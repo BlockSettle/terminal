@@ -230,18 +230,15 @@ void ChatClientUserView::editContact(std::shared_ptr<Chat::Data> crecord)
       auto contactRecord = crecord->mutable_contact_record();
       QString contactId = QString::fromStdString(contactRecord->contact_id());
       QString displayName = QString::fromStdString(contactRecord->display_name());
-      QDateTime joinDate;  // TODO: implement when will be ready
-      QString idKey;       // TODO: implement when will be ready
-      EditContactDialog dialog(contactId, displayName, joinDate, idKey);
+      QDateTime timestamp = QDateTime::fromMSecsSinceEpoch(contactRecord->public_key_timestamp());
+      QByteArray pubKey = QByteArray::fromStdString(contactRecord->public_key());
+      QString idKey = QString::fromLatin1(pubKey.toHex());
+      if (contactId == displayName) {
+         displayName.clear();
+      }
+      EditContactDialog dialog(contactId, displayName, timestamp, idKey, parentWidget()->window());
       if (dialog.exec() == QDialog::Accepted) {
-         contactId = dialog.contactId();
-         displayName = dialog.displayName();
-         joinDate = dialog.joinDate();
-         idKey = dialog.idKey();
-         contactRecord->set_contact_id(contactId.toStdString());
-         contactRecord->set_display_name(displayName.toStdString());
-         // TODO: joinDate implement when will be ready
-         // TODO: idKey    implement when will be ready
+         contactRecord->set_display_name(dialog.displayName().toStdString());
          handler_->onActionEditContactRequest(crecord);
       }
    }

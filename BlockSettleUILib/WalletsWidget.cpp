@@ -302,9 +302,6 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
 
    const auto &hdWallet = node->hdWallet();
    if (hdWallet != nullptr) {
-//      RootWalletPropertiesDialog(logger_, hdWallet, walletsManager_, armory_, signingContainer_
-//         , walletsModel_, appSettings_, assetManager_, this).exec();
-
       RootWalletPropertiesDialog(logger_, hdWallet, walletsManager_, armory_, signingContainer_
          , walletsModel_, appSettings_, connectionManager_, assetManager_, this).exec();
    }

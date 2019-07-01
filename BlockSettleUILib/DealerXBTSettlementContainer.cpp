@@ -79,11 +79,11 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    // connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }
 
-bool DealerXBTSettlementContainer::accept(const SecureBinaryData &password)
+bool DealerXBTSettlementContainer::startSigning()
 {
    if (weSell_) {
       try {
-         const auto txReq = transactionData_->getSignTXRequest();
+         const auto txReq = transactionData_->getSignTxRequest();
          // FIXME: Settlement containers will be reimplemented to use another function
 //         payinSignId_ = signingContainer_->signTXRequest(txReq, autoSign_
 //            , SignContainer::TXSignMode::Full, password);
@@ -111,11 +111,12 @@ bool DealerXBTSettlementContainer::accept(const SecureBinaryData &password)
          return false;
       }
 
-      const auto &cbSettlInput = [this, receivingAddress, password](UTXO input) {
+      const auto &cbSettlInput = [this, receivingAddress](UTXO input) {
          try {
             const auto txReq = settlWallet_->createPayoutTXRequest(input
                , receivingAddress, transactionData_->feePerByte());
             const auto authAddr = bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH);
+            // FIXME: Settlement containers will be reimplemented to use another function
 //            payoutSignId_ = signingContainer_->signPayoutTXRequest(txReq, authAddr, settlIdStr_
 //               , autoSign_, password);
          }

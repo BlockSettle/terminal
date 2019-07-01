@@ -35,8 +35,8 @@ XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &XBTSettlementTransactionWidget::onCancel);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &XBTSettlementTransactionWidget::onAccept);
 
-   connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateAcceptButton(); });
-   connect(ui_->widgetSubmitKeysAuth, &WalletKeysSubmitWidget::keyChanged, [this] { updateAcceptButton(); });
+   //connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateAcceptButton(); });
+   //connect(ui_->widgetSubmitKeysAuth, &WalletKeysSubmitWidget::keyChanged, [this] { updateAcceptButton(); });
 
    connect(celerClient.get(), &CelerClient::OnConnectionClosed,
       this, &XBTSettlementTransactionWidget::onCancel);
@@ -64,8 +64,8 @@ XBTSettlementTransactionWidget::~XBTSettlementTransactionWidget() noexcept = def
 void XBTSettlementTransactionWidget::onCancel()
 {
    settlContainer_->cancel();
-   ui_->widgetSubmitKeys->cancel();
-   ui_->widgetSubmitKeysAuth->cancel();
+//   ui_->widgetSubmitKeys->cancel();
+//   ui_->widgetSubmitKeysAuth->cancel();
 }
 
 void XBTSettlementTransactionWidget::onError(QString text)
@@ -116,7 +116,7 @@ void XBTSettlementTransactionWidget::populateDetails()
       if (settlContainer_->isSellFromPrimary()) {
          ui_->labelHintAuthPassword->hide();
          ui_->horizontalWidgetAuthPassword->hide();
-         ui_->widgetSubmitKeysAuth->suspend();
+         //ui_->widgetSubmitKeysAuth->suspend();
       }
       else {
          ui_->labelHintAuthPassword->setText(tr("Enter password for \"%1\" wallet to sign revoke Pay-Out")
@@ -128,44 +128,44 @@ void XBTSettlementTransactionWidget::populateDetails()
          .arg(settlContainer_->walletInfoAuth().name()));
       ui_->labelHintAuthPassword->hide();
       ui_->horizontalWidgetAuthPassword->hide();
-      ui_->widgetSubmitKeysAuth->suspend();
+      //ui_->widgetSubmitKeysAuth->suspend();
    }
 }
 
 void XBTSettlementTransactionWidget::onDealerVerificationStateChanged(AddressVerificationState state)
 {
-   QString text;
-   switch (state) {
-   case AddressVerificationState::Verified: {
-         text = sValid_;
-         ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfo()
-            , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
-         ui_->widgetSubmitKeys->setFocus();
-         // tr("%1 Settlement %2").arg(QString::fromStdString(rfq_.security)).arg(clientSells_ ? tr("Pay-In") : tr("Pay-Out"))
+//   QString text;
+//   switch (state) {
+//   case AddressVerificationState::Verified: {
+//         text = sValid_;
+//         ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfo()
+//            , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
+//         ui_->widgetSubmitKeys->setFocus();
+//         // tr("%1 Settlement %2").arg(QString::fromStdString(rfq_.security)).arg(clientSells_ ? tr("Pay-In") : tr("Pay-Out"))
 
-         if (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary()) {
-            ui_->widgetSubmitKeysAuth->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfoAuth()
-            , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
-         }
-         QApplication::processEvents();
-         adjustSize();
-   }
-      break;
-   case AddressVerificationState::VerificationFailed:
-      text = sFailed_;
-      break;
-   default:
-      text = sInvalid_;
-      break;
-   }
+//         if (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary()) {
+//            ui_->widgetSubmitKeysAuth->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfoAuth()
+//            , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
+//         }
+//         QApplication::processEvents();
+//         adjustSize();
+//   }
+//      break;
+//   case AddressVerificationState::VerificationFailed:
+//      text = sFailed_;
+//      break;
+//   default:
+//      text = sInvalid_;
+//      break;
+//   }
 
-   ui_->labelDealerAuthAddress->setText(text);
-   updateAcceptButton();
+//   ui_->labelDealerAuthAddress->setText(text);
+//   updateAcceptButton();
 }
 
 void XBTSettlementTransactionWidget::onAuthWalletInfoReceived()
 {
-   ui_->widgetSubmitKeysAuth->resume();
+   //ui_->widgetSubmitKeysAuth->resume();
 }
 
 void XBTSettlementTransactionWidget::populateXBTDetails()
@@ -209,38 +209,40 @@ void XBTSettlementTransactionWidget::populateXBTDetails()
 
 void XBTSettlementTransactionWidget::onAccept()
 {
-   SecureBinaryData authKey = (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary() && settlContainer_->payinReceived())
-      ? ui_->widgetSubmitKeysAuth->key() : ui_->widgetSubmitKeys->key();
-   settlContainer_->accept(authKey);
+   // FIXME: this widget needs to be reimplemented to move signing to signer
 
-   if (!settlContainer_->payinReceived() && !settlContainer_->weSell()) {
-      ui_->pushButtonCancel->setEnabled(false);
-   }
-   ui_->labelHintPassword->clear();
-   ui_->pushButtonAccept->setEnabled(false);
+//   SecureBinaryData authKey = (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary() && settlContainer_->payinReceived())
+//      ? ui_->widgetSubmitKeysAuth->key() : ui_->widgetSubmitKeys->key();
+//   settlContainer_->accept(authKey);
+
+//   if (!settlContainer_->payinReceived() && !settlContainer_->weSell()) {
+//      ui_->pushButtonCancel->setEnabled(false);
+//   }
+//   ui_->labelHintPassword->clear();
+//   ui_->pushButtonAccept->setEnabled(false);
 }
 
 void XBTSettlementTransactionWidget::onStop()
 {
-   ui_->progressBar->setValue(0);
-   ui_->widgetSubmitKeys->setEnabled(false);
-   ui_->labelHintAuthPassword->clear();
-   ui_->widgetSubmitKeysAuth->setEnabled(false);
+//   ui_->progressBar->setValue(0);
+//   ui_->widgetSubmitKeys->setEnabled(false);
+//   ui_->labelHintAuthPassword->clear();
+//   ui_->widgetSubmitKeysAuth->setEnabled(false);
 }
 
 void XBTSettlementTransactionWidget::onRetry()
 {
-   ui_->pushButtonAccept->setText(tr("Retry"));
-   ui_->widgetSubmitKeys->setEnabled(true);
-   ui_->widgetSubmitKeysAuth->setEnabled(true);
-   ui_->pushButtonAccept->setEnabled(true);
+//   ui_->pushButtonAccept->setText(tr("Retry"));
+//   ui_->widgetSubmitKeys->setEnabled(true);
+//   ui_->widgetSubmitKeysAuth->setEnabled(true);
+//   ui_->pushButtonAccept->setEnabled(true);
 }
 
 void XBTSettlementTransactionWidget::updateAcceptButton()
 {
-   bool isPasswordValid = ui_->widgetSubmitKeys->isValid();
-   if (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary()) {
-      isPasswordValid = ui_->widgetSubmitKeysAuth->isValid();
-   }
-   ui_->pushButtonAccept->setEnabled(settlContainer_->isAcceptable() && isPasswordValid);
+//   bool isPasswordValid = ui_->widgetSubmitKeys->isValid();
+//   if (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary()) {
+//      isPasswordValid = ui_->widgetSubmitKeysAuth->isValid();
+//   }
+//   ui_->pushButtonAccept->setEnabled(settlContainer_->isAcceptable() && isPasswordValid);
 }

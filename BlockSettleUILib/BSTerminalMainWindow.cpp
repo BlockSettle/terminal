@@ -80,9 +80,9 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
-      QTimer::singleShot(0, this, []() {
+      QMetaObject::invokeMethod(this, []() {
          qApp->exit(EXIT_FAILURE);
-      });
+      }, Qt::QueuedConnection);
       return;
    }
 
@@ -474,16 +474,12 @@ void BSTerminalMainWindow::InitAuthManager()
 }
 
 std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
-{
-   auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
-
-   switch (runMode) {
-      case SignContainer::OpMode::Remote:
-         return createRemoteSigner();
-      case SignContainer::OpMode::Local:
-         return createLocalSigner();
-      default:
-         return nullptr;
+{  
+   if (signersProvider_->currentSignerIsLocal()) {
+      return createLocalSigner();
+   }
+   else {
+      return createRemoteSigner();
    }
 }
 
@@ -548,7 +544,6 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
 
 std::shared_ptr<SignContainer> BSTerminalMainWindow::createLocalSigner()
 {
-   SignerHost signerHost = signersProvider_->getCurrentSigner();
    QLatin1String localSignerHost("127.0.0.1");
    QString localSignerPort = applicationSettings_->get<QString>(ApplicationSettings::localSignerPort);
    NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
@@ -677,6 +672,11 @@ bool BSTerminalMainWindow::showStartupDialog()
       hide();
       return false;
    }
+
+   // Ueed update armory settings if case user selects TestNet
+   // (MainNet selected by default at startup)
+   applicationSettings_->selectNetwork();
+
    return true;
 }
 
@@ -817,12 +817,21 @@ void BSTerminalMainWindow::raiseWindow()
 #ifdef Q_OS_WIN
    auto hwnd = reinterpret_cast<HWND>(winId());
    auto flags = static_cast<UINT>(SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+   auto currentProcessId = ::GetCurrentProcessId();
+   auto currentThreadId = ::GetCurrentThreadId();
+   auto windowThreadId = ::GetWindowThreadProcessId(hwnd, nullptr);
+   if (currentThreadId != windowThreadId) {
+      ::AttachThreadInput(windowThreadId, currentThreadId, TRUE);
+   }
+   ::AllowSetForegroundWindow(currentProcessId);
    ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
-   ::SetForegroundWindow(hwnd);
-   ::SetActiveWindow(hwnd);
-   ::ShowWindow(hwnd, SW_SHOWNORMAL);
-   ::SetFocus(hwnd);
    ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, flags);
+   ::SetForegroundWindow(hwnd);
+   ::SetFocus(hwnd);
+   ::SetActiveWindow(hwnd);
+   if (currentThreadId != windowThreadId) {
+      ::AttachThreadInput(windowThreadId, currentThreadId, FALSE);
+   }
 #endif // Q_OS_WIN
 }
 
@@ -1265,6 +1274,9 @@ void BSTerminalMainWindow::onCelerConnected()
    action_logout_->setVisible(true);
 
    onUserLoggedIn();
+
+   // TODO: Use PB contact name from downloaded settings or something
+   ui_->widgetChat->connectToPb("m8ifjy99bpom");
 }
 
 void BSTerminalMainWindow::onCelerDisconnected()

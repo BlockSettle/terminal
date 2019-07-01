@@ -215,8 +215,10 @@ bool ZmqBIP15XServerConnection::ReadFromDataSocket()
       return true;
    }
 
+   int socket = zmq_msg_get(&data, ZMQ_SRCFD);
+
    // Process the incoming data.
-   ProcessIncomingData(data.ToString(), clientId.ToString());
+   ProcessIncomingData(data.ToString(), clientId.ToString(), socket);
    return true;
 }
 
@@ -353,7 +355,7 @@ bool ZmqBIP15XServerConnection::SendDataToAllClients(const std::string& data, co
 // OUTPUT: None
 // RETURN: None
 void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
-   , const string& clientID)
+   , const string& clientID, int socket)
 {
    const auto connData = setBIP151Connection(clientID);
 
@@ -405,12 +407,13 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
    }
 
    if (msg.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
-      if (!processAEADHandshake(msg, clientID)) {
+      if (!processAEADHandshake(msg, clientID, socket)) {
          if (logger_) {
             logger_->error("[ZmqBIP15XServerConnection::{}] Handshake failed "
                "(connection {})", __func__, connectionName_);
          }
          notifyListenerOnClientError(clientID, "handshake failed");
+         notifyListenerOnClientError(clientID, ServerConnectionListener::HandshakeFailed, socket);
          return;
       }
 
@@ -441,7 +444,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
 // OUTPUT: None
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XServerConnection::processAEADHandshake(
-   const ZmqBipMsg& msgObj, const string& clientID)
+   const ZmqBipMsg& msgObj, const string& clientID, int socket)
 {
    // Function used to actually send data to the client.
    auto writeToClient = [this, clientID](uint8_t type, const BinaryDataRef& msg
@@ -464,7 +467,7 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
    };
 
    // Handshake function. Code mostly copied from Armory.
-   auto processHandshake = [this, writeToClient, clientID, msgObj]()->bool
+   auto processHandshake = [this, writeToClient, clientID, msgObj, socket]()->bool
    {
       auto connection = GetConnection(clientID);
       if (connection == nullptr) {

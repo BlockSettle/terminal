@@ -31,9 +31,9 @@ QVariant ArmoryServersViewModel::data(const QModelIndex &index, int role) const
    QString serverNetType = (server.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet"));
 
    if (role == Qt::FontRole && index.row() == currentServerIndex) {
-       QFont font;
-       font.setBold(true);
-       return font;
+//       QFont font;
+//       font.setBold(true);
+//       return font;
    }
    else if (role == Qt::TextColorRole && index.row() == currentServerIndex && highLightSelectedServer_) {
        return QColor(Qt::white);

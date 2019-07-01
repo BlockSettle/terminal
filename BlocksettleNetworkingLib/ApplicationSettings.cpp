@@ -118,8 +118,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { chatDbFile,              SettingDef(QString(), AppendToWritableDir(QLatin1String("chat2.db"))) },
       { celerUsername,           SettingDef(QLatin1String("MatchSystemUsername")) },
       { localSignerPort,         SettingDef(QLatin1String("SignerPort"), 23456) },
-      { signerRunMode,           SettingDef(QLatin1String("SignerRunMode"), 1) },
-      { signerIndex,             SettingDef(QLatin1String("SignerIndex"), -1) },
+      { signerIndex,             SettingDef(QLatin1String("SignerIndex"), 0) },
       { signerOfflineDir,        SettingDef(QLatin1String("SignerOfflineDir"), QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)) },
       { autoSignSpendLimit,      SettingDef(QLatin1String("AutoSignSpendLimit"), 0.0) },
       { launchToTray,            SettingDef(QLatin1String("LaunchToTray"), false) },
@@ -369,30 +368,11 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
       return false;
    }
 
-   // Set up Armory as needed. Even though the BDMC object isn't used, it sets
-   // global values that are used later.
-   BlockDataManagerConfig config;
-
    if (parser.isSet(testnetName)) {
       set(netType, (int)NetworkType::TestNet);
    }
 
-   switch (get<NetworkType>(netType)) {
-   case NetworkType::MainNet:
-      config.selectNetwork(NETWORK_MODE_MAINNET);
-      break;
-
-   case NetworkType::TestNet:
-      config.selectNetwork(NETWORK_MODE_TESTNET);
-      break;
-
-   case NetworkType::RegTest:
-      config.selectNetwork(NETWORK_MODE_REGTEST);
-      break;
-
-   default:
-      break;
-   }
+   selectNetwork();
 
    SetHomeDir(parser.value(dataDirName));
    SetBitcoinsDir(parser.value(satoshiDataDirName));
@@ -724,4 +704,29 @@ std::string ApplicationSettings::pubBridgePort() const
 
    assert(false);
    return "";
+}
+
+void ApplicationSettings::selectNetwork()
+{
+   // Set up Armory as needed. Even though the BDMC object isn't used, it sets
+   // global values that are used later.
+   BlockDataManagerConfig config;
+
+   switch (get<NetworkType>(netType)) {
+   case NetworkType::MainNet:
+      config.selectNetwork(NETWORK_MODE_MAINNET);
+      break;
+
+   case NetworkType::TestNet:
+      config.selectNetwork(NETWORK_MODE_TESTNET);
+      break;
+
+   case NetworkType::RegTest:
+      config.selectNetwork(NETWORK_MODE_REGTEST);
+      break;
+
+   default:
+      assert(false);
+      break;
+   }
 }

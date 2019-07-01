@@ -15,6 +15,8 @@
 #include "SignerUiDefs.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 
+#include "SettlementInfo.h"
+
 namespace spdlog {
    class logger;
 }
@@ -82,11 +84,25 @@ public:
       , const bs::Address &authAddr, const std::string &settlementId
       , const PasswordType& password = {}) = 0;
 
+   virtual bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &
+      , const bs::sync::SettlementInfo &settlementInfo
+      , TXSignMode mode = TXSignMode::Full
+      , bool keepDuplicatedRecipients = false
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
+
+   virtual bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &
+      , const bs::sync::SettlementInfo &settlementInfo
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
+
+   virtual bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &
+      , const bs::sync::SettlementInfo &settlementInfo
+      , const bs::Address &authAddr, const std::string &settlementId
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
+
    virtual bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) = 0;
 
-   virtual void SendPassword(const std::string &walletId, const PasswordType &password,
-      bool cancelledByUser) = 0;
    virtual bs::signer::RequestId CancelSignTx(const BinaryData &txId) = 0;
+   virtual void SendPassword(const std::string &walletId, bs::error::ErrorCode result, const PasswordType &password) = 0;
 
    virtual bs::signer::RequestId SetUserId(const BinaryData &) = 0;
    virtual bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
@@ -119,7 +135,6 @@ public:
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) = 0;
 
    const OpMode &opMode() const { return mode_; }
-   virtual bool hasUI() const { return false; }
    virtual bool isReady() const { return true; }
    virtual bool isOffline() const { return true; }
    virtual bool isWalletOffline(const std::string &) const { return true; }

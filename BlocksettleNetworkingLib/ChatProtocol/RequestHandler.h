@@ -21,6 +21,7 @@ namespace Chat {
    class Request_SearchUsers;
    class Request_SessionPublicKey;
    class Request_ReplySessionPublicKey;
+   class Request_UploadNewPublicKey;
 
    class RequestHandler
    {
@@ -53,6 +54,8 @@ namespace Chat {
 
       virtual void OnSessionPublicKeyRequest(const std::string& clientId, const Request_SessionPublicKey&) = 0;
       virtual void OnReplySessionPublicKeyRequest(const std::string& clientId, const Request_ReplySessionPublicKey&) = 0;
+
+      virtual void OnRequestUploadNewPublicKey(const Request_UploadNewPublicKey&) = 0;
    };
 }
 

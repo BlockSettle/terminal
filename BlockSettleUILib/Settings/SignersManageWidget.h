@@ -33,7 +33,7 @@ signals:
    void needClose();
 
 private:
-   void setupSignerFromSelected(bool save);
+   void setupSignerFromSelected(bool needUpdate);
 
 private slots:
    void resetForm();

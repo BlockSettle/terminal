@@ -165,7 +165,6 @@ private:
    std::chrono::time_point<std::chrono::steady_clock> outKeyTimePoint_;
    uint32_t outerRekeyCount_ = 0;
    uint32_t innerRekeyCount_ = 0;
-   BinaryData leftOverData_;
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
    const std::string bipIDCookiePath_;

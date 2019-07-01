@@ -79,7 +79,6 @@ public:
       celerUsername,
       localSignerPort,
       signerIndex,
-      signerRunMode,
       signerOfflineDir,
       autoSignSpendLimit,
       launchToTray,
@@ -183,6 +182,8 @@ public:
 
    std::string pubBridgeHost() const;
    std::string pubBridgePort() const;
+
+   void selectNetwork();
 
 signals:
    void settingChanged(int setting, QVariant value);

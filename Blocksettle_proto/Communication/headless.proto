@@ -1,13 +1,13 @@
 syntax = "proto3";
 
 package Blocksettle.Communication.headless;
-
+import "Blocksettle_Communication_Internal.proto";
 
 enum RequestType
 {
    InvalidRequestType          = 0;
    AuthenticationRequestType   = 1;
-   SignTXRequestType           = 2;
+   SignTxRequestType           = 2;
    SignPartialTXRequestType    = 3;
    SignPayoutTXRequestType     = 4;
    PasswordRequestType         = 5;
@@ -31,6 +31,9 @@ enum RequestType
    WalletsListUpdatedType      = 22;
    ExtendAddressChainType      = 23;
    SyncNewAddressType	       = 24;
+   SignSettlementTxRequestType = 25;
+   SignSettlementPartialTxRequestType = 26;
+   SignSettlementPayoutTxRequestType = 27;
 }
 
 message RequestPacket
@@ -71,8 +74,7 @@ message AuthenticationReply
       bytes authTicket = 1;
       string   error = 2;
    }
-   bool     hasUI = 3;
-   NetworkType  netType = 4;
+   NetworkType  netType = 3;
 }
 
 
@@ -83,7 +85,7 @@ message Change
    uint64   value = 3;
 }
 
-message SignTXRequest
+message SignTxRequest
 {
    string         walletId = 1;
    repeated bytes inputs = 2;
@@ -97,19 +99,28 @@ message SignTXRequest
    bool           keepDuplicatedRecipients = 11;
 }
 
-message SignTXReply
+message SignTxReply
 {
-   uint32 errorCode = 1;
-   oneof result {
-      bytes signedTX = 2;
-      string   errorString = 3;
-   }
-   Change   change = 4;
+   uint32         errorCode = 1;
+   bytes          signedTX = 2;
+   Change         change = 3;
 }
 
 message CancelSignTx
 {
    bytes txId = 1;
+}
+
+message SignSettlementTxRequest
+{
+   SignTxRequest signTxRequest                                        = 1;
+   Blocksettle.Communication.Internal.SettlementInfo settlementInfo   = 2;
+}
+
+message SignSettlementPayoutTxRequest
+{
+   SignPayoutTXRequest signPayoutTXRequest                            = 1;
+   Blocksettle.Communication.Internal.SettlementInfo settlementInfo   = 2;
 }
 
 message SignPayoutTXRequest
@@ -132,9 +143,9 @@ message PasswordRequest
 
 message PasswordReply
 {
-   string   walletId = 1;
-   string   password = 2;
-   bool     cancelledByUser = 3;
+   uint32   errorCode = 1;
+   string   walletId = 2;
+   string   password = 3;
 }
 
 
