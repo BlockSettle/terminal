@@ -1,7 +1,19 @@
 {
-   "latest_version": "0.17.6",
-   "release_date": "01 Jul 2019",
+   "latest_version": "0.18.0",
+   "release_date": "02 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.18.0",
+         "previous_version": "0.17.6",
+         "release_date": "02 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "New wallets code"
+         ],
+         "bug_fixes": [],
+         "revision": "9baf1708",
+         "common_revision": "79fe3e5b"
+      },
       {
          "version_string": "0.17.6",
          "previous_version": "0.17.5",
