@@ -59,7 +59,7 @@ protected:
    bool sendWoWallet(const std::shared_ptr<bs::core::hd::Wallet> &
       , Blocksettle::Communication::signer::PacketType, bs::signer::RequestId reqId = 0);
 
-   bool onSignTxReq(const std::string &data, bs::signer::RequestId);
+   bool onSignOfflineTxRequest(const std::string &data, bs::signer::RequestId);
    bool onSyncWalletInfo(bs::signer::RequestId);
    bool onSyncHDWallet(const std::string &data, bs::signer::RequestId);
    bool onSyncWallet(const std::string &data, bs::signer::RequestId);

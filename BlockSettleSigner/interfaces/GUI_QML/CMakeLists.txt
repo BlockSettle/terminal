@@ -10,6 +10,7 @@ LIST(APPEND SOURCES
    ../../PasswordConfirmValidator.cpp
    ../../PdfBackupQmlPrinter.cpp
    ../../QmlFactory.cpp
+   ../../QmlBridge.cpp
    ../../QMLStatusUpdater.cpp
    ../../SignerAdapter.cpp
    ../../SignerAdapterContainer.cpp
@@ -27,6 +28,8 @@ LIST(APPEND HEADERS
    ../../PasswordConfirmValidator.h
    ../../PdfBackupQmlPrinter.h
    ../../QmlFactory.h
+   ../../QmlBridge.h
+   ../../QmlCallbackImpl.h
    ../../QMLStatusUpdater.h
    ../../SignerAdapter.h
    ../../SignerAdapterContainer.h

@@ -118,34 +118,11 @@ ApplicationWindow {
     }
 
     function customDialogRequest(dialogName, data) {
-        // close previous dialog
-        if (currentDialog && typeof currentDialog.close !== "undefined") {
-            currentDialog.close()
-        }
+        var newDialog = QmlDialogs.customDialogRequest(dialogName, data)
+        QmlDialogs.prepareLigthModeDialog(newDialog)
+    }
 
-        show()
-        currentDialog = QmlDialogs.customDialogRequest(dialogName, data)
-        mainWindow.width = currentDialog.width
-        mainWindow.height = currentDialog.height
-        mainWindow.title = currentDialog.title
-        if (typeof currentDialog.qmlTitleVisible !== "undefined") {
-            currentDialog.qmlTitleVisible = false
-        }
-
-        currentDialog.dialogsChainFinished.connect(function(){ hide() })
-        currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
-            mainWindow.width = nextDialog.width
-            mainWindow.height = nextDialog.height
-
-            nextDialog.sizeChanged.connect(function(w, h){
-                mainWindow.width = w
-                mainWindow.height = h
-            })
-        })
-
-        currentDialog.sizeChanged.connect(function(w, h){
-            mainWindow.width = w
-            mainWindow.height = h
-        })
+    function invokeQmlMetod(method, cppCallback, argList) {
+        QmlDialogs.evalWorker(method, cppCallback, argList)
     }
 }

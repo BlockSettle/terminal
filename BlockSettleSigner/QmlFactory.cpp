@@ -14,12 +14,11 @@ using namespace bs::hd;
 
 QmlFactory::QmlFactory(const std::shared_ptr<ApplicationSettings> &settings
    , const std::shared_ptr<ConnectionManager> &connectionManager
-   , SignerAdapter *adapter, const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<spdlog::logger> &logger
    , QObject *parent)
    : QObject(parent)
    , settings_(settings)
    , connectionManager_(connectionManager)
-   , adapter_(adapter)
    , logger_(logger)
 {
 }
@@ -110,15 +109,6 @@ AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index
    authObject->removeDevice(index, walletInfo);
    QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
    return authObject;
-}
-
-void QmlFactory::requestHeadlessPubKey()
-{
-   if (adapter_) {
-      adapter_->getHeadlessPubKey([this](const std::string &key){
-         setHeadlessPubKey(QString::fromStdString(key));
-      });
-   }
 }
 
 void QmlFactory::setClipboard(const QString &text) const

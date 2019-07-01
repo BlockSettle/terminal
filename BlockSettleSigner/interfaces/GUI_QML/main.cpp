@@ -23,6 +23,7 @@
 #include "SignerSettings.h"
 #include "LogManager.h"
 #include "QMLApp.h"
+#include "QmlBridge.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
 Q_DECLARE_METATYPE(std::string)
@@ -163,6 +164,8 @@ static int QMLApp(int argc, char **argv)
 #endif
 #endif
 
+   auto qmlBridge = std::make_shared<QmlBridge>(logger);
+
    // Go ahead and build the headless connection encryption files, even if we
    // don't use them. If they already exist, we'll leave them alone.
    logger->info("Starting BS Signer UI with args: {}", app.arguments().join(QLatin1Char(' ')).toStdString());
@@ -178,7 +181,7 @@ static int QMLApp(int argc, char **argv)
             "command line. Functionality may be limited.", __func__);
       }
 
-      SignerAdapter adapter(logger, settings->netType(), &srvIDKey);
+      SignerAdapter adapter(logger, qmlBridge, settings->netType(), &srvIDKey);
       adapter.setCloseHeadless(settings->closeHeadless());
 
       QMLAppObj qmlAppObj(&adapter, logger, settings, splashScreen, engine.rootContext());
@@ -199,6 +202,7 @@ static int QMLApp(int argc, char **argv)
          throw std::runtime_error("Failed to load main QML file");
       }
       qmlAppObj.SetRootObject(engine.rootObjects().at(0));
+      qmlBridge->setRootQmlObj(engine.rootObjects().at(0));
       return app.exec();
    }
    catch (const std::exception &e) {

@@ -6,7 +6,12 @@
 #include "CoreWallet.h"
 #include "SignContainer.h"
 #include "DataConnectionListener.h"
+#include "QmlBridge.h"
+#include "QmlFactory.h"
 #include "bs_signer.pb.h"
+
+#include <functional>
+#include <memory>
 
 namespace bs {
    namespace sync {
@@ -21,12 +26,14 @@ class SignerAdapter;
 
 using namespace Blocksettle::Communication;
 
+
 class SignerInterfaceListener : public QObject, public DataConnectionListener
 {
    Q_OBJECT
 
 public:
    SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<QmlBridge> &qmlBridge
       , const std::shared_ptr<ZmqBIP15XDataConnection> &conn, SignerAdapter *parent);
 
    void OnDataReceived(const std::string &) override;
@@ -76,13 +83,17 @@ public:
       cbAutoSignReqs_[reqId] = cb;
    }
 
+   void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
+
 private:
    void processData(const std::string &);
 
    void onReady(const std::string &data);
    void onPeerConnected(const std::string &data, bool connected);
-   void onPasswordRequested(const std::string &data);
+   void onSignTxRequested(const std::string &data);
+   void onSignSettlementTxRequested(const std::string &data);
    void onTxSigned(const std::string &data, bs::signer::RequestId);
+   void onCancelTx(const std::string &data, bs::signer::RequestId);
    void onXbtSpent(const std::string &data);
    void onAutoSignActivated(const std::string &data, bs::signer::RequestId reqId);
    void onSyncWalletInfo(const std::string &data, bs::signer::RequestId);
@@ -102,10 +113,12 @@ private:
    void shutdown();
 
 private:
-   std::shared_ptr<spdlog::logger>  logger_;
+   std::shared_ptr<spdlog::logger>           logger_;
    std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
-   SignerAdapter  *  parent_;
-   bs::signer::RequestId   seq_ = 1;
+   std::shared_ptr<QmlFactory>               qmlFactory_;
+   SignerAdapter                             * parent_;
+
+   bs::signer::RequestId seq_ = 1;
    std::map<bs::signer::RequestId, std::function<void(const BinaryData &)>>      cbSignReqs_;
    std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfo_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletData_;
@@ -119,6 +132,9 @@ private:
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbDeleteHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(const std::string &pubKey)>> cbHeadlessPubKeyReqs_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbAutoSignReqs_;
+
+   std::shared_ptr<QmlBridge>  qmlBridge_;
+
 };
 
 

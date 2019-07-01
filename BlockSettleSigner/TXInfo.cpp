@@ -1,8 +1,31 @@
 #include "TXInfo.h"
 #include "QWalletInfo.h"
-#include "QmlFactory.h"
 
 using namespace bs::wallet;
+using namespace Blocksettle::Communication;
+
+bs::core::wallet::TXSignRequest TXInfo::getCoreSignTxRequest(const signer::SignTxRequest &req)
+{
+   bs::core::wallet::TXSignRequest txReq;
+   txReq.walletId = req.wallet_id();
+   for (int i = 0; i < req.inputs_size(); ++i) {
+      UTXO utxo;
+      utxo.unserialize(req.inputs(i));
+      txReq.inputs.emplace_back(std::move(utxo));
+   }
+   for (int i = 0; i < req.recipients_size(); ++i) {
+      const BinaryData bd(req.recipients(i));
+      txReq.recipients.push_back(ScriptRecipient::deserialize(bd));
+   }
+   txReq.fee = req.fee();
+   txReq.RBF = req.rbf();
+   if (req.has_change()) {
+      txReq.change.address = req.change().address();
+      txReq.change.index = req.change().index();
+      txReq.change.value = req.change().value();
+   }
+   return  txReq;
+}
 
 QStringList TXInfo::recvAddresses() const
 {
