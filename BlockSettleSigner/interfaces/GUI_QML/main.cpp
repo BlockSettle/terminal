@@ -21,7 +21,9 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include "SignerAdapter.h"
 #include "SignerSettings.h"
+#include "LogManager.h"
 #include "QMLApp.h"
+#include "QmlBridge.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
 Q_DECLARE_METATYPE(std::string)
@@ -50,8 +52,6 @@ Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
 
 Q_IMPORT_PLUGIN(QICOPlugin)
 Q_IMPORT_PLUGIN(QtQuick2Plugin)
-Q_IMPORT_PLUGIN(QtQuick2DialogsPlugin)
-Q_IMPORT_PLUGIN(QtQuick2DialogsPrivatePlugin)
 Q_IMPORT_PLUGIN(QtQuick2WindowPlugin)
 Q_IMPORT_PLUGIN(QtQuickControls2Plugin)
 Q_IMPORT_PLUGIN(QtQuickTemplates2Plugin)
@@ -60,6 +60,7 @@ Q_IMPORT_PLUGIN(QtQuickLayoutsPlugin)
 Q_IMPORT_PLUGIN(QtQmlModelsPlugin)
 Q_IMPORT_PLUGIN(QmlFolderListModelPlugin)
 Q_IMPORT_PLUGIN(QmlSettingsPlugin)
+Q_IMPORT_PLUGIN(QtLabsPlatformPlugin)
 
 #endif // STATIC_BUILD
 
@@ -141,14 +142,14 @@ static int QMLApp(int argc, char **argv)
    try {
       logger = spdlog::basic_logger_mt("", settings->logFileName().toStdString());
       // [date time.miliseconds] [level](thread id): text
-      logger->set_pattern("%D %H:%M:%S.%e [%L](%t): %v");
+      logger->set_pattern(bs::LogManager::detectFormatOverride("%D %H:%M:%S.%e [%L](%t): %v"));
    }
    catch (const spdlog::spdlog_ex &e) {
       std::cerr << "Failed to create logger in "
          << settings->logFileName().toStdString() << ": " << e.what()
          << " - logging to console" << std::endl;
       logger = spdlog::stdout_logger_mt("");
-      logger->set_pattern("[%L](%t): %v");
+      logger->set_pattern(bs::LogManager::detectFormatOverride("[%L](%t): %v"));
    }
    logger->set_level(spdlog::level::debug);
    logger->flush_on(spdlog::level::debug);
@@ -162,6 +163,8 @@ static int QMLApp(int argc, char **argv)
    setvbuf(stderr, NULL, _IONBF, 0);
 #endif
 #endif
+
+   auto qmlBridge = std::make_shared<QmlBridge>(logger);
 
    // Go ahead and build the headless connection encryption files, even if we
    // don't use them. If they already exist, we'll leave them alone.
@@ -178,7 +181,7 @@ static int QMLApp(int argc, char **argv)
             "command line. Functionality may be limited.", __func__);
       }
 
-      SignerAdapter adapter(logger, settings->netType(), &srvIDKey);
+      SignerAdapter adapter(logger, qmlBridge, settings->netType(), &srvIDKey);
       adapter.setCloseHeadless(settings->closeHeadless());
 
       QMLAppObj qmlAppObj(&adapter, logger, settings, splashScreen, engine.rootContext());
@@ -199,6 +202,7 @@ static int QMLApp(int argc, char **argv)
          throw std::runtime_error("Failed to load main QML file");
       }
       qmlAppObj.SetRootObject(engine.rootObjects().at(0));
+      qmlBridge->setRootQmlObj(engine.rootObjects().at(0));
       return app.exec();
    }
    catch (const std::exception &e) {

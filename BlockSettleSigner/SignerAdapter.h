@@ -7,6 +7,8 @@
 #include "SignerDefs.h"
 #include "QPasswordData.h"
 #include "BSErrorCode.h"
+#include "QmlBridge.h"
+#include "QmlFactory.h"
 
 #include "bs_signer.pb.h"
 
@@ -36,6 +38,7 @@ class SignerAdapter : public QObject
 
 public:
    SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<QmlBridge> &qmlBridge
       , const NetworkType netType, const BinaryData* inSrvIDKey = nullptr);
    ~SignerAdapter() override;
 
@@ -47,10 +50,8 @@ public:
    std::shared_ptr<bs::sync::WalletsManager> getWalletsManager();
    void reloadWallets(const QString &, const std::function<void()> &);
 
-   void setOnline(bool);
-   void reconnect(const QString &address, const QString &port);
    void setLimits(bs::signer::Limits);
-   void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
+   void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
 
    using ResultCb = std::function<void(bool, const std::string&)>;
    void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
@@ -69,7 +70,7 @@ public:
       , bool addNew, bool removeOld, bool dryRun
       , const std::function<void(bool)> &);
 
-   void signTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
+   void signOfflineTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
       , const std::function<void(const BinaryData &)> &);
    void createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
@@ -89,14 +90,21 @@ public:
 
    void walletsListUpdated();
 
+   // Requests from headless with callbacks - relacement for signals
+   // TODO: reimlement requestPasswordAndSignTx, cancelTxSign etc
+   void onSignSettlementTxRequest();
+
+   QString headlessPubKey() const;
+
+   void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
+
 signals:
    void ready() const;
    void connectionError() const;
-   void headlessBindFailed() const;
+   void headlessBindUpdated(bool success) const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
-   void requestPassword(const bs::core::wallet::TXSignRequest &, const QString &prompt);
-   void autoSignRequiresPwd(const std::string &walletId);
+   void requestPasswordAndSignTx(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void cancelTxSign(const BinaryData &txHash);
    void txSigned(const BinaryData &);
    void xbtSpent(const qint64 value, bool autoSign);
@@ -104,14 +112,20 @@ signals:
    void autoSignDeactivated(const std::string &walletId);
    void customDialogRequest(const QString &dialogName, const QVariantMap &data);
    void bindFailed() const;
+   void headlessPubKeyChanged(const QString &headlessPubKey) const;
+   void terminalHandshakeFailed(const std::string &peerAddress);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    NetworkType netType_;
    std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   std::shared_ptr<QmlFactory>               qmlFactory_;
    std::shared_ptr<SignerInterfaceListener>  listener_;
+   std::shared_ptr<QmlBridge>  qmlBridge_;
    bool closeHeadless_{true};
+
+   QString headlessPubKey_;
 };
 
 

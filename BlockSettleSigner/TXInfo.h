@@ -5,7 +5,7 @@
 #include <QObject>
 #include <QStringList>
 #include "CoreWallet.h"
-
+#include "bs_signer.pb.h"
 
 namespace bs {
 namespace wallet {
@@ -30,7 +30,10 @@ class TXInfo : public QObject
 public:
    TXInfo() : QObject(), txReq_() {}
    TXInfo(const bs::core::wallet::TXSignRequest &txReq) : QObject(), txReq_(txReq) {}
+   TXInfo(const Blocksettle::Communication::signer::SignTxRequest &txRequest): QObject(), txReq_(getCoreSignTxRequest(txRequest)) {}
    TXInfo(const TXInfo &src) : QObject(), txReq_(src.txReq_) { }
+
+   static bs::core::wallet::TXSignRequest getCoreSignTxRequest(const Blocksettle::Communication::signer::SignTxRequest &req);
 
    bool isValid() const { return txReq_.isValid(); }
    int nbInputs() const { return (int)txReq_.inputs.size(); }

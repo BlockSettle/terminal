@@ -114,6 +114,8 @@ private:
    void settingChanged(int setting);
    bool verifyServerIDKey();
 
+   void setStringSetting(const QString &val, std::string *oldValue, int setting);
+
    std::string writableDir_;
    std::string fileName_;
    std::string srvIDKey_;

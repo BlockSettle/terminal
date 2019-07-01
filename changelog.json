@@ -1,7 +1,42 @@
 {
-   "latest_version": "0.17.3",
-   "release_date": "26 Jun 2019",
+   "latest_version": "0.17.5",
+   "release_date": "01 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.17.5",
+         "previous_version": "0.17.4",
+         "release_date": "01 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Signer/settlement dialogs",
+            "Signer ui fixes",
+            "Add scripts folder in installer",
+            "Connect chat user to PB",
+            "Inform user on keys changed",
+            "Improve user edit dialog"
+         ],
+         "bug_fixes": [],
+         "revision": "c8b3282a",
+         "common_revision": "3105a760"
+      },
+      {
+         "version_string": "0.17.4",
+         "previous_version": "0.17.3",
+         "release_date": "27 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Show signer error for unknown terminals",
+            "Set focus on chat on notification clock",
+            "Chat: Upload new public key",
+            "Report different error if 2-way client's auth failed",
+            "Put edit contact dialog centered over terminal main window"
+         ],
+         "bug_fixes": [
+            "Fix problem with signer settings update"
+         ],
+         "revision": "4a9702cd",
+         "common_revision": "600d5798"
+      },
       {
          "version_string": "0.17.3",
          "previous_version": "0.17.2",

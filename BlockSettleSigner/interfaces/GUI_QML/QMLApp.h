@@ -59,26 +59,24 @@ signals:
 private slots:
    void onReady();
    void onConnectionError();
-   void onHeadlessBindFailed();
+   void onHeadlessBindUpdated(bool success);
    void onWalletsSynced();
    void onPasswordAccepted(const QString &walletId
                            , bs::wallet::QPasswordData *passwordData
                            , bool cancelledByUser);
    void onOfflinePassword(const bs::core::wallet::TXSignRequest &);
    void onPasswordRequested(const bs::core::wallet::TXSignRequest &, const QString &prompt);
-   void onAutoSignPwdRequested(const std::string &walletId);
-   void onOfflineChanged();
-   void onListenSocketChanged();
    void onLimitsChanged();
    void onSettingChanged(int);
    void onSysTrayMsgClicked();
    void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
    void onCancelSignTx(const BinaryData &txId);
    void onCustomDialogRequest(const QString &dialogName, const QVariantMap &data);
+   void onTerminalHandshakeFailed(const std::string &peerAddress);
 
 private:
    void settingsConnections();
-   void requestPassword(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
+   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
 
    void registerQtTypes();
 
@@ -109,6 +107,8 @@ private:
 #endif // BS_USE_DBUS
 
    std::unordered_set<std::string>  offlinePasswordRequests_;
+
+   std::unordered_set<std::string> lastFailedTerminals_;
 };
 
 #endif // __QML_APP_H__

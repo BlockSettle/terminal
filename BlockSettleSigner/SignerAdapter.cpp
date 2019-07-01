@@ -21,8 +21,9 @@ namespace {
 using namespace Blocksettle::Communication;
 
 SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<QmlBridge> &qmlBridge
    , const NetworkType netType, const BinaryData* inSrvIDKey)
-   : QObject(nullptr), logger_(logger), netType_(netType)
+   : QObject(nullptr), logger_(logger), qmlBridge_(qmlBridge), netType_(netType)
 {
    ZmqBIP15XDataConnectionParams params;
    params.ephemeralPeers = true;
@@ -46,12 +47,17 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       adapterConn->addAuthPeer(ZmqBIP15XPeer(connectAddr, *inSrvIDKey));
    }
 
-   listener_ = std::make_shared<SignerInterfaceListener>(logger, adapterConn, this);
+   listener_ = std::make_shared<SignerInterfaceListener>(logger, qmlBridge_, adapterConn, this);
    if (!adapterConn->openConnection(kLocalAddrV4, kLocalAddrPort
       , listener_.get())) {
       throw std::runtime_error("adapter connection failed");
    }
 
+/*   requestHeadlessPubKey([this](const std::string &key){
+      headlessPubKey_ = QString::fromStdString(key);
+      emit headlessPubKeyChanged(headlessPubKey_);
+   });   // TODO: decide whether this code is really required
+*/
    signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
 }
 
@@ -72,7 +78,7 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
    return walletsMgr_;
 }
 
-void SignerAdapter::signTxRequest(const bs::core::wallet::TXSignRequest &txReq
+void SignerAdapter::signOfflineTxRequest(const bs::core::wallet::TXSignRequest &txReq
    , const SecureBinaryData &password, const std::function<void(const BinaryData &)> &cb)
 {
    const auto reqId = signContainer_->signTXRequest(txReq, SignContainer::TXSignMode::Full, password, true);
@@ -89,18 +95,11 @@ void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const Secu
    , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb
    , signer::PacketType pt)
 {
-   signer::DecryptWalletRequest request;
+   signer::DecryptWalletEvent request;
    request.set_wallet_id(walletId);
    request.set_password(password.toBinStr());
    const auto reqId = listener_->send(pt, request.SerializeAsString());
    listener_->setDecryptNodeCb(reqId, cb);
-}
-
-void SignerAdapter::getHeadlessPubKey(const std::function<void (const std::string &)> &cb)
-{
-   signer::HeadlessPubKeyRequest request;
-   const auto reqId = listener_->send(signer::HeadlessPubKeyRequestType, request.SerializeAsString());
-   listener_->setHeadlessPubKeyCb(reqId, cb);
 }
 
 void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function<void()> &cb)
@@ -109,22 +108,6 @@ void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function
    request.set_path(walletsDir.toStdString());
    const auto reqId = listener_->send(signer::ReloadWalletsType, request.SerializeAsString());
    listener_->setReloadWalletsCb(reqId, cb);
-}
-
-void SignerAdapter::setOnline(bool value)
-{
-   signer::ReconnectRequest request;
-   request.set_online(value);
-   listener_->send(signer::ReconnectTerminalType, request.SerializeAsString());
-}
-
-void SignerAdapter::reconnect(const QString &address, const QString &port)
-{
-   signer::ReconnectRequest request;
-   request.set_online(true);
-   request.set_listen_address(address.toStdString());
-   request.set_listen_port(port.toStdString());
-   listener_->send(signer::ReconnectTerminalType, request.SerializeAsString());
 }
 
 void SignerAdapter::setLimits(bs::signer::Limits limits)
@@ -143,12 +126,12 @@ void SignerAdapter::syncSettings(const std::unique_ptr<Blocksettle::Communicatio
 }
 
 void SignerAdapter::passwordReceived(const std::string &walletId
-   , const SecureBinaryData &password, bool cancelledByUser)
+   , bs::error::ErrorCode result, const SecureBinaryData &password)
 {
-   signer::DecryptWalletRequest request;
+   signer::DecryptWalletEvent request;
    request.set_wallet_id(walletId);
    request.set_password(password.toBinStr());
-   request.set_cancelled_by_user(cancelledByUser);
+   request.set_errorcode(static_cast<uint32_t>(result));
    listener_->send(signer::PasswordReceivedType, request.SerializeAsString());
 }
 
@@ -252,6 +235,17 @@ void SignerAdapter::activateAutoSign(const std::string &walletId
 void SignerAdapter::walletsListUpdated()
 {
    logger_->debug("[{}]", __func__);
-   walletsMgr_->reset();
-   walletsMgr_->syncWallets();
+   getWalletsManager()->reset();
+   getWalletsManager()->syncWallets();
+}
+
+QString SignerAdapter::headlessPubKey() const
+{
+   return headlessPubKey_;
+}
+
+void SignerAdapter::setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory)
+{
+   qmlFactory_ = qmlFactory;
+   listener_->setQmlFactory(qmlFactory);
 }

@@ -3,7 +3,7 @@ Name "BlockSettle Terminal"
 # General Symbol Definitions
 !define COMPANY "BlockSettle AB"
 !define URL http://blocksettle.com/
-!define VERSION "0.17.3"
+!define VERSION "0.17.5"
 
 # MultiUser Symbol Definitions
 !define MULTIUSER_EXECUTIONLEVEL Highest
@@ -127,8 +127,10 @@ Section "install"
             File ..\..\build_terminal\Release\bin\Release\blocksettle_signer.exe
             File ..\..\build_terminal\Release\bin\Release\bs_signer_gui.exe
 #	${Endif}
+        SetOutPath $INSTDIR\scripts
         File ..\..\Scripts\DealerAutoQuote.qml
         File ..\..\Scripts\RFQBot.qml
+        SetOutPath $INSTDIR
         CreateShortcut "$DESKTOP\BlockSettle Terminal.lnk" $INSTDIR\blocksettle.exe
         CreateShortcut "$DESKTOP\BlockSettle Signer.lnk" $INSTDIR\blocksettle_signer.exe
         !insertmacro CREATE_SMGROUP_SHORTCUT "BlockSettle Terminal" "$INSTDIR\blocksettle.exe" ""

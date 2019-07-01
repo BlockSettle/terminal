@@ -1,7 +1,8 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
-import QtQuick.Dialogs 1.2
+import Qt.labs.platform 1.1
+
 import com.blocksettle.QmlFactory 1.0
 
 import "StyledControls"
@@ -11,11 +12,6 @@ import "BsDialogs"
 import "js/helper.js" as JsHelper
 
 Item {
-    DirSelectionDialog {
-        id: ldrWalletsDirDlg
-        title: qsTr("Select wallets directory")
-    }
-
     Component.onCompleted: {
         qmlFactory.requestHeadlessPubKey()
     }
@@ -302,22 +298,21 @@ Item {
                     Layout.maximumWidth: 150
                     Layout.maximumHeight: 22
                     Layout.rightMargin: 6
-                    onClicked: {
-                        exportSignerPubKeyDlg.open()
-                        exportSignerPubKeyDlg.accepted.connect(function(){
-                            var zmqPubKey = qmlFactory.headlessPubKey
-                            JsHelper.saveTextFile(exportSignerPubKeyDlg.fileUrl, zmqPubKey)
-                        })
-                    }
+                    onClicked: exportHeadlessPubKeyDlg.open()
+
                     FileDialog {
-                        id: exportSignerPubKeyDlg
-                        visible: false
+                        id: exportHeadlessPubKeyDlg
                         title: "Save Signer ID Key"
-                        selectFolder: false
-                        selectExisting: false
+
+                        currentFile: StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/signer_id_key.pub"
+                        folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+                        fileMode: FileDialog.SaveFile
                         nameFilters: [ "Key files (*.pub)", "All files (*)" ]
-                        selectedNameFilter: "*.pub"
-                        folder: shortcuts.documents
+
+                        onAccepted: {
+                            var zmqPubKey = qmlFactory.headlessPubKey
+                            JsHelper.saveTextFile(file, zmqPubKey)
+                        }
                     }
                 }
             }

@@ -20,6 +20,7 @@
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
+using namespace bs::error;
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<HeadlessSettings> &params, const std::shared_ptr<DispatchQueue> &queue)
@@ -84,7 +85,11 @@ void HeadlessAppObj::start()
 
    guiListener_->sendStatusUpdate();
 
-   onlineProcessing();
+   if (!settings_->offline()) {
+      startTerminalsProcessing();
+   } else {
+      SPDLOG_LOGGER_INFO(logger_, "do not stop listening for terminal connections (offline)");
+   }
 }
 
 void HeadlessAppObj::stop()
@@ -171,12 +176,15 @@ void HeadlessAppObj::startInterface()
    }
 }
 
-void HeadlessAppObj::onlineProcessing()
+void HeadlessAppObj::startTerminalsProcessing()
 {
    if (terminalConnection_) {
       logger_->debug("[{}] already online", __func__);
       return;
    }
+
+   SPDLOG_LOGGER_INFO(logger_, "start listening for terminal connections");
+
    logger_->debug("Using command socket {}:{}, network {}"
       , settings_->listenAddress(), settings_->listenPort()
       , (settings_->testNet() ? "testnet" : "mainnet"));
@@ -279,6 +287,20 @@ void HeadlessAppObj::onlineProcessing()
    guiListener_->sendStatusUpdate();
 }
 
+void HeadlessAppObj::stopTerminalsProcessing()
+{
+   if (!terminalListener_) {
+      return;
+   }
+
+   SPDLOG_LOGGER_INFO(logger_, "stop listening for terminal connections");
+
+   // Send message that server has stopped
+   terminalListener_->disconnect();
+   terminalConnection_.reset();
+   terminalListener_->resetConnection(nullptr);
+}
+
 ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
 {
    return terminalConnection_.get();
@@ -348,40 +370,17 @@ void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::fun
    cb();
 }
 
-void HeadlessAppObj::setOnline(bool value)
-{
-   if (value && terminalConnection_) {
-      return;
-   }
-   logger_->info("[{}] changing online state to {}", __func__, value);
-   if (value) {
-      onlineProcessing();
-   }
-   else {
-      // Send message that server has stopped
-      terminalListener_->disconnect();
-      terminalConnection_.reset();
-      terminalListener_->resetConnection(nullptr);
-   }
-}
-
-void HeadlessAppObj::reconnect(const std::string &listenAddr, const std::string &port)
-{
-   setOnline(false);
-//   settings_->setListenAddress(QString::fromStdString(listenAddr));  // won't be any QString trans-
-//   settings_->setPort(QString::fromStdString(port));  // formations once SignerSettings are split, too
-   setOnline(true);
-}
-
 void HeadlessAppObj::setLimits(bs::signer::Limits limits)
 {
    terminalListener_->SetLimits(limits);
 }
 
-void HeadlessAppObj::passwordReceived(const std::string &walletId
-   , const SecureBinaryData &password, bool cancelledByUser)
+void HeadlessAppObj::passwordReceived(const std::string &walletId, ErrorCode result
+   , const SecureBinaryData &password)
 {
-   terminalListener_->passwordReceived(walletId, password, cancelledByUser);
+   if (terminalListener_) {
+      terminalListener_->passwordReceived(walletId, result, password);
+   }
 }
 
 void HeadlessAppObj::close()
@@ -407,13 +406,15 @@ bs::error::ErrorCode HeadlessAppObj::activateAutoSign(const std::string &walletI
    return bs::error::ErrorCode::InternalError;
 }
 
-void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &settings)
+void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Settings &settings)
 {
    const auto prevTrustedTerminals = settings_->trustedTerminals();
-   if (!settings_->update(settings)) {
-      logger_->error("[{}] failed to update settings", __func__);
-      return;
-   }
+
+   const bool needReconnect = settings.offline() != settings_->offline()
+         || settings.listen_address() != settings_->listenAddress()
+         || std::to_string(settings.listen_port()) != settings_->listenPort();
+
+   settings_->update(settings);
 
    const auto trustedTerminals = settings_->trustedTerminals();
    if (terminalConnection_ && (trustedTerminals != prevTrustedTerminals)) {
@@ -443,5 +444,17 @@ void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communica
 
       logger_->info("[{}] Updating {} trusted keys", __func__, updatedKeys.size());
       terminalConnection_->updatePeerKeys(updatedKeys);
+   }
+
+   if (needReconnect) {
+      // Stop old connection at any case (if possible)
+      if (terminalConnection_) {
+         stopTerminalsProcessing();
+      }
+
+      // Start new connection only if we are not offline
+      if (!settings_->offline()) {
+         startTerminalsProcessing();
+      }
    }
 }
