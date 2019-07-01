@@ -24,7 +24,6 @@ class UserSearchModel;
 class ChatTreeModelWrapper;
 
 class ChatClient : public BaseChatClient
-      , public ChatItemActionsHandler
       , public ChatSearchActionsHandler
       , public ChatMessageReadHandler
       , public ModelChangesHandler
@@ -59,21 +58,22 @@ public:
    std::shared_ptr<Chat::Data> sendRoomOwnMessage(
          const std::string& message, const std::string &receiver);
 
-   void sendFriendRequest(const std::string &friendUserId);
+   void createPendingFriendRequest(const std::string& userId);
+   void onContactRequestPositiveAction(const std::string& contactId, const std::string &message);
+   void onContactRequestNegativeAction(const std::string& contactId);
+   void sendFriendRequest(const std::string &friendUserId, const std::string& message = std::string());
    void acceptFriendRequest(const std::string &friendUserId);
    void rejectFriendRequest(const std::string &friendUserId);
    void removeFriendOrRequest(const std::string& userId);
 
    void clearSearch();
    bool isFriend(const std::string &userId);
+   void onEditContactRequest(std::shared_ptr<Chat::Data> crecord);
 
    Chat::Data_ContactRecord getContact(const std::string &userId) const;
 
    void retrieveUserMessages(const std::string &userId);
    void loadRoomMessagesFromDB(const std::string& roomId);
-
-   void confirmContactList(const std::vector<std::shared_ptr<Chat::Data> > &confirmedList
-                           , const std::vector<std::shared_ptr<Chat::Data> > &declinedList);
 
 private:
    void initMessage(Chat::Data *msg, const std::string& receiver);
@@ -114,6 +114,7 @@ protected:
    void onSearchResult(const std::vector<std::shared_ptr<Chat::Data>>& userData) override;
 
    void onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData) override;
+   void onCRMessageReceived(const std::shared_ptr<Chat::Data>& messageData) override;
    void onRoomMessageReceived(const std::shared_ptr<Chat::Data>& messageData) override;
 
    void onMessageSent(const std::string& receiverId, const std::string& localId, const std::string& serverId) override;
@@ -123,15 +124,7 @@ protected:
    void onContactRejected(const std::string& contactId) override;
    void onFriendRequest(const std::string& userId, const std::string& contactId, const BinaryData& pk) override;
    void onContactRemove(const std::string& contactId) override;
-
-   // ChatItemActionsHandler interface
-public:
-   void onActionAddToContacts(const std::string& userId) override;
-   void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) override;
-   void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) override;
-   void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) override;
-   void onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord) override;
-   bool onActionIsFriend(const std::string& userId) override;
+   void onCreateOutgoingContact(const std::string& contactId) override;
 
    // ChatSearchActionsHandler interface
 public:

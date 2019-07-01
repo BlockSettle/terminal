@@ -61,7 +61,7 @@ private slots:
    void onAddToContacts(bool)
    {
       qDebug() << __func__;
-      if (!handler_){
+      if (!handler_) {
          return;
       }
       //handler_->onActionAddToContacts(currentContact_);
@@ -70,7 +70,7 @@ private slots:
    void onRemoveFromContacts(bool)
    {
       qDebug() << __func__;
-      if (!handler_){
+      if (!handler_) {
          return;
       }
 
@@ -92,7 +92,7 @@ private slots:
 
    void onAcceptFriendRequest(bool)
    {
-      if (!handler_){
+      if (!handler_) {
          return;
       }
       handler_->onActionAcceptContactRequest(currentContact_);
@@ -100,7 +100,7 @@ private slots:
 
    void onDeclineFriendRequest(bool)
    {
-      if (!handler_){
+      if (!handler_) {
          return;
       }
       handler_->onActionRejectContactRequest(currentContact_);
@@ -112,7 +112,7 @@ private slots:
 
    void prepareContactMenu()
    {
-      if (!currentContact_){
+      if (!currentContact_) {
          return;
       }
 
@@ -247,11 +247,11 @@ void ChatClientUserView::editContact(std::shared_ptr<Chat::Data> crecord)
 void ChatClientUserView::onCustomContextMenu(const QPoint & point)
 {
    if (!contextMenu_) {
-      if (handler_){
-         contextMenu_ = new ChatUsersContextMenu(handler_.get(), this);
+      if (handler_) {
+         contextMenu_ = new ChatUsersContextMenu(handler_, this);
       }
    }
-   if (contextMenu_){
+   if (contextMenu_) {
       contextMenu_->execMenu(point);
    }
 }
@@ -289,24 +289,53 @@ void ChatClientUserView::updateDependUI(CategoryElement *element)
    auto data = static_cast<CategoryElement*>(element)->getDataObject();
    switch (element->getType()) {
       case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:{
-         if (label_){
+         if (label_) {
             label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->room().id()));
          }
       } break;
       case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
-         if (label_){
+         if (label_) {
             label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->contact_record().contact_id()));
          }
       } break;
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:{
+         if (label_) {
+            QString labelPattern = QObject::tr("Contact request  #%1%2")
+                                           .arg(QString::fromStdString(data->contact_record().contact_id()));
+            QString stringStatus = QLatin1String("");
+
+            switch (data->contact_record().status()) {
+               case Chat::ContactStatus::CONTACT_STATUS_INCOMING:
+                  stringStatus = QLatin1String("-INCOMING");
+                  break;
+               case Chat::ContactStatus::CONTACT_STATUS_OUTGOING:
+                  stringStatus = QLatin1String("-OUTGOING SEND");
+                  break;
+               case Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING:
+                  stringStatus = QLatin1String("-OUTGOING PENDING");
+                  break;
+               case Chat::ContactStatus::CONTACT_STATUS_REJECTED:
+                  stringStatus = QLatin1String("-REJECTED");
+                  break;
+               default:
+                  stringStatus =
+                        QString::fromStdString(Chat::ContactStatus_Name(data->contact_record().status()))
+                        .prepend (QLatin1Char('-'));
+                  break;
+            }
+
+            label_->setText(labelPattern.arg(stringStatus));
+         }
+      } break;
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
-         if (label_){
+         if (label_) {
             label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->user().user_id()));
          }
       } break;
       //XXXOTC
       // case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:
       // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:{
-      //    if (label_){
+      //    if (label_) {
       //       label_->setText(QObject::tr("Trading with ..."));
       //    }
       // } break;
@@ -338,7 +367,14 @@ void ChatClientUserView::notifyElementUpdated(CategoryElement *element)
    }
 }
 
-void ChatClientUserView::setHandler(std::shared_ptr<ChatItemActionsHandler> handler)
+void ChatClientUserView::notifyCurrentAboutToBeRemoved()
+{
+   for (auto watcher : watchers_) {
+      watcher->onCurrentElementAboutToBeRemoved();
+   }
+}
+
+void ChatClientUserView::setHandler(ChatItemActionsHandler * handler)
 {
    handler_ = handler;
 }
@@ -353,6 +389,7 @@ void ChatClientUserView::currentChanged(const QModelIndex &current, const QModel
       switch (item->getType()) {
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
          case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
          case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
             auto element = static_cast<CategoryElement*>(item);
             updateDependUI(element);
@@ -381,8 +418,10 @@ void ChatClientUserView::dataChanged(const QModelIndex &topLeft, const QModelInd
          }
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
          case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
          {
             auto node = static_cast<CategoryElement*>(item);
+            updateDependUI(node);
             notifyElementUpdated(node);
             break;
          }
@@ -405,4 +444,22 @@ void ChatClientUserView::rowsInserted(const QModelIndex &parent, int start, int 
    // }
 
    QTreeView::rowsInserted(parent, start, end);
+}
+
+void ChatClientUserView::rowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
+{
+   bool callDefaultSelection = false;
+
+   for (int i = start; i <= end; i++) {
+      if (model()->index(i, 0, parent) == currentIndex()) {
+         callDefaultSelection = true;
+         break;
+      }
+   }
+
+   //I'm using callDefaultSelection flag in case if
+   //default element that will be selected will be in start to end range
+   if (callDefaultSelection && handler_) {
+      notifyCurrentAboutToBeRemoved();
+   }
 }

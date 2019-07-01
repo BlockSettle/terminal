@@ -34,6 +34,7 @@ enum ContactStatus
     CONTACT_STATUS_INCOMING = 2;
     CONTACT_STATUS_OUTGOING = 3;
     CONTACT_STATUS_REJECTED = 4;
+    CONTACT_STATUS_OUTGOING_PENDING = 5;
 }
 
 enum UserStatus
@@ -250,6 +251,8 @@ message Request
         string sender_id = 1;
         string receiver_id = 2;
         ContactsAction action = 3;
+        bytes sender_pub_key = 4;
+        Data message = 5;
     }
 
     message ModifyContactsServer
@@ -394,6 +397,7 @@ message Response
         ContactsAction action = 3;
         bytes sender_public_key = 4;
         int64 sender_public_key_timestamp = 5;
+        Data message = 6;
     }
 
     message ModifyContactsServer

@@ -199,6 +199,11 @@ void BaseChatClient::setSavedKeys(std::map<std::string, BinaryData>&& loadedKeys
    std::swap(contactPublicKeys_, loadedKeys);
 }
 
+void BaseChatClient::onCreateOutgoingContact(const std::string &contactId)
+{
+   addOrUpdateContact(contactId, Chat::CONTACT_STATUS_OUTGOING);
+}
+
 bool BaseChatClient::sendRequest(const Chat::Request& request)
 {
    logger_->debug("[BaseChatClient::{}] send: \n{}", __func__, ProtobufUtils::toJson(request));
@@ -213,13 +218,58 @@ bool BaseChatClient::sendRequest(const Chat::Request& request)
 
 bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId)
 {
+   return sendFriendRequestToServer(friendUserId, nullptr);
+}
+
+bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId, std::shared_ptr<Chat::Data> message, bool isFromPendings)
+{
+   if (message) {
+
+      message->set_direction(Chat::Data_Direction_SENT);
+
+      if (!isFromPendings) {
+         onCreateOutgoingContact(friendUserId);
+         encryptByIESAndSaveMessageInDb(message);
+         onCRMessageReceived(message);
+      }
+
+      const auto &contactPublicKeyIterator = contactPublicKeys_.find(friendUserId);
+      if (contactPublicKeyIterator == contactPublicKeys_.end()) {
+         // Ask for public key from peer. Enqueue the message to be sent, once we receive the
+         // necessary public key.
+         pending_contact_requests_.insert({friendUserId, message});
+
+         // Send our key to the peer.
+         Chat::Request request;
+         auto d = request.mutable_ask_for_public_key();
+         d->set_asking_node_id(currentUserId_);
+         d->set_peer_id(friendUserId);
+         return sendRequest(request);
+      }
+
+      auto msgEncrypted = encryptMessageToSendIES(contactPublicKeyIterator->second, message);
+      Chat::Request request;
+      auto d = request.mutable_modify_contacts_direct();
+      d->set_sender_id(currentUserId_);
+      d->set_receiver_id(friendUserId);
+      d->set_action(Chat::CONTACTS_ACTION_REQUEST);
+      d->set_sender_pub_key(getOwnAuthPublicKey().toBinStr());
+      *d->mutable_message() = std::move(*msgEncrypted);
+      return sendRequest(request);
+   }
+
    Chat::Request request;
    auto d = request.mutable_modify_contacts_direct();
    d->set_sender_id(currentUserId_);
    d->set_receiver_id(friendUserId);
    d->set_action(Chat::CONTACTS_ACTION_REQUEST);
+   d->set_sender_pub_key(getOwnAuthPublicKey().toBinStr());
 
-   return sendRequest(request);
+   if (sendRequest(request)) {
+      onCreateOutgoingContact(friendUserId);
+      return true;
+   }
+   return false;
 }
 
 bool BaseChatClient::sendAcceptFriendRequestToServer(const std::string &friendUserId)
@@ -397,7 +447,21 @@ void BaseChatClient::OnModifyContactsDirectResponse(const Chat::Response_ModifyC
       case Chat::CONTACTS_ACTION_REQUEST: {
          actionString = "ContactsAction::Request";
          const std::string &receiverId = response.receiver_id();
-         onFriendRequestReceived(receiverId, senderId, publicKey, publicKeyTimestamp);
+         const auto pubKey = BinaryData(response.sender_public_key());
+         if (response.has_message()) {
+            auto message = std::make_shared<Chat::Data>(response.message());
+            onFriendRequestReceived(receiverId,
+                                 senderId,
+                                 pubKey,
+                                 publicKeyTimestamp,
+                                 message);
+         } else {
+            onFriendRequestReceived(receiverId,
+                                 senderId,
+                                 pubKey,
+                                 publicKeyTimestamp,
+                                 nullptr);
+         }
          break;
       }
       case Chat::CONTACTS_ACTION_REMOVE: {
@@ -434,8 +498,9 @@ void BaseChatClient::OnModifyContactsServerResponse(const Chat::Response_ModifyC
 
 void BaseChatClient::OnContactsListResponse(const Chat::Response_ContactsList & response)
 {
-   std::vector<std::shared_ptr<Chat::Data>> newList;
-   std::vector<std::shared_ptr<Chat::Data>> toConfirmList;
+   std::vector<std::shared_ptr<Chat::Data>> checkedList;
+   std::vector<std::shared_ptr<Chat::Data>> absolutelyNewList;
+   std::vector<std::shared_ptr<Chat::Data>> toConfirmKeysList;
    for (const auto& contact : response.contacts()) {
       if (!contact.has_contact_record()) {
          logger_->error("[BaseChatClient::{}] invalid response detected", __func__);
@@ -447,39 +512,81 @@ void BaseChatClient::OnContactsListResponse(const Chat::Response_ContactsList & 
       const auto publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact.contact_record().public_key_timestamp());
 
       if (!chatDb_->compareLocalData(userId, publicKey, publicKeyTimestamp)) {
-         toConfirmList.push_back(std::make_shared<Chat::Data>(contact));
+         if (chatDb_->isContactExist(userId)) {
+            toConfirmKeysList.push_back(std::make_shared<Chat::Data>(contact));
+         } else {
+            absolutelyNewList.push_back(std::make_shared<Chat::Data>(contact));
+         }
          continue;
       }
 
-      newList.push_back(std::make_shared<Chat::Data>(contact));
+      checkedList.push_back(std::make_shared<Chat::Data>(contact));
    }
 
-   if (!newList.empty()) {
-      // false - we don't need update contact in db since it is already fine in compareLocalData
-      OnContactListConfirmed(newList, false);
-   }
+//   if (!checkedList.empty()) {
+//      // false - we don't need update contact in db since it is already fine in compareLocalData
+//      OnContactListConfirmed(checkedList, false);
+//   }
 
-   if (!toConfirmList.empty()) {
-      // TODO: if confirmed in GUI execute OnContactListConfirmed and remove this comment
-      emit ConfirmContactNewKeyData(toConfirmList);
+//   if (!toConfirmKeysList.empty()) {
+//      // TODO: if confirmed in GUI execute OnContactListConfirmed and remove this comment
+//      emit ConfirmContactsNewData(toConfirmKeysList);
+//   }
+
+   if (toConfirmKeysList.empty() && absolutelyNewList.empty()) {
+      OnContactListConfirmed(checkedList, {}, {});
+   } else {
+      emit ConfirmContactsNewData(checkedList,
+                                  toConfirmKeysList,
+                                  absolutelyNewList);
    }
 }
 
-void BaseChatClient::OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts, const bool& updateContactDb)
+void BaseChatClient::OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& checked,
+                                            const std::vector<std::shared_ptr<Chat::Data>>& keyUpdate,
+                                            const std::vector<std::shared_ptr<Chat::Data>>& absolutelyNew)
 {
-   for (const auto& contact : remoteContacts) {
-      const auto& userId = contact->contact_record().contact_id();
-      const auto& publicKey = BinaryData(contact->contact_record().public_key());
-      const auto& publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact->contact_record().public_key_timestamp());
+   enum ContactListKeyAction {
+      Leave,
+      Update,
+      Add
+   };
 
-      contactPublicKeys_[userId] = publicKey;
+   std::vector<std::pair<std::vector<std::shared_ptr<Chat::Data>>, ContactListKeyAction>> updateLists;
 
-      if (updateContactDb) {
-         chatDb_->updateContactKey(userId, publicKey, publicKeyTimestamp);
+   updateLists.push_back({checked, Leave});
+   updateLists.push_back({keyUpdate, Update});
+   updateLists.push_back({absolutelyNew, Add});
+
+   std::vector<std::shared_ptr<Chat::Data>> resultContactsCollection;
+
+   for (auto updateInfo : updateLists) {
+      for (const auto& contact : updateInfo.first) {
+         const auto& userId = contact->contact_record().contact_id();
+         const auto& publicKey = BinaryData(contact->contact_record().public_key());
+         const auto& publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact->contact_record().public_key_timestamp());
+
+         contactPublicKeys_[userId] = publicKey;
+
+         switch (updateInfo.second) {
+            case Update:
+               if (!chatDb_->updateContactKey(userId, publicKey, publicKeyTimestamp)) {
+                  chatDb_->addKey(userId, publicKey, publicKeyTimestamp);
+               }
+               break;
+            case Add:
+               if (!chatDb_->addKey(userId, publicKey, publicKeyTimestamp)) {
+                  chatDb_->updateContactKey(userId, publicKey, publicKeyTimestamp);
+               }
+               break;
+            default:
+               break;
+         }
       }
+      resultContactsCollection.insert(resultContactsCollection.end(), updateInfo.first.begin(), updateInfo.first.end());
    }
 
-   onContactListLoaded(remoteContacts);
+   onContactListLoaded(resultContactsCollection);
 }
 
 void BaseChatClient::OnChatroomsList(const Chat::Response_ChatroomsList &response)
@@ -643,6 +750,7 @@ void BaseChatClient::OnSendOwnPublicKey(const Chat::Response_SendOwnPublicKey &r
    contactPublicKeys_[peerId] = publicKey;
    chatDb_->updateContactKey(peerId, publicKey, publicKeyTimestamp);
 
+   retrySendQueuedContactRequests(response.sending_node_id());
    retrySendQueuedMessages(response.sending_node_id());
 }
 
@@ -785,7 +893,7 @@ std::shared_ptr<Chat::Data> BaseChatClient::sendMessageDataRequest(const std::sh
          }
          break;
       }
-      case Chat::Data_Message_Encryption_IES:{
+      case Chat::Data_Message_Encryption_IES: {
          auto msgEncrypted = encryptMessageToSendIES(contactPublicKeyIterator->second, messageData);
          if (msgEncrypted) {
             Chat::Request request;
@@ -797,7 +905,7 @@ std::shared_ptr<Chat::Data> BaseChatClient::sendMessageDataRequest(const std::sh
          }
          break;
       }
-      default:{
+      default: {
          Chat::Request request;
          auto d = request.mutable_send_message();
          *d->mutable_message() = *messageData;
@@ -823,6 +931,24 @@ void BaseChatClient::retrySendQueuedMessages(const std::string userId)
 void BaseChatClient::eraseQueuedMessages(const std::string userId)
 {
    enqueued_messages_.erase(userId);
+}
+
+void BaseChatClient::retrySendQueuedContactRequests(const std::string& userId)
+{
+   auto crMessage = pending_contact_requests_.find(userId);
+   if (crMessage != pending_contact_requests_.end()) {
+      auto message = crMessage->second;
+      pending_contact_requests_.erase(crMessage);
+      sendFriendRequestToServer(userId, message, true);
+   }
+}
+
+void BaseChatClient::eraseQueuedContactRequests(const std::string& userId)
+{
+   auto crMessage = pending_contact_requests_.find(userId);
+   if (crMessage != pending_contact_requests_.end()) {
+      pending_contact_requests_.erase(crMessage);
+   }
 }
 
 bool BaseChatClient::encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::Data>& message)
@@ -931,13 +1057,35 @@ std::shared_ptr<Chat::Data> BaseChatClient::decryptIESMessage(const std::shared_
    return msgDecrypted;
 }
 
-void BaseChatClient::onFriendRequestReceived(const std::string &userId, const std::string &contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp)
+void BaseChatClient::onFriendRequestReceived(const std::string &userId, const std::string &contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp, const std::shared_ptr<Chat::Data>& message)
 {
    // incoming public key was replaced by server, it's not directly sent by client
    contactPublicKeys_[contactId] = publicKey;
    chatDb_->addKey(contactId, publicKey, publicKeyTimestamp);
 
    onFriendRequest(userId, contactId, publicKey);
+
+   if (message) {
+      message->set_direction(Chat::Data_Direction_RECEIVED);
+
+      switch (message->message().encryption()) {
+         case Chat::Data_Message_Encryption_IES: {
+            chatDb_->add(message);
+            auto decMsg = decryptIESMessage(message);
+            onCRMessageReceived(decMsg);
+            break;
+         }
+         case Chat::Data_Message_Encryption_UNENCRYPTED: {
+            encryptByIESAndSaveMessageInDb(message);
+            onCRMessageReceived(message);
+            break;
+         }
+         default:
+            ChatUtils::messageFlagSet(message->mutable_message(), Chat::Data_Message_State_INVALID);
+            onCRMessageReceived(message);
+            break;
+      }
+   }
 }
 
 void BaseChatClient::onFriendRequestAccepted(const std::string &contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp)

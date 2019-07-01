@@ -92,7 +92,7 @@ void ChatClient::OnLogoutCompleted()
 void ChatClient::readDatabase()
 {
    ContactRecordDataList clist;
-   chatDb_->getContacts(clist);
+   chatDb_->getContacts(clist, false);
 
    for (const auto &c : clist) {
       auto contact = std::make_shared<Chat::Data>();
@@ -234,25 +234,80 @@ std::shared_ptr<Chat::Data> ChatClient::sendRoomOwnMessage(const std::string& me
    return roomMessage;
 }
 
-void ChatClient::sendFriendRequest(const std::string &friendUserId)
+void ChatClient::createPendingFriendRequest(const std::string &userId)
 {
-   if (model_->findContactItem(friendUserId)) {
+   addOrUpdateContact(userId, Chat::CONTACT_STATUS_OUTGOING_PENDING);
+   auto record = std::make_shared<Chat::Data>();
+   auto d = record->mutable_contact_record();
+   d->set_user_id(model_->currentUser());
+   d->set_contact_id(userId);
+   d->set_status(Chat::CONTACT_STATUS_OUTGOING_PENDING);
+   model_->insertContactObject(record);
+}
+
+void ChatClient::onContactRequestPositiveAction(const std::string &contactId, const std::string& message)
+{
+   auto citem = model_->findContactItem(contactId);
+
+   if (!citem) {
       return;
    }
 
-   Chat::Data_ContactRecord contact;
-   chatDb_->getContact(model_->currentUser(), &contact);
+   switch (citem->contact_record().status()) {
+      case Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING:
+         sendFriendRequest(contactId, message);
+         break;
+      case Chat::ContactStatus::CONTACT_STATUS_INCOMING:
+         acceptFriendRequest(contactId);
+         break;
+      default:
+         break;
+   }
+}
 
-   if (sendFriendRequestToServer(friendUserId)) {
-      auto record = std::make_shared<Chat::Data>();
-      auto d = record->mutable_contact_record();
-      d->set_user_id(model_->currentUser());
-      d->set_contact_id(friendUserId);
-      d->set_status(Chat::CONTACT_STATUS_OUTGOING);
-      d->set_public_key(contact.public_key());
-      d->set_public_key_timestamp(contact.public_key_timestamp());
-      model_->insertContactObject(record);
-      addOrUpdateContact(friendUserId, Chat::CONTACT_STATUS_OUTGOING);
+void ChatClient::onContactRequestNegativeAction(const std::string &contactId)
+{
+   auto citem = model_->findContactItem(contactId);
+
+   if (!citem) {
+      return;
+   }
+
+   switch (citem->contact_record().status()) {
+      case Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING:
+         chatDb_->removeContact(contactId);
+         model_->removeContactRequestNode(contactId);
+         break;
+      case Chat::ContactStatus::CONTACT_STATUS_INCOMING:
+         rejectFriendRequest(contactId);
+         break;
+      default:
+         break;
+   }
+
+}
+
+void ChatClient::sendFriendRequest(const std::string &friendUserId, const std::string& message)
+{
+   auto citem = model_->findContactItem(friendUserId);
+
+   if (citem && citem->contact_record().status() != Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING) {
+      return;
+   }
+
+   std::shared_ptr<Chat::Data> messageData = nullptr;
+   if (!message.empty()) {
+      messageData = std::make_shared<Chat::Data>();
+      initMessage(messageData.get(), friendUserId);
+
+      auto d = messageData->mutable_message();
+      d->set_message(message);
+   }
+
+
+   if (sendFriendRequestToServer(friendUserId, messageData)) {
+      logger_->error("[ChatClient::sendFriendRequest] Friend request sent to {}"
+                     , friendUserId);
    } else {
       logger_->error("[ChatClient::sendFriendRequest] failed to send friend request for {}", friendUserId);
    }
@@ -273,7 +328,7 @@ void ChatClient::acceptFriendRequest(const std::string &friendUserId)
    model_->removeContactRequestNode(contact->contact_record().contact_id());
    model_->insertContactObject(contact, true);
    retrieveUserMessages(contact->contact_record().contact_id());
-   sendAcceptFriendRequestToServer(friendUserId);
+   sendAcceptFriendRequestToServer(contact->contact_record().contact_id());
 }
 
 void ChatClient::rejectFriendRequest(const std::string &friendUserId)
@@ -309,37 +364,7 @@ bool ChatClient::isFriend(const std::string &userId)
    return chatDb_->isContactExist(userId);
 }
 
-Chat::Data_ContactRecord ChatClient::getContact(const std::string &userId) const
-{
-   Chat::Data_ContactRecord contact;
-   chatDb_->getContact(userId, &contact);
-
-   return contact;
-}
-
-void ChatClient::onActionAddToContacts(const std::string& userId)
-{
-   qDebug() << __func__ << " " << QString::fromStdString(userId);
-   return sendFriendRequest(userId);
-}
-
-void ChatClient::onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord)
-{
-   return removeFriendOrRequest(crecord->contact_record().contact_id());
-}
-
-void ChatClient::onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord)
-{
-
-   return acceptFriendRequest(crecord->contact_record().contact_id());
-}
-
-void ChatClient::onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord)
-{
-   return rejectFriendRequest(crecord->contact_record().contact_id());
-}
-
-void ChatClient::onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord)
+void ChatClient::onEditContactRequest(std::shared_ptr<Chat::Data> crecord)
 {
    if (!crecord) {
       return;
@@ -349,12 +374,15 @@ void ChatClient::onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord)
    addOrUpdateContact(contactRecord->contact_id()
                       , contactRecord->status()
                       , contactRecord->display_name());
-   model_->notifyContactChanged(crecord);
+   getDataModel()->notifyContactChanged(crecord);
 }
 
-bool ChatClient::onActionIsFriend(const std::string& userId)
+Chat::Data_ContactRecord ChatClient::getContact(const std::string &userId) const
 {
-   return isFriend(userId);
+   Chat::Data_ContactRecord contact;
+   chatDb_->getContact(userId, &contact);
+
+   return contact;
 }
 
 void ChatClient::onActionSearchUsers(const std::string &text)
@@ -485,7 +513,7 @@ void ChatClient::onUserListChanged(Chat::Command command, const std::vector<std:
 void ChatClient::onMessageSent(const std::string& receiverId, const std::string& localId, const std::string& serverId)
 {
    auto message = model_->findMessageItem(receiverId, localId);
-   if (message){
+   if (message) {
       message->mutable_message()->set_id(serverId);
       ChatUtils::messageFlagSet(message->mutable_message(), Chat::Data_Message_State_SENT);
       model_->notifyMessageChanged(message);
@@ -516,7 +544,7 @@ void ChatClient::onContactAccepted(const std::string& contactId)
          model_->insertContactObject(contactNode->getDataObject()
                                      , contactNode->getOnlineStatus() == ChatContactElement::OnlineStatus::Online);
 
-         retrieveUserMessages(contactId);
+         retrieveUserMessages(holdData->contact_id());
       }
    }
 }
@@ -577,9 +605,41 @@ void ChatClient::onContactRemove(const std::string& contactId)
    }
 }
 
+void ChatClient::onCreateOutgoingContact(const std::string &contactId)
+{
+   //In base class this method calls addOrUpdateContact with Outgoing State
+   BaseChatClient::onCreateOutgoingContact(contactId);
+
+   auto citem = model_->findContactItem(contactId);
+
+   if (citem && citem->contact_record().status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING) {
+       auto d = citem->mutable_contact_record();
+       d->set_status(Chat::CONTACT_STATUS_OUTGOING);
+       model_->notifyContactChanged(citem);
+   } else if (!citem) {
+      Chat::Data_ContactRecord contact;
+      chatDb_->getContact(model_->currentUser(), &contact);
+
+      auto record = std::make_shared<Chat::Data>();
+      auto d = record->mutable_contact_record();
+      d->set_user_id(model_->currentUser());
+      d->set_contact_id(contactId);
+      d->set_status(Chat::CONTACT_STATUS_OUTGOING);
+      d->set_public_key(contact.public_key());
+      d->set_public_key_timestamp(contact.public_key_timestamp());
+      model_->insertContactObject(record);
+   }
+
+}
+
 void ChatClient::onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData)
 {
    model_->insertContactsMessage(messageData);
+}
+
+void ChatClient::onCRMessageReceived(const std::shared_ptr<Chat::Data> &messageData)
+{
+   model_->insertContactRequestMessage(messageData);
 }
 
 void ChatClient::onRoomMessageReceived(const std::shared_ptr<Chat::Data>& messageData)
@@ -614,52 +674,6 @@ void ChatClient::loadRoomMessagesFromDB(const std::string& roomId)
          model_->insertRoomMessage(msg);
       }
    }
-}
-
-void ChatClient::confirmContactList(const std::vector<std::shared_ptr<Chat::Data> > &confirmedList
-                                    , const std::vector<std::shared_ptr<Chat::Data> > &declinedList)
-{
-   std::map<std::string, std::shared_ptr<Chat::Data> > dict;
-
-   ContactRecordDataList clist;
-   chatDb_->getContacts(clist);
-   for (const auto &c : clist) {
-      auto contact = std::make_shared<Chat::Data>();
-      auto d = contact->mutable_contact_record();
-      d->set_user_id(model_->currentUser());
-      d->set_contact_id(c.contact_id());
-      d->set_status(c.status());
-      d->set_display_name(c.display_name());
-      d->set_public_key(c.public_key());
-      d->set_public_key_timestamp(c.public_key_timestamp());
-
-      dict[d->contact_id()] = contact;
-   }
-
-   for (const auto &contact : confirmedList) {
-      if (!contact->has_contact_record()) {
-         logger_->error("[ChatClient::{}] invalid contact", __func__);
-         continue;
-      }
-      dict[contact->mutable_contact_record()->contact_id()] = contact;
-   }
-
-   for (const auto &contact : declinedList) {
-      if (!contact->has_contact_record()) {
-         logger_->error("[ChatClient::{}] invalid contact", __func__);
-         continue;
-      }
-      auto it = dict.find(contact->mutable_contact_record()->contact_id());
-      if (it != dict.end()) {
-         dict.erase(it);
-      }
-   }
-
-   std::vector<std::shared_ptr<Chat::Data> > contacts;
-   for (const auto &item : dict) {
-      contacts.push_back(item.second);
-   }
-   OnContactListConfirmed(contacts, true);
 }
 
 void ChatClient::initMessage(Chat::Data *msg, const std::string &receiver)

@@ -470,6 +470,32 @@
                  </widget>
                 </item>
                 <item>
+                 <widget class="QFrame" name="frameContactActions">
+                  <property name="frameShape">
+                   <enum>QFrame::StyledPanel</enum>
+                  </property>
+                  <property name="frameShadow">
+                   <enum>QFrame::Raised</enum>
+                  </property>
+                  <layout class="QHBoxLayout" name="horizontalLayout_5">
+                   <item>
+                    <widget class="QPushButton" name="pushButton_AcceptSend">
+                     <property name="text">
+                      <string>ACCEPT/SEND</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="pushButton_RejectCancel">
+                     <property name="text">
+                      <string>REJECT/CANCEL</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
                  <widget class="QFrame" name="inputContainer">
                   <property name="darkFrame" stdset="0">
                    <bool>true</bool>

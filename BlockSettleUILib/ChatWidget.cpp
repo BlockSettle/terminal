@@ -13,6 +13,7 @@
 #include "CelerClient.h"
 #include "ChatProtocol/ChatUtils.h"
 #include "ChatSearchListViewItemStyle.h"
+#include "BSMessageBox.h"
 #include "ImportKeyBox.h"
 
 #include <QApplication>
@@ -108,6 +109,7 @@ public:
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
 
       chat_->SetLoggedOutOTCState();
+      chat_->ui_->frameContactActions->setVisible(false);
 
       NotificationCenter::notify(bs::ui::NotifyType::LogOut, {});
    }
@@ -154,6 +156,7 @@ public:
 
    void onStateExit() override {
       chat_->onUserClicked({});
+      chat_->ui_->frameContactActions->setVisible(false);
    }
 
    std::string login(const std::string& /*email*/, const std::string& /*jwt*/
@@ -174,13 +177,14 @@ public:
       std::string messageText = chat_->ui_->input_textEdit->toPlainText().toStdString();
 
       if (!messageText.empty() && !chat_->currentChat_.empty()) {
-         if (!chat_->isRoom()){
+         if (chat_->isContactRequest()) {
+            chat_->onContactRequestAcceptSendClicked();
+         } else if (!chat_->isRoom()) {
             auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
-            chat_->ui_->input_textEdit->clear();
          } else {
             auto msg = chat_->client_->sendRoomOwnMessage(messageText, chat_->currentChat_);
-            chat_->ui_->input_textEdit->clear();
          }
+         chat_->ui_->input_textEdit->clear();
       }
    }
 
@@ -255,6 +259,7 @@ public:
 ChatWidget::ChatWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::ChatWidget)
+   , isContactRequest_(false)
    , needsToStartFirstRoom_(false)
    , chatLoggedInTimestampUtcInMillis_(0)
 {
@@ -270,6 +275,7 @@ ChatWidget::ChatWidget(QWidget *parent)
                                           ui_->messageLabel->minimumWidth());
 
    //Init UI and other stuff
+   ui_->frameContactActions->setVisible(false);
    ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
    otcRequestViewModel_ = new OTCRequestViewModel(this);
@@ -290,6 +296,9 @@ ChatWidget::ChatWidget(QWidget *parent)
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::TradeUpdated, this, &ChatWidget::OnUpdateTradeResponder);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::TradeAccepted, this, &ChatWidget::OnAcceptTradeResponder);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::TradeRejected, this, &ChatWidget::OnCancelCurrentTrading);
+
+   connect(ui_->pushButton_AcceptSend, &QPushButton::clicked, this, &ChatWidget::onContactRequestAcceptSendClicked);
+   connect(ui_->pushButton_RejectCancel, &QPushButton::clicked, this, &ChatWidget::onContactRequestRejectCancelClicked);
 }
 
 ChatWidget::~ChatWidget() = default;
@@ -315,8 +324,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 //   ui_->treeViewUsers->expandAll();
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
    ui_->treeViewUsers->addWatcher(this);
-   ui_->treeViewUsers->setHandler(client_);
-   ui_->textEditMessages->setHandler(client_);
+   ui_->treeViewUsers->setHandler(this);
+   ui_->textEditMessages->setHandler(this);
    ui_->textEditMessages->setMessageReadHandler(client_);
    ui_->textEditMessages->setClient(client_);
    ui_->input_textEdit->setAcceptRichText(false);
@@ -325,6 +334,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    //ui_->chatSearchLineEdit->setActionsHandler(client_);
 
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
+   connect(client_.get(), &ChatClient::ConfirmContactsNewData, this, &ChatWidget::onContactListConfirmationRequested);
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
    connect(client_.get(), &ChatClient::SearchUserListReceived, this, &ChatWidget::onSearchUserListReceived);
    connect(client_.get(), &ChatClient::ConnectedToServer, this, &ChatWidget::onConnectedToServer);
@@ -334,7 +344,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
             NotificationCenter::notify(bs::ui::NotifyType::FriendRequest, {QString::fromStdString(userId)});
    });
    connect(client_.get(), &ChatClient::ConfirmUploadNewPublicKey, this, &ChatWidget::onConfirmUploadNewPublicKey);
-   connect(client_.get(), &ChatClient::ConfirmContactNewKeyData, this, &ChatWidget::onConfirmContactNewKeyData);
+   connect(client_.get(), &ChatClient::ConfirmContactsNewData, this, &ChatWidget::onConfirmContactNewKeyData);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
@@ -613,11 +623,21 @@ void ChatWidget::onConfirmUploadNewPublicKey(const std::string &oldKey, const st
    client_->uploadNewPublicKeyToServer(confirmed);
 }
 
-void ChatWidget::onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data> > &toConfirmList)
+void ChatWidget::onConfirmContactNewKeyData(
+      const std::vector<std::shared_ptr<Chat::Data> > &remoteConfirmed
+      , const std::vector<std::shared_ptr<Chat::Data> > &remoteKeysUpdate
+      , const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutelyNew)
 {
-   std::vector<std::shared_ptr<Chat::Data> > confirmedList;
-   std::vector<std::shared_ptr<Chat::Data> > declinedList;
-   for (const auto &contact : toConfirmList) {
+   Q_UNUSED(remoteConfirmed)
+
+   const auto localContacts = client_->getDataModel()->getAllContacts();
+   std::map<std::string, std::shared_ptr<Chat::Data> > dict;
+   for (const auto &contact : localContacts) {
+      dict[contact->mutable_contact_record()->contact_id()] = contact;
+   }
+
+   std::vector<std::shared_ptr<Chat::Data> > updateList;
+   for (const auto &contact : remoteKeysUpdate) {
       if (!contact || !contact->has_contact_record()) {
          logger_->error("[ChatWidget::{}] invalid contact", __func__);
          continue;
@@ -636,18 +656,49 @@ void ChatWidget::onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Ch
       ImportKeyBox box(BSMessageBox::question
                        , tr("Import Contact '%1' Public Key?").arg(name)
                        , this);
-      box.setAddrPort("");
+      box.setAddrPort(std::string());
       box.setNewKeyFromBinary(contactRecord->public_key());
       box.setOldKeyFromBinary(oldContact.public_key());
       box.setCancelVisible(true);
 
       if (box.exec() == QDialog::Accepted) {
-         confirmedList.push_back(contact);
+         updateList.push_back(contact);
       } else {
-         declinedList.push_back(contact);
+         auto it = dict.find(contact->mutable_contact_record()->contact_id());
+         if (it != dict.end()) {
+            dict.erase(it);
+         }
       }
    }
-   client_->confirmContactList(confirmedList, declinedList);
+
+   std::vector<std::shared_ptr<Chat::Data> > leaveList;
+   for (const auto &item : dict) {
+      leaveList.push_back(item.second);
+   }
+
+   std::vector<std::shared_ptr<Chat::Data> > newList;
+   for (const auto &contact : remoteAbsolutelyNew) {
+      if (!contact || !contact->has_contact_record()) {
+         logger_->error("[ChatWidget::{}] invalid contact", __func__);
+         continue;
+      }
+      auto contactRecord = contact->mutable_contact_record();
+      auto name = QString::fromStdString(contactRecord->contact_id());
+
+      ImportKeyBox box(BSMessageBox::question
+                       , tr("Import new Contact '%1' Public Key?").arg(name)
+                       , this);
+      box.setAddrPort(std::string());
+      box.setNewKeyFromBinary(contactRecord->public_key());
+      box.setOldKey(std::string());
+      box.setCancelVisible(true);
+
+      if (box.exec() == QDialog::Accepted) {
+         newList.push_back(contact);
+      }
+   }
+
+   client_->OnContactListConfirmed(leaveList, updateList, newList);
 }
 
 bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
@@ -679,13 +730,14 @@ bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
 
 void ChatWidget::onSendFriendRequest(const QString &userId)
 {
-   client_->sendFriendRequest(userId.toStdString());
+   //client_->sendFriendRequest(userId.toStdString());
+   onActionCreatePendingOutgoing (userId.toStdString());
    ui_->searchWidget->setListVisible(false);
 }
 
 void ChatWidget::onRemoveFriendRequest(const QString &userId)
 {
-   client_->removeContactFromDB(userId.toStdString());
+   client_->removeFriendOrRequest(userId.toStdString());
    ui_->searchWidget->setListVisible(false);
 }
 
@@ -699,6 +751,16 @@ bool ChatWidget::isRoom()
    return isRoom_;
 }
 
+bool ChatWidget::isContactRequest()
+{
+   return isContactRequest_;
+}
+
+void ChatWidget::setIsContactRequest(bool isCr)
+{
+   isContactRequest_ = isCr;
+}
+
 void ChatWidget::setIsRoom(bool isRoom)
 {
    isRoom_ = isRoom;
@@ -706,6 +768,8 @@ void ChatWidget::setIsRoom(bool isRoom)
 
 void ChatWidget::onElementSelected(CategoryElement *element)
 {
+   ui_->frameContactActions->setVisible(false);
+   setIsContactRequest(false);
    if (element) {
       switch (element->getType()) {
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement: {
@@ -718,7 +782,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             }
          }
          break;
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
             //TODO: Change cast
             auto contact = element->getDataObject();
             if (contact && contact->has_contact_record()) {
@@ -730,8 +794,31 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             }
          }
          break;
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
+            auto contact = element->getDataObject();
+            if (contact && contact->has_contact_record()) {
+               setIsRoom(false);
+               currentChat_ = contact->contact_record().contact_id();
+               ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
+
+               if (cElement->getContactData()->status() ==
+                   Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING) {
+                  setIsContactRequest(true);
+                  ui_->pushButton_AcceptSend->setText(QObject::tr("SEND"));
+                  ui_->pushButton_RejectCancel->setText(QObject::tr("CANCEL"));
+                  ui_->frameContactActions->setVisible(true);
+               } else if (cElement->getContactData()->status() ==
+                          Chat::ContactStatus::CONTACT_STATUS_INCOMING) {
+                  setIsContactRequest(true);
+                  ui_->pushButton_AcceptSend->setText(QObject::tr("ACCEPT"));
+                  ui_->pushButton_RejectCancel->setText(QObject::tr("REJECT"));
+                  ui_->frameContactActions->setVisible(true);
+               }
+            }
+         }
+         break;
          // XXXOTC
-         // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:{
+         // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement: {
          //    ui_->stackedWidgetMessages->setCurrentIndex(0);
          //    auto response = element->getDataObject();
          //    if (response) {
@@ -740,7 +827,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
          //    }
          // }
          // break;
-         // case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:{
+         // case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement: {
          //    ui_->stackedWidgetMessages->setCurrentIndex(0);
          //    auto response = element->getDataObject();
          //    if (response) {
@@ -776,13 +863,30 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
             }
          }
          break;
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
             //TODO: Change cast
             auto contact = element->getDataObject();
             if (contact && contact->has_contact_record() && currentChat_ == contact->contact_record().contact_id()) {
                 ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
                OTCSwitchToContact(contact, cElement->getOnlineStatus()
                                   == ChatContactElement::OnlineStatus::Online);
+            }
+         }
+         break;
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
+            auto contact = element->getDataObject();
+            if (contact && contact->has_contact_record()) {
+               ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
+
+               //Hide buttons if this current chat, but thme shouldn't be visible
+               bool isButtonsVisible = false;
+               if (currentChat_ == contact->contact_record().contact_id()) {
+                  isButtonsVisible =
+                  (cElement->getContactData()->status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING)
+                  || (cElement->getContactData()->status() == Chat::ContactStatus::CONTACT_STATUS_INCOMING);
+
+               }
+               ui_->frameContactActions->setVisible(isButtonsVisible);
             }
          }
          break;
@@ -1143,6 +1247,66 @@ void ChatWidget::onChatMessagesSelectionChanged()
    isChatMessagesSelected_ = true;
 }
 
+void ChatWidget::onActionCreatePendingOutgoing(const std::string &userId)
+{
+   return client_->createPendingFriendRequest(userId);
+   //return client_->sendFriendRequest(userId, std::string("I would like to add you to friends!"));
+}
+
+void ChatWidget::onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord)
+{
+   return client_->removeFriendOrRequest(crecord->contact_record().contact_id());
+}
+
+void ChatWidget::onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord)
+{
+   return client_->acceptFriendRequest(crecord->contact_record().contact_id());
+}
+
+void ChatWidget::onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord)
+{
+    return client_->rejectFriendRequest(crecord->contact_record().contact_id());
+}
+
+void ChatWidget::onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord)
+{
+   return client_->onEditContactRequest(crecord);
+}
+
+bool ChatWidget::onActionIsFriend(const std::string &userId)
+{
+   return client_->isFriend(userId);
+}
+
+void ChatWidget::onContactRequestAcceptSendClicked()
+{
+   std::string messageText = ui_->input_textEdit->toPlainText().toStdString();
+   ui_->input_textEdit->clear();
+   client_->onContactRequestPositiveAction(currentChat_, messageText);
+}
+
+void ChatWidget::onContactRequestRejectCancelClicked()
+{
+   ui_->input_textEdit->clear();
+   client_->onContactRequestNegativeAction(currentChat_);
+}
+
+void ChatWidget::onContactListConfirmationRequested(const std::vector<std::shared_ptr<Chat::Data> > &remoteConfirmed,
+                                                    const std::vector<std::shared_ptr<Chat::Data> > &remoteKeysUpdate,
+                                                    const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutelyNew)
+{
+   QString detailsPattern = QLatin1String("Confirmed contacts: %1\n"
+                                          "Require key update: %2\n"
+                                          "New contacts: %3");
+
+   QString  detailsString = detailsPattern.arg(remoteConfirmed.size()).arg(remoteKeysUpdate.size()).arg(remoteAbsolutelyNew.size());
+
+   if (BSMessageBox(BSMessageBox::question, tr("Contacts Information Update"), tr("Some contacts information require update.")
+                    , tr("Do you want to continue?"), detailsString).exec() == QDialog::Accepted) {
+      client_->OnContactListConfirmed(remoteConfirmed, remoteKeysUpdate, remoteAbsolutelyNew);
+   }
+}
+
 void ChatWidget::showOldMessagesNotification()
 {
    if (oldMessages_.size() > 0) {
@@ -1171,4 +1335,12 @@ void ChatWidget::showOldMessagesNotification()
       oldMessages_.clear();
       NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
    }
+}
+
+void ChatWidget::onCurrentElementAboutToBeRemoved()
+{
+   // To make selectGlobalRoom(); workable
+   currentChat_.clear();
+
+   selectGlobalRoom();
 }

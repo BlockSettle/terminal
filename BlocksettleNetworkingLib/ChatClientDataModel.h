@@ -42,10 +42,14 @@ public:
    bool insertDisplayableDataNode(DisplayableDataNode * displayableNode);
    bool insertRoomMessage(std::shared_ptr<Chat::Data> message);
    bool insertContactsMessage(std::shared_ptr<Chat::Data> message);
+   bool insertContactRequestMessage(std::shared_ptr<Chat::Data> message);
    TreeItem* findChatNode(const std::string& chatId);
    std::vector<std::shared_ptr<Chat::Data>> getAllContacts();
    bool removeContactNode(const std::string& contactId);
-   bool removeContactRequestNode(const std::string& contactId);
+
+   //std::string contactId copy required here
+   bool removeContactRequestNode(const std::string contactId);
+
    std::shared_ptr<Chat::Data> findContactItem(const std::string& contactId);
    ChatContactElement *findContactNode(const std::string& contactId);
    std::shared_ptr<Chat::Data> findMessageItem(const std::string& chatId, const std::string& messgeId);

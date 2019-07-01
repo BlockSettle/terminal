@@ -453,12 +453,22 @@ bool ChatDB::removeContact(const std::string &userId)
    return true;
 }
 
-bool ChatDB::getContacts(ContactRecordDataList &contactList)
+bool ChatDB::getContacts(ContactRecordDataList &contactList, bool onlyWithKeys)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String(
-      "SELECT contacts.user_id, contacts.user_name, contacts.status, user_keys.key, user_keys.key_timestamp FROM contacts " \
-      "LEFT JOIN user_keys on contacts.user_id=user_keys.user_id;"))) {
+
+   bool prepared = false;
+
+   if (onlyWithKeys) {
+      prepared = query.prepare(QLatin1String(
+                  "SELECT contacts.user_id, contacts.user_name, contacts.status, user_keys.key, user_keys.key_timestamp FROM contacts " \
+                  "LEFT JOIN user_keys on contacts.user_id=user_keys.user_id;"));
+   } else {
+      prepared = query.prepare(QLatin1String(
+                  "SELECT contacts.user_id, contacts.user_name, contacts.status FROM contacts;"));
+   }
+
+   if (!prepared) {
       logger_->error("[ChatDB::getContacts] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
