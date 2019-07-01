@@ -368,30 +368,11 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
       return false;
    }
 
-   // Set up Armory as needed. Even though the BDMC object isn't used, it sets
-   // global values that are used later.
-   BlockDataManagerConfig config;
-
    if (parser.isSet(testnetName)) {
       set(netType, (int)NetworkType::TestNet);
    }
 
-   switch (get<NetworkType>(netType)) {
-   case NetworkType::MainNet:
-      config.selectNetwork(NETWORK_MODE_MAINNET);
-      break;
-
-   case NetworkType::TestNet:
-      config.selectNetwork(NETWORK_MODE_TESTNET);
-      break;
-
-   case NetworkType::RegTest:
-      config.selectNetwork(NETWORK_MODE_REGTEST);
-      break;
-
-   default:
-      break;
-   }
+   selectNetwork();
 
    SetHomeDir(parser.value(dataDirName));
    SetBitcoinsDir(parser.value(satoshiDataDirName));
@@ -723,4 +704,29 @@ std::string ApplicationSettings::pubBridgePort() const
 
    assert(false);
    return "";
+}
+
+void ApplicationSettings::selectNetwork()
+{
+   // Set up Armory as needed. Even though the BDMC object isn't used, it sets
+   // global values that are used later.
+   BlockDataManagerConfig config;
+
+   switch (get<NetworkType>(netType)) {
+   case NetworkType::MainNet:
+      config.selectNetwork(NETWORK_MODE_MAINNET);
+      break;
+
+   case NetworkType::TestNet:
+      config.selectNetwork(NETWORK_MODE_TESTNET);
+      break;
+
+   case NetworkType::RegTest:
+      config.selectNetwork(NETWORK_MODE_REGTEST);
+      break;
+
+   default:
+      assert(false);
+      break;
+   }
 }

@@ -672,6 +672,11 @@ bool BSTerminalMainWindow::showStartupDialog()
       hide();
       return false;
    }
+
+   // Ueed update armory settings if case user selects TestNet
+   // (MainNet selected by default at startup)
+   applicationSettings_->selectNetwork();
+
    return true;
 }
 
