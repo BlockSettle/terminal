@@ -26,14 +26,16 @@ void CustomTreeWidget::mouseReleaseEvent(QMouseEvent *ev) {
    }
    else if (ev->button() == Qt::RightButton && copyToClipboardColumn_ != -1) {
       QTreeWidgetItem *item = itemAt(ev->pos());
-      QClipboard *clipboard = QApplication::clipboard();
-      clipboard->setText(item->text(copyToClipboardColumn_));
-      QPoint p = ev->pos();
-      p.setY(p.y() + 3);
-      // placing the tooltip in a timer because mouseReleaseEvent messes with it otherwise
-      QTimer::singleShot(50, [=] {
-         QToolTip::showText(this->mapToGlobal(p), tr("Copied '") + item->text(copyToClipboardColumn_) + tr("' to clipboard."), this);
-      });
+      if (item) {
+         QClipboard *clipboard = QApplication::clipboard();
+         clipboard->setText(item->text(copyToClipboardColumn_));
+         QPoint p = ev->pos();
+         p.setY(p.y() + 3);
+         // placing the tooltip in a timer because mouseReleaseEvent messes with it otherwise
+         QTimer::singleShot(50, [=] {
+            QToolTip::showText(this->mapToGlobal(p), tr("Copied '") + item->text(copyToClipboardColumn_) + tr("' to clipboard."), this);
+         });
+      }
    }
    QTreeWidget::mouseReleaseEvent(ev);
 }
