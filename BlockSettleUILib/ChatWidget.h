@@ -65,6 +65,10 @@ public:
    void setCelerClient(std::shared_ptr<CelerClient> celerClient);
    void updateChat(const bool &isChatTab);
 
+   // Sends friend request to PB contact if needed
+   // TODO: Add PB's public key verfication
+   void connectToPb(const std::string &pbUserId);
+
 public slots:
    void onLoggedOut();
    void onNewChatMessageTrayNotificationClicked(const QString &userId);
@@ -159,11 +163,15 @@ private:
    std::unique_ptr<QTimer> oldNotificationsTimer_;
    std::vector<QVariantList> oldMessages_;
 
+   std::string pbUserId_;
+
 private:
    bool isRoom();
    void setIsRoom(bool);
    void changeState(ChatWidget::State state);
    void initSearchWidget();
+   bool isLoggedIn() const;
+   void tryBecomeContactWithPb();
 
    bool eventFilter(QObject *sender, QEvent *event) override;
 
