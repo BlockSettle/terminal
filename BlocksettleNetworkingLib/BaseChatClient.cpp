@@ -741,19 +741,18 @@ std::shared_ptr<Chat::Data> BaseChatClient::sendMessageDataRequest(const std::sh
       // we should not send friend request from here. this is user action
       // sendFriendRequest(receiver);
       return messageData;
-   } else {
-      // is contact rejected?
+   }
 
-      Chat::Data_ContactRecord contact;
-      chatDb_->getContact(messageData->message().receiver_id(), &contact);
+   // is contact rejected?
+   Chat::Data_ContactRecord contact;
+   chatDb_->getContact(messageData->message().receiver_id(), &contact);
 
-      if (contact.status() == Chat::CONTACT_STATUS_REJECTED) {
-         logger_->error("[BaseChatClient::sendMessageDataRequest] {}",
-                        "Receiver has rejected state. Discarding message."
-                        , receiver);
-         ChatUtils::messageFlagSet(messageData->mutable_message(), Chat::Data_Message_State_INVALID);
-         return messageData;
-      }
+   if (contact.status() == Chat::CONTACT_STATUS_REJECTED) {
+      logger_->error("[BaseChatClient::sendMessageDataRequest] {}",
+                     "Receiver has rejected state. Discarding message."
+                     , receiver);
+      ChatUtils::messageFlagSet(messageData->mutable_message(), Chat::Data_Message_State_INVALID);
+      return messageData;
    }
 
    const auto &contactPublicKeyIterator = contactPublicKeys_.find(receiver);
