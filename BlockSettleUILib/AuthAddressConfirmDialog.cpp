@@ -84,7 +84,7 @@ void AuthAddressConfirmDialog::onAuthAddrSubmitError(const QString &address, con
 {
    BSMessageBox(BSMessageBox::critical, tr("Submission Aborted")
       , tr("The process of submitting an Authentication Address has been aborted."
-           "Any reserved balance will have been returned.")
+           "Any reserved balance will be returned.")
       , error, this).exec();
 
    reject();
@@ -94,7 +94,7 @@ void AuthAddressConfirmDialog::onAuthConfirmSubmitError(const QString &address, 
 {
    BSMessageBox(BSMessageBox::critical, tr("Confirmation Aborted")
       , tr("The process of submitting an Authentication Address has been aborted."
-           "Any reserved balance will have been returned.")
+           "Any reserved balance will be returned.")
       , error, this).exec();
 
    reject();
@@ -117,7 +117,7 @@ void AuthAddressConfirmDialog::onSignFailed(const QString &text)
 
    BSMessageBox(BSMessageBox::critical, tr("Request sign failed")
       , tr("The process of submitting an Authentication Address has been aborted."
-           "Any reserved balance will have been returned.")
+           "Any reserved balance will be returned.")
       , this).exec();
 
    CancelSubmission();
