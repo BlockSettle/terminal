@@ -37,7 +37,7 @@ signals:
    void needClose();
 
 private:
-   void setupServerFromSelected(bool save);
+   void setupServerFromSelected(bool needUpdate);
 
 private slots:
    void resetForm();

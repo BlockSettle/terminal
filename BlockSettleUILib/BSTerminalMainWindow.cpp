@@ -484,16 +484,12 @@ void BSTerminalMainWindow::InitAuthManager()
 }
 
 std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
-{
-   auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
-
-   switch (runMode) {
-      case SignContainer::OpMode::Remote:
-         return createRemoteSigner();
-      case SignContainer::OpMode::Local:
-         return createLocalSigner();
-      default:
-         return nullptr;
+{  
+   if (signersProvider_->currentSignerIsLocal()) {
+      return createLocalSigner();
+   }
+   else {
+      return createRemoteSigner();
    }
 }
 
@@ -558,7 +554,6 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
 
 std::shared_ptr<SignContainer> BSTerminalMainWindow::createLocalSigner()
 {
-   SignerHost signerHost = signersProvider_->getCurrentSigner();
    QLatin1String localSignerHost("127.0.0.1");
    QString localSignerPort = applicationSettings_->get<QString>(ApplicationSettings::localSignerPort);
    NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
