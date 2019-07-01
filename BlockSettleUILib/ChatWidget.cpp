@@ -13,6 +13,7 @@
 #include "CelerClient.h"
 #include "ChatProtocol/ChatUtils.h"
 #include "ChatSearchListViewItemStyle.h"
+#include "ImportKeyBox.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -332,6 +333,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::NewContactRequest, this, [=] (const std::string &userId) {
             NotificationCenter::notify(bs::ui::NotifyType::FriendRequest, {QString::fromStdString(userId)});
    });
+   connect(client_.get(), &ChatClient::ConfirmUploadNewPublicKey, this, &ChatWidget::onConfirmUploadNewPublicKey);
+   connect(client_.get(), &ChatClient::ConfirmContactNewKeyData, this, &ChatWidget::onConfirmContactNewKeyData);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
@@ -566,6 +569,58 @@ void ChatWidget::onConnectedToServer()
 void ChatWidget::onContactRequestAccepted(const std::string &userId)
 {
    ui_->treeViewUsers->setCurrentUserChat(userId);
+}
+
+void ChatWidget::onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey)
+{
+   ImportKeyBox box(BSMessageBox::question
+                    , tr("Replace OTC Chat Public Key?")
+                    , this);
+
+   box.setAddrPort("");
+   box.setNewKeyFromBinary(newKey);
+   box.setOldKeyFromBinary(oldKey);
+   box.setCancelVisible(true);
+
+   bool confirmed = box.exec() == QDialog::Accepted;
+   client_->uploadNewPublicKeyToServer(confirmed);
+}
+
+void ChatWidget::onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data> > &toConfirmList)
+{
+   std::vector<std::shared_ptr<Chat::Data> > confirmedList;
+   std::vector<std::shared_ptr<Chat::Data> > declinedList;
+   for (const auto &contact : toConfirmList) {
+      if (!contact || !contact->has_contact_record()) {
+         logger_->error("[ChatWidget::{}] invalid contact", __func__);
+         continue;
+      }
+      auto contactRecord = contact->mutable_contact_record();
+      auto oldContact = client_->getContact(contactRecord->contact_id());
+      if (oldContact.contact_id().empty()) {
+         logger_->error("[ChatWidget::{}] invalid contact", __func__);
+         continue;
+      }
+      auto name = QString::fromStdString(contactRecord->display_name());
+      if (name.isEmpty()) {
+         name = QString::fromStdString(contactRecord->contact_id());
+      }
+
+      ImportKeyBox box(BSMessageBox::question
+                       , tr("Import Contact '%1' Public Key?").arg(name)
+                       , this);
+      box.setAddrPort("");
+      box.setNewKeyFromBinary(contactRecord->public_key());
+      box.setOldKeyFromBinary(oldContact.public_key());
+      box.setCancelVisible(true);
+
+      if (box.exec() == QDialog::Accepted) {
+         confirmedList.push_back(contact);
+      } else {
+         declinedList.push_back(contact);
+      }
+   }
+   client_->confirmContactList(confirmedList, declinedList);
 }
 
 bool ChatWidget::eventFilter(QObject *sender, QEvent *event)

@@ -84,6 +84,8 @@ private slots:
    void onConnectedToServer();
    void selectGlobalRoom();
    void onContactRequestAccepted(const std::string &userId);
+   void onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey);
+   void onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& toConfirmList);
    void onBSChatInputSelectionChanged();
    void onChatMessagesSelectionChanged();
    void showOldMessagesNotification();

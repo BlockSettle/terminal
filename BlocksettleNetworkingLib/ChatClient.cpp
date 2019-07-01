@@ -616,6 +616,52 @@ void ChatClient::loadRoomMessagesFromDB(const std::string& roomId)
    }
 }
 
+void ChatClient::confirmContactList(const std::vector<std::shared_ptr<Chat::Data> > &confirmedList
+                                    , const std::vector<std::shared_ptr<Chat::Data> > &declinedList)
+{
+   std::map<std::string, std::shared_ptr<Chat::Data> > dict;
+
+   ContactRecordDataList clist;
+   chatDb_->getContacts(clist);
+   for (const auto &c : clist) {
+      auto contact = std::make_shared<Chat::Data>();
+      auto d = contact->mutable_contact_record();
+      d->set_user_id(model_->currentUser());
+      d->set_contact_id(c.contact_id());
+      d->set_status(c.status());
+      d->set_display_name(c.display_name());
+      d->set_public_key(c.public_key());
+      d->set_public_key_timestamp(c.public_key_timestamp());
+
+      dict[d->contact_id()] = contact;
+   }
+
+   for (const auto &contact : confirmedList) {
+      if (!contact->has_contact_record()) {
+         logger_->error("[ChatClient::{}] invalid contact", __func__);
+         continue;
+      }
+      dict[contact->mutable_contact_record()->contact_id()] = contact;
+   }
+
+   for (const auto &contact : declinedList) {
+      if (!contact->has_contact_record()) {
+         logger_->error("[ChatClient::{}] invalid contact", __func__);
+         continue;
+      }
+      auto it = dict.find(contact->mutable_contact_record()->contact_id());
+      if (it != dict.end()) {
+         dict.erase(it);
+      }
+   }
+
+   std::vector<std::shared_ptr<Chat::Data> > contacts;
+   for (const auto &item : dict) {
+      contacts.push_back(item.second);
+   }
+   OnContactListConfirmed(contacts, true);
+}
+
 void ChatClient::initMessage(Chat::Data *msg, const std::string &receiver)
 {
    auto d = msg->mutable_message();
