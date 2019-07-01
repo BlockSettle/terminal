@@ -74,6 +74,8 @@ public:
    int indexOf(const SignerHost &server) const;
    int indexOfIpPort(const std::string &srvIPPort) const;
 
+   bool currentSignerIsLocal();
+
    bool add(const SignerHost &signer);
    bool replace(int index, const SignerHost &signer);
    bool remove(int index);

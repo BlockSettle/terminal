@@ -47,25 +47,44 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
 
    connect(ui_->tableViewSignerKeys->selectionModel(), &QItemSelectionModel::selectionChanged, this,
       [this](const QItemSelection &selected, const QItemSelection &deselected){
+      // this check will prevent loop selectionChanged -> setupSignerFromSelected -> select -> selectionChanged
+      if (deselected.isEmpty()) {
+         return;
+      }
 
       ui_->pushButtonSelect->setDisabled(ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty());
       ui_->pushButtonDeleteSignerKey->setDisabled(ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty());
       ui_->pushButtonEditSignerKey->setDisabled(ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty());
 
+      if (selected.indexes().first().row() == 0) {
+         ui_->pushButtonDeleteSignerKey->setDisabled(true);
+         ui_->pushButtonEditSignerKey->setDisabled(true);
+      }
+
       resetForm();
 
       // save to settings right after row highlight
-      setupSignerFromSelected(false);
+      setupSignerFromSelected(true);
    });
 
    resetForm();
 
    setRowSelected(signersProvider->indexOfCurrent());
+   ui_->pushButtonDeleteSignerKey->setDisabled(ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty());
+   ui_->pushButtonEditSignerKey->setDisabled(ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty());
+
+   if (signersProvider->indexOfCurrent() == 0) {
+      ui_->pushButtonDeleteSignerKey->setDisabled(true);
+      ui_->pushButtonEditSignerKey->setDisabled(true);
+   }
 
    auto validator = new QRegExpValidator(this);
    validator->setRegExp(kRxAddress);
    ui_->lineEditAddress->setValidator(validator);
    onFormChanged();
+
+   // TODO: remove select signer button if it's not required anymore
+   ui_->pushButtonSelect->hide();
 }
 
 void SignerKeysWidget::setRowSelected(int row)
@@ -100,6 +119,7 @@ void SignerKeysWidget::onAddSignerKey()
    resetForm();
 
    setRowSelected(signersProvider_->signers().size() - 1);
+   setupSignerFromSelected(true);
 }
 
 void SignerKeysWidget::onDeleteSignerKey()
@@ -116,7 +136,8 @@ void SignerKeysWidget::onDeleteSignerKey()
    signersProvider_->remove(selectedRow);
    resetForm();
 
-   setRowSelected(selectedRow);
+   setRowSelected(0);
+   setupSignerFromSelected(true);
 }
 
 void SignerKeysWidget::onEdit()
@@ -204,7 +225,7 @@ void SignerKeysWidget::onKeyImport()
    }
 }
 
-void SignerKeysWidget::setupSignerFromSelected(bool save)
+void SignerKeysWidget::setupSignerFromSelected(bool needUpdate)
 {
    if (ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty()) {
       return;
@@ -215,5 +236,6 @@ void SignerKeysWidget::setupSignerFromSelected(bool save)
       return;
    }
 
-   signersProvider_->setupSigner(index, save);
+   signersProvider_->setupSigner(index, needUpdate);
+   setRowSelected(signersProvider_->indexOfCurrent());
 }
