@@ -1,14 +1,14 @@
 syntax = "proto3";
 
 package Blocksettle.Communication.signer;
-
+import "Blocksettle_Communication_Internal.proto";
 
 enum PacketType
 {
    HeadlessReadyType = 0;
    PeerConnectedType = 1;
    PeerDisconnectedType = 2;
-   PasswordRequestType = 3;
+   SignTxRequestType = 3;
    TxSignedType = 4;
    CancelTxSignType = 5;
    XbtSpentType = 6;
@@ -17,7 +17,7 @@ enum PacketType
    // Request from ui, response from headless
    AutoSignActType = 7;
 
-   SignTxRequestType = 8;
+   SignOfflineTxRequestType = 8;
    SyncWalletInfoType = 9;
    SyncHDWalletType = 10;
    SyncWalletType = 11;
@@ -50,8 +50,10 @@ enum PacketType
 
    ImportWoWalletType = 27;
 
+   SignSettlementTxRequestType = 28;
+
    // Sent from headless signer when unknown terminal is trying to connect
-   TerminalHandshakeFailedType = 28;
+   TerminalHandshakeFailedType = 29;
 }
 
 message Packet
@@ -121,7 +123,7 @@ message PeerEvent
    string ip_address = 1;
 }
 
-message PasswordEvent
+message SignTxRequest
 {
    message Change {
       bytes    address = 1;
@@ -129,7 +131,6 @@ message PasswordEvent
       uint64   value = 3;
    }
 
-   bool   auto_sign = 1;
    string prompt = 2;
    string wallet_id = 3;
    repeated bytes inputs = 4;
@@ -139,12 +140,22 @@ message PasswordEvent
    Change         change = 8;
 }
 
-message TxSignEvent
+message SignTxEvent
 {
-   oneof data {
-      bytes  tx = 1;
-      bytes  tx_hash = 2;
-   }
+   uint32         errorCode = 1;
+   bytes          signedTX = 2;
+   //bytes          tx_hash = 3;
+}
+
+message SignTxCancelRequest
+{
+   bytes  tx_hash = 1;
+}
+
+message SignSettlementTxRequest
+{
+   SignTxRequest signTXRequest                                        = 1;
+   Blocksettle.Communication.Internal.SettlementInfo settlementInfo   = 2;
 }
 
 message XbtSpentEvent
@@ -154,9 +165,9 @@ message XbtSpentEvent
 }
 
 
-message SignTxRequest
+message SignOfflineTxRequest
 {
-   PasswordEvent tx_request = 1;
+   SignTxRequest tx_request = 1;
    bytes password = 2;
 }
 
@@ -225,11 +236,11 @@ message SyncWalletResponse
 }
 
 
-message DecryptWalletRequest
+message DecryptWalletEvent
 {
-   string wallet_id = 1;
-   bytes  password = 2;
-   bool   cancelled_by_user = 3;
+   uint32   errorCode = 1;
+   string   wallet_id = 2;
+   string   password = 3;
 }
 
 message CreateWatchingOnlyResponse

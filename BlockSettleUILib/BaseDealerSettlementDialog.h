@@ -13,6 +13,8 @@
 
 #include "QWalletInfo.h"
 
+// TODO: Obsoleted, delete file after Sign Settlement moved to Signer
+
 namespace spdlog {
    class logger;
 }
@@ -25,7 +27,6 @@ namespace bs {
    class SettlementContainer;
 }
 class SignContainer;
-class WalletKeysSubmitWidget;
 class ApplicationSettings;
 class ConnectionManager;
 
@@ -72,7 +73,7 @@ protected:
    bool isMessageCritical() const { return hintSetToCritical_; }
 
    virtual QWidget *widgetPassword() const = 0;
-   virtual WalletKeysSubmitWidget *widgetWalletKeys() const = 0;
+   //virtual WalletKeysSubmitWidget *widgetWalletKeys() const = 0;
    virtual QLabel *labelHint() const = 0;
    virtual QLabel *labelPassword() const = 0;
 

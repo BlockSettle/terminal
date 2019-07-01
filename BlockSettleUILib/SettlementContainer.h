@@ -8,6 +8,7 @@
 #include "ArmoryObject.h"
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
+#include "SettlementInfo.h"
 
 namespace bs {
 
@@ -18,7 +19,6 @@ namespace bs {
       explicit SettlementContainer(const std::shared_ptr<ArmoryObject> &);
       ~SettlementContainer() override = default;
 
-      virtual bool accept(const SecureBinaryData &password = {}) = 0;
       virtual bool cancel() = 0;
       virtual bool isAcceptable() const = 0;
 
@@ -36,6 +36,8 @@ namespace bs {
 
       int durationMs() const { return msDuration_; }
       int timeLeftMs() const { return msTimeLeft_; }
+
+      virtual bs::sync::SettlementInfo toSettlementInfo() const;
 
    signals:
       void error(QString);
