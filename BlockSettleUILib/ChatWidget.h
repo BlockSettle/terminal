@@ -38,6 +38,7 @@ class CelerClient;
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
                  , public NewMessageMonitor
+                 , public ChatItemActionsHandler
 {
    Q_OBJECT
 
@@ -89,9 +90,16 @@ private slots:
    void selectGlobalRoom();
    void onContactRequestAccepted(const std::string &userId);
    void onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey);
-   void onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& toConfirmList);
+   void onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
+                                   const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
+                                   const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
    void onBSChatInputSelectionChanged();
    void onChatMessagesSelectionChanged();
+   void onContactRequestAcceptSendClicked();
+   void onContactRequestRejectCancelClicked();
+   void onContactListConfirmationRequested(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
+                                           const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
+                                           const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
    void showOldMessagesNotification();
 
    // OTC UI slots
@@ -148,6 +156,7 @@ private:
    std::string serverPublicKey_;
    std::string  currentChat_;
    bool isRoom_;
+   bool isContactRequest_;
    QSpacerItem *chatUsersVerticalSpacer_;
    bool isChatMessagesSelected_;
    bool isChatTab_;
@@ -167,6 +176,8 @@ private:
 
 private:
    bool isRoom();
+   bool isContactRequest();
+   void setIsContactRequest(bool);
    void setIsRoom(bool);
    void changeState(ChatWidget::State state);
    void initSearchWidget();
@@ -180,10 +191,19 @@ public:
    void onElementSelected(CategoryElement *element) override;
    void onMessageChanged(std::shared_ptr<Chat::Data> message) override;
    void onElementUpdated(CategoryElement *element) override;
+   void onCurrentElementAboutToBeRemoved() override;
 
    // NewMessageMonitor interface
 public:
    void onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat::Data>> newMessages) override;
-};
 
+   // ChatItemActionsHandler interface
+public:
+   void onActionCreatePendingOutgoing(const std::string &userId) override;
+   void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   bool onActionIsFriend(const std::string &userId) override;
+};
 #endif // CHAT_WIDGET_H

@@ -89,14 +89,17 @@ protected:
                                                        std::shared_ptr<Chat::Data> messageData);
    std::shared_ptr<Chat::Data> decryptIESMessage(const std::shared_ptr<Chat::Data>& message);
 
-   void onFriendRequestReceived(const std::string& userId, const std::string& contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp);
+   void onFriendRequestReceived(const std::string& userId, const std::string& contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp, const std::shared_ptr<Chat::Data>& message = nullptr);
    void onFriendRequestAccepted(const std::string& contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp);
    void onFriendRequestRejected(const std::string& contactId);
    void onFriendRequestedRemove(const std::string& userId);
 
    void onServerApprovedFriendRemoving(const std::string& contactId);
 
-   void OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts, const bool& updateContactDb = true);
+public:
+   void OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& checked,
+                               const std::vector<std::shared_ptr<Chat::Data>>& keyUpdate,
+                               const std::vector<std::shared_ptr<Chat::Data>>& absolutelyNew);
 
 public:
    bool sendSearchUsersRequest(const std::string& userIdPattern);
@@ -107,7 +110,9 @@ public:
    void uploadNewPublicKeyToServer(const bool& confirmed);
 
 signals:
-   void ConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts);
+   void ConfirmContactsNewData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
+                               const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
+                               const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
    void ConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey);
 
 protected:
@@ -133,6 +138,7 @@ protected:
 
    // either new message received or ours delivered
    virtual void onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData) = 0;
+   virtual void onCRMessageReceived(const std::shared_ptr<Chat::Data>& messageData) = 0;
    virtual void onRoomMessageReceived(const std::shared_ptr<Chat::Data>& messageData) = 0;
 
    virtual void onMessageSent(const std::string& receiverId, const std::string& localId, const std::string& serverId) = 0;
@@ -142,9 +148,11 @@ protected:
    virtual void onContactRejected(const std::string& contactId) = 0;
    virtual void onFriendRequest(const std::string& userId, const std::string& contactId, const BinaryData& pk) = 0;
    virtual void onContactRemove(const std::string& contactId) = 0;
+   virtual void onCreateOutgoingContact(const std::string& contactId);
 
 protected:
    bool sendFriendRequestToServer(const std::string &friendUserId);
+   bool sendFriendRequestToServer(const std::string &friendUserId, std::shared_ptr<Chat::Data> message, bool isFromPendings = false);
    bool sendAcceptFriendRequestToServer(const std::string &friendUserId);
    bool sendRejectFriendRequestToServer(const std::string &friendUserId);
    bool sendRemoveFriendToServer(const std::string& contactId);
@@ -159,6 +167,9 @@ protected:
 
    void retrySendQueuedMessages(const std::string userId);
    void eraseQueuedMessages(const std::string userId);
+
+   void retrySendQueuedContactRequests(const std::string &userId);
+   void eraseQueuedContactRequests(const std::string& userId);
 
 protected:
    std::shared_ptr<spdlog::logger>        logger_;
@@ -176,6 +187,7 @@ private:
    // Queue of messages to be sent for each receiver, once we received the public key.
    using messages_queue = std::queue<std::shared_ptr<Chat::Data> >;
    std::map<std::string, messages_queue>    enqueued_messages_;
+   std::map<std::string, std::shared_ptr<Chat::Data>>    pending_contact_requests_;
 
    std::string       currentJwt_;
 };

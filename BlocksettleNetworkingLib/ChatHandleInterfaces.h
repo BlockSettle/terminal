@@ -15,13 +15,14 @@ public:
    virtual void onElementSelected(CategoryElement* element) = 0;
    virtual void onElementUpdated(CategoryElement* element) = 0;
    virtual void onMessageChanged(std::shared_ptr<Chat::Data> message) = 0;
+   virtual void onCurrentElementAboutToBeRemoved() = 0;
    virtual ~ViewItemWatcher() = default;
 };
 
 class ChatItemActionsHandler {
 public:
    virtual ~ChatItemActionsHandler() = default;
-   virtual void onActionAddToContacts(const std::string& userId) = 0;
+   virtual void onActionCreatePendingOutgoing(const std::string& userId) = 0;
    virtual void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) = 0;
    virtual void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) = 0;
    virtual void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) = 0;

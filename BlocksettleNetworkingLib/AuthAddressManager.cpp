@@ -459,11 +459,23 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
    request.set_scripttype(mapToScriptType(address.getType()));
    request.set_userid(celerClient_->userId());
 
-   const auto cbSigned = [this](const std::string &data, const BinaryData &, const std::string &signature) {
+   std::string requestData = request.SerializeAsString();
+   BinaryData requestDataHash = BtcUtils::getSha256(requestData);
+
+   const auto cbSigned = [this, requestData](const AutheIDClient::SignResult &result) {
       RequestPacket  packet;
-      packet.set_datasignature(signature);
+
       packet.set_requesttype(ConfirmAuthAddressSubmitType);
-      packet.set_requestdata(data);
+      packet.set_requestdata(requestData);
+
+      // Copy AuthEid signature
+      auto autheidSign = packet.mutable_autheidsign();
+      autheidSign->set_serialization(AuthEidSign::Serialization(result.serialization));
+      autheidSign->set_signature_data(result.data.toBinStr());
+      autheidSign->set_sign(result.sign.toBinStr());
+      autheidSign->set_certificate_client(result.certificateClient.toBinStr());
+      autheidSign->set_certificate_issuer(result.certificateIssuer.toBinStr());
+      autheidSign->set_ocsp_response(result.ocspResponse.toBinStr());
 
       logger_->debug("[AuthAddressManager::ConfirmSubmitForVerification] confirmed auth address submission");
       SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
@@ -474,7 +486,7 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
       emit SignFailed(text);
    };
 
-   return authSignManager_->Sign(request.SerializeAsString(), tr("Authentication Address")
+   return authSignManager_->Sign(requestDataHash, tr("Authentication Address")
       , tr("Submit auth address for verification"), cbSigned, cbSignFailed, expireTimeoutSeconds);
 }
 

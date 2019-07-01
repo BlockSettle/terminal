@@ -21,7 +21,7 @@ void ChatSearchLineEdit::setResetOnNextInput(bool value)
 
 void ChatSearchLineEdit::onTextChanged(const QString &text)
 {
-   if (text.isEmpty() && handler_){
+   if (text.isEmpty() && handler_) {
       handler_->onActionResetSearch();
    }
 }

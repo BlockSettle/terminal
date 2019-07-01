@@ -92,7 +92,7 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
 {
    QStyleOptionViewItem itemOption(option);
    if (index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsElement
-       && index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement){
+       && index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement) {
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
@@ -115,6 +115,7 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
       case ContactStatus::CONTACT_STATUS_INCOMING:
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactIncoming());
          return QStyledItemDelegate::paint(painter, itemOption, index);
+      case ContactStatus::CONTACT_STATUS_OUTGOING_PENDING:
       case ContactStatus::CONTACT_STATUS_OUTGOING:
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOutgoing());
          return QStyledItemDelegate::paint(painter, itemOption, index);
