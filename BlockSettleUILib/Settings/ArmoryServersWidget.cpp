@@ -5,11 +5,11 @@
 const int kArmoryDefaultMainNetPort = 80;
 
 ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
-   , const std::shared_ptr<ApplicationSettings> &appSettings, QWidget *parent) :
-   QWidget(parent)
-   , appSettings_(appSettings)
-   , armoryServersProvider_(armoryServersProvider)
+   , const std::shared_ptr<ApplicationSettings> &appSettings, QWidget *parent)
+   : QWidget(parent)
    , ui_(new Ui::ArmoryServersWidget)
+   , armoryServersProvider_(armoryServersProvider)
+   , appSettings_(appSettings)
    , armoryServersModel_(new ArmoryServersViewModel(armoryServersProvider))
 {
    ui_->setupUi(this);

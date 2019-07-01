@@ -80,9 +80,9 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
-      QTimer::singleShot(0, this, []() {
+      QMetaObject::invokeMethod(this, []() {
          qApp->exit(EXIT_FAILURE);
-      });
+      }, Qt::QueuedConnection);
       return;
    }
 
