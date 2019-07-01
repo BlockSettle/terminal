@@ -16,7 +16,7 @@ namespace spdlog {
 
 namespace autheid {
    namespace rp {
-   class GetResultResponse_SignatureResult;
+      class GetResultResponse_SignatureResult;
    }
 }
 
@@ -99,9 +99,46 @@ public:
       ServerError
    };
    Q_ENUM(ErrorType)
+
+   enum class AuthEidEnv
+   {
+      Prod,
+      Test,
+   };
+
+   struct SignVerifyStatus
+   {
+      bool valid{false};
+      std::string errorMsg;
+
+      // From client's certificate common name
+      std::string uniqueUserId;
+
+      // Data that was signed by client
+      std::string email;
+      std::string rpName;
+      std::string title;
+      std::string description;
+      std::chrono::system_clock::time_point finished;
+      BinaryData invisibleData;
+
+      static SignVerifyStatus failed(const std::string &errorMsg)
+      {
+         SignVerifyStatus result;
+         result.errorMsg = errorMsg;
+         return result;
+      }
+   };
+
    static QString errorString(ErrorType error);
 
    static DeviceInfo getDeviceInfo(const std::string &encKey);
+
+   // Verifies signature only
+   // Check uniqueUserId to make sure that valid user did sign request.
+   // Check invisibleData and other fields to make sure that valid request was signed.
+   // OCSP must be valid at the moment when request was signed (`finished` timepoint).
+   static SignVerifyStatus verifySignature(const SignResult &result, AuthEidEnv env);
 
    // ConnectionManager must live long enough to be able send cancel message
    // (if cancelling request in mobile app is needed)

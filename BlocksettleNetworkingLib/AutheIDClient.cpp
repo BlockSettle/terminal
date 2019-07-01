@@ -8,7 +8,10 @@
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
-
+#include <botan/x509cert.h>
+#include <botan/data_src.h>
+#include <botan/pubkey.h>
+#include <botan/ocsp.h>
 #include "rp.pb.h"
 
 using namespace autheid;
@@ -37,6 +40,47 @@ namespace
    const auto kServerAddrTest = "https://api.staging.autheid.com/v1/requests";
    const auto kAuthorizationKeyTest = "Bearer live_opnKv0PyeML0WvYm66ka2k29qPPoDjS3rzw13bRJzITY";
 
+   const char AuthEidProdRootCert[] =
+      "-----BEGIN CERTIFICATE-----"
+      "MIICiDCCAg6gAwIBAgIVAOb2okkDBWR/iW2RuT8nYjpNplTqMAoGCCqGSM49BAMD"
+      "MGUxCzAJBgNVBAYTAlNFMRwwGgYDVQQKExNBdXRoZW50aWNhdGUgZUlEIEFCMRow"
+      "GAYDVQQLExFJbmZyYXN0cnVjdHVyZSBDQTEcMBoGA1UEAxMTQXV0aCBlSUQgUm9v"
+      "dCBDQSB2MTAiGA8yMDE5MDUyMjAwMDAwMFoYDzIwMzkwNTIyMDAwMDAwWjBlMQsw"
+      "CQYDVQQGEwJTRTEcMBoGA1UEChMTQXV0aGVudGljYXRlIGVJRCBBQjEaMBgGA1UE"
+      "CxMRSW5mcmFzdHJ1Y3R1cmUgQ0ExHDAaBgNVBAMTE0F1dGggZUlEIFJvb3QgQ0Eg"
+      "djEwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAAR2kBiv/YrCKa/LfEBAIvjCmonftbeq"
+      "wIjlTMFnVXTZTBTOMssMOeCByJYTv0ghR4g7BNTeYaCcriMA35UtlKeF6jiTnoQc"
+      "6mGU2b19HwSyvtmIhlINeeCu5HfxLvHDFsijejB4MB0GA1UdDgQWBBQlqiF6NhIs"
+      "6V7c/FEOvUCONlG2mDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAV"
+      "BgNVHSAEDjAMMAoGCCqFcIIEAQEBMB8GA1UdIwQYMBaAFCWqIXo2EizpXtz8UQ69"
+      "QI42UbaYMAoGCCqGSM49BAMDA2gAMGUCMCPwsYvJzRIRLvGyAVlbLj+E6BnvAfBb"
+      "5+iNbo1RXrhTdIMb/oqcyEJbNbSSrrYYUwIxALTrwUrCe7t33RZOVVtuV+ZjiAm/"
+      "j7izMBc1rGipMTl4L8vVqqmtz+2vXilxSb7dtA=="
+      "-----END CERTIFICATE-----";
+
+   const char AuthEidTestRootCert[] =
+      "-----BEGIN CERTIFICATE-----"
+      "MIICpzCCAi2gAwIBAgIVANCWAAe4NB0AbzvcOMzVt/eXvJOEMAoGCCqGSM49BAMD"
+      "MHQxCzAJBgNVBAYTAlNFMSEwHwYDVQQKExhUZXN0IEF1dGhlbnRpY2F0ZSBlSUQg"
+      "QUIxHzAdBgNVBAsTFlRlc3QgSW5mcmFzdHJ1Y3R1cmUgQ0ExITAfBgNVBAMTGFRl"
+      "c3QgQXV0aCBlSUQgUm9vdCBDQSB2MTAiGA8yMDE5MDUyMTAwMDAwMFoYDzIwMzkw"
+      "NTIxMDAwMDAwWjB0MQswCQYDVQQGEwJTRTEhMB8GA1UEChMYVGVzdCBBdXRoZW50"
+      "aWNhdGUgZUlEIEFCMR8wHQYDVQQLExZUZXN0IEluZnJhc3RydWN0dXJlIENBMSEw"
+      "HwYDVQQDExhUZXN0IEF1dGggZUlEIFJvb3QgQ0EgdjEwdjAQBgcqhkjOPQIBBgUr"
+      "gQQAIgNiAATttsFmSGlfGgeBWCO+G4j+LaheRZksckdz0ks2DrUz+eBLAdY5neE1"
+      "uwvidGXuebR4c3Kr7TbBZaQbmIHEd3kUTQ4paqKWQKgck5WJNYPm2wgpS7co8Fjk"
+      "jaFG4Mu9QZujezB5MB0GA1UdDgQWBBRaWiMIx4yz8dBVsBVyR0qL9wVSejAOBgNV"
+      "HQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAWBgNVHSAEDzANMAsGCSqFcL2E"
+      "PwEBATAfBgNVHSMEGDAWgBRaWiMIx4yz8dBVsBVyR0qL9wVSejAKBggqhkjOPQQD"
+      "AwNoADBlAjBaJB4PI9hFk0teclJEPWfXUt1CovrWY3nWlOkyl+usJFkgJZH1yIFI"
+      "uYVsbv9LK7QCMQCc9MQEu9tZLzVCcucBy2tbNYF1BPUE4Z51gohpiBTxbosqy9L2"
+      "61lZsHVbH/v/HtY="
+      "-----END CERTIFICATE-----";
+
+   const char AuthEidCertHash[] = "EMSA1(SHA-256)";
+
+   const char AuthEidUniqueUserIdField[] = "X520.CommonName";
+
    QNetworkRequest getRequest(const char *url, const char *apiKey)
    {
       QNetworkRequest request;
@@ -46,6 +90,7 @@ namespace
       request.setRawHeader(kAuthorizationHeader, QByteArray(apiKey));
       return request;
    }
+
 } // namespace
 
 QString AutheIDClient::errorString(AutheIDClient::ErrorType error)
@@ -98,6 +143,94 @@ AutheIDClient::DeviceInfo AutheIDClient::getDeviceInfo(const std::string &encKey
 
    result.userId = encKey.substr(0, firstSep);
    return result;
+}
+
+AutheIDClient::SignVerifyStatus AutheIDClient::verifySignature(const SignResult &signResult, AuthEidEnv env)
+{
+   try {
+      // DER encoding
+      Botan::DataSource_Memory clientRaw(signResult.certificateClient.getPtr()
+         , signResult.certificateClient.getSize());
+      Botan::X509_Certificate client(clientRaw);
+
+      // DER encoding
+      Botan::DataSource_Memory issuerRaw(signResult.certificateIssuer.getPtr()
+         , signResult.certificateIssuer.getSize());
+      Botan::X509_Certificate issuer(issuerRaw);
+
+      // PEM encoding
+      Botan::DataSource_Memory rootRaw(env == AuthEidEnv::Prod ? AuthEidProdRootCert : AuthEidTestRootCert);
+      Botan::X509_Certificate root(rootRaw);
+
+      auto clientPubKey = client.load_subject_public_key();
+
+      Botan::PK_Verifier verifier(*clientPubKey, AuthEidCertHash, Botan::DER_SEQUENCE);
+      verifier.update(signResult.data.getPtr(), signResult.data.getSize());
+      bool result = verifier.check_signature(signResult.sign.getPtr(), signResult.sign.getSize());
+      if (!result) {
+         return SignVerifyStatus::failed("invalid signature");
+      }
+
+      rp::GetResultResponse::SignatureResult::SignatureData sigData;
+
+      switch (signResult.serialization) {
+         case Serialization::Protobuf: {
+            bool result = sigData.ParseFromArray(signResult.data.getPtr(), int(signResult.data.getSize()));
+            if (!result) {
+               return SignVerifyStatus::failed("Protobuf deserialization failed");
+            }
+            break;
+         }
+
+         case Serialization::Json: {
+            auto status = google::protobuf::util::JsonStringToMessage(signResult.data.toBinStr(), &sigData);
+            if (!status.ok()) {
+               return SignVerifyStatus::failed("JSON deserialization failed");
+            }
+            break;
+         }
+      }
+
+      auto signTimestamp = std::chrono::system_clock::from_time_t(sigData.timestamp_finished());
+
+      // Verify that issuer's certificate is valid
+      result = issuer.check_signature(*root.load_subject_public_key());
+      if (!result) {
+         return SignVerifyStatus::failed("invalid issuer's certificate");
+      }
+
+      // Verify that client's certificate is valid
+      result = client.check_signature(*issuer.load_subject_public_key());
+      if (!result) {
+         return SignVerifyStatus::failed("invalid client's certificate");
+      }
+
+      Botan::OCSP::Response ocsp(signResult.ocspResponse.getPtr(), signResult.ocspResponse.getSize());
+      Botan::Certificate_Status_Code verifyResult = ocsp.status_for(issuer, client, signTimestamp);
+      if (verifyResult != Botan::Certificate_Status_Code::OCSP_RESPONSE_GOOD) {
+         return SignVerifyStatus::failed("invalid OCSP response");
+      }
+
+      std::string certUniqueUserId = client.subject_dn().get_first_attribute(AuthEidUniqueUserIdField);
+      if (certUniqueUserId.empty()) {
+         return SignVerifyStatus::failed("invalid empty unique user Id in the certificate");
+      }
+
+      SignVerifyStatus status;
+      status.valid = true;
+
+      status.uniqueUserId = certUniqueUserId;
+
+      status.email = sigData.email();
+      status.rpName = sigData.rp_name();
+      status.title = sigData.title();
+      status.description = sigData.description();
+      status.finished = signTimestamp;
+      status.invisibleData = sigData.invisible_data();
+      return status;
+   } catch (const std::exception &e) {
+      return SignVerifyStatus::failed(fmt::format("signature verification failed: {}", e.what()));
+   }
 }
 
 AutheIDClient::AutheIDClient(const std::shared_ptr<spdlog::logger> &logger
