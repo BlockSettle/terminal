@@ -172,8 +172,8 @@ CustomTitleDialogWindow {
                             columnSpacing: 0
                             Layout.margins: 5
                             //sectionHeaderTxt: qsTr("Enter Root Private Key")
-                            line1LabelTxt: qsTr("Root Key Line 1")
-                            line2LabelTxt: qsTr("Root Key Line 2")
+                            line1LabelTxt: qsTr("Line 1")
+                            line2LabelTxt: qsTr("Line 2")
                             onEntryComplete: {
                                 seed = qmlFactory.createSeedFromPaperBackupT(rootKeyInput.privateRootKey, signerSettings.testNet)
                                 if (seed.networkType === WalletInfo.Invalid) {

@@ -23,7 +23,7 @@ ColumnLayout {
 //    property alias sectionHeaderTxt: sectionHeader.text
 //    property alias sectionHeaderVisible: sectionHeader.visible
 
-    property int inputLabelsWidth: 110
+    property int inputLabelsWidth: 50
     property int rowSpacing: 5
     property int columnSpacing: topLayout.spacing
 
