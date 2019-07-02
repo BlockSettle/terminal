@@ -32,6 +32,9 @@ void QmlPdfBackup::onWidthChanged()
 
 void QmlPdfBackup::onSeedChanged()
 {
+   if (!seed_) {
+      return;
+   }
    pdf_.reset(new WalletBackupPdfWriter(seed_->walletId(), seed_->part1(), seed_->part2(),
                                         QPixmap(QLatin1String(":/FULL_LOGO")),
                                         UiUtils::getQRCode(seed_->part1() + QLatin1Literal("\n") + seed_->part2())));

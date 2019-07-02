@@ -1,7 +1,62 @@
 {
-   "latest_version": "0.17.4",
-   "release_date": "27 Jun 2019",
+   "latest_version": "0.18.1",
+   "release_date": "02 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.18.1",
+         "previous_version": "0.18.0",
+         "release_date": "02 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Multiple small fixes for code around wallets"
+         ],
+         "bug_fixes": [],
+         "revision": "8d772651",
+         "common_revision": "4ec6b2a2"
+      },
+      {
+         "version_string": "0.18.0",
+         "previous_version": "0.17.6",
+         "release_date": "02 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "New wallets code"
+         ],
+         "bug_fixes": [],
+         "revision": "9baf1708",
+         "common_revision": "79fe3e5b"
+      },
+      {
+         "version_string": "0.17.6",
+         "previous_version": "0.17.5",
+         "release_date": "01 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Update autheid signatures",
+            "Contact request with message",
+            "Terminal - ui fixes"
+         ],
+         "bug_fixes": [],
+         "revision": "326a4a1c",
+         "common_revision": "0dd7db44"
+      },
+      {
+         "version_string": "0.17.5",
+         "previous_version": "0.17.4",
+         "release_date": "01 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Signer/settlement dialogs",
+            "Signer ui fixes",
+            "Add scripts folder in installer",
+            "Connect chat user to PB",
+            "Inform user on keys changed",
+            "Improve user edit dialog"
+         ],
+         "bug_fixes": [],
+         "revision": "c8b3282a",
+         "common_revision": "3105a760"
+      },
       {
          "version_string": "0.17.4",
          "previous_version": "0.17.3",

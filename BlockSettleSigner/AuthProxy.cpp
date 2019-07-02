@@ -73,7 +73,7 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
 
    try {
       if (userIds.empty()) {
-         throw std::runtime_error("Auth eID email not found");
+         throw std::runtime_error("Auth eID email not found when signing");
       }
       autheIDClient_->start(requestType
                             , userIds[0]
@@ -123,7 +123,7 @@ void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInf
 
    try {
       if (userIds.empty()) {
-         throw std::runtime_error("Auth eID email not found");
+         throw std::runtime_error("Auth eID email not found at removal");
       }
       // currently we supports only single account for whole wallet, thus email stored in userIds[0]
       autheIDClient_->start(AutheIDClient::DeactivateWalletDevice
