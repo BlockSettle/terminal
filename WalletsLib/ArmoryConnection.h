@@ -55,7 +55,7 @@ class ArmoryCallbackTarget
 {
 public:
    ArmoryCallbackTarget(ArmoryConnection *armory);
-   ~ArmoryCallbackTarget();
+   virtual ~ArmoryCallbackTarget();
 
    // use empty methods in abstract class to avoid re-implementation in descendants
    // for more brevity if some of them are not needed
@@ -95,7 +95,7 @@ public:
 
    void disconnected() override;
 
-   void resetConnection() { connection_ = nullptr; };
+   void resetConnection() { connection_ = nullptr; }
 
 private:
    ArmoryConnection * connection_ = nullptr;

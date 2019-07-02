@@ -28,10 +28,12 @@ namespace bs {
                , SignContainer *container, WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger
                , bool extOnlyAddresses = false)
-               : signContainer_(container), wct_(wct)
+               : signContainer_(container)
                , logger_(logger), path_(path)
                , walletName_(walletName), name_(name), desc_(desc)
-               , extOnlyAddresses_(extOnlyAddresses) {}
+               , extOnlyAddresses_(extOnlyAddresses)
+               , wct_(wct) {}
+            virtual ~Group() = default;
 
             size_t getNumLeaves() const { return leaves_.size(); }
             std::shared_ptr<hd::Leaf> getLeaf(bs::hd::Path::Elem) const;
@@ -63,14 +65,14 @@ namespace bs {
             virtual void initLeaf(std::shared_ptr<hd::Leaf> &, const bs::hd::Path &) const;
 
          protected:
-            SignContainer  *  signContainer_;
+            SignContainer  *  signContainer_{};
             std::shared_ptr<spdlog::logger>  logger_;
             bs::hd::Path   path_;
             std::string    walletName_, name_, desc_;
             bool        extOnlyAddresses_;
             std::unordered_map<bs::hd::Path::Elem, std::shared_ptr<hd::Leaf>> leaves_;
             unsigned int   scanPortion_ = 200;
-            WalletCallbackTarget *wct_;
+            WalletCallbackTarget *wct_{};
          };
 
 

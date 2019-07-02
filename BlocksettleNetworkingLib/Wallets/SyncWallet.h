@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <QObject>
+#include <QString>
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "AsyncClient.h"
@@ -40,11 +40,11 @@ namespace bs {
             {
                switch (t)
                {
-               case ChangeAddress:     return "--== Change Address ==--";
-               case AuthAddress:       return "--== Auth Address ==--";
-               case SettlementPayOut:  return "--== Settlement Pay-Out ==--";
-               default:                return "";
+                  case ChangeAddress:     return "--== Change Address ==--";
+                  case AuthAddress:       return "--== Auth Address ==--";
+                  case SettlementPayOut:  return "--== Settlement Pay-Out ==--";
                }
+               return "";
             }
          };
 
@@ -177,12 +177,9 @@ namespace bs {
          virtual bool getAddressTxnCounts(std::function<void(void)> cb = nullptr);
          
          //utxos
-         virtual bool getSpendableTxOutList(
-            std::function<void(std::vector<UTXO>)>, uint64_t val);
-         virtual bool getSpendableZCList(
-            std::function<void(std::vector<UTXO>)>) const;
-         virtual bool getRBFTxOutList(
-            std::function<void(std::vector<UTXO>)>) const;
+         virtual bool getSpendableTxOutList(const ArmoryConnection::UTXOsCb &, uint64_t val);
+         virtual bool getSpendableZCList(const ArmoryConnection::UTXOsCb &) const;
+         virtual bool getRBFTxOutList(const ArmoryConnection::UTXOsCb &) const;
 
          //custom ACT
          template<class U> void setCustomACT(
@@ -194,9 +191,9 @@ namespace bs {
          void setWCT(WalletCallbackTarget *wct) { wct_ = wct; }
 
       protected:
-         virtual void onZeroConfReceived(const std::vector<bs::TXEntry>);
+         virtual void onZeroConfReceived(const std::vector<bs::TXEntry>&);
          virtual void onNewBlock(unsigned int);
-         virtual void onRefresh(std::vector<BinaryData> ids, bool online);
+         virtual void onRefresh(const std::vector<BinaryData> &ids, bool online);
 
          virtual std::vector<BinaryData> getAddrHashes() const = 0;
 
@@ -326,9 +323,9 @@ namespace bs {
             case Revoke:      return QT_TR_NOOP("REVOKE");
             case Delivery:    return QT_TR_NOOP("Delivery");
             case Payment:     return QT_TR_NOOP("Payment");
-            case Unknown:
-            default:          return QT_TR_NOOP("Undefined");
+            case Unknown:     return QT_TR_NOOP("Undefined");
             }
+            return QT_TR_NOOP("Undefined");
          }
          static const char *toStringDir(Direction dir) {
             switch (dir)

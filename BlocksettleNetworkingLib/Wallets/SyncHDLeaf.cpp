@@ -102,7 +102,7 @@ bool hd::Leaf::isOwnId(const std::string &wId) const
    return false;
 }
 
-void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
+void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
 {
    const auto &cbRegisterExt = [this, online] {
       if (isExtOnly_ || (regIdExt_.empty() && regIdInt_.empty())) {
@@ -775,7 +775,7 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
       hd::Leaf::getSpendableTxOutList(cbRefresh, UINT64_MAX);
    }
 
-   const auto &cbRefreshZC = [this](std::vector<UTXO> utxos) {
+   const auto &cbRefreshZC = [this](const std::vector<UTXO> &utxos) {
       const auto &cbUpdateZcBalance = [this](const std::vector<UTXO> &ZcUTXOs) {
          std::unique_lock<std::mutex> lock(addrMapsMtx_);
          for (const auto &utxo : ZcUTXOs) {
@@ -883,7 +883,7 @@ void hd::CCLeaf::validationProc()
    }
 }
 
-void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, std::function<void(const std::vector<UTXO> &)> cb)
+void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, const ArmoryConnection::UTXOsCb &cb)
 {
    std::set<BinaryData> txHashes;
    std::map<BinaryData, UTXO> utxoMap;
@@ -960,7 +960,7 @@ void hd::CCLeaf::CCWalletACT::onStateChanged(ArmoryState state)
    }
 }
 
-void hd::CCLeaf::onZeroConfReceived(const std::vector<bs::TXEntry> entries)
+void hd::CCLeaf::onZeroConfReceived(const std::vector<TXEntry> &entries)
 {
    hd::Leaf::onZeroConfReceived(entries);
    refreshInvalidUTXOs(true);
@@ -977,8 +977,7 @@ std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
    return result;
 }
 
-bool hd::CCLeaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
-   , QObject *obj)
+bool hd::CCLeaf::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const
 {
    if (validationStarted_ && !validationEnded_) {
       return false;

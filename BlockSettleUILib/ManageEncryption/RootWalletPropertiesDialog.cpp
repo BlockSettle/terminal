@@ -230,9 +230,7 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
       leaf->getSpendableTxOutList(cbUTXOs, UINT64_MAX);
 
       auto addrCnt = leaf->getActiveAddressCount();
-      QMetaObject::invokeMethod(this, [this, addrCnt] {
-         ui_->labelAddressesActive->setText(QString::number(addrCnt));
-      });
+      ui_->labelAddressesActive->setText(QString::number(addrCnt));
 
       nbTotalAddresses += leaf->getUsedAddressCount();
    }

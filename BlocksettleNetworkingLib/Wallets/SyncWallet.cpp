@@ -291,8 +291,7 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
 #endif   //0
 }
 
-bool Wallet::getSpendableTxOutList(
-   std::function<void(std::vector<UTXO>)> cb, uint64_t val)
+bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t val)
 {
    //combined utxo fetch method
 
@@ -339,7 +338,7 @@ bool Wallet::getSpendableTxOutList(
    return true;
 }
 
-bool Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb) const
+bool Wallet::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const
 {
    if (!isBalanceAvailable())
       return false;
@@ -356,7 +355,7 @@ bool Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb) const
    return true;
 }
 
-bool Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) const
+bool Wallet::getRBFTxOutList(const ArmoryConnection::UTXOsCb &cb) const
 {
    if (!isBalanceAvailable())
       return false;
@@ -533,7 +532,7 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
-void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry>)
+void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &)
 {
    logger_->debug("[{}]", __func__);
    init(true);
@@ -545,7 +544,7 @@ void Wallet::onNewBlock(unsigned int depth)
    init(true);
 }
 
-void Wallet::onRefresh(std::vector<BinaryData> ids, bool online)
+void Wallet::onRefresh(const std::vector<BinaryData> &ids, bool online)
 {
    for (const auto &id : ids) {
       if (id == regId_) {
@@ -558,7 +557,7 @@ void Wallet::onRefresh(std::vector<BinaryData> ids, bool online)
             }
          };
          bs::sync::Wallet::init();
-         const bool rc = getAddressTxnCounts([this, cbTrackAddrChain] {
+         getAddressTxnCounts([this, cbTrackAddrChain] {
             trackChainAddressUse(cbTrackAddrChain);
          });
       }

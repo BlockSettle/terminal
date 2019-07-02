@@ -74,7 +74,7 @@ namespace bs {
             std::string getAddressIndex(const bs::Address &) override;
             bool addressIndexExists(const std::string &index) const override;
             bool getLedgerDelegateForAddress(const bs::Address &
-               , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &);
+               , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &) override;
 
             int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true) override;
 
@@ -118,7 +118,7 @@ namespace bs {
             using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
 
          protected:
-            void onRefresh(std::vector<BinaryData> ids, bool online) override;
+            void onRefresh(const std::vector<BinaryData> &ids, bool online) override;
             virtual void createAddress(const CbAddress &cb, const AddrPoolKey &);
             void reset();
             bs::hd::Path getPathForAddress(const bs::Address &) const;
@@ -222,8 +222,7 @@ namespace bs {
             void setData(uint64_t data) override { lotSizeInSatoshis_ = data; }
             void init(bool force) override;
 
-            bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
-               , QObject *);
+            bool getSpendableZCList(const ArmoryConnection::UTXOsCb &) const override;
             bool isBalanceAvailable() const override;
             BTCNumericTypes::balance_type getSpendableBalance() const override;
             BTCNumericTypes::balance_type getUnconfirmedBalance() const override;
@@ -238,12 +237,12 @@ namespace bs {
             void setArmory(const std::shared_ptr<ArmoryConnection> &) override;
 
          protected:
-            void onZeroConfReceived(const std::vector<bs::TXEntry>) override;
+            void onZeroConfReceived(const std::vector<bs::TXEntry> &) override;
 
          private:
             void validationProc();
             void findInvalidUTXOs(const std::vector<UTXO> &
-               , std::function<void(const std::vector<UTXO> &)>);
+               , const ArmoryConnection::UTXOsCb &);
             void refreshInvalidUTXOs(const bool& ZConly = false);
             BTCNumericTypes::balance_type correctBalance(BTCNumericTypes::balance_type
                , bool applyCorrection = true) const;
