@@ -215,10 +215,13 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
    unsigned int nbTotalAddresses = 0;
    auto nbUTXOs = std::make_shared<std::atomic_uint>(0);
 
-   const auto &cbUTXOs = [this, nbUTXOs](std::vector<UTXO> utxos) {
-      *nbUTXOs += utxos.size();
-      QMetaObject::invokeMethod(this, [this, nbUTXOs] {
-         ui_->labelUTXOs->setText(QString::number(*nbUTXOs));
+   QPointer<RootWalletPropertiesDialog> thisPtr = this;
+   const auto &cbUTXOs = [thisPtr, nbUTXOs](const std::vector<UTXO> &utxos) {
+      *nbUTXOs += uint32_t(utxos.size());
+      QMetaObject::invokeMethod(qApp, [thisPtr, nbUTXOs] {
+         if (thisPtr) {
+            thisPtr->ui_->labelUTXOs->setText(QString::number(*nbUTXOs));
+         }
       });
    };
 
@@ -227,9 +230,7 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
       leaf->getSpendableTxOutList(cbUTXOs, UINT64_MAX);
 
       auto addrCnt = leaf->getActiveAddressCount();
-      QMetaObject::invokeMethod(this, [this, addrCnt] {
-         ui_->labelAddressesActive->setText(QString::number(addrCnt));
-      });
+      ui_->labelAddressesActive->setText(QString::number(addrCnt));
 
       nbTotalAddresses += leaf->getUsedAddressCount();
    }
