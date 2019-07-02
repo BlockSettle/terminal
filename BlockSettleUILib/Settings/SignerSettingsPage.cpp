@@ -63,7 +63,7 @@ void SignerSettingsPage::display()
 void SignerSettingsPage::reset()
 {
    reset_ = true;
-   for (const auto &setting : {ApplicationSettings::localSignerPort, ApplicationSettings::signerOfflineDir
+   for (const auto &setting : {ApplicationSettings::localSignerPort
       , ApplicationSettings::remoteSigners, ApplicationSettings::autoSignSpendLimit
       , ApplicationSettings::twoWaySignerAuth}) {
       appSettings_->reset(setting, false);

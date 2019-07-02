@@ -7,7 +7,6 @@
 #include <string>
 #include <QObject>
 #include <QStringList>
-#include "ApplicationSettings.h"
 #include "DataConnectionListener.h"
 #include "SignContainer.h"
 #include "ZMQ_BIP15X_DataConnection.h"
@@ -24,7 +23,6 @@ namespace bs {
    }
 }
 
-class ApplicationSettings;
 class ConnectionManager;
 class DataConnection;
 class HeadlessListener;
@@ -147,7 +145,6 @@ public:
    RemoteSigner(const std::shared_ptr<spdlog::logger> &, const QString &host
       , const QString &port, NetworkType netType
       , const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::shared_ptr<ApplicationSettings>& appSettings
       , OpMode opMode = OpMode::Remote
       , const bool ephemeralDataConnKeys = true
       , const std::string& ownKeyFileDir = ""
@@ -161,9 +158,6 @@ public:
    bool Disconnect() override;
    bool isOffline() const override;
    void updatePeerKeys(const ZmqBIP15XPeers &peers);
-
-   void setTargetDir(const QString& targetDir) override;
-   QString targetDir() const override;
 
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
@@ -183,6 +177,7 @@ private:
    void ScheduleRestart();
 
    bs::signer::RequestId signOffline(const bs::core::wallet::TXSignRequest &txSignReq);
+   void txSignedAsync(bs::signer::RequestId id, const BinaryData &signedTX, bs::error::ErrorCode result, const std::string &errorReason = {});
 
 protected:
    const QString                              host_;
@@ -192,7 +187,6 @@ protected:
    const std::string                          ownKeyFileDir_;
    const std::string                          ownKeyFileName_;
    std::shared_ptr<ZmqBIP15XDataConnection>   connection_;
-   std::shared_ptr<ApplicationSettings>       appSettings_;
    const ZmqBIP15XDataConnection::cbNewKey    cbNewKey_;
 
 private:
@@ -209,7 +203,6 @@ public:
    LocalSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::shared_ptr<ApplicationSettings>& appSettings
       , const bool startSignerProcess = true
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""

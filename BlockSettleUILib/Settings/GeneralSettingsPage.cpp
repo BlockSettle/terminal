@@ -44,8 +44,6 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget* parent)
       TerminalEncryptionDialog dialog(TerminalEncryptionDialog::DisableEncryption, this);
       dialog.exec();
    });
-
-   connect(ui_->pushButtonOfflineDir, &QPushButton::clicked, this, &GeneralSettingsPage::onOfflineDirSel);
 }
 
 GeneralSettingsPage::~GeneralSettingsPage() = default;
@@ -58,7 +56,6 @@ void GeneralSettingsPage::display()
    ui_->checkBoxShowTxNotification->setChecked(appSettings_->get<bool>(ApplicationSettings::notifyOnTX));
    ui_->addvancedDialogByDefaultCheckBox->setChecked(appSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault));
    ui_->checkBox_subscribeToMdOnStart->setChecked(appSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart));
-   ui_->labelOfflineDir->setText(appSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
    const auto cfg = appSettings_->GetLogsConfig();
    ui_->logFileName->setText(QString::fromStdString(cfg.at(0).fileName));
@@ -104,8 +101,6 @@ void GeneralSettingsPage::apply()
 
    appSettings_->set(ApplicationSettings::SubscribeToMDOnStart
       , ui_->checkBox_subscribeToMdOnStart->isChecked());
-
-   appSettings_->set(ApplicationSettings::signerOfflineDir, ui_->labelOfflineDir->text());
 
    auto cfg = appSettings_->GetLogsConfig();
 
@@ -211,14 +206,4 @@ void GeneralSettingsPage::checkSettings()
    ui_->warnLabel->setText(tr("Changes will take effect after the application is restarted."));
 
    emit illformedSettings(false);
-}
-
-void GeneralSettingsPage::onOfflineDirSel()
-{
-   const auto dir = QFileDialog::getExistingDirectory(this, tr("Dir for offline signer files")
-      , ui_->labelOfflineDir->text(), QFileDialog::ShowDirsOnly);
-   if (dir.isEmpty()) {
-      return;
-   }
-   ui_->labelOfflineDir->setText(dir);
 }

@@ -19,13 +19,16 @@ inline QString ErrorCodeToString(bs::error::ErrorCode errorCode) {
       return QObject::tr("Failed to find wallet");
    case bs::error::ErrorCode::MissingPassword:
       return QObject::tr("Missing password for encrypted wallet");
+   case bs::error::ErrorCode::InvalidPassword:
+      return QObject::tr("Invalid password");
    case bs::error::ErrorCode::MissingAuthKeys:
       return QObject::tr("Missing auth priv/pub keys for encrypted wallet");
    case bs::error::ErrorCode::MissingSettlementWallet:
       return QObject::tr("Missing settlement wallet");
    case bs::error::ErrorCode::MissingAuthWallet:
       return QObject::tr("Missing Auth wallet");
-
+   case bs::error::ErrorCode::InternalError:
+      return QObject::tr("Internal error");
 
    // TX Signing errors
    case bs::error::ErrorCode::TxInvalidRequest:
@@ -40,9 +43,9 @@ inline QString ErrorCodeToString(bs::error::ErrorCode errorCode) {
       return QObject::tr("Failed to open TX request file");
    case bs::error::ErrorCode::TxFailedToWriteRequestFile:
       return QObject::tr("Failed to write TX request file");
-   default:
-      return QObject::tr("Unknown error");
    }
+
+   return QObject::tr("Unknown error");
 }
 
 } // namespace error

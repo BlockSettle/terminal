@@ -25,6 +25,7 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer>&
       , const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<ApplicationSettings> &
       , const Tx &
       , const std::shared_ptr<bs::sync::Wallet>&
       , QWidget* parent = nullptr);
@@ -35,6 +36,7 @@ public:
       , const std::shared_ptr<SignContainer>&
       , const std::shared_ptr<bs::sync::Wallet>&
       , const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<ApplicationSettings> &
       , const Tx &
       , QWidget* parent = nullptr);
 
@@ -42,6 +44,7 @@ public:
    CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<SignContainer> &
       , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
+      , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const std::shared_ptr<TransactionData> &
       , QWidget* parent = nullptr);
    ~CreateTransactionDialogAdvanced() override;

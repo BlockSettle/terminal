@@ -17,6 +17,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class ApplicationSettings;
 class ArmoryConnection;
 class QCheckBox;
 class QComboBox;
@@ -41,11 +42,11 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
+      , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , QWidget* parent);
    ~CreateTransactionDialog() noexcept override;
 
    int SelectWallet(const std::string& walletId);
-   void setOfflineDir(const QString &dir) { offlineDir_ = dir; }
 
 protected:
    virtual void init();
@@ -114,6 +115,7 @@ protected:
    std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<TransactionData> transactionData_;
    std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<ApplicationSettings> applicationSettings_;
 
    XbtAmountValidator * xbtValidator_ = nullptr;
 
@@ -125,9 +127,7 @@ protected:
    uint64_t       originalFee_ = 0;
    float          originalFeePerByte_ = 0.0f;
 
-   QString        offlineDir_;
    BinaryData     importedSignedTX_;
-
 private:
    bs::core::wallet::TXSignRequest  txReq_;
 };

@@ -1,6 +1,5 @@
 #include "HeadlessContainer.h"
 
-#include "ApplicationSettings.h"
 #include "ConnectionManager.h"
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncHDWallet.h"
@@ -1083,7 +1082,6 @@ void HeadlessContainer::ProcessExtAddrChain(unsigned int id, const std::string &
 RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &host, const QString &port, NetworkType netType
    , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const std::shared_ptr<ApplicationSettings>& appSettings
    , OpMode opMode
    , const bool ephemeralDataConnKeys
    , const std::string& ownKeyFileDir
@@ -1094,7 +1092,6 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , ephemeralDataConnKeys_(ephemeralDataConnKeys)
    , ownKeyFileDir_(ownKeyFileDir)
    , ownKeyFileName_(ownKeyFileName)
-   , appSettings_{appSettings}
    , cbNewKey_{inNewKeyCB}
    , connectionManager_{connectionManager}
 {
@@ -1357,16 +1354,6 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
    }
 }
 
-void RemoteSigner::setTargetDir(const QString& targetDir)
-{
-   appSettings_->set(ApplicationSettings::signerOfflineDir, targetDir);
-}
-
-QString RemoteSigner::targetDir() const
-{
-   return appSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
-}
-
 bs::signer::RequestId RemoteSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , SignContainer::TXSignMode mode, const PasswordType& password
    , bool keepDuplicatedRecipients)
@@ -1421,52 +1408,48 @@ bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRe
    container->set_type(Blocksettle::Storage::Signer::RequestFileType);
    container->set_data(request.SerializeAsString());
 
-   const auto timestamp = std::to_string(QDateTime::currentDateTime().toSecsSinceEpoch());
-   const auto targetDir = appSettings_->get<std::string>(ApplicationSettings::signerOfflineDir);
-   const std::string fileName = targetDir + "/" + txSignReq.walletId + "_" + timestamp + ".bin";
-
    const auto reqId = listener_->newRequestId();
-   QFile f(QString::fromStdString(fileName));
+   const std::string &fileNamePath = txSignReq.offlineFilePath;
+
+   QFile f(QString::fromStdString(fileNamePath));
    if (f.exists()) {
-      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::TxRequestFileExist, fileName);
-      });
+      txSignedAsync(reqId, {}, bs::error::ErrorCode::TxRequestFileExist, fileNamePath);
       return reqId;
    }
    if (!f.open(QIODevice::WriteOnly)) {
-      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::TxFailedToOpenRequestFile, fileName);
-      });
+      txSignedAsync(reqId, {}, bs::error::ErrorCode::TxFailedToOpenRequestFile, fileNamePath);
       return reqId;
    }
 
    const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
    if (f.write(data) != data.size()) {
-      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::TxFailedToWriteRequestFile, fileName);
-      });
+      txSignedAsync(reqId, {}, bs::error::ErrorCode::TxFailedToWriteRequestFile, fileNamePath);
       return reqId;
    }
    f.close();
 
-   QTimer::singleShot(1, [this, reqId, fileName] {    // requires some delay to avoid race condition on return
-      emit TXSigned(reqId, fileName, bs::error::ErrorCode::NoError);
-   });
+   // response should be async
+   txSignedAsync(reqId, {}, bs::error::ErrorCode::NoError);
    return reqId;
 }
 
+void RemoteSigner::txSignedAsync(bs::signer::RequestId id, const BinaryData &signedTX, bs::error::ErrorCode result, const std::string &errorReason)
+{
+   QMetaObject::invokeMethod(this, [this, id, signedTX, result, errorReason] {
+      emit TXSigned(id, signedTX, result, errorReason);
+   }, Qt::QueuedConnection);
+}
 
 LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &homeDir, NetworkType netType, const QString &port
    , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const std::shared_ptr<ApplicationSettings> &appSettings
    , const bool startSignerProcess
    , const std::string& ownKeyFileDir
    , const std::string& ownKeyFileName
    , double asSpendLimit
    , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-      , connectionManager, appSettings, OpMode::Local, true
+      , connectionManager, OpMode::Local, true
       , ownKeyFileDir, ownKeyFileName, inNewKeyCB)
       , homeDir_(homeDir), startProcess_(startSignerProcess), asSpendLimit_(asSpendLimit)
 {}

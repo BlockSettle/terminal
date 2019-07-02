@@ -523,7 +523,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
 
    QString resultHost = signerHost.address;
    const auto remoteSigner = std::make_shared<RemoteSigner>(logMgr_->logger()
-      , resultHost, resultPort, netType, connectionManager_, applicationSettings_
+      , resultHost, resultPort, netType, connectionManager_
       , SignContainer::OpMode::Remote, false
       , signersProvider_->remoteSignerKeysDir(), signersProvider_->remoteSignerKeysFile(), ourNewKeyCB);
 
@@ -567,7 +567,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createLocalSigner()
    const bool startLocalSignerProcess = true;
    return std::make_shared<LocalSigner>(logMgr_->logger()
       , applicationSettings_->GetHomeDir(), netType
-      , localSignerPort, connectionManager_, applicationSettings_
+      , localSignerPort, connectionManager_
       , startLocalSignerProcess, "", ""
       , applicationSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
 }
@@ -1031,8 +1031,7 @@ void BSTerminalMainWindow::onReceive()
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
 {
    CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_
-      , signContainer_, true, logMgr_->logger("ui"), nullptr, this};
-   advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
+      , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, this};
 
    if (!selectedWalletId.empty()) {
       advancedDialog.SelectWallet(selectedWalletId);
@@ -1058,10 +1057,8 @@ void BSTerminalMainWindow::onSend()
       if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
          createAdvancedTxDialog(selectedWalletId);
       } else {
-         CreateTransactionDialogSimple dlg{armory_, walletsMgr_, signContainer_
-            , logMgr_->logger("ui"),
-                                           this};
-         dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
+         CreateTransactionDialogSimple dlg(armory_, walletsMgr_, signContainer_
+            , logMgr_->logger("ui"), applicationSettings_, this);
 
          if (!selectedWalletId.empty()) {
             dlg.SelectWallet(selectedWalletId);
@@ -1090,7 +1087,7 @@ void BSTerminalMainWindow::setupMenu()
    ui_->menuFile->insertSeparator(action_login_);
    ui_->menuFile->insertSeparator(ui_->actionSettings);
 
-   connect(ui_->actionCreateNewWallet, &QAction::triggered, [ww = ui_->widgetWallets]{ ww->CreateNewWallet(); });
+   connect(ui_->actionCreateNewWallet, &QAction::triggered, this, [ww = ui_->widgetWallets]{ ww->CreateNewWallet(); });
    connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
    connect(ui_->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
    connect(ui_->actionAccountInformation, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
