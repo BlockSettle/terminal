@@ -41,7 +41,11 @@ namespace bs {
       uint32_t    txTime;
       bool        isRBF;
       bool        isChainedZC;
+      bool        merged;
+      std::chrono::time_point<std::chrono::steady_clock> recvTime;
 
+      bool operator==(const TXEntry &other) const { return (txHash == other.txHash); }
+      void merge(const TXEntry &);
       static TXEntry fromLedgerEntry(const ClientClasses::LedgerEntry &);
       static std::vector<TXEntry> fromLedgerEntries(std::vector<ClientClasses::LedgerEntry>);
    };
@@ -192,6 +196,7 @@ private:
    bool addGetTxCallback(const BinaryData &hash, const TxCb &);  // returns true if hash exists
    void callGetTxCallbacks(const BinaryData &hash, const Tx &);
 
+   void processZCEntries(const std::vector<bs::TXEntry> &, std::vector<bs::TXEntry> &immediate);
    void maintenanceThreadFunc();
 
 protected:
@@ -217,6 +222,8 @@ protected:
    std::map<BinaryData, std::vector<TxCb>>   txCallbacks_;
 
    std::map<BinaryData, bs::TXEntry>   zcEntries_;
+   std::vector<bs::TXEntry>   delayedZCEntries_;
+   std::mutex                 zcMutex_;
 
    std::unordered_set<ArmoryCallbackTarget *>   activeTargets_;
    std::atomic_bool  actChanged_{ false };

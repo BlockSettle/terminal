@@ -172,8 +172,9 @@ bs::Address CreateTransactionDialogSimple::getChangeAddress() const
    };
    if (transactionData_->GetTransactionSummary().hasChange) {
       transactionData_->getWallet()->getNewChangeAddress(cbAddr);
+      return futAddr.get();
    }
-   return futAddr.get();
+   return {};
 }
 
 void CreateTransactionDialogSimple::createTransaction()

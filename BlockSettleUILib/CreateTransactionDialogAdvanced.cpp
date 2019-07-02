@@ -873,7 +873,8 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
             promAddr->set_value(addr);
          };
          transactionData_->getWallet()->getNewChangeAddress(cbAddr
-            , ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
+            , ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH
+            : static_cast<AddressEntryType>(AddressEntryType_P2SH|AddressEntryType_P2WPKH));
          const auto changeAddr = futAddr.get();
          transactionData_->getWallet()->syncAddresses();
          return changeAddr;

@@ -87,16 +87,48 @@ bool ArmoryConnection::removeTarget(ArmoryCallbackTarget *act)
 
 void ArmoryConnection::maintenanceThreadFunc()
 {
+   const auto &forEachTarget = [this](const std::function<void(ArmoryCallbackTarget *tgt)> &cb) {
+      do {
+         decltype(activeTargets_) tempACT;
+         {
+            std::unique_lock<std::mutex> lock(cbMutex_);
+            actChanged_ = false;
+            tempACT = activeTargets_;
+         }
+         for (const auto &tgt : tempACT) {
+            if (!maintThreadRunning_ || actChanged_) {
+               break;
+            }
+            cb(tgt);
+         }
+      } while (actChanged_ && maintThreadRunning_);
+   };
+
    while (maintThreadRunning_) {
       {
          std::unique_lock<std::mutex> lock(actMutex_);
          if (actQueue_.empty()) {
-            actCV_.wait_for(lock, std::chrono::milliseconds{ 300 });
+            actCV_.wait_for(lock, std::chrono::milliseconds{ 100 });
          }
       }
       if (!maintThreadRunning_) {
          break;
       }
+
+      decltype(delayedZCEntries_) tempZCEntries;
+      {
+         std::unique_lock<std::mutex> lock(zcMutex_);
+         tempZCEntries.swap(delayedZCEntries_);
+      }
+      if (!tempZCEntries.empty()) {
+         logger_->debug("[{}] processing {} delayed ZCs", __func__, tempZCEntries.size());
+         std::vector<bs::TXEntry> immediate;
+         processZCEntries(tempZCEntries, immediate);
+         addToMaintQueue([this, immediate](ArmoryCallbackTarget *tgt) {
+            tgt->onZCReceived(immediate);
+         });
+      }
+
       decltype(actQueue_) tempQueue;
       {
          std::unique_lock<std::mutex> lock(actMutex_);
@@ -107,21 +139,7 @@ void ArmoryConnection::maintenanceThreadFunc()
       }
 
       for (const auto &cb : tempQueue) {
-         do {
-            decltype(activeTargets_) tempACT;
-            {
-               std::unique_lock<std::mutex> lock(cbMutex_);
-               actChanged_ = false;
-               tempACT = activeTargets_;
-            }
-            for (const auto &tgt : tempACT) {
-               if (!maintThreadRunning_ || actChanged_) {
-                  break;
-               }
-               cb(tgt);
-            }
-         } while (actChanged_ && maintThreadRunning_);
-
+         forEachTarget(cb);
          if (!maintThreadRunning_) {
             break;
          }
@@ -889,15 +907,44 @@ void ArmoryConnection::onRefresh(const std::vector<BinaryData>& ids)
    });
 }
 
+void ArmoryConnection::processZCEntries(const std::vector<bs::TXEntry> &txEntries
+   , std::vector<bs::TXEntry> &immediate)
+{
+   for (const auto &txEntry : txEntries) {
+      auto entry = txEntry;
+      auto itEntry = zcEntries_.find(txEntry.txHash);
+      if (itEntry == zcEntries_.end()) {
+         zcEntries_.insert({ txEntry.txHash, txEntry });
+      }
+      else {
+         itEntry->second.merge(txEntry);
+         entry = itEntry->second;
+      }
+      if (entry.merged) {
+         immediate.emplace_back(std::move(entry));
+      } else {
+         const auto timeDiff = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - entry.recvTime).count();
+         if (timeDiff >= 2300) { // can be tuned later
+            immediate.emplace_back(std::move(entry));
+         } else {
+            std::unique_lock<std::mutex> lock(zcMutex_);
+            delayedZCEntries_.emplace_back(std::move(entry));
+         }
+      }
+   }
+}
+
 void ArmoryConnection::onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &entries)
 {
    const auto txEntries = bs::TXEntry::fromLedgerEntries(entries);
-   for (const auto &entry : txEntries) {
-      zcEntries_[entry.txHash] = entry;
+   std::vector<bs::TXEntry> immediate;
+   processZCEntries(txEntries, immediate);
+   if (!immediate.empty()) {
+      addToMaintQueue([this, immediate](ArmoryCallbackTarget *tgt) {
+         tgt->onZCReceived(immediate);
+      });
    }
-   addToMaintQueue([txEntries](ArmoryCallbackTarget *tgt) {
-      tgt->onZCReceived(txEntries);
-   });
 }
 
 void ArmoryConnection::onZCsInvalidated(const std::set<BinaryData> &ids)
@@ -1025,17 +1072,37 @@ void ArmoryCallback::disconnected()
 }
 
 
+void bs::TXEntry::merge(const bs::TXEntry &other)
+{
+   value += other.value;
+   merged = true;
+}
+
 bs::TXEntry bs::TXEntry::fromLedgerEntry(const ClientClasses::LedgerEntry &entry)
 {
    return { entry.getTxHash(), entry.getID(), entry.getValue(), entry.getBlockNum()
-         , entry.getTxTime(), entry.isOptInRBF(), entry.isChainedZC() };
+         , entry.getTxTime(), entry.isOptInRBF(), entry.isChainedZC(), false
+         , std::chrono::steady_clock::now() };
 }
 
 std::vector<bs::TXEntry> bs::TXEntry::fromLedgerEntries(std::vector<ClientClasses::LedgerEntry> entries)
 {
    std::vector<bs::TXEntry> result;
+   std::map<BinaryData, bs::TXEntry> txeMap;
    for (const auto &entry : entries) {
-      result.push_back(fromLedgerEntry(entry));
+      const auto txEntry = fromLedgerEntry(entry);
+      auto itEntry = txeMap.find(txEntry.txHash);
+      if (itEntry == txeMap.end()) {
+         txeMap.insert({txEntry.txHash, txEntry});
+         result.emplace_back(std::move(txEntry));
+      }
+      else {
+         itEntry->second.merge(txEntry);
+         const auto itVec = std::find(result.begin(), result.end(), txEntry);
+         if (itVec != result.end()) {
+            *itVec = itEntry->second;
+         }
+      }
    }
    return result;
 }
