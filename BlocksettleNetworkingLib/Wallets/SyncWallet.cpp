@@ -15,6 +15,9 @@ Wallet::Wallet(SignContainer *container, const std::shared_ptr<spdlog::logger> &
 Wallet::~Wallet()
 {
    UtxoReservation::delAdapter(utxoAdapter_);
+   if (armory_) {
+      armory_->unregisterCallbacks(registeredCallbacks_);
+   }
 }
 
 const std::string& Wallet::walletIdInt(void) const
@@ -335,6 +338,7 @@ bool Wallet::getSpendableTxOutList(
    catch(std::exception&)
    {}
 
+   registeredCallbacks_.push_back((void *)&cbTxOutList);
    armory_->getSpendableTxOutListForValue(walletIDs, val, cbTxOutList);
    return true;
 }
@@ -352,6 +356,7 @@ bool Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb) const
    catch (std::exception&)
    {}
 
+   registeredCallbacks_.push_back((void *)&cb);
    armory_->getSpendableZCoutputs(walletIDs, cb);
    return true;
 }
