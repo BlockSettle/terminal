@@ -30,8 +30,6 @@ ApplicationWindow {
     height: 600
 //    minimumWidth: 450
 //    minimumHeight: 600
-    flags: Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint | Qt.Dialog |
-           Qt.WindowSystemMenuHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
 
     property var currentDialog: ({})
 

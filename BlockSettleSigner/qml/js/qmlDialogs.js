@@ -1,8 +1,21 @@
 .import "helper.js" as JsHelper
 
+var mainWindowFlags = Qt.Window
+
+function restoreMainWindowFlags() {
+    console.log("Restored main window flags")
+    mainWindow.flags = mainWindowFlags
+    mainWindow.closing.disconnect(restoreMainWindowFlags)
+}
+
 function customDialogRequest(dialogName, data) {
     //if (dialogName === "createNewWalletDialog")
+    mainWindowFlags = mainWindow.flags
+    mainWindow.flags = Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint | Qt.Dialog |
+            Qt.WindowSystemMenuHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
     let dlg = eval(dialogName)(data)
+    mainWindow.closing.connect(restoreMainWindowFlags)
+    dlg.closed.connect(restoreMainWindowFlags)
     JsHelper.raiseWindow()
     return dlg
 }
