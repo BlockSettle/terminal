@@ -30,6 +30,8 @@ ApplicationWindow {
     height: 600
     minimumWidth: 800
     minimumHeight: 600
+    flags: Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint | Qt.Dialog |
+           Qt.WindowSystemMenuHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
 
     background: Rectangle {
         color: BSStyle.backgroundColor
