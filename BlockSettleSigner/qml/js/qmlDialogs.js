@@ -1,21 +1,36 @@
 .import "helper.js" as JsHelper
 
-var mainWindowFlags = Qt.Window
+var mainWindowFlags = 0
+var connections = []
+
+function backupMainWindowFlags() {
+    mainWindowFlags = mainWindow.flags
+    mainWindow.closing.connect(restoreMainWindowFlags)
+}
 
 function restoreMainWindowFlags() {
-    console.log("Restored main window flags")
     mainWindow.flags = mainWindowFlags
-    mainWindow.closing.disconnect(restoreMainWindowFlags)
+    while (connections.length > 0) {
+        var item = connections.pop()
+        item["signal"].disconnect(item["slot"])
+    }
+}
+
+function updateMainWindowFlagsForDialog(dialog) {
+    mainWindow.flags = Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint |
+            Qt.Dialog | Qt.WindowSystemMenuHint |
+            Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+    raiseWindow()
+    function restore() {
+        restoreMainWindowFlags()
+    }
+    dialog.aboutToHide.connect(restore)
+    connections.push({"signal": dialog.aboutToHide, "slot": restore})
 }
 
 function customDialogRequest(dialogName, data) {
     //if (dialogName === "createNewWalletDialog")
-    mainWindowFlags = mainWindow.flags
-    mainWindow.flags = Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint | Qt.Dialog |
-            Qt.WindowSystemMenuHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
     let dlg = eval(dialogName)(data)
-    mainWindow.closing.connect(restoreMainWindowFlags)
-    dlg.closed.connect(restoreMainWindowFlags)
     JsHelper.raiseWindow()
     return dlg
 }
@@ -96,10 +111,12 @@ function createNewWalletDialog(data) {
 
     // allow user to save wallet seed lines and then prompt him to enter them for verification
     var dlgNewSeed = Qt.createComponent("../BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
+    updateMainWindowFlagsForDialog(dlgNewSeed)
     dlgNewSeed.seed = newSeed
     dlgNewSeed.bsAccepted.connect(function() {
         // let user set a password or Auth eID and also name and desc. for the new wallet
         var dlgCreateWallet = Qt.createComponent("../BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
+        updateMainWindowFlagsForDialog(dlgCreateWallet)
         dlgNewSeed.setNextChainDialog(dlgCreateWallet)
         dlgCreateWallet.seed = newSeed
         dlgCreateWallet.open()
@@ -110,6 +127,7 @@ function createNewWalletDialog(data) {
 
 function importWalletDialog(data) {
     var dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
+    updateMainWindowFlagsForDialog(dlgImp)
     dlgImp.open()
     return dlgImp
 }
@@ -117,6 +135,7 @@ function importWalletDialog(data) {
 function backupWalletDialog(data) {
     var rootId = data["rootId"]
     var dlg = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
+    updateMainWindowFlagsForDialog(dlg)
     dlg.walletInfo = qmlFactory.createWalletInfo(rootId)
     // FIXME: save backups dir
     //dlg.targetDir = signerSettings.dirDocuments
@@ -127,6 +146,7 @@ function backupWalletDialog(data) {
 function deleteWalletDialog(data) {
     var walletId = data["rootId"]
     var dlg = Qt.createComponent("../BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
+    updateMainWindowFlagsForDialog(dlg)
     dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
     dlg.rootName = walletsProxy.getRootWalletName(walletId)
     dlg.open()
@@ -136,6 +156,7 @@ function deleteWalletDialog(data) {
 function manageEncryptionDialog(data) {
     var rootId = data["rootId"]
     var dlg = Qt.createComponent("../BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow)
+    updateMainWindowFlagsForDialog(dlg)
     dlg.walletInfo = qmlFactory.createWalletInfo(rootId)
     dlg.open()
     return dlg
@@ -151,6 +172,7 @@ function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, settlem
     raiseWindow()
 
     var dlg = Qt.createComponent("../BsDialogs/CCSettlementTransactionDialog.qml").createObject(mainWindow)
+    updateMainWindowFlagsForDialog(dlg)
     prepareLigthModeDialog(dlg)
 
     dlg.walletInfo = walletInfo

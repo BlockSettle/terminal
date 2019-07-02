@@ -34,6 +34,7 @@ ApplicationWindow {
     property var currentDialog: ({})
 
     Component.onCompleted: {
+        QmlDialogs.backupMainWindowFlags()
         hide()
         qmlFactory.installEventFilterToObj(mainWindow)
     }
