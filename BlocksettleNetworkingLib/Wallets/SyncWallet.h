@@ -251,6 +251,7 @@ namespace bs {
          mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
          std::vector<std::function<void(void)>> cbTxNs_;
          std::vector<std::function<void(void)>> cbBalances_;
+         mutable std::vector<void *>            registeredCallbacks_;
 
       protected:
          bool firstInit_ = false;
