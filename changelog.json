@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.18.1",
-   "release_date": "02 Jul 2019",
+   "latest_version": "0.18.2",
+   "release_date": "03 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.18.2",
+         "previous_version": "0.18.1",
+         "release_date": "03 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Put Create wallet dialog at center of screen",
+            "UI fixes",
+            "Save quoted prices to detect own quote (#1071)",
+            " Allow user select exported TX file name (#1067)"
+         ],
+         "bug_fixes": [],
+         "revision": "96f4b812",
+         "common_revision": "c0a2af38"
+      },
       {
          "version_string": "0.18.1",
          "previous_version": "0.18.0",
