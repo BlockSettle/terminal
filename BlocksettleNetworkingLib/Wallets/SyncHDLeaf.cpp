@@ -960,7 +960,7 @@ void hd::CCLeaf::CCWalletACT::onStateChanged(ArmoryState state)
    }
 }
 
-void hd::CCLeaf::onZeroConfReceived(const std::vector<TXEntry> &entries)
+void hd::CCLeaf::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 {
    hd::Leaf::onZeroConfReceived(entries);
    refreshInvalidUTXOs(true);
