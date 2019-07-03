@@ -470,7 +470,7 @@ bool ArmoryConnection::getSpendableTxOutListForValue(const std::vector<std::stri
    const auto &cbWrap = [this, cb](ReturnMessage<std::vector<UTXO>> retMsg) {
       try {
          const auto &txOutList = retMsg.get();
-         if (cb && hasRegisteredCallback((void *)&cb)) {
+         if (cb) {
             cb(txOutList);
          }
       }
@@ -481,7 +481,6 @@ bool ArmoryConnection::getSpendableTxOutListForValue(const std::vector<std::stri
          }
       }
    };
-   registerCallback((void *)&cb);
    bdv_->getCombinedSpendableTxOutListForValue(walletIds, val, cbWrap);
    return true;
 }
@@ -495,7 +494,7 @@ bool ArmoryConnection::getSpendableZCoutputs(const std::vector<std::string> &wal
    const auto &cbWrap = [this, cb](ReturnMessage<std::vector<UTXO>> retMsg) {
       try {
          const auto &txOutList = retMsg.get();
-         if (cb && hasRegisteredCallback((void *)&cb)) {
+         if (cb) {
             cb(txOutList);
          }
       } catch (const std::exception &e) {
@@ -505,7 +504,6 @@ bool ArmoryConnection::getSpendableZCoutputs(const std::vector<std::string> &wal
          }
       }
    };
-   registerCallback((void *)&cb);
    bdv_->getCombinedSpendableZcOutputs(walletIds, cbWrap);
    return true;
 }
@@ -972,32 +970,6 @@ std::shared_ptr<AsyncClient::BtcWallet> ArmoryConnection::instantiateWallet(cons
       return nullptr;
    }
    return std::make_shared<AsyncClient::BtcWallet>(bdv_->instantiateWallet(walletId));
-}
-
-bool ArmoryConnection::unregisterCallback(void *cb)
-{
-   std::unique_lock<std::mutex> lock(regCbMutex_);
-   return (registeredCallbacks_.erase(cb) > 0);
-}
-
-void ArmoryConnection::unregisterCallbacks(const std::vector<void *> &cbs)
-{
-   std::unique_lock<std::mutex> lock(regCbMutex_);
-   for (const auto &cb : cbs) {
-      registeredCallbacks_.erase(cb);
-   }
-}
-
-bool ArmoryConnection::hasRegisteredCallback(void *cb)
-{
-   std::unique_lock<std::mutex> lock(regCbMutex_);
-   return (registeredCallbacks_.find(cb) != registeredCallbacks_.end());
-}
-
-void ArmoryConnection::registerCallback(void *cb)
-{
-   std::unique_lock<std::mutex> lock(regCbMutex_);
-   registeredCallbacks_.insert(cb);
 }
 
 
