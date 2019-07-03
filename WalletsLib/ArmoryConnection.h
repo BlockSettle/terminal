@@ -172,9 +172,6 @@ public:
    bool addTarget(ArmoryCallbackTarget *);
    bool removeTarget(ArmoryCallbackTarget *);
 
-   bool unregisterCallback(void *);
-   void unregisterCallbacks(const std::vector<void *> &);
-
    using BIP151Cb = std::function<bool(const BinaryData&, const std::string&)>;
 
    std::shared_ptr<AsyncClient::BtcWallet> instantiateWallet(const std::string &walletId);
@@ -202,9 +199,6 @@ private:
    void processZCEntries(const std::vector<bs::TXEntry> &, std::vector<bs::TXEntry> &immediate);
    void maintenanceThreadFunc();
 
-   bool hasRegisteredCallback(void *);
-   void registerCallback(void *);
-
 protected:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<AsyncClient::BlockDataViewer>   bdv_;
@@ -226,8 +220,6 @@ protected:
 
    std::mutex  cbMutex_;
    std::map<BinaryData, std::vector<TxCb>>   txCallbacks_;
-   std::mutex  regCbMutex_;
-   std::unordered_set<void *> registeredCallbacks_;
 
    std::map<BinaryData, bs::TXEntry>   zcEntries_;
    std::vector<bs::TXEntry>   delayedZCEntries_;
