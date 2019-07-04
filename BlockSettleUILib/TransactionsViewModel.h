@@ -60,6 +60,7 @@ struct TransactionsViewItem
    bool isCPFPeligible() const;
 
    std::string id() const;
+   bs::Address filterAddress;
 
 private:
    bool     txHashesReceived{ false };
@@ -118,8 +119,9 @@ public:
                           , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<AsyncClient::LedgerDelegate> &
                           , const std::shared_ptr<spdlog::logger> &
-                          , QObject* parent
-                          , const std::shared_ptr<bs::sync::Wallet> &defWlt);
+                          , const std::shared_ptr<bs::sync::Wallet> &defWlt
+                          , const bs::Address &filterAddress = bs::Address()
+                          , QObject* parent = nullptr);
    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
                           , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<spdlog::logger> &
@@ -215,6 +217,12 @@ private:
    const bool        allWallets_;
    std::shared_ptr<std::atomic_bool>  stopped_;
    std::atomic_bool  initialLoadCompleted_{ true };
+
+   // If set, amount field will show only related address balance changes
+   // (without fees because fees are related to transaction, not address).
+   // Right now used with AddressDetailDialog only.
+   // See BST-1982 and BST-1983 for details.
+   const bs::Address filterAddress_;
 };
 
 #endif // __TRANSACTIONS_VIEW_MODEL_H__
