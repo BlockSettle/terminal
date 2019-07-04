@@ -71,7 +71,7 @@ public:
    static void notify(bs::ui::NotifyType, const bs::ui::NotifyMessage &);
 
 signals:
-   void notifyEndpoint(bs::ui::NotifyType, bs::ui::NotifyMessage);
+   void notifyEndpoint(bs::ui::NotifyType, const bs::ui::NotifyMessage &);
    void newChatMessageClick(const QString &chatId);
 
 private:
