@@ -30,8 +30,22 @@ ApplicationWindow {
     height: 600
 //    minimumWidth: 450
 //    minimumHeight: 600
+    onWidthChanged: emitSizeChanged()
+    onHeightChanged: emitSizeChanged()
 
     property var currentDialog: ({})
+
+    function emitSizeChanged() {
+        sizeChangeTimer.start()
+    }
+    Timer {
+        id: sizeChangeTimer
+        interval: 100
+        repeat: false
+        running: false
+        onTriggered: sizeChanged(mainWindow.width, mainWindow.height)
+    }
+    signal sizeChanged(int w, int h)
 
     Component.onCompleted: {
         hide()

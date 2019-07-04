@@ -92,10 +92,8 @@ function createNewWalletDialog(data) {
         dlgCreateWallet.open()
     })
     if (Object.keys(mainWindow).indexOf("currentDialog") != -1) {
-        mainWindow.widthChanged.connect(function(w) {
+        mainWindow.sizeChanged.connect(function(w, h) {
             dlgNewSeed.width = w
-        })
-        mainWindow.heightChanged.connect(function(h) {
             dlgNewSeed.height = h
         })
         dlgNewSeed.bsResized.connect(function() {
