@@ -94,7 +94,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    ui_->labelError->hide();
 
    auto balanceVec = wallet_->getAddrBalance(address);
-   QMetaObject::invokeMethod(this, [this, balanceVec] { onAddrBalanceReceived(balanceVec); });
+   onAddrBalanceReceived(balanceVec);
 
    onAddrTxNReceived(wallet_->getAddrTxN(address));
 
@@ -193,7 +193,7 @@ void AddressDetailDialog::initModels(const std::shared_ptr<AsyncClient::LedgerDe
    ui_->outputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
 }
 
-void AddressDetailDialog::onAddrBalanceReceived(std::vector<uint64_t> balance)
+void AddressDetailDialog::onAddrBalanceReceived(const std::vector<uint64_t> &balance)
 {
    if (balance.empty()) {
       ui_->labelBalance->setText(QString::number(0));

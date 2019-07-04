@@ -25,8 +25,12 @@ TXNode::TXNode(const std::shared_ptr<TransactionsViewItem> &item, TXNode *parent
 void TXNode::init()
 {
    fontBold_.setBold(true);
-   colorGray_ = Qt::darkGray, colorRed_ = Qt::red, colorYellow_ = Qt::darkYellow;
-   colorGreen_ = Qt::darkGreen, colorInvalid_ = Qt::red;
+
+   colorGray_ = Qt::darkGray;
+   colorRed_ = Qt::red;
+   colorYellow_ = Qt::darkYellow;
+   colorGreen_ = Qt::darkGreen;
+   colorInvalid_ = Qt::red;
 }
 
 void TXNode::clear(bool del)
