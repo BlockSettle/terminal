@@ -27,7 +27,7 @@ CustomTitleDialogWindow {
 
     property bool fullScreenMode: true
     width: curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.75) : 470
-    height: curPage === 1 ? (fullScreenMode ? 800 : mainWindow.height * 0.98) : 265
+    height: curPage === 1 ? (fullScreenMode ? 800 : mainWindow.height * 0.98) : 225
 
     abortConfirmation: true
     abortBoxType: BSAbortBox.WalletCreation
@@ -44,7 +44,7 @@ CustomTitleDialogWindow {
     onCurPageChanged: {
         // Bindings not working here for some reason
         var w = curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.8) : 470
-        var h = curPage === 1 ? (fullScreenMode ? 800 : mainWindow.width * 0.8) : 265
+        var h = curPage === 1 ? (fullScreenMode ? 800 : mainWindow.width * 0.8) : 225
         sizeChanged(w, h)
     }
 

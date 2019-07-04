@@ -21,9 +21,6 @@ CustomTitleDialogWindow {
     property string targetFile: qmlAppObj.getUrlPath(StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + backupFileName)
 
     property string backupFileExt: "." + (isPrintable ? "pdf" : "wdb")
-//    property string backupFileName: fullBackupMode
-//                                    ? "backup_wallet_" + walletInfo.name + "_" + walletInfo.walletId + backupFileExt
-//                                    : "bip44wo_" + walletInfo.walletId + "_wallet.lmdb"
 
     // suggested new file names
     property string backupFileName: fullBackupMode
@@ -51,7 +48,6 @@ CustomTitleDialogWindow {
         if (walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)) {
             fullBackupTabButton.enabled = false
             tabBar.currentIndex = 1
-            walletDetailsFrame.visible = false
         }
     }
 
@@ -91,6 +87,8 @@ CustomTitleDialogWindow {
 
         BSWalletDetailsFrame {
             id: walletDetailsFrame
+            Layout.fillHeight: false
+
             walletInfo: walletInfo
             inputsWidth: 250
             onPasswordEntered:{
@@ -232,7 +230,7 @@ CustomTitleDialogWindow {
                         }
                     }
 
-                    if (walletInfo.encType === QPasswordData.Password) {
+                    if (walletInfo.encType === QPasswordData.Password || walletInfo.encType === QPasswordData.Unencrypted) {
                         var passwordData = qmlFactory.createPasswordData()
                         passwordData.textPassword = walletDetailsFrame.password
 
@@ -247,7 +245,7 @@ CustomTitleDialogWindow {
                                , exportCallback)
                         }
                     }
-                    else {
+                    else if (walletInfo.encType === QPasswordData.Auth) {
                         JsHelper.requesteIdAuth(AutheIDClient.BackupWallet, walletInfo
                             , function(passwordData){
                                 if (fullBackupMode) {

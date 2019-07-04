@@ -121,6 +121,9 @@ function createNewWalletDialog(data) {
         dlgCreateWallet.seed = newSeed
         dlgCreateWallet.open()
     })
+    dlgNewSeed.bsResized.connect(function() {
+        mainWindow.moveMainWindowToScreenCenter()
+    })
     dlgNewSeed.open()
     return dlgNewSeed
 }

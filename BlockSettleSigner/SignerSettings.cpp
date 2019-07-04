@@ -283,7 +283,7 @@ QStringList SignerSettings::trustedTerminals() const
 
 bool SignerSettings::twoWaySignerAuth() const
 {
-   return d_->two_way_signer_auth();
+   return d_->two_way_signer_auth() == Blocksettle::Communication::signer::TWO_WAY_AUTH_ENABLED;
 }
 
 QString SignerSettings::dirDocuments() const
@@ -405,8 +405,10 @@ void SignerSettings::setTrustedTerminals(const QStringList &val)
 
 void SignerSettings::setTwoWaySignerAuth(bool val)
 {
-   if (val != d_->two_way_signer_auth()) {
-      d_->set_two_way_signer_auth(val);
+   const bool valOld = (d_->two_way_signer_auth() == Blocksettle::Communication::signer::TWO_WAY_AUTH_ENABLED);
+   if (val != valOld) {
+      d_->set_two_way_signer_auth(val ? Blocksettle::Communication::signer::TWO_WAY_AUTH_ENABLED
+         : Blocksettle::Communication::signer::TWO_WAY_AUTH_DISABLED);
       settingChanged(signer::Setting::TwoWaySignerAuth);
    }
 }
