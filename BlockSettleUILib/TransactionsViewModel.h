@@ -217,6 +217,11 @@ private:
    const bool        allWallets_;
    std::shared_ptr<std::atomic_bool>  stopped_;
    std::atomic_bool  initialLoadCompleted_{ true };
+
+   // If set, amount field will show only related address balance changes
+   // (without fees because fees are related to transaction, not address).
+   // Right now used with AddressDetailDialog only.
+   // See BST-1982 and BST-1983 for details.
    const bs::Address filterAddress_;
 };
 
