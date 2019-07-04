@@ -192,7 +192,7 @@ private slots:
    void openCCTokenDialog();
 
    void onZCreceived(const std::vector<bs::TXEntry> &);
-   void showZcNotification(const TxInfo *);
+   void showZcNotification(const TxInfo &);
 
    void onLogin();
    void onLogout();

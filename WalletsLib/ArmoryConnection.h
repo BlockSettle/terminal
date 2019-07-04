@@ -196,7 +196,7 @@ private:
    bool addGetTxCallback(const BinaryData &hash, const TxCb &);  // returns true if hash exists
    void callGetTxCallbacks(const BinaryData &hash, const Tx &);
 
-   void processZCEntries(const std::vector<bs::TXEntry> &, std::vector<bs::TXEntry> &immediate);
+   void processDelayedZC();
    void maintenanceThreadFunc();
 
 protected:
@@ -221,8 +221,8 @@ protected:
    std::mutex  cbMutex_;
    std::map<BinaryData, std::vector<TxCb>>   txCallbacks_;
 
-   std::map<BinaryData, bs::TXEntry>   zcEntries_;
-   std::vector<bs::TXEntry>   delayedZCEntries_;
+   std::map<BinaryData, bs::TXEntry>   zcNotifiedEntries_;
+   std::map<BinaryData, bs::TXEntry>   zcWaitingEntries_;
    std::mutex                 zcMutex_;
 
    std::unordered_set<ArmoryCallbackTarget *>   activeTargets_;

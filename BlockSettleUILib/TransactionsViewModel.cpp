@@ -9,7 +9,6 @@
 #include <QDateTime>
 #include <QMutexLocker>
 #include <QFutureWatcher>
-#include <QtConcurrent/QtConcurrentRun>
 
 
 TXNode::TXNode()
@@ -174,7 +173,7 @@ void TXNode::forEach(const std::function<void(const std::shared_ptr<Transactions
 TXNode *TXNode::find(const std::string &id) const
 {
    if (item_ && (item_->id() == id)) {
-      return (TXNode *)this;
+      return const_cast<TXNode*>(this);
    }
    for (const auto &child : children_) {
       if (child->item()->id() == id) {
@@ -211,7 +210,7 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
    , allWallets_(false)
 {
    init();
-   QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
+   loadLedgerEntries();
 }
 
 TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
@@ -220,8 +219,8 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
                                              , QObject* parent)
    : QAbstractItemModel(parent)
    , ArmoryCallbackTarget(armory.get())
-   , walletsManager_(walletsManager)
    , logger_(logger)
+   , walletsManager_(walletsManager)
    , allWallets_(true)
 {
    init();
@@ -229,11 +228,11 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
 
 void TransactionsViewModel::init()
 {
-   stopped_ = false;
+   stopped_ = std::make_shared<std::atomic_bool>(false);
    qRegisterMetaType<TransactionsViewItem>();
    qRegisterMetaType<TransactionItems>();
 
-   rootNode_ = new TXNode;
+   rootNode_.reset(new TXNode);
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &TransactionsViewModel::onWalletDeleted, Qt::QueuedConnection);
@@ -243,8 +242,7 @@ void TransactionsViewModel::init()
 
 TransactionsViewModel::~TransactionsViewModel() noexcept
 {
-   stopped_ = true;
-   delete rootNode_;
+   *stopped_ = true;
 }
 
 void TransactionsViewModel::onNewBlock(unsigned int)
@@ -259,7 +257,7 @@ void TransactionsViewModel::loadAllWallets()
          return;
       }
       ledgerDelegate_ = delegate;
-      QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
+      loadLedgerEntries();
    };
    if (initialLoadCompleted_) {
       armory_->getWalletsLedgerDelegate(cbWalletsLD);
@@ -274,7 +272,7 @@ int TransactionsViewModel::columnCount(const QModelIndex &) const
 TXNode *TransactionsViewModel::getNode(const QModelIndex &index) const
 {
    if (!index.isValid()) {
-      return rootNode_;
+      return rootNode_.get();
    }
    return static_cast<TXNode *>(index.internalPointer());
 }
@@ -311,7 +309,7 @@ QModelIndex TransactionsViewModel::parent(const QModelIndex &child) const
 
    auto node = getNode(child);
    auto parentNode = (node == nullptr) ? nullptr : node->parent();
-   if ((parentNode == nullptr) || (parentNode == rootNode_)) {
+   if ((parentNode == nullptr) || (parentNode == rootNode_.get())) {
       return QModelIndex();
    }
    return createIndex(parentNode->row(), 0, static_cast<void*>(parentNode));
@@ -387,7 +385,7 @@ void TransactionsViewModel::updatePage()
 
 void TransactionsViewModel::clear()
 {
-   stopped_ = true;
+   *stopped_ = true;
    beginResetModel();
    {
       QMutexLocker locker(&updateMutex_);
@@ -396,7 +394,7 @@ void TransactionsViewModel::clear()
       oldestItem_ = {};
    }
    endResetModel();
-   stopped_ = false;
+   *stopped_ = false;
 }
 
 void TransactionsViewModel::onStateChanged(ArmoryState state)
@@ -473,7 +471,7 @@ void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entr
       for (const auto &entry : entries) {
          const auto key = mkTxKey(entry);
          const auto node = rootNode_->find(key);
-         if (node && (node->parent() == rootNode_) && !node->item()->confirmations) {
+         if (node && (node->parent() == rootNode_.get()) && !node->item()->confirmations) {
             delRows.push_back(node->row());
             currentItems_.erase(key);
             if (node->hasChildren()) { // handle race condition when node being deleted has confirmed children
@@ -508,10 +506,10 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
    if ((!child->confirmations && child->txEntry.isRBF && !parent->confirmations && parent->txEntry.isRBF)
        && (child->txEntry.txHash != parent->txEntry.txHash) && (child->txEntry.id == parent->txEntry.id)) {
       std::set<BinaryData> childInputs, parentInputs;
-      for (int i = 0; i < child->tx.getNumTxIn(); i++) {
+      for (int i = 0; i < int(child->tx.getNumTxIn()); i++) {
          childInputs.insert(child->tx.getTxInCopy(i).serialize());
       }
-      for (int i = 0; i < parent->tx.getNumTxIn(); i++) {
+      for (int i = 0; i < int(parent->tx.getNumTxIn()); i++) {
          parentInputs.insert(parent->tx.getTxInCopy(i).serialize());
       }
       if (childInputs == parentInputs) {
@@ -570,7 +568,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          std::unordered_set<std::string> deletedItems;
          if (rootNode_->hasChildren()) {
             std::vector<int> delRows;
-            const auto &cbEachExisting = [this, newItems, &delRows](TXNode *txNode) {
+            const auto &cbEachExisting = [newItems, &delRows](TXNode *txNode) {
                for (auto &newItem : *newItems) {
                   if (newItem.second.second->find(txNode->item()->id())
                      || txNode->find(newItem.first)) {   // avoid looped graphs
@@ -625,7 +623,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
             onNewItems(*newItems);
             if (signalOnEndLoading_ && updatedItems->empty()) {
                signalOnEndLoading_ = false;
-               emit dataLoaded(newItems->size());
+               emit dataLoaded(int(newItems->size()));
             }
          }
       }
@@ -697,38 +695,53 @@ void TransactionsViewModel::loadLedgerEntries()
    }
    initialLoadCompleted_ = false;
 
-   const auto &cbPageCount = [this](ReturnMessage<uint64_t> pageCnt)->void {
+   QPointer<TransactionsViewModel> thisPtr = this;
+   auto rawData = std::make_shared<std::map<int, std::vector<bs::TXEntry>>>();
+
+   const auto &cbPageCount = [thisPtr, stopped = stopped_, logger = logger_, rawData, ledgerDelegate = ledgerDelegate_](ReturnMessage<uint64_t> pageCnt)->void {
       try {
-         auto inPageCnt = pageCnt.get();
-         emit initProgress(0, inPageCnt * 2);
-         for (uint64_t pageId = 0; pageId < inPageCnt; ++pageId) {
-            if (stopped_) {
-               logger_->debug("[TransactionsViewModel::loadLedgerEntries] stopped");
+         int inPageCnt = int(pageCnt.get());
+
+         QMetaObject::invokeMethod(qApp, [thisPtr, inPageCnt] {
+            if (thisPtr) {
+               emit thisPtr->initProgress(0, int(inPageCnt * 2));
+            }
+         });
+
+         for (int pageId = 0; pageId < inPageCnt; ++pageId) {
+            if (*stopped) {
+               logger->debug("[TransactionsViewModel::loadLedgerEntries] stopped");
                break;
             }
-            const auto &cbLedger = [this, pageId, inPageCnt]
+            const auto &cbLedger = [thisPtr, pageId, inPageCnt, rawData, logger]
                (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
                try {
                  auto le = entries.get();
-                 rawData_[pageId] = bs::TXEntry::fromLedgerEntries(le);
-                 emit updateProgress((int)pageId);
+                 (*rawData)[pageId] = bs::TXEntry::fromLedgerEntries(le);
+                 QMetaObject::invokeMethod(qApp, [thisPtr, pageId] {
+                    if (thisPtr) {
+                       emit thisPtr->updateProgress(pageId);
+                    }
+                 });
                }
                catch (std::exception& e) {
-                  logger_->error("[TransactionsViewModel::loadLedgerEntries] " \
+                  logger->error("[TransactionsViewModel::loadLedgerEntries] " \
                      "Return data error (getPageCount) - {}", e.what());
                }
 
-               if (rawData_.size() >= inPageCnt) {
-                  QMetaObject::invokeMethod(this, [this] {
-                     ledgerToTxData();
+               if (int(rawData->size()) >= inPageCnt) {
+                  QMetaObject::invokeMethod(qApp, [thisPtr, rawData] {
+                     if (thisPtr) {
+                        thisPtr->ledgerToTxData(*rawData);
+                     }
                   });
                }
             };
-            ledgerDelegate_->getHistoryPage(pageId, cbLedger);
+            ledgerDelegate->getHistoryPage(uint32_t(pageId), cbLedger);
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[TransactionsViewModel::loadLedgerEntries] Return " \
+         logger->error("[TransactionsViewModel::loadLedgerEntries] Return " \
             "data error (getPageCount) - {}", e.what());
       }
    };
@@ -736,16 +749,15 @@ void TransactionsViewModel::loadLedgerEntries()
    ledgerDelegate_->getPageCount(cbPageCount);
 }
 
-void TransactionsViewModel::ledgerToTxData()
+void TransactionsViewModel::ledgerToTxData(const std::map<int, std::vector<bs::TXEntry>> &rawData)
 {
    int pageCnt = 0;
 
    signalOnEndLoading_ = true;
-   for (const auto &le : rawData_) {
+   for (const auto &le : rawData) {
       updateTransactionsPage(le.second);
-      emit updateProgress(rawData_.size() + pageCnt++);
+      emit updateProgress(int(rawData.size()) + pageCnt++);
    }
-   rawData_.clear();
    initialLoadCompleted_ = true;
 }
 

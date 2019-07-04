@@ -114,17 +114,17 @@ class TransactionsViewModel : public QAbstractItemModel, public ArmoryCallbackTa
 {
 Q_OBJECT
 public:
-    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
+   TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
                           , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<AsyncClient::LedgerDelegate> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent
                           , const std::shared_ptr<bs::sync::Wallet> &defWlt);
-    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
+   TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
                           , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent = nullptr);
-    ~TransactionsViewModel() noexcept;
+   ~TransactionsViewModel() noexcept override;
 
    TransactionsViewModel(const TransactionsViewModel&) = delete;
    TransactionsViewModel& operator = (const TransactionsViewModel&) = delete;
@@ -166,7 +166,7 @@ private:
    void init();
    void clear();
    void loadLedgerEntries();
-   void ledgerToTxData();
+   void ledgerToTxData(const std::map<int, std::vector<bs::TXEntry>> &rawData);
    std::pair<size_t, size_t> updateTransactionsPage(const std::vector<bs::TXEntry> &);
    void updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &);
    void updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
@@ -203,9 +203,8 @@ public:
    };
 
 private:
-   TXNode   *  rootNode_;
+   std::unique_ptr<TXNode> rootNode_;
    TransactionsViewItem oldestItem_;
-   std::map<uint32_t, std::vector<bs::TXEntry>> rawData_;
    std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>>  currentItems_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AsyncClient::LedgerDelegate> ledgerDelegate_;
@@ -214,7 +213,7 @@ private:
    std::shared_ptr<bs::sync::Wallet>   defaultWallet_;
    std::atomic_bool  signalOnEndLoading_{ false };
    const bool        allWallets_;
-   std::atomic_bool  stopped_;
+   std::shared_ptr<std::atomic_bool>  stopped_;
    std::atomic_bool  initialLoadCompleted_{ true };
 };
 

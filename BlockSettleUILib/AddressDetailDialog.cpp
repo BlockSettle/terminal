@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <QLabel>
 #include <QPushButton>
+#include <QPointer>
 #include <QSortFilterProxyModel>
 #include <QMenu>
 #include <QAction>
@@ -83,13 +84,12 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    , const std::shared_ptr<spdlog::logger> &logger, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AddressDetailDialog())
+   , logger_(logger)
    , address_(address)
    , walletsManager_(walletsManager)
    , armory_(armory)
    , wallet_(wallet)
-   , logger_(logger)
 {
-   setAttribute(Qt::WA_DeleteOnClose);
    ui_->setupUi(this);
    ui_->labelError->hide();
 
@@ -141,8 +141,13 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
       onError();
    }
    else {
-      const auto &cbLedgerDelegate = [this, armory](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
-         QMetaObject::invokeMethod(this, [this, delegate]{ initModels(delegate); });
+      QPointer<AddressDetailDialog> thisPtr = this;
+      const auto &cbLedgerDelegate = [thisPtr, armory](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
+         QMetaObject::invokeMethod(qApp, [thisPtr, delegate]{
+            if (thisPtr) {
+               thisPtr->initModels(delegate);
+            }
+         });
       };
       if (!wallet_->getLedgerDelegateForAddress(address_, cbLedgerDelegate)) {
          ui_->labelError->setText(tr("Error loading address info"));
