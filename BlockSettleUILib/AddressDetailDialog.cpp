@@ -175,8 +175,9 @@ void AddressDetailDialog::initModels(const std::shared_ptr<AsyncClient::LedgerDe
                                                             , walletsManager_
                                                             , delegate
                                                             , logger_
-                                                            , this
-                                                            , wallet_);
+                                                            , wallet_
+                                                            , address_
+                                                            , this);
 
    IncomingTransactionFilter* incomingFilter = new IncomingTransactionFilter(this);
    incomingFilter->setSourceModel(model);

@@ -51,6 +51,7 @@ QVariant TXNode::data(int column, int role) const
    if (!item_) {
       return {};
    }
+
    const auto col = static_cast<TransactionsViewModel::Columns>(column);
    if (role == Qt::DisplayRole) {
       switch (col) {
@@ -203,8 +204,9 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
                          , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
                          , const std::shared_ptr<AsyncClient::LedgerDelegate> &ledgerDelegate
                          , const std::shared_ptr<spdlog::logger> &logger
-                         , QObject* parent
-                         , const std::shared_ptr<bs::sync::Wallet> &defWlt)
+                         , const std::shared_ptr<bs::sync::Wallet> &defWlt
+                         , const bs::Address &filterAddress
+                         , QObject* parent)
    : QAbstractItemModel(parent)
    , ArmoryCallbackTarget(armory.get())
    , logger_(logger)
@@ -212,6 +214,7 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
    , walletsManager_(walletsManager)
    , defaultWallet_(defWlt)
    , allWallets_(false)
+   , filterAddress_(filterAddress)
 {
    init();
    loadLedgerEntries();
@@ -419,6 +422,7 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction
    item->txEntry = entry;
    item->displayDateTime = UiUtils::displayDateTime(entry.txTime);
    item->wallet = walletsManager_->getWalletById(entry.id);
+   item->filterAddress = filterAddress_;
    if (!item->wallet && defaultWallet_) {
       item->wallet = defaultWallet_;
    }
@@ -998,7 +1002,8 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
 {
    if (wallet && tx.isInitialized()) {
       bool hasSpecialAddr = false;
-      uint64_t outputVal = 0, ownOutputVal = 0;
+      int64_t outputVal = 0, ownOutputVal = 0;
+      int64_t addressVal = 0;
       for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
          const TxOut out = tx.getTxOutCopy(i);
          const auto addr = bs::Address::fromTxOut(out);
@@ -1010,6 +1015,10 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
             ownOutputVal += out.getValue();
          }
          outputVal += out.getValue();
+
+         if (filterAddress.isValid() && addr == filterAddress) {
+            addressVal += out.getValue();
+         }
       }
 
       int64_t inputVal = 0;
@@ -1020,18 +1029,28 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
          if (prevTx.isInitialized()) {
             TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
             inputVal += prevOut.getValue();
+            const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
             if (txEntry.isChainedZC && !hasSpecialAddr) {
-               const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
                hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr.id()));
+            }
+
+            if (filterAddress.isValid() && filterAddress == addr) {
+               addressVal -= prevOut.getValue();
             }
          }
       }
-      const uint64_t fee = (wallet->type() == bs::core::wallet::Type::ColorCoin) || (txEntry.value > 0)
+      const int64_t fee = (wallet->type() == bs::core::wallet::Type::ColorCoin) || (txEntry.value > 0)
          ? 0 : (inputVal - outputVal);
       const auto value = (txEntry.value < -fee) ? -(outputVal - ownOutputVal + fee)
          : (ownOutputVal > 0) ? ownOutputVal : outputVal;
-      amount = wallet->getTxBalance(value);
-      amountStr = wallet->displayTxValue(value);
+
+      if (!filterAddress.isValid()) {
+         amount = wallet->getTxBalance(value);
+         amountStr = wallet->displayTxValue(value);
+      } else {
+         amount = wallet->getTxBalance(addressVal);
+         amountStr = wallet->displayTxValue(addressVal);
+      }
 
       if (txEntry.isChainedZC && (wallet->type() == bs::core::wallet::Type::Bitcoin) && !hasSpecialAddr) {
          isCPFP = true;
