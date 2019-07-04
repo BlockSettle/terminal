@@ -283,7 +283,7 @@ QStringList SignerSettings::trustedTerminals() const
 
 bool SignerSettings::twoWaySignerAuth() const
 {
-   return d_->two_way_signer_auth();
+   return !d_->disable_terminal_auth();
 }
 
 QString SignerSettings::dirDocuments() const
@@ -405,8 +405,9 @@ void SignerSettings::setTrustedTerminals(const QStringList &val)
 
 void SignerSettings::setTwoWaySignerAuth(bool val)
 {
-   if (val != d_->two_way_signer_auth()) {
-      d_->set_two_way_signer_auth(val);
+   const bool disableTerminalAuth = (val == false);
+   if (disableTerminalAuth != d_->disable_terminal_auth()) {
+      d_->set_disable_terminal_auth(disableTerminalAuth);
       settingChanged(signer::Setting::TwoWaySignerAuth);
    }
 }

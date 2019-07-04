@@ -230,7 +230,7 @@ std::vector<std::string> HeadlessSettings::trustedInterfaces() const
 
 bool HeadlessSettings::twoWaySignerAuth() const
 {
-   return d_->two_way_signer_auth();
+   return !d_->disable_terminal_auth();
 }
 
 bool HeadlessSettings::offline() const
