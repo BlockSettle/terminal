@@ -125,4 +125,9 @@ ApplicationWindow {
     function invokeQmlMetod(method, cppCallback, argList) {
         QmlDialogs.evalWorker(method, cppCallback, argList)
     }
+
+    function moveMainWindowToScreenCenter() {
+        mainWindow.x = (Screen.width - mainWindow.width) / 2
+        mainWindow.y = (Screen.height - mainWindow.height) / 2
+    }
 }

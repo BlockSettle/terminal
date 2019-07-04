@@ -19,6 +19,7 @@ CustomDialogWindow {
     // or after next dialog in chain will send dialogsChainFinished signal
     signal bsAccepted()
     signal bsRejected()
+    signal bsResized()
 
     function acceptAnimated(){
         bsAccepted()
@@ -37,6 +38,19 @@ CustomDialogWindow {
         else rejectAnimated()
     }
 
+    onWidthChanged: {
+        root.bsResized()
+    }
+
+    onHeightChanged: {
+        root.bsResized()
+    }
+
+    onOpacityChanged: {
+        if (opacity === 1) {
+            root.bsResized()
+        }
+    }
 
     property int animationDuration: 100
 
