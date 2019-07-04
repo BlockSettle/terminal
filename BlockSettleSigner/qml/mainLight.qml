@@ -34,7 +34,9 @@ ApplicationWindow {
     property var currentDialog: ({})
 
     Component.onCompleted: {
-        QmlDialogs.backupMainWindowFlags()
+        mainWindow.flags = Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint |
+                Qt.Dialog | Qt.WindowSystemMenuHint |
+                Qt.WindowTitleHint | Qt.WindowCloseButtonHint
         hide()
         qmlFactory.installEventFilterToObj(mainWindow)
     }

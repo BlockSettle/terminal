@@ -46,10 +46,6 @@ ApplicationWindow {
         return JsHelper.messageBoxCritical(title, text, details)
     }
 
-    Component.onCompleted: {
-        QmlDialogs.backupMainWindowFlags()
-    }
-
     Settings {
         id: settings
         category: "GUI"
