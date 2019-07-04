@@ -121,6 +121,7 @@ protected:
    void ProcessSyncAddresses(unsigned int id, const std::string &data);
    void ProcessExtAddrChain(unsigned int id, const std::string &data);
    void ProcessSettlWalletCreate(unsigned int id, const std::string &data);
+   void ProcessSetUserId(const std::string &data);
 
 protected:
    std::shared_ptr<HeadlessListener>   listener_;
