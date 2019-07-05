@@ -288,13 +288,13 @@ std::string wallet::Seed::getWalletId() const
 
       const auto node = getNode();
       auto chainCode = node.getChaincode();
-      auto derScheme = std::make_shared<DerivationScheme_ArmoryLegacy>(chainCode);
+      DerivationScheme_ArmoryLegacy derScheme(chainCode);
 
       auto pubKey = node.getPublicKey();
       auto assetSingle = std::make_shared<AssetEntry_Single>(
          ROOT_ASSETENTRY_ID, BinaryData(), pubKey, nullptr);
 
-      auto addrVec = derScheme->extendPublicChain(assetSingle, 1, 1);
+      auto addrVec = derScheme.extendPublicChain(assetSingle, 1, 1);
       assert(addrVec.size() == 1);
       auto firstEntry = std::dynamic_pointer_cast<AssetEntry_Single>(addrVec[0]);
       assert(firstEntry != nullptr);
