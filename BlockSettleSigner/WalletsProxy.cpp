@@ -201,19 +201,11 @@ QString WalletsProxy::getWoWalletFile(const QString &walletId) const
    return (QString::fromStdString(bs::core::hd::Wallet::fileNamePrefix(true)) + walletId + QLatin1String("_wallet.lmdb"));
 }
 
-void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &path
+void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &filePath
    , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
-   logger_->debug("[{}] path={}", __func__, path.toStdString());
-   const auto &cbResult = [this, walletId, path, jsCallback, passwordData](const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
-      auto pathCopy = path;
-#if defined (Q_OS_WIN)
-      // Workaround for bad QML handling of Windows absolute paths
-      if (pathCopy.startsWith(QChar::fromLatin1('/'))) {
-         pathCopy.remove(0, 1);
-      }
-#endif
-
+   logger_->debug("[{}] path={}", __func__, filePath.toStdString());
+   const auto &cbResult = [this, walletId, filePath, jsCallback, passwordData](const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
       std::shared_ptr<bs::core::hd::Wallet> newWallet;
       try {
          const auto hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
@@ -267,14 +259,14 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
             throw std::runtime_error("export failed (too many exported files)");
          }
 
-         if (QFile::exists(pathCopy)) {
-            bool result = QFile::remove(pathCopy);
+         if (QFile::exists(filePath)) {
+            bool result = QFile::remove(filePath);
             if (!result) {
                throw std::runtime_error("can't delete old file");
             }
          }
 
-         bool result = QFile::rename(dir.filePath(entryList[0]), pathCopy);
+         bool result = QFile::rename(dir.filePath(entryList[0]), filePath);
          if (!result) {
             throw std::runtime_error("write failed");
          }
@@ -285,10 +277,10 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
          }
 
          logger_->error("[WalletsProxy::exportWatchingOnly] {}", e.what());
-         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, path, errorMessage = e.what()] {
+         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, filePath, errorMessage = e.what()] {
             QJSValueList args;
             QString message = tr("Failed to save watching-only wallet for %1 to %2: %3")
-                  .arg(walletId).arg(path).arg(QString::fromStdString(errorMessage));
+                  .arg(walletId).arg(filePath).arg(QString::fromStdString(errorMessage));
             args << QJSValue(false) << message;
             invokeJsCallBack(jsCallback, args);
          });
