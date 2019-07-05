@@ -34,7 +34,7 @@ CustomTitleDialogWindow {
     title: qsTr("Create New Wallet")
 
     Component.onCompleted: {
-        tfName.text = qsTr("Wallet #%1").arg(walletsProxy.walletNames.length + 1);
+        tfName.text = walletsProxy.generateNextWalletName();
         if (!primaryWalletExists) {
             cbPrimary.checked = true
         }

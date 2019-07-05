@@ -72,6 +72,8 @@ public:
    Q_INVOKABLE QString walletIdForIndex(int) const;
 
    Q_INVOKABLE bool walletNameExists(const QString& name) const;
+   Q_INVOKABLE QString generateNextWalletName() const;
+
    Q_INVOKABLE bool isWatchingOnlyWallet(const QString& walletId) const;
 
    bool walletsLoaded() const { return walletsSynchronized_; }
