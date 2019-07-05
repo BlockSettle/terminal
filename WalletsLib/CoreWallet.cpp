@@ -291,6 +291,9 @@ std::string wallet::Seed::getWalletId() const
       DerivationScheme_ArmoryLegacy derScheme(chainCode);
 
       auto pubKey = node.getPublicKey();
+      if (pubKey.isNull()) {
+         return {};
+      }
       auto assetSingle = std::make_shared<AssetEntry_Single>(
          ROOT_ASSETENTRY_ID, BinaryData(), pubKey, nullptr);
 
