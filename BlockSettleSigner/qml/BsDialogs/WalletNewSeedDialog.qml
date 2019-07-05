@@ -18,7 +18,7 @@ CustomTitleDialogWindow {
     property int curPage: 1
     property bool acceptable: (curPage == 1 || seedMatch)
     property bool seedMatch: rootKeyInput.acceptableInput
-     || true  // !!! ONLY FOR TESTING!!!
+    // || true  // !!! ONLY FOR TESTING!!!
 
 
     property QSeed seed
