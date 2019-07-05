@@ -771,11 +771,11 @@ void BSTerminalMainWindow::MainWinACT::onRefresh(const std::vector<BinaryData> &
    if (!parent_->initialWalletCreateDialogShown_ && parent_->walletsMgr_
       && parent_->walletsMgr_->isWalletsReady()
       && (parent_->walletsMgr_->hdWalletsCount() == 0)) {
-      parent_->initialWalletCreateDialogShown_ = true;
       QMetaObject::invokeMethod(parent_, [this] {
          parent_->createWallet(true);
       });
    }
+   parent_->initialWalletCreateDialogShown_ = true;
 }
 
 void BSTerminalMainWindow::CompleteUIOnlineView()

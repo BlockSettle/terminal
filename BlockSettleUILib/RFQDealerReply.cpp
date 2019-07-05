@@ -671,7 +671,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
    bool isBid = (qrn.side == bs::network::Side::Buy);
 
    if ((qrn.assetType == bs::network::Asset::SpotXBT) && authAddressManager_ && transData) {
-      authKey = authAddressManager_->GetPublicKey(authAddressManager_->FromVerifiedIndex(ui_->authenticationAddressComboBox->currentIndex())).toHexStr();
+      authKey = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(ui_->authenticationAddressComboBox->currentIndex())).toHexStr();
       if (authKey.empty()) {
          logger_->error("[RFQDealerReply::submit] empty auth key");
          return false;

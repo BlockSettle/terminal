@@ -240,7 +240,7 @@ void StatusBarView::setBalances()
 
    switch (armoryConnState_) {
       case ArmoryState::Ready :
-         xbt = UiUtils::displayAmount(walletsManager_->getSpendableBalance());
+         xbt = UiUtils::displayAmount(walletsManager_->getTotalBalance());
       break;
 
       case ArmoryState::Scanning :

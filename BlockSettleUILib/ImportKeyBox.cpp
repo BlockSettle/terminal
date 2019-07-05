@@ -15,6 +15,10 @@ ImportKeyBox::ImportKeyBox(BSMessageBox::Type mbType, const QString& title
    ui_->labelTitle->setText(title);
 
    setType(mbType);
+
+   ui_->labelDescription->hide();
+   ui_->verticalSpacerDescription->changeSize(100, 0);
+
    resize(width(), 0);
 
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &ImportKeyBox::accept);
@@ -46,6 +50,14 @@ void ImportKeyBox::setOkVisible(bool visible)
 void ImportKeyBox::setCancelVisible(bool visible)
 {
    ui_->pushButtonCancel->setVisible(visible);
+}
+
+void ImportKeyBox::setDescription(const QString &desc)
+{
+   ui_->labelDescription->setText(desc);
+   ui_->labelDescription->show();
+
+   ui_->verticalSpacerDescription->changeSize(100, 10);
 }
 
 void ImportKeyBox::setAddrPort(const std::string &srvAddrPort)

@@ -30,6 +30,8 @@ public:
    void setOkVisible(bool visible);
    void setCancelVisible(bool visible);
 
+   void setDescription(const QString &desc);
+
    void setAddrPort(const std::string &srvAddrPort);
 
    void setAddress(const QString &address);

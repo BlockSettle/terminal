@@ -532,18 +532,17 @@ void WalletsManager::walletReady(const std::string &walletId)
          });
       }
    }
-   if (armory_->state() != ArmoryState::Ready) {
-      readyWallets_.insert(walletId);
-      auto nbWallets = wallets_.size();
-      if (settlementWallet_ != nullptr) {
-         nbWallets++;
-      }
-      if (readyWallets_.size() >= nbWallets) {
-         isReady_ = true;
-         logger_->debug("[WalletsManager::{}] - All wallets are ready", __func__);
-         QMetaObject::invokeMethod(this, [this] { emit walletsReady(); });
-         readyWallets_.clear();
-      }
+
+   readyWallets_.insert(walletId);
+   auto nbWallets = wallets_.size();
+   if (settlementWallet_ != nullptr) {
+      nbWallets++;
+   }
+   if (readyWallets_.size() >= nbWallets) {
+      isReady_ = true;
+      logger_->debug("[WalletsManager::{}] - All wallets are ready", __func__);
+      emit walletsReady();
+      readyWallets_.clear();
    }
 }
 

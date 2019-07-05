@@ -344,7 +344,7 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
 {
    walletsManager_ = walletsManager;
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQTicketXBT::walletsLoaded);
-   QMetaObject::invokeMethod(this, "walletsLoaded");
+   walletsLoaded();
 }
 
 void RFQTicketXBT::walletsLoaded()
@@ -515,7 +515,7 @@ std::string RFQTicketXBT::authKey() const
    if (index < 0) {
       return "";
    }
-   return authAddressManager_->GetPublicKey(authAddressManager_->FromVerifiedIndex(index)).toHexStr();
+   return authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index)).toHexStr();
 }
 
 bs::Address RFQTicketXBT::recvAddress() const
