@@ -5,6 +5,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QMetaMethod>
+#include <QTemporaryDir>
 
 #include <spdlog/spdlog.h>
 
@@ -204,20 +205,27 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
    , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
    logger_->debug("[{}] path={}", __func__, filePath.toStdString());
-   const auto &cbResult = [this, walletId, filePath, jsCallback, passwordData]
-   (const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
-      QFileInfo fileInfo(filePath);
-      auto folderStr = fileInfo.absoluteDir().path().toStdString();
-
+   const auto &cbResult = [this, walletId, filePath, jsCallback, passwordData](const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
       std::shared_ptr<bs::core::hd::Wallet> newWallet;
       try {
          const auto hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
          if (!hdWallet) {
             throw std::runtime_error("failed to find wallet with id " + walletId.toStdString());
          }
+
+         // New wallets currently do not allow select file name used to save.
+         // Save WO wallet to the temporary dir and move out where it should be.
+         // Temporary directory will be removed when goes out of scope.
+         QTemporaryDir tmpDir;
+         if (!tmpDir.isValid()) {
+            throw std::runtime_error("failed to create temporary dir");
+         }
+         SPDLOG_LOGGER_DEBUG(logger_, "temporary export WO file to {}", tmpDir.path().toStdString());
+
          const bs::core::wallet::Seed seed(seedData, hdWallet->networkType());
          newWallet = std::make_shared<bs::core::hd::Wallet>(hdWallet->name(), hdWallet->description()
-            , seed, passwordData->password, folderStr);
+            , seed, passwordData->password, tmpDir.path().toStdString());
+
          for (const auto &group : hdWallet->getGroups()) {
             auto newGroup = newWallet->createGroup(static_cast<bs::hd::CoinType>(group->index()));
             if (!newGroup) {
@@ -238,33 +246,47 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
          }
          const auto woWallet = newWallet->createWatchingOnly();
          newWallet->eraseFile();
+         // Clear pointer to not call one more time eraseFile if something will fail below
+         newWallet = nullptr;
 
-         // FIXME: rewirk after core function will be fixed to support file names
-         // rename wallet to desired name
-         // "/armory_" << masterIDStr << "_WatchingOnly.lmdb" to
-         // "/BlockSettle_" << masterIDStr << "_WatchingOnly.lmdb"
-         QFile woWalletFile(fileInfo.absoluteDir().path() + QDir::separator()
-                            + QStringLiteral("armory_%1_WatchingOnly.lmdb").arg(walletId));
-         bool ok = woWalletFile.rename(fileInfo.absoluteDir().path() + QDir::separator()
-                            + QStringLiteral("BlockSettle_%1_WatchingOnly.lmdb").arg(walletId));
+         QDir dir(tmpDir.path());
+         auto entryList = dir.entryList({QStringLiteral("*.lmdb")});
+         if (entryList.empty()) {
+            throw std::runtime_error("export failed (can't find exported file)");
+         }
 
-         if (!ok) {
-            throw std::exception("Failed to rename file");
+         if (entryList.size() != 1) {
+            throw std::runtime_error("export failed (too many exported files)");
+         }
+
+         if (QFile::exists(filePath)) {
+            bool result = QFile::remove(filePath);
+            if (!result) {
+               throw std::runtime_error("can't delete old file");
+            }
+         }
+
+         bool result = QFile::rename(dir.filePath(entryList[0]), filePath);
+         if (!result) {
+            throw std::runtime_error("write failed");
          }
       }
       catch (const std::exception &e) {
          if (newWallet) {
             newWallet->eraseFile();
          }
+
          logger_->error("[WalletsProxy::exportWatchingOnly] {}", e.what());
-         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, filePath, e] {
+         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, filePath, errorMessage = e.what()] {
             QJSValueList args;
-            args << QJSValue(false) << tr("Failed to save watching-only wallet for %1 to %2: %3")
-               .arg(walletId).arg(filePath).arg(QLatin1String(e.what()));
+            QString message = tr("Failed to save watching-only wallet for %1 to %2: %3")
+                  .arg(walletId).arg(filePath).arg(QString::fromStdString(errorMessage));
+            args << QJSValue(false) << message;
             invokeJsCallBack(jsCallback, args);
          });
          return;
       }
+
       QMetaObject::invokeMethod(this, [this, jsCallback] {
          QJSValueList args;
          args << QJSValue(true) << QStringLiteral("");
@@ -282,11 +304,6 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
       emit walletError(walletId, tr("Failed to backup private key: wallet not found"));
       return false;
    }
-#if defined (Q_OS_WIN)
-   if (fileName.startsWith(QLatin1Char('/'))) {
-      fileName.remove(0, 1);  // Workaround for bad QML handling of Windows absolute paths
-   }
-#endif
    const auto &cbResult = [this, fileName, walletId, name=wallet->name(), desc=wallet->description(), isPrintable, jsCallback]
       (const SecureBinaryData &privKey, const SecureBinaryData &chainCode) {
       QString fn = fileName;

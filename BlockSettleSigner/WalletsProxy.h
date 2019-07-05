@@ -58,7 +58,7 @@ public:
    Q_INVOKABLE void importWoWallet(const QString &pathName, const QJSValue &jsCallback);
 
    Q_INVOKABLE void exportWatchingOnly(const QString &walletId
-      , const QString &path, bs::wallet::QPasswordData *passwordData
+      , const QString &filePath, bs::wallet::QPasswordData *passwordData
       , const QJSValue &jsCallback);
 
    Q_INVOKABLE bool backupPrivateKey(const QString &walletId
