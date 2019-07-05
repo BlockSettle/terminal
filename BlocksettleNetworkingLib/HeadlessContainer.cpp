@@ -1566,7 +1566,7 @@ void HeadlessListener::processDisconnectNotification()
    SPDLOG_LOGGER_INFO(logger_, "remote signer has been disconnected");
    isConnected_ = false;
    isReady_ = false;
-   tryEmitError(HeadlessContainer::SignerGoesOffline, tr("remote signer has been disconnected"));
+   tryEmitError(HeadlessContainer::SignerGoesOffline, tr("Remote signer disconnected"));
 }
 
 void HeadlessListener::tryEmitError(SignContainer::ConnectionError errorCode, const QString &msg)
