@@ -66,7 +66,7 @@ public:
 
    size_t GetAddressCount();
    bs::Address GetAddress(size_t index);
-   virtual BinaryData GetPublicKey(size_t index);
+//   virtual BinaryData GetPublicKey(size_t index);
 
    AddressVerificationState GetState(const bs::Address &addr) const;
    void SetState(const bs::Address &addr, AddressVerificationState state);

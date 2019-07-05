@@ -81,7 +81,8 @@ bool AuthAddressManager::setup()
       const auto address = addr->GetChainedAddress();
       if (GetState(address) != state) {
          logger_->info("Address verification {} for {}", to_string(state), address.display());
-         SetState(address, state);
+         //FIXME: temp disabled for simulating address verification
+         //SetState(address, state);
          SetInitialTxHash(address, addr->GetInitialTransactionTxHash());
          SetVerifChangeTxHash(address, addr->GetVerificationChangeTxHash());
          SetBSFundingAddress(address, addr->GetBSFundingAddress());
@@ -704,18 +705,26 @@ void AuthAddressManager::onWalletChanged(const std::string &walletId)
       const auto count = newAddresses.size();
       listUpdated = (count > addresses_.size());
 
-      for (size_t i = addresses_.size(); i < count; i++) {
+      //FIXME: temporary code to simulate address verification
+      listUpdated = true;
+      addresses_ = newAddresses;
+      for (const auto &addr : newAddresses) {
+         SetState(addr, AddressVerificationState::Verified);
+      }
+      emit VerifiedAddressListUpdated();
+
+      // FIXME: address verification is disabled temporarily
+/*      for (size_t i = addresses_.size(); i < count; i++) {
          const auto &addr = newAddresses[i];
          AddAddress(addr);
          const auto authAddr = std::make_shared<AuthAddress>(addr);
          addressVerificator_->StartAddressVerification(authAddr);
-      }
+      }*/
    }
 
    if (listUpdated) {
       emit AddressListUpdated();
-      addressVerificator_->RegisterAddresses();
-      authWallet_->registerWallet();
+//      addressVerificator_->RegisterAddresses();  //FIXME: re-enable later
    }
 }
 
@@ -858,12 +867,6 @@ void AuthAddressManager::SetState(const bs::Address &addr, AddressVerificationSt
 bool AuthAddressManager::BroadcastTransaction(const BinaryData& transactionData)
 {
    return armory_->broadcastZC(transactionData);
-}
-
-BinaryData AuthAddressManager::GetPublicKey(size_t index)
-{
-//   return authWallet_->GetPubChainedKeyFor(GetAddress(index));
-   return {};  //FIXME: public keys are not available now
 }
 
 void AuthAddressManager::setDefault(const bs::Address &addr)
