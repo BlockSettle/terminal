@@ -611,10 +611,14 @@ void ChatWidget::onContactRequestAccepted(const std::string &userId)
 void ChatWidget::onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey)
 {
    ImportKeyBox box(BSMessageBox::question
-                    , tr("Replace OTC Chat Public Key?")
+                    , tr("Update OTC ID Key?")
                     , this);
 
    box.setAddrPort("");
+   box.setDescription(QStringLiteral("Unless your OTC ID Key is lost or compromised, "
+      "BlockSettle strongly discourages from re-submitting a new OTC ID Key. "
+      "When updating your OTC ID Key, all your contacts will be asked to replace the OTC ID Key they use in relation to communication with yourself. "
+      "You will need to rebuild and re-establish your reputation. Are you sure you wish to continue?"));
    box.setNewKeyFromBinary(newKey);
    box.setOldKeyFromBinary(oldKey);
    box.setCancelVisible(true);
