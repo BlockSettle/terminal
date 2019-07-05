@@ -4,6 +4,7 @@
 #include <QPixmap>
 #include <QStandardPaths>
 #include <QMetaMethod>
+#include <QTemporaryDir>
 
 #include <spdlog/spdlog.h>
 
@@ -203,23 +204,35 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
    , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
    logger_->debug("[{}] path={}", __func__, path.toStdString());
-   const auto &cbResult = [this, walletId, path, jsCallback, passwordData]
-   (const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
-      auto pathStr = path.toStdString();
+   const auto &cbResult = [this, walletId, path, jsCallback, passwordData](const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
+      auto pathCopy = path;
 #if defined (Q_OS_WIN)
-      if (pathStr[0] == '/') {
-         pathStr = pathStr.substr(1);  // Workaround for bad QML handling of Windows absolute paths
+      // Workaround for bad QML handling of Windows absolute paths
+      if (pathCopy.startsWith(QChar::fromLatin1('/'))) {
+         pathCopy.remove(0, 1);
       }
 #endif
+
       std::shared_ptr<bs::core::hd::Wallet> newWallet;
       try {
          const auto hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
          if (!hdWallet) {
             throw std::runtime_error("failed to find wallet with id " + walletId.toStdString());
          }
+
+         // New wallets currently do not allow select file name used to save.
+         // Save WO wallet to the temporary dir and move out where it should be.
+         // Temporary directory will be removed when goes out of scope.
+         QTemporaryDir tmpDir;
+         if (!tmpDir.isValid()) {
+            throw std::runtime_error("failed to create temporary dir");
+         }
+         SPDLOG_LOGGER_DEBUG(logger_, "temporary export WO file to {}", tmpDir.path().toStdString());
+
          const bs::core::wallet::Seed seed(seedData, hdWallet->networkType());
          newWallet = std::make_shared<bs::core::hd::Wallet>(hdWallet->name(), hdWallet->description()
-            , seed, passwordData->password, pathStr);
+            , seed, passwordData->password, tmpDir.path().toStdString());
+
          for (const auto &group : hdWallet->getGroups()) {
             auto newGroup = newWallet->createGroup(static_cast<bs::hd::CoinType>(group->index()));
             if (!newGroup) {
@@ -240,20 +253,47 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
          }
          const auto woWallet = newWallet->createWatchingOnly();
          newWallet->eraseFile();
+         // Clear pointer to not call one more time eraseFile if something will fail below
+         newWallet = nullptr;
+
+         QDir dir(tmpDir.path());
+         auto entryList = dir.entryList({QStringLiteral("*.lmdb")});
+         if (entryList.empty()) {
+            throw std::runtime_error("export failed (can't find exported file)");
+         }
+
+         if (entryList.size() != 1) {
+            throw std::runtime_error("export failed (too many exported files)");
+         }
+
+         if (QFile::exists(pathCopy)) {
+            bool result = QFile::remove(pathCopy);
+            if (!result) {
+               throw std::runtime_error("can't delete old file");
+            }
+         }
+
+         bool result = QFile::rename(dir.filePath(entryList[0]), pathCopy);
+         if (!result) {
+            throw std::runtime_error("write failed");
+         }
       }
       catch (const std::exception &e) {
          if (newWallet) {
             newWallet->eraseFile();
          }
+
          logger_->error("[WalletsProxy::exportWatchingOnly] {}", e.what());
-         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, path, e] {
+         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, path, errorMessage = e.what()] {
             QJSValueList args;
-            args << QJSValue(false) << tr("Failed to save watching-only wallet for %1 to %2: %3")
-               .arg(walletId).arg(path).arg(QLatin1String(e.what()));
+            QString message = tr("Failed to save watching-only wallet for %1 to %2: %3")
+                  .arg(walletId).arg(path).arg(QString::fromStdString(errorMessage));
+            args << QJSValue(false) << message;
             invokeJsCallBack(jsCallback, args);
          });
          return;
       }
+
       QMetaObject::invokeMethod(this, [this, jsCallback] {
          QJSValueList args;
          args << QJSValue(true) << QStringLiteral("");
