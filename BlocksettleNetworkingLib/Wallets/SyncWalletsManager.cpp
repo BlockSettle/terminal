@@ -575,7 +575,7 @@ void WalletsManager::eraseWallet(const WalletPtr &wallet)
    wallets_.erase(wallet->walletId());
 }
 
-bool WalletsManager::deleteWallet(const WalletPtr &wallet)
+bool WalletsManager::deleteWallet(WalletPtr wallet)
 {
    bool isHDLeaf = false;
    logger_->info("[WalletsManager::{}] - Removing wallet {} ({})...", __func__
@@ -614,7 +614,7 @@ bool WalletsManager::deleteWallet(const WalletPtr &wallet)
    return true;
 }
 
-bool WalletsManager::deleteWallet(const HDWalletPtr &wallet)
+bool WalletsManager::deleteWallet(HDWalletPtr wallet)
 {
    const auto it = hdWallets_.find(wallet->walletId());
    if (it == hdWallets_.end()) {
