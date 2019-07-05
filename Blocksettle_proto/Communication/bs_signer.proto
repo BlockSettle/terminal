@@ -90,6 +90,12 @@ enum Setting {
    TwoWaySignerAuth = 14;
 };
 
+enum TwoWayAuth
+{
+   TWO_WAY_AUTH_ENABLED = 0;
+   TWO_WAY_AUTH_DISABLED = 1;
+}
+
 message Settings
 {
    bool offline = 1;
@@ -105,7 +111,7 @@ message Settings
    int32 limit_pass_keep_time = 10;
    bool hide_eid_info_box = 12;
    repeated KeyPair trusted_terminals = 13;
-   bool two_way_signer_auth = 14;
+   TwoWayAuth two_way_signer_auth = 15;
 }
 
 // Keep in sync with bs::signer::BindStatus

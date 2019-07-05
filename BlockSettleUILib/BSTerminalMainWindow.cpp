@@ -1349,10 +1349,10 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
 
 struct BSTerminalMainWindow::TxInfo {
    Tx       tx;
-   uint32_t txTime;
-   int64_t  value;
+   uint32_t txTime{};
+   int64_t  value{};
    std::shared_ptr<bs::sync::Wallet>   wallet;
-   bs::sync::Transaction::Direction    direction;
+   bs::sync::Transaction::Direction    direction{};
    QString  mainAddress;
 };
 
@@ -1367,21 +1367,27 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> &entries)
          if (!wallet) {
             return;
          }
-         auto txInfo = new TxInfo { tx, txTime, value, wallet, bs::sync::Transaction::Direction::Unknown, QString() };
-         const auto &cbDir = [this, txInfo] (bs::sync::Transaction::Direction dir, std::vector<bs::Address>) {
+
+         auto txInfo = std::make_shared<TxInfo>();
+         txInfo->tx = tx;
+         txInfo->txTime = txTime;
+         txInfo->value = value;
+         txInfo->wallet = wallet;
+
+         const auto &cbDir = [this, txInfo] (bs::sync::Transaction::Direction dir, const std::vector<bs::Address> &) {
             txInfo->direction = dir;
-            if (!txInfo->mainAddress.isEmpty() && txInfo->wallet) {
-               showZcNotification(txInfo);
-               delete txInfo;
+            if (!txInfo->mainAddress.isEmpty()) {
+               showZcNotification(*txInfo);
             }
          };
-         const auto &cbMainAddr = [this, txInfo] (QString mainAddr, int addrCount) {
+
+         const auto &cbMainAddr = [this, txInfo] (const QString &mainAddr, int addrCount) {
             txInfo->mainAddress = mainAddr;
-            if ((txInfo->direction != bs::sync::Transaction::Direction::Unknown) && txInfo->wallet) {
-               showZcNotification(txInfo);
-               delete txInfo;
+            if ((txInfo->direction != bs::sync::Transaction::Direction::Unknown)) {
+               showZcNotification(*txInfo);
             }
          };
+
          walletsMgr_->getTransactionDirection(tx, id, cbDir);
          walletsMgr_->getTransactionMainAddress(tx, id, (value > 0), cbMainAddr);
       };
@@ -1389,14 +1395,14 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> &entries)
    }
 }
 
-void BSTerminalMainWindow::showZcNotification(const TxInfo *txInfo)
+void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
 {
    QStringList lines;
-   lines << tr("Date: %1").arg(UiUtils::displayDateTime(txInfo->txTime));
-   lines << tr("TX: %1 %2 %3").arg(tr(bs::sync::Transaction::toString(txInfo->direction)))
-      .arg(txInfo->wallet->displayTxValue(txInfo->value)).arg(txInfo->wallet->displaySymbol());
-   lines << tr("Wallet: %1").arg(QString::fromStdString(txInfo->wallet->name()));
-   lines << txInfo->mainAddress;
+   lines << tr("Date: %1").arg(UiUtils::displayDateTime(txInfo.txTime));
+   lines << tr("TX: %1 %2 %3").arg(tr(bs::sync::Transaction::toString(txInfo.direction)))
+      .arg(txInfo.wallet->displayTxValue(txInfo.value)).arg(txInfo.wallet->displaySymbol());
+   lines << tr("Wallet: %1").arg(QString::fromStdString(txInfo.wallet->name()));
+   lines << txInfo.mainAddress;
 
    const auto &title = tr("New blockchain transaction");
    NotificationCenter::notify(bs::ui::NotifyType::BlockchainTX, { title, lines.join(tr("\n")) });

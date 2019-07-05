@@ -79,8 +79,9 @@ namespace bs {
          bool walletNameExists(const std::string &walletName) const;
          bool isWatchingOnly(const std::string &walletId) const;
 
-         bool deleteWallet(const WalletPtr &);
-         bool deleteWallet(const HDWalletPtr &);
+         // Do not use references here (could crash when underlying pointers are cleared)
+         bool deleteWallet(WalletPtr);
+         bool deleteWallet(HDWalletPtr);
 
          void setUserId(const BinaryData &userId);
 
@@ -145,6 +146,7 @@ namespace bs {
       private slots:
          void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet>);
          void onWalletsListUpdated();
+         void onAuthLeafAdded(const std::string &walletId);
 
       private:
          void addressAdded(const std::string &) override;
@@ -165,7 +167,6 @@ namespace bs {
          void saveWallet(const WalletPtr &);
          void saveWallet(const HDWalletPtr &);
          void eraseWallet(const WalletPtr &);
-         bool setAuthWalletFrom(const HDWalletPtr &);
          void setSettlementWallet(const std::shared_ptr<bs::sync::SettlementWallet> &);
 
          void updateTxDirCache(const std::string &txKey, Transaction::Direction

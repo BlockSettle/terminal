@@ -237,7 +237,7 @@ bs::signer::RequestId InprocSigner::customDialogRequest(bs::signer::ui::DialogTy
 bs::signer::RequestId InprocSigner::SetUserId(const BinaryData &userId)
 {
    //walletsMgr_->setChainCode(userId);
-   QTimer::singleShot(1, [this] { emit UserIdSet(); });
+   //TODO: add SetUserId implementation here
    return seqId_++;
 }
 

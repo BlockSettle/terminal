@@ -33,7 +33,7 @@ CelerMessage CelerCancelQuoteNotifSequence::send()
    message.messageType = CelerAPI::QuoteCancelNotificationType;
    message.messageData = request.SerializeAsString();
 
-   logger_->debug("[CancelQNotif] {}", request.DebugString());
+   logger_->debug("[CelerCancelQuoteNotifSequence::send] {}", request.DebugString());
 
    return message;
 }

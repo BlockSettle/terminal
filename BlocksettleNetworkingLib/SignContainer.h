@@ -152,8 +152,8 @@ signals:
 
    void HDLeafCreated(bs::signer::RequestId id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void HDWalletCreated(bs::signer::RequestId id, std::shared_ptr<bs::sync::hd::Wallet>);
+   void AuthLeafAdded(const std::string &walletId);
    void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
-   void UserIdSet();
    void PasswordChanged(const std::string &walletId, bool success);
    void AutoSignStateChanged(const std::string &walletId, bool active);
    // Notified from remote/local signer when wallets list is updated

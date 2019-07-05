@@ -3,6 +3,7 @@
 #include <cassert>
 #include <exception>
 #include <condition_variable>
+#include <spdlog/spdlog.h>
 
 #include "ClientClasses.h"
 #include "DbHeader.h"
@@ -115,19 +116,7 @@ void ArmoryConnection::maintenanceThreadFunc()
          break;
       }
 
-      decltype(delayedZCEntries_) tempZCEntries;
-      {
-         std::unique_lock<std::mutex> lock(zcMutex_);
-         tempZCEntries.swap(delayedZCEntries_);
-      }
-      if (!tempZCEntries.empty()) {
-         logger_->debug("[{}] processing {} delayed ZCs", __func__, tempZCEntries.size());
-         std::vector<bs::TXEntry> immediate;
-         processZCEntries(tempZCEntries, immediate);
-         addToMaintQueue([this, immediate](ArmoryCallbackTarget *tgt) {
-            tgt->onZCReceived(immediate);
-         });
-      }
+      processDelayedZC();
 
       decltype(actQueue_) tempQueue;
       {
@@ -907,42 +896,71 @@ void ArmoryConnection::onRefresh(const std::vector<BinaryData>& ids)
    });
 }
 
-void ArmoryConnection::processZCEntries(const std::vector<bs::TXEntry> &txEntries
-   , std::vector<bs::TXEntry> &immediate)
+void ArmoryConnection::processDelayedZC()
 {
-   for (const auto &txEntry : txEntries) {
-      auto entry = txEntry;
-      auto itEntry = zcEntries_.find(txEntry.txHash);
-      if (itEntry == zcEntries_.end()) {
-         zcEntries_.insert({ txEntry.txHash, txEntry });
+   const auto currentTime = std::chrono::steady_clock::now();
+
+   std::unique_lock<std::mutex> lock(zcMutex_);
+
+   auto it = zcWaitingEntries_.begin();
+   while (it != zcWaitingEntries_.end()) {
+      auto &waitingEntry = it->second;
+      const auto timeDiff = currentTime - waitingEntry.recvTime;
+      if (timeDiff < std::chrono::milliseconds(2300)) { // can be tuned later
+         ++it;
+         continue;
       }
-      else {
-         itEntry->second.merge(txEntry);
-         entry = itEntry->second;
-      }
-      if (entry.merged) {
-         immediate.emplace_back(std::move(entry));
+
+      bs::TXEntry newEntry;
+      auto itOld = zcNotifiedEntries_.find(waitingEntry.txHash);
+      if (itOld != zcNotifiedEntries_.end()) {
+         auto oldEntry = std::move(itOld->second);
+         zcNotifiedEntries_.erase(itOld);
+         addToMaintQueue([oldEntry](ArmoryCallbackTarget *tgt) {
+            tgt->onZCInvalidated({oldEntry});
+         });
+
+         newEntry = std::move(oldEntry);
+         newEntry.merge(waitingEntry);
       } else {
-         const auto timeDiff = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - entry.recvTime).count();
-         if (timeDiff >= 2300) { // can be tuned later
-            immediate.emplace_back(std::move(entry));
-         } else {
-            std::unique_lock<std::mutex> lock(zcMutex_);
-            delayedZCEntries_.emplace_back(std::move(entry));
-         }
+         newEntry = std::move(waitingEntry);
       }
+
+      zcNotifiedEntries_.emplace(newEntry.txHash, newEntry);
+      addToMaintQueue([newEntry](ArmoryCallbackTarget *tgt) {
+         tgt->onZCReceived({newEntry});
+      });
+
+      it = zcWaitingEntries_.erase(it);
    }
 }
 
 void ArmoryConnection::onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &entries)
 {
-   const auto txEntries = bs::TXEntry::fromLedgerEntries(entries);
-   std::vector<bs::TXEntry> immediate;
-   processZCEntries(txEntries, immediate);
-   if (!immediate.empty()) {
-      addToMaintQueue([this, immediate](ArmoryCallbackTarget *tgt) {
-         tgt->onZCReceived(immediate);
+   std::vector<bs::TXEntry> immediates;
+   const auto newEntries = bs::TXEntry::fromLedgerEntries(entries);
+
+   std::unique_lock<std::mutex> lock(zcMutex_);
+
+   for (const auto &newEntry : newEntries) {
+      auto it = zcWaitingEntries_.find(newEntry.txHash);
+
+      if (it == zcWaitingEntries_.end()) {
+         zcWaitingEntries_.emplace(newEntry.txHash, newEntry);
+         continue;
+      }
+
+      auto mergedEntry = std::move(it->second);
+      zcWaitingEntries_.erase(it);
+
+      mergedEntry.merge(newEntry);
+      zcNotifiedEntries_.emplace(mergedEntry.txHash, mergedEntry);
+      immediates.push_back(std::move(mergedEntry));
+   }
+
+   if (!immediates.empty()) {
+      addToMaintQueue([immediates](ArmoryCallbackTarget *tgt) {
+         tgt->onZCReceived(immediates);
       });
    }
 }
@@ -951,10 +969,10 @@ void ArmoryConnection::onZCsInvalidated(const std::set<BinaryData> &ids)
 {
    std::vector<bs::TXEntry> zcInvEntries;
    for (const auto &id : ids) {
-      const auto &itEntry = zcEntries_.find(id);
-      if (itEntry != zcEntries_.end()) {
+      const auto &itEntry = zcNotifiedEntries_.find(id);
+      if (itEntry != zcNotifiedEntries_.end()) {
          zcInvEntries.emplace_back(std::move(itEntry->second));
-         zcEntries_.erase(itEntry);
+         zcNotifiedEntries_.erase(itEntry);
       }
    }
 
