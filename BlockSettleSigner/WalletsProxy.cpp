@@ -249,7 +249,7 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
                             + QStringLiteral("BlockSettle_%1_WatchingOnly.lmdb").arg(walletId));
 
          if (!ok) {
-            std::exception("Failed to rename file");
+            throw std::exception("Failed to rename file");
          }
       }
       catch (const std::exception &e) {
@@ -351,7 +351,18 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
 
 bool WalletsProxy::walletNameExists(const QString &name) const
 {
-   return walletNames().contains(name);
+   return walletsMgr_->walletNameExists(name.toStdString());
+}
+
+QString WalletsProxy::generateNextWalletName() const
+{
+   QString newWalletName;
+   size_t nextNumber = walletsMgr_->hdWalletsCount() + 1;
+   do {
+      newWalletName = tr("Wallet #%1").arg(nextNumber);
+      nextNumber++;
+   } while (walletNameExists(newWalletName));
+   return newWalletName;
 }
 
 bool WalletsProxy::isWatchingOnlyWallet(const QString &walletId) const
