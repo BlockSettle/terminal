@@ -304,11 +304,6 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
       emit walletError(walletId, tr("Failed to backup private key: wallet not found"));
       return false;
    }
-#if defined (Q_OS_WIN)
-   if (fileName.startsWith(QLatin1Char('/'))) {
-      fileName.remove(0, 1);  // Workaround for bad QML handling of Windows absolute paths
-   }
-#endif
    const auto &cbResult = [this, fileName, walletId, name=wallet->name(), desc=wallet->description(), isPrintable, jsCallback]
       (const SecureBinaryData &privKey, const SecureBinaryData &chainCode) {
       QString fn = fileName;
