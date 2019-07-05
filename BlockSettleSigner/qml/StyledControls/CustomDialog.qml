@@ -100,7 +100,12 @@ CustomDialogWindow {
     footer: Item{}
 
     onClosed: {
-        root.destroy()
+        if (!isNextChainDialogSet) {
+            root.destroy()
+        }
+        else {
+            dialogsChainFinished.connect(function(){ root.destroy() })
+        }
     }
 
     onOpened: PropertyAnimation {

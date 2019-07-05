@@ -3,6 +3,7 @@
 #include <QVariant>
 #include <QPixmap>
 #include <QStandardPaths>
+#include <QDir>
 #include <QMetaMethod>
 #include <QTemporaryDir>
 
@@ -380,7 +381,18 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
 
 bool WalletsProxy::walletNameExists(const QString &name) const
 {
-   return walletNames().contains(name);
+   return walletsMgr_->walletNameExists(name.toStdString());
+}
+
+QString WalletsProxy::generateNextWalletName() const
+{
+   QString newWalletName;
+   size_t nextNumber = walletsMgr_->hdWalletsCount() + 1;
+   do {
+      newWalletName = tr("Wallet #%1").arg(nextNumber);
+      nextNumber++;
+   } while (walletNameExists(newWalletName));
+   return newWalletName;
 }
 
 bool WalletsProxy::isWatchingOnlyWallet(const QString &walletId) const
