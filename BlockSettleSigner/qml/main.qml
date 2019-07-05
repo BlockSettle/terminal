@@ -195,8 +195,8 @@ ApplicationWindow {
     }
 
     function moveMainWindowToScreenCenter() {
-        mainWindow.x = (Screen.width - mainWindow.width) / 2
-        mainWindow.y = (Screen.height - mainWindow.height) / 2
+        /*mainWindow.x = (Screen.width - mainWindow.width) / 2
+        mainWindow.y = (Screen.height - mainWindow.height) / 2*/
     }
 
 }

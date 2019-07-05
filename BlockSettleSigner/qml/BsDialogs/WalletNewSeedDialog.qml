@@ -92,6 +92,7 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
         }
 
         ScrollView {
+            id: scroll
             Layout.alignment: Qt.AlignCenter
             Layout.preferredWidth: mainLayout.width * 0.95
             Layout.preferredHeight: mainLayout.height * 0.95
@@ -99,18 +100,23 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical.policy: ScrollBar.AlwaysOn
             clip: true
-            id: scroll
             contentWidth: width
             contentHeight: pdf.preferedHeight - 50
             visible: curPage == 1
 
+            onWidthChanged: {
+                pdf.parent.width = scroll.width
+                pdf.parent.height = pdf.preferedHeight - 50
+                pdf.width = pdf.parent.width
+                pdf.height = pdf.preferedHeight
+            }
+
             QmlPdfBackup {
                 id: pdf
-                anchors.fill: parent;
+                anchors.fill: parent
                 seed: root.seed
             }
         }
-
 
         CustomLabel {
             text: qsTr("Your seed is important! If you lose your seed, your bitcoin assets will be permanently lost. \
