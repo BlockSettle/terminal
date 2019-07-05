@@ -168,7 +168,6 @@ namespace bs {
          struct TXSignRequest
          {
             std::string       walletId;
-            //         bs::Wallet     *  wallet = nullptr;
             std::vector<UTXO> inputs;
             std::vector<std::shared_ptr<ScriptRecipient>>   recipients;
             struct {

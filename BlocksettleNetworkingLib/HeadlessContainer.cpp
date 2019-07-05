@@ -331,6 +331,21 @@ void HeadlessContainer::ProcessAutoSignActEvent(unsigned int id, const std::stri
    emit AutoSignStateChanged(event.rootwalletid(), event.autosignactive());
 }
 
+void HeadlessContainer::ProcessSetUserId(const std::string &data)
+{
+   headless::SetUserIdResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[{}] failed to parse response", __func__);
+      return;
+   }
+   if (!response.auth_wallet_id().empty() && (response.response() == headless::AWR_NoError)) {
+      emit AuthLeafAdded(response.auth_wallet_id());
+   }
+   else {   // unset auth wallet
+      emit AuthLeafAdded("");
+   }
+}
+
 headless::SignTxRequest HeadlessContainer::createSignTxRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , const SignContainer::PasswordType &password, bool keepDuplicatedRecipients)
 {
@@ -585,7 +600,7 @@ bs::signer::RequestId HeadlessContainer::SetUserId(const BinaryData &userId)
    }
 
    headless::RequestPacket packet;
-   packet.set_type(headless::SetUserIdRequestType);
+   packet.set_type(headless::SetUserIdType);
    packet.set_data(request.SerializeAsString());
    return Send(packet);
 }
@@ -1307,8 +1322,8 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       ProcessGetHDWalletInfoResponse(packet.id(), packet.data());
       break;
 
-   case headless::SetUserIdRequestType:
-      emit UserIdSet();
+   case headless::SetUserIdType:
+      ProcessSetUserId(packet.data());
       break;
 
    case headless::AutoSignActType:

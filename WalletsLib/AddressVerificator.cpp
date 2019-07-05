@@ -338,6 +338,10 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
 
 void AddressVerificator::onLedgerForAddress(const bs::Address &addr, const std::shared_ptr<AsyncClient::LedgerDelegate> &ledger)
 {
+   if (!ledger) {
+      logger_->error("[{}] no ledger for {} returned", __func__, addr.display());
+      return;
+   }
    const auto lbdInvokeCb = [this, addr, ledger]
    (std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>> &map) -> bool
    {

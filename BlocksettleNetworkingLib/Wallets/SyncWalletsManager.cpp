@@ -43,6 +43,7 @@ void WalletsManager::setSignContainer(const std::shared_ptr<SignContainer> &cont
    signContainer_ = container;
 
    connect(signContainer_.get(), &SignContainer::HDWalletCreated, this, &WalletsManager::onHDWalletCreated);
+   connect(signContainer_.get(), &SignContainer::AuthLeafAdded, this, &WalletsManager::onAuthLeafAdded);
    connect(signContainer_.get(), &SignContainer::walletsListUpdated, this, &WalletsManager::onWalletsListUpdated);
 }
 
@@ -204,8 +205,7 @@ void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
 */
    QMutexLocker lock(&mtxWallets_);
    auto insertIter = walletsId_.insert(wallet->walletId());
-   if (!insertIter.second)
-   {
+   if (!insertIter.second) {
       auto wltIter = wallets_.find(wallet->walletId());
       if (wltIter == wallets_.end())
          throw std::runtime_error("have id but lack leaf ptr");
@@ -274,25 +274,17 @@ void WalletsManager::setSettlementWallet(const std::shared_ptr<bs::sync::Settlem
    settlementWallet_ = wallet;
 }
 
-bool WalletsManager::setAuthWalletFrom(const HDWalletPtr &wallet)
-{
-   const auto group = wallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
-   if ((group != nullptr) && (group->getNumLeaves() > 0)) {
-      authAddressWallet_ = group->getLeaf(0);
-      return true;
-   }
-   return false;
-}
-
 void WalletsManager::walletCreated(const std::string &walletId)
 {
+   logger_->debug("[{}] walletId={}", __func__, walletId);
+   return;
    const auto &lbdMaint = [this, walletId] {
       for (const auto &hdWallet : hdWallets_) {
          const auto &leaf = hdWallet.second->getLeaf(walletId);
          if (leaf == nullptr) {
             continue;
          }
-         logger_->debug("[WalletsManager::{}] HD leaf {} ({}) added", __func__
+         logger_->debug("[WalletsManager::walletCreated] HD leaf {} ({}) added"
             , walletId, leaf->name());
 
          const auto &ccIt = ccSecurities_.find(leaf->shortName());
@@ -304,14 +296,7 @@ void WalletsManager::walletCreated(const std::string &walletId)
 
          leaf->setUserId(userId_);
          addWallet(leaf);
-/*         if (armory_) {
-            leaf->registerWallet(armoryPtr_);
-         }*/
 
-         if (setAuthWalletFrom(hdWallet.second)) {
-            logger_->debug("[WalletsManager::{}] - Auth wallet updated", __func__);
-            emit authWalletChanged();
-         }
          QMetaObject::invokeMethod(this, [this, walletId] { emit walletChanged(walletId); });
          break;
       }
@@ -624,6 +609,7 @@ bool WalletsManager::deleteWallet(const WalletPtr &wallet)
       authAddressWallet_ = nullptr;
       emit authWalletChanged();
    }
+   emit walletDeleted(wallet->walletId());
    emit walletBalanceUpdated(wallet->walletId());
    return true;
 }
@@ -1023,6 +1009,51 @@ void WalletsManager::onWalletsListUpdated()
    };
    reset();
    syncWallets(cbSyncWallets);
+}
+
+void WalletsManager::onAuthLeafAdded(const std::string &walletId)
+{
+   if (walletId.empty()) {
+      if (authAddressWallet_) {
+         logger_->debug("[{}] auth wallet {} unset", __func__, authAddressWallet_->walletId());
+         deleteWallet(authAddressWallet_);
+      }
+      return;
+   }
+   const auto wallet = getPrimaryWallet();
+   if (!wallet) {
+      logger_->error("[{}] no primary wallet loaded", __func__);
+      return;
+   }
+   auto group = wallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
+   if (!group) {
+      logger_->error("[{}] no auth group in primary wallet", __func__);
+      return;
+   }
+
+   logger_->debug("[{}] creating auth leaf with id {}", __func__, walletId);
+   auto leaf = group->getLeaf(0x80000000);
+   if (leaf) {
+      logger_->warn("[{}] auth leaf already exists", __func__);
+      group->deleteLeaf(0x80000000);
+   }
+   try {
+      leaf = group->createLeaf(0x80000000, walletId);
+   }
+   catch (const std::exception &e) {
+      logger_->error("[{}] failed to create auth leaf: {}", __func__, e.what());
+      return;
+   }
+   leaf->synchronize([this, leaf] {
+      logger_->debug("Synchronized auth leaf has {} address[es]", leaf->getUsedAddressCount());
+      addWallet(leaf, true);
+      authAddressWallet_ = leaf;
+      authAddressWallet_->registerWallet(armoryPtr_);
+      QMetaObject::invokeMethod(this, [this, walletId=leaf->walletId()] {
+         emit authWalletChanged();
+         emit walletChanged(walletId);
+      });
+   });
 }
 
 void WalletsManager::adoptNewWallet(const HDWalletPtr &wallet)
