@@ -344,7 +344,7 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
 {
    walletsManager_ = walletsManager;
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQTicketXBT::walletsLoaded);
-   QMetaObject::invokeMethod(this, "walletsLoaded");
+   walletsLoaded();
 }
 
 void RFQTicketXBT::walletsLoaded()
