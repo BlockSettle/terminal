@@ -3,6 +3,7 @@
 #include <QVariant>
 #include <QPixmap>
 #include <QStandardPaths>
+#include <QDir>
 #include <QMetaMethod>
 
 #include <spdlog/spdlog.h>
@@ -199,18 +200,15 @@ QString WalletsProxy::getWoWalletFile(const QString &walletId) const
    return (QString::fromStdString(bs::core::hd::Wallet::fileNamePrefix(true)) + walletId + QLatin1String("_wallet.lmdb"));
 }
 
-void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &path
+void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &filePath
    , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
-   logger_->debug("[{}] path={}", __func__, path.toStdString());
-   const auto &cbResult = [this, walletId, path, jsCallback, passwordData]
+   logger_->debug("[{}] path={}", __func__, filePath.toStdString());
+   const auto &cbResult = [this, walletId, filePath, jsCallback, passwordData]
    (const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
-      auto pathStr = path.toStdString();
-#if defined (Q_OS_WIN)
-      if (pathStr[0] == '/') {
-         pathStr = pathStr.substr(1);  // Workaround for bad QML handling of Windows absolute paths
-      }
-#endif
+      QFileInfo fileInfo(filePath);
+      auto folderStr = fileInfo.absoluteDir().path().toStdString();
+
       std::shared_ptr<bs::core::hd::Wallet> newWallet;
       try {
          const auto hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
@@ -219,7 +217,7 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
          }
          const bs::core::wallet::Seed seed(seedData, hdWallet->networkType());
          newWallet = std::make_shared<bs::core::hd::Wallet>(hdWallet->name(), hdWallet->description()
-            , seed, passwordData->password, pathStr);
+            , seed, passwordData->password, folderStr);
          for (const auto &group : hdWallet->getGroups()) {
             auto newGroup = newWallet->createGroup(static_cast<bs::hd::CoinType>(group->index()));
             if (!newGroup) {
@@ -240,16 +238,29 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
          }
          const auto woWallet = newWallet->createWatchingOnly();
          newWallet->eraseFile();
+
+         // FIXME: rewirk after core function will be fixed to support file names
+         // rename wallet to desired name
+         // "/armory_" << masterIDStr << "_WatchingOnly.lmdb" to
+         // "/BlockSettle_" << masterIDStr << "_WatchingOnly.lmdb"
+         QFile woWalletFile(fileInfo.absoluteDir().path() + QDir::separator()
+                            + QStringLiteral("armory_%1_WatchingOnly.lmdb").arg(walletId));
+         bool ok = woWalletFile.rename(fileInfo.absoluteDir().path() + QDir::separator()
+                            + QStringLiteral("BlockSettle_%1_WatchingOnly.lmdb").arg(walletId));
+
+         if (!ok) {
+            std::exception("Failed to rename file");
+         }
       }
       catch (const std::exception &e) {
          if (newWallet) {
             newWallet->eraseFile();
          }
          logger_->error("[WalletsProxy::exportWatchingOnly] {}", e.what());
-         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, path, e] {
+         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, filePath, e] {
             QJSValueList args;
             args << QJSValue(false) << tr("Failed to save watching-only wallet for %1 to %2: %3")
-               .arg(walletId).arg(path).arg(QLatin1String(e.what()));
+               .arg(walletId).arg(filePath).arg(QLatin1String(e.what()));
             invokeJsCallBack(jsCallback, args);
          });
          return;

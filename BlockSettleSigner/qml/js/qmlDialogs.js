@@ -71,6 +71,8 @@ function prepareLigthModeDialog(dialog) {
         })
     })
 
+    //currentDialog.closing
+
     currentDialog.sizeChanged.connect(function(w, h){
         mainWindow.width = w
         mainWindow.height = h
@@ -88,6 +90,7 @@ function createNewWalletDialog(data) {
         // let user set a password or Auth eID and also name and desc. for the new wallet
         var dlgCreateWallet = Qt.createComponent("../BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
         dlgNewSeed.setNextChainDialog(dlgCreateWallet)
+        //prepareLigthModeDialog(dlgCreateWallet)
         dlgCreateWallet.seed = newSeed
         dlgCreateWallet.open()
     })
