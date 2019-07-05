@@ -79,8 +79,9 @@ namespace bs {
          bool walletNameExists(const std::string &walletName) const;
          bool isWatchingOnly(const std::string &walletId) const;
 
-         bool deleteWallet(const WalletPtr &);
-         bool deleteWallet(const HDWalletPtr &);
+         // Do not use references here (could crash when underlying pointers are cleared)
+         bool deleteWallet(WalletPtr);
+         bool deleteWallet(HDWalletPtr);
 
          void setUserId(const BinaryData &userId);
 
