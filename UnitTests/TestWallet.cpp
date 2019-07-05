@@ -1709,15 +1709,13 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
       envPtr_->armoryInstance()->pushZC(txSigned);
 
       auto&& zcVec = UnitTestWalletACT::waitOnZC();
-      ASSERT_EQ(zcVec.size(), 2);
+      promPtr1->set_value(zcVec.size() == 1);
       EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
-
-      promPtr1->set_value(true);
    };
 
    //async, has to wait
    syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
-   fut1.wait();
+   ASSERT_TRUE(fut1.get());
 
    //mine 6 more blocks
    curHeight = envPtr_->armoryConnection()->topBlock();
@@ -2336,15 +2334,13 @@ TEST_F(TestWalletWithArmory, ZCBalance)
       envPtr_->armoryInstance()->pushZC(txSigned);
 
       auto&& zcVec = UnitTestWalletACT::waitOnZC();
-      ASSERT_EQ(zcVec.size(), 2);
+      promPtr1->set_value(zcVec.size() == 1);
       EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
-
-      promPtr1->set_value(true);
    };
    
    //async, has to wait
    syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
-   fut1.wait();
+   ASSERT_TRUE(fut1.get());
 
    //update balance
    auto promPtr2 = std::make_shared<std::promise<bool>>();
@@ -2479,15 +2475,12 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       Tx txObj(txSigned1);
 
       auto&& zcVec = UnitTestWalletACT::waitOnZC();
-      ASSERT_EQ(zcVec.size(), 2);
+      promPtr1->set_value(zcVec.size() == 1);
       EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
-      EXPECT_EQ(zcVec[1].txHash, txObj.getThisHash());
-
-      promPtr1->set_value(true);
    };
    
    syncLeaf->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
-   fut1.wait();
+   ASSERT_TRUE(fut1.get());
 
    curHeight = envPtr_->armoryConnection()->topBlock();
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
@@ -2528,14 +2521,12 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       Tx txObj(txSigned2);
 
       auto&& zcVec = UnitTestWalletACT::waitOnZC();
-      ASSERT_EQ(zcVec.size(), 2);
+      promPtr3->set_value(zcVec.size() == 1);
       EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
-      EXPECT_EQ(zcVec[1].txHash, txObj.getThisHash());
 
-      promPtr3->set_value(true);
    };
    syncLeaf->getSpendableTxOutList(cbTxOutList2, UINT64_MAX);
-   fut3.wait();
+   ASSERT_TRUE(fut3.get());
 }
 
 /*
