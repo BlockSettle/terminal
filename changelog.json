@@ -1,7 +1,24 @@
 {
-   "latest_version": "0.18.2",
-   "release_date": "03 Jul 2019",
+   "latest_version": "0.18.3",
+   "release_date": "05 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.18.3",
+         "previous_version": "0.18.2",
+         "release_date": "05 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Auth wallet reimplementation",
+            "Loosing Button at small screens (#294)",
+            "Disallow minimize maximize popups (#288)",
+            "Enable 2-way auth in signer by default (#292)",
+            "Enable 2-way terminal auth in signer by default (#1073)",
+            "Fix problem with doubled ZC notification balance (#1072)"
+         ],
+         "bug_fixes": [],
+         "revision": "ea904bc1",
+         "common_revision": "f4f4fca1"
+      },
       {
          "version_string": "0.18.2",
          "previous_version": "0.18.1",
