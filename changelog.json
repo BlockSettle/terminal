@@ -1,7 +1,21 @@
 {
-   "latest_version": "0.18.3",
+   "latest_version": "0.18.4",
    "release_date": "05 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.18.4",
+         "previous_version": "0.18.3",
+         "release_date": "05 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "UI updates and fixes",
+            "Simulate auth address verification",
+            "Fix crash auth wallet"
+         ],
+         "bug_fixes": [],
+         "revision": "dd68411f",
+         "common_revision": "f373e0c6"
+      },
       {
          "version_string": "0.18.3",
          "previous_version": "0.18.2",
