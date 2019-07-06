@@ -265,7 +265,7 @@ double AssetManager::getCCTotal()
 
 double AssetManager::getTotalAssets()
 {
-   return walletsManager_->getSpendableBalance() + getCashTotal() + getCCTotal();
+   return walletsManager_->getTotalBalance() + getCashTotal() + getCCTotal();
 }
 
 uint64_t AssetManager::getCCLotSize(const std::string &cc) const
