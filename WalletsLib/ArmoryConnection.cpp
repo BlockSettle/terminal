@@ -1105,6 +1105,9 @@ bs::TXEntry bs::TXEntry::fromLedgerEntry(const ClientClasses::LedgerEntry &entry
 
 std::vector<bs::TXEntry> bs::TXEntry::fromLedgerEntries(const std::vector<ClientClasses::LedgerEntry> &entries)
 {
+   // Looks like we don't need to merge TXs here (like it was done before).
+   // So there would be two TX when two different local wallets are used (with different wallet IDs),
+   // but only one for internal TX (if addresses from same wallet are used).
    std::vector<bs::TXEntry> result;
    for (const auto &entry : entries) {
       result.emplace_back(fromLedgerEntry(entry));
