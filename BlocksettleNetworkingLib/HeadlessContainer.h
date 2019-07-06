@@ -265,6 +265,7 @@ private:
    std::atomic<bool>                isReady_{false};
    bool                             isConnected_{false};
    bool                             wasErrorReported_{false};
+   std::atomic<bool>                isShuttingDown_{false};
 };
 
 #endif // __HEADLESS_CONTAINER_H__

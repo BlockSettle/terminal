@@ -994,7 +994,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       lastHeartbeatReply_ = now;
       lastHeartbeatSend_ = now;
 
-      logger_->info("[processHandshake] BIP 150 handshake with server complete "
+      logger_->debug("[processHandshake] BIP 150 handshake with server complete "
          "- connection to {} is ready and fully secured", srvId);
 
       onConnected();
