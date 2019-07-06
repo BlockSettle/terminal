@@ -13,7 +13,6 @@
 #include <QProcess>
 #include <QStandardPaths>
 #include <QTimer>
-#include <QtConcurrent/QtConcurrentRun>
 
 #include <spdlog/spdlog.h>
 #include "signer.pb.h"
@@ -168,11 +167,16 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
 
 bs::signer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)
 {
+   if (!connection_) {
+      return 0;
+   }
+
    bs::signer::RequestId id = 0;
    if (updateId) {
       id = newRequestId();
       packet.set_id(id);
    }
+
    if (!connection_->send(packet.SerializeAsString())) {
       logger_->error("[HeadlessListener] Failed to send request packet");
       emit disconnected();
@@ -188,7 +192,7 @@ HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logg
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Leaf>>();
 }
 
-bs::signer::RequestId HeadlessContainer::Send(headless::RequestPacket packet, bool incSeqNo)
+bs::signer::RequestId HeadlessContainer::Send(const headless::RequestPacket &packet, bool incSeqNo)
 {
    if (!listener_) {
       return 0;
@@ -860,23 +864,25 @@ void HeadlessContainer::syncAddressBatch(
    const std::string &walletId, const std::set<BinaryData>& addrSet,
    std::function<void(bs::sync::SyncState)> cb)
 {
-   headless::SyncAddressesRequest request;
-   request.set_wallet_id(walletId);
-   for (const auto &addr : addrSet) {
-      request.add_addresses(addr.toBinStr());
-   }
-
-   headless::RequestPacket packet;
-   packet.set_type(headless::SyncAddressesType);
-   packet.set_data(request.SerializeAsString());
-   const auto reqId = Send(packet);
-   if (!reqId) {
-      if (cb) {
-         cb(bs::sync::SyncState::Failure);
+   QMetaObject::invokeMethod(this, [this, walletId, addrSet, cb] {
+      headless::SyncAddressesRequest request;
+      request.set_wallet_id(walletId);
+      for (const auto &addr : addrSet) {
+         request.add_addresses(addr.toBinStr());
       }
-      return;
-   }
-   cbSyncAddrsMap_[reqId] = cb;
+
+      headless::RequestPacket packet;
+      packet.set_type(headless::SyncAddressesType);
+      packet.set_data(request.SerializeAsString());
+      const auto reqId = Send(packet);
+      if (!reqId) {
+         if (cb) {
+            cb(bs::sync::SyncState::Failure);
+         }
+         return;
+      }
+      cbSyncAddrsMap_[reqId] = cb;
+   });
 }
 
 static NetworkType mapFrom(headless::NetworkType netType)
@@ -1110,13 +1116,15 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , cbNewKey_{inNewKeyCB}
    , connectionManager_{connectionManager}
 {
-   // Create connection upfront in order to grab some required data early.
-   RecreateConnection();
 }
 
 // Establish the remote connection to the signer.
 bool RemoteSigner::Start()
 {
+   if (!connection_) {
+      RecreateConnection();
+   }
+
    // If we've already connected, don't do more setup.
    if (headlessConnFinished_) {
       return true;
@@ -1180,7 +1188,9 @@ bool RemoteSigner::Disconnect()
       return true;
    }
 
-   return connection_->closeConnection();
+   bool result = connection_->closeConnection();
+   connection_.reset();
+   return result;
 }
 
 void RemoteSigner::Authenticate()
@@ -1255,6 +1265,10 @@ bool RemoteSigner::isOffline() const
 
 void RemoteSigner::updatePeerKeys(const ZmqBIP15XPeers &peers)
 {
+   if (!connection_) {
+      RecreateConnection();
+   }
+
    connection_->updatePeerKeys(peers);
 }
 
@@ -1514,6 +1528,11 @@ bool LocalSigner::Start()
 {
    Stop();
 
+   bool result = RemoteSigner::Start();
+   if (!result) {
+      return false;
+   }
+
    if (startProcess_) {
       // If there's a previous headless process, stop it.
       headlessProcess_ = std::make_shared<QProcess>();
@@ -1554,12 +1573,9 @@ bool LocalSigner::Start()
          emit connectionError(UnknownError, tr("failed to start process"));
          return false;
       }
-
-      // Give the signer a little time to get set up.
-      QThread::msleep(250);
    }
 
-   return RemoteSigner::Start();
+   return true;
 }
 
 bool LocalSigner::Stop()
