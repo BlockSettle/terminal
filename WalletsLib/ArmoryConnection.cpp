@@ -1103,24 +1103,11 @@ bs::TXEntry bs::TXEntry::fromLedgerEntry(const ClientClasses::LedgerEntry &entry
          , std::chrono::steady_clock::now() };
 }
 
-std::vector<bs::TXEntry> bs::TXEntry::fromLedgerEntries(std::vector<ClientClasses::LedgerEntry> entries)
+std::vector<bs::TXEntry> bs::TXEntry::fromLedgerEntries(const std::vector<ClientClasses::LedgerEntry> &entries)
 {
    std::vector<bs::TXEntry> result;
-   std::map<BinaryData, bs::TXEntry> txeMap;
    for (const auto &entry : entries) {
-      const auto txEntry = fromLedgerEntry(entry);
-      auto itEntry = txeMap.find(txEntry.txHash);
-      if (itEntry == txeMap.end()) {
-         txeMap.insert({txEntry.txHash, txEntry});
-         result.emplace_back(std::move(txEntry));
-      }
-      else {
-         itEntry->second.merge(txEntry);
-         const auto itVec = std::find(result.begin(), result.end(), txEntry);
-         if (itVec != result.end()) {
-            *itVec = itEntry->second;
-         }
-      }
+      result.emplace_back(fromLedgerEntry(entry));
    }
    return result;
 }
