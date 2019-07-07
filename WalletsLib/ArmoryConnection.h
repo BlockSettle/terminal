@@ -47,7 +47,7 @@ namespace bs {
       bool operator==(const TXEntry &other) const { return (txHash == other.txHash); }
       void merge(const TXEntry &);
       static TXEntry fromLedgerEntry(const ClientClasses::LedgerEntry &);
-      static std::vector<TXEntry> fromLedgerEntries(std::vector<ClientClasses::LedgerEntry>);
+      static std::vector<TXEntry> fromLedgerEntries(const std::vector<ClientClasses::LedgerEntry> &);
    };
 }
 
