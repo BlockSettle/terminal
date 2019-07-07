@@ -151,8 +151,14 @@ static int QMLApp(int argc, char **argv)
       logger = spdlog::stdout_logger_mt("");
       logger->set_pattern(bs::LogManager::detectFormatOverride("[%L](%t): %v"));
    }
+
+#ifdef NDEBUG
+   logger->set_level(spdlog::level::err);
+   logger->flush_on(spdlog::level::err);
+#else
    logger->set_level(spdlog::level::debug);
    logger->flush_on(spdlog::level::debug);
+#endif
 
 #ifndef NDEBUG
    qInstallMessageHandler(qMessageHandler);
