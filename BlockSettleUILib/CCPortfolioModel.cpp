@@ -915,7 +915,7 @@ void CCPortfolioModel::updateXBTBalance()
          const auto walletId = wallet->walletId();
          const auto xbtNode = xbtGroup->GetXBTNode(walletId);
          if (xbtNode != nullptr) {
-            const double balance = wallet->getSpendableBalance();
+            const double balance = wallet->getTotalBalance();
             if (xbtNode->SetXBTAmount(balance)) {
                dataChanged(index(xbtNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
                   , index(xbtNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
