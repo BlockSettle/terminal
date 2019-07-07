@@ -76,6 +76,15 @@ static const QString chatServerPortName = QLatin1String("chatserver-port");
 static const QString chatServerPortHelp = QLatin1String("Chat server port");
 #endif // NDEBUG
 
+namespace {
+
+#ifdef NDEBUG
+   const char DefaultLogLevel[] = "error";
+#else
+   const char DefaultLogLevel[] = "debug";
+#endif
+
+} // namespace
 
 
 ApplicationSettings::ApplicationSettings(const QString &appName
@@ -127,8 +136,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { notifyOnTX,              SettingDef(QLatin1String("ShowTxNotification"), true) },
       { defaultAuthAddr,         SettingDef(QLatin1String("DefaultAuthAddress")) },
       { bsPublicKey,             SettingDef(QString(), QLatin1String("022aa8719eadf13ba5bbced2848fb492a4118087b200fdde8ec68a2f5d105b36fa")) },
-      { logDefault,              SettingDef(QLatin1String("LogFile"), QStringList() << LogFileName << QString() << QString() << QLatin1String("trace")) },
-      { logMessages,             SettingDef(QLatin1String("LogMsgFile"), QStringList() << LogMsgFileName << QLatin1String("message") << QLatin1String("%C/%m/%d %H:%M:%S.%e [%L]: %v") << QString()<< QLatin1String("trace")) },
+      { logDefault,              SettingDef(QLatin1String("LogFile"), QStringList() << LogFileName << QString() << QString() << QLatin1String(DefaultLogLevel)) },
+      { logMessages,             SettingDef(QLatin1String("LogMsgFile"), QStringList() << LogMsgFileName << QLatin1String("message") << QLatin1String("%C/%m/%d %H:%M:%S.%e [%L]: %v") << QLatin1String(DefaultLogLevel)) },
       { ccFileName,              SettingDef(QString(), AppendToWritableDir(CCFileName))},
       { txCacheFileName,         SettingDef(QString(), AppendToWritableDir(TxCacheFileName)) },
       { nbBackupFilesKeep,       SettingDef(QString(), 10) },

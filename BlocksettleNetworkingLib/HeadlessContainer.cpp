@@ -128,6 +128,10 @@ void HeadlessListener::OnConnected()
 
 void HeadlessListener::OnDisconnected()
 {
+   if (isShuttingDown_) {
+      return;
+   }
+
    SPDLOG_LOGGER_ERROR(logger_, "remote signer disconnected unexpectedly");
    isConnected_ = false;
    isReady_ = false;
@@ -1169,6 +1173,7 @@ bool RemoteSigner::Connect()
    }
 
    listener_->wasErrorReported_ = false;
+   listener_->isShuttingDown_ = false;
 
    bool result = connection_->openConnection(host_.toStdString(), port_.toStdString(), listener_.get());
    if (!result) {
@@ -1186,6 +1191,10 @@ bool RemoteSigner::Disconnect()
 {
    if (!connection_) {
       return true;
+   }
+
+   if (listener_) {
+      listener_->isShuttingDown_ = true;
    }
 
    bool result = connection_->closeConnection();
