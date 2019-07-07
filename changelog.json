@@ -1,7 +1,28 @@
 {
-   "latest_version": "0.18.4",
-   "release_date": "05 Jul 2019",
+   "latest_version": "0.18.5",
+   "release_date": "07 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.18.5",
+         "previous_version": "0.18.4",
+         "release_date": "07 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Change default log level for release builds",
+            "UI fixes",
+            "Show total XBT balance in portfolio view",
+            "Change default log level for release builds",
+            "Show two transactions with internal wallets",
+            "Seed wallet ID change"
+         ],
+         "bug_fixes": [
+            "Fix crash with multiple wallets (#1082)",
+            "Fix WO file export (#297)",
+            "Fix XBT RFQ"
+         ],
+         "revision": "c8261fc5",
+         "common_revision": "53a95113"
+      },
       {
          "version_string": "0.18.4",
          "previous_version": "0.18.3",
