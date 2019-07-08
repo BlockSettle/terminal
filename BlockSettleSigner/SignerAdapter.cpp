@@ -199,11 +199,11 @@ void SignerAdapter::changePassword(const std::string &walletId, const std::vecto
    signer::ChangePasswordRequest request;
    request.set_rootwalletid(walletId);
    if (!oldPass.isNull()) {
-      request.set_oldpassword(oldPass.toHexStr());
+      request.set_oldpassword(oldPass.toBinStr());
    }
    for (const auto &pwd : newPass) {
       auto reqNewPass = request.add_newpassword();
-      reqNewPass->set_password(pwd.password.toHexStr());
+      reqNewPass->set_password(pwd.password.toBinStr());
       reqNewPass->set_enctype(static_cast<uint32_t>(pwd.encType));
       reqNewPass->set_enckey(pwd.encKey.toBinStr());
    }
