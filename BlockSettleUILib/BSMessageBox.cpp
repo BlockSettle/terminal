@@ -91,10 +91,12 @@ bool BSMessageBox::detailsVisible() const {
 
 void BSMessageBox::hideDetails() {
    ui_->verticalWidgetDetails->hide();
+   adjustSize();
 }
 
 void BSMessageBox::showDetails() {
    ui_->verticalWidgetDetails->show();
+   adjustSize();
 }
 
 void BSMessageBox::setLabelTextFormat(Qt::TextFormat tf) {
