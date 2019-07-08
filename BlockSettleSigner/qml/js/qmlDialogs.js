@@ -89,6 +89,9 @@ function createNewWalletDialog(data) {
         var dlgCreateWallet = Qt.createComponent("../BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
         dlgNewSeed.setNextChainDialog(dlgCreateWallet)
         dlgCreateWallet.seed = newSeed
+        dlgCreateWallet.bsResized.connect(function() {
+            mainWindow.moveMainWindowToScreenCenter()
+        })
         dlgCreateWallet.open()
     })
     if (Object.keys(mainWindow).indexOf("currentDialog") != -1) {
