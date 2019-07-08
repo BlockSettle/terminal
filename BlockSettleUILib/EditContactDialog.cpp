@@ -65,7 +65,11 @@ void EditContactDialog::showEvent(QShowEvent *event)
    auto dialogCenter = window()->mapToGlobal(window()->rect().center());
    auto parentWindow = parentWidget()->window();
    auto parentWindowCenter = parentWindow->mapToGlobal(parentWindow->rect().center());
-   move(parentWindowCenter - dialogCenter);
+   if (parentWindowCenter == dialogCenter) {
+      move(parentWindowCenter - window()->rect().center());
+   } else {
+      move(parentWindowCenter - dialogCenter);
+   }
 }
 
 void EditContactDialog::refillFields()
