@@ -58,6 +58,7 @@ public:
    void postSplashscreenActions();
 
    bool event(QEvent *event) override;
+   void addDeferredDialog(const std::function<void(void)> &deferredDialog);
 
 private:
    void setupToolbar();
@@ -244,6 +245,9 @@ private:
 
    ZmqBIP15XDataConnection::cbNewKey   cbApprovePuB_ = nullptr;
    ZmqBIP15XDataConnection::cbNewKey   cbApproveChat_ = nullptr;
+
+   std::queue<std::function<void(void)>> deferredDialogs_;
+   bool deferredDialogRunning_ = false;
 
    class MainWinACT : public ArmoryCallbackTarget
    {
