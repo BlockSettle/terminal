@@ -1,6 +1,7 @@
 #include "QmlFactory.h"
 #include <QApplication>
 #include <QClipboard>
+#include <QQuickWindow>
 #include <QKeyEvent>
 #include <spdlog/spdlog.h>
 #include "AuthProxy.h"
@@ -118,6 +119,15 @@ void QmlFactory::setClipboard(const QString &text) const
 QString QmlFactory::getClipboard() const
 {
    return QApplication::clipboard()->text();
+}
+
+QRect QmlFactory::frameSize(QObject *window) const
+{
+   auto win = qobject_cast<QQuickWindow *>(window);
+   if (win) {
+      return win->frameGeometry();
+   }
+   return QRect();
 }
 
 void QmlFactory::installEventFilterToObj(QObject *object)

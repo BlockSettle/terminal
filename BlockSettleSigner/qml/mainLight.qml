@@ -39,8 +39,10 @@ ApplicationWindow {
     }
     onHeightChanged: {
         if (height > Screen.desktopAvailableHeight) {
+            let frameSize = qmlFactory.frameSize(mainWindow)
+            let h = frameSize.height > height ? frameSize.height - height : 0
             y = 0
-            height = Screen.desktopAvailableHeight
+            height = Screen.desktopAvailableHeight - h
         }
         emitSizeChanged()
     }
