@@ -280,18 +280,16 @@ void WalletsManager::walletCreated(const std::string &walletId)
    return;
    const auto &lbdMaint = [this, walletId] {
       for (const auto &hdWallet : hdWallets_) {
-         const auto &leaf = hdWallet.second->getLeaf(walletId);
+         const auto leaf = hdWallet.second->getLeaf(walletId);
          if (leaf == nullptr) {
             continue;
          }
          logger_->debug("[WalletsManager::walletCreated] HD leaf {} ({}) added"
             , walletId, leaf->name());
 
-         const auto &ccIt = ccSecurities_.find(leaf->shortName());
-         if (ccIt != ccSecurities_.end()) {
-            leaf->setDescription(ccIt->second.desc);
-            leaf->setData(ccIt->second.genesisAddr);
-            leaf->setData(ccIt->second.lotSize);
+         auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(leaf);
+         if (ccLeaf) {
+            ccLeaf->setCCDataResolver(ccResolver_);
          }
 
          leaf->setUserId(userId_);
@@ -1088,30 +1086,25 @@ bool WalletsManager::isWatchingOnly(const std::string &walletId) const
 void WalletsManager::onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr)
 {
    const auto &cc = ccProd.toStdString();
-   for (const auto &wallet : wallets_) {
-      if (wallet.second->type() != bs::core::wallet::Type::ColorCoin) {
-         continue;
-      }
-      if (wallet.second->shortName() == cc) {
-         wallet.second->setDescription(ccDesc.toStdString());
-         const auto ccWallet = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(wallet.second);
-         if (ccWallet) {
-            ccWallet->setData(genesisAddr.toStdString());
-            ccWallet->setData(nbSatoshis);
-         }
-         else {
-            logger_->warn("[WalletsManager::{}] - Invalid CC leaf type for {}"
-               , __func__, ccProd.toStdString());
-         }
-      }
-   }
-   ccSecurities_[cc] = { ccDesc.toStdString(), nbSatoshis, genesisAddr.toStdString() };
+   ccResolver_->addData(cc, nbSatoshis, genesisAddr.toStdString(), ccDesc.toStdString());
 }
 
 void WalletsManager::onCCInfoLoaded()
 {
    logger_->debug("[WalletsManager::{}] - Re-validating against GAs in CC leaves"
       , __func__);
+   for (const auto &wallet : wallets_) {
+      if (wallet.second->type() != bs::core::wallet::Type::ColorCoin) {
+         continue;
+      }
+      const auto ccWallet = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(wallet.second);
+      if (ccWallet) {
+         ccWallet->setCCDataResolver(ccResolver_);
+      }
+      else {
+         logger_->warn("[{}] invalid CC leaf {}", __func__, wallet.second->walletId());
+      }
+   }
    for (const auto &hdWallet : hdWallets_) {
       for (const auto &leaf : hdWallet.second->getLeaves()) {
          if (leaf->type() == bs::core::wallet::Type::ColorCoin) {
@@ -1396,4 +1389,58 @@ void WalletsManager::maintenanceThreadFunc()
          cb();
       }
    }
+}
+
+
+void WalletsManager::CCResolver::addData(const std::string &cc, uint64_t lotSize
+   , const bs::Address &genAddr, const std::string &desc)
+{
+   securities_[cc] = { desc, lotSize, genAddr };
+   const auto walletIdx = bs::hd::Path::keyToElem(cc);
+   walletIdxMap_[walletIdx] = cc;
+}
+
+std::vector<std::string> WalletsManager::CCResolver::securities() const
+{
+   std::vector<std::string> result;
+   for (const auto &ccDef : securities_) {
+      result.push_back(ccDef.first);
+   }
+   return result;
+}
+
+std::string WalletsManager::CCResolver::nameByWalletIndex(const bs::hd::Path::Elem idx) const
+{
+   const auto &itWallet = walletIdxMap_.find(idx);
+   if (itWallet != walletIdxMap_.end()) {
+      return itWallet->second;
+   }
+   return {};
+}
+
+uint64_t WalletsManager::CCResolver::lotSizeFor(const std::string &cc) const
+{
+   const auto &itSec = securities_.find(cc);
+   if (itSec != securities_.end()) {
+      return itSec->second.lotSize;
+   }
+   return 0;
+}
+
+std::string WalletsManager::CCResolver::descriptionFor(const std::string &cc) const
+{
+   const auto &itSec = securities_.find(cc);
+   if (itSec != securities_.end()) {
+      return itSec->second.desc;
+   }
+   return {};
+}
+
+bs::Address WalletsManager::CCResolver::genesisAddrFor(const std::string &cc) const
+{
+   const auto &itSec = securities_.find(cc);
+   if (itSec != securities_.end()) {
+      return itSec->second.genesisAddr;
+   }
+   return {};
 }

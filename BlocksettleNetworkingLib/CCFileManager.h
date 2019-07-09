@@ -3,13 +3,14 @@
 
 #include "CCPubConnection.h"
 
+#include <functional>
 #include <memory>
 #include <vector>
 
 #include <QString>
 #include <QVariant>
 
-#include "ZMQ_BIP15X_DataConnection.h"
+#include "Wallets/SyncWallet.h"
 
 namespace Blocksettle {
    namespace Communication {
@@ -20,6 +21,42 @@ namespace Blocksettle {
 class ApplicationSettings;
 class AuthSignManager;
 class CelerClient;
+
+class CCPubResolver : public bs::sync::CCDataResolver
+{
+public:
+   using CCSecLoadedCb = std::function<void(const bs::network::CCSecurityDef &)>;
+   using CCLoadCompleteCb = std::function<void(unsigned int)>;
+   CCPubResolver(const std::shared_ptr<spdlog::logger> &logger
+      , const SecureBinaryData &bsPubKey, const CCSecLoadedCb &cbSec
+      , const CCLoadCompleteCb &cbLoad)
+      : logger_(logger), pubKey_(bsPubKey), cbSecLoaded_(cbSec)
+      , cbLoadComplete_(cbLoad) {}
+
+   std::string nameByWalletIndex(const bs::hd::Path::Elem) const override;
+   uint64_t lotSizeFor(const std::string &cc) const override;
+   bs::Address genesisAddrFor(const std::string &cc) const override;
+   std::string descriptionFor(const std::string &cc) const override;
+   std::vector<std::string> securities() const override;
+
+   void fillFrom(Blocksettle::Communication::GetCCGenesisAddressesResponse *resp);
+   bool loadFromFile(const std::string &path);
+   bool saveToFile(const std::string &path, unsigned int rev
+      , const std::string &signature);
+
+private:
+   void add(const bs::network::CCSecurityDef &);
+   void clear();
+   bool verifySignature(const std::string& data, const std::string& signature) const;
+
+private:
+   std::shared_ptr<spdlog::logger>  logger_;
+   const SecureBinaryData           pubKey_;
+   std::map<std::string, bs::network::CCSecurityDef>  securities_;
+   std::map<bs::hd::Path::Elem, std::string>          walletIdxMap_;
+   const CCSecLoadedCb     cbSecLoaded_;
+   const CCLoadCompleteCb  cbLoadComplete_;
+};
 
 class CCFileManager : public CCPubConnection
 {
@@ -35,8 +72,7 @@ public:
    CCFileManager(CCFileManager&&) = delete;
    CCFileManager& operator = (CCFileManager&&) = delete;
 
-   using CCSecurities = std::vector<bs::network::CCSecurityDef>;
-   CCSecurities ccSecurities() const { return ccSecurities_; }
+   std::shared_ptr<bs::sync::CCDataResolver> getResolver() const { return resolver_; }
    bool synchronized() const { return syncFinished_; }
 
    void LoadSavedCCDefinitions();
@@ -68,8 +104,6 @@ protected:
    void ProcessGenAddressesResponse(const std::string& response, bool sigVerified, const std::string &sig) override;
    void ProcessSubmitAddrResponse(const std::string& response) override;
 
-   bool VerifySignature(const std::string& data, const std::string& signature) const override;
-
    bool IsTestNet() const override;
 
    std::string GetPuBHost() const override;
@@ -81,8 +115,6 @@ private:
    std::shared_ptr<CelerClient>           celerClient_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
 
-   CCSecurities   ccSecurities_;
-
    // when user changes PuB connection settings - save to file should be disabled.
    // dev build feature only. final release should have single PuB.
    bool saveToFileDisabled_ = false;
@@ -90,11 +122,10 @@ private:
    bool syncStarted_ = false;
    bool syncFinished_ = false;
 
+   std::shared_ptr<CCPubResolver>   resolver_;
+
 private:
-   bool LoadFromFile(const std::string &path);
-   bool SaveToFile(const std::string &path, const std::string &signature);
    bool RequestFromPuB();
-   void FillFrom(Blocksettle::Communication::GetCCGenesisAddressesResponse *);
 };
 
 #endif // __CC_FILE_MANAGER_H__
