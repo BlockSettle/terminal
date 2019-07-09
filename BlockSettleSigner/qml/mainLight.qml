@@ -54,7 +54,7 @@ ApplicationWindow {
     }
     Timer {
         id: sizeChangeTimer
-        interval: 100
+        interval: 5
         repeat: false
         running: false
         onTriggered: sizeChanged(mainWindow.width, mainWindow.height)
@@ -158,7 +158,7 @@ ApplicationWindow {
     }
 
     function moveMainWindowToScreenCenter() {
-        mainWindow.x = (Screen.width - mainWindow.width) / 2
-        mainWindow.y = (Screen.height - mainWindow.height) / 2
+        mainWindow.x = Screen.virtualX + (Screen.width - mainWindow.width) / 2
+        mainWindow.y = Screen.virtualY + (Screen.height - mainWindow.height) / 2
     }
 }
