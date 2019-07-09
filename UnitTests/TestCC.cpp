@@ -73,7 +73,7 @@ void TestCC::SetUp()
    const auto priWallet = envPtr_->walletsMgr()->createWallet("Primary", "", 
       bs::core::wallet::Seed(CryptoPRNG::generateRandom(32), NetworkType::TestNet), 
       envPtr_->armoryInstance()->homedir_, passphrase_, true);
-   
+
    if (!priWallet)
       return;
    const auto ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
@@ -116,7 +116,6 @@ void TestCC::SetUp()
    UnitTestWalletACT::waitOnRefresh(regIDs);
 
    ccWallet_ = syncMgr_->getWalletById(ccSignWallet_->walletId());
-   ccWallet_->setData(envPtr_->assetMgr()->getCCLotSize("BLK"));
 
    xbtWallet_ = syncMgr_->getDefaultWallet();
    if (!xbtWallet_)
@@ -130,7 +129,10 @@ void TestCC::SetUp()
    xbtWallet_->getNewExtAddress(cbGenAddr,
       AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
    genesisAddr_ = futGenAddr.get();
-   ccWallet_->setData(genesisAddr_.display());
+   resolver_ = std::make_shared<CCResolver>(envPtr_->assetMgr()->getCCLotSize("BLK"), genesisAddr_);
+   auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(ccWallet_);
+   ASSERT_NE(ccLeaf, nullptr);
+   ccLeaf->setCCDataResolver(resolver_);
    sendTo(initialAmount_ * COIN, genesisAddr_);
    mineBlocks(6);
 
@@ -169,12 +171,12 @@ void TestCC::SetUp()
          Tx txObj(fundingTx);
          envPtr_->armoryInstance()->pushZC(fundingTx);
          auto&& zcvec = envPtr_->blockMonitor()->waitForZC();
-         
-         ASSERT_EQ(zcvec.size(), 2);
+
+         const bool zcVecOk = (zcvec.size() == 1);
          EXPECT_EQ(zcvec[0].txHash, txObj.getThisHash());
 
          mineBlocks(6);
-         promFund->set_value(true);
+         promFund->set_value(zcVecOk);
       }
       catch (const std::exception &e) 
       {
@@ -183,7 +185,7 @@ void TestCC::SetUp()
       }
    };
    auto inputs = xbtWallet_->getSpendableTxOutList(cbInputs, UINT64_MAX);
-   futFund.wait();
+   ASSERT_TRUE(futFund.get());
 
    auto promPtr = std::make_shared<std::promise<bool>>();
    auto fut = promPtr->get_future();
@@ -197,8 +199,6 @@ void TestCC::SetUp()
    xbtWallet_->updateBalances(waitOnBalance);
    ccWallet_->updateBalances(waitOnBalance);
    fut.wait();
-
-   std::cout << "test setup" << std::endl;
 }
 
 void TestCC::TearDown()
@@ -207,7 +207,7 @@ void TestCC::TearDown()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-TEST_F(TestCC, DISABLED_Initial_balance)
+TEST_F(TestCC, Initial_balance)
 {
    ASSERT_NE(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
    ASSERT_NE(ccWallet_, nullptr);
