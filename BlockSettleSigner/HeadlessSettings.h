@@ -52,6 +52,11 @@ private:
    bs::signer::RunMode runMode_;
    std::string walletsDir_;
    std::unique_ptr<Settings> d_;
+
+   std::unique_ptr<bool> overrideTestNet_;
+   std::unique_ptr<std::string> overrideListenAddress_;
+   std::unique_ptr<int> overrideListenPort_;
+   std::unique_ptr<uint64_t> overrideAutoSignXbt_;
 };
 
 

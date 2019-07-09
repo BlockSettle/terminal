@@ -82,22 +82,22 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       }
 
       if (result.count("mainnet")) {
-         d_->set_test_net(false);
+         overrideTestNet_ = std::make_unique<bool>(false);
       }
       else if (result.count("testnet")) {
-         d_->set_test_net(true);
+         overrideTestNet_ = std::make_unique<bool>(true);
       }
 
       if (result.count("listen")) {
-         d_->set_listen_address(listenAddress);
+         overrideListenAddress_ = std::make_unique<std::string>(listenAddress);
       }
 
       if (result.count("port")) {
-         d_->set_listen_port(listenPort);
+         overrideListenPort_ = std::make_unique<int>(listenPort);
       }
 
       if (result.count("auto_sign_spend_limit")) {
-         d_->set_limit_auto_sign_xbt(uint64_t(autoSignSpendLimit * BTCNumericTypes::BalanceDivider));
+         overrideAutoSignXbt_ = std::make_unique<uint64_t>(uint64_t(autoSignSpendLimit * BTCNumericTypes::BalanceDivider));
       }
 
       if (result.count("dirwallets")) {
@@ -143,7 +143,7 @@ NetworkType HeadlessSettings::netType() const
 
 bool HeadlessSettings::testNet() const
 {
-   return d_->test_net();
+   return overrideTestNet_ ? *overrideTestNet_ : d_->test_net();
 }
 
 // Get the terminal (client) BIP 150 ID key. Intended only for when the key is
@@ -193,6 +193,9 @@ std::vector<std::string> HeadlessSettings::trustedTerminals() const
 
 std::string HeadlessSettings::listenAddress() const
 {
+   if (overrideListenAddress_) {
+      return *overrideListenAddress_;
+   }
    if (d_->listen_address().empty()) {
       return "0.0.0.0";
    }
@@ -201,6 +204,9 @@ std::string HeadlessSettings::listenAddress() const
 
 std::string HeadlessSettings::listenPort() const
 {
+   if (overrideListenPort_) {
+      return std::to_string(*overrideListenPort_);
+   }
    if (d_->listen_port() == 0) {
       return "23456";
    }
@@ -210,7 +216,7 @@ std::string HeadlessSettings::listenPort() const
 bs::signer::Limits HeadlessSettings::limits() const
 {
    bs::signer::Limits result;
-   result.autoSignSpendXBT = d_->limit_auto_sign_xbt();
+   result.autoSignSpendXBT = overrideAutoSignXbt_ ? *overrideAutoSignXbt_ : d_->limit_auto_sign_xbt();
    return result;
 }
 
