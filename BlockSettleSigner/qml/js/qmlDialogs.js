@@ -128,6 +128,9 @@ function deleteWalletDialog(data) {
     var dlg = Qt.createComponent("../BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
     dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
     dlg.rootName = walletsProxy.getRootWalletName(walletId)
+    dlg.bsResized.connect(function() {
+        mainWindow.moveMainWindowToScreenCenter()
+    })
     dlg.open()
     return dlg
 }
