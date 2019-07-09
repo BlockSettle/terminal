@@ -36,7 +36,6 @@ HeadlessSettings::~HeadlessSettings() noexcept = default;
 bool HeadlessSettings::loadSettings(int argc, char **argv)
 {
    const std::string jsonFileName = SystemFilePaths::appDataLocation() + "/signer.json";
-   logger_->debug("Loading settings from {}", jsonFileName);
 
    if (SystemFileUtils::fileExist(jsonFileName)) {
       bool result = loadSettings(d_.get(), jsonFileName);

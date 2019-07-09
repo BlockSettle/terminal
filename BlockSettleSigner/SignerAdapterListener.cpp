@@ -573,7 +573,7 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
    std::vector<bs::wallet::PasswordData> pwdData;
    for (int i = 0; i < request.newpassword_size(); ++i) {
       const auto &pwd = request.newpassword(i);
-      pwdData.push_back({ BinaryData::CreateFromHex(pwd.password())
+      pwdData.push_back({ SecureBinaryData(pwd.password())
                           , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
    }
    bs::wallet::KeyRank keyRank = {request.rankm(), request.rankn()};
