@@ -38,20 +38,6 @@ CustomDialogWindow {
         else rejectAnimated()
     }
 
-    onWidthChanged: {
-        root.bsResized()
-    }
-
-    onHeightChanged: {
-        root.bsResized()
-    }
-
-    onOpacityChanged: {
-        if (opacity === 1) {
-            root.bsResized()
-        }
-    }
-
     property int animationDuration: 100
 
     default property alias cContentItem: customContentContainer.data

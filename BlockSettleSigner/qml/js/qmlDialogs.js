@@ -55,6 +55,7 @@ function prepareLigthModeDialog(dialog) {
 
     mainWindow.width = currentDialog.width
     mainWindow.height = currentDialog.height
+    mainWindow.moveMainWindowToScreenCenter()
     mainWindow.title = currentDialog.title
     if (typeof currentDialog.qmlTitleVisible !== "undefined") {
         currentDialog.qmlTitleVisible = false
@@ -64,16 +65,19 @@ function prepareLigthModeDialog(dialog) {
     currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
         mainWindow.width = nextDialog.width
         mainWindow.height = nextDialog.height
+        mainWindow.moveMainWindowToScreenCenter()
 
         nextDialog.sizeChanged.connect(function(w, h){
             mainWindow.width = w
             mainWindow.height = h
+            mainWindow.moveMainWindowToScreenCenter()
         })
     })
 
     currentDialog.sizeChanged.connect(function(w, h){
         mainWindow.width = w
         mainWindow.height = h
+        mainWindow.moveMainWindowToScreenCenter()
     })
 }
 
@@ -95,9 +99,6 @@ function createNewWalletDialog(data) {
         mainWindow.sizeChanged.connect(function(w, h) {
             dlgNewSeed.width = w
             dlgNewSeed.height = h
-        })
-        dlgNewSeed.bsResized.connect(function() {
-            mainWindow.moveMainWindowToScreenCenter()
         })
     }
     dlgNewSeed.open()
