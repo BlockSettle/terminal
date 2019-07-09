@@ -404,7 +404,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
    };
 
    if (!request.password().empty()) {
-      onPassword(ErrorCode::NoError, BinaryData::CreateFromHex(request.password()));
+      onPassword(ErrorCode::NoError, request.password());
       return true;
    }
 
@@ -590,7 +590,7 @@ bool HeadlessContainerListener::onPasswordReceived(const std::string &clientId, 
       logger_->error("[HeadlessContainerListener] walletId is empty in PasswordReply");
       return false;
    }
-   const auto password = BinaryData::CreateFromHex(response.password());
+   SecureBinaryData password(response.password());
    if (!password.isNull()) {
       passwords_[response.walletid()] = password;
    }
@@ -1340,7 +1340,6 @@ bool HeadlessContainerListener::onSyncWallet(const std::string &clientId, headle
          }
       }
       const auto &pooledAddresses = wallet->getPooledAddressList();
-      unsigned int poolAddrCnt = 0;
       for (const auto &addr : pooledAddresses) {
          const auto index = wallet->getAddressIndex(addr);
          auto addrData = response.add_addrpool();

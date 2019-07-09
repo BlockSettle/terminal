@@ -381,7 +381,7 @@ headless::SignTxRequest HeadlessContainer::createSignTxRequest(const bs::core::w
    }
 
    if (!password.isNull()) {
-      request.set_password(password.toHexStr());
+      request.set_password(password.toBinStr());
    }
 
    if (!txSignReq.prevStates.empty()) {
@@ -449,7 +449,7 @@ bs::signer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::core::wal
 //   }
 
    if (!password.isNull()) {
-      request.set_password(password.toHexStr());
+      request.set_password(password.toBinStr());
    }
 
    headless::RequestPacket packet;
@@ -588,7 +588,7 @@ void HeadlessContainer::SendPassword(const std::string &walletId, bs::error::Err
       response.set_walletid(walletId);
    }
    if (!password.isNull()) {
-      response.set_password(password.toHexStr());
+      response.set_password(password.toBinStr());
    }
    response.set_errorcode(static_cast<uint32_t>(result));
    packet.set_data(response.SerializeAsString());

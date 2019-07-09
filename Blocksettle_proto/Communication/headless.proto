@@ -95,7 +95,7 @@ message SignTxRequest
    bytes          unsignedState = 6;
    Change         change = 7;
    bool           populateUTXOs = 8;
-   string         password = 10;
+   bytes          password = 10;
    bool           keepDuplicatedRecipients = 11;
 }
 
@@ -129,7 +129,7 @@ message SignPayoutTXRequest
    bytes    recipient = 2;
    string   authAddress = 3;
    bytes    settlementId = 4;
-   string   password = 8;
+   bytes    password = 8;
 }
 
 message PasswordRequest
@@ -145,7 +145,7 @@ message PasswordReply
 {
    uint32   errorCode = 1;
    string   walletId = 2;
-   string   password = 3;
+   bytes    password = 3;
 }
 
 
@@ -190,7 +190,7 @@ message NewHDWallet
 
 message PasswordData
 {
-   string   password = 1;
+   bytes   password = 1;
    uint32   encType = 2;
    bytes    encKey = 3;
 }
@@ -434,5 +434,5 @@ message SyncNewAddressRequest
    }
    string wallet_id = 1;
    repeated Address addresses = 2;
-   
+
 }

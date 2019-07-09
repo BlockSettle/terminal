@@ -249,7 +249,7 @@ message DecryptWalletEvent
 {
    uint32   errorCode = 1;
    string   wallet_id = 2;
-   string   password = 3;
+   bytes    password = 3;
 }
 
 message CreateWatchingOnlyResponse
@@ -306,7 +306,7 @@ message CustomDialogRequest
 
 message PasswordData
 {
-   string   password = 1;
+   bytes    password = 1;
    uint32   encType = 2;
    bytes    encKey = 3;
 }
@@ -314,7 +314,7 @@ message PasswordData
 message ChangePasswordRequest
 {
    string   rootWalletId = 1;
-   string   oldPassword = 2;
+   bytes    oldPassword = 2;
    repeated PasswordData newPassword = 3;
    uint32   rankM = 4;
    uint32   rankN = 5;
