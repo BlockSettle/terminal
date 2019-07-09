@@ -30,8 +30,22 @@ ApplicationWindow {
     height: 600
 //    minimumWidth: 450
 //    minimumHeight: 600
-    onWidthChanged: emitSizeChanged()
-    onHeightChanged: emitSizeChanged()
+    onWidthChanged: {
+        if (width > Screen.desktopAvailableWidth) {
+            x = 0
+            width = Screen.desktopAvailableWidth
+        }
+        emitSizeChanged()
+    }
+    onHeightChanged: {
+        if (height > Screen.desktopAvailableHeight) {
+            let frameSize = qmlFactory.frameSize(mainWindow)
+            let h = frameSize.height > height ? frameSize.height - height : 0
+            y = 0
+            height = Screen.desktopAvailableHeight - h
+        }
+        emitSizeChanged()
+    }
 
     property var currentDialog: ({})
 
