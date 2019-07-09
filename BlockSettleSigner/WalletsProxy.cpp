@@ -244,9 +244,14 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
                   , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
             }
          }
-         const auto woWallet = newWallet->createWatchingOnly();
+
+         // Do not keep WO wallet ptr here as it would lock file
+         if (newWallet->createWatchingOnly() == nullptr) {
+             throw std::runtime_error("can't create WO wallet");
+         }
+
          newWallet->eraseFile();
-         // Clear pointer to not call one more time eraseFile if something will fail below
+         // Clear pointer to not call one more time eraseFile if something would fail below
          newWallet = nullptr;
 
          QDir dir(tmpDir.path());
