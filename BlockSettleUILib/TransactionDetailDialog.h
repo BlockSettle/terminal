@@ -38,8 +38,9 @@ public:
    static const int minHeightAtRendering = 500;
 
 private:
+   using WalletsSet = std::set<std::shared_ptr<bs::sync::Wallet>>;
    void addAddress(const std::shared_ptr<bs::sync::Wallet> &, const TxOut& out,
-      bool isOutput, bool isTxOutgoing, const BinaryData& txHash);
+      bool isOutput, bool isTxOutgoing, bool isInternalTx, const BinaryData& txHash, const WalletsSet *inputWallets);
    QString getScriptType(const TxOut &);
 
 private:

@@ -576,7 +576,7 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConn
       };
 
       regId_ = armory_->registerWallet(
-         walletId(), getAddrHashes(), cbRegister, asNew);
+         walletId(), walletId(), getAddrHashes(), cbRegister, asNew);
       logger_->debug("[{}] register wallet {}, {} addresses = {}"
          , __func__, walletId(), getAddrHashes().size(), regId_);
       return { regId_ };

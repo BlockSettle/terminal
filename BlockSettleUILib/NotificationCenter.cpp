@@ -11,7 +11,9 @@
 
 static std::shared_ptr<NotificationCenter> globalInstance = nullptr;
 
-NotificationCenter::NotificationCenter(const std::shared_ptr<ApplicationSettings> &appSettings, const Ui::BSTerminalMainWindow *mainWinUi
+NotificationCenter::NotificationCenter(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const Ui::BSTerminalMainWindow *mainWinUi
    , const std::shared_ptr<QSystemTrayIcon> &trayIcon, QObject *parent)
    : QObject(parent)
 {
@@ -19,13 +21,13 @@ NotificationCenter::NotificationCenter(const std::shared_ptr<ApplicationSettings
    qRegisterMetaType<bs::ui::NotifyMessage>("NotifyMessage");
 
    addResponder(std::make_shared<NotificationTabResponder>(mainWinUi, appSettings, this));
-   addResponder(std::make_shared<NotificationTrayIconResponder>(mainWinUi, trayIcon, appSettings, this));
+   addResponder(std::make_shared<NotificationTrayIconResponder>(logger, mainWinUi, trayIcon, appSettings, this));
 }
 
-void NotificationCenter::createInstance(const std::shared_ptr<ApplicationSettings> &appSettings, const Ui::BSTerminalMainWindow *ui
-   , const std::shared_ptr<QSystemTrayIcon> &trayIcon, QObject *parent)
+void NotificationCenter::createInstance(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<ApplicationSettings> &appSettings
+   , const Ui::BSTerminalMainWindow *ui, const std::shared_ptr<QSystemTrayIcon> &trayIcon, QObject *parent)
 {
-   globalInstance = std::make_shared<NotificationCenter>(appSettings, ui, trayIcon, parent);
+   globalInstance = std::make_shared<NotificationCenter>(logger, appSettings, ui, trayIcon, parent);
 }
 
 NotificationCenter *NotificationCenter::instance()
@@ -101,10 +103,15 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
 }
 
 
-NotificationTrayIconResponder::NotificationTrayIconResponder(const Ui::BSTerminalMainWindow *mainWinUi
+NotificationTrayIconResponder::NotificationTrayIconResponder(const std::shared_ptr<spdlog::logger> &logger
+   , const Ui::BSTerminalMainWindow *mainWinUi
    , const std::shared_ptr<QSystemTrayIcon> &trayIcon
    , const std::shared_ptr<ApplicationSettings> &appSettings, QObject *parent)
-   : NotificationResponder(parent), mainWinUi_(mainWinUi), trayIcon_(trayIcon), appSettings_(appSettings)
+   : NotificationResponder(parent)
+   , logger_(logger)
+   , mainWinUi_(mainWinUi)
+   , trayIcon_(trayIcon)
+   , appSettings_(appSettings)
    , notifMode_(QSystemTray)
 #ifdef BS_USE_DBUS
    , dbus_(new DBusNotification(tr("BlockSettle Terminal"), this))
@@ -231,6 +238,8 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
 
    default: return;
    }
+
+   SPDLOG_LOGGER_INFO(logger_, "notification: {} ({}) {}", title.toStdString(), text.toStdString(), userId.toStdString());
 
    if (notifMode_ == QSystemTray) {
       //trayIcon_->showMessage(title, text, icon, msecs);

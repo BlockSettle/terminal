@@ -78,7 +78,7 @@ void ArmoryEventsPublisher::onZeroConfReceived(const std::vector<bs::TXEntry> &e
    for (const auto &entry : entries) {
       auto zcEntry = eventData.add_zc_entries();
       zcEntry->set_tx_hash(entry.txHash.toBinStr());
-      zcEntry->set_wallet_id(entry.id);
+      zcEntry->set_wallet_id(entry.walletId);
       zcEntry->set_value(entry.value);
       zcEntry->set_block_num(entry.blockNum);
       zcEntry->set_time(entry.txTime);

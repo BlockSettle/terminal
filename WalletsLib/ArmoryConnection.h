@@ -35,7 +35,7 @@ enum class ArmoryState : uint8_t {
 namespace bs {
    struct TXEntry {
       BinaryData  txHash;
-      std::string id;
+      std::string walletId;
       int64_t     value;
       uint32_t    blockNum;
       uint32_t    txTime;
@@ -125,15 +125,14 @@ public:
    using LedgerDelegateCb = std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>;
    using UTXOsCb = std::function<void(const std::vector<UTXO> &)>;
 
-   virtual std::string registerWallet(const std::string &walletId
+   // For ZC notifications walletId would be replaced with mergedWalletId (and notifications are merged)
+   virtual std::string registerWallet(const std::string &walletId, const std::string &mergedWalletId
       , const std::vector<BinaryData> &addrVec, const RegisterWalletCb&
       , bool asNew = false);
    virtual bool getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb&);
    virtual bool getCombinedBalances(const std::vector<std::string> &walletIDs);  // will return result to ACT
    virtual bool getCombinedTxNs(const std::vector<std::string> &walletIDs);      // will return result to ACT
 
-   // If context is not null and cbInMainThread is true then the callback will be called
-   // on main thread only if context is still alive.
    bool getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &); // result to ACT
    virtual bool getWalletsLedgerDelegate(const LedgerDelegateCb &);
 
@@ -199,6 +198,10 @@ private:
    void processDelayedZC();
    void maintenanceThreadFunc();
 
+   void addMergedWalletId(const std::string &walletId, const std::string &mergedWalletId);
+   // zcMutex_ must be locked
+   const std::string &getMergedWalletId(const std::string &walletId);
+
 protected:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<AsyncClient::BlockDataViewer>   bdv_;
@@ -221,9 +224,12 @@ protected:
    std::mutex  cbMutex_;
    std::map<BinaryData, std::vector<TxCb>>   txCallbacks_;
 
-   std::map<BinaryData, bs::TXEntry>   zcNotifiedEntries_;
-   std::map<BinaryData, bs::TXEntry>   zcWaitingEntries_;
-   std::mutex                 zcMutex_;
+   // Maps walletId to mergedWalletId
+   std::map<std::string, std::string> zcMergedWalletIds_;
+   // Stores ZC event maps for the mergedWalletId
+   std::map<std::string, std::map<BinaryData, bs::TXEntry>> zcNotifiedEntries_;
+   std::map<std::string, std::map<BinaryData, bs::TXEntry>> zcWaitingEntries_;
+   std::mutex zcMutex_;
 
    std::unordered_set<ArmoryCallbackTarget *>   activeTargets_;
    std::atomic_bool  actChanged_{ false };

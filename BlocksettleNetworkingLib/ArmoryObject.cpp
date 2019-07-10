@@ -95,19 +95,6 @@ void ArmoryObject::setupConnection(const ArmorySettings &settings, const BIP151C
       , bip150PromptUserCb);
 }
 
-std::string ArmoryObject::registerWallet(const std::string &walletId
-   , const std::vector<BinaryData> &addrVec, const RegisterWalletCb &cb
-   , bool asNew)
-{
-   const auto &cbWrap = [this, cb](const std::string &regId) 
-   {
-      if (cb) 
-         cb(regId);
-   };
-
-   return ArmoryConnection::registerWallet(walletId, addrVec, cbWrap, asNew);
-}
-
 bool ArmoryObject::getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb &cb)
 {
    const auto &cbWrap = [this, cb](std::vector<ClientClasses::LedgerEntry> le) {

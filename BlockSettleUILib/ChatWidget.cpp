@@ -396,6 +396,7 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
             case Chat::CONTACT_STATUS_INCOMING:
                status = UserSearchModel::UserStatus::ContactPendingIncoming;
                break;
+            case Chat::CONTACT_STATUS_OUTGOING_PENDING:
             case Chat::CONTACT_STATUS_OUTGOING:
                status = UserSearchModel::UserStatus::ContactPendingOutgoing;
                break;

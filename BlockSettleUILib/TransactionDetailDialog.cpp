@@ -84,6 +84,9 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
                break;
             }
 
+            std::set<bs::sync::WalletsManager::WalletPtr> inputWallets;
+
+            const bool isInternalTx = item->direction == bs::sync::Transaction::Internal;
             for (const auto &prevTx : txs) {
                if (!prevTx.isInitialized()) {
                   continue;
@@ -96,8 +99,14 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
                   if (prevTx.isInitialized() && wallet) {
                      TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
                      value += prevOut.getValue();
-                     addAddress(wallet, prevOut, false, isTxOutgoing,
-                                prevTx.getThisHash());
+                     const bool isOutput = false;
+                     addAddress(wallet, prevOut, isOutput, isTxOutgoing, isInternalTx, prevTx.getThisHash(), nullptr);
+
+                     const auto addr = bs::Address::fromTxOut(prevOut);
+                     const auto addressWallet = walletsManager_->getWalletByAddress(addr);
+                     if (addressWallet) {
+                        inputWallets.insert(addressWallet);
+                     }
                   }
                   else {
                      QStringList items;
@@ -112,8 +121,8 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
                for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
                   TxOut out = item->tx.getTxOutCopy(i);
                   value -= out.getValue();
-                  addAddress(wallet, out, true, isTxOutgoing,
-                             item->tx.getThisHash());
+                  const bool isOutput = true;
+                  addAddress(wallet, out, isOutput, isTxOutgoing, isInternalTx, item->tx.getThisHash(), &inputWallets);
                }
                ui_->labelComment->setText(QString::fromStdString(wallet->getTransactionComment(item->tx.getThisHash())));
             }
@@ -203,36 +212,21 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
                                          const TxOut& out,
                                          bool isOutput,
                                          bool isTxOutgoing,
-                                         const BinaryData& txHash)
+                                         bool isInternalTx,
+                                         const BinaryData& txHash,
+                                         const WalletsSet *inputWallets)
 {
    const auto addr = bs::Address::fromTxOut(out);
    const auto addressWallet = walletsManager_->getWalletByAddress(addr);
+   const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
    bool negative = false;
    QString addressType;
-   const bool isOurs = (addressWallet == wallet);
 
-   if (isTxOutgoing) {
-      const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
-      if (isOurs) {
-         if (!isOutput) {
-            negative = true;
-         }
-         else if (!isSettlement) {
-            addressType = tr("Change");
-            isOutput = false;
-         }
-      }
-   }
-   else {
-      if (!isOurs) {
-         if (!isOutput) {
-            negative = true;
-         }
-         else {
-            addressType = tr("Change");
-         }
-         isOutput = false;
-      }
+   // Do not try mark outputs as change for internal tx (or there would be only input and change, without output)
+   if (isOutput && !isInternalTx && inputWallets->find(addressWallet) != inputWallets->end() && !isSettlement) {
+      addressType = tr("Change");
+      isOutput = false;
+      negative = true;
    }
 
    const auto displayedAddress = QString::fromStdString(addr.display());
