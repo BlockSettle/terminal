@@ -76,7 +76,7 @@ public:
    bool isContactExist(const std::string &userId);
    bool addContact(Chat::Data &contact);
    bool removeContact(const std::string &userId);
-   bool getContacts(ContactRecordDataList &contactList, bool onlyWithKeys = true);
+   bool getContacts(ContactRecordDataList &contactList);
    bool updateContact(Chat::Data &contact);
    bool getContact(const std::string &userId, Chat::Data_ContactRecord *contact);
    bool compareLocalData(const std::string& userId, const BinaryData& key, const QDateTime& dt);

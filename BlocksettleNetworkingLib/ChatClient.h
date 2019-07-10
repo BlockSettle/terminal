@@ -77,6 +77,7 @@ public:
 
 private:
    void initMessage(Chat::Data *msg, const std::string& receiver);
+   void updateMessageStateAndSave(const std::shared_ptr<Chat::Data>& message, const Chat::Data_Message_State& state);
 
    void readDatabase();
 

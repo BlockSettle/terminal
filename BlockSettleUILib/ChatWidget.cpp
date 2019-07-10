@@ -346,7 +346,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
             onContactChanged();
    });
    connect(client_.get(), &ChatClient::ConfirmUploadNewPublicKey, this, &ChatWidget::onConfirmUploadNewPublicKey);
-   connect(client_.get(), &ChatClient::ConfirmContactsNewData, this, &ChatWidget::onConfirmContactNewKeyData);
    connect(client_.get(), &ChatClient::ContactChanged, this, &ChatWidget::onContactChanged);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
@@ -682,10 +681,13 @@ void ChatWidget::onConfirmContactNewKeyData(
       if (box.exec() == QDialog::Accepted) {
          updateList.push_back(contact);
       } else {
-         auto it = dict.find(contact->mutable_contact_record()->contact_id());
+         auto userId = contact->mutable_contact_record()->contact_id();
+         auto it = dict.find(userId);
          if (it != dict.end()) {
             dict.erase(it);
          }
+         // New public key rejected, let's remove contact from friends
+         client_->OnContactNewPublicKeyRejected(userId);
       }
    }
 
@@ -1319,9 +1321,19 @@ void ChatWidget::onContactListConfirmationRequested(const std::vector<std::share
 
    QString  detailsString = detailsPattern.arg(remoteConfirmed.size()).arg(remoteKeysUpdate.size()).arg(remoteAbsolutelyNew.size());
 
-   if (BSMessageBox(BSMessageBox::question, tr("Contacts Information Update"), tr("Some contacts information require update.")
-                    , tr("Do you want to continue?"), detailsString).exec() == QDialog::Accepted) {
-      client_->OnContactListConfirmed(remoteConfirmed, remoteKeysUpdate, remoteAbsolutelyNew);
+   BSMessageBox bsMessageBox(BSMessageBox::question, tr("Contacts Information Update"),
+      tr("Some contacts information require update."), tr("Do you want to continue?"), detailsString);
+   int ret = bsMessageBox.exec();
+
+   if (QDialog::Accepted == ret) {
+      onConfirmContactNewKeyData(remoteConfirmed, remoteKeysUpdate, remoteAbsolutelyNew);
+   }
+   else if (QDialog::Rejected == ret) {
+      std::vector<std::shared_ptr<Chat::Data>> mergedList;
+      mergedList.insert(mergedList.end(), remoteKeysUpdate.begin(), remoteKeysUpdate.end());
+      mergedList.insert(mergedList.end(), remoteAbsolutelyNew.begin(), remoteAbsolutelyNew.end());
+      // User canceled contact changes, remove this contacts from friend list
+      client_->OnContactListRejected(mergedList);
    }
 }
 
