@@ -603,6 +603,8 @@ void ChatClient::onContactRemove(const std::string& contactId)
    } else {
       model_->removeContactRequestNode(contactId);
    }
+
+   emit ContactChanged();
 }
 
 void ChatClient::onCreateOutgoingContact(const std::string &contactId)

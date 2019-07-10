@@ -346,6 +346,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    });
    connect(client_.get(), &ChatClient::ConfirmUploadNewPublicKey, this, &ChatWidget::onConfirmUploadNewPublicKey);
    connect(client_.get(), &ChatClient::ConfirmContactsNewData, this, &ChatWidget::onConfirmContactNewKeyData);
+   connect(client_.get(), &ChatClient::ContactChanged, this, &ChatWidget::onContactChanged);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
@@ -1320,6 +1321,11 @@ void ChatWidget::onContactListConfirmationRequested(const std::vector<std::share
                     , tr("Do you want to continue?"), detailsString).exec() == QDialog::Accepted) {
       client_->OnContactListConfirmed(remoteConfirmed, remoteKeysUpdate, remoteAbsolutelyNew);
    }
+}
+
+void ChatWidget::onContactChanged()
+{
+   updateChat(true);
 }
 
 void ChatWidget::showOldMessagesNotification()
