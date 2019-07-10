@@ -82,22 +82,22 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       }
 
       if (result.count("mainnet")) {
-         overrideTestNet_ = std::make_unique<bool>(false);
+         overrideTestNet_.setValue(false);
       }
       else if (result.count("testnet")) {
-         overrideTestNet_ = std::make_unique<bool>(true);
+         overrideTestNet_.setValue(true);
       }
 
       if (result.count("listen")) {
-         overrideListenAddress_ = std::make_unique<std::string>(listenAddress);
+         overrideListenAddress_.setValue(listenAddress);
       }
 
       if (result.count("port")) {
-         overrideListenPort_ = std::make_unique<int>(listenPort);
+         overrideListenPort_.setValue(listenPort);
       }
 
       if (result.count("auto_sign_spend_limit")) {
-         overrideAutoSignXbt_ = std::make_unique<uint64_t>(uint64_t(autoSignSpendLimit * BTCNumericTypes::BalanceDivider));
+         overrideAutoSignXbt_.setValue(uint64_t(autoSignSpendLimit * BTCNumericTypes::BalanceDivider));
       }
 
       if (result.count("dirwallets")) {
@@ -143,7 +143,7 @@ NetworkType HeadlessSettings::netType() const
 
 bool HeadlessSettings::testNet() const
 {
-   return overrideTestNet_ ? *overrideTestNet_ : d_->test_net();
+   return overrideTestNet_.isValid() ? overrideTestNet_.getValue() : d_->test_net();
 }
 
 // Get the terminal (client) BIP 150 ID key. Intended only for when the key is
@@ -193,8 +193,8 @@ std::vector<std::string> HeadlessSettings::trustedTerminals() const
 
 std::string HeadlessSettings::listenAddress() const
 {
-   if (overrideListenAddress_) {
-      return *overrideListenAddress_;
+   if (overrideListenAddress_.isValid()) {
+      return overrideListenAddress_.getValue();
    }
    if (d_->listen_address().empty()) {
       return "0.0.0.0";
@@ -204,8 +204,8 @@ std::string HeadlessSettings::listenAddress() const
 
 std::string HeadlessSettings::listenPort() const
 {
-   if (overrideListenPort_) {
-      return std::to_string(*overrideListenPort_);
+   if (overrideListenPort_.isValid()) {
+      return std::to_string(overrideListenPort_.getValue());
    }
    if (d_->listen_port() == 0) {
       return "23456";
@@ -216,7 +216,8 @@ std::string HeadlessSettings::listenPort() const
 bs::signer::Limits HeadlessSettings::limits() const
 {
    bs::signer::Limits result;
-   result.autoSignSpendXBT = overrideAutoSignXbt_ ? *overrideAutoSignXbt_ : d_->limit_auto_sign_xbt();
+   result.autoSignSpendXBT = overrideAutoSignXbt_.isValid() ?
+      overrideAutoSignXbt_.getValue() : d_->limit_auto_sign_xbt();
    return result;
 }
 

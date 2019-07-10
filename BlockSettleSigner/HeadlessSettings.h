@@ -4,6 +4,7 @@
 #include <memory>
 #include "BtcDefinitions.h"
 #include "SignerDefs.h"
+#include <SettableField.h>
 
 namespace spdlog {
    class logger;
@@ -53,10 +54,10 @@ private:
    std::string walletsDir_;
    std::unique_ptr<Settings> d_;
 
-   std::unique_ptr<bool> overrideTestNet_;
-   std::unique_ptr<std::string> overrideListenAddress_;
-   std::unique_ptr<int> overrideListenPort_;
-   std::unique_ptr<uint64_t> overrideAutoSignXbt_;
+   SettableField<bool> overrideTestNet_;
+   SettableField<std::string> overrideListenAddress_;
+   SettableField<int> overrideListenPort_;
+   SettableField<uint64_t> overrideAutoSignXbt_;
 };
 
 
