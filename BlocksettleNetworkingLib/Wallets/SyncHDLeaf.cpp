@@ -745,12 +745,6 @@ void hd::CCLeaf::setPath(const bs::hd::Path &path)
          walletName_ = name_ + "/" + suffix_;
       }
    }
-   if (path != path_) {
-      path_ = path;
-      suffix_.clear();
-      suffix_ = bs::hd::Path::elemToKey(index());
-      walletName_ = name_ + "/" + suffix_;
-   }
 }
 
 void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
