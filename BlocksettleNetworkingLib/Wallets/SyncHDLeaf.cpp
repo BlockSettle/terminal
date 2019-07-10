@@ -326,12 +326,12 @@ std::vector<std::string> hd::Leaf::registerWallet(
       std::unique_lock<std::mutex> lock(regMutex_);
       btcWallet_ = armory_->instantiateWallet(walletId());
       regIdExt_ = armory_->registerWallet(
-         walletId(), addrsExt, cbRegistered, asNew);
+         walletId(), walletId(), addrsExt, cbRegistered, asNew);
       regIds.push_back(regIdExt_);
 
       if (!isExtOnly_) {
          regIdInt_ = armory_->registerWallet(
-            walletIdInt(), addrsInt, cbRegistered, asNew);
+            walletIdInt(), walletId(), addrsInt, cbRegistered, asNew);
          regIds.push_back(regIdInt_);
          btcWalletInt_ = armory_->instantiateWallet(walletIdInt());
       }
@@ -461,7 +461,7 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
          };
 
          armory_->registerWallet(
-            walletId(), addrHashes, cbRegistered, true);
+            walletId(), walletId(), addrHashes, cbRegistered, true);
          fut.wait();
       }
       

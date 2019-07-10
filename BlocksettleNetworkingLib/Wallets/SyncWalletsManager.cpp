@@ -1134,7 +1134,7 @@ void WalletsManager::onZCReceived(const std::vector<bs::TXEntry> &entries)
    std::vector<bs::TXEntry> ourZCentries;
 
    for (const auto &entry : entries) {
-      auto wallet = getWalletById(entry.id);
+      auto wallet = getWalletById(entry.walletId);
       if (wallet != nullptr) {
          logger_->debug("[WalletsManager::{}] - ZC entry in wallet {}", __func__
             , wallet->name());
@@ -1145,7 +1145,7 @@ void WalletsManager::onZCReceived(const std::vector<bs::TXEntry> &entries)
       } // if
       else {
          logger_->debug("[WalletsManager::{}] - get ZC but wallet not found: {}"
-            , __func__, entry.id);
+            , __func__, entry.walletId);
       }
    } // for
 
