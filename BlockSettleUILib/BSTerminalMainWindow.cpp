@@ -59,6 +59,27 @@
 
 #include <spdlog/spdlog.h>
 
+// tmp
+#include "BsProxy.h"
+
+namespace {
+
+   void startTestProxy(const std::shared_ptr<spdlog::logger> &logger)
+   {
+      BsProxyParams params;
+      params.context = std::make_shared<ZmqContext>(logger);
+      params.ownKeyFileDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toStdString();
+      params.ownKeyFileName = "bs_proxy_tmp.peers";
+      params.autheidApiKey = "Bearer live_opnKv0PyeML0WvYm66ka2k29qPPoDjS3rzw13bRJzITY";
+      params.celerHost = "";
+      params.celerPort = 0;
+
+      BsProxy proxy(logger, params);
+      std::this_thread::sleep_for(std::chrono::hours(24));
+   }
+
+} // namespace
+
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QWidget* parent)
    : QMainWindow(parent)
@@ -161,11 +182,28 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    updateControlEnabledState();
 
    InitWidgets();
+
+   std::thread(&startTestProxy, logMgr_->logger()).detach();
+
+   createBsClient();
 }
 
 void BSTerminalMainWindow::onMDConnectionDetailsRequired()
 {
    GetNetworkSettingsFromPuB([this]() { OnNetworkSettingsLoaded(); } );
+}
+
+void BSTerminalMainWindow::onBsConnected()
+{
+
+}
+
+void BSTerminalMainWindow::onBsConnectionFailed()
+{
+}
+
+void BSTerminalMainWindow::onBsLogoutDone()
+{
 }
 
 void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
@@ -1191,11 +1229,18 @@ void BSTerminalMainWindow::onReadyToLogin()
 {
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
 
-   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, connectionManager_, this);
+   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, this);
+
+   connect(&loginDialog, &LoginWindow::startLogin, this, [this](const QString &login) {
+      bsClient_->startLogin(login.toStdString());
+   });
+
+   connect(bsClient_.get(), &BsClient::startLoginDone, &loginDialog, &LoginWindow::onStartLoginDone);
 
    if (loginDialog.exec() == QDialog::Accepted) {
       currentUserLogin_ = loginDialog.getUsername();
-      auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt(), cbApproveChat_);
+      std::string jwt;
+      auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
       setLoginButtonText(currentUserLogin_);
       setWidgetsAuthorized(true);
 
@@ -1737,4 +1782,19 @@ void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &de
       }
 
    }, Qt::QueuedConnection);
+}
+
+
+void BSTerminalMainWindow::createBsClient()
+{
+   BsClientParams params;
+   params.context = std::make_shared<ZmqContext>(logMgr_->logger());
+   params.newServerKeyCallback = [](const BsClientParams::NewKey &newKey) {
+      // FIXME: Show GUI prompt
+      newKey.prompt->set_value(true);
+   };
+
+   bsClient_ = std::make_unique<BsClient>(logMgr_->logger(), params);
+   connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
+   connect(bsClient_.get(), &BsClient::logoutDone, this, &BSTerminalMainWindow::onBsLogoutDone);
 }

@@ -4,10 +4,6 @@
 #include <QTimer>
 #include <QDialog>
 #include <memory>
-#include <QNetworkReply>
-#include "AutheIDClient.h"
-
-class AutheIDClient;
 
 namespace Ui {
     class LoginWindow;
@@ -17,7 +13,7 @@ namespace spdlog {
 }
 
 class ApplicationSettings;
-class ConnectionManager;
+class BsClient;
 
 class LoginWindow : public QDialog
 {
@@ -25,9 +21,8 @@ Q_OBJECT
 
 public:
    LoginWindow(const std::shared_ptr<spdlog::logger> &logger
-               , const std::shared_ptr<ApplicationSettings> &
-               , const std::shared_ptr<ConnectionManager> &
-               , QWidget* parent = nullptr);
+      , std::shared_ptr<ApplicationSettings> &settings
+      , QWidget* parent = nullptr);
    ~LoginWindow() override;
 
    enum State {
@@ -37,7 +32,14 @@ public:
 
    QString getUsername() const;
 
-   std::string getJwt() const {return jwt_; }
+   std::shared_ptr<BsClient> client() { return client_; }
+
+signals:
+   void startLogin(const QString &login);
+   void cancelLogin();
+
+public slots:
+   void onStartLoginDone(bool success);
 
 private slots:
    void onTextChanged();
@@ -45,8 +47,6 @@ private slots:
 
    void onAuthStatusUpdated(const QString &userId, const QString &status);
 
-   void onAutheIDDone(const std::string& email);
-   void onAutheIDFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError);
    void onTimer();
 
    void setupLoginPage();
@@ -59,10 +59,8 @@ private:
    std::unique_ptr<Ui::LoginWindow>       ui_;
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ApplicationSettings>   settings_;
-   std::shared_ptr<ConnectionManager>     connectionManager_;
-   std::shared_ptr<AutheIDClient>         autheIDConnection_ {};
+   std::shared_ptr<BsClient>              client_;
 
-   std::string jwt_;
    State       state_ = State::Login;
    QTimer      timer_;
    float       timeLeft_;

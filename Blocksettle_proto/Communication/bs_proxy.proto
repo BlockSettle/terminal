@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.Proxy;
+
+message Request
+{
+    message StartLogin
+    {
+        string auth_id = 1;
+    }
+
+    message CancelLogin
+    {
+    }
+
+    message GetLoginResult
+    {
+    }
+
+    message Logout
+    {
+    }
+
+    int64 request_id = 1;
+
+    oneof data
+    {
+        StartLogin start_login = 10;
+        CancelLogin cancel_login = 11;
+        GetLoginResult get_login_result = 12;
+        Logout logout = 13;
+    }
+}
+
+message Response
+{
+    message StartLogin
+    {
+        bool success = 1;
+    }
+
+    message CancelLogin
+    {
+    }
+
+    message GetLoginResult
+    {
+    }
+
+    message Logout
+    {
+    }
+
+    int64 request_id = 1;
+
+    oneof data
+    {
+        StartLogin start_login = 10;
+        CancelLogin cancel_login = 11;
+        GetLoginResult get_login_result = 12;
+        Logout logout = 13;
+    }
+}

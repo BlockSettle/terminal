@@ -13,6 +13,7 @@
 #include "QWalletInfo.h"
 #include "SignContainer.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "BsClient.h"
 
 namespace Ui {
     class BSTerminalMainWindow;
@@ -207,6 +208,10 @@ private slots:
 
    void onMDConnectionDetailsRequired();
 
+   void onBsConnected();
+   void onBsConnectionFailed();
+   void onBsLogoutDone();
+
 protected:
    void closeEvent(QCloseEvent* event) override;
    void changeEvent(QEvent* e) override;
@@ -230,6 +235,8 @@ private:
    bool goOnlineArmory() const;
 
    void InitWidgets();
+
+   void createBsClient();
 
 private:
    QString           loginButtonText_;
@@ -263,6 +270,8 @@ private:
       BSTerminalMainWindow *parent_;
    };
    std::unique_ptr<MainWinACT>   act_;
+
+   std::unique_ptr<BsClient> bsClient_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

@@ -1,28 +1,25 @@
 #include "LoginWindow.h"
 #include "ui_LoginWindow.h"
 
+#include <spdlog/spdlog.h>
 #include <QIcon>
 
 #include "AboutDialog.h"
 #include "ApplicationSettings.h"
 #include "UiUtils.h"
 #include "BSMessageBox.h"
-#include <spdlog/spdlog.h>
-#include "AutheIDClient.h"
 
 namespace {
    int kAuthTimeout = 60;
 }
 
 LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
-                         , const std::shared_ptr<ApplicationSettings> &settings
-                         , const std::shared_ptr<ConnectionManager> &connectionManager
-                         , QWidget* parent)
+   , std::shared_ptr<ApplicationSettings> &settings
+   , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::LoginWindow())
    , logger_(logger)
    , settings_(settings)
-   , connectionManager_(connectionManager)
 {
    ui_->setupUi(this);
    ui_->progressBar->setMaximum(kAuthTimeout * 2); // update every 0.5 sec
@@ -30,7 +27,6 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
       , tr("Version %1").arg(QString::fromStdString(AboutDialog::version())));
    ui_->loginVersionLabel->setText(version);
    resize(minimumSize());
-
 
    const auto accountLink = ui_->labelGetAccount->text().replace(QLatin1String("{GetAccountLink}")
       , settings->get<QString>(ApplicationSettings::GetAccount_Url));
@@ -47,11 +43,6 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
    else {
       ui_->lineEditUsername->setFocus();
    }
-
-   autheIDConnection_ = std::make_shared<AutheIDClient>(logger_, settings, connectionManager_);
-   connect(autheIDConnection_.get(), &AutheIDClient::authSuccess, this, &LoginWindow::onAutheIDDone);
-   connect(autheIDConnection_.get(), &AutheIDClient::failed, this, &LoginWindow::onAutheIDFailed);
-   connect(autheIDConnection_.get(), &AutheIDClient::userCancelled, this, &LoginWindow::setupLoginPage);
 
    connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::accept);
 
@@ -105,6 +96,18 @@ QString LoginWindow::getUsername() const
    return ui_->lineEditUsername->text().toLower();
 }
 
+void LoginWindow::onStartLoginDone(bool success)
+{
+   if (success) {
+      QDialog::accept();
+      return;
+   }
+
+   setupLoginPage();
+   BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), tr(""), this);
+   loginErrorBox.exec();
+}
+
 void LoginWindow::accept()
 {
    onAuthPressed();
@@ -112,17 +115,19 @@ void LoginWindow::accept()
 
 void LoginWindow::onAuthPressed()
 {
-   ui_->lineEditUsername->setText(ui_->lineEditUsername->text().trimmed());
+   QString login = ui_->lineEditUsername->text().trimmed();
+   ui_->lineEditUsername->setText(login);
 
    if (state_ == Login) {
-      autheIDConnection_->authenticate(ui_->lineEditUsername->text().toStdString(), kAuthTimeout);
+      emit startLogin(login);
       setupLoginPage();
       timer_.start();
       setupCancelPage();
    }
    else {
       setupLoginPage();
-      autheIDConnection_->cancel();
+      emit cancelLogin();
+      QDialog::reject();
    }
 
    if (ui_->checkBoxRememberUsername->isChecked()) {
@@ -139,17 +144,11 @@ void LoginWindow::onAuthStatusUpdated(const QString &userId, const QString &stat
    ui_->signWithEidButton->setText(status);
 }
 
-void LoginWindow::onAutheIDDone(const std::string& jwt)
-{
-   jwt_= jwt;
-   QDialog::accept();
-}
-
-void LoginWindow::onAutheIDFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError)
-{
-   if (authError != AutheIDClient::Timeout) {
-      setupLoginPage();
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), AutheIDClient::errorString(authError), this);
-      loginErrorBox.exec();
-   }
-}
+//void LoginWindow::onAutheIDFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError)
+//{
+//   if (authError != AutheIDClient::Timeout) {
+//      setupLoginPage();
+//      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), AutheIDClient::errorString(authError), this);
+//      loginErrorBox.exec();
+//   }
+//}

@@ -323,7 +323,7 @@ const chrono::milliseconds ZmqBIP15XServerConnection::getDefaultHeartbeatInterva
 // static
 const chrono::milliseconds ZmqBIP15XServerConnection::getLocalHeartbeatInterval()
 {
-   return std::chrono::seconds(3);
+   return std::chrono::seconds(3000);
 }
 
 // A send function for the data connection that sends data to all clients,
