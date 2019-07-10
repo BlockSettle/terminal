@@ -186,7 +186,7 @@ static int GuiApp(int &argc, char** argv)
          , app.tr("Failed to parse command line arguments")
          , settings->ErrorText());
       errorMessage.exec();
-      return 1;
+      return EXIT_FAILURE;
    }
 
    QString logoIcon;
