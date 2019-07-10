@@ -1,7 +1,20 @@
 {
-   "latest_version": "0.18.6",
+   "latest_version": "0.18.7",
    "release_date": "10 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.18.7",
+         "previous_version": "0.18.6",
+         "release_date": "10 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Do not update signer settings from command line",
+            "Separate ZC notifications for different wallets (#1090)"
+         ],
+         "bug_fixes": [],
+         "revision": "b0c3ead6",
+         "common_revision": "bff25ad7"
+      },
       {
          "version_string": "0.18.6",
          "previous_version": "0.18.5",
