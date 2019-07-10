@@ -93,6 +93,7 @@ private slots:
    void onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
                                    const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
                                    const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
+   void onContactChanged();
    void onBSChatInputSelectionChanged();
    void onChatMessagesSelectionChanged();
    void onContactRequestAcceptSendClicked();
