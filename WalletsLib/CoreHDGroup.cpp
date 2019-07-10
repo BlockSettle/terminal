@@ -1,4 +1,5 @@
 #include "CoreHDGroup.h"
+#include "HDPath.h"
 #include "Wallets.h"
 
 using namespace bs::core;
@@ -73,7 +74,7 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(
    bs::hd::Path::Elem elem, unsigned lookup)
 {
    //leaves are always hardened
-   elem |= 0x80000000;
+   elem |= bs::hd::hardFlag;
    if (getLeafByPath(elem) != nullptr)
       throw std::runtime_error("leaf already exists");
 

@@ -47,12 +47,13 @@ namespace bs {
 
 
       static const Path::Elem purpose = 44;  // BIP44-compatible
+      static const Path::Elem hardFlag = 0x80000000;
 
       enum CoinType : Path::Elem {
-         Bitcoin_main = 0x80000000,
-         Bitcoin_test = 0x80000001,
-         BlockSettle_CC = 0x80004253,            // 0x80000000 | "BS" in hex
-         BlockSettle_Auth = 0xc1757468       // 0x80000000 | "Auth" in hex 
+         Bitcoin_main = hardFlag,
+         Bitcoin_test = hardFlag + 1,
+         BlockSettle_CC = hardFlag + 0x4253, // 0x80000000 | "BS" in hex
+         BlockSettle_Auth = hardFlag + 0x41757468  // 0x80000000 | "Auth" in hex
       };
 
    }  //namespace hd

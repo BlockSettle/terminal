@@ -4,7 +4,6 @@
 #include "Address.h"
 #include "AuthAddress.h"
 #include "ArmoryConnection.h"
-#include "CCFileManager.h"
 
 #include <QWidget>
 #include <QItemSelection>
@@ -14,11 +13,11 @@ namespace Ui {
 }
 namespace bs {
    namespace sync {
+      class CCDataResolver;
       class PlainWallet;
    }
 }
 class AddressVerificator;
-class CCFileManager;
 class QTreeWidgetItem;
 
 class AddressDetailsWidget : public QWidget
@@ -31,7 +30,7 @@ public:
 
    void init(const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<spdlog::logger> &inLogger
-      , const CCFileManager::CCSecurities &);
+      , const std::shared_ptr<bs::sync::CCDataResolver> &);
    void setQueryAddr(const bs::Address& inAddrVal);
    void setBSAuthAddrs(const std::unordered_set<std::string> &bsAuthAddrs);
    void clear();
@@ -94,7 +93,7 @@ private:
 
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
-   CCFileManager::CCSecurities         ccSecurities_;
+   std::shared_ptr<bs::sync::CCDataResolver> ccResolver_;
    std::pair<std::string, uint64_t>    ccFound_;
    std::shared_ptr<AddressVerificator> addrVerify_;
    std::map<bs::Address, AddressVerificationState> authAddrStates_;

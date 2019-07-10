@@ -248,8 +248,10 @@ void RFQTicketXBT::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sy
    const auto &ccProduct = getProduct().toStdString();
    group->addLeaf(leaf);
 
-   leaf->setData(assetManager_->getCCGenesisAddr(ccProduct).display());
-   leaf->setData(assetManager_->getCCLotSize(ccProduct));
+   auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(leaf);
+   if (ccLeaf) {
+      ccLeaf->setCCDataResolver(walletsManager_->ccResolver());
+   }
 
    ui_->comboBoxCCWallets->clear();
    ui_->comboBoxCCWallets->addItem(QString::fromStdString(leaf->name()));

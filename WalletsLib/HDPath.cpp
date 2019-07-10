@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <stdexcept>
+#include "BtcUtils.h"
 #include "HDPath.h"
 
 using namespace bs;
@@ -12,14 +13,14 @@ hd::Path::Path(const std::vector<Elem> &elems) : path_(elems)
       //Only resorting to this so as to not blow up the entire code base. Maybe 
       //it deserves to, however.
       for (size_t i = 0; i < std::min<size_t>(3, path_.size()); i++) {
-         path_[i] |= 0x80000000;
+         path_[i] |= hardFlag;
       }
    }
 }
 
 bool hd::Path::isHardened(size_t index) const
 {
-   return (path_[index] & 0x80000000);
+   return (path_[index] & hardFlag);
 }
 
 hd::Path::Elem hd::Path::get(int index) const
@@ -54,31 +55,32 @@ void hd::Path::append(Elem elem)
 
 hd::Path::Elem hd::Path::keyToElem(const std::string &key)
 {
-   /***
-   This is weird af.
-   The length restriction is off. It should just fail instead of 
-   silently trimming. The size limit does not allow for the harderning
-   flag (') with 4 character strings.
-   Latin ASCII characters cannot flag the hardening bit but that seems 
-   to be a lucky oversight rather than intentional design.
-
-   I recommend against using this. If you want conversions of strings 
-   into BIP32 nodes, use a hash method to 4 bytes values rather than
-   ASCII to binary conversions.
-
-   Disabling this for now until it is reimplemented with a proper 
-   hash function.
-   ***/
-
-   throw std::runtime_error("hd::Path::keyToElem disabled");
-   
-   hd::Path::Elem result = 0;
-   const std::string &str = (key.length() > 4) ? key.substr(0, 4) : key;
-   if (str.empty() || str.length() > 4) {
-      throw std::runtime_error("invalid BIP32 string key");
+   if (key.empty()) {
+      throw std::runtime_error("empty string key");
    }
-   for (size_t i = 0; i < str.length(); i++) {
-      result |= static_cast<hd::Path::Elem>(str[str.length() - 1 - i]) << (i * 8);
+   const auto hash = BtcUtils::getSha256(key);
+   hd::Path::Elem result = 0;
+   for (int startIdx = 0; startIdx < hash.getSize() - 4; ++startIdx) {
+      result = BinaryData::StrToIntBE<hd::Path::Elem>(hash.getSliceCopy(startIdx, 4));
+      if ((result & hardFlag) == hardFlag) {
+         result &= ~hardFlag;
+      }
+      bool isResultClashingPredefinedElems = false;
+      for (const hd::Path::Elem elem : { 0, 1, 0x4253, 0x41757468 }) {
+         if (result == elem) {
+            isResultClashingPredefinedElems = true;
+            break;
+         }
+      }
+      if (isResultClashingPredefinedElems) {
+         result = 0;
+      }
+      else {
+         break;
+      }
+   }
+   if (result == 0) {
+      throw std::runtime_error("failed to generate index from key");
    }
    return result;
 }
@@ -86,26 +88,10 @@ hd::Path::Elem hd::Path::keyToElem(const std::string &key)
 std::string hd::Path::elemToKey(hd::Path::Elem elem)
 {
    //mask off the hardened flag if present
-   bool hardened = elem & 0x80000000;
+   bool hardened = elem & hardFlag;
    if (hardened)
-      elem &= ~0x80000000;
+      elem &= ~hardFlag;
    std::string result;
-
-   /*** 
-   isValidPathElem does not tolerate alphabetical characters, yet path to index conversion
-   generates alphabetical nodes. Path to index conversion then back to path from index is 
-   at least used to pass addresses from CoreHDLeaf to SyncHDLeaf. Therefor this method is
-   not just a pretty printer for BIP32 paths, hence this mismatch in the codec makes no 
-   sense and has been disabled. If you want pretty printing, have an extra method for that
-   and name it accordingly!
-   ***/
-
-/*   for (size_t i = 4; i > 0; i--) {
-      unsigned char c = (elem >> (8 * (i - 1))) & 0xff;
-      if (((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z')) || ((c >= '0') && (c <= '9'))) {
-         result.append(1, c);
-      }
-   }*/
 
    if (result.empty()) {
       result = std::to_string(elem);
@@ -185,7 +171,7 @@ hd::Path hd::Path::fromString(const std::string &s)
       }
       auto pe = static_cast<Elem>(std::stoul(elem));
       if (elem.find("'") != std::string::npos)
-         pe |= 0x80000000; //proper way to signify hardness, stick to the spec!
+         pe |= hardFlag; //proper way to signify hardness, stick to the spec!
       result.append(pe);
    }
    if (result.get(0) == hd::purpose) {

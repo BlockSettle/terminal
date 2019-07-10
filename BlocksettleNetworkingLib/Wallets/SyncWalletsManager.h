@@ -84,6 +84,7 @@ namespace bs {
          bool deleteWallet(HDWalletPtr);
 
          void setUserId(const BinaryData &userId);
+         std::shared_ptr<CCDataResolver> ccResolver() const { return ccResolver_; }
 
          bool isArmoryReady() const;
          bool isReadyForTrading() const;
@@ -209,12 +210,28 @@ namespace bs {
          std::shared_ptr<SettlementWallet>   settlementWallet_;
          std::set<std::string>               newWallets_;
 
-         struct CCInfo {
-            std::string desc;
-            uint64_t    lotSize;
-            std::string genesisAddr;
+         class CCResolver : public CCDataResolver
+         {
+         public:
+            std::string nameByWalletIndex(bs::hd::Path::Elem) const override;
+            uint64_t lotSizeFor(const std::string &cc) const override;
+            bs::Address genesisAddrFor(const std::string &cc) const override;
+            std::string descriptionFor(const std::string &cc) const override;
+            std::vector<std::string> securities() const override;
+
+            void addData(const std::string &cc, uint64_t lotSize, const bs::Address &genAddr
+               , const std::string &desc);
+
+         private:
+            struct CCInfo {
+               std::string desc;
+               uint64_t    lotSize;
+               bs::Address genesisAddr;
+            };
+            std::unordered_map<std::string, CCInfo>   securities_;
+            std::unordered_map<bs::hd::Path::Elem, std::string>   walletIdxMap_;
          };
-         std::unordered_map<std::string, CCInfo>   ccSecurities_;
+         std::shared_ptr<CCResolver>   ccResolver_;
 
          std::unordered_map<std::string, std::pair<Transaction::Direction, std::vector<bs::Address>>> txDirections_;
          mutable std::atomic_flag      txDirLock_ = ATOMIC_FLAG_INIT;

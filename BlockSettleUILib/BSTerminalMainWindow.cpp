@@ -596,9 +596,13 @@ void BSTerminalMainWindow::SignerReady()
    updateControlEnabledState();
 
    LoadWallets();
-   //InitWidgets();
 
-   signContainer_->SetUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
+   signContainer_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
+
+   if (deferCCsync_) {
+      signContainer_->syncCCNames(walletsMgr_->ccResolver()->securities());
+      deferCCsync_ = false;
+   }
 
    lastSignerError_ = SignContainer::NoError;
 }
@@ -695,7 +699,7 @@ void BSTerminalMainWindow::InitAssets()
 
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityDef, assetManager_.get(), &AssetManager::onCCSecurityReceived);
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsMgr_.get(), &bs::sync::WalletsManager::onCCSecurityInfo);
-   connect(ccFileManager_.get(), &CCFileManager::Loaded, walletsMgr_.get(), &bs::sync::WalletsManager::onCCInfoLoaded);
+   connect(ccFileManager_.get(), &CCFileManager::Loaded, this, &BSTerminalMainWindow::onCCLoaded);
    connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
 
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
@@ -1250,7 +1254,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    const auto &deferredDialog = [this, userId] {
       if (signContainer_) {
-         signContainer_->SetUserId(userId);
+         signContainer_->setUserId(userId);
       }
    };
    addDeferredDialog(deferredDialog);
@@ -1272,7 +1276,7 @@ void BSTerminalMainWindow::onUserLoggedOut()
    ui_->actionLinkAdditionalBankAccount->setEnabled(false);
 
    if (signContainer_) {
-      signContainer_->SetUserId(BinaryData{});
+      signContainer_->setUserId(BinaryData{});
    }
    if (walletsMgr_) {
       walletsMgr_->setUserId(BinaryData{});
@@ -1477,6 +1481,20 @@ void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 #ifndef Q_OS_MAC
    ui_->menubar->adjustSize();
 #endif
+}
+
+void BSTerminalMainWindow::onCCLoaded()
+{
+   walletsMgr_->onCCInfoLoaded();
+
+   const auto ccResolver = walletsMgr_->ccResolver();
+   if (ccResolver && signContainer_) {
+      deferCCsync_ = false;
+      signContainer_->syncCCNames(ccResolver->securities());
+   }
+   else {
+      deferCCsync_ = true;
+   }
 }
 
 void BSTerminalMainWindow::onCCInfoMissing()
