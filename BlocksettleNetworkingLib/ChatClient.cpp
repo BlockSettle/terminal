@@ -243,6 +243,7 @@ void ChatClient::createPendingFriendRequest(const std::string &userId)
    d->set_contact_id(userId);
    d->set_status(Chat::CONTACT_STATUS_OUTGOING_PENDING);
    model_->insertContactObject(record);
+   emit  ContactChanged();
 }
 
 void ChatClient::onContactRequestPositiveAction(const std::string &contactId, const std::string& message)

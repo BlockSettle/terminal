@@ -343,6 +343,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::RoomsInserted, this, &ChatWidget::selectGlobalRoom);
    connect(client_.get(), &ChatClient::NewContactRequest, this, [=] (const std::string &userId) {
             NotificationCenter::notify(bs::ui::NotifyType::FriendRequest, {QString::fromStdString(userId)});
+            onContactChanged();
    });
    connect(client_.get(), &ChatClient::ConfirmUploadNewPublicKey, this, &ChatWidget::onConfirmUploadNewPublicKey);
    connect(client_.get(), &ChatClient::ConfirmContactsNewData, this, &ChatWidget::onConfirmContactNewKeyData);
