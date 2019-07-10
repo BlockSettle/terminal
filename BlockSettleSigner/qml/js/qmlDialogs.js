@@ -55,6 +55,7 @@ function prepareLigthModeDialog(dialog) {
 
     mainWindow.width = currentDialog.width
     mainWindow.height = currentDialog.height
+    mainWindow.moveMainWindowToScreenCenter()
     mainWindow.title = currentDialog.title
     if (typeof currentDialog.qmlTitleVisible !== "undefined") {
         currentDialog.qmlTitleVisible = false
@@ -64,16 +65,19 @@ function prepareLigthModeDialog(dialog) {
     currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
         mainWindow.width = nextDialog.width
         mainWindow.height = nextDialog.height
+        mainWindow.moveMainWindowToScreenCenter()
 
         nextDialog.sizeChanged.connect(function(w, h){
             mainWindow.width = w
             mainWindow.height = h
+            mainWindow.moveMainWindowToScreenCenter()
         })
     })
 
     currentDialog.sizeChanged.connect(function(w, h){
         mainWindow.width = w
         mainWindow.height = h
+        mainWindow.moveMainWindowToScreenCenter()
     })
 }
 
@@ -89,15 +93,15 @@ function createNewWalletDialog(data) {
         var dlgCreateWallet = Qt.createComponent("../BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
         dlgNewSeed.setNextChainDialog(dlgCreateWallet)
         dlgCreateWallet.seed = newSeed
+        dlgCreateWallet.bsResized.connect(function() {
+            mainWindow.moveMainWindowToScreenCenter()
+        })
         dlgCreateWallet.open()
     })
     if (Object.keys(mainWindow).indexOf("currentDialog") != -1) {
         mainWindow.sizeChanged.connect(function(w, h) {
             dlgNewSeed.width = w
             dlgNewSeed.height = h
-        })
-        dlgNewSeed.bsResized.connect(function() {
-            mainWindow.moveMainWindowToScreenCenter()
         })
     }
     dlgNewSeed.open()
@@ -125,6 +129,9 @@ function deleteWalletDialog(data) {
     var dlg = Qt.createComponent("../BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
     dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
     dlg.rootName = walletsProxy.getRootWalletName(walletId)
+    dlg.bsResized.connect(function() {
+        mainWindow.moveMainWindowToScreenCenter()
+    })
     dlg.open()
     return dlg
 }

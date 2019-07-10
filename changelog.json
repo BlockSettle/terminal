@@ -1,7 +1,41 @@
 {
-   "latest_version": "0.18.5",
-   "release_date": "07 Jul 2019",
+   "latest_version": "0.18.7",
+   "release_date": "10 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.18.7",
+         "previous_version": "0.18.6",
+         "release_date": "10 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Do not update signer settings from command line",
+            "Separate ZC notifications for different wallets (#1090)"
+         ],
+         "bug_fixes": [],
+         "revision": "b0c3ead6",
+         "common_revision": "bff25ad7"
+      },
+      {
+         "version_string": "0.18.6",
+         "previous_version": "0.18.5",
+         "release_date": "10 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Reduce flashing. All headless dialogs centered",
+            "Centered delete wallet pop-ups",
+            "Fix window centering on resize",
+            "Centered edit contact window",
+            "Pass password as bytes for consistency (#1092)",
+            "Terminal - Stacked popup dialogs (#1093)",
+            "MessageBox and style fixes"
+         ],
+         "bug_fixes": [
+            "Fix WO export on Windows",
+            "Fixed resize on small screen (#300)"
+         ],
+         "revision": "b8414ed6",
+         "common_revision": "8de663c1"
+      },
       {
          "version_string": "0.18.5",
          "previous_version": "0.18.4",

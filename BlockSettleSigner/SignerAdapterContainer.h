@@ -52,11 +52,11 @@ public:
       , const std::function<void(bs::error::ErrorCode , const BinaryData &signedTX)> &)  override { return 0; }
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
-
-   void SendPassword(const std::string &walletId, bs::error::ErrorCode result, const PasswordType &password) override {}
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override { return 0; }
 
-   bs::signer::RequestId SetUserId(const BinaryData &) override { return 0; }
+   bs::signer::RequestId setUserId(const BinaryData &) override { return 0; }
+   bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override { return 0; }
+
    bs::signer::RequestId createHDLeaf(const std::string &, const bs::hd::Path &
        , const std::vector<bs::wallet::PasswordData> & = {}
        , const std::function<void(bs::error::ErrorCode result)> & = nullptr) override { return 0; }

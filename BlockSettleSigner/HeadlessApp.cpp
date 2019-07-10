@@ -408,13 +408,16 @@ bs::error::ErrorCode HeadlessAppObj::activateAutoSign(const std::string &walletI
 
 void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Settings &settings)
 {
+   const bool prevOffline = settings_->offline();
+   const std::string prevListenAddress = settings_->listenAddress();
+   const std::string prevListenPort = settings_->listenPort();
    const auto prevTrustedTerminals = settings_->trustedTerminals();
 
-   const bool needReconnect = settings.offline() != settings_->offline()
-         || settings.listen_address() != settings_->listenAddress()
-         || std::to_string(settings.listen_port()) != settings_->listenPort();
-
    settings_->update(settings);
+
+   const bool needReconnect = prevOffline != settings_->offline()
+         || prevListenAddress != settings_->listenAddress()
+         || prevListenPort != settings_->listenPort();
 
    const auto trustedTerminals = settings_->trustedTerminals();
    if (terminalConnection_ && (trustedTerminals != prevTrustedTerminals)) {

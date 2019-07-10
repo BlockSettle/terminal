@@ -30,8 +30,22 @@ ApplicationWindow {
     height: 600
 //    minimumWidth: 450
 //    minimumHeight: 600
-    onWidthChanged: emitSizeChanged()
-    onHeightChanged: emitSizeChanged()
+    onWidthChanged: {
+        if (width > Screen.desktopAvailableWidth) {
+            x = 0
+            width = Screen.desktopAvailableWidth
+        }
+        emitSizeChanged()
+    }
+    onHeightChanged: {
+        if (height > Screen.desktopAvailableHeight) {
+            let frameSize = qmlFactory.frameSize(mainWindow)
+            let h = frameSize.height > height ? frameSize.height - height : 0
+            y = 0
+            height = Screen.desktopAvailableHeight - h
+        }
+        emitSizeChanged()
+    }
 
     property var currentDialog: ({})
 
@@ -40,7 +54,7 @@ ApplicationWindow {
     }
     Timer {
         id: sizeChangeTimer
-        interval: 100
+        interval: 5
         repeat: false
         running: false
         onTriggered: sizeChanged(mainWindow.width, mainWindow.height)
@@ -144,7 +158,7 @@ ApplicationWindow {
     }
 
     function moveMainWindowToScreenCenter() {
-        mainWindow.x = (Screen.width - mainWindow.width) / 2
-        mainWindow.y = (Screen.height - mainWindow.height) / 2
+        mainWindow.x = Screen.virtualX + (Screen.width - mainWindow.width) / 2
+        mainWindow.y = Screen.virtualY + (Screen.height - mainWindow.height) / 2
     }
 }
