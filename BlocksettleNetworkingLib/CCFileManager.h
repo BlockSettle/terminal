@@ -33,7 +33,7 @@ public:
       : logger_(logger), pubKey_(bsPubKey), cbSecLoaded_(cbSec)
       , cbLoadComplete_(cbLoad) {}
 
-   std::string nameByWalletIndex(const bs::hd::Path::Elem) const override;
+   std::string nameByWalletIndex(bs::hd::Path::Elem) const override;
    uint64_t lotSizeFor(const std::string &cc) const override;
    bs::Address genesisAddrFor(const std::string &cc) const override;
    std::string descriptionFor(const std::string &cc) const override;

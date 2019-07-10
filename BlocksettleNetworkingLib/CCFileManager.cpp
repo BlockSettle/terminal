@@ -33,6 +33,7 @@ CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
          , (unsigned long)ccSecDef.nbSatoshis, QString::fromStdString(ccSecDef.genesisAddr.display()));
    };
    const auto &cbLoadComplete = [this] (unsigned int rev) {
+      logger_->debug("[CCFileManager] loading complete, last revision: {}", rev);
       currentRev_ = rev;
       emit Loaded();
    };
@@ -270,8 +271,9 @@ std::vector<std::string> CCPubResolver::securities() const
    return result;
 }
 
-std::string CCPubResolver::nameByWalletIndex(const bs::hd::Path::Elem idx) const
+std::string CCPubResolver::nameByWalletIndex(bs::hd::Path::Elem idx) const
 {
+   idx &= ~bs::hd::hardFlag;
    const auto &itWallet = walletIdxMap_.find(idx);
    if (itWallet != walletIdxMap_.end()) {
       return itWallet->second;

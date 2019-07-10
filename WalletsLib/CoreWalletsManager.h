@@ -62,9 +62,12 @@ namespace bs {
          bool deleteWalletFile(const HDWalletPtr &);
 
          HDWalletPtr createWallet(const std::string& name, const std::string& description
-            , bs::core::wallet::Seed, const std::string &folder, 
-            const SecureBinaryData& passprase, bool primary);
+            , bs::core::wallet::Seed, const std::string &folder
+            , const SecureBinaryData& passprase, bool primary);
          void addWallet(const HDWalletPtr &);
+
+         std::vector<std::string> ccLeaves() const { return ccLeaves_; }
+         void setCCLeaves(const std::vector<std::string> &ccLeaves) { ccLeaves_ = ccLeaves; }
 
       private:
          bool isWalletFile(const std::string &fileName) const;
@@ -81,6 +84,7 @@ namespace bs {
          //std::vector<BinaryData>             walletsId_;
          std::vector<std::string>            hdWalletsId_;
          std::shared_ptr<SettlementWallet>   settlementWallet_;
+         std::vector<std::string>            ccLeaves_;
       };
 
    }  //namespace core

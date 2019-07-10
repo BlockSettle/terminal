@@ -22,6 +22,7 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
    , appSettings_(appSettings)
    , armoryPtr_(armory)
 {
+   ccResolver_ = std::make_shared<CCResolver>();
    maintThreadRunning_ = true;
    maintThread_ = std::thread(&WalletsManager::maintenanceThreadFunc, this);
 }
@@ -203,6 +204,12 @@ void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
 /*   if (!isHDLeaf && hdDummyWallet_)
       hdDummyWallet_->add(wallet);
 */
+   auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(wallet);
+   if (ccLeaf) {
+      ccLeaf->setCCDataResolver(ccResolver_);
+   }
+   wallet->setUserId(userId_);
+
    QMutexLocker lock(&mtxWallets_);
    auto insertIter = walletsId_.insert(wallet->walletId());
    if (!insertIter.second) {
@@ -287,12 +294,6 @@ void WalletsManager::walletCreated(const std::string &walletId)
          logger_->debug("[WalletsManager::walletCreated] HD leaf {} ({}) added"
             , walletId, leaf->name());
 
-         auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(leaf);
-         if (ccLeaf) {
-            ccLeaf->setCCDataResolver(ccResolver_);
-         }
-
-         leaf->setUserId(userId_);
          addWallet(leaf);
 
          QMetaObject::invokeMethod(this, [this, walletId] { emit walletChanged(walletId); });
@@ -1409,8 +1410,9 @@ std::vector<std::string> WalletsManager::CCResolver::securities() const
    return result;
 }
 
-std::string WalletsManager::CCResolver::nameByWalletIndex(const bs::hd::Path::Elem idx) const
+std::string WalletsManager::CCResolver::nameByWalletIndex(bs::hd::Path::Elem idx) const
 {
+   idx &= ~bs::hd::hardFlag;
    const auto &itWallet = walletIdxMap_.find(idx);
    if (itWallet != walletIdxMap_.end()) {
       return itWallet->second;

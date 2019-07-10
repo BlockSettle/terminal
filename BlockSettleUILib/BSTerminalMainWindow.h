@@ -123,6 +123,7 @@ private slots:
    void showArmoryServerPrompt(const BinaryData& srvPubKey, const std::string& srvIPPort, std::shared_ptr<std::promise<bool> > promiseObj);
 
    void onArmoryNeedsReconnect();
+   void onCCLoaded();
 
    void onTabWidgetCurrentChanged(const int &index);
 
@@ -240,6 +241,7 @@ private:
    bool armoryKeyDialogShown_ = false;
    bool armoryBDVRegistered_ = false;
    bool walletsSynched_ = false;
+   bool deferCCsync_ = false;
 
    SignContainer::ConnectionError lastSignerError_{};
 
