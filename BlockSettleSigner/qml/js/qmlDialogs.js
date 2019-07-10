@@ -143,7 +143,7 @@ function activateAutoSignDialog(data) {
     signerStatus.activateAutoSign()
 }
 
-function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, settlementInfo, walletInfo) {
+function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
     raiseWindow()
 
     var dlg = Qt.createComponent("../BsDialogs/CCSettlementTransactionDialog.qml").createObject(mainWindow)
@@ -152,7 +152,7 @@ function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, settlem
     dlg.walletInfo = walletInfo
     dlg.prompt = prompt
     dlg.txInfo = txInfo
-    dlg.settlementInfo = settlementInfo
+    dlg.passwordDialogData = passwordDialogData
 
     // FIXME: use bs error codes enum in qml
     dlg.bsAccepted.connect(function() {

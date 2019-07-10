@@ -210,8 +210,8 @@ void SignerInterfaceListener::onSignSettlementTxRequested(const std::string &dat
    }
 
    signer::SignTxRequest txRequest = request.signtxrequest();
-   bs::sync::SettlementInfo *settlementInfo = new bs::sync::SettlementInfo(request.settlementinfo());
-   QQmlEngine::setObjectOwnership(settlementInfo, QQmlEngine::JavaScriptOwnership);
+   bs::sync::PasswordDialogData *passwordDialogData = new bs::sync::PasswordDialogData(request.passworddialogdata());
+   QQmlEngine::setObjectOwnership(passwordDialogData, QQmlEngine::JavaScriptOwnership);
 
    bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest);
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
@@ -231,7 +231,7 @@ void SignerInterfaceListener::onSignSettlementTxRequested(const std::string &dat
    qmlBridge_->invokeQmlMethod("createCCSettlementTransactionDialog", cb
       , QString::fromStdString(txRequest.prompt())
       , QVariant::fromValue(txInfo)
-      , QVariant::fromValue(settlementInfo)
+      , QVariant::fromValue(passwordDialogData)
       , QVariant::fromValue(qmlFactory_->createWalletInfo(QString::fromStdString(txRequest.wallet_id()))));
 }
 
@@ -516,8 +516,7 @@ void SignerInterfaceListener::onCreateHDWallet(const std::string &data, bs::sign
          , __func__, reqId);
       return;
    }
-   bool success = response.error().empty();
-   itCb->second(success, response.error());
+   itCb->second(static_cast<bs::error::ErrorCode>(response.errorcode()));
    cbCreateHDWalletReqs_.erase(itCb);
 }
 

@@ -37,17 +37,17 @@ public:
    }
 
    bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::SettlementInfo &
+      , const bs::sync::PasswordDialogData &
       , TXSignMode
       , bool
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &) override {return 0; }
 
    bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::SettlementInfo &
+      , const bs::sync::PasswordDialogData &
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> & ) override { return 0; }
 
    bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::SettlementInfo &
+      , const bs::sync::PasswordDialogData &
       , const bs::Address &, const std::string &
       , const std::function<void(bs::error::ErrorCode , const BinaryData &signedTX)> &)  override { return 0; }
 
@@ -57,13 +57,11 @@ public:
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override { return 0; }
 
    bs::signer::RequestId SetUserId(const BinaryData &) override { return 0; }
-   bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
-      , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override { return 0; }
-   bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc
-      , bool primary, const bs::core::wallet::Seed &
-      , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
+   bs::signer::RequestId createHDLeaf(const std::string &, const bs::hd::Path &
+       , const std::vector<bs::wallet::PasswordData> & = {}
+       , const std::function<void(bs::error::ErrorCode result)> & = nullptr) override { return 0; }
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
-   bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override { return 0; }
+   bs::signer::RequestId DeleteHDLeaf(const std::string &) override { return 0; }
    bs::signer::RequestId GetInfo(const std::string &rootWalletId) override { return 0; }
    //void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
    bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override  { return 0; }

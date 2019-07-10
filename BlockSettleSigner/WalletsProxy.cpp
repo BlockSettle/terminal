@@ -18,6 +18,7 @@
 #include "WalletsProxy.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "BSErrorCodeStrings.h"
 
 
 WalletsProxy::WalletsProxy(const std::shared_ptr<spdlog::logger> &logger
@@ -408,10 +409,11 @@ void WalletsProxy::createWallet(bool isPrimary
       return;
    }
 
-   auto cb = [this, jsCallback] (bool success, const std::string &msg) {
-      QMetaObject::invokeMethod(this, [this, success, msg, jsCallback] {
+   auto cb = [this, jsCallback] (bs::error::ErrorCode errorCode) {
+      QMetaObject::invokeMethod(this, [this, errorCode, jsCallback] {
          QJSValueList args;
-         args << QJSValue(success) << QString::fromStdString(msg);
+         args << QJSValue(errorCode == bs::error::ErrorCode::NoError)
+              << bs::error::ErrorCodeToString(errorCode);
          invokeJsCallBack(jsCallback, args);
       });
    };

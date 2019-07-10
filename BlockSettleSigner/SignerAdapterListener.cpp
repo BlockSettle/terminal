@@ -73,11 +73,11 @@ public:
    }
 
    void requestPasswordForSigningSettlementTx(const bs::core::wallet::TXSignRequest &txReq
-      , const Blocksettle::Communication::Internal::SettlementInfo &settlementInfo, const std::string &prompt) override
+      , const Blocksettle::Communication::Internal::PasswordDialogData &passwordDialogData, const std::string &prompt) override
    {
       signer::SignSettlementTxRequest request;
       *(request.mutable_signtxrequest()) = createSignTxRequest(txReq, prompt);
-      *(request.mutable_settlementinfo()) = settlementInfo;
+      *(request.mutable_passworddialogdata()) = passwordDialogData;
 
       owner_->sendData(signer::SignSettlementTxRequestType, request.SerializeAsString());
    }
@@ -117,6 +117,18 @@ public:
       signer::TerminalHandshakeFailed evt;
       evt.set_peeraddress(peerAddress);
       owner_->sendData(signer::TerminalHandshakeFailedType, evt.SerializeAsString());
+   }
+
+
+   void decryptWalletRequest(Blocksettle::Communication::signer::PacketType reqType
+      , const Blocksettle::Communication::Internal::PasswordDialogData &passwordDialogData
+      , const bs::core::wallet::TXSignRequest &txReq) override
+   {
+      signer::SignSettlementTxRequest request;
+      *(request.mutable_signtxrequest()) = createSignTxRequest(txReq, {});
+      *(request.mutable_passworddialogdata()) = passwordDialogData;
+
+      owner_->sendData(reqType, request.SerializeAsString());
    }
 
    SignerAdapterListener *owner_{};
@@ -632,8 +644,9 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
       walletsListUpdated();
    }
    catch (const std::exception &e) {
+      logger_->error("[{}] failed to create HD Wallet: {}", __func__, e.what());
       headless::CreateHDWalletResponse response;
-      response.set_error(e.what());
+      response.set_errorcode(static_cast<uint32_t>(bs::error::ErrorCode::InternalError));
       return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);;
    }
 

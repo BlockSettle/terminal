@@ -56,7 +56,7 @@ public:
    using ResultCb = std::function<void(bool, const std::string&)>;
    void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
       , bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
-      , bs::wallet::KeyRank keyRank, const ResultCb &cb);
+      , bs::wallet::KeyRank keyRank, const std::function<void(bs::error::ErrorCode)> &cb);
 
    using CreateWoCb = std::function<void(const bs::sync::WatchingOnlyWallet &)>;
    void importWoWallet(const std::string &filename, const BinaryData &content, const CreateWoCb &cb);
