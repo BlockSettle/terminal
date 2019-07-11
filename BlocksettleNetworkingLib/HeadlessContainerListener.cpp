@@ -831,9 +831,12 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
       }
 
       auto assetPtr = leaf->getRootAsset();
+      auto rootPtr = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(assetPtr);
+      if (rootPtr == nullptr)
+         throw AssetException("unexpected root asset type");
       CreateHDWalletResponse(clientId, id, "",
-         assetPtr->getPubKey()->getUncompressedKey(), 
-         assetPtr->getChaincode());
+         rootPtr->getPubKey()->getUncompressedKey(),
+         rootPtr->getChaincode());
    };
 
    if (!hdWallet->encryptionTypes().empty()) {

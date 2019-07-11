@@ -330,6 +330,16 @@ void InprocSigner::syncHDWallet(const std::string &id, const std::function<void(
          groupData.type = static_cast<bs::hd::CoinType>(group->index());
          groupData.extOnly = group->isExtOnly();
 
+         if (groupData.type == bs::hd::CoinType::BlockSettle_Auth)
+         {
+            auto authGroupPtr = 
+               std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
+            if (authGroupPtr == nullptr)
+               throw std::runtime_error("unexpected group type");
+
+            groupData.salt = authGroupPtr->getSalt();
+         }
+
          for (const auto &leaf : group->getLeaves()) 
          {
             //ext only needs to be reflected on headless signer
@@ -549,4 +559,53 @@ void InprocSigner::syncAddressBatch(
       cb(bs::sync::SyncState::Success);
    else
       cb(bs::sync::SyncState::NothingToDo);
+}
+
+void InprocSigner::setSettlementID(
+   const std::string& wltId, const SecureBinaryData& settlId)
+{
+   /***
+   For remote methods, the caller should wait on return before
+   proceeding further with settlement flow.
+   ***/
+
+   auto leafPtr = walletsMgr_->getWalletById(wltId);
+   auto settlLeafPtr = 
+      std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(leafPtr);
+   if (settlLeafPtr == nullptr)
+      throw std::runtime_error("unexpected leaf type");
+
+   settlLeafPtr->addSettlementID(settlId);
+
+   /*
+   Grab the id so that the address is in the asset map. These
+   aren't useful to the sync wallet as they never see coins and
+   aren't registered.
+   */
+   settlLeafPtr->getNewExtAddress();
+}
+
+bs::Address InprocSigner::getSettlementPayinAddress(
+   const std::string& walletID,
+   const SecureBinaryData& settlementID, 
+   const SecureBinaryData& counterPartyPubKey, 
+   bool isMyKeyFirst) const
+{
+   auto wltPtr = walletsMgr_->getHDWalletById(walletID);
+   if (wltPtr == nullptr)
+      throw std::runtime_error("unknown wallet");
+
+   return wltPtr->getSettlementPayinAddress(
+      settlementID, counterPartyPubKey, isMyKeyFirst);
+}
+
+SecureBinaryData InprocSigner::getRootPubkey(const std::string& walletID) const
+{
+   auto leafPtr = walletsMgr_->getWalletById(walletID);
+   auto rootPtr = leafPtr->getRootAsset();
+   auto rootSingle = std::dynamic_pointer_cast<AssetEntry_Single>(rootPtr);
+   if (rootSingle == nullptr)
+      throw AssetException("unexpected asset type");
+
+   return rootSingle->getPubKey()->getCompressedKey();
 }

@@ -744,6 +744,8 @@ void HeadlessContainer::syncWalletInfo(const std::function<void(std::vector<bs::
 
 void HeadlessContainer::syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &cb)
 {
+   throw std::runtime_error("implement salt passthrough for auth group synchronization. InprocSigner::syncHDWallet");
+   
    headless::SyncWalletRequest request;
    request.set_walletid(id);
 
