@@ -162,12 +162,10 @@ void BsClient::sendRequest(Request *request, std::chrono::milliseconds timeout
    activeRequest.requestId = newRequestId();
    activeRequest.failedCb = std::move(failedCb);
 
-   request->set_request_id(activeRequest.requestId);
-   connection_->send(request->SerializeAsString());
-
    activeRequestIds_.insert(activeRequest.requestId);
    activeRequests_.emplace(std::chrono::steady_clock::now() + timeout, std::move(activeRequest));
 
+   request->set_request_id(activeRequest.requestId);
    sendMessage(request);
 }
 

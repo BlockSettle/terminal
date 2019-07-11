@@ -101,6 +101,7 @@ void BsProxy::onProxyDataFromClient(const std::string &clientId, const std::stri
    bool result = request->ParseFromString(data);
    if (!result) {
       SPDLOG_LOGGER_ERROR(logger_, "can't parse request from {}", bs::toHex(clientId));
+      return;
    }
 
    QMetaObject::invokeMethod(this, [this, clientId, request] {
