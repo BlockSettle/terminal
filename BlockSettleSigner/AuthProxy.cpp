@@ -1,13 +1,12 @@
+#include "AuthProxy.h"
+
+#include <spdlog/spdlog.h>
 #include <QFile>
 #include <QVariant>
 #include <QBuffer>
 #include <QByteArray>
 #include <QPixmap>
-
-#include <spdlog/spdlog.h>
-
-#include "AuthProxy.h"
-
+#include "ConnectionManager.h"
 
 AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &settings
@@ -42,7 +41,7 @@ AuthSignWalletObject::AuthSignWalletObject(const AuthSignWalletObject &other)
 void AuthSignWalletObject::connectToServer()
 {
    auto authKeys = settings_->GetAuthKeys();
-   autheIDClient_ = std::make_shared<AutheIDClient>(logger_, settings_, connectionManager_, this);
+   autheIDClient_ = std::make_shared<AutheIDClient>(logger_, connectionManager_->GetNAM(), settings_->GetAuthKeys(), settings_->isAutheidTestEnv(), this);
 
    connect(autheIDClient_.get(), &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
       emit succeeded(QString::fromStdString(encKey), password);
