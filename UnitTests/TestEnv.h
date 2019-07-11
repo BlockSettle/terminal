@@ -162,18 +162,32 @@ public:
       return notif->block_;
    }
 
-   static std::vector<bs::TXEntry> waitOnZC()
+   static std::vector<bs::TXEntry> waitOnZC(bool soft = false)
    {
-      auto&& notif = notifQueue_.pop_front();
-      if (notif->type_ != DBNS_ZC)
-         throw std::runtime_error("expected zc notification");
+      while (1)
+      {
+         auto&& notif = notifQueue_.pop_front();
+         if (notif->type_ != DBNS_ZC)
+         {
+            if (soft)
+               continue;
 
-      return notif->zc_;
+            throw std::runtime_error("expected zc notification");
+         }
+
+         return notif->zc_;
+      }
    }
 
    static std::shared_ptr<DBNotificationStruct> popNotif()
    {
       return notifQueue_.pop_front();
+   }
+
+   //to clear the notification queue
+   static void clear(void)
+   {
+      notifQueue_.clear();
    }
 };
 
