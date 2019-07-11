@@ -739,3 +739,17 @@ void ApplicationSettings::selectNetwork()
       break;
    }
 }
+
+bool ApplicationSettings::isAutheidTestEnv() const
+{
+   auto conf = ApplicationSettings::EnvConfiguration(get<int>(ApplicationSettings::envConfiguration));
+
+   switch (conf) {
+      case ApplicationSettings::EnvConfiguration::UAT:
+      case ApplicationSettings::EnvConfiguration::Staging:
+      case ApplicationSettings::EnvConfiguration::Custom:
+         return true;
+      default:
+         return false;
+   }
+}

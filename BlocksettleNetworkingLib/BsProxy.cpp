@@ -1,13 +1,26 @@
 #include "BsProxy.h"
 
-#include "ZMQ_BIP15X_ServerConnection.h"
+#include <QNetworkAccessManager>
+#include "AutheIDClient.h"
 #include "StringUtils.h"
-#include "bs_proxy.pb.h"
+#include "ZMQ_BIP15X_ServerConnection.h"
 
+#include "bs_proxy.pb.h"
+#include "rp.pb.h"
 
 using namespace Blocksettle::Communication::Proxy;
+using namespace autheid;
 
 namespace {
+
+   const auto ContentTypeHeader = "Content-Type";
+   const auto AcceptHeader = "Accept";
+   const auto AuthorizationHeader = "Authorization";
+
+   const auto ProtobufMimeType = "application/protobuf";
+
+   const auto AutheidServerAddrLive = "https://api.autheid.com/v1/requests";
+   const auto AutheidServerAddrTest = "https://api.staging.autheid.com/v1/requests";
 
    ZmqBIP15XPeers emptyTrustedClientsCallback()
    {
@@ -51,6 +64,8 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
    if (!result) {
       throw std::runtime_error(fmt::format("can't bind to {}:{}", params.listenAddress, params.listenPort));
    }
+
+   nam_ = new QNetworkAccessManager(this);
 }
 
 BsProxy::~BsProxy() = default;
@@ -93,7 +108,23 @@ void BsProxy::onProxyClientDisconnected(const std::string &clientId)
 
 void BsProxy::process(const std::string &clientId, const Request_StartLogin &request)
 {
+   SPDLOG_LOGGER_INFO(logger_, "process login request from {}", bs::toHex(clientId));
 
+   rp::CreateRequest autheidReq;
+   auto signRequest = autheidReq.mutable_signature();
+   signRequest->set_serialization(rp::SERIALIZATION_PROTOBUF);
+
+   autheidReq.set_title("Terminal Login");
+   autheidReq.set_type(rp::SIGNATURE);
+   autheidReq.set_email(request.auth_id());
+   autheidReq.set_timeout_seconds(60);
+
+   QNetworkRequest httpReq;
+   httpReq.setUrl(QUrl(QString::fromLatin1(params_.autheidTestEnv ? AutheidServerAddrTest : AutheidServerAddrLive)));
+   httpReq.setRawHeader(ContentTypeHeader, ProtobufMimeType);
+   httpReq.setRawHeader(AcceptHeader, ProtobufMimeType);
+   httpReq.setRawHeader(AuthorizationHeader, QByteArray::fromStdString(params_.autheidApiKey));
+   //nam_->post()
 }
 
 void BsProxy::process(const std::string &clientId, const Request_CancelLogin &request)

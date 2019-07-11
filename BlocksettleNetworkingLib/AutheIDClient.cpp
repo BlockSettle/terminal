@@ -1,7 +1,5 @@
 #include "AutheIDClient.h"
 
-#include "ApplicationSettings.h"
-#include "ConnectionManager.h"
 #include <google/protobuf/util/json_util.h>
 #include <spdlog/spdlog.h>
 #include <QTimer>
@@ -28,11 +26,11 @@ namespace
 
    static const char kSeparatorSymbol = ':';
 
-   const auto kContentTypeHeader = "Content-Type";
-   const auto kAcceptHeader = "Accept";
-   const auto kAuthorizationHeader = "Authorization";
+   const auto ContentTypeHeader = "Content-Type";
+   const auto AcceptHeader = "Accept";
+   const auto AuthorizationHeader = "Authorization";
 
-   const auto kProtobufType = "application/protobuf";
+   const auto ProtobufMimeType = "application/protobuf";
 
    const auto kServerAddrLive = "https://api.autheid.com/v1/requests";
    const auto kAuthorizationKeyLive = "Bearer live_17ec2nlP5NzHWkEAQUwVpqhN63fiyDPWGc5Z3ZQ8npaf";
@@ -85,9 +83,9 @@ namespace
    {
       QNetworkRequest request;
       request.setUrl(QUrl(QString::fromLatin1(url)));
-      request.setRawHeader(kContentTypeHeader, kProtobufType);
-      request.setRawHeader(kAcceptHeader, kProtobufType);
-      request.setRawHeader(kAuthorizationHeader, QByteArray(apiKey));
+      request.setRawHeader(ContentTypeHeader, ProtobufMimeType);
+      request.setRawHeader(AcceptHeader, ProtobufMimeType);
+      request.setRawHeader(AuthorizationHeader, QByteArray(apiKey));
       return request;
    }
 
@@ -234,29 +232,22 @@ AutheIDClient::SignVerifyStatus AutheIDClient::verifySignature(const SignResult 
 }
 
 AutheIDClient::AutheIDClient(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<ApplicationSettings> &settings
-   , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const std::shared_ptr<QNetworkAccessManager> &nam
+   , const AuthKeys &authKeys
+   , bool autheidTestEnv
    , QObject *parent)
    : QObject(parent)
    , logger_(logger)
-   , settings_(settings)
-   , connectionManager_(connectionManager)
+   , nam_(nam)
+   , authKeys_(authKeys)
    , resultAuth_(false)
-   , authKeys_(settings->GetAuthKeys())
 {
-   ApplicationSettings::EnvConfiguration conf = ApplicationSettings::EnvConfiguration(settings_->get<int>(ApplicationSettings::envConfiguration));
-
-   switch (conf) {
-      case ApplicationSettings::EnvConfiguration::UAT:
-      case ApplicationSettings::EnvConfiguration::Staging:
-      case ApplicationSettings::EnvConfiguration::Custom:
-         baseUrl_ = kServerAddrTest;
-         apiKey_ = kAuthorizationKeyTest;
-         break;
-      default:
-         baseUrl_ = kServerAddrLive;
-         apiKey_ = kAuthorizationKeyLive;
-         break;
+   if (autheidTestEnv) {
+      baseUrl_ = kServerAddrTest;
+      apiKey_ = kAuthorizationKeyTest;
+   } else {
+      baseUrl_ = kServerAddrLive;
+      apiKey_ = kAuthorizationKeyLive;
    }
 }
 
@@ -269,7 +260,7 @@ void AutheIDClient::createCreateRequest(const std::string &payload, int expirati
 {
    QNetworkRequest request = getRequest(baseUrl_, apiKey_);
 
-   QNetworkReply *reply = connectionManager_->GetNAM()->post(request, QByteArray::fromStdString(payload));
+   QNetworkReply *reply = nam_->post(request, QByteArray::fromStdString(payload));
    processNetworkReply(reply, kNetworkTimeoutSeconds, [this, expiration] (const Result &result) {
       if (result.networkError != QNetworkReply::NoError) {
          emit failed(result.networkError, result.authError);
@@ -385,7 +376,7 @@ void AutheIDClient::cancel()
 
    QNetworkRequest request = getRequest(fmt::format("{}/{}/cancel", baseUrl_, requestId_).c_str(), apiKey_);
 
-   QNetworkReply *reply = connectionManager_->GetNAM()->post(request, QByteArray());
+   QNetworkReply *reply = nam_->post(request, QByteArray());
    processNetworkReply(reply, kNetworkTimeoutSeconds, {});
 
    requestId_.clear();
@@ -404,7 +395,7 @@ void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration
 
    QNetworkRequest request = getRequest(fmt::format("{}/{}", baseUrl_, requestId_).c_str(), apiKey_);
 
-   QNetworkReply *reply = connectionManager_->GetNAM()->get(request);
+   QNetworkReply *reply = nam_->get(request);
    processNetworkReply(reply, expiration, [this] (const Result &result) {
       processResultReply(result.payload);
    });

@@ -1,10 +1,11 @@
 #include "AuthSignManager.h"
 
-#include "AuthSignManager.h"
 #include "ApplicationSettings.h"
-#include "CelerClient.h"
-#include "EncryptionUtils.h"
 #include "AutheIDClient.h"
+#include "AuthSignManager.h"
+#include "CelerClient.h"
+#include "ConnectionManager.h"
+#include "EncryptionUtils.h"
 
 #include <spdlog/spdlog.h>
 
@@ -26,7 +27,7 @@ bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, c
    , const SignedCb &onSigned, const SignFailedCb &onSignFailed, int expiration)
 {
    // recreate autheIDClient in case there another request in flight (it should be stopped)
-   autheIDClient_.reset(new AutheIDClient(logger_, appSettings_, connectionManager_));
+   autheIDClient_.reset(new AutheIDClient(logger_, connectionManager_->GetNAM(), appSettings_->GetAuthKeys(), appSettings_->isAutheidTestEnv()));
    connect(autheIDClient_.get(), &AutheIDClient::signSuccess, this, &AuthSignManager::onSignSuccess);
    connect(autheIDClient_.get(), &AutheIDClient::failed, this, &AuthSignManager::onFailed);
 

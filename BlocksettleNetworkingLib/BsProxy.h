@@ -5,7 +5,9 @@
 #include <string>
 #include <memory>
 #include <spdlog/logger.h>
+#include <QObject>
 
+class QNetworkAccessManager;
 class BsProxy;
 class BsProxyListener;
 class ZmqBIP15XServerConnection;
@@ -29,6 +31,7 @@ struct BsProxyParams
    int listenPort{10259};
 
    std::string autheidApiKey;
+   bool autheidTestEnv{false};
 
    std::string celerHost;
    int celerPort{};
@@ -37,8 +40,10 @@ struct BsProxyParams
    std::function<bool(BsProxy *proxy, const std::string &login)> verifyCallback;
 };
 
-class BsProxy
+class BsProxy : public QObject
 {
+   Q_OBJECT
+
 public:
    explicit BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyParams &params);
    ~BsProxy();
@@ -62,6 +67,7 @@ private:
 
    std::unique_ptr<BsProxyListener> serverListener_;
    std::unique_ptr<ZmqBIP15XServerConnection> server_;
+   QNetworkAccessManager *nam_{};
 };
 
 #endif

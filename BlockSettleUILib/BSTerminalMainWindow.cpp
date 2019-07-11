@@ -71,6 +71,7 @@ namespace {
       params.ownKeyFileDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toStdString();
       params.ownKeyFileName = "bs_proxy_tmp.peers";
       params.autheidApiKey = "Bearer live_opnKv0PyeML0WvYm66ka2k29qPPoDjS3rzw13bRJzITY";
+      params.autheidTestEnv = true;
       params.celerHost = "";
       params.celerPort = 0;
 

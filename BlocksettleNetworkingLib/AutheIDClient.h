@@ -1,12 +1,9 @@
 #ifndef __AUTH_EID_CLIENT_H__
 #define __AUTH_EID_CLIENT_H__
 
-#include <QObject>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-
 #include <functional>
-
+#include <QObject>
+#include <QNetworkReply>
 #include "EncryptionUtils.h"
 #include "autheid_utils.h"
 
@@ -20,15 +17,16 @@ namespace autheid {
    }
 }
 
-class ApplicationSettings;
 class QNetworkReply;
-class ConnectionManager;
+class QNetworkAccessManager;
 
 class AutheIDClient : public QObject
 {
    Q_OBJECT
 
 public:
+   using AuthKeys = std::pair<autheid::PrivateKey, autheid::PublicKey>;
+
    // Keep in sync with autheid::rp::Serialization
    enum class Serialization
    {
@@ -140,10 +138,10 @@ public:
    // OCSP must be valid at the moment when request was signed (`finished` timepoint).
    static SignVerifyStatus verifySignature(const SignResult &result, AuthEidEnv env);
 
-   // ConnectionManager must live long enough to be able send cancel message
+   // QNetworkAccessManager must live long enough to be able send cancel message
    // (if cancelling request in mobile app is needed)
-   AutheIDClient(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<ConnectionManager> &, QObject *parent = nullptr);
+   AutheIDClient(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<QNetworkAccessManager> &
+      , const AuthKeys &authKeys, bool autheidTestEnv, QObject *parent = nullptr);
    ~AutheIDClient() override;
 
    void start(RequestType requestType, const std::string &email, const std::string &walletId
@@ -184,13 +182,11 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger> logger_;
-   std::shared_ptr<ApplicationSettings> settings_;
-   std::shared_ptr<ConnectionManager> connectionManager_;
+   std::shared_ptr<QNetworkAccessManager> nam_;
    std::string requestId_;
    std::string email_;
+   const AuthKeys authKeys_;
    bool resultAuth_{};
-
-   const std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
 
    std::vector<std::string> knownDeviceIds_;
 

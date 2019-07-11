@@ -185,6 +185,8 @@ public:
 
    void selectNetwork();
 
+   bool isAutheidTestEnv() const;
+
 signals:
    void settingChanged(int setting, QVariant value);
 
