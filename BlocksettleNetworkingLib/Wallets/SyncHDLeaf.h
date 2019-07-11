@@ -218,9 +218,9 @@ namespace bs {
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::ColorCoin; }
 
-            void setData(const std::string &) override;
-            void setData(uint64_t data) override { lotSizeInSatoshis_ = data; }
+            void setCCDataResolver(const std::shared_ptr<CCDataResolver> &resolver);
             void init(bool force) override;
+            void setPath(const bs::hd::Path &) override;
 
             bool getSpendableZCList(const ArmoryConnection::UTXOsCb &) const override;
             bool isBalanceAvailable() const override;
@@ -257,7 +257,7 @@ namespace bs {
             };
 
             std::shared_ptr<TxAddressChecker>   checker_;
-            uint64_t       lotSizeInSatoshis_ = 0;
+            std::shared_ptr<CCDataResolver>     ccResolver_;
             volatile bool  validationStarted_, validationEnded_;
             double         balanceCorrection_ = 0;
             std::set<UTXO> invalidTx_;

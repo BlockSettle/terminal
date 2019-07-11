@@ -322,8 +322,8 @@ bool WalletsManager::deleteWalletFile(const HDWalletPtr &wallet)
 
 WalletsManager::HDWalletPtr WalletsManager::createWallet(
    const std::string& name, const std::string& description
-   , wallet::Seed seed, const std::string &folder, 
-   const SecureBinaryData& passphrase, bool primary)
+   , wallet::Seed seed, const std::string &folder
+   , const SecureBinaryData& passphrase, bool primary)
 {
    const HDWalletPtr newWallet = std::make_shared<hd::Wallet>(
       name, description, seed, passphrase, folder, logger_);
@@ -337,6 +337,10 @@ WalletsManager::HDWalletPtr WalletsManager::createWallet(
       newWallet->createStructure();
       if (primary) {
          newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+         auto group = newWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
+         for (const auto &cc : ccLeaves_) {
+            group->createLeaf(cc);
+         }
       }
    }
 

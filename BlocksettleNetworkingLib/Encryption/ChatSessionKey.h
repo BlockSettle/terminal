@@ -33,7 +33,7 @@ namespace Chat {
       std::shared_ptr<spdlog::logger> logger_ = nullptr;
    };
 
-   typedef std::shared_ptr<ChatSessionKey> ChatSessionKeyPtr;
+   using ChatSessionKeyPtr = std::shared_ptr<ChatSessionKey>;
 
 };
 

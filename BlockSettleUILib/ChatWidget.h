@@ -90,9 +90,7 @@ private slots:
    void selectGlobalRoom();
    void onContactRequestAccepted(const std::string &userId);
    void onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey);
-   void onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
-                                   const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
-                                   const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
+   void onContactChanged();
    void onBSChatInputSelectionChanged();
    void onChatMessagesSelectionChanged();
    void onContactRequestAcceptSendClicked();
@@ -129,6 +127,9 @@ private:
    void OTCSwitchToContact(std::shared_ptr<Chat::Data>& contact, bool onlineStatus);
    void OTCSwitchToResponse(std::shared_ptr<Chat::Data>& response);
 
+   void onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
+      const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
+      const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
 
    // used to display proper widget if OTC room selected.
    // either create OTC or Pull OTC, if was submitted

@@ -1248,9 +1248,13 @@ void RFQDealerReply::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
       group = priWallet->createGroup(bs::hd::BlockSettle_CC, true);
    }
    group->addLeaf(leaf, true);
-
-   leaf->setData(assetManager_->getCCGenesisAddr(baseProduct_).display());
-   leaf->setData(assetManager_->getCCLotSize(baseProduct_));
+   auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(leaf);
+   if (ccLeaf) {
+      ccLeaf->setCCDataResolver(walletsManager_->ccResolver());
+   }
+   else {
+      logger_->error("[{}] invalid CC leaf {}", __func__, leaf->walletId());
+   }
 
    ccWallet_ = leaf;
    updateUiWalletFor(currentQRN_);

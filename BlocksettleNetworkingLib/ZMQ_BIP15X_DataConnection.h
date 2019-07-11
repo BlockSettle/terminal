@@ -200,4 +200,6 @@ private:
    std::chrono::steady_clock::time_point lastHeartbeatReply_{};
 };
 
+using ZmqBIP15XDataConnectionPtr = std::shared_ptr<ZmqBIP15XDataConnection>;
+
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__

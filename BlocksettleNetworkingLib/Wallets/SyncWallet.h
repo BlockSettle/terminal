@@ -25,6 +25,16 @@ class SignContainer;
 
 namespace bs {
    namespace sync {
+      class CCDataResolver
+      {
+      public:
+         virtual std::string nameByWalletIndex(bs::hd::Path::Elem) const = 0;
+         virtual uint64_t lotSizeFor(const std::string &cc) const = 0;
+         virtual bs::Address genesisAddrFor(const std::string &cc) const = 0;
+         virtual std::string descriptionFor(const std::string &cc) const = 0;
+         virtual std::vector<std::string> securities() const = 0;
+      };
+
       namespace wallet {
 
          constexpr uint64_t kMinRelayFee = 1000;
@@ -82,9 +92,6 @@ namespace bs {
          virtual core::wallet::Type type() const { return core::wallet::Type::Bitcoin; }
          NetworkType networkType() const { return netType_; }
          virtual bool hasId(const std::string &id) const { return (walletId() == id); }
-
-         virtual void setData(const std::string &) {}
-         virtual void setData(uint64_t) {}
 
          virtual void setArmory(const std::shared_ptr<ArmoryConnection> &);
          virtual void setUserId(const BinaryData &) {}

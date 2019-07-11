@@ -729,9 +729,22 @@ hd::CCLeaf::~CCLeaf()
    validationStarted_ = false;
 }
 
-void hd::CCLeaf::setData(const std::string &data)
+void hd::CCLeaf::setCCDataResolver(const std::shared_ptr<CCDataResolver> &resolver)
 {
-   checker_ = std::make_shared<TxAddressChecker>(bs::Address(data), armory_);
+   ccResolver_ = resolver;
+   setPath(path_);
+   checker_ = std::make_shared<TxAddressChecker>(ccResolver_->genesisAddrFor(suffix_), armory_);
+}
+
+void hd::CCLeaf::setPath(const bs::hd::Path &path)
+{
+   hd::Leaf::setPath(path);
+   if ((path_.length() > 0) && ccResolver_) {
+      suffix_ = ccResolver_->nameByWalletIndex(static_cast<bs::hd::Path::Elem>(path_.get(-1)));
+      if (!suffix_.empty()) {
+         walletName_ = name_ + "/" + suffix_;
+      }
+   }
 }
 
 void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
@@ -816,7 +829,7 @@ void hd::CCLeaf::validationProc()
    for (const auto &addr : getUsedAddressList()) {
       const auto &cbLedger = [this, addr, addressesToCheck]
                               (const std::shared_ptr<AsyncClient::LedgerDelegate> &ledger) {
-         if (!validationStarted_) {
+         if (!validationStarted_ || !ccResolver_) {
             return;
          }
          const auto &cbCheck = [this, addr, addressesToCheck](const Tx &tx) {
@@ -825,7 +838,7 @@ void hd::CCLeaf::validationProc()
                   invalidTxHash_.insert(tx.getThisHash());
                }
             };
-            checker_->containsInputAddress(tx, cbResult, lotSizeInSatoshis_);
+            checker_->containsInputAddress(tx, cbResult, ccResolver_->lotSizeFor(suffix_));
 
             auto it = addressesToCheck->find(addr);
             if (it != addressesToCheck->end()) {
@@ -931,7 +944,8 @@ void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, const ArmoryCo
                cb(filterUTXOs(utxos));
             }
          };
-         checker_->containsInputAddress(txData.tx, cbResult, lotSizeInSatoshis_, txData.utxo.getValue());
+         checker_->containsInputAddress(txData.tx, cbResult, ccResolver_->lotSizeFor(suffix_)
+            , txData.utxo.getValue());
       }
    };
    if (txHashes.empty()) {
@@ -995,11 +1009,11 @@ bool hd::CCLeaf::isBalanceAvailable() const
 
 BTCNumericTypes::balance_type hd::CCLeaf::correctBalance(BTCNumericTypes::balance_type balance, bool apply) const
 {
-   if (!lotSizeInSatoshis_) {
+   if (!ccResolver_ || (ccResolver_->lotSizeFor(suffix_) == 0)) {
       return 0;
    }
    const BTCNumericTypes::balance_type correction = apply ? balanceCorrection_ : 0;
-   return (balance - correction) * BTCNumericTypes::BalanceDivider / lotSizeInSatoshis_;
+   return (balance - correction) * BTCNumericTypes::BalanceDivider / ccResolver_->lotSizeFor(suffix_);
 }
 
 BTCNumericTypes::balance_type hd::CCLeaf::getSpendableBalance() const
@@ -1019,15 +1033,16 @@ BTCNumericTypes::balance_type hd::CCLeaf::getTotalBalance() const
 
 std::vector<uint64_t> hd::CCLeaf::getAddrBalance(const bs::Address &addr) const
 {
-   if (!lotSizeInSatoshis_ || !validationEnded_ || !Wallet::isBalanceAvailable()) {
+   if (!ccResolver_ || (ccResolver_->lotSizeFor(suffix_) == 0) || !validationEnded_
+      || !Wallet::isBalanceAvailable()) {
       return {};
    }
 
    /*doesnt seem thread safe, yet addressBalanceMap_ can be changed by other threads*/
-   auto inner = [this, addr](std::vector<uint64_t>& xbtBalances)->void
-   {
+   auto inner = [addr, lotSizeInSatoshis= ccResolver_->lotSizeFor(suffix_)]
+      (std::vector<uint64_t>& xbtBalances)->void {
       for (auto &balance : xbtBalances) {
-         balance /= lotSizeInSatoshis_;
+         balance /= lotSizeInSatoshis;
       }
    };
 
@@ -1044,10 +1059,14 @@ bool hd::CCLeaf::isTxValid(const BinaryData &txHash) const
 
 BTCNumericTypes::balance_type hd::CCLeaf::getTxBalance(int64_t val) const
 {
-   if (!lotSizeInSatoshis_) {
+   if (!ccResolver_) {
       return 0;
    }
-   return (double)val / lotSizeInSatoshis_;
+   const auto lotSize = ccResolver_->lotSizeFor(suffix_);
+   if (lotSize == 0) {
+      return 0;
+   }
+   return (double)val / lotSize;
 }
 
 QString hd::CCLeaf::displayTxValue(int64_t val) const

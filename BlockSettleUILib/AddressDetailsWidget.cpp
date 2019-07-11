@@ -7,6 +7,7 @@
 #include "CheckRecipSigner.h"
 #include "UiUtils.h"
 #include "Wallets/SyncPlainWallet.h"
+#include "Wallets/SyncWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 
@@ -33,11 +34,11 @@ AddressDetailsWidget::~AddressDetailsWidget() = default;
 // Initialize the widget and related widgets (block, address, Tx)
 void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
-   , const CCFileManager::CCSecurities &ccSecurities)
+   , const std::shared_ptr<bs::sync::CCDataResolver> &resolver)
 {
    armory_ = armory;
    logger_ = inLogger;
-   ccSecurities_ = ccSecurities;
+   ccResolver_ = resolver;
 
    act_ = make_unique<AddrDetailsACT>(armory_.get(), this);
 }
@@ -127,21 +128,22 @@ void AddressDetailsWidget::searchForCC()
       return;
    }
    for (const auto &txPair : txMap_) {
-      for (const auto &ccSecurity : ccSecurities_) {
-         auto checker = std::make_shared<bs::TxAddressChecker>(ccSecurity.genesisAddr, armory_);
+      for (const auto &ccSecurity : ccResolver_->securities()) {
+         auto checker = std::make_shared<bs::TxAddressChecker>(
+            ccResolver_->genesisAddrFor(ccSecurity), armory_);
          const auto &cbHasInput = [this, ccSecurity, checker](bool found) {
             if (!found || !ccFound_.first.empty()) {
                return;
             }
-            ccFound_ = { ccSecurity.product, ccSecurity.nbSatoshis };
+            ccFound_ = { ccSecurity, ccResolver_->lotSizeFor(ccSecurity) };
             QMetaObject::invokeMethod(this, &AddressDetailsWidget::updateFields);
          };
          if (!ccFound_.first.empty()) {
             break;
          }
-         if (((totalReceived_ % ccSecurity.nbSatoshis) == 0)
-            && ((totalSpent_ % ccSecurity.nbSatoshis) == 0)) {
-            checker->containsInputAddress(txPair.second, cbHasInput, ccSecurity.nbSatoshis);
+         const auto nbSatoshis = ccResolver_->lotSizeFor(ccSecurity);
+         if (((totalReceived_ % nbSatoshis) == 0) && ((totalSpent_ % nbSatoshis) == 0)) {
+            checker->containsInputAddress(txPair.second, cbHasInput, nbSatoshis);
          }
       }
    }

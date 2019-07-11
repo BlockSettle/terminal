@@ -77,6 +77,7 @@ public:
 
 private:
    void initMessage(Chat::Data *msg, const std::string& receiver);
+   void updateMessageStateAndSave(const std::shared_ptr<Chat::Data>& message, const Chat::Data_Message_State& state);
 
    void readDatabase();
 
@@ -95,6 +96,7 @@ signals:
    void NewContactRequest(const std::string &userId);
    void ContactRequestAccepted(const std::string &userId);
    void RoomsInserted();
+   void ContactChanged();
 
 protected:
    BinaryData getOwnAuthPublicKey() const override;

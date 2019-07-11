@@ -90,12 +90,12 @@ void CCPubConnection::OnDataReceived(const std::string& data)
       logger_->warn("[CCPubConnection::OnDataReceived] Public bridge response of type {} has no signature!"
          , static_cast<int>(response.responsetype()));
    } else {
-      sigVerified = VerifySignature(response.responsedata(), response.datasignature());
+/*      sigVerified = VerifySignature(response.responsedata(), response.datasignature());
       if (!sigVerified) {
          logger_->error("[CCPubConnection::OnDataReceived] Response signature verification failed - response {} dropped"
             , static_cast<int>(response.responsetype()));
          return;
-      }
+      }*/   //TODO: consider implementing this via resolver - maybe it's not needed here at all (= 0 in this class)
    }
 
    switch (response.responsetype()) {

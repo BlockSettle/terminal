@@ -234,10 +234,16 @@ bs::signer::RequestId InprocSigner::customDialogRequest(bs::signer::ui::DialogTy
    return 0;
 }
 
-bs::signer::RequestId InprocSigner::SetUserId(const BinaryData &userId)
+bs::signer::RequestId InprocSigner::setUserId(const BinaryData &userId)
 {
    //walletsMgr_->setChainCode(userId);
    //TODO: add SetUserId implementation here
+   return seqId_++;
+}
+
+bs::signer::RequestId InprocSigner::syncCCNames(const std::vector<std::string> &ccNames)
+{
+   walletsMgr_->setCCLeaves(ccNames);
    return seqId_++;
 }
 

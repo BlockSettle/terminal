@@ -100,11 +100,11 @@ public:
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
 
    virtual bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) = 0;
-
    virtual bs::signer::RequestId CancelSignTx(const BinaryData &txId) = 0;
-   virtual void SendPassword(const std::string &walletId, bs::error::ErrorCode result, const PasswordType &password) = 0;
 
-   virtual bs::signer::RequestId SetUserId(const BinaryData &) = 0;
+   virtual bs::signer::RequestId setUserId(const BinaryData &) = 0;
+   virtual bs::signer::RequestId syncCCNames(const std::vector<std::string> &) = 0;
+
    virtual bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) = 0;
    virtual bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc

@@ -42,8 +42,6 @@ protected:
 
    virtual bool IsTestNet() const = 0;
 
-   virtual bool VerifySignature(const std::string& data, const std::string& signature) const = 0;
-
    bool SubmitRequestToPB(const std::string& name, const std::string& data);
 
    virtual void ProcessGenAddressesResponse(const std::string& response, bool sigVerified, const std::string &sig) = 0;
@@ -56,7 +54,7 @@ private:
 
 protected:
    std::shared_ptr<spdlog::logger>  logger_;
-   int                              currentRev_ = 0;
+   unsigned int                     currentRev_ = 0;
 
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
