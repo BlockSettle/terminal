@@ -1,7 +1,24 @@
 {
-   "latest_version": "0.18.7",
-   "release_date": "10 Jul 2019",
+   "latest_version": "0.18.8",
+   "release_date": "11 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.18.8",
+         "previous_version": "0.18.7",
+         "release_date": "11 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "CC wallet reimplementation",
+            "Fix bundled vcredist (#304)",
+            "Contact fixes (#1096)",
+            "Decline friend request"
+         ],
+         "bug_fixes": [
+            "Fix user search"
+         ],
+         "revision": "06d582b0",
+         "common_revision": "17673144"
+      },
       {
          "version_string": "0.18.7",
          "previous_version": "0.18.6",
