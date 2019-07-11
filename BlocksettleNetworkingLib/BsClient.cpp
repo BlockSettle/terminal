@@ -73,10 +73,11 @@ void BsClient::getLoginResult()
    });
 }
 
-void BsClient::celerSend(const std::string &data)
+void BsClient::celerSend(CelerAPI::CelerMessageType messageType, const std::string &data)
 {
    Request request;
    auto d = request.mutable_celer();
+   d->set_message_type(int(messageType));
    d->set_data(data);
    sendMessage(&request);
 }
@@ -197,7 +198,13 @@ void BsClient::processLogout(const Response_Logout &response)
 
 void BsClient::processCeler(const Response_Celer &response)
 {
-   emit celerRecv(response.data());
+   auto messageType = CelerAPI::CelerMessageType(response.message_type());
+   if (!CelerAPI::isValidMessageType(messageType)) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid celer msg type received: {}", int(messageType));
+      return;
+   }
+
+   emit celerRecv(messageType, response.data());
 }
 
 int64_t BsClient::newRequestId()

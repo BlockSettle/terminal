@@ -150,22 +150,8 @@ void CelerClient::CloseConnection()
    }
 }
 
-void CelerClient::OnDataReceived(const std::string& data)
+void CelerClient::OnDataReceived(CelerAPI::CelerMessageType messageType, const std::string& data)
 {
-   ProtobufMessage response;
-
-   // Without adding \0 it will not parse
-   if (response.ParseFromString(data+'\0')) {
-      logger_->error("[CelerClient::OnDataReceived] failed to parse ProtobufMessage");
-      return;
-   }
-
-   auto messageType = CelerAPI::GetMessageType(response.protobufclassname());
-   if (messageType == CelerAPI::UndefinedType) {
-      logger_->error("[CelerClient::OnDataReceived] get message of unrecognized type : {}", response.protobufclassname());
-      return;
-   }
-
    // internal queue
    while (!internalCommands_.empty()) {
       std::shared_ptr<BaseCelerCommand> command = internalCommands_.front();
@@ -177,7 +163,8 @@ void CelerClient::OnDataReceived(const std::string& data)
       }
 
       if (command->IsWaitingForData()) {
-         if (command->OnMessage({messageType, response.protobufmessagecontents()}) ) {
+
+         if (command->OnMessage({messageType, data}) ) {
             SendCommandMessagesIfRequired(command);
          }
 
@@ -188,19 +175,19 @@ void CelerClient::OnDataReceived(const std::string& data)
          return;
       } else {
          logger_->debug("[CelerClient::OnDataReceived] internal command {} not waiting for message {}"
-            , command->GetCommandName(), response.protobufclassname());
+            , command->GetCommandName(), CelerAPI::GetMessageClass(messageType));
          break;
       }
    }
 
    auto handlerIt = messageHandlersMap_.find(messageType);
    if (handlerIt != messageHandlersMap_.end()) {
-      if (handlerIt->second(response.protobufmessagecontents())) {
+      if (handlerIt->second(data)) {
          return;
       }
-      logger_->debug("[CelerClient::OnDataReceived] handler rejected message of type {}.", response.protobufclassname());
+      logger_->debug("[CelerClient::OnDataReceived] handler rejected message of type {}.", CelerAPI::GetMessageClass(messageType));
    } else {
-      logger_->debug("[CelerClient::OnDataReceived] ignore message {}", response.protobufclassname());
+      logger_->debug("[CelerClient::OnDataReceived] ignore message {}", CelerAPI::GetMessageClass(messageType));
    }
 }
 
@@ -214,23 +201,12 @@ void CelerClient::SendCommandMessagesIfRequired(const std::shared_ptr<BaseCelerC
 
 bool CelerClient::sendMessage(CelerAPI::CelerMessageType messageType, const std::string& data)
 {
-   ProtobufMessage message;
-
    // reset heartbeat interval
    if (heartbeatTimer_->isActive()) {
       emit restartTimer();
    }
 
-   std::string fullClassName = CelerAPI::GetMessageClass(messageType);
-   if (fullClassName.empty()) {
-      logger_->error("[CelerClient::sendMessage] could not get class name for {}", messageType);
-      return false;
-   }
-
-   message.set_protobufclassname(fullClassName);
-   message.set_protobufmessagecontents(data);
-
-   emit sendData(message.SerializeAsString());
+   emit sendData(messageType, data);
    return true;
 }
 
@@ -425,9 +401,9 @@ void CelerClient::onTimerRestart()
    heartbeatTimer_->start();
 }
 
-void CelerClient::recvData(const std::string &data)
+void CelerClient::recvData(CelerAPI::CelerMessageType messageType, const std::string &data)
 {
-   OnDataReceived(data);
+   OnDataReceived(messageType, data);
 }
 
 std::string CelerClient::userId() const

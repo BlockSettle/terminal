@@ -135,6 +135,9 @@ enum CelerMessageType
 std::string GetMessageClass(CelerMessageType messageType);
 
 CelerMessageType GetMessageType(const std::string& fullClassName);
+
+bool isValidMessageType(CelerMessageType messageType);
+
 };
 
 #endif // __CELER_MESSAGE_MAPPER_H__

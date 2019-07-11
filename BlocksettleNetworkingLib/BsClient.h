@@ -10,6 +10,7 @@
 #include <spdlog/logger.h>
 #include <QObject>
 #include "DataConnectionListener.h"
+#include "CelerMessageMapper.h"
 #include "autheid_utils.h"
 
 class ZmqContext;
@@ -61,14 +62,14 @@ public:
    void cancelLogin();
    void getLoginResult();
    void logout();
-   void celerSend(const std::string &data);
+   void celerSend(CelerAPI::CelerMessageType messageType, const std::string &data);
 
 signals:
    void startLoginDone(bool success);
    void getLoginResultDone(bool success);
    void cancelLoginDone(bool success);
    void logoutDone();
-   void celerRecv(const std::string &data);
+   void celerRecv(CelerAPI::CelerMessageType messageType, const std::string &data);
 
    void connected();
    void connectionFailed();

@@ -91,7 +91,7 @@ public slots:
    void sendHeartbeat();
 
    void onTimerRestart();
-   void recvData(const std::string &data);
+   void recvData(CelerAPI::CelerMessageType messageType, const std::string &data);
 
 signals:
    void OnConnectedToServer();
@@ -101,10 +101,10 @@ signals:
    void closingConnection();
    void restartTimer();
 
-   void sendData(const std::string &data);
+   void sendData(CelerAPI::CelerMessageType messageType, const std::string &data);
 
 private:
-   void OnDataReceived(const std::string& data);
+   void OnDataReceived(CelerAPI::CelerMessageType messageType, const std::string& data);
    void OnConnected();
    void OnDisconnected();
    void OnError(DataConnectionListener::DataConnectionError errorCode);

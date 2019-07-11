@@ -2,6 +2,7 @@
 
 #include <QNetworkAccessManager>
 #include "AutheIDClient.h"
+#include "CelerMessageMapper.h"
 #include "ConnectionManager.h"
 #include "DataConnection.h"
 #include "DataConnectionListener.h"
@@ -10,9 +11,11 @@
 #include "ZMQ_BIP15X_ServerConnection.h"
 #include "bs_proxy.pb.h"
 #include "rp.pb.h"
+#include "NettyCommunication.pb.h"
 
 using namespace Blocksettle::Communication::Proxy;
 using namespace autheid;
+using namespace com::celertech::baseserver::communication::protobuf;
 
 namespace {
 
@@ -164,9 +167,24 @@ void BsProxy::onCelerDataReceived(const std::string &clientId, const std::string
       BS_ASSERT_RETURN(logger_, client);
       BS_VERIFY_RETURN(logger_, client->state == State::LoggedIn);
 
+      ProtobufMessage celerMsg;
+
+      bool result = celerMsg.ParseFromString(data);
+      if (!result) {
+         SPDLOG_LOGGER_CRITICAL(logger_, "failed to parse ProtobufMessage from Celer");
+         return;
+      }
+
+      auto messageType = CelerAPI::GetMessageType(celerMsg.protobufclassname());
+      if (!CelerAPI::isValidMessageType(messageType)) {
+         SPDLOG_LOGGER_CRITICAL(logger_, "get message of unrecognized type: {}", celerMsg.protobufclassname());
+         return;
+      }
+
       Response response;
       auto d = response.mutable_celer();
-      d->set_data(std::move(data));
+      d->set_message_type(int(messageType));
+      d->set_data(std::move(*celerMsg.mutable_protobufmessagecontents()));
       sendMessage(client, &response);
    });
 }
@@ -298,7 +316,21 @@ void BsProxy::processLogout(Client *client, int64_t requestId, const Request_Log
 void BsProxy::processCeler(BsProxy::Client *client, const Request_Celer &request)
 {
    BS_VERIFY_RETURN(logger_, client->state == State::LoggedIn);
-   client->celer_->send(request.data());
+
+   auto messageType = CelerAPI::CelerMessageType(request.message_type());
+   if (!CelerAPI::isValidMessageType(messageType)) {
+      SPDLOG_LOGGER_ERROR(logger_, "get message of invalid type ({}) from client {}/{}"
+         , request.message_type(), client->clientId, client->email);
+      return;
+   }
+
+   std::string fullClassName = CelerAPI::GetMessageClass(messageType);
+   BS_ASSERT_RETURN(logger_, !fullClassName.empty());
+
+   ProtobufMessage message;
+   message.set_protobufclassname(fullClassName);
+   message.set_protobufmessagecontents(request.data());
+   client->celer_->send(message.SerializeAsString());
 }
 
 void BsProxy::sendResponse(Client *client, int64_t requestId, Response *response)

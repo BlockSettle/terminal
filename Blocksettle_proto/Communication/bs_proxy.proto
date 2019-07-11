@@ -23,7 +23,8 @@ message Request
 
     message Celer
     {
-        bytes data = 1;
+        int32 message_type = 1;
+        bytes data = 2;
     }
 
     int64 request_id = 1;
@@ -61,7 +62,8 @@ message Response
 
     message Celer
     {
-        bytes data = 1;
+        int32 message_type = 1;
+        bytes data = 2;
     }
 
     int64 request_id = 1;
