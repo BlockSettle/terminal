@@ -91,7 +91,7 @@ shared_ptr<DerivationScheme> DerivationScheme::deserialize(
       auto id = brr.get_BinaryData(len);
 
       //saltMap
-      map<unsigned, SecureBinaryData> saltMap;
+      map<SecureBinaryData, unsigned> saltMap;
 
       BinaryWriter bwKey;
       bwKey.put_uint8_t(ECDH_SALT_PREFIX);
@@ -119,7 +119,7 @@ shared_ptr<DerivationScheme> DerivationScheme::deserialize(
          auto len = bdrData.get_var_int();
          auto&& salt = bdrData.get_SecureBinaryData(len);
 
-         saltMap.emplace(make_pair(saltId, move(salt)));
+         saltMap.emplace(make_pair(move(salt), saltId));
          ++dbIter;
       }
 
@@ -524,6 +524,27 @@ BinaryData DerivationScheme_BIP32_Salted::serialize() const
 //// DerivationScheme_ECDH
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+DerivationScheme_ECDH::DerivationScheme_ECDH(const BinaryData& id,
+   std::map<SecureBinaryData, unsigned> saltMap) :
+   DerivationScheme(DerSchemeType_ECDH),
+   id_(id), saltMap_(move(saltMap))
+{
+   set<unsigned> idSet;
+   for (auto& saltPair : saltMap_)
+   {
+      auto insertIter = idSet.insert(saltPair.second);
+      if (insertIter.second == false)
+         throw DerivationSchemeException("ECDH id collision!");
+   }
+
+   if (idSet.size() == 0)
+      return;
+
+   auto idIter = idSet.rbegin();
+   topSaltIndex_ = *idIter + 1;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 const SecureBinaryData& DerivationScheme_ECDH::getChaincode() const
 {
    throw DerivationSchemeException("no chaincode for ECDH derivation scheme");
@@ -553,17 +574,15 @@ unsigned DerivationScheme_ECDH::addSalt(const SecureBinaryData& salt, LMDB* db)
    if (salt.getSize() != 32)
       throw DerivationSchemeException("salt is too small");
 
-   unsigned id = 0;
-   if (saltMap_.size() != 0)
-   {
-      auto iter = saltMap_.rbegin();
-      if (iter->first == UINT32_MAX)
-         throw DerivationSchemeException("exhausted ECDH salt map allocation");
+   //return the salt id if it's already in there
+   auto saltIter = saltMap_.find(salt);
+   if (saltIter != saltMap_.end())
+      return saltIter->second;
 
-      id = iter->first + 1;
-   }
+   unique_lock<mutex> lock(saltMutex_);
 
-   auto insertIter = saltMap_.insert(make_pair(id, salt));
+   unsigned id = topSaltIndex_++;
+   auto insertIter = saltMap_.insert(make_pair(salt, id));
    if (!insertIter.second)
       throw DerivationSchemeException("failed to insert salt");
 
@@ -571,7 +590,7 @@ unsigned DerivationScheme_ECDH::addSalt(const SecureBinaryData& salt, LMDB* db)
    putSalt(id, salt, db);
 
    //return insert index
-   return insertIter.first->first;
+   return id;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -598,7 +617,7 @@ void DerivationScheme_ECDH::putAllSalts(LMDB* db)
 {
    //expects live read-write db tx
    for (auto& saltPair : saltMap_)
-      putSalt(saltPair.first, saltPair.second, db);
+      putSalt(saltPair.second, saltPair.first, db);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -640,16 +659,24 @@ shared_ptr<AssetEntry_Single> DerivationScheme_ECDH::computeNextPublicEntry(
       throw DerivationSchemeException("unexpected pubkey size");
 
    //get salt
-   auto saltIter = saltMap_.find(index);
-   if (saltIter == saltMap_.end())
+   auto saltIter = saltMap_.rbegin();
+   while (saltIter != saltMap_.rend())
+   {
+      if (saltIter->second == index)
+         break;
+
+      ++saltIter;
+   }
+
+   if (saltIter == saltMap_.rend())
       throw DerivationSchemeException("missing salt for id");
 
-   if (saltIter->second.getSize() != 32)
+   if (saltIter->first.getSize() != 32)
       throw DerivationSchemeException("unexpected salt size");
 
    //salt root pubkey
    auto&& saltedPubkey = CryptoECDSA::PubKeyScalarMultiply(
-      pubKey, saltIter->second);
+      pubKey, saltIter->first);
 
    return make_shared<AssetEntry_Single>(
       index, full_id,
@@ -708,16 +735,24 @@ DerivationScheme_ECDH::computeNextPrivateEntry(
    const BinaryData& accountID, unsigned index)
 {
    //get salt
-   auto saltIter = saltMap_.find(index);
-   if (saltIter == saltMap_.end())
+   auto saltIter = saltMap_.rbegin();
+   while (saltIter != saltMap_.rend())
+   {
+      if (saltIter->second == index)
+         break;
+
+      ++saltIter;
+   }
+
+   if (saltIter == saltMap_.rend())
       throw DerivationSchemeException("missing salt for id");
 
-   if (saltIter->second.getSize() != 32)
+   if (saltIter->first.getSize() != 32)
       throw DerivationSchemeException("unexpected salt size");
 
    //salt root privkey
    auto&& saltedPrivKey = CryptoECDSA::PrivKeyScalarMultiply(
-      privKeyData, saltIter->second);
+      privKeyData, saltIter->first);
 
    //compute salted pubkey
    auto&& saltedPubKey = CryptoECDSA().ComputePublicKey(saltedPrivKey, true);
@@ -736,4 +771,14 @@ DerivationScheme_ECDH::computeNextPrivateEntry(
    //instantiate and return new asset entry
    return make_shared<AssetEntry_Single>(
       index, accountID, saltedPubKey, nextPrivKey);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unsigned DerivationScheme_ECDH::getSaltIndex(const SecureBinaryData& salt)
+{
+   auto iter = saltMap_.find(salt);
+   if (iter == saltMap_.end())
+      throw DerivationSchemeException("missing salt");
+
+   return iter->second;
 }
