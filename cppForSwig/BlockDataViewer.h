@@ -50,6 +50,15 @@ class BDMnotReady : public std::exception
    }
 };
 
+struct OpData
+{
+   unsigned height_;
+   unsigned txindex_;
+   bool isspent_;
+   uint64_t value_;
+   BinaryData spenderHash_;
+};
+
 class BlockDataViewer
 {
 
@@ -191,6 +200,12 @@ public:
       std::function<bool(BinaryDataRef&)>);
 
    virtual const std::string& getID(void) const = 0;
+
+   //wallet agnostic methods
+   std::vector<UTXO> getUtxosForAddress(const BinaryDataRef&, bool) const;
+   std::map<BinaryData, std::map<BinaryData, std::map<unsigned, OpData>>>
+      getAddressOutpoints(const std::set<BinaryDataRef>&, 
+         unsigned&, unsigned&) const;
 
 protected:
    std::atomic<bool> rescanZC_;

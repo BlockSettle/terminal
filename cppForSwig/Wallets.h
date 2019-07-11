@@ -641,7 +641,7 @@ public:
       */
 
       auto&& hash = BtcUtils::getHash160(pubkey);
-      auto assetPair = getAssetPairForKey(pubkey);
+      auto assetPair = getAssetPairForKey(hash);
       if (assetPair.first == nullptr)
          throw NoAssetException("invalid pubkey");
 
@@ -664,6 +664,30 @@ public:
       DecryptedDataContainerException means the wallet failed to decrypt the 
       encrypted pubkey (bad passphrase or unlocked wallet most likely).
       */
+   }
+
+   void seedFromAddressEntry(std::shared_ptr<AddressEntry> addrPtr)
+   {
+      try
+      {
+         //add hash to preimage pair
+         auto& hash = addrPtr->getHash();
+         auto& preimage = addrPtr->getPreimage();
+         hash_to_preimage_.insert(std::make_pair(hash, preimage));
+      }
+      catch (AddressException&)
+      {
+         return;
+      }
+
+      //is this address nested?
+      auto addrNested =
+         std::dynamic_pointer_cast<AddressEntry_Nested>(addrPtr);
+      if (addrNested == nullptr)
+         return; //return if not
+
+      //seed the predecessor too
+      seedFromAddressEntry(addrNested->getPredecessor());
    }
 };
 
