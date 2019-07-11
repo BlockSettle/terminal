@@ -379,7 +379,7 @@ namespace bs {
             walletPtr_(wallet)
          {
             //std::function<SecureBinaryData(const BinaryData&)>
-            auto lbd = [&passphrase](const BinaryData&)->SecureBinaryData
+            auto lbd = [passphrase](const BinaryData&)->SecureBinaryData
             {
                return passphrase;
             };
