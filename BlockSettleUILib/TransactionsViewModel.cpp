@@ -448,12 +448,7 @@ static std::string mkTxKey(const BinaryData &txHash, const std::string &id)
 }
 static std::string mkTxKey(const bs::TXEntry &item)
 {
-/*   std::string id;
-   id.reserve(item.walletId.size());
-   for (const auto &c : item.walletId) {
-      id.push_back(tolower(c));
-   }*/
-   return mkTxKey(item.txHash, /*id*/item.walletId);
+   return mkTxKey(item.txHash, item.walletId);
 }
 
 std::shared_ptr<TransactionsViewItem> TransactionsViewModel::getTxEntry(const std::string &key)
