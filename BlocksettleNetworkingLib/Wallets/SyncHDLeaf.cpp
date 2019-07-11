@@ -1060,3 +1060,40 @@ QString hd::CCLeaf::displaySymbol() const
 {
    return suffix_.empty() ? hd::Leaf::displaySymbol() : QString::fromStdString(suffix_);
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+hd::SettlementLeaf::SettlementLeaf(const std::string &walletId, const std::string &name, const std::string &desc
+   , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger)
+   : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Settlement, true)
+{
+   intAddressPoolSize_ = 0;
+   extAddressPoolSize_ = 0;
+   poolAET_ = { AddressEntryType_P2WPKH };
+}
+
+void hd::SettlementLeaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
+{
+   throw std::runtime_error("Settlement leaves do not yield addresses");
+}
+
+void hd::SettlementLeaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
+{
+   throw std::runtime_error("Settlement leaves do not yield addresses");
+}
+
+void hd::SettlementLeaf::setSettlementID(const SecureBinaryData& id)
+{
+   if (signContainer_ == nullptr)
+      throw std::runtime_error("uninitialized sign container");
+
+   signContainer_->setSettlementID(walletId(), id);
+}
+
+SecureBinaryData hd::SettlementLeaf::getRootPubkey(void) const
+{
+   if (signContainer_ == nullptr)
+      throw std::runtime_error("uninitialized sign container");
+
+   return signContainer_->getRootPubkey(walletId());
+}
