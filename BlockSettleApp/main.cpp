@@ -109,15 +109,15 @@ static void checkStyleSheet(QApplication &app)
    app.setStyleSheet(QString::fromLatin1(stylesheetFile.readAll()));
 }
 
-static QScreen *getCurrentDisplay()
+QScreen *getDisplay(QPoint position)
 {
    for (auto currentScreen : QGuiApplication::screens()) {
-      if (currentScreen->availableGeometry().contains(QCursor::pos(), true)) {
+      if (currentScreen->availableGeometry().contains(position, false)) {
          return currentScreen;
       }
    }
 
-   return nullptr;
+   return QGuiApplication::primaryScreen();
 }
 
 static int GuiApp(int &argc, char** argv)
@@ -208,11 +208,11 @@ static int GuiApp(int &argc, char** argv)
    const int splashScreenWidth = 400;
    BSTerminalSplashScreen splashScreen(splashLogo.scaledToWidth(splashScreenWidth, Qt::SmoothTransformation));
 
-
-   //todo: depends on current display positioning splashScreen
-   auto currentDisplay = getCurrentDisplay();
-
-   //qDebug() << "currentDisplay: " << QGuiApplication::screens().indexOf(currentDisplay);
+   auto mainGeometry = settings->get<QRect>(ApplicationSettings::GUI_main_geometry);
+   auto currentDisplay = getDisplay(mainGeometry.center());
+   auto splashGeometry = splashScreen.geometry();
+   splashGeometry.moveCenter(currentDisplay->geometry().center());
+   splashScreen.setGeometry(splashGeometry);
 
    splashScreen.show();
    app.processEvents();
