@@ -75,8 +75,10 @@ namespace {
       params.celerHost = "";
       params.celerPort = 0;
 
-      BsProxy proxy(logger, params);
-      std::this_thread::sleep_for(std::chrono::hours(24));
+      auto proxy = new BsProxy(logger, params);
+      auto thread = new QThread();
+      proxy->moveToThread(thread);
+      thread->start();
    }
 
 } // namespace
@@ -184,7 +186,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    InitWidgets();
 
-   std::thread(&startTestProxy, logMgr_->logger()).detach();
+   startTestProxy(logMgr_->logger());
 
    createBsClient();
 }

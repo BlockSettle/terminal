@@ -6,7 +6,7 @@ message Request
 {
     message StartLogin
     {
-        string auth_id = 1;
+        string email = 1;
     }
 
     message CancelLogin
@@ -45,6 +45,7 @@ message Response
 
     message GetLoginResult
     {
+        bool success = 1;
     }
 
     message Logout

@@ -2,9 +2,9 @@
 
 #include <QNetworkAccessManager>
 #include "AutheIDClient.h"
+#include "LoggerHelpers.h"
 #include "StringUtils.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
-
 #include "bs_proxy.pb.h"
 #include "rp.pb.h"
 
@@ -12,15 +12,6 @@ using namespace Blocksettle::Communication::Proxy;
 using namespace autheid;
 
 namespace {
-
-   const auto ContentTypeHeader = "Content-Type";
-   const auto AcceptHeader = "Accept";
-   const auto AuthorizationHeader = "Authorization";
-
-   const auto ProtobufMimeType = "application/protobuf";
-
-   const auto AutheidServerAddrLive = "https://api.autheid.com/v1/requests";
-   const auto AutheidServerAddrTest = "https://api.staging.autheid.com/v1/requests";
 
    ZmqBIP15XPeers emptyTrustedClientsCallback()
    {
@@ -65,79 +56,156 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
       throw std::runtime_error(fmt::format("can't bind to {}:{}", params.listenAddress, params.listenPort));
    }
 
-   nam_ = new QNetworkAccessManager(this);
+   nam_ = std::make_shared<QNetworkAccessManager>(this);
 }
 
 BsProxy::~BsProxy() = default;
 
 void BsProxy::onProxyDataFromClient(const std::string &clientId, const std::string &data)
 {
-   Request requst;
-   bool result = requst.ParseFromString(data);
+   auto request = std::make_shared<Request>();
+   bool result = request->ParseFromString(data);
    if (!result) {
       SPDLOG_LOGGER_ERROR(logger_, "can't parse request from {}", bs::toHex(clientId));
    }
 
-   switch (requst.data_case()) {
-      case Request::kStartLogin:
-         process(clientId, requst.start_login());
-         break;
-      case Request::kCancelLogin:
-         process(clientId, requst.cancel_login());
-         break;
-      case Request::kGetLoginResult:
-         process(clientId, requst.get_login_result());
-         break;
-      case Request::kLogout:
-         process(clientId, requst.logout());
-         break;
-      case Request::DATA_NOT_SET:
-         break;
-   }
+   QMetaObject::invokeMethod(this, [this, clientId, request] {
+      auto client = findClient(clientId);
+      BS_ASSERT_RETURN(logger_, client);
+      BS_VERIFY_RETURN(logger_, client->state != State::Closed);
+
+      switch (request->data_case()) {
+         case Request::kStartLogin:
+            process(client, request->request_id(), request->start_login());
+            break;
+         case Request::kCancelLogin:
+            process(client, request->request_id(), request->cancel_login());
+            break;
+         case Request::kGetLoginResult:
+            process(client, request->request_id(), request->get_login_result());
+            break;
+         case Request::kLogout:
+            process(client, request->request_id(), request->logout());
+            break;
+         case Request::DATA_NOT_SET:
+            break;
+      }
+   });
 }
 
 void BsProxy::onProxyClientConnected(const std::string &clientId)
 {
+   QMetaObject::invokeMethod(this, [this, clientId] {
+      auto it = clients_.find(clientId);
+      if (it != clients_.end()) {
+         // sanity checks
+         SPDLOG_LOGGER_CRITICAL(logger_, "old data was not cleanly removed for client {}!", bs::toHex(clientId));
+         clients_.erase(it);
+      }
 
+      Client client;
+      client.clientId = clientId;
+      clients_.emplace(clientId, std::move(client));
+   });
 }
 
 void BsProxy::onProxyClientDisconnected(const std::string &clientId)
 {
+   QMetaObject::invokeMethod(this, [this, clientId] {
+      // Erase old client's data
+      clients_.erase(clientId);
+   });
+}
+
+void BsProxy::process(Client *client, int64_t requestId, const Request_StartLogin &request)
+{
+   SPDLOG_LOGGER_INFO(logger_, "process login request from {}", bs::toHex(client->clientId));
+   BS_VERIFY_RETURN(logger_, client->state == State::UnknownClient);
+
+   client->autheid = std::make_unique<AutheIDClient>(logger_, nam_, AutheIDClient::AuthKeys{}, params_.autheidTestEnv, this);
+
+   connect(client->autheid.get(), &AutheIDClient::createRequestDone, this, [this, client, requestId] {
+      // Data must be still available.
+      // if client was disconnected its data should be cleared and autheid was destroyed (and no callback is called).
+      BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidStart);
+
+      Response response;
+      auto d = response.mutable_start_login();
+      client->state = State::WaitClientGetResult;
+      d->set_success(true);
+      sendResponse(client, requestId, &response);
+   });
+
+   connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId] {
+      // Data must be still available.
+      // if client was disconnected its data should be cleared and autheid was destroyed (and no callback is called).
+      BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidStart);
+
+      Response response;
+      auto d = response.mutable_start_login();
+      client->state = State::Closed;
+      d->set_success(false);
+      sendResponse(client, requestId, &response);
+   });
+
+   client->state = State::WaitAutheidStart;
+   client->email = request.email();
+   const bool autoRequestResult = false;
+   client->autheid->authenticate(request.email(), 120, autoRequestResult);
+}
+
+void BsProxy::process(Client *client, int64_t requestId, const Request_CancelLogin &request)
+{
+}
+
+void BsProxy::process(Client *client, int64_t requestId, const Request_GetLoginResult &request)
+{
+   SPDLOG_LOGGER_INFO(logger_, "process get login result request from {}", bs::toHex(client->clientId));
+   BS_VERIFY_RETURN(logger_, client->state == State::WaitClientGetResult);
+
+   // Need to disconnect `AutheIDClient::failed` signal here because we don't need old callback anymore
+   client->autheid->disconnect();
+
+   connect(client->autheid.get(), &AutheIDClient::authSuccess, this, [this, client, requestId](const std::string &jwt) {
+      BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidResult);
+      client->state = State::LoggedIn;
+
+      Response response;
+      auto d = response.mutable_get_login_result();
+      d->set_success(true);
+      sendResponse(client, requestId, &response);
+   });
+
+   connect(client->autheid.get(), &AutheIDClient::authSuccess, this, [this, client, requestId](const std::string &jwt) {
+      BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidResult);
+      client->state = State::Closed;
+
+      Response response;
+      auto d = response.mutable_get_login_result();
+      d->set_success(false);
+      sendResponse(client, requestId, &response);
+   });
+
+   client->state = State::WaitAutheidResult;
+   client->autheid->requestResult();
+}
+
+void BsProxy::process(Client *client, int64_t requestId, const Request_Logout &request)
+{
 
 }
 
-void BsProxy::process(const std::string &clientId, const Request_StartLogin &request)
+void BsProxy::sendResponse(Client *client, int64_t requestId, Response *response)
 {
-   SPDLOG_LOGGER_INFO(logger_, "process login request from {}", bs::toHex(clientId));
-
-   rp::CreateRequest autheidReq;
-   auto signRequest = autheidReq.mutable_signature();
-   signRequest->set_serialization(rp::SERIALIZATION_PROTOBUF);
-
-   autheidReq.set_title("Terminal Login");
-   autheidReq.set_type(rp::SIGNATURE);
-   autheidReq.set_email(request.auth_id());
-   autheidReq.set_timeout_seconds(60);
-
-   QNetworkRequest httpReq;
-   httpReq.setUrl(QUrl(QString::fromLatin1(params_.autheidTestEnv ? AutheidServerAddrTest : AutheidServerAddrLive)));
-   httpReq.setRawHeader(ContentTypeHeader, ProtobufMimeType);
-   httpReq.setRawHeader(AcceptHeader, ProtobufMimeType);
-   httpReq.setRawHeader(AuthorizationHeader, QByteArray::fromStdString(params_.autheidApiKey));
-   //nam_->post()
+   response->set_request_id(requestId);
+   server_->SendDataToClient(client->clientId, response->SerializeAsString());
 }
 
-void BsProxy::process(const std::string &clientId, const Request_CancelLogin &request)
+BsProxy::Client *BsProxy::findClient(const std::string &clientId)
 {
-
-}
-
-void BsProxy::process(const std::string &clientId, const Request_GetLoginResult &request)
-{
-
-}
-
-void BsProxy::process(const std::string &clientId, const Request_Logout &request)
-{
-
+   auto it = clients_.find(clientId);
+   if (it == clients_.end()) {
+      return nullptr;
+   }
+   return &it->second;
 }

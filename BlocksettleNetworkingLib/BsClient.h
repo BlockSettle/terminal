@@ -56,7 +56,7 @@ public:
 
    const autheid::PrivateKey &ephemeralPrivKey() const;
 
-   void startLogin(const std::string &login);
+   void startLogin(const std::string &email);
    void cancelLogin();
    void getLoginResult();
    void logout();

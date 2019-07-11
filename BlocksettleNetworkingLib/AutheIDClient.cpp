@@ -256,18 +256,18 @@ AutheIDClient::~AutheIDClient()
    cancel();
 }
 
-void AutheIDClient::createCreateRequest(const std::string &payload, int expiration)
+void AutheIDClient::createCreateRequest(const std::string &payload, int expiration, bool autoRequestResult)
 {
    QNetworkRequest request = getRequest(baseUrl_, apiKey_);
 
    QNetworkReply *reply = nam_->post(request, QByteArray::fromStdString(payload));
-   processNetworkReply(reply, kNetworkTimeoutSeconds, [this, expiration] (const Result &result) {
+   processNetworkReply(reply, kNetworkTimeoutSeconds, [this, expiration, autoRequestResult] (const Result &result) {
       if (result.networkError != QNetworkReply::NoError) {
          emit failed(result.networkError, result.authError);
          return;
       }
 
-      processCreateReply(result.payload, expiration);
+      processCreateReply(result.payload, expiration, autoRequestResult);
    });
 }
 
@@ -314,15 +314,10 @@ void AutheIDClient::start(RequestType requestType, const std::string &email
       request.mutable_device_key()->add_known_device_ids(knownDeviceId);
    }
 
-   createCreateRequest(request.SerializeAsString(), expiration);
+   createCreateRequest(request.SerializeAsString(), expiration, true);
 }
 
-void AutheIDClient::authenticate(const std::string &email, int expiration)
-{
-   requestAuth(email, expiration);
-}
-
-void AutheIDClient::requestAuth(const std::string &email, int expiration)
+void AutheIDClient::authenticate(const std::string &email, int expiration, bool autoRequestResult)
 {
    cancel();
    email_ = email;
@@ -338,7 +333,7 @@ void AutheIDClient::requestAuth(const std::string &email, int expiration)
    request.set_email(email);
    request.set_timeout_seconds(expiration);
 
-   createCreateRequest(request.SerializeAsString(), expiration);
+   createCreateRequest(request.SerializeAsString(), expiration, autoRequestResult);
 }
 
 void AutheIDClient::sign(const SignRequest &request)
@@ -362,7 +357,7 @@ void AutheIDClient::sign(const SignRequest &request)
    createRequest.set_description(request.description);
    createRequest.set_email(request.email);
 
-   createCreateRequest(createRequest.SerializeAsString(), request.expiration);
+   createCreateRequest(createRequest.SerializeAsString(), request.expiration, true);
 
    // Make a copy to check sign result later
    signRequest_ = request;
@@ -382,7 +377,17 @@ void AutheIDClient::cancel()
    requestId_.clear();
 }
 
-void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration)
+void AutheIDClient::requestResult()
+{
+   QNetworkRequest request = getRequest(fmt::format("{}/{}", baseUrl_, requestId_).c_str(), apiKey_);
+
+   QNetworkReply *reply = nam_->get(request);
+   processNetworkReply(reply, expiration_, [this] (const Result &result) {
+      processResultReply(result.payload);
+   });
+}
+
+void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration, bool autoRequestResult)
 {
    rp::CreateResponse response;
    if (!response.ParseFromArray(payload.data(), payload.size())) {
@@ -392,13 +397,11 @@ void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration
    }
 
    requestId_ = response.request_id();
-
-   QNetworkRequest request = getRequest(fmt::format("{}/{}", baseUrl_, requestId_).c_str(), apiKey_);
-
-   QNetworkReply *reply = nam_->get(request);
-   processNetworkReply(reply, expiration, [this] (const Result &result) {
-      processResultReply(result.payload);
-   });
+   expiration_ = expiration;
+   emit createRequestDone();
+   if (autoRequestResult) {
+      requestResult();
+   }
 }
 
 void AutheIDClient::processResultReply(const QByteArray &payload)

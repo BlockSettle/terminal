@@ -1,6 +1,7 @@
 #include "BsClient.h"
 
 #include <QTimer>
+#include "ProtobufUtils.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "bs_proxy.pb.h"
 
@@ -41,11 +42,11 @@ BsClient::~BsClient()
    connection_.reset();
 }
 
-void BsClient::startLogin(const std::string &login)
+void BsClient::startLogin(const std::string &email)
 {
    Request request;
    auto d = request.mutable_start_login();
-   d->set_auth_id(login);
+   d->set_email(email);
 
    sendRequest(&request, std::chrono::seconds(10), [this] {
       emit startLoginDone(false);
@@ -76,6 +77,8 @@ void BsClient::OnDataReceived(const std::string &data)
       SPDLOG_LOGGER_ERROR(logger_, "can't parse from BS proxy");
       return;
    }
+
+   SPDLOG_LOGGER_DEBUG(logger_, "bs recv: {}", ProtobufUtils::toJsonCompact(*response));
 
    QMetaObject::invokeMethod(this, [this, response] {
       if (response->request_id() != 0) {
@@ -131,6 +134,8 @@ void BsClient::sendRequest(Request *request, std::chrono::milliseconds timeout
 
    activeRequestIds_.insert(activeRequest.requestId);
    activeRequests_.emplace(std::chrono::steady_clock::now() + timeout, std::move(activeRequest));
+
+   SPDLOG_LOGGER_DEBUG(logger_, "bs send: {}", ProtobufUtils::toJsonCompact(*request));
 }
 
 void BsClient::process(const Response_StartLogin &response)
