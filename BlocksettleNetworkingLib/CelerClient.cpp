@@ -314,7 +314,7 @@ void CelerClient::OnError(DataConnectionListener::DataConnectionError errorCode)
 void CelerClient::RegisterDefaulthandlers()
 {
    RegisterHandler(CelerAPI::HeartbeatType, [this](const std::string& data) { return this->onHeartbeat(data); });
-   RegisterHandler(CelerAPI::SingleResponseMessageType, [this](const std::string& data) { return this->onSignleMessage(data); });
+   RegisterHandler(CelerAPI::SingleResponseMessageType, [this](const std::string& data) { return this->onSingleMessage(data); });
    RegisterHandler(CelerAPI::ExceptionResponseMessageType, [this](const std::string& data) { return this->onExceptionResponse(data); });
    RegisterHandler(CelerAPI::MultiResponseMessageType, [this](const std::string& data) { return this->onMultiMessage(data); });
 }
@@ -344,11 +344,11 @@ bool CelerClient::onHeartbeat(const std::string& message)
    return true;
 }
 
-bool CelerClient::onSignleMessage(const std::string& message)
+bool CelerClient::onSingleMessage(const std::string& message)
 {
    SingleResponseMessage response;
    if (!response.ParseFromString(message)) {
-      logger_->error("[CelerClient::onSignleMessage] failed to parse SingleResponseMessage");
+      logger_->error("[CelerClient::onSingleMessage] failed to parse SingleResponseMessage");
       return false;
    }
 
