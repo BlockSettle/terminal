@@ -21,6 +21,11 @@ message Request
     {
     }
 
+    message Celer
+    {
+        bytes data = 1;
+    }
+
     int64 request_id = 1;
 
     oneof data
@@ -29,6 +34,7 @@ message Request
         CancelLogin cancel_login = 11;
         GetLoginResult get_login_result = 12;
         Logout logout = 13;
+        Celer celer = 14;
     }
 }
 
@@ -53,6 +59,11 @@ message Response
     {
     }
 
+    message Celer
+    {
+        bytes data = 1;
+    }
+
     int64 request_id = 1;
 
     oneof data
@@ -61,5 +72,6 @@ message Response
         CancelLogin cancel_login = 11;
         GetLoginResult get_login_result = 12;
         Logout logout = 13;
+        Celer celer = 14;
     }
 }

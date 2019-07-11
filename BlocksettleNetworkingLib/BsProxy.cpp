@@ -2,6 +2,9 @@
 
 #include <QNetworkAccessManager>
 #include "AutheIDClient.h"
+#include "ConnectionManager.h"
+#include "DataConnection.h"
+#include "DataConnectionListener.h"
 #include "LoggerHelpers.h"
 #include "StringUtils.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
@@ -41,6 +44,34 @@ public:
    BsProxy *proxy_{};
 };
 
+class BsClientCelerListener : public DataConnectionListener
+{
+public:
+   void OnDataReceived(const std::string& data) override
+   {
+      proxy_->onCelerDataReceived(clientId_, data);
+   }
+
+   void OnConnected() override
+   {
+      proxy_->onCelerConnected(clientId_);
+   }
+
+   void OnDisconnected() override
+   {
+      proxy_->onCelerDisconnected(clientId_);
+   }
+
+   void OnError(DataConnectionListener::DataConnectionError errorCode) override
+   {
+      proxy_->onCelerError(clientId_, errorCode);
+   }
+
+   BsProxy *proxy_{};
+   std::string clientId_;
+};
+
+
 BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyParams &params)
    : logger_(logger)
    , params_(params)
@@ -56,7 +87,10 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
       throw std::runtime_error(fmt::format("can't bind to {}:{}", params.listenAddress, params.listenPort));
    }
 
+   // Need to create own QNetworkAccessManager as a child so it will be in our thread
    nam_ = std::make_shared<QNetworkAccessManager>(this);
+
+   connectionManager_ = std::make_shared<ConnectionManager>(logger_);
 }
 
 BsProxy::~BsProxy() = default;
@@ -76,20 +110,25 @@ void BsProxy::onProxyDataFromClient(const std::string &clientId, const std::stri
 
       switch (request->data_case()) {
          case Request::kStartLogin:
-            process(client, request->request_id(), request->start_login());
-            break;
+            processStartLogin(client, request->request_id(), request->start_login());
+            return;
          case Request::kCancelLogin:
-            process(client, request->request_id(), request->cancel_login());
-            break;
+            processCancelLogin(client, request->request_id(), request->cancel_login());
+            return;
          case Request::kGetLoginResult:
-            process(client, request->request_id(), request->get_login_result());
-            break;
+            processGetLoginResult(client, request->request_id(), request->get_login_result());
+            return;
          case Request::kLogout:
-            process(client, request->request_id(), request->logout());
-            break;
+            processLogout(client, request->request_id(), request->logout());
+            return;
+         case Request::kCeler:
+            processCeler(client, request->celer());
+            return;
          case Request::DATA_NOT_SET:
-            break;
+            return;
       }
+
+      SPDLOG_LOGGER_CRITICAL(logger_, "FIXME: request was not processed!");
    });
 }
 
@@ -117,7 +156,39 @@ void BsProxy::onProxyClientDisconnected(const std::string &clientId)
    });
 }
 
-void BsProxy::process(Client *client, int64_t requestId, const Request_StartLogin &request)
+void BsProxy::onCelerDataReceived(const std::string &clientId, const std::string &data)
+{
+   QMetaObject::invokeMethod(this, [this, clientId, data] {
+      auto client = findClient(clientId);
+      BS_ASSERT_RETURN(logger_, client);
+      BS_VERIFY_RETURN(logger_, client->state == State::LoggedIn);
+
+      Response response;
+      auto d = response.mutable_celer();
+      d->set_data(std::move(data));
+      sendMessage(client, &response);
+   });
+}
+
+void BsProxy::onCelerConnected(const std::string &clientId)
+{
+   QMetaObject::invokeMethod(this, [this, clientId] {
+   });
+}
+
+void BsProxy::onCelerDisconnected(const std::string &clientId)
+{
+   QMetaObject::invokeMethod(this, [this, clientId] {
+   });
+}
+
+void BsProxy::onCelerError(const std::string &clientId, DataConnectionListener::DataConnectionError errorCode)
+{
+   QMetaObject::invokeMethod(this, [this, clientId, errorCode] {
+   });
+}
+
+void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request_StartLogin &request)
 {
    SPDLOG_LOGGER_INFO(logger_, "process login request from {}", bs::toHex(client->clientId));
    BS_VERIFY_RETURN(logger_, client->state == State::UnknownClient);
@@ -154,7 +225,7 @@ void BsProxy::process(Client *client, int64_t requestId, const Request_StartLogi
    client->autheid->authenticate(request.email(), 120, autoRequestResult);
 }
 
-void BsProxy::process(Client *client, int64_t requestId, const Request_CancelLogin &request)
+void BsProxy::processCancelLogin(Client *client, int64_t requestId, const Request_CancelLogin &request)
 {
    SPDLOG_LOGGER_INFO(logger_, "process cancel login request from {}", bs::toHex(client->clientId));
    BS_VERIFY_RETURN(logger_, client->state == State::WaitAutheidResult || client->state == State::WaitClientGetResult);
@@ -168,7 +239,7 @@ void BsProxy::process(Client *client, int64_t requestId, const Request_CancelLog
    sendResponse(client, requestId, &response);
 }
 
-void BsProxy::process(Client *client, int64_t requestId, const Request_GetLoginResult &request)
+void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Request_GetLoginResult &request)
 {
    SPDLOG_LOGGER_INFO(logger_, "process get login result request from {}", bs::toHex(client->clientId));
    BS_VERIFY_RETURN(logger_, client->state == State::WaitClientGetResult);
@@ -184,6 +255,14 @@ void BsProxy::process(Client *client, int64_t requestId, const Request_GetLoginR
       auto d = response.mutable_get_login_result();
       d->set_success(true);
       sendResponse(client, requestId, &response);
+
+      client->celerListener_ = std::make_unique<BsClientCelerListener>();
+      client->celerListener_->proxy_ = this;
+      client->celerListener_->clientId_ = client->clientId;
+
+      client->celer_ = connectionManager_->CreateCelerClientConnection();
+      client->celer_->openConnection(params_.celerHost, std::to_string(params_.celerPort)
+         , client->celerListener_.get());
    });
 
    connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId] {
@@ -210,14 +289,25 @@ void BsProxy::process(Client *client, int64_t requestId, const Request_GetLoginR
    client->autheid->requestResult();
 }
 
-void BsProxy::process(Client *client, int64_t requestId, const Request_Logout &request)
+void BsProxy::processLogout(Client *client, int64_t requestId, const Request_Logout &request)
 {
 
+}
+
+void BsProxy::processCeler(BsProxy::Client *client, const Request_Celer &request)
+{
+   BS_VERIFY_RETURN(logger_, client->state == State::LoggedIn);
+   client->celer_->send(request.data());
 }
 
 void BsProxy::sendResponse(Client *client, int64_t requestId, Response *response)
 {
    response->set_request_id(requestId);
+   sendMessage(client, response);
+}
+
+void BsProxy::sendMessage(BsProxy::Client *client, Response *response)
+{
    server_->SendDataToClient(client->clientId, response->SerializeAsString());
 }
 

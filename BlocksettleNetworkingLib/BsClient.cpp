@@ -73,6 +73,14 @@ void BsClient::getLoginResult()
    });
 }
 
+void BsClient::celerSend(const std::string &data)
+{
+   Request request;
+   auto d = request.mutable_celer();
+   d->set_data(data);
+   sendMessage(&request);
+}
+
 void BsClient::timerEvent(QTimerEvent *event)
 {
    const auto now = std::chrono::steady_clock::now();
@@ -113,20 +121,25 @@ void BsClient::OnDataReceived(const std::string &data)
 
       switch (response->data_case()) {
          case Response::kStartLogin:
-            process(response->start_login());
-            break;
+            processStartLogin(response->start_login());
+            return;
          case Response::kCancelLogin:
-            process(response->cancel_login());
-            break;
+            processCancelLogin(response->cancel_login());
+            return;
          case Response::kGetLoginResult:
-            process(response->get_login_result());
-            break;
+            processGetLoginResult(response->get_login_result());
+            return;
          case Response::kLogout:
-            process(response->logout());
-            break;
+            processLogout(response->logout());
+            return;
+         case Response::kCeler:
+            processCeler(response->celer());
+            return;
          case Response::DATA_NOT_SET:
-            break;
+            return;
       }
+
+      SPDLOG_LOGGER_CRITICAL(logger_, "FIXME: response was not processed!");
    });
 }
 
@@ -155,26 +168,38 @@ void BsClient::sendRequest(Request *request, std::chrono::milliseconds timeout
    activeRequestIds_.insert(activeRequest.requestId);
    activeRequests_.emplace(std::chrono::steady_clock::now() + timeout, std::move(activeRequest));
 
-   SPDLOG_LOGGER_DEBUG(logger_, "bs send: {}", ProtobufUtils::toJsonCompact(*request));
+   sendMessage(request);
 }
 
-void BsClient::process(const Response_StartLogin &response)
+void BsClient::sendMessage(Request *request)
+{
+   SPDLOG_LOGGER_DEBUG(logger_, "bs send: {}", ProtobufUtils::toJsonCompact(*request));
+
+   connection_->send(request->SerializeAsString());
+}
+
+void BsClient::processStartLogin(const Response_StartLogin &response)
 {
    emit startLoginDone(response.success());
 }
 
-void BsClient::process(const Response_CancelLogin &response)
+void BsClient::processCancelLogin(const Response_CancelLogin &response)
 {
    emit cancelLoginDone(response.success());
 }
 
-void BsClient::process(const Response_GetLoginResult &response)
+void BsClient::processGetLoginResult(const Response_GetLoginResult &response)
 {
    emit getLoginResultDone(response.success());
 }
 
-void BsClient::process(const Response_Logout &response)
+void BsClient::processLogout(const Response_Logout &response)
 {
+}
+
+void BsClient::processCeler(const Response_Celer &response)
+{
+   emit celerRecv(response.data());
 }
 
 int64_t BsClient::newRequestId()

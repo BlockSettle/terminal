@@ -21,6 +21,7 @@ class Response_StartLogin;
 class Response_CancelLogin;
 class Response_GetLoginResult;
 class Response_Logout;
+class Response_Celer;
 } } }
 
 struct BsClientParams
@@ -60,11 +61,14 @@ public:
    void cancelLogin();
    void getLoginResult();
    void logout();
+   void celerSend(const std::string &data);
+
 signals:
    void startLoginDone(bool success);
    void getLoginResultDone(bool success);
    void cancelLoginDone(bool success);
    void logoutDone();
+   void celerRecv(const std::string &data);
 
    void connected();
    void connectionFailed();
@@ -87,11 +91,13 @@ private:
 
    void sendRequest(Blocksettle::Communication::Proxy::Request *request, std::chrono::milliseconds timeout
       , FailedCallback failedCb);
+   void sendMessage(Blocksettle::Communication::Proxy::Request *request);
 
-   void process(const Blocksettle::Communication::Proxy::Response_StartLogin &response);
-   void process(const Blocksettle::Communication::Proxy::Response_CancelLogin &response);
-   void process(const Blocksettle::Communication::Proxy::Response_GetLoginResult &response);
-   void process(const Blocksettle::Communication::Proxy::Response_Logout &response);
+   void processStartLogin(const Blocksettle::Communication::Proxy::Response_StartLogin &response);
+   void processCancelLogin(const Blocksettle::Communication::Proxy::Response_CancelLogin &response);
+   void processGetLoginResult(const Blocksettle::Communication::Proxy::Response_GetLoginResult &response);
+   void processLogout(const Blocksettle::Communication::Proxy::Response_Logout &response);
+   void processCeler(const Blocksettle::Communication::Proxy::Response_Celer &response);
 
    int64_t newRequestId();
 

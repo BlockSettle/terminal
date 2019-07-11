@@ -6,11 +6,16 @@
 #include <memory>
 #include <spdlog/logger.h>
 #include <QObject>
+#include "DataConnectionListener.h"
+
+class QNetworkAccessManager;
 
 class AutheIDClient;
-class QNetworkAccessManager;
+class ConnectionManager;
 class BsProxy;
 class BsProxyListener;
+class BsClientCelerListener;
+class DataConnection;
 class ZmqBIP15XServerConnection;
 class ZmqContext;
 
@@ -19,6 +24,7 @@ class Request_StartLogin;
 class Request_CancelLogin;
 class Request_GetLoginResult;
 class Request_Logout;
+class Request_Celer;
 class Response;
 } } }
 
@@ -53,6 +59,7 @@ public:
    const BsProxyParams &params() const { return params_; }
 private:
    friend class BsProxyListener;
+   friend class BsClientCelerListener;
 
    enum class State
    {
@@ -70,18 +77,29 @@ private:
       std::unique_ptr<AutheIDClient> autheid;
       State state{};
       std::string email;
+
+      // Declare celer listener before celer client itself (it should be destroyed after connection)!
+      std::unique_ptr<BsClientCelerListener> celerListener_;
+      std::shared_ptr<DataConnection> celer_;
    };
 
    void onProxyDataFromClient(const std::string& clientId, const std::string& data);
    void onProxyClientConnected(const std::string& clientId);
    void onProxyClientDisconnected(const std::string& clientId);
 
-   void process(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_StartLogin &request);
-   void process(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_CancelLogin &request);
-   void process(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_GetLoginResult &request);
-   void process(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_Logout &request);
+   void onCelerDataReceived(const std::string& clientId, const std::string& data);
+   void onCelerConnected(const std::string& clientId);
+   void onCelerDisconnected(const std::string& clientId);
+   void onCelerError(const std::string& clientId, DataConnectionListener::DataConnectionError errorCode);
+
+   void processStartLogin(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_StartLogin &request);
+   void processCancelLogin(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_CancelLogin &request);
+   void processGetLoginResult(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_GetLoginResult &request);
+   void processLogout(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_Logout &request);
+   void processCeler(Client *client, const Blocksettle::Communication::Proxy::Request_Celer &request);
 
    void sendResponse(Client *client, int64_t requestId, Blocksettle::Communication::Proxy::Response *response);
+   void sendMessage(Client *client, Blocksettle::Communication::Proxy::Response *response);
 
    Client *findClient(const std::string &clientId);
 
@@ -93,6 +111,7 @@ private:
 
    std::unique_ptr<BsProxyListener> serverListener_;
    std::unique_ptr<ZmqBIP15XServerConnection> server_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<QNetworkAccessManager> nam_{};
 };
 

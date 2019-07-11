@@ -14,39 +14,6 @@
 
 using namespace com::celertech::baseserver::communication::protobuf;
 
-class CelerClientListener : public DataConnectionListener
-{
-public:
-   CelerClientListener(CelerClient *client)
-      : client_(client)
-   {
-   }
-
-   ~CelerClientListener() noexcept
-   {}
-
-public:
-   void OnDataReceived(const std::string& data) override
-   {
-      client_->OnDataReceived(data);
-   }
-   void OnConnected() override
-   {
-      client_->OnConnected();
-   }
-   void OnDisconnected() override
-   {
-      client_->OnDisconnected();
-   }
-   void OnError(DataConnectionListener::DataConnectionError errorCode) override
-   {
-      client_->OnError(errorCode);
-   }
-
-private:
-   CelerClient *client_;
-};
-
 CelerClient::CelerClient(const std::shared_ptr<ConnectionManager>& connectionManager, bool userIdRequired)
    : connectionManager_(connectionManager)
    , logger_(connectionManager->GetLogger())
@@ -72,7 +39,7 @@ CelerClient::CelerClient(const std::shared_ptr<ConnectionManager>& connectionMan
 bool CelerClient::LoginToServer(const std::string& hostname, const std::string& port
       , const std::string& login, const std::string& password)
 {
-   if (connection_) {
+   if (!sessionToken_.empty()) {
       logger_->error("[CelerClient::LoginToServer] connecting with not purged connection");
       return false;
    }
@@ -94,16 +61,7 @@ bool CelerClient::LoginToServer(const std::string& hostname, const std::string& 
 
    AddInternalSequence(loginSequence);
 
-   listener_ = std::make_shared<CelerClientListener>(this);
-   connection_ = connectionManager_->CreateCelerClientConnection();
-
-   // put login command to queue
-   if (!connection_->openConnection(hostname, port, listener_.get())) {
-      logger_->error("[CelerClient::LoginToServer] failed to open celer connection");
-      // XXX purge connection and listener
-      connection_.reset();
-      return false;
-   }
+   OnConnected();
 
    return true;
 }
@@ -186,9 +144,8 @@ void CelerClient::CloseConnection()
 {
    heartbeatTimer_->stop();
 
-   if (connection_) {
-      connection_->closeConnection();
-      connection_.reset();
+   if (!sessionToken_.empty()) {
+      sessionToken_.clear();
       emit OnConnectionClosed();
    }
 }
@@ -273,7 +230,8 @@ bool CelerClient::sendMessage(CelerAPI::CelerMessageType messageType, const std:
    message.set_protobufclassname(fullClassName);
    message.set_protobufmessagecontents(data);
 
-   return connection_->send(message.SerializeAsString());
+   emit sendData(message.SerializeAsString());
+   return true;
 }
 
 void CelerClient::OnConnected()
@@ -449,7 +407,7 @@ bool CelerClient::ExecuteSequence(const std::shared_ptr<BaseCelerCommand>& comma
 
 bool CelerClient::IsConnected() const
 {
-   return connection_ != nullptr && !sessionToken_.empty();
+   return !sessionToken_.empty();
 }
 
 std::string CelerClient::userName() const
@@ -465,6 +423,11 @@ void CelerClient::RegisterUserCommand(const std::shared_ptr<BaseCelerCommand>& c
 void CelerClient::onTimerRestart()
 {
    heartbeatTimer_->start();
+}
+
+void CelerClient::recvData(const std::string &data)
+{
+   OnDataReceived(data);
 }
 
 std::string CelerClient::userId() const

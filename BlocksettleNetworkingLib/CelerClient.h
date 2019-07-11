@@ -91,6 +91,8 @@ public slots:
    void sendHeartbeat();
 
    void onTimerRestart();
+   void recvData(const std::string &data);
+
 signals:
    void OnConnectedToServer();
    void OnConnectionClosed();
@@ -98,6 +100,9 @@ signals:
 
    void closingConnection();
    void restartTimer();
+
+   void sendData(const std::string &data);
+
 private:
    void OnDataReceived(const std::string& data);
    void OnConnected();
@@ -128,8 +133,6 @@ private:
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<spdlog::logger>        logger_;
-   std::shared_ptr<CelerClientListener>   listener_;
-   std::shared_ptr<DataConnection>        connection_;
    QTimer                                 *heartbeatTimer_;
 
    using commandsQueueType = std::queue< std::shared_ptr<BaseCelerCommand> >;

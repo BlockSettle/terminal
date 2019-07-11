@@ -72,8 +72,8 @@ namespace {
       params.ownKeyFileName = "bs_proxy_tmp.peers";
       params.autheidApiKey = "Bearer live_opnKv0PyeML0WvYm66ka2k29qPPoDjS3rzw13bRJzITY";
       params.autheidTestEnv = true;
-      params.celerHost = "";
-      params.celerPort = 0;
+      params.celerHost = "104.155.117.179";
+      params.celerPort = 16001;
 
       auto proxy = new BsProxy(logger, params);
       auto thread = new QThread();
@@ -187,8 +187,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitWidgets();
 
    startTestProxy(logMgr_->logger());
-
-   createBsClient();
 }
 
 void BSTerminalMainWindow::onMDConnectionDetailsRequired()
@@ -1816,4 +1814,7 @@ void BSTerminalMainWindow::createBsClient()
    bsClient_ = std::make_unique<BsClient>(logMgr_->logger(), params);
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
    connect(bsClient_.get(), &BsClient::logoutDone, this, &BSTerminalMainWindow::onBsLogoutDone);
+
+   connect(bsClient_.get(), &BsClient::celerRecv, celerConnection_.get(), &CelerClient::recvData);
+   connect(celerConnection_.get(), &CelerClient::sendData, bsClient_.get(), &BsClient::celerSend);
 }
