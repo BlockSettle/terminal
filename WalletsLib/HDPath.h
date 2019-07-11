@@ -51,8 +51,12 @@ namespace bs {
       enum CoinType : Path::Elem {
          Bitcoin_main = 0x80000000,
          Bitcoin_test = 0x80000001,
-         BlockSettle_CC = 0x80004253,            // 0x80000000 | "BS" in hex
-         BlockSettle_Auth = 0xc1757468       // 0x80000000 | "Auth" in hex 
+         BlockSettle_CC = 0x80004253,         // 0x80000000 | "BS" in hex
+         BlockSettle_Auth = 0xc1757468,       // 0x80000000 | "Auth" in hex 
+
+         //this is a place holder for the Group ctor, settlement accounts 
+         //are not deterministic
+         BlockSettle_Settlement = 0xdeadbeef 
       };
 
    }  //namespace hd

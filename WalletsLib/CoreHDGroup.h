@@ -15,10 +15,13 @@ namespace bs {
    namespace core {
       namespace hd {
          class Wallet;
+         class SettlementGroup;
 
+         ///////////////////////////////////////////////////////////////////////
          class Group
          {
             friend class hd::Wallet;
+            friend class hd::SettlementGroup;
 
          public:
             Group(std::shared_ptr<AssetWallet_Single>, const bs::hd::Path &path, 
@@ -34,9 +37,9 @@ namespace bs {
             std::vector<std::shared_ptr<Leaf>> getLeaves() const;
             std::vector<std::shared_ptr<Leaf>> getAllLeaves() const;
             
-            std::shared_ptr<Leaf> createLeaf(
+            virtual std::shared_ptr<Leaf> createLeaf(
                bs::hd::Path::Elem, unsigned lookup = UINT32_MAX);
-            std::shared_ptr<Leaf> createLeaf(
+            virtual std::shared_ptr<Leaf> createLeaf(
                const std::string &key, unsigned lookup = UINT32_MAX);
             
             virtual std::shared_ptr<Leaf> newLeaf() const;
@@ -90,6 +93,7 @@ namespace bs {
             void putDataToDB(const BinaryData&, const BinaryData&);
          };
 
+         ///////////////////////////////////////////////////////////////////////
          class AuthGroup : public Group
          {
          private:
@@ -122,7 +126,7 @@ namespace bs {
             SecureBinaryData salt_;
          };
 
-
+         ///////////////////////////////////////////////////////////////////////
          class CCGroup : public Group
          {
          public:
@@ -137,6 +141,57 @@ namespace bs {
 
          protected:
             std::shared_ptr<Leaf> newLeaf() const override;
+         };
+
+         ///////////////////////////////////////////////////////////////////////
+         class SettlementGroup : public Group
+         {
+            friend class hd::Wallet;
+
+         public:
+            SettlementGroup(std::shared_ptr<AssetWallet_Single> walletPtr,
+               const bs::hd::Path &path, NetworkType netType,
+               const std::shared_ptr<spdlog::logger> &logger)
+               : Group(walletPtr, path, netType, true, logger)
+            {} //Settlement groups are always ext only
+
+            wallet::Type type() const override { return wallet::Type::ColorCoin; }
+            std::set<AddressEntryType> getAddressTypeSet(void) const override;
+
+            //these will throw on purpose, settlement leafs arent deterministic,
+            //they need a dedicated setup routine
+            std::shared_ptr<hd::Leaf> createLeaf(
+               bs::hd::Path::Elem, unsigned lookup = UINT32_MAX) override
+            {
+               throw AccountException("invalid for settlement leaves");
+            }
+
+            std::shared_ptr<hd::Leaf> createLeaf(
+               const std::string &key, unsigned lookup = UINT32_MAX) override
+            {
+               throw AccountException("invalid for settlement leaves");
+            }
+
+            std::shared_ptr<hd::SettlementLeaf>
+               getLeafForSettlementID(const SecureBinaryData&) const;
+
+         protected:
+            std::shared_ptr<Leaf> newLeaf() const override;
+
+            //
+            void initLeaf(std::shared_ptr<hd::Leaf> &, const bs::hd::Path &,
+               unsigned lookup = UINT32_MAX) const override
+            {
+               throw AccountException("cannot setup ECDH accounts from HD account routines");
+            }
+
+            void initLeaf(std::shared_ptr<hd::Leaf> &, 
+               const SecureBinaryData&, const SecureBinaryData&) const;
+            void serializeLeaves(BinaryWriter &) const override;
+
+         private:
+            std::shared_ptr<hd::Leaf> createLeaf(const bs::Address&, const bs::hd::Path&);
+            void deserialize(BinaryDataRef value) override;
          };
 
       }  //namespace hd

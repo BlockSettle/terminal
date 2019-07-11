@@ -19,6 +19,16 @@ namespace bs {
          private:
 
             Wallet(void) {}
+            
+            std::shared_ptr<AddressEntry_P2WSH> getAddressPtrForSettlement(
+               const SecureBinaryData& settlementID,
+               const SecureBinaryData& counterPartyPubKey,
+               bool isMyKeyFirst) const;
+
+            std::shared_ptr<hd::SettlementLeaf> getLeafForSettlementID(
+               const SecureBinaryData&) const;
+
+            std::shared_ptr<AssetEntry> getAssetForAddress(const bs::Address&);
 
          public:
 
@@ -88,6 +98,21 @@ namespace bs {
 
             bs::core::wallet::Seed getDecryptedSeed(void) const;
             SecureBinaryData getDecryptedRootXpriv(void) const;
+
+            //settlement leaves methods
+            std::shared_ptr<hd::Leaf> createSettlementLeaf(const bs::Address&);
+
+            bs::Address getSettlementPayinAddress(
+               const SecureBinaryData&,
+               const SecureBinaryData&,
+               bool) const;
+
+            BinaryData signSettlementTXRequest(
+               const wallet::TXSignRequest &,
+               const BinaryData& settlementId,
+               const SecureBinaryData& counterPartyPubKey,
+               bool myKeyComesFirst);
+
 
          protected:
             std::string    name_, desc_;
