@@ -180,6 +180,7 @@ namespace bs {
 
             std::string regIdExt_, regIdInt_;
             std::mutex  regMutex_;
+            std::vector<std::string> unconfTgtRegIds_;
 
          private:
             void createAddress(const CbAddress &, AddressEntryType aet, bool isInternal = false);
