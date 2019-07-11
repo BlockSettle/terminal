@@ -63,6 +63,7 @@ public:
 signals:
    void startLoginDone(bool success);
    void getLoginResultDone(bool success);
+   void cancelLoginDone(bool success);
    void logoutDone();
 
    void connected();

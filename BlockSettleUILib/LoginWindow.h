@@ -21,7 +21,7 @@ Q_OBJECT
 
 public:
    LoginWindow(const std::shared_ptr<spdlog::logger> &logger
-      , std::shared_ptr<ApplicationSettings> &settings
+      , std::shared_ptr<ApplicationSettings> &settings, BsClient *client
       , QWidget* parent = nullptr);
    ~LoginWindow() override;
 
@@ -32,38 +32,30 @@ public:
 
    QString getUsername() const;
 
-   std::shared_ptr<BsClient> client() { return client_; }
-
-signals:
-   void startLogin(const QString &login);
-   void cancelLogin();
-
-public slots:
-   void onStartLoginDone(bool success);
-
 private slots:
+   void onStartLoginDone(bool success);
+   void onGetLoginResultDone(bool success);
    void onTextChanged();
    void onAuthPressed();
-
    void onAuthStatusUpdated(const QString &userId, const QString &status);
-
    void onTimer();
-
-   void setupLoginPage();
-   void setupCancelPage();
 
 protected:
    void accept() override;
+   void reject() override;
 
 private:
+   void setupLoginPage();
+   void setupCancelPage();
+
    std::unique_ptr<Ui::LoginWindow>       ui_;
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ApplicationSettings>   settings_;
-   std::shared_ptr<BsClient>              client_;
 
    State       state_ = State::Login;
    QTimer      timer_;
-   float       timeLeft_;
+   float       timeLeft_{};
+   BsClient    *bsClient_{};
 };
 
 #endif // __LOGIN_WINDOW_H__

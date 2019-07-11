@@ -53,6 +53,26 @@ void BsClient::startLogin(const std::string &email)
    });
 }
 
+void BsClient::cancelLogin()
+{
+   Request request;
+   request.mutable_cancel_login();
+
+   sendRequest(&request, std::chrono::seconds(10), [this] {
+      emit cancelLoginDone(false);
+   });
+}
+
+void BsClient::getLoginResult()
+{
+   Request request;
+   request.mutable_get_login_result();
+
+   sendRequest(&request, std::chrono::seconds(60), [this] {
+      emit getLoginResultDone(false);
+   });
+}
+
 void BsClient::timerEvent(QTimerEvent *event)
 {
    const auto now = std::chrono::steady_clock::now();
@@ -145,17 +165,16 @@ void BsClient::process(const Response_StartLogin &response)
 
 void BsClient::process(const Response_CancelLogin &response)
 {
-
+   emit cancelLoginDone(response.success());
 }
 
 void BsClient::process(const Response_GetLoginResult &response)
 {
-
+   emit getLoginResultDone(response.success());
 }
 
 void BsClient::process(const Response_Logout &response)
 {
-
 }
 
 int64_t BsClient::newRequestId()

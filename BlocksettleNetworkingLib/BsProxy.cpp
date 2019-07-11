@@ -156,6 +156,16 @@ void BsProxy::process(Client *client, int64_t requestId, const Request_StartLogi
 
 void BsProxy::process(Client *client, int64_t requestId, const Request_CancelLogin &request)
 {
+   SPDLOG_LOGGER_INFO(logger_, "process cancel login request from {}", bs::toHex(client->clientId));
+   BS_VERIFY_RETURN(logger_, client->state == State::WaitAutheidResult || client->state == State::WaitClientGetResult);
+
+   client->state = State::Closed;
+   client->autheid->cancel();
+
+   Response response;
+   auto d = response.mutable_cancel_login();
+   d->set_success(true);
+   sendResponse(client, requestId, &response);
 }
 
 void BsProxy::process(Client *client, int64_t requestId, const Request_GetLoginResult &request)
@@ -176,7 +186,17 @@ void BsProxy::process(Client *client, int64_t requestId, const Request_GetLoginR
       sendResponse(client, requestId, &response);
    });
 
-   connect(client->autheid.get(), &AutheIDClient::authSuccess, this, [this, client, requestId](const std::string &jwt) {
+   connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId] {
+      BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidResult);
+      client->state = State::Closed;
+
+      Response response;
+      auto d = response.mutable_get_login_result();
+      d->set_success(false);
+      sendResponse(client, requestId, &response);
+   });
+
+   connect(client->autheid.get(), &AutheIDClient::userCancelled, this, [this, client, requestId] {
       BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidResult);
       client->state = State::Closed;
 

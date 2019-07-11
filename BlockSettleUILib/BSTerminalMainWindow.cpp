@@ -1236,15 +1236,13 @@ void BSTerminalMainWindow::onReadyToLogin()
 {
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
 
-   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, this);
+   createBsClient();
 
-   connect(&loginDialog, &LoginWindow::startLogin, this, [this](const QString &login) {
-      bsClient_->startLogin(login.toStdString());
-   });
+   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, bsClient_.get(), this);
 
-   connect(bsClient_.get(), &BsClient::startLoginDone, &loginDialog, &LoginWindow::onStartLoginDone);
+   int rc = loginDialog.exec();
 
-   if (loginDialog.exec() == QDialog::Accepted) {
+   if (rc == QDialog::Accepted) {
       currentUserLogin_ = loginDialog.getUsername();
       std::string jwt;
       auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);

@@ -41,6 +41,7 @@ message Response
 
     message CancelLogin
     {
+        bool success = 1;
     }
 
     message GetLoginResult

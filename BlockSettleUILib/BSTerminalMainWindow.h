@@ -41,6 +41,7 @@ class CCPortfolioModel;
 class CelerClient;
 class ConnectionManager;
 class QSystemTrayIcon;
+class LoginWindow;
 class RequestReplyCommand;
 class StatusBarView;
 class StatusViewBlockListener;
