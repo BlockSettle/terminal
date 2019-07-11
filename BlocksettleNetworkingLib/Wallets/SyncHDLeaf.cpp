@@ -119,21 +119,36 @@ void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
       }
    };
 
-   std::unique_lock<std::mutex> lock(regMutex_);
-   if (!regIdExt_.empty() || !regIdInt_.empty()) {
+   {
+      std::unique_lock<std::mutex> lock(regMutex_);
+      if (!regIdExt_.empty() || !regIdInt_.empty()) {
+         for (const auto &id : ids) {
+            if (id.isNull()) {
+               continue;
+            }
+            logger_->debug("[{}] {}: id={}, extId={}, intId={}", __func__, walletId()
+               , id.toBinStr(), regIdExt_, regIdInt_);
+            if (id == regIdExt_) {
+               regIdExt_.clear();
+               cbRegisterExt();
+            } else if (id == regIdInt_) {
+               regIdInt_.clear();
+               cbRegisterInt();
+            }
+         }
+      }
+   }
+
+   if (!unconfTgtRegIds_.empty()) {
       for (const auto &id : ids) {
-         if (id.isNull()) {
-            continue;
+         const auto it = std::find(unconfTgtRegIds_.cbegin(), unconfTgtRegIds_.cend(), id.toBinStr());
+         if (it != unconfTgtRegIds_.end()) {
+            unconfTgtRegIds_.erase(it);
          }
-         logger_->debug("[{}] {}: id={}, extId={}, intId={}", __func__, walletId()
-            , id.toBinStr(), regIdExt_, regIdInt_);
-         if (id == regIdExt_) {
-            regIdExt_.clear();
-            cbRegisterExt();
-         } else if (id == regIdInt_) {
-            regIdInt_.clear();
-            cbRegisterInt();
-         }
+      }
+
+      if (unconfTgtRegIds_.empty()) {
+         bs::sync::Wallet::init();
       }
    }
 }
@@ -157,14 +172,13 @@ void hd::Leaf::postOnline()
    if (firstInit_)
       return;
 
-   setUnconfirmedTarget();
+   unconfTgtRegIds_ = setUnconfirmedTarget();
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
       if (wct_) {
          wct_->walletReady(walletId());
       }
    };
-   bs::sync::Wallet::init();
    const bool rc = getAddressTxnCounts([this, cbTrackAddrChain] {
       trackChainAddressUse(cbTrackAddrChain);
    });
@@ -204,6 +218,7 @@ void hd::Leaf::reset()
    if (wct_) {
       wct_->walletReset(walletId());
    }
+   unconfTgtRegIds_.clear();
 }
 
 const std::string& hd::Leaf::walletId() const
@@ -283,8 +298,7 @@ std::vector<BinaryData> hd::Leaf::getAddrHashesExt() const
    std::vector<BinaryData> result;
    result.insert(result.end(), addrPrefixedHashes_.external.cbegin(), addrPrefixedHashes_.external.cend());
    for (const auto &addr : addressPool_) {
-      const auto path = addr.first.path;
-      if (path.get(-2) == addrTypeExternal) {
+      if (addr.first.path.get(-2) == addrTypeExternal) {
          result.push_back(addr.second.id());
       }
    }
@@ -296,8 +310,7 @@ std::vector<BinaryData> hd::Leaf::getAddrHashesInt() const
    std::vector<BinaryData> result;
    result.insert(result.end(), addrPrefixedHashes_.internal.cbegin(), addrPrefixedHashes_.internal.cend());
    for (const auto &addr : addressPool_) {
-      const auto path = addr.first.path;
-      if (path.get(-2) == addrTypeInternal) {
+      if (addr.first.path.get(-2) == addrTypeInternal) {
          result.push_back(addr.second.id());
       }
    }
@@ -325,15 +338,15 @@ std::vector<std::string> hd::Leaf::registerWallet(
 
       std::unique_lock<std::mutex> lock(regMutex_);
       btcWallet_ = armory_->instantiateWallet(walletId());
-      regIdExt_ = armory_->registerWallet(
-         walletId(), walletId(), addrsExt, cbRegistered, asNew);
+      regIdExt_ = armory_->registerWallet(btcWallet_
+         , walletId(), walletId(), addrsExt, cbRegistered, asNew);
       regIds.push_back(regIdExt_);
 
       if (!isExtOnly_) {
-         regIdInt_ = armory_->registerWallet(
-            walletIdInt(), walletId(), addrsInt, cbRegistered, asNew);
-         regIds.push_back(regIdInt_);
          btcWalletInt_ = armory_->instantiateWallet(walletIdInt());
+         regIdInt_ = armory_->registerWallet(btcWalletInt_
+            , walletIdInt(), walletId(), addrsInt, cbRegistered, asNew);
+         regIds.push_back(regIdInt_);
       }
       logger_->debug("[{}] registered {}+{} addresses in {}, {} regIds {} {}"
          , __func__, addrsExt.size(), addrsInt.size(), walletId(), regIds.size()
@@ -428,7 +441,7 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
       throw std::runtime_error("uninitialized sign container");
    }
 
-   auto fillUpAddressPoolCallback = [this, cb](
+   auto fillUpAddressPoolCallback = [this, extInt, cb](
       const std::vector<std::pair<bs::Address, std::string>>& addrVec)
    {
       /***
@@ -439,16 +452,14 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
       with the DB, which is why they are only saved in the pool.
       ***/
 
-      for (const auto &addrPair : addrVec)
-      {
+      for (const auto &addrPair : addrVec) {
          const auto path = bs::hd::Path::fromString(addrPair.second);
          addressPool_[{ path, addrPair.first.getType() }] = addrPair.first;
          poolByAddr_[addrPair.first] = { path, addrPair.first.getType() };
       }
 
       //register new addresses with db
-      if (armory_)
-      {
+      if (armory_) {
          std::vector<BinaryData> addrHashes;
          for (auto& addrPair : addrVec)
             addrHashes.push_back(addrPair.first.prefixed());
@@ -460,8 +471,14 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
             promPtr->set_value(true);
          };
 
-         armory_->registerWallet(
-            walletId(), walletId(), addrHashes, cbRegistered, true);
+         if (extInt) {
+            armory_->registerWallet(btcWallet_
+               , walletId(), walletId(), addrHashes, cbRegistered, true);
+         }
+         else {
+            armory_->registerWallet(btcWalletInt_
+               , walletIdInt(), walletId(), addrHashes, cbRegistered, true);
+         }
          fut.wait();
       }
       

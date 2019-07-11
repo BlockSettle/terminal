@@ -451,8 +451,12 @@ bool ZmqBIP15XDataConnection::SetZMQTransport(ZMQTransport transport)
 // static
 BinaryData ZmqBIP15XDataConnection::getOwnPubKey(const string &ownKeyFileDir, const string &ownKeyFileName)
 {
-   AuthorizedPeers authPeers(ownKeyFileDir, ownKeyFileName);
-   return getOwnPubKey(authPeers);
+   try {
+      AuthorizedPeers authPeers(ownKeyFileDir, ownKeyFileName);
+      return getOwnPubKey(authPeers);
+   }
+   catch (const std::exception &) { }
+   return {};
 }
 
 // static
