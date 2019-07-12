@@ -2,7 +2,6 @@
 #include "ui_SearchWidget.h"
 #include "UserSearchModel.h"
 
-#include <QDebug>
 #include <QTimer>
 #include <QMenu>
 
@@ -30,6 +29,8 @@ SearchWidget::SearchWidget(QWidget *parent)
    connect(ui_->searchResultTreeView, &ChatSearchListVew::customContextMenuRequested,
            this, &SearchWidget::showContextMenu);
    connect(ui_->searchResultTreeView, &ChatSearchListVew::activated,
+           this, &SearchWidget::onItemClicked);
+   connect(ui_->searchResultTreeView, &ChatSearchListVew::clicked,
            this, &SearchWidget::onItemClicked);
    connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveRequired,
            this, &SearchWidget::leaveSearchResults);
