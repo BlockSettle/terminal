@@ -16,7 +16,6 @@
 #include "CelerProperty.h"
 #include "IdStringGenerator.h"
 
-class ConnectionManager;
 class CommandSequence;
 class DataConnection;
 class BaseCelerCommand;
@@ -52,7 +51,7 @@ public:
    using message_handler = std::function<bool (const std::string&)>;
 
 public:
-   CelerClient(const std::shared_ptr<ConnectionManager>& connectionManager, bool userIdRequired = true);
+   CelerClient(const std::shared_ptr<spdlog::logger> &logger, bool userIdRequired = true);
    ~CelerClient() noexcept override = default;
 
    CelerClient(const CelerClient&) = delete;
@@ -85,8 +84,9 @@ public:
    static void UpdateSetFromString(const std::string& value, std::unordered_set<std::string> &set);
    static std::string SetToString(const std::unordered_set<std::string> &set);
 
+   virtual void CloseConnection();
+
 public slots:
-   void CloseConnection();
    void sendHeartbeat();
 
    void onTimerRestart();
@@ -129,9 +129,10 @@ private:
 
    static void AddToSet(const std::string& address, std::unordered_set<std::string> &set);
 
+protected:
+   std::shared_ptr<spdlog::logger> logger_;
+
 private:
-   std::shared_ptr<ConnectionManager>     connectionManager_;
-   std::shared_ptr<spdlog::logger>        logger_;
    QTimer                                 *heartbeatTimer_;
 
    using commandsQueueType = std::queue< std::shared_ptr<BaseCelerCommand> >;

@@ -41,7 +41,7 @@ bool CelerMarketDataProvider::StartMDConnection()
 
    emit StartConnecting();
 
-   celerClient_ = std::make_shared<CelerClient>(connectionManager_, false);
+   celerClient_ = std::make_shared<CelerClient>(logger_, false);
 
    celerClient_->RegisterHandler(CelerAPI::SecurityListingDownstreamEventType
       , [this](const std::string& data) { return ProcessSecurityListingEvent(data); });

@@ -14,9 +14,8 @@
 
 using namespace com::celertech::baseserver::communication::protobuf;
 
-CelerClient::CelerClient(const std::shared_ptr<ConnectionManager>& connectionManager, bool userIdRequired)
-   : connectionManager_(connectionManager)
-   , logger_(connectionManager->GetLogger())
+CelerClient::CelerClient(const std::shared_ptr<spdlog::logger> &logger, bool userIdRequired)
+   : logger_(logger)
    , userId_(CelerUserProperties::UserIdPropertyName)
    , submittedAuthAddressListProperty_(CelerUserProperties::SubmittedBtcAuthAddressListPropertyName)
    , submittedCCAddressListProperty_(CelerUserProperties::SubmittedCCAddressListPropertyName)
