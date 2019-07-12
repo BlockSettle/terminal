@@ -606,7 +606,7 @@ std::shared_ptr<hd::Leaf> hd::SettlementGroup::createLeaf(
    else
    {
       //wo wallet, create ECDH account from the compressed pubkey
-      auto& pubKeyObj = assetSingle->getPubKey();
+      const auto &pubKeyObj = assetSingle->getPubKey();
       initLeaf(leaf, SecureBinaryData(), pubKeyObj->getCompressedKey());
    }
 

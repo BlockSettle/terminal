@@ -468,7 +468,7 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
             bool updated = false;
             {
                std::unique_lock<std::mutex> lock(addrMapsMtx_);
-               auto &itTxn = addressTxNMap_.find(addr.id());
+               const auto &itTxn = addressTxNMap_.find(addr.id());
                if (itTxn != addressTxNMap_.end()) {
                   itTxn->second++;
                   updated = true;
