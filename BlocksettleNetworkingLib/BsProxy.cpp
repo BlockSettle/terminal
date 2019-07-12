@@ -313,7 +313,10 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
 
    connect(client->autheid.get(), &AutheIDClient::userCancelled, this, [this, client, requestId] {
       BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidResult);
-      client->state = State::Closed;
+
+      // Request was cancelled from mobile device.
+      // Allow client try login one more time.
+      client->state = State::UnknownClient;
 
       Response response;
       auto d = response.mutable_get_login_result();
