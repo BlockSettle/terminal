@@ -57,21 +57,22 @@ public:
 
    const BsClientParams &params() const { return params_; }
 
-   const autheid::PrivateKey &ephemeralPrivKey() const;
-
    void startLogin(const std::string &email);
+
+   // Cancel login. Please note that this will close channel.
    void cancelLogin();
    void getLoginResult();
    void logout();
    void celerSend(CelerAPI::CelerMessageType messageType, const std::string &data);
 
+   static std::chrono::seconds getDefaultAutheidAuthTimeout();
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
    void getLoginResultDone(AutheIDClient::ErrorType status);
-   void logoutDone();
    void celerRecv(CelerAPI::CelerMessageType messageType, const std::string &data);
 
    void connected();
+   void disconnected();
    void connectionFailed();
 private:
    using FailedCallback = std::function<void()>;
@@ -95,9 +96,7 @@ private:
    void sendMessage(Blocksettle::Communication::Proxy::Request *request);
 
    void processStartLogin(const Blocksettle::Communication::Proxy::Response_StartLogin &response);
-   void processCancelLogin(const Blocksettle::Communication::Proxy::Response_CancelLogin &response);
    void processGetLoginResult(const Blocksettle::Communication::Proxy::Response_GetLoginResult &response);
-   void processLogout(const Blocksettle::Communication::Proxy::Response_Logout &response);
    void processCeler(const Blocksettle::Communication::Proxy::Response_Celer &response);
 
    int64_t newRequestId();

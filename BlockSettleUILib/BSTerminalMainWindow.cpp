@@ -194,16 +194,11 @@ void BSTerminalMainWindow::onMDConnectionDetailsRequired()
    GetNetworkSettingsFromPuB([this]() { OnNetworkSettingsLoaded(); } );
 }
 
-void BSTerminalMainWindow::onBsConnected()
-{
-}
-
 void BSTerminalMainWindow::onBsConnectionFailed()
 {
-}
-
-void BSTerminalMainWindow::onBsLogoutDone()
-{
+   SPDLOG_LOGGER_ERROR(logMgr_->logger(), "BsClient disconnected unexpectedly");
+   onCelerDisconnected();
+   showError(tr("Network error"), tr("Connection to BlockSettle server failed"));
 }
 
 void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
@@ -1799,7 +1794,6 @@ void BSTerminalMainWindow::createBsClient()
 
    bsClient_ = std::make_unique<BsClient>(logMgr_->logger(), params);
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
-   connect(bsClient_.get(), &BsClient::logoutDone, this, &BSTerminalMainWindow::onBsLogoutDone);
 
    connect(bsClient_.get(), &BsClient::celerRecv, celerConnection_.get(), &CelerClient::recvData);
    connect(celerConnection_.get(), &CelerClient::sendData, bsClient_.get(), &BsClient::celerSend);

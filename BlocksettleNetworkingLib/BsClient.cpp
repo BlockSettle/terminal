@@ -57,8 +57,7 @@ void BsClient::cancelLogin()
 {
    Request request;
    request.mutable_cancel_login();
-
-   sendRequest(&request, std::chrono::seconds(10));
+   sendMessage(&request);
 }
 
 void BsClient::getLoginResult()
@@ -66,9 +65,16 @@ void BsClient::getLoginResult()
    Request request;
    request.mutable_get_login_result();
 
-   sendRequest(&request, std::chrono::seconds(60), [this] {
+   sendRequest(&request, getDefaultAutheidAuthTimeout(), [this] {
       emit getLoginResultDone(AutheIDClient::NetworkError);
    });
+}
+
+void BsClient::logout()
+{
+   Request request;
+   request.mutable_logout();
+   sendMessage(&request);
 }
 
 void BsClient::celerSend(CelerAPI::CelerMessageType messageType, const std::string &data)
@@ -78,6 +84,11 @@ void BsClient::celerSend(CelerAPI::CelerMessageType messageType, const std::stri
    d->set_message_type(int(messageType));
    d->set_data(data);
    sendMessage(&request);
+}
+
+std::chrono::seconds BsClient::getDefaultAutheidAuthTimeout()
+{
+   return std::chrono::seconds(60);
 }
 
 void BsClient::timerEvent(QTimerEvent *event)
@@ -124,14 +135,8 @@ void BsClient::OnDataReceived(const std::string &data)
          case Response::kStartLogin:
             processStartLogin(response->start_login());
             return;
-         case Response::kCancelLogin:
-            processCancelLogin(response->cancel_login());
-            return;
          case Response::kGetLoginResult:
             processGetLoginResult(response->get_login_result());
-            return;
-         case Response::kLogout:
-            processLogout(response->logout());
             return;
          case Response::kCeler:
             processCeler(response->celer());
@@ -146,14 +151,19 @@ void BsClient::OnDataReceived(const std::string &data)
 
 void BsClient::OnConnected()
 {
+   emit connected();
 }
 
 void BsClient::OnDisconnected()
 {
+   emit disconnected();
 }
 
 void BsClient::OnError(DataConnectionListener::DataConnectionError errorCode)
 {
+   SPDLOG_LOGGER_ERROR(logger_, "connection to bs proxy failed ({})", int(errorCode));
+
+   emit connectionFailed();
 }
 
 void BsClient::sendRequest(Request *request, std::chrono::milliseconds timeout
@@ -182,17 +192,9 @@ void BsClient::processStartLogin(const Response_StartLogin &response)
    emit startLoginDone(AutheIDClient::ErrorType(response.error_code()));
 }
 
-void BsClient::processCancelLogin(const Response_CancelLogin &response)
-{
-}
-
 void BsClient::processGetLoginResult(const Response_GetLoginResult &response)
 {
    emit getLoginResultDone(AutheIDClient::ErrorType(response.error_code()));
-}
-
-void BsClient::processLogout(const Response_Logout &response)
-{
 }
 
 void BsClient::processCeler(const Response_Celer &response)

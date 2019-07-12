@@ -210,9 +210,7 @@ private slots:
 
    void onMDConnectionDetailsRequired();
 
-   void onBsConnected();
    void onBsConnectionFailed();
-   void onBsLogoutDone();
 
 protected:
    void closeEvent(QCloseEvent* event) override;

@@ -3,6 +3,7 @@
 #include <QThread>
 #include <QNetworkAccessManager>
 #include "AutheIDClient.h"
+#include "BsClient.h"
 #include "CelerMessageMapper.h"
 #include "ConnectionManager.h"
 #include "DataConnection.h"
@@ -256,7 +257,8 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
    client->state = State::WaitAutheidStart;
    client->email = request.email();
    const bool autoRequestResult = false;
-   client->autheid->authenticate(request.email(), 120, autoRequestResult);
+   const int authTimeout = int(BsClient::getDefaultAutheidAuthTimeout() / std::chrono::seconds(1));
+   client->autheid->authenticate(request.email(), authTimeout, autoRequestResult);
 }
 
 void BsProxy::processCancelLogin(Client *client, int64_t requestId, const Request_CancelLogin &request)
@@ -264,12 +266,9 @@ void BsProxy::processCancelLogin(Client *client, int64_t requestId, const Reques
    SPDLOG_LOGGER_INFO(logger_, "process cancel login request from {}", bs::toHex(client->clientId));
    BS_VERIFY_RETURN(logger_, client->state == State::WaitAutheidResult || client->state == State::WaitClientGetResult);
 
+   // We could safely close connection, terminal will need to start new one if needed
    client->state = State::Closed;
    client->autheid->cancel();
-
-   Response response;
-   response.mutable_cancel_login();
-   sendResponse(client, requestId, &response);
 }
 
 void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Request_GetLoginResult &request)
@@ -277,7 +276,7 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
    SPDLOG_LOGGER_INFO(logger_, "process get login result request from {}", bs::toHex(client->clientId));
    BS_VERIFY_RETURN(logger_, client->state == State::WaitClientGetResult);
 
-   // Need to disconnect `AutheIDClient::failed` signal here because we don't need old callback anymore
+   // Need to disconnect `AutheIDClient::failed` signal here because we don't need old callbacks anymore
    client->autheid->disconnect();
 
    connect(client->autheid.get(), &AutheIDClient::authSuccess, this, [this, client, requestId](const std::string &jwt) {
