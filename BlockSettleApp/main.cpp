@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QFontDatabase>
 #include <QLockFile>
+#include <QScreen>
 #include <QStandardPaths>
 #include <QThread>
 #include <QtPlugin>
@@ -108,6 +109,17 @@ static void checkStyleSheet(QApplication &app)
    app.setStyleSheet(QString::fromLatin1(stylesheetFile.readAll()));
 }
 
+QScreen *getDisplay(QPoint position)
+{
+   for (auto currentScreen : QGuiApplication::screens()) {
+      if (currentScreen->availableGeometry().contains(position, false)) {
+         return currentScreen;
+      }
+   }
+
+   return QGuiApplication::primaryScreen();
+}
+
 static int GuiApp(int &argc, char** argv)
 {
    Q_INIT_RESOURCE(armory);
@@ -195,6 +207,12 @@ static int GuiApp(int &argc, char** argv)
    QPixmap splashLogo(logoIcon);
    const int splashScreenWidth = 400;
    BSTerminalSplashScreen splashScreen(splashLogo.scaledToWidth(splashScreenWidth, Qt::SmoothTransformation));
+
+   auto mainGeometry = settings->get<QRect>(ApplicationSettings::GUI_main_geometry);
+   auto currentDisplay = getDisplay(mainGeometry.center());
+   auto splashGeometry = splashScreen.geometry();
+   splashGeometry.moveCenter(currentDisplay->geometry().center());
+   splashScreen.setGeometry(splashGeometry);
 
    splashScreen.show();
    app.processEvents();
