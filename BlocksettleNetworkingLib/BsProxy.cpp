@@ -18,7 +18,6 @@
 
 using namespace Blocksettle::Communication::Proxy;
 using namespace autheid;
-using namespace com::celertech::baseserver::communication::protobuf;
 
 namespace {
 
@@ -93,6 +92,7 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
 
    bool result = server_->BindConnection(params.listenAddress, std::to_string(params.listenPort), serverListener_.get());
    if (!result) {
+      SPDLOG_LOGGER_CRITICAL(logger_, "can't bind to {}:{}", params.listenAddress, params.listenPort);
       throw std::runtime_error(fmt::format("can't bind to {}:{}", params.listenAddress, params.listenPort));
    }
 
@@ -180,7 +180,7 @@ void BsProxy::onCelerDataReceived(const std::string &clientId, const std::string
       BS_ASSERT_RETURN(logger_, client);
       BS_VERIFY_RETURN(logger_, client->state == State::LoggedIn);
 
-      ProtobufMessage celerMsg;
+      com::celertech::baseserver::communication::protobuf::ProtobufMessage celerMsg;
 
       bool result = celerMsg.ParseFromString(data);
       if (!result) {
@@ -204,19 +204,20 @@ void BsProxy::onCelerDataReceived(const std::string &clientId, const std::string
 
 void BsProxy::onCelerConnected(const std::string &clientId)
 {
-   QMetaObject::invokeMethod(this, [this, clientId] {
-   });
+   // TODO: Queue requests before we connect to Celer
 }
 
 void BsProxy::onCelerDisconnected(const std::string &clientId)
 {
    QMetaObject::invokeMethod(this, [this, clientId] {
+      // TODO: Close connection and send error to client
    });
 }
 
 void BsProxy::onCelerError(const std::string &clientId, DataConnectionListener::DataConnectionError errorCode)
 {
    QMetaObject::invokeMethod(this, [this, clientId, errorCode] {
+      // TODO: Close connection and send error to client
    });
 }
 
@@ -329,6 +330,7 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
 
 void BsProxy::processLogout(Client *client, int64_t requestId, const Request_Logout &request)
 {
+   // TODO: Close Celer connection
 }
 
 void BsProxy::processCeler(BsProxy::Client *client, const Request_Celer &request)
@@ -356,7 +358,7 @@ void BsProxy::processCeler(BsProxy::Client *client, const Request_Celer &request
    std::string fullClassName = CelerAPI::GetMessageClass(messageType);
    BS_ASSERT_RETURN(logger_, !fullClassName.empty());
 
-   ProtobufMessage message;
+   com::celertech::baseserver::communication::protobuf::ProtobufMessage message;
    message.set_protobufclassname(fullClassName);
    message.set_protobufmessagecontents(dataOverride);
    client->celer_->send(message.SerializeAsString());

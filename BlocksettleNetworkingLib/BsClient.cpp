@@ -3,6 +3,7 @@
 #include <QTimer>
 #include "ProtobufUtils.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "LoggerHelpers.h"
 #include "bs_proxy.pb.h"
 
 using namespace Blocksettle::Communication::Proxy;
@@ -13,8 +14,6 @@ BsClient::BsClient(const std::shared_ptr<spdlog::logger> &logger
    , logger_(logger)
    , params_(params)
 {
-   startTimer(std::chrono::milliseconds(1000));
-
    ZmqBIP15XDataConnectionParams zmqBipParams;
    zmqBipParams.ephemeralPeers = true;
    connection_ = std::make_unique<ZmqBIP15XDataConnection>(logger, zmqBipParams);
@@ -29,11 +28,9 @@ BsClient::BsClient(const std::shared_ptr<spdlog::logger> &logger
       params_.newServerKeyCallback(d);
    });
 
+   // This should not ever fail normally
    bool result = connection_->openConnection(params_.connectAddress, std::to_string(params_.connectPort), this);
-   if (!result) {
-      throw std::invalid_argument(fmt::format("can't open BsClient connection to {}:{}"
-         , params_.connectAddress, params_.connectPort));
-   }
+   BS_ASSERT_RETURN(logger, result);
 }
 
 BsClient::~BsClient()
@@ -91,24 +88,6 @@ std::chrono::seconds BsClient::getDefaultAutheidAuthTimeout()
    return std::chrono::seconds(60);
 }
 
-void BsClient::timerEvent(QTimerEvent *event)
-{
-   const auto now = std::chrono::steady_clock::now();
-   auto it = activeRequests_.begin();
-   while (it != activeRequests_.end() && it->first < now) {
-      auto activeRequest = std::move(it->second);
-      it = activeRequests_.erase(it);
-
-      auto itId = activeRequestIds_.find(activeRequest.requestId);
-      if (itId != activeRequestIds_.end()) {
-         activeRequestIds_.erase(itId);
-         if (activeRequest.failedCb) {
-            activeRequest.failedCb();
-         }
-      }
-   }
-}
-
 void BsClient::OnDataReceived(const std::string &data)
 {
    auto response = std::make_shared<Response>();
@@ -118,17 +97,19 @@ void BsClient::OnDataReceived(const std::string &data)
       return;
    }
 
-   SPDLOG_LOGGER_DEBUG(logger_, "bs recv: {}", ProtobufUtils::toJsonCompact(*response));
+   if (response->data_case() != Response::kCeler) {
+      SPDLOG_LOGGER_DEBUG(logger_, "bs recv: {}", ProtobufUtils::toJsonCompact(*response));
+   }
 
    QMetaObject::invokeMethod(this, [this, response] {
       if (response->request_id() != 0) {
-         auto it = activeRequestIds_.find(response->request_id());
-         if (it == activeRequestIds_.end()) {
+         auto it = activeRequests_.find(response->request_id());
+         if (it == activeRequests_.end()) {
             SPDLOG_LOGGER_ERROR(logger_, "discard late response from BsProxy (requestId: {})", response->request_id());
             return;
          }
 
-         activeRequestIds_.erase(it);
+         activeRequests_.erase(it);
       }
 
       switch (response->data_case()) {
@@ -169,20 +150,30 @@ void BsClient::OnError(DataConnectionListener::DataConnectionError errorCode)
 void BsClient::sendRequest(Request *request, std::chrono::milliseconds timeout
    , FailedCallback failedCb)
 {
+   const int64_t requestId = newRequestId();
    ActiveRequest activeRequest;
-   activeRequest.requestId = newRequestId();
    activeRequest.failedCb = std::move(failedCb);
+   activeRequests_.emplace(requestId, std::move(activeRequest));
 
-   activeRequestIds_.insert(activeRequest.requestId);
-   activeRequests_.emplace(std::chrono::steady_clock::now() + timeout, std::move(activeRequest));
+   QTimer::singleShot(timeout, this, [this, requestId] {
+      auto it = activeRequests_.find(requestId);
+      if (it == activeRequests_.end()) {
+         return;
+      }
 
-   request->set_request_id(activeRequest.requestId);
+      it->second.failedCb();
+      activeRequests_.erase(it);
+   });
+
+   request->set_request_id(requestId);
    sendMessage(request);
 }
 
 void BsClient::sendMessage(Request *request)
 {
-   SPDLOG_LOGGER_DEBUG(logger_, "bs send: {}", ProtobufUtils::toJsonCompact(*request));
+   if (request->data_case() != Request::kCeler) {
+      SPDLOG_LOGGER_DEBUG(logger_, "bs send: {}", ProtobufUtils::toJsonCompact(*request));
+   }
 
    connection_->send(request->SerializeAsString());
 }

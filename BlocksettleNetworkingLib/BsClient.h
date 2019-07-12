@@ -20,9 +20,7 @@ class ZmqBIP15XDataConnection;
 namespace Blocksettle { namespace Communication { namespace Proxy {
 class Request;
 class Response_StartLogin;
-class Response_CancelLogin;
 class Response_GetLoginResult;
-class Response_Logout;
 class Response_Celer;
 } } }
 
@@ -79,11 +77,8 @@ private:
 
    struct ActiveRequest
    {
-      int64_t requestId{};
       FailedCallback failedCb;
    };
-
-   void timerEvent(QTimerEvent *event) override;
 
    // From DataConnectionListener
    void OnDataReceived(const std::string& data) override;
@@ -91,8 +86,8 @@ private:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   void sendRequest(Blocksettle::Communication::Proxy::Request *request, std::chrono::milliseconds timeout
-      , FailedCallback failedCb = nullptr);
+   void sendRequest(Blocksettle::Communication::Proxy::Request *request
+      , std::chrono::milliseconds timeout, FailedCallback failedCb);
    void sendMessage(Blocksettle::Communication::Proxy::Request *request);
 
    void processStartLogin(const Blocksettle::Communication::Proxy::Response_StartLogin &response);
@@ -107,11 +102,8 @@ private:
 
    std::unique_ptr<ZmqBIP15XDataConnection> connection_;
 
+   std::unordered_map<int64_t, ActiveRequest> activeRequests_;
    int64_t lastRequestId_{};
-   FailedCallback failedCallback_;
-
-   std::unordered_set<int64_t> activeRequestIds_;
-   std::map<std::chrono::steady_clock::time_point, ActiveRequest> activeRequests_;
 };
 
 #endif

@@ -48,6 +48,9 @@ struct BsProxyParams
    std::function<bool(BsProxy *proxy, const std::string &login)> verifyCallback;
 };
 
+// BsProxy should live in separate QThread to not cause congestion.
+// All processing will be done in async on that thread (so there is no need for locks).
+// Multiple proxy instances could be started at the same time (need will need to bind to different ports).
 class BsProxy : public QObject
 {
    Q_OBJECT

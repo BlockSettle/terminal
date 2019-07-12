@@ -27,6 +27,7 @@ message Request
         bytes data = 2;
     }
 
+    // Set for requests and server will copy them back in response
     int64 request_id = 1;
 
     oneof data

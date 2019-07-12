@@ -55,6 +55,7 @@ bool CelerClient::LoginToServer(const std::string& login, const std::string& pas
 
    AddInternalSequence(loginSequence);
 
+   // BsProxy will wait when Celer connects and will queue requests before that
    OnConnected();
 
    return true;
