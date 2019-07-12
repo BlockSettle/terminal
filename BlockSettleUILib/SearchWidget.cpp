@@ -2,6 +2,7 @@
 #include "ui_SearchWidget.h"
 #include "UserSearchModel.h"
 
+#include <QDebug>
 #include <QTimer>
 #include <QMenu>
 
@@ -156,7 +157,8 @@ void SearchWidget::showContextMenu(const QPoint &pos)
    if (!index.isValid()) {
       return;
    }
-   auto status = index.data(UserSearchModel::UserStatusRole).value<UserSearchModel::UserStatus>();
+   onItemClicked(index);
+   /*auto status = index.data(UserSearchModel::UserStatusRole).value<UserSearchModel::UserStatus>();
    QString id = index.data(Qt::DisplayRole).toString();
    switch (status) {
    case UserSearchModel::UserStatus::ContactUnknown: {
@@ -178,7 +180,7 @@ void SearchWidget::showContextMenu(const QPoint &pos)
    default:
       return;
    }
-   menu->exec(ui_->searchResultTreeView->mapToGlobal(pos));
+   menu->exec(ui_->searchResultTreeView->mapToGlobal(pos));*/
 }
 
 void SearchWidget::focusResults()
