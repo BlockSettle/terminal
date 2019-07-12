@@ -83,7 +83,6 @@ namespace bs {
 
             std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
                , bool asNew = false) override;
-            void unregisterWallet() override;
 
             std::vector<BinaryData> getAddrHashes() const override;
             std::vector<BinaryData> getAddrHashesExt() const;

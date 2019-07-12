@@ -356,16 +356,6 @@ std::vector<std::string> hd::Leaf::registerWallet(
    return {};
 }
 
-void hd::Leaf::unregisterWallet()
-{
-   Wallet::unregisterWallet();
-   /*if (armory_)
-      armory_->registerWallet(btcWalletInt_, getWalletIdInt(), {}, [](const std::string &){}, false);*/
-
-   btcWallet_.reset();
-   btcWalletInt_.reset();
-}
-
 void hd::Leaf::createAddress(const CbAddress &cb, AddressEntryType aet, bool isInternal)
 {
    bs::hd::Path addrPath;
