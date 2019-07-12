@@ -2837,8 +2837,8 @@ TEST_F(TestWalletWithArmory, SignSettlement)
       //create tx request
       const auto txReq = syncLeaf->createTXRequest(utxos,
          {
-            settlementRootAddress.getRecipient(20 * COIN),
-            msAddress.getRecipient(30 * COIN)
+            settlementRootAddress.getRecipient((uint64_t)(20 * COIN)),
+            msAddress.getRecipient((uint64_t)(30 * COIN))
          },
          0, false);
 
