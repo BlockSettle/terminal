@@ -1241,6 +1241,13 @@ bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, head
          groupData->set_type(group->index());
          groupData->set_ext_only(hdWallet->isExtOnly());
 
+         if (group->index() == bs::hd::CoinType::BlockSettle_Auth) {
+            const auto authGroup = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
+            if (authGroup) {
+               groupData->set_salt(authGroup->getSalt().toBinStr());
+            }
+         }
+
          if (static_cast<bs::hd::CoinType>(group->index()) == bs::hd::CoinType::BlockSettle_Auth) {
             continue;      // don't sync leaves for auth before setUserId is asked
          }

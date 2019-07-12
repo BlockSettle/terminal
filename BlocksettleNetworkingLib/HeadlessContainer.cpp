@@ -753,8 +753,6 @@ void HeadlessContainer::syncWalletInfo(const std::function<void(std::vector<bs::
 
 void HeadlessContainer::syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &cb)
 {
-   throw std::runtime_error("implement salt passthrough for auth group synchronization. InprocSigner::syncHDWallet");
-   
    headless::SyncWalletRequest request;
    request.set_walletid(id);
 
@@ -962,6 +960,7 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
       bs::sync::HDWalletData::Group group;
       group.type = static_cast<bs::hd::CoinType>(groupInfo.type());
       group.extOnly = groupInfo.ext_only();
+      group.salt = groupInfo.salt();
       for (int j = 0; j < groupInfo.leaves_size(); ++j) {
          const auto leafInfo = groupInfo.leaves(j);
          if (isWoRoot) {
