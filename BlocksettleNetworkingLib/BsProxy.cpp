@@ -25,6 +25,9 @@ namespace {
       return ZmqBIP15XPeers();
    }
 
+   std::string g_celerHostOverride;
+   int g_celerPortOverride;
+
 } // namespace
 
 class BsProxyListener : public ServerConnectionListener
@@ -95,6 +98,13 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
    nam_ = std::make_shared<QNetworkAccessManager>(this);
 
    connectionManager_ = std::make_shared<ConnectionManager>(logger_);
+}
+
+// static
+void BsProxy::overrideCelerHost(const std::string &host, int port)
+{
+   g_celerHostOverride = host;
+   g_celerPortOverride = port;
 }
 
 BsProxy::~BsProxy() = default;
@@ -281,8 +291,11 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
       client->celerListener_->clientId_ = client->clientId;
 
       client->celer_ = connectionManager_->CreateCelerClientConnection();
-      client->celer_->openConnection(params_.celerHost, std::to_string(params_.celerPort)
-         , client->celerListener_.get());
+
+      const std::string &host = g_celerHostOverride.empty() ? params_.celerHost : g_celerHostOverride;
+      const int port = g_celerHostOverride.empty() ? params_.celerPort : g_celerPortOverride;
+
+      client->celer_->openConnection(host, std::to_string(port), client->celerListener_.get());
    });
 
    connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId] {

@@ -64,8 +64,6 @@ public:
       customPubBridgePort,
       pubBridgePubKey,
       envConfiguration,
-      celerHost,
-      celerPort,
       mdServerHost,
       mdServerPort,
       mdhsHost,

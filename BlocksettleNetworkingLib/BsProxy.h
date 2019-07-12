@@ -57,6 +57,8 @@ public:
    ~BsProxy();
 
    const BsProxyParams &params() const { return params_; }
+
+   static void overrideCelerHost(const std::string &host, int port);
 private:
    friend class BsProxyListener;
    friend class BsClientCelerListener;

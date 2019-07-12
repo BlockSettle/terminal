@@ -36,8 +36,7 @@ CelerClient::CelerClient(const std::shared_ptr<ConnectionManager>& connectionMan
    celerUserType_ = CelerUserType::Undefined;
 }
 
-bool CelerClient::LoginToServer(const std::string& hostname, const std::string& port
-      , const std::string& login, const std::string& password)
+bool CelerClient::LoginToServer(const std::string& login, const std::string& password)
 {
    // create user login sequence
    std::string loginString = login;

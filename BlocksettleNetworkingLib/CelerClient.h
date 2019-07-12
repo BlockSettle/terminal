@@ -61,8 +61,7 @@ public:
    CelerClient(CelerClient&&) = delete;
    CelerClient& operator = (CelerClient&&) = delete;
 
-   bool LoginToServer(const std::string& hostname, const std::string& port
-      , const std::string& login, const std::string& password);
+   bool LoginToServer(const std::string& login, const std::string& password);
 
    bool RegisterHandler(CelerAPI::CelerMessageType messageType, const message_handler& handler);
 

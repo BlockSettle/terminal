@@ -64,16 +64,16 @@
 
 namespace {
 
-   void startTestProxy(const std::shared_ptr<spdlog::logger> &logger)
+   void startTestProxy(const std::shared_ptr<spdlog::logger> &logger, bool autheidTestEnv)
    {
       BsProxyParams params;
       params.context = std::make_shared<ZmqContext>(logger);
       params.ownKeyFileDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toStdString();
       params.ownKeyFileName = "bs_proxy_tmp.peers";
-      params.autheidApiKey = "Bearer live_opnKv0PyeML0WvYm66ka2k29qPPoDjS3rzw13bRJzITY";
-      params.autheidTestEnv = true;
-      params.celerHost = "104.155.117.179";
-      params.celerPort = 16001;
+      params.autheidTestEnv = autheidTestEnv;
+      params.autheidApiKey = autheidTestEnv ? "Bearer live_opnKv0PyeML0WvYm66ka2k29qPPoDjS3rzw13bRJzITY" : "Bearer live_17ec2nlP5NzHWkEAQUwVpqhN63fiyDPWGc5Z3ZQ8npaf";
+      //params.celerHost = "104.155.117.179";
+      //params.celerPort = 16001;
 
       auto proxy = new BsProxy(logger, params);
       auto thread = new QThread();
@@ -186,7 +186,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    InitWidgets();
 
-   startTestProxy(logMgr_->logger());
+   startTestProxy(logMgr_->logger(), applicationSettings_->isAutheidTestEnv());
 }
 
 void BSTerminalMainWindow::onMDConnectionDetailsRequired()
@@ -196,7 +196,6 @@ void BSTerminalMainWindow::onMDConnectionDetailsRequired()
 
 void BSTerminalMainWindow::onBsConnected()
 {
-
 }
 
 void BSTerminalMainWindow::onBsConnectionFailed()
@@ -248,8 +247,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
 
    const auto &populateAppSettings = [this](NetworkSettings settings) {
       if (!settings.celer.host.empty()) {
-         applicationSettings_->set(ApplicationSettings::celerHost, QString::fromStdString(settings.celer.host));
-         applicationSettings_->set(ApplicationSettings::celerPort, settings.celer.port);
+         BsProxy::overrideCelerHost(settings.celer.host, int(settings.celer.port));
       }
       if (!settings.marketData.host.empty()) {
          applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
@@ -1199,17 +1197,8 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::loginToCeler(const std::string& username)
 {
-   const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
-   const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
-
-   if (host.empty() || port.empty()) {
-      logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginToCeler] missing network settings for App server");
-      showError(tr("Connection error"), tr("Missing network settings for Blocksettle Server"));
-      return;
-   }
-
    // We don't use password here, BsProxy will manage authentication
-   celerConnection_->LoginToServer(host, port, username, "");
+   celerConnection_->LoginToServer(username, "");
 
    auto userName = QString::fromStdString(username);
    currentUserLogin_ = userName;
