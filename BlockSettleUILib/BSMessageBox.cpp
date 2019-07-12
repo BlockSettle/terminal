@@ -61,7 +61,8 @@ void BSMessageBox::showEvent( QShowEvent* )
 {
    if (parentWidget()) {
       QRect parentRect(parentWidget()->mapToGlobal(QPoint(0, 0)), parentWidget()->size());
-      move(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), parentRect).topLeft());
+      QRect windowGeometry = geometry();
+      windowGeometry.moveCenter(parentRect.center());
    }
 }
 
