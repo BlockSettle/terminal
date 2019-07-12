@@ -914,9 +914,9 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       }
 
       //check chain use counters
-      EXPECT_EQ(leafPtr->getUsedAddressCount(), 10);
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 5);
       EXPECT_EQ(leafPtr->getExtAddressCount(), 5);
-      EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
+      EXPECT_EQ(leafPtr->getIntAddressCount(), 0);
 
       //fetch used address list, turn it into a set, 
       //same with grabbed addresses, check they match
@@ -967,9 +967,9 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafPtr->getUsedAddressCount(), 10);
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 5);
       EXPECT_EQ(leafPtr->getExtAddressCount(), 5);
-      EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
+      EXPECT_EQ(leafPtr->getIntAddressCount(), 0);
 
       //grab new address
       {
@@ -1019,9 +1019,9 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       EXPECT_EQ(woAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafWO->getUsedAddressCount(), 12);
+      EXPECT_EQ(leafWO->getUsedAddressCount(), 6);
       EXPECT_EQ(leafWO->getExtAddressCount(), 6);
-      EXPECT_EQ(leafWO->getIntAddressCount(), 6);
+      EXPECT_EQ(leafWO->getIntAddressCount(), 0);
 
       //exiting this scope will destroy both loaded wallet and wo copy object
       woFilename = woCopy->getFileName();
@@ -1066,9 +1066,9 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafWO->getUsedAddressCount(), 12);
+      EXPECT_EQ(leafWO->getUsedAddressCount(), 6);
       EXPECT_EQ(leafWO->getExtAddressCount(), 6);
-      EXPECT_EQ(leafWO->getIntAddressCount(), 6);
+      EXPECT_EQ(leafWO->getIntAddressCount(), 0);
 
       //grab new address
       {
@@ -1082,6 +1082,216 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
          auto addr_hash = BtcUtils::getHash160(saltedKey);
          EXPECT_EQ(addr_hash, newAddr);
       }
+   }
+}
+
+TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
+{
+   std::vector<bs::Address> addrVec;
+   std::set<BinaryData> grabbedAddrHash;
+
+   std::string filename, woFilename;
+   auto&& salt = CryptoPRNG::generateRandom(32);
+   SecureBinaryData authPubKey;
+
+   std::vector<BinaryData> settlementIDs;
+   bs::Address authAddr;
+
+   SecureBinaryData passphrase("test");
+   {
+      //create a wallet
+      const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
+         "test", "", seed, passphrase, walletFolder_, envPtr_->logger());
+
+      auto group = walletPtr->createGroup(bs::hd::BlockSettle_Auth);
+      ASSERT_TRUE(group != nullptr);
+
+      auto authGroup = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
+      ASSERT_TRUE(authGroup != nullptr);
+      authGroup->setSalt(salt);
+
+      std::shared_ptr<bs::core::hd::Leaf> leafPtr;
+
+      {
+         auto lock = walletPtr->lockForEncryption(passphrase);
+         leafPtr = group->createLeaf(0, 10);
+         ASSERT_TRUE(leafPtr != nullptr);
+         ASSERT_TRUE(leafPtr->hasExtOnlyAddresses());
+      }
+
+      auto authLeafPtr = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leafPtr);
+      ASSERT_TRUE(authLeafPtr != nullptr);
+      ASSERT_EQ(authLeafPtr->getSalt(), salt);
+
+      //grab auth address and its pubkey
+      authAddr = authLeafPtr->getNewExtAddress();
+      authPubKey = authLeafPtr->getPublicKeyFor(authAddr);
+      
+      {
+         //need to lock for leaf creation
+         auto lock = walletPtr->lockForEncryption(passphrase);
+         
+         /*
+         Create settlement leaf from address, wallet will generate 
+         settlement group on the fly.
+         */
+         leafPtr = walletPtr->createSettlementLeaf(authAddr);
+         ASSERT_TRUE(leafPtr != nullptr);
+         ASSERT_TRUE(leafPtr->hasExtOnlyAddresses());
+
+      }
+
+      //create a bunch of settlementIDs
+      for (unsigned i = 0; i < 13; i++)
+         settlementIDs.push_back(CryptoPRNG::generateRandom(32));
+
+      //feed the ids to the settlement leaf
+      auto settlLeafPtr = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(leafPtr);
+      ASSERT_TRUE(settlLeafPtr != nullptr);
+      for (auto& settlID : settlementIDs)
+         settlLeafPtr->addSettlementID(settlID);
+
+      //grab a bunch of addresses
+      for (unsigned i = 0; i < 7; i++)
+         addrVec.push_back(leafPtr->getNewExtAddress());
+
+      //check address maps
+      for (unsigned i = 0; i < 7; i++)
+      {
+         auto saltedPubKey = CryptoECDSA::PubKeyScalarMultiply(
+            authPubKey, settlementIDs[i]);
+         auto addr_hash = BtcUtils::getHash160(saltedPubKey);
+
+         EXPECT_EQ(addr_hash, addrVec[i].unprefixed());
+      }
+
+      //check chain use counters
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 7);
+      EXPECT_EQ(leafPtr->getExtAddressCount(), 7);
+
+      //fetch used address list, turn it into a set, 
+      //same with grabbed addresses, check they match
+      auto usedAddrList = leafPtr->getUsedAddressList();
+      std::set<BinaryData> usedAddrHash;
+      for (auto& addr : usedAddrList)
+         usedAddrHash.insert(addr.unprefixed());
+
+      grabbedAddrHash.insert(addrVec.begin(), addrVec.end());
+
+      ASSERT_EQ(grabbedAddrHash.size(), 7);
+      EXPECT_EQ(usedAddrHash.size(), 7);
+      EXPECT_EQ(usedAddrHash, grabbedAddrHash);
+
+      //wallet object will be destroyed when on scope out
+      filename = walletPtr->getFileName();
+   }
+
+   //reload
+   {
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
+         filename, NetworkType::TestNet);
+
+      //grab settlement group
+      auto group = walletPtr->getGroup(bs::hd::BlockSettle_Settlement);
+      ASSERT_NE(group, nullptr);
+
+      //get settlement leaf from auth address path
+      auto settlLeaf = group->getLeafByPath(0);
+      ASSERT_NE(settlLeaf, nullptr);
+
+      auto usedAddrList = settlLeaf->getUsedAddressList();
+      std::set<BinaryData> usedAddrHash;
+      for (auto& addr : usedAddrList)
+         usedAddrHash.insert(addr.unprefixed());
+
+      EXPECT_EQ(usedAddrHash.size(), 7);
+      EXPECT_EQ(usedAddrHash, grabbedAddrHash);
+
+      //grab extra addresses
+      for (unsigned i = 7; i < 10; i++)
+         addrVec.push_back(settlLeaf->getNewExtAddress());
+
+      //check address maps
+      for (unsigned i = 7; i < 10; i++)
+      {
+         auto saltedPubKey = CryptoECDSA::PubKeyScalarMultiply(
+            authPubKey, settlementIDs[i]);
+         auto addr_hash = BtcUtils::getHash160(saltedPubKey);
+
+         EXPECT_EQ(addr_hash, addrVec[i].unprefixed());
+         grabbedAddrHash.insert(addrVec[i]);
+      }
+
+      //create WO
+      auto woWlt = walletPtr->createWatchingOnly();
+      woFilename = woWlt->getFileName();
+   }
+
+   //wo
+   {
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
+         filename, NetworkType::TestNet);
+
+      //grab settlement group
+      auto group = walletPtr->getGroup(bs::hd::BlockSettle_Settlement);
+      ASSERT_NE(group, nullptr);
+
+      //get settlement leaf from auth address path
+      auto settlLeaf = group->getLeafByPath(0);
+      auto settlLeafPtr = 
+         std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(settlLeaf);
+      ASSERT_NE(settlLeafPtr, nullptr);
+
+      auto usedAddrList = settlLeaf->getUsedAddressList();
+      std::set<BinaryData> usedAddrHash;
+      for (auto& addr : usedAddrList)
+         usedAddrHash.insert(addr.unprefixed());
+
+      EXPECT_EQ(usedAddrHash.size(), 10);
+      EXPECT_EQ(usedAddrHash, grabbedAddrHash);
+
+      //add extra settlement ids
+      for (unsigned i = 10; i < 13; i++)
+      {
+         settlLeafPtr->addSettlementID(settlementIDs[i]);
+         addrVec.push_back(settlLeaf->getNewExtAddress());
+         grabbedAddrHash.insert(addrVec[i]);
+      }
+
+      //check address maps
+      for (unsigned i = 10; i < 13; i++)
+      {
+         auto saltedPubKey = CryptoECDSA::PubKeyScalarMultiply(
+            authPubKey, settlementIDs[i]);
+         auto addr_hash = BtcUtils::getHash160(saltedPubKey);
+
+         EXPECT_EQ(addr_hash, addrVec[i].unprefixed());
+      }
+   }
+
+   //reload WO, check again
+   {
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
+         filename, NetworkType::TestNet);
+
+      //grab settlement group
+      auto group = walletPtr->getGroup(bs::hd::BlockSettle_Settlement);
+      ASSERT_NE(group, nullptr);
+
+      //get settlement leaf from auth address path
+      auto settlLeaf = group->getLeafByPath(0);
+      auto settlLeafPtr =
+         std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(settlLeaf);
+      ASSERT_NE(settlLeafPtr, nullptr);
+
+      auto usedAddrList = settlLeaf->getUsedAddressList();
+      std::set<BinaryData> usedAddrHash;
+      for (auto& addr : usedAddrList)
+         usedAddrHash.insert(addr.unprefixed());
+
+      EXPECT_EQ(usedAddrHash.size(), 13);
+      EXPECT_EQ(usedAddrHash, grabbedAddrHash);
    }
 }
 
@@ -2529,84 +2739,134 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    ASSERT_TRUE(fut3.get());
 }
 
-/*
-TEST(TestWallet, Encryption)
+TEST_F(TestWalletWithArmory, SignSettlement)
 {
-   TestEnv::requireArmory();
-   const SecureBinaryData password("test pass");
-   const SecureBinaryData wrongPass("wrong pass");
-   bs::core::hd::Node node(NetworkType::TestNet);
-   EXPECT_TRUE(node.encTypes().empty());
+   /*create settlement leaf*/
 
-   const auto encrypted = node.encrypt(password);
-   ASSERT_NE(encrypted, nullptr);
-   ASSERT_FALSE(encrypted->encTypes().empty());
-   EXPECT_TRUE(encrypted->encTypes()[0] == bs::wallet::EncryptionType::Password);
-   EXPECT_NE(node.privateKey(), encrypted->privateKey());
-   EXPECT_EQ(encrypted->derive(bs::hd::Path({2, 3, 4})), nullptr);
-   EXPECT_EQ(encrypted->encrypt(password), nullptr);
+   //Grab a regular address to build the settlement leaf from, too
+   //lazy to create an auth leaf. This test does not cover auth
+   //logic anyways
 
-   const auto decrypted = encrypted->decrypt(password);
-   ASSERT_NE(decrypted, nullptr);
-   EXPECT_TRUE(decrypted->encTypes().empty());
-   EXPECT_EQ(node.privateKey(), decrypted->privateKey());
-   EXPECT_EQ(decrypted->decrypt(password), nullptr);
+   std::shared_ptr<bs::core::hd::SettlementLeaf> settlLeafPtr;
+   std::vector<bs::Address> settlAddrVec;
+   std::vector<BinaryData> settlementIDs;
 
-   const auto wrongDec = encrypted->decrypt(wrongPass);
-   ASSERT_NE(wrongDec, nullptr);
-   EXPECT_NE(node.privateKey(), wrongDec->privateKey());
-   EXPECT_EQ(node.privateKey().getSize(), wrongDec->privateKey().getSize());
+   auto&& counterpartyPrivKey = CryptoPRNG::generateRandom(32);
+   auto&& counterpartyPubKey = 
+      CryptoECDSA().ComputePublicKey(counterpartyPrivKey, true);
 
-   bs::core::wallet::Seed seed{ "test seed", NetworkType::TestNet };
-   auto wallet = std::make_shared<bs::core::hd::Wallet>("test", "", seed);
-   EXPECT_FALSE(wallet->isWatchingOnly());
-   auto grp = wallet->createGroup(wallet->getXBTGroupType());
-   ASSERT_NE(grp, nullptr);
+   auto btcGroup = walletPtr_->getGroup(bs::hd::Bitcoin_test);
+   auto spendLeaf = btcGroup->getLeafByPath(0);
+   auto settlementRootAddress = spendLeaf->getNewExtAddress();
 
-   auto leaf = grp->createLeaf(0);
-   ASSERT_NE(leaf, nullptr);
-   EXPECT_FALSE(leaf->isWatchingOnly());
-   EXPECT_TRUE(leaf->encryptionTypes().empty());
+   {
+      //need to lock for leaf creation
+      auto lock = walletPtr_->lockForEncryption(passphrase_);
 
-   const bs::wallet::PasswordData pwdData = {password, bs::wallet::EncryptionType::Password, {}};
-   wallet->changePassword({ pwdData }, { 1, 1 }, {}, false, false, false);
-   EXPECT_TRUE(wallet->encryptionTypes()[0] == bs::wallet::EncryptionType::Password);
-   EXPECT_TRUE(leaf->encryptionTypes()[0] == bs::wallet::EncryptionType::Password);
+      /*
+      Create settlement leaf from address, wallet will generate
+      settlement group on the fly.
+      */
+      auto leafPtr = walletPtr_->createSettlementLeaf(settlementRootAddress);
+      ASSERT_TRUE(leafPtr->hasExtOnlyAddresses());
 
-   auto addr = leaf->getNewExtAddress(AddressEntryType_P2SH);
-   ASSERT_FALSE(addr.isNull());
+      settlLeafPtr = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(leafPtr);
+      ASSERT_TRUE(settlLeafPtr != nullptr);
+   }
 
-   auto inprocSigner = std::make_shared<InprocSigner>(wallet, TestEnv::logger());
+   /*sync the wallet and connect to db*/
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
    inprocSigner->Start();
-   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(TestEnv::logger()
-      , TestEnv::appSettings(), TestEnv::armory());
+   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+      , envPtr_->appSettings(), envPtr_->armoryConnection());
    syncMgr->setSignContainer(inprocSigner);
    syncMgr->syncWallets();
 
-   auto syncWallet = syncMgr->getHDWalletById(wallet->walletId());
-   auto syncLeaf = syncMgr->getWalletById(leaf->walletId());
-   syncWallet->registerWallet(TestEnv::armory());
+   auto syncWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
+   auto syncLeaf = syncMgr->getWalletById(leafPtr_->walletId());
+   auto syncSettlLeaf = syncMgr->getWalletById(settlLeafPtr->walletId());
+   auto syncLeafPtr = 
+      std::dynamic_pointer_cast<bs::sync::hd::SettlementLeaf>(syncSettlLeaf);
+   ASSERT_NE(syncLeafPtr, nullptr);
 
-   const auto &cbSend = [syncLeaf](QString result) {
-      const auto curHeight = TestEnv::armory()->topBlock();
-      TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
-      TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
-      if (TestEnv::blockMonitor()->waitForWalletReady(syncLeaf)) {
-         syncLeaf->updateBalances();
+   //grab the settlement leaf root pub key (typically the auth key) to check it
+   auto&& settlPubRoot = syncLeafPtr->getRootPubkey();
+   auto settlRootHash = BtcUtils::getHash160(settlPubRoot);
+   EXPECT_EQ(settlementRootAddress.unprefixed(), settlRootHash);
+
+   syncWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncWallet->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
+   //create some settlement ids
+   for (unsigned i = 0; i < 5; i++)
+      settlementIDs.push_back(CryptoPRNG::generateRandom(32));
+
+   //set a settlemend id
+   syncLeafPtr->setSettlementID(settlementIDs[0]);
+
+   /*create settlement multisig script and fund it*/
+   auto msAddress = syncWallet->getSettlementPayinAddress(
+         settlementIDs[0], counterpartyPubKey, true);
+
+   /*send to the script*/
+   auto armoryInstance = envPtr_->armoryInstance();
+   unsigned blockCount = 6;
+
+   auto curHeight = envPtr_->armoryConnection()->topBlock();
+   auto recipient = msAddress.getRecipient((uint64_t)(50 * COIN));
+   armoryInstance->mineNewBlock(recipient.get(), blockCount);
+   auto newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
+
+   /*get a multisig utxo*/
+   auto promPtr1 = std::make_shared<std::promise<UTXO>>();
+   auto fut1 = promPtr1->get_future();
+   const auto &cbUtxo = [promPtr1](const std::vector<UTXO> &utxoVec)
+   {
+      ASSERT_NE(utxoVec.size(), 0);
+      promPtr1->set_value(utxoVec[0]);
+   };
+
+   envPtr_->armoryConnection()->getUTXOsForAddress(msAddress, cbUtxo);
+   auto utxo1 = fut1.get();
+   std::vector<UTXO> utxos = { utxo1 };
+
+   /*spend it*/
+   {
+      //create tx request
+      const auto txReq = syncLeaf->createTXRequest(utxos,
+         {
+            settlementRootAddress.getRecipient(20 * COIN),
+            msAddress.getRecipient(30 * COIN)
+         },
+         0, false);
+
+      //sign it
+      BinaryData signedTx;
+      {
+         auto lock = walletPtr_->lockForEncryption(passphrase_);
+         signedTx = walletPtr_->signSettlementTXRequest(
+            txReq, settlementIDs[0], counterpartyPubKey, true);
       }
-   };
-   TestEnv::regtestControl()->SendTo(0.001, addr, cbSend);
 
-   const auto &cbTxOutList = [leaf, syncLeaf, addr, password](std::vector<UTXO> inputs) {
-      const auto txReq = syncLeaf->createTXRequest(inputs
-         , { addr.getRecipient((uint64_t)1200) }, 345);
-      EXPECT_THROW(leaf->signTXRequest(txReq), std::exception);
-      const auto txData = leaf->signTXRequest(txReq, password);
-      ASSERT_FALSE(txData.isNull());
-   };
-   syncLeaf->getSpendableTxOutList(cbTxOutList, nullptr);
+      //broadcast and wait on zc
+      Tx txObj(signedTx);
+      envPtr_->armoryInstance()->pushZC(signedTx);
+
+      while (true)
+      {
+         auto&& zcVec = UnitTestWalletACT::waitOnZC(false);
+         if (zcVec.size() != 1)
+            continue;
+
+         if (zcVec[0].txHash == txObj.getThisHash())
+            break;
+      }
+   }
 }
 
+#if 0
 TEST(TestWallet, 1of2_SameKey)
 {
    bs::core::hd::Wallet wallet1("hdWallet", "", NetworkType::TestNet, TestEnv::logger());
@@ -2639,4 +2899,4 @@ TEST(TestWallet, 1of2_SameKey)
    }
    EXPECT_TRUE(wallet1.eraseFile());
 }
-*/
+#endif   //0
