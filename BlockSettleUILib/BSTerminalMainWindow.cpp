@@ -1197,7 +1197,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
    addDeferredDialog(deferredDialog);
 }
 
-void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::string& password)
+void BSTerminalMainWindow::loginToCeler(const std::string& username)
 {
    const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
    const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
@@ -1208,16 +1208,14 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
       return;
    }
 
-   if (!celerConnection_->LoginToServer(host, port, username, password)) {
-      logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginToCeler] login failed");
-      showError(tr("Connection error"), tr("Login failed"));
-   } else {
-      auto userName = QString::fromStdString(username);
-      currentUserLogin_ = userName;
-      ui_->widgetWallets->setUsername(userName);
-      action_logout_->setVisible(false);
-      action_login_->setEnabled(false);
-   }
+   // We don't use password here, BsProxy will manage authentication
+   celerConnection_->LoginToServer(host, port, username, "");
+
+   auto userName = QString::fromStdString(username);
+   currentUserLogin_ = userName;
+   ui_->widgetWallets->setUsername(userName);
+   action_logout_->setVisible(false);
+   action_login_->setEnabled(false);
 }
 
 void BSTerminalMainWindow::onLogin()
@@ -1250,8 +1248,7 @@ void BSTerminalMainWindow::onReadyToLogin()
 #ifndef PRODUCTION_BUILD
       // TODO: uncomment this section once we have armory connection
       // if (isArmoryConnected()) {
-         loginToCeler(loginDialog.getUsername().toStdString()
-            , "Welcome1234");
+         loginToCeler(loginDialog.getUsername().toStdString());
       // } else {
          // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
       // }

@@ -12,6 +12,7 @@
 #include "bs_proxy.pb.h"
 #include "rp.pb.h"
 #include "NettyCommunication.pb.h"
+#include "UpstreamLoginProto.pb.h"
 
 using namespace Blocksettle::Communication::Proxy;
 using namespace autheid;
@@ -310,7 +311,6 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
 
 void BsProxy::processLogout(Client *client, int64_t requestId, const Request_Logout &request)
 {
-
 }
 
 void BsProxy::processCeler(BsProxy::Client *client, const Request_Celer &request)
@@ -324,12 +324,23 @@ void BsProxy::processCeler(BsProxy::Client *client, const Request_Celer &request
       return;
    }
 
+   std::string dataOverride = request.data();
+
+   if (messageType == CelerAPI::LoginRequestType) {
+      // Override user's login and password here
+      com::celertech::baseserver::communication::login::LoginRequest loginRequest;
+      loginRequest.set_username(client->email);
+      // FIXME: Use different passwords
+      loginRequest.set_password("Welcome1234");
+      dataOverride = loginRequest.SerializeAsString();
+   }
+
    std::string fullClassName = CelerAPI::GetMessageClass(messageType);
    BS_ASSERT_RETURN(logger_, !fullClassName.empty());
 
    ProtobufMessage message;
    message.set_protobufclassname(fullClassName);
-   message.set_protobufmessagecontents(request.data());
+   message.set_protobufmessagecontents(dataOverride);
    client->celer_->send(message.SerializeAsString());
 }
 

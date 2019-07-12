@@ -39,11 +39,6 @@ CelerClient::CelerClient(const std::shared_ptr<ConnectionManager>& connectionMan
 bool CelerClient::LoginToServer(const std::string& hostname, const std::string& port
       , const std::string& login, const std::string& password)
 {
-   if (!sessionToken_.empty()) {
-      logger_->error("[CelerClient::LoginToServer] connecting with not purged connection");
-      return false;
-   }
-
    // create user login sequence
    std::string loginString = login;
    sessionToken_.clear();
