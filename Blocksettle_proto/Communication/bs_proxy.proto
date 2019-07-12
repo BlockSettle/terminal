@@ -43,17 +43,18 @@ message Response
 {
     message StartLogin
     {
-        bool success = 1;
+        // AutheIDClient::ErrorType as int, 0 if succeess
+        int32 error_code = 1;
     }
 
     message CancelLogin
     {
-        bool success = 1;
     }
 
     message GetLoginResult
     {
-        bool success = 1;
+        // AutheIDClient::ErrorType as int, 0 if succeess
+        int32 error_code = 1;
     }
 
     message Logout

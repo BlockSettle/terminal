@@ -492,18 +492,22 @@ void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds
       if (reply->error() == QNetworkReply::OperationCanceledError) {
          return;
       }
-      else if (reply->error() == QNetworkReply::TimeoutError) {
+
+      if (reply->error() == QNetworkReply::TimeoutError) {
          emit failed(ErrorType::NetworkError);
          return;
       }
-      else if (reply->error()) {
+
+      if (reply->error()) {
          rp::Error error;
          // Auth eID will send rp::Error
-         if (!payload.isEmpty() && error.ParseFromArray(payload.data(), payload.size())) {
-            logger_->error("Auth EId server error: {}", error.message());
-         } else {
-            logger_->error("Auth EId failed: error code {}, ", reply->error(), reply->errorString().toStdString());
+         if (payload.isEmpty() || !error.ParseFromArray(payload.data(), payload.size())) {
+            logger_->error("AuthEid failed: network error {}({})", reply->error(), reply->errorString().toStdString());
+            emit failed(ErrorType::ServerError);
+            return;
          }
+
+         logger_->error("AuthEid server error: {}", error.message());
          emit failed(ErrorType::ServerError);
          return;
       }

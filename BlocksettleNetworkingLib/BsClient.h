@@ -9,9 +9,10 @@
 #include <unordered_set>
 #include <spdlog/logger.h>
 #include <QObject>
-#include "DataConnectionListener.h"
-#include "CelerMessageMapper.h"
 #include "autheid_utils.h"
+#include "AutheIDClient.h"
+#include "CelerMessageMapper.h"
+#include "DataConnectionListener.h"
 
 class ZmqContext;
 class ZmqBIP15XDataConnection;
@@ -65,9 +66,8 @@ public:
    void celerSend(CelerAPI::CelerMessageType messageType, const std::string &data);
 
 signals:
-   void startLoginDone(bool success);
-   void getLoginResultDone(bool success);
-   void cancelLoginDone(bool success);
+   void startLoginDone(AutheIDClient::ErrorType status);
+   void getLoginResultDone(AutheIDClient::ErrorType status);
    void logoutDone();
    void celerRecv(CelerAPI::CelerMessageType messageType, const std::string &data);
 
@@ -91,7 +91,7 @@ private:
    void OnError(DataConnectionError errorCode) override;
 
    void sendRequest(Blocksettle::Communication::Proxy::Request *request, std::chrono::milliseconds timeout
-      , FailedCallback failedCb);
+      , FailedCallback failedCb = nullptr);
    void sendMessage(Blocksettle::Communication::Proxy::Request *request);
 
    void processStartLogin(const Blocksettle::Communication::Proxy::Response_StartLogin &response);

@@ -49,7 +49,7 @@ void BsClient::startLogin(const std::string &email)
    d->set_email(email);
 
    sendRequest(&request, std::chrono::seconds(10), [this] {
-      emit startLoginDone(false);
+      emit startLoginDone(AutheIDClient::NetworkError);
    });
 }
 
@@ -58,9 +58,7 @@ void BsClient::cancelLogin()
    Request request;
    request.mutable_cancel_login();
 
-   sendRequest(&request, std::chrono::seconds(10), [this] {
-      emit cancelLoginDone(false);
-   });
+   sendRequest(&request, std::chrono::seconds(10));
 }
 
 void BsClient::getLoginResult()
@@ -69,7 +67,7 @@ void BsClient::getLoginResult()
    request.mutable_get_login_result();
 
    sendRequest(&request, std::chrono::seconds(60), [this] {
-      emit getLoginResultDone(false);
+      emit getLoginResultDone(AutheIDClient::NetworkError);
    });
 }
 
@@ -93,7 +91,9 @@ void BsClient::timerEvent(QTimerEvent *event)
       auto itId = activeRequestIds_.find(activeRequest.requestId);
       if (itId != activeRequestIds_.end()) {
          activeRequestIds_.erase(itId);
-         activeRequest.failedCb();
+         if (activeRequest.failedCb) {
+            activeRequest.failedCb();
+         }
       }
    }
 }
@@ -140,7 +140,7 @@ void BsClient::OnDataReceived(const std::string &data)
             return;
       }
 
-      SPDLOG_LOGGER_CRITICAL(logger_, "FIXME: response was not processed!");
+      SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
    });
 }
 
@@ -179,17 +179,16 @@ void BsClient::sendMessage(Request *request)
 
 void BsClient::processStartLogin(const Response_StartLogin &response)
 {
-   emit startLoginDone(response.success());
+   emit startLoginDone(AutheIDClient::ErrorType(response.error_code()));
 }
 
 void BsClient::processCancelLogin(const Response_CancelLogin &response)
 {
-   emit cancelLoginDone(response.success());
 }
 
 void BsClient::processGetLoginResult(const Response_GetLoginResult &response)
 {
-   emit getLoginResultDone(response.success());
+   emit getLoginResultDone(AutheIDClient::ErrorType(response.error_code()));
 }
 
 void BsClient::processLogout(const Response_Logout &response)

@@ -4,6 +4,7 @@
 #include <QTimer>
 #include <QDialog>
 #include <memory>
+#include "AutheIDClient.h"
 
 namespace Ui {
     class LoginWindow;
@@ -33,8 +34,8 @@ public:
    QString getUsername() const;
 
 private slots:
-   void onStartLoginDone(bool success);
-   void onGetLoginResultDone(bool success);
+   void onStartLoginDone(AutheIDClient::ErrorType errorCode);
+   void onGetLoginResultDone(AutheIDClient::ErrorType errorCode);
    void onTextChanged();
    void onAuthPressed();
    void onAuthStatusUpdated(const QString &userId, const QString &status);

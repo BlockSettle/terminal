@@ -99,12 +99,12 @@ QString LoginWindow::getUsername() const
    return ui_->lineEditUsername->text().toLower();
 }
 
-void LoginWindow::onStartLoginDone(bool success)
+void LoginWindow::onStartLoginDone(AutheIDClient::ErrorType errorCode)
 {
-   if (!success) {
+   if (errorCode != AutheIDClient::NoError) {
       setupLoginPage();
-      // FIXME: Show error message here
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), tr(""), this);
+      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
+         , AutheIDClient::errorString(errorCode), this);
       loginErrorBox.exec();
       QDialog::reject();
       return;
@@ -114,12 +114,17 @@ void LoginWindow::onStartLoginDone(bool success)
    bsClient_->getLoginResult();
 }
 
-void LoginWindow::onGetLoginResultDone(bool success)
+void LoginWindow::onGetLoginResultDone(AutheIDClient::ErrorType errorCode)
 {
-   if (!success) {
+   if (errorCode == AutheIDClient::Cancelled) {
       setupLoginPage();
-      // FIXME: Show error message here
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), tr(""), this);
+      return;
+   }
+
+   if (errorCode != AutheIDClient::NoError) {
+      setupLoginPage();
+      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
+         , AutheIDClient::errorString(errorCode), this);
       loginErrorBox.exec();
       QDialog::reject();
       return;

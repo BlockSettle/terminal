@@ -1,5 +1,6 @@
 #include "BsProxy.h"
 
+#include <QThread>
 #include <QNetworkAccessManager>
 #include "AutheIDClient.h"
 #include "CelerMessageMapper.h"
@@ -143,7 +144,7 @@ void BsProxy::onProxyDataFromClient(const std::string &clientId, const std::stri
             return;
       }
 
-      SPDLOG_LOGGER_CRITICAL(logger_, "FIXME: request was not processed!");
+      SPDLOG_LOGGER_CRITICAL(logger_, "unknown request detected!");
    });
 }
 
@@ -226,6 +227,9 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
    client->autheid = std::make_unique<AutheIDClient>(logger_, nam_, AutheIDClient::AuthKeys{}, params_.autheidTestEnv, this);
 
    connect(client->autheid.get(), &AutheIDClient::createRequestDone, this, [this, client, requestId] {
+      // Check that autheid lives in our thread
+      assert(thread() == QThread::currentThread());
+
       // Data must be still available.
       // if client was disconnected its data should be cleared and autheid was destroyed (and no callback is called).
       BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidStart);
@@ -233,11 +237,11 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
       Response response;
       auto d = response.mutable_start_login();
       client->state = State::WaitClientGetResult;
-      d->set_success(true);
+      d->set_error_code(int(AutheIDClient::NoError));
       sendResponse(client, requestId, &response);
    });
 
-   connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId]/*(QNetworkReply::NetworkError networkError, AutheIDClient::ErrorType error)*/ {
+   connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId] (AutheIDClient::ErrorType error) {
       // Data must be still available.
       // if client was disconnected its data should be cleared and autheid was destroyed (and no callback is called).
       BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidStart);
@@ -245,7 +249,7 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
       Response response;
       auto d = response.mutable_start_login();
       client->state = State::Closed;
-      d->set_success(false);
+      d->set_error_code(int(error));
       sendResponse(client, requestId, &response);
    });
 
@@ -264,8 +268,7 @@ void BsProxy::processCancelLogin(Client *client, int64_t requestId, const Reques
    client->autheid->cancel();
 
    Response response;
-   auto d = response.mutable_cancel_login();
-   d->set_success(true);
+   response.mutable_cancel_login();
    sendResponse(client, requestId, &response);
 }
 
@@ -283,7 +286,7 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
 
       Response response;
       auto d = response.mutable_get_login_result();
-      d->set_success(true);
+      d->set_error_code(int(AutheIDClient::NoError));
       sendResponse(client, requestId, &response);
 
       client->celerListener_ = std::make_unique<BsClientCelerListener>();
@@ -298,13 +301,13 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
       client->celer_->openConnection(host, std::to_string(port), client->celerListener_.get());
    });
 
-   connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId] {
+   connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId](AutheIDClient::ErrorType error) {
       BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidResult);
       client->state = State::Closed;
 
       Response response;
       auto d = response.mutable_get_login_result();
-      d->set_success(false);
+      d->set_error_code(int(error));
       sendResponse(client, requestId, &response);
    });
 
@@ -314,7 +317,7 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
 
       Response response;
       auto d = response.mutable_get_login_result();
-      d->set_success(false);
+      d->set_error_code(int(AutheIDClient::Cancelled));
       sendResponse(client, requestId, &response);
    });
 
