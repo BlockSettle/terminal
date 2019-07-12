@@ -39,7 +39,7 @@ public:
 
 private slots:
    void onSignSuccess(const AutheIDClient::SignResult &result);
-   void onFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError);
+   void onFailed(AutheIDClient::ErrorType authError);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

@@ -94,7 +94,8 @@ public:
       Timeout,
       Cancelled,
       NotAuthenticated,
-      ServerError
+      ServerError,
+      NetworkError,
    };
    Q_ENUM(ErrorType)
 
@@ -157,7 +158,7 @@ signals:
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
    void signSuccess(const SignResult &result);
    void authSuccess(const std::string &jwt);
-   void failed(QNetworkReply::NetworkError networkError, ErrorType error);
+   void failed(ErrorType error);
    void userCancelled();
 
 private:

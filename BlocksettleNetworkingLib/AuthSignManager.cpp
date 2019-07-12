@@ -45,7 +45,7 @@ bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, c
    return true;
 }
 
-void AuthSignManager::onFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError)
+void AuthSignManager::onFailed(AutheIDClient::ErrorType authError)
 {
    logger_->error("[AuthSignManager] Auth eID failure: {}", AutheIDClient::errorString(authError).toStdString());
    if (onSignFailedCB_) {

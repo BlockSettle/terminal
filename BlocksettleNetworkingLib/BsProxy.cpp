@@ -237,7 +237,7 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
       sendResponse(client, requestId, &response);
    });
 
-   connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId] {
+   connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId]/*(QNetworkReply::NetworkError networkError, AutheIDClient::ErrorType error)*/ {
       // Data must be still available.
       // if client was disconnected its data should be cleared and autheid was destroyed (and no callback is called).
       BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidStart);

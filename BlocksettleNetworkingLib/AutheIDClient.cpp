@@ -118,9 +118,13 @@ QString AutheIDClient::errorString(AutheIDClient::ErrorType error)
       return tr("Operation cancelled");
    case NotAuthenticated:
       return tr("Not authenticated");
-   default:
-      return tr("Internal error");
+   case ServerError:
+      return tr("Server error");
+   case NetworkError:
+      return tr("Network error");
    }
+
+   return tr("Unknown error");
 }
 
 AutheIDClient::DeviceInfo AutheIDClient::getDeviceInfo(const std::string &encKey)
@@ -263,7 +267,7 @@ void AutheIDClient::createCreateRequest(const std::string &payload, int expirati
    QNetworkReply *reply = nam_->post(request, QByteArray::fromStdString(payload));
    processNetworkReply(reply, kNetworkTimeoutSeconds, [this, expiration, autoRequestResult] (const Result &result) {
       if (result.networkError != QNetworkReply::NoError) {
-         emit failed(result.networkError, result.authError);
+         emit failed(result.authError != NoError ? result.authError : NetworkError);
          return;
       }
 
@@ -392,7 +396,7 @@ void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration
    rp::CreateResponse response;
    if (!response.ParseFromArray(payload.data(), payload.size())) {
       logger_->error("Can't decode ResultReply packet");
-      emit failed(QNetworkReply::NoError, ErrorType::CreateError);
+      emit failed(ErrorType::CreateError);
       return;
    }
 
@@ -409,7 +413,7 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
    rp::GetResultResponse reply;
    if (!reply.ParseFromArray(payload.data(), payload.size())) {
       logger_->error("Can't decode ResultReply packet");
-      emit failed(QNetworkReply::NoError, ErrorType::DecodeError);
+      emit failed(ErrorType::DecodeError);
       return;
    }
 
@@ -426,7 +430,7 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
    }
 
    if (reply.status() == rp::TIMEOUT) {
-      emit failed(QNetworkReply::NoError, ErrorType::Timeout);
+      emit failed(ErrorType::Timeout);
       return;
    }
 
@@ -439,33 +443,33 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
       }
       else
       {
-         emit failed(QNetworkReply::NoError, ErrorType::NotAuthenticated);
+         emit failed(ErrorType::NotAuthenticated);
       }
       return;
    }
 
    if (reply.device_key_enc().empty() || reply.device_id().empty()) {
-      emit failed(QNetworkReply::NoError, ErrorType::Cancelled);
+      emit failed(ErrorType::Cancelled);
       return;
    }
 
    autheid::SecureBytes secureReplyData = autheid::decryptData(reply.device_key_enc().data()
       , reply.device_key_enc().size(), authKeys_.first);
    if (secureReplyData.empty()) {
-      emit failed(QNetworkReply::NoError, ErrorType::DecryptError);
+      emit failed(ErrorType::DecryptError);
       return;
    }
 
    rp::GetResultResponse::DeviceKeyResult secureReply;
    if (!secureReply.ParseFromArray(secureReplyData.data(), int(secureReplyData.size()))) {
-      emit failed(QNetworkReply::NoError, ErrorType::InvalidSecureReplyError);
+      emit failed(ErrorType::InvalidSecureReplyError);
       return;
    }
 
    const std::string &deviceKey = secureReply.device_key();
 
    if (deviceKey.size() != kKeySize) {
-      emit failed(QNetworkReply::NoError, ErrorType::InvalidKeySizeError);
+      emit failed(ErrorType::InvalidKeySizeError);
       return;
    }
 
@@ -489,7 +493,7 @@ void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds
          return;
       }
       else if (reply->error() == QNetworkReply::TimeoutError) {
-         emit failed(reply->error(), ErrorType::ServerError);
+         emit failed(ErrorType::NetworkError);
          return;
       }
       else if (reply->error()) {
@@ -500,7 +504,7 @@ void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds
          } else {
             logger_->error("Auth EId failed: error code {}, ", reply->error(), reply->errorString().toStdString());
          }
-         emit failed(QNetworkReply::NoError, ErrorType::ServerError);
+         emit failed(ErrorType::ServerError);
          return;
       }
 
@@ -563,7 +567,7 @@ bool AutheIDClient::isAutheIDClientNewDeviceNeeded(RequestType requestType)
 void AutheIDClient::processSignatureReply(const autheid::rp::GetResultResponse_SignatureResult &reply)
 {
    if (reply.signature_data().empty() || reply.sign().empty()) {
-      emit failed(QNetworkReply::NoError, ErrorType::MissingSignatuteError);
+      emit failed(ErrorType::MissingSignatuteError);
       return;
    }
 
@@ -574,7 +578,7 @@ void AutheIDClient::processSignatureReply(const autheid::rp::GetResultResponse_S
          bool result = sigData.ParseFromString(reply.signature_data());
          if (!result) {
             SPDLOG_LOGGER_ERROR(logger_, "parsing signature protobuf from AuthEid failed");
-            emit failed(QNetworkReply::NoError, ErrorType::ParseSignatureError);
+            emit failed(ErrorType::ParseSignatureError);
             return;
          }
          break;
@@ -584,7 +588,7 @@ void AutheIDClient::processSignatureReply(const autheid::rp::GetResultResponse_S
          auto status = google::protobuf::util::JsonStringToMessage(reply.signature_data(), &sigData);
          if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(logger_, "parsing signature json from AuthEid failed");
-            emit failed(QNetworkReply::NoError, ErrorType::ParseSignatureError);
+            emit failed(ErrorType::ParseSignatureError);
             return;
          }
          break;
@@ -592,7 +596,7 @@ void AutheIDClient::processSignatureReply(const autheid::rp::GetResultResponse_S
 
       default:
          SPDLOG_LOGGER_ERROR(logger_, "unknown serialization from AuthEid");
-         emit failed(QNetworkReply::NoError, ErrorType::SerializationSignatureError);
+         emit failed(ErrorType::SerializationSignatureError);
          return;
    }
 
@@ -603,7 +607,7 @@ void AutheIDClient::processSignatureReply(const autheid::rp::GetResultResponse_S
        || signRequest_.invisibleData.toBinStr() != sigData.invisible_data())
    {
       SPDLOG_LOGGER_ERROR(logger_, "invalid response from AuthEid detected");
-      emit failed(QNetworkReply::NoError, ErrorType::SerializationSignatureError);
+      emit failed(ErrorType::SerializationSignatureError);
       return;
    }
 
