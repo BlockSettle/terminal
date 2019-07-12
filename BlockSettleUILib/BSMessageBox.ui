@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>200</height>
+    <height>201</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -161,7 +161,7 @@
     </spacer>
    </item>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widgetButtons" native="true">
      <property name="buttonBar" stdset="0">
       <bool>true</bool>
      </property>
@@ -343,7 +343,7 @@
            <x>0</x>
            <y>0</y>
            <width>378</width>
-           <height>67</height>
+           <height>68</height>
           </rect>
          </property>
          <property name="sizePolicy">

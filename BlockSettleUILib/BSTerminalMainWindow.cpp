@@ -80,9 +80,9 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
-      QTimer::singleShot(0, this, []() {
+      QMetaObject::invokeMethod(this, []() {
          qApp->exit(EXIT_FAILURE);
-      });
+      }, Qt::QueuedConnection);
       return;
    }
 
@@ -101,7 +101,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    setupIcon();
    UiUtils::setupIconFont(this);
-   NotificationCenter::createInstance(applicationSettings_, ui_.get(), sysTrayIcon_, this);
+   NotificationCenter::createInstance(logMgr_->logger(), applicationSettings_, ui_.get(), sysTrayIcon_, this);
 
    cbApprovePuB_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::PublicBridge
       , this, applicationSettings_);
@@ -503,7 +503,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
          oldKeyHex = signersProvider_->getCurrentSigner().key.toStdString();
       }
 
-      QMetaObject::invokeMethod(this, [this, oldKeyHex, newKey, newKeyProm, srvAddrPort] {
+      const auto &deferredDialog = [this, oldKeyHex, newKey, newKeyProm, srvAddrPort]{
          ImportKeyBox box(BSMessageBox::question
             , tr("Import Signer ID Key?")
             , this);
@@ -518,12 +518,14 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
             signersProvider_->addKey(srvAddrPort, newKey);
          }
          newKeyProm->set_value(answer);
-      });
+      };
+
+      addDeferredDialog(deferredDialog);
    };
 
    QString resultHost = signerHost.address;
    const auto remoteSigner = std::make_shared<RemoteSigner>(logMgr_->logger()
-      , resultHost, resultPort, netType, connectionManager_, applicationSettings_
+      , resultHost, resultPort, netType, connectionManager_
       , SignContainer::OpMode::Remote, false
       , signersProvider_->remoteSignerKeysDir(), signersProvider_->remoteSignerKeysFile(), ourNewKeyCB);
 
@@ -567,7 +569,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createLocalSigner()
    const bool startLocalSignerProcess = true;
    return std::make_shared<LocalSigner>(logMgr_->logger()
       , applicationSettings_->GetHomeDir(), netType
-      , localSignerPort, connectionManager_, applicationSettings_
+      , localSignerPort, connectionManager_
       , startLocalSignerProcess, "", ""
       , applicationSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
 }
@@ -594,9 +596,13 @@ void BSTerminalMainWindow::SignerReady()
    updateControlEnabledState();
 
    LoadWallets();
-   //InitWidgets();
 
-   signContainer_->SetUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
+   signContainer_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
+
+   if (deferCCsync_) {
+      signContainer_->syncCCNames(walletsMgr_->ccResolver()->securities());
+      deferCCsync_ = false;
+   }
 
    lastSignerError_ = SignContainer::NoError;
 }
@@ -619,16 +625,20 @@ void BSTerminalMainWindow::InitConnections()
 
 void BSTerminalMainWindow::acceptMDAgreement()
 {
-   if (!isMDLicenseAccepted()) {
-      MDAgreementDialog dlg{this};
-      if (dlg.exec() != QDialog::Accepted) {
-         return;
+   const auto &deferredDailog = [this]{
+      if (!isMDLicenseAccepted()) {
+         MDAgreementDialog dlg{this};
+         if (dlg.exec() != QDialog::Accepted) {
+            return;
+         }
+
+         saveUserAcceptedMDLicense();
       }
 
-      saveUserAcceptedMDLicense();
-   }
+      mdProvider_->MDLicenseAccepted();
+   };
 
-   mdProvider_->MDLicenseAccepted();
+   addDeferredDialog(deferredDailog);
 }
 
 void BSTerminalMainWindow::updateControlEnabledState()
@@ -672,6 +682,11 @@ bool BSTerminalMainWindow::showStartupDialog()
       hide();
       return false;
    }
+
+   // Ueed update armory settings if case user selects TestNet
+   // (MainNet selected by default at startup)
+   applicationSettings_->selectNetwork();
+
    return true;
 }
 
@@ -684,7 +699,7 @@ void BSTerminalMainWindow::InitAssets()
 
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityDef, assetManager_.get(), &AssetManager::onCCSecurityReceived);
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsMgr_.get(), &bs::sync::WalletsManager::onCCSecurityInfo);
-   connect(ccFileManager_.get(), &CCFileManager::Loaded, walletsMgr_.get(), &bs::sync::WalletsManager::onCCInfoLoaded);
+   connect(ccFileManager_.get(), &CCFileManager::Loaded, this, &BSTerminalMainWindow::onCCLoaded);
    connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
 
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
@@ -766,11 +781,14 @@ void BSTerminalMainWindow::MainWinACT::onRefresh(const std::vector<BinaryData> &
    if (!parent_->initialWalletCreateDialogShown_ && parent_->walletsMgr_
       && parent_->walletsMgr_->isWalletsReady()
       && (parent_->walletsMgr_->hdWalletsCount() == 0)) {
-      parent_->initialWalletCreateDialogShown_ = true;
-      QMetaObject::invokeMethod(parent_, [this] {
+
+      const auto &deferredDialog = [this]{
          parent_->createWallet(true);
-      });
+      };
+
+      parent_->addDeferredDialog(deferredDialog);
    }
+   parent_->initialWalletCreateDialogShown_ = true;
 }
 
 void BSTerminalMainWindow::CompleteUIOnlineView()
@@ -1026,8 +1044,7 @@ void BSTerminalMainWindow::onReceive()
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
 {
    CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_
-      , signContainer_, true, logMgr_->logger("ui"), nullptr, this};
-   advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
+      , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, this};
 
    if (!selectedWalletId.empty()) {
       advancedDialog.SelectWallet(selectedWalletId);
@@ -1053,10 +1070,8 @@ void BSTerminalMainWindow::onSend()
       if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
          createAdvancedTxDialog(selectedWalletId);
       } else {
-         CreateTransactionDialogSimple dlg{armory_, walletsMgr_, signContainer_
-            , logMgr_->logger("ui"),
-                                           this};
-         dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
+         CreateTransactionDialogSimple dlg(armory_, walletsMgr_, signContainer_
+            , logMgr_->logger("ui"), applicationSettings_, this);
 
          if (!selectedWalletId.empty()) {
             dlg.SelectWallet(selectedWalletId);
@@ -1085,7 +1100,7 @@ void BSTerminalMainWindow::setupMenu()
    ui_->menuFile->insertSeparator(action_login_);
    ui_->menuFile->insertSeparator(ui_->actionSettings);
 
-   connect(ui_->actionCreateNewWallet, &QAction::triggered, [ww = ui_->widgetWallets]{ ww->CreateNewWallet(); });
+   connect(ui_->actionCreateNewWallet, &QAction::triggered, this, [ww = ui_->widgetWallets]{ ww->CreateNewWallet(); });
    connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
    connect(ui_->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
    connect(ui_->actionAccountInformation, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
@@ -1133,10 +1148,14 @@ void BSTerminalMainWindow::openAccountInfoDialog()
 
 void BSTerminalMainWindow::openCCTokenDialog()
 {
-   if (walletsMgr_->hasPrimaryWallet() || createWallet(true, false)) {
-      CCTokenEntryDialog dialog(walletsMgr_, ccFileManager_, signContainer_, this);
-      dialog.exec();
-   }
+   const auto &deferredDialog = [this]{
+      if (walletsMgr_->hasPrimaryWallet() || createWallet(true, false)) {
+         CCTokenEntryDialog dialog(walletsMgr_, ccFileManager_, signContainer_, this);
+         dialog.exec();
+      }
+   };
+
+   addDeferredDialog(deferredDialog);
 }
 
 void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::string& password)
@@ -1233,9 +1252,13 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ccFileManager_->ConnectToCelerClient(celerConnection_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
-   if (signContainer_) {
-      signContainer_->SetUserId(userId);
-   }
+   const auto &deferredDialog = [this, userId] {
+      if (signContainer_) {
+         signContainer_->setUserId(userId);
+      }
+   };
+   addDeferredDialog(deferredDialog);
+
    walletsMgr_->setUserId(userId);
 
    setLoginButtonText(currentUserLogin_);
@@ -1253,7 +1276,7 @@ void BSTerminalMainWindow::onUserLoggedOut()
    ui_->actionLinkAdditionalBankAccount->setEnabled(false);
 
    if (signContainer_) {
-      signContainer_->SetUserId(BinaryData{});
+      signContainer_->setUserId(BinaryData{});
    }
    if (walletsMgr_) {
       walletsMgr_->setUserId(BinaryData{});
@@ -1297,19 +1320,23 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
 void BSTerminalMainWindow::createAuthWallet()
 {
    if (celerConnection_->tradingAllowed()) {
-      if (!walletsMgr_->hasPrimaryWallet() && !createWallet(true)) {
-         return;
-      }
-
-      if (!walletsMgr_->getAuthWallet()) {
-         BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
-            , tr("Create Authentication Wallet")
-            , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
-            , this);
-         if (createAuthReq.exec() == QDialog::Accepted) {
-            authManager_->CreateAuthWallet();
+      const auto &deferredDialog = [this]{
+         if (!walletsMgr_->hasPrimaryWallet() && !createWallet(true)) {
+            return;
          }
-      }
+
+         if (!walletsMgr_->getAuthWallet()) {
+            BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
+               , tr("Create Authentication Wallet")
+               , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
+               , this);
+            if (createAuthReq.exec() == QDialog::Accepted) {
+               authManager_->CreateAuthWallet();
+            }
+         }
+      };
+
+      addDeferredDialog(deferredDialog);
    }
 }
 
@@ -1347,10 +1374,10 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
 
 struct BSTerminalMainWindow::TxInfo {
    Tx       tx;
-   uint32_t txTime;
-   int64_t  value;
+   uint32_t txTime{};
+   int64_t  value{};
    std::shared_ptr<bs::sync::Wallet>   wallet;
-   bs::sync::Transaction::Direction    direction;
+   bs::sync::Transaction::Direction    direction{};
    QString  mainAddress;
 };
 
@@ -1360,26 +1387,32 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> &entries)
       return;
    }
    for (const auto &entry : entries) {
-      const auto &cbTx = [this, id = entry.id, txTime = entry.txTime, value = entry.value](const Tx &tx) {
+      const auto &cbTx = [this, id = entry.walletId, txTime = entry.txTime, value = entry.value](const Tx &tx) {
          const auto wallet = walletsMgr_->getWalletById(id);
          if (!wallet) {
             return;
          }
-         auto txInfo = new TxInfo { tx, txTime, value, wallet, bs::sync::Transaction::Direction::Unknown, QString() };
-         const auto &cbDir = [this, txInfo] (bs::sync::Transaction::Direction dir, std::vector<bs::Address>) {
+
+         auto txInfo = std::make_shared<TxInfo>();
+         txInfo->tx = tx;
+         txInfo->txTime = txTime;
+         txInfo->value = value;
+         txInfo->wallet = wallet;
+
+         const auto &cbDir = [this, txInfo] (bs::sync::Transaction::Direction dir, const std::vector<bs::Address> &) {
             txInfo->direction = dir;
-            if (!txInfo->mainAddress.isEmpty() && txInfo->wallet) {
-               showZcNotification(txInfo);
-               delete txInfo;
+            if (!txInfo->mainAddress.isEmpty()) {
+               showZcNotification(*txInfo);
             }
          };
-         const auto &cbMainAddr = [this, txInfo] (QString mainAddr, int addrCount) {
+
+         const auto &cbMainAddr = [this, txInfo] (const QString &mainAddr, int addrCount) {
             txInfo->mainAddress = mainAddr;
-            if ((txInfo->direction != bs::sync::Transaction::Direction::Unknown) && txInfo->wallet) {
-               showZcNotification(txInfo);
-               delete txInfo;
+            if ((txInfo->direction != bs::sync::Transaction::Direction::Unknown)) {
+               showZcNotification(*txInfo);
             }
          };
+
          walletsMgr_->getTransactionDirection(tx, id, cbDir);
          walletsMgr_->getTransactionMainAddress(tx, id, (value > 0), cbMainAddr);
       };
@@ -1387,14 +1420,14 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> &entries)
    }
 }
 
-void BSTerminalMainWindow::showZcNotification(const TxInfo *txInfo)
+void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
 {
    QStringList lines;
-   lines << tr("Date: %1").arg(UiUtils::displayDateTime(txInfo->txTime));
-   lines << tr("TX: %1 %2 %3").arg(tr(bs::sync::Transaction::toString(txInfo->direction)))
-      .arg(txInfo->wallet->displayTxValue(txInfo->value)).arg(txInfo->wallet->displaySymbol());
-   lines << tr("Wallet: %1").arg(QString::fromStdString(txInfo->wallet->name()));
-   lines << txInfo->mainAddress;
+   lines << tr("Date: %1").arg(UiUtils::displayDateTime(txInfo.txTime));
+   lines << tr("TX: %1 %2 %3").arg(tr(bs::sync::Transaction::toString(txInfo.direction)))
+      .arg(txInfo.wallet->displayTxValue(txInfo.value)).arg(txInfo.wallet->displaySymbol());
+   lines << tr("Wallet: %1").arg(QString::fromStdString(txInfo.wallet->name()));
+   lines << txInfo.mainAddress;
 
    const auto &title = tr("New blockchain transaction");
    NotificationCenter::notify(bs::ui::NotifyType::BlockchainTX, { title, lines.join(tr("\n")) });
@@ -1448,6 +1481,20 @@ void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 #ifndef Q_OS_MAC
    ui_->menubar->adjustSize();
 #endif
+}
+
+void BSTerminalMainWindow::onCCLoaded()
+{
+   walletsMgr_->onCCInfoLoaded();
+
+   const auto ccResolver = walletsMgr_->ccResolver();
+   if (ccResolver && signContainer_) {
+      deferCCsync_ = false;
+      signContainer_->syncCCNames(ccResolver->securities());
+   }
+   else {
+      deferCCsync_ = true;
+   }
 }
 
 void BSTerminalMainWindow::onCCInfoMissing()
@@ -1566,43 +1613,47 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
    if (serverIndex >= 0) {
       ArmoryServer server = servers.at(serverIndex);
 
-      if (server.armoryDBKey.isEmpty()) {
-         ImportKeyBox box(BSMessageBox::question
-            , tr("Import ArmoryDB ID Key?")
-            , this);
+      const auto &deferredDialog = [this, server, promiseObj, srvPubKey, srvIPPort]{
+         if (server.armoryDBKey.isEmpty()) {
+            ImportKeyBox box(BSMessageBox::question
+               , tr("Import ArmoryDB ID Key?")
+               , this);
 
-         box.setNewKeyFromBinary(srvPubKey);
-         box.setAddrPort(srvIPPort);
+            box.setNewKeyFromBinary(srvPubKey);
+            box.setAddrPort(srvIPPort);
 
-         bool answer = (box.exec() == QDialog::Accepted);
+            bool answer = (box.exec() == QDialog::Accepted);
 
-         if (answer) {
-            armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+            if (answer) {
+               armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+            }
+
+            promiseObj->set_value(true);
          }
+         else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
+            ImportKeyBox box(BSMessageBox::question
+               , tr("Import ArmoryDB ID Key?")
+               , this);
 
-         promiseObj->set_value(true);
-      }
-      else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
-         ImportKeyBox box(BSMessageBox::question
-            , tr("Import ArmoryDB ID Key?")
-            , this);
+            box.setNewKeyFromBinary(srvPubKey);
+            box.setOldKey(server.armoryDBKey);
+            box.setAddrPort(srvIPPort);
+            box.setCancelVisible(true);
 
-         box.setNewKeyFromBinary(srvPubKey);
-         box.setOldKey(server.armoryDBKey);
-         box.setAddrPort(srvIPPort);
-         box.setCancelVisible(true);
+            bool answer = (box.exec() == QDialog::Accepted);
 
-         bool answer = (box.exec() == QDialog::Accepted);
+            if (answer) {
+               armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+            }
 
-         if (answer) {
-            armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+            promiseObj->set_value(answer);
          }
+         else {
+            promiseObj->set_value(true);
+         }
+      };
 
-         promiseObj->set_value(answer);
-      }
-      else {
-         promiseObj->set_value(true);
-      }
+      addDeferredDialog(deferredDialog);
    }
    else {
       // server not in the list - added directly to ini config
@@ -1684,5 +1735,24 @@ void BSTerminalMainWindow::InitWidgets()
    ui_->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
       , dialogManager, signContainer_, armory_, connectionManager_);
    ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
-      , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_);
+                             , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_);
+}
+
+void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)
+{
+   // multi thread scope, it's safe to call this function from different threads
+   QMetaObject::invokeMethod(this, [this, deferredDialog] {
+      // single thread scope (main thread), it's safe to push to deferredDialogs_
+      // and check deferredDialogRunning_ variable
+      deferredDialogs_.push(deferredDialog);
+      if(!deferredDialogRunning_) {
+         deferredDialogRunning_ = true;
+         while (!deferredDialogs_.empty()) {
+            deferredDialogs_.front()(); // run stored lambda
+            deferredDialogs_.pop();
+         }
+         deferredDialogRunning_ = false;
+      }
+
+   }, Qt::QueuedConnection);
 }

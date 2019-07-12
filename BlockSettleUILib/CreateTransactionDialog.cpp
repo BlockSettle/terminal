@@ -45,12 +45,15 @@ const size_t kTransactionWeightLimit = 400000;
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
-   , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
+   , const std::shared_ptr<spdlog::logger>& logger
+   , const std::shared_ptr<ApplicationSettings> &applicationSettings
+   , QWidget* parent)
    : QDialog(parent)
    , armory_(armory)
    , walletsManager_(walletManager)
    , signContainer_(container)
    , logger_(logger)
+   , applicationSettings_(applicationSettings)
    , loadFeeSuggestions_(loadFeeSuggestions)
 {
    qRegisterMetaType<std::map<unsigned int, float>>();
@@ -78,7 +81,12 @@ void CreateTransactionDialog::init()
          transactionData_->RemoveRecipient(recipId);
       }
       onTransactionUpdated();
-      transactionData_->SetCallback([this] { onTransactionUpdated(); });
+      transactionData_->SetCallback([this] {
+         QMetaObject::invokeMethod(this, [this] {
+            // Call on main thread because GUI is updated here
+            onTransactionUpdated();
+         });
+      });
    }
 
    xbtValidator_ = new XbtAmountValidator(this);
@@ -327,18 +335,19 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    }
 
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
-   if (result == bs::error::ErrorCode::NoError && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {   // Offline signing
+   if (result == bs::error::ErrorCode::NoError && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {
+      // Offline signing
       BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
-         , tr("Request exported to:\n%1").arg(QString::fromStdString(signedTX.toBinStr()))
-         , this).exec();
+         , tr("Request was successfully exported"), this).exec();
       accept();
       return;
    }
 
    try {
       if (result != bs::error::ErrorCode::NoError) {
-         throw std::runtime_error("error " + std::to_string(static_cast<int>(result)));
+         throw std::runtime_error(bs::error::ErrorCodeToString(result).toStdString());
       }
+
       if (signedTX.isNull()) {
          throw std::runtime_error("Empty signed TX data received");
       }
@@ -426,13 +435,26 @@ bool CreateTransactionDialog::CreateTransaction()
       return false;
    }
 
+   std::string offlineFilePath;
+
    if (signContainer_->isWalletOffline(transactionData_->getWallet()->walletId())) {
-      const auto txDir = QFileDialog::getExistingDirectory(this, tr("Select Offline TX destination directory")
-         , signContainer_->targetDir());
-      if (txDir.isNull()) {
+      QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
+
+      const qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();
+      const std::string &walletId = transactionData_->getWallet()->walletId();
+      const std::string fileName = fmt::format("{}_{}.bin", walletId, timestamp);
+
+      QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));
+      offlineFilePath = QFileDialog::getSaveFileName(this, tr("Save Offline TX as..."), defaultFilePath).toStdString();
+
+      if (offlineFilePath.empty()) {
          return true;
       }
-      signContainer_->setTargetDir(txDir);
+
+      QString newSignerOfflineDir = QFileInfo(QString::fromStdString(offlineFilePath)).absoluteDir().path();
+      if (signerOfflineDir != newSignerOfflineDir) {
+         applicationSettings_->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
+      }
    }
 
    startBroadcasting();
@@ -440,6 +462,7 @@ bool CreateTransactionDialog::CreateTransaction()
       txReq_ = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked
          , changeAddress, originalFee_);
       txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
+      txReq_.offlineFilePath = offlineFilePath;
 
       // We shouldn't hit this case since the request checks the incremental
       // relay fee requirement for RBF. But, in case we
@@ -492,11 +515,20 @@ bool CreateTransactionDialog::CreateTransaction()
 
 std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTransactions()
 {
-   const auto reqFile = QFileDialog::getOpenFileName(this, tr("Select Transaction file"), offlineDir_
+   QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
+
+   const QString reqFile = QFileDialog::getOpenFileName(this, tr("Select Transaction file"), signerOfflineDir
       , tr("TX files (*.bin)"));
    if (reqFile.isEmpty()) {
       return {};
    }
+
+   // Update latest used directory if needed
+   QString newSignerOfflineDir = QFileInfo(reqFile).absoluteDir().path();
+   if (signerOfflineDir != newSignerOfflineDir) {
+      applicationSettings_->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
+   }
+
    const auto title = tr("Transaction file");
    QFile f(reqFile);
    if (!f.exists()) {

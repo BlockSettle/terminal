@@ -1,10 +1,11 @@
 #include "CCFileManager.h"
 
 #include "ApplicationSettings.h"
+#include "AuthSignManager.h"
 #include "CelerClient.h"
 #include "ConnectionManager.h"
 #include "EncryptionUtils.h"
-#include "AuthSignManager.h"
+#include "HDPath.h"
 
 #include <spdlog/spdlog.h>
 
@@ -25,6 +26,21 @@ CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
    , appSettings_(appSettings)
    , authSignManager_(authSignMgr)
 {
+   const auto &cbSecLoaded = [this](const bs::network::CCSecurityDef &ccSecDef) {
+      emit CCSecurityDef(ccSecDef);
+      emit CCSecurityId(ccSecDef.securityId);
+      emit CCSecurityInfo(QString::fromStdString(ccSecDef.product), QString::fromStdString(ccSecDef.description)
+         , (unsigned long)ccSecDef.nbSatoshis, QString::fromStdString(ccSecDef.genesisAddr.display()));
+   };
+   const auto &cbLoadComplete = [this] (unsigned int rev) {
+      logger_->debug("[CCFileManager] loading complete, last revision: {}", rev);
+      currentRev_ = rev;
+      emit Loaded();
+   };
+   resolver_ = std::make_shared<CCPubResolver>(logger_
+      , BinaryData::CreateFromHex(appSettings_->get<std::string>(ApplicationSettings::bsPublicKey))
+      , cbSecLoaded, cbLoadComplete);
+
    connect(appSettings_.get(), &ApplicationSettings::settingChanged, this, &CCFileManager::onPubSettingsChanged
       , Qt::QueuedConnection);
 }
@@ -64,7 +80,7 @@ bool CCFileManager::hasLocalFile() const
 void CCFileManager::LoadSavedCCDefinitions()
 {
    const auto &path = appSettings_->get<std::string>(ApplicationSettings::ccFileName);
-   if (!LoadFromFile(path)) {
+   if (!resolver_->loadFromFile(path)) {
       emit LoadingFailed();
       QFile::remove(QString::fromStdString(path));
    }
@@ -78,28 +94,6 @@ void CCFileManager::ConnectToCelerClient(const std::shared_ptr<CelerClient> &cel
 bool CCFileManager::wasAddressSubmitted(const bs::Address &addr)
 {
    return celerClient_->IsCCAddressSubmitted(addr.display());
-}
-
-void CCFileManager::FillFrom(Blocksettle::Communication::GetCCGenesisAddressesResponse *resp)
-{
-   ccSecurities_.clear();
-   ccSecurities_.reserve(resp->ccsecurities_size());
-   for (int i = 0; i < resp->ccsecurities_size(); i++) {
-      const auto ccSecurity = resp->ccsecurities(i);
-      bs::network::CCSecurityDef ccSecDef = {
-         ccSecurity.securityid(), ccSecurity.product(), ccSecurity.description(),
-         bs::Address(ccSecurity.genesisaddr()), ccSecurity.satoshisnb()
-      };
-      emit CCSecurityDef(ccSecDef);
-      emit CCSecurityId(ccSecurity.securityid());
-      emit CCSecurityInfo(QString::fromStdString(ccSecDef.product), QString::fromStdString(ccSecDef.description)
-         , (unsigned long)ccSecDef.nbSatoshis, QString::fromStdString(ccSecurity.genesisaddr()));
-      ccSecurities_.push_back(ccSecDef);
-   }
-   logger_->debug("[CCFileManager::ProcessCCGenAddressesResponse] got {} CC gen address[es]", ccSecurities_.size());
-
-   currentRev_ = resp->revision();
-   emit Loaded();
 }
 
 static inline AddressNetworkType networkType(const std::shared_ptr<ApplicationSettings> &settings)
@@ -138,8 +132,15 @@ void CCFileManager::ProcessGenAddressesResponse(const std::string& response, boo
       return;
    }
 
-   FillFrom(&genAddrResp);
-   SaveToFile(appSettings_->get<std::string>(ApplicationSettings::ccFileName), sig);
+   resolver_->fillFrom(&genAddrResp);
+
+   if (saveToFileDisabled_) {
+      logger_->debug("[{}] save to file disabled", __func__);
+   }
+   else {
+      resolver_->saveToFile(appSettings_->get<std::string>(ApplicationSettings::ccFileName)
+         , currentRev_, sig);
+   }
 }
 
 bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed)
@@ -149,26 +150,33 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       return false;
    }
 
-   const auto cbSigned = [this, address](const std::string &data, const BinaryData &invisibleData, const std::string &signature) {
-      SubmitAddrForInitialDistributionRequest addressRequest;
-      if (!addressRequest.ParseFromString(invisibleData.toBinStr())) {
-         logger_->error("[CCFileManager::SubmitAddressToPuB] failed to parse original request");
-         emit CCSubmitFailed(QString::fromStdString(address.display()), tr("Failed to parse original request"));
-         return;
-      }
-      if (addressRequest.prefixedaddress() != address.display()) {
-         logger_->error("[CCFileManager::SubmitAddressToPuB] CC address mismatch");
-         emit CCSubmitFailed(QString::fromStdString(address.display()), tr("CC address mismatch"));
-         return;
-      }
+   SubmitAddrForInitialDistributionRequest request;
+   request.set_username(celerClient_->userName());
+   request.set_networktype(networkType(appSettings_));
+   request.set_prefixedaddress(address.display());
+   request.set_bsseed(seed);
 
-      RequestPacket  request;
-      request.set_datasignature(signature);
-      request.set_requesttype(SubmitCCAddrInitialDistribType);
-      request.set_requestdata(data);
+   std::string requestData = request.SerializeAsString();
+   BinaryData requestDataHash = BtcUtils::getSha256(requestData);
+
+   const auto cbSigned = [this, address, requestData](const AutheIDClient::SignResult &result) {
+      // No need to check result.data (AutheIDClient will check that invisible data is the same)
+
+      RequestPacket packet;
+      packet.set_requesttype(SubmitCCAddrInitialDistribType);
+      packet.set_requestdata(requestData);
+
+      // Copy AuthEid signature
+      auto autheidSign = packet.mutable_autheidsign();
+      autheidSign->set_serialization(AuthEidSign::Serialization(result.serialization));
+      autheidSign->set_signature_data(result.data.toBinStr());
+      autheidSign->set_sign(result.sign.toBinStr());
+      autheidSign->set_certificate_client(result.certificateClient.toBinStr());
+      autheidSign->set_certificate_issuer(result.certificateIssuer.toBinStr());
+      autheidSign->set_ocsp_response(result.ocspResponse.toBinStr());
 
       logger_->debug("[CCFileManager::SubmitAddressToPuB] submitting addr {}", address.display());
-      if (SubmitRequestToPB("submit_cc_addr", request.SerializeAsString())) {
+      if (SubmitRequestToPB("submit_cc_addr", packet.SerializeAsString())) {
          emit CCInitialSubmitted(QString::fromStdString(address.display()));
       }
       else {
@@ -181,13 +189,7 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       emit CCSubmitFailed(QString::fromStdString(address.display()), text);
    };
 
-   SubmitAddrForInitialDistributionRequest addressRequest;
-   addressRequest.set_username(celerClient_->userName());
-   addressRequest.set_networktype(networkType(appSettings_));
-   addressRequest.set_prefixedaddress(address.display());
-   addressRequest.set_bsseed(seed);
-
-   return authSignManager_->Sign(addressRequest.SerializeAsString(), tr("Private Market token")
+   return authSignManager_->Sign(requestDataHash, tr("Private Market token")
       , tr("Submitting CC wallet address to receive PM token")
       , cbSigned, cbSignFailed, 90);
 }
@@ -225,7 +227,104 @@ void CCFileManager::ProcessSubmitAddrResponse(const std::string& responseString)
    emit CCAddressSubmitted(QString::fromStdString(addr.display()));
 }
 
-bool CCFileManager::LoadFromFile(const std::string &path)
+std::string CCFileManager::GetPuBHost() const
+{
+   return appSettings_->pubBridgeHost();
+}
+
+std::string CCFileManager::GetPuBPort() const
+{
+   return appSettings_->pubBridgePort();
+}
+
+std::string CCFileManager::GetPuBKey() const
+{
+   return appSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey);
+}
+
+bool CCFileManager::IsTestNet() const
+{
+   return appSettings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet;
+}
+
+
+void CCPubResolver::clear()
+{
+   securities_.clear();
+   walletIdxMap_.clear();
+}
+
+void CCPubResolver::add(const bs::network::CCSecurityDef &ccDef)
+{
+   securities_[ccDef.product] = ccDef;
+   const auto walletIdx = bs::hd::Path::keyToElem(ccDef.product);
+   walletIdxMap_[walletIdx] = ccDef.product;
+   cbSecLoaded_(ccDef);
+}
+
+std::vector<std::string> CCPubResolver::securities() const
+{
+   std::vector<std::string> result;
+   for (const auto &ccDef : securities_) {
+      result.push_back(ccDef.first);
+   }
+   return result;
+}
+
+std::string CCPubResolver::nameByWalletIndex(bs::hd::Path::Elem idx) const
+{
+   idx &= ~bs::hd::hardFlag;
+   const auto &itWallet = walletIdxMap_.find(idx);
+   if (itWallet != walletIdxMap_.end()) {
+      return itWallet->second;
+   }
+   return {};
+}
+
+uint64_t CCPubResolver::lotSizeFor(const std::string &cc) const
+{
+   const auto &itSec = securities_.find(cc);
+   if (itSec != securities_.end()) {
+      return itSec->second.nbSatoshis;
+   }
+   return 0;
+}
+
+std::string CCPubResolver::descriptionFor(const std::string &cc) const
+{
+   const auto &itSec = securities_.find(cc);
+   if (itSec != securities_.end()) {
+      return itSec->second.description;
+   }
+   return {};
+}
+
+bs::Address CCPubResolver::genesisAddrFor(const std::string &cc) const
+{
+   const auto &itSec = securities_.find(cc);
+   if (itSec != securities_.end()) {
+      return itSec->second.genesisAddr;
+   }
+   return {};
+}
+
+void CCPubResolver::fillFrom(Blocksettle::Communication::GetCCGenesisAddressesResponse *resp)
+{
+   clear();
+   for (int i = 0; i < resp->ccsecurities_size(); i++) {
+      const auto ccSecurity = resp->ccsecurities(i);
+      bs::network::CCSecurityDef ccSecDef = {
+         ccSecurity.securityid(), ccSecurity.product(), ccSecurity.description(),
+         bs::Address(ccSecurity.genesisaddr()), ccSecurity.satoshisnb()
+      };
+      add(ccSecDef);
+   }
+   logger_->debug("[CCFileManager::ProcessCCGenAddressesResponse] got {} CC gen address[es]", securities_.size());
+
+   cbLoadComplete_(resp->revision());
+}
+
+bool CCPubResolver::loadFromFile(const std::string &path)
 {
    QFile f(QString::fromStdString(path));
    if (!f.exists()) {
@@ -247,10 +346,10 @@ bool CCFileManager::LoadFromFile(const std::string &path)
       logger_->error("[CCFileManager::LoadFromFile] failed to parse {}", path);
       return false;
    }
-   if (resp.networktype() != networkType(appSettings_)) {
+/*   if (resp.networktype() != networkType(appSettings_)) {
       logger_->error("[CCFileManager::LoadFromFile] wrong network type in {}", path);
       return false;
-   }
+   }*/
 
    if (!resp.has_signature()) {
       logger_->error("[CCFileManager::LoadFromFile] signature is missing in {}", path);
@@ -259,36 +358,31 @@ bool CCFileManager::LoadFromFile(const std::string &path)
    const auto signature = resp.signature();
    resp.clear_signature();
 
-   if (!VerifySignature(resp.SerializeAsString(), signature)) {
+   if (!verifySignature(resp.SerializeAsString(), signature)) {
       logger_->error("[CCFileManager::LoadFromFile] signature verification failed for {}", path);
       return false;
    }
 
-   FillFrom(&resp);
+   fillFrom(&resp);
    return true;
 }
 
-bool CCFileManager::SaveToFile(const std::string &path, const std::string &sig)
+bool CCPubResolver::saveToFile(const std::string &path, unsigned int rev, const std::string &sig)
 {
-   if (saveToFileDisabled_) {
-      logger_->debug("[CCFileManager::SaveToFile] save to file disabled");
-      return true;
-   }
-
    GetCCGenesisAddressesResponse resp;
 
-   resp.set_networktype(networkType(appSettings_));
-   resp.set_revision(currentRev_);
+   resp.set_networktype(/*networkType(appSettings_)*/AddressNetworkType::TestNetType);
+   resp.set_revision(rev);
    resp.set_signature(sig);
 
-   for (const auto &ccDef : ccSecurities_) {
+   for (const auto &ccDef : securities_) {
       const auto secDef = resp.add_ccsecurities();
-      secDef->set_securityid(ccDef.securityId);
-      secDef->set_product(ccDef.product);
-      secDef->set_genesisaddr(ccDef.genesisAddr.display());
-      secDef->set_satoshisnb(ccDef.nbSatoshis);
-      if (!ccDef.description.empty()) {
-         secDef->set_description(ccDef.description);
+      secDef->set_securityid(ccDef.second.securityId);
+      secDef->set_product(ccDef.second.product);
+      secDef->set_genesisaddr(ccDef.second.genesisAddr.display());
+      secDef->set_satoshisnb(ccDef.second.nbSatoshis);
+      if (!ccDef.second.description.empty()) {
+         secDef->set_description(ccDef.second.description);
       }
    }
 
@@ -305,29 +399,7 @@ bool CCFileManager::SaveToFile(const std::string &path, const std::string &sig)
    return true;
 }
 
-bool CCFileManager::VerifySignature(const std::string& data, const std::string& signature) const
+bool CCPubResolver::verifySignature(const std::string& data, const std::string& signature) const
 {
-   const BinaryData publicKey = BinaryData::CreateFromHex(appSettings_->get<std::string>(ApplicationSettings::bsPublicKey));
-
-   return CryptoECDSA().VerifyData(data, signature, publicKey);
-}
-
-std::string CCFileManager::GetPuBHost() const
-{
-   return appSettings_->pubBridgeHost();
-}
-
-std::string CCFileManager::GetPuBPort() const
-{
-   return appSettings_->pubBridgePort();
-}
-
-std::string CCFileManager::GetPuBKey() const
-{
-   return appSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey);
-}
-
-bool CCFileManager::IsTestNet() const
-{
-   return appSettings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet;
+   return CryptoECDSA().VerifyData(data, signature, pubKey_);
 }

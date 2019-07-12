@@ -1,5 +1,7 @@
 #include "SyncHDGroup.h"
+
 #include "SyncWallet.h"
+#include <QObject>
 
 using namespace bs::sync;
 
@@ -120,9 +122,9 @@ std::string hd::Group::nameForType(bs::hd::CoinType ct)
 
    case bs::hd::CoinType::BlockSettle_Auth:
       return QObject::tr("Authentication").toStdString();
-
-   default: return QObject::tr("Unknown").toStdString();
    }
+
+   return QObject::tr("Unknown").toStdString();
 }
 
 std::shared_ptr<hd::Leaf> hd::Group::newLeaf(const std::string &walletId) const

@@ -1,6 +1,8 @@
 #include "SelectedTransactionInputs.h"
-#include "Wallets/SyncWallet.h"
 
+#include <QPointer>
+#include <QApplication>
+#include "Wallets/SyncWallet.h"
 
 SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
    , bool swTransactionsOnly, bool confirmedOnly
@@ -64,8 +66,14 @@ void SelectedTransactionInputs::resetSelection()
 void SelectedTransactionInputs::onCPFPReceived(std::vector<UTXO> inputs)
 {
    cpfpInputs_ = inputs;
-   wallet_->getSpendableTxOutList(
-      [this](std::vector<UTXO> utxos) { onUTXOsReceived(utxos); }, UINT64_MAX);
+   QPointer<SelectedTransactionInputs> thisPtr = this;
+   wallet_->getSpendableTxOutList([thisPtr](const std::vector<UTXO> &utxos) {
+      QMetaObject::invokeMethod(qApp, [thisPtr, utxos] {
+         if (thisPtr) {
+            thisPtr->onUTXOsReceived(utxos);
+         }
+      });
+   }, UINT64_MAX);
 }
 
 void SelectedTransactionInputs::onUTXOsReceived(std::vector<UTXO> inputs)
@@ -80,7 +88,7 @@ void SelectedTransactionInputs::onUTXOsReceived(std::vector<UTXO> inputs)
    resetCallbacks_.clear();
 }
 
-void SelectedTransactionInputs::ResetInputs(std::function<void()> cb)
+void SelectedTransactionInputs::ResetInputs(const std::function<void()> &cb)
 {
    inputs_.clear();
    cpfpInputs_.clear();
@@ -89,14 +97,24 @@ void SelectedTransactionInputs::ResetInputs(std::function<void()> cb)
    if (resetCallbacks_.size() > 1) {
       return;
    }
+
+   QPointer<SelectedTransactionInputs> thisPtr = this;
    if (confirmedOnly_) {
-      wallet_->getSpendableTxOutList([this](std::vector<UTXO> inputs) {
-         onUTXOsReceived(inputs);
+      wallet_->getSpendableTxOutList([thisPtr](const std::vector<UTXO> &inputs) {
+         QMetaObject::invokeMethod(qApp, [thisPtr, inputs] {
+            if (thisPtr) {
+               thisPtr->onUTXOsReceived(inputs);
+            }
+         });
       }, UINT64_MAX);
    }
    else {
-      wallet_->getSpendableZCList([this](std::vector<UTXO> inputs) {
-         onCPFPReceived(inputs);
+      wallet_->getSpendableZCList([thisPtr](const std::vector<UTXO> &inputs) {
+         QMetaObject::invokeMethod(qApp, [thisPtr, inputs] {
+            if (thisPtr) {
+               thisPtr->onCPFPReceived(inputs);
+            }
+         });
       });
    }
 }

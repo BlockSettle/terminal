@@ -168,7 +168,6 @@ namespace bs {
          struct TXSignRequest
          {
             std::string       walletId;
-            //         bs::Wallet     *  wallet = nullptr;
             std::vector<UTXO> inputs;
             std::vector<std::shared_ptr<ScriptRecipient>>   recipients;
             struct {
@@ -181,6 +180,9 @@ namespace bs {
             std::vector<BinaryData>       prevStates;
             bool        populateUTXOs = false;
             std::string comment;
+
+            // Used when offline TX export is requested
+            std::string offlineFilePath;
 
             bool isValid() const noexcept;
             BinaryData serializeState() const { return getSigner().serializeState(); }

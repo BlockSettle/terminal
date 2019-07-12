@@ -81,7 +81,8 @@ bool AuthAddressManager::setup()
       const auto address = addr->GetChainedAddress();
       if (GetState(address) != state) {
          logger_->info("Address verification {} for {}", to_string(state), address.display());
-         SetState(address, state);
+         //FIXME: temp disabled for simulating address verification
+         //SetState(address, state);
          SetInitialTxHash(address, addr->GetInitialTransactionTxHash());
          SetVerifChangeTxHash(address, addr->GetVerificationChangeTxHash());
          SetBSFundingAddress(address, addr->GetBSFundingAddress());
@@ -459,11 +460,23 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
    request.set_scripttype(mapToScriptType(address.getType()));
    request.set_userid(celerClient_->userId());
 
-   const auto cbSigned = [this](const std::string &data, const BinaryData &, const std::string &signature) {
+   std::string requestData = request.SerializeAsString();
+   BinaryData requestDataHash = BtcUtils::getSha256(requestData);
+
+   const auto cbSigned = [this, requestData](const AutheIDClient::SignResult &result) {
       RequestPacket  packet;
-      packet.set_datasignature(signature);
+
       packet.set_requesttype(ConfirmAuthAddressSubmitType);
-      packet.set_requestdata(data);
+      packet.set_requestdata(requestData);
+
+      // Copy AuthEid signature
+      auto autheidSign = packet.mutable_autheidsign();
+      autheidSign->set_serialization(AuthEidSign::Serialization(result.serialization));
+      autheidSign->set_signature_data(result.data.toBinStr());
+      autheidSign->set_sign(result.sign.toBinStr());
+      autheidSign->set_certificate_client(result.certificateClient.toBinStr());
+      autheidSign->set_certificate_issuer(result.certificateIssuer.toBinStr());
+      autheidSign->set_ocsp_response(result.ocspResponse.toBinStr());
 
       logger_->debug("[AuthAddressManager::ConfirmSubmitForVerification] confirmed auth address submission");
       SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
@@ -474,7 +487,7 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
       emit SignFailed(text);
    };
 
-   return authSignManager_->Sign(request.SerializeAsString(), tr("Authentication Address")
+   return authSignManager_->Sign(requestDataHash, tr("Authentication Address")
       , tr("Submit auth address for verification"), cbSigned, cbSignFailed, expireTimeoutSeconds);
 }
 
@@ -692,18 +705,26 @@ void AuthAddressManager::onWalletChanged(const std::string &walletId)
       const auto count = newAddresses.size();
       listUpdated = (count > addresses_.size());
 
-      for (size_t i = addresses_.size(); i < count; i++) {
+      //FIXME: temporary code to simulate address verification
+      listUpdated = true;
+      addresses_ = newAddresses;
+      for (const auto &addr : newAddresses) {
+         SetState(addr, AddressVerificationState::Verified);
+      }
+      emit VerifiedAddressListUpdated();
+
+      // FIXME: address verification is disabled temporarily
+/*      for (size_t i = addresses_.size(); i < count; i++) {
          const auto &addr = newAddresses[i];
          AddAddress(addr);
          const auto authAddr = std::make_shared<AuthAddress>(addr);
          addressVerificator_->StartAddressVerification(authAddr);
-      }
+      }*/
    }
 
    if (listUpdated) {
       emit AddressListUpdated();
-      addressVerificator_->RegisterAddresses();
-      authWallet_->registerWallet();
+//      addressVerificator_->RegisterAddresses();  //FIXME: re-enable later
    }
 }
 
@@ -846,12 +867,6 @@ void AuthAddressManager::SetState(const bs::Address &addr, AddressVerificationSt
 bool AuthAddressManager::BroadcastTransaction(const BinaryData& transactionData)
 {
    return armory_->broadcastZC(transactionData);
-}
-
-BinaryData AuthAddressManager::GetPublicKey(size_t index)
-{
-//   return authWallet_->GetPubChainedKeyFor(GetAddress(index));
-   return {};  //FIXME: public keys are not available now
 }
 
 void AuthAddressManager::setDefault(const bs::Address &addr)

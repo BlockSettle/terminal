@@ -7,7 +7,6 @@
 #include <string>
 #include <QObject>
 #include <QStringList>
-#include "ApplicationSettings.h"
 #include "DataConnectionListener.h"
 #include "SignContainer.h"
 #include "ZMQ_BIP15X_DataConnection.h"
@@ -24,7 +23,6 @@ namespace bs {
    }
 }
 
-class ApplicationSettings;
 class ConnectionManager;
 class DataConnection;
 class HeadlessListener;
@@ -75,9 +73,10 @@ public:
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
 
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override;
-   void SendPassword(const std::string &walletId, bs::error::ErrorCode result, const PasswordType &password) override;
 
-   bs::signer::RequestId SetUserId(const BinaryData &) override;
+   bs::signer::RequestId setUserId(const BinaryData &) override;
+   bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override;
+
    bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override;
    bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc
@@ -109,10 +108,9 @@ public:
    bool isWalletOffline(const std::string &walletId) const override;
 
 protected:
-   bs::signer::RequestId Send(Blocksettle::Communication::headless::RequestPacket, bool incSeqNo = true);
+   bs::signer::RequestId Send(const Blocksettle::Communication::headless::RequestPacket &, bool incSeqNo = true);
    void ProcessSignTXResponse(unsigned int id, const std::string &data);
    void ProcessSettlementSignTXResponse(unsigned int id, const std::string &data);
-   void ProcessPasswordRequest(const std::string &data);
    void ProcessCreateHDWalletResponse(unsigned int id, const std::string &data);
    bs::signer::RequestId SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId);
    void ProcessGetHDWalletInfoResponse(unsigned int id, const std::string &data);
@@ -123,6 +121,7 @@ protected:
    void ProcessSyncAddresses(unsigned int id, const std::string &data);
    void ProcessExtAddrChain(unsigned int id, const std::string &data);
    void ProcessSettlWalletCreate(unsigned int id, const std::string &data);
+   void ProcessSetUserId(const std::string &data);
 
 protected:
    std::shared_ptr<HeadlessListener>   listener_;
@@ -147,7 +146,6 @@ public:
    RemoteSigner(const std::shared_ptr<spdlog::logger> &, const QString &host
       , const QString &port, NetworkType netType
       , const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::shared_ptr<ApplicationSettings>& appSettings
       , OpMode opMode = OpMode::Remote
       , const bool ephemeralDataConnKeys = true
       , const std::string& ownKeyFileDir = ""
@@ -161,9 +159,6 @@ public:
    bool Disconnect() override;
    bool isOffline() const override;
    void updatePeerKeys(const ZmqBIP15XPeers &peers);
-
-   void setTargetDir(const QString& targetDir) override;
-   QString targetDir() const override;
 
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
@@ -183,6 +178,7 @@ private:
    void ScheduleRestart();
 
    bs::signer::RequestId signOffline(const bs::core::wallet::TXSignRequest &txSignReq);
+   void txSignedAsync(bs::signer::RequestId id, const BinaryData &signedTX, bs::error::ErrorCode result, const std::string &errorReason = {});
 
 protected:
    const QString                              host_;
@@ -192,7 +188,6 @@ protected:
    const std::string                          ownKeyFileDir_;
    const std::string                          ownKeyFileName_;
    std::shared_ptr<ZmqBIP15XDataConnection>   connection_;
-   std::shared_ptr<ApplicationSettings>       appSettings_;
    const ZmqBIP15XDataConnection::cbNewKey    cbNewKey_;
 
 private:
@@ -209,7 +204,6 @@ public:
    LocalSigner(const std::shared_ptr<spdlog::logger> &, const QString &homeDir
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::shared_ptr<ApplicationSettings>& appSettings
       , const bool startSignerProcess = true
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""
@@ -271,6 +265,7 @@ private:
    std::atomic<bool>                isReady_{false};
    bool                             isConnected_{false};
    bool                             wasErrorReported_{false};
+   std::atomic<bool>                isShuttingDown_{false};
 };
 
 #endif // __HEADLESS_CONTAINER_H__

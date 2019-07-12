@@ -103,6 +103,7 @@ void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettin
    armory_ = armory;
    walletsManager_ = walletsMgr;
    logger_ = logger;
+   appSettings_ = appSettings;
 
    ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ_Portfolio, mdProvider);
    ui_->widgetCCProtfolio->SetPortfolioModel(model);
@@ -180,7 +181,7 @@ void PortfolioWidget::onCreateRBFDialog()
    const auto &cbDialog = [this] (const TransactionsViewItem *txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
-            , walletsManager_, signContainer_, logger_, txItem->tx
+            , walletsManager_, signContainer_, logger_, appSettings_, txItem->tx
             , txItem->wallet, this);
          dlg->exec();
       }
@@ -205,7 +206,7 @@ void PortfolioWidget::onCreateCPFPDialog()
    const auto &cbDialog = [this] (const TransactionsViewItem *txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
-            , walletsManager_, signContainer_, txItem->wallet, logger_
+            , walletsManager_, signContainer_, txItem->wallet, logger_, appSettings_
             , txItem->tx, this);
          dlg->exec();
       }

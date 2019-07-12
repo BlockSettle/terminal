@@ -248,8 +248,10 @@ void RFQTicketXBT::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sy
    const auto &ccProduct = getProduct().toStdString();
    group->addLeaf(leaf);
 
-   leaf->setData(assetManager_->getCCGenesisAddr(ccProduct).display());
-   leaf->setData(assetManager_->getCCLotSize(ccProduct));
+   auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(leaf);
+   if (ccLeaf) {
+      ccLeaf->setCCDataResolver(walletsManager_->ccResolver());
+   }
 
    ui_->comboBoxCCWallets->clear();
    ui_->comboBoxCCWallets->addItem(QString::fromStdString(leaf->name()));
@@ -344,7 +346,7 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
 {
    walletsManager_ = walletsManager;
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQTicketXBT::walletsLoaded);
-   QMetaObject::invokeMethod(this, "walletsLoaded");
+   walletsLoaded();
 }
 
 void RFQTicketXBT::walletsLoaded()
@@ -515,7 +517,7 @@ std::string RFQTicketXBT::authKey() const
    if (index < 0) {
       return "";
    }
-   return authAddressManager_->GetPublicKey(authAddressManager_->FromVerifiedIndex(index)).toHexStr();
+   return authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index)).toHexStr();
 }
 
 bs::Address RFQTicketXBT::recvAddress() const

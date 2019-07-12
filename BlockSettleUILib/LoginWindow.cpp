@@ -57,6 +57,8 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
 
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &LoginWindow::onTimer);
+
+   onTextChanged();
 }
 
 LoginWindow::~LoginWindow() = default;

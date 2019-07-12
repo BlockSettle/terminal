@@ -18,7 +18,9 @@ public:
    CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<spdlog::logger>&, QWidget* parent = nullptr);
+      , const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<ApplicationSettings> &applicationSettings
+      , QWidget* parent = nullptr);
    ~CreateTransactionDialogSimple() override;
 
    bool userRequestedAdvancedDialog() const;

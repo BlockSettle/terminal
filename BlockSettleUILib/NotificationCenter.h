@@ -15,6 +15,9 @@
 #include "DBusNotification.h"
 #endif // BS_USE_DBUS
 
+namespace spdlog {
+   class logger;
+}
 
 namespace Ui {
     class BSTerminalMainWindow;
@@ -60,18 +63,18 @@ class NotificationCenter : public QObject
    Q_OBJECT
 
 public:
-   NotificationCenter(const std::shared_ptr<ApplicationSettings> &, const Ui::BSTerminalMainWindow *
-      , const std::shared_ptr<QSystemTrayIcon> &, QObject *parent = nullptr);
+   NotificationCenter(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings> &
+      , const Ui::BSTerminalMainWindow *, const std::shared_ptr<QSystemTrayIcon> &, QObject *parent = nullptr);
    ~NotificationCenter() noexcept = default;
 
-   static void createInstance(const std::shared_ptr<ApplicationSettings> &, const Ui::BSTerminalMainWindow *
+   static void createInstance(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<ApplicationSettings> &, const Ui::BSTerminalMainWindow *
       , const std::shared_ptr<QSystemTrayIcon> &, QObject *parent = nullptr);
    static NotificationCenter *instance();
    static void destroyInstance();
    static void notify(bs::ui::NotifyType, const bs::ui::NotifyMessage &);
 
 signals:
-   void notifyEndpoint(bs::ui::NotifyType, bs::ui::NotifyMessage);
+   void notifyEndpoint(bs::ui::NotifyType, const bs::ui::NotifyMessage &);
    void newChatMessageClick(const QString &chatId);
 
 private:
@@ -79,6 +82,7 @@ private:
    void addResponder(const std::shared_ptr<NotificationResponder> &);
 
 private:
+   std::shared_ptr<spdlog::logger> logger_;
    std::vector<std::shared_ptr<NotificationResponder>>   responders_;
 };
 
@@ -110,7 +114,8 @@ class NotificationTrayIconResponder : public NotificationResponder
 {
    Q_OBJECT
 public:
-   NotificationTrayIconResponder(const Ui::BSTerminalMainWindow *mainWinUi, const std::shared_ptr<QSystemTrayIcon> &trayIcon, const std::shared_ptr<ApplicationSettings> &appSettings
+   NotificationTrayIconResponder(const std::shared_ptr<spdlog::logger> &, const Ui::BSTerminalMainWindow *mainWinUi
+      , const std::shared_ptr<QSystemTrayIcon> &trayIcon, const std::shared_ptr<ApplicationSettings> &appSettings
       , QObject *parent = nullptr);
    
    void respond(bs::ui::NotifyType, bs::ui::NotifyMessage) override;
@@ -122,7 +127,8 @@ private slots:
 #endif // BS_USE_DBUS
 
 private:
-   const Ui::BSTerminalMainWindow * mainWinUi_;
+   std::shared_ptr<spdlog::logger> logger_;
+   const Ui::BSTerminalMainWindow * mainWinUi_{};
    std::shared_ptr<QSystemTrayIcon>       trayIcon_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    bool  newVersionMessage_ = false;

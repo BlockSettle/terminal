@@ -1,6 +1,5 @@
 #include "HeadlessContainer.h"
 
-#include "ApplicationSettings.h"
 #include "ConnectionManager.h"
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncHDWallet.h"
@@ -14,7 +13,6 @@
 #include <QProcess>
 #include <QStandardPaths>
 #include <QTimer>
-#include <QtConcurrent/QtConcurrentRun>
 
 #include <spdlog/spdlog.h>
 #include "signer.pb.h"
@@ -130,6 +128,10 @@ void HeadlessListener::OnConnected()
 
 void HeadlessListener::OnDisconnected()
 {
+   if (isShuttingDown_) {
+      return;
+   }
+
    SPDLOG_LOGGER_ERROR(logger_, "remote signer disconnected unexpectedly");
    isConnected_ = false;
    isReady_ = false;
@@ -169,11 +171,16 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
 
 bs::signer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)
 {
+   if (!connection_) {
+      return 0;
+   }
+
    bs::signer::RequestId id = 0;
    if (updateId) {
       id = newRequestId();
       packet.set_id(id);
    }
+
    if (!connection_->send(packet.SerializeAsString())) {
       logger_->error("[HeadlessListener] Failed to send request packet");
       emit disconnected();
@@ -189,7 +196,7 @@ HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logg
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Leaf>>();
 }
 
-bs::signer::RequestId HeadlessContainer::Send(headless::RequestPacket packet, bool incSeqNo)
+bs::signer::RequestId HeadlessContainer::Send(const headless::RequestPacket &packet, bool incSeqNo)
 {
    if (!listener_) {
       return 0;
@@ -226,16 +233,6 @@ void HeadlessContainer::ProcessSettlementSignTXResponse(unsigned int id, const s
       itCb->second(static_cast<bs::error::ErrorCode>(response.errorcode()), BinaryData(response.signedtx()));
    }
    cbSettlementSignTxMap_.erase(itCb);
-}
-
-void HeadlessContainer::ProcessPasswordRequest(const std::string &data)
-{
-   headless::PasswordRequest request;
-   if (!request.ParseFromString(data)) {
-      logger_->error("[HeadlessContainer] Failed to parse PasswordRequest");
-      return;
-   }
-   logger_->error("[{}] shouldn't arrive from signer anymore", __func__);
 }
 
 void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std::string &data)
@@ -332,6 +329,21 @@ void HeadlessContainer::ProcessAutoSignActEvent(unsigned int id, const std::stri
    emit AutoSignStateChanged(event.rootwalletid(), event.autosignactive());
 }
 
+void HeadlessContainer::ProcessSetUserId(const std::string &data)
+{
+   headless::SetUserIdResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[{}] failed to parse response", __func__);
+      return;
+   }
+   if (!response.auth_wallet_id().empty() && (response.response() == headless::AWR_NoError)) {
+      emit AuthLeafAdded(response.auth_wallet_id());
+   }
+   else {   // unset auth wallet
+      emit AuthLeafAdded("");
+   }
+}
+
 headless::SignTxRequest HeadlessContainer::createSignTxRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , const SignContainer::PasswordType &password, bool keepDuplicatedRecipients)
 {
@@ -359,7 +371,7 @@ headless::SignTxRequest HeadlessContainer::createSignTxRequest(const bs::core::w
    }
 
    if (!password.isNull()) {
-      request.set_password(password.toHexStr());
+      request.set_password(password.toBinStr());
    }
 
    if (!txSignReq.prevStates.empty()) {
@@ -427,7 +439,7 @@ bs::signer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::core::wal
 //   }
 
    if (!password.isNull()) {
-      request.set_password(password.toHexStr());
+      request.set_password(password.toBinStr());
    }
 
    headless::RequestPacket packet;
@@ -556,24 +568,7 @@ bs::signer::RequestId HeadlessContainer::CancelSignTx(const BinaryData &txId)
    return Send(packet);
 }
 
-void HeadlessContainer::SendPassword(const std::string &walletId, bs::error::ErrorCode result, const PasswordType &password)
-{
-   headless::RequestPacket packet;
-   packet.set_type(headless::PasswordRequestType);
-
-   headless::PasswordReply response;
-   if (!walletId.empty()) {
-      response.set_walletid(walletId);
-   }
-   if (!password.isNull()) {
-      response.set_password(password.toHexStr());
-   }
-   response.set_errorcode(static_cast<uint32_t>(result));
-   packet.set_data(response.SerializeAsString());
-   Send(packet, false);
-}
-
-bs::signer::RequestId HeadlessContainer::SetUserId(const BinaryData &userId)
+bs::signer::RequestId HeadlessContainer::setUserId(const BinaryData &userId)
 {
    if (!listener_) {
       logger_->warn("[HeadlessContainer::SetUserId] listener not set yet");
@@ -586,7 +581,21 @@ bs::signer::RequestId HeadlessContainer::SetUserId(const BinaryData &userId)
    }
 
    headless::RequestPacket packet;
-   packet.set_type(headless::SetUserIdRequestType);
+   packet.set_type(headless::SetUserIdType);
+   packet.set_data(request.SerializeAsString());
+   return Send(packet);
+}
+
+bs::signer::RequestId HeadlessContainer::syncCCNames(const std::vector<std::string> &ccNames)
+{
+   logger_->debug("[{}] syncing {} CCs", __func__, ccNames.size());
+   headless::SyncCCNamesData request;
+   for (const auto &cc : ccNames) {
+      request.add_ccnames(cc);
+   }
+
+   headless::RequestPacket packet;
+   packet.set_type(headless::SyncCCNamesType);
    packet.set_data(request.SerializeAsString());
    return Send(packet);
 }
@@ -848,23 +857,25 @@ void HeadlessContainer::syncAddressBatch(
    const std::string &walletId, const std::set<BinaryData>& addrSet,
    std::function<void(bs::sync::SyncState)> cb)
 {
-   headless::SyncAddressesRequest request;
-   request.set_wallet_id(walletId);
-   for (const auto &addr : addrSet) {
-      request.add_addresses(addr.toBinStr());
-   }
-
-   headless::RequestPacket packet;
-   packet.set_type(headless::SyncAddressesType);
-   packet.set_data(request.SerializeAsString());
-   const auto reqId = Send(packet);
-   if (!reqId) {
-      if (cb) {
-         cb(bs::sync::SyncState::Failure);
+   QMetaObject::invokeMethod(this, [this, walletId, addrSet, cb] {
+      headless::SyncAddressesRequest request;
+      request.set_wallet_id(walletId);
+      for (const auto &addr : addrSet) {
+         request.add_addresses(addr.toBinStr());
       }
-      return;
-   }
-   cbSyncAddrsMap_[reqId] = cb;
+
+      headless::RequestPacket packet;
+      packet.set_type(headless::SyncAddressesType);
+      packet.set_data(request.SerializeAsString());
+      const auto reqId = Send(packet);
+      if (!reqId) {
+         if (cb) {
+            cb(bs::sync::SyncState::Failure);
+         }
+         return;
+      }
+      cbSyncAddrsMap_[reqId] = cb;
+   });
 }
 
 static NetworkType mapFrom(headless::NetworkType netType)
@@ -1085,7 +1096,6 @@ void HeadlessContainer::ProcessExtAddrChain(unsigned int id, const std::string &
 RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &host, const QString &port, NetworkType netType
    , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const std::shared_ptr<ApplicationSettings>& appSettings
    , OpMode opMode
    , const bool ephemeralDataConnKeys
    , const std::string& ownKeyFileDir
@@ -1096,17 +1106,18 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , ephemeralDataConnKeys_(ephemeralDataConnKeys)
    , ownKeyFileDir_(ownKeyFileDir)
    , ownKeyFileName_(ownKeyFileName)
-   , appSettings_{appSettings}
    , cbNewKey_{inNewKeyCB}
    , connectionManager_{connectionManager}
 {
-   // Create connection upfront in order to grab some required data early.
-   RecreateConnection();
 }
 
 // Establish the remote connection to the signer.
 bool RemoteSigner::Start()
 {
+   if (!connection_) {
+      RecreateConnection();
+   }
+
    // If we've already connected, don't do more setup.
    if (headlessConnFinished_) {
       return true;
@@ -1151,6 +1162,7 @@ bool RemoteSigner::Connect()
    }
 
    listener_->wasErrorReported_ = false;
+   listener_->isShuttingDown_ = false;
 
    bool result = connection_->openConnection(host_.toStdString(), port_.toStdString(), listener_.get());
    if (!result) {
@@ -1170,7 +1182,13 @@ bool RemoteSigner::Disconnect()
       return true;
    }
 
-   return connection_->closeConnection();
+   if (listener_) {
+      listener_->isShuttingDown_ = true;
+   }
+
+   bool result = connection_->closeConnection();
+   connection_.reset();
+   return result;
 }
 
 void RemoteSigner::Authenticate()
@@ -1245,6 +1263,10 @@ bool RemoteSigner::isOffline() const
 
 void RemoteSigner::updatePeerKeys(const ZmqBIP15XPeers &peers)
 {
+   if (!connection_) {
+      RecreateConnection();
+   }
+
    connection_->updatePeerKeys(peers);
 }
 
@@ -1300,10 +1322,6 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       ProcessSettlementSignTXResponse(packet.id(), packet.data());
       break;
 
-   case headless::PasswordRequestType:
-      ProcessPasswordRequest(packet.data());
-      break;
-
    case headless::CreateHDWalletRequestType:
       ProcessCreateHDWalletResponse(packet.id(), packet.data());
       break;
@@ -1312,8 +1330,8 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       ProcessGetHDWalletInfoResponse(packet.id(), packet.data());
       break;
 
-   case headless::SetUserIdRequestType:
-      emit UserIdSet();
+   case headless::SetUserIdType:
+      ProcessSetUserId(packet.data());
       break;
 
    case headless::AutoSignActType:
@@ -1357,16 +1375,6 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       logger_->warn("[HeadlessContainer] Unknown packet type: {}", packet.type());
       break;
    }
-}
-
-void RemoteSigner::setTargetDir(const QString& targetDir)
-{
-   appSettings_->set(ApplicationSettings::signerOfflineDir, targetDir);
-}
-
-QString RemoteSigner::targetDir() const
-{
-   return appSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 }
 
 bs::signer::RequestId RemoteSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
@@ -1423,52 +1431,48 @@ bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRe
    container->set_type(Blocksettle::Storage::Signer::RequestFileType);
    container->set_data(request.SerializeAsString());
 
-   const auto timestamp = std::to_string(QDateTime::currentDateTime().toSecsSinceEpoch());
-   const auto targetDir = appSettings_->get<std::string>(ApplicationSettings::signerOfflineDir);
-   const std::string fileName = targetDir + "/" + txSignReq.walletId + "_" + timestamp + ".bin";
-
    const auto reqId = listener_->newRequestId();
-   QFile f(QString::fromStdString(fileName));
+   const std::string &fileNamePath = txSignReq.offlineFilePath;
+
+   QFile f(QString::fromStdString(fileNamePath));
    if (f.exists()) {
-      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::TxRequestFileExist, fileName);
-      });
+      txSignedAsync(reqId, {}, bs::error::ErrorCode::TxRequestFileExist, fileNamePath);
       return reqId;
    }
    if (!f.open(QIODevice::WriteOnly)) {
-      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::TxFailedToOpenRequestFile, fileName);
-      });
+      txSignedAsync(reqId, {}, bs::error::ErrorCode::TxFailedToOpenRequestFile, fileNamePath);
       return reqId;
    }
 
    const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
    if (f.write(data) != data.size()) {
-      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::TxFailedToWriteRequestFile, fileName);
-      });
+      txSignedAsync(reqId, {}, bs::error::ErrorCode::TxFailedToWriteRequestFile, fileNamePath);
       return reqId;
    }
    f.close();
 
-   QTimer::singleShot(1, [this, reqId, fileName] {    // requires some delay to avoid race condition on return
-      emit TXSigned(reqId, fileName, bs::error::ErrorCode::NoError);
-   });
+   // response should be async
+   txSignedAsync(reqId, {}, bs::error::ErrorCode::NoError);
    return reqId;
 }
 
+void RemoteSigner::txSignedAsync(bs::signer::RequestId id, const BinaryData &signedTX, bs::error::ErrorCode result, const std::string &errorReason)
+{
+   QMetaObject::invokeMethod(this, [this, id, signedTX, result, errorReason] {
+      emit TXSigned(id, signedTX, result, errorReason);
+   }, Qt::QueuedConnection);
+}
 
 LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &homeDir, NetworkType netType, const QString &port
    , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const std::shared_ptr<ApplicationSettings> &appSettings
    , const bool startSignerProcess
    , const std::string& ownKeyFileDir
    , const std::string& ownKeyFileName
    , double asSpendLimit
    , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-      , connectionManager, appSettings, OpMode::Local, true
+      , connectionManager, OpMode::Local, true
       , ownKeyFileDir, ownKeyFileName, inNewKeyCB)
       , homeDir_(homeDir), startProcess_(startSignerProcess), asSpendLimit_(asSpendLimit)
 {}
@@ -1518,6 +1522,11 @@ bool LocalSigner::Start()
 {
    Stop();
 
+   bool result = RemoteSigner::Start();
+   if (!result) {
+      return false;
+   }
+
    if (startProcess_) {
       // If there's a previous headless process, stop it.
       headlessProcess_ = std::make_shared<QProcess>();
@@ -1558,12 +1567,9 @@ bool LocalSigner::Start()
          emit connectionError(UnknownError, tr("failed to start process"));
          return false;
       }
-
-      // Give the signer a little time to get set up.
-      QThread::msleep(250);
    }
 
-   return RemoteSigner::Start();
+   return true;
 }
 
 bool LocalSigner::Stop()
@@ -1585,7 +1591,7 @@ void HeadlessListener::processDisconnectNotification()
    SPDLOG_LOGGER_INFO(logger_, "remote signer has been disconnected");
    isConnected_ = false;
    isReady_ = false;
-   tryEmitError(HeadlessContainer::SignerGoesOffline, tr("remote signer has been disconnected"));
+   tryEmitError(HeadlessContainer::SignerGoesOffline, tr("Remote signer disconnected"));
 }
 
 void HeadlessListener::tryEmitError(SignContainer::ConnectionError errorCode, const QString &msg)

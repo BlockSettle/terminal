@@ -477,7 +477,6 @@ bool hd::Wallet::changePassword(const SecureBinaryData& newPass)
 
 bool hd::Wallet::isPrimary() const
 {
-   logger_->debug("auth group: {}, XBT group: {}", (getGroup(bs::hd::CoinType::BlockSettle_Auth) != nullptr), (getGroup(getXBTGroupType()) != nullptr));
    if ((getGroup(bs::hd::CoinType::BlockSettle_Auth) != nullptr)
       && (getGroup(getXBTGroupType()) != nullptr)) {
       return true;

@@ -58,6 +58,7 @@ public:
    void postSplashscreenActions();
 
    bool event(QEvent *event) override;
+   void addDeferredDialog(const std::function<void(void)> &deferredDialog);
 
 private:
    void setupToolbar();
@@ -122,6 +123,7 @@ private slots:
    void showArmoryServerPrompt(const BinaryData& srvPubKey, const std::string& srvIPPort, std::shared_ptr<std::promise<bool> > promiseObj);
 
    void onArmoryNeedsReconnect();
+   void onCCLoaded();
 
    void onTabWidgetCurrentChanged(const int &index);
 
@@ -192,7 +194,7 @@ private slots:
    void openCCTokenDialog();
 
    void onZCreceived(const std::vector<bs::TXEntry> &);
-   void showZcNotification(const TxInfo *);
+   void showZcNotification(const TxInfo &);
 
    void onLogin();
    void onLogout();
@@ -239,11 +241,15 @@ private:
    bool armoryKeyDialogShown_ = false;
    bool armoryBDVRegistered_ = false;
    bool walletsSynched_ = false;
+   bool deferCCsync_ = false;
 
    SignContainer::ConnectionError lastSignerError_{};
 
    ZmqBIP15XDataConnection::cbNewKey   cbApprovePuB_ = nullptr;
    ZmqBIP15XDataConnection::cbNewKey   cbApproveChat_ = nullptr;
+
+   std::queue<std::function<void(void)>> deferredDialogs_;
+   bool deferredDialogRunning_ = false;
 
    class MainWinACT : public ArmoryCallbackTarget
    {

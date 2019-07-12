@@ -4,6 +4,7 @@
 #include "BlockObj.h"
 #include "CheckRecipSigner.h"
 #include "UiUtils.h"
+#include "Wallets/SyncWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 #include <memory>
@@ -89,12 +90,12 @@ void TransactionDetailsWidget::init(
    const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const CCFileManager::CCSecurities &ccSecurities)
+   , const std::shared_ptr<bs::sync::CCDataResolver> &resolver)
 {
    armoryPtr_ = armory;
    logger_ = inLogger;
    walletsMgr_ = walletsMgr;
-   ccSecurities_ = ccSecurities;
+   ccResolver_ = resolver;
    act_ = make_unique<TxDetailsACT>(armoryPtr_.get(), this);
 }
 
@@ -263,24 +264,41 @@ void TransactionDetailsWidget::loadInputs()
 }
 
 void TransactionDetailsWidget::updateTreeCC(QTreeWidget *tree
-   , const bs::network::CCSecurityDef &ccDef)
+   , const std::string &cc, uint64_t lotSize)
 {
    for (int i = 0; i < tree->topLevelItemCount(); ++i) {
       auto item = tree->topLevelItem(i);
       const uint64_t amt = item->data(1, Qt::UserRole).toULongLong();
-      if (amt && ((amt % ccDef.nbSatoshis) == 0)) {
-         item->setData(1, Qt::DisplayRole, QString::number(amt / ccDef.nbSatoshis));
+      if (amt && ((amt % lotSize) == 0)) {
+         item->setData(1, Qt::DisplayRole, QString::number(amt / lotSize));
          const auto addrWallet = item->data(2, Qt::DisplayRole).toString();
          if (addrWallet.isEmpty()) {
-            item->setData(2, Qt::DisplayRole, QString::fromStdString(ccDef.product));
+            item->setData(2, Qt::DisplayRole, QString::fromStdString(cc));
          }
          for (int j = 0; j < item->childCount(); ++j) {
             auto outItem = item->child(j);
             const uint64_t outAmt = outItem->data(1, Qt::UserRole).toULongLong();
-            outItem->setData(1, Qt::DisplayRole, QString::number(outAmt / ccDef.nbSatoshis));
-            outItem->setData(2, Qt::DisplayRole, QString::fromStdString(ccDef.product));
+            outItem->setData(1, Qt::DisplayRole, QString::number(outAmt / lotSize));
+            outItem->setData(2, Qt::DisplayRole, QString::fromStdString(cc));
          }
       }
+   }
+}
+
+void TransactionDetailsWidget::checkTxForCC(const Tx &tx, QTreeWidget *treeWidget)
+{
+   for (const auto &cc : ccResolver_->securities()) {
+      const auto &genesisAddr = ccResolver_->genesisAddrFor(cc);
+      auto txChecker = std::make_shared<bs::TxAddressChecker>(genesisAddr, armoryPtr_);
+      const auto &cbHasGA = [this, txChecker, treeWidget, cc](bool found) {
+         if (!found) {
+            return;
+         }
+         QMetaObject::invokeMethod(this, [this, treeWidget, cc] {
+            updateTreeCC(treeWidget, cc, ccResolver_->lotSizeFor(cc));
+         });
+      };
+      txChecker->containsInputAddress(tx, cbHasGA, ccResolver_->lotSizeFor(cc));
    }
 }
 
@@ -293,18 +311,7 @@ void TransactionDetailsWidget::updateCCInputs()
    for (size_t i = 0; i < curTx_.getNumTxIn(); ++i) {
       const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
       const auto &prevTx = prevTxMap_[op.getTxHash()];
-      for (const auto &ccSec : ccSecurities_) {
-         auto txChecker = std::make_shared<bs::TxAddressChecker>(ccSec.genesisAddr, armoryPtr_);
-         const auto &cbHasGA = [this, txChecker, ccSec](bool found) {
-            if (!found) {
-               return;
-            }
-            QMetaObject::invokeMethod(this, [this, ccSec] {
-               updateTreeCC(ui_->treeInput, ccSec);
-            });
-         };
-         txChecker->containsInputAddress(curTx_, cbHasGA, ccSec.nbSatoshis);
-      }
+      checkTxForCC(prevTx, ui_->treeInput);
    }
 }
 
@@ -390,18 +397,7 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
    }
    tree->resizeColumns();
 
-   for (const auto &ccSec : ccSecurities_) {
-      auto txChecker = std::make_shared<bs::TxAddressChecker>(ccSec.genesisAddr, armoryPtr_);
-      const auto &cbHasGA = [this, txChecker, ccSec](bool found) {
-         if (!found) {
-            return;
-         }
-         QMetaObject::invokeMethod(this, [this, ccSec] {
-            updateTreeCC(ui_->treeOutput, ccSec);
-         });
-      };
-      txChecker->containsInputAddress(curTx_, cbHasGA, ccSec.nbSatoshis);
-   }
+   checkTxForCC(curTx_, ui_->treeOutput);
 }
 
 void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address

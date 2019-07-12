@@ -338,6 +338,10 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
 
 void AddressVerificator::onLedgerForAddress(const bs::Address &addr, const std::shared_ptr<AsyncClient::LedgerDelegate> &ledger)
 {
+   if (!ledger) {
+      logger_->error("[{}] no ledger for {} returned", __func__, addr.display());
+      return;
+   }
    const auto lbdInvokeCb = [this, addr, ledger]
    (std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>> &map) -> bool
    {
@@ -681,7 +685,8 @@ void AddressVerificator::RegisterAddresses()
    if (armory_ && (armory_->state() == ArmoryState::Ready)) {
       pendingRegAddresses_.clear();
       internalWallet_ = armory_->instantiateWallet(walletId_);
-      regId_ = armory_->registerWallet(internalWallet_->walletID(), addresses, [](const std::string &) {}, true);
+      regId_ = armory_->registerWallet(internalWallet_, walletId_, walletId_, addresses
+         , [](const std::string &) {}, true);
       logger_->debug("[AddressVerificator::RegisterAddresses] registered {} addresses in {} with {}", addresses.size(), walletId_, regId_);
    }
    else {

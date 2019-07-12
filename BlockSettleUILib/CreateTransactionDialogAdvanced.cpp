@@ -23,7 +23,7 @@
 
 #include <stdexcept>
 
-static const size_t kP2WPKHOutputSize = 35;
+//static const size_t kP2WPKHOutputSize = 35;
 static const float kDustFeePerByte = 3.0;
 
 
@@ -31,9 +31,11 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shar
       , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
       , const std::shared_ptr<SignContainer> &container
       , bool loadFeeSuggestions
-      , const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<TransactionData> &txData
+      , const std::shared_ptr<spdlog::logger>& logger
+      , const std::shared_ptr<ApplicationSettings> &applicationSettings
+      , const std::shared_ptr<TransactionData> &txData
       , QWidget* parent)
-   : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions, logger, parent)
+   : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions, logger, applicationSettings, parent)
  , ui_(new Ui::CreateTransactionDialogAdvanced)
 {
    transactionData_ = txData;
@@ -50,12 +52,13 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
       , const std::shared_ptr<SignContainer>& container
       , const std::shared_ptr<spdlog::logger>& logger
+      , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const Tx &tx
       , const std::shared_ptr<bs::sync::Wallet>& wallet
       , QWidget* parent)
 {
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, container, false, logger, nullptr, parent);
+      , walletManager, container, false, logger, applicationSettings, nullptr, parent);
 
    dlg->setWindowTitle(tr("Replace-By-Fee"));
 
@@ -73,11 +76,12 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , const std::shared_ptr<SignContainer>& container
       , const std::shared_ptr<bs::sync::Wallet>& wallet
       , const std::shared_ptr<spdlog::logger>& logger
+      , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const Tx &tx
       , QWidget* parent)
 {
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, container, false, logger, nullptr, parent);
+      , walletManager, container, false, logger, applicationSettings, nullptr, parent);
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
    dlg->ui_->pushButtonImport->setEnabled(false);
@@ -873,7 +877,8 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
             promAddr->set_value(addr);
          };
          transactionData_->getWallet()->getNewChangeAddress(cbAddr
-            , ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
+            , ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH
+            : static_cast<AddressEntryType>(AddressEntryType_P2SH|AddressEntryType_P2WPKH));
          const auto changeAddr = futAddr.get();
          transactionData_->getWallet()->syncAddresses();
          return changeAddr;

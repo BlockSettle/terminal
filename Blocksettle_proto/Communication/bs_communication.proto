@@ -36,13 +36,39 @@ enum AddressType
    BitcoinsAddressType        = 1;
 }
 
+// copy of autheid.rp.GetResultResponse.SignatureResult
+message AuthEidSign
+{
+   enum Serialization
+   {
+      JSON = 0;
+      PROTOBUF = 1;
+   }
+
+   required Serialization serialization = 1;
+
+   // Serialized autheid::rp::SignatureData message.
+   // We should pass it as is to be able verify signature.
+   // invisible_data field is SHA256 hash of requestData.
+   required bytes signature_data = 2;
+
+   required bytes sign = 3;
+
+   // Certificate used for sign verification
+   required bytes certificate_client = 6;
+
+   required bytes certificate_issuer = 7;
+
+   required bytes ocsp_response = 8;
+}
+
 message RequestPacket
 {
    // requestType - hint to requestData type
    required RequestType requestType = 1;
    required bytes       requestData = 2;
-   optional bytes       dataSignature = 3;
-   optional bytes	unsignedMixIn = 4;
+   optional bytes       unsignedMixIn = 4;
+   optional AuthEidSign authEidSign = 5;
 }
 
 message ResponsePacket
@@ -58,7 +84,6 @@ message SubmitAuthAddressForVerificationRequest
    required AddressNetworkType   networkType = 3;
    required AddressScriptType    scriptType = 4;
    required bytes                address160hex = 5;
-   required bytes                publicKey = 7;
    required string               userName = 8;
 }
 
@@ -81,7 +106,6 @@ message SubmitAuthAddressForVerificationResponse
    optional AddressNetworkType   networkType = 2;
    optional AddressScriptType    scriptType = 3;
    required bytes                address160hex = 4;
-   optional bytes                publicKey = 5;
    optional string               errorMessage = 6;
    optional bool                 requestConfirmation = 7;
    optional float 		         validationAmount = 8;

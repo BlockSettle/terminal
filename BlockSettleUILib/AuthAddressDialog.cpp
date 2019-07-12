@@ -281,30 +281,29 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
       return;
    }
 
-   BSMessageBox *qry = nullptr;
+   int promptResult = 0;
    const auto &qryTitle = tr("Authentication Address");
    const auto &qryText = tr("New Authentication Address");
    if (validationAmount > 0) {
-      qry = new BSMessageBox(BSMessageBox::question, qryTitle, qryText
+      promptResult = BSMessageBox(BSMessageBox::question, qryTitle, qryText
          , tr("Are you sure you wish to submit a new authentication address? Setting up a new Authentication Address"
             " costs %1 %2").arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
          , tr("BlockSettle will not deduct an amount higher than the Fee Schedule maximum regardless of the"
-            " stated cost. Please confirm BlockSettle can debit the Authentication Address fee from your account."), this);
+            " stated cost. Please confirm BlockSettle can debit the Authentication Address fee from your account."), this).exec();
    }
    else {
-      qry = new BSMessageBox(BSMessageBox::question, qryTitle, qryText
+      promptResult = BSMessageBox(BSMessageBox::question, qryTitle, qryText
          , tr("Are you sure you wish to submit a new authentication address?")
          , tr("It appears that you're submitting the same Authentication Address again. The confirmation is"
-            " formal and won't result in any withdrawals from your account."), this);
+            " formal and won't result in any withdrawals from your account."), this).exec();
    }
 
-   if (qry->exec() == QDialog::Accepted) {
+   if (promptResult == QDialog::Accepted) {
       ConfirmAuthAddressSubmission();
    } else {
       authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
       lastSubmittedAddress_ = bs::Address{};
    }
-   delete qry;
 }
 
 void AuthAddressDialog::ConfirmAuthAddressSubmission()

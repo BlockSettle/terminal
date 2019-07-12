@@ -36,7 +36,7 @@ int TreeItem::selfIndex() const
 {
    if (parent_) {
        auto thizIt = std::find(parent_->children_.begin(), parent_->children_.end(), this);
-       if (thizIt != parent_->children_.end()){
+       if (thizIt != parent_->children_.end()) {
           return static_cast<int>(std::distance(parent_->children_.begin(), thizIt));
        }
    }
@@ -46,7 +46,7 @@ int TreeItem::selfIndex() const
 int TreeItem::notEmptyChildrenCount()
 {
    int count = 0;
-   for (const auto & child : children_){
+   for (const auto & child : children_) {
        count += child->getChildren().size() > 0 ? 1 : 0;
    }
    return count;
@@ -67,7 +67,7 @@ void TreeItem::setParent(TreeItem *parent)
 
 void TreeItem::addChild(TreeItem *item)
 {
-   if (item->getParent()){
+   if (item->getParent()) {
       item->getParent()->removeChild(item);
    }
    item->setParent(this);
@@ -86,7 +86,7 @@ void TreeItem::removeChild(TreeItem *item)
 TreeItem *TreeItem::findSupportChild(TreeItem *item)
 {
    auto found = std::find_if(children_.begin(), children_.end(),
-                                       [item](TreeItem* child){
+                                       [item](TreeItem* child) {
       return child->isChildSupported(item);
    });
 
@@ -127,7 +127,7 @@ bool TreeItem::isParentSupported(const TreeItem* item) const
 
 const TreeItem *TreeItem::recursiveRoot() const
 {
-   if (!parent_){
+   if (!parent_) {
       return this;
    }
 

@@ -18,14 +18,8 @@ public:
    void setupConnection(const ArmorySettings &settings
       , const BIP151Cb &bip150PromptUserCb = [](const BinaryData&, const std::string&) { return true; });
 
-   std::string registerWallet(const std::string &walletId
-      , const std::vector<BinaryData> &addrVec, const RegisterWalletCb &
-      , bool asNew = false) override;
-
    bool getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb &) override;
 
-   // If context is not null and cbInMainThread is true then the callback will be called
-   // on main thread only if context is still alive.
    bool getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &
       , const LedgerDelegateCb &, QObject *context = nullptr);
    bool getWalletsLedgerDelegate(const LedgerDelegateCb &) override;

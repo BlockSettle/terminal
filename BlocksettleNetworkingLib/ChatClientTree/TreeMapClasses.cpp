@@ -72,7 +72,7 @@ bool RootItem::insertSearchUserObject(std::shared_ptr<Chat::Data> data)
 
 TreeItem * RootItem::resolveMessageTargetNode(DisplayableDataNode * messageNode)
 {
-   if (!messageNode){
+   if (!messageNode) {
       return nullptr;
    }
 
@@ -101,7 +101,7 @@ TreeItem* RootItem::findChatNode(const std::string &chatId)
             }
 
             if (data->has_contact_record()) {
-               if (data->contact_record().contact_id() == chatId){
+               if (data->contact_record().contact_id() == chatId) {
                   return cchild;
                }
             }
@@ -116,9 +116,9 @@ std::vector<std::shared_ptr<Chat::Data> > RootItem::getAllContacts()
 {
    std::vector<std::shared_ptr<Chat::Data>> contacts;
 
-   for (auto child : children_){ // through all categories
+   for (auto child : children_) { // through all categories
       if (child->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::ContactsElement)) {
-         for (auto cchild : child->getChildren()){
+         for (auto cchild : child->getChildren()) {
             auto data = static_cast<CategoryElement*>(cchild)->getDataObject();
             if (data->has_contact_record()) {
                contacts.push_back(data);
@@ -131,9 +131,9 @@ std::vector<std::shared_ptr<Chat::Data> > RootItem::getAllContacts()
 
 bool RootItem::removeContactNode(const std::string &contactId)
 {
-   for (auto child : children_){ // through all categories
+   for (auto child : children_) { // through all categories
       if (child->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::ContactsElement)) {
-         for (auto cchild : child->getChildren()){
+         for (auto cchild : child->getChildren()) {
             auto data = static_cast<CategoryElement*>(cchild)->getDataObject();
             if (data->has_contact_record()) {
                if (data->contact_record().contact_id() == contactId) {
@@ -149,9 +149,9 @@ bool RootItem::removeContactNode(const std::string &contactId)
 
 bool RootItem::removeContactRequestNode(const std::string &contactId)
 {
-   for (auto child : children_){ // through all categories
+   for (auto child : children_) { // through all categories
       if (child->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement)) {
-         for (auto cchild : child->getChildren()){
+         for (auto cchild : child->getChildren()) {
             auto data = static_cast<CategoryElement*>(cchild)->getDataObject();
             if (data->has_contact_record()) {
                if (data->contact_record().contact_id() == contactId) {
@@ -168,7 +168,7 @@ bool RootItem::removeContactRequestNode(const std::string &contactId)
 std::shared_ptr<Chat::Data> RootItem::findContactItem(const std::string &contactId)
 {
    ChatContactElement* contactNode = findContactNode(contactId);
-   if (contactNode){
+   if (contactNode) {
       return contactNode->getDataObject();
    }
    return  nullptr;
@@ -191,9 +191,9 @@ std::shared_ptr<Chat::Data> RootItem::findMessageItem(const std::string &chatId,
 {
    TreeItem* chatNode = findChatNode(chatId);
    if (chatNode && chatNode->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::MessageDataNode)) {
-         for (auto child : chatNode->getChildren()){
+         for (auto child : chatNode->getChildren()) {
             auto data = static_cast<CategoryElement*>(child)->getDataObject();
-            if (data && data->has_message() && data->message().id() == messgeId){
+            if (data && data->has_message() && data->message().id() == messgeId) {
                return data;
             }
          }
@@ -253,7 +253,7 @@ bool RootItem::insertNode(TreeItem * item)
 TreeItem *RootItem::findCategoryNodeWith(ChatUIDefinitions::ChatTreeNodeType type)
 {
    auto found = std::find_if(children_.begin(), children_.end(),
-                                       [type](TreeItem* child){
+                                       [type](TreeItem* child) {
       return child->isChildTypeSupported(type);
    });
 
@@ -305,7 +305,9 @@ void RootItem::notifyContactChanged(std::shared_ptr<Chat::Data> contact)
    assert(contact->has_contact_record());
 
    TreeItem* chatNode = findChatNode(contact->contact_record().contact_id());
-   if (chatNode && chatNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement){
+   if (chatNode && (chatNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement
+                 || chatNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement)
+       ) {
       emit itemChanged(chatNode);
    }
 }

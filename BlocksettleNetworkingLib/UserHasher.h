@@ -15,4 +15,6 @@ private:
    std::shared_ptr<KeyDerivationFunction> kdf_;
 };
 
+using UserHasherPtr = std::shared_ptr<UserHasher>;
+
 #endif //__USER_HASHER_H__

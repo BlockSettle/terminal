@@ -232,67 +232,9 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
    } else {          // if the callbacks queue is not empty, don't call
       return true;   // armory's RPC - just add the callback and return
    }
-
-#if 0
-   if (!isBalanceAvailable())
-      return false;
-
-   const auto &cbBalances = [this, cb]
-   (ReturnMessage<std::map<std::string, CombinedBalances>> balanceVector)->void
-   {
-      try {
-         auto&& bv = balanceVector.get();
-
-         //reset wallet balance and count, as these values are not diffs
-         totalBalance_ = 0;
-         spendableBalance_ = 0;
-         unconfirmedBalance_ = 0;
-         addrCount_ = 0;
-
-         for (auto& wltBal : bv) {
-            //wallet balance
-            totalBalance_ += static_cast<BTCNumericTypes::balance_type>(
-               wltBal.second.walletBalanceAndCount_[0]) / BTCNumericTypes::BalanceDivider;
-            spendableBalance_ += static_cast<BTCNumericTypes::balance_type>(
-               wltBal.second.walletBalanceAndCount_[1]) / BTCNumericTypes::BalanceDivider;
-            unconfirmedBalance_ += static_cast<BTCNumericTypes::balance_type>(
-               wltBal.second.walletBalanceAndCount_[2]) / BTCNumericTypes::BalanceDivider;
-
-            //wallet txn count
-            addrCount_ += wltBal.second.walletBalanceAndCount_[3];
-
-            //address balances
-            updateMap<std::map<BinaryData, std::vector<uint64_t>>>(
-               wltBal.second.addressBalances_, addressBalanceMap_);
-         }
-
-         if (cb)
-            cb();
-      }
-      catch (const std::exception &e) {
-         if (logger_)
-         {
-            logger_->error("[hd::Leaf::updateBalances] return balance data error: {}"
-               , e.what());
-         }
-      }
-   };
-
-   std::vector<std::string> walletIDs;
-   walletIDs.push_back(walletId());
-   try {
-      walletIDs.push_back(walletIdInt());
-   }
-   catch (std::exception&)
-   {}
-
-   armory_->bdv()->getCombinedBalances(walletIDs, cbBalances);
-   return true;
-#endif   //0
 }
 
-bool Wallet::getSpendableTxOutList(
-   std::function<void(std::vector<UTXO>)> cb, uint64_t val)
+bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t val)
 {
    //combined utxo fetch method
 
@@ -339,7 +281,7 @@ bool Wallet::getSpendableTxOutList(
    return true;
 }
 
-bool Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb) const
+bool Wallet::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const
 {
    if (!isBalanceAvailable())
       return false;
@@ -356,7 +298,7 @@ bool Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb) const
    return true;
 }
 
-bool Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) const
+bool Wallet::getRBFTxOutList(const ArmoryConnection::UTXOsCb &cb) const
 {
    if (!isBalanceAvailable())
       return false;
@@ -421,35 +363,6 @@ bool Wallet::getAddressTxnCounts(std::function<void(void)> cb)
    else {
       return true;
    }
-
-#if 0
-   if (!isBalanceAvailable())
-      return false;
-
-   auto cbCounts = [this, cb]
-      (ReturnMessage<std::map<std::string, CombinedCounts>> counts)->void
-   {
-      try {
-         auto&& countMap = counts.get();
-
-         for (auto& countPair : countMap) {
-            updateMap<std::map<BinaryData, uint64_t>>(
-               countPair.second.addressTxnCounts_, addressTxNMap_);
-         }
-      }
-      catch (const std::exception &e) {
-         if (logger_) {
-            logger_->error("[sync::Wallet::getAddressTxnCounts] failed: {}", e.what());
-         }
-      }
-
-      if (cb)
-         cb();
-   };
-
-   armory_->bdv()->getCombinedAddrTxnCounts(walletIDs, cbCounts);
-   return true;
-#endif   //0
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -533,10 +446,44 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
-void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry>)
+void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 {
    logger_->debug("[{}]", __func__);
    init(true);
+
+   const auto &cbTX = [this](const Tx &tx) {
+      for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
+         const TxIn in = tx.getTxInCopy(i);
+         const OutPoint op = in.getOutPoint();
+
+         const auto &cbPrevTX = [this, idx=op.getTxOutIndex()](const Tx &prevTx) {
+            if (!prevTx.isInitialized()) {
+               return;
+            }
+            const TxOut prevOut = prevTx.getTxOutCopy(idx);
+            const auto addr = bs::Address::fromTxOut(prevOut);
+            if (!containsAddress(addr)) {
+               return;
+            }
+            bool updated = false;
+            {
+               std::unique_lock<std::mutex> lock(addrMapsMtx_);
+               auto &itTxn = addressTxNMap_.find(addr.id());
+               if (itTxn != addressTxNMap_.end()) {
+                  itTxn->second++;
+                  updated = true;
+               }
+            }
+            if (updated && wct_) {
+               wct_->balanceUpdated(walletId());
+            }
+         };
+         armory_->getTxByHash(op.getTxHash(), cbPrevTX);
+      }
+   };
+   for (const auto &entry : entries) {
+      armory_->getTxByHash(entry.txHash, cbTX);
+   }
 }
 
 void Wallet::onNewBlock(unsigned int depth)
@@ -545,7 +492,7 @@ void Wallet::onNewBlock(unsigned int depth)
    init(true);
 }
 
-void Wallet::onRefresh(std::vector<BinaryData> ids, bool online)
+void Wallet::onRefresh(const std::vector<BinaryData> &ids, bool online)
 {
    for (const auto &id : ids) {
       if (id == regId_) {
@@ -558,7 +505,7 @@ void Wallet::onRefresh(std::vector<BinaryData> ids, bool online)
             }
          };
          bs::sync::Wallet::init();
-         const bool rc = getAddressTxnCounts([this, cbTrackAddrChain] {
+         getAddressTxnCounts([this, cbTrackAddrChain] {
             trackChainAddressUse(cbTrackAddrChain);
          });
       }
@@ -576,8 +523,9 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConn
          isRegistered_ = true;
       };
 
-      regId_ = armory_->registerWallet(
-         walletId(), getAddrHashes(), cbRegister, asNew);
+      const auto wallet = armory_->instantiateWallet(walletId());
+      regId_ = armory_->registerWallet(wallet
+         , walletId(), walletId(), getAddrHashes(), cbRegister, asNew);
       logger_->debug("[{}] register wallet {}, {} addresses = {}"
          , __func__, walletId(), getAddrHashes().size(), regId_);
       return { regId_ };
@@ -692,7 +640,7 @@ bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> 
       getNewChangeAddress(cbAddr);
       return fut.get();
    };
-   const auto &cbChangeAddr = [this, changeAddress, cbNewChangeAddr](std::string &index) {
+   const auto &cbChangeAddr = [changeAddress, cbNewChangeAddr](std::string &index) {
       if (changeAddress.isNull()) {
          return cbNewChangeAddr(index);
       }

@@ -37,9 +37,9 @@ a {
   font-family: 'Open Sans', sans-serif; }
 
 .hyper-link {
-  color: #247dac !important;
-  text-decoration: none !important;
-  font-style: italic !important; }
+  color: #247dac;
+  text-decoration: none;
+  font-style: italic; }
 
 *[headerRow="true"] {
   background-color: transparent;
@@ -377,11 +377,11 @@ QHeaderView::section {
 
 QHeaderView::down-arrow {
   subcontrol-position: center right;
-  image: url("://resources/down-arrow-primary.png") !important; }
+  image: url("://resources/down-arrow-primary.png"); }
 
 QHeaderView::up-arrow {
   subcontrol-position: center right;
-  image: url("://resources/up-arrow-primary.png") !important; }
+  image: url("://resources/up-arrow-primary.png"); }
 
 QTreeView::branch {
   background: transparent; }
@@ -389,12 +389,12 @@ QTreeView::branch {
 QTreeView::branch:closed:has-children,
 QTreeView::branch:closed:has-children:has-siblings {
   border-image: none;
-  image: url("://resources/right-arrow.png") !important; }
+  image: url("://resources/right-arrow.png"); }
 
 QTreeView::branch:open:has-children,
 QTreeView::branch:open:has-children:has-siblings {
   border-image: none;
-  image: url(":/resources/dropdown-arrow.png") !important; }
+  image: url(":/resources/dropdown-arrow.png"); }
 
 QTreeWidget QPushButton:hover, QTreeWidget QToolButton:hover, QTreeWidget [buttonImportant="true"]:hover, QTreeWidget [buttonSuccess="true"]:hover, QTreeWidget [buttonWarning="true"]:hover {
   background-color: red;
@@ -407,7 +407,7 @@ QTreeWidget QPushButton:hover, QTreeWidget QToolButton:hover, QTreeWidget [butto
   border-top: 1px solid #3f4c50; }
   *[tableFooter="true"] QLabel {
     color: #e7e8e9;
-    font-weight: normal !important; }
+    font-weight: normal; }
 
 QTabWidget::pane {
   /* The tab widget frame */
@@ -719,7 +719,7 @@ QCalendarWidget {
     color: #6f787c;
     background-color: #e7e8e9; }
   QCalendarWidget QAbstractItemView::Saturday {
-    color: green !important;
+    color: green;
     background-color: #e7e8e9; }
   QCalendarWidget QAbstractItemView:disabled {
     color: #9fa5a7;
@@ -805,7 +805,6 @@ QToolButton[buttonDiscreetPrimary="true"],
   font-weight: normal;
   font-style: italic;
   border-width: 0px;
-  height: auto !important;
   text-transform: none;
   text-align: left; }
   QPushButton[buttonDiscreet="true"]:hover, QToolButton[buttonDiscreet="true"]:hover, [buttonDiscreet="true"][buttonImportant="true"]:hover, [buttonDiscreet="true"][buttonSuccess="true"]:hover, [buttonDiscreet="true"][buttonWarning="true"]:hover,
@@ -1185,7 +1184,7 @@ QSpinBox::down-button {
 
 QDoubleSpinBox:disabled,
 QSpinBox:disabled {
-  border: 1px solid #586266 !important; }
+  border: 1px solid #586266; }
 
 QDoubleSpinBox:disabled,
 QSpinBox:disabled,
@@ -1193,7 +1192,7 @@ QDoubleSpinBox::up-button:disabled,
 QSpinBox::up-button:disabled,
 QDoubleSpinBox::down-button:disabled,
 QSpinBox::down-button:disabled {
-  border-color: #586266 !important;
+  border-color: #586266;
   color: #586266; }
 
 *[searchField="true"] {

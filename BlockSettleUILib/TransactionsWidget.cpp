@@ -490,7 +490,7 @@ void TransactionsWidget::onCreateRBFDialog()
    const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
-            , walletsManager_, signContainer_, logger_, txItem->tx
+            , walletsManager_, signContainer_, logger_, appSettings_, txItem->tx
             , txItem->wallet, this);
          dlg->exec();
       }
@@ -516,7 +516,7 @@ void TransactionsWidget::onCreateCPFPDialog()
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
             , walletsManager_, signContainer_, txItem->wallet
-            , logger_, txItem->tx, this);
+            , logger_, appSettings_, txItem->tx, this);
          dlg->exec();
       }
       catch (const std::exception &e) {

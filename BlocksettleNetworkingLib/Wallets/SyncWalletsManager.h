@@ -79,10 +79,12 @@ namespace bs {
          bool walletNameExists(const std::string &walletName) const;
          bool isWatchingOnly(const std::string &walletId) const;
 
-         bool deleteWallet(const WalletPtr &);
-         bool deleteWallet(const HDWalletPtr &);
+         // Do not use references here (could crash when underlying pointers are cleared)
+         bool deleteWallet(WalletPtr);
+         bool deleteWallet(HDWalletPtr);
 
          void setUserId(const BinaryData &userId);
+         std::shared_ptr<CCDataResolver> ccResolver() const { return ccResolver_; }
 
          bool isArmoryReady() const;
          bool isReadyForTrading() const;
@@ -145,6 +147,7 @@ namespace bs {
       private slots:
          void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet>);
          void onWalletsListUpdated();
+         void onAuthLeafAdded(const std::string &walletId);
 
       private:
          void addressAdded(const std::string &) override;
@@ -165,7 +168,6 @@ namespace bs {
          void saveWallet(const WalletPtr &);
          void saveWallet(const HDWalletPtr &);
          void eraseWallet(const WalletPtr &);
-         bool setAuthWalletFrom(const HDWalletPtr &);
          void setSettlementWallet(const std::shared_ptr<bs::sync::SettlementWallet> &);
 
          void updateTxDirCache(const std::string &txKey, Transaction::Direction
@@ -208,12 +210,28 @@ namespace bs {
          std::shared_ptr<SettlementWallet>   settlementWallet_;
          std::set<std::string>               newWallets_;
 
-         struct CCInfo {
-            std::string desc;
-            uint64_t    lotSize;
-            std::string genesisAddr;
+         class CCResolver : public CCDataResolver
+         {
+         public:
+            std::string nameByWalletIndex(bs::hd::Path::Elem) const override;
+            uint64_t lotSizeFor(const std::string &cc) const override;
+            bs::Address genesisAddrFor(const std::string &cc) const override;
+            std::string descriptionFor(const std::string &cc) const override;
+            std::vector<std::string> securities() const override;
+
+            void addData(const std::string &cc, uint64_t lotSize, const bs::Address &genAddr
+               , const std::string &desc);
+
+         private:
+            struct CCInfo {
+               std::string desc;
+               uint64_t    lotSize;
+               bs::Address genesisAddr;
+            };
+            std::unordered_map<std::string, CCInfo>   securities_;
+            std::unordered_map<bs::hd::Path::Elem, std::string>   walletIdxMap_;
          };
-         std::unordered_map<std::string, CCInfo>   ccSecurities_;
+         std::shared_ptr<CCResolver>   ccResolver_;
 
          std::unordered_map<std::string, std::pair<Transaction::Direction, std::vector<bs::Address>>> txDirections_;
          mutable std::atomic_flag      txDirLock_ = ATOMIC_FLAG_INIT;

@@ -100,11 +100,11 @@ public:
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
 
    virtual bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) = 0;
-
    virtual bs::signer::RequestId CancelSignTx(const BinaryData &txId) = 0;
-   virtual void SendPassword(const std::string &walletId, bs::error::ErrorCode result, const PasswordType &password) = 0;
 
-   virtual bs::signer::RequestId SetUserId(const BinaryData &) = 0;
+   virtual bs::signer::RequestId setUserId(const BinaryData &) = 0;
+   virtual bs::signer::RequestId syncCCNames(const std::vector<std::string> &) = 0;
+
    virtual bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) = 0;
    virtual bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc
@@ -138,9 +138,6 @@ public:
    virtual bool isReady() const { return true; }
    virtual bool isOffline() const { return true; }
    virtual bool isWalletOffline(const std::string &) const { return true; }
-
-   virtual void setTargetDir(const QString& targetDir) {}
-   virtual QString targetDir() const { return QString(); }
 
    bool isLocal() const { return mode_ == OpMode::Local || mode_ == OpMode::LocalInproc; }
 
@@ -176,8 +173,8 @@ signals:
 
    void HDLeafCreated(bs::signer::RequestId id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void HDWalletCreated(bs::signer::RequestId id, std::shared_ptr<bs::sync::hd::Wallet>);
+   void AuthLeafAdded(const std::string &walletId);
    void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
-   void UserIdSet();
    void PasswordChanged(const std::string &walletId, bool success);
    void AutoSignStateChanged(const std::string &walletId, bool active);
    // Notified from remote/local signer when wallets list is updated

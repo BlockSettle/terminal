@@ -61,7 +61,7 @@ public:
    std::shared_ptr<bs::sync::Wallet> GetWallet() const { return wallet_; }
    void Reload(const std::vector<UTXO> &);
 
-   void ResetInputs(std::function<void()>);
+   void ResetInputs(const std::function<void()> &);
 
 private:
    std::vector<UTXO> filterNonSWInputs(const std::vector<UTXO> &);

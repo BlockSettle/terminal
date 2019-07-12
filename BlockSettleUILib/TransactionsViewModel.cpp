@@ -9,7 +9,6 @@
 #include <QDateTime>
 #include <QMutexLocker>
 #include <QFutureWatcher>
-#include <QtConcurrent/QtConcurrentRun>
 
 
 TXNode::TXNode()
@@ -26,8 +25,12 @@ TXNode::TXNode(const std::shared_ptr<TransactionsViewItem> &item, TXNode *parent
 void TXNode::init()
 {
    fontBold_.setBold(true);
-   colorGray_ = Qt::darkGray, colorRed_ = Qt::red, colorYellow_ = Qt::darkYellow;
-   colorGreen_ = Qt::darkGreen, colorInvalid_ = Qt::red;
+
+   colorGray_ = Qt::darkGray;
+   colorRed_ = Qt::red;
+   colorYellow_ = Qt::darkYellow;
+   colorGreen_ = Qt::darkGreen;
+   colorInvalid_ = Qt::red;
 }
 
 void TXNode::clear(bool del)
@@ -48,6 +51,7 @@ QVariant TXNode::data(int column, int role) const
    if (!item_) {
       return {};
    }
+
    const auto col = static_cast<TransactionsViewModel::Columns>(column);
    if (role == Qt::DisplayRole) {
       switch (col) {
@@ -174,7 +178,7 @@ void TXNode::forEach(const std::function<void(const std::shared_ptr<Transactions
 TXNode *TXNode::find(const std::string &id) const
 {
    if (item_ && (item_->id() == id)) {
-      return (TXNode *)this;
+      return const_cast<TXNode*>(this);
    }
    for (const auto &child : children_) {
       if (child->item()->id() == id) {
@@ -200,8 +204,9 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
                          , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
                          , const std::shared_ptr<AsyncClient::LedgerDelegate> &ledgerDelegate
                          , const std::shared_ptr<spdlog::logger> &logger
-                         , QObject* parent
-                         , const std::shared_ptr<bs::sync::Wallet> &defWlt)
+                         , const std::shared_ptr<bs::sync::Wallet> &defWlt
+                         , const bs::Address &filterAddress
+                         , QObject* parent)
    : QAbstractItemModel(parent)
    , ArmoryCallbackTarget(armory.get())
    , logger_(logger)
@@ -209,9 +214,10 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
    , walletsManager_(walletsManager)
    , defaultWallet_(defWlt)
    , allWallets_(false)
+   , filterAddress_(filterAddress)
 {
    init();
-   QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
+   loadLedgerEntries();
 }
 
 TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
@@ -220,8 +226,8 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
                                              , QObject* parent)
    : QAbstractItemModel(parent)
    , ArmoryCallbackTarget(armory.get())
-   , walletsManager_(walletsManager)
    , logger_(logger)
+   , walletsManager_(walletsManager)
    , allWallets_(true)
 {
    init();
@@ -229,11 +235,11 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
 
 void TransactionsViewModel::init()
 {
-   stopped_ = false;
+   stopped_ = std::make_shared<std::atomic_bool>(false);
    qRegisterMetaType<TransactionsViewItem>();
    qRegisterMetaType<TransactionItems>();
 
-   rootNode_ = new TXNode;
+   rootNode_.reset(new TXNode);
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &TransactionsViewModel::onWalletDeleted, Qt::QueuedConnection);
@@ -243,8 +249,7 @@ void TransactionsViewModel::init()
 
 TransactionsViewModel::~TransactionsViewModel() noexcept
 {
-   stopped_ = true;
-   delete rootNode_;
+   *stopped_ = true;
 }
 
 void TransactionsViewModel::onNewBlock(unsigned int)
@@ -259,7 +264,7 @@ void TransactionsViewModel::loadAllWallets()
          return;
       }
       ledgerDelegate_ = delegate;
-      QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
+      loadLedgerEntries();
    };
    if (initialLoadCompleted_) {
       armory_->getWalletsLedgerDelegate(cbWalletsLD);
@@ -274,7 +279,7 @@ int TransactionsViewModel::columnCount(const QModelIndex &) const
 TXNode *TransactionsViewModel::getNode(const QModelIndex &index) const
 {
    if (!index.isValid()) {
-      return rootNode_;
+      return rootNode_.get();
    }
    return static_cast<TXNode *>(index.internalPointer());
 }
@@ -311,7 +316,7 @@ QModelIndex TransactionsViewModel::parent(const QModelIndex &child) const
 
    auto node = getNode(child);
    auto parentNode = (node == nullptr) ? nullptr : node->parent();
-   if ((parentNode == nullptr) || (parentNode == rootNode_)) {
+   if ((parentNode == nullptr) || (parentNode == rootNode_.get())) {
       return QModelIndex();
    }
    return createIndex(parentNode->row(), 0, static_cast<void*>(parentNode));
@@ -387,7 +392,7 @@ void TransactionsViewModel::updatePage()
 
 void TransactionsViewModel::clear()
 {
-   stopped_ = true;
+   *stopped_ = true;
    beginResetModel();
    {
       QMutexLocker locker(&updateMutex_);
@@ -396,7 +401,7 @@ void TransactionsViewModel::clear()
       oldestItem_ = {};
    }
    endResetModel();
-   stopped_ = false;
+   *stopped_ = false;
 }
 
 void TransactionsViewModel::onStateChanged(ArmoryState state)
@@ -416,11 +421,16 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction
    auto item = std::make_shared<TransactionsViewItem>();
    item->txEntry = entry;
    item->displayDateTime = UiUtils::displayDateTime(entry.txTime);
-   item->walletID = QString::fromStdString(entry.id);
-   item->wallet = walletsManager_->getWalletById(entry.id);
+   item->wallet = walletsManager_->getWalletById(entry.walletId);
+   item->filterAddress = filterAddress_;
    if (!item->wallet && defaultWallet_) {
       item->wallet = defaultWallet_;
-      item->walletID = QString::fromStdString(defaultWallet_->walletId());
+   }
+   if (item->wallet) {
+      item->walletID = QString::fromStdString(item->wallet->walletId());
+   }
+   else {
+      item->walletID = QString::fromStdString(entry.walletId);
    }
 
    item->confirmations = armory_->getConfirmationsNumber(entry.blockNum);
@@ -438,17 +448,16 @@ static std::string mkTxKey(const BinaryData &txHash, const std::string &id)
 }
 static std::string mkTxKey(const bs::TXEntry &item)
 {
-   std::string id;
-   id.reserve(item.id.size());
-   for (const auto &c : item.id) {
-      id.push_back(tolower(c));
-   }
-   return mkTxKey(item.txHash, id);
+   return mkTxKey(item.txHash, item.walletId);
 }
 
-bool TransactionsViewModel::txKeyExists(const std::string &key)
+std::shared_ptr<TransactionsViewItem> TransactionsViewModel::getTxEntry(const std::string &key)
 {
-   return (currentItems_.find(key) != currentItems_.end());
+   const auto itEntry = currentItems_.find(key);
+   if (itEntry == currentItems_.end()) {
+      return nullptr;
+   }
+   return itEntry->second;
 }
 
 void TransactionsViewModel::onZCReceived(const std::vector<bs::TXEntry> &entries)
@@ -465,7 +474,7 @@ void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entr
       for (const auto &entry : entries) {
          const auto key = mkTxKey(entry);
          const auto node = rootNode_->find(key);
-         if (node && (node->parent() == rootNode_) && !node->item()->confirmations) {
+         if (node && (node->parent() == rootNode_.get()) && !node->item()->confirmations) {
             delRows.push_back(node->row());
             currentItems_.erase(key);
             if (node->hasChildren()) { // handle race condition when node being deleted has confirmed children
@@ -498,12 +507,12 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
       }
    }
    if ((!child->confirmations && child->txEntry.isRBF && !parent->confirmations && parent->txEntry.isRBF)
-       && (child->txEntry.txHash != parent->txEntry.txHash) && (child->txEntry.id == parent->txEntry.id)) {
+       && (child->txEntry.txHash != parent->txEntry.txHash) && (child->txEntry.walletId == parent->txEntry.walletId)) {
       std::set<BinaryData> childInputs, parentInputs;
-      for (int i = 0; i < child->tx.getNumTxIn(); i++) {
+      for (int i = 0; i < int(child->tx.getNumTxIn()); i++) {
          childInputs.insert(child->tx.getTxInCopy(i).serialize());
       }
-      for (int i = 0; i < parent->tx.getNumTxIn(); i++) {
+      for (int i = 0; i < int(parent->tx.getNumTxIn()); i++) {
          parentInputs.insert(parent->tx.getTxInCopy(i).serialize());
       }
       if (childInputs == parentInputs) {
@@ -527,8 +536,10 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          if (!item->wallet) {
             continue;
          }
-         if (txKeyExists(item->id())) {
-            updatedItems->push_back(item);
+         auto txEntry = getTxEntry(item->id());
+         if (txEntry) {
+            txEntry->txEntry.merge(item->txEntry);
+            updatedItems->push_back(txEntry);
             continue;
          }
          currentItems_[item->id()] = item;
@@ -560,7 +571,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          std::unordered_set<std::string> deletedItems;
          if (rootNode_->hasChildren()) {
             std::vector<int> delRows;
-            const auto &cbEachExisting = [this, newItems, &delRows](TXNode *txNode) {
+            const auto &cbEachExisting = [newItems, &delRows](TXNode *txNode) {
                for (auto &newItem : *newItems) {
                   if (newItem.second.second->find(txNode->item()->id())
                      || txNode->find(newItem.first)) {   // avoid looped graphs
@@ -615,7 +626,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
             onNewItems(*newItems);
             if (signalOnEndLoading_ && updatedItems->empty()) {
                signalOnEndLoading_ = false;
-               emit dataLoaded(newItems->size());
+               emit dataLoaded(int(newItems->size()));
             }
          }
       }
@@ -687,38 +698,53 @@ void TransactionsViewModel::loadLedgerEntries()
    }
    initialLoadCompleted_ = false;
 
-   const auto &cbPageCount = [this](ReturnMessage<uint64_t> pageCnt)->void {
+   QPointer<TransactionsViewModel> thisPtr = this;
+   auto rawData = std::make_shared<std::map<int, std::vector<bs::TXEntry>>>();
+
+   const auto &cbPageCount = [thisPtr, stopped = stopped_, logger = logger_, rawData, ledgerDelegate = ledgerDelegate_](ReturnMessage<uint64_t> pageCnt)->void {
       try {
-         auto inPageCnt = pageCnt.get();
-         emit initProgress(0, inPageCnt * 2);
-         for (uint64_t pageId = 0; pageId < inPageCnt; ++pageId) {
-            if (stopped_) {
-               logger_->debug("[TransactionsViewModel::loadLedgerEntries] stopped");
+         int inPageCnt = int(pageCnt.get());
+
+         QMetaObject::invokeMethod(qApp, [thisPtr, inPageCnt] {
+            if (thisPtr) {
+               emit thisPtr->initProgress(0, int(inPageCnt * 2));
+            }
+         });
+
+         for (int pageId = 0; pageId < inPageCnt; ++pageId) {
+            if (*stopped) {
+               logger->debug("[TransactionsViewModel::loadLedgerEntries] stopped");
                break;
             }
-            const auto &cbLedger = [this, pageId, inPageCnt]
+            const auto &cbLedger = [thisPtr, pageId, inPageCnt, rawData, logger]
                (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
                try {
                  auto le = entries.get();
-                 rawData_[pageId] = bs::TXEntry::fromLedgerEntries(le);
-                 emit updateProgress((int)pageId);
+                 (*rawData)[pageId] = bs::TXEntry::fromLedgerEntries(le);
+                 QMetaObject::invokeMethod(qApp, [thisPtr, pageId] {
+                    if (thisPtr) {
+                       emit thisPtr->updateProgress(pageId);
+                    }
+                 });
                }
                catch (std::exception& e) {
-                  logger_->error("[TransactionsViewModel::loadLedgerEntries] " \
+                  logger->error("[TransactionsViewModel::loadLedgerEntries] " \
                      "Return data error (getPageCount) - {}", e.what());
                }
 
-               if (rawData_.size() >= inPageCnt) {
-                  QMetaObject::invokeMethod(this, [this] {
-                     ledgerToTxData();
+               if (int(rawData->size()) >= inPageCnt) {
+                  QMetaObject::invokeMethod(qApp, [thisPtr, rawData] {
+                     if (thisPtr) {
+                        thisPtr->ledgerToTxData(*rawData);
+                     }
                   });
                }
             };
-            ledgerDelegate_->getHistoryPage(pageId, cbLedger);
+            ledgerDelegate->getHistoryPage(uint32_t(pageId), cbLedger);
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[TransactionsViewModel::loadLedgerEntries] Return " \
+         logger->error("[TransactionsViewModel::loadLedgerEntries] Return " \
             "data error (getPageCount) - {}", e.what());
       }
    };
@@ -726,16 +752,15 @@ void TransactionsViewModel::loadLedgerEntries()
    ledgerDelegate_->getPageCount(cbPageCount);
 }
 
-void TransactionsViewModel::ledgerToTxData()
+void TransactionsViewModel::ledgerToTxData(const std::map<int, std::vector<bs::TXEntry>> &rawData)
 {
    int pageCnt = 0;
 
    signalOnEndLoading_ = true;
-   for (const auto &le : rawData_) {
+   for (const auto &le : rawData) {
       updateTransactionsPage(le.second);
-      emit updateProgress(rawData_.size() + pageCnt++);
+      emit updateProgress(int(rawData.size()) + pageCnt++);
    }
-   rawData_.clear();
    initialLoadCompleted_ = true;
 }
 
@@ -972,35 +997,56 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
 {
    if (wallet && tx.isInitialized()) {
       bool hasSpecialAddr = false;
-      int64_t outputVal = 0;
+      int64_t totalVal = 0;
+      int64_t addressVal = 0;
+
       for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-         TxOut out = tx.getTxOutCopy(i);
-         if (txEntry.isChainedZC && !hasSpecialAddr) {
-            const auto addr = bs::Address::fromTxOut(out);
-            hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr.id()));
+         const TxOut out = tx.getTxOutCopy(i);
+         const auto addr = bs::Address::fromTxOut(out);
+         const auto addrWallet = walletsManager->getWalletByAddress(addr.id());
+         if (txEntry.isChainedZC && !hasSpecialAddr && addrWallet) {
+            hasSpecialAddr = isSpecialWallet(addrWallet);
          }
-         outputVal += out.getValue();
+
+         if (addrWallet == wallet) {
+            totalVal += out.getValue();
+         }
+
+         if (filterAddress.isValid() && addr == filterAddress) {
+            addressVal += out.getValue();
+         }
       }
 
-      int64_t inputVal = 0;
       for (size_t i = 0; i < tx.getNumTxIn(); i++) {
          TxIn in = tx.getTxInCopy(i);
          OutPoint op = in.getOutPoint();
          const auto &prevTx = txIns[op.getTxHash()];
          if (prevTx.isInitialized()) {
             TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
-            inputVal += prevOut.getValue();
+
+            const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
+            const auto addrWallet = walletsManager->getWalletByAddress(addr.id());
+
             if (txEntry.isChainedZC && !hasSpecialAddr) {
-               const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
                hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr.id()));
+            }
+
+            if (addrWallet == wallet) {
+               totalVal -= prevOut.getValue();
+            }
+
+            if (filterAddress.isValid() && filterAddress == addr) {
+               addressVal -= prevOut.getValue();
             }
          }
       }
-      auto value = txEntry.value;
-      const auto fee = (wallet->type() == bs::core::wallet::Type::ColorCoin) || (value > 0) ? 0 : (outputVal - inputVal);
-      value -= fee;
-      amount = wallet->getTxBalance(value);
-      amountStr = wallet->displayTxValue(value);
+      if (!filterAddress.isValid()) {
+         amount = wallet->getTxBalance(totalVal);
+         amountStr = wallet->displayTxValue(totalVal);
+      } else {
+         amount = wallet->getTxBalance(addressVal);
+         amountStr = wallet->displayTxValue(addressVal);
+      }
 
       if (txEntry.isChainedZC && (wallet->type() == bs::core::wallet::Type::Bitcoin) && !hasSpecialAddr) {
          isCPFP = true;
@@ -1032,7 +1078,7 @@ bool TransactionsViewItem::containsInputsFrom(const Tx &inTx) const
 std::string TransactionsViewItem::id() const
 {
    if (id_.empty()) {
-      id_ = mkTxKey(txEntry);
+      id_ = mkTxKey(txEntry.txHash, walletID.toStdString());
    }
    return id_;
 }

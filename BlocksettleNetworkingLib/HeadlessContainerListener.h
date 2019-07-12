@@ -56,7 +56,6 @@ public:
       , const std::shared_ptr<DispatchQueue> &
       , const std::string &walletsPath
       , NetworkType netType
-      , bool watchingOnly = false
       , const bool &backupEnabled = true);
    ~HeadlessContainerListener() noexcept override;
 
@@ -100,8 +99,8 @@ private:
       , Blocksettle::Communication::headless::RequestType requestType);
    bool onSignPayoutTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSignMultiTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
-   bool onPasswordReceived(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSetUserId(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
+   bool onSyncCCNames(Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCreateHDWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onDeleteHDWallet(Blocksettle::Communication::headless::RequestPacket &packet);
    bool onGetHDWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
@@ -124,6 +123,8 @@ private:
    void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::string &walletId
       , const std::shared_ptr<bs::core::hd::Wallet> &, const std::string &error = {});
    void SyncAddrsResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bs::sync::SyncState);
+   void setUserIdResponse(const std::string &clientId, unsigned int id
+      , Blocksettle::Communication::headless::AuthWalletResponseType, const std::string &walletId = {});
    void AutoSignActivatedEvent(const std::string &walletId, bool active);
 
    bool CreateHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDLeaf &request
@@ -142,8 +143,6 @@ private:
 
    bool CheckSpendLimit(uint64_t value, const std::string &walletId);
 
-   bool isRequestAllowed(Blocksettle::Communication::headless::RequestType) const;
-
 private:
    std::shared_ptr<spdlog::logger>     logger_;
    ServerConnection                    *connection_{};
@@ -153,7 +152,6 @@ private:
    const std::string                   backupPath_;
    const NetworkType                   netType_;
    bs::signer::Limits                  limits_;
-   const bool                          watchingOnly_;
    std::unordered_set<std::string>     connectedClients_;
 
    std::unordered_map<std::string, std::vector<PasswordReceivedCb>>  passwordCallbacks_; // map<wallet_id, std::vector<PasswordReceivedCb>>

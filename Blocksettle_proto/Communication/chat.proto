@@ -34,6 +34,7 @@ enum ContactStatus
     CONTACT_STATUS_INCOMING = 2;
     CONTACT_STATUS_OUTGOING = 3;
     CONTACT_STATUS_REJECTED = 4;
+    CONTACT_STATUS_OUTGOING_PENDING = 5;
 }
 
 enum UserStatus
@@ -69,6 +70,14 @@ enum OtcRangeType
     OTC_RANGE_50_100  = 3;
     OTC_RANGE_100_250 = 4;
     OTC_RANGE_250PLUS = 5;
+};
+
+enum SessionKeyError
+{
+    SESSION_NO_ERROR = 0;
+    SESSION_UNABLE_DECODE_KEY = 1;
+    SESSION_USER_KEY_NOT_FOUND = 2;
+    SESSION_ENCRYPTION_FAILED = 3;
 };
 
 message OtcRange
@@ -250,6 +259,8 @@ message Request
         string sender_id = 1;
         string receiver_id = 2;
         ContactsAction action = 3;
+        bytes sender_pub_key = 4;
+        Data message = 5;
     }
 
     message ModifyContactsServer
@@ -295,6 +306,7 @@ message Request
         string sender_id = 1;
         string receiver_id = 2;
         bytes sender_session_public_key = 3;
+        SessionKeyError session_key_error = 4;
     }
     
     message UploadNewPublicKey
@@ -394,6 +406,7 @@ message Response
         ContactsAction action = 3;
         bytes sender_public_key = 4;
         int64 sender_public_key_timestamp = 5;
+        Data message = 6;
     }
 
     message ModifyContactsServer
@@ -441,6 +454,7 @@ message Response
         string sender_id = 1;
         string receiver_id = 2;
         bytes sender_session_public_key = 3;
+        SessionKeyError session_key_error = 4;
     }
     
     message ConfirmReplacePublicKey

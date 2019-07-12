@@ -671,7 +671,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
    bool isBid = (qrn.side == bs::network::Side::Buy);
 
    if ((qrn.assetType == bs::network::Asset::SpotXBT) && authAddressManager_ && transData) {
-      authKey = authAddressManager_->GetPublicKey(authAddressManager_->FromVerifiedIndex(ui_->authenticationAddressComboBox->currentIndex())).toHexStr();
+      authKey = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(ui_->authenticationAddressComboBox->currentIndex())).toHexStr();
       if (authKey.empty()) {
          logger_->error("[RFQDealerReply::submit] empty auth key");
          return false;
@@ -1248,9 +1248,13 @@ void RFQDealerReply::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
       group = priWallet->createGroup(bs::hd::BlockSettle_CC, true);
    }
    group->addLeaf(leaf, true);
-
-   leaf->setData(assetManager_->getCCGenesisAddr(baseProduct_).display());
-   leaf->setData(assetManager_->getCCLotSize(baseProduct_));
+   auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(leaf);
+   if (ccLeaf) {
+      ccLeaf->setCCDataResolver(walletsManager_->ccResolver());
+   }
+   else {
+      logger_->error("[{}] invalid CC leaf {}", __func__, leaf->walletId());
+   }
 
    ccWallet_ = leaf;
    updateUiWalletFor(currentQRN_);

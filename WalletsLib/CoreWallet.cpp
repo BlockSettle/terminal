@@ -281,10 +281,27 @@ wallet::Seed::Seed(const SecureBinaryData &seed, NetworkType netType)
 std::string wallet::Seed::getWalletId() const
 {
    if (walletId_.empty()) {
-      const SecureBinaryData hmacMasterMsg("MetaEntry");
+/*      const SecureBinaryData hmacMasterMsg("MetaEntry");
       const auto &pubkey = node_.getPublicKey();
       auto &&masterID = BtcUtils::getHMAC256(pubkey, hmacMasterMsg);
-      walletId_ = BtcUtils::computeID(masterID).toBinStr();
+      walletId_ = BtcUtils::computeID(masterID).toBinStr();*/
+
+      const auto node = getNode();
+      auto chainCode = node.getChaincode();
+      DerivationScheme_ArmoryLegacy derScheme(chainCode);
+
+      auto pubKey = node.getPublicKey();
+      if (pubKey.isNull()) {
+         return {};
+      }
+      auto assetSingle = std::make_shared<AssetEntry_Single>(
+         ROOT_ASSETENTRY_ID, BinaryData(), pubKey, nullptr);
+
+      auto addrVec = derScheme.extendPublicChain(assetSingle, 1, 1);
+      assert(addrVec.size() == 1);
+      auto firstEntry = std::dynamic_pointer_cast<AssetEntry_Single>(addrVec[0]);
+      assert(firstEntry != nullptr);
+      walletId_ = BtcUtils::computeID(firstEntry->getPubKey()->getUncompressedKey()).toBinStr();
       if (*(walletId_.rbegin()) == 0) {
          walletId_.resize(walletId_.size() - 1);
       }

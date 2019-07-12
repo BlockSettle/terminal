@@ -3,6 +3,7 @@
 #include <cassert>
 #include <exception>
 #include <condition_variable>
+#include <spdlog/spdlog.h>
 
 #include "ClientClasses.h"
 #include "DbHeader.h"
@@ -87,16 +88,36 @@ bool ArmoryConnection::removeTarget(ArmoryCallbackTarget *act)
 
 void ArmoryConnection::maintenanceThreadFunc()
 {
+   const auto &forEachTarget = [this](const std::function<void(ArmoryCallbackTarget *tgt)> &cb) {
+      do {
+         decltype(activeTargets_) tempACT;
+         {
+            std::unique_lock<std::mutex> lock(cbMutex_);
+            actChanged_ = false;
+            tempACT = activeTargets_;
+         }
+         for (const auto &tgt : tempACT) {
+            if (!maintThreadRunning_ || actChanged_) {
+               break;
+            }
+            cb(tgt);
+         }
+      } while (actChanged_ && maintThreadRunning_);
+   };
+
    while (maintThreadRunning_) {
       {
          std::unique_lock<std::mutex> lock(actMutex_);
          if (actQueue_.empty()) {
-            actCV_.wait_for(lock, std::chrono::milliseconds{ 300 });
+            actCV_.wait_for(lock, std::chrono::milliseconds{ 100 });
          }
       }
       if (!maintThreadRunning_) {
          break;
       }
+
+      processDelayedZC();
+
       decltype(actQueue_) tempQueue;
       {
          std::unique_lock<std::mutex> lock(actMutex_);
@@ -107,26 +128,27 @@ void ArmoryConnection::maintenanceThreadFunc()
       }
 
       for (const auto &cb : tempQueue) {
-         do {
-            decltype(activeTargets_) tempACT;
-            {
-               std::unique_lock<std::mutex> lock(cbMutex_);
-               actChanged_ = false;
-               tempACT = activeTargets_;
-            }
-            for (const auto &tgt : tempACT) {
-               if (!maintThreadRunning_ || actChanged_) {
-                  break;
-               }
-               cb(tgt);
-            }
-         } while (actChanged_ && maintThreadRunning_);
-
+         forEachTarget(cb);
          if (!maintThreadRunning_) {
             break;
          }
       }
    }
+}
+
+void ArmoryConnection::addMergedWalletId(const std::string &walletId, const std::string &mergedWalletId)
+{
+   std::unique_lock<std::mutex> lock(zcMutex_);
+   zcMergedWalletIds_[walletId] = mergedWalletId;
+}
+
+const std::string &ArmoryConnection::getMergedWalletId(const std::string &walletId)
+{
+   auto it = zcMergedWalletIds_.find(walletId);
+   if (it == zcMergedWalletIds_.end()) {
+      return walletId;
+   }
+   return it->second;
 }
 
 void ArmoryConnection::addToMaintQueue(const CallbackQueueCb &cb)
@@ -331,7 +353,8 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
    return true;
 }
 
-std::string ArmoryConnection::registerWallet(const std::string &walletId
+std::string ArmoryConnection::registerWallet(const std::shared_ptr<AsyncClient::BtcWallet> &wallet
+   , const std::string &walletId, const std::string &mergedWalletId
    , const std::vector<BinaryData> &addrVec, const RegisterWalletCb &cb, bool asNew)
 {
    if (!bdv_ || ((state_ != ArmoryState::Ready) && (state_ != ArmoryState::Connected))) {
@@ -341,11 +364,11 @@ std::string ArmoryConnection::registerWallet(const std::string &walletId
 
    std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
 
-   auto wallet = std::make_shared<AsyncClient::BtcWallet>(
-      bdv_->instantiateWallet(walletId));
    const auto &regId = wallet->registerAddresses(addrVec, asNew);
 
    registrationCallbacks_[regId] = cb;
+
+   addMergedWalletId(walletId, mergedWalletId);
 
    return regId;
 
@@ -512,6 +535,31 @@ bool ArmoryConnection::getRBFoutputs(const std::vector<std::string> &walletIds, 
    bdv_->getCombinedRBFTxOuts(walletIds, cbWrap);
    return true;
 }
+
+bool ArmoryConnection::getUTXOsForAddress(const bs::Address &addr, const UTXOsCb &cb, bool withZC)
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
+      return false;
+   }
+   const auto &cbWrap = [this, cb, addr](ReturnMessage<std::vector<UTXO>> retMsg) {
+      try {
+         const auto &utxos = retMsg.get();
+         if (cb) {
+            cb(utxos);
+         }
+      }
+      catch (const std::exception &e) {
+         logger_->error("[ArmoryConnection::getUTXOsForAddress] {} failed: {}"
+            , addr.display(), e.what());
+         if (cb) {
+            cb({});
+         }
+      }
+   };
+   bdv_->getUTXOsForAddress(addr.id(), withZC, cbWrap);
+}
+
 
 bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walletIDs)
 {
@@ -889,31 +937,106 @@ void ArmoryConnection::onRefresh(const std::vector<BinaryData>& ids)
    });
 }
 
+void ArmoryConnection::processDelayedZC()
+{
+   const auto currentTime = std::chrono::steady_clock::now();
+
+   std::unique_lock<std::mutex> lock(zcMutex_);
+
+   for (auto &waitingEntriesData : zcWaitingEntries_) {
+      auto &waitingEntries = waitingEntriesData.second;
+      auto &notifiedEntries = zcNotifiedEntries_[waitingEntriesData.first];
+
+      auto it = waitingEntries.begin();
+      while (it != waitingEntries.end()) {
+         auto &waitingEntry = it->second;
+         const auto timeDiff = currentTime - waitingEntry.recvTime;
+         if (timeDiff < std::chrono::milliseconds(2300)) { // can be tuned later
+            ++it;
+            continue;
+         }
+
+         bs::TXEntry newEntry;
+         auto itOld = notifiedEntries.find(waitingEntry.txHash);
+         if (itOld != notifiedEntries.end()) {
+            auto oldEntry = std::move(itOld->second);
+            notifiedEntries.erase(itOld);
+            addToMaintQueue([oldEntry](ArmoryCallbackTarget *tgt) {
+               tgt->onZCInvalidated({oldEntry});
+            });
+
+            newEntry = std::move(oldEntry);
+            newEntry.merge(waitingEntry);
+         } else {
+            newEntry = std::move(waitingEntry);
+         }
+
+         notifiedEntries.emplace(newEntry.txHash, newEntry);
+         addToMaintQueue([newEntry](ArmoryCallbackTarget *tgt) {
+            tgt->onZCReceived({newEntry});
+         });
+
+         it = waitingEntries.erase(it);
+      }
+   }
+}
+
 void ArmoryConnection::onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &entries)
 {
-   const auto txEntries = bs::TXEntry::fromLedgerEntries(entries);
-   for (const auto &entry : txEntries) {
-      zcEntries_[entry.txHash] = entry;
+   std::vector<bs::TXEntry> immediates;
+   auto newEntries = bs::TXEntry::fromLedgerEntries(entries);
+
+   std::unique_lock<std::mutex> lock(zcMutex_);
+
+   for (auto &newEntry : newEntries) {
+      std::string mergedWalletId = getMergedWalletId(newEntry.walletId);
+      auto &waitingEntries = zcWaitingEntries_[mergedWalletId];
+      newEntry.walletId = mergedWalletId;
+
+      auto it = waitingEntries.find(newEntry.txHash);
+
+      if (it == waitingEntries.end()) {
+         waitingEntries.emplace(newEntry.txHash, newEntry);
+         continue;
+      }
+
+      auto mergedEntry = std::move(it->second);
+      waitingEntries.erase(it);
+
+      auto &notifiedEntries = zcNotifiedEntries_[mergedWalletId];
+      mergedEntry.merge(newEntry);
+      notifiedEntries.emplace(mergedEntry.txHash, mergedEntry);
+      immediates.push_back(std::move(mergedEntry));
    }
-   addToMaintQueue([txEntries](ArmoryCallbackTarget *tgt) {
-      tgt->onZCReceived(txEntries);
-   });
+
+   if (!immediates.empty()) {
+      addToMaintQueue([immediates](ArmoryCallbackTarget *tgt) {
+         tgt->onZCReceived(immediates);
+      });
+   }
 }
 
 void ArmoryConnection::onZCsInvalidated(const std::set<BinaryData> &ids)
 {
+   std::lock_guard<std::mutex> lock(zcMutex_);
+
    std::vector<bs::TXEntry> zcInvEntries;
-   for (const auto &id : ids) {
-      const auto &itEntry = zcEntries_.find(id);
-      if (itEntry != zcEntries_.end()) {
-         zcInvEntries.emplace_back(std::move(itEntry->second));
-         zcEntries_.erase(itEntry);
+   for (auto &mergedWalletData : zcNotifiedEntries_) {
+      auto &notifiedEntries = mergedWalletData.second;
+      for (const BinaryData &id : ids) {
+         const auto &itEntry = notifiedEntries.find(id);
+         if (itEntry != notifiedEntries.end()) {
+            zcInvEntries.emplace_back(std::move(itEntry->second));
+            notifiedEntries.erase(itEntry);
+         }
       }
    }
 
-   addToMaintQueue([zcInvEntries](ArmoryCallbackTarget *tgt) {
-      tgt->onZCInvalidated(zcInvEntries);
-   });
+   if (!zcInvEntries.empty()) {
+      addToMaintQueue([zcInvEntries](ArmoryCallbackTarget *tgt) {
+         tgt->onZCInvalidated(zcInvEntries);
+      });
+   }
 }
 
 std::shared_ptr<AsyncClient::BtcWallet> ArmoryConnection::instantiateWallet(const std::string &walletId)
@@ -1025,17 +1148,27 @@ void ArmoryCallback::disconnected()
 }
 
 
+void bs::TXEntry::merge(const bs::TXEntry &other)
+{
+   value += other.value;
+   merged = true;
+}
+
 bs::TXEntry bs::TXEntry::fromLedgerEntry(const ClientClasses::LedgerEntry &entry)
 {
    return { entry.getTxHash(), entry.getID(), entry.getValue(), entry.getBlockNum()
-         , entry.getTxTime(), entry.isOptInRBF(), entry.isChainedZC() };
+         , entry.getTxTime(), entry.isOptInRBF(), entry.isChainedZC(), false
+         , std::chrono::steady_clock::now() };
 }
 
-std::vector<bs::TXEntry> bs::TXEntry::fromLedgerEntries(std::vector<ClientClasses::LedgerEntry> entries)
+std::vector<bs::TXEntry> bs::TXEntry::fromLedgerEntries(const std::vector<ClientClasses::LedgerEntry> &entries)
 {
+   // Looks like we don't need to merge TXs here (like it was done before).
+   // So there would be two TX when two different local wallets are used (with different wallet IDs),
+   // but only one for internal TX (if addresses from same wallet are used).
    std::vector<bs::TXEntry> result;
    for (const auto &entry : entries) {
-      result.push_back(fromLedgerEntry(entry));
+      result.emplace_back(fromLedgerEntry(entry));
    }
    return result;
 }

@@ -62,6 +62,7 @@ private:
    std::unique_ptr<Ui::PortfolioWidget> ui_;
    std::shared_ptr<TransactionsViewModel> model_;
    std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
    UnconfirmedTransactionFilter* filter_;
    QMenu    contextMenu_;
    QAction  *actionRBF_;

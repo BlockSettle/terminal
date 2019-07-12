@@ -451,8 +451,12 @@ bool ZmqBIP15XDataConnection::SetZMQTransport(ZMQTransport transport)
 // static
 BinaryData ZmqBIP15XDataConnection::getOwnPubKey(const string &ownKeyFileDir, const string &ownKeyFileName)
 {
-   AuthorizedPeers authPeers(ownKeyFileDir, ownKeyFileName);
-   return getOwnPubKey(authPeers);
+   try {
+      AuthorizedPeers authPeers(ownKeyFileDir, ownKeyFileName);
+      return getOwnPubKey(authPeers);
+   }
+   catch (const std::exception &) { }
+   return {};
 }
 
 // static
@@ -994,7 +998,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       lastHeartbeatReply_ = now;
       lastHeartbeatSend_ = now;
 
-      logger_->info("[processHandshake] BIP 150 handshake with server complete "
+      logger_->debug("[processHandshake] BIP 150 handshake with server complete "
          "- connection to {} is ready and fully secured", srvId);
 
       onConnected();

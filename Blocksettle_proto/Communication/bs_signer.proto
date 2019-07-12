@@ -90,6 +90,12 @@ enum Setting {
    TwoWaySignerAuth = 14;
 };
 
+enum TwoWayAuth
+{
+   TWO_WAY_AUTH_ENABLED = 0;
+   TWO_WAY_AUTH_DISABLED = 1;
+}
+
 message Settings
 {
    bool offline = 1;
@@ -105,7 +111,7 @@ message Settings
    int32 limit_pass_keep_time = 10;
    bool hide_eid_info_box = 12;
    repeated KeyPair trusted_terminals = 13;
-   bool two_way_signer_auth = 14;
+   TwoWayAuth two_way_signer_auth = 15;
 }
 
 // Keep in sync with bs::signer::BindStatus
@@ -243,7 +249,7 @@ message DecryptWalletEvent
 {
    uint32   errorCode = 1;
    string   wallet_id = 2;
-   string   password = 3;
+   bytes    password = 3;
 }
 
 message CreateWatchingOnlyResponse
@@ -300,7 +306,7 @@ message CustomDialogRequest
 
 message PasswordData
 {
-   string   password = 1;
+   bytes    password = 1;
    uint32   encType = 2;
    bytes    encKey = 3;
 }
@@ -308,7 +314,7 @@ message PasswordData
 message ChangePasswordRequest
 {
    string   rootWalletId = 1;
-   string   oldPassword = 2;
+   bytes    oldPassword = 2;
    repeated PasswordData newPassword = 3;
    uint32   rankM = 4;
    uint32   rankN = 5;
