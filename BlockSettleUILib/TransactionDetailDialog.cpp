@@ -57,32 +57,14 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
             txHashSet.insert(op.getTxHash());
             txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
          }
+
          const auto &cbTXs = [this, item, txOutIndices](const std::vector<Tx> &txs) {
-            for (auto item : { itemSender_, itemReceiver_ }) {
-               ui_->treeAddresses->addTopLevelItem(item);
-            }
+            ui_->treeAddresses->addTopLevelItem(itemSender_);
+            ui_->treeAddresses->addTopLevelItem(itemReceiver_);
 
             const auto &wallet = item->wallet;
             uint64_t value = 0;
             bool initialized = true;
-
-            bool isTxOutgoing = false;
-            switch (item->direction) {
-            case bs::sync::Transaction::Sent:
-            case bs::sync::Transaction::PayOut:
-            case bs::sync::Transaction::Revoke:
-               isTxOutgoing = true;
-               break;
-
-            case bs::sync::Transaction::Delivery:
-            case bs::sync::Transaction::Payment:
-            case bs::sync::Transaction::Auth:
-               isTxOutgoing = (item->amount < 0);
-               break;
-
-            default:
-               break;
-            }
 
             std::set<bs::sync::WalletsManager::WalletPtr> inputWallets;
 
@@ -100,7 +82,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
                      TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
                      value += prevOut.getValue();
                      const bool isOutput = false;
-                     addAddress(wallet, prevOut, isOutput, isTxOutgoing, isInternalTx, prevTx.getThisHash(), nullptr);
+                     addAddress(wallet, prevOut, isOutput, isInternalTx, prevTx.getThisHash(), nullptr);
 
                      const auto addr = bs::Address::fromTxOut(prevOut);
                      const auto addressWallet = walletsManager_->getWalletByAddress(addr);
@@ -122,7 +104,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
                   TxOut out = item->tx.getTxOutCopy(i);
                   value -= out.getValue();
                   const bool isOutput = true;
-                  addAddress(wallet, out, isOutput, isTxOutgoing, isInternalTx, item->tx.getThisHash(), &inputWallets);
+                  addAddress(wallet, out, isOutput, isInternalTx, item->tx.getThisHash(), &inputWallets);
                }
                ui_->labelComment->setText(QString::fromStdString(wallet->getTransactionComment(item->tx.getThisHash())));
             }
@@ -211,7 +193,6 @@ QSize TransactionDetailDialog::minimumSizeHint() const
 void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet> &wallet,
                                          const TxOut& out,
                                          bool isOutput,
-                                         bool isTxOutgoing,
                                          bool isInternalTx,
                                          const BinaryData& txHash,
                                          const WalletsSet *inputWallets)
@@ -219,50 +200,35 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
    const auto addr = bs::Address::fromTxOut(out);
    const auto addressWallet = walletsManager_->getWalletByAddress(addr);
    const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
-   bool negative = false;
-   QString addressType;
 
    // Do not try mark outputs as change for internal tx (or there would be only input and change, without output)
-   if (isOutput && !isInternalTx && inputWallets->find(addressWallet) != inputWallets->end() && !isSettlement) {
-      addressType = tr("Change");
-      isOutput = false;
-      negative = true;
-   }
+   const bool isChange = isOutput && !isInternalTx && !isSettlement
+         && (inputWallets->find(addressWallet) != inputWallets->end());
 
+   const QString addressType = isChange ? tr("Change") : (isOutput ? tr("Output") : tr("Input"));
    const auto displayedAddress = QString::fromStdString(addr.display());
-   QString valueStr = negative ? QLatin1String("-") : QString();
-   auto parent = isOutput ? itemReceiver_ : itemSender_;
-   auto &addrItems = isOutput ? addrOutputItems_ : addrInputItems_;
-   auto item = addrItems[displayedAddress];
-   if (item == nullptr) {
-      if (addressType.isEmpty()) {
-         addressType = isOutput ? tr("Output") : tr("Input");
-      }
-      valueStr += addressWallet ? addressWallet->displayTxValue(out.getValue()) : UiUtils::displayAmount(out.getValue());
 
-      QString walletName = addressWallet ? QString::fromStdString(addressWallet->name()) : QString();
-      QStringList items;
-      items << addressType;
-      items << valueStr;
-      if (walletName.isEmpty()) {
-         items << displayedAddress;
-      } else {
-         items << displayedAddress << walletName;
-      }
+   // Inputs should be negative, outputs positive, and change positive
+   QString valueStr = isOutput ? QString() : QLatin1String("-");
 
-      item = new QTreeWidgetItem(items);
-      item->setData(0, Qt::UserRole, displayedAddress);
-      item->setData(1, Qt::UserRole, (qulonglong)out.getValue());
-      parent->addChild(item);
-      addrItems[displayedAddress] = item;
+   const auto parent = (!isOutput || isChange) ? itemSender_ : itemReceiver_;
+
+   valueStr += addressWallet ? addressWallet->displayTxValue(int64_t(out.getValue())) : UiUtils::displayAmount(out.getValue());
+
+   QString walletName = addressWallet ? QString::fromStdString(addressWallet->name()) : QString();
+   QStringList items;
+   items << addressType;
+   items << valueStr;
+   if (walletName.isEmpty()) {
+      items << displayedAddress;
+   } else {
+      items << displayedAddress << walletName;
    }
-   else {
-      uint64_t prevVal = item->data(1, Qt::UserRole).toULongLong();
-      prevVal += out.getValue();
-      valueStr += addressWallet ? addressWallet->displayTxValue(prevVal) : UiUtils::displayAmount(prevVal);
-      item->setData(1, Qt::UserRole, (qulonglong)prevVal);
-      item->setData(1, Qt::DisplayRole, valueStr);
-   }
+
+   auto item = new QTreeWidgetItem(items);
+   item->setData(0, Qt::UserRole, displayedAddress);
+   item->setData(1, Qt::UserRole, (qulonglong)out.getValue());
+   parent->addChild(item);
    const auto txHashStr = QString::fromStdString(txHash.toHexStr(true));
    auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(out)
                                      << QString::number(out.getValue())
