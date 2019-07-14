@@ -86,7 +86,7 @@ void CCFileManager::LoadSavedCCDefinitions()
    }
 }
 
-void CCFileManager::ConnectToCelerClient(const std::shared_ptr<CelerClient> &celerClient)
+void CCFileManager::ConnectToCelerClient(const std::shared_ptr<BaseCelerClient> &celerClient)
 {
    celerClient_ = celerClient;
 }

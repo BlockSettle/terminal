@@ -29,7 +29,7 @@ namespace bs {
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
-class CelerClient;
+class BaseCelerClient;
 class DialogManager;
 class MarketDataProvider;
 class QuoteProvider;
@@ -47,7 +47,7 @@ public:
    ~RFQReplyWidget() override;
 
    void init(std::shared_ptr<spdlog::logger> logger
-      , const std::shared_ptr<CelerClient>& celerClient
+      , const std::shared_ptr<BaseCelerClient>& celerClient
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<QuoteProvider>& quoteProvider
       , const std::shared_ptr<MarketDataProvider>& mdProvider
@@ -92,7 +92,7 @@ private:
 private:
    std::unique_ptr<Ui::RFQReplyWidget> ui_;
    std::shared_ptr<spdlog::logger>        logger_;
-   std::shared_ptr<CelerClient>           celerClient_;
+   std::shared_ptr<BaseCelerClient>           celerClient_;
    std::shared_ptr<QuoteProvider>         quoteProvider_;
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;

@@ -9,7 +9,7 @@
 
 #include "ApplicationSettings.h"
 #include "ArmoryObject.h"
-#include "CelerClient.h"
+#include "CelerClientProxy.h"
 #include "QWalletInfo.h"
 #include "SignContainer.h"
 #include "ZMQ_BIP15X_DataConnection.h"
@@ -38,7 +38,7 @@ class BSMarketDataProvider;
 class BSTerminalSplashScreen;
 class CCFileManager;
 class CCPortfolioModel;
-class CelerClient;
+class BaseCelerClient;
 class ConnectionManager;
 class QSystemTrayIcon;
 class LoginWindow;
@@ -152,7 +152,7 @@ private:
    std::shared_ptr<TransactionsViewModel>    transactionsModel_;
    std::shared_ptr<CCPortfolioModel>         portfolioModel_;
    std::shared_ptr<ConnectionManager>        connectionManager_;
-   std::shared_ptr<CelerClient>              celerConnection_;
+   std::shared_ptr<CelerClientProxy>         celerConnection_;
    std::shared_ptr<BSMarketDataProvider>     mdProvider_;
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;

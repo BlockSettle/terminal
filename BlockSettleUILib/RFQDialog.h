@@ -29,7 +29,7 @@ class ReqCCSettlementContainer;
 class ReqXBTSettlementContainer;
 class SignContainer;
 class XBTSettlementTransactionWidget;
-class CelerClient;
+class BaseCelerClient;
 class ApplicationSettings;
 class ConnectionManager;
 
@@ -46,7 +46,7 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<CelerClient> &celerClient
+      , const std::shared_ptr<BaseCelerClient> &celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &
       , QWidget* parent = nullptr);
@@ -84,7 +84,7 @@ private:
    std::shared_ptr<SignContainer>      signContainer_;
    std::shared_ptr<AssetManager>       assetMgr_;
    std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<CelerClient>        celerClient_;
+   std::shared_ptr<BaseCelerClient>        celerClient_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<ConnectionManager>  connectionManager_;
    std::unordered_map<std::string, std::string> ccTxMap_;

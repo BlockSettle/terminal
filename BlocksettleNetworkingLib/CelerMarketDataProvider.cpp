@@ -27,9 +27,6 @@ CelerMarketDataProvider::CelerMarketDataProvider(const std::shared_ptr<Connectio
  , filterUsdProducts_{filterUsdProducts}
 {
    celerClient_ = nullptr;
-
-   // FIXME: Login will not properly work because BsProxy will replace it with real account details
-   SPDLOG_LOGGER_CRITICAL(logger_, "FIXME: CelerMarketDataProvider do work with BsProxy!!!");
 }
 
 bool CelerMarketDataProvider::StartMDConnection()
@@ -41,7 +38,7 @@ bool CelerMarketDataProvider::StartMDConnection()
 
    emit StartConnecting();
 
-   celerClient_ = std::make_shared<CelerClient>(logger_, false);
+   celerClient_ = std::make_shared<CelerClient>(connectionManager_, false);
 
    celerClient_->RegisterHandler(CelerAPI::SecurityListingDownstreamEventType
       , [this](const std::string& data) { return ProcessSecurityListingEvent(data); });
@@ -54,7 +51,7 @@ bool CelerMarketDataProvider::StartMDConnection()
       , host_, port_);
 
    // login password could be any string
-   if (!celerClient_->LoginToServer(credentials, credentials)) {
+   if (!celerClient_->LoginToServer(host_, port_, credentials, credentials)) {
       logger_->error("[CelerMarketDataProvider::StartMDConnection] failed to connect to MD source");
       celerClient_ = nullptr;
       return false;

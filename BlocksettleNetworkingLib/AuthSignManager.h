@@ -12,7 +12,7 @@ namespace spdlog {
    class logger;
 }
 class ApplicationSettings;
-class CelerClient;
+class BaseCelerClient;
 class AutheIDClient;
 class SecureBinaryData;
 class ConnectionManager;
@@ -24,7 +24,7 @@ Q_OBJECT
 public:
    AuthSignManager(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , const std::shared_ptr<CelerClient> &, const std::shared_ptr<ConnectionManager> &);
+      , const std::shared_ptr<BaseCelerClient> &, const std::shared_ptr<ConnectionManager> &);
    ~AuthSignManager() noexcept;
 
    AuthSignManager(const AuthSignManager&) = delete;
@@ -44,7 +44,7 @@ private slots:
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
-   std::shared_ptr<CelerClient>           celerClient_;
+   std::shared_ptr<BaseCelerClient>           celerClient_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::unique_ptr<AutheIDClient>         autheIDClient_;
    SignedCb                               onSignedCB_;

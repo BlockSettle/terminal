@@ -545,7 +545,7 @@ void ChatWidget::switchToChat(const std::string& chatId)
    onUserClicked(chatId);
 }
 
-void ChatWidget::setCelerClient(std::shared_ptr<CelerClient> celerClient)
+void ChatWidget::setCelerClient(std::shared_ptr<BaseCelerClient> celerClient)
 {
    celerClient_ = celerClient;
 }
@@ -998,8 +998,8 @@ void ChatWidget::SetLoggedOutOTCState()
 bool ChatWidget::TradingAvailableForUser() const
 {
    return celerClient_
-      && (   celerClient_->celerUserType() == CelerClient::CelerUserType::Dealing
-          || celerClient_->celerUserType() == CelerClient::CelerUserType::Trading);
+      && (   celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Dealing
+          || celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Trading);
 }
 
 void ChatWidget::OTCSwitchToCommonRoom()

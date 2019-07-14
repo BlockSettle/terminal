@@ -103,7 +103,7 @@ void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& md
 }
 
 void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
-   , const std::shared_ptr<CelerClient>& celerClient
+   , const std::shared_ptr<BaseCelerClient>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , std::shared_ptr<QuoteProvider> quoteProvider
    , const std::shared_ptr<AssetManager>& assetManager
@@ -136,8 +136,8 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
          , { false, QString::fromStdString(quoteId), QString::fromStdString(reason) });
    });
 
-   connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
-   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
+   connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
+   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
 
    ui_->pageRFQTicket->disablePanel();
 }

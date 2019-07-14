@@ -48,7 +48,7 @@ void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSet
 }
 
 void AuthAddressManager::ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &connMgr
-   , const std::shared_ptr<CelerClient>& celerClient)
+   , const std::shared_ptr<BaseCelerClient>& celerClient)
 {
    connectionManager_ = connMgr;
    celerClient_ = celerClient;

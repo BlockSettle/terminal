@@ -12,7 +12,7 @@
 
 AuthSignManager::AuthSignManager(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<ApplicationSettings> &appSettings
-      , const std::shared_ptr<CelerClient> &celerClient
+      , const std::shared_ptr<BaseCelerClient> &celerClient
       , const std::shared_ptr<ConnectionManager> &connectionManager)
    : logger_(logger)
    , appSettings_(appSettings)

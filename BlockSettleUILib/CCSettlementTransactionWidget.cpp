@@ -20,7 +20,7 @@ CCSettlementTransactionWidget::~CCSettlementTransactionWidget() noexcept = defau
 
 CCSettlementTransactionWidget::CCSettlementTransactionWidget(
    const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<CelerClient> &celerClient
+   , const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ReqCCSettlementContainer> &settlContainer
    , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -46,7 +46,7 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
    connect(settlContainer_.get(), &ReqCCSettlementContainer::timerExpired, this, &CCSettlementTransactionWidget::onTimerExpired);
    connect(settlContainer_.get(), &ReqCCSettlementContainer::timerStarted, [this](int msDuration) { ui_->progressBar->setMaximum(msDuration); });
    connect(settlContainer_.get(), &ReqCCSettlementContainer::walletInfoReceived, this, &CCSettlementTransactionWidget::initSigning);
-   connect(celerClient.get(), &CelerClient::OnConnectionClosed, this, &CCSettlementTransactionWidget::onCancel);
+   connect(celerClient.get(), &BaseCelerClient::OnConnectionClosed, this, &CCSettlementTransactionWidget::onCancel);
    //connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, this, &CCSettlementTransactionWidget::onKeyChanged);
 
    settlContainer_->activate();

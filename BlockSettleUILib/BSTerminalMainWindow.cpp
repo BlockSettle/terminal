@@ -642,10 +642,10 @@ void BSTerminalMainWindow::SignerReady()
 void BSTerminalMainWindow::InitConnections()
 {
    connectionManager_ = std::make_shared<ConnectionManager>(logMgr_->logger("message"));
-   celerConnection_ = std::make_shared<CelerClient>(logMgr_->logger());
-   connect(celerConnection_.get(), &CelerClient::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
-   connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
-   connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
+   celerConnection_ = std::make_shared<CelerClientProxy>(logMgr_->logger());
+   connect(celerConnection_.get(), &BaseCelerClient::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
+   connect(celerConnection_.get(), &BaseCelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
+   connect(celerConnection_.get(), &BaseCelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
    mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_, logMgr_->logger("message"));
 
@@ -1193,7 +1193,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
 void BSTerminalMainWindow::loginToCeler(const std::string& username)
 {
    // We don't use password here, BsProxy will manage authentication
-   celerConnection_->LoginToServer(username, "");
+   celerConnection_->LoginToServer(bsClient_.get(), username);
 
    auto userName = QString::fromStdString(username);
    currentUserLogin_ = userName;
@@ -1336,7 +1336,7 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
 {
    switch(errorCode)
    {
-   case CelerClient::LoginError:
+   case BaseCelerClient::LoginError:
       logMgr_->logger("ui")->debug("[BSTerminalMainWindow::onCelerConnectionError] login failed. Probably user do not have BS matching account");
       break;
    }
@@ -1794,7 +1794,4 @@ void BSTerminalMainWindow::createBsClient()
 
    bsClient_ = std::make_unique<BsClient>(logMgr_->logger(), params);
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
-
-   connect(bsClient_.get(), &BsClient::celerRecv, celerConnection_.get(), &CelerClient::recvData);
-   connect(celerConnection_.get(), &CelerClient::sendData, bsClient_.get(), &BsClient::celerSend);
 }

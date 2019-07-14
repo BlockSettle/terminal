@@ -1,512 +1,99 @@
 #include "CelerClient.h"
 
-#include "DataConnection.h"
+#include <spdlog/spdlog.h>
 #include "ConnectionManager.h"
-
-#include "CelerLoginSequence.h"
-#include "CelerGetUserIdSequence.h"
-#include "CelerGetUserPropertySequence.h"
-#include "CelerLoadUserInfoSequence.h"
-#include "CelerPropertiesDefinitions.h"
-#include "CelerSetUserPropertySequence.h"
-
+#include "DataConnection.h"
 #include "NettyCommunication.pb.h"
 
-using namespace com::celertech::baseserver::communication::protobuf;
-
-CelerClient::CelerClient(const std::shared_ptr<spdlog::logger> &logger, bool userIdRequired)
-   : logger_(logger)
-   , userId_(CelerUserProperties::UserIdPropertyName)
-   , submittedAuthAddressListProperty_(CelerUserProperties::SubmittedBtcAuthAddressListPropertyName)
-   , submittedCCAddressListProperty_(CelerUserProperties::SubmittedCCAddressListPropertyName)
-   , userIdRequired_(userIdRequired)
-   , serverNotAvailable_(false)
+class CelerClientListener : public DataConnectionListener
 {
-   heartbeatTimer_ = new QTimer(this);
-   heartbeatTimer_->setInterval(30 * 1000);
-   heartbeatTimer_->setSingleShot(false);
+public:
+   void OnDataReceived(const std::string& data) override
+   {
+      com::celertech::baseserver::communication::protobuf::ProtobufMessage celerMsg;
 
-   connect(heartbeatTimer_, &QTimer::timeout, this, &CelerClient::sendHeartbeat);
-   connect(this, &CelerClient::restartTimer, this, &CelerClient::onTimerRestart);
-
-   connect(this, &CelerClient::closingConnection, this, &CelerClient::CloseConnection, Qt::QueuedConnection);
-   RegisterDefaulthandlers();
-
-   celerUserType_ = CelerUserType::Undefined;
-}
-
-bool CelerClient::LoginToServer(const std::string& login, const std::string& password)
-{
-   // create user login sequence
-   std::string loginString = login;
-   sessionToken_.clear();
-
-   celerUserType_ = CelerUserType::Undefined;
-
-   auto loginSequence = std::make_shared<CelerLoginSequence>(logger_, login, password);
-   auto onLoginSuccess = [this,loginString](const std::string& sessionToken, int32_t heartbeatInterval) {
-     loginSuccessCallback(loginString, sessionToken, heartbeatInterval);
-   };
-   auto onLoginFailed = [this](const std::string& errorMessage) {
-     loginFailedCallback(errorMessage);
-   };
-   loginSequence->SetCallbackFunctions(onLoginSuccess, onLoginFailed);
-
-   AddInternalSequence(loginSequence);
-
-   // BsProxy will wait when Celer connects and will queue requests before that
-   OnConnected();
-
-   return true;
-}
-
-void CelerClient::loginSuccessCallback(const std::string& userName, const std::string& sessionToken
-   , int32_t heartbeatInterval)
-{
-   logger_->debug("[CelerClient::loginSuccessCallback] logged in as {}", userName);
-   userName_ = userName;
-   sessionToken_ = sessionToken;
-   heartbeatInterval_ = heartbeatInterval;
-   serverNotAvailable_ = false;
-   idGenerator_.setUserName(userName);
-
-   heartbeatTimer_->setInterval(heartbeatInterval_ * 1000);
-   heartbeatTimer_->setSingleShot(false);
-
-   if (userIdRequired_) {
-      auto getUserIdSequence = std::make_shared<CelerLoadUserInfoSequence>(logger_, userName, [this](CelerProperties properties) {
-         userId_ = properties[CelerUserProperties::UserIdPropertyName];
-         bitcoinParticipant_ = properties[CelerUserProperties::BitcoinParticipantPropertyName];
-
-         const auto authIt = properties.find(CelerUserProperties::SubmittedBtcAuthAddressListPropertyName);
-         if (authIt != properties.end()) {
-            submittedAuthAddressListProperty_ = authIt->second;
-            UpdateSetFromString(submittedAuthAddressListProperty_.value, submittedAuthAddressSet_);
-         }
-
-         const auto ccIt = properties.find(CelerUserProperties::SubmittedCCAddressListPropertyName);
-         if (ccIt != properties.end()) {
-            submittedCCAddressListProperty_ = properties[CelerUserProperties::SubmittedCCAddressListPropertyName];
-            UpdateSetFromString(submittedCCAddressListProperty_.value, submittedCCAddressSet_);
-         }
-
-         const bool bd = (properties[CelerUserProperties::BitcoinDealerPropertyName].value == "true");
-         const bool bp = (bitcoinParticipant_.value == "true");
-
-         if (bp && bd) {
-            userType_ = tr("Dealing Participant");
-            celerUserType_ = CelerUserType::Dealing;
-         } else if (bp && !bd) {
-            userType_ = tr("Trading Participant");
-            celerUserType_ = CelerUserType::Trading;
-         } else {
-            userType_ = tr("Market Participant");
-            celerUserType_ = CelerUserType::Market;
-         }
-
-         emit OnConnectedToServer();
-      });
-      ExecuteSequence(getUserIdSequence);
-   } else {
-      emit OnConnectedToServer();
-   }
-
-   emit restartTimer();
-}
-
-void CelerClient::loginFailedCallback(const std::string& errorMessage)
-{
-   if (errorMessage == "Server not available, please try again later.") {
-      if (!serverNotAvailable_){
-         logger_->error("[CelerClient] login failed: {}", errorMessage);
-         serverNotAvailable_ = true;
+      bool result = celerMsg.ParseFromString(data);
+      if (!result) {
+         SPDLOG_LOGGER_CRITICAL(logger_, "failed to parse ProtobufMessage from Celer");
+         return;
       }
 
-      emit OnConnectionError(ServerMaintainanceError);
-   } else {
-      logger_->error("[CelerClient] login failed: {}", errorMessage);
-      emit OnConnectionError(LoginError);
+      auto messageType = CelerAPI::GetMessageType(celerMsg.protobufclassname());
+      if (!CelerAPI::isValidMessageType(messageType)) {
+         SPDLOG_LOGGER_CRITICAL(logger_, "get message of unrecognized type: {}", celerMsg.protobufclassname());
+         return;
+      }
+
+      client_->recvData(messageType, celerMsg.protobufmessagecontents());
    }
+   void OnConnected() override
+   {
+      client_->OnConnected();
+   }
+   void OnDisconnected() override
+   {
+      client_->OnDisconnected();
+   }
+   void OnError(DataConnectionListener::DataConnectionError errorCode) override
+   {
+      client_->OnError(errorCode);
+   }
+
+   BaseCelerClient *client_{};
+   std::shared_ptr<spdlog::logger> logger_;
+};
+
+CelerClient::CelerClient(const std::shared_ptr<ConnectionManager> &connectionManager, bool userIdRequired)
+   : BaseCelerClient(connectionManager->GetLogger(), userIdRequired)
+   , connectionManager_(connectionManager)
+{
 }
 
-void CelerClient::AddInternalSequence(const std::shared_ptr<BaseCelerCommand>& commandSequence)
+CelerClient::~CelerClient() = default;
+
+bool CelerClient::LoginToServer(const std::string &hostname, const std::string &port
+   , const std::string &login, const std::string &password)
 {
-   internalCommands_.emplace(commandSequence);
+   if (connection_) {
+      logger_->error("[CelerClient::LoginToServer] connecting with not purged connection");
+      return false;
+   }
+
+   listener_ = std::make_unique<CelerClientListener>();
+   listener_->client_ = this;
+   listener_->logger_ = logger_;
+
+   connection_ = connectionManager_->CreateCelerClientConnection();
+
+   // put login command to queue
+   if (!connection_->openConnection(hostname, port, listener_.get())) {
+      logger_->error("[CelerClient::LoginToServer] failed to open celer connection");
+      // XXX purge connection and listener
+      connection_.reset();
+      return false;
+   }
+
+   bool result = BaseCelerClient::SendLogin(login, password);
+   return result;
 }
 
 void CelerClient::CloseConnection()
 {
-   heartbeatTimer_->stop();
-
-   if (!sessionToken_.empty()) {
-      sessionToken_.clear();
-      emit OnConnectionClosed();
-   }
-}
-
-void CelerClient::OnDataReceived(CelerAPI::CelerMessageType messageType, const std::string& data)
-{
-   // internal queue
-   while (!internalCommands_.empty()) {
-      std::shared_ptr<BaseCelerCommand> command = internalCommands_.front();
-      if (command->IsCompleted()) {
-         logger_->error("[CelerClient::OnDataReceived] ========== Completed command in internal Q =========");
-         internalCommands_.pop();
-         command->FinishSequence();
-         continue;
-      }
-
-      if (command->IsWaitingForData()) {
-
-         if (command->OnMessage({messageType, data}) ) {
-            SendCommandMessagesIfRequired(command);
-         }
-
-         if (command->IsCompleted()) {
-            internalCommands_.pop();
-            command->FinishSequence();
-         }
-         return;
-      } else {
-         logger_->debug("[CelerClient::OnDataReceived] internal command {} not waiting for message {}"
-            , command->GetCommandName(), CelerAPI::GetMessageClass(messageType));
-         break;
-      }
+   if (connection_) {
+      connection_->closeConnection();
+      connection_.reset();
    }
 
-   auto handlerIt = messageHandlersMap_.find(messageType);
-   if (handlerIt != messageHandlersMap_.end()) {
-      if (handlerIt->second(data)) {
-         return;
-      }
-      logger_->debug("[CelerClient::OnDataReceived] handler rejected message of type {}.", CelerAPI::GetMessageClass(messageType));
-   } else {
-      logger_->debug("[CelerClient::OnDataReceived] ignore message {}", CelerAPI::GetMessageClass(messageType));
-   }
+   BaseCelerClient::CloseConnection();
 }
 
-void CelerClient::SendCommandMessagesIfRequired(const std::shared_ptr<BaseCelerCommand>& command)
+void CelerClient::onSendData(CelerAPI::CelerMessageType messageType, const std::string &data)
 {
-   while (!(command->IsCompleted() || command->IsWaitingForData())) {
-      auto message = command->GetNextDataToSend();
-      sendMessage(message.messageType, message.messageData);
-   }
-}
-
-bool CelerClient::sendMessage(CelerAPI::CelerMessageType messageType, const std::string& data)
-{
-   // reset heartbeat interval
-   if (heartbeatTimer_->isActive()) {
-      emit restartTimer();
-   }
-
-   emit sendData(messageType, data);
-   return true;
-}
-
-void CelerClient::OnConnected()
-{
-   // start command execution
-   if (!internalCommands_.empty()) {
-      if (!internalCommands_.front()->IsWaitingForData()) {
-         auto message = internalCommands_.front()->GetNextDataToSend();
-         sendMessage(message.messageType, message.messageData);
-      }
-   } else {
-      logger_->error("[CelerClient::OnConnected] ======= no internal sequence =======");
-   }
-}
-
-void CelerClient::OnDisconnected()
-{
-//   commandsQueueType{}.swap(internalCommands_);
-   emit closingConnection();
-}
-
-void CelerClient::OnError(DataConnectionListener::DataConnectionError errorCode)
-{
-   // emit error message
-   CelerErrorCode celerError = UndefinedError;
-
-   switch (errorCode) {
-   case DataConnectionListener::HostNotFoundError:
-      celerError = ResolveHostError;
-      break;
-   default:
-      break;
-   }
-
-   emit OnConnectionError(celerError);
-}
-
-void CelerClient::RegisterDefaulthandlers()
-{
-   RegisterHandler(CelerAPI::HeartbeatType, [this](const std::string& data) { return this->onHeartbeat(data); });
-   RegisterHandler(CelerAPI::SingleResponseMessageType, [this](const std::string& data) { return this->onSingleMessage(data); });
-   RegisterHandler(CelerAPI::ExceptionResponseMessageType, [this](const std::string& data) { return this->onExceptionResponse(data); });
-   RegisterHandler(CelerAPI::MultiResponseMessageType, [this](const std::string& data) { return this->onMultiMessage(data); });
-}
-
-bool CelerClient::RegisterHandler(CelerAPI::CelerMessageType messageType, const message_handler& handler)
-{
-   auto it = messageHandlersMap_.find(messageType);
-   if (it != messageHandlersMap_.end()) {
-      logger_->error("[CelerClient::RegisterHandler] handler for message {} already exists", messageType);
-      return false;
-   }
-
-   messageHandlersMap_.emplace(messageType, handler);
-
-   return true;
-}
-
-bool CelerClient::onHeartbeat(const std::string& message)
-{
-   Heartbeat response;
-
-   if (!response.ParseFromString(message)) {
-      logger_->error("[CelerClient::onHeartbeat] failed to parse message");
-      return false;
-   }
-
-   return true;
-}
-
-bool CelerClient::onSingleMessage(const std::string& message)
-{
-   SingleResponseMessage response;
-   if (!response.ParseFromString(message)) {
-      logger_->error("[CelerClient::onSingleMessage] failed to parse SingleResponseMessage");
-      return false;
-   }
-
-   return SendDataToSequence(response.clientrequestid(), CelerAPI::SingleResponseMessageType, message);
-}
-
-bool CelerClient::onExceptionResponse(const std::string& message)
-{
-   ExceptionResponseMessage response;
-
-   if (!response.ParseFromString(message)) {
-      logger_->error("[CelerClient::onExceptionResponse] failed to parse ExceptionResponseMessage");
-      return false;
-   }
-
-   logger_->error("[CelerClient::onExceptionResponse] get exception response: {}"
-      , response.DebugString());
-
-   return true;
-}
-
-bool CelerClient::onMultiMessage(const std::string& message)
-{
-   MultiResponseMessage response;
-   if (!response.ParseFromString(message)) {
-      logger_->error("[CelerClient::onMultiMessage] failed to parse MultiResponseMessage");
-      return false;
-   }
-
-   return SendDataToSequence(response.clientrequestid(), CelerAPI::MultiResponseMessageType, message);
-}
-
-bool CelerClient::SendDataToSequence(const std::string& sequenceId, CelerAPI::CelerMessageType messageType, const std::string& message)
-{
-   auto commandIt = activeCommands_.find(sequenceId);
-   if (commandIt == activeCommands_.end()) {
-      logger_->error("[CelerClient::SendDataToSequence] there is no active sequence for id {}", sequenceId);
-      return false;
-   }
-
-   std::shared_ptr<BaseCelerCommand> command = commandIt->second;
-   if (command->IsWaitingForData()) {
-      if (command->OnMessage( {messageType, message} ) ) {
-         SendCommandMessagesIfRequired(command);
-      }
-
-      if (command->IsCompleted()) {
-         command->FinishSequence();
-         activeCommands_.erase(commandIt);
-      }
-
-   } else {
-      logger_->error("[CelerClient::SendDataToSequence] command is not waiting for data {}", sequenceId);
-      return false;
-   }
-
-   return true;
-}
-
-void CelerClient::sendHeartbeat()
-{
-   Heartbeat heartbeat;
-
-   sendMessage(CelerAPI::HeartbeatType, heartbeat.SerializeAsString());
-}
-
-bool CelerClient::ExecuteSequence(const std::shared_ptr<BaseCelerCommand>& command)
-{
-   if (!IsConnected()) {
-      logger_->error("[CelerClient::ExecuteSequence] could not execute seqeuence if not connected");
-      return false;
-   }
-
-   if (command->IsCompleted()) {
-      logger_->error("[CelerClient::ExecuteSequence] could not execute completed sequence");
-      return false;
-   }
-
-   if (command->IsWaitingForData()) {
-      logger_->error("[CelerClient::ExecuteSequence] could not execute sequence that starts from receiving");
-      return false;
-   }
-
-   // assign ID
-   command->SetSequenceId(idGenerator_.getNextId());
-   command->SetUniqueSeed(idGenerator_.getUniqueSeed());
-
-   // send first command
-   SendCommandMessagesIfRequired(command);
-
-   // if not completed - add to map
-   if (!command->IsCompleted()) {
-      RegisterUserCommand(command);
-   }
-
-   return true;
-}
-
-bool CelerClient::IsConnected() const
-{
-   return !sessionToken_.empty();
-}
-
-std::string CelerClient::userName() const
-{
-   return userName_;
-}
-
-void CelerClient::RegisterUserCommand(const std::shared_ptr<BaseCelerCommand>& command)
-{
-   activeCommands_.emplace(command->GetSequenceId(), command);
-}
-
-void CelerClient::onTimerRestart()
-{
-   heartbeatTimer_->start();
-}
-
-void CelerClient::recvData(CelerAPI::CelerMessageType messageType, const std::string &data)
-{
-   OnDataReceived(messageType, data);
-}
-
-std::string CelerClient::userId() const
-{
-   return userId_.value;
-}
-
-const QString& CelerClient::userType() const
-{
-   return userType_;
-}
-
-CelerClient::CelerUserType CelerClient::celerUserType() const
-{
-   return celerUserType_;
-}
-
-std::unordered_set<std::string> CelerClient::GetSubmittedAuthAddressSet() const
-{
-   return submittedAuthAddressSet_;
-}
-
-bool CelerClient::SetSubmittedAuthAddressSet(const std::unordered_set<std::string>& addressSet)
-{
-   submittedAuthAddressSet_ = addressSet;
-
-   std::string stringValue = SetToString(addressSet);
-
-   submittedAuthAddressListProperty_.value = stringValue;
-   auto command = std::make_shared<CelerSetUserPropertySequence>(logger_, userName_
-      , submittedAuthAddressListProperty_);
-
-   return ExecuteSequence(command);
-}
-
-bool CelerClient::IsCCAddressSubmitted(const std::string &address) const
-{
-   const auto it = submittedCCAddressSet_.find(address);
-   if (it != submittedCCAddressSet_.end()) {
-      return true;
-   }
-   return false;
-}
-
-bool CelerClient::SetCCAddressSubmitted(const std::string &address)
-{
-   if (IsCCAddressSubmitted(address)) {
-      return true;
-   }
-
-   submittedCCAddressSet_.insert(address);
-   submittedCCAddressListProperty_.value = SetToString(submittedCCAddressSet_);
-   const auto command = std::make_shared<CelerSetUserPropertySequence>(logger_, userName_
-      , submittedCCAddressListProperty_);
-
-   return ExecuteSequence(command);
-}
-
-std::string CelerClient::SetToString(const std::unordered_set<std::string> &set)
-{
-   std::string stringValue;
-
-   if (set.empty()) {
-      return "";
-   }
-
-   for (const auto& address : set ) {
-      stringValue.append(address);
-      stringValue.append(";");
-   }
-
-   // remove last column
-   stringValue.resize(stringValue.size() - 1);
-
-   return stringValue;
-}
-
-void CelerClient::UpdateSetFromString(const std::string& value, std::unordered_set<std::string> &set)
-{
-   set.clear();
-
-   if (value.empty()) {
-      return;
-   }
-
-   size_t start = 0;
-   size_t end = 0;
-
-   const char *data = value.c_str();
-
-   while (end < value.length()) {
-      if (data[end] == ';') {
-         AddToSet( {&data[start], end - start}, set);
-         start = end + 1;
-      }
-      end += 1;
-   }
-   AddToSet( {&data[start], end - start}, set);
-}
-
-void CelerClient::AddToSet(const std::string& address, std::unordered_set<std::string> &set)
-{
-   auto it = set.find(address);
-   if (it == set.end()) {
-      set.emplace(address);
-   }
-}
-
-bool CelerClient::tradingAllowed() const
-{
-   return (bitcoinParticipant_.value == "true");
+   std::string fullClassName = CelerAPI::GetMessageClass(messageType);
+   assert(!fullClassName.empty());
+
+   com::celertech::baseserver::communication::protobuf::ProtobufMessage message;
+   message.set_protobufclassname(fullClassName);
+   message.set_protobufmessagecontents(data);
+   connection_->send(message.SerializeAsString());
 }

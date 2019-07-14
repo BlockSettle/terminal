@@ -14,7 +14,7 @@ namespace bs {
       class WalletsManager;
    }
 }
-class CelerClient;
+class BaseCelerClient;
 class DealerCCSettlementContainer;
 
 
@@ -28,7 +28,7 @@ public:
       , const std::string &reqRecvAddr
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &
-      , std::shared_ptr<CelerClient>
+      , std::shared_ptr<BaseCelerClient>
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent = nullptr);

@@ -22,7 +22,7 @@ namespace bs {
 class AssetManager;
 class DealerXBTSettlementContainer;
 class SignContainer;
-class CelerClient;
+class BaseCelerClient;
 class ApplicationSettings;
 
 class DealerXBTSettlementDialog : public BaseDealerSettlementDialog
@@ -34,7 +34,7 @@ public:
       , const std::shared_ptr<AssetManager>& assetManager
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &
-      , std::shared_ptr<CelerClient>
+      , std::shared_ptr<BaseCelerClient>
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &
       , QWidget* parent = nullptr);

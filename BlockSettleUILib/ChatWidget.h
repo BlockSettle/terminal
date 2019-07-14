@@ -33,7 +33,7 @@ class ApplicationSettings;
 class ChatWidgetState;
 class OTCRequestViewModel;
 class ChatTreeModelWrapper;
-class CelerClient;
+class BaseCelerClient;
 
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
@@ -63,7 +63,7 @@ public:
    void logout();
    bool hasUnreadMessages();
    void switchToChat(const std::string& chatId);
-   void setCelerClient(std::shared_ptr<CelerClient> celerClient);
+   void setCelerClient(std::shared_ptr<BaseCelerClient> celerClient);
    void updateChat(const bool &isChatTab);
 
    // Sends friend request to PB contact if needed
@@ -152,7 +152,7 @@ private:
 
    std::shared_ptr<ChatClient>      client_;
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<CelerClient>     celerClient_;
+   std::shared_ptr<BaseCelerClient>     celerClient_;
 
    std::string serverPublicKey_;
    std::string  currentChat_;

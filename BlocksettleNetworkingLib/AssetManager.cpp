@@ -17,7 +17,7 @@
 AssetManager::AssetManager(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
       , const std::shared_ptr<MarketDataProvider>& mdProvider
-      , const std::shared_ptr<CelerClient>& celerClient)
+      , const std::shared_ptr<BaseCelerClient>& celerClient)
  : logger_(logger)
  , walletsManager_(walletsManager)
  , mdProvider_(mdProvider)
@@ -37,8 +37,8 @@ void AssetManager::init()
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &AssetManager::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &AssetManager::onWalletChanged);
 
-   connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &AssetManager::onCelerConnected);
-   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, this, &AssetManager::onCelerDisconnected);
+   connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &AssetManager::onCelerConnected);
+   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &AssetManager::onCelerDisconnected);
 
    celerClient_->RegisterHandler(CelerAPI::SubLedgerSnapshotDownstreamEventType, [this](const std::string& data) { return onAccountBalanceUpdatedEvent(data); });
 }
