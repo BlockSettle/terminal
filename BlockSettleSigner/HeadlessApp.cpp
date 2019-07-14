@@ -265,9 +265,13 @@ void HeadlessAppObj::startTerminalsProcessing()
    terminalConnection_ = std::make_unique<ZmqBIP15XServerConnection>(logger_, zmqContext
       , getClientIDKeys, ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
-   terminalConnection_->setLocalHeartbeatInterval();
 
+   terminalConnection_->setLocalHeartbeatInterval();
+   if (!settings_->listenFrom().empty()) {
+      terminalConnection_->setListenFrom({settings_->listenFrom()});
+   }
    terminalListener_->SetLimits(settings_->limits());
+
    terminalListener_->resetConnection(terminalConnection_.get());
 
    bool result = terminalConnection_->BindConnection(settings_->listenAddress()
@@ -412,11 +416,13 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
    const std::string prevListenAddress = settings_->listenAddress();
    const std::string prevListenPort = settings_->listenPort();
    const auto prevTrustedTerminals = settings_->trustedTerminals();
+   const std::string prevListenFrom = settings_->listenFrom();
 
    settings_->update(settings);
 
    const bool needReconnect = prevOffline != settings_->offline()
          || prevListenAddress != settings_->listenAddress()
+         || prevListenFrom != settings_->listenFrom()
          || prevListenPort != settings_->listenPort();
 
    const auto trustedTerminals = settings_->trustedTerminals();

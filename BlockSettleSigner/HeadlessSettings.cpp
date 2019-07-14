@@ -201,6 +201,11 @@ std::string HeadlessSettings::listenAddress() const
    return d_->listen_address();
 }
 
+std::string HeadlessSettings::listenFrom() const
+{
+   return d_->listen_from();
+}
+
 std::string HeadlessSettings::listenPort() const
 {
    if (overrideListenPort_.isValid()) {

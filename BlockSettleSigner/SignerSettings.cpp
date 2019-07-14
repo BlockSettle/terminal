@@ -66,11 +66,15 @@ void SignerSettings::settingChanged(int setting)
    case signer::WatchingOnly:
       emit woChanged();
       break;
+   case signer::ExportWalletsDir:
+      emit exportWalletsDirChanged();
+      break;
    case signer::AutoSignWallet:
       emit autoSignWalletChanged();
       break;
    case signer::ListenAddress:
    case signer::ListenPort:
+   case signer::ListenFrom:
       emit listenSocketChanged();
       break;
    case signer::LimitManualXBT:
@@ -234,6 +238,11 @@ QString SignerSettings::listenAddress() const
    return QString::fromStdString(d_->listen_address());
 }
 
+QString SignerSettings::listenFrom() const
+{
+   return QString::fromStdString(d_->listen_from());
+}
+
 QString SignerSettings::port() const
 {
    if (d_->listen_port() == 0) {
@@ -328,6 +337,11 @@ void SignerSettings::setAutoSignWallet(const QString &val)
 void SignerSettings::setListenAddress(const QString &val)
 {
    setStringSetting(val, d_->mutable_listen_address(), signer::Setting::ListenAddress);
+}
+
+void SignerSettings::setListenFrom(const QString &val)
+{
+   setStringSetting(val, d_->mutable_listen_from(), signer::Setting::ListenFrom);
 }
 
 void SignerSettings::setPort(const QString &val)

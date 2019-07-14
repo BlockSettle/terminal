@@ -19,6 +19,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(bool watchingOnly READ watchingOnly WRITE setWatchingOnly NOTIFY woChanged)
    Q_PROPERTY(QString exportWalletsDir READ getExportWalletsDir WRITE setExportWalletsDir NOTIFY exportWalletsDirChanged)
    Q_PROPERTY(QString listenAddress READ listenAddress WRITE setListenAddress NOTIFY listenSocketChanged)
+   Q_PROPERTY(QString listenFrom READ listenFrom WRITE setListenFrom NOTIFY listenSocketChanged)
    Q_PROPERTY(QString listenPort READ port WRITE setPort NOTIFY listenSocketChanged)
    Q_PROPERTY(bool autoSignUnlimited READ autoSignUnlimited NOTIFY limitAutoSignXbtChanged)
    Q_PROPERTY(bool manualSignUnlimited READ manualSignUnlimited NOTIFY limitManualXbtChanged)
@@ -46,6 +47,7 @@ public:
    QString serverIDKeyStr() const;
 
    QString listenAddress() const;
+   QString listenFrom() const;
    QString port() const;
    QString logFileName() const;
    bool testNet() const;
@@ -78,6 +80,7 @@ public:
    void setExportWalletsDir(const QString &);
    void setAutoSignWallet(const QString &val);
    void setListenAddress(const QString &val);
+   void setListenFrom(const QString &val);
    void setPort(const QString &val);
    void setLimitManualXbt(const double val);
    void setLimitAutoSignXbt(const double val);
