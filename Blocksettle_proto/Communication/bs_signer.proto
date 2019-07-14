@@ -80,14 +80,15 @@ enum Setting {
    ExportWalletsDir = 4;
    AutoSignWallet = 5;
    ListenAddress = 6;
-   ListenPort = 7;
-   LimitManualXBT = 8;
-   LimitAutoSignXBT = 9;
-   LimitAutoSignTime = 10;
-   LimitManualPwKeep = 11;
-   HideEidInfoBox = 12;
-   TrustedTerminals = 13;
-   TwoWaySignerAuth = 14;
+   ListenFrom = 7;
+   ListenPort = 8;
+   LimitManualXBT = 9;
+   LimitAutoSignXBT = 10;
+   LimitAutoSignTime = 11;
+   LimitManualPwKeep = 12;
+   HideEidInfoBox = 13;
+   TrustedTerminals = 14;
+   TwoWaySignerAuth = 15;
 };
 
 enum TwoWayAuth
@@ -102,15 +103,16 @@ message Settings
    bool test_net = 2;
    bool watching_only = 3;
    string export_wallets_dir = 4;
-   string auto_sign_wallet = 11;
-   string listen_address = 5;
-   int32 listen_port = 6;
-   uint64 limit_manual_xbt = 7;
-   uint64 limit_auto_sign_xbt = 8;
-   int32 limit_auto_sign_time = 9;
-   int32 limit_pass_keep_time = 10;
-   bool hide_eid_info_box = 12;
-   repeated KeyPair trusted_terminals = 13;
+   string auto_sign_wallet = 5;
+   string listen_address = 6;
+   string listen_from = 7;
+   int32 listen_port = 8;
+   uint64 limit_manual_xbt = 9;
+   uint64 limit_auto_sign_xbt = 10;
+   int32 limit_auto_sign_time = 11;
+   int32 limit_pass_keep_time = 12;
+   bool hide_eid_info_box = 13;
+   repeated KeyPair trusted_terminals = 14;
    TwoWayAuth two_way_signer_auth = 15;
 }
 
