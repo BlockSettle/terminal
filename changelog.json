@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.18.8",
-   "release_date": "11 Jul 2019",
+   "latest_version": "0.18.9",
+   "release_date": "13 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.18.9",
+         "previous_version": "0.18.8",
+         "release_date": "13 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix application startup 2 displays mess",
+            "Fix and simplify transaction details",
+            "Centering Remove Contact dialog",
+            "Wallet registration fixes"
+         ],
+         "bug_fixes": [],
+         "revision": "0ea08909",
+         "common_revision": "52a1e5f3"
+      },
       {
          "version_string": "0.18.8",
          "previous_version": "0.18.7",
