@@ -80,7 +80,7 @@ enum Setting {
    ExportWalletsDir = 4;
    AutoSignWallet = 5;
    ListenAddress = 6;
-   ListenFrom = 7;
+   AcceptFrom = 7;
    ListenPort = 8;
    LimitManualXBT = 9;
    LimitAutoSignXBT = 10;
@@ -105,7 +105,7 @@ message Settings
    string export_wallets_dir = 4;
    string auto_sign_wallet = 5;
    string listen_address = 6;
-   string listen_from = 7;
+   string accept_from = 7;
    int32 listen_port = 8;
    uint64 limit_manual_xbt = 9;
    uint64 limit_auto_sign_xbt = 10;
