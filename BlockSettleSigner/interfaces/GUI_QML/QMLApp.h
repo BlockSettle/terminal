@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <QObject>
 #include <QSystemTrayIcon>
+#include "SignerDefs.h"
 
 namespace bs {
    namespace wallet {
@@ -59,7 +60,7 @@ signals:
 private slots:
    void onReady();
    void onConnectionError();
-   void onHeadlessBindUpdated(bool success);
+   void onHeadlessBindUpdated(bs::signer::BindStatus status);
    void onWalletsSynced();
    void onPasswordAccepted(const QString &walletId
                            , bs::wallet::QPasswordData *passwordData

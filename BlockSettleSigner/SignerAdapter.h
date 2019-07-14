@@ -101,7 +101,7 @@ public:
 signals:
    void ready() const;
    void connectionError() const;
-   void headlessBindUpdated(bool success) const;
+   void headlessBindUpdated(bs::signer::BindStatus status) const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
    void requestPasswordAndSignTx(const bs::core::wallet::TXSignRequest &, const QString &prompt);
