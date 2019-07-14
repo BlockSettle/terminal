@@ -497,8 +497,8 @@ Item {
         if (signerSettings.listenPort !== listenPort.text) {
             signerSettings.listenPort = listenPort.text
         }
-        if (signerSettings.listenAddress !== listenAddress.text) {
-            signerSettings.listenAddress = listenAddress.text
+        if (signerSettings.listenFrom !== listenFrom.text) {
+            signerSettings.listenFrom = listenFrom.text
         }
     }
 }
