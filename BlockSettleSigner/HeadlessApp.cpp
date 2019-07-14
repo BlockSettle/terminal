@@ -265,8 +265,8 @@ void HeadlessAppObj::startTerminalsProcessing()
       , absTermCookiePath);
 
    terminalConnection_->setLocalHeartbeatInterval();
-   if (!settings_->listenFrom().empty()) {
-      terminalConnection_->setListenFrom({settings_->listenFrom()});
+   if (!settings_->acceptFrom().empty()) {
+      terminalConnection_->setListenFrom({settings_->acceptFrom()});
    }
    terminalListener_->SetLimits(settings_->limits());
 
@@ -415,13 +415,13 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
    const std::string prevListenAddress = settings_->listenAddress();
    const std::string prevListenPort = settings_->listenPort();
    const auto prevTrustedTerminals = settings_->trustedTerminals();
-   const std::string prevListenFrom = settings_->listenFrom();
+   const std::string prevListenFrom = settings_->acceptFrom();
 
    settings_->update(settings);
 
    const bool needReconnect = prevOffline != settings_->offline()
          || prevListenAddress != settings_->listenAddress()
-         || prevListenFrom != settings_->listenFrom()
+         || prevListenFrom != settings_->acceptFrom()
          || prevListenPort != settings_->listenPort();
 
    const auto trustedTerminals = settings_->trustedTerminals();

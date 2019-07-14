@@ -193,11 +193,11 @@ Item {
                     Layout.alignment: Qt.AlignRight
 
                     Layout.rightMargin: 6
-                    text: signerSettings.listenFrom
+                    text: signerSettings.acceptFrom
                     selectByMouse: true
-                    id: listenFrom
+                    id: acceptFrom
                     onEditingFinished: {
-                        signerSettings.listenFrom = text
+                        signerSettings.acceptFrom = text
                     }
 
                     ToolTip.visible: hovered
@@ -497,8 +497,8 @@ Item {
         if (signerSettings.listenPort !== listenPort.text) {
             signerSettings.listenPort = listenPort.text
         }
-        if (signerSettings.listenFrom !== listenFrom.text) {
-            signerSettings.listenFrom = listenFrom.text
+        if (signerSettings.acceptFrom !== acceptFrom.text) {
+            signerSettings.acceptFrom = acceptFrom.text
         }
     }
 }

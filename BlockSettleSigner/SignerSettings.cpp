@@ -74,7 +74,7 @@ void SignerSettings::settingChanged(int setting)
       break;
    case signer::ListenAddress:
    case signer::ListenPort:
-   case signer::ListenFrom:
+   case signer::AcceptFrom:
       emit listenSocketChanged();
       break;
    case signer::LimitManualXBT:
@@ -238,9 +238,9 @@ QString SignerSettings::listenAddress() const
    return QString::fromStdString(d_->listen_address());
 }
 
-QString SignerSettings::listenFrom() const
+QString SignerSettings::acceptFrom() const
 {
-   return QString::fromStdString(d_->listen_from());
+   return QString::fromStdString(d_->accept_from());
 }
 
 QString SignerSettings::port() const
@@ -339,9 +339,9 @@ void SignerSettings::setListenAddress(const QString &val)
    setStringSetting(val, d_->mutable_listen_address(), signer::Setting::ListenAddress);
 }
 
-void SignerSettings::setListenFrom(const QString &val)
+void SignerSettings::setAcceptFrom(const QString &val)
 {
-   setStringSetting(val, d_->mutable_listen_from(), signer::Setting::ListenFrom);
+   setStringSetting(val, d_->mutable_accept_from(), signer::Setting::AcceptFrom);
 }
 
 void SignerSettings::setPort(const QString &val)
