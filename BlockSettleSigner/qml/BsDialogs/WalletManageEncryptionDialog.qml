@@ -87,6 +87,10 @@ CustomDialog {
                     text: "Simple"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
+
+                    onClicked: {
+                        walletDetailsFrame.passwordInput.focus = true
+                    }
                 }
                 CustomTabButton {
                     id: addTabButton
@@ -96,6 +100,10 @@ CustomDialog {
                     text: "Add Device"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
+
+                    onClicked: {
+                        walletDetailsFrame.passwordInput.focus = true
+                    }
                 }
                 CustomTabButton {
                     id: deleteTabButton
@@ -105,6 +113,10 @@ CustomDialog {
                     text: "Device List"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
+
+                    onClicked: {
+                        walletDetailsFrame.passwordInput.focus = true
+                    }
                 }
             }
         }

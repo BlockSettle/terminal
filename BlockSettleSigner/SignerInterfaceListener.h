@@ -90,12 +90,12 @@ private:
 
    void onReady(const std::string &data);
    void onPeerConnected(const std::string &data, bool connected);
+   void onDecryptWalletRequested(const std::string &data);
    void onSignTxRequested(const std::string &data);
-   void onSignSettlementTxRequested(const std::string &data);
    void onTxSigned(const std::string &data, bs::signer::RequestId);
    void onCancelTx(const std::string &data, bs::signer::RequestId);
    void onXbtSpent(const std::string &data);
-   void onAutoSignActivated(const std::string &data, bs::signer::RequestId reqId);
+   void onAutoSignActivated(const std::string &data, bs::signer::RequestId);
    void onSyncWalletInfo(const std::string &data, bs::signer::RequestId);
    void onSyncHDWallet(const std::string &data, bs::signer::RequestId);
    void onSyncWallet(const std::string &data, bs::signer::RequestId);
@@ -109,6 +109,9 @@ private:
    void onHeadlessPubKey(const std::string &data, bs::signer::RequestId);
    void onUpdateStatus(const std::string &data);
    void onTerminalHandshakeFailed(const std::string &data);
+
+   void requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData);
+   void requestPasswordForSettlementTx(bs::sync::PasswordDialogData *dialogData);
 
    void shutdown();
 

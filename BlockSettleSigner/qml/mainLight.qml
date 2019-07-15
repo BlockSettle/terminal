@@ -18,7 +18,6 @@ import "BsStyles"
 import "BsControls"
 import "BsDialogs"
 import "js/helper.js" as JsHelper
-import "js/qmlDialogs.js" as QmlDialogs
 
 
 ApplicationWindow {
@@ -142,19 +141,21 @@ ApplicationWindow {
     }
 
     function raiseWindow() {
-        JsHelper.raiseWindow()
+        JsHelper.raiseWindow(mainWindow)
     }
     function hideWindow() {
-        JsHelper.hideWindow()
+        JsHelper.hideWindow(mainWindow)
     }
 
     function customDialogRequest(dialogName, data) {
-        var newDialog = QmlDialogs.customDialogRequest(dialogName, data)
-        QmlDialogs.prepareLigthModeDialog(newDialog)
+        raiseWindow()
+        var newDialog = JsHelper.customDialogRequest(dialogName, data)
+        JsHelper.prepareLigthModeDialog(newDialog)
     }
 
     function invokeQmlMetod(method, cppCallback, argList) {
-        QmlDialogs.evalWorker(method, cppCallback, argList)
+        raiseWindow()
+        JsHelper.evalWorker(method, cppCallback, argList)
     }
 
     function moveMainWindowToScreenCenter() {

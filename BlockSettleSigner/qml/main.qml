@@ -18,7 +18,6 @@ import "BsStyles"
 import "BsControls"
 import "BsDialogs"
 import "js/helper.js" as JsHelper
-import "js/qmlDialogs.js" as QmlDialogs
 
 
 ApplicationWindow {
@@ -148,14 +147,14 @@ ApplicationWindow {
         dlg.init()
     }
     function raiseWindow() {
-        JsHelper.raiseWindow()
+        JsHelper.raiseWindow(mainWindow)
     }
     function hideWindow() {
-        JsHelper.hideWindow()
+        JsHelper.hideWindow(mainWindow)
     }
 
     function customDialogRequest(dialogName, data) {
-        QmlDialogs.customDialogRequest(dialogName, data)
+        JsHelper.customDialogRequest(dialogName, data)
     }
 
     function showError(text) {

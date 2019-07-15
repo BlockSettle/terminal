@@ -208,7 +208,8 @@ void QMLAppObj::registerQtTypes()
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
    qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
       "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
-
+   qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
+      "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
 
    qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
@@ -220,9 +221,6 @@ void QMLAppObj::registerQtTypes()
    qmlRegisterType<bs::hd::WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
    qmlRegisterType<bs::wallet::QSeed>("com.blocksettle.QSeed", 1, 0, "QSeed");
    qmlRegisterType<bs::wallet::QPasswordData>("com.blocksettle.QPasswordData", 1, 0, "QPasswordData");
-
-   qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
-      "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
 }
 
 void QMLAppObj::onLimitsChanged()

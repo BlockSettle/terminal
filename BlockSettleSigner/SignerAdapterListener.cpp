@@ -72,16 +72,6 @@ public:
       owner_->sendData(signer::SignTxRequestType, createSignTxRequest(txReq, prompt).SerializeAsString());
    }
 
-   void requestPasswordForSigningSettlementTx(const bs::core::wallet::TXSignRequest &txReq
-      , const Blocksettle::Communication::Internal::PasswordDialogData &passwordDialogData, const std::string &prompt) override
-   {
-      signer::SignSettlementTxRequest request;
-      *(request.mutable_signtxrequest()) = createSignTxRequest(txReq, prompt);
-      *(request.mutable_passworddialogdata()) = passwordDialogData;
-
-      owner_->sendData(signer::SignSettlementTxRequestType, request.SerializeAsString());
-   }
-
    void txSigned(const BinaryData &tx) override
    {
       signer::SignTxEvent evt;
@@ -120,15 +110,16 @@ public:
    }
 
 
-   void decryptWalletRequest(Blocksettle::Communication::signer::PacketType reqType
-      , const Blocksettle::Communication::Internal::PasswordDialogData &passwordDialogData
-      , const bs::core::wallet::TXSignRequest &txReq) override
+   void decryptWalletRequest(Blocksettle::Communication::signer::PasswordDialogType dialogType
+      , const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+      , const bs::core::wallet::TXSignRequest &txReq = {}) override
    {
-      signer::SignSettlementTxRequest request;
+      signer::DecryptWalletRequest request;
+      request.set_dialogtype(dialogType);
       *(request.mutable_signtxrequest()) = createSignTxRequest(txReq, {});
-      *(request.mutable_passworddialogdata()) = passwordDialogData;
+      *(request.mutable_passworddialogdata()) = dialogData;
 
-      owner_->sendData(reqType, request.SerializeAsString());
+      owner_->sendData(signer::DecryptWalletRequestType, request.SerializeAsString());
    }
 
    SignerAdapterListener *owner_{};
