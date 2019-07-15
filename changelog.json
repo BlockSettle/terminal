@@ -1,7 +1,20 @@
 {
-   "latest_version": "0.18.9",
-   "release_date": "13 Jul 2019",
+   "latest_version": "0.19.0",
+   "release_date": "15 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.19.0",
+         "previous_version": "0.18.9",
+         "release_date": "15 Jul 2019",
+         "release_type": "prod",
+         "improvements": [
+            "Open channel when adding to contacts",
+            "Settlement wallets"
+         ],
+         "bug_fixes": [],
+         "revision": "a2bd4c60",
+         "common_revision": "e0d7445f"
+      },
       {
          "version_string": "0.18.9",
          "previous_version": "0.18.8",
