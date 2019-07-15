@@ -97,7 +97,6 @@ signals:
    void ContactRequestAccepted(const std::string &userId);
    void RoomsInserted();
    void ContactChanged();
-   void ContactRequestApproved(const std::string &userId);
 
 protected:
    BinaryData getOwnAuthPublicKey() const override;

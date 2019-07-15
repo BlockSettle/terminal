@@ -764,6 +764,7 @@ bool BaseChatClient::addOrUpdateContact(const std::string &userId, Chat::Contact
    d->set_contact_id(userId);
    d->set_status(status);
    d->set_display_name(userName);
+   emit ContactRequestApproved(userId);
 
    if (chatDb_->isContactExist(userId))
    {
