@@ -13,24 +13,11 @@ import "../StyledControls"
 ColumnLayout {
     id: root
 
-    Connections {
-        target: fullBackupTabButton
-        onClicked: {
-            passwordInput.focus = true
-        }
-    }
-
-    Connections {
-        target: woBackupTabButton
-        onClicked: {
-            passwordInput.focus = true
-        }
-    }
-
     onVisibleChanged: {
         passwordInput.focus = true
     }
 
+    property alias passwordInput_: passwordInput
     property WalletInfo walletInfo : WalletInfo {}
     property alias password: passwordInput.text
     property int inputsWidth
