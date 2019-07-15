@@ -98,6 +98,7 @@ private slots:
    void onContactListConfirmationRequested(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
                                            const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
                                            const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
+   void onContactRequestApproved(const std::string &userId);
    void showOldMessagesNotification();
 
    // OTC UI slots
