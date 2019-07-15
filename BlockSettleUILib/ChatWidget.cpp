@@ -351,6 +351,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
    connect(ui_->textEditMessages, &QTextEdit::selectionChanged, this, &ChatWidget::onChatMessagesSelectionChanged);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::addContactRequired, this, &ChatWidget::onSendFriendRequest);
 
 //   connect(client_.get(), &ChatClient::SearchUserListReceived,
 //           this, &ChatWidget::onSearchUserListReceived);
@@ -752,6 +753,8 @@ void ChatWidget::onSendFriendRequest(const QString &userId)
 {
    //client_->sendFriendRequest(userId.toStdString());
    onActionCreatePendingOutgoing (userId.toStdString());
+   ui_->treeViewUsers->setCurrentUserChat(userId.toStdString());
+   ui_->treeViewUsers->updateCurrentChat();
    ui_->searchWidget->setListVisible(false);
 }
 
