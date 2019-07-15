@@ -98,7 +98,7 @@ private slots:
    void onContactListConfirmationRequested(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
                                            const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
                                            const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
-   void showOldMessagesNotification();
+   void onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData);
 
    // OTC UI slots
    void OnOTCRequestCreated();
@@ -170,7 +170,6 @@ private:
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
    int64_t chatLoggedInTimestampUtcInMillis_;
-   std::unique_ptr<QTimer> oldNotificationsTimer_;
    std::vector<QVariantList> oldMessages_;
 
    std::string pbUserId_;

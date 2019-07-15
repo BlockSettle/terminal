@@ -637,6 +637,8 @@ void ChatClient::onCreateOutgoingContact(const std::string &contactId)
 void ChatClient::onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData)
 {
    model_->insertContactsMessage(messageData);
+
+   emit DMMessageReceived(messageData);
 }
 
 void ChatClient::onCRMessageReceived(const std::shared_ptr<Chat::Data> &messageData)

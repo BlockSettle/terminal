@@ -201,7 +201,9 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
 
       if (isChatTab && QApplication::activeWindow()) {
          mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
-         return;
+      }
+      else {
+         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon(QLatin1String(":/ICON_DOT")));
       }
 
       if (msg.size() != 3) {
@@ -218,7 +220,6 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       
       newChatMessage_ = true;
       newChatId_ = userId;
-      mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon(QLatin1String(":/ICON_DOT")));
       break;
 
    case bs::ui::NotifyType::FriendRequest:
