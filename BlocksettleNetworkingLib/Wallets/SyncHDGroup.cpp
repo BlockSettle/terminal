@@ -217,3 +217,11 @@ std::shared_ptr<hd::Leaf> hd::CCGroup::newLeaf(const std::string &walletId) cons
    return std::make_shared<hd::CCLeaf>(walletId, walletName_ + "/" + name_, desc_
       , signContainer_, logger_, extOnlyAddresses_);
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+std::shared_ptr<hd::Leaf> hd::SettlementGroup::newLeaf(const std::string &walletId) const
+{
+   return std::make_shared<hd::SettlementLeaf>(walletId, walletName_ + "/" + name_, desc_
+      , signContainer_, logger_);
+}

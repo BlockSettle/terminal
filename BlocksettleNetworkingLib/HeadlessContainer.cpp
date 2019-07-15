@@ -960,6 +960,7 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
       bs::sync::HDWalletData::Group group;
       group.type = static_cast<bs::hd::CoinType>(groupInfo.type());
       group.extOnly = groupInfo.ext_only();
+      group.salt = groupInfo.salt();
       for (int j = 0; j < groupInfo.leaves_size(); ++j) {
          const auto leafInfo = groupInfo.leaves(j);
          if (isWoRoot) {

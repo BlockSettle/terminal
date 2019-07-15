@@ -42,6 +42,16 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
          auto group = getGroup(grpData.type);
          if (!group) {
             group = createGroup(grpData.type, grpData.extOnly);
+            if (grpData.type == bs::hd::CoinType::BlockSettle_Auth &&
+               grpData.salt.getSize() == 32)
+            {
+               auto authGroupPtr = 
+                  std::dynamic_pointer_cast<hd::AuthGroup>(group);
+               if (authGroupPtr == nullptr)
+                  throw std::runtime_error("unexpected sync group type");
+
+               authGroupPtr->setUserId(grpData.salt);
+            }
          }
          if (!group) {
             LOG(logger_, error, "[hd::Wallet::synchronize] failed to create group {}", (uint32_t)grpData.type);
@@ -154,8 +164,13 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct, bool isE
       break;
 
    case bs::hd::CoinType::BlockSettle_CC:
-      result = std::make_shared<hd::CCGroup>(path, name_, desc_,signContainer_
+      result = std::make_shared<hd::CCGroup>(path, name_, desc_, signContainer_
          , this, logger_, isExtOnly);
+      break;
+
+   case bs::hd::CoinType::BlockSettle_Settlement:
+      result = std::make_shared<hd::SettlementGroup>(
+         path, name_, desc_, signContainer_, this, logger_);
       break;
 
    default:
@@ -234,7 +249,12 @@ std::vector<std::string> hd::Wallet::registerWallet(
    const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    std::vector<std::string> result;
-   for (const auto &leaf : getLeaves()) {
+   for (const auto &leaf : getLeaves()) 
+   {
+      //settlement leaves are not registered
+      if (leaf->type() == bs::core::wallet::Type::Settlement)
+         continue;
+
       auto&& regIDs = leaf->registerWallet(armory, asNew);
       result.insert(result.end(), regIDs.begin(), regIDs.end());
    }
@@ -346,4 +366,13 @@ void hd::Wallet::merge(const Wallet& rhs)
       auto& leafPtr = iter->second;
       leafPtr->merge(leafPair.second);
    }
+}
+
+bs::Address hd::Wallet::getSettlementPayinAddress(
+   const SecureBinaryData& settlementID, 
+   const SecureBinaryData& counterPartyPubKey, 
+   bool isMyKeyFirst) const
+{
+   return signContainer_->getSettlementPayinAddress(
+      walletId(), settlementID, counterPartyPubKey, isMyKeyFirst);
 }

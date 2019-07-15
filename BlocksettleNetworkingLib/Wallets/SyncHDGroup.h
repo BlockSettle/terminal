@@ -115,6 +115,22 @@ namespace bs {
             std::shared_ptr<hd::Leaf> newLeaf(const std::string &walletId) const override;
          };
 
+         class SettlementGroup : public Group
+         {
+         public:
+            SettlementGroup(const bs::hd::Path &path, const std::string &name
+               , const std::string &desc, SignContainer *container
+               , WalletCallbackTarget *wct
+               , const std::shared_ptr<spdlog::logger> &logger)
+               : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_CC),
+                  desc, container, wct, logger) {}
+
+            bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Settlement; }
+
+         protected:
+            std::shared_ptr<hd::Leaf> newLeaf(const std::string &walletId) const override;
+         };
+
       }  //namespace hd
    }  //namespace sync
 }  //namespace bs

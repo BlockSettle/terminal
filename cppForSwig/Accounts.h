@@ -583,6 +583,9 @@ public:
    std::shared_ptr<AssetEntry> getAssetForID(const BinaryData&) const;
    std::shared_ptr<AssetEntry> getAssetForIndex(unsigned id) const;
 
+   // temporary moved from private to public session to allow the build of old code
+   void extendPublicChain(unsigned);
+
    void updateAddressHashMap(const std::set<AddressEntryType>&);
    const std::map<BinaryData, std::map<AddressEntryType, BinaryData>>&
       getAddressHashMap(const std::set<AddressEntryType>&);
@@ -590,8 +593,6 @@ public:
    const BinaryData& getID(void) const { return id_; }
    BinaryData getFullID(void) const { return parent_id_ + id_; }
    const SecureBinaryData& getChaincode(void) const;
-
-   void extendPublicChain(unsigned);
 
    //static
    static void putData(LMDB* db, const BinaryData& key, const BinaryData& data);
@@ -623,6 +624,7 @@ public:
    {}
 
    unsigned addSalt(const SecureBinaryData&);
+   unsigned getSaltIndex(const SecureBinaryData&) const;
 };
 
 

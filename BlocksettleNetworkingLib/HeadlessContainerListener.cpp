@@ -870,9 +870,12 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
       }
 
       auto assetPtr = leaf->getRootAsset();
+      auto rootPtr = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(assetPtr);
+      if (rootPtr == nullptr)
+         throw AssetException("unexpected root asset type");
       CreateHDWalletResponse(clientId, id, "",
-         assetPtr->getPubKey()->getUncompressedKey(), 
-         assetPtr->getChaincode());
+         rootPtr->getPubKey()->getUncompressedKey(),
+         rootPtr->getChaincode());
    };
 
    if (!hdWallet->encryptionTypes().empty()) {
@@ -1237,6 +1240,13 @@ bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, head
          auto groupData = response.add_groups();
          groupData->set_type(group->index());
          groupData->set_ext_only(hdWallet->isExtOnly());
+
+         if (group->index() == bs::hd::CoinType::BlockSettle_Auth) {
+            const auto authGroup = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
+            if (authGroup) {
+               groupData->set_salt(authGroup->getSalt().toBinStr());
+            }
+         }
 
          if (static_cast<bs::hd::CoinType>(group->index()) == bs::hd::CoinType::BlockSettle_Auth) {
             continue;      // don't sync leaves for auth before setUserId is asked

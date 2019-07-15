@@ -94,6 +94,11 @@ public:
 
    bool isReady() const override { return inited_; }
 
+   void setSettlementID(const std::string&, const SecureBinaryData&) override;
+   bs::Address getSettlementPayinAddress(const std::string&,
+      const SecureBinaryData&, const SecureBinaryData&, bool) const override;
+   SecureBinaryData getRootPubkey(const std::string& walletID) const override;
+
 private:
    std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
    const std::string walletsPath_;

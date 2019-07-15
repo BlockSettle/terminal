@@ -28,6 +28,30 @@ class WalletManager;
 class WalletContainer;
 
 ///////////////////////////////////////////////////////////////////////////////
+struct OutpointData
+{
+   BinaryData txHash_;
+   unsigned txOutIndex_;
+   
+   unsigned txHeight_ = UINT32_MAX;
+   unsigned txIndex_ = UINT32_MAX;
+
+   uint64_t value_;
+   bool isSpent_;
+
+   BinaryData spenderHash_;
+};
+
+////
+struct OutpointBatch
+{
+   unsigned heightCutoff_;
+   unsigned zcIndexCutoff_;
+
+   std::map<BinaryData, std::vector<OutpointData>> outpoints_;
+};
+
+///////////////////////////////////////////////////////////////////////////////
 class ClientMessageError : public std::runtime_error
 {
 public:
@@ -442,6 +466,14 @@ namespace AsyncClient
 
       void getCombinedRBFTxOuts(const std::vector<std::string>&, 
          std::function<void(ReturnMessage<std::vector<UTXO>>)>);
+
+      //outpoints
+      void getOutpointsForAddresses(const std::vector<BinaryData>&, 
+         unsigned startHeight, unsigned zcIndexCutoff,
+         std::function<void(ReturnMessage<OutpointBatch>)>);
+
+      void getUTXOsForAddress(const BinaryData&, bool,
+         std::function<void(ReturnMessage<std::vector<UTXO>>)>);
    };
 
    ////////////////////////////////////////////////////////////////////////////
@@ -806,6 +838,24 @@ public:
       userCallbackLambda_(lbd)
    {}
    
+   //virtual
+   void callback(const WebSocketMessagePartial&);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct CallbackReturn_AddrOutpoints : public CallbackReturn_WebSocket
+{
+private:
+   std::function<void(ReturnMessage<OutpointBatch>)>
+      userCallbackLambda_;
+
+public:
+   CallbackReturn_AddrOutpoints(
+      std::function<void(
+         ReturnMessage<OutpointBatch>)> lbd) :
+      userCallbackLambda_(lbd)
+   {}
+
    //virtual
    void callback(const WebSocketMessagePartial&);
 };

@@ -141,6 +141,7 @@ public:
       , const UTXOsCb &);
    bool getSpendableZCoutputs(const std::vector<std::string> &walletIds, const UTXOsCb &);
    bool getRBFoutputs(const std::vector<std::string> &walletIds, const UTXOsCb &);
+   bool getUTXOsForAddress(const bs::Address &, const UTXOsCb &, bool withZC = false);
 
    using TxCb = std::function<void(const Tx&)>;
    using TXsCb = std::function<void(const std::vector<Tx>&)>;

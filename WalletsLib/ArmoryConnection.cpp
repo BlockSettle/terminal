@@ -536,6 +536,31 @@ bool ArmoryConnection::getRBFoutputs(const std::vector<std::string> &walletIds, 
    return true;
 }
 
+bool ArmoryConnection::getUTXOsForAddress(const bs::Address &addr, const UTXOsCb &cb, bool withZC)
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
+      return false;
+   }
+   const auto &cbWrap = [this, cb, addr](ReturnMessage<std::vector<UTXO>> retMsg) {
+      try {
+         const auto &utxos = retMsg.get();
+         if (cb) {
+            cb(utxos);
+         }
+      }
+      catch (const std::exception &e) {
+         logger_->error("[ArmoryConnection::getUTXOsForAddress] {} failed: {}"
+            , addr.display(), e.what());
+         if (cb) {
+            cb({});
+         }
+      }
+   };
+   bdv_->getUTXOsForAddress(addr.id(), withZC, cbWrap);
+}
+
+
 bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walletIDs)
 {
    if (!bdv_ || (state_ != ArmoryState::Ready)) {
