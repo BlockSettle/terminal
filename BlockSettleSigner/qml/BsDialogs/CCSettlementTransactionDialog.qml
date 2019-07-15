@@ -3,6 +3,7 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 
 import com.blocksettle.TXInfo 1.0
+import com.blocksettle.SettlementInfo 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
@@ -17,15 +18,16 @@ CustomTitleDialogWindow {
     property string prompt
     property WalletInfo walletInfo: WalletInfo{}
     property TXInfo txInfo: TXInfo {}
+    property SettlementInfo settlementInfo: SettlementInfo {}
     property QPasswordData passwordData: QPasswordData{}
     property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
-    property bool   cancelledByUser: false
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
     property int addressRowHeight: 24
-    property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
+    //property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
+    property int recvAddrHeight: 22
 
     id: root
-    title: qsTr("Sign Transaction")
+    title: qsTr("Sign Settlement Transaction")
     rejectable: true
     width: 500
     height: 420 + recvAddresses.height - 24
@@ -57,7 +59,6 @@ CustomTitleDialogWindow {
             mb.bsAccepted.connect(function() { rejectAnimated() })
         })
         authSign.userCancelled.connect(function() {
-            cancelledByUser = true
             rejectAnimated()
         })
     }
@@ -77,8 +78,7 @@ CustomTitleDialogWindow {
         Layout.alignment: Qt.AlignTop
 
         GridLayout {
-            id: gridDashboard
-            //visible: txInfo.nbInputs
+            id: gridRfqDetails
             columns: 2
             Layout.leftMargin: 10
             Layout.rightMargin: 10
@@ -87,113 +87,112 @@ CustomTitleDialogWindow {
             CustomHeader {
                 Layout.fillWidth: true
                 Layout.columnSpan: 2
-                text: qsTr("Details")
+                text: qsTr("RFQ Details")
                 Layout.preferredHeight: 25
             }
 
+            // Product Group
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("Sending Wallet")
+                text: qsTr("Product Group")
             }
             CustomLabelValue {
-                text: walletInfo.name
+                text: settlementInfo.productGroup
                 Layout.alignment: Qt.AlignRight
             }
 
+            // Security ID
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("No. of Inputs")
+                text: qsTr("Security ID")
             }
             CustomLabelValue {
-                text: txInfo.nbInputs
+                text: settlementInfo.security
                 Layout.alignment: Qt.AlignRight
             }
 
-            RowLayout {
+            // Product
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Product")
+            }
+            CustomLabelValue {
+                text: settlementInfo.product
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Side
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Side")
+            }
+            CustomLabelValue {
+                text: settlementInfo.side
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Quantity
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Quantity")
+            }
+            CustomLabelValue {
+                text: settlementInfo.quantity
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Price
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Price")
+            }
+            CustomLabelValue {
+                text: settlementInfo.price
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Total Value
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Total Value (XBT)")
+            }
+            CustomLabelValue {
+                text: settlementInfo.totalValue
+                Layout.alignment: Qt.AlignRight
+            }
+        }
+
+        GridLayout {
+            id: gridSettlementDetails
+            columns: 2
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            rowSpacing: 0
+
+            CustomHeader {
+                Layout.fillWidth: true
                 Layout.columnSpan: 2
-                Layout.fillWidth: true
-
-                CustomLabel {
-                    text: qsTr("Output Address(es)")
-                    Layout.alignment: Qt.AlignTop
-                }
-
-                ListView {
-                    id: recvAddresses
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignRight
-                    model: txInfo.recvAddresses
-                    clip: true
-                    Layout.preferredHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
-
-                    flickableDirection: Flickable.VerticalFlick
-                    boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: ScrollBar {
-                        active: true
-                    }
-
-                    delegate: Rectangle {
-                        id: addressRect
-                        color: "transparent"
-                        height: 22
-                        width: recvAddresses.width
-
-                        CustomLabelValue {
-                            id: labelTxWalletId
-                            text: modelData
-                            anchors.fill: addressRect
-                            horizontalAlignment: Text.AlignRight
-                            verticalAlignment: Text.AlignTop
-                            font: fixedFont
-                        }
-                    }
-
-                }
+                text: qsTr("Settlement Details")
+                Layout.preferredHeight: 25
             }
 
-
+            // Payment
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("Transaction Weight")
+                text: qsTr("Payment")
             }
             CustomLabelValue {
-                text: txInfo.txVirtSize
+                text: settlementInfo.payment
                 Layout.alignment: Qt.AlignRight
             }
 
+            // Genesis Address
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("Input Amount")
+                text: qsTr("Genesis Address")
             }
             CustomLabelValue {
-                text: txInfo.inputAmount.toFixed(8)
-                Layout.alignment: Qt.AlignRight
-            }
-
-            CustomLabel {
-                Layout.fillWidth: true
-                text: qsTr("Return Amount")
-            }
-            CustomLabelValue {
-                text: txInfo.changeAmount.toFixed(8)
-                Layout.alignment: Qt.AlignRight
-            }
-
-            CustomLabel {
-                Layout.fillWidth: true
-                text: qsTr("Transaction Fee")
-            }
-            CustomLabelValue {
-                text: txInfo.fee.toFixed(8)
-                Layout.alignment: Qt.AlignRight
-            }
-
-            CustomLabel {
-                Layout.fillWidth: true
-                text: qsTr("Transaction Amount")
-            }
-            CustomLabelValue {
-                text: txInfo.total.toFixed(8)
+                text: settlementInfo.genesisAddress
                 Layout.alignment: Qt.AlignRight
             }
         }
@@ -206,7 +205,6 @@ CustomTitleDialogWindow {
 
             CustomHeader {
                 Layout.fillWidth: true
-                //text: walletInfo.encType !== QPasswordData.Auth ? qsTr("Password Confirmation") : qsTr("Press Continue to start eID Auth")
                 text: qsTr("Decrypt Wallet")
                 Layout.preferredHeight: 25
             }
@@ -217,16 +215,6 @@ CustomTitleDialogWindow {
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
-
-//            CustomLabel {
-//                visible: prompt.length
-//                Layout.minimumWidth: 110
-//                Layout.preferredWidth: 110
-//                Layout.maximumWidth: 110
-//                Layout.fillWidth: true
-//                text: prompt
-//                elide: Label.ElideRight
-//            }
 
             CustomLabel {
                 visible: walletInfo.encType === QPasswordData.Password
@@ -239,7 +227,7 @@ CustomTitleDialogWindow {
 
             CustomPasswordTextInput {
                 id: tfPassword
-                visible: true //walletInfo.encType === QPasswordData.Password
+                visible: walletInfo.encType === QPasswordData.Password
                 focus: true
                 //placeholderText: qsTr("Password")
                 Layout.fillWidth: true
@@ -275,7 +263,6 @@ CustomTitleDialogWindow {
                     if (timeLeft <= 0) {
                         stop()
                         // assume non signed tx is cancelled tx
-                        cancelledByUser = true
                         rejectAnimated()
                     }
                 }
@@ -315,7 +302,6 @@ CustomTitleDialogWindow {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
-                    cancelledByUser = true
                     rejectAnimated()
                     if (authSign) {
                         authSign.cancel()
@@ -330,17 +316,17 @@ CustomTitleDialogWindow {
                 anchors.bottom: parent.bottom
                 enabled: tfPassword.text.length || acceptable
                 onClicked: {
-//                    if (walletInfo.encType === QPasswordData.Password) {
+                    if (walletInfo.encType === QPasswordData.Password) {
                         passwordData.textPassword = tfPassword.text
                         passwordData.encType = QPasswordData.Password
                         acceptAnimated()
-/*                    }
+                    }
                     else if (walletInfo.encType === QPasswordData.Auth) {
                     }
                     else {
                         passwordData.encType = QPasswordData.Unencrypted
                         acceptAnimated()
-                    }*/
+                    }
                 }
             }
         }

@@ -65,15 +65,6 @@ ApplicationWindow {
         bgColor: "darkred"
     }
 
-    DirSelectionDialog {
-        id: ldrWoWalletDirDlg
-        title: qsTr("Select watching only wallet target directory")
-    }
-    DirSelectionDialog {
-        id: ldrDirDlg
-        title: qsTr("Select directory")
-    }
-
     SwipeView {
         id: swipeView
         anchors.fill: parent
@@ -156,11 +147,6 @@ ApplicationWindow {
 
         dlg.init()
     }
-
-    function showError(text) {
-        ibFailure.displayMessage(text)
-    }
-
     function raiseWindow() {
         JsHelper.raiseWindow()
     }
@@ -171,4 +157,46 @@ ApplicationWindow {
     function customDialogRequest(dialogName, data) {
         QmlDialogs.customDialogRequest(dialogName, data)
     }
+
+    function showError(text) {
+        ibFailure.displayMessage(text)
+    }
+
+    function getJsCallback(reqId) {
+        return function(argList){ qmlFactory.execJsCallback(reqId, argList)}
+    }
+
+    function test(jsCallback, prompt, txInfo, walletInfo) {
+        // called from QMLAppObj::requestPassword
+
+        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
+        dlg.walletInfo = walletInfo
+        dlg.prompt = prompt
+        dlg.txInfo = txInfo
+
+        dlg.bsAccepted.connect(function() {
+            jsCallback(walletInfo.walletId, dlg.passwordData, false)
+        })
+        dlg.bsRejected.connect(function() {
+            jsCallback(walletInfo.walletId, dlg.passwordData, true)
+        })
+        mainWindow.requestActivate()
+        dlg.open()
+
+        dlg.init()
+    }
+
+    function invokeQmlMetod(method, cb, val0, val1, val2, val3, val4, val5, val6, val7) {
+        eval(method)(cb, val0, val1, val2, val3, val4, val5, val6, val7)
+    }
+
+    function terminalHandshakeFailed(peerAddress) {
+        JsHelper.messageBoxCritical("Authentication failure", "An incoming connection from address " + peerAddress + " has failed to authenticate themselves. Please ensure that you have imported the Terminal ID Key from those Terminals you wish to have access to your wallets.")
+    }
+
+    function moveMainWindowToScreenCenter() {
+        /*mainWindow.x = (Screen.width - mainWindow.width) / 2
+        mainWindow.y = (Screen.height - mainWindow.height) / 2*/
+    }
+
 }

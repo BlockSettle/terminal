@@ -114,11 +114,20 @@ CustomTitleDialogWindow {
                         var dlgBkp = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
                         dlgBkp.setNextChainDialog(root)
                         dlgBkp.walletInfo = walletInfo
-                        dlgBkp.targetDir = signerSettings.dirDocuments
+                        // FIXME: save backups dir
+                        //dlgBkp.targetDir = signerSettings.dirDocuments
                         dlgBkp.bsAccepted.connect(function() {
                             walletsProxy.deleteWallet(walletInfo.rootId, deleteCallback)
                         })
+                        dlgBkp.bsResized.connect(function() {
+                            mainWindow.moveMainWindowToScreenCenter()
+                        })
                         dlgBkp.open()
+
+                        sizeChanged(dlgBkp.width, dlgBkp.height)
+                        dlgBkp.closed.connect(function(){
+                            sizeChanged(root.width, root.height)
+                        })
                     }
                     else {
                         walletsProxy.deleteWallet(walletInfo.rootId, deleteCallback)

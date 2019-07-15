@@ -7,6 +7,7 @@
 #include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
+#include "SignerDefs.h"
 
 namespace spdlog {
    class logger;
@@ -57,7 +58,7 @@ public:
    Q_INVOKABLE void importWoWallet(const QString &pathName, const QJSValue &jsCallback);
 
    Q_INVOKABLE void exportWatchingOnly(const QString &walletId
-      , const QString &path, bs::wallet::QPasswordData *passwordData
+      , const QString &filePath, bs::wallet::QPasswordData *passwordData
       , const QJSValue &jsCallback);
 
    Q_INVOKABLE bool backupPrivateKey(const QString &walletId
@@ -71,6 +72,9 @@ public:
    Q_INVOKABLE QString walletIdForIndex(int) const;
 
    Q_INVOKABLE bool walletNameExists(const QString& name) const;
+   Q_INVOKABLE QString generateNextWalletName() const;
+
+   Q_INVOKABLE bool isWatchingOnlyWallet(const QString& walletId) const;
 
    bool walletsLoaded() const { return walletsSynchronized_; }
 
@@ -89,7 +93,6 @@ private:
    std::shared_ptr<bs::sync::hd::Wallet> getRootForId(const QString &walletId) const;
    QStringList walletNames() const;
    Q_INVOKABLE QJSValue invokeJsCallBack(QJSValue jsCallback, QJSValueList args);
-   std::shared_ptr<bs::core::hd::Wallet> getWoWallet(const bs::sync::WatchingOnlyWallet &) const;
    std::shared_ptr<bs::sync::hd::Wallet> getWoSyncWallet(const bs::sync::WatchingOnlyWallet &) const;
 
 private:

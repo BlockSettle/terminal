@@ -59,17 +59,15 @@ protected:
    bool sendWoWallet(const std::shared_ptr<bs::core::hd::Wallet> &
       , Blocksettle::Communication::signer::PacketType, bs::signer::RequestId reqId = 0);
 
-   bool onSignTxReq(const std::string &data, bs::signer::RequestId);
+   bool onSignOfflineTxRequest(const std::string &data, bs::signer::RequestId);
    bool onSyncWalletInfo(bs::signer::RequestId);
    bool onSyncHDWallet(const std::string &data, bs::signer::RequestId);
    bool onSyncWallet(const std::string &data, bs::signer::RequestId);
-   bool onCreateWO(const std::string &data, bs::signer::RequestId);
    bool onGetDecryptedNode(const std::string &data, bs::signer::RequestId);
    bool onSetLimits(const std::string &data);
    bool onPasswordReceived(const std::string &data);
    bool onRequestClose();
    bool onReloadWallets(const std::string &data, bs::signer::RequestId);
-   bool onReconnect(const std::string &data);
    bool onAutoSignRequest(const std::string &data, bs::signer::RequestId);
    bool onChangePassword(const std::string &data, bs::signer::RequestId);
    bool onCreateHDWallet(const std::string &data, bs::signer::RequestId);

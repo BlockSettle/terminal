@@ -19,7 +19,7 @@ using namespace Blocksettle::Communication;
 bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txReq
    , TXSignMode mode, const PasswordType& password, bool keepDuplicatedRecipients)
 {
-   signer::SignTxRequest request;
+   signer::SignOfflineTxRequest request;
    request.set_password(password.toBinStr());
    auto evt = request.mutable_tx_request();
 
@@ -39,7 +39,7 @@ bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet
       change->set_value(txReq.change.value);
    }
 
-   return listener_->send(signer::SignTxRequestType, request.SerializeAsString());
+   return listener_->send(signer::SignOfflineTxRequestType, request.SerializeAsString());
 }
 
 bs::signer::RequestId SignAdapterContainer::createHDWallet(const std::string &name, const std::string &desc

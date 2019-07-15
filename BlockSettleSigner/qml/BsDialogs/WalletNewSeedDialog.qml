@@ -21,13 +21,13 @@ CustomTitleDialogWindow {
     // || true  // !!! ONLY FOR TESTING!!!
 
 
-    property QSeed seed: QSeed{}
+    property QSeed seed
 
     title: curPage === 1 ? qsTr("Save your Root Private Key") : qsTr("Confirm Seed")
 
     property bool fullScreenMode: true
     width: curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.75) : 470
-    height: curPage === 1 ? (fullScreenMode ? 800 : mainWindow.height * 0.98) : 265
+    height: curPage === 1 ? (fullScreenMode ? 800 : mainWindow.height * 0.98) : 225
 
     abortConfirmation: true
     abortBoxType: BSAbortBox.WalletCreation
@@ -44,7 +44,7 @@ CustomTitleDialogWindow {
     onCurPageChanged: {
         // Bindings not working here for some reason
         var w = curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.8) : 470
-        var h = curPage === 1 ? (fullScreenMode ? 800 : mainWindow.width * 0.8) : 265
+        var h = curPage === 1 ? (fullScreenMode ? 800 : mainWindow.width * 0.8) : 225
         sizeChanged(w, h)
     }
 
@@ -92,6 +92,7 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
         }
 
         ScrollView {
+            id: scroll
             Layout.alignment: Qt.AlignCenter
             Layout.preferredWidth: mainLayout.width * 0.95
             Layout.preferredHeight: mainLayout.height * 0.95
@@ -99,18 +100,23 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical.policy: ScrollBar.AlwaysOn
             clip: true
-            id: scroll
             contentWidth: width
             contentHeight: pdf.preferedHeight - 50
             visible: curPage == 1
 
+            onWidthChanged: {
+                pdf.parent.width = scroll.width
+                pdf.parent.height = pdf.preferedHeight - 50
+                pdf.width = pdf.parent.width
+                pdf.height = pdf.preferedHeight
+            }
+
             QmlPdfBackup {
                 id: pdf
-                anchors.fill: parent;
+                anchors.fill: parent
                 seed: root.seed
             }
         }
-
 
         CustomLabel {
             text: qsTr("Your seed is important! If you lose your seed, your bitcoin assets will be permanently lost. \

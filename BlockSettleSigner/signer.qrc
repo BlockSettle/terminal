@@ -49,13 +49,11 @@
         <file>qml/StyledControls/CustomTitleDialogWindow.qml</file>
         <file>qml/js/helper.js</file>
         <file>qml/js/qmldir</file>
-        <file>qml/BsDialogs/DirSelectionDialog.qml</file>
         <file>qml/BsDialogs/qmldir</file>
         <file>qml/BsDialogs/WalletBackupDialog.qml</file>
         <file>qml/BsDialogs/WalletManageEncryptionDialog.qml</file>
         <file>qml/BsDialogs/WalletCreateDialog.qml</file>
         <file>qml/BsDialogs/WalletDeleteDialog.qml</file>
-        <file>qml/BsDialogs/WalletExportWoDialog.qml</file>
         <file>qml/BsDialogs/WalletImportDialog.qml</file>
         <file>qml/BsDialogs/WalletNewDialog.qml</file>
         <file>qml/BsDialogs/WalletNewSeedDialog.qml</file>
@@ -66,5 +64,6 @@
         <file>qml/BsDialogs/TerminalKeysDialog.qml</file>
         <file>qml/js/qmlDialogs.js</file>
         <file>qml/mainLight.qml</file>
+        <file>qml/BsDialogs/CCSettlementTransactionDialog.qml</file>
     </qresource>
 </RCC>

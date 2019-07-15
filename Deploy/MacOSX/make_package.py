@@ -98,6 +98,8 @@ def make_package(sourcesRoot, packagePath):
       ]
    }
 
+   shutil.copyfile(os.path.join(sourcesRoot, 'Scripts', 'RFQBot.qml'), os.path.join(packgeDir, 'RFQBot.qml'))
+
    settingsFile = 'settings.json'
 
    if os.path.exists(settingsFile):

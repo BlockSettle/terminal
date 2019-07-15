@@ -1,19 +1,16 @@
-#include <atomic>
-#include <condition_variable>
-#include <iostream>
-#include <memory>
-#include <mutex>
 #include <csignal>
 #include <btc/ecc.h>
+#include <iostream>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
+
+#include "BIP150_151.h"
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
 #include "HeadlessSettings.h"
 #include "LogManager.h"
 #include "SystemFileUtils.h"
-#include "ZMQ_BIP15X_ServerConnection.h"
 
 namespace {
 
@@ -70,7 +67,7 @@ static int HeadlessApp(int argc, char **argv)
    if (!SystemFileUtils::pathExist(dir)) {
       loggerStdout->info("Creating missing dir {}", dir);
       if (!SystemFileUtils::mkPath(dir)) {
-         loggerStdout->error("Failed to create path {} - exitting", dir);
+         loggerStdout->error("Failed to create path {} - exiting", dir);
          return EXIT_FAILURE;
       }
    }
@@ -83,7 +80,17 @@ static int HeadlessApp(int argc, char **argv)
 
    auto logger = loggerStdout;
    if (!settings->logFile().empty()) {
-      logMgr.add(bs::LogConfig{ settings->logFile(), "%D %H:%M:%S.%e (%t)[%L]: %v", "" });
+      bs::LogConfig config;
+      config.fileName = settings->logFile();
+      config.pattern = "%D %H:%M:%S.%e (%t)[%L]: %v";
+
+#ifdef NDEBUG
+      config.level = bs::LogLevel::err;
+#else
+      config.level = bs::LogLevel::debug;
+#endif
+
+      logMgr.add(config);
       logger = logMgr.logger();
    }
 

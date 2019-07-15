@@ -15,6 +15,7 @@ endif()
 option(BSTERMINAL_SHARED_LIBS "Build shared libraries" OFF)
 
 add_definitions(-DSTATIC_BUILD)
+add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
 
 IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
    IF(BSTERMINAL_SHARED_LIBS)
@@ -71,8 +72,8 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # set versions info
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
-SET(BS_VERSION_MINOR 17 )
-SET(BS_VERSION_PATCH 1 )
+SET(BS_VERSION_MINOR 19 )
+SET(BS_VERSION_PATCH 0 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
@@ -111,6 +112,7 @@ IF( WIN32 )
    SET( LIBRARY_OUTPUT_PATH ${EXECUTABLE_OUTPUT_PATH} )
 ELSE()
    SET( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/libs )
+   SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
 ENDIF()
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -436,13 +438,12 @@ IF(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugind.lib
             ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugind.lib
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugind.lib
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugind.lib
             ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugind.lib
-            ${QT5_QML_ROOT}/Qt/Labs/folderlistmodel/qmlfolderlistmodelplugind.lib
-            ${QT5_QML_ROOT}/Qt/Labs/settings/qmlsettingsplugind.lib
+            ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/qmlfolderlistmodelplugind.lib
+            ${QT5_QML_ROOT}/Qt/labs/settings/qmlsettingsplugind.lib
+            ${QT5_QML_ROOT}/Qt/labs/platform/qtlabsplatformplugind.lib
          )
       ELSE(NOT BSTERMINAL_SHARED_LIBS)
          LIST(APPEND OS_SPECIFIC_LIBS
@@ -487,13 +488,12 @@ IF(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugin.lib
             ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugin.lib
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugin.lib
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugin.lib
             ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugin.lib
             ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/qmlfolderlistmodelplugin.lib
             ${QT5_QML_ROOT}/Qt/labs/settings/qmlsettingsplugin.lib
+            ${QT5_QML_ROOT}/Qt/labs/platform/qtlabsplatformplugin.lib
          )
       ELSE(NOT BSTERMINAL_SHARED_LIBS)
          LIST(APPEND OS_SPECIFIC_LIBS
@@ -568,13 +568,12 @@ ELSE(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin_debug.a
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin_debug.a
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin_debug.a
             ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin_debug.a
             ${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin_debug.a
+            ${QT5_QML_ROOT}/Qt/labs/platform/libqtlabsplatformplugin_debug.a
             ${QT5_LIB_ROOT}/libQt5Quick_debug.a
             ${QT5_LIB_ROOT}/libQt5QuickWidgets_debug.a
             ${QT5_LIB_ROOT}/libQt5QuickControls2_debug.a
@@ -606,13 +605,12 @@ ELSE(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin.a
             ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
             ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin.a
             ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin.a
             ${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin.a
+            ${QT5_QML_ROOT}/Qt/labs/platform/libqtlabsplatformplugin.a
             ${QT5_LIB_ROOT}/libQt5QuickControls2.a
             ${QT5_LIB_ROOT}/libQt5QuickTemplates2.a
          )
@@ -697,14 +695,13 @@ ELSE(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin.a
             ${QT5_QML_ROOT}/QtQuick/PrivateWidgets/libwidgetsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
             ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin.a
             ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin.a
             ${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin.a
+            ${QT5_QML_ROOT}/Qt/labs/platform/libqtlabsplatformplugin.a
             ${QT5_LIB_ROOT}/libQt5QuickControls2.a
             ${QT5_LIB_ROOT}/libQt5QuickTemplates2.a
          )
@@ -713,6 +710,13 @@ ELSE(WIN32)
 ENDIF(WIN32)
 
 LIST(REMOVE_DUPLICATES QT_LIBS)
+
+
+IF(WIN32)
+file(COPY ${BLOCK_SETTLE_ROOT}/Scripts/RFQBot.qml
+     DESTINATION ${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/)
+ENDIF(WIN32)
+
 
 IF(BSTERMINAL_SHARED_LIBS)
    unset(OPENSSL_USE_STATIC_LIBS)

@@ -30,10 +30,41 @@ ApplicationWindow {
     height: 600
 //    minimumWidth: 450
 //    minimumHeight: 600
+    onWidthChanged: {
+        if (width > Screen.desktopAvailableWidth) {
+            x = 0
+            width = Screen.desktopAvailableWidth
+        }
+        emitSizeChanged()
+    }
+    onHeightChanged: {
+        if (height > Screen.desktopAvailableHeight) {
+            let frameSize = qmlFactory.frameSize(mainWindow)
+            let h = frameSize.height > height ? frameSize.height - height : 0
+            y = 0
+            height = Screen.desktopAvailableHeight - h
+        }
+        emitSizeChanged()
+    }
 
     property var currentDialog: ({})
 
+    function emitSizeChanged() {
+        sizeChangeTimer.start()
+    }
+    Timer {
+        id: sizeChangeTimer
+        interval: 5
+        repeat: false
+        running: false
+        onTriggered: sizeChanged(mainWindow.width, mainWindow.height)
+    }
+    signal sizeChanged(int w, int h)
+
     Component.onCompleted: {
+        mainWindow.flags = Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint |
+                Qt.Dialog | Qt.WindowSystemMenuHint |
+                Qt.WindowTitleHint | Qt.WindowCloseButtonHint
         hide()
         qmlFactory.installEventFilterToObj(mainWindow)
     }
@@ -60,15 +91,6 @@ ApplicationWindow {
     InfoBanner {
         id: ibFailure
         bgColor: "darkred"
-    }
-
-    DirSelectionDialog {
-        id: ldrWoWalletDirDlg
-        title: qsTr("Select watching only wallet target directory")
-    }
-    DirSelectionDialog {
-        id: ldrDirDlg
-        title: qsTr("Select directory")
     }
 
     signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
@@ -127,34 +149,16 @@ ApplicationWindow {
     }
 
     function customDialogRequest(dialogName, data) {
-        // close previous dialog
-        if (currentDialog && typeof currentDialog.close !== "undefined") {
-            currentDialog.close()
-        }
+        var newDialog = QmlDialogs.customDialogRequest(dialogName, data)
+        QmlDialogs.prepareLigthModeDialog(newDialog)
+    }
 
-        show()
-        currentDialog = QmlDialogs.customDialogRequest(dialogName, data)
-        mainWindow.width = currentDialog.width
-        mainWindow.height = currentDialog.height
-        mainWindow.title = currentDialog.title
-        if (typeof currentDialog.qmlTitleVisible !== "undefined") {
-            currentDialog.qmlTitleVisible = false
-        }
+    function invokeQmlMetod(method, cppCallback, argList) {
+        QmlDialogs.evalWorker(method, cppCallback, argList)
+    }
 
-        currentDialog.dialogsChainFinished.connect(function(){ hide() })
-        currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
-            mainWindow.width = nextDialog.width
-            mainWindow.height = nextDialog.height
-
-            nextDialog.sizeChanged.connect(function(w, h){
-                mainWindow.width = w
-                mainWindow.height = h
-            })
-        })
-
-        currentDialog.sizeChanged.connect(function(w, h){
-            mainWindow.width = w
-            mainWindow.height = h
-        })
+    function moveMainWindowToScreenCenter() {
+        mainWindow.x = Screen.virtualX + (Screen.width - mainWindow.width) / 2
+        mainWindow.y = Screen.virtualY + (Screen.height - mainWindow.height) / 2
     }
 }

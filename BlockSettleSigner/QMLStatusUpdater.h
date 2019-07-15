@@ -59,7 +59,6 @@ signals:
    void listenSocketChanged();
    void autoSignActiveChanged();
    void socketOkChanged();
-   void autoSignRequiresPwd(const std::string &walletId);
 
 private slots:
    void txSigned(const BinaryData &);

@@ -43,42 +43,55 @@ public:
       }
    }
 
-   void pwd(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override
+   signer::SignTxRequest createSignTxRequest(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt)
    {
-      signer::PasswordEvent evt;
-      evt.set_wallet_id(txReq.walletId);
-      evt.set_prompt(prompt);
-      if (txReq.autoSign) {
-         evt.set_auto_sign(true);
-      } else {
-         for (const auto &input : txReq.inputs) {
-            evt.add_inputs(input.serialize().toBinStr());
-         }
-         for (const auto &recip : txReq.recipients) {
-            evt.add_recipients(recip->getSerializedScript().toBinStr());
-         }
-         evt.set_fee(txReq.fee);
-         evt.set_rbf(txReq.RBF);
-         if (txReq.change.value) {
-            auto change = evt.mutable_change();
-            change->set_address(txReq.change.address.display());
-            change->set_index(txReq.change.index);
-            change->set_value(txReq.change.value);
-         }
+      signer::SignTxRequest request;
+      request.set_wallet_id(txReq.walletId);
+      request.set_prompt(prompt);
+
+      for (const auto &input : txReq.inputs) {
+         request.add_inputs(input.serialize().toBinStr());
       }
-      owner_->sendData(signer::PasswordRequestType, evt.SerializeAsString());
+      for (const auto &recip : txReq.recipients) {
+         request.add_recipients(recip->getSerializedScript().toBinStr());
+      }
+      request.set_fee(txReq.fee);
+      request.set_rbf(txReq.RBF);
+      if (txReq.change.value) {
+         auto change = request.mutable_change();
+         change->set_address(txReq.change.address.display());
+         change->set_index(txReq.change.index);
+         change->set_value(txReq.change.value);
+      }
+
+      return request;
+   }
+
+   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override
+   {
+      owner_->sendData(signer::SignTxRequestType, createSignTxRequest(txReq, prompt).SerializeAsString());
+   }
+
+   void requestPasswordForSigningSettlementTx(const bs::core::wallet::TXSignRequest &txReq
+      , const Blocksettle::Communication::Internal::SettlementInfo &settlementInfo, const std::string &prompt) override
+   {
+      signer::SignSettlementTxRequest request;
+      *(request.mutable_signtxrequest()) = createSignTxRequest(txReq, prompt);
+      *(request.mutable_settlementinfo()) = settlementInfo;
+
+      owner_->sendData(signer::SignSettlementTxRequestType, request.SerializeAsString());
    }
 
    void txSigned(const BinaryData &tx) override
    {
-      signer::TxSignEvent evt;
-      evt.set_tx(tx.toBinStr());
+      signer::SignTxEvent evt;
+      evt.set_signedtx(tx.toBinStr());
       owner_->sendData(signer::TxSignedType, evt.SerializeAsString());
    }
 
    void cancelTxSign(const BinaryData &txHash) override
    {
-      signer::TxSignEvent evt;
+      signer::SignTxCancelRequest evt;
       evt.set_tx_hash(txHash.toBinStr());
       owner_->sendData(signer::CancelTxSignType, evt.SerializeAsString());
    }
@@ -97,6 +110,13 @@ public:
       evt.set_dialogname(dialogName);
       evt.set_variantdata(data);
       owner_->sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
+   }
+
+   void terminalHandshakeFailed(const std::string &peerAddress) override
+   {
+      signer::TerminalHandshakeFailed evt;
+      evt.set_peeraddress(peerAddress);
+      owner_->sendData(signer::TerminalHandshakeFailedType, evt.SerializeAsString());
    }
 
    SignerAdapterListener *owner_{};
@@ -164,8 +184,8 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case::signer::HeadlessReadyType:
       rc = sendReady();
       break;
-   case signer::SignTxRequestType:
-      rc = onSignTxReq(packet.data(), packet.id());
+   case signer::SignOfflineTxRequestType:
+      rc = onSignOfflineTxRequest(packet.data(), packet.id());
       break;
    case signer::SyncWalletInfoType:
       rc = onSyncWalletInfo(packet.id());
@@ -177,8 +197,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
       rc = onSyncWallet(packet.data(), packet.id());
       break;
    case signer::CreateWOType:
-      rc = onCreateWO(packet.data(), packet.id());
-      break;
    case signer::GetDecryptedNodeType:
       rc = onGetDecryptedNode(packet.data(), packet.id());
       break;
@@ -193,9 +211,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
       break;
    case signer::ReloadWalletsType:
       rc = onReloadWallets(packet.data(), packet.id());
-      break;
-   case signer::ReconnectTerminalType:
-      rc = onReconnect(packet.data());
       break;
    case signer::AutoSignActType:
       rc = onAutoSignRequest(packet.data(), packet.id());
@@ -261,9 +276,9 @@ HeadlessContainerCallbacks *SignerAdapterListener::callbacks() const
    return callbacks_.get();
 }
 
-bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::RequestId reqId)
+bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::SignTxRequest request;
+   signer::SignOfflineTxRequest request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
@@ -299,10 +314,11 @@ bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::Req
    }
 
    try {
-      const auto tx = wallet->signTXRequest(txReq, request.password());
-      signer::TxSignEvent evt;
-      evt.set_tx(tx.toBinStr());
-      return sendData(signer::SignTxRequestType, evt.SerializeAsString(), reqId);
+      auto lock = wallet->lockForEncryption(request.password());
+      const auto tx = wallet->signTXRequest(txReq);
+      signer::SignTxEvent evt;
+      evt.set_signedtx(tx.toBinStr());
+      return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
    }
    catch (const std::exception &e) {
       logger_->error("[SignerAdapterListener::{}] sign error: {}"
@@ -322,14 +338,6 @@ bool SignerAdapterListener::onSyncWalletInfo(bs::signer::RequestId reqId)
       wallet->set_name(hdWallet->name());
       wallet->set_description(hdWallet->description());
       wallet->set_watching_only(hdWallet->isWatchingOnly());
-   }
-   const auto settlWallet = walletsMgr_->getSettlementWallet();
-   if (settlWallet) {
-      auto wallet = response.add_wallets();
-      wallet->set_format(signer::WalletFormatSettlement);
-      wallet->set_id(settlWallet->walletId());
-      wallet->set_name(settlWallet->name());
-      wallet->set_description(settlWallet->description());
    }
    return sendData(signer::SyncWalletInfoType, response.SerializeAsString(), reqId);
 }
@@ -382,6 +390,10 @@ bool SignerAdapterListener::onSyncWallet(const std::string &data, bs::signer::Re
       response.set_key_rank_m(wallet->encryptionRank().first);
       response.set_key_rank_n(wallet->encryptionRank().second);
 
+      response.set_net_type(static_cast<int>(wallet->networkType()));
+      response.set_highest_ext_index(wallet->getExtAddressCount());
+      response.set_highest_int_index(wallet->getIntAddressCount());
+
       for (const auto &addr : wallet->getUsedAddressList()) {
          const auto index = wallet->getAddressIndex(addr);
          auto address = response.add_addresses();
@@ -412,7 +424,7 @@ bool SignerAdapterListener::sendWoWallet(const std::shared_ptr<bs::core::hd::Wal
          auto leafEntry = groupEntry->add_leaves();
          leafEntry->set_id(leaf->walletId());
          leafEntry->set_index(leaf->index());
-         leafEntry->set_public_key(leaf->getPubKey().toBinStr());
+//         leafEntry->set_public_key(leaf->getPubKey().toBinStr());
          for (const auto &addr : leaf->getUsedAddressList()) {
             auto addrEntry = leafEntry->add_addresses();
             addrEntry->set_index(leaf->getAddressIndex(addr));
@@ -423,32 +435,9 @@ bool SignerAdapterListener::sendWoWallet(const std::shared_ptr<bs::core::hd::Wal
    return sendData(pt, response.SerializeAsString(), reqId);
 }
 
-bool SignerAdapterListener::onCreateWO(const std::string &data, bs::signer::RequestId reqId)
-{
-   signer::DecryptWalletRequest request;
-   if (!request.ParseFromString(data)) {
-      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
-      return false;
-   }
-   const auto hdWallet = walletsMgr_->getHDWalletById(request.wallet_id());
-   if (!hdWallet) {
-      logger_->error("[SignerAdapterListener::{}] failed to find HD wallet with id {}"
-         , __func__, request.wallet_id());
-      return false;
-   }
-   const auto woWallet = hdWallet->createWatchingOnly(request.password());
-   if (!woWallet) {
-      logger_->error("[SignerAdapterListener::{}] failed to create watching-only wallet for id {}"
-         , __func__, request.wallet_id());
-      return false;
-   }
-
-   return sendWoWallet(woWallet, signer::CreateWOType, reqId);
-}
-
 bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::DecryptWalletRequest request;
+   signer::DecryptWalletEvent request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
@@ -459,8 +448,17 @@ bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::sign
          , __func__, request.wallet_id());
       return false;
    }
-   const auto decrypted = hdWallet->getRootNode(request.password());
-   if (!decrypted) {
+
+   std::string seedStr, privKeyStr;
+
+   try {
+      const SecureBinaryData pwd(request.password());
+      const auto lock = hdWallet->lockForEncryption(pwd);
+      const auto &seed = hdWallet->getDecryptedSeed();
+      seedStr = seed.seed().toBinStr();
+      privKeyStr = seed.toXpriv().toBinStr();
+   }
+   catch (const WalletException &e) {
       logger_->error("[SignerAdapterListener::{}] failed to decrypt wallet with id {}"
          , __func__, request.wallet_id());
       return false;
@@ -468,8 +466,8 @@ bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::sign
 
    signer::DecryptedNodeResponse response;
    response.set_wallet_id(hdWallet->walletId());
-   response.set_private_key(decrypted->privateKey().toBinStr());
-   response.set_chain_code(decrypted->chainCode().toBinStr());
+   response.set_private_key(privKeyStr);
+   response.set_chain_code(seedStr);
    return sendData(signer::GetDecryptedNodeType, response.SerializeAsString(), reqId);
 }
 
@@ -491,23 +489,23 @@ bool SignerAdapterListener::onSetLimits(const std::string &data)
 
 bool SignerAdapterListener::onSyncSettings(const std::string &data)
 {
-   auto request = make_unique<signer::Settings>();
-   if (!request->ParseFromString(data)) {
+   signer::Settings settings;
+   if (!settings.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
    }
-   app_->updateSettings(request);
+   app_->updateSettings(settings);
    return true;
 }
 
 bool SignerAdapterListener::onPasswordReceived(const std::string &data)
 {
-   signer::DecryptWalletRequest request;
+   signer::DecryptWalletEvent request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
    }
-   app_->passwordReceived(request.wallet_id(), request.password(), request.cancelled_by_user());
+   app_->passwordReceived(request.wallet_id(), static_cast<bs::error::ErrorCode>(request.errorcode()), request.password());
    return true;
 }
 
@@ -528,22 +526,6 @@ bool SignerAdapterListener::onReloadWallets(const std::string &data, bs::signer:
    app_->reloadWallets(request.path(), [this, reqId] {
       sendData(signer::ReloadWalletsType, "", reqId);
    });
-   return true;
-}
-
-bool SignerAdapterListener::onReconnect(const std::string &data)
-{
-   signer::ReconnectRequest request;
-   if (!request.ParseFromString(data)) {
-      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
-      return false;
-   }
-   if (request.listen_address().empty() || request.listen_port().empty()) {
-      app_->setOnline(request.online());
-   }
-   else {
-      app_->reconnect(request.listen_address(), request.listen_port());
-   }
    return true;
 }
 
@@ -591,14 +573,14 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
    std::vector<bs::wallet::PasswordData> pwdData;
    for (int i = 0; i < request.newpassword_size(); ++i) {
       const auto &pwd = request.newpassword(i);
-      pwdData.push_back({ BinaryData::CreateFromHex(pwd.password())
+      pwdData.push_back({ SecureBinaryData(pwd.password())
                           , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
    }
    bs::wallet::KeyRank keyRank = {request.rankm(), request.rankn()};
 
-   bool result = wallet->changePassword(pwdData, keyRank
+   bool result = wallet->changePassword(request.newpassword(0).password() /*pwdData, keyRank
                                         , BinaryData::CreateFromHex(request.oldpassword())
-                                        , request.addnew(), request.removeold(), request.dryrun());
+                                        , request.addnew(), request.removeold(), request.dryrun()*/);
 
    if (result) {
       walletsListUpdated();
@@ -626,22 +608,26 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
       return false;
    }
 
-   std::vector<bs::wallet::PasswordData> pwdData;
+/*   std::vector<bs::wallet::PasswordData> pwdData;
    for (int i = 0; i < request.password_size(); ++i) {
       const auto pwd = request.password(i);
-      pwdData.push_back({BinaryData::CreateFromHex(pwd.password())
+      pwdData.push_back({ pwd.password()
          , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
    }
-   bs::wallet::KeyRank keyRank = { request.rankm(), request.rankn() };
+   bs::wallet::KeyRank keyRank = { request.rankm(), request.rankn() }; */
 
    std::shared_ptr<bs::core::hd::Wallet> wallet;
    try {
       const auto &w = request.wallet();
-      auto netType = mapNetworkType(w.nettype());
-      auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
-         : bs::core::wallet::Seed(netType, w.privatekey(), w.chaincode());
+      const auto netType = mapNetworkType(w.nettype());
+      const auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
+         : bs::core::wallet::Seed::fromXpriv(w.privatekey(), netType);
+      const SecureBinaryData pwd(request.password(0).password());
+      /*      auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
+         : bs::core::wallet::Seed(netType, w.privatekey(), w.chaincode());*/
       wallet = walletsMgr_->createWallet(w.name(), w.description()
-         , seed, settings_->getWalletsDir(), w.primary(), pwdData, keyRank);
+         , seed, settings_->getWalletsDir(), pwd, w.primary()
+      /*, pwdData, keyRank*/);
 
       walletsListUpdated();
    }
@@ -725,7 +711,8 @@ bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer
       ofs << request.content();
    }
 
-   const auto woWallet = walletsMgr_->loadWoWallet(settings_->getWalletsDir(), request.filename());
+   const auto woWallet = walletsMgr_->loadWoWallet(settings_->netType()
+      , settings_->getWalletsDir(), request.filename());
    if (!woWallet) {
       return false;
    }

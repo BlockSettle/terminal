@@ -25,6 +25,7 @@ public:
    {}
    ~SignAdapterContainer() noexcept = default;
 
+   // Used to sign offline requests from signer
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
    , bool keepDuplicatedRecipients = false) override;
@@ -34,13 +35,28 @@ public:
       , const std::string &settlementId, const PasswordType& password = {}) override {
       return 0;
    }
-   bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
 
-   void SendPassword(const std::string &walletId, const PasswordType &password,
-      bool cancelledByUser) override {}
+   bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &
+      , const bs::sync::SettlementInfo &
+      , TXSignMode
+      , bool
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &) override {return 0; }
+
+   bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &
+      , const bs::sync::SettlementInfo &
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> & ) override { return 0; }
+
+   bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &
+      , const bs::sync::SettlementInfo &
+      , const bs::Address &, const std::string &
+      , const std::function<void(bs::error::ErrorCode , const BinaryData &signedTX)> &)  override { return 0; }
+
+   bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override { return 0; }
 
-   bs::signer::RequestId SetUserId(const BinaryData &) override { return 0; }
+   bs::signer::RequestId setUserId(const BinaryData &) override { return 0; }
+   bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override { return 0; }
+
    bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override { return 0; }
    bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc
@@ -48,7 +64,6 @@ public:
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override { return 0; }
-   bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override { return 0; }
    bs::signer::RequestId GetInfo(const std::string &rootWalletId) override { return 0; }
    //void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
    bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override  { return 0; }
@@ -58,8 +73,10 @@ public:
    void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) override;
    void syncAddressComment(const std::string &walletId, const bs::Address &, const std::string &) override {}
    void syncTxComment(const std::string &walletId, const BinaryData &, const std::string &) override {}
-   void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
-      , const std::function<void(const bs::Address &)> &) override {}
+   void syncAddressBatch(const std::string &walletId,
+      const std::set<BinaryData>& addrSet, std::function<void(bs::sync::SyncState)>) override {}
+   void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
+      const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override {}
    void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) override {}
 

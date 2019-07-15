@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QFileDialog>
+#include <QDesktopServices>
 
 //
 // QmlPdfBackup
@@ -32,6 +33,9 @@ void QmlPdfBackup::onWidthChanged()
 
 void QmlPdfBackup::onSeedChanged()
 {
+   if (!seed_) {
+      return;
+   }
    pdf_.reset(new WalletBackupPdfWriter(seed_->walletId(), seed_->part1(), seed_->part2(),
                                         QPixmap(QLatin1String(":/FULL_LOGO")),
                                         UiUtils::getQRCode(seed_->part1() + QLatin1Literal("\n") + seed_->part2())));
@@ -89,7 +93,7 @@ void QmlPdfBackup::componentComplete()
 void QmlPdfBackup::save()
 {
    QDir documentsDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
-   QString filePath = documentsDir.filePath(QString::fromLatin1("backup_wallet_%1.pdf").arg(seed_->walletId()));
+   QString filePath = documentsDir.filePath(QString::fromLatin1("BlockSettle_%1.pdf").arg(seed_->walletId()));
 
    QFileDialog dlg;
    dlg.setFileMode(QFileDialog::AnyFile);
@@ -106,6 +110,7 @@ void QmlPdfBackup::save()
       emit saveFailed(filePath);
    }
    else {
+      QDesktopServices::openUrl(filePath);
       emit saveSucceed(filePath);
    }
 }

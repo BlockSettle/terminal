@@ -1,6 +1,5 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
-import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.3
 
 import com.blocksettle.WalletsProxy 1.0
@@ -42,6 +41,7 @@ Item {
                 CustomHeader {
                     Layout.columnSpan: 2
                     text: qsTr("Controls")
+                    enabled: !signerStatus.offline
                     height: 25
                     Layout.fillWidth: true
                     Layout.preferredHeight: 25
@@ -50,6 +50,7 @@ Item {
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 25
+                    enabled: !signerStatus.offline
                     CustomLabel {
                         Layout.fillWidth: true
                         text: qsTr("Wallet")
@@ -58,10 +59,11 @@ Item {
 
                 Loader {
                     active: walletsProxy.loaded
-                    sourceComponent: CustomComboBox {
+                    sourceComponent:
+                        CustomComboBox {
                         width: 150
                         height: 25
-                        enabled: !signerStatus.autoSignActive
+                        enabled: !signerStatus.autoSignActive && !signerStatus.offline
                         model: walletsProxy.walletNames
                         currentIndex: walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
                         onActivated: {
@@ -77,6 +79,7 @@ Item {
 
                     CustomLabel {
                         Layout.fillWidth: true
+                        enabled: !signerStatus.offline
                         text: qsTr("Auto-Sign")
                     }
                 }
@@ -84,7 +87,7 @@ Item {
                 CustomSwitch {
                     id: autoSignSwitch
                     Layout.alignment: Qt.AlignRight
-                    visible: !signerStatus.offline
+                    enabled: !signerStatus.offline
                     checked: signerStatus.autoSignActive
                     onClicked: {
                         var walletInfo = qmlFactory.createWalletInfo(signerSettings.autoSignWallet)
@@ -154,52 +157,76 @@ Item {
             SettingsGrid {
                 id: gridLimits
                 columns: 3
+                enabled: !signerStatus.offline
 
                 CustomHeader {
                     Layout.fillWidth: true
                     Layout.columnSpan: 3
                     text: qsTr("Details")
                     Layout.preferredHeight: 25
+                    enabled: !signerStatus.offline
                 }
 
                 CustomLabel {
                     text: qsTr("XBT spend limit")
+                    enabled: !signerStatus.offline
                 }
                 CustomLabel {
                     Layout.fillWidth: true
                 }
-                CustomTextInput {
-                    Layout.preferredWidth: 150
-                    text: signerSettings.autoSignUnlimited ? qsTr("Unlimited") : signerSettings.limitAutoSignXbt
-                    selectByMouse: true
+
+                CustomComboBox {
                     id: limitAutoSignXbt
+                    Layout.preferredWidth: 150
+                    height: 25
+                    enabled: !signerStatus.autoSignActive && !signerStatus.offline
+                    editable: true
+                    model: [ "Unlimited", "0.1", "0.5", "1", "2", "5"]
+                    maximumLength: 9
+
+                    // FIXME: uncomment when limits will be fixed
+                    // displayText: signerSettings.autoSignUnlimited ? qsTr("Unlimited") : signerSettings.limitAutoSignXbt
+                    onCurrentTextChanged: {
+                        if (currentText !== qsTr("Unlimited")) {
+                            signerSettings.limitAutoSignXbt = currentText
+                        }
+                        else {
+                            signerSettings.limitAutoSignXbt = 0
+                        }
+                    }
                     validator: RegExpValidator {
                         regExp: /^[0-9]*\.?[0-9]*$/
-                    }
-                    onEditingFinished: {
-                        if (text !== qsTr("Unlimited")) {
-                            signerSettings.limitAutoSignXbt = text
-                        }
                     }
                 }
 
                 CustomLabel {
                     text: qsTr("Time limit")
+                    enabled: !signerStatus.offline
                 }
                 CustomLabel {
                     Layout.fillWidth: true
                 }
-                CustomTextInput {
-                    Layout.preferredWidth: 150
-                    placeholderText: "e.g. 1h or 15m or 600s or combined"
-                    selectByMouse: true
-                    text: signerSettings.limitAutoSignTime ? signerSettings.limitAutoSignTime : qsTr("Unlimited")
+                CustomComboBox {
                     id: limitAutoSignTime
+                    Layout.preferredWidth: 150
+                    height: 25
+                    enabled: !signerStatus.autoSignActive && !signerStatus.offline
+                    editable: true
+                    model: [ "Unlimited", "30m", "1h", "6h", "12h", "24h"]
+                    maximumLength: 9
+
+                    // FIXME: uncomment when limits will be fixed
+                    // displayText: signerSettings.limitAutoSignTime ? signerSettings.limitAutoSignTime : qsTr("Unlimited")
+                    onCurrentTextChanged: {
+                        if (currentText !== qsTr("Unlimited")) {
+                            signerSettings.limitAutoSignTime = text
+                        }
+                        else {
+                            signerSettings.limitAutoSignTime = 0
+                        }
+                    }
                     validator: RegExpValidator {
                         regExp: /^(?:\d+(h|hour|m|min|minute|s|sec|second)?\s*)*$/
-                    }
-                    onEditingFinished: {
-                        signerSettings.limitAutoSignTime = text
                     }
                 }
             }
@@ -207,12 +234,13 @@ Item {
     }
 
     function storeSettings() {
-        if (signerSettings.limitAutoSignXbt !== limitAutoSignXbt.text) {
-            if (limitAutoSignXbt.text !== qsTr("Unlimited")) {
-                signerSettings.limitAutoSignXbt = limitAutoSignXbt.text
+        if (signerSettings.limitAutoSignXbt !== limitAutoSignXbt.displayText) {
+            if (limitAutoSignXbt.displayText !== qsTr("Unlimited")) {
+                signerSettings.limitAutoSignXbt = limitAutoSignXbt.displayText
             }
         }
 
-        signerSettings.limitAutoSignTime = limitAutoSignTime.text
+        signerSettings.limitAutoSignTime = limitAutoSignTime.displayText
     }
+
 }

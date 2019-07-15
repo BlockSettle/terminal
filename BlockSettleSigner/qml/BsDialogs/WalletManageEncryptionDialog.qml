@@ -90,6 +90,8 @@ CustomDialog {
                 }
                 CustomTabButton {
                     id: addTabButton
+                    enabled: walletInfo.encType !== QPasswordData.Unencrypted
+
                     //enabled: walletInfo.encType === QPasswordData.Auth
                     text: "Add Device"
                     cText.font.capitalization: Font.MixedCase
@@ -97,6 +99,8 @@ CustomDialog {
                 }
                 CustomTabButton {
                     id: deleteTabButton
+                    enabled: walletInfo.encType !== QPasswordData.Unencrypted
+
                     //enabled: walletInfo.encType === QPasswordData.Auth
                     text: "Device List"
                     cText.font.capitalization: Font.MixedCase
@@ -127,6 +131,7 @@ CustomDialog {
 
                     CustomHeader {
                         text: qsTr("New Encryption")
+                        visible: walletInfo.encType !== QPasswordData.Unencrypted
                         Layout.fillWidth: true
                         Layout.preferredHeight: 25
                         Layout.topMargin: 5
@@ -135,6 +140,7 @@ CustomDialog {
                     }
 
                     RowLayout {
+                        visible: walletInfo.encType !== QPasswordData.Unencrypted
                         spacing: 5
                         Layout.fillWidth: true
                         Layout.leftMargin: 10
@@ -185,9 +191,9 @@ CustomDialog {
 
                     BSConfirmedPasswordInput {
                         id: newPasswordInput
+                        visible: rbPassword.checked && walletInfo.encType !== QPasswordData.Unencrypted
                         inputsWidth: inputsWidth_
                         columnSpacing: 10
-                        visible: rbPassword.checked
                         passwordLabelTxt: qsTr("New Password")
                         confirmLabelTxt: qsTr("Confirm New")
                         nextFocusItem: btnAccept
@@ -235,6 +241,7 @@ CustomDialog {
 
             ColumnLayout {
                 id: addTab
+
                 spacing: 5
                 Layout.topMargin: 15
                 Layout.leftMargin: 10
@@ -246,7 +253,7 @@ CustomDialog {
                     color: BSStyle.textColor
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
-                    visible: walletInfo.encType !== QPasswordData.Auth
+                    visible: walletInfo.encType === QPasswordData.Password
                     Layout.preferredWidth: root.width - 20
                     horizontalAlignment: Text.AlignHCenter
                     padding: 20

@@ -1,6 +1,7 @@
 #include "QmlFactory.h"
 #include <QApplication>
 #include <QClipboard>
+#include <QQuickWindow>
 #include <QKeyEvent>
 #include <spdlog/spdlog.h>
 #include "AuthProxy.h"
@@ -14,12 +15,11 @@ using namespace bs::hd;
 
 QmlFactory::QmlFactory(const std::shared_ptr<ApplicationSettings> &settings
    , const std::shared_ptr<ConnectionManager> &connectionManager
-   , SignerAdapter *adapter, const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<spdlog::logger> &logger
    , QObject *parent)
    : QObject(parent)
    , settings_(settings)
    , connectionManager_(connectionManager)
-   , adapter_(adapter)
    , logger_(logger)
 {
 }
@@ -46,8 +46,7 @@ WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) const
 
    const auto &wallet = walletsMgr_->getWalletById(walletId.toStdString());
    if (wallet) {
-      const auto rootWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
-      wi = new bs::hd::WalletInfo(wallet, rootWallet);
+      wi = new bs::hd::WalletInfo(walletsMgr_, wallet);
    }
    else {
       const auto &hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
@@ -56,7 +55,7 @@ WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) const
          wi = new bs::hd::WalletInfo();
       }
       else {
-         wi = new bs::hd::WalletInfo(hdWallet);
+         wi = new bs::hd::WalletInfo(walletsMgr_, hdWallet);
       }
    }
 
@@ -67,7 +66,7 @@ WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) const
 bs::hd::WalletInfo *QmlFactory::createWalletInfo(int index) const
 {
    const auto &wallet = walletsMgr_->getHDWallet(index);
-   auto wi = new bs::hd::WalletInfo(wallet);
+   auto wi = new bs::hd::WalletInfo(walletsMgr_, wallet);
    QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
    return wi;
 }
@@ -112,13 +111,6 @@ AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index
    return authObject;
 }
 
-void QmlFactory::requestHeadlessPubKey()
-{
-   adapter_->getHeadlessPubKey([this](const std::string &key){
-      setHeadlessPubKey(QString::fromStdString(key));
-   });
-}
-
 void QmlFactory::setClipboard(const QString &text) const
 {
    QApplication::clipboard()->setText(text);
@@ -127,6 +119,15 @@ void QmlFactory::setClipboard(const QString &text) const
 QString QmlFactory::getClipboard() const
 {
    return QApplication::clipboard()->text();
+}
+
+QRect QmlFactory::frameSize(QObject *window) const
+{
+   auto win = qobject_cast<QQuickWindow *>(window);
+   if (win) {
+      return win->frameGeometry();
+   }
+   return QRect();
 }
 
 void QmlFactory::installEventFilterToObj(QObject *object)

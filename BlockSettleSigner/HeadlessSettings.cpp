@@ -36,7 +36,6 @@ HeadlessSettings::~HeadlessSettings() noexcept = default;
 bool HeadlessSettings::loadSettings(int argc, char **argv)
 {
    const std::string jsonFileName = SystemFilePaths::appDataLocation() + "/signer.json";
-   logger_->debug("Loading settings from {}", jsonFileName);
 
    if (SystemFileUtils::fileExist(jsonFileName)) {
       bool result = loadSettings(d_.get(), jsonFileName);
@@ -82,22 +81,22 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       }
 
       if (result.count("mainnet")) {
-         d_->set_test_net(false);
+         overrideTestNet_.setValue(false);
       }
       else if (result.count("testnet")) {
-         d_->set_test_net(true);
+         overrideTestNet_.setValue(true);
       }
 
       if (result.count("listen")) {
-         d_->set_listen_address(listenAddress);
+         overrideListenAddress_.setValue(listenAddress);
       }
 
       if (result.count("port")) {
-         d_->set_listen_port(listenPort);
+         overrideListenPort_.setValue(listenPort);
       }
 
       if (result.count("auto_sign_spend_limit")) {
-         d_->set_limit_auto_sign_xbt(uint64_t(autoSignSpendLimit * BTCNumericTypes::BalanceDivider));
+         overrideAutoSignXbt_.setValue(uint64_t(autoSignSpendLimit * BTCNumericTypes::BalanceDivider));
       }
 
       if (result.count("dirwallets")) {
@@ -143,7 +142,7 @@ NetworkType HeadlessSettings::netType() const
 
 bool HeadlessSettings::testNet() const
 {
-   return d_->test_net();
+   return overrideTestNet_.isValid() ? overrideTestNet_.getValue() : d_->test_net();
 }
 
 // Get the terminal (client) BIP 150 ID key. Intended only for when the key is
@@ -193,6 +192,9 @@ std::vector<std::string> HeadlessSettings::trustedTerminals() const
 
 std::string HeadlessSettings::listenAddress() const
 {
+   if (overrideListenAddress_.isValid()) {
+      return overrideListenAddress_.getValue();
+   }
    if (d_->listen_address().empty()) {
       return "0.0.0.0";
    }
@@ -201,6 +203,9 @@ std::string HeadlessSettings::listenAddress() const
 
 std::string HeadlessSettings::listenPort() const
 {
+   if (overrideListenPort_.isValid()) {
+      return std::to_string(overrideListenPort_.getValue());
+   }
    if (d_->listen_port() == 0) {
       return "23456";
    }
@@ -210,7 +215,8 @@ std::string HeadlessSettings::listenPort() const
 bs::signer::Limits HeadlessSettings::limits() const
 {
    bs::signer::Limits result;
-   result.autoSignSpendXBT = d_->limit_auto_sign_xbt();
+   result.autoSignSpendXBT = overrideAutoSignXbt_.isValid() ?
+      overrideAutoSignXbt_.getValue() : d_->limit_auto_sign_xbt();
    return result;
 }
 
@@ -230,7 +236,12 @@ std::vector<std::string> HeadlessSettings::trustedInterfaces() const
 
 bool HeadlessSettings::twoWaySignerAuth() const
 {
-   return d_->two_way_signer_auth();
+   return d_->two_way_signer_auth() == Blocksettle::Communication::signer::TWO_WAY_AUTH_ENABLED;
+}
+
+bool HeadlessSettings::offline() const
+{
+   return d_->offline();
 }
 
 bool HeadlessSettings::loadSettings(HeadlessSettings::Settings *settings, const std::string &fileName)
@@ -260,10 +271,7 @@ bool HeadlessSettings::saveSettings(const HeadlessSettings::Settings &settings, 
    return s.good();
 }
 
-bool HeadlessSettings::update(const std::unique_ptr<Settings> &settings)
+void HeadlessSettings::update(const Settings &settings)
 {
-   if (!settings) {
-      return false;
-   }
-   *d_ = *settings;
+   *d_ = settings;
 }

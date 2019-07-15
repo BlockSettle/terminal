@@ -31,10 +31,10 @@ CustomTitleDialogWindow {
     height: 470
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletCreation
-    title: qsTr("Create New Wallet")
+    title: qsTr("Manage encryption")
 
     Component.onCompleted: {
-        tfName.text = qsTr("Wallet #%1").arg(walletsProxy.walletNames.length + 1);
+        tfName.text = walletsProxy.generateNextWalletName();
         if (!primaryWalletExists) {
             cbPrimary.checked = true
         }

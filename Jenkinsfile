@@ -57,7 +57,7 @@ pipeline {
         }
         stage('Upload changelog') {
             steps {
-                sh "scp ${WORKSPACE}/terminal/changlelog.json genoa@10.0.1.36:/var/www/Changelog/changelog.json"
+                sh "scp ${WORKSPACE}/terminal/changelog.json genoa@10.0.1.36:/var/www/Changelog/changelog.json"
             }
         }
     }

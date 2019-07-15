@@ -173,11 +173,11 @@ QmlWalletsViewModel::QmlWalletsViewModel(QObject* parent)
 void QmlWalletsViewModel::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    walletsManager_ = walletsManager;
-   loadWallets();
+   loadWallets("");
 
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletReady, this, &QmlWalletsViewModel::loadWallets);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { loadWallets(); });
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletCreated, this, &QmlWalletsViewModel::loadWallets);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletIsReady, this, &QmlWalletsViewModel::loadWallets);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &QmlWalletsViewModel::loadWallets);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletAdded, this, &QmlWalletsViewModel::loadWallets);
 }
 
 QmlWalletNode *QmlWalletsViewModel::getNode(const QModelIndex &index) const
@@ -283,7 +283,7 @@ static QmlWalletNode::Type getHDWalletType(const std::shared_ptr<bs::sync::hd::W
    return QmlWalletNode::Type::WalletRegular;
 }
 
-void QmlWalletsViewModel::loadWallets()
+void QmlWalletsViewModel::loadWallets(const std::string &)
 {
    beginResetModel();
    rootNode_->clear();

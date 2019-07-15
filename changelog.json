@@ -1,7 +1,267 @@
 {
-   "latest_version": "0.17.1",
-   "release_date": "20 Jun 2019",
+   "latest_version": "0.19.0",
+   "release_date": "15 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.19.0",
+         "previous_version": "0.18.9",
+         "release_date": "15 Jul 2019",
+         "release_type": "prod",
+         "improvements": [
+            "Open channel when adding to contacts",
+            "Settlement wallets"
+         ],
+         "bug_fixes": [],
+         "revision": "a2bd4c60",
+         "common_revision": "e0d7445f"
+      },
+      {
+         "version_string": "0.18.9",
+         "previous_version": "0.18.8",
+         "release_date": "13 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix application startup 2 displays mess",
+            "Fix and simplify transaction details",
+            "Centering Remove Contact dialog",
+            "Wallet registration fixes"
+         ],
+         "bug_fixes": [],
+         "revision": "0ea08909",
+         "common_revision": "52a1e5f3"
+      },
+      {
+         "version_string": "0.18.8",
+         "previous_version": "0.18.7",
+         "release_date": "11 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "CC wallet reimplementation",
+            "Fix bundled vcredist (#304)",
+            "Contact fixes (#1096)",
+            "Decline friend request"
+         ],
+         "bug_fixes": [
+            "Fix user search"
+         ],
+         "revision": "06d582b0",
+         "common_revision": "17673144"
+      },
+      {
+         "version_string": "0.18.7",
+         "previous_version": "0.18.6",
+         "release_date": "10 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Do not update signer settings from command line",
+            "Separate ZC notifications for different wallets (#1090)"
+         ],
+         "bug_fixes": [],
+         "revision": "b0c3ead6",
+         "common_revision": "bff25ad7"
+      },
+      {
+         "version_string": "0.18.6",
+         "previous_version": "0.18.5",
+         "release_date": "10 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Reduce flashing. All headless dialogs centered",
+            "Centered delete wallet pop-ups",
+            "Fix window centering on resize",
+            "Centered edit contact window",
+            "Pass password as bytes for consistency (#1092)",
+            "Terminal - Stacked popup dialogs (#1093)",
+            "MessageBox and style fixes"
+         ],
+         "bug_fixes": [
+            "Fix WO export on Windows",
+            "Fixed resize on small screen (#300)"
+         ],
+         "revision": "b8414ed6",
+         "common_revision": "8de663c1"
+      },
+      {
+         "version_string": "0.18.5",
+         "previous_version": "0.18.4",
+         "release_date": "07 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Change default log level for release builds",
+            "UI fixes",
+            "Show total XBT balance in portfolio view",
+            "Change default log level for release builds",
+            "Show two transactions with internal wallets",
+            "Seed wallet ID change"
+         ],
+         "bug_fixes": [
+            "Fix crash with multiple wallets (#1082)",
+            "Fix WO file export (#297)",
+            "Fix XBT RFQ"
+         ],
+         "revision": "c8261fc5",
+         "common_revision": "53a95113"
+      },
+      {
+         "version_string": "0.18.4",
+         "previous_version": "0.18.3",
+         "release_date": "05 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "UI updates and fixes",
+            "Simulate auth address verification",
+            "Fix crash auth wallet"
+         ],
+         "bug_fixes": [],
+         "revision": "dd68411f",
+         "common_revision": "f373e0c6"
+      },
+      {
+         "version_string": "0.18.3",
+         "previous_version": "0.18.2",
+         "release_date": "05 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Auth wallet reimplementation",
+            "Loosing Button at small screens (#294)",
+            "Disallow minimize maximize popups (#288)",
+            "Enable 2-way auth in signer by default (#292)",
+            "Enable 2-way terminal auth in signer by default (#1073)",
+            "Fix problem with doubled ZC notification balance (#1072)"
+         ],
+         "bug_fixes": [],
+         "revision": "ea904bc1",
+         "common_revision": "f4f4fca1"
+      },
+      {
+         "version_string": "0.18.2",
+         "previous_version": "0.18.1",
+         "release_date": "03 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Put Create wallet dialog at center of screen",
+            "UI fixes",
+            "Save quoted prices to detect own quote (#1071)",
+            " Allow user select exported TX file name (#1067)"
+         ],
+         "bug_fixes": [],
+         "revision": "96f4b812",
+         "common_revision": "c0a2af38"
+      },
+      {
+         "version_string": "0.18.1",
+         "previous_version": "0.18.0",
+         "release_date": "02 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Multiple small fixes for code around wallets"
+         ],
+         "bug_fixes": [],
+         "revision": "8d772651",
+         "common_revision": "4ec6b2a2"
+      },
+      {
+         "version_string": "0.18.0",
+         "previous_version": "0.17.6",
+         "release_date": "02 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "New wallets code"
+         ],
+         "bug_fixes": [],
+         "revision": "9baf1708",
+         "common_revision": "79fe3e5b"
+      },
+      {
+         "version_string": "0.17.6",
+         "previous_version": "0.17.5",
+         "release_date": "01 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Update autheid signatures",
+            "Contact request with message",
+            "Terminal - ui fixes"
+         ],
+         "bug_fixes": [],
+         "revision": "326a4a1c",
+         "common_revision": "0dd7db44"
+      },
+      {
+         "version_string": "0.17.5",
+         "previous_version": "0.17.4",
+         "release_date": "01 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Signer/settlement dialogs",
+            "Signer ui fixes",
+            "Add scripts folder in installer",
+            "Connect chat user to PB",
+            "Inform user on keys changed",
+            "Improve user edit dialog"
+         ],
+         "bug_fixes": [],
+         "revision": "c8b3282a",
+         "common_revision": "3105a760"
+      },
+      {
+         "version_string": "0.17.4",
+         "previous_version": "0.17.3",
+         "release_date": "27 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Show signer error for unknown terminals",
+            "Set focus on chat on notification clock",
+            "Chat: Upload new public key",
+            "Report different error if 2-way client's auth failed",
+            "Put edit contact dialog centered over terminal main window"
+         ],
+         "bug_fixes": [
+            "Fix problem with signer settings update"
+         ],
+         "revision": "4a9702cd",
+         "common_revision": "600d5798"
+      },
+      {
+         "version_string": "0.17.3",
+         "previous_version": "0.17.2",
+         "release_date": "26 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Update chat selection on old message notification clicked",
+            "Add Chat public key timestamp"
+         ],
+         "bug_fixes": [
+            "Fix retrieve user messages after accepting again friend request"
+         ],
+         "revision": "151f4950",
+         "common_revision": "ad3805db"
+      },
+      {
+         "version_string": "0.17.2",
+         "previous_version": "0.17.1",
+         "release_date": "24 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Send offline signer message",
+            "UI fixes",
+            "Add rfq bot to rep",
+            "Allow pull AQ requests",
+            "Do not prompt for downloading PM list",
+            "Fixes for the terminal's own key",
+            "Update staging and UAT chat server public keys",
+            "Added offline messages",
+            "Removing contact requests will allow making a secont request again",
+            "Contact request could be canceled/removed only by requestor",
+            "Fixed displaying not completed contact requests after re-login",
+            "Fixed loading not completed (not approved) contact requests after logout and the login",
+            "Disabled draw blue dot for Support chat room",
+            "Filter old failed trade notifications",
+            "Improve click at new message notifications"
+         ],
+         "bug_fixes": [],
+         "revision": "33d9adeb",
+         "common_revision": "5fee88f3"
+      },
       {
          "version_string": "0.17.1",
          "previous_version": "0.16.2",

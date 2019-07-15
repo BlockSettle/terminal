@@ -19,6 +19,7 @@ CustomDialogWindow {
     // or after next dialog in chain will send dialogsChainFinished signal
     signal bsAccepted()
     signal bsRejected()
+    signal bsResized()
 
     function acceptAnimated(){
         bsAccepted()
@@ -36,7 +37,6 @@ CustomDialogWindow {
         if (result) acceptAnimated()
         else rejectAnimated()
     }
-
 
     property int animationDuration: 100
 
@@ -86,7 +86,12 @@ CustomDialogWindow {
     footer: Item{}
 
     onClosed: {
-        root.destroy()
+        if (!isNextChainDialogSet) {
+            root.destroy()
+        }
+        else {
+            dialogsChainFinished.connect(function(){ root.destroy() })
+        }
     }
 
     onOpened: PropertyAnimation {
@@ -117,6 +122,9 @@ CustomDialogWindow {
         onTriggered: {
             if (!isNextChainDialogSet) {
                 dialogsChainFinished()
+                reject()
+            }
+            else {
                 reject()
             }
         }

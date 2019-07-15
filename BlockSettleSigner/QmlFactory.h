@@ -26,7 +26,6 @@ class QmlFactory : public QObject
 public:
    QmlFactory(const std::shared_ptr<ApplicationSettings> &settings
       , const std::shared_ptr<ConnectionManager> &connectionManager
-      , SignerAdapter *adapter
       , const std::shared_ptr<spdlog::logger> &logger
       , QObject *parent = nullptr);
 
@@ -91,14 +90,12 @@ public:
    // index: is encKeys index which should be deleted
    Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index
                                                              , bs::hd::WalletInfo *walletInfo);
-
-   Q_INVOKABLE void requestHeadlessPubKey();
    QString headlessPubKey() const;
-   void setHeadlessPubKey(const QString &headlessPubKey);
 
    // service functions
    Q_INVOKABLE void setClipboard(const QString &text) const;
    Q_INVOKABLE QString getClipboard() const;
+   Q_INVOKABLE QRect frameSize(QObject *window) const;
    Q_INVOKABLE void installEventFilterToObj(QObject *object);
    bool eventFilter(QObject *object, QEvent *event) override;
 
@@ -106,9 +103,10 @@ signals:
    void closeEventReceived();
    void headlessPubKeyChanged();
 
-private:
-   SignerAdapter  *  adapter_;
+public slots:
+   void setHeadlessPubKey(const QString &headlessPubKey);
 
+private:
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<ApplicationSettings> settings_;
    std::shared_ptr<ConnectionManager> connectionManager_;

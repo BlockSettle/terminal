@@ -4,26 +4,28 @@ import "../BsStyles"
 
 ComboBox {
     id: control
-    model: ["First", "Second", "Third"]
     spacing: 3
+    rightPadding: 30 // workaround to decrease width of TextInput
+    property alias maximumLength: input.maximumLength
 
-    contentItem: Text {
-        leftPadding: 7
-        rightPadding: control.indicator.width + control.spacing
-        color: BSStyle.comboBoxItemTextHighlightedColor
+    contentItem: TextInput {
+        id: input
         text: control.displayText
         font: control.font
-
+        color: { control.enabled ? BSStyle.comboBoxItemTextHighlightedColor : BSStyle.disabledTextColor }
+        leftPadding: 7
+        rightPadding: control.indicator.width + control.spacing
         verticalAlignment: Text.AlignVCenter
-        elide: Text.ElideRight
+        clip: true
+        readOnly: !editable
+        validator: control.validator
     }
-
 
     indicator: Canvas {
         id: canvas
-        x: control.width - width / 2 - control.rightPadding
+        x: control.width - width
         y: control.topPadding + (control.availableHeight - height) / 2
-        width: 16
+        width: 30
         height: 8
         contextType: "2d"
 
@@ -48,9 +50,9 @@ ComboBox {
 
     background: Rectangle {
         implicitWidth: 120
-        color: BSStyle.comboBoxBgColor
-        implicitHeight: 40
-        border.color: BSStyle.inputsBorderColor
+        color: { control.enabled ?  BSStyle.comboBoxBgColor :  BSStyle.disabledBgColor }
+        implicitHeight: 25
+        border.color: { control.enabled ? BSStyle.inputsBorderColor : BSStyle.disabledColor }
         border.width: control.visualFocus ? 2 : 1
         radius: 2
     }
@@ -63,7 +65,7 @@ ComboBox {
             text: modelData
             color: menuItem.highlighted ? BSStyle.comboBoxItemTextColor : BSStyle.comboBoxItemTextHighlightedColor
             font: control.font
-            elide: Text.ElideRight
+            elide: Text.ElideNone
             verticalAlignment: Text.AlignVCenter
         }
         highlighted: control.highlightedIndex === index
@@ -87,7 +89,6 @@ ComboBox {
 
             ScrollIndicator.vertical: ScrollIndicator { }
         }
-
 
         background: Rectangle {
             color: BSStyle.comboBoxItemBgColor

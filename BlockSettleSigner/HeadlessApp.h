@@ -47,24 +47,23 @@ public:
    void stop();
 
    void reloadWallets(const std::string &, const std::function<void()> &);
-   void reconnect(const std::string &listenAddr, const std::string &port);
-   void setOnline(bool);
    void setLimits(bs::signer::Limits);
-   void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
+   void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
 
    bs::error::ErrorCode activateAutoSign(const std::string &walletId, bool activate, const SecureBinaryData& password);
 
    void close();
    void walletsListUpdated();
 
-   void updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &);
+   void updateSettings(const Blocksettle::Communication::signer::Settings&);
 
    ZmqBIP15XServerConnection* connection() const;
    bs::signer::BindStatus signerBindStatus() const { return signerBindStatus_; }
 
 private:
    void startInterface();
-   void onlineProcessing();
+   void startTerminalsProcessing();
+   void stopTerminalsProcessing();
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

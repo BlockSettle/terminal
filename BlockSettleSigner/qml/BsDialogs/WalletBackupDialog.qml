@@ -1,12 +1,14 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
+import Qt.labs.platform 1.1
 
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.WalletsProxy 1.0
 
 import "../StyledControls"
 import "../BsControls"
@@ -16,11 +18,15 @@ CustomTitleDialogWindow {
     id: root
 
     property WalletInfo walletInfo: WalletInfo{}
-    property string targetDir
+    property string targetFile: qmlAppObj.getUrlPath(StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + backupFileName)
+
     property string backupFileExt: "." + (isPrintable ? "pdf" : "wdb")
+
+    // suggested new file names
     property string backupFileName: fullBackupMode
-                                    ? "backup_wallet_" + walletInfo.name + "_" + walletInfo.walletId + backupFileExt
-                                    : "bip44wo_" + walletInfo.walletId + "_wallet.lmdb"
+                                    ? "BlockSettle_" + walletInfo.walletId + backupFileExt
+                                    : "BlockSettle_" + walletInfo.walletId + "_WatchingOnly.lmdb"
+
     property bool   isPrintable: false
     property bool   acceptable: (walletInfo.encType === QPasswordData.Unencrypted)
                                     || walletInfo.encType === QPasswordData.Auth
@@ -39,6 +45,10 @@ CustomTitleDialogWindow {
     onWalletInfoChanged: {
         // need to update object since bindings working only for basic types
         walletDetailsFrame.walletInfo = walletInfo
+        if (walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)) {
+            fullBackupTabButton.enabled = false
+            tabBar.currentIndex = 1
+        }
     }
 
     cContentItem: ColumnLayout {
@@ -65,6 +75,7 @@ CustomTitleDialogWindow {
                 text: "Full"
                 cText.font.capitalization: Font.MixedCase
                 implicitHeight: 35
+                enabled: !walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)
             }
             CustomTabButton {
                 id: woBackupTabButton
@@ -76,6 +87,8 @@ CustomTitleDialogWindow {
 
         BSWalletDetailsFrame {
             id: walletDetailsFrame
+            Layout.fillHeight: false
+
             walletInfo: walletInfo
             inputsWidth: 250
             onPasswordEntered:{
@@ -136,12 +149,11 @@ CustomTitleDialogWindow {
                 Layout.alignment: Qt.AlignTop
             }
             CustomLabelValue {
-                text: qsTr("%1/%2").arg(targetDir).arg(backupFileName)
+                text: targetFile
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
                 Layout.preferredWidth: 300
             }
-
         }
         RowLayout {
             spacing: 5
@@ -154,15 +166,20 @@ CustomTitleDialogWindow {
                 Layout.preferredWidth: 80
                 Layout.maximumHeight: 25
                 Layout.leftMargin: 110 + 5
-                onClicked: {
-                    if (!ldrDirDlg.item) {
-                        ldrDirDlg.active = true
+
+                FileDialog {
+                    id: fileDialog
+                    currentFile: StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + backupFileName
+                    folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+                    fileMode: FileDialog.SaveFile
+
+                    onAccepted: {
+                        targetFile = qmlAppObj.getUrlPath(file)
                     }
-                    ldrDirDlg.startFromFolder = targetDir
-                    ldrDirDlg.item.bsAccepted.connect(function() {
-                        targetDir = ldrDirDlg.dir
-                    })
-                    ldrDirDlg.item.open();
+                }
+
+                onClicked: {
+                    fileDialog.open()
                 }
             }
         }
@@ -202,7 +219,7 @@ CustomTitleDialogWindow {
                                 , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'")
                                     .arg(walletInfo.name)
                                     .arg(walletInfo.walletId)
-                                    .arg(targetDir + "/" + backupFileName))
+                                    .arg(targetFile))
                             mb.bsAccepted.connect(function(){ acceptAnimated() })
                         } else {
                             JsHelper.messageBox(BSMessageBox.Type.Critical
@@ -213,32 +230,32 @@ CustomTitleDialogWindow {
                         }
                     }
 
-                    if (walletInfo.encType === QPasswordData.Password) {
+                    if (walletInfo.encType === QPasswordData.Password || walletInfo.encType === QPasswordData.Unencrypted) {
                         var passwordData = qmlFactory.createPasswordData()
                         passwordData.textPassword = walletDetailsFrame.password
 
                         if (fullBackupMode) {
                             walletsProxy.backupPrivateKey(walletInfo.walletId
-                               , targetDir + "/" + backupFileName, isPrintable
+                               , targetFile, isPrintable
                                , passwordData, exportCallback)
                         }
                         else {
                             walletsProxy.exportWatchingOnly(walletInfo.walletId
-                               , targetDir + "/" + backupFileName, passwordData
+                               , targetFile, passwordData
                                , exportCallback)
                         }
                     }
-                    else {
+                    else if (walletInfo.encType === QPasswordData.Auth) {
                         JsHelper.requesteIdAuth(AutheIDClient.BackupWallet, walletInfo
                             , function(passwordData){
                                 if (fullBackupMode) {
                                     walletsProxy.backupPrivateKey(walletInfo.walletId
-                                       , targetDir + "/" + backupFileName, isPrintable
+                                       , targetFile, isPrintable
                                        , passwordData, exportCallback)
                                 }
                                 else {
                                     walletsProxy.exportWatchingOnly(walletInfo.walletId
-                                       , targetDir + "/" + backupFileName, passwordData
+                                       , targetFile, passwordData
                                        , exportCallback)
                                 }
                         })
