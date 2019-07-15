@@ -159,29 +159,6 @@ void SearchWidget::showContextMenu(const QPoint &pos)
       return;
    }
    onItemClicked(index);
-   /*auto status = index.data(UserSearchModel::UserStatusRole).value<UserSearchModel::UserStatus>();
-   QString id = index.data(Qt::DisplayRole).toString();
-   switch (status) {
-   case UserSearchModel::UserStatus::ContactUnknown: {
-      auto action = menu->addAction(tr("Add to contacts"), [this, id] {
-         emit addFriendRequied(id);
-      });
-      action->setStatusTip(tr("Click to add user to contact list"));
-      break;
-   }
-   case UserSearchModel::UserStatus::ContactAccepted:
-   case UserSearchModel::UserStatus::ContactPendingIncoming:
-   case UserSearchModel::UserStatus::ContactPendingOutgoing: {
-      auto action = menu->addAction(tr("Remove from contacts"), [this, id] {
-         emit removeFriendRequired(id);
-      });
-      action->setStatusTip(tr("Click to remove user from contact list"));
-      break;
-   }
-   default:
-      return;
-   }
-   menu->exec(ui_->searchResultTreeView->mapToGlobal(pos));*/
 }
 
 void SearchWidget::focusResults()

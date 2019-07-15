@@ -200,7 +200,6 @@ void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
                userMenu_->addAction(userRemoveContactAction_);
             }
             else {
-               //userMenu_->addAction(userAddContactAction_);
                emit addContactRequired(QString::fromStdString(username_));
             }
             userMenu_->exec(QCursor::pos());
