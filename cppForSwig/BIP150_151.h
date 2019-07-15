@@ -222,6 +222,8 @@ public:
 //   const void clearErrorState() { curState_ = BIP150State::INACTIVE; }
    BinaryDataRef getOwnPubKey(void) const;
    bool havePublicKey(const BinaryDataRef&, const std::string&) const;
+   // For unit tests
+   btc_pubkey getChosenAuthPeerKey() const { return chosenAuthPeerKey; }
 };
 
 class BIP151Connection
@@ -283,6 +285,9 @@ public:
    bool getProposeFlag(void) const { return goodPropose_; }
    BinaryDataRef getOwnPubKey(void) const { return bip150SM_.getOwnPubKey(); }
    bool havePublicKey(const BinaryDataRef&, const std::string&) const;
+
+   // For unit tests
+   btc_pubkey getChosenAuthPeerKey() const { return bip150SM_.getChosenAuthPeerKey(); }
 };
 
 // Class to use on BIP 151 encrypted messages. Contains the plaintext contents

@@ -193,7 +193,9 @@ class DerivationScheme_ECDH : public DerivationScheme
 {
 private:
    const BinaryData id_;
-   std::map<unsigned, SecureBinaryData> saltMap_;
+   std::map<SecureBinaryData, unsigned> saltMap_;
+   unsigned topSaltIndex_ = 0;
+   std::mutex saltMutex_;
 
 private:
    std::shared_ptr<AssetEntry_Single> computeNextPublicEntry(
@@ -214,10 +216,7 @@ public:
    {}
 
    DerivationScheme_ECDH(const BinaryData& id,
-      std::map<unsigned, SecureBinaryData> saltMap) :
-      DerivationScheme(DerSchemeType_ECDH), 
-      id_(id), saltMap_(move(saltMap))
-   {}
+      std::map<SecureBinaryData, unsigned> saltMap);
 
    //virtuals
    std::vector<std::shared_ptr<AssetEntry>> extendPublicChain(
@@ -232,6 +231,7 @@ public:
    //locals
    unsigned addSalt(const SecureBinaryData&, LMDB*);
    void putAllSalts(LMDB*);
+   unsigned getSaltIndex(const SecureBinaryData&);
 };
 
 #endif

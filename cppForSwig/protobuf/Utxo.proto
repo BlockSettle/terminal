@@ -16,3 +16,27 @@ message ManyUtxo
 {
 	repeated Utxo value = 1;
 }
+
+message Outpoint
+{
+	required bytes txHash = 1;
+	required uint32 txOutIndex = 2;
+	required uint64 value = 3;
+	required bool isSpent = 4;
+	optional uint32 txHeight = 5;
+	optional uint32 txIndex = 6;
+	optional bytes spenderHash = 7;
+}
+
+message AddressOutpoints
+{
+	required bytes scrAddr = 1;
+	repeated Outpoint outpoints = 2;
+}
+
+message AddressOutpointsData
+{
+	required uint32 heightCutOff = 1;
+	required uint32 zcIndexCutOff = 2;
+	repeated AddressOutpoints addrOutpoints = 3;
+}

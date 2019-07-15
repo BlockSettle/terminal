@@ -264,7 +264,7 @@ BinaryData TransactionVerifier::serializeAllSequences() const
 ////////////////////////////////////////////////////////////////////////////////
 BinaryDataRef TransactionVerifier::getOutpoint(unsigned inputID) const
 {
-   if (inputID > theTx_.txins_.size())
+   if (inputID >= theTx_.txins_.size())
       throw runtime_error("invalid txin index");
 
    auto& inputOnS = theTx_.txins_[inputID];
@@ -294,7 +294,7 @@ uint64_t TransactionVerifier::getOutpointValue(unsigned inputID) const
 ////////////////////////////////////////////////////////////////////////////////
 unsigned TransactionVerifier::getTxInSequence(unsigned inputID) const
 {
-   if (inputID > theTx_.txins_.size())
+   if (inputID >= theTx_.txins_.size())
       throw ScriptException("invalid txin index");
 
    auto& inputOnS = theTx_.txins_[inputID];

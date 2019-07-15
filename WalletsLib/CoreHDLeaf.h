@@ -8,8 +8,9 @@
 #include "CoreWallet.h"
 #include "HDPath.h"
 
-#define LEAF_KEY        0x00002001
-#define AUTH_LEAF_KEY   0x00002002
+#define LEAF_KEY              0x00002001
+#define AUTH_LEAF_KEY         0x00002002
+#define SETTLEMENT_LEAF_KEY   0x00002003
 
 namespace spdlog {
    class logger;
@@ -23,11 +24,13 @@ namespace bs {
          class AuthGroup;
          class Group;
          class Wallet;
+         class SettlementLeaf;
 
          class Leaf : public bs::core::Wallet
          {
             friend class hd::Group;
             friend class hd::Wallet;
+            friend class SettlementLeaf;
 
          public:
             Leaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger, 
@@ -101,7 +104,7 @@ namespace bs {
             virtual bs::hd::Path::Elem getExtPath(void) const { return addrTypeExternal_; }
             virtual bs::hd::Path::Elem getIntPath(void) const { return addrTypeInternal_; }
 
-            std::shared_ptr<AssetEntry_BIP32Root> getRootAsset(void) const;
+            std::shared_ptr<AssetEntry> getRootAsset(void) const;
 
          public:
             static const bs::hd::Path::Elem  addrTypeExternal_ = 0u;
@@ -181,6 +184,29 @@ namespace bs {
             ~CCLeaf() override = default;
 
             wallet::Type type() const override { return wallet::Type::ColorCoin; }
+         };
+
+
+         class SettlementLeaf : public Leaf
+         {
+         public:
+            SettlementLeaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger)
+               : hd::Leaf(netType, logger, wallet::Type::ColorCoin) {}
+            ~SettlementLeaf() override = default;
+
+            BinaryData serialize() const override;
+
+            wallet::Type type() const override { return wallet::Type::Settlement; }
+            unsigned addSettlementID(const SecureBinaryData&);
+
+            BinaryData signTXRequest(const wallet::TXSignRequest &
+               , bool keepDuplicatedRecipients = false) override
+            {
+               throw std::runtime_error("invalid for settlement leaves, \
+                  use bs::core::hd::Wallet::signSettlementTXRequest");
+            }
+
+            unsigned getIndexForSettlementID(const SecureBinaryData&) const;
          };
 
       }  //namespace hd

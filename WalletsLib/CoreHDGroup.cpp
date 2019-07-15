@@ -200,6 +200,11 @@ std::shared_ptr<hd::Group> hd::Group::deserialize(
          walletPtr, emptyPath, netType, logger);
       break;
 
+   case bs::hd::CoinType::BlockSettle_Settlement:
+      group = std::make_shared<hd::SettlementGroup>(
+         walletPtr, emptyPath, netType, logger);
+      break;
+
    default:
       throw WalletException("unknown group type");
       break;
@@ -347,12 +352,12 @@ std::shared_ptr<hd::Group> hd::Group::getCopy(
 }
 
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthGroup::AuthGroup(std::shared_ptr<AssetWallet_Single> walletPtr,
-   const bs::hd::Path &path, NetworkType netType,
-   const std::shared_ptr<spdlog::logger>& logger)
-   : Group(walletPtr, path, netType, true, logger) //auto wallets are always ext only
+   const bs::hd::Path &path, NetworkType netType, 
+   const std::shared_ptr<spdlog::logger>& logger) :
+   Group(walletPtr, path, netType, true, logger) //auth wallets are always ext only
 {}
 
 void hd::AuthGroup::initLeaf(std::shared_ptr<hd::Leaf> &leaf, 
@@ -368,7 +373,7 @@ void hd::AuthGroup::initLeaf(std::shared_ptr<hd::Leaf> &leaf,
 
    //setup address account
    if (salt_.getSize() != 32)
-      throw AccountException("emtpy auth group salt");
+      throw AccountException("empty auth group salt");
    auto accTypePtr = std::make_shared<AccountType_BIP32_Salted>(salt_);
 
    //account IDs and nodes
@@ -521,3 +526,151 @@ std::set<AddressEntryType> hd::CCGroup::getAddressTypeSet(void) const
 {
    return { AddressEntryType_P2WPKH };
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+std::shared_ptr<hd::Leaf> hd::SettlementGroup::newLeaf() const
+{
+   return std::make_shared<hd::SettlementLeaf>(netType_, logger_);
+}
+
+std::set<AddressEntryType> hd::SettlementGroup::getAddressTypeSet(void) const
+{
+   return { AddressEntryType_P2WPKH };
+}
+
+void hd::SettlementGroup::initLeaf(std::shared_ptr<hd::Leaf> &leaf,
+   const SecureBinaryData& privKey, const SecureBinaryData& pubKey) const
+{
+   auto settlLeafPtr = std::dynamic_pointer_cast<hd::SettlementLeaf>(leaf);
+   if (settlLeafPtr == nullptr)
+      throw AccountException("expected auth leaf ptr");
+
+   //setup address account
+   auto accTypePtr = std::make_shared<AccountType_ECDH>(privKey, pubKey);
+
+   //address types
+   accTypePtr->setAddressTypes(getAddressTypeSet());
+   accTypePtr->setDefaultAddressType(AddressEntryType_P2WPKH);
+
+   //Lock the underlying armory wallet to allow accounts to derive their root from
+   //the wallet's. We assume the passphrase prompt lambda is already set.
+   auto lock = walletPtr_->lockDecryptedContainer();
+   auto accPtr = walletPtr_->createAccount(accTypePtr);
+   auto& accID = accPtr->getID();
+
+   settlLeafPtr->init(walletPtr_, accID);
+}
+
+std::shared_ptr<hd::Leaf> hd::SettlementGroup::createLeaf(
+   const bs::Address& addr, const bs::hd::Path& path)
+{
+   /*
+   We assume this address belongs to our wallet. We will try to recover the
+   asset for that address and extract the key pair to init the ECDH account 
+   with. 
+
+   The path argument is not useful on its own as ECDH accounts are not 
+   deterministic. However, leaves are keyed by their path within groups, 
+   therefor the path provided should be that of the address the account is
+   build from.
+
+   Sadly there is no way for a group to resolve the path of addresses 
+   belonging to other groups, therefor this method is private and the class
+   friends HDWallet, which implements the method to create a leaf from an 
+   address and feed the proper path to this method.
+   */
+
+   //grab asset id for address
+   auto& idPair = walletPtr_->getAssetIDForAddr(addr.prefixed());
+   auto assetPtr = walletPtr_->getAssetForID(idPair.first);
+   auto assetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
+   if (assetSingle == nullptr)
+      throw AssetException("cannot create settlement leaf from this asset type");
+
+   //create the leaf
+   auto leaf = newLeaf();
+
+   //initialize it
+   if(!walletPtr_->isWatchingOnly())
+   {
+      /*
+      Full wallet, grab the decrypted private key for this asset. The wallet
+      has to be locked for decryption and the passphrase lambda set for this
+      to succeed.
+      */
+
+      auto& privKey = walletPtr_->getDecryptedPrivateKeyForAsset(assetSingle);
+      initLeaf(leaf, privKey, SecureBinaryData());
+   }
+   else
+   {
+      //wo wallet, create ECDH account from the compressed pubkey
+      const auto &pubKeyObj = assetSingle->getPubKey();
+      initLeaf(leaf, SecureBinaryData(), pubKeyObj->getCompressedKey());
+   }
+
+   leaf->setPath(path);
+
+   //add the leaf
+   auto leafKey = leaf->index() | 0x80000000;
+   leaves_[leafKey] = leaf;
+   needsCommit_ = true;
+   commit();
+
+   return leaf;
+}
+
+void hd::SettlementGroup::serializeLeaves(BinaryWriter &bw) const
+{
+   for (const auto &leaf : leaves_)
+   {
+      bw.put_uint32_t(SETTLEMENT_LEAF_KEY);
+      bw.put_BinaryData(leaf.second->serialize());
+   }
+}
+
+void hd::SettlementGroup::deserialize(BinaryDataRef value)
+{
+   BinaryRefReader brrVal(value);
+   auto len = brrVal.get_var_int();
+   const auto strPath = brrVal.get_BinaryData(len).toBinStr();
+   path_ = bs::hd::Path::fromString(strPath);
+   isExtOnly_ = (bool)brrVal.get_uint8_t();
+
+   while (brrVal.getSizeRemaining() > 0)
+   {
+      auto key = brrVal.get_uint32_t();
+      if (key != SETTLEMENT_LEAF_KEY)
+         throw AccountException("unexpected leaf type");
+
+      len = brrVal.get_var_int();
+      const auto serLeaf = brrVal.get_BinaryData(len);
+      auto leafPair = hd::Leaf::deserialize(serLeaf, netType_, logger_);
+
+      auto leaf = leafPair.first;
+      leaf->init(walletPtr_, leafPair.second);
+      
+      auto leafKey = leaf->index() | 0x80000000;
+      leaves_[leafKey] = leaf;
+   }
+}
+
+std::shared_ptr<hd::SettlementLeaf> hd::SettlementGroup::getLeafForSettlementID(
+   const SecureBinaryData& id) const
+{
+   for (auto& leafPair : leaves_)
+   {
+      auto settlLeaf = std::dynamic_pointer_cast<hd::SettlementLeaf>(
+         leafPair.second);
+      
+      if (settlLeaf == nullptr)
+         throw AccountException("unexpected leaf type");
+
+      if (settlLeaf->getIndexForSettlementID(id) != UINT32_MAX)
+         return settlLeaf;
+   }
+
+   return nullptr;
+}
+

@@ -141,6 +141,27 @@ public:
 
    bool isLocal() const { return mode_ == OpMode::Local || mode_ == OpMode::LocalInproc; }
 
+   //settlement related methods
+   virtual void setSettlementID(const std::string&, const SecureBinaryData&)
+   {
+      throw std::runtime_error("needs implemented, check InprocSigner for example");
+   }
+
+   virtual bs::Address getSettlementPayinAddress(
+      const std::string& walletID,
+      const SecureBinaryData& settlementID, 
+      const SecureBinaryData& counterPartyPubKey, 
+      bool isMyKeyFirst //to order the pubkeys in the ms script properly
+   ) const
+   {
+      throw std::runtime_error("needs implemented, check InprocSigner for example");
+   }
+
+   virtual SecureBinaryData getRootPubkey(const std::string& walletID) const
+   {
+      throw std::runtime_error("needs implemented, check InprocSigner for example");
+   }
+
 signals:
    void connected();
    void disconnected();

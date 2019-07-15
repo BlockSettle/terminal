@@ -169,6 +169,11 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
          walletPtr_, path, netType_, logger_);
       break;
 
+   case bs::hd::CoinType::BlockSettle_Settlement:
+      result = std::make_shared<SettlementGroup>(
+         walletPtr_, path, netType_, logger_);
+      break;
+
    default:
       result = std::make_shared<Group>(
          walletPtr_, path, netType_, extOnlyFlag_, logger_);
@@ -567,4 +572,149 @@ SecureBinaryData hd::Wallet::getDecryptedRootXpriv(void) const
       rootBip32->getDepth(), rootBip32->getLeafID(), rootBip32->getFingerPrint(),
       decryptedRootPrivKey, rootBip32->getChaincode());
    return node.getBase58();
+}
+
+std::shared_ptr<hd::Leaf> hd::Wallet::createSettlementLeaf(
+   const bs::Address& addr)
+{
+   /*
+   This method expects the wallet locked and passprhase lambda set 
+   for a full wallet.
+   */
+
+   //does this wallet have a settlement group?
+   auto group = getGroup(bs::hd::BlockSettle_Settlement);
+   if (group == nullptr)
+      group = createGroup(bs::hd::BlockSettle_Settlement);
+
+   auto settlGroup = std::dynamic_pointer_cast<hd::SettlementGroup>(group);
+   if (settlGroup == nullptr)
+      throw AccountException("unexpected settlement group type");
+
+   //get hd path for addr
+   auto getPathForAddr = [this, &addr](void)->bs::hd::Path
+   {
+      for (auto& groupPair : groups_)
+      {
+         for (auto& leafPair : groupPair.second->leaves_)
+         {
+            auto path = leafPair.second->getPathForAddress(addr);
+            if (path.length() != 0)
+               return path;
+         }
+      }
+
+      return {};
+   };
+
+   auto addrPath = getPathForAddr();
+   if (addrPath.length() == 0)
+      throw AssetException("failed to resolve path for settlement address");
+
+   return settlGroup->createLeaf(addr, addrPath);
+}
+
+std::shared_ptr<AssetEntry> hd::Wallet::getAssetForAddress(
+   const bs::Address& addr)
+{
+   auto& idPair = walletPtr_->getAssetIDForAddr(addr.prefixed());
+   return walletPtr_->getAssetForID(idPair.first);
+}
+
+bs::Address hd::Wallet::getSettlementPayinAddress(
+   const SecureBinaryData& settlementID,
+   const SecureBinaryData& counterPartyPubKey,
+   bool isMyKeyFirst) const
+{
+   auto addrPtr = getAddressPtrForSettlement(
+      settlementID, counterPartyPubKey, isMyKeyFirst);
+   return bs::Address(addrPtr->getPrefixedHash());
+}
+
+std::shared_ptr<AddressEntry_P2WSH> hd::Wallet::getAddressPtrForSettlement(
+   const SecureBinaryData& settlementID,
+   const SecureBinaryData& counterPartyPubKey,
+   bool isMyKeyFirst) const
+{
+   //get settlement leaf for id
+   auto leafPtr = getLeafForSettlementID(settlementID);
+
+   //grab settlement asset from leaf
+   auto index = leafPtr->getIndexForSettlementID(settlementID);
+   auto myAssetPtr = leafPtr->accountPtr_->getAssetForID(index, true);
+   auto myAssetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(myAssetPtr);
+   if (myAssetSingle == nullptr)
+      throw AssetException("unexpected asset type");
+
+   //salt counterparty pubkey
+   auto&& counterPartySaltedKey = CryptoECDSA::PubKeyScalarMultiply(
+      counterPartyPubKey, settlementID);
+
+   //create counterparty asset
+   auto counterPartyAsset = std::make_shared<AssetEntry_Single>(
+      0, BinaryData(), counterPartySaltedKey, nullptr);
+
+   //create ms asset
+   std::map<BinaryData, std::shared_ptr<AssetEntry>> assetMap;
+
+   if (isMyKeyFirst)
+   {
+      assetMap.insert(std::make_pair(READHEX("00"), myAssetSingle));
+      assetMap.insert(std::make_pair(READHEX("01"), counterPartyAsset));
+   }
+   else
+   {
+      assetMap.insert(std::make_pair(READHEX("00"), counterPartyAsset));
+      assetMap.insert(std::make_pair(READHEX("01"), myAssetSingle));
+   }
+
+   auto assetMs = std::make_shared<AssetEntry_Multisig>(
+      0, BinaryData(), assetMap, 1, 2);
+
+   //create ms address
+   auto addrMs = std::make_shared<AddressEntry_Multisig>(assetMs, true);
+
+   //nest it
+   auto addrP2wsh = std::make_shared<AddressEntry_P2WSH>(addrMs);
+
+   //done
+   return addrP2wsh;
+}
+
+std::shared_ptr<hd::SettlementLeaf> hd::Wallet::getLeafForSettlementID(
+   const SecureBinaryData& id) const
+{
+   auto group = getGroup(bs::hd::CoinType::BlockSettle_Settlement);
+   auto settlGroup = std::dynamic_pointer_cast<hd::SettlementGroup>(group);
+   if (settlGroup == nullptr)
+      throw AccountException("missing settlement group");
+
+   return settlGroup->getLeafForSettlementID(id);
+}
+
+BinaryData hd::Wallet::signSettlementTXRequest(
+   const wallet::TXSignRequest& txReq,
+   const BinaryData& settlementId,
+   const SecureBinaryData& counterPartyPubKey,
+   bool myKeyComesFirst)
+{
+   //get p2wsh address entry
+   auto addrP2wsh = getAddressPtrForSettlement(
+      settlementId, counterPartyPubKey, myKeyComesFirst);
+
+   //grab wallet resolver, seed it with p2wsh script
+   auto resolver = 
+      std::make_shared<ResolverFeed_AssetWalletSingle>(walletPtr_);
+   resolver->seedFromAddressEntry(addrP2wsh);
+
+   //get leaf
+   auto leafPtr = getLeafForSettlementID(settlementId);
+
+   //sign & return
+   auto signer = leafPtr->getSigner(txReq, false);
+   signer.resetFeeds();
+   signer.setFeed(resolver);
+
+   signer.sign();
+   return signer.serialize();
 }

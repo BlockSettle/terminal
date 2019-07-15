@@ -372,7 +372,7 @@ const BinaryData& AddressEntry_Multisig::getScript() const
             dynamic_pointer_cast<AssetEntry_Single>(asset.second);
 
          if (assetSingle == nullptr)
-            AssetException("unexpected asset entry type");
+            throw AssetException("unexpected asset entry type");
 
          if (isCompressed())
          {
@@ -607,7 +607,7 @@ shared_ptr<AddressEntry> AddressEntry::instantiate(
    /*creates an address entry based on an asset and an address type*/
    shared_ptr<AddressEntry> addressPtr = nullptr;
 
-   bool isCompressed = aeType && ADDRESS_COMPRESSED_MASK;
+   bool isCompressed = (aeType & ADDRESS_COMPRESSED_MASK) != 0;
 
    switch (aeType & ADDRESS_TYPE_MASK)
    {

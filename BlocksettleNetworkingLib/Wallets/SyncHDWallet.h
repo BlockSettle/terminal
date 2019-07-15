@@ -76,10 +76,20 @@ namespace bs {
             {
                const auto &leaves = getLeaves();
                for (auto& leaf : leaves)
+               {
+                  //settlement leaves are not registered, they dont need an ACT
+                  if (leaf->type() == bs::core::wallet::Type::Settlement)
+                     continue;
+
                   leaf->setCustomACT<U>(armory);
+               }
             }
 
             void setWCT(WalletCallbackTarget *wct) { wct_ = wct; }
+
+            //settlement shenanigans
+            bs::Address getSettlementPayinAddress(
+               const SecureBinaryData&, const SecureBinaryData&, bool) const;
 
          protected:
             void addressAdded(const std::string &walletId) override { wct_->addressAdded(walletId); }
