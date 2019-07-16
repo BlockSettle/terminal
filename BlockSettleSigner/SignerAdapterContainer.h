@@ -23,7 +23,7 @@ public:
       , const std::shared_ptr<SignerInterfaceListener> &lsn)
       : SignContainer(logger, OpMode::LocalInproc), listener_(lsn)
    {}
-   ~SignAdapterContainer() noexcept override = default;
+   ~SignAdapterContainer() noexcept = default;
 
    // Used to sign offline requests from signer
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &

@@ -72,6 +72,7 @@ protected:
    bool onChangePassword(const std::string &data, bs::signer::RequestId);
    bool onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    bool onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
+   bool onHeadlessPubKeyRequest(const std::string &data, bs::signer::RequestId);
    bool onImportWoWallet(const std::string &data, bs::signer::RequestId);
    bool onSyncSettings(const std::string &data);
 

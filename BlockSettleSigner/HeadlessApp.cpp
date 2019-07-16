@@ -199,8 +199,8 @@ void HeadlessAppObj::startTerminalsProcessing()
    if (settings_->getTermIDKeyStr().empty()) {
       makeServerCookie = false;
       absTermCookiePath = "";
-      ourKeyFileDir = getOwnKeyFileDir();
-      ourKeyFileName = getOwnKeyFileName();
+      ourKeyFileDir = SystemFilePaths::appDataLocation();
+      ourKeyFileName = "remote_signer.peers";
    }
 
    // The whitelisted key set depends on whether or not the signer is meant to
@@ -307,25 +307,6 @@ void HeadlessAppObj::stopTerminalsProcessing()
 ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
 {
    return terminalConnection_.get();
-}
-
-BinaryData HeadlessAppObj::signerPubKey() const
-{
-   if (terminalConnection_) {
-      return terminalConnection_->getOwnPubKey();
-   }
-
-   return ZmqBIP15XServerConnection::getOwnPubKey(getOwnKeyFileDir(), getOwnKeyFileName());
-}
-
-std::string HeadlessAppObj::getOwnKeyFileDir()
-{
-   return SystemFilePaths::appDataLocation();
-}
-
-std::string HeadlessAppObj::getOwnKeyFileName()
-{
-   return "remote_signer.peers";
 }
 
 #if 0
