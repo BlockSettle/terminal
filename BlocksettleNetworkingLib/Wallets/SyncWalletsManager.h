@@ -93,7 +93,7 @@ namespace bs {
          BTCNumericTypes::balance_type getUnconfirmedBalance() const;
          BTCNumericTypes::balance_type getTotalBalance() const;
 
-         void registerWallets();
+         std::vector<std::string> registerWallets();
          void unregisterWallets();
 
          bool getTransactionDirection(Tx, const std::string &walletId

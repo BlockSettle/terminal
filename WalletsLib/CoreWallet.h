@@ -338,13 +338,14 @@ namespace bs {
             return std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>>();
          }
 
+         Signer getSigner(const wallet::TXSignRequest &,
+            bool keepDuplicatedRecipients = false);
+
       protected:
          virtual std::shared_ptr<LMDBEnv> getDBEnv() = 0;
          virtual LMDB *getDB() = 0;
 
       private:
-         Signer getSigner(const wallet::TXSignRequest &,
-            bool keepDuplicatedRecipients = false);
 
       protected:
          std::string       walletName_;
@@ -371,7 +372,6 @@ namespace bs {
          WalletEncryptionLock& operator=(WalletEncryptionLock&&) = delete;
 
       public:
-
          WalletEncryptionLock(
             std::shared_ptr<AssetWallet_Single> wallet,
             const SecureBinaryData& passphrase) :

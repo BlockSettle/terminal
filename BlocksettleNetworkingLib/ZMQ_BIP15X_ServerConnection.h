@@ -86,6 +86,7 @@ public:
 
    // Only for tests
    void rekey(const std::string &clientId);
+
    void setLocalHeartbeatInterval();
 
    // There was some issues with static field initalization order so use static function here

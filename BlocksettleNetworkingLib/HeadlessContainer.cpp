@@ -960,6 +960,7 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
       bs::sync::HDWalletData::Group group;
       group.type = static_cast<bs::hd::CoinType>(groupInfo.type());
       group.extOnly = groupInfo.ext_only();
+      group.salt = groupInfo.salt();
       for (int j = 0; j < groupInfo.leaves_size(); ++j) {
          const auto leafInfo = groupInfo.leaves(j);
          if (isWoRoot) {
@@ -1504,6 +1505,7 @@ QStringList LocalSigner::args() const
    // Among many other things, send the signer the terminal's BIP 150 ID key.
    // Processes reading keys from the disk are subject to attack.
    result << QLatin1String("--listen") << QLatin1String("127.0.0.1");
+   result << QLatin1String("--accept_from") << QLatin1String("127.0.0.1");
    result << QLatin1String("--port") << port_;
    result << QLatin1String("--dirwallets") << walletsCopyDir;
    if (asSpendLimit_ > 0) {

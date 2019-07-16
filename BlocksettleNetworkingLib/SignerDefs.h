@@ -70,6 +70,7 @@ namespace sync {
          bs::hd::CoinType  type;
          std::vector<Leaf> leaves;
          bool extOnly;
+         BinaryData salt;
       };
       std::vector<Group>   groups;
    };

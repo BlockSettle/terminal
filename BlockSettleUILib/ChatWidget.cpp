@@ -348,10 +348,13 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::ConfirmUploadNewPublicKey, this, &ChatWidget::onConfirmUploadNewPublicKey);
    connect(client_.get(), &ChatClient::ContactChanged, this, &ChatWidget::onContactChanged);
    connect(client_.get(), &ChatClient::DMMessageReceived, this, &ChatWidget::onDMMessageReceived);
+   connect(client_.get(), &ChatClient::ContactRequestApproved, this, &ChatWidget::onContactRequestApproved);
+
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
    connect(ui_->textEditMessages, &QTextEdit::selectionChanged, this, &ChatWidget::onChatMessagesSelectionChanged);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::addContactRequired, this, &ChatWidget::onSendFriendRequest);
 
 //   connect(client_.get(), &ChatClient::SearchUserListReceived,
 //           this, &ChatWidget::onSearchUserListReceived);
@@ -440,6 +443,12 @@ void ChatWidget::onUserClicked(const std::string& userId)
 void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 {
    stateCurrent_->onUsersDeleted(users);
+}
+
+void ChatWidget::onContactRequestApproved(const std::string &userId)
+{
+   ui_->treeViewUsers->setCurrentUserChat(userId);
+   ui_->treeViewUsers->updateCurrentChat();
 }
 
 void ChatWidget::changeState(ChatWidget::State state)
@@ -753,6 +762,8 @@ void ChatWidget::onSendFriendRequest(const QString &userId)
 {
    //client_->sendFriendRequest(userId.toStdString());
    onActionCreatePendingOutgoing (userId.toStdString());
+   ui_->treeViewUsers->setCurrentUserChat(userId.toStdString());
+   ui_->treeViewUsers->updateCurrentChat();
    ui_->searchWidget->setListVisible(false);
 }
 

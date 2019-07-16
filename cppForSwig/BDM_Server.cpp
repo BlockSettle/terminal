@@ -1150,7 +1150,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
          enough UTXOs to cover value twice, as Codec_Utxo::ManyUtxo
 
       The order in which wallets are presented will be the order by
-      which utxo fetching will be prioritize, i.e. if the first wallet
+      which utxo fetching will be prioritized, i.e. if the first wallet
       has enough UTXOs to cover value twice over, there will not be any
       UTXOs returned for the other wallets.
       */
@@ -1189,6 +1189,98 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
             utxoPtr->set_txoutindex(utxo.txOutIndex_);
             utxoPtr->set_txhash(utxo.txHash_.getPtr(), utxo.txHash_.getSize());
          }
+      }
+
+      return response;
+   }
+
+   case Methods::getOutpointsForAddresses:
+   {
+      set<BinaryDataRef> scrAddrSet;
+      for (int i = 0; i < command->bindata_size(); i++)
+      {
+         auto& scrAddr = command->bindata(i);
+         BinaryDataRef scrAddrRef; scrAddrRef.setRef(scrAddr);
+         
+         scrAddrSet.insert(scrAddrRef);
+      }
+
+      unsigned heightCutOff = command->height();
+      unsigned zcCutOff = command->zcid();
+      auto response = make_shared<::Codec_Utxo::AddressOutpointsData>();
+
+      //sanity check
+      if (scrAddrSet.size() == 0)
+      {
+         response->set_heightcutoff(heightCutOff);
+         response->set_zcindexcutoff(zcCutOff);
+
+         return response;
+      }
+
+      //this call will update the cutoff values
+      auto&& outpointMap = getAddressOutpoints(scrAddrSet, heightCutOff, zcCutOff);
+
+      //fill in response
+      for (auto& addrPair : outpointMap)
+      {
+         auto addrop = response->add_addroutpoints();
+         addrop->set_scraddr(addrPair.first.getPtr(), addrPair.first.getSize());
+
+         for (auto& outpointMap : addrPair.second)
+         {
+            for (auto& outpointPair : outpointMap.second)
+            {
+               auto opPtr = addrop->add_outpoints();
+               opPtr->set_txhash(
+                  outpointMap.first.getPtr(), outpointMap.first.getSize());
+               
+               opPtr->set_txoutindex(outpointPair.first);
+               opPtr->set_value(outpointPair.second.value_);
+               opPtr->set_isspent(outpointPair.second.isspent_);
+
+               opPtr->set_txheight(outpointPair.second.height_);
+               opPtr->set_txindex(outpointPair.second.txindex_);
+
+               if (outpointPair.second.isspent_)
+               {
+                  opPtr->set_spenderhash(
+                     outpointPair.second.spenderHash_.getCharPtr(),
+                     outpointPair.second.spenderHash_.getSize());
+               }
+            }
+         }
+      }
+
+      //set cutoffs
+      response->set_heightcutoff(heightCutOff);
+      response->set_zcindexcutoff(zcCutOff);
+
+      return response;
+   }
+
+   case Methods::getUTXOsForAddress:
+   {
+      auto& addr = command->scraddr();
+      if (addr.size() == 0)
+         throw runtime_error("expected address for getUTXOsForAddress");
+
+      BinaryDataRef scrAddr;
+      scrAddr.setRef((const uint8_t*)addr.c_str(), addr.size());
+
+      auto withZc = command->flag();
+      auto&& utxoVec = getUtxosForAddress(scrAddr, withZc);
+
+      auto response = make_shared<::Codec_Utxo::ManyUtxo>();
+      for (auto& utxo : utxoVec)
+      {
+         auto utxoPtr = response->add_value();
+         utxoPtr->set_value(utxo.value_);
+         utxoPtr->set_script(utxo.script_.getPtr(), utxo.script_.getSize());
+         utxoPtr->set_txheight(utxo.txHeight_);
+         utxoPtr->set_txindex(utxo.txIndex_);
+         utxoPtr->set_txoutindex(utxo.txOutIndex_);
+         utxoPtr->set_txhash(utxo.txHash_.getPtr(), utxo.txHash_.getSize());
       }
 
       return response;

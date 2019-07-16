@@ -264,6 +264,24 @@ namespace bs {
             std::set<BinaryData> invalidTxHash_;
          };
 
+
+         class SettlementLeaf : public Leaf
+         {
+         public:
+            SettlementLeaf(const std::string &walletId, const std::string &name, 
+               const std::string &desc, SignContainer *, const std::shared_ptr<spdlog::logger> &);
+
+            SecureBinaryData getRootPubkey(void) const;
+            void setSettlementID(const SecureBinaryData&);
+
+         protected:
+            void createAddress(const CbAddress &, const AddrPoolKey &) override;
+            void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr) override;
+
+         private:
+            BinaryData              userId_;
+         };
+
       }  //namespace hd
    }  //namespace sync
 }  //namespace bs

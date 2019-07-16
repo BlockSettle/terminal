@@ -149,7 +149,7 @@ std::shared_ptr<AddressEntry> hd::Leaf::getAddressEntryForAddr(const BinaryData 
 SecureBinaryData hd::Leaf::getPublicKeyFor(const bs::Address &addr)
 {
    auto idPair = accountPtr_->getAssetIDPairForAddr(addr.prefixed());
-   auto assetPtr = accountPtr_->getAssetForID(idPair.first);
+   auto assetPtr = accountPtr_->getAssetForID(idPair.first.getSliceRef(4, 8));
    
    auto assetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
    if (assetSingle == nullptr)
@@ -318,7 +318,7 @@ bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
 
       return addrPath;
    }
-   catch (std::exception &e) {
+   catch (std::exception&) {
       return {};
    }
 }
@@ -465,6 +465,12 @@ std::pair<std::shared_ptr<hd::Leaf>, BinaryData> hd::Leaf::deserialize(
       break;
    }
 
+   case SETTLEMENT_LEAF_KEY:
+   {
+      leafPtr = std::make_shared<hd::SettlementLeaf>(netType, logger);
+      break;
+   }
+
    default:
       throw AccountException("unknown leaf type");
    }
@@ -546,6 +552,11 @@ std::vector<bs::Address> hd::Leaf::getIntAddressList() const
 unsigned hd::Leaf::getIntAddressCount() const
 {
    auto& accID = accountPtr_->getInnerAccountID();
+
+   //return 0 if the address account does not have an inner chain
+   if (accountPtr_->getOuterAccountID() == accID)
+      return 0;
+
    auto& accMap = accountPtr_->getAccountMap();
    auto iter = accMap.find(accID);
    if (iter == accMap.end())
@@ -707,17 +718,13 @@ hd::Leaf::indexPathAndTypes(const std::set<BinaryData>& addrSet)
    return result;
 }
 
-std::shared_ptr<AssetEntry_BIP32Root> hd::Leaf::getRootAsset() const
+std::shared_ptr<AssetEntry> hd::Leaf::getRootAsset() const
 {
    if (accountPtr_ == nullptr)
       throw AccountException("null account ptr");
    
    auto rootPtr = accountPtr_->getOutterAssetRoot();
-   auto rootSingle = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(rootPtr);
-   if (rootSingle == nullptr)
-      throw AccountException("unexpected root ptr type");
-
-   return rootSingle;
+   return rootPtr;
 }
 
 void hd::Leaf::readMetaData()
@@ -774,4 +781,59 @@ std::shared_ptr<hd::Leaf> hd::AuthLeaf::getCopy(
    leafCopy->init(wltPtr, getRootId());
 
    return leafCopy;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BinaryData hd::SettlementLeaf::serialize() const
+{
+   BinaryWriter bw;
+
+   // format revision - should always be <= 10
+   bw.put_uint32_t(2);
+
+   bw.put_uint32_t(SETTLEMENT_LEAF_KEY);
+
+   //address account id
+   auto&& rootID = getRootId();
+   bw.put_var_int(rootID.getSize());
+   bw.put_BinaryData(rootID);
+
+   //path
+   bw.put_var_int(path_.length());
+   for (unsigned i = 0; i < path_.length(); i++)
+      bw.put_uint32_t(path_.get(i));
+
+   //size wrapper
+   BinaryWriter finalBW;
+   finalBW.put_var_int(bw.getSize());
+   finalBW.put_BinaryData(bw.getData());
+   return finalBW.getData();
+}
+
+unsigned hd::SettlementLeaf::addSettlementID(const SecureBinaryData& id)
+{
+   auto assetAcc = std::dynamic_pointer_cast<AssetAccount_ECDH>(
+      accountPtr_->getOuterAccount());
+   if (assetAcc == nullptr)
+      throw AccountException("unexpected settlement asset account type");
+
+   return assetAcc->addSalt(id);
+}
+
+unsigned hd::SettlementLeaf::getIndexForSettlementID(const SecureBinaryData& id) const
+{
+   try
+   {
+      auto accountPtr = accountPtr_->getOuterAccount();
+      auto accountEcdh = std::dynamic_pointer_cast<AssetAccount_ECDH>(accountPtr);
+      if (accountEcdh == nullptr)
+         throw AccountException("unexpected account type");
+
+      return accountEcdh->getSaltIndex(id);
+   }
+   catch(DerivationSchemeException&)
+   {}
+
+   return UINT32_MAX;
 }

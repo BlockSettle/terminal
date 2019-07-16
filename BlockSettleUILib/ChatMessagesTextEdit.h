@@ -73,6 +73,7 @@ signals:
    void rowsInserted();
    void userHaveNewMessageChanged(const std::string &userId, const bool &haveNewMessage, const bool &isInCurrentChat);
    void sendFriendRequest(const std::string &userID);
+   void addContactRequired(const QString &userId);
 
 protected:
    enum class Column {
@@ -102,6 +103,7 @@ private slots:
    void copyLinkLocationActionTriggered();
    void selectAllActionTriggered();
    void onTextChanged();
+   void onUserUrlOpened(const QUrl &url);
 
 private:
    //using MessagesHistory = std::vector<std::shared_ptr<Chat::Data_Message>>;

@@ -1348,7 +1348,8 @@ QDialog {
 
 QDialogButtonBox QPushButton, QDialogButtonBox QToolButton, QDialogButtonBox *[buttonImportant="true"], QDialogButtonBox *[buttonSuccess="true"], QDialogButtonBox *[buttonWarning="true"] {
   min-width: 65px;
-  padding: 10px 5px; }
+  padding: 10px 5px;
+  qproperty-icon: none; }
 
 QDialog {
   background-color: #1c2835;

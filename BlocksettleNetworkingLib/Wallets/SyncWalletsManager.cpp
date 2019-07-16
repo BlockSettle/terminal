@@ -650,28 +650,33 @@ bool WalletsManager::deleteWallet(HDWalletPtr wallet)
    return result;
 }
 
-void WalletsManager::registerWallets()
+std::vector<std::string> WalletsManager::registerWallets()
 {
+   std::vector<std::string> result;
    if (!armory_) {
       logger_->warn("[WalletsManager::{}] armory is not set", __func__);
-      return;
+      return result;
    }
    if (empty()) {
       logger_->debug("[WalletsManager::{}] no wallets to register", __func__);
-      return;
+      return result;
    }
    for (auto &it : wallets_) {
       const auto &ids = it.second->registerWallet(armoryPtr_);
+      result.insert(result.end(), ids.begin(), ids.end());
       if (ids.empty()) {
          logger_->error("[{}] failed to register wallet {}", __func__, it.second->walletId());
       }
    }
    if (settlementWallet_) {
       const auto &ids = settlementWallet_->registerWallet(armoryPtr_);
+      result.insert(result.end(), ids.begin(), ids.end());
       if (ids.empty()) {
          logger_->error("[{}] failed to register settlement wallet", __func__);
       }
    }
+
+   return result;
 }
 
 void WalletsManager::unregisterWallets()
