@@ -191,6 +191,11 @@ void OfflineProcessor::removeSignReq(int reqId)
 
 void OfflineProcessor::ProcessSignTX(const bs::core::wallet::TXSignRequest &txReq, const QString &reqFileName)
 {
+   if (txReq.walletId.empty()) {
+      sendSignFailure(tr("Invalid sign transaction request"));
+      return;
+   }
+
    const auto walletsMgr = adapter_->getWalletsManager();
    const auto &wallet = walletsMgr->getWalletById(txReq.walletId);
    if (!wallet) {
