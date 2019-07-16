@@ -1,7 +1,52 @@
 {
-   "latest_version": "0.18.7",
-   "release_date": "10 Jul 2019",
+   "latest_version": "0.19.0",
+   "release_date": "15 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.19.0",
+         "previous_version": "0.18.9",
+         "release_date": "15 Jul 2019",
+         "release_type": "prod",
+         "improvements": [
+            "Open channel when adding to contacts",
+            "Settlement wallets"
+         ],
+         "bug_fixes": [],
+         "revision": "a2bd4c60",
+         "common_revision": "e0d7445f"
+      },
+      {
+         "version_string": "0.18.9",
+         "previous_version": "0.18.8",
+         "release_date": "13 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix application startup 2 displays mess",
+            "Fix and simplify transaction details",
+            "Centering Remove Contact dialog",
+            "Wallet registration fixes"
+         ],
+         "bug_fixes": [],
+         "revision": "0ea08909",
+         "common_revision": "52a1e5f3"
+      },
+      {
+         "version_string": "0.18.8",
+         "previous_version": "0.18.7",
+         "release_date": "11 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "CC wallet reimplementation",
+            "Fix bundled vcredist (#304)",
+            "Contact fixes (#1096)",
+            "Decline friend request"
+         ],
+         "bug_fixes": [
+            "Fix user search"
+         ],
+         "revision": "06d582b0",
+         "common_revision": "17673144"
+      },
       {
          "version_string": "0.18.7",
          "previous_version": "0.18.6",
