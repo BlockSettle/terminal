@@ -83,13 +83,20 @@ void RequestReplyCommand::OnDataReceived(const std::string& data)
 {
    if (!replyReceived_) {
       replyReceived_ = true;
-      requestCompleted_->SetEvent();
+      // this event should be set after callback processed
+      // callback result is used as command processing result and returned from GetExecutionResult
+      // but some callbacks might destroy RequestReplyCommand object
+      // so we should make copy of smart pointer
+      auto eventCopy = requestCompleted_;
       if (dropResult_) {
          result_ = true;
       }
       else {
          result_ = replyCallback_(data);
       }
+
+      eventCopy->SetEvent();
+
    } else {
       logger_->error("[RequestReplyCommand::OnDataReceived] reply already received. Ignore data for {}."
          , name_);
