@@ -64,7 +64,7 @@ QuoteRequestsWidget::~QuoteRequestsWidget() = default;
 
 void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
-   , const std::shared_ptr<ApplicationSettings> &appSettings, std::shared_ptr<CelerClient> celerClient)
+   , const std::shared_ptr<ApplicationSettings> &appSettings, std::shared_ptr<BaseCelerClient> celerClient)
 {
    logger_ = logger;
    assetManager_ = assetManager;

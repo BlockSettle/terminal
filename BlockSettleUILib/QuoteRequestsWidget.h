@@ -106,11 +106,11 @@ private:
 
 
 class AssetManager;
-class CelerClient;
+class BaseCelerClient;
 class QuoteRequestsModel;
 class QuoteReqSortModel;
 class RFQBlotterTreeView;
-class CelerClient;
+class BaseCelerClient;
 
 class QuoteRequestsWidget : public QWidget
 {
@@ -123,7 +123,7 @@ public:
    void init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
       , const std::shared_ptr<ApplicationSettings> &appSettings
-      , std::shared_ptr<CelerClient> celerClient);
+      , std::shared_ptr<BaseCelerClient> celerClient);
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
 

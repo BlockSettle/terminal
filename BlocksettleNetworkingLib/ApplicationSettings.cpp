@@ -113,8 +113,6 @@ ApplicationSettings::ApplicationSettings(const QString &appName
    #else
       { envConfiguration,        SettingDef(QLatin1String("envConfiguration"), int(Staging)) },
    #endif
-      { celerHost,               SettingDef(QString()) },
-      { celerPort,               SettingDef(QString()) },
       { mdServerHost,            SettingDef(QString()) },
       { mdServerPort,            SettingDef(QString()) },
       { mdhsHost,                SettingDef(QString()) },
@@ -417,8 +415,6 @@ void ApplicationSettings::SetDefaultSettings(bool toFile)
    reset(customPubBridgeHost, toFile);
    reset(customPubBridgePort, toFile);
 
-   reset(celerHost, toFile);
-   reset(celerPort, toFile);
    reset(launchToTray, toFile);
    reset(minimizeToTray, toFile);
    reset(closeToTray, toFile);
@@ -737,5 +733,19 @@ void ApplicationSettings::selectNetwork()
    default:
       assert(false);
       break;
+   }
+}
+
+bool ApplicationSettings::isAutheidTestEnv() const
+{
+   auto conf = ApplicationSettings::EnvConfiguration(get<int>(ApplicationSettings::envConfiguration));
+
+   switch (conf) {
+      case ApplicationSettings::EnvConfiguration::UAT:
+      case ApplicationSettings::EnvConfiguration::Staging:
+      case ApplicationSettings::EnvConfiguration::Custom:
+         return true;
+      default:
+         return false;
    }
 }

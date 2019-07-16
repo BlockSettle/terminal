@@ -64,7 +64,7 @@ signals:
    void OnNewPMTrade(const bs::network::NewPMTrade& trade);
 
 protected:
-   std::shared_ptr<spdlog::logger>  logger_ = nullptr;
+   std::shared_ptr<spdlog::logger>  logger_;
 
    bool waitingForConnectionDetails_ = false;
 

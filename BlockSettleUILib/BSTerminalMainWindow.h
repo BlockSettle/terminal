@@ -9,10 +9,11 @@
 
 #include "ApplicationSettings.h"
 #include "ArmoryObject.h"
-#include "CelerClient.h"
+#include "CelerClientProxy.h"
 #include "QWalletInfo.h"
 #include "SignContainer.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "BsClient.h"
 
 namespace Ui {
     class BSTerminalMainWindow;
@@ -37,9 +38,10 @@ class BSMarketDataProvider;
 class BSTerminalSplashScreen;
 class CCFileManager;
 class CCPortfolioModel;
-class CelerClient;
+class BaseCelerClient;
 class ConnectionManager;
 class QSystemTrayIcon;
+class LoginWindow;
 class RequestReplyCommand;
 class StatusBarView;
 class StatusViewBlockListener;
@@ -150,7 +152,7 @@ private:
    std::shared_ptr<TransactionsViewModel>    transactionsModel_;
    std::shared_ptr<CCPortfolioModel>         portfolioModel_;
    std::shared_ptr<ConnectionManager>        connectionManager_;
-   std::shared_ptr<CelerClient>              celerConnection_;
+   std::shared_ptr<CelerClientProxy>         celerConnection_;
    std::shared_ptr<BSMarketDataProvider>     mdProvider_;
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
@@ -208,6 +210,8 @@ private slots:
 
    void onMDConnectionDetailsRequired();
 
+   void onBsConnectionFailed();
+
 protected:
    void closeEvent(QCloseEvent* event) override;
    void changeEvent(QEvent* e) override;
@@ -226,11 +230,13 @@ private:
    bool isUserLoggedIn() const;
    bool isArmoryConnected() const;
 
-   void loginToCeler(const std::string& username, const std::string& password);
+   void loginToCeler(const std::string& username);
 
    bool goOnlineArmory() const;
 
    void InitWidgets();
+
+   void createBsClient();
 
 private:
    QString           loginButtonText_;
@@ -265,6 +271,8 @@ private:
       BSTerminalMainWindow *parent_;
    };
    std::unique_ptr<MainWinACT>   act_;
+
+   std::unique_ptr<BsClient> bsClient_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

@@ -37,6 +37,7 @@ CelerMessage CelerLoginSequence::sendLoginRequest()
 {
    LoginRequest loginRequest;
 
+   // This message will be replaced on BsProxy but we still need to do whole login sequence as usual
    loginRequest.set_username(username_);
    loginRequest.set_password(password_);
 

@@ -20,7 +20,7 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
       , const std::shared_ptr<AssetManager>& assetManager
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &signContainer
-      , std::shared_ptr<CelerClient> celerClient
+      , std::shared_ptr<BaseCelerClient> celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent)
@@ -30,7 +30,7 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
 {
    ui_->setupUi(this);
 
-   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+   connect(celerClient.get(), &BaseCelerClient::OnConnectionClosed,
       this, &DealerXBTSettlementDialog::reject);
 
    connectToProgressBar(ui_->progressBar, ui_->labelTimeLeft);

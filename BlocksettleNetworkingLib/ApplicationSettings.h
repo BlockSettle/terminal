@@ -64,8 +64,6 @@ public:
       customPubBridgePort,
       pubBridgePubKey,
       envConfiguration,
-      celerHost,
-      celerPort,
       mdServerHost,
       mdServerPort,
       mdhsHost,
@@ -184,6 +182,8 @@ public:
    std::string pubBridgePort() const;
 
    void selectNetwork();
+
+   bool isAutheidTestEnv() const;
 
 signals:
    void settingChanged(int setting, QVariant value);

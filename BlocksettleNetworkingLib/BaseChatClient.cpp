@@ -50,7 +50,7 @@ void BaseChatClient::OnDataReceived(const std::string& data)
       return;
    }
 
-   logger_->debug("[BaseChatClient::{}] recv: \n{}", __func__, ProtobufUtils::toJson(*response));
+   SPDLOG_LOGGER_DEBUG(logger_, "recv: {}", ProtobufUtils::toJsonCompact(*response));
 
    // Process on main thread because otherwise ChatDB could crash
    QMetaObject::invokeMethod(this, [this, response] {
@@ -205,7 +205,7 @@ void BaseChatClient::onCreateOutgoingContact(const std::string &contactId)
 
 bool BaseChatClient::sendRequest(const Chat::Request& request)
 {
-   logger_->debug("[BaseChatClient::{}] send: \n{}", __func__, ProtobufUtils::toJson(request));
+   SPDLOG_LOGGER_DEBUG(logger_, "send: {}", ProtobufUtils::toJsonCompact(request));
 
    if (!connection_->isActive()) {
       logger_->error("[BaseChatClient::{}] Connection is not alive!", __func__);

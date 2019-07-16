@@ -21,7 +21,7 @@ namespace bs {
 }
 
 class MarketDataProvider;
-class CelerClient;
+class BaseCelerClient;
 
 class AssetManager : public QObject
 {
@@ -31,7 +31,7 @@ public:
    AssetManager(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<MarketDataProvider>& mdProvider
-      , const std::shared_ptr<CelerClient>& celerClient);
+      , const std::shared_ptr<BaseCelerClient>& celerClient);
    ~AssetManager() = default;
 
    virtual void init();
@@ -91,7 +91,7 @@ protected:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<MarketDataProvider>    mdProvider_;
-   std::shared_ptr<CelerClient>           celerClient_;
+   std::shared_ptr<BaseCelerClient>           celerClient_;
 
    bool     securitiesReceived_ = false;
    std::vector<std::string>   currencies_;

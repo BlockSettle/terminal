@@ -46,10 +46,10 @@ RequestingQuoteWidget::~RequestingQuoteWidget()
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
-void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<CelerClient> celerClient) {
+void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<BaseCelerClient> celerClient) {
    celerClient_ = celerClient;
 
-   connect(celerClient_.get(), &CelerClient::OnConnectionClosed,
+   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed,
       this, &RequestingQuoteWidget::onCelerDisconnected);
 }
 

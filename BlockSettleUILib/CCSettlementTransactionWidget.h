@@ -20,7 +20,7 @@ namespace spdlog {
    class logger;
 }
 class ApplicationSettings;
-class CelerClient;
+class BaseCelerClient;
 class WalletsManager;
 class ReqCCSettlementContainer;
 class ConnectionManager;
@@ -36,7 +36,7 @@ Q_OBJECT
 
 public:
    CCSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<CelerClient> &
+      , const std::shared_ptr<BaseCelerClient> &
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<ReqCCSettlementContainer> &
       , const std::shared_ptr<ConnectionManager> &connectionManager

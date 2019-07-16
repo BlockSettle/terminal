@@ -1,12 +1,9 @@
 #ifndef __AUTH_EID_CLIENT_H__
 #define __AUTH_EID_CLIENT_H__
 
-#include <QObject>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-
 #include <functional>
-
+#include <QObject>
+#include <QNetworkReply>
 #include "EncryptionUtils.h"
 #include "autheid_utils.h"
 
@@ -20,15 +17,16 @@ namespace autheid {
    }
 }
 
-class ApplicationSettings;
 class QNetworkReply;
-class ConnectionManager;
+class QNetworkAccessManager;
 
 class AutheIDClient : public QObject
 {
    Q_OBJECT
 
 public:
+   using AuthKeys = std::pair<autheid::PrivateKey, autheid::PublicKey>;
+
    // Keep in sync with autheid::rp::Serialization
    enum class Serialization
    {
@@ -96,7 +94,8 @@ public:
       Timeout,
       Cancelled,
       NotAuthenticated,
-      ServerError
+      ServerError,
+      NetworkError,
    };
    Q_ENUM(ErrorType)
 
@@ -140,23 +139,26 @@ public:
    // OCSP must be valid at the moment when request was signed (`finished` timepoint).
    static SignVerifyStatus verifySignature(const SignResult &result, AuthEidEnv env);
 
-   // ConnectionManager must live long enough to be able send cancel message
+   // QNetworkAccessManager must live long enough to be able send cancel message
    // (if cancelling request in mobile app is needed)
-   AutheIDClient(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<ConnectionManager> &, QObject *parent = nullptr);
+   AutheIDClient(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<QNetworkAccessManager> &
+      , const AuthKeys &authKeys, bool autheidTestEnv, QObject *parent = nullptr);
    ~AutheIDClient() override;
 
    void start(RequestType requestType, const std::string &email, const std::string &walletId
       , const std::vector<std::string> &knownDeviceIds, int expiration = 120);
    void sign(const SignRequest &request);
-   void authenticate(const std::string &email, int expiration = 120);
+   void authenticate(const std::string &email, int expiration = 120, bool autoRequestResult = true);
    void cancel();
 
+   void requestResult();
+
 signals:
+   void createRequestDone();
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
    void signSuccess(const SignResult &result);
    void authSuccess(const std::string &jwt);
-   void failed(QNetworkReply::NetworkError networkError, ErrorType error);
+   void failed(ErrorType error);
    void userCancelled();
 
 private:
@@ -170,9 +172,8 @@ private:
 
    using ResultCallback = std::function<void(const Result &result)>;
 
-   void requestAuth(const std::string& email, int expiration);
-   void createCreateRequest(const std::string &payload, int expiration);
-   void processCreateReply(const QByteArray &payload, int expiration);
+   void createCreateRequest(const std::string &payload, int expiration, bool autoRequestResult);
+   void processCreateReply(const QByteArray &payload, int expiration, bool autoRequestResult);
    void processResultReply(const QByteArray &payload);
 
    void processNetworkReply(QNetworkReply *, int timeoutSeconds, const ResultCallback &);
@@ -184,13 +185,12 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger> logger_;
-   std::shared_ptr<ApplicationSettings> settings_;
-   std::shared_ptr<ConnectionManager> connectionManager_;
+   std::shared_ptr<QNetworkAccessManager> nam_;
    std::string requestId_;
+   int expiration_{};
    std::string email_;
+   const AuthKeys authKeys_;
    bool resultAuth_{};
-
-   const std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
 
    std::vector<std::string> knownDeviceIds_;
 

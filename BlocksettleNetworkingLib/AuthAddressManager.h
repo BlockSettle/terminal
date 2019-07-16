@@ -34,7 +34,7 @@ namespace bs {
 class AddressVerificator;
 class ApplicationSettings;
 class ArmoryConnection;
-class CelerClient;
+class BaseCelerClient;
 class ConnectionManager;
 class AuthSignManager;
 class RequestReplyCommand;
@@ -62,7 +62,7 @@ public:
       , const std::shared_ptr<AuthSignManager> &
       , const std::shared_ptr<SignContainer> &);
    void ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<CelerClient> &);
+      , const std::shared_ptr<BaseCelerClient> &);
 
    size_t GetAddressCount();
    bs::Address GetAddress(size_t index);
@@ -172,7 +172,7 @@ protected:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
-   std::shared_ptr<CelerClient>           celerClient_;
+   std::shared_ptr<BaseCelerClient>           celerClient_;
    std::shared_ptr<AddressVerificator>    addressVerificator_;
 
    std::map<int, std::unique_ptr<RequestReplyCommand>>  activeCommands_;

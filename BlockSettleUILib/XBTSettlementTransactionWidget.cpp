@@ -13,7 +13,7 @@
 
 
 XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<CelerClient> &celerClient
+   , const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ReqXBTSettlementContainer> &settlContainer
    , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -38,7 +38,7 @@ XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared
    //connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, [this] { updateAcceptButton(); });
    //connect(ui_->widgetSubmitKeysAuth, &WalletKeysSubmitWidget::keyChanged, [this] { updateAcceptButton(); });
 
-   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+   connect(celerClient.get(), &BaseCelerClient::OnConnectionClosed,
       this, &XBTSettlementTransactionWidget::onCancel);
 
    connect(settlContainer_.get(), &ReqXBTSettlementContainer::DealerVerificationStateChanged

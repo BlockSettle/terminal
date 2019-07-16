@@ -18,7 +18,7 @@ namespace spdlog {
    class logger;
 }
 class ApplicationSettings;
-class CelerClient;
+class BaseCelerClient;
 class ReqXBTSettlementContainer;
 
 
@@ -28,7 +28,7 @@ Q_OBJECT
 
 public:
    XBTSettlementTransactionWidget(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<CelerClient> &
+      , const std::shared_ptr<BaseCelerClient> &
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<ReqXBTSettlementContainer> &
       , const std::shared_ptr<ConnectionManager> &

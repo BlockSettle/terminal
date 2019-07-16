@@ -1,17 +1,18 @@
 #include "AuthSignManager.h"
 
-#include "AuthSignManager.h"
 #include "ApplicationSettings.h"
-#include "CelerClient.h"
-#include "EncryptionUtils.h"
 #include "AutheIDClient.h"
+#include "AuthSignManager.h"
+#include "CelerClient.h"
+#include "ConnectionManager.h"
+#include "EncryptionUtils.h"
 
 #include <spdlog/spdlog.h>
 
 
 AuthSignManager::AuthSignManager(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<ApplicationSettings> &appSettings
-      , const std::shared_ptr<CelerClient> &celerClient
+      , const std::shared_ptr<BaseCelerClient> &celerClient
       , const std::shared_ptr<ConnectionManager> &connectionManager)
    : logger_(logger)
    , appSettings_(appSettings)
@@ -26,7 +27,7 @@ bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, c
    , const SignedCb &onSigned, const SignFailedCb &onSignFailed, int expiration)
 {
    // recreate autheIDClient in case there another request in flight (it should be stopped)
-   autheIDClient_.reset(new AutheIDClient(logger_, appSettings_, connectionManager_));
+   autheIDClient_.reset(new AutheIDClient(logger_, connectionManager_->GetNAM(), appSettings_->GetAuthKeys(), appSettings_->isAutheidTestEnv()));
    connect(autheIDClient_.get(), &AutheIDClient::signSuccess, this, &AuthSignManager::onSignSuccess);
    connect(autheIDClient_.get(), &AutheIDClient::failed, this, &AuthSignManager::onFailed);
 
@@ -44,7 +45,7 @@ bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, c
    return true;
 }
 
-void AuthSignManager::onFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError)
+void AuthSignManager::onFailed(AutheIDClient::ErrorType authError)
 {
    logger_->error("[AuthSignManager] Auth eID failure: {}", AutheIDClient::errorString(authError).toStdString());
    if (onSignFailedCB_) {
