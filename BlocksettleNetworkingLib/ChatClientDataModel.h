@@ -46,6 +46,7 @@ public:
    TreeItem* findChatNode(const std::string& chatId);
    std::vector<std::shared_ptr<Chat::Data>> getAllContacts();
    bool removeContactNode(const std::string& contactId);
+   std::string getContactDisplayName(const std::string& contactId);
 
    //std::string contactId copy required here
    bool removeContactRequestNode(const std::string contactId);
@@ -58,6 +59,7 @@ public:
    void notifyMessageChanged(std::shared_ptr<Chat::Data> message);
    void notifyContactChanged(std::shared_ptr<Chat::Data> contact);
    void setNewMessageMonitor(NewMessageMonitor* monitor);
+   NewMessageMonitor* getNewMessageMonitor() const;
 
    // QAbstractItemModel interface
 public:
