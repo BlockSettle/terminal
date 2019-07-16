@@ -110,8 +110,9 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
    # to remove cmake 3.10 dev warnings
    command.append('-Wno-dev')
 
-   for flag in cmake_flags.split():
-      command.append(flag)
+   if cmake_flags != None:
+      for flag in cmake_flags.split():
+         command.append(flag)
 
    result = subprocess.call(command)
    if result == 0:
