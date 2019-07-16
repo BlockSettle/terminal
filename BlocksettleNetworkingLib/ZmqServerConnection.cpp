@@ -103,6 +103,16 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
       return false;
    }
 
+   for (const std::string &fromAddress : fromAddresses_) {
+      // ZMQ_TCP_ACCEPT_FILTER is deprecated in favor of ZAP API.
+      // But let's use it for now because our future ZMQ usage is not yet clear.
+      int result = zmq_setsockopt(tempDataSocket.get(), ZMQ_TCP_ACCEPT_FILTER, fromAddress.c_str(), fromAddress.size());
+      if (result != 0) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't set ZMQ_TCP_ACCEPT_FILTER for {}", fromAddress);
+         return false;
+      }
+   }
+
    result = zmq_connect(tempMonSocket.get(), monitorConnectionName_.c_str());
    if (result != 0) {
       logger_->error("[{}] failed to connect to monitor {}", __func__
@@ -439,10 +449,15 @@ bool ZmqServerConnection::SetZMQTransport(ZMQTransport transport)
    case ZMQTransport::InprocTransport:
       zmqTransport_ = transport;
       return true;
-   default:
-      logger_->error("[{}] undefined transport", __func__);
-      return false;
    }
+
+   logger_->error("[{}] undefined transport", __func__);
+   return false;
+}
+
+void ZmqServerConnection::setListenFrom(const std::vector<std::string> &fromAddresses)
+{
+   fromAddresses_ = fromAddresses;
 }
 
 bool ZmqServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr &dataSocket)
