@@ -441,7 +441,8 @@ bool CreateTransactionDialog::CreateTransaction()
       QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 
       const qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();
-      const std::string &walletId = transactionData_->getWallet()->walletId();
+      auto rootWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
+      const std::string &walletId = rootWallet ? rootWallet->walletId() : transactionData_->getWallet()->walletId();
       const std::string fileName = fmt::format("{}_{}.bin", walletId, timestamp);
 
       QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));
