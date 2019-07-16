@@ -602,7 +602,8 @@ void ChatClientDataModel::updateNewMessagesFlag()
             if (elem->updateNewItemsFlag()) {
                flag = true;
 
-               bool displayTrayNotification = true;
+               // display notification only for rooms that have flag set
+               bool displayTrayNotification = false;
                auto roomItem = findChatNode(lastMessage_->message().receiver_id());
          
                // get display tray notification flag for room
@@ -636,6 +637,20 @@ void ChatClientDataModel::updateNewMessagesFlag()
    }
 }
 
+std::string ChatClientDataModel::getContactDisplayName(const std::string& contactId)
+{
+   std::string contactName;
+   auto contactItem = findContactItem(contactId);
+   if (contactItem && contactItem->has_contact_record()) {
+      contactName = contactItem->contact_record().display_name();
+   }
+   else {
+      contactName = contactId;
+   }
+
+   return contactName;
+}
+
 void ChatClientDataModel::setModelChangesHandler(ModelChangesHandler *modelChangesHandler)
 {
    modelChangesHandler_ = modelChangesHandler;
@@ -666,4 +681,9 @@ bool ChatClientDataModel::setData(const QModelIndex &index, const QVariant &valu
       default:
          return QAbstractItemModel::setData(index, value, role);
    }
+}
+
+NewMessageMonitor* ChatClientDataModel::getNewMessageMonitor() const
+{
+   return newMessageMonitor_;
 }
