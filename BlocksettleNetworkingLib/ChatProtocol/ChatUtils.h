@@ -1,13 +1,17 @@
 #ifndef CHAT_UTILS_H
 #define CHAT_UTILS_H
 
-#include <spdlog/spdlog.h>
 #include <QString>
 #include <QMetaType>
+
 #include "chat.pb.h"
 #include "ChatCommonTypes.h"
+
+#include <disable_warnings.h>
+#include <spdlog/spdlog.h>
 #include "BinaryData.h"
 #include "SecureBinaryData.h"
+#include <enable_warnings.h>
 
 class BinaryData;
 
