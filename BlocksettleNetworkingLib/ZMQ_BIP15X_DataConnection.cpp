@@ -451,24 +451,13 @@ bool ZmqBIP15XDataConnection::SetZMQTransport(ZMQTransport transport)
 // static
 BinaryData ZmqBIP15XDataConnection::getOwnPubKey(const string &ownKeyFileDir, const string &ownKeyFileName)
 {
-   try {
-      AuthorizedPeers authPeers(ownKeyFileDir, ownKeyFileName);
-      return getOwnPubKey(authPeers);
-   }
-   catch (const std::exception &) { }
-   return {};
+   return ZmqBIP15XServerConnection::getOwnPubKey(ownKeyFileDir, ownKeyFileName);
 }
 
 // static
 BinaryData ZmqBIP15XDataConnection::getOwnPubKey(const AuthorizedPeers &authPeers)
 {
-   try {
-      const auto &pubKey = authPeers.getOwnPublicKey();
-      return BinaryData(pubKey.pubkey, pubKey.compressed
-         ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH);
-   } catch (...) {
-      return {};
-   }
+   return ZmqBIP15XServerConnection::getOwnPubKey(authPeers);
 }
 
 // Kick off the BIP 151 handshake. This is the first function to call once the
