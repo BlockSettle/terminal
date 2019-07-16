@@ -16,7 +16,6 @@
 
 #include "SignerInterfaceListener.h"
 #include "SignerAdapterContainer.h"
-#include "TXInfo.h"
 #include <memory>
 
 
@@ -97,9 +96,6 @@ void SignerInterfaceListener::processData(const std::string &data)
       break;
    case signer::DecryptWalletRequestType:
       onDecryptWalletRequested(packet.data());
-      break;
-   case signer::SignTxRequestType:
-      onSignTxRequested(packet.data());
       break;
    case signer::CancelTxSignType:
       onCancelTx(packet.data(), packet.id());
@@ -200,71 +196,52 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
    bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest);
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
+   bs::hd::WalletInfo *walletInfo = qmlFactory_->createWalletInfo(txInfo->walletId());
+
+   QString notifyTitle;
+   QString notifyMsg = tr("Enter password for %1").arg(walletInfo->name());
+
+
    switch (request.dialogtype()) {
-   case signer::RegularTx:
+   case signer::SignTx:
+   case signer::SignPartialTx:
+      notifyTitle = tr("Sign Transaction");
+      requestPasswordForTx(request.dialogtype(), dialogData, txInfo, walletInfo);
+      break;
+   case signer::SignSettlementTx:
+   case signer::SignSettlementPartialTx:
+      notifyTitle = tr("Sign Settlement Transaction");
+      requestPasswordForSettlementTx(request.dialogtype(), dialogData, txInfo, walletInfo);
       break;
    case signer::CreateAuthLeaf:
+      notifyTitle = tr("Create Auth Leaf");
       requestPasswordForAuthLeaf(dialogData);
       break;
-   case signer::CCSettlementTx:
-      break;
    case signer::CreateHDLeaf:
+      notifyTitle = tr("Create Leaf");
       // FIXME: implement me
       break;
    default:
       break;
    }
+
+   emit qmlFactory_->showTrayNotify(notifyTitle, notifyMsg);
 }
 
-void SignerInterfaceListener::onSignTxRequested(const std::string &data)
-{
-   signer::SignTxRequest req;
-   if (!req.ParseFromString(data)) {
-      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
-      return;
-   }
+//void SignerInterfaceListener::onSignTxRequested(const std::string &data)
+//{
+//   signer::SignTxRequest req;
+//   if (!req.ParseFromString(data)) {
+//      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+//      return;
+//   }
 
-   bs::core::wallet::TXSignRequest txReq = bs::wallet::TXInfo::getCoreSignTxRequest(req);
+//   bs::core::wallet::TXSignRequest txReq = bs::wallet::TXInfo::getCoreSignTxRequest(req);
 
-   QMetaObject::invokeMethod(parent_, [this, txReq, req] {
-      emit parent_->requestPasswordAndSignTx(txReq, QString::fromStdString(req.prompt()));
-   });
-}
-
-void SignerInterfaceListener::requestPasswordForSettlementTx(bs::sync::PasswordDialogData *dialogData)
-{
-
-   signer::SignSettlementTxRequest request;
-   if (!request.ParseFromString(dialogData)) {
-      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
-      return;
-   }
-
-   signer::SignTxRequest txRequest = request.signtxrequest();
-   bs::sync::PasswordDialogData *dialogData = new bs::sync::PasswordDialogData(request.passworddialogdata());
-   QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
-
-   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest);
-   QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
-
-
-   bs::signer::QmlCallbackBase *cb = new bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>([this](int result, const QString &walletId, bs::wallet::QPasswordData *passwordData){
-      signer::DecryptWalletEvent request;
-      request.set_wallet_id(walletId.toStdString());
-      if (passwordData) {
-         request.set_password(passwordData->binaryPassword().toBinStr());
-      }
-      request.set_errorcode(static_cast<uint32_t>(result));
-      send(signer::PasswordReceivedType, request.SerializeAsString());
-   });
-
-
-   qmlBridge_->invokeQmlMethod("createCCSettlementTransactionDialog", cb
-      , QString::fromStdString(txRequest.prompt())
-      , QVariant::fromValue(txInfo)
-      , QVariant::fromValue(dialogData)
-      , QVariant::fromValue(qmlFactory_->createWalletInfo(QString::fromStdString(txRequest.wallet_id()))));
-}
+//   QMetaObject::invokeMethod(parent_, [this, txReq, req] {
+//      emit parent_->requestPasswordAndSignTx(txReq, QString::fromStdString(req.prompt()));
+//   });
+//}
 
 void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::RequestId reqId)
 {
@@ -611,6 +588,54 @@ void SignerInterfaceListener::onTerminalHandshakeFailed(const std::string &data)
    }
 
    emit parent_->terminalHandshakeFailed(evt.peeraddress());
+}
+
+void SignerInterfaceListener::requestPasswordForTx(signer::PasswordDialogType reqType
+   , bs::sync::PasswordDialogData *dialogData, bs::wallet::TXInfo *txInfo, bs::hd::WalletInfo *walletInfo)
+{
+   bs::signer::QmlCallbackBase *cb = new bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>
+         ([this](int result, const QString &walletId, bs::wallet::QPasswordData *passwordData){
+      signer::DecryptWalletEvent request;
+      request.set_wallet_id(walletId.toStdString());
+      if (passwordData) {
+         request.set_password(passwordData->binaryPassword().toBinStr());
+      }
+      request.set_errorcode(static_cast<uint32_t>(result));
+      send(signer::PasswordReceivedType, request.SerializeAsString());
+   });
+
+   bool partial = (reqType == signer::SignPartialTx);
+   QString prompt = (partial ? tr("Outgoing Partial Transaction") : tr("Outgoing Transaction"));
+
+   qmlBridge_->invokeQmlMethod("createTxSignDialog", cb
+      , prompt
+      , QVariant::fromValue(txInfo)
+      , QVariant::fromValue(dialogData)
+      , QVariant::fromValue(walletInfo));
+}
+
+void SignerInterfaceListener::requestPasswordForSettlementTx(signer::PasswordDialogType reqType
+   , bs::sync::PasswordDialogData *dialogData, bs::wallet::TXInfo *txInfo, bs::hd::WalletInfo *walletInfo)
+{
+   bs::signer::QmlCallbackBase *cb = new bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>
+         ([this](int result, const QString &walletId, bs::wallet::QPasswordData *passwordData){
+      signer::DecryptWalletEvent request;
+      request.set_wallet_id(walletId.toStdString());
+      if (passwordData) {
+         request.set_password(passwordData->binaryPassword().toBinStr());
+      }
+      request.set_errorcode(static_cast<uint32_t>(result));
+      send(signer::PasswordReceivedType, request.SerializeAsString());
+   });
+
+   bool partial = (reqType == signer::SignSettlementPartialTx);
+   QString prompt = (partial ? tr("Outgoing Partial Transaction") : tr("Outgoing Transaction"));
+
+   qmlBridge_->invokeQmlMethod("createCCSettlementTransactionDialog", cb
+      , prompt
+      , QVariant::fromValue(txInfo)
+      , QVariant::fromValue(dialogData)
+      , QVariant::fromValue(walletInfo));
 }
 
 void SignerInterfaceListener::requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData)

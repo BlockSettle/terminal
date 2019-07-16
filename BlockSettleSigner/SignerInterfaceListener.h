@@ -8,6 +8,8 @@
 #include "DataConnectionListener.h"
 #include "QmlBridge.h"
 #include "QmlFactory.h"
+#include "TXInfo.h"
+
 #include "bs_signer.pb.h"
 
 #include <functional>
@@ -91,7 +93,7 @@ private:
    void onReady(const std::string &data);
    void onPeerConnected(const std::string &data, bool connected);
    void onDecryptWalletRequested(const std::string &data);
-   void onSignTxRequested(const std::string &data);
+   //void onSignTxRequested(const std::string &data);
    void onTxSigned(const std::string &data, bs::signer::RequestId);
    void onCancelTx(const std::string &data, bs::signer::RequestId);
    void onXbtSpent(const std::string &data);
@@ -110,8 +112,11 @@ private:
    void onUpdateStatus(const std::string &data);
    void onTerminalHandshakeFailed(const std::string &data);
 
+   void requestPasswordForTx(signer::PasswordDialogType reqType, bs::sync::PasswordDialogData *dialogData
+      , bs::wallet::TXInfo *txInfo, bs::hd::WalletInfo *walletInfo);
+   void requestPasswordForSettlementTx(signer::PasswordDialogType reqType, bs::sync::PasswordDialogData *dialogData
+      , bs::wallet::TXInfo *txInfo, bs::hd::WalletInfo *walletInfo);
    void requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData);
-   void requestPasswordForSettlementTx(bs::sync::PasswordDialogData *dialogData);
 
    void shutdown();
 

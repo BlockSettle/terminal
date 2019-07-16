@@ -67,11 +67,6 @@ public:
       return request;
    }
 
-   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override
-   {
-      owner_->sendData(signer::SignTxRequestType, createSignTxRequest(txReq, prompt).SerializeAsString());
-   }
-
    void txSigned(const BinaryData &tx) override
    {
       signer::SignTxEvent evt;

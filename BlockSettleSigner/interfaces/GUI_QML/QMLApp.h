@@ -65,7 +65,7 @@ private slots:
                            , bs::wallet::QPasswordData *passwordData
                            , bool cancelledByUser);
    void onOfflinePassword(const bs::core::wallet::TXSignRequest &);
-   void onPasswordRequested(const bs::core::wallet::TXSignRequest &, const QString &prompt);
+//   void onPasswordRequested(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void onLimitsChanged();
    void onSettingChanged(int);
    void onSysTrayMsgClicked();
@@ -74,10 +74,9 @@ private slots:
    void onCustomDialogRequest(const QString &dialogName, const QVariantMap &data);
    void onTerminalHandshakeFailed(const std::string &peerAddress);
 
+   void showTrayNotify(const QString &title, const QString &msg);
 private:
    void settingsConnections();
-   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
-
    void registerQtTypes();
 
    SignerAdapter  *  adapter_;

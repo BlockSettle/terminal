@@ -125,27 +125,27 @@ ApplicationWindow {
         autoSignPage.storeSettings();
     }
 
-    signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
+   // signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
 
-    function createTxSignDialog(prompt, txInfo, walletInfo) {
-        // called from QMLAppObj::requestPassword
+//    function createTxSignDialog(prompt, txInfo, walletInfo) {
+//        // called from QMLAppObj::requestPassword
 
-        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
-        dlg.walletInfo = walletInfo
-        dlg.prompt = prompt
-        dlg.txInfo = txInfo
+//        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
+//        dlg.walletInfo = walletInfo
+//        dlg.prompt = prompt
+//        dlg.txInfo = txInfo
 
-        dlg.bsAccepted.connect(function() {
-            passwordEntered(walletInfo.walletId, dlg.passwordData, false)
-        })
-        dlg.bsRejected.connect(function() {
-            passwordEntered(walletInfo.walletId, dlg.passwordData, true)
-        })
-        mainWindow.requestActivate()
-        dlg.open()
+//        dlg.bsAccepted.connect(function() {
+//            passwordEntered(walletInfo.walletId, dlg.passwordData, false)
+//        })
+//        dlg.bsRejected.connect(function() {
+//            passwordEntered(walletInfo.walletId, dlg.passwordData, true)
+//        })
+//        mainWindow.requestActivate()
+//        dlg.open()
 
-        dlg.init()
-    }
+//        dlg.init()
+//    }
     function raiseWindow() {
         JsHelper.raiseWindow(mainWindow)
     }
@@ -163,26 +163,6 @@ ApplicationWindow {
 
     function getJsCallback(reqId) {
         return function(argList){ qmlFactory.execJsCallback(reqId, argList)}
-    }
-
-    function test(jsCallback, prompt, txInfo, walletInfo) {
-        // called from QMLAppObj::requestPassword
-
-        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
-        dlg.walletInfo = walletInfo
-        dlg.prompt = prompt
-        dlg.txInfo = txInfo
-
-        dlg.bsAccepted.connect(function() {
-            jsCallback(walletInfo.walletId, dlg.passwordData, false)
-        })
-        dlg.bsRejected.connect(function() {
-            jsCallback(walletInfo.walletId, dlg.passwordData, true)
-        })
-        mainWindow.requestActivate()
-        dlg.open()
-
-        dlg.init()
     }
 
     function invokeQmlMetod(method, cb, val0, val1, val2, val3, val4, val5, val6, val7) {

@@ -81,18 +81,21 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
         onSuccess(passwordData);
         authObject.destroy()
     })
-    authObject.failed.connect(function(errorText) {
-        messageBox(BSMessageBox.Type.Critical
+    authObject.failed.connect(function(errorText) {       
+        console.log("QML requesteIdAuth: authObject.failed")
+        var mb = messageBox(BSMessageBox.Type.Critical
                                      , qsTr("Wallet")
                                      , qsTr("eID request failed with error: \n") + errorText
                                      , qsTr("Wallet Name: %1\nWallet ID: %2")
                                      .arg(walletInfo.name)
                                      .arg(walletInfo.rootId))
 
+        authProgress.setNextChainDialog(mb)
         authProgress.rejectAnimated()
         authObject.destroy()
     })
     authObject.userCancelled.connect(function() {
+        console.log("QML requesteIdAuth: authObject.userCancelled")
         authProgress.rejectAnimated()
         authObject.destroy()
     })
@@ -270,7 +273,7 @@ function prepareLigthModeDialog(dialog) {
         currentDialog.close()
     }
 
-    show()
+    //dialog.show()
     currentDialog = dialog
     if (typeof currentDialog.qmlTitleVisible !== "undefined") {
         currentDialog.qmlTitleVisible = false
@@ -299,6 +302,7 @@ function prepareLigthModeDialog(dialog) {
         mainWindow.height = h
         mainWindow.moveMainWindowToScreenCenter()
     })
+    raiseWindow(mainWindow)
 }
 
 
@@ -364,10 +368,30 @@ function manageEncryptionDialog(data) {
     return dlg
 }
 
-function activateAutoSignDialog(data) {
-    var walletId = data["rootId"]
-    signerSettings.autoSignWallet = walletId
-    signerStatus.activateAutoSign(walletId)
+//function activateAutoSignDialog(data) {
+//    var walletId = data["rootId"]
+//    signerSettings.autoSignWallet = walletId
+//    signerStatus.activateAutoSign(walletId)
+//}
+
+function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
+    var dlg = Qt.createComponent("../BsDialogs/TxSignDialog.qml").createObject(mainWindow)
+    prepareLigthModeDialog(dlg)
+
+    dlg.walletInfo = walletInfo
+    dlg.prompt = prompt
+    dlg.txInfo = txInfo
+    dlg.passwordDialogData = passwordDialogData
+
+    // FIXME: use bs error codes enum in qml
+    dlg.bsAccepted.connect(function() {
+        jsCallback(0, walletInfo.walletId, dlg.passwordData)
+    })
+    dlg.bsRejected.connect(function() {
+        jsCallback(10, walletInfo.walletId, dlg.passwordData)
+    })
+    dlg.open()
+    dlg.init()
 }
 
 function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
@@ -386,26 +410,24 @@ function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, passwor
     dlg.bsRejected.connect(function() {
         jsCallback(10, walletInfo.walletId, dlg.passwordData)
     })
-    mainWindow.requestActivate()
     dlg.open()
-
     dlg.init()
 }
 
 function createPasswordDialogForAuthLeaf(jsCallback, passwordDialogData, walletInfo) {
-    raiseWindow()
-
     var dlg
 
     if (walletInfo.encType === 2) {
-        dlg = JsHelper.requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
+        dlg = requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
             jsCallback(0, walletInfo.walletId, passwordData)
         })
     }
     else if (walletInfo.encType === QPasswordData.Password){
         // FIXME: implement pw enc case
+        dlg = requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
+            jsCallback(0, walletInfo.walletId, passwordData)
+        })
     }
 
     prepareLigthModeDialog(dlg)
-    mainWindow.requestActivate()
 }

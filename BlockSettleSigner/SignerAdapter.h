@@ -92,7 +92,7 @@ public:
 
    // Requests from headless with callbacks - relacement for signals
    // TODO: reimlement requestPasswordAndSignTx, cancelTxSign etc
-   void onSignSettlementTxRequest();
+   //void onSignSettlementTxRequest();
 
    QString headlessPubKey() const;
 
@@ -104,7 +104,7 @@ signals:
    void headlessBindUpdated(bool success) const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
-   void requestPasswordAndSignTx(const bs::core::wallet::TXSignRequest &, const QString &prompt);
+//   void requestPasswordAndSignTx(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void cancelTxSign(const BinaryData &txHash);
    void txSigned(const BinaryData &);
    void xbtSpent(const qint64 value, bool autoSign);
