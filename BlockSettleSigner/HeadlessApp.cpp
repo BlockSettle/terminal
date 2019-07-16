@@ -83,12 +83,10 @@ void HeadlessAppObj::start()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
    }
 
-   guiListener_->sendStatusUpdate();
-
    if (!settings_->offline()) {
       startTerminalsProcessing();
    } else {
-      SPDLOG_LOGGER_INFO(logger_, "do not stop listening for terminal connections (offline)");
+      SPDLOG_LOGGER_INFO(logger_, "do not start listening for terminal connections (offline mode selected)");
    }
 }
 
@@ -265,9 +263,13 @@ void HeadlessAppObj::startTerminalsProcessing()
    terminalConnection_ = std::make_unique<ZmqBIP15XServerConnection>(logger_, zmqContext
       , getClientIDKeys, ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
-   terminalConnection_->setLocalHeartbeatInterval();
 
+   terminalConnection_->setLocalHeartbeatInterval();
+   if (!settings_->acceptFrom().empty()) {
+      terminalConnection_->setListenFrom({settings_->acceptFrom()});
+   }
    terminalListener_->SetLimits(settings_->limits());
+
    terminalListener_->resetConnection(terminalConnection_.get());
 
    bool result = terminalConnection_->BindConnection(settings_->listenAddress()
@@ -284,7 +286,6 @@ void HeadlessAppObj::startTerminalsProcessing()
    }
 
    signerBindStatus_ = result ? bs::signer::BindStatus::Succeed : bs::signer::BindStatus::Failed;
-   guiListener_->sendStatusUpdate();
 }
 
 void HeadlessAppObj::stopTerminalsProcessing()
@@ -299,6 +300,8 @@ void HeadlessAppObj::stopTerminalsProcessing()
    terminalListener_->disconnect();
    terminalConnection_.reset();
    terminalListener_->resetConnection(nullptr);
+
+   signerBindStatus_ = bs::signer::BindStatus::Inactive;
 }
 
 ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
@@ -412,11 +415,13 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
    const std::string prevListenAddress = settings_->listenAddress();
    const std::string prevListenPort = settings_->listenPort();
    const auto prevTrustedTerminals = settings_->trustedTerminals();
+   const std::string prevListenFrom = settings_->acceptFrom();
 
    settings_->update(settings);
 
    const bool needReconnect = prevOffline != settings_->offline()
          || prevListenAddress != settings_->listenAddress()
+         || prevListenFrom != settings_->acceptFrom()
          || prevListenPort != settings_->listenPort();
 
    const auto trustedTerminals = settings_->trustedTerminals();
@@ -459,5 +464,7 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
       if (!settings_->offline()) {
          startTerminalsProcessing();
       }
+
+      guiListener_->sendStatusUpdate();
    }
 }

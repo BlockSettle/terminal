@@ -155,14 +155,15 @@ void QMLAppObj::onConnectionError()
                              , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
 }
 
-void QMLAppObj::onHeadlessBindUpdated(bool success)
+void QMLAppObj::onHeadlessBindUpdated(bs::signer::BindStatus status)
 {
-   if (!success) {
+   if (status == bs::signer::BindStatus::Failed) {
       QMetaObject::invokeMethod(rootObj_, "showError"
          , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
    }
 
-   statusUpdater_->setSocketOk(success);
+   // bs::signer::BindStatus::Inactive is OK status too
+   statusUpdater_->setSocketOk(status != bs::signer::BindStatus::Failed);
 }
 
 void QMLAppObj::onWalletsSynced()
@@ -287,7 +288,7 @@ void QMLAppObj::onPasswordAccepted(const QString &walletId
       , cancelledByUser ? bs::error::ErrorCode::TxCanceled : bs::error::ErrorCode::NoError
       , passwordData->password);
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
-      offlineProc_->passwordEntered(walletId.toStdString(), passwordData->password);
+      offlineProc_->passwordEntered(walletId.toStdString(), passwordData->password, cancelledByUser);
       offlinePasswordRequests_.erase(walletId.toStdString());
    }
 }
@@ -336,7 +337,7 @@ void QMLAppObj::requestPasswordForSigningTx(const bs::core::wallet::TXSignReques
    }
    else {
       logger_->error("Wallet {} not found", txReq.walletId);
-      emit offlineProc_->signFailure();
+      emit offlineProc_->signFailure(tr("Wallet %1 not found").arg(QString::fromStdString(txReq.walletId)));
    }
 }
 
