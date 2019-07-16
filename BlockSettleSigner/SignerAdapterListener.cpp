@@ -737,5 +737,8 @@ void SignerAdapterListener::shutdownIfNeeded()
 
 bool SignerAdapterListener::sendReady()
 {
+   // Notify GUI about bind status
+   sendStatusUpdate();
+
    return sendData(signer::HeadlessReadyType, {});
 }

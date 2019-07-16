@@ -155,14 +155,15 @@ void QMLAppObj::onConnectionError()
                              , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
 }
 
-void QMLAppObj::onHeadlessBindUpdated(bool success)
+void QMLAppObj::onHeadlessBindUpdated(bs::signer::BindStatus status)
 {
-   if (!success) {
+   if (status == bs::signer::BindStatus::Failed) {
       QMetaObject::invokeMethod(rootObj_, "showError"
          , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
    }
 
-   statusUpdater_->setSocketOk(success);
+   // bs::signer::BindStatus::Inactive is OK status too
+   statusUpdater_->setSocketOk(status != bs::signer::BindStatus::Failed);
 }
 
 void QMLAppObj::onWalletsSynced()
