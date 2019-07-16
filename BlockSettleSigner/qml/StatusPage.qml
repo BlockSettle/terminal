@@ -5,7 +5,9 @@ import Qt.labs.platform 1.1
 import com.blocksettle.OfflineProc 1.0
 
 import "StyledControls"
+import "BsControls"
 import "BsStyles"
+import "js/helper.js" as JsHelper
 
 Item {
     id: view
@@ -253,11 +255,17 @@ Item {
 
     Connections {
         target: offlineProc
-        onSignSuccess: {
-            ibSuccess.displayMessage(qsTr("Offline request successfully signed"))
+        onSignSuccess: function(filePath) {
+            JsHelper.messageBox(BSMessageBox.Type.Success
+                , qsTr("Offline Transaction")
+                , qsTr("Transaction was succesfully signed")
+                , qsTr("Saved to %1").arg(filePath))
         }
-        onSignFailure: {
-            ibFailure.displayMessage(qsTr("Failed to sign offline request - check log for details"))
+        onSignFailure: function(errorMsg) {
+            JsHelper.messageBox(BSMessageBox.Type.Critical
+                , qsTr("Offline Transaction")
+                , qsTr("Failed to sign transaction")
+                , errorMsg)
         }
     }
 }

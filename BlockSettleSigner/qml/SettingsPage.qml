@@ -181,11 +181,11 @@ Item {
                 id: gridNetwork
 
                 CustomLabel {
-                    text: qsTr("Listen IP address")
+                    text: qsTr("Accept connections from")
                     Layout.fillWidth: true
                 }
                 CustomTextInput {
-                    placeholderText: "0.0.0.0"
+                    placeholderText: "0.0.0.0/0"
 
                     Layout.minimumWidth: 440
                     Layout.preferredWidth: 440
@@ -193,15 +193,17 @@ Item {
                     Layout.alignment: Qt.AlignRight
 
                     Layout.rightMargin: 6
-                    text: signerSettings.listenAddress
+                    text: signerSettings.acceptFrom
                     selectByMouse: true
-                    id: listenAddress
-                    validator: RegExpValidator {
-                        regExp: /^((?:[0-1]?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])\.){0,3}(?:[0-1]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$/
-                    }
+                    id: acceptFrom
                     onEditingFinished: {
-                        signerSettings.listenAddress = text
+                        signerSettings.acceptFrom = text
                     }
+
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 10000
+                    ToolTip.text: qsTr("Set IP address or subnet (in CIDR notation) that will be able to connect to the signer.\n\nExamples:\nLocal host only: 127.0.0.1\nFrom some LAN: 192.168.1.0/24\nAnybody (default): 0.0.0.0/0")
                 }
 
                 CustomLabel {
@@ -495,8 +497,8 @@ Item {
         if (signerSettings.listenPort !== listenPort.text) {
             signerSettings.listenPort = listenPort.text
         }
-        if (signerSettings.listenAddress !== listenAddress.text) {
-            signerSettings.listenAddress = listenAddress.text
+        if (signerSettings.acceptFrom !== acceptFrom.text) {
+            signerSettings.acceptFrom = acceptFrom.text
         }
     }
 }

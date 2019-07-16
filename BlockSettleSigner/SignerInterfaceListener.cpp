@@ -563,13 +563,7 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
       return;
    }
 
-   if (evt.signer_bind_status() == signer::BindFailed) {
-      emit parent_->headlessBindUpdated(false);
-   }
-
-   if (evt.signer_bind_status() == signer::BindSucceed) {
-      emit parent_->headlessBindUpdated(true);
-   }
+   emit parent_->headlessBindUpdated(bs::signer::BindStatus(evt.signer_bind_status()));
 }
 
 void SignerInterfaceListener::onTerminalHandshakeFailed(const std::string &data)
