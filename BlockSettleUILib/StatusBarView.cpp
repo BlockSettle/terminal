@@ -80,10 +80,13 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    connect(celerClient.get(), &BaseCelerClient::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
    connect(celerClient.get(), &BaseCelerClient::OnConnectionError, this, &StatusBarView::onConnectionError);
 
-   // connected are not used here because we wait for authenticated signal instead
-   // disconnected are not used here because onContainerError should be always called
-   connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
-   connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
+   // container might be null if user rejects remote signer key
+   if (container) {
+      // connected are not used here because we wait for authenticated signal instead
+      // disconnected are not used here because onContainerError should be always called
+      connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
+      connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
+   }
 
    onArmoryStateChanged(armory_->state());
    onConnectionClosed();
