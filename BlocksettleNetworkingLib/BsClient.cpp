@@ -3,7 +3,6 @@
 #include <QTimer>
 #include "ProtobufUtils.h"
 #include "ZMQ_BIP15X_DataConnection.h"
-#include "LoggerHelpers.h"
 #include "bs_proxy.pb.h"
 
 using namespace Blocksettle::Communication::Proxy;
@@ -28,9 +27,9 @@ BsClient::BsClient(const std::shared_ptr<spdlog::logger> &logger
       params_.newServerKeyCallback(d);
    });
 
-   // This should not ever fail normally
+   // This should not ever fail
    bool result = connection_->openConnection(params_.connectAddress, std::to_string(params_.connectPort), this);
-   BS_ASSERT_RETURN(logger, result);
+   assert(result);
 }
 
 BsClient::~BsClient()

@@ -8,7 +8,6 @@
 #include "ConnectionManager.h"
 #include "DataConnection.h"
 #include "DataConnectionListener.h"
-#include "LoggerHelpers.h"
 #include "StringUtils.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 #include "bs_proxy.pb.h"
@@ -122,8 +121,14 @@ void BsProxy::onProxyDataFromClient(const std::string &clientId, const std::stri
 
    QMetaObject::invokeMethod(this, [this, clientId, request] {
       auto client = findClient(clientId);
-      BS_ASSERT_RETURN(logger_, client);
-      BS_VERIFY_RETURN(logger_, client->state != State::Closed);
+      // Data must be available because we create client's data on connect event
+      // (and destroy it on only on disconnect event).
+      assert(client);
+
+      if (client->state == State::Closed) {
+         SPDLOG_LOGGER_ERROR(logger_, "skip data processing from closed channel for {}", bs::toHex(clientId));
+         return;
+      }
 
       switch (request->data_case()) {
          case Request::kStartLogin:
@@ -177,8 +182,16 @@ void BsProxy::onCelerDataReceived(const std::string &clientId, const std::string
 {
    QMetaObject::invokeMethod(this, [this, clientId, data] {
       auto client = findClient(clientId);
-      BS_ASSERT_RETURN(logger_, client);
-      BS_VERIFY_RETURN(logger_, client->state == State::LoggedIn);
+      if (!client) {
+         // This is very unlikely but perhaps possible
+         SPDLOG_LOGGER_ERROR(logger_, "can't process message from Celer because client is already disconnected");
+         return;
+      }
+
+      if (client->state != State::LoggedIn) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected message from Celer");
+         return;
+      }
 
       com::celertech::baseserver::communication::protobuf::ProtobufMessage celerMsg;
 
@@ -224,7 +237,10 @@ void BsProxy::onCelerError(const std::string &clientId, DataConnectionListener::
 void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request_StartLogin &request)
 {
    SPDLOG_LOGGER_INFO(logger_, "process login request from {}", bs::toHex(client->clientId));
-   BS_VERIFY_RETURN(logger_, client->state == State::UnknownClient);
+   if (client->state != State::UnknownClient) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected start login request");
+      return;
+   }
 
    client->autheid = std::make_unique<AutheIDClient>(logger_, nam_, AutheIDClient::AuthKeys{}, params_.autheidTestEnv, this);
 
@@ -234,7 +250,10 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
 
       // Data must be still available.
       // if client was disconnected its data should be cleared and autheid was destroyed (and no callback is called).
-      BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidStart);
+      if (client->state != State::WaitAutheidStart) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+         return;
+      }
 
       Response response;
       auto d = response.mutable_start_login();
@@ -246,7 +265,10 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
    connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId] (AutheIDClient::ErrorType error) {
       // Data must be still available.
       // if client was disconnected its data should be cleared and autheid was destroyed (and no callback is called).
-      BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidStart);
+      if (client->state != State::WaitAutheidStart) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+         return;
+      }
 
       Response response;
       auto d = response.mutable_start_login();
@@ -265,7 +287,10 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
 void BsProxy::processCancelLogin(Client *client, int64_t requestId, const Request_CancelLogin &request)
 {
    SPDLOG_LOGGER_INFO(logger_, "process cancel login request from {}", bs::toHex(client->clientId));
-   BS_VERIFY_RETURN(logger_, client->state == State::WaitAutheidResult || client->state == State::WaitClientGetResult);
+   if (client->state != State::WaitAutheidResult && client->state != State::WaitClientGetResult) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected cancel login request");
+      return;
+   }
 
    // We could safely close connection, terminal will need to start new one if needed
    client->state = State::Closed;
@@ -275,13 +300,20 @@ void BsProxy::processCancelLogin(Client *client, int64_t requestId, const Reques
 void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Request_GetLoginResult &request)
 {
    SPDLOG_LOGGER_INFO(logger_, "process get login result request from {}", bs::toHex(client->clientId));
-   BS_VERIFY_RETURN(logger_, client->state == State::WaitClientGetResult);
+   if (client->state != State::WaitClientGetResult) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected get login result request");
+      return;
+   }
 
    // Need to disconnect `AutheIDClient::failed` signal here because we don't need old callbacks anymore
    client->autheid->disconnect();
 
    connect(client->autheid.get(), &AutheIDClient::authSuccess, this, [this, client, requestId](const std::string &jwt) {
-      BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidResult);
+      if (client->state != State::WaitAutheidResult) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+         return;
+      }
+
       client->state = State::LoggedIn;
 
       Response response;
@@ -302,7 +334,11 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
    });
 
    connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId](AutheIDClient::ErrorType error) {
-      BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidResult);
+      if (client->state != State::WaitAutheidResult) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+         return;
+      }
+
       client->state = State::Closed;
 
       Response response;
@@ -312,7 +348,10 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
    });
 
    connect(client->autheid.get(), &AutheIDClient::userCancelled, this, [this, client, requestId] {
-      BS_ASSERT_RETURN(logger_, client->state == State::WaitAutheidResult);
+      if (client->state != State::WaitAutheidResult) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+         return;
+      }
 
       // Request was cancelled from mobile device.
       // Allow client try login one more time.
@@ -335,7 +374,10 @@ void BsProxy::processLogout(Client *client, int64_t requestId, const Request_Log
 
 void BsProxy::processCeler(BsProxy::Client *client, const Request_Celer &request)
 {
-   BS_VERIFY_RETURN(logger_, client->state == State::LoggedIn);
+   if (client->state != State::LoggedIn) {
+      SPDLOG_LOGGER_ERROR(logger_, "got unexpected Celer message from client");
+      return;
+   }
 
    auto messageType = CelerAPI::CelerMessageType(request.message_type());
    if (!CelerAPI::isValidMessageType(messageType)) {
@@ -356,7 +398,8 @@ void BsProxy::processCeler(BsProxy::Client *client, const Request_Celer &request
    }
 
    std::string fullClassName = CelerAPI::GetMessageClass(messageType);
-   BS_ASSERT_RETURN(logger_, !fullClassName.empty());
+   // CelerAPI::isValidMessageType check at the start must prevent this
+   assert(!fullClassName.empty());
 
    com::celertech::baseserver::communication::protobuf::ProtobufMessage message;
    message.set_protobufclassname(fullClassName);
