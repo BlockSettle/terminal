@@ -96,6 +96,7 @@ public:
 signals:
    void ConfirmContactsNewData(const ChatDataVectorPtr& /*remoteConfirmed*/, const ChatDataVectorPtr& /*remoteKeysUpdate*/, const ChatDataVectorPtr& /*remoteAbsolutelyNew*/);
    void ConfirmUploadNewPublicKey(const std::string&/*oldKey*/, const std::string&/*newKey*/);
+   void ContactRequestApproved(const std::string &userId);
 
 protected:
 

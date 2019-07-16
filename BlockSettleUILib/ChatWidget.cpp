@@ -347,6 +347,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    });
    connect(client_.get(), &ChatClient::ConfirmUploadNewPublicKey, this, &ChatWidget::onConfirmUploadNewPublicKey);
    connect(client_.get(), &ChatClient::ContactChanged, this, &ChatWidget::onContactChanged);
+   connect(client_.get(), &ChatClient::ContactRequestApproved, this, &ChatWidget::onContactRequestApproved);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
@@ -440,6 +441,12 @@ void ChatWidget::onUserClicked(const std::string& userId)
 void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 {
    stateCurrent_->onUsersDeleted(users);
+}
+
+void ChatWidget::onContactRequestApproved(const std::string &userId)
+{
+   ui_->treeViewUsers->setCurrentUserChat(userId);
+   ui_->treeViewUsers->updateCurrentChat();
 }
 
 void ChatWidget::changeState(ChatWidget::State state)
