@@ -37,11 +37,11 @@ public:
 
 signals:
    void requestPassword(const bs::core::wallet::TXSignRequest &);
-   void signSuccess();
-   void signFailure();
+   void signSuccess(const QString &filePath);
+   void signFailure(const QString &errorMsg);
 
 public slots:
-   void passwordEntered(const std::string &walletId, const SecureBinaryData &password);
+   void passwordEntered(const std::string &walletId, const SecureBinaryData &password, bool cancelledByUser);
 
 private:
    struct SignData {
@@ -54,6 +54,7 @@ private:
    void ProcessSignTX(const bs::core::wallet::TXSignRequest &txReq, const QString &reqFN);
    void SignTxRequest(const bs::core::wallet::TXSignRequest &txReq, const QString &reqFN
       , const SecureBinaryData &password = {});
+   void sendSignFailure(const QString &errorMsg);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

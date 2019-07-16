@@ -288,7 +288,7 @@ void QMLAppObj::onPasswordAccepted(const QString &walletId
       , cancelledByUser ? bs::error::ErrorCode::TxCanceled : bs::error::ErrorCode::NoError
       , passwordData->password);
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
-      offlineProc_->passwordEntered(walletId.toStdString(), passwordData->password);
+      offlineProc_->passwordEntered(walletId.toStdString(), passwordData->password, cancelledByUser);
       offlinePasswordRequests_.erase(walletId.toStdString());
    }
 }
@@ -337,7 +337,7 @@ void QMLAppObj::requestPasswordForSigningTx(const bs::core::wallet::TXSignReques
    }
    else {
       logger_->error("Wallet {} not found", txReq.walletId);
-      emit offlineProc_->signFailure();
+      emit offlineProc_->signFailure(tr("Wallet %1 not found").arg(QString::fromStdString(txReq.walletId)));
    }
 }
 
