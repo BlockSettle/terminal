@@ -12,10 +12,6 @@ import "BsDialogs"
 import "js/helper.js" as JsHelper
 
 Item {
-    Component.onCompleted: {
-        qmlFactory.requestHeadlessPubKey()
-    }
-
     Rectangle {
         id: rectHelp
 
