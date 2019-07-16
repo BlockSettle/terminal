@@ -415,6 +415,10 @@ function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, passwor
 }
 
 function createPasswordDialogForAuthLeaf(jsCallback, passwordDialogData, walletInfo) {
+    if (walletInfo.walletId === "") {
+        jsCallback(10, walletInfo.walletId, passwordData)
+    }
+
     var dlg
 
     if (walletInfo.encType === 2) {
@@ -423,8 +427,15 @@ function createPasswordDialogForAuthLeaf(jsCallback, passwordDialogData, walletI
         })
     }
     else if (walletInfo.encType === QPasswordData.Password){
-        // FIXME: implement pw enc case
-        dlg = requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
+        dlg = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
+        dlg.type = BSPasswordInput.Type.Request
+        dlg.open()
+        dlg.bsAccepted.connect(function() {
+            var passwordData = qmlFactory.createPasswordData()
+            passwordData.encType = QPasswordData.Password
+            passwordData.encKey = ""
+            passwordData.textPassword = passwordDialog.enteredPassword
+
             jsCallback(0, walletInfo.walletId, passwordData)
         })
     }

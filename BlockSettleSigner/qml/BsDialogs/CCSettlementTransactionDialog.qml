@@ -20,8 +20,9 @@ CustomTitleDialogWindow {
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
     property QPasswordData passwordData: QPasswordData{}
-    property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
+
+    property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property int addressRowHeight: 24
     //property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
     property int recvAddrHeight: 22
