@@ -228,21 +228,6 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
    emit qmlFactory_->showTrayNotify(notifyTitle, notifyMsg);
 }
 
-//void SignerInterfaceListener::onSignTxRequested(const std::string &data)
-//{
-//   signer::SignTxRequest req;
-//   if (!req.ParseFromString(data)) {
-//      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
-//      return;
-//   }
-
-//   bs::core::wallet::TXSignRequest txReq = bs::wallet::TXInfo::getCoreSignTxRequest(req);
-
-//   QMetaObject::invokeMethod(parent_, [this, txReq, req] {
-//      emit parent_->requestPasswordAndSignTx(txReq, QString::fromStdString(req.prompt()));
-//   });
-//}
-
 void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SignTxEvent evt;

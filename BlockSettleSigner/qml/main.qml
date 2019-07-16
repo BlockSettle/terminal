@@ -125,27 +125,6 @@ ApplicationWindow {
         autoSignPage.storeSettings();
     }
 
-   // signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
-
-//    function createTxSignDialog(prompt, txInfo, walletInfo) {
-//        // called from QMLAppObj::requestPassword
-
-//        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
-//        dlg.walletInfo = walletInfo
-//        dlg.prompt = prompt
-//        dlg.txInfo = txInfo
-
-//        dlg.bsAccepted.connect(function() {
-//            passwordEntered(walletInfo.walletId, dlg.passwordData, false)
-//        })
-//        dlg.bsRejected.connect(function() {
-//            passwordEntered(walletInfo.walletId, dlg.passwordData, true)
-//        })
-//        mainWindow.requestActivate()
-//        dlg.open()
-
-//        dlg.init()
-//    }
     function raiseWindow() {
         JsHelper.raiseWindow(mainWindow)
     }

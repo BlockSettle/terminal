@@ -241,8 +241,6 @@ void QMLAppObj::SetRootObject(QObject *obj)
          QMetaObject::invokeMethod(walletsView, "expandAll");
       }
    });
-//   connect(rootObj_, SIGNAL(passwordEntered(QString, bs::wallet::QPasswordData *, bool)),
-//           this, SLOT(onPasswordAccepted(QString, bs::wallet::QPasswordData *, bool)));
 }
 
 void QMLAppObj::raiseQmlWindow()
@@ -292,27 +290,10 @@ void QMLAppObj::onPasswordAccepted(const QString &walletId
 void QMLAppObj::onOfflinePassword(const bs::core::wallet::TXSignRequest &txReq)
 {
    offlinePasswordRequests_.insert(txReq.walletId);
+
+   // FIXME: reimplement
    //requestPasswordForSigningTx(txReq, {}, false);
 }
-
-//void QMLAppObj::requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
-//{
-//   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txReq);
-//   QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
-
-//   bs::hd::WalletInfo *walletInfo = qmlFactory_.get()->createWalletInfo(txReq.walletId);
-//   if (!walletInfo->walletId().isEmpty()) {
-//      raiseQmlWindow();
-//      QMetaObject::invokeMethod(rootObj_, "createTxSignDialog"
-//                                , Q_ARG(QVariant, prompt)
-//                                , Q_ARG(QVariant, QVariant::fromValue(txInfo))
-//                                , Q_ARG(QVariant, QVariant::fromValue(walletInfo)));
-//   }
-//   else {
-//      logger_->error("Wallet {} not found", txReq.walletId);
-//      emit offlineProc_->signFailure();
-//   }
-//}
 
 void QMLAppObj::onSysTrayMsgClicked()
 {

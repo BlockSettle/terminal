@@ -93,7 +93,6 @@ private:
    void onReady(const std::string &data);
    void onPeerConnected(const std::string &data, bool connected);
    void onDecryptWalletRequested(const std::string &data);
-   //void onSignTxRequested(const std::string &data);
    void onTxSigned(const std::string &data, bs::signer::RequestId);
    void onCancelTx(const std::string &data, bs::signer::RequestId);
    void onXbtSpent(const std::string &data);

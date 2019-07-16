@@ -65,7 +65,6 @@ private slots:
                            , bs::wallet::QPasswordData *passwordData
                            , bool cancelledByUser);
    void onOfflinePassword(const bs::core::wallet::TXSignRequest &);
-//   void onPasswordRequested(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void onLimitsChanged();
    void onSettingChanged(int);
    void onSysTrayMsgClicked();
@@ -105,8 +104,7 @@ private:
    DBusNotification *dbus_;
 #endif // BS_USE_DBUS
 
-   std::unordered_set<std::string>  offlinePasswordRequests_;
-
+   std::unordered_set<std::string> offlinePasswordRequests_;
    std::unordered_set<std::string> lastFailedTerminals_;
 };
 

@@ -368,11 +368,11 @@ function manageEncryptionDialog(data) {
     return dlg
 }
 
-//function activateAutoSignDialog(data) {
-//    var walletId = data["rootId"]
-//    signerSettings.autoSignWallet = walletId
-//    signerStatus.activateAutoSign(walletId)
-//}
+function activateAutoSignDialog(data) {
+    var walletId = data["rootId"]
+    signerSettings.autoSignWallet = walletId
+    signerStatus.activateAutoSign(walletId)
+}
 
 function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
     var dlg = Qt.createComponent("../BsDialogs/TxSignDialog.qml").createObject(mainWindow)
@@ -434,7 +434,7 @@ function createPasswordDialogForAuthLeaf(jsCallback, passwordDialogData, walletI
             var passwordData = qmlFactory.createPasswordData()
             passwordData.encType = QPasswordData.Password
             passwordData.encKey = ""
-            passwordData.textPassword = passwordDialog.enteredPassword
+            passwordData.textPassword = dlg.enteredPassword
 
             jsCallback(0, walletInfo.walletId, passwordData)
         })
