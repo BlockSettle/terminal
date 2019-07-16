@@ -59,7 +59,10 @@ public:
 
    ZmqBIP15XServerConnection* connection() const;
    bs::signer::BindStatus signerBindStatus() const { return signerBindStatus_; }
+   BinaryData signerPubKey() const;
 
+   static std::string getOwnKeyFileDir();
+   static std::string getOwnKeyFileName();
 private:
    void startInterface();
    void startTerminalsProcessing();

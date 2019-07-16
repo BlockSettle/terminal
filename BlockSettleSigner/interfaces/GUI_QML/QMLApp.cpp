@@ -66,6 +66,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
    connect(adapter_, &SignerAdapter::customDialogRequest, this, &QMLAppObj::onCustomDialogRequest);
    connect(adapter_, &SignerAdapter::terminalHandshakeFailed, this, &QMLAppObj::onTerminalHandshakeFailed);
+   connect(adapter_, &SignerAdapter::signerPubKeyUpdated, this, &QMLAppObj::onSignerPubKeyUpdated);
 
    walletsModel_ = new QmlWalletsViewModel(ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
@@ -390,4 +391,9 @@ void QMLAppObj::onTerminalHandshakeFailed(const std::string &peerAddress)
 
    QMetaObject::invokeMethod(rootObj_, "terminalHandshakeFailed"
       , Q_ARG(QVariant, QString::fromStdString(peerAddress)));
+}
+
+void QMLAppObj::onSignerPubKeyUpdated(const BinaryData &pubKey)
+{
+   qmlFactory_->setHeadlessPubKey(QString::fromStdString(pubKey.toHexStr()));
 }

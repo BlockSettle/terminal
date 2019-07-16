@@ -74,6 +74,7 @@ private slots:
    void onCancelSignTx(const BinaryData &txId);
    void onCustomDialogRequest(const QString &dialogName, const QVariantMap &data);
    void onTerminalHandshakeFailed(const std::string &peerAddress);
+   void onSignerPubKeyUpdated(const BinaryData &pubKey);
 
 private:
    void settingsConnections();

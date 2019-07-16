@@ -151,11 +151,13 @@ bool QmlFactory::eventFilter(QObject *object, QEvent *event)
 
 QString QmlFactory::headlessPubKey() const
 {
-    return headlessPubKey_;
+   return headlessPubKey_;
 }
 
 void QmlFactory::setHeadlessPubKey(const QString &headlessPubKey)
 {
-    headlessPubKey_ = headlessPubKey;
-    emit headlessPubKeyChanged();
+   if (headlessPubKey != headlessPubKey_) {
+      headlessPubKey_ = headlessPubKey;
+      emit headlessPubKeyChanged();
+   }
 }
