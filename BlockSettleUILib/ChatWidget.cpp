@@ -234,6 +234,7 @@ public:
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + QString::fromStdString(chat_->currentChat_));
       chat_->ui_->textEditMessages->switchToChat(chat_->currentChat_, true);
       chat_->client_->loadRoomMessagesFromDB(chat_->currentChat_);
+      chat_->updateChat(true);
 
       // load draft
       if (chat_->draftMessages_.contains(roomId)) {

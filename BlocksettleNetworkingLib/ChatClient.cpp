@@ -674,7 +674,10 @@ void ChatClient::loadRoomMessagesFromDB(const std::string& roomId)
             msg = decryptIESMessage(msg);
          }
 
-         model_->insertRoomMessage(msg);
+         auto existingMessage = model_->findMessageItem(roomId, msg->message().id());
+         if (!existingMessage) {
+            model_->insertRoomMessage(msg);
+         }
       }
    }
 }
