@@ -219,7 +219,7 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       break;
    case signer::CreateHDLeaf:
       notifyTitle = tr("Create Leaf");
-      // FIXME: implement me
+      requestPasswordForAuthLeaf(dialogData);
       break;
    default:
       break;
