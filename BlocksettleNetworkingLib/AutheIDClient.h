@@ -147,7 +147,7 @@ public:
 
    void getDeviceKey(RequestType requestType, const std::string &email, const std::string &walletId
       , const std::vector<std::string> &knownDeviceIds, int expiration = 120);
-   void sign(const SignRequest &request);
+   void sign(const SignRequest &request, bool autoRequestResult = true);
    void authenticate(const std::string &email, int expiration = 120, bool autoRequestResult = true);
    void cancel();
 

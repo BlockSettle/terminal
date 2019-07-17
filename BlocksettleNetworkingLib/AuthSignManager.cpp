@@ -23,7 +23,7 @@ AuthSignManager::AuthSignManager(const std::shared_ptr<spdlog::logger> &logger
 
 AuthSignManager::~AuthSignManager() noexcept = default;
 
-bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, const QString &desc
+bool AuthSignManager::sign(const BinaryData &dataToSign, const QString &title, const QString &desc
    , const SignedCb &onSigned, const SignFailedCb &onSignFailed, int expiration)
 {
    // recreate autheIDClient in case there another request in flight (it should be stopped)

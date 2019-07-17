@@ -34,7 +34,7 @@ public:
 
    using SignedCb = std::function<void (const AutheIDClient::SignResult &result)>;
    using SignFailedCb = std::function<void(const QString &)>;
-   bool Sign(const BinaryData &dataToSign, const QString &title, const QString &desc
+   bool sign(const BinaryData &dataToSign, const QString &title, const QString &desc
       , const SignedCb &, const SignFailedCb &cbF = nullptr, int expiration = 30);
 
 private slots:

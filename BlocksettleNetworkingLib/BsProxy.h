@@ -21,10 +21,13 @@ class ZmqContext;
 
 namespace Blocksettle { namespace Communication { namespace Proxy {
 class Request_StartLogin;
-class Request_CancelLogin;
 class Request_GetLoginResult;
+class Request_StartSignAuthAddress;
+class Request_GetSignResult;
+class Request_CancelLogin;
 class Request_Logout;
 class Request_Celer;
+class Request_CancelSign;
 class Response;
 } } }
 
@@ -84,8 +87,8 @@ private:
       std::string email;
 
       // Declare celer listener before celer client itself (it should be destroyed after connection)!
-      std::unique_ptr<BsClientCelerListener> celerListener_;
-      std::shared_ptr<DataConnection> celer_;
+      std::unique_ptr<BsClientCelerListener> celerListener;
+      std::shared_ptr<DataConnection> celer;
    };
 
    void onProxyDataFromClient(const std::string& clientId, const std::string& data);
@@ -98,10 +101,14 @@ private:
    void onCelerError(const std::string& clientId, DataConnectionListener::DataConnectionError errorCode);
 
    void processStartLogin(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_StartLogin &request);
-   void processCancelLogin(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_CancelLogin &request);
    void processGetLoginResult(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_GetLoginResult &request);
-   void processLogout(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_Logout &request);
+   void processStartSignAuthAddress(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_StartSignAuthAddress &request);
+   void processGetSignResult(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_GetSignResult &request);
+
+   void processCancelLogin(Client *client, const Blocksettle::Communication::Proxy::Request_CancelLogin &request);
+   void processLogout(Client *client, const Blocksettle::Communication::Proxy::Request_Logout &request);
    void processCeler(Client *client, const Blocksettle::Communication::Proxy::Request_Celer &request);
+   void processCancelSign(Client *client, const Blocksettle::Communication::Proxy::Request_CancelSign &request);
 
    void sendResponse(Client *client, int64_t requestId, Blocksettle::Communication::Proxy::Response *response);
    void sendMessage(Client *client, Blocksettle::Communication::Proxy::Response *response);

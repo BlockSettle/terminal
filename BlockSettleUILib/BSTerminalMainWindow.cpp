@@ -491,7 +491,7 @@ void BSTerminalMainWindow::LoadWallets()
 void BSTerminalMainWindow::InitAuthManager()
 {
    authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_, cbApprovePuB_);
-   authManager_->init(applicationSettings_, walletsMgr_, authSignManager_, signContainer_);
+   authManager_->init(applicationSettings_, walletsMgr_, signContainer_);
 
    connect(authManager_.get(), &AuthAddressManager::NeedVerify, this, &BSTerminalMainWindow::openAuthDlgVerify);
    connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, [](const QString &addr, const QString &state) {
@@ -1794,4 +1794,6 @@ void BSTerminalMainWindow::createBsClient()
 
    bsClient_ = std::make_unique<BsClient>(logMgr_->logger(), params);
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
+
+   authAddrDlg_->setBsClient(bsClient_.get());
 }

@@ -187,7 +187,10 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
    armory_ = armory;
    connectionManager_ = connectionManager;
 
-   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &WalletsWidget::onTXSigned);
+   // signingContainer_ might be null if user rejects remote signer key
+   if (signingContainer_) {
+      connect(signingContainer_.get(), &SignContainer::TXSigned, this, &WalletsWidget::onTXSigned);
+   }
 
    const auto &defWallet = walletsManager_->getDefaultWallet();
    InitWalletsView(defWallet ? defWallet->walletId() : std::string{});

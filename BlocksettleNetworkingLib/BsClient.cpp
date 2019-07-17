@@ -1,6 +1,7 @@
 #include "BsClient.h"
 
 #include <QTimer>
+#include "Address.h"
 #include "ProtobufUtils.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "bs_proxy.pb.h"
@@ -36,6 +37,12 @@ BsClient::~BsClient()
 {
    // Stop receiving events from DataConnectionListener before BsClient is partially destroyed
    connection_.reset();
+
+   for (const auto &req : activeRequests_) {
+      if (req.second.timeoutCb) {
+         req.second.timeoutCb();
+      }
+   }
 }
 
 void BsClient::startLogin(const std::string &email)
@@ -61,7 +68,7 @@ void BsClient::getLoginResult()
    Request request;
    request.mutable_get_login_result();
 
-   sendRequest(&request, getDefaultAutheidAuthTimeout(), [this] {
+   sendRequest(&request, autheidLoginTimeout(), [this] {
       emit getLoginResultDone(AutheIDClient::NetworkError);
    });
 }
@@ -82,9 +89,53 @@ void BsClient::celerSend(CelerAPI::CelerMessageType messageType, const std::stri
    sendMessage(&request);
 }
 
-std::chrono::seconds BsClient::getDefaultAutheidAuthTimeout()
+void BsClient::signAuthAddress(const bs::Address &address, const BinaryData &invisibleData
+   , const SignStartedCb &startedCb, const BsClient::SignedCb &signedCb, const BsClient::SignFailedCb &failedCb)
+{
+   Request request;
+   auto d = request.mutable_start_sign_auth_address();
+   d->set_address(address.display());
+   d->set_invisible_data(invisibleData.toBinStr());
+
+   auto processCb = [this, signedCb, failedCb, startedCb](const Response &response) {
+      if (!response.has_start_sign_auth_address()) {
+         SPDLOG_LOGGER_ERROR(logger_, "unexpected response from BsProxy, expected StartSignAuthAddress response");
+         failedCb(AutheIDClient::ServerError);
+         return;
+      }
+
+      const auto &d = response.start_sign_auth_address();
+      if (d.error().error_code() != 0) {
+         SPDLOG_LOGGER_ERROR(logger_, "signature request start failed on the server");
+         failedCb(AutheIDClient::ErrorType(d.error().error_code()));
+         return;
+      }
+
+      if (startedCb) {
+         startedCb();
+      }
+
+      // Add some time to be able get timeout error from the server
+      requestSignResult(autheidAuthAddressTimeout() + std::chrono::seconds(3), signedCb, failedCb);
+   };
+
+   auto timeoutCb = [failedCb] {
+      failedCb(AutheIDClient::NetworkError);
+   };
+
+   sendRequest(&request, std::chrono::seconds(10), std::move(timeoutCb), std::move(processCb));
+}
+
+// static
+std::chrono::seconds BsClient::autheidLoginTimeout()
 {
    return std::chrono::seconds(60);
+}
+
+// static
+std::chrono::seconds BsClient::autheidAuthAddressTimeout()
+{
+   return std::chrono::seconds(30);
 }
 
 void BsClient::OnDataReceived(const std::string &data)
@@ -108,6 +159,10 @@ void BsClient::OnDataReceived(const std::string &data)
             return;
          }
 
+         if (it->second.processCb) {
+            it->second.processCb(*response);
+         }
+
          activeRequests_.erase(it);
       }
 
@@ -120,6 +175,10 @@ void BsClient::OnDataReceived(const std::string &data)
             return;
          case Response::kCeler:
             processCeler(response->celer());
+            return;
+         case Response::kStartSignAuthAddress:
+         case Response::kGetSignResult:
+            // Will be handled from processCb
             return;
          case Response::DATA_NOT_SET:
             return;
@@ -147,11 +206,12 @@ void BsClient::OnError(DataConnectionListener::DataConnectionError errorCode)
 }
 
 void BsClient::sendRequest(Request *request, std::chrono::milliseconds timeout
-   , FailedCallback failedCb)
+   , TimeoutCb timeoutCb, ProcessCb processCb)
 {
    const int64_t requestId = newRequestId();
    ActiveRequest activeRequest;
-   activeRequest.failedCb = std::move(failedCb);
+   activeRequest.processCb = std::move(processCb);
+   activeRequest.timeoutCb = std::move(timeoutCb);
    activeRequests_.emplace(requestId, std::move(activeRequest));
 
    QTimer::singleShot(timeout, this, [this, requestId] {
@@ -160,7 +220,7 @@ void BsClient::sendRequest(Request *request, std::chrono::milliseconds timeout
          return;
       }
 
-      it->second.failedCb();
+      it->second.timeoutCb();
       activeRequests_.erase(it);
    });
 
@@ -179,12 +239,12 @@ void BsClient::sendMessage(Request *request)
 
 void BsClient::processStartLogin(const Response_StartLogin &response)
 {
-   emit startLoginDone(AutheIDClient::ErrorType(response.error_code()));
+   emit startLoginDone(AutheIDClient::ErrorType(response.error().error_code()));
 }
 
 void BsClient::processGetLoginResult(const Response_GetLoginResult &response)
 {
-   emit getLoginResultDone(AutheIDClient::ErrorType(response.error_code()));
+   emit getLoginResultDone(AutheIDClient::ErrorType(response.error().error_code()));
 }
 
 void BsClient::processCeler(const Response_Celer &response)
@@ -196,6 +256,42 @@ void BsClient::processCeler(const Response_Celer &response)
    }
 
    emit celerRecv(messageType, response.data());
+}
+
+void BsClient::requestSignResult(std::chrono::seconds timeout
+   , const BsClient::SignedCb &signedCb, const BsClient::SignFailedCb &failedCb)
+{
+   auto successCbWrap = [this, signedCb, failedCb](const Response &response) {
+      if (!response.has_get_sign_result()) {
+         SPDLOG_LOGGER_ERROR(logger_, "unexpected response from BsProxy, expected GetSignResult response");
+         failedCb(AutheIDClient::ServerError);
+         return;
+      }
+
+      const auto &d = response.get_sign_result();
+      if (d.error().error_code() != 0) {
+         SPDLOG_LOGGER_ERROR(logger_, "getting sign response faild on the server");
+         failedCb(AutheIDClient::ErrorType(d.error().error_code()));
+         return;
+      }
+
+      AutheIDClient::SignResult result;
+      result.serialization = AutheIDClient::Serialization::Protobuf;
+      result.data = d.sign_data();
+      result.sign = d.sign();
+      result.certificateClient = d.certificate_client();
+      result.certificateIssuer = d.certificate_issuer();
+      result.ocspResponse = d.ocsp_response();
+      signedCb(result);
+   };
+
+   auto failedCbWrap = [failedCb] {
+      failedCb(AutheIDClient::NetworkError);
+   };
+
+   Request request;
+   request.mutable_get_sign_result();
+   sendRequest(&request, timeout, std::move(failedCbWrap), std::move(successCbWrap));
 }
 
 int64_t BsClient::newRequestId()

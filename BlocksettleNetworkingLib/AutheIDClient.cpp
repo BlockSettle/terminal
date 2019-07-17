@@ -340,7 +340,7 @@ void AutheIDClient::authenticate(const std::string &email, int expiration, bool 
    createCreateRequest(request.SerializeAsString(), expiration, autoRequestResult);
 }
 
-void AutheIDClient::sign(const SignRequest &request)
+void AutheIDClient::sign(const SignRequest &request, bool autoRequestResult)
 {
    assert(!request.email.empty());
    assert(!request.title.empty());
@@ -361,7 +361,7 @@ void AutheIDClient::sign(const SignRequest &request)
    createRequest.set_description(request.description);
    createRequest.set_email(request.email);
 
-   createCreateRequest(createRequest.SerializeAsString(), request.expiration, true);
+   createCreateRequest(createRequest.SerializeAsString(), request.expiration, autoRequestResult);
 
    // Make a copy to check sign result later
    signRequest_ = request;

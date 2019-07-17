@@ -189,7 +189,7 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       emit CCSubmitFailed(QString::fromStdString(address.display()), text);
    };
 
-   return authSignManager_->Sign(requestDataHash, tr("Private Market token")
+   return authSignManager_->sign(requestDataHash, tr("Private Market token")
       , tr("Submitting CC wallet address to receive PM token")
       , cbSigned, cbSignFailed, 90);
 }
