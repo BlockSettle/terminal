@@ -22,7 +22,7 @@ class ZmqContext;
 namespace Blocksettle { namespace Communication { namespace Proxy {
 class Request_StartLogin;
 class Request_GetLoginResult;
-class Request_StartSignAuthAddress;
+class Request_StartSignAddress;
 class Request_GetSignResult;
 class Request_CancelLogin;
 class Request_Logout;
@@ -102,7 +102,7 @@ private:
 
    void processStartLogin(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_StartLogin &request);
    void processGetLoginResult(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_GetLoginResult &request);
-   void processStartSignAuthAddress(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_StartSignAuthAddress &request);
+   void processStartSignAddress(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_StartSignAddress &request);
    void processGetSignResult(Client *client, int64_t requestId, const Blocksettle::Communication::Proxy::Request_GetSignResult &request);
 
    void processCancelLogin(Client *client, const Blocksettle::Communication::Proxy::Request_CancelLogin &request);

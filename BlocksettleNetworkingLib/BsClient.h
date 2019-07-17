@@ -8,6 +8,7 @@
 #include <future>
 #include <spdlog/logger.h>
 #include <QObject>
+#include "Address.h"
 #include "autheid_utils.h"
 #include "AutheIDClient.h"
 #include "CelerMessageMapper.h"
@@ -15,10 +16,6 @@
 
 class ZmqContext;
 class ZmqBIP15XDataConnection;
-
-namespace bs {
-class Address;
-}
 
 namespace Blocksettle { namespace Communication { namespace Proxy {
 class Request;
@@ -57,6 +54,23 @@ public:
    using SignedCb = std::function<void (const AutheIDClient::SignResult &result)>;
    using SignFailedCb = std::function<void(AutheIDClient::ErrorType)>;
 
+   struct SignAddressReq
+   {
+      enum Type
+      {
+         Unknown,
+         AuthAddr,
+         CcAddr,
+      };
+
+      Type type{};
+      bs::Address address;
+      BinaryData invisibleData;
+      SignStartedCb startedCb;
+      SignedCb signedCb;
+      SignFailedCb failedCb;
+   };
+
    BsClient(const std::shared_ptr<spdlog::logger>& logger, const BsClientParams &params
       , QObject *parent = nullptr);
    ~BsClient() override;
@@ -71,11 +85,11 @@ public:
    void logout();
    void celerSend(CelerAPI::CelerMessageType messageType, const std::string &data);
 
-   void signAuthAddress(const bs::Address &address, const BinaryData &invisibleData
-      , const SignStartedCb &startedCb, const SignedCb &signedCb, const SignFailedCb &failedCb);
+   void signAddress(const SignAddressReq &req);
 
    static std::chrono::seconds autheidLoginTimeout();
    static std::chrono::seconds autheidAuthAddressTimeout();
+   static std::chrono::seconds autheidCcAddressTimeout();
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
    void getLoginResultDone(AutheIDClient::ErrorType status);

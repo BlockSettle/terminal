@@ -33,10 +33,14 @@ message Request
         bytes data = 2;
     }
 
-    message StartSignAuthAddress
+    message StartSignAddress
     {
         string address = 1;
+
         bytes invisible_data = 2;
+
+        // BsClient::SignAddressReq::Type as int
+        int32 type = 3;
     }
 
     message CancelSign
@@ -55,7 +59,7 @@ message Request
         // Requests (there are must be some response after some time)
         StartLogin start_login = 10;
         GetLoginResult get_login_result = 11;
-        StartSignAuthAddress start_sign_auth_address = 12;
+        StartSignAddress start_sign_address = 12;
         GetSignResult get_sign_result = 13;
 
         // Messages
@@ -84,7 +88,7 @@ message Response
         bytes data = 2;
     }
 
-    message StartSignAuthAddress
+    message StartSignAddress
     {
         AuthEidError error = 1;
     }
@@ -108,7 +112,7 @@ message Response
         // Responses
         StartLogin start_login = 10;
         GetLoginResult get_login_result = 11;
-        StartSignAuthAddress start_sign_auth_address = 12;
+        StartSignAddress start_sign_address = 12;
         GetSignResult get_sign_result = 13;
 
         // Messages

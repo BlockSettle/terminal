@@ -89,37 +89,39 @@ void BsClient::celerSend(CelerAPI::CelerMessageType messageType, const std::stri
    sendMessage(&request);
 }
 
-void BsClient::signAuthAddress(const bs::Address &address, const BinaryData &invisibleData
-   , const SignStartedCb &startedCb, const BsClient::SignedCb &signedCb, const BsClient::SignFailedCb &failedCb)
+void BsClient::signAddress(const SignAddressReq &req)
 {
-   Request request;
-   auto d = request.mutable_start_sign_auth_address();
-   d->set_address(address.display());
-   d->set_invisible_data(invisibleData.toBinStr());
+   assert(req.type != SignAddressReq::Unknown);
 
-   auto processCb = [this, signedCb, failedCb, startedCb](const Response &response) {
-      if (!response.has_start_sign_auth_address()) {
+   Request request;
+   auto d = request.mutable_start_sign_address();
+   d->set_type(int(req.type));
+   d->set_address(req.address.display());
+   d->set_invisible_data(req.invisibleData.toBinStr());
+
+   auto processCb = [this, req](const Response &response) {
+      if (!response.has_start_sign_address()) {
          SPDLOG_LOGGER_ERROR(logger_, "unexpected response from BsProxy, expected StartSignAuthAddress response");
-         failedCb(AutheIDClient::ServerError);
+         req.failedCb(AutheIDClient::ServerError);
          return;
       }
 
-      const auto &d = response.start_sign_auth_address();
+      const auto &d = response.start_sign_address();
       if (d.error().error_code() != 0) {
          SPDLOG_LOGGER_ERROR(logger_, "signature request start failed on the server");
-         failedCb(AutheIDClient::ErrorType(d.error().error_code()));
+         req.failedCb(AutheIDClient::ErrorType(d.error().error_code()));
          return;
       }
 
-      if (startedCb) {
-         startedCb();
+      if (req.startedCb) {
+         req.startedCb();
       }
 
       // Add some time to be able get timeout error from the server
-      requestSignResult(autheidAuthAddressTimeout() + std::chrono::seconds(3), signedCb, failedCb);
+      requestSignResult(autheidAuthAddressTimeout() + std::chrono::seconds(3), req.signedCb, req.failedCb);
    };
 
-   auto timeoutCb = [failedCb] {
+   auto timeoutCb = [failedCb = req.failedCb] {
       failedCb(AutheIDClient::NetworkError);
    };
 
@@ -136,6 +138,11 @@ std::chrono::seconds BsClient::autheidLoginTimeout()
 std::chrono::seconds BsClient::autheidAuthAddressTimeout()
 {
    return std::chrono::seconds(30);
+}
+
+std::chrono::seconds BsClient::autheidCcAddressTimeout()
+{
+   return std::chrono::seconds(90);
 }
 
 void BsClient::OnDataReceived(const std::string &data)
@@ -176,7 +183,7 @@ void BsClient::OnDataReceived(const std::string &data)
          case Response::kCeler:
             processCeler(response->celer());
             return;
-         case Response::kStartSignAuthAddress:
+         case Response::kStartSignAddress:
          case Response::kGetSignResult:
             // Will be handled from processCb
             return;

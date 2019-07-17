@@ -137,8 +137,8 @@ void BsProxy::onProxyDataFromClient(const std::string &clientId, const std::stri
          case Request::kGetLoginResult:
             processGetLoginResult(client, request->request_id(), request->get_login_result());
             return;
-         case Request::kStartSignAuthAddress:
-            processStartSignAuthAddress(client, request->request_id(), request->start_sign_auth_address());
+         case Request::kStartSignAddress:
+            processStartSignAddress(client, request->request_id(), request->start_sign_address());
             return;
          case Request::kGetSignResult:
             processGetSignResult(client, request->request_id(), request->get_sign_result());
@@ -363,22 +363,36 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
    client->autheid->requestResult();
 }
 
-void BsProxy::processStartSignAuthAddress(BsProxy::Client *client, int64_t requestId, const Request_StartSignAuthAddress &request)
+void BsProxy::processStartSignAddress(BsProxy::Client *client, int64_t requestId, const Request_StartSignAddress &request)
 {
    if (client->state != State::LoggedIn) {
       SPDLOG_LOGGER_ERROR(logger_, "got unexpected sign request");
       return;
    }
 
-   client->autheid = std::make_unique<AutheIDClient>(logger_, nam_, AutheIDClient::AuthKeys{}, params_.autheidTestEnv, this);
-
    AutheIDClient::SignRequest req;
    req.email = client->email;
-   req.title = "Authentication Address";
-   req.description = "Submit auth address for verification";
-   req.expiration = int(std::chrono::duration_cast<std::chrono::seconds>(BsClient::autheidAuthAddressTimeout()).count());
    req.serialization = AutheIDClient::Serialization::Protobuf;
    req.invisibleData = request.invisible_data();
+
+   auto type = BsClient::SignAddressReq::Type(request.type());
+   switch (type) {
+      case BsClient::SignAddressReq::AuthAddr:
+         req.title = "Authentication Address";
+         req.description = "Submit auth address for verification";
+         req.expiration = int(std::chrono::duration_cast<std::chrono::seconds>(BsClient::autheidAuthAddressTimeout()).count());
+         break;
+      case BsClient::SignAddressReq::CcAddr:
+         req.title = "Private Market token";
+         req.description = "Submitting CC wallet address to receive PM token";
+         req.expiration = int(std::chrono::duration_cast<std::chrono::seconds>(BsClient::autheidCcAddressTimeout()).count());
+         break;
+      default:
+         SPDLOG_LOGGER_ERROR(logger_, "invalid sign address request (unknown address type)");
+         return;
+   }
+
+   client->autheid = std::make_unique<AutheIDClient>(logger_, nam_, AutheIDClient::AuthKeys{}, params_.autheidTestEnv, this);
 
    connect(client->autheid.get(), &AutheIDClient::createRequestDone, this, [this, client, requestId] {
       // Check that autheid lives in our thread
@@ -391,7 +405,7 @@ void BsProxy::processStartSignAuthAddress(BsProxy::Client *client, int64_t reque
       }
 
       Response response;
-      response.mutable_start_sign_auth_address();
+      response.mutable_start_sign_address();
       sendResponse(client, requestId, &response);
    });
 
@@ -403,7 +417,7 @@ void BsProxy::processStartSignAuthAddress(BsProxy::Client *client, int64_t reque
       }
 
       Response response;
-      auto d = response.mutable_start_sign_auth_address();
+      auto d = response.mutable_start_sign_address();
       d->mutable_error()->set_error_code(int(error));
       sendResponse(client, requestId, &response);
    });

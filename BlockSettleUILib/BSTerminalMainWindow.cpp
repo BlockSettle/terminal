@@ -725,7 +725,7 @@ bool BSTerminalMainWindow::showStartupDialog()
 void BSTerminalMainWindow::InitAssets()
 {
    ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
-      , authSignManager_, connectionManager_, cbApprovePuB_);
+      , connectionManager_, cbApprovePuB_);
    assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsMgr_, mdProvider_, celerConnection_);
    assetManager_->init();
 
@@ -1796,4 +1796,5 @@ void BSTerminalMainWindow::createBsClient()
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 
    authAddrDlg_->setBsClient(bsClient_.get());
+   ccFileManager_->setBsClient(bsClient_.get());
 }

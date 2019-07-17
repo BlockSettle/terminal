@@ -466,7 +466,12 @@ void AuthAddressManager::ConfirmSubmitForVerification(BsClient *bsClient, const 
 
    QPointer<AuthAddressManager> thisPtr = this;
 
-   const auto cbSigned = [thisPtr, requestData](const AutheIDClient::SignResult &result) {
+   BsClient::SignAddressReq req;
+   req.type = BsClient::SignAddressReq::AuthAddr;
+   req.address = address;
+   req.invisibleData = requestDataHash;
+
+   req.signedCb = [thisPtr, requestData](const AutheIDClient::SignResult &result) {
       if (!thisPtr) {
          return;
       }
@@ -489,9 +494,7 @@ void AuthAddressManager::ConfirmSubmitForVerification(BsClient *bsClient, const 
       thisPtr->SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
    };
 
-   const auto cbStarted = nullptr;
-
-   const auto cbSignFailed = [thisPtr](AutheIDClient::ErrorType error) {
+   req.failedCb = [thisPtr](AutheIDClient::ErrorType error) {
       if (!thisPtr) {
          return;
       }
@@ -500,7 +503,7 @@ void AuthAddressManager::ConfirmSubmitForVerification(BsClient *bsClient, const 
       emit thisPtr->signFailed(error);
    };
 
-   bsClient->signAuthAddress(address, requestDataHash, cbStarted, cbSigned, cbSignFailed);
+   bsClient->signAddress(req);
 }
 
 bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)
