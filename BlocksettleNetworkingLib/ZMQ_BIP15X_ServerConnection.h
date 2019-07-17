@@ -93,6 +93,9 @@ public:
    static const std::chrono::milliseconds getDefaultHeartbeatInterval();
    static const std::chrono::milliseconds getLocalHeartbeatInterval();
 
+   static BinaryData getOwnPubKey(const std::string &ownKeyFileDir, const std::string &ownKeyFileName);
+   static BinaryData getOwnPubKey(const AuthorizedPeers &authPeers);
+
 protected:
    // Overridden functions from ZmqServerConnection.
    ZmqContext::sock_ptr CreateDataSocket() override;

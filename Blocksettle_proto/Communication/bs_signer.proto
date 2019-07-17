@@ -41,9 +41,6 @@ enum PacketType
    // Sent from headless signer when wallet added, removed or changed somehow (request body is empty)
    WalletsListUpdatedType = 23;
 
-   // Send headless public key to signer ui to export it
-   HeadlessPubKeyRequestType = 24;
-
    SyncSettingsRequestType = 25;
 
    UpdateStatusType = 26;
@@ -331,15 +328,6 @@ message ChangePasswordResponse
    bool     success = 2;
 }
 
-message HeadlessPubKeyRequest
-{
-}
-
-message HeadlessPubKeyResponse
-{
-   string pubKey = 1;
-}
-
 message AutoSignActRequest
 {
    string   rootWalletId = 1;
@@ -358,6 +346,7 @@ message AutoSignActResponse
 message UpdateStatus
 {
    BindStatus signer_bind_status = 1;
+   bytes signer_pub_key = 2;
 }
 
 message ImportWoWalletRequest
