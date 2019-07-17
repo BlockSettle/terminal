@@ -7,7 +7,6 @@
 
 #include <QApplication>
 #include <QClipboard>
-#include <QDebug>
 #include <QDesktopServices>
 #include <QMimeData>
 #include <QScrollBar>

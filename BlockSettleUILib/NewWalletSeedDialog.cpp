@@ -10,7 +10,6 @@
 #include <QResizeEvent>
 #include <QScrollArea>
 #include <QEvent>
-#include <QDebug>
 
 #include "BSMessageBox.h"
 #include "PaperBackupWriter.h"

@@ -12,7 +12,6 @@
 #include "XbtAmountValidator.h"
 
 #include <QFileDialog>
-#include <QDebug>
 
 CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager>& walletManager

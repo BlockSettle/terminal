@@ -2,7 +2,6 @@
 #include <QPainter>
 #include <QVariant>
 #include <QStyle>
-#include <QDebug>
 #include <QPropertyAnimation>
 #include <QMouseEvent>
 

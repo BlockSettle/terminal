@@ -16,7 +16,6 @@
 #include "ProtobufUtils.h"
 
 #include <QDateTime>
-#include <QDebug>
 #include <QRegularExpression>
 
 

@@ -1,6 +1,5 @@
 #include "SignersManageWidget.h"
 #include "ui_SignersManageWidget.h"
-#include <QDebug>
 #include <QFileDialog>
 #include <QStandardPaths>
 #include <SecureBinaryData.h>

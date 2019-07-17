@@ -3,7 +3,6 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QToolTip>
-#include <QDebug>
 #include <QRegularExpression>
 #include <QTimer>
 

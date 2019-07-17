@@ -1,5 +1,4 @@
 #include <chrono>
-#include <QDebug>
 #include <QtConcurrent/QtConcurrentRun>
 #include "CacheFile.h"
 

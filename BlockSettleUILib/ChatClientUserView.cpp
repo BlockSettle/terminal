@@ -25,7 +25,6 @@ public:
 
    ~ChatUsersContextMenu()
    {
-      qDebug() << __func__;
    }
 
    QAction* execMenu(const QPoint & point)
@@ -60,7 +59,6 @@ private slots:
 
    void onAddToContacts(bool)
    {
-      qDebug() << __func__;
       if (!handler_) {
          return;
       }
@@ -69,7 +67,6 @@ private slots:
 
    void onRemoveFromContacts(bool)
    {
-      qDebug() << __func__;
       if (!handler_) {
          return;
       }
