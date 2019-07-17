@@ -87,6 +87,9 @@ CustomDialog {
                     text: "Simple"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
+                    onClicked: {
+                        walletDetailsFrame.passwordInput.focus = true
+                    }
                 }
                 CustomTabButton {
                     id: addTabButton

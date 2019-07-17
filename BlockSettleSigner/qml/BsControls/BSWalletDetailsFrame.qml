@@ -14,12 +14,12 @@ ColumnLayout {
     id: root
 
     onVisibleChanged: {
-        passwordInput.focus = true
+        passwordInput_.focus = true
     }
 
-    property alias passwordInput_: passwordInput
+    property alias passwordInput: passwordInput_
     property WalletInfo walletInfo : WalletInfo {}
-    property alias password: passwordInput.text
+    property alias password: passwordInput_.text
     property int inputsWidth
     property var nextFocusItem
 
@@ -101,7 +101,7 @@ ColumnLayout {
             Layout.fillWidth: true
         }
         CustomPasswordTextInput {
-            id: passwordInput
+            id: passwordInput_
             visible: walletInfo.encType === QPasswordData.Password
             focus: true
             //placeholderText: qsTr("Old Password")

@@ -77,7 +77,7 @@ CustomTitleDialogWindow {
                 implicitHeight: 35
                 enabled: !walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)
                 onClicked: {
-                    walletDetailsFrame.passwordInput_.focus = true
+                    walletDetailsFrame.passwordInput.focus = true
                 }
             }
             CustomTabButton {
@@ -86,7 +86,7 @@ CustomTitleDialogWindow {
                 cText.font.capitalization: Font.MixedCase
                 implicitHeight: 35
                 onClicked: {
-                    walletDetailsFrame.passwordInput_.focus = true
+                    walletDetailsFrame.passwordInput.focus = true
                 }
             }
         }
