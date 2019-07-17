@@ -145,7 +145,7 @@ public:
       , const AuthKeys &authKeys, bool autheidTestEnv, QObject *parent = nullptr);
    ~AutheIDClient() override;
 
-   void start(RequestType requestType, const std::string &email, const std::string &walletId
+   void getDeviceKey(RequestType requestType, const std::string &email, const std::string &walletId
       , const std::vector<std::string> &knownDeviceIds, int expiration = 120);
    void sign(const SignRequest &request);
    void authenticate(const std::string &email, int expiration = 120, bool autoRequestResult = true);

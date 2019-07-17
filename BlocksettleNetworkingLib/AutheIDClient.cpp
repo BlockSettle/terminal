@@ -275,7 +275,7 @@ void AutheIDClient::createCreateRequest(const std::string &payload, int expirati
    });
 }
 
-void AutheIDClient::start(RequestType requestType, const std::string &email
+void AutheIDClient::getDeviceKey(RequestType requestType, const std::string &email
    , const std::string &walletId, const std::vector<std::string> &knownDeviceIds, int expiration)
 {
    cancel();
