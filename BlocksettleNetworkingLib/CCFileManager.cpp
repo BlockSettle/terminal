@@ -1,7 +1,6 @@
 #include "CCFileManager.h"
 
 #include "ApplicationSettings.h"
-#include "AuthSignManager.h"
 #include "CelerClient.h"
 #include "ConnectionManager.h"
 #include "EncryptionUtils.h"

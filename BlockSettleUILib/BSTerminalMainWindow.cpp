@@ -21,7 +21,6 @@
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
 #include "AutheIDClient.h"
-#include "AuthSignManager.h"
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
@@ -136,8 +135,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    initArmory();
 
    walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
-   authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_
-      , celerConnection_, connectionManager_);
 
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);

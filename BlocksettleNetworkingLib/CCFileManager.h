@@ -21,7 +21,6 @@ namespace Blocksettle {
 }
 
 class ApplicationSettings;
-class AuthSignManager;
 class BaseCelerClient;
 
 class CCPubResolver : public bs::sync::CCDataResolver
