@@ -84,8 +84,6 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
          file.write(ui_->labelArmoryServerKey->text().toLatin1());
       }
    });
-
-   connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::display);
 }
 
 void NetworkSettingsPage::initSettings()

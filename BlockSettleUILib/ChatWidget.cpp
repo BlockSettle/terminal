@@ -23,9 +23,6 @@
 #include <QScrollBar>
 #include <QClipboard>
 #include <QMimeData>
-
-#include <QDebug>
-
 #include <thread>
 #include <spdlog/spdlog.h>
 

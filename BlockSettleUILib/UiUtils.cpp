@@ -17,7 +17,6 @@
 #include <QComboBox>
 #include <QImage>
 #include <QPixmap>
-#include <QDebug>
 #include <QStyle>
 #include <QAbstractItemModel>
 

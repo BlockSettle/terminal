@@ -1,5 +1,4 @@
 #include <QDate>
-#include <QDebug>
 #include <spdlog/spdlog.h>
 #include "CelerSubmitQuoteNotifSequence.h"
 #include "UpstreamQuoteProto.pb.h"

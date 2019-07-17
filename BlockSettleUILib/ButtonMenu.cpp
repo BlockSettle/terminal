@@ -2,7 +2,6 @@
 
 #include <QPoint>
 #include <QRect>
-#include <QDebug>
 #include <QApplication>
 
 ButtonMenu::ButtonMenu(QPushButton* button)
