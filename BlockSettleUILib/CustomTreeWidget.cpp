@@ -1,6 +1,5 @@
 #include "CustomTreeWidget.h"
 #include <QMouseEvent>
-#include <QDebug>
 #include <QHeaderView>
 #include <QClipboard>
 #include <QToolTip>
@@ -77,7 +76,6 @@ void CustomTreeWidget::onItemEntered(QTreeWidgetItem * item, int column) {
 // doesn't. It might be necessary to override QHeaderView and handle
 // it there.
 void CustomTreeWidget::onHeaderEntered(const QModelIndex &index) {
-   qDebug() << "onHeaderEntered";
    resetCursor();
 }
 

@@ -9,7 +9,6 @@
 
 #include <QDateTime>
 #include <QLabel>
-#include <QDebug>
 #include <QMenu>
 #include <QClipboard>
 

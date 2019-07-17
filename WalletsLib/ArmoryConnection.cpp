@@ -50,7 +50,10 @@ ArmoryConnection::~ArmoryConnection() noexcept
       actCV_.notify_one();
    }
    stopServiceThreads();
-   cbRemote_->resetConnection();
+
+   if (cbRemote_) {
+      cbRemote_->resetConnection();
+   }
 
    if (maintThread_.joinable()) {
       maintThread_.join();

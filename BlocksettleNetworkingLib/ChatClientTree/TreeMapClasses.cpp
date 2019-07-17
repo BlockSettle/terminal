@@ -4,7 +4,6 @@
 #include "ChatProtocol/ChatUtils.h"
 
 #include <algorithm>
-#include <QDebug>
 
 bool RootItem::insertRoomObject(std::shared_ptr<Chat::Data> data)
 {

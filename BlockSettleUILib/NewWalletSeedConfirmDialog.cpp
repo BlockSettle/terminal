@@ -2,7 +2,6 @@
 
 #include <QValidator>
 #include <QEvent>
-#include <QDebug>
 
 #include "BSMessageBox.h"
 #include "CoreWallet.h"

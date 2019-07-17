@@ -338,7 +338,8 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    if (result == bs::error::ErrorCode::NoError && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {
       // Offline signing
       BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
-         , tr("Request was successfully exported"), this).exec();
+         , tr("Request was successfully exported")
+         , tr("Saved to %1").arg(QString::fromStdString(txReq_.offlineFilePath)), this).exec();
       accept();
       return;
    }

@@ -3,7 +3,6 @@
 
 #include <QTreeView>
 #include <QLabel>
-#include <QDebug>
 #include "ChatHandleInterfaces.h"
 #include "ChatUsersViewItemStyle.h"
 

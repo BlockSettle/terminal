@@ -45,8 +45,6 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
          file.write(ui_->labelTerminalKey->text().toLatin1());
       }
    });
-
-   connect(signersProvider_.get(), &SignersProvider::dataChanged, this, &SignerSettingsPage::display);
 }
 
 SignerSettingsPage::~SignerSettingsPage() = default;

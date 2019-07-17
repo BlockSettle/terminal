@@ -7,7 +7,6 @@
 
 #include <QApplication>
 #include <QClipboard>
-#include <QDebug>
 #include <QDesktopServices>
 #include <QMimeData>
 #include <QScrollBar>
@@ -370,7 +369,9 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::Data> msg)
    table_->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
    QImage image = statusImage(rowIdx);
-   table_->cellAt(0, 1).firstCursorPosition().insertImage(image);
+   if (!image.isNull()) {
+      table_->cellAt(0, 1).firstCursorPosition().insertImage(image);
+   }
 
    QString user = data(rowIdx, Column::User);
    table_->cellAt(0, 2).firstCursorPosition().insertHtml(user);

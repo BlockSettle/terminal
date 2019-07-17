@@ -1,6 +1,5 @@
 #include "ArmoryServersWidget.h"
 #include "ui_ArmoryServersWidget.h"
-#include <QDebug>
 
 const int kArmoryDefaultMainNetPort = 80;
 

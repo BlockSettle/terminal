@@ -1,6 +1,5 @@
 #include "TerminalEncryptionDialog.h"
 #include "ui_TerminalEncryptionDialog.h"
-#include <QDebug>
 #include <QShowEvent>
 #include <QStyle>
 #include <QTimer>

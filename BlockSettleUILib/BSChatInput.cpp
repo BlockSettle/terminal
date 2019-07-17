@@ -21,11 +21,9 @@ void BSChatInput::keyPressEvent(QKeyEvent * e)
    //Qt::Key_Enter  = Numpad Enter key
    if (e->key() == Qt::Key_Enter || e->key() == Qt::Key_Return) {
       if (e->modifiers().testFlag(Qt::ShiftModifier)) {
-         qDebug("Shift + Return/Enter press %d", e->key());
          this->insertPlainText(QStringLiteral("\n"));
 
       } else {
-         qDebug("Return/Enter press %d", e->key());
          emit sendMessage();
       }
       return e->ignore();
