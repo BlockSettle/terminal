@@ -799,6 +799,10 @@ void ChatWidget::onElementSelected(CategoryElement *element)
 {
    ui_->frameContactActions->setVisible(false);
    setIsContactRequest(false);
+
+   // Save draft message
+   std::string previousChat = currentChat_;
+
    if (element) {
       switch (element->getType()) {
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement: {
@@ -869,6 +873,23 @@ void ChatWidget::onElementSelected(CategoryElement *element)
          default:
             break;
 
+      }
+   }
+
+   if (previousChat != currentChat_) {
+      // Save draft message if any
+      if (!ui_->input_textEdit->toPlainText().isEmpty())
+          draftMessages_[previousChat] = ui_->input_textEdit->toPlainText().toStdString();
+
+      // Return back draft message
+      auto const iDraft = draftMessages_.find(currentChat_);
+      if (iDraft != draftMessages_.cend()) {
+         ui_->input_textEdit->setText(QString::fromStdString(iDraft.value()));
+         auto cursor = ui_->input_textEdit->textCursor();
+         cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::MoveAnchor);
+         ui_->input_textEdit->setTextCursor(cursor);
+      } else {
+         ui_->input_textEdit->clear();
       }
    }
 }
