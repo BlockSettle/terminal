@@ -53,12 +53,10 @@ BSQuoteReqReply {
     }
     onIndicBidChanged: {
         log('#new indic bid: ' + indicBid)
-        if (!quoteReq.isBuy) return;
         onBidOrAskChanged();
     }
     onIndicAskChanged: {
         log('#new indic ask: ' + indicAsk)
-        if (quoteReq.isBuy) return;
         onBidOrAskChanged();
     }
     onSendFailed: {

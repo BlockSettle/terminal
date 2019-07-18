@@ -53,11 +53,6 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       throw std::runtime_error("adapter connection failed");
    }
 
-/*   requestHeadlessPubKey([this](const std::string &key){
-      headlessPubKey_ = QString::fromStdString(key);
-      emit headlessPubKeyChanged(headlessPubKey_);
-   });   // TODO: decide whether this code is really required
-*/
    signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
 }
 
@@ -137,7 +132,7 @@ void SignerAdapter::passwordReceived(const std::string &walletId
 
 void SignerAdapter::createWallet(const std::string &name, const std::string &desc
    , bs::core::wallet::Seed seed, bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
-   , bs::wallet::KeyRank keyRank, const ResultCb &cb)
+   , bs::wallet::KeyRank keyRank, const std::function<void(bs::error::ErrorCode errorCode)> &cb)
 {
    headless::CreateHDWalletRequest request;
 

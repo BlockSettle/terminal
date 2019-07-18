@@ -197,8 +197,8 @@ static int QMLApp(int argc, char **argv)
       case bs::signer::ui::RunMode::fullgui:
          engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
          break;
-      case bs::signer::ui::RunMode::lightgui:
-         engine.load(QUrl(QStringLiteral("qrc:/qml/mainLight.qml")));
+      case bs::signer::ui::RunMode::litegui:
+         engine.load(QUrl(QStringLiteral("qrc:/qml/mainLite.qml")));
          break;
       default:
          return EXIT_FAILURE;

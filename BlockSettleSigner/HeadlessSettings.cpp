@@ -46,6 +46,7 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
    }
 
    std::string listenAddress;
+   std::string acceptFrom;
    int listenPort;
    double autoSignSpendLimit;
    std::string walletsDir;
@@ -56,6 +57,8 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       ("h,help", "Print help")
       ("a,listen", "IP address to listen on"
          , cxxopts::value<std::string>(listenAddress))
+      ("f,accept_from", "Terminal IP address from which incoming connection will be accepted"
+         , cxxopts::value<std::string>(acceptFrom))
       ("p,port", "Listen port for terminal connections"
          , cxxopts::value<int>(listenPort))
       ("d,dirwallets", "Directory where wallets reside"
@@ -91,6 +94,10 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
          overrideListenAddress_.setValue(listenAddress);
       }
 
+      if (result.count("accept_from")) {
+         overrideAcceptFrom_.setValue(acceptFrom);
+      }
+
       if (result.count("port")) {
          overrideListenPort_.setValue(listenPort);
       }
@@ -114,8 +121,8 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       exit(0);
    }
 
-   if (guiMode == "lightgui") {
-      runMode_ = bs::signer::RunMode::lightgui;
+   if (guiMode == "litegui") {
+      runMode_ = bs::signer::RunMode::litegui;
    }
    else if (guiMode == "fullgui") {
       runMode_ = bs::signer::RunMode::fullgui;
@@ -199,6 +206,14 @@ std::string HeadlessSettings::listenAddress() const
       return "0.0.0.0";
    }
    return d_->listen_address();
+}
+
+std::string HeadlessSettings::acceptFrom() const
+{
+   if (overrideAcceptFrom_.isValid()) {
+      return overrideAcceptFrom_.getValue();
+   }
+   return d_->accept_from();
 }
 
 std::string HeadlessSettings::listenPort() const

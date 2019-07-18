@@ -18,7 +18,7 @@ static const QString testnetName = QString::fromStdString("testnet");
 static const QString testnetHelp = QObject::tr("Set bitcoin network type to testnet");
 
 static const QString runModeName = QString::fromStdString("guimode");
-static QString runModeHelp = QObject::tr("GUI run mode [fullgui|lightgui]");
+static QString runModeHelp = QObject::tr("GUI run mode [fullgui|litegui]");
 
 static const QString srvIDKeyName = QString::fromStdString("server_id_key");
 static QString srvIDKeyHelp = QObject::tr("The server's compressed BIP 150 ID key (hex)");
@@ -66,11 +66,15 @@ void SignerSettings::settingChanged(int setting)
    case signer::WatchingOnly:
       emit woChanged();
       break;
+   case signer::ExportWalletsDir:
+      emit exportWalletsDirChanged();
+      break;
    case signer::AutoSignWallet:
       emit autoSignWalletChanged();
       break;
    case signer::ListenAddress:
    case signer::ListenPort:
+   case signer::AcceptFrom:
       emit listenSocketChanged();
       break;
    case signer::LimitManualXBT:
@@ -191,7 +195,7 @@ bool SignerSettings::loadSettings(const QStringList &args)
          return false;
       }
       runMode_ = static_cast<bs::signer::ui::RunMode>(runModeValue);
-      if (runMode_ != bs::signer::ui::RunMode::fullgui && runMode_ != bs::signer::ui::RunMode::lightgui) {
+      if (runMode_ != bs::signer::ui::RunMode::fullgui && runMode_ != bs::signer::ui::RunMode::litegui) {
          return false;
       }
    }
@@ -232,6 +236,11 @@ QString SignerSettings::serverIDKeyStr() const
 QString SignerSettings::listenAddress() const
 {
    return QString::fromStdString(d_->listen_address());
+}
+
+QString SignerSettings::acceptFrom() const
+{
+   return QString::fromStdString(d_->accept_from());
 }
 
 QString SignerSettings::port() const
@@ -328,6 +337,11 @@ void SignerSettings::setAutoSignWallet(const QString &val)
 void SignerSettings::setListenAddress(const QString &val)
 {
    setStringSetting(val, d_->mutable_listen_address(), signer::Setting::ListenAddress);
+}
+
+void SignerSettings::setAcceptFrom(const QString &val)
+{
+   setStringSetting(val, d_->mutable_accept_from(), signer::Setting::AcceptFrom);
 }
 
 void SignerSettings::setPort(const QString &val)

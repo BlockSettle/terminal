@@ -56,7 +56,7 @@ public:
    using ResultCb = std::function<void(bool, const std::string&)>;
    void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
       , bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
-      , bs::wallet::KeyRank keyRank, const ResultCb &cb);
+      , bs::wallet::KeyRank keyRank, const std::function<void(bs::error::ErrorCode)> &cb);
 
    using CreateWoCb = std::function<void(const bs::sync::WatchingOnlyWallet &)>;
    void importWoWallet(const std::string &filename, const BinaryData &content, const CreateWoCb &cb);
@@ -90,10 +90,6 @@ public:
 
    void walletsListUpdated();
 
-   // Requests from headless with callbacks - relacement for signals
-   // TODO: reimlement requestPasswordAndSignTx, cancelTxSign etc
-   void onSignSettlementTxRequest();
-
    QString headlessPubKey() const;
 
    void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
@@ -101,10 +97,9 @@ public:
 signals:
    void ready() const;
    void connectionError() const;
-   void headlessBindUpdated(bool success) const;
+   void headlessBindUpdated(bs::signer::BindStatus status) const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
-   void requestPasswordAndSignTx(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void cancelTxSign(const BinaryData &txHash);
    void txSigned(const BinaryData &);
    void xbtSpent(const qint64 value, bool autoSign);
@@ -114,6 +109,7 @@ signals:
    void bindFailed() const;
    void headlessPubKeyChanged(const QString &headlessPubKey) const;
    void terminalHandshakeFailed(const std::string &peerAddress);
+   void signerPubKeyUpdated(const BinaryData &pubKey) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

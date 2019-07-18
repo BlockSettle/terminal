@@ -41,7 +41,7 @@
 
 Q_DECLARE_METATYPE(bs::core::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(bs::wallet::TXInfo)
-Q_DECLARE_METATYPE(bs::sync::SettlementInfo)
+Q_DECLARE_METATYPE(bs::sync::PasswordDialogData)
 Q_DECLARE_METATYPE(bs::hd::WalletInfo)
 
 QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logger> &logger
@@ -62,21 +62,14 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(adapter_, &SignerAdapter::ready, this, &QMLAppObj::onReady);
    connect(adapter_, &SignerAdapter::connectionError, this, &QMLAppObj::onConnectionError);
    connect(adapter_, &SignerAdapter::headlessBindUpdated, this, &QMLAppObj::onHeadlessBindUpdated);
-   connect(adapter_, &SignerAdapter::requestPasswordAndSignTx, this, &QMLAppObj::onPasswordRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
    connect(adapter_, &SignerAdapter::customDialogRequest, this, &QMLAppObj::onCustomDialogRequest);
    connect(adapter_, &SignerAdapter::terminalHandshakeFailed, this, &QMLAppObj::onTerminalHandshakeFailed);
+   connect(adapter_, &SignerAdapter::signerPubKeyUpdated, this, &QMLAppObj::onSignerPubKeyUpdated);
 
    walletsModel_ = new QmlWalletsViewModel(ctxt_->engine());
-   ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
 
    statusUpdater_ = std::make_shared<QMLStatusUpdater>(settings_, adapter_, logger_);
-
-   ctxt_->setContextProperty(QStringLiteral("signerStatus"), statusUpdater_.get());
-
-   ctxt_->setContextProperty(QStringLiteral("qmlAppObj"), this);
-
-   ctxt_->setContextProperty(QStringLiteral("signerSettings"), settings_.get());
 
    qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
    adapter_->setQmlFactory(qmlFactory_);
@@ -84,17 +77,16 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    qmlFactory_->setHeadlessPubKey(adapter_->headlessPubKey());
    connect(adapter_, &SignerAdapter::headlessPubKeyChanged, qmlFactory_.get(), &QmlFactory::setHeadlessPubKey);
 
-   ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
+   connect(qmlFactory_.get(), &QmlFactory::showTrayNotify, this, &QMLAppObj::showTrayNotify);
+
    connect(qmlFactory_.get(), &QmlFactory::closeEventReceived, this, [this](){
       hideQmlWindow();
    });
 
    offlineProc_ = std::make_shared<OfflineProcessor>(logger_, adapter_);
    connect(offlineProc_.get(), &OfflineProcessor::requestPassword, this, &QMLAppObj::onOfflinePassword);
-   ctxt_->setContextProperty(QStringLiteral("offlineProc"), offlineProc_.get());
 
    walletsProxy_ = std::make_shared<WalletsProxy>(logger_, adapter_);
-   ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
    connect(walletsProxy_.get(), &WalletsProxy::walletsChanged, [this] {
       if (walletsProxy_->walletsLoaded()) {
          if (splashScreen_) {
@@ -104,7 +96,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       }
    });
 
-   if (params->runMode() != bs::signer::ui::RunMode::lightgui) {
+   if (params->runMode() != bs::signer::ui::RunMode::litegui) {
       trayIconOptional_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
       connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
       connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
@@ -133,6 +125,14 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       // Show error one more time if needed
       lastFailedTerminals_.clear();
    });
+
+   ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
+   ctxt_->setContextProperty(QStringLiteral("signerStatus"), statusUpdater_.get());
+   ctxt_->setContextProperty(QStringLiteral("qmlAppObj"), this);
+   ctxt_->setContextProperty(QStringLiteral("signerSettings"), settings_.get());
+   ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
+   ctxt_->setContextProperty(QStringLiteral("offlineProc"), offlineProc_.get());
+   ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
 }
 
 void QMLAppObj::onReady()
@@ -152,17 +152,18 @@ void QMLAppObj::onReady()
 void QMLAppObj::onConnectionError()
 {
    QMetaObject::invokeMethod(rootObj_, "showError"
-                             , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
+      , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
 }
 
-void QMLAppObj::onHeadlessBindUpdated(bool success)
+void QMLAppObj::onHeadlessBindUpdated(bs::signer::BindStatus status)
 {
-   if (!success) {
+   if (status == bs::signer::BindStatus::Failed) {
       QMetaObject::invokeMethod(rootObj_, "showError"
          , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
    }
 
-   statusUpdater_->setSocketOk(success);
+   // bs::signer::BindStatus::Inactive is OK status too
+   statusUpdater_->setSocketOk(status != bs::signer::BindStatus::Failed);
 }
 
 void QMLAppObj::onWalletsSynced()
@@ -208,11 +209,12 @@ void QMLAppObj::registerQtTypes()
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
    qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
       "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
-
+   qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
+      "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
 
    qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
-   qmlRegisterType<bs::sync::SettlementInfo>("com.blocksettle.SettlementInfo", 1, 0, "SettlementInfo");
+   qmlRegisterType<bs::sync::PasswordDialogData>("com.blocksettle.PasswordDialogData", 1, 0, "PasswordDialogData");
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
    qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
@@ -220,9 +222,6 @@ void QMLAppObj::registerQtTypes()
    qmlRegisterType<bs::hd::WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
    qmlRegisterType<bs::wallet::QSeed>("com.blocksettle.QSeed", 1, 0, "QSeed");
    qmlRegisterType<bs::wallet::QPasswordData>("com.blocksettle.QPasswordData", 1, 0, "QPasswordData");
-
-   qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
-      "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
 }
 
 void QMLAppObj::onLimitsChanged()
@@ -244,8 +243,6 @@ void QMLAppObj::SetRootObject(QObject *obj)
          QMetaObject::invokeMethod(walletsView, "expandAll");
       }
    });
-   connect(rootObj_, SIGNAL(passwordEntered(QString, bs::wallet::QPasswordData *, bool)),
-           this, SLOT(onPasswordAccepted(QString, bs::wallet::QPasswordData *, bool)));
 }
 
 void QMLAppObj::raiseQmlWindow()
@@ -287,7 +284,7 @@ void QMLAppObj::onPasswordAccepted(const QString &walletId
       , cancelledByUser ? bs::error::ErrorCode::TxCanceled : bs::error::ErrorCode::NoError
       , passwordData->password);
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
-      offlineProc_->passwordEntered(walletId.toStdString(), passwordData->password);
+      offlineProc_->passwordEntered(walletId.toStdString(), passwordData->password, cancelledByUser);
       offlinePasswordRequests_.erase(walletId.toStdString());
    }
 }
@@ -295,49 +292,9 @@ void QMLAppObj::onPasswordAccepted(const QString &walletId
 void QMLAppObj::onOfflinePassword(const bs::core::wallet::TXSignRequest &txReq)
 {
    offlinePasswordRequests_.insert(txReq.walletId);
-   requestPasswordForSigningTx(txReq, {}, false);
-}
 
-void QMLAppObj::onPasswordRequested(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt)
-{
-   requestPasswordForSigningTx(txReq, prompt);
-}
-
-void QMLAppObj::requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
-{
-   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txReq);
-   QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
-
-   bs::hd::WalletInfo *walletInfo = qmlFactory_.get()->createWalletInfo(txReq.walletId);
-   if (!walletInfo->walletId().isEmpty()) {
-      if (alert && trayIconOptional_) {
-         QString notifPrompt = prompt;
-         if (!txReq.walletId.empty()) {
-            notifPrompt = tr("Enter password for %1").arg(walletInfo->name());
-         }
-
-         if (notifMode_ == QSystemTray) {
-            trayIconOptional_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
-         }
-#ifdef BS_USE_DBUS
-         else {
-            dbus_->notifyDBus(QSystemTrayIcon::Warning,
-               tr("Password request"), notifPrompt,
-               QIcon(), 30000);
-         }
-#endif // BS_USE_DBUS
-      }
-
-      raiseQmlWindow();
-      QMetaObject::invokeMethod(rootObj_, "createTxSignDialog"
-                                , Q_ARG(QVariant, prompt)
-                                , Q_ARG(QVariant, QVariant::fromValue(txInfo))
-                                , Q_ARG(QVariant, QVariant::fromValue(walletInfo)));
-   }
-   else {
-      logger_->error("Wallet {} not found", txReq.walletId);
-      emit offlineProc_->signFailure();
-   }
+   // FIXME: reimplement
+   //requestPasswordForSigningTx(txReq, {}, false);
 }
 
 void QMLAppObj::onSysTrayMsgClicked()
@@ -388,5 +345,26 @@ void QMLAppObj::onTerminalHandshakeFailed(const std::string &peerAddress)
    lastFailedTerminals_.insert(peerAddress);
 
    QMetaObject::invokeMethod(rootObj_, "terminalHandshakeFailed"
-      , Q_ARG(QVariant, QString::fromStdString(peerAddress)));
+                             , Q_ARG(QVariant, QString::fromStdString(peerAddress)));
+}
+
+void QMLAppObj::showTrayNotify(const QString &title, const QString &msg)
+{
+   if (trayIconOptional_) {
+      if (notifMode_ == QSystemTray) {
+         trayIconOptional_->showMessage(title, msg, QSystemTrayIcon::Warning, 30000);
+      }
+#ifdef BS_USE_DBUS
+      else {
+         dbus_->notifyDBus(QSystemTrayIcon::Warning,
+            title, msg,
+            QIcon(), 30000);
+      }
+#endif // BS_USE_DBUS
+   }
+}
+
+void QMLAppObj::onSignerPubKeyUpdated(const BinaryData &pubKey)
+{
+   qmlFactory_->setHeadlessPubKey(QString::fromStdString(pubKey.toHexStr()));
 }

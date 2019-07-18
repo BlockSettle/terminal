@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <QObject>
 #include <QSystemTrayIcon>
+#include "SignerDefs.h"
 
 namespace bs {
    namespace wallet {
@@ -59,13 +60,12 @@ signals:
 private slots:
    void onReady();
    void onConnectionError();
-   void onHeadlessBindUpdated(bool success);
+   void onHeadlessBindUpdated(bs::signer::BindStatus status);
    void onWalletsSynced();
    void onPasswordAccepted(const QString &walletId
                            , bs::wallet::QPasswordData *passwordData
                            , bool cancelledByUser);
    void onOfflinePassword(const bs::core::wallet::TXSignRequest &);
-   void onPasswordRequested(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void onLimitsChanged();
    void onSettingChanged(int);
    void onSysTrayMsgClicked();
@@ -73,11 +73,11 @@ private slots:
    void onCancelSignTx(const BinaryData &txId);
    void onCustomDialogRequest(const QString &dialogName, const QVariantMap &data);
    void onTerminalHandshakeFailed(const std::string &peerAddress);
+   void onSignerPubKeyUpdated(const BinaryData &pubKey);
 
+   void showTrayNotify(const QString &title, const QString &msg);
 private:
    void settingsConnections();
-   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
-
    void registerQtTypes();
 
    SignerAdapter  *  adapter_;
@@ -106,8 +106,7 @@ private:
    DBusNotification *dbus_;
 #endif // BS_USE_DBUS
 
-   std::unordered_set<std::string>  offlinePasswordRequests_;
-
+   std::unordered_set<std::string> offlinePasswordRequests_;
    std::unordered_set<std::string> lastFailedTerminals_;
 };
 
