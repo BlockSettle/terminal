@@ -347,6 +347,8 @@ void ChatClient::rejectFriendRequest(const std::string &friendUserId)
    model_->notifyContactChanged(contact);
 
    sendRejectFriendRequestToServer(friendUserId);
+
+   removeFriendOrRequest(friendUserId);
 }
 
 void ChatClient::removeFriendOrRequest(const std::string &userId)
