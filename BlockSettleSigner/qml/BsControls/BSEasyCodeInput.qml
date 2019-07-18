@@ -39,6 +39,13 @@ ColumnLayout {
     property string  privateRootKeyToCheck
     signal entryComplete()
 
+    Component.onCompleted: {
+        keyLine1.focus = true
+    }
+
+    onVisibleChanged: {
+        keyLine1.focus = true
+    }
 
     RowLayout {
         spacing: rowSpacing

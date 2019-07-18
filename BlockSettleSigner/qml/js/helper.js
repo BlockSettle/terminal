@@ -317,9 +317,6 @@ function createNewWalletDialog(data) {
         var dlgCreateWallet = Qt.createComponent("../BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
         dlgNewSeed.setNextChainDialog(dlgCreateWallet)
         dlgCreateWallet.seed = newSeed
-        dlgCreateWallet.bsResized.connect(function() {
-            mainWindow.moveMainWindowToScreenCenter()
-        })
         dlgCreateWallet.open()
     })
     if (Object.keys(mainWindow).indexOf("currentDialog") != -1) {
@@ -353,9 +350,6 @@ function deleteWalletDialog(data) {
     var dlg = Qt.createComponent("../BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
     dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
     dlg.rootName = walletsProxy.getRootWalletName(walletId)
-    dlg.bsResized.connect(function() {
-        mainWindow.moveMainWindowToScreenCenter()
-    })
     dlg.open()
     return dlg
 }

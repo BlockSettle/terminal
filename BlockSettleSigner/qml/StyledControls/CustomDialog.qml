@@ -19,7 +19,6 @@ CustomDialogWindow {
     // or after next dialog in chain will send dialogsChainFinished signal
     signal bsAccepted()
     signal bsRejected()
-    signal bsResized()
 
     function acceptAnimated(){
         bsAccepted()
