@@ -253,7 +253,7 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
       return;
    }
 
-   client->autheid = std::make_unique<AutheIDClient>(logger_, nam_, AutheIDClient::AuthKeys{}, params_.autheidTestEnv, this);
+   resetAuthEid(client);
 
    connect(client->autheid.get(), &AutheIDClient::createRequestDone, this, [this, client, requestId] {
       // Check that autheid lives in our thread
@@ -392,7 +392,7 @@ void BsProxy::processStartSignAddress(BsProxy::Client *client, int64_t requestId
          return;
    }
 
-   client->autheid = std::make_unique<AutheIDClient>(logger_, nam_, AutheIDClient::AuthKeys{}, params_.autheidTestEnv, this);
+   resetAuthEid(client);
 
    connect(client->autheid.get(), &AutheIDClient::createRequestDone, this, [this, client, requestId] {
       // Check that autheid lives in our thread
@@ -551,6 +551,15 @@ void BsProxy::sendResponse(Client *client, int64_t requestId, Response *response
 void BsProxy::sendMessage(BsProxy::Client *client, Response *response)
 {
    server_->SendDataToClient(client->clientId, response->SerializeAsString());
+}
+
+void BsProxy::resetAuthEid(BsProxy::Client *client)
+{
+   client->autheid = std::make_unique<AutheIDClient>(logger_, nam_, AutheIDClient::AuthKeys{}, params_.autheidTestEnv, this);
+
+   if (!params_.autheidApiKey.empty()) {
+      client->autheid->setApiKey(params_.autheidApiKey);
+   }
 }
 
 BsProxy::Client *BsProxy::findClient(const std::string &clientId)

@@ -153,6 +153,7 @@ public:
 
    void requestResult();
 
+   void setApiKey(const std::string &apiKey);
 signals:
    void createRequestDone();
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
@@ -197,7 +198,7 @@ private:
    SignRequest signRequest_;
 
    const char *baseUrl_;
-   const char *apiKey_;
+   std::string apiKey_;
 };
 
 Q_DECLARE_METATYPE(AutheIDClient::RequestType)

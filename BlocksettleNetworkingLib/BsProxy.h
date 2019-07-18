@@ -113,6 +113,8 @@ private:
    void sendResponse(Client *client, int64_t requestId, Blocksettle::Communication::Proxy::Response *response);
    void sendMessage(Client *client, Blocksettle::Communication::Proxy::Response *response);
 
+   void resetAuthEid(Client *client);
+
    Client *findClient(const std::string &clientId);
 
    const std::shared_ptr<spdlog::logger> logger_;
