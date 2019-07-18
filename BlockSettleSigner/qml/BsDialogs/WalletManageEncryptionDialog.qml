@@ -89,7 +89,12 @@ CustomDialog {
                     implicitHeight: 35
 
                     onClicked: {
-                        walletDetailsFrame.passwordInput.focus = true
+                        if (walletInfo.encType === QPasswordData.Password) {
+                            walletDetailsFrame.passwordInput.focus = true
+                        }
+                        else if (walletInfo.encType === QPasswordData.Auth) {
+                            textInputEmail.focus = true
+                        }
                     }
                 }
                 CustomTabButton {
@@ -100,10 +105,6 @@ CustomDialog {
                     text: "Add Device"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
-
-                    onClicked: {
-                        walletDetailsFrame.passwordInput.focus = true
-                    }
                 }
                 CustomTabButton {
                     id: deleteTabButton
@@ -113,10 +114,6 @@ CustomDialog {
                     text: "Device List"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
-
-                    onClicked: {
-                        walletDetailsFrame.passwordInput.focus = true
-                    }
                 }
             }
         }
