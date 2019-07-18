@@ -301,11 +301,6 @@ void QmlWalletsViewModel::loadWallets(const std::string &)
       hdNode->addGroups(hdWallet->getGroups());
    }
 
-   const auto stmtWallet = walletsManager_->getSettlementWallet();
-   if (stmtWallet) {
-      const auto stmtNode = new QmlWalletLeafNode(this, stmtWallet, rootNode_->nbChildren(), rootNode_.get());
-      rootNode_->add(stmtNode);
-   }
    endResetModel();
 }
 

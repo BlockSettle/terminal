@@ -70,7 +70,7 @@ public:
       , bool addNew, bool removeOld, bool dryRun
       , const std::function<void(bool)> &);
 
-   void signOfflineTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
+   void signOfflineTxRequest(const bs::core::wallet::TXSignRequest &
       , const std::function<void(const BinaryData &)> &);
    void createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
