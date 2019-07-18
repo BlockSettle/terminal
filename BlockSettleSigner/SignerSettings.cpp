@@ -11,7 +11,6 @@
 #include "SystemFileUtils.h"
 #include "bs_signer.pb.h"
 #include "HeadlessSettings.h"
-#include <QDebug>
 using namespace Blocksettle::Communication;
 
 static const QString testnetName = QString::fromStdString("testnet");
