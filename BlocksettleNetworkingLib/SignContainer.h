@@ -15,7 +15,7 @@
 #include "SignerUiDefs.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 
-#include "SettlementInfo.h"
+#include "PasswordDialogData.h"
 
 namespace spdlog {
    class logger;
@@ -85,31 +85,29 @@ public:
       , const PasswordType& password = {}) = 0;
 
    virtual bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::SettlementInfo &settlementInfo
+      , const bs::sync::PasswordDialogData &dialogData
       , TXSignMode mode = TXSignMode::Full
       , bool keepDuplicatedRecipients = false
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
 
    virtual bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::SettlementInfo &settlementInfo
+      , const bs::sync::PasswordDialogData &dialogData
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
 
    virtual bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::SettlementInfo &settlementInfo
+      , const bs::sync::PasswordDialogData &dialogData
       , const bs::Address &authAddr, const std::string &settlementId
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
 
    virtual bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) = 0;
    virtual bs::signer::RequestId CancelSignTx(const BinaryData &txId) = 0;
 
-   virtual bs::signer::RequestId setUserId(const BinaryData &) = 0;
+   virtual bs::signer::RequestId setUserId(const BinaryData &, const std::string &walletId) = 0;
    virtual bs::signer::RequestId syncCCNames(const std::vector<std::string> &) = 0;
 
    virtual bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
-      , const std::vector<bs::wallet::PasswordData> &pwdData = {}) = 0;
-   virtual bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc
-      , bool primary, const bs::core::wallet::Seed &
-      , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) = 0;
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}
+      , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) = 0;
    virtual bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) = 0;
    virtual bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) = 0;
    virtual bs::signer::RequestId GetInfo(const std::string &rootWalletId) = 0;
@@ -172,7 +170,7 @@ signals:
    void TXSigned(bs::signer::RequestId id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason = {});
 
    void HDLeafCreated(bs::signer::RequestId id, const std::shared_ptr<bs::sync::hd::Leaf> &);
-   void HDWalletCreated(bs::signer::RequestId id, std::shared_ptr<bs::sync::hd::Wallet>);
+   //void HDWalletCreated(bs::signer::RequestId id, std::shared_ptr<bs::sync::hd::Wallet>);
    void AuthLeafAdded(const std::string &walletId);
    void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
    void PasswordChanged(const std::string &walletId, bool success);

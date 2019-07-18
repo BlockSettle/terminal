@@ -47,31 +47,29 @@ public:
       , const std::string &settlementId, const PasswordType& password = {}) override;
 
    bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::SettlementInfo &
+      , const bs::sync::PasswordDialogData &
       , TXSignMode
       , bool
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &) override { return 0; }
 
    bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::SettlementInfo &
+      , const bs::sync::PasswordDialogData &
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> & ) override { return 0; }
 
    bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::SettlementInfo &
+      , const bs::sync::PasswordDialogData &
       , const bs::Address &, const std::string &
       , const std::function<void(bs::error::ErrorCode , const BinaryData &signedTX)> &)  override { return 0; }
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
    bs::signer::RequestId CancelSignTx(const BinaryData &) override { return 0; }
 
-   bs::signer::RequestId setUserId(const BinaryData &) override;
+   bs::signer::RequestId setUserId(const BinaryData &, const std::string &walletId) override;
    bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override;
 
    bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
-      , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override;
-   bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc
-      , bool primary, const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData = {}
-      , bs::wallet::KeyRank keyRank = { 0, 0 }) override;
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}
+      , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) override;
    bs::signer::RequestId DeleteHDRoot(const std::string &) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override;
    bs::signer::RequestId GetInfo(const std::string &) override;

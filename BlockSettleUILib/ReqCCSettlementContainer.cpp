@@ -205,7 +205,7 @@ bool ReqCCSettlementContainer::startSigning()
       }
    };
 
-   ccSignId_ = signingContainer_->signSettlementPartialTXRequest(ccTxData_, toSettlementInfo(), cbTx);
+   ccSignId_ = signingContainer_->signSettlementPartialTXRequest(ccTxData_, toPasswordDialogData(), cbTx);
    logger_->debug("[CCSettlementTransactionWidget::createCCSignedTXdata] {} recipients", ccTxData_.recipients.size());
    return (ccSignId_ > 0);
 }

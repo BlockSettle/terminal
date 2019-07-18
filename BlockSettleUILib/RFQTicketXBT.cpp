@@ -1034,9 +1034,9 @@ void RFQTicketXBT::onCreateWalletClicked()
 {
    ui_->pushButtonCreateWallet->setEnabled(false);
    bs::hd::Path path;
-   path.append(bs::hd::purpose | 0x80000000);
-   path.append(bs::hd::BlockSettle_CC | 0x80000000);
-   path.append(getProduct().toStdString());
+   path.append(bs::hd::purpose | bs::hd::hardFlag);
+   path.append(bs::hd::BlockSettle_CC | bs::hd::hardFlag);
+   path.append(bs::hd::Path::keyToElem(getProduct().toStdString()) | bs::hd::hardFlag);
    leafCreateReqId_ = signingContainer_->createHDLeaf(walletsManager_->getPrimaryWallet()->walletId(), path);
    if (leafCreateReqId_ == 0) {
       showHelp(tr("Create CC wallet request failed"));

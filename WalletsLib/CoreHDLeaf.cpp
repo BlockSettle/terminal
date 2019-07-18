@@ -595,7 +595,7 @@ std::pair<bs::Address, bool> hd::Leaf::synchronizeUsedAddressChain(
    auto&& path = bs::hd::Path::fromString(index);
 
    //does path belong to our leaf?
-   if (path.isAbolute())
+   if (path.isAbsolute())
    {
       if (path.length() != path_.length() - 2)
          throw AccountException("address path does not belong to leaf");
