@@ -9,7 +9,7 @@
 #include "DataConnectionListener.h"
 
 class QNetworkAccessManager;
-
+class QThreadPool;
 class AutheIDClient;
 class ConnectionManager;
 class BsProxy;
@@ -127,6 +127,7 @@ private:
    std::unique_ptr<ZmqBIP15XServerConnection> server_;
    std::shared_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<QNetworkAccessManager> nam_{};
+   QThreadPool *threadPool_{};
 };
 
 #endif

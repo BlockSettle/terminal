@@ -1,6 +1,7 @@
 #include "BsProxy.h"
 
 #include <QThread>
+#include <QtConcurrent/QtConcurrentRun>
 #include <QNetworkAccessManager>
 #include "AutheIDClient.h"
 #include "BsClient.h"
@@ -99,6 +100,8 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
    nam_ = std::make_shared<QNetworkAccessManager>(this);
 
    connectionManager_ = std::make_shared<ConnectionManager>(logger_);
+
+   threadPool_ = new QThreadPool(this);
 }
 
 // static
@@ -108,7 +111,10 @@ void BsProxy::overrideCelerHost(const std::string &host, int port)
    g_celerPortOverride = port;
 }
 
-BsProxy::~BsProxy() = default;
+BsProxy::~BsProxy()
+{
+   threadPool_->waitForDone();
+}
 
 void BsProxy::onProxyDataFromClient(const std::string &clientId, const std::string &data)
 {
@@ -289,9 +295,13 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
 
    client->state = State::WaitAutheidStart;
    client->email = request.email();
+
+   AutheIDClient::SignRequest loginRequest;
+   loginRequest.email = request.email();
+   loginRequest.title = "Terminal Login";
+   loginRequest.expiration = int(BsClient::autheidLoginTimeout() / std::chrono::seconds(1));
    const bool autoRequestResult = false;
-   const int authTimeout = int(BsClient::autheidLoginTimeout() / std::chrono::seconds(1));
-   client->autheid->authenticate(request.email(), authTimeout, autoRequestResult);
+   client->autheid->sign(loginRequest, autoRequestResult);
 }
 
 void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Request_GetLoginResult &request)
@@ -305,28 +315,45 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
    // Need to disconnect `AutheIDClient::failed` signal here because we don't need old callbacks anymore
    client->autheid->disconnect();
 
-   connect(client->autheid.get(), &AutheIDClient::authSuccess, this, [this, client, requestId](const std::string &jwt) {
-      if (client->state != State::WaitAutheidResult) {
-         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
-         return;
-      }
+   connect(client->autheid.get(), &AutheIDClient::signSuccess, this, [this, client, requestId](const AutheIDClient::SignResult &result) {
+      QtConcurrent::run([this, clientId = client->clientId, requestId, result] {
+         const auto env = params_.autheidTestEnv ?
+            AutheIDClient::AuthEidEnv::Test : AutheIDClient::AuthEidEnv::Prod;
+         auto status = AutheIDClient::verifySignature(result, env);
+         if (!status.valid) {
+            SPDLOG_LOGGER_ERROR(logger_, "auth eid login signature verification failed: {}", status.errorMsg);
+            return;
+         }
 
-      client->state = State::LoggedIn;
+         QMetaObject::invokeMethod(this, [this, clientId, requestId, result, status] {
+            auto client = findClient(clientId);
+            if (!client) {
+               return;
+            }
 
-      Response response;
-      response.mutable_get_login_result();
-      sendResponse(client, requestId, &response);
+            if (client->state != State::WaitAutheidResult) {
+               SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+               return;
+            }
 
-      client->celerListener = std::make_unique<BsClientCelerListener>();
-      client->celerListener->proxy_ = this;
-      client->celerListener->clientId_ = client->clientId;
+            client->state = State::LoggedIn;
 
-      client->celer = connectionManager_->CreateCelerClientConnection();
+            Response response;
+            response.mutable_get_login_result();
+            sendResponse(client, requestId, &response);
 
-      const std::string &host = g_celerHostOverride.empty() ? params_.celerHost : g_celerHostOverride;
-      const int port = g_celerHostOverride.empty() ? params_.celerPort : g_celerPortOverride;
+            client->celerListener = std::make_unique<BsClientCelerListener>();
+            client->celerListener->proxy_ = this;
+            client->celerListener->clientId_ = client->clientId;
 
-      client->celer->openConnection(host, std::to_string(port), client->celerListener.get());
+            client->celer = connectionManager_->CreateCelerClientConnection();
+
+            const std::string &host = g_celerHostOverride.empty() ? params_.celerHost : g_celerHostOverride;
+            const int port = g_celerHostOverride.empty() ? params_.celerPort : g_celerPortOverride;
+
+            client->celer->openConnection(host, std::to_string(port), client->celerListener.get());
+         });
+      });
    });
 
    connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId](AutheIDClient::ErrorType error) {
