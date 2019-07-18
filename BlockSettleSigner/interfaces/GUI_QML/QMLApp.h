@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <QObject>
 #include <QSystemTrayIcon>
+#include "SignerDefs.h"
 
 namespace bs {
    namespace wallet {
@@ -59,7 +60,7 @@ signals:
 private slots:
    void onReady();
    void onConnectionError();
-   void onHeadlessBindUpdated(bool success);
+   void onHeadlessBindUpdated(bs::signer::BindStatus status);
    void onWalletsSynced();
    void onPasswordAccepted(const QString &walletId
                            , bs::wallet::QPasswordData *passwordData
@@ -72,6 +73,7 @@ private slots:
    void onCancelSignTx(const BinaryData &txId);
    void onCustomDialogRequest(const QString &dialogName, const QVariantMap &data);
    void onTerminalHandshakeFailed(const std::string &peerAddress);
+   void onSignerPubKeyUpdated(const BinaryData &pubKey);
 
    void showTrayNotify(const QString &title, const QString &msg);
 private:

@@ -1,7 +1,28 @@
 {
-   "latest_version": "0.19.0",
-   "release_date": "15 Jul 2019",
+   "latest_version": "0.19.1",
+   "release_date": "16 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.19.1",
+         "previous_version": "0.19.0",
+         "release_date": "16 Jul 2019",
+         "release_type": "prod",
+         "improvements": [
+            "Offline TX sign fixes",
+            "Allow filter incoming TCP connection in signer",
+            "Use root wallet ID in exported TX file name",
+            "Allow filter incoming TCP connection in signer",
+            "Approving contact req stay in chat",
+            "Remove icons in buttons - generate address (linux)",
+            "Fix loading bar"
+         ],
+         "bug_fixes": [
+            "Fix notification reappearance",
+            "Fix message reappearance"
+         ],
+         "revision": "f7851fe6",
+         "common_revision": "3eb5fe3a"
+      },
       {
          "version_string": "0.19.0",
          "previous_version": "0.18.9",

@@ -78,9 +78,6 @@ public:
    void setDeleteHDWalletCb(bs::signer::RequestId reqId, const std::function<void(bool success, const std::string& errorMsg)> &cb) {
       cbDeleteHDWalletReqs_[reqId] = cb;
    }
-   void setHeadlessPubKeyCb(bs::signer::RequestId reqId, const std::function<void(const std::string &pubKey)> &cb) {
-      cbHeadlessPubKeyReqs_[reqId] = cb;
-   }
    void setAutoSignCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
       cbAutoSignReqs_[reqId] = cb;
    }
@@ -107,7 +104,6 @@ private:
    void onChangePassword(const std::string &data, bs::signer::RequestId);
    void onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    void onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
-   void onHeadlessPubKey(const std::string &data, bs::signer::RequestId);
    void onUpdateStatus(const std::string &data);
    void onTerminalHandshakeFailed(const std::string &data);
 
@@ -138,7 +134,6 @@ private:
    std::map<bs::signer::RequestId, std::function<void(bool success)>> cbChangePwReqs_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbCreateHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbDeleteHDWalletReqs_;
-   std::map<bs::signer::RequestId, std::function<void(const std::string &pubKey)>> cbHeadlessPubKeyReqs_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbAutoSignReqs_;
 
    std::shared_ptr<QmlBridge>  qmlBridge_;

@@ -222,9 +222,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::DeleteHDWalletType:
       rc = onDeleteHDWallet(packet.data(), packet.id());
       break;
-   case signer::HeadlessPubKeyRequestType:
-      rc = onHeadlessPubKeyRequest(packet.data(), packet.id());
-      break;
    case signer::ImportWoWalletType:
       rc = onImportWoWallet(packet.data(), packet.id());
       break;
@@ -261,6 +258,7 @@ void SignerAdapterListener::sendStatusUpdate()
 {
    signer::UpdateStatus evt;
    evt.set_signer_bind_status(signer::BindStatus(app_->signerBindStatus()));
+   evt.set_signer_pub_key(app_->signerPubKey().toBinStr());
    sendData(signer::UpdateStatusType, evt.SerializeAsString());
 }
 
@@ -673,16 +671,6 @@ bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer
    return sendData(signer::DeleteHDWalletType, response.SerializeAsString(), reqId);
 }
 
-bool SignerAdapterListener::onHeadlessPubKeyRequest(const std::string &, bs::signer::RequestId reqId)
-{
-   signer::HeadlessPubKeyResponse response;
-   if (app_ && app_->connection()) {
-      response.set_pubkey(app_->connection()->getOwnPubKey().toHexStr());
-   }
-
-   return sendData(signer::HeadlessPubKeyRequestType, response.SerializeAsString(), reqId);
-}
-
 bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::ImportWoWalletRequest request;
@@ -736,5 +724,8 @@ void SignerAdapterListener::shutdownIfNeeded()
 
 bool SignerAdapterListener::sendReady()
 {
+   // Notify GUI about bind status
+   sendStatusUpdate();
+
    return sendData(signer::HeadlessReadyType, {});
 }
