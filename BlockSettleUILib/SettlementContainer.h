@@ -8,7 +8,7 @@
 #include "ArmoryConnection.h"
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
-#include "SettlementInfo.h"
+#include "PasswordDialogData.h"
 
 namespace bs {
 
@@ -37,7 +37,7 @@ namespace bs {
       int durationMs() const { return msDuration_; }
       int timeLeftMs() const { return msTimeLeft_; }
 
-      virtual bs::sync::SettlementInfo toSettlementInfo() const;
+      virtual bs::sync::PasswordDialogData toPasswordDialogData() const;
 
    signals:
       void error(QString);

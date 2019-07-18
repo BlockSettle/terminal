@@ -632,19 +632,19 @@ void WalletsWidget::onRevokeSettlement()
             return;
          }
 
+#if 0
          const auto &cbFee = [this, input, recvAddr, title](float feePerByte) {
             try {
                const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(input, recvAddr
                   , feePerByte, armory_->topBlock());
-#if 0    //FIXME
-               const auto authAddr = bs::Address::fromPubKey(sellAuthKey, AddressEntryType_P2WPKH);
-               revokeReqId_ = signingContainer_->signPayoutTXRequest(txReq, authAddr, settlWallet->getAddressIndex(ae));
-#endif
+               //FIXME: need to retrive SettlementData for revoke - to be decided later
+               revokeReqId_ = signingContainer_->signSettlementPayoutTXRequest(txReq, {}, {});
             } catch (const std::exception &e) {
                BSMessageBox(BSMessageBox::critical, title, tr("Failed to sign revoke pay-out"), QLatin1String(e.what())).exec();
             }
          };
          walletsManager_->estimatedFeePerByte(2, cbFee, this);
+#endif   //0
       };
       monitor->getPayinInput(cbSettlInput, false);
    };

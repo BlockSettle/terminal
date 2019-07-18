@@ -47,9 +47,9 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    if (authKey_.isNull() || reqAuthKey_.isNull()) {
       throw std::runtime_error("missing auth key");
    }
-   settlIdStr_ = qn.settlementId;
+   settlementId_ = BinaryData::CreateFromHex(qn.settlementId);
 
-   addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory, settlIdStr_
+   addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory, settlementId_.toHexStr()
       , [this, logger](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
    {
       logger->info("Counterparty's address verification {} for {}"
@@ -73,7 +73,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    if (!priWallet) {
       throw std::runtime_error("missing primary wallet");
    }
-   priWallet->getSettlementPayinAddress(BinaryData::CreateFromHex(settlIdStr_), reqAuthKey_, cbSettlAddr, !weSell_);
+   priWallet->getSettlementPayinAddress(settlementId_, reqAuthKey_, cbSettlAddr, !weSell_);
 
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }
@@ -118,10 +118,10 @@ bool DealerXBTSettlementContainer::startSigning()
          try {
             const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(input
                , receivingAddress, transactionData_->feePerByte(), armory_->topBlock());
-            const auto authAddr = bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH);
-            // FIXME: Settlement containers will be reimplemented to use another function
-//            payoutSignId_ = signingContainer_->signPayoutTXRequest(txReq, authAddr, settlIdStr_
-//               , autoSign_);
+            const bs::sync::PasswordDialogData dlgData({ {tr("Settlement ID")
+               , QString::fromStdString(settlementId_.toHexStr())} });
+            payoutSignId_ = signingContainer_->signSettlementPayoutTXRequest(txReq, { settlementId_
+               , reqAuthKey_, !weSell_ }, dlgData);
          } catch (const std::exception &e) {
             logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());
             emit error(tr("Failed to sign pay-out"));

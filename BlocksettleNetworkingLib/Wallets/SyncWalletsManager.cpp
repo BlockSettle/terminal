@@ -43,7 +43,6 @@ void WalletsManager::setSignContainer(const std::shared_ptr<SignContainer> &cont
 {
    signContainer_ = container;
 
-   connect(signContainer_.get(), &SignContainer::HDWalletCreated, this, &WalletsManager::onHDWalletCreated);
    connect(signContainer_.get(), &SignContainer::AuthLeafAdded, this, &WalletsManager::onAuthLeafAdded);
    connect(signContainer_.get(), &SignContainer::walletsListUpdated, this, &WalletsManager::onWalletsListUpdated);
 }
@@ -328,6 +327,7 @@ void WalletsManager::setUserId(const BinaryData &userId)
    for (const auto &hdWallet : hdWallets_) {
       hdWallet.second->setUserId(userId);
    }
+   signContainer_->setUserId(userId, getPrimaryWallet()->walletId());
 }
 
 const WalletsManager::HDWalletPtr WalletsManager::getHDWallet(unsigned id) const
@@ -896,19 +896,6 @@ void WalletsManager::createSettlementLeaf(const bs::Address &authAddr
       return;
    }
    signContainer_->createSettlementWallet(authAddr, cb);
-}
-
-void WalletsManager::createWallet(const std::string& name, const std::string& description
-   , bs::core::wallet::Seed seed, bool primary
-   , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
-{
-   if (!signContainer_) {
-      logger_->error("[WalletsManager::{}] - signer is not set - aborting"
-         , __func__);
-      return;
-   }
-   createHdReqId_ = signContainer_->createHDWallet(name, description, primary
-      , seed, pwdData, keyRank);
 }
 
 void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet> newWallet)

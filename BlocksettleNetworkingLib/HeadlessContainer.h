@@ -49,36 +49,30 @@ public:
 
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) override;
-   bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &) override;
-/*   bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::string &settlementId, const PasswordType& password = {}) override;*/
 
    bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
-      , const bs::sync::SettlementInfo &settlementInfo
+      , const bs::sync::PasswordDialogData &dialogData
       , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) override;
 
    bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
-      , const bs::sync::SettlementInfo &settlementInfo
+      , const bs::sync::PasswordDialogData &dialogData
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) override;
 
    bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
-      , const bs::sync::SettlementInfo &settlementInfo
-      , const bs::Address &authAddr, const std::string &settlementId
+      , const bs::core::wallet::SettlementData &, const bs::sync::PasswordDialogData &dialogData
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) override;
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
 
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override;
 
-   bs::signer::RequestId setUserId(const BinaryData &) override;
+   bs::signer::RequestId setUserId(const BinaryData &, const std::string &walletId) override;
    bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override;
 
    bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
-      , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override;
-   bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc
-      , bool primary, const bs::core::wallet::Seed &seed
-      , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}
+      , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) override;
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override;
    bs::signer::RequestId GetInfo(const std::string &rootWalletId) override;
@@ -103,9 +97,9 @@ public:
       , const std::function<void(const SecureBinaryData &)> &) override;
    void setSettlementID(const std::string &walletId, const SecureBinaryData &id
       , const std::function<void(bool)> &) override;
-   void getSettlementPayinAddress(const std::string &walletId,
-      const SecureBinaryData &settlementId, const SecureBinaryData &cpPubKey
-      , const std::function<void(bool, bs::Address)> &, bool myFirst = true) override;
+   void getSettlementPayinAddress(const std::string &walletId
+      , const bs::core::wallet::SettlementData &
+      , const std::function<void(bool, bs::Address)> &) override;
    void getRootPubkey(const std::string &walletID
       , const std::function<void(bool, const SecureBinaryData &)> &) override;
 
@@ -116,7 +110,7 @@ protected:
    bs::signer::RequestId Send(const Blocksettle::Communication::headless::RequestPacket &, bool incSeqNo = true);
    void ProcessSignTXResponse(unsigned int id, const std::string &data);
    void ProcessSettlementSignTXResponse(unsigned int id, const std::string &data);
-   void ProcessCreateHDWalletResponse(unsigned int id, const std::string &data);
+   void ProcessCreateHDLeafResponse(unsigned int id, const std::string &data);
    bs::signer::RequestId SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId);
    void ProcessGetHDWalletInfoResponse(unsigned int id, const std::string &data);
    void ProcessAutoSignActEvent(unsigned int id, const std::string &data);

@@ -89,7 +89,7 @@ private:
    std::shared_ptr<SignContainer>               signingContainer_;
    AddressVerificationState                     cptyAddressState_ = AddressVerificationState::InProgress;
    bs::Address settlAddr_;
-   std::string settlIdStr_;
+   BinaryData  settlementId_;
    BinaryData  authKey_, reqAuthKey_;
    bool        payInDetected_ = false;
    bool        payInSent_ = false;

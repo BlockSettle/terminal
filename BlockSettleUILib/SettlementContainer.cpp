@@ -7,21 +7,20 @@ SettlementContainer::SettlementContainer()
    : QObject(nullptr)
 {}
 
-sync::SettlementInfo SettlementContainer::toSettlementInfo() const
+sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
 {
-   bs::sync::SettlementInfo info;
-   info.setProductGroup(tr(bs::network::Asset::toString(assetType())));
-   info.setSecurity(QString::fromStdString(security()));
-   info.setProduct(QString::fromStdString(product()));
-   info.setSide(tr(bs::network::Side::toString(side())));
+   bs::sync::PasswordDialogData info;
 
-   info.setPrice(UiUtils::displayPriceCC(price()));
-   info.setQuantity(tr("%1 %2")
-                    .arg(UiUtils::displayCCAmount(quantity()))
-                    .arg(QString::fromStdString(product())));
-   info.setTotalValue(tr("%1").arg(UiUtils::displayAmount(amount())));
-
-   info.setGenesisAddress(tr("Verifying"));
+   info.setValue("ProductGroup", tr(bs::network::Asset::toString(assetType())));
+   info.setValue("Security", QString::fromStdString(security()));
+   info.setValue("Product", QString::fromStdString(product()));
+   info.setValue("Side", tr(bs::network::Side::toString(side())));
+   info.setValue("Price", UiUtils::displayPriceCC(price()));
+   info.setValue("Quantity", tr("%1 %2")
+                 .arg(UiUtils::displayCCAmount(quantity()))
+                 .arg(QString::fromStdString(product())));
+   info.setValue("TotalValue", tr("%1").arg(UiUtils::displayAmount(amount())));
+   info.setValue("GenesisAddress", tr("Verifying"));
 
    return info;
 }

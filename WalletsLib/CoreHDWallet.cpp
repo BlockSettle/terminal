@@ -622,12 +622,10 @@ std::shared_ptr<AssetEntry> hd::Wallet::getAssetForAddress(
 }
 
 bs::Address hd::Wallet::getSettlementPayinAddress(
-   const SecureBinaryData& settlementID,
-   const SecureBinaryData& counterPartyPubKey,
-   bool isMyKeyFirst) const
+   const bs::core::wallet::SettlementData &sd) const
 {
    auto addrPtr = getAddressPtrForSettlement(
-      settlementID, counterPartyPubKey, isMyKeyFirst);
+      sd.settlementId, sd.cpPublicKey, sd.ownKeyFirst);
    return bs::Address(addrPtr->getPrefixedHash());
 }
 
@@ -692,15 +690,12 @@ std::shared_ptr<hd::SettlementLeaf> hd::Wallet::getLeafForSettlementID(
    return settlGroup->getLeafForSettlementID(id);
 }
 
-BinaryData hd::Wallet::signSettlementTXRequest(
-   const wallet::TXSignRequest& txReq,
-   const BinaryData& settlementId,
-   const SecureBinaryData& counterPartyPubKey,
-   bool myKeyComesFirst)
+BinaryData hd::Wallet::signSettlementTXRequest(const wallet::TXSignRequest &txReq
+   , const wallet::SettlementData &sd)
 {
    //get p2wsh address entry
    auto addrP2wsh = getAddressPtrForSettlement(
-      settlementId, counterPartyPubKey, myKeyComesFirst);
+      sd.settlementId, sd.cpPublicKey, sd.ownKeyFirst);
 
    //grab wallet resolver, seed it with p2wsh script
    auto resolver = 
@@ -708,7 +703,7 @@ BinaryData hd::Wallet::signSettlementTXRequest(
    resolver->seedFromAddressEntry(addrP2wsh);
 
    //get leaf
-   auto leafPtr = getLeafForSettlementID(settlementId);
+   auto leafPtr = getLeafForSettlementID(sd.settlementId);
 
    //sign & return
    auto signer = leafPtr->getSigner(txReq, false);

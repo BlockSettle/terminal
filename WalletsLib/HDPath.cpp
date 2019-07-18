@@ -174,7 +174,8 @@ hd::Path hd::Path::fromString(const std::string &s)
          pe |= hardFlag; //proper way to signify hardness, stick to the spec!
       result.append(pe);
    }
-   if (result.get(0) == hd::purpose) {
+
+   if ((result.get(0) & ~hardFlag) == hd::purpose) {
       result.isAbsolute_ = true;
    }
    return result;

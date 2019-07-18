@@ -100,9 +100,6 @@ namespace bs {
          bool getTransactionMainAddress(const Tx &, const std::string &walletId
             , bool isReceiving, const std::function<void(QString, int)> &);
 
-         void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
-            , bool primary = false, const std::vector<bs::wallet::PasswordData> &pwdData = {}
-            , bs::wallet::KeyRank keyRank = { 0, 0 });
          void adoptNewWallet(const HDWalletPtr &);
 
          bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>, QObject *obj = nullptr);

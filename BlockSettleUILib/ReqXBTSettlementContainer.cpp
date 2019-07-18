@@ -60,18 +60,18 @@ ReqXBTSettlementContainer::~ReqXBTSettlementContainer()
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
-unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHash, double qty, const bs::Address &recvAddr
-   , const SecureBinaryData &password)
+unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHash, double qty
+   , const bs::Address &recvAddr)
 {
    try {
-#if 0    //FIXME
-      const auto authAddr = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
-      return signContainer_->signPayoutTXRequest(txReq, authAddr, wallet->getAddressIndex(settlAddr_), false, password);
-#endif
       const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(
          bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, qty), recvAddr
          , transactionData_->GetTransactionSummary().feePerByte, armory_->topBlock());
+      const bs::sync::PasswordDialogData dlgData({ {tr("Settlement ID")
+         , QString::fromStdString(settlementId_.toHexStr())} });
       logger_->debug("[ReqXBTSettlementContainer] pay-out fee={}, payin hash={}", txReq.fee, payinHash.toHexStr(true));
+      return signContainer_->signSettlementPayoutTXRequest(txReq, {settlementId_, dealerAuthKey_, !clientSells_ }
+         , dlgData);
    }
    catch (const std::exception &e) {
       logger_->warn("[ReqXBTSettlementContainer] failed to create pay-out transaction based on {}: {}"
@@ -81,16 +81,20 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
    return 0;
 }
 
-void ReqXBTSettlementContainer::acceptSpotXBT(const SecureBinaryData &password)
+void ReqXBTSettlementContainer::acceptSpotXBT()
 {
    emit info(tr("Waiting for transactions signing..."));
-   if (clientSells_) {  //FIXME: send new type of message to signer here
-/*      const auto hasChange = transactionData_->GetTransactionSummary().hasChange;
-      const auto changeAddr = hasChange ? transactionData_->getWallet()->getNewChangeAddress() : bs::Address();
-      const auto payinTxReq = transactionData_->createTXRequest(false, changeAddr);
-      payinSignId_ = signContainer_->signTXRequest(payinTxReq, false, SignContainer::TXSignMode::Full
-         , password);
-      payoutPassword_ = password;*/
+   if (clientSells_) {
+      const auto &cbChangeAddr = [this](const bs::Address &changeAddr) {
+         const auto payinTxReq = transactionData_->createTXRequest(false, changeAddr);
+         payinSignId_ = signContainer_->signTXRequest(payinTxReq);
+      };
+      if (transactionData_->GetTransactionSummary().hasChange) {
+         transactionData_->getWallet()->getNewChangeAddress(cbChangeAddr);
+      }
+      else {
+         cbChangeAddr({});
+      }
    }
    else {
       try {    // create payout based on dealer TX
@@ -99,7 +103,7 @@ void ReqXBTSettlementContainer::acceptSpotXBT(const SecureBinaryData &password)
             emit error(tr("empty dealer payin hash"));
          }
          else {
-            payoutSignId_ = createPayoutTx(dealerTx_, amount_, recvAddr_, password);
+            payoutSignId_ = createPayoutTx(dealerTx_, amount_, recvAddr_);
          }
       }
       catch (const std::exception &e) {
@@ -112,13 +116,12 @@ void ReqXBTSettlementContainer::acceptSpotXBT(const SecureBinaryData &password)
 
 bool ReqXBTSettlementContainer::startSigning()
 {
-   // FIXME: reimlement
-//   if (!payinReceived()) {
-//      acceptSpotXBT(password);
-//   }
-//   else {
-//      payoutSignId_ = createPayoutTx(Tx(payinData_).getThisHash(), amount_, recvAddr_, password);
-//   }
+   if (!payinReceived()) {
+      acceptSpotXBT();
+   }
+   else {
+      payoutSignId_ = createPayoutTx(Tx(payinData_).getThisHash(), amount_, recvAddr_);
+   }
    return true;
 }
 
@@ -188,9 +191,9 @@ void ReqXBTSettlementContainer::activate()
 
    settlementId_ = BinaryData::CreateFromHex(quote_.settlementId);
    userKey_ = BinaryData::CreateFromHex(quote_.requestorAuthPublicKey);
-   const auto dealerAuthKey = BinaryData::CreateFromHex(quote_.dealerAuthPublicKey);
-   const auto buyAuthKey = clientSells_ ? dealerAuthKey : userKey_;
-   const auto sellAuthKey = clientSells_ ? userKey_ : dealerAuthKey;
+   dealerAuthKey_ = BinaryData::CreateFromHex(quote_.dealerAuthPublicKey);
+   const auto buyAuthKey = clientSells_ ? dealerAuthKey_ : userKey_;
+   const auto sellAuthKey = clientSells_ ? userKey_ : dealerAuthKey_;
 
    const auto &cbSettlAddr = [this](const bs::Address &addr) {
       settlAddr_ = addr;
@@ -208,7 +211,7 @@ void ReqXBTSettlementContainer::activate()
       logger_->error("[{}] missing primary wallet", __func__);
       return;
    }
-   priWallet->getSettlementPayinAddress(settlementId_, dealerAuthKey, cbSettlAddr, clientSells_);
+   priWallet->getSettlementPayinAddress(settlementId_, dealerAuthKey_, cbSettlAddr, clientSells_);
 
    recvAddr_ = transactionData_->GetFallbackRecvAddress();
 
@@ -216,7 +219,7 @@ void ReqXBTSettlementContainer::activate()
    transactionData_->UpdateRecipientAmount(recipient, amount_, transactionData_->maxSpendAmount());
    transactionData_->UpdateRecipientAddress(recipient, settlAddr_);
 
-   const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey, AddressEntryType_P2WPKH);
+   const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
    addrVerificator_->StartAddressVerification(std::make_shared<AuthAddress>(dealerAddrSW));
    addrVerificator_->RegisterBSAuthAddresses();
    addrVerificator_->RegisterAddresses();
@@ -270,8 +273,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       stopTimer();
       emit stop();
       payinData_ = signedTX;
-      payoutSignId_ = createPayoutTx(Tx(payinData_).getThisHash(), amount_, recvAddr_, payoutPassword_);
-      payoutPassword_.clear();
+      payoutSignId_ = createPayoutTx(Tx(payinData_).getThisHash(), amount_, recvAddr_);
    }
    else if (payoutSignId_ && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
@@ -291,8 +293,6 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
 
       waitForPayout_ = waitForPayin_ = true;
       emit acceptQuote(rfq_.requestId, payoutData_.toHexStr());
-/*      quoteProvider_->AcceptQuote(QString::fromStdString(rfq_.requestId), quote_
-         , payoutData_.toHexStr());*/
       startTimer(kWaitTimeoutInSec);
    }
 }

@@ -85,11 +85,10 @@ private slots:
    void onPayoutZCDetected(int confNum, bs::PayoutSigner::Type);
 
 private:
-   unsigned int createPayoutTx(const BinaryData& payinHash, double qty, const bs::Address &recvAddr
-      , const SecureBinaryData &password);
+   unsigned int createPayoutTx(const BinaryData& payinHash, double qty, const bs::Address &recvAddr);
    void payoutOnCancel();
    void detectDealerTxs();
-   void acceptSpotXBT(const SecureBinaryData &password);
+   void acceptSpotXBT();
    void dealerVerifStateChanged(AddressVerificationState);
 
 private:
@@ -116,9 +115,9 @@ private:
    double            amount_;
    std::string       fxProd_;
    uint64_t          fee_;
-   SecureBinaryData  payoutPassword_;
    BinaryData        settlementId_;
    BinaryData        userKey_;
+   BinaryData        dealerAuthKey_;
    bs::Address       recvAddr_;
    BinaryData        dealerTx_;
    BinaryData        requesterTx_;

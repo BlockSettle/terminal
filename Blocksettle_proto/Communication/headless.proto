@@ -9,11 +9,10 @@ enum RequestType
    AuthenticationRequestType   = 1;
    SignTxRequestType           = 2;
    SignPartialTXRequestType    = 3;
-//   SignPayoutTXRequestType     = 4;
    SetSettlementIdType         = 5;
    SetUserIdType               = 6;
    CreateSettlWalletType       = 7;
-   CreateHDWalletRequestType   = 8;
+   CreateHDLeafRequestType     = 8;
    DeleteHDWalletRequestType   = 9;
    GetRootKeyRequestType       = 10;
    AutoSignActType             = 11;
@@ -116,23 +115,22 @@ message CancelSignTx
 
 message SignSettlementTxRequest
 {
-   SignTxRequest signTxRequest                                        = 1;
-   Blocksettle.Communication.Internal.SettlementInfo settlementInfo   = 2;
+   SignTxRequest signTxRequest                                                 = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData    = 2;
 }
 
 message SignSettlementPayoutTxRequest
 {
-   SignPayoutTXRequest signPayoutTXRequest                            = 1;
-   Blocksettle.Communication.Internal.SettlementInfo settlementInfo   = 2;
+   SignPayoutTXRequest signPayoutTXRequest                                     = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData    = 2;
 }
 
 message SignPayoutTXRequest
 {
    bytes    input = 1;
    bytes    recipient = 2;
-   string   authAddress = 3;
-   bytes    settlementId = 4;
-   bytes    password = 8;
+   uint64   fee = 3;
+   SettlementData settlement_data = 4;
 }
 
 
@@ -160,12 +158,17 @@ message SetSettlementIdResponse
    bool   success = 2;
 }
 
+message SettlementData
+{
+   bytes  settlement_id = 1;
+   bytes  counterparty_pubkey = 2;
+   bool   my_pubkey_first = 3;
+}
+
 message SettlPayinAddressRequest
 {
    string wallet_id = 1;
-   bytes  settlement_id = 2;
-   bytes  counterparty_pubkey = 3;
-   bool   my_pubkey_first = 4;
+   SettlementData settlement_data = 2;
 }
 
 message SettlPayinAddressResponse
@@ -194,6 +197,7 @@ message SettlGetRootPubkeyResponse
 message SetUserIdRequest
 {
    bytes userId = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData  = 2;
 }
 
 enum AuthWalletResponseType
@@ -211,7 +215,6 @@ message SetUserIdResponse
    string auth_wallet_id = 1;
    AuthWalletResponseType response = 2;
 }
-
 
 message NewHDLeaf
 {
@@ -248,6 +251,13 @@ message CreateHDWalletRequest
    uint32   rankN = 5;
 }
 
+message CreateHDLeafRequest
+{
+   string   rootWalletId = 1;
+   string   path = 2;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData = 3;
+}
+
 message HDLeafWO
 {
    string   name = 1;
@@ -274,11 +284,14 @@ message HDWalletWO
 
 message CreateHDWalletResponse
 {
-   oneof result {
-      HDWalletWO wallet = 1;
-      HDLeafWO  leaf   = 2;
-      string    error  = 3;
-   }
+   uint32    errorCode   = 1;
+   HDWalletWO wallet = 2;
+}
+
+message CreateHDLeafResponse
+{
+   uint32    errorCode   = 1;
+   HDLeafWO  leaf        = 2;
 }
 
 
@@ -325,7 +338,6 @@ message SignTXMultiRequest
    repeated string   walletIds = 1;
    bytes             signerState = 2;
 }
-
 
 enum WalletFormat
 {

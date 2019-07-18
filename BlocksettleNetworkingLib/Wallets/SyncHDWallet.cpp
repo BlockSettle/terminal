@@ -390,6 +390,6 @@ void hd::Wallet::getSettlementPayinAddress(const SecureBinaryData &settlementID
       if (cb)
          cb(addr);
    };
-   signContainer_->getSettlementPayinAddress(walletId(), settlementID
-      , counterPartyPubKey, cbWrap, isMyKeyFirst);
+   signContainer_->getSettlementPayinAddress(walletId(), { settlementID
+      , counterPartyPubKey, isMyKeyFirst }, cbWrap);
 }
