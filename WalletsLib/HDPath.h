@@ -30,7 +30,7 @@ namespace bs {
          size_t length() const { return path_.size(); }
          Elem get(int index) const;   // negative index is an offset from end
          void clear();
-         bool isAbolute() const { return isAbsolute_; }
+         bool isAbsolute() const { return isAbsolute_; }
 
          std::string toString() const;
 

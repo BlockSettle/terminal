@@ -12,7 +12,7 @@ enum RequestType
    SignPayoutTXRequestType     = 4;
    SetUserIdType               = 6;
    CreateSettlWalletType       = 7;
-   CreateHDWalletRequestType   = 8;
+   CreateHDLeafRequestType     = 8;
    DeleteHDWalletRequestType   = 9;
    GetRootKeyRequestType       = 10;
    AutoSignActType             = 11;
@@ -113,14 +113,14 @@ message CancelSignTx
 
 message SignSettlementTxRequest
 {
-   SignTxRequest signTxRequest                                        = 1;
-   Blocksettle.Communication.Internal.SettlementInfo settlementInfo   = 2;
+   SignTxRequest signTxRequest                                                 = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData    = 2;
 }
 
 message SignSettlementPayoutTxRequest
 {
-   SignPayoutTXRequest signPayoutTXRequest                            = 1;
-   Blocksettle.Communication.Internal.SettlementInfo settlementInfo   = 2;
+   SignPayoutTXRequest signPayoutTXRequest                                     = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData    = 2;
 }
 
 message SignPayoutTXRequest
@@ -152,6 +152,7 @@ message PasswordReply
 message SetUserIdRequest
 {
    bytes userId = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData  = 2;
 }
 
 enum AuthWalletResponseType
@@ -169,7 +170,6 @@ message SetUserIdResponse
    string auth_wallet_id = 1;
    AuthWalletResponseType response = 2;
 }
-
 
 message NewHDLeaf
 {
@@ -206,6 +206,13 @@ message CreateHDWalletRequest
    uint32   rankN = 5;
 }
 
+message CreateHDLeafRequest
+{
+   string   rootWalletId = 1;
+   string   path = 2;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData = 3;
+}
+
 message HDLeafWO
 {
    string   name = 1;
@@ -232,11 +239,14 @@ message HDWalletWO
 
 message CreateHDWalletResponse
 {
-   oneof result {
-      HDWalletWO wallet = 1;
-      HDLeafWO  leaf   = 2;
-      string    error  = 3;
-   }
+   uint32    errorCode   = 1;
+   HDWalletWO wallet = 2;
+}
+
+message CreateHDLeafResponse
+{
+   uint32    errorCode   = 1;
+   HDLeafWO  leaf        = 2;
 }
 
 

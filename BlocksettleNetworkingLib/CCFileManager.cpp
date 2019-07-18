@@ -112,10 +112,10 @@ void CCFileManager::ProcessGenAddressesResponse(const std::string& response, boo
       logger_->error("[CCFileManager::ProcessCCGenAddressesResponse] data corrupted. Could not parse.");
       return;
    }
-   if (!sigVerified) {
+   /*if (!sigVerified) {
       logger_->error("[CCFileManager::ProcessCCGenAddressesResponse] rejecting unverified reply");
       return;
-   }
+   }*/
 
    if (currentRev_ > 0) {
       if (genAddrResp.revision() == currentRev_) {

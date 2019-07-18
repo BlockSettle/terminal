@@ -76,7 +76,7 @@ bool DealerCCSettlementContainer::startSigning()
 
    emit info(tr("Waiting for TX half signing..."));
 
-   bs::signer::RequestId signId = signingContainer_->signSettlementPartialTXRequest(txReq, toSettlementInfo(), cbTx);
+   bs::signer::RequestId signId = signingContainer_->signSettlementPartialTXRequest(txReq, toPasswordDialogData(), cbTx);
    return (signId > 0);
 }
 
