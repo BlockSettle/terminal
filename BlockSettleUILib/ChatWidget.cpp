@@ -801,7 +801,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
    setIsContactRequest(false);
 
    // Save draft message
-   std::string previousChat = currentChat_;
+   std::string const previousChat = currentChat_;
 
    if (element) {
       switch (element->getType()) {
@@ -878,8 +878,9 @@ void ChatWidget::onElementSelected(CategoryElement *element)
 
    if (previousChat != currentChat_) {
       // Save draft message if any
-      if (!ui_->input_textEdit->toPlainText().isEmpty())
+      if (!ui_->input_textEdit->toPlainText().isEmpty()) {
           draftMessages_[previousChat] = ui_->input_textEdit->toPlainText().toStdString();
+      }
 
       // Return back draft message
       auto const iDraft = draftMessages_.find(currentChat_);
