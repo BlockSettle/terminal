@@ -85,6 +85,7 @@ void AuthAddressDialog::updateUnsubmittedState()
       switch (authAddressManager_->GetState(authAddressManager_->GetAddress(i))) {
       case AddressVerificationState::NotSubmitted:
          ui_->labelHint->setText(tr("There are unsubmitted addresses - adding new ones is temporarily suspended"));
+         [[clang::fallthrough]];
       case AddressVerificationState::InProgress:
       case AddressVerificationState::VerificationFailed:
          unconfirmedExists_ = true;
@@ -135,6 +136,11 @@ void AuthAddressDialog::setAddressToVerify(const QString &addr)
       ui_->labelHint->setText(tr("Your Authentication Address can now be Verified. Please press <b>Verify</b> and enter your password to execute the address verification."));
       ui_->treeViewAuthAdress->setFocus();
    }
+}
+
+void AuthAddressDialog::setBsClient(BsClient *bsClient)
+{
+   bsClient_ = bsClient;
 }
 
 void AuthAddressDialog::onAddressListUpdated()
@@ -308,7 +314,12 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
 
 void AuthAddressDialog::ConfirmAuthAddressSubmission()
 {
-   AuthAddressConfirmDialog confirmDlg{lastSubmittedAddress_, authAddressManager_, this};
+   if (!bsClient_) {
+      SPDLOG_LOGGER_ERROR(logger_, "bsClient_ in not set");
+      return;
+   }
+
+   AuthAddressConfirmDialog confirmDlg{bsClient_.data(), lastSubmittedAddress_, authAddressManager_, this};
 
    confirmDlg.exec();
 

@@ -3,10 +3,10 @@
 
 #include "AuthAddressManager.h"
 #include "BinaryData.h"
-
+#include "BsClient.h"
 #include <memory>
-
 #include <QDialog>
+#include <QPointer>
 
 class AssetManager;
 class AuthAddressViewModel;
@@ -33,6 +33,7 @@ public:
    ~AuthAddressDialog() override;
 
    void setAddressToVerify(const QString &addr);
+   void setBsClient(BsClient *bsClient);
 
 signals:
    void askForConfirmation(const QString &address, double txAmount);
@@ -78,6 +79,7 @@ private:
    std::shared_ptr<ApplicationSettings>   settings_;
    AuthAddressViewModel                *  model_;
    bs::Address                            defaultAddr_;
+   QPointer<BsClient>                     bsClient_;
 
    bs::Address                            lastSubmittedAddress_;
 

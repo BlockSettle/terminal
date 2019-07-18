@@ -1,7 +1,6 @@
 #include "CCFileManager.h"
 
 #include "ApplicationSettings.h"
-#include "AuthSignManager.h"
 #include "CelerClient.h"
 #include "ConnectionManager.h"
 #include "EncryptionUtils.h"
@@ -19,12 +18,10 @@ using namespace Blocksettle::Communication;
 
 CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<AuthSignManager> &authSignMgr
    , const std::shared_ptr<ConnectionManager>& connectionManager
    , const ZmqBIP15XDataConnection::cbNewKey &cb)
    : CCPubConnection(logger, connectionManager, cb)
    , appSettings_(appSettings)
-   , authSignManager_(authSignMgr)
 {
    const auto &cbSecLoaded = [this](const bs::network::CCSecurityDef &ccSecDef) {
       emit CCSecurityDef(ccSecDef);
@@ -75,6 +72,11 @@ bool CCFileManager::hasLocalFile() const
 {
    const auto path = appSettings_->get<QString>(ApplicationSettings::ccFileName);
    return QFile(path).exists();
+}
+
+void CCFileManager::setBsClient(BsClient *bsClient)
+{
+   bsClient_ = bsClient;
 }
 
 void CCFileManager::LoadSavedCCDefinitions()
@@ -150,6 +152,11 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       return false;
    }
 
+   if (!bsClient_) {
+      SPDLOG_LOGGER_ERROR(logger_, "not connected to BsProxy");
+      return false;
+   }
+
    SubmitAddrForInitialDistributionRequest request;
    request.set_username(celerClient_->userName());
    request.set_networktype(networkType(appSettings_));
@@ -159,7 +166,12 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
    std::string requestData = request.SerializeAsString();
    BinaryData requestDataHash = BtcUtils::getSha256(requestData);
 
-   const auto cbSigned = [this, address, requestData](const AutheIDClient::SignResult &result) {
+   BsClient::SignAddressReq req;
+   req.type = BsClient::SignAddressReq::CcAddr;
+   req.address = address;
+   req.invisibleData = requestDataHash;
+
+   req.signedCb = [this, address, requestData](const AutheIDClient::SignResult &result) {
       // No need to check result.data (AutheIDClient will check that invisible data is the same)
 
       RequestPacket packet;
@@ -184,14 +196,14 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       }
    };
 
-   const auto &cbSignFailed = [this, address](const QString &text) {
-      logger_->error("[CCFileManager::SubmitAddressToPuB] failed to sign data: {}", text.toStdString());
-      emit CCSubmitFailed(QString::fromStdString(address.display()), text);
+   req.failedCb = [this, address](AutheIDClient::ErrorType error) {
+      std::string errorStr = fmt::format("failed to sign data: {}", AutheIDClient::errorString(error).toStdString());
+      SPDLOG_LOGGER_ERROR(logger_, "{}", errorStr);
+      emit CCSubmitFailed(QString::fromStdString(address.display()), QString::fromStdString(errorStr));
    };
 
-   return authSignManager_->Sign(requestDataHash, tr("Private Market token")
-      , tr("Submitting CC wallet address to receive PM token")
-      , cbSigned, cbSignFailed, 90);
+   bsClient_->signAddress(req);
+   return true;
 }
 
 void CCFileManager::ProcessSubmitAddrResponse(const std::string& responseString)

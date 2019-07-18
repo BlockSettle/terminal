@@ -145,14 +145,15 @@ public:
       , const AuthKeys &authKeys, bool autheidTestEnv, QObject *parent = nullptr);
    ~AutheIDClient() override;
 
-   void start(RequestType requestType, const std::string &email, const std::string &walletId
+   void getDeviceKey(RequestType requestType, const std::string &email, const std::string &walletId
       , const std::vector<std::string> &knownDeviceIds, int expiration = 120);
-   void sign(const SignRequest &request);
+   void sign(const SignRequest &request, bool autoRequestResult = true);
    void authenticate(const std::string &email, int expiration = 120, bool autoRequestResult = true);
    void cancel();
 
    void requestResult();
 
+   void setApiKey(const std::string &apiKey);
 signals:
    void createRequestDone();
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
@@ -197,7 +198,7 @@ private:
    SignRequest signRequest_;
 
    const char *baseUrl_;
-   const char *apiKey_;
+   std::string apiKey_;
 };
 
 Q_DECLARE_METATYPE(AutheIDClient::RequestType)

@@ -5,7 +5,7 @@
 #include "AddressVerificator.h"
 #include "ApplicationSettings.h"
 #include "ArmoryConnection.h"
-#include "AuthSignManager.h"
+#include "BsClient.h"
 #include "CelerClient.h"
 #include "CheckRecipSigner.h"
 #include "ClientClasses.h"
@@ -28,12 +28,10 @@ AuthAddressManager::AuthAddressManager(const std::shared_ptr<spdlog::logger> &lo
 
 void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSettings
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::shared_ptr<AuthSignManager> &authSignManager
    , const std::shared_ptr<SignContainer> &container)
 {
    settings_ = appSettings;
    walletsManager_ = walletsManager;
-   authSignManager_ = authSignManager;
    signingContainer_ = container;
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &AuthAddressManager::VerifyWalletAddresses);
@@ -452,7 +450,7 @@ bool AuthAddressManager::SubmitAddressToPublicBridge(const bs::Address &address)
    return SubmitRequestToPB("submit_address", request.SerializeAsString());
 }
 
-bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address, int expireTimeoutSeconds)
+void AuthAddressManager::ConfirmSubmitForVerification(BsClient *bsClient, const bs::Address &address)
 {
    ConfirmAuthSubmitRequest request;
 
@@ -466,7 +464,18 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
    std::string requestData = request.SerializeAsString();
    BinaryData requestDataHash = BtcUtils::getSha256(requestData);
 
-   const auto cbSigned = [this, requestData](const AutheIDClient::SignResult &result) {
+   QPointer<AuthAddressManager> thisPtr = this;
+
+   BsClient::SignAddressReq req;
+   req.type = BsClient::SignAddressReq::AuthAddr;
+   req.address = address;
+   req.invisibleData = requestDataHash;
+
+   req.signedCb = [thisPtr, requestData](const AutheIDClient::SignResult &result) {
+      if (!thisPtr) {
+         return;
+      }
+
       RequestPacket  packet;
 
       packet.set_requesttype(ConfirmAuthAddressSubmitType);
@@ -481,17 +490,20 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
       autheidSign->set_certificate_issuer(result.certificateIssuer.toBinStr());
       autheidSign->set_ocsp_response(result.ocspResponse.toBinStr());
 
-      logger_->debug("[AuthAddressManager::ConfirmSubmitForVerification] confirmed auth address submission");
-      SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
+      SPDLOG_LOGGER_DEBUG(thisPtr->logger_, "confirmed auth address submission");
+      thisPtr->SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
    };
 
-   const auto cbSignFailed = [this](const QString &text) {
-      logger_->error("[AuthAddressManager::ConfirmSubmitForVerification] failed to sign data: {}", text.toStdString());
-      emit SignFailed(text);
+   req.failedCb = [thisPtr](AutheIDClient::ErrorType error) {
+      if (!thisPtr) {
+         return;
+      }
+
+      SPDLOG_LOGGER_ERROR(thisPtr->logger_, "failed to sign data: {}", AutheIDClient::errorString(error).toStdString());
+      emit thisPtr->signFailed(error);
    };
 
-   return authSignManager_->Sign(requestDataHash, tr("Authentication Address")
-      , tr("Submit auth address for verification"), cbSigned, cbSignFailed, expireTimeoutSeconds);
+   bsClient->signAddress(req);
 }
 
 bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)
