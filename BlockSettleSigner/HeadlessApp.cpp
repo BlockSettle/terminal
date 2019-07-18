@@ -115,11 +115,11 @@ void HeadlessAppObj::startInterface()
       logger_->warn("[{}] cli run mode is not supported yet"
          , __func__);
       return;
-   case bs::signer::RunMode::lightgui:
+   case bs::signer::RunMode::litegui:
       serverIDKey = guiListener_->getServerConn()->getOwnPubKey();
-      logger_->debug("[{}] starting lightgui", __func__);
+      logger_->debug("[{}] starting litegui", __func__);
       args.push_back("--guimode");
-      args.push_back("lightgui");
+      args.push_back("litegui");
       args.push_back("--server_id_key");
       args.push_back(serverIDKey.toHexStr());
       break;
@@ -277,8 +277,8 @@ void HeadlessAppObj::startTerminalsProcessing()
       logger_->error("Failed to bind to {}:{}"
          , settings_->listenAddress(), settings_->listenPort());
 
-      // Abort only if lightgui used, fullgui should just show error message instead
-      if (settings_->runMode() == bs::signer::RunMode::lightgui) {
+      // Abort only if litegui used, fullgui should just show error message instead
+      if (settings_->runMode() == bs::signer::RunMode::litegui) {
          throw std::runtime_error("failed to bind listening socket");
       }
    }

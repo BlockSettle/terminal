@@ -118,6 +118,7 @@ private:
    void requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData);
 
    void shutdown();
+   bs::signer::QmlCallbackBase *createQmlPasswordCallback();
 
 private:
    std::shared_ptr<spdlog::logger>           logger_;

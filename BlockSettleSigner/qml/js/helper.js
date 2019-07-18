@@ -267,7 +267,7 @@ function evalWorker(method, cppCallback, argList) {
     else                                  eval(method)()
 }
 
-function prepareLigthModeDialog(dialog) {
+function prepareLiteModeDialog(dialog) {
     // close previous dialog
     if (currentDialog && typeof currentDialog.close !== "undefined") {
         currentDialog.close()
@@ -376,7 +376,7 @@ function activateAutoSignDialog(data) {
 
 function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
     var dlg = Qt.createComponent("../BsDialogs/TxSignDialog.qml").createObject(mainWindow)
-    prepareLigthModeDialog(dlg)
+    prepareLiteModeDialog(dlg)
 
     dlg.walletInfo = walletInfo
     dlg.prompt = prompt
@@ -396,7 +396,7 @@ function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, wall
 
 function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
     var dlg = Qt.createComponent("../BsDialogs/CCSettlementTransactionDialog.qml").createObject(mainWindow)
-    prepareLigthModeDialog(dlg)
+    prepareLiteModeDialog(dlg)
 
     dlg.walletInfo = walletInfo
     dlg.prompt = prompt
@@ -440,5 +440,5 @@ function createPasswordDialogForAuthLeaf(jsCallback, passwordDialogData, walletI
         })
     }
 
-    prepareLigthModeDialog(dlg)
+    prepareLiteModeDialog(dlg)
 }

@@ -37,8 +37,8 @@ public:
 
    void clientDisconn(const std::string &) override
    {
-      if (owner_->settings_->runMode() == bs::signer::RunMode::lightgui) {
-         owner_->logger_->info("Quit because terminal disconnected unexpectedly and lightgui used");
+      if (owner_->settings_->runMode() == bs::signer::RunMode::litegui) {
+         owner_->logger_->info("Quit because terminal disconnected unexpectedly and litegui used");
          owner_->queue_->quit();
       }
    }
@@ -728,7 +728,7 @@ void SignerAdapterListener::walletsListUpdated()
 
 void SignerAdapterListener::shutdownIfNeeded()
 {
-   if (settings_->runMode() == bs::signer::RunMode::lightgui && app_) {
+   if (settings_->runMode() == bs::signer::RunMode::litegui && app_) {
       logger_->info("terminal disconnect detected, shutdown...");
       app_->close();
    }

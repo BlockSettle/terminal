@@ -95,7 +95,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       }
    });
 
-   if (params->runMode() != bs::signer::ui::RunMode::lightgui) {
+   if (params->runMode() != bs::signer::ui::RunMode::litegui) {
       trayIconOptional_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
       connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
       connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);

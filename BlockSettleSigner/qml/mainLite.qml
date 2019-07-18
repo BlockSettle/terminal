@@ -102,7 +102,7 @@ ApplicationWindow {
     function customDialogRequest(dialogName, data) {
         raiseWindow()
         var newDialog = JsHelper.customDialogRequest(dialogName, data)
-        JsHelper.prepareLigthModeDialog(newDialog)
+        JsHelper.prepareLiteModeDialog(newDialog)
     }
 
     function invokeQmlMetod(method, cppCallback, argList) {
