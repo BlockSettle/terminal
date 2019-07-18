@@ -7,8 +7,7 @@
 #include <QString>
 #include <QVariant>
 
-namespace spdlog
-{
+namespace spdlog {
 class logger;
 }
 
@@ -16,8 +15,7 @@ class logger;
 //
 // If --settings_file argument is set then settings loads from it (ini-format).
 // It will be checked for unknown parameters.
-// --help is generated and processed as exptected.
-// See MobileAppServerSettings for usage example.
+// --help is generated and processed as expected.
 class SettingsParser
 {
 public:

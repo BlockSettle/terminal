@@ -262,7 +262,7 @@ AutheIDClient::~AutheIDClient()
 
 void AutheIDClient::createCreateRequest(const std::string &payload, int expiration, bool autoRequestResult)
 {
-   QNetworkRequest request = getRequest(baseUrl_, apiKey_);
+   QNetworkRequest request = getRequest(baseUrl_, apiKey_.c_str());
 
    QNetworkReply *reply = nam_->post(request, QByteArray::fromStdString(payload));
    processNetworkReply(reply, kNetworkTimeoutSeconds, [this, expiration, autoRequestResult] (const Result &result) {
@@ -275,7 +275,7 @@ void AutheIDClient::createCreateRequest(const std::string &payload, int expirati
    });
 }
 
-void AutheIDClient::start(RequestType requestType, const std::string &email
+void AutheIDClient::getDeviceKey(RequestType requestType, const std::string &email
    , const std::string &walletId, const std::vector<std::string> &knownDeviceIds, int expiration)
 {
    cancel();
@@ -340,7 +340,7 @@ void AutheIDClient::authenticate(const std::string &email, int expiration, bool 
    createCreateRequest(request.SerializeAsString(), expiration, autoRequestResult);
 }
 
-void AutheIDClient::sign(const SignRequest &request)
+void AutheIDClient::sign(const SignRequest &request, bool autoRequestResult)
 {
    assert(!request.email.empty());
    assert(!request.title.empty());
@@ -361,7 +361,7 @@ void AutheIDClient::sign(const SignRequest &request)
    createRequest.set_description(request.description);
    createRequest.set_email(request.email);
 
-   createCreateRequest(createRequest.SerializeAsString(), request.expiration, true);
+   createCreateRequest(createRequest.SerializeAsString(), request.expiration, autoRequestResult);
 
    // Make a copy to check sign result later
    signRequest_ = request;
@@ -373,7 +373,7 @@ void AutheIDClient::cancel()
       return;
    }
 
-   QNetworkRequest request = getRequest(fmt::format("{}/{}/cancel", baseUrl_, requestId_).c_str(), apiKey_);
+   QNetworkRequest request = getRequest(fmt::format("{}/{}/cancel", baseUrl_, requestId_).c_str(), apiKey_.c_str());
 
    QNetworkReply *reply = nam_->post(request, QByteArray());
    processNetworkReply(reply, kNetworkTimeoutSeconds, {});
@@ -383,12 +383,17 @@ void AutheIDClient::cancel()
 
 void AutheIDClient::requestResult()
 {
-   QNetworkRequest request = getRequest(fmt::format("{}/{}", baseUrl_, requestId_).c_str(), apiKey_);
+   QNetworkRequest request = getRequest(fmt::format("{}/{}", baseUrl_, requestId_).c_str(), apiKey_.c_str());
 
    QNetworkReply *reply = nam_->get(request);
    processNetworkReply(reply, expiration_, [this] (const Result &result) {
       processResultReply(result.payload);
    });
+}
+
+void AutheIDClient::setApiKey(const std::string &apiKey)
+{
+   apiKey_ = apiKey;
 }
 
 void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration, bool autoRequestResult)

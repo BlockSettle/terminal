@@ -6,9 +6,9 @@
 #include <memory>
 #include <functional>
 #include <future>
-#include <unordered_set>
 #include <spdlog/logger.h>
 #include <QObject>
+#include "Address.h"
 #include "autheid_utils.h"
 #include "AutheIDClient.h"
 #include "CelerMessageMapper.h"
@@ -22,6 +22,7 @@ class Request;
 class Response_StartLogin;
 class Response_GetLoginResult;
 class Response_Celer;
+class Response;
 } } }
 
 struct BsClientParams
@@ -49,6 +50,27 @@ class BsClient : public QObject, public DataConnectionListener
 {
    Q_OBJECT
 public:
+   using SignStartedCb = std::function<void ()>;
+   using SignedCb = std::function<void (const AutheIDClient::SignResult &result)>;
+   using SignFailedCb = std::function<void(AutheIDClient::ErrorType)>;
+
+   struct SignAddressReq
+   {
+      enum Type
+      {
+         Unknown,
+         AuthAddr,
+         CcAddr,
+      };
+
+      Type type{};
+      bs::Address address;
+      BinaryData invisibleData;
+      SignStartedCb startedCb;
+      SignedCb signedCb;
+      SignFailedCb failedCb;
+   };
+
    BsClient(const std::shared_ptr<spdlog::logger>& logger, const BsClientParams &params
       , QObject *parent = nullptr);
    ~BsClient() override;
@@ -63,7 +85,11 @@ public:
    void logout();
    void celerSend(CelerAPI::CelerMessageType messageType, const std::string &data);
 
-   static std::chrono::seconds getDefaultAutheidAuthTimeout();
+   void signAddress(const SignAddressReq &req);
+
+   static std::chrono::seconds autheidLoginTimeout();
+   static std::chrono::seconds autheidAuthAddressTimeout();
+   static std::chrono::seconds autheidCcAddressTimeout();
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
    void getLoginResultDone(AutheIDClient::ErrorType status);
@@ -73,11 +99,13 @@ signals:
    void disconnected();
    void connectionFailed();
 private:
-   using FailedCallback = std::function<void()>;
+   using ProcessCb = std::function<void(const Blocksettle::Communication::Proxy::Response &response)>;
+   using TimeoutCb = std::function<void()>;
 
    struct ActiveRequest
    {
-      FailedCallback failedCb;
+      ProcessCb processCb;
+      TimeoutCb timeoutCb;
    };
 
    // From DataConnectionListener
@@ -87,12 +115,15 @@ private:
    void OnError(DataConnectionError errorCode) override;
 
    void sendRequest(Blocksettle::Communication::Proxy::Request *request
-      , std::chrono::milliseconds timeout, FailedCallback failedCb);
+      , std::chrono::milliseconds timeout, TimeoutCb timeoutCb, ProcessCb processCb = nullptr);
    void sendMessage(Blocksettle::Communication::Proxy::Request *request);
 
    void processStartLogin(const Blocksettle::Communication::Proxy::Response_StartLogin &response);
    void processGetLoginResult(const Blocksettle::Communication::Proxy::Response_GetLoginResult &response);
    void processCeler(const Blocksettle::Communication::Proxy::Response_Celer &response);
+
+   void requestSignResult(std::chrono::seconds timeout
+      , const BsClient::SignedCb &signedCb, const BsClient::SignFailedCb &failedCb);
 
    int64_t newRequestId();
 
@@ -102,7 +133,7 @@ private:
 
    std::unique_ptr<ZmqBIP15XDataConnection> connection_;
 
-   std::unordered_map<int64_t, ActiveRequest> activeRequests_;
+   std::map<int64_t, ActiveRequest> activeRequests_;
    int64_t lastRequestId_{};
 };
 

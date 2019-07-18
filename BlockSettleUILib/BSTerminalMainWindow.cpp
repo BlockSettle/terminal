@@ -21,7 +21,6 @@
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
 #include "AutheIDClient.h"
-#include "AuthSignManager.h"
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
@@ -136,8 +135,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    initArmory();
 
    walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
-   authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_
-      , celerConnection_, connectionManager_);
 
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
@@ -491,7 +488,7 @@ void BSTerminalMainWindow::LoadWallets()
 void BSTerminalMainWindow::InitAuthManager()
 {
    authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_, cbApprovePuB_);
-   authManager_->init(applicationSettings_, walletsMgr_, authSignManager_, signContainer_);
+   authManager_->init(applicationSettings_, walletsMgr_, signContainer_);
 
    connect(authManager_.get(), &AuthAddressManager::NeedVerify, this, &BSTerminalMainWindow::openAuthDlgVerify);
    connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, [](const QString &addr, const QString &state) {
@@ -725,7 +722,7 @@ bool BSTerminalMainWindow::showStartupDialog()
 void BSTerminalMainWindow::InitAssets()
 {
    ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
-      , authSignManager_, connectionManager_, cbApprovePuB_);
+      , connectionManager_, cbApprovePuB_);
    assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsMgr_, mdProvider_, celerConnection_);
    assetManager_->init();
 
@@ -1772,4 +1769,7 @@ void BSTerminalMainWindow::createBsClient()
 
    bsClient_ = std::make_unique<BsClient>(logMgr_->logger(), params);
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
+
+   authAddrDlg_->setBsClient(bsClient_.get());
+   ccFileManager_->setBsClient(bsClient_.get());
 }

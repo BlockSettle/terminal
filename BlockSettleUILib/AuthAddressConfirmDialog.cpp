@@ -1,15 +1,15 @@
 #include "AuthAddressConfirmDialog.h"
 
 #include "AuthAddressConfirmDialog.h"
+#include "BsClient.h"
+#include "BSMessageBox.h"
 #include "ui_AuthAddressConfirmDialog.h"
 
-#include "BSMessageBox.h"
+namespace {
+constexpr auto UiTimerInterval = std::chrono::milliseconds(250);
+}
 
-constexpr int uiTimerIntervalMS = 250;
-constexpr int ConfirmAddressTimeoutSecs = 30;
-constexpr int ConfirmAddressRequestDurationMS = ConfirmAddressTimeoutSecs * 1000;
-
-AuthAddressConfirmDialog::AuthAddressConfirmDialog(const bs::Address& address
+AuthAddressConfirmDialog::AuthAddressConfirmDialog(BsClient *bsClient, const bs::Address& address
    , const std::shared_ptr<AuthAddressManager>& authManager, QWidget* parent)
   : QDialog(parent)
   , ui_{new Ui::AuthAddressConfirmDialog()}
@@ -25,10 +25,11 @@ AuthAddressConfirmDialog::AuthAddressConfirmDialog(const bs::Address& address
 
    // setup timer
    progressTimer_.setSingleShot(false);
-   progressTimer_.setInterval(uiTimerIntervalMS);
+   progressTimer_.setInterval(UiTimerInterval);
 
    ui_->progressBarTimeout->setMinimum(0);
-   ui_->progressBarTimeout->setMaximum(ConfirmAddressRequestDurationMS);
+   const int timeoutMs = int(std::chrono::duration_cast<std::chrono::milliseconds>(BsClient::autheidAuthAddressTimeout()).count());
+   ui_->progressBarTimeout->setMaximum(timeoutMs);
    ui_->progressBarTimeout->setValue(ui_->progressBarTimeout->maximum());
    ui_->progressBarTimeout->setFormat(QString());
 
@@ -39,21 +40,24 @@ AuthAddressConfirmDialog::AuthAddressConfirmDialog(const bs::Address& address
    connect(authManager_.get(), &AuthAddressManager::AuthConfirmSubmitError, this, &AuthAddressConfirmDialog::onAuthConfirmSubmitError, Qt::QueuedConnection);
    connect(authManager_.get(), &AuthAddressManager::AuthAddrSubmitSuccess, this, &AuthAddressConfirmDialog::onAuthAddrSubmitSuccess, Qt::QueuedConnection);
    connect(authManager_.get(), &AuthAddressManager::AuthAddressSubmitCancelled, this, &AuthAddressConfirmDialog::onAuthAddressSubmitCancelled, Qt::QueuedConnection);
-   connect(authManager_.get(), &AuthAddressManager::SignFailed, this, &AuthAddressConfirmDialog::onSignFailed, Qt::QueuedConnection);
+   connect(authManager_.get(), &AuthAddressManager::signFailed, this, &AuthAddressConfirmDialog::onSignFailed, Qt::QueuedConnection);
 
    // send confirm request
    startTime_ = std::chrono::steady_clock::now();
-   authManager_->ConfirmSubmitForVerification(address, ConfirmAddressTimeoutSecs);
+   authManager_->ConfirmSubmitForVerification(bsClient, address);
    progressTimer_.start();
 }
 
+AuthAddressConfirmDialog::~AuthAddressConfirmDialog() = default;
+
 void AuthAddressConfirmDialog::onUiTimerTick()
 {
-   const auto timeDiff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime_).count();
-   if (timeDiff >= ConfirmAddressRequestDurationMS) {
+   const auto timeLeft = BsClient::autheidAuthAddressTimeout() - (std::chrono::steady_clock::now() - startTime_);
+   if (timeLeft.count() < 0) {
       CancelSubmission();
    } else {
-      ui_->progressBarTimeout->setValue(ConfirmAddressRequestDurationMS - timeDiff);
+      const int countMs = int(std::chrono::duration_cast<std::chrono::milliseconds>(timeLeft).count());
+      ui_->progressBarTimeout->setValue(countMs);
    }
 }
 
@@ -110,7 +114,7 @@ void AuthAddressConfirmDialog::onAuthAddrSubmitSuccess(const QString &address)
    accept();
 }
 
-void AuthAddressConfirmDialog::onSignFailed(const QString &text)
+void AuthAddressConfirmDialog::onSignFailed(AutheIDClient::ErrorType error)
 {
    // explicitly stop timer before cancel on submission, user need time to read MessageBox text
    progressTimer_.stop();

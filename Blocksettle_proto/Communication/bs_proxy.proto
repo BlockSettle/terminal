@@ -2,6 +2,12 @@ syntax = "proto3";
 
 package Blocksettle.Communication.Proxy;
 
+message AuthEidError
+{
+    // AutheIDClient::ErrorType as int
+    int32 error_code = 1;
+}
+
 message Request
 {
     message StartLogin
@@ -27,6 +33,24 @@ message Request
         bytes data = 2;
     }
 
+    message StartSignAddress
+    {
+        string address = 1;
+
+        bytes invisible_data = 2;
+
+        // BsClient::SignAddressReq::Type as int
+        int32 type = 3;
+    }
+
+    message CancelSign
+    {
+    }
+
+    message GetSignResult
+    {
+    }
+
     // Set for requests and server will copy them back in response
     int64 request_id = 1;
 
@@ -35,11 +59,14 @@ message Request
         // Requests (there are must be some response after some time)
         StartLogin start_login = 10;
         GetLoginResult get_login_result = 11;
+        StartSignAddress start_sign_address = 12;
+        GetSignResult get_sign_result = 13;
 
         // Messages
         CancelLogin cancel_login = 30;
         Logout logout = 31;
         Celer celer = 32;
+        CancelSign cancel_sign = 33;
     }
 }
 
@@ -47,20 +74,35 @@ message Response
 {
     message StartLogin
     {
-        // AutheIDClient::ErrorType as int, 0 if succeess
-        int32 error_code = 1;
+        AuthEidError error = 1;
     }
 
     message GetLoginResult
     {
-        // AutheIDClient::ErrorType as int, 0 if succeess
-        int32 error_code = 1;
+        AuthEidError error = 1;
     }
 
     message Celer
     {
         int32 message_type = 1;
         bytes data = 2;
+    }
+
+    message StartSignAddress
+    {
+        AuthEidError error = 1;
+    }
+
+    message GetSignResult
+    {
+        AuthEidError error = 1;
+
+        // rp::GetResultResponse::SignatureResult::SignatureData from Auth eId
+        bytes sign_data = 3;
+        bytes sign = 4;
+        bytes certificate_client = 5;
+        bytes certificate_issuer = 6;
+        bytes ocsp_response = 7;
     }
 
     int64 request_id = 1;
@@ -70,6 +112,8 @@ message Response
         // Responses
         StartLogin start_login = 10;
         GetLoginResult get_login_result = 11;
+        StartSignAddress start_sign_address = 12;
+        GetSignResult get_sign_result = 13;
 
         // Messages
         Celer celer = 30;

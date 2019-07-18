@@ -297,7 +297,7 @@ WalletsManager::WalletPtr WalletsManager::getDefaultWallet() const
    const auto &priWallet = getPrimaryWallet();
    if (priWallet) {
       const auto &group = priWallet->getGroup(priWallet->getXBTGroupType());
-      
+
       //all leaf paths are always hardened
       result = group ? group->getLeaf(0x80000000) : nullptr;
    }
@@ -327,7 +327,10 @@ void WalletsManager::setUserId(const BinaryData &userId)
    for (const auto &hdWallet : hdWallets_) {
       hdWallet.second->setUserId(userId);
    }
-   signContainer_->setUserId(userId, getPrimaryWallet()->walletId());
+   auto primaryWallet = getPrimaryWallet();
+   if (primaryWallet) {
+      signContainer_->setUserId(userId, primaryWallet->walletId());
+   }
 }
 
 const WalletsManager::HDWalletPtr WalletsManager::getHDWallet(unsigned id) const
