@@ -29,6 +29,7 @@ public:
    bs::signer::Limits limits() const;
    std::string getWalletsDir() const { return walletsDir_; }
    std::string listenAddress() const;
+   std::string acceptFrom() const;
    std::string listenPort() const;
    std::string interfacePort() const { return "23457"; }
    std::string getTermIDKeyStr() const { return termIDKeyStr_; }
@@ -56,6 +57,7 @@ private:
 
    SettableField<bool> overrideTestNet_;
    SettableField<std::string> overrideListenAddress_;
+   SettableField<std::string> overrideAcceptFrom_;
    SettableField<int> overrideListenPort_;
    SettableField<uint64_t> overrideAutoSignXbt_;
 };

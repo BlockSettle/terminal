@@ -33,20 +33,18 @@ void OfflineProcessor::processFile(const QString &file)
    logger_->debug("Processing file {}...", file.toStdString());
    QFile f(file);
    if (!f.exists()) {
-      logger_->error("File {} doesn't exist", file.toStdString());
-      emit signFailure();
+      sendSignFailure(tr("File %1 doesn't exist").arg(file));
       return;
    }
+
    if (!f.open(QIODevice::ReadOnly)) {
-      logger_->error("Failed to open {} for reading", file.toStdString());
-      emit signFailure();
+      sendSignFailure(tr("Failed to open %1 for reading").arg(file));
       return;
    }
 
    const auto &data = f.readAll().toStdString();
    if (data.empty()) {
-      logger_->error("File {} contains no data", file.toStdString());
-      emit signFailure();
+      sendSignFailure(tr("File %1 contains no data").arg(file));
       return;
    }
 
@@ -73,28 +71,24 @@ int OfflineProcessor::parseFile(QString file)
       }
 #endif
       if (!f->exists()) {
-         logger_->error("File {} doesn't exist", file.toStdString());
-         emit signFailure();
+         sendSignFailure(tr("File %1 doesn't exist").arg(file));
          return -1;
       }
    }
    if (!f->open(QIODevice::ReadOnly)) {
-      logger_->error("Failed to open {} for reading", file.toStdString());
-      emit signFailure();
+      sendSignFailure(tr("Failed to open %1 for reading").arg(file));
       return -1;
    }
 
    const auto &data = f->readAll().toStdString();
    if (data.empty()) {
-      logger_->error("File {} contains no data", file.toStdString());
-      emit signFailure();
+      sendSignFailure(tr("File %1 contains no data").arg(file));
       return -1;
    }
 
    const auto &parsedReqs = ParseOfflineTXFile(data);
    if (parsedReqs.empty()) {
-      logger_->error("File {} contains no TX sign requests", file.toStdString());
-      emit signFailure();
+      sendSignFailure(tr("File %1 contains no TX sign requests").arg(file));
       return -1;
    }
 
@@ -120,8 +114,7 @@ void OfflineProcessor::processRequest(int reqId)
 {
    const auto reqIt = parsedReqs_.find(reqId);
    if (reqIt == parsedReqs_.end()) {
-      logger_->error("Failed to find sign request with ID {}", reqId);
-      emit signFailure();
+      sendSignFailure(tr("Failed to find sign request with ID %1").arg(reqId));
    }
    else {
       for (const auto &req : reqIt->second) {
@@ -198,11 +191,15 @@ void OfflineProcessor::removeSignReq(int reqId)
 
 void OfflineProcessor::ProcessSignTX(const bs::core::wallet::TXSignRequest &txReq, const QString &reqFileName)
 {
+   if (txReq.walletId.empty()) {
+      sendSignFailure(tr("Invalid sign transaction request"));
+      return;
+   }
+
    const auto walletsMgr = adapter_->getWalletsManager();
    const auto &wallet = walletsMgr->getWalletById(txReq.walletId);
    if (!wallet) {
-      logger_->error("Failed to find wallet with ID {}", txReq.walletId);
-      emit signFailure();
+      sendSignFailure(tr("Failed to find wallet with ID %1").arg(QString::fromStdString(txReq.walletId)));
       return;
    }
 
@@ -211,8 +208,7 @@ void OfflineProcessor::ProcessSignTX(const bs::core::wallet::TXSignRequest &txRe
       if (cbPassword_) {
          password = cbPassword_(wallet);
          if (password.isNull()) {
-            logger_->error("Empty password for encrypted wallet {}", wallet->name());
-            emit signFailure();
+            sendSignFailure(tr("Empty password for encrypted wallet %1").arg(QString::fromStdString(wallet->name())));
             return;
          }
       }
@@ -232,20 +228,18 @@ void OfflineProcessor::SignTxRequest(const bs::core::wallet::TXSignRequest &txRe
 {
    const auto &cbSigned = [this, reqFN, txReq] (const BinaryData &signedTX) {
       if (signedTX.isNull()) {
-         emit signFailure();
+         sendSignFailure(tr("Invalid sign request"));
          return;
       }
       QFileInfo fi(reqFN);
       QString outputFN = fi.path() + QLatin1String("/") + fi.baseName() + QLatin1String("_signed.bin");
       QFile f(outputFN);
       if (f.exists()) {
-         logger_->error("File {} already exists", outputFN.toStdString());
-         emit signFailure();
+         sendSignFailure(tr("File %1 already exists").arg(outputFN));
          return;
       }
       if (!f.open(QIODevice::WriteOnly)) {
-         logger_->error("Failed to open {} for writing", outputFN.toStdString());
-         emit signFailure();
+         sendSignFailure(tr("Failed to open %1 for writing").arg(outputFN));
          return;
       }
 
@@ -259,26 +253,36 @@ void OfflineProcessor::SignTxRequest(const bs::core::wallet::TXSignRequest &txRe
       container->set_data(response.SerializeAsString());
 
       const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
-      if (f.write(data) == data.size()) {
-         logger_->info("Created signed TX response file in {}", outputFN.toStdString());
-         // remove original request file?
-      } else {
-         logger_->error("Failed to write TX response data to {}", outputFN.toStdString());
+      if (f.write(data) != data.size()) {
+         sendSignFailure(tr("Failed to write TX response data to %1").arg(outputFN));
+         return;
       }
-      emit signSuccess();
+
+      logger_->info("Created signed TX response file in {}", outputFN.toStdString());
+      // remove original request file?
+      emit signSuccess(outputFN);
    };
    adapter_->signOfflineTxRequest(txReq, cbSigned);
 }
 
-void OfflineProcessor::passwordEntered(const std::string &walletId, const SecureBinaryData &password)
+void OfflineProcessor::sendSignFailure(const QString &errorMsg)
+{
+   SPDLOG_LOGGER_ERROR(logger_, "offline TX sign failed: {}", errorMsg.toStdString());
+   emit signFailure(errorMsg);
+}
+
+void OfflineProcessor::passwordEntered(const std::string &walletId, const SecureBinaryData &password, bool cancelledByUser)
 {
    const auto &reqsIt = pendingReqs_.find(walletId);
    if (reqsIt == pendingReqs_.end()) {
       return;
    }
-   logger_->debug("Signing {} pending request[s] on password receive", reqsIt->second.size());
+   logger_->debug("Signing {} pending request[s] on password receive, cancelledByUser: {}"
+      , reqsIt->second.size(), cancelledByUser);
    for (const auto &req : reqsIt->second) {
-      SignTxRequest(req.request, req.requestFile, password);
+      if (!cancelledByUser) {
+         SignTxRequest(req.request, req.requestFile, password);
+      }
    }
    pendingReqs_.erase(reqsIt);
 }

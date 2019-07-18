@@ -53,11 +53,6 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       throw std::runtime_error("adapter connection failed");
    }
 
-/*   requestHeadlessPubKey([this](const std::string &key){
-      headlessPubKey_ = QString::fromStdString(key);
-      emit headlessPubKeyChanged(headlessPubKey_);
-   });   // TODO: decide whether this code is really required
-*/
    signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
 }
 

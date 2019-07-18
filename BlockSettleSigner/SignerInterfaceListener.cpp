@@ -148,9 +148,6 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::WalletsListUpdatedType:
       parent_->walletsListUpdated();
       break;
-   case signer::HeadlessPubKeyRequestType:
-      onHeadlessPubKey(packet.data(), packet.id());
-      break;
    case signer::UpdateStatusType:
       onUpdateStatus(packet.data());
       break;
@@ -538,23 +535,6 @@ void SignerInterfaceListener::onDeleteHDWallet(const std::string &data, bs::sign
    cbDeleteHDWalletReqs_.erase(itCb);
 }
 
-void SignerInterfaceListener::onHeadlessPubKey(const std::string &data, bs::signer::RequestId reqId)
-{
-   signer::HeadlessPubKeyResponse response;
-   if (!response.ParseFromString(data)) {
-      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
-      return;
-   }
-   const auto &itCb = cbHeadlessPubKeyReqs_.find(reqId);
-   if (itCb == cbHeadlessPubKeyReqs_.end()) {
-      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
-         , __func__, reqId);
-      return;
-   }
-   itCb->second(response.pubkey());
-   cbHeadlessPubKeyReqs_.erase(itCb);
-}
-
 void SignerInterfaceListener::onUpdateStatus(const std::string &data)
 {
    signer::UpdateStatus evt;
@@ -563,13 +543,8 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
       return;
    }
 
-   if (evt.signer_bind_status() == signer::BindFailed) {
-      emit parent_->headlessBindUpdated(false);
-   }
-
-   if (evt.signer_bind_status() == signer::BindSucceed) {
-      emit parent_->headlessBindUpdated(true);
-   }
+   emit parent_->headlessBindUpdated(bs::signer::BindStatus(evt.signer_bind_status()));
+   emit parent_->signerPubKeyUpdated(evt.signer_pub_key());
 }
 
 void SignerInterfaceListener::onTerminalHandshakeFailed(const std::string &data)

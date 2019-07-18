@@ -3,7 +3,7 @@ Name "BlockSettle Terminal"
 # General Symbol Definitions
 !define COMPANY "BlockSettle AB"
 !define URL http://blocksettle.com/
-!define VERSION "0.18.8"
+!define VERSION "0.19.1"
 
 # MultiUser Symbol Definitions
 !define MULTIUSER_EXECUTIONLEVEL Highest
@@ -104,7 +104,7 @@ Section "install"
         SetOutPath $INSTDIR
         RmDir /r $INSTDIR
         SetOverwrite on
-        File ..\..\build_terminal\Release\bin\Release\libzmq-v141-mt-4_3_1.dll
+        File ..\..\build_terminal\Release\bin\Release\libzmq-v141-mt-4_3_2.dll
         File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\concrt140.dll"
         File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\msvcp140.dll"
         File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\msvcp140_1.dll"
@@ -193,7 +193,7 @@ Section "Uninstall"
     Delete /REBOOTOK $INSTDIR\blocksettle.exe
     Delete /REBOOTOK $INSTDIR\blocksettle_signer.exe
     Delete /REBOOTOK $INSTDIR\bs_signer_gui.exe
-    Delete /REBOOTOK $INSTDIR\libzmq-v141-mt-4_3_1.dll
+    Delete /REBOOTOK $INSTDIR\libzmq-v141-mt-4_3_2.dll
     Delete /REBOOTOK $INSTDIR\msvcp140.dll
     Delete /REBOOTOK $INSTDIR\vcruntime140.dll
     RmDir /r /REBOOTOK $INSTDIR

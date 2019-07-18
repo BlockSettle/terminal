@@ -101,7 +101,7 @@ public:
 signals:
    void ready() const;
    void connectionError() const;
-   void headlessBindUpdated(bool success) const;
+   void headlessBindUpdated(bs::signer::BindStatus status) const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
    void requestPasswordAndSignTx(const bs::core::wallet::TXSignRequest &, const QString &prompt);
@@ -114,6 +114,7 @@ signals:
    void bindFailed() const;
    void headlessPubKeyChanged(const QString &headlessPubKey) const;
    void terminalHandshakeFailed(const std::string &peerAddress);
+   void signerPubKeyUpdated(const BinaryData &pubKey) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
