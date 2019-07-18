@@ -66,7 +66,6 @@ private slots:
                            , bs::wallet::QPasswordData *passwordData
                            , bool cancelledByUser);
    void onOfflinePassword(const bs::core::wallet::TXSignRequest &);
-   void onPasswordRequested(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void onLimitsChanged();
    void onSettingChanged(int);
    void onSysTrayMsgClicked();
@@ -76,10 +75,9 @@ private slots:
    void onTerminalHandshakeFailed(const std::string &peerAddress);
    void onSignerPubKeyUpdated(const BinaryData &pubKey);
 
+   void showTrayNotify(const QString &title, const QString &msg);
 private:
    void settingsConnections();
-   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
-
    void registerQtTypes();
 
    SignerAdapter  *  adapter_;
@@ -108,8 +106,7 @@ private:
    DBusNotification *dbus_;
 #endif // BS_USE_DBUS
 
-   std::unordered_set<std::string>  offlinePasswordRequests_;
-
+   std::unordered_set<std::string> offlinePasswordRequests_;
    std::unordered_set<std::string> lastFailedTerminals_;
 };
 

@@ -102,6 +102,7 @@ public:
 signals:
    void closeEventReceived();
    void headlessPubKeyChanged();
+   void showTrayNotify(const QString &title, const QString &msg);
 
 public slots:
    void setHeadlessPubKey(const QString &headlessPubKey);

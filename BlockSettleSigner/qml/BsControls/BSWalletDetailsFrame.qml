@@ -14,6 +14,7 @@ ColumnLayout {
     id: root
     property WalletInfo walletInfo : WalletInfo {}
     property alias password: passwordInput.text
+    property alias passwordInput: passwordInput
     property int inputsWidth
     property var nextFocusItem
 

@@ -18,7 +18,6 @@ import "BsStyles"
 import "BsControls"
 import "BsDialogs"
 import "js/helper.js" as JsHelper
-import "js/qmlDialogs.js" as QmlDialogs
 
 
 ApplicationWindow {
@@ -93,68 +92,22 @@ ApplicationWindow {
         bgColor: "darkred"
     }
 
-    signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
-
-    function createTxSignDialog(prompt, txInfo, walletInfo) {
-        // called from QMLAppObj::requestPassword
-
-        currentDialog = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
-        currentDialog.walletInfo = walletInfo
-        currentDialog.prompt = prompt
-        currentDialog.txInfo = txInfo
-
-        show()
-
-        currentDialog.sizeChanged.connect(function(w, h){
-            mainWindow.width = w
-            mainWindow.height = h
-        })
-
-        currentDialog.bsAccepted.connect(function() {
-            passwordEntered(walletInfo.walletId, currentDialog.passwordData, false)
-            currentDialog.destroy()
-            hideWindow()
-        })
-        currentDialog.bsRejected.connect(function() {
-            passwordEntered(walletInfo.walletId, currentDialog.passwordData, true)
-            currentDialog.destroy()
-            hideWindow()
-        })
-
-        mainWindow.width = currentDialog.width
-        mainWindow.height = currentDialog.height + currentDialog.recvAddrHeight
-        mainWindow.title = currentDialog.title
-        if (typeof currentDialog.qmlTitleVisible !== "undefined") {
-            currentDialog.qmlTitleVisible = false
-        }
-
-        currentDialog.dialogsChainFinished.connect(function(){ hide() })
-        currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
-            mainWindow.width = nextDialog.width
-            mainWindow.height = nextDialog.height
-        })
-
-        mainWindow.requestActivate()
-        currentDialog.open()
-        currentDialog.init()
-
-        mainWindow.closing.connect(function() { currentDialog.bsRejected() });
-    }
-
     function raiseWindow() {
-        JsHelper.raiseWindow()
+        JsHelper.raiseWindow(mainWindow)
     }
     function hideWindow() {
-        JsHelper.hideWindow()
+        JsHelper.hideWindow(mainWindow)
     }
 
     function customDialogRequest(dialogName, data) {
-        var newDialog = QmlDialogs.customDialogRequest(dialogName, data)
-        QmlDialogs.prepareLigthModeDialog(newDialog)
+        raiseWindow()
+        var newDialog = JsHelper.customDialogRequest(dialogName, data)
+        JsHelper.prepareLiteModeDialog(newDialog)
     }
 
     function invokeQmlMetod(method, cppCallback, argList) {
-        QmlDialogs.evalWorker(method, cppCallback, argList)
+        raiseWindow()
+        JsHelper.evalWorker(method, cppCallback, argList)
     }
 
     function moveMainWindowToScreenCenter() {

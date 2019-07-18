@@ -42,13 +42,6 @@ bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet
    return listener_->send(signer::SignOfflineTxRequestType, request.SerializeAsString());
 }
 
-bs::signer::RequestId SignAdapterContainer::createHDWallet(const std::string &name, const std::string &desc
-   , bool primary, const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
-{
-   // not implemented, use SignAdaptor directly
-   return 0;
-}
-
 bs::signer::RequestId SignAdapterContainer::DeleteHDRoot(const std::string &rootWalletId) {
    headless::DeleteHDWalletRequest request;
    request.set_rootwalletid(rootWalletId);
