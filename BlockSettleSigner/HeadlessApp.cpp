@@ -139,7 +139,7 @@ void HeadlessAppObj::startInterface()
 
 #ifdef __APPLE__
    std::string guiPath = SystemFilePaths::applicationDirIfKnown()
-      + "/Blocksettle Signer Gui.app/Contents/MacOS/Blocksettle Signer GUI";
+      + "/BlockSettle Signer Gui.app/Contents/MacOS/BlockSettle Signer GUI";
 #else
 
    std::string guiPath = SystemFilePaths::applicationDirIfKnown();
