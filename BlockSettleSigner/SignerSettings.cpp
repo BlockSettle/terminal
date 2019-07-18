@@ -17,7 +17,7 @@ static const QString testnetName = QString::fromStdString("testnet");
 static const QString testnetHelp = QObject::tr("Set bitcoin network type to testnet");
 
 static const QString runModeName = QString::fromStdString("guimode");
-static QString runModeHelp = QObject::tr("GUI run mode [fullgui|lightgui]");
+static QString runModeHelp = QObject::tr("GUI run mode [fullgui|litegui]");
 
 static const QString srvIDKeyName = QString::fromStdString("server_id_key");
 static QString srvIDKeyHelp = QObject::tr("The server's compressed BIP 150 ID key (hex)");
@@ -194,7 +194,7 @@ bool SignerSettings::loadSettings(const QStringList &args)
          return false;
       }
       runMode_ = static_cast<bs::signer::ui::RunMode>(runModeValue);
-      if (runMode_ != bs::signer::ui::RunMode::fullgui && runMode_ != bs::signer::ui::RunMode::lightgui) {
+      if (runMode_ != bs::signer::ui::RunMode::fullgui && runMode_ != bs::signer::ui::RunMode::litegui) {
          return false;
       }
    }

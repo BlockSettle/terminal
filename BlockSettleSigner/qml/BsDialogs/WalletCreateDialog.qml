@@ -34,9 +34,12 @@ CustomTitleDialogWindow {
     title: qsTr("Manage encryption")
 
     Component.onCompleted: {
-        tfName.text = walletsProxy.generateNextWalletName();
         if (!primaryWalletExists) {
             cbPrimary.checked = true
+            tfName.text = qsTr("Primary Wallet");
+        }
+        else {
+            tfName.text = walletsProxy.generateNextWalletName();
         }
     }
 
@@ -141,6 +144,13 @@ CustomTitleDialogWindow {
                 // enabled: !primaryWalletExists
                 onCheckedChanged: {
                     if (primaryWalletExists) cbPrimary.checked = false;
+
+                    if (!primaryWalletExists && (tfName.text === walletsProxy.generateNextWalletName() || tfName.text.length === 0)) {
+                        tfName.text = qsTr("Primary Wallet");
+                    }
+                    else if (tfName.text === qsTr("Primary Wallet")  || tfName.text.length === 0){
+                        tfName.text = walletsProxy.generateNextWalletName();
+                    }
                 }
             }
         }
@@ -168,6 +178,13 @@ CustomTitleDialogWindow {
                 onCheckedChanged: {
                     if (checked) {
                         newPasswordWithConfirm.tfPasswordInput.focus = true
+                    }
+
+                    if (!primaryWalletExists && tfName.text === walletsProxy.generateNextWalletName()) {
+                        tfName.text = qsTr("Primary Wallet");
+                    }
+                    else if (tfName.text === qsTr("Primary Wallet")){
+                        tfName.text = walletsProxy.generateNextWalletName();
                     }
                 }
             }

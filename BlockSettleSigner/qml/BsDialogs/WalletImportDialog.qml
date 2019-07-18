@@ -290,7 +290,7 @@ CustomTitleDialogWindow {
                             id: tfName
                             selectByMouse: true
                             Layout.fillWidth: true
-                            focus: true
+                            //focus: true // not possible to edit if focus set to true.
                             Keys.onEnterPressed: tfDesc.forceActiveFocus()
                             Keys.onReturnPressed: tfDesc.forceActiveFocus()
                         }
@@ -335,6 +335,24 @@ CustomTitleDialogWindow {
                             enabled: !primaryWalletExists
                             checked: !primaryWalletExists
                             text: qsTr("Primary Wallet")
+
+                            ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
+                            ToolTip.delay: 150
+                            ToolTip.timeout: 5000
+                            ToolTip.visible: cbPrimary.hovered && primaryWalletExists
+
+                            // workaround on https://bugreports.qt.io/browse/QTBUG-30801
+                            // enabled: !primaryWalletExists
+                            onCheckedChanged: {
+                                if (primaryWalletExists) cbPrimary.checked = false;
+
+                                if (!primaryWalletExists && (tfName.text === walletsProxy.generateNextWalletName() || tfName.text.length === 0)) {
+                                    tfName.text = qsTr("Primary Wallet");
+                                }
+                                else if (tfName.text === qsTr("Primary Wallet")  || tfName.text.length === 0){
+                                    tfName.text = walletsProxy.generateNextWalletName();
+                                }
+                            }
                         }
                     }
 

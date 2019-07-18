@@ -87,6 +87,15 @@ CustomDialog {
                     text: "Simple"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
+
+                    onClicked: {
+                        if (walletInfo.encType === QPasswordData.Password) {
+                            walletDetailsFrame.passwordInput.focus = true
+                        }
+                        else if (walletInfo.encType === QPasswordData.Auth) {
+                            textInputEmail.focus = true
+                        }
+                    }
                 }
                 CustomTabButton {
                     id: addTabButton

@@ -33,6 +33,8 @@ CustomTitleDialogWindow {
                                     || walletDetailsFrame.password.length
 
     property bool fullBackupMode: tabBar.currentIndex === 0
+    property bool woBackupAllowed: true
+
     width: 400
     height: 495
 
@@ -76,12 +78,31 @@ CustomTitleDialogWindow {
                 cText.font.capitalization: Font.MixedCase
                 implicitHeight: 35
                 enabled: !walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)
+
+                onClicked: {
+                    if (walletInfo.encType === QPasswordData.Password) {
+                        walletDetailsFrame.passwordInput.focus = true
+                    }
+                    else if (walletInfo.encType === QPasswordData.Auth) {
+                        textInputEmail.focus = true
+                    }
+                }
             }
             CustomTabButton {
                 id: woBackupTabButton
                 text: "Watch-Only"
                 cText.font.capitalization: Font.MixedCase
                 implicitHeight: 35
+                enabled: woBackupAllowed
+
+                onClicked: {
+                    if (walletInfo.encType === QPasswordData.Password) {
+                        walletDetailsFrame.passwordInput.focus = true
+                    }
+                    else if (walletInfo.encType === QPasswordData.Auth) {
+                        textInputEmail.focus = true
+                    }
+                }
             }
         }
 

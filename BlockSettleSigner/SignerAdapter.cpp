@@ -132,7 +132,7 @@ void SignerAdapter::passwordReceived(const std::string &walletId
 
 void SignerAdapter::createWallet(const std::string &name, const std::string &desc
    , bs::core::wallet::Seed seed, bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
-   , bs::wallet::KeyRank keyRank, const ResultCb &cb)
+   , bs::wallet::KeyRank keyRank, const std::function<void(bs::error::ErrorCode errorCode)> &cb)
 {
    headless::CreateHDWalletRequest request;
 
