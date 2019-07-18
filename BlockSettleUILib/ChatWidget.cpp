@@ -362,6 +362,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    changeState(State::LoggedOut); //Initial state is LoggedOut
    initSearchWidget();
+
+   installEventFilter(this);
 }
 
 
@@ -740,12 +742,12 @@ bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
    }
 
    // copy selected messages by keyboard shortcut
-   if (event->type() == QEvent::KeyPress && sender == ui_->input_textEdit) {
+   if (event->type() == QEvent::KeyPress) {
       QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
 
       // handle ctrl+c (cmd+c on macOS)
       if(keyEvent->key() == Qt::Key_C && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
-         if (ui_->textEditMessages->textCursor().hasSelection() && isChatMessagesSelected_) {
+         if (ui_->textEditMessages->textCursor().hasSelection()) {
             QApplication::clipboard()->setText(ui_->textEditMessages->getFormattedTextFromSelection());
             return true;
          }
@@ -1008,7 +1010,14 @@ bool ChatWidget::TradingAvailableForUser() const
 {
    return celerClient_
       && (   celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Dealing
-          || celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Trading);
+             || celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Trading);
+}
+
+void ChatWidget::clearCursorSelection(QTextEdit *element)
+{
+   auto cursor = element->textCursor();
+   cursor.clearSelection();
+   element->setTextCursor(cursor);
 }
 
 void ChatWidget::OTCSwitchToCommonRoom()
@@ -1262,12 +1271,14 @@ void ChatWidget::selectGlobalRoom()
 
 void ChatWidget::onBSChatInputSelectionChanged()
 {
-   isChatMessagesSelected_ = false;
+   // Once we got new selection we should clear previous one.
+   clearCursorSelection(ui_->textEditMessages);
 }
 
 void ChatWidget::onChatMessagesSelectionChanged()
 {
-   isChatMessagesSelected_ = true;
+   // Once we got new selection we should clear previous one.
+   clearCursorSelection(ui_->input_textEdit);
 }
 
 void ChatWidget::onActionCreatePendingOutgoing(const std::string &userId)
