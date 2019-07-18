@@ -16,7 +16,6 @@
 #include "ProtobufUtils.h"
 
 #include <QDateTime>
-#include <QDebug>
 #include <QRegularExpression>
 
 
@@ -329,6 +328,7 @@ void ChatClient::acceptFriendRequest(const std::string &friendUserId)
    model_->insertContactObject(contact, true);
    retrieveUserMessages(contact->contact_record().contact_id());
    sendAcceptFriendRequestToServer(contact->contact_record().contact_id());
+   emit ContactRequestApproved(contact->contact_record().contact_id());
 }
 
 void ChatClient::rejectFriendRequest(const std::string &friendUserId)
@@ -637,6 +637,8 @@ void ChatClient::onCreateOutgoingContact(const std::string &contactId)
 void ChatClient::onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData)
 {
    model_->insertContactsMessage(messageData);
+
+   emit DMMessageReceived(messageData);
 }
 
 void ChatClient::onCRMessageReceived(const std::shared_ptr<Chat::Data> &messageData)
@@ -673,7 +675,10 @@ void ChatClient::loadRoomMessagesFromDB(const std::string& roomId)
             msg = decryptIESMessage(msg);
          }
 
-         model_->insertRoomMessage(msg);
+         auto existingMessage = model_->findMessageItem(roomId, msg->message().id());
+         if (!existingMessage) {
+            model_->insertRoomMessage(msg);
+         }
       }
    }
 }

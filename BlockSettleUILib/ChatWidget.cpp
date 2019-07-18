@@ -23,9 +23,6 @@
 #include <QScrollBar>
 #include <QClipboard>
 #include <QMimeData>
-
-#include <QDebug>
-
 #include <thread>
 #include <spdlog/spdlog.h>
 
@@ -47,9 +44,12 @@ enum class OTCPages : int
    OTCSupportRoomShieldPage
 };
 
-const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"),
-                                  QRegularExpression::CaseInsensitiveOption);
-const int kShowOldMessagesNotificationTimeout = 1000;
+namespace {
+   const int maxMessageLength = 20;
+
+   const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"),
+      QRegularExpression::CaseInsensitiveOption);
+}
 
 bool IsOTCChatRoom(const std::string& chatRoom)
 {
@@ -234,6 +234,7 @@ public:
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + QString::fromStdString(chat_->currentChat_));
       chat_->ui_->textEditMessages->switchToChat(chat_->currentChat_, true);
       chat_->client_->loadRoomMessagesFromDB(chat_->currentChat_);
+      chat_->updateChat(true);
 
       // load draft
       if (chat_->draftMessages_.contains(roomId)) {
@@ -309,10 +310,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
                  , const std::shared_ptr<spdlog::logger>& logger)
 {
    logger_ = logger;
-   oldNotificationsTimer_ = std::make_unique<QTimer>();
-   oldNotificationsTimer_->setSingleShot(true);
-   oldNotificationsTimer_->setInterval(kShowOldMessagesNotificationTimeout);
-   connect(oldNotificationsTimer_.get(), &QTimer::timeout, this, &ChatWidget::showOldMessagesNotification);
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
    auto model = client_->getDataModel();
    model->setNewMessageMonitor(this);
@@ -347,10 +344,14 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    });
    connect(client_.get(), &ChatClient::ConfirmUploadNewPublicKey, this, &ChatWidget::onConfirmUploadNewPublicKey);
    connect(client_.get(), &ChatClient::ContactChanged, this, &ChatWidget::onContactChanged);
+   connect(client_.get(), &ChatClient::DMMessageReceived, this, &ChatWidget::onDMMessageReceived);
+   connect(client_.get(), &ChatClient::ContactRequestApproved, this, &ChatWidget::onContactRequestApproved);
+
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
    connect(ui_->textEditMessages, &QTextEdit::selectionChanged, this, &ChatWidget::onChatMessagesSelectionChanged);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::addContactRequired, this, &ChatWidget::onSendFriendRequest);
 
 //   connect(client_.get(), &ChatClient::SearchUserListReceived,
 //           this, &ChatWidget::onSearchUserListReceived);
@@ -439,6 +440,12 @@ void ChatWidget::onUserClicked(const std::string& userId)
 void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 {
    stateCurrent_->onUsersDeleted(users);
+}
+
+void ChatWidget::onContactRequestApproved(const std::string &userId)
+{
+   ui_->treeViewUsers->setCurrentUserChat(userId);
+   ui_->treeViewUsers->updateCurrentChat();
 }
 
 void ChatWidget::changeState(ChatWidget::State state)
@@ -545,7 +552,7 @@ void ChatWidget::switchToChat(const std::string& chatId)
    onUserClicked(chatId);
 }
 
-void ChatWidget::setCelerClient(std::shared_ptr<CelerClient> celerClient)
+void ChatWidget::setCelerClient(std::shared_ptr<BaseCelerClient> celerClient)
 {
    celerClient_ = celerClient;
 }
@@ -752,6 +759,8 @@ void ChatWidget::onSendFriendRequest(const QString &userId)
 {
    //client_->sendFriendRequest(userId.toStdString());
    onActionCreatePendingOutgoing (userId.toStdString());
+   ui_->treeViewUsers->setCurrentUserChat(userId.toStdString());
+   ui_->treeViewUsers->updateCurrentChat();
    ui_->searchWidget->setListVisible(false);
 }
 
@@ -998,8 +1007,8 @@ void ChatWidget::SetLoggedOutOTCState()
 bool ChatWidget::TradingAvailableForUser() const
 {
    return celerClient_
-      && (   celerClient_->celerUserType() == CelerClient::CelerUserType::Dealing
-          || celerClient_->celerUserType() == CelerClient::CelerUserType::Trading);
+      && (   celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Dealing
+          || celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Trading);
 }
 
 void ChatWidget::OTCSwitchToCommonRoom()
@@ -1205,14 +1214,12 @@ bool ChatWidget::IsOTCChatSelected() const
 void ChatWidget::onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat::Data>> newMessages)
 {
    // show notification of new message in tray icon
-   const int maxMessageLength = 20;
    for (auto i : newMessages) {
 
       auto userName = i.first;
       auto message = i.second;
 
       if (message) {
-         oldNotificationsTimer_->stop();
          auto messageTitle = userName.empty() ? message->message().sender_id() : userName;
          auto messageText = (message->message().encryption() == Chat::Data_Message_Encryption_UNENCRYPTED)
                ? message->message().message() : "";
@@ -1225,12 +1232,8 @@ void ChatWidget::onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat
          notifyMsg.append(QString::fromStdString(messageTitle));
          notifyMsg.append(QString::fromStdString(messageText));
          notifyMsg.append(QString::fromStdString(message->message().sender_id()));
-         if (message->message().timestamp_ms() < chatLoggedInTimestampUtcInMillis_) {
-            oldMessages_.push_back(notifyMsg);
-            oldNotificationsTimer_->start();
-         } else {
-            NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
-         }
+
+         NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
       }
    }
 }
@@ -1342,40 +1345,19 @@ void ChatWidget::onContactChanged()
    updateChat(true);
 }
 
-void ChatWidget::showOldMessagesNotification()
-{
-   if (oldMessages_.size() > 0) {
-      bs::ui::NotifyMessage notifyMsg;
-      if (oldMessages_.size() == 1) {
-         notifyMsg = oldMessages_.at(0);
-      } else {
-         QString chatId;
-         for (const auto &message : qAsConst(oldMessages_)) {
-            if (message.size() != 3) {
-               continue;
-            }
-            if (chatId.isEmpty()) {
-               chatId = message.at(2).toString();
-            } else {
-               if (chatId != message.at(2).toString()) {
-                  chatId = QStringLiteral(" ");
-                  break;
-               }
-            }
-         }
-         notifyMsg.append(tr("OTC Chat"));
-         notifyMsg.append(tr("You have unread messages"));
-         notifyMsg.append(chatId);
-      }
-      oldMessages_.clear();
-      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
-   }
-}
-
 void ChatWidget::onCurrentElementAboutToBeRemoved()
 {
    // To make selectGlobalRoom(); workable
    currentChat_.clear();
 
    selectGlobalRoom();
+}
+
+void ChatWidget::onDMMessageReceived(const std::shared_ptr<Chat::Data>& message)
+{
+   std::map<std::string, std::shared_ptr<Chat::Data>> newMessages;
+   const auto model = client_->getDataModel();
+   std::string contactName = model->getContactDisplayName(message->message().sender_id());
+   newMessages.emplace(contactName, message);
+   model->getNewMessageMonitor()->onNewMessagesPresent(newMessages);
 }

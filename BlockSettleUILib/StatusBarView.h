@@ -27,7 +27,7 @@ class StatusBarView  : public QObject, public ArmoryCallbackTarget
 public:
    StatusBarView(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
-      , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<CelerClient> &
+      , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<BaseCelerClient> &
       , const std::shared_ptr<SignContainer> &, QStatusBar *parent);
    ~StatusBarView() noexcept override;
 

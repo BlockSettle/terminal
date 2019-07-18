@@ -7,7 +7,6 @@
 
 #include <QApplication>
 #include <QClipboard>
-#include <QDebug>
 #include <QDesktopServices>
 #include <QMimeData>
 #include <QScrollBar>
@@ -200,7 +199,7 @@ void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
                userMenu_->addAction(userRemoveContactAction_);
             }
             else {
-               userMenu_->addAction(userAddContactAction_);
+               emit addContactRequired(QString::fromStdString(username_));
             }
             userMenu_->exec(QCursor::pos());
          }
@@ -260,6 +259,14 @@ void ChatMessagesTextEdit::selectAllActionTriggered()
 void ChatMessagesTextEdit::onTextChanged()
 {
    verticalScrollBar()->setValue(verticalScrollBar()->maximum());
+}
+
+void ChatMessagesTextEdit::onUserUrlOpened(const QUrl &url)
+{
+   username_ = url.path().toStdString();
+   if (!handler_->onActionIsFriend(username_)) {
+      emit addContactRequired(QString::fromStdString(username_));
+   }
 }
 
 void ChatMessagesTextEdit::switchToChat(const std::string& chatId, bool isGroupRoom)
@@ -341,8 +348,10 @@ void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
    if (link.toString() == QLatin1Literal("load_more")) {
       loadMore();
    }
-   else if (!link.toString().startsWith(QLatin1Literal("user:"))) {
+   else if (link.scheme() != QLatin1Literal("user")) {
       QDesktopServices::openUrl(link);
+   } else {
+      onUserUrlOpened(link);
    }
 }
 
@@ -360,7 +369,9 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::Data> msg)
    table_->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
    QImage image = statusImage(rowIdx);
-   table_->cellAt(0, 1).firstCursorPosition().insertImage(image);
+   if (!image.isNull()) {
+      table_->cellAt(0, 1).firstCursorPosition().insertImage(image);
+   }
 
    QString user = data(rowIdx, Column::User);
    table_->cellAt(0, 2).firstCursorPosition().insertHtml(user);

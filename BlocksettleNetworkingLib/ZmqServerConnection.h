@@ -8,6 +8,7 @@
 #include <deque>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 namespace spdlog
 {
@@ -37,6 +38,11 @@ public:
 
    void SetImmediate(bool flag = true) { immediate_ = flag; }
    void SetIdentity(const std::string &id) { identity_ = id; }
+
+   // Sets list of addresses (in ipv4 or ipv6 CIDR) from which we would accept incoming TCP connections.
+   // If not set filtering is not applied.
+   // Make sure to set it before BindConnection call.
+   void setListenFrom(const std::vector<std::string> &fromAddresses);
 
 protected:
    bool isActive() const;
@@ -113,6 +119,7 @@ private:
    bool        immediate_{ false };
    std::string identity_;
    int sendTimeoutInMs_{ 5000 };
+   std::vector<std::string> fromAddresses_;
 };
 
 #endif // __ZEROMQ_SERVER_CONNECTION_H__

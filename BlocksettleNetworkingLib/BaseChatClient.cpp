@@ -50,7 +50,7 @@ void BaseChatClient::OnDataReceived(const std::string& data)
       return;
    }
 
-   logger_->debug("[BaseChatClient::{}] recv: \n{}", __func__, ProtobufUtils::toJson(*response));
+   SPDLOG_LOGGER_DEBUG(logger_, "recv: {}", ProtobufUtils::toJsonCompact(*response));
 
    // Process on main thread because otherwise ChatDB could crash
    QMetaObject::invokeMethod(this, [this, response] {
@@ -205,7 +205,7 @@ void BaseChatClient::onCreateOutgoingContact(const std::string &contactId)
 
 bool BaseChatClient::sendRequest(const Chat::Request& request)
 {
-   logger_->debug("[BaseChatClient::{}] send: \n{}", __func__, ProtobufUtils::toJson(request));
+   SPDLOG_LOGGER_DEBUG(logger_, "send: {}", ProtobufUtils::toJsonCompact(request));
 
    if (!connection_->isActive()) {
       logger_->error("[BaseChatClient::{}] Connection is not alive!", __func__);
@@ -614,19 +614,6 @@ void BaseChatClient::OnRoomMessages(const Chat::Response_RoomMessages& response)
       auto msgCopy = std::make_shared<Chat::Data>(msg);
       ChatUtils::messageFlagSet(msgCopy->mutable_message(), Chat::Data_Message_State_ACKNOWLEDGED);
 
-      /*chatDb_->add(*msg);
-
-      if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
-         if (!msg->decrypt(ownPrivKey_)) {
-            logger_->error("Failed to decrypt msg {}", msg->getId().toStdString());
-            msg->setFlag(Chat::MessageData::State::Invalid);
-         }
-         else {
-            msg->setEncryptionType(Chat::MessageData::EncryptionType::Unencrypted);
-         }
-      }*/
-
-
       onRoomMessageReceived(msgCopy);
    }
 }
@@ -702,7 +689,7 @@ void BaseChatClient::OnMessages(const Chat::Response_Messages &response)
 
          case Chat::Data_Message_Encryption_IES:
          {
-            logger_->error("[BaseChatClient::{}] This could not happen! Failed to decrypt msg.", __func__);
+            // messages which are stored on server when user was offline are encoded by IES
             chatDb_->add(msgCopy);
             auto decMsg = decryptIESMessage(msgCopy);
             onDMMessageReceived(decMsg);
@@ -764,6 +751,7 @@ bool BaseChatClient::addOrUpdateContact(const std::string &userId, Chat::Contact
    d->set_contact_id(userId);
    d->set_status(status);
    d->set_display_name(userName);
+   emit ContactRequestApproved(userId);
 
    if (chatDb_->isContactExist(userId))
    {

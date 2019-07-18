@@ -555,7 +555,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       }
    }
 
-   const auto &cbInited = [this, newItems, newTxKeys, keysMutex, updatedItems]
+   const auto &cbInited = [this, newItems, newTxKeys, keysMutex]
          (const TransactionsViewItem *itemPtr) {
       if (!itemPtr || !itemPtr->initialized) {
          logger_->error("item is not inited");
@@ -624,7 +624,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          }
          if (!newItems->empty()) {
             onNewItems(*newItems);
-            if (signalOnEndLoading_ && updatedItems->empty()) {
+            if (signalOnEndLoading_) {
                signalOnEndLoading_ = false;
                emit dataLoaded(int(newItems->size()));
             }

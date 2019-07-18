@@ -25,7 +25,6 @@ public:
 
    ~ChatUsersContextMenu()
    {
-      qDebug() << __func__;
    }
 
    QAction* execMenu(const QPoint & point)
@@ -60,7 +59,6 @@ private slots:
 
    void onAddToContacts(bool)
    {
-      qDebug() << __func__;
       if (!handler_) {
          return;
       }
@@ -69,7 +67,6 @@ private slots:
 
    void onRemoveFromContacts(bool)
    {
-      qDebug() << __func__;
       if (!handler_) {
          return;
       }
@@ -195,7 +192,8 @@ void ChatClientUserView::setCurrentUserChat(const std::string &userId)
             break;
          }
       }
-      if (type == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+      if (type == ChatUIDefinitions::ChatTreeNodeType::ContactsElement
+          || type == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement) {
          if (index.data(ChatClientDataModel::Role::ContactIdRole).toString().toStdString() == userId) {
             setCurrentIndex(index);
             break;
@@ -212,7 +210,8 @@ void ChatClientUserView::updateCurrentChat()
    if (!watchers_.empty() && item) {
       switch (item->getType()) {
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
             auto element = static_cast<CategoryElement*>(item);
             updateDependUI(element);
             notifyCurrentChanged(element);

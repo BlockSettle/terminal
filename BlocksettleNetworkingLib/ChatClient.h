@@ -97,6 +97,7 @@ signals:
    void ContactRequestAccepted(const std::string &userId);
    void RoomsInserted();
    void ContactChanged();
+   void DMMessageReceived(const std::shared_ptr<Chat::Data>& messageData);
 
 protected:
    BinaryData getOwnAuthPublicKey() const override;

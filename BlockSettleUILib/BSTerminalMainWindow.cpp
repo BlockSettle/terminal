@@ -59,6 +59,30 @@
 
 #include <spdlog/spdlog.h>
 
+// tmp
+#include "BsProxy.h"
+
+namespace {
+
+   void startTestProxy(const std::shared_ptr<spdlog::logger> &logger, bool autheidTestEnv)
+   {
+      BsProxyParams params;
+      params.context = std::make_shared<ZmqContext>(logger);
+      params.ownKeyFileDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toStdString();
+      params.ownKeyFileName = "bs_proxy_tmp.peers";
+      params.autheidTestEnv = autheidTestEnv;
+      params.autheidApiKey = autheidTestEnv ? "Bearer live_opnKv0PyeML0WvYm66ka2k29qPPoDjS3rzw13bRJzITY" : "Bearer live_17ec2nlP5NzHWkEAQUwVpqhN63fiyDPWGc5Z3ZQ8npaf";
+      //params.celerHost = "104.155.117.179";
+      //params.celerPort = 16001;
+
+      auto proxy = new BsProxy(logger, params);
+      auto thread = new QThread();
+      proxy->moveToThread(thread);
+      thread->start();
+   }
+
+} // namespace
+
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QWidget* parent)
    : QMainWindow(parent)
@@ -161,11 +185,20 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    updateControlEnabledState();
 
    InitWidgets();
+
+   startTestProxy(logMgr_->logger(), applicationSettings_->isAutheidTestEnv());
 }
 
 void BSTerminalMainWindow::onMDConnectionDetailsRequired()
 {
    GetNetworkSettingsFromPuB([this]() { OnNetworkSettingsLoaded(); } );
+}
+
+void BSTerminalMainWindow::onBsConnectionFailed()
+{
+   SPDLOG_LOGGER_ERROR(logMgr_->logger(), "BsClient disconnected unexpectedly");
+   onCelerDisconnected();
+   showError(tr("Network error"), tr("Connection to BlockSettle server failed"));
 }
 
 void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
@@ -209,8 +242,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
 
    const auto &populateAppSettings = [this](NetworkSettings settings) {
       if (!settings.celer.host.empty()) {
-         applicationSettings_->set(ApplicationSettings::celerHost, QString::fromStdString(settings.celer.host));
-         applicationSettings_->set(ApplicationSettings::celerPort, settings.celer.port);
+         BsProxy::overrideCelerHost(settings.celer.host, int(settings.celer.port));
       }
       if (!settings.marketData.host.empty()) {
          applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
@@ -610,10 +642,10 @@ void BSTerminalMainWindow::SignerReady()
 void BSTerminalMainWindow::InitConnections()
 {
    connectionManager_ = std::make_shared<ConnectionManager>(logMgr_->logger("message"));
-   celerConnection_ = std::make_shared<CelerClient>(connectionManager_);
-   connect(celerConnection_.get(), &CelerClient::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
-   connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
-   connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
+   celerConnection_ = std::make_shared<CelerClientProxy>(logMgr_->logger());
+   connect(celerConnection_.get(), &BaseCelerClient::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
+   connect(celerConnection_.get(), &BaseCelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
+   connect(celerConnection_.get(), &BaseCelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
    mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_, logMgr_->logger("message"));
 
@@ -1158,27 +1190,16 @@ void BSTerminalMainWindow::openCCTokenDialog()
    addDeferredDialog(deferredDialog);
 }
 
-void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::string& password)
+void BSTerminalMainWindow::loginToCeler(const std::string& username)
 {
-   const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
-   const std::string port = applicationSettings_->get<std::string>(ApplicationSettings::celerPort);
+   // We don't use password here, BsProxy will manage authentication
+   celerConnection_->LoginToServer(bsClient_.get(), username);
 
-   if (host.empty() || port.empty()) {
-      logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginToCeler] missing network settings for App server");
-      showError(tr("Connection error"), tr("Missing network settings for Blocksettle Server"));
-      return;
-   }
-
-   if (!celerConnection_->LoginToServer(host, port, username, password)) {
-      logMgr_->logger("ui")->error("[BSTerminalMainWindow::loginToCeler] login failed");
-      showError(tr("Connection error"), tr("Login failed"));
-   } else {
-      auto userName = QString::fromStdString(username);
-      currentUserLogin_ = userName;
-      ui_->widgetWallets->setUsername(userName);
-      action_logout_->setVisible(false);
-      action_login_->setEnabled(false);
-   }
+   auto userName = QString::fromStdString(username);
+   currentUserLogin_ = userName;
+   ui_->widgetWallets->setUsername(userName);
+   action_logout_->setVisible(false);
+   action_login_->setEnabled(false);
 }
 
 void BSTerminalMainWindow::onLogin()
@@ -1195,19 +1216,23 @@ void BSTerminalMainWindow::onReadyToLogin()
 {
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
 
-   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, connectionManager_, this);
+   createBsClient();
 
-   if (loginDialog.exec() == QDialog::Accepted) {
+   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, bsClient_.get(), this);
+
+   int rc = loginDialog.exec();
+
+   if (rc == QDialog::Accepted) {
       currentUserLogin_ = loginDialog.getUsername();
-      auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt(), cbApproveChat_);
+      std::string jwt;
+      auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
       setLoginButtonText(currentUserLogin_);
       setWidgetsAuthorized(true);
 
 #ifndef PRODUCTION_BUILD
       // TODO: uncomment this section once we have armory connection
       // if (isArmoryConnected()) {
-         loginToCeler(loginDialog.getUsername().toStdString()
-            , "Welcome1234");
+         loginToCeler(loginDialog.getUsername().toStdString());
       // } else {
          // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
       // }
@@ -1311,7 +1336,7 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
 {
    switch(errorCode)
    {
-   case CelerClient::LoginError:
+   case BaseCelerClient::LoginError:
       logMgr_->logger("ui")->debug("[BSTerminalMainWindow::onCelerConnectionError] login failed. Probably user do not have BS matching account");
       break;
    }
@@ -1736,4 +1761,18 @@ void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &de
       }
 
    }, Qt::QueuedConnection);
+}
+
+
+void BSTerminalMainWindow::createBsClient()
+{
+   BsClientParams params;
+   params.context = std::make_shared<ZmqContext>(logMgr_->logger());
+   params.newServerKeyCallback = [](const BsClientParams::NewKey &newKey) {
+      // FIXME: Show GUI prompt
+      newKey.prompt->set_value(true);
+   };
+
+   bsClient_ = std::make_unique<BsClient>(logMgr_->logger(), params);
+   connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 }

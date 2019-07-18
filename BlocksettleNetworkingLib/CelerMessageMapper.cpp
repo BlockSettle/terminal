@@ -223,4 +223,11 @@ CelerMessageType GetMessageType(const std::string& fullClassName)
    return UndefinedType;
 }
 
+bool isValidMessageType(CelerMessageType messageType)
+{
+   return messageType >= CelerMessageTypeFirst &&
+          messageType <= CelerMessageTypeLast &&
+          messageType != UndefinedType;
+}
+
 };

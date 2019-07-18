@@ -8,11 +8,13 @@
 
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4100)
-#pragma warning(disable : 4996)
-#pragma warning(disable : 4250)
-#pragma warning(disable : 4251)
-#pragma warning(disable : 4275)
+#pragma warning(disable : 4100)  // 'identifier' : unreferenced formal parameter
+#pragma warning(disable : 4996)  // function deprecated or _CRT_SECURE_NO_WARNINGS
+#pragma warning(disable : 4250)  // 'class1' : inherits 'class2::member' via dominance
+#pragma warning(disable : 4251)  // 'identifier' : class 'type' needs to have dll-interface to be used by clients of class 'type2'
+#pragma warning(disable : 4275)  // non - DLL-interface class 'class_1' used as base for DLL-interface class 'class_2'
+#pragma warning(disable : 4267)  // conversion from 'x' to 'y', possible loss of data
+#pragma warning(disable : 4101)  // unreferenced local variable
 #endif
 
 #if defined(__GNUC__)

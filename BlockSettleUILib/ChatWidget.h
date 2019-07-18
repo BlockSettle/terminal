@@ -33,7 +33,7 @@ class ApplicationSettings;
 class ChatWidgetState;
 class OTCRequestViewModel;
 class ChatTreeModelWrapper;
-class CelerClient;
+class BaseCelerClient;
 
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
@@ -63,7 +63,7 @@ public:
    void logout();
    bool hasUnreadMessages();
    void switchToChat(const std::string& chatId);
-   void setCelerClient(std::shared_ptr<CelerClient> celerClient);
+   void setCelerClient(std::shared_ptr<BaseCelerClient> celerClient);
    void updateChat(const bool &isChatTab);
 
    // Sends friend request to PB contact if needed
@@ -98,7 +98,9 @@ private slots:
    void onContactListConfirmationRequested(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
                                            const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
                                            const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
-   void showOldMessagesNotification();
+
+   void onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData);
+   void onContactRequestApproved(const std::string &userId);
 
    // OTC UI slots
    void OnOTCRequestCreated();
@@ -152,7 +154,7 @@ private:
 
    std::shared_ptr<ChatClient>      client_;
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<CelerClient>     celerClient_;
+   std::shared_ptr<BaseCelerClient>     celerClient_;
 
    std::string serverPublicKey_;
    std::string  currentChat_;
@@ -170,7 +172,6 @@ private:
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
    int64_t chatLoggedInTimestampUtcInMillis_;
-   std::unique_ptr<QTimer> oldNotificationsTimer_;
    std::vector<QVariantList> oldMessages_;
 
    std::string pbUserId_;

@@ -3,7 +3,7 @@
 
 #include "CelerClient.h"
 
-CelerAccountInfoDialog::CelerAccountInfoDialog(std::shared_ptr<CelerClient> celerConnection, QWidget* parent)
+CelerAccountInfoDialog::CelerAccountInfoDialog(std::shared_ptr<BaseCelerClient> celerConnection, QWidget* parent)
  : QDialog(parent)
  , ui_(new Ui::CelerAccountInfoDialog())
 {

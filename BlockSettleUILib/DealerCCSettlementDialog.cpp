@@ -17,7 +17,7 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
       , const std::string &reqRecvAddr
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &signContainer
-      , std::shared_ptr<CelerClient> celerClient
+      , std::shared_ptr<BaseCelerClient> celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent)
@@ -31,7 +31,7 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    connectToProgressBar(ui_->progressBar, ui_->labelTimeLeft);
    connectToHintLabel(ui_->labelHint, ui_->labelError);
 
-   connect(celerClient.get(), &CelerClient::OnConnectionClosed,
+   connect(celerClient.get(), &BaseCelerClient::OnConnectionClosed,
       this, &DealerCCSettlementDialog::reject);
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &DealerCCSettlementDialog::reject);

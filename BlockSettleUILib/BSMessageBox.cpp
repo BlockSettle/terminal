@@ -1,6 +1,5 @@
 #include "BSMessageBox.h"
 #include "ui_BSMessageBox.h"
-#include <QDebug>
 #include <QShowEvent>
 #include <QStyle>
 #include <QTimer>

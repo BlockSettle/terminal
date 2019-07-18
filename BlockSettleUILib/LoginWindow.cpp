@@ -1,36 +1,34 @@
 #include "LoginWindow.h"
-#include "ui_LoginWindow.h"
 
+#include <spdlog/spdlog.h>
 #include <QIcon>
-
 #include "AboutDialog.h"
 #include "ApplicationSettings.h"
-#include "UiUtils.h"
+#include "BsClient.h"
 #include "BSMessageBox.h"
-#include <spdlog/spdlog.h>
-#include "AutheIDClient.h"
+#include "UiUtils.h"
+#include "ui_LoginWindow.h"
 
 namespace {
-   int kAuthTimeout = 60;
+   const auto AuthTimeout = int(BsClient::getDefaultAutheidAuthTimeout() / std::chrono::seconds(1));
 }
 
 LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
-                         , const std::shared_ptr<ApplicationSettings> &settings
-                         , const std::shared_ptr<ConnectionManager> &connectionManager
-                         , QWidget* parent)
+   , std::shared_ptr<ApplicationSettings> &settings
+   , BsClient *client
+   , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::LoginWindow())
    , logger_(logger)
    , settings_(settings)
-   , connectionManager_(connectionManager)
+   , bsClient_(client)
 {
    ui_->setupUi(this);
-   ui_->progressBar->setMaximum(kAuthTimeout * 2); // update every 0.5 sec
+   ui_->progressBar->setMaximum(AuthTimeout * 2); // update every 0.5 sec
    const auto version = ui_->loginVersionLabel->text().replace(QLatin1String("{Version}")
       , tr("Version %1").arg(QString::fromStdString(AboutDialog::version())));
    ui_->loginVersionLabel->setText(version);
    resize(minimumSize());
-
 
    const auto accountLink = ui_->labelGetAccount->text().replace(QLatin1String("{GetAccountLink}")
       , settings->get<QString>(ApplicationSettings::GetAccount_Url));
@@ -48,15 +46,13 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
       ui_->lineEditUsername->setFocus();
    }
 
-   autheIDConnection_ = std::make_shared<AutheIDClient>(logger_, settings, connectionManager_);
-   connect(autheIDConnection_.get(), &AutheIDClient::authSuccess, this, &LoginWindow::onAutheIDDone);
-   connect(autheIDConnection_.get(), &AutheIDClient::failed, this, &LoginWindow::onAutheIDFailed);
-   connect(autheIDConnection_.get(), &AutheIDClient::userCancelled, this, &LoginWindow::setupLoginPage);
-
    connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::accept);
 
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &LoginWindow::onTimer);
+
+   connect(bsClient_, &BsClient::startLoginDone, this, &LoginWindow::onStartLoginDone);
+   connect(bsClient_, &BsClient::getLoginResultDone, this, &LoginWindow::onGetLoginResultDone);
 
    onTextChanged();
 }
@@ -69,11 +65,9 @@ void LoginWindow::onTimer()
    if (timeLeft_ <= 0) {
       //onAutheIDFailed(tr("Timeout"));
       setupLoginPage();
-   }
-   else {
-      ui_->progressBar->setValue(timeLeft_ * 2);
-      ui_->labelTimeLeft->setText(tr("%1 seconds left").arg((int)timeLeft_));
-      ui_->progressBar->repaint();
+   } else {
+      ui_->progressBar->setValue(int(timeLeft_ * 2));
+      ui_->labelTimeLeft->setText(tr("%1 seconds left").arg(int(timeLeft_)));
    }
 }
 
@@ -81,7 +75,7 @@ void LoginWindow::setupLoginPage()
 {
    timer_.stop();
    state_ = Login;
-   timeLeft_ = kAuthTimeout;
+   timeLeft_ = AuthTimeout;
    ui_->signWithEidButton->setText(tr("Sign in with Auth eID"));
    ui_->stackedWidgetAuth->setCurrentWidget(ui_->pageLogin);
    ui_->progressBar->setValue(0);
@@ -105,25 +99,66 @@ QString LoginWindow::getUsername() const
    return ui_->lineEditUsername->text().toLower();
 }
 
+void LoginWindow::onStartLoginDone(AutheIDClient::ErrorType errorCode)
+{
+   if (errorCode != AutheIDClient::NoError) {
+      setupLoginPage();
+      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
+         , AutheIDClient::errorString(errorCode), this);
+      loginErrorBox.exec();
+      QDialog::reject();
+      return;
+   }
+
+   timer_.start();
+   bsClient_->getLoginResult();
+}
+
+void LoginWindow::onGetLoginResultDone(AutheIDClient::ErrorType errorCode)
+{
+   if (errorCode == AutheIDClient::Cancelled) {
+      setupLoginPage();
+      return;
+   }
+
+   if (errorCode != AutheIDClient::NoError) {
+      setupLoginPage();
+      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
+         , AutheIDClient::errorString(errorCode), this);
+      loginErrorBox.exec();
+      QDialog::reject();
+      return;
+   }
+
+   QDialog::accept();
+}
+
 void LoginWindow::accept()
 {
    onAuthPressed();
 }
 
+void LoginWindow::reject()
+{
+   if (state_ == Cancel) {
+      bsClient_->cancelLogin();
+   }
+   QDialog::reject();
+}
+
 void LoginWindow::onAuthPressed()
 {
-   ui_->lineEditUsername->setText(ui_->lineEditUsername->text().trimmed());
+   if (state_ == Cancel) {
+      reject();
+      return;
+   }
 
-   if (state_ == Login) {
-      autheIDConnection_->authenticate(ui_->lineEditUsername->text().toStdString(), kAuthTimeout);
-      setupLoginPage();
-      timer_.start();
-      setupCancelPage();
-   }
-   else {
-      setupLoginPage();
-      autheIDConnection_->cancel();
-   }
+   QString login = ui_->lineEditUsername->text().trimmed();
+   ui_->lineEditUsername->setText(login);
+
+   setupLoginPage();
+   setupCancelPage();
+   bsClient_->startLogin(login.toStdString());
 
    if (ui_->checkBoxRememberUsername->isChecked()) {
       settings_->set(ApplicationSettings::rememberLoginUserName, true);
@@ -137,19 +172,4 @@ void LoginWindow::onAuthPressed()
 void LoginWindow::onAuthStatusUpdated(const QString &userId, const QString &status)
 {
    ui_->signWithEidButton->setText(status);
-}
-
-void LoginWindow::onAutheIDDone(const std::string& jwt)
-{
-   jwt_= jwt;
-   QDialog::accept();
-}
-
-void LoginWindow::onAutheIDFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError)
-{
-   if (authError != AutheIDClient::Timeout) {
-      setupLoginPage();
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), AutheIDClient::errorString(authError), this);
-      loginErrorBox.exec();
-   }
 }

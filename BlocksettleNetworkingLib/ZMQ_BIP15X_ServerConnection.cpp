@@ -326,6 +326,29 @@ const chrono::milliseconds ZmqBIP15XServerConnection::getLocalHeartbeatInterval(
    return std::chrono::seconds(3);
 }
 
+// static
+BinaryData ZmqBIP15XServerConnection::getOwnPubKey(const string &ownKeyFileDir, const string &ownKeyFileName)
+{
+   try {
+      AuthorizedPeers authPeers(ownKeyFileDir, ownKeyFileName);
+      return getOwnPubKey(authPeers);
+   }
+   catch (const std::exception &) { }
+   return {};
+}
+
+// static
+BinaryData ZmqBIP15XServerConnection::getOwnPubKey(const AuthorizedPeers &authPeers)
+{
+   try {
+      const auto &pubKey = authPeers.getOwnPublicKey();
+      return BinaryData(pubKey.pubkey, pubKey.compressed
+         ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH);
+   } catch (...) {
+      return {};
+   }
+}
+
 // A send function for the data connection that sends data to all clients,
 // somewhat like multicasting.
 //

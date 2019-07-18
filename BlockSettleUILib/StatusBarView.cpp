@@ -7,7 +7,7 @@
 
 StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<CelerClient> &celerClient
+   , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<SignContainer> &container, QStatusBar *parent)
    : QObject(nullptr), ArmoryCallbackTarget(armory.get())
    , statusBar_(parent)
@@ -76,14 +76,17 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &StatusBarView::onWalletImportFinished);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &StatusBarView::updateBalances);
 
-   connect(celerClient.get(), &CelerClient::OnConnectedToServer, this, &StatusBarView::onConnectedToServer);
-   connect(celerClient.get(), &CelerClient::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
-   connect(celerClient.get(), &CelerClient::OnConnectionError, this, &StatusBarView::onConnectionError);
+   connect(celerClient.get(), &BaseCelerClient::OnConnectedToServer, this, &StatusBarView::onConnectedToServer);
+   connect(celerClient.get(), &BaseCelerClient::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
+   connect(celerClient.get(), &BaseCelerClient::OnConnectionError, this, &StatusBarView::onConnectionError);
 
-   // connected are not used here because we wait for authenticated signal instead
-   // disconnected are not used here because onContainerError should be always called
-   connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
-   connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
+   // container might be null if user rejects remote signer key
+   if (container) {
+      // connected are not used here because we wait for authenticated signal instead
+      // disconnected are not used here because onContainerError should be always called
+      connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
+      connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
+   }
 
    onArmoryStateChanged(armory_->state());
    onConnectionClosed();
@@ -348,16 +351,16 @@ void StatusBarView::onConnectionError(int errorCode)
 {
    switch(errorCode)
    {
-   case CelerClient::ResolveHostError:
+   case BaseCelerClient::ResolveHostError:
       statusBar_->showMessage(tr("Could not resolve Celer host"));
       break;
-   case CelerClient::LoginError:
+   case BaseCelerClient::LoginError:
       statusBar_->showMessage(tr("Invalid login/password pair"), 2000);
       break;
-   case CelerClient::ServerMaintainanceError:
+   case BaseCelerClient::ServerMaintainanceError:
       statusBar_->showMessage(tr("Server maintainance"));
       break;
-   case CelerClient::UndefinedError:
+   case BaseCelerClient::UndefinedError:
       break;
    }
 }

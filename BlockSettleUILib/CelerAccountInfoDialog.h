@@ -7,14 +7,14 @@
 namespace Ui {
     class CelerAccountInfoDialog;
 };
-class CelerClient;
+class BaseCelerClient;
 
 class CelerAccountInfoDialog : public QDialog
 {
 Q_OBJECT
 
 public:
-   CelerAccountInfoDialog(std::shared_ptr<CelerClient> celerConnection, QWidget* parent = nullptr );
+   CelerAccountInfoDialog(std::shared_ptr<BaseCelerClient> celerConnection, QWidget* parent = nullptr );
    ~CelerAccountInfoDialog() override;
 
 private:

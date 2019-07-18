@@ -1,7 +1,6 @@
 #include "AddressDetailsWidget.h"
 #include "ui_AddressDetailsWidget.h"
 #include <QDateTime>
-#include <QDebug>
 #include <QtConcurrent/QtConcurrentRun>
 #include "AddressVerificator.h"
 #include "CheckRecipSigner.h"

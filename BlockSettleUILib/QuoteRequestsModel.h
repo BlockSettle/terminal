@@ -24,7 +24,7 @@ namespace bs {
    class SettlementContainer;
 }
 class AssetManager;
-class CelerClient;
+class BaseCelerClient;
 class ApplicationSettings;
 
 class QuoteRequestsModel : public QAbstractItemModel
@@ -83,7 +83,7 @@ public:
 
 public:
    QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
-                      , std::shared_ptr<CelerClient> celerClient
+                      , std::shared_ptr<BaseCelerClient> celerClient
                       , std::shared_ptr<ApplicationSettings> appSettings
                       , QObject* parent);
    ~QuoteRequestsModel() override;
@@ -142,7 +142,7 @@ private:
    MDPrices    mdPrices_;
    const QString groupNameSettlements_ = tr("Settlements");
    std::shared_ptr<bs::SecurityStatsCollector> secStatsCollector_;
-   std::shared_ptr<CelerClient>     celerClient_;
+   std::shared_ptr<BaseCelerClient>     celerClient_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::unordered_set<std::string>  pendingDeleteIds_;
    unsigned int   settlCompleted_ = 0;

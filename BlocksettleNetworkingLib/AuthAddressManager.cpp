@@ -40,15 +40,18 @@ void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSet
    connect(walletsManager_.get(), &bs::sync::WalletsManager::authWalletChanged, this, &AuthAddressManager::onAuthWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &AuthAddressManager::onWalletChanged);
 
-   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &AuthAddressManager::onTXSigned);
-   connect(signingContainer_.get(), &SignContainer::Error, this, &AuthAddressManager::onWalletFailed);
-   connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &AuthAddressManager::onWalletCreated);
+   // signingContainer_ might be null if user rejects remote signer key
+   if (signingContainer_) {
+      connect(signingContainer_.get(), &SignContainer::TXSigned, this, &AuthAddressManager::onTXSigned);
+      connect(signingContainer_.get(), &SignContainer::Error, this, &AuthAddressManager::onWalletFailed);
+      connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &AuthAddressManager::onWalletCreated);
+   }
 
    SetAuthWallet();
 }
 
 void AuthAddressManager::ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &connMgr
-   , const std::shared_ptr<CelerClient>& celerClient)
+   , const std::shared_ptr<BaseCelerClient>& celerClient)
 {
    connectionManager_ = connMgr;
    celerClient_ = celerClient;

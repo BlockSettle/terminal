@@ -22,7 +22,7 @@ class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
-class CelerClient;
+class BaseCelerClient;
 class ConnectionManager;
 class DialogManager;
 class MarketDataProvider;
@@ -42,7 +42,7 @@ public:
       , const std::shared_ptr<ApplicationSettings> &appSettings);
 
    void init(std::shared_ptr<spdlog::logger> logger
-         , const std::shared_ptr<CelerClient>& celerClient
+         , const std::shared_ptr<BaseCelerClient>& celerClient
          , const std::shared_ptr<AuthAddressManager> &
          , std::shared_ptr<QuoteProvider> quoteProvider
          , const std::shared_ptr<AssetManager>& assetManager
@@ -68,7 +68,7 @@ private:
    std::unique_ptr<Ui::RFQRequestWidget> ui_;
 
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<CelerClient>        celerClient_;
+   std::shared_ptr<BaseCelerClient>        celerClient_;
    std::shared_ptr<QuoteProvider>      quoteProvider_;
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;

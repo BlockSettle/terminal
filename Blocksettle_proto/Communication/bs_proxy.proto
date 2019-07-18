@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.Proxy;
+
+message Request
+{
+    message StartLogin
+    {
+        string email = 1;
+    }
+
+    message CancelLogin
+    {
+    }
+
+    message GetLoginResult
+    {
+    }
+
+    message Logout
+    {
+    }
+
+    message Celer
+    {
+        int32 message_type = 1;
+        bytes data = 2;
+    }
+
+    // Set for requests and server will copy them back in response
+    int64 request_id = 1;
+
+    oneof data
+    {
+        // Requests (there are must be some response after some time)
+        StartLogin start_login = 10;
+        GetLoginResult get_login_result = 11;
+
+        // Messages
+        CancelLogin cancel_login = 30;
+        Logout logout = 31;
+        Celer celer = 32;
+    }
+}
+
+message Response
+{
+    message StartLogin
+    {
+        // AutheIDClient::ErrorType as int, 0 if succeess
+        int32 error_code = 1;
+    }
+
+    message GetLoginResult
+    {
+        // AutheIDClient::ErrorType as int, 0 if succeess
+        int32 error_code = 1;
+    }
+
+    message Celer
+    {
+        int32 message_type = 1;
+        bytes data = 2;
+    }
+
+    int64 request_id = 1;
+
+    oneof data
+    {
+        // Responses
+        StartLogin start_login = 10;
+        GetLoginResult get_login_result = 11;
+
+        // Messages
+        Celer celer = 30;
+    }
+}

@@ -20,7 +20,7 @@ namespace Blocksettle {
 
 class ApplicationSettings;
 class AuthSignManager;
-class CelerClient;
+class BaseCelerClient;
 
 class CCPubResolver : public bs::sync::CCDataResolver
 {
@@ -76,7 +76,7 @@ public:
    bool synchronized() const { return syncFinished_; }
 
    void LoadSavedCCDefinitions();
-   void ConnectToCelerClient(const std::shared_ptr<CelerClient> &);
+   void ConnectToCelerClient(const std::shared_ptr<BaseCelerClient> &);
 
    bool SubmitAddressToPuB(const bs::Address &, uint32_t seed);
    bool wasAddressSubmitted(const bs::Address &);
@@ -112,7 +112,7 @@ protected:
 
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
-   std::shared_ptr<CelerClient>           celerClient_;
+   std::shared_ptr<BaseCelerClient>           celerClient_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
 
    // when user changes PuB connection settings - save to file should be disabled.

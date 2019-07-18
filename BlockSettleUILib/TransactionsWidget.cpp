@@ -99,7 +99,7 @@ public:
       if ((startDate > 0) && (endDate > 0)) {
          QModelIndex index = src->index(source_row, static_cast<int>(TransactionsViewModel::Columns::Date));
          uint32_t txDate = src->data(index, TransactionsViewModel::FilterRole).toUInt();
-         result = (startDate <= txDate) && (txDate <= endDate);
+         result = (startDate <= txDate) && (txDate < endDate);
       }
 
       if (result && !searchString.isEmpty()) {     // more columns can be added later
@@ -137,10 +137,10 @@ public:
       invalidateFilter();
    }
 
-   void updateDates(const QDateTime& start, const QDateTime& end)
+   void updateDates(const QDate& start, const QDate& end)
    {
-      this->startDate = start.isValid() ? start.toTime_t() : 0;
-      this->endDate = end.isValid() ? end.toTime_t() : 0;
+      this->startDate = start.isValid() ? QDateTime(start, QTime(), Qt::LocalTime).toTime_t() : 0;
+      this->endDate = end.isValid() ? QDateTime(end, QTime(), Qt::LocalTime).addDays(1).toTime_t() : 0;
       invalidateFilter();
    }
 
@@ -231,18 +231,18 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
 
    connect(ui_->walletBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &TransactionsWidget::walletsFilterChanged);
 
-   ui_->dateEditEnd->setDateTime(QDateTime::currentDateTime().addDays(1));
+   ui_->dateEditEnd->setDate(QDate::currentDate());
 
    connect(ui_->dateEditEnd, &QDateTimeEdit::dateTimeChanged, [=](const QDateTime& dateTime) {
       if (ui_->dateEditStart->dateTime() > dateTime)
       {
-         ui_->dateEditStart->setDateTime(dateTime);
+         ui_->dateEditStart->setDate(dateTime.date());
       }
    });
    connect(ui_->dateEditStart, &QDateTimeEdit::dateTimeChanged, [=](const QDateTime& dateTime) {
       if (ui_->dateEditEnd->dateTime() < dateTime)
       {
-         ui_->dateEditEnd->setDateTime(dateTime);
+         ui_->dateEditEnd->setDate(dateTime.date());
       }
    });
 
@@ -286,8 +286,8 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
 
    walletsChanged();
 
-   auto updateDateTimes = [=]() {
-      sortFilterModel_->updateDates(ui_->dateEditStart->dateTime(), ui_->dateEditEnd->dateTime());
+   auto updateDateTimes = [this]() {
+      sortFilterModel_->updateDates(ui_->dateEditStart->date(), ui_->dateEditEnd->date());
    };
    connect(ui_->dateEditStart, &QDateTimeEdit::dateTimeChanged, updateDateTimes);
    connect(ui_->dateEditEnd, &QDateTimeEdit::dateTimeChanged, updateDateTimes);
