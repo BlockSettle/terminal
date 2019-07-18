@@ -8,13 +8,19 @@ import "../BsStyles"
 CustomDialog {
     id: root
     property bool qmlTitleVisible: true
+    property int headerPanelHeight: qmlTitleVisible ? 40 : 0
+
     cHeaderItem: RowLayout {
         CustomHeaderPanel {
+            id: panel
             Layout.fillWidth: true
-            Layout.preferredHeight: qmlTitleVisible ? 40 : 0
-            height: qmlTitleVisible ? 40 : 0
+            Layout.preferredHeight: root.headerPanelHeight
             text: root.title
             visible: qmlTitleVisible
         }
+    }
+
+    onNextChainDialogChangedOverloaded: {
+        nextDialog.qmlTitleVisible = qmlTitleVisible
     }
 }

@@ -37,8 +37,8 @@ public:
 
    void clientDisconn(const std::string &) override
    {
-      if (owner_->settings_->runMode() == bs::signer::RunMode::lightgui) {
-         owner_->logger_->info("Quit because terminal disconnected unexpectedly and lightgui used");
+      if (owner_->settings_->runMode() == bs::signer::RunMode::litegui) {
+         owner_->logger_->info("Quit because terminal disconnected unexpectedly and litegui used");
          owner_->queue_->quit();
       }
    }
@@ -65,21 +65,6 @@ public:
       }
 
       return request;
-   }
-
-   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override
-   {
-      owner_->sendData(signer::SignTxRequestType, createSignTxRequest(txReq, prompt).SerializeAsString());
-   }
-
-   void requestPasswordForSigningSettlementTx(const bs::core::wallet::TXSignRequest &txReq
-      , const Blocksettle::Communication::Internal::SettlementInfo &settlementInfo, const std::string &prompt) override
-   {
-      signer::SignSettlementTxRequest request;
-      *(request.mutable_signtxrequest()) = createSignTxRequest(txReq, prompt);
-      *(request.mutable_settlementinfo()) = settlementInfo;
-
-      owner_->sendData(signer::SignSettlementTxRequestType, request.SerializeAsString());
    }
 
    void txSigned(const BinaryData &tx) override
@@ -117,6 +102,19 @@ public:
       signer::TerminalHandshakeFailed evt;
       evt.set_peeraddress(peerAddress);
       owner_->sendData(signer::TerminalHandshakeFailedType, evt.SerializeAsString());
+   }
+
+
+   void decryptWalletRequest(Blocksettle::Communication::signer::PasswordDialogType dialogType
+      , const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+      , const bs::core::wallet::TXSignRequest &txReq = {}) override
+   {
+      signer::DecryptWalletRequest request;
+      request.set_dialogtype(dialogType);
+      *(request.mutable_signtxrequest()) = createSignTxRequest(txReq, {});
+      *(request.mutable_passworddialogdata()) = dialogData;
+
+      owner_->sendData(signer::DecryptWalletRequestType, request.SerializeAsString());
    }
 
    SignerAdapterListener *owner_{};
@@ -630,8 +628,9 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
       walletsListUpdated();
    }
    catch (const std::exception &e) {
+      logger_->error("[{}] failed to create HD Wallet: {}", __func__, e.what());
       headless::CreateHDWalletResponse response;
-      response.set_error(e.what());
+      response.set_errorcode(static_cast<uint32_t>(bs::error::ErrorCode::InternalError));
       return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);;
    }
 
@@ -717,7 +716,7 @@ void SignerAdapterListener::walletsListUpdated()
 
 void SignerAdapterListener::shutdownIfNeeded()
 {
-   if (settings_->runMode() == bs::signer::RunMode::lightgui && app_) {
+   if (settings_->runMode() == bs::signer::RunMode::litegui && app_) {
       logger_->info("terminal disconnect detected, shutdown...");
       app_->close();
    }

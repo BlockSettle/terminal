@@ -17,7 +17,6 @@ import "BsStyles"
 import "BsControls"
 import "BsDialogs"
 import "js/helper.js" as JsHelper
-import "js/qmlDialogs.js" as QmlDialogs
 
 Item {
     id: view
@@ -77,11 +76,11 @@ Item {
                             var dlgNew = Qt.createComponent("BsDialogs/WalletNewDialog.qml").createObject(mainWindow)
                             dlgNew.bsAccepted.connect(function() {
                                 if (dlgNew.type === WalletNewDialog.WalletType.NewWallet) {
-                                    var dlgNewSeed = QmlDialogs.createNewWalletDialog()
+                                    var dlgNewSeed = JsHelper.createNewWalletDialog()
                                     dlgNewSeed.fullScreenMode = false
                                 }
                                 else {
-                                    QmlDialogs.importWalletDialog()
+                                    JsHelper.importWalletDialog()
                                 }
                             })
                             dlgNew.open()
@@ -94,7 +93,7 @@ Item {
                         text: qsTr("Manage")
                         enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         onClicked: {
-                            QmlDialogs.manageEncryptionDialog(getCurrentWalletIdData())
+                            JsHelper.manageEncryptionDialog(getCurrentWalletIdData())
                         }
                     }
 
@@ -104,7 +103,7 @@ Item {
                         text: qsTr("Export")
                         enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         onClicked: {
-                            QmlDialogs.backupWalletDialog(getCurrentWalletIdData())
+                            JsHelper.backupWalletDialog(getCurrentWalletIdData())
                         }
                     }
 
@@ -114,7 +113,7 @@ Item {
                         enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         text: qsTr("Delete")
                         onClicked: {
-                            QmlDialogs.deleteWalletDialog(getCurrentWalletIdData())
+                            JsHelper.deleteWalletDialog(getCurrentWalletIdData())
                         }
                     }
                 }

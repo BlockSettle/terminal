@@ -94,10 +94,10 @@ static int HeadlessApp(int argc, char **argv)
       logger = logMgr.logger();
    }
 
-   // Enable terminal key checks if two way auth is enabled (or lightgui is used).
+   // Enable terminal key checks if two way auth is enabled (or litegui is used).
    // This also affects GUI connection because the flag works globally for now.
    // So if remote signer has two-way auth disabled GUI connection will be less secure too.
-   const bool twoWayEnabled = settings->twoWaySignerAuth() || (settings->runMode() == bs::signer::RunMode::lightgui);
+   const bool twoWayEnabled = settings->twoWaySignerAuth() || (settings->runMode() == bs::signer::RunMode::litegui);
    startupBIP151CTX();
    startupBIP150CTX(4, !twoWayEnabled);
 

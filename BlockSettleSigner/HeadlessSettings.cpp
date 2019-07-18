@@ -121,8 +121,8 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       exit(0);
    }
 
-   if (guiMode == "lightgui") {
-      runMode_ = bs::signer::RunMode::lightgui;
+   if (guiMode == "litegui") {
+      runMode_ = bs::signer::RunMode::litegui;
    }
    else if (guiMode == "fullgui") {
       runMode_ = bs::signer::RunMode::fullgui;

@@ -24,6 +24,7 @@ CustomTitleDialogWindow {
     }
 
     width: 350
+    height: 210 + headerPanelHeight
 
     title: qsTr("Sign with Auth eID")
 
@@ -62,8 +63,6 @@ CustomTitleDialogWindow {
     cContentItem: ColumnLayout {
         Layout.fillWidth: true
         ColumnLayout {
-            Layout.preferredWidth: root.width
-
             CustomLabelValue{
                 id: labelText_
                 text: centralText
