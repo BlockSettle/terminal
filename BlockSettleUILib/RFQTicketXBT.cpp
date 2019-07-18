@@ -64,7 +64,7 @@ RFQTicketXBT::RFQTicketXBT(QWidget* parent)
 
    connect(ui_->lineEditAmount, &QLineEdit::textEdited, this, &RFQTicketXBT::onAmountEdited);
 
-   connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(updateSubmitButton()));
+   connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(onAuthAddrChanged(int)));
    connect(this, &RFQTicketXBT::update, this, &RFQTicketXBT::onTransactinDataChanged);
 
    ui_->comboBoxCCWallets->setEnabled(false);
@@ -511,13 +511,36 @@ bs::network::Side::Type RFQTicketXBT::getSelectedSide() const
    return bs::network::Side::Buy;
 }
 
-std::string RFQTicketXBT::authKey() const
+void RFQTicketXBT::onAuthAddrChanged(int index)
 {
-   const auto index = ui_->authenticationAddressComboBox->currentIndex();
-   if (index < 0) {
-      return "";
+   const auto authAddr = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
+   if (authAddr.isNull()) {
+      return;
    }
-   return authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index)).toHexStr();
+   const auto priWallet = walletsManager_->getPrimaryWallet();
+   const auto group = priWallet->getGroup(bs::hd::BlockSettle_Settlement);
+   std::shared_ptr<bs::sync::hd::SettlementLeaf> settlLeaf;
+   if (group) {
+      const auto settlGroup = std::dynamic_pointer_cast<bs::sync::hd::SettlementGroup>(group);
+      if (!settlGroup) {
+         SPDLOG_ERROR("wrong settlement group type");
+         return;
+      }
+      settlLeaf = settlGroup->getLeaf(authAddr);
+   }
+
+   const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
+      authKey_ = pubKey.toHexStr();
+      QMetaObject::invokeMethod(this, &RFQTicketXBT::updateSubmitButton);
+   };
+
+   if (settlLeaf) {
+      settlLeaf->getRootPubkey(cbPubKey);
+   }
+   else {
+      walletsManager_->createSettlementLeaf(authAddr, cbPubKey);
+      return;
+   }
 }
 
 bs::Address RFQTicketXBT::recvAddress() const
@@ -602,8 +625,7 @@ void RFQTicketXBT::updateSubmitButton()
       return;
    }
 
-  if ((currentGroupType_ == ProductGroupType::XBTGroupType)
-      && (ui_->authenticationAddressComboBox->currentIndex() == -1)) {
+  if ((currentGroupType_ == ProductGroupType::XBTGroupType) && (authKey().empty())) {
      return;
   }
 
@@ -695,6 +717,9 @@ void RFQTicketXBT::submitButtonClicked()
 
    if (rfq.assetType == bs::network::Asset::SpotXBT) {
       rfq.requestorAuthPublicKey = authKey();
+      if (rfq.requestorAuthPublicKey.empty()) {
+         return;
+      }
       transactionData_->SetFallbackRecvAddress(recvAddress());
 
       if ((rfq.side == bs::network::Side::Sell) && (rfq.product == bs::network::XbtCurrency)) {

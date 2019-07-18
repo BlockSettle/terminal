@@ -45,16 +45,13 @@ public:
    ~HeadlessContainer() noexcept override = default;
 
    Blocksettle::Communication::headless::SignTxRequest createSignTxRequest(const bs::core::wallet::TXSignRequest &
-      , const PasswordType& password = {}
       , bool keepDuplicatedRecipients = false);
 
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
-      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
-      , bool keepDuplicatedRecipients = false) override;
-   bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , const PasswordType& password = {}) override;
-   bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::string &settlementId, const PasswordType& password = {}) override;
+      , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) override;
+   bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &) override;
+/*   bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
+      , const std::string &settlementId, const PasswordType& password = {}) override;*/
 
    bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
       , const bs::sync::SettlementInfo &settlementInfo
@@ -88,8 +85,6 @@ public:
    //void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override;
    bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override;
 
-   void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) override;
-
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;
    void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) override;
@@ -103,6 +98,16 @@ public:
       const std::set<BinaryData>& addrSet, std::function<void(bs::sync::SyncState)>) override;
    void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
       const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override;
+
+   void createSettlementWallet(const bs::Address &authAddr
+      , const std::function<void(const SecureBinaryData &)> &) override;
+   void setSettlementID(const std::string &walletId, const SecureBinaryData &id
+      , const std::function<void(bool)> &) override;
+   void getSettlementPayinAddress(const std::string &walletId,
+      const SecureBinaryData &settlementId, const SecureBinaryData &cpPubKey
+      , const std::function<void(bool, bs::Address)> &, bool myFirst = true) override;
+   void getRootPubkey(const std::string &walletID
+      , const std::function<void(bool, const SecureBinaryData &)> &) override;
 
    bool isReady() const override;
    bool isWalletOffline(const std::string &walletId) const override;
@@ -121,21 +126,27 @@ protected:
    void ProcessSyncAddresses(unsigned int id, const std::string &data);
    void ProcessExtAddrChain(unsigned int id, const std::string &data);
    void ProcessSettlWalletCreate(unsigned int id, const std::string &data);
+   void ProcessSetSettlementId(unsigned int id, const std::string &data);
    void ProcessSetUserId(const std::string &data);
+   void ProcessGetPayinAddr(unsigned int id, const std::string &data);
+   void ProcessSettlGetRootPubkey(unsigned int id, const std::string &data);
 
 protected:
    std::shared_ptr<HeadlessListener>   listener_;
    std::unordered_set<std::string>     missingWallets_;
    std::unordered_set<std::string>     woWallets_;
    std::set<bs::signer::RequestId>     signRequests_;
-   std::map<bs::signer::RequestId, std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)>>   cbSettlWalletMap_;
-   std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfoMap_;
+   std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>   cbWalletInfoMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::SyncState)>>     cbSyncAddrsMap_;
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbExtAddrsMap_;
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)>>  cbSettlementSignTxMap_;
+   std::map<bs::signer::RequestId, std::function<void(const SecureBinaryData &)>>   cbSettlWalletMap_;
+   std::map<bs::signer::RequestId, std::function<void(bool)>>                    cbSettlIdMap_;
+   std::map<bs::signer::RequestId, std::function<void(bool, bs::Address)>>       cbPayinAddrMap_;
+   std::map<bs::signer::RequestId, std::function<void(bool, const SecureBinaryData &)>>   cbSettlPubkeyMap_;
 };
 
 
@@ -161,8 +172,7 @@ public:
    void updatePeerKeys(const ZmqBIP15XPeers &peers);
 
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
-      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
-   , bool keepDuplicatedRecipients = false) override;
+      , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) override;
 
 protected slots:
    void onAuthenticated();

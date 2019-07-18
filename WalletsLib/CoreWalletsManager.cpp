@@ -337,6 +337,7 @@ WalletsManager::HDWalletPtr WalletsManager::createWallet(
       newWallet->createStructure();
       if (primary) {
          newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+         newWallet->createGroup(bs::hd::CoinType::BlockSettle_Settlement);
          auto group = newWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
          for (const auto &cc : ccLeaves_) {
             group->createLeaf(cc);

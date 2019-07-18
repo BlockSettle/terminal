@@ -4,7 +4,7 @@
 #include <memory>
 #include <unordered_set>
 #include "AddressVerificator.h"
-#include "AuthAddress.h"
+#include "BSErrorCode.h"
 #include "SettlementContainer.h"
 #include "SettlementMonitor.h"
 #include "UtxoReservation.h"
@@ -79,13 +79,10 @@ signals:
 
 private slots:
    void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo);
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
+   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string error);
    void onTimerExpired();
    void onPayInZCDetected();
    void onPayoutZCDetected(int confNum, bs::PayoutSigner::Type);
-
-protected:
-   void onZCReceived(const std::vector<bs::TXEntry> &) override;
 
 private:
    unsigned int createPayoutTx(const BinaryData& payinHash, double qty, const bs::Address &recvAddr

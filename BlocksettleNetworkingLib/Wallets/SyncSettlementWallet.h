@@ -39,12 +39,6 @@ namespace bs {
 
          bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Settlement; }
 
-         bool getInputFor(const bs::Address &, std::function<void(UTXO)>, bool allowZC = true);
-         uint64_t getEstimatedFeeFor(UTXO input, const bs::Address &recvAddr, float feePerByte);
-
-         bs::core::wallet::TXSignRequest createPayoutTXRequest(const UTXO &, const bs::Address &recvAddr, float feePerByte);
-         UTXO getInputFromTX(const bs::Address &, const BinaryData &payinHash, const double amount) const;
-
          void getNewExtAddress(const CbAddress &, AddressEntryType) override {}  // can't generate address without input data
          void getNewIntAddress(const CbAddress &, AddressEntryType) override {}  // can't generate address without input data
 

@@ -76,13 +76,11 @@ public:
    virtual bool Disconnect() { return true; }
 
    virtual bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
-      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
-      , bool keepDuplicatedRecipients = false) = 0;
-   virtual bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , const PasswordType& password = {}) = 0;
-   virtual bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &
+      , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) = 0;
+   virtual bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &) = 0;
+/*   virtual bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &
       , const bs::Address &authAddr, const std::string &settlementId
-      , const PasswordType& password = {}) = 0;
+      , const PasswordType& password = {}) = 0;*/
 
    virtual bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &
       , const bs::sync::SettlementInfo &settlementInfo
@@ -113,8 +111,7 @@ public:
    virtual bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) = 0;
    virtual bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) = 0;
    virtual bs::signer::RequestId GetInfo(const std::string &rootWalletId) = 0;
-   //virtual void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) = 0;
-   virtual void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) {}
+
    virtual bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog
       , const QVariantMap &data = QVariantMap()) = 0;
 
@@ -134,33 +131,24 @@ public:
    virtual void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) = 0;
 
+   //settlement related methods
+   virtual void createSettlementWallet(const bs::Address &authAddr
+      , const std::function<void(const SecureBinaryData &)> &) = 0;
+   virtual void setSettlementID(const std::string &walletId, const SecureBinaryData &id
+      , const std::function<void(bool)> &) = 0;
+   virtual void getSettlementPayinAddress(const std::string &walletID
+      , const SecureBinaryData &settlementID, const SecureBinaryData &counterPartyPubKey
+      , const std::function<void(bool, bs::Address)> &
+      , bool isMyKeyFirst = true) = 0; //to order the pubkeys in the ms script properly
+   virtual void getRootPubkey(const std::string &walletID
+      , const std::function<void(bool, const SecureBinaryData &)> &) = 0;
+
    const OpMode &opMode() const { return mode_; }
    virtual bool isReady() const { return true; }
    virtual bool isOffline() const { return true; }
    virtual bool isWalletOffline(const std::string &) const { return true; }
 
    bool isLocal() const { return mode_ == OpMode::Local || mode_ == OpMode::LocalInproc; }
-
-   //settlement related methods
-   virtual void setSettlementID(const std::string&, const SecureBinaryData&)
-   {
-      throw std::runtime_error("needs implemented, check InprocSigner for example");
-   }
-
-   virtual bs::Address getSettlementPayinAddress(
-      const std::string& walletID,
-      const SecureBinaryData& settlementID, 
-      const SecureBinaryData& counterPartyPubKey, 
-      bool isMyKeyFirst //to order the pubkeys in the ms script properly
-   ) const
-   {
-      throw std::runtime_error("needs implemented, check InprocSigner for example");
-   }
-
-   virtual SecureBinaryData getRootPubkey(const std::string& walletID) const
-   {
-      throw std::runtime_error("needs implemented, check InprocSigner for example");
-   }
 
 signals:
    void connected();

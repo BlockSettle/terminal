@@ -58,7 +58,6 @@ void WalletsManager::reset()
    isReady_ = false;
    walletsId_.clear();
    hdWalletsId_.clear();
-   settlementWallet_.reset();
    authAddressWallet_.reset();
 
    emit walletChanged("");
@@ -116,27 +115,8 @@ void WalletsManager::syncWallets(const CbProgress &cb)
          }
 
          case bs::sync::WalletFormat::Settlement:
-         {
-            if (settlementWallet_) {
-               logger_->error("[WalletsManager::syncWallets] more than one settlement "
-                  "wallet is not supported");
-               cbDone();
-            }
-            else {
-               const auto settlWallet = std::make_shared<SettlementWallet>(
-                  info.id, info.name, info.description, signContainer_.get(), logger_);
-               settlWallet->setWCT(this);
-               
-               const auto &cbSettlementDone = [this, settlWallet, cbDone] 
-               {
-                  setSettlementWallet(settlWallet);
-                  cbDone();
-               };
-
-               settlWallet->synchronize(cbSettlementDone);
-            }
+            throw std::runtime_error("not implemented");
             break;
-         }
 
          default:
             cbDone();
@@ -176,17 +156,7 @@ bool WalletsManager::isWalletsReady() const
 
 bool WalletsManager::isReadyForTrading() const
 {
-   return (hasPrimaryWallet() && hasSettlementWallet());
-}
-
-void WalletsManager::registerSettlementWallet()
-{
-   if (!settlementWallet_) {
-      return;
-   }
-   if (armory_) {
-      settlementWallet_->registerWallet(armoryPtr_);
-   }
+   return hasPrimaryWallet();
 }
 
 void WalletsManager::saveWallet(const WalletPtr &newWallet)
@@ -274,11 +244,6 @@ void WalletsManager::saveWallet(const HDWalletPtr &wallet)
 
    for (const auto &leaf : wallet->getLeaves())
       addWallet(leaf, true);
-}
-
-void WalletsManager::setSettlementWallet(const std::shared_ptr<bs::sync::SettlementWallet> &wallet)
-{
-   settlementWallet_ = wallet;
 }
 
 void WalletsManager::walletCreated(const std::string &walletId)
@@ -412,10 +377,6 @@ WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walle
          return wallet.second;
       }
    }
-
-   if (settlementWallet_ && (settlementWallet_->walletId() == walletId)) {
-      return settlementWallet_;
-   }
    return nullptr;
 }
 
@@ -429,9 +390,6 @@ WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &
             return wallet.second;
          }
       }
-   }
-   if ((settlementWallet_ != nullptr) && settlementWallet_->containsAddress(address)) {
-      return settlementWallet_;
    }
    return nullptr;
 }
@@ -491,17 +449,6 @@ void WalletsManager::onNewBlock(unsigned int)
    QMetaObject::invokeMethod(this, [this] {emit blockchainEvent(); });
 }
 
-void WalletsManager::onRefresh(const std::vector<BinaryData> &ids, bool online)
-{
-   if (!online) {
-      return;
-   }
-   if (settlementWallet_) {   //TODO: check for refresh id
-      settlementWallet_->refreshWallets(ids);
-   }
-   QMetaObject::invokeMethod(this, [this] { emit blockchainEvent(); });
-}
-
 void WalletsManager::onStateChanged(ArmoryState state)
 {
    if (state == ArmoryState::Ready) {
@@ -534,9 +481,6 @@ void WalletsManager::walletReady(const std::string &walletId)
 
    readyWallets_.insert(walletId);
    auto nbWallets = wallets_.size();
-   if (settlementWallet_ != nullptr) {
-      nbWallets++;
-   }
    if (readyWallets_.size() >= nbWallets) {
       isReady_ = true;
       logger_->debug("[WalletsManager::{}] - All wallets are ready", __func__);
@@ -597,9 +541,6 @@ bool WalletsManager::deleteWallet(WalletPtr wallet)
 
    wallet->unregisterWallet();
    if (!isHDLeaf) {
-      if (wallet == settlementWallet_) {
-         settlementWallet_ = nullptr;
-      }
       eraseWallet(wallet);
    }
 
@@ -668,13 +609,6 @@ std::vector<std::string> WalletsManager::registerWallets()
          logger_->error("[{}] failed to register wallet {}", __func__, it.second->walletId());
       }
    }
-   if (settlementWallet_) {
-      const auto &ids = settlementWallet_->registerWallet(armoryPtr_);
-      result.insert(result.end(), ids.begin(), ids.end());
-      if (ids.empty()) {
-         logger_->error("[{}] failed to register settlement wallet", __func__);
-      }
-   }
 
    return result;
 }
@@ -683,9 +617,6 @@ void WalletsManager::unregisterWallets()
 {
    for (auto &it : wallets_) {
       it.second->unregisterWallet();
-   }
-   if (settlementWallet_) {
-      settlementWallet_->unregisterWallet();
    }
 }
 
@@ -791,6 +722,7 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
             return;
          }
          if (txOuts.size() == 1) {
+#if 0    //TODO: decide later how to handle settlement addresses
             const bs::Address addr = txOuts[0].getScrAddressStr();
             const auto settlAE = getSettlementWallet()->getAddressEntryForAddr(addr);
             if (settlAE) {
@@ -807,6 +739,7 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
             }
             logger_->warn("[WalletsManager::{}] - failed to get settlement AE"
                , __func__);
+#endif   //0
          }
          else {
             logger_->warn("[WalletsManager::{}] - more than one settlement "
@@ -950,6 +883,19 @@ void WalletsManager::updateTxDescCache(const std::string &txKey, const QString &
       txDesc_[txKey] = { desc, addrCount };
    }
    cb(desc, addrCount);
+}
+
+void WalletsManager::createSettlementLeaf(const bs::Address &authAddr
+   , const std::function<void(const SecureBinaryData &)> &cb)
+{
+   if (!signContainer_) {
+      logger_->error("[WalletsManager::{}] - signer is not set - aborting"
+         , __func__);
+      if (cb)
+         cb({});
+      return;
+   }
+   signContainer_->createSettlementWallet(authAddr, cb);
 }
 
 void WalletsManager::createWallet(const std::string& name, const std::string& description

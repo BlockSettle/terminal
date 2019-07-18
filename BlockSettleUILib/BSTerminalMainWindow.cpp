@@ -1346,25 +1346,6 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
       if (!walletsMgr_->hasPrimaryWallet()) {
          return;
       }
-      if (!walletsMgr_->hasSettlementWallet()) {
-         BSMessageBox createSettlReq(BSMessageBox::question, tr("Create settlement wallet")
-            , tr("Settlement wallet missing")
-            , tr("You don't have Settlement wallet, yet. Do you wish to create it?")
-            , this);
-         if (createSettlReq.exec() == QDialog::Accepted) {
-            const auto title = tr("Settlement wallet");
-            if (walletsMgr_->createSettlementWallet()) {
-               BSMessageBox(BSMessageBox::success, title, tr("Settlement wallet successfully created")).exec();
-            } else {
-               showError(title, tr("Failed to create settlement wallet"));
-               return;
-            }
-         }
-         else {
-            return;
-         }
-      }
-
       createAuthWallet();
    }
    else {

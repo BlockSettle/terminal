@@ -43,8 +43,7 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
          if (!group) {
             group = createGroup(grpData.type, grpData.extOnly);
             if (grpData.type == bs::hd::CoinType::BlockSettle_Auth &&
-               grpData.salt.getSize() == 32)
-            {
+               grpData.salt.getSize() == 32) {
                auto authGroupPtr = 
                   std::dynamic_pointer_cast<hd::AuthGroup>(group);
                if (authGroupPtr == nullptr)
@@ -67,6 +66,16 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
                LOG(logger_, error, "[hd::Wallet::synchronize] failed to create leaf {}/{} with id {}"
                   , (uint32_t)grpData.type, leafData.index, leafData.id);
                continue;
+            }
+            if (grpData.type == bs::hd::CoinType::BlockSettle_Settlement) {
+               if (leafData.extraData.isNull()) {
+                  throw std::runtime_error("no extra data for settlement leaf " + leafData.id);
+               }
+               const auto settlGroup = std::dynamic_pointer_cast<hd::SettlementGroup>(group);
+               if (!settlGroup) {
+                  throw std::runtime_error("invalid settlement group type");
+               }
+               settlGroup->addMap(leafData.extraData, leafData.index);
             }
          }
       }
@@ -368,11 +377,19 @@ void hd::Wallet::merge(const Wallet& rhs)
    }
 }
 
-bs::Address hd::Wallet::getSettlementPayinAddress(
-   const SecureBinaryData& settlementID, 
-   const SecureBinaryData& counterPartyPubKey, 
-   bool isMyKeyFirst) const
+void hd::Wallet::getSettlementPayinAddress(const SecureBinaryData &settlementID
+   , const SecureBinaryData &counterPartyPubKey, const bs::sync::Wallet::CbAddress &cb
+   , bool isMyKeyFirst) const
 {
-   return signContainer_->getSettlementPayinAddress(
-      walletId(), settlementID, counterPartyPubKey, isMyKeyFirst);
+   if (!signContainer_) {
+      if (cb)
+         cb({});
+      return;
+   }
+   const auto &cbWrap = [cb](bool, const bs::Address &addr) {
+      if (cb)
+         cb(addr);
+   };
+   signContainer_->getSettlementPayinAddress(walletId(), settlementID
+      , counterPartyPubKey, cbWrap, isMyKeyFirst);
 }

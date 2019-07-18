@@ -12,7 +12,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
       , const bs::Address &genAddr, const std::string &ownRecvAddr
       , const std::shared_ptr<TransactionData> &txData, const std::shared_ptr<SignContainer> &container
       , const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
-   : bs::SettlementContainer(armory)
+   : bs::SettlementContainer()
    , logger_(logger)
    , order_(order)
    , quoteReqId_(quoteReqId)

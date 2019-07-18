@@ -4,7 +4,7 @@
 #include "SignContainer.h"
 #include "QuoteProvider.h"
 #include "TransactionData.h"
-#include "Wallets/SyncSettlementWallet.h"
+#include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 Q_DECLARE_METATYPE(AddressVerificationState)
@@ -14,7 +14,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::shared_ptr<QuoteProvider> &quoteProvider, const std::shared_ptr<TransactionData> &txData
    , const std::unordered_set<std::string> &bsAddresses, const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
-   : bs::SettlementContainer(armory), order_(order)
+   : bs::SettlementContainer(), armory_(armory), walletsMgr_(walletsMgr), order_(order)
    , weSell_((order.side == bs::network::Side::Buy) ^ (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)
    , autoSign_(autoSign), logger_(logger), transactionData_(txData), signingContainer_(container)
@@ -28,11 +28,6 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       throw std::runtime_error("no wallet");
    }
 
-   settlWallet_ = walletsMgr->getSettlementWallet();
-   if (!settlWallet_) {
-      throw std::runtime_error("missing settlement wallet");
-   }
-
    if (weSell_) {
       const Tx tx(BinaryData::CreateFromHex(order_.reqTransaction));
       const bs::TxChecker txChecker(tx);
@@ -41,26 +36,18 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       }
    }
 
-   comment_ = std::string(bs::network::Side::toString(order.side)) + " " + order.security + " @ " + std::to_string(order.price);
-   settlAddr_ = settlWallet_->getExistingAddress(BinaryData::CreateFromHex(order.settlementId));
-
    auto qn = quoteProvider->getSubmittedXBTQuoteNotification(order.settlementId);
    if (qn.authKey.empty() || qn.reqAuthKey.empty() || qn.settlementId.empty()) {
       throw std::invalid_argument("failed to get submitted QN for " + order.quoteId);
    }
+
+   comment_ = std::string(bs::network::Side::toString(order.side)) + " " + order.security + " @ " + std::to_string(order.price);
    authKey_ = BinaryData::CreateFromHex(qn.authKey);
    reqAuthKey_ = BinaryData::CreateFromHex(qn.reqAuthKey);
    if (authKey_.isNull() || reqAuthKey_.isNull()) {
       throw std::runtime_error("missing auth key");
    }
    settlIdStr_ = qn.settlementId;
-
-   if (settlAddr_.isNull()) {
-      const auto buyAuthKey = weSell_ ? reqAuthKey_ : authKey_;
-      const auto sellAuthKey = weSell_ ? authKey_ : reqAuthKey_;
-      settlWallet_->newAddress([this](const bs::Address &addr) {settlAddr_ = addr; }
-         , BinaryData::CreateFromHex(settlIdStr_), buyAuthKey, sellAuthKey, comment_);
-   }
 
    addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory, settlIdStr_
       , [this, logger](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
@@ -73,10 +60,22 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
          onCptyVerified();
       }
    });
-   addrVerificator_->SetBSAddressList(bsAddresses);
 
-   // FIXME: Settlement containers will be reimplemented to use another function
-   // connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
+   const auto &cbSettlAddr = [this, bsAddresses](const bs::Address &addr) {
+      settlAddr_ = addr;
+      addrVerificator_->SetBSAddressList(bsAddresses);
+
+      settlMonitor_ = std::make_shared<bs::SettlementMonitorCb>(armory_, addr, logger_
+         , [this] { });
+   };
+
+   const auto priWallet = walletsMgr->getPrimaryWallet();
+   if (!priWallet) {
+      throw std::runtime_error("missing primary wallet");
+   }
+   priWallet->getSettlementPayinAddress(BinaryData::CreateFromHex(settlIdStr_), reqAuthKey_, cbSettlAddr, !weSell_);
+
+   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }
 
 bool DealerXBTSettlementContainer::startSigning()
@@ -84,9 +83,7 @@ bool DealerXBTSettlementContainer::startSigning()
    if (weSell_) {
       try {
          const auto txReq = transactionData_->getSignTxRequest();
-         // FIXME: Settlement containers will be reimplemented to use another function
-//         payinSignId_ = signingContainer_->signTXRequest(txReq, autoSign_
-//            , SignContainer::TXSignMode::Full, password);
+         payinSignId_ = signingContainer_->signTXRequest(txReq, SignContainer::TXSignMode::Full);
       }
       catch (const std::exception &e) {
          logger_->error("[DealerXBTSettlementContainer::onAccepted] Failed to sign pay-in: {}", e.what());
@@ -112,21 +109,26 @@ bool DealerXBTSettlementContainer::startSigning()
       }
 
       const auto &cbSettlInput = [this, receivingAddress](UTXO input) {
+         if (!input.isInitialized()) {
+            logger_->error("[DealerSettlDialog::onAccepted] Failed to get pay-in input");
+            emit error(tr("Failed to get pay-in UTXO"));
+            emit failed();
+            return;
+         }
          try {
-            const auto txReq = settlWallet_->createPayoutTXRequest(input
-               , receivingAddress, transactionData_->feePerByte());
+            const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(input
+               , receivingAddress, transactionData_->feePerByte(), armory_->topBlock());
             const auto authAddr = bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH);
             // FIXME: Settlement containers will be reimplemented to use another function
 //            payoutSignId_ = signingContainer_->signPayoutTXRequest(txReq, authAddr, settlIdStr_
-//               , autoSign_, password);
-         }
-         catch (const std::exception &e) {
+//               , autoSign_);
+         } catch (const std::exception &e) {
             logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());
             emit error(tr("Failed to sign pay-out"));
             emit failed();
          }
       };
-      return settlWallet_->getInputFor(settlAddr_, cbSettlInput);
+      settlMonitor_->getPayinInput(cbSettlInput);
    }
    return true;
 }
@@ -153,16 +155,9 @@ void DealerXBTSettlementContainer::activate()
    addrVerificator_->RegisterBSAuthAddresses();
    addrVerificator_->RegisterAddresses();
 
-   auto createMonitorCB = [this](const std::shared_ptr<bs::SettlementMonitorCb>& monitor)
-   {
-      settlMonitor_ = monitor;
-
-      settlMonitor_->start([this](int confNo, const BinaryData &txHash) { onPayInDetected(confNo, txHash); }
-         , [this](int, bs::PayoutSigner::Type signedBy) { onPayOutDetected(signedBy); }
-         , [this](bs::PayoutSigner::Type) {});
-   };
-
-   settlWallet_->createMonitorCb(settlAddr_, logger_, createMonitorCB);
+   settlMonitor_->start([this](int confNo, const BinaryData &txHash) { onPayInDetected(confNo, txHash); }
+      , [this](int, bs::PayoutSigner::Type signedBy) { onPayOutDetected(signedBy); }
+      , [this](bs::PayoutSigner::Type) {});
 }
 
 void DealerXBTSettlementContainer::deactivate()
@@ -171,13 +166,6 @@ void DealerXBTSettlementContainer::deactivate()
    if (settlMonitor_) {
       settlMonitor_->stop();
       settlMonitor_ = nullptr;
-   }
-}
-
-void DealerXBTSettlementContainer::onZCReceived(const std::vector<bs::TXEntry> &)
-{
-   if (settlMonitor_) {
-      settlMonitor_->checkNewEntries();
    }
 }
 
@@ -210,10 +198,11 @@ void DealerXBTSettlementContainer::onPayInDetected(int confirmationsNumber, cons
          }
 
          const auto &cbInput = [this](UTXO input) {
-            fee_ = settlWallet_->getEstimatedFeeFor(input, transactionData_->GetFallbackRecvAddress()
-               , transactionData_->feePerByte());
+            fee_ = bs::SettlementMonitor::getEstimatedFeeFor(input
+               , transactionData_->GetFallbackRecvAddress()
+               , transactionData_->feePerByte(), armory_->topBlock());
          };
-         settlWallet_->getInputFor(settlAddr_, cbInput);
+         settlMonitor_->getPayinInput(cbInput);
       };
       armory_->getTxByHash(txHash, cbTX);
    }
@@ -260,8 +249,8 @@ void DealerXBTSettlementContainer::onPayOutDetected(bs::PayoutSigner::Type signe
    }
 }
 
-void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX,
-   std::string errMsg, bool cancelledByUser)
+void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
+   , bs::error::ErrorCode, std::string errMsg)
 {
    if (payoutSignId_ && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
@@ -279,7 +268,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       }
       const auto &txWallet = transactionData_->getWallet();
       txWallet->setTransactionComment(signedTX, comment_);
-      settlWallet_->setTransactionComment(signedTX, comment_);
+//      settlWallet_->setTransactionComment(signedTX, comment_);   //TODO: implement later
       txWallet->setAddressComment(transactionData_->GetFallbackRecvAddress()
          , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::SettlementPayOut));
 
@@ -301,7 +290,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
          return;
       }
       transactionData_->getWallet()->setTransactionComment(signedTX, comment_);
-      settlWallet_->setTransactionComment(signedTX, comment_);
+//      settlWallet_->setTransactionComment(signedTX, comment_);  //TODO: implement later
 
       logger_->debug("[DealerXBTSettlementContainer::onAccepted] Payin sent");
       payInSent_ = true;

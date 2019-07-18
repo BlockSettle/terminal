@@ -12,11 +12,11 @@
 
 namespace bs {
 
-   class SettlementContainer : public QObject, public ArmoryCallbackTarget
+   class SettlementContainer : public QObject
    {
       Q_OBJECT
    public:
-      explicit SettlementContainer(const std::shared_ptr<ArmoryConnection> &);
+      explicit SettlementContainer();
       ~SettlementContainer() override = default;
 
       virtual bool cancel() = 0;

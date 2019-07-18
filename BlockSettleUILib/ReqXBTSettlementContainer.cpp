@@ -22,7 +22,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const std::shared_ptr<SignContainer> &signContainer, const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr, const bs::network::RFQ &rfq
    , const bs::network::Quote &quote, const std::shared_ptr<TransactionData> &txData)
-   : bs::SettlementContainer(armory)
+   : bs::SettlementContainer()
    , logger_(logger)
    , authAddrMgr_(authAddrMgr)
    , assetMgr_(assetMgr)
@@ -40,9 +40,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
    connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &ReqXBTSettlementContainer::onWalletInfo);
-
-   // FIXME: Settlement containers will be reimplemented to use another function
-   //connect(signContainer_.get(), &SignContainer::TXSigned, this, &ReqXBTSettlementContainer::onTXSigned);
+   connect(signContainer_.get(), &SignContainer::TXSigned, this, &ReqXBTSettlementContainer::onTXSigned);
 
    connect(this, &ReqXBTSettlementContainer::timerExpired, this, &ReqXBTSettlementContainer::onTimerExpired);
 
@@ -66,13 +64,14 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
    , const SecureBinaryData &password)
 {
    try {
-      const auto wallet = walletsMgr_->getSettlementWallet();
-      const auto txReq = wallet->createPayoutTXRequest(wallet->getInputFromTX(settlAddr_, payinHash, qty), recvAddr
-         , transactionData_->GetTransactionSummary().feePerByte);
+#if 0    //FIXME
       const auto authAddr = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
+      return signContainer_->signPayoutTXRequest(txReq, authAddr, wallet->getAddressIndex(settlAddr_), false, password);
+#endif
+      const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(
+         bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, qty), recvAddr
+         , transactionData_->GetTransactionSummary().feePerByte, armory_->topBlock());
       logger_->debug("[ReqXBTSettlementContainer] pay-out fee={}, payin hash={}", txReq.fee, payinHash.toHexStr(true));
-
-      //return signContainer_->signPayoutTXRequest(txReq, authAddr, wallet->getAddressIndex(settlAddr_), false, password);
    }
    catch (const std::exception &e) {
       logger_->warn("[ReqXBTSettlementContainer] failed to create pay-out transaction based on {}: {}"
@@ -193,13 +192,23 @@ void ReqXBTSettlementContainer::activate()
    const auto buyAuthKey = clientSells_ ? dealerAuthKey : userKey_;
    const auto sellAuthKey = clientSells_ ? userKey_ : dealerAuthKey;
 
-   walletsMgr_->getSettlementWallet()->newAddress([this](const bs::Address &addr) {settlAddr_ = addr; }
-   , settlementId_, buyAuthKey, sellAuthKey, comment_);
+   const auto &cbSettlAddr = [this](const bs::Address &addr) {
+      settlAddr_ = addr;
 
-   if (settlAddr_.isNull()) {
-      logger_->error("[ReqXBTSettlementContainer] failed to get settlement address");
+      monitor_ = std::make_shared<bs::SettlementMonitorCb>(armory_, settlAddr_, logger_
+         , [this] {
+         monitor_->start([this](int, const BinaryData &) { onPayInZCDetected(); }
+         , [this](int confNum, bs::PayoutSigner::Type signedBy) { onPayoutZCDetected(confNum, signedBy); }
+         , [this](bs::PayoutSigner::Type) {});
+      });
+   };
+
+   const auto priWallet = walletsMgr_->getPrimaryWallet();
+   if (!priWallet) {
+      logger_->error("[{}] missing primary wallet", __func__);
       return;
    }
+   priWallet->getSettlementPayinAddress(settlementId_, dealerAuthKey, cbSettlAddr, clientSells_);
 
    recvAddr_ = transactionData_->GetFallbackRecvAddress();
 
@@ -231,17 +240,6 @@ void ReqXBTSettlementContainer::activate()
    }
 
    fee_ = transactionData_->GetTransactionSummary().totalFee;
-
-   auto createMonitorCB = [this](const std::shared_ptr<bs::SettlementMonitorCb>& monitor)
-   {
-      monitor_ = monitor;
-
-      monitor_->start([this](int, const BinaryData &) { onPayInZCDetected(); }
-      , [this](int confNum, bs::PayoutSigner::Type signedBy) { onPayoutZCDetected(confNum, signedBy); }
-      , [this](bs::PayoutSigner::Type) {});
-   };
-
-   walletsMgr_->getSettlementWallet()->createMonitorCb(settlAddr_, logger_, createMonitorCB);
 }
 
 void ReqXBTSettlementContainer::deactivate()
@@ -252,21 +250,14 @@ void ReqXBTSettlementContainer::deactivate()
    }
 }
 
-void ReqXBTSettlementContainer::onZCReceived(const std::vector<bs::TXEntry> &)
-{
-   if (monitor_) {
-      monitor_->checkNewEntries();
-   }
-}
-
 void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState state)
 {
    dealerVerifState_ = state;
    emit DealerVerificationStateChanged(state);
 }
 
-void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX,
-                                           std::string errTxt, bool cancelledByUser)
+void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
+   , bs::error::ErrorCode, std::string errTxt)
 {
    if (payinSignId_ && (payinSignId_ == id)) {
       payinSignId_ = 0;
@@ -293,7 +284,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX,
       payoutData_ = signedTX;
       if (!clientSells_) {
          transactionData_->getWallet()->setTransactionComment(payoutData_, comment_);
-         walletsMgr_->getSettlementWallet()->setTransactionComment(payoutData_, comment_);
+//         walletsMgr_->getSettlementWallet()->setTransactionComment(payoutData_, comment_); //TODO: later
       }
 
       emit info(tr("Waiting for Order verification"));
@@ -316,7 +307,7 @@ void ReqXBTSettlementContainer::payoutOnCancel()
    }
    const std::string revokeComment = "Revoke for " + comment_;
    transactionData_->getWallet()->setTransactionComment(payoutData_, revokeComment);
-   walletsMgr_->getSettlementWallet()->setTransactionComment(payoutData_, revokeComment);
+//   walletsMgr_->getSettlementWallet()->setTransactionComment(payoutData_, revokeComment);  //TODO: later
 }
 
 void ReqXBTSettlementContainer::detectDealerTxs()
@@ -374,7 +365,7 @@ void ReqXBTSettlementContainer::OrderReceived()
             throw std::runtime_error("Failed to bradcast transaction");
          }
          transactionData_->getWallet()->setTransactionComment(payinData_, comment_);
-         walletsMgr_->getSettlementWallet()->setTransactionComment(payinData_, comment_);
+//         walletsMgr_->getSettlementWallet()->setTransactionComment(payinData_, comment_);  //TODO: later
 
          waitForPayin_ = true;
          logger_->debug("[XBTSettlementTransactionWidget::OrderReceived] Pay-In broadcasted");
