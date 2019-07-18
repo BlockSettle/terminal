@@ -533,7 +533,7 @@ bs::Address RFQTicketXBT::recvAddress() const
       const auto &cbAddr = [promAddr](const bs::Address &addr) {
          promAddr->set_value(addr);
       };
-      recvWallet_->getNewIntAddress(cbAddr);
+      recvWallet_->getNewExtAddress(cbAddr);
       return futAddr.get();
    }
    return recvWallet_->getExtAddressList()[index - 1];

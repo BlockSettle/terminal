@@ -332,7 +332,7 @@ WalletsManager::WalletPtr WalletsManager::getDefaultWallet() const
    const auto &priWallet = getPrimaryWallet();
    if (priWallet) {
       const auto &group = priWallet->getGroup(priWallet->getXBTGroupType());
-      
+
       //all leaf paths are always hardened
       result = group ? group->getLeaf(0x80000000) : nullptr;
    }
