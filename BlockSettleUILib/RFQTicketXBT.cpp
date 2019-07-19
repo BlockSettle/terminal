@@ -157,6 +157,7 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
 
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
       UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
+      onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
    });
 
    utxoAdapter_ = std::make_shared<bs::RequesterUtxoResAdapter>(nullptr, this);
@@ -625,7 +626,7 @@ void RFQTicketXBT::updateSubmitButton()
       return;
    }
 
-  if ((currentGroupType_ == ProductGroupType::XBTGroupType) && (authKey().empty())) {
+  if ((currentGroupType_ == ProductGroupType::XBTGroupType) && authKey().empty()) {
      return;
   }
 

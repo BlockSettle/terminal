@@ -675,6 +675,7 @@ bool HeadlessContainerListener::RequestPassword(const std::string &clientId, con
          break;
 
       case headless::CreateHDLeafRequestType:
+      case headless::CreateSettlWalletType:
          callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dialogData);
          break;
       case headless::SetUserIdType:
@@ -938,25 +939,46 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       logger_->error("[{}] failed to parse request", __func__);
       return false;
    }
-   headless::CreateSettlWalletResponse response;
    const auto priWallet = walletsMgr_->getPrimaryWallet();
    if (!priWallet) {
       logger_->error("[{}] no primary wallet found", __func__);
-      packet.set_data(response.SerializeAsString());
+      packet.set_data("");
       sendData(packet.SerializeAsString(), clientId);
       return false;
    }
-   const auto leaf = priWallet->createSettlementLeaf(request.auth_address());
-   if (!leaf) {
-      logger_->error("[{}] failed to create settlement leaf", __func__);
+   const auto &onPassword = [this, priWallet, request, clientId, id=packet.id()]
+      (bs::error::ErrorCode result, const SecureBinaryData &password) {
+      headless::CreateSettlWalletResponse response;
+      headless::RequestPacket packet;
+      packet.set_id(id);
+      packet.set_type(headless::CreateSettlWalletType);
+
+      if (result != bs::error::ErrorCode::NoError) {
+         logger_->warn("[HeadlessContainerListener] password request failed");
+         packet.set_data(response.SerializeAsString());
+         sendData(packet.SerializeAsString(), clientId);
+         return;
+      }
+
+      {
+         auto lock = priWallet->lockForEncryption(password);
+         const auto leaf = priWallet->createSettlementLeaf(request.auth_address());
+         if (!leaf) {
+            logger_->error("[{}] failed to create settlement leaf", __func__);
+            packet.set_data(response.SerializeAsString());
+            sendData(packet.SerializeAsString(), clientId);
+            return;
+         }
+         response.set_wallet_id(leaf->walletId());
+         response.set_public_key(getPubKey(leaf).toBinStr());
+      }
       packet.set_data(response.SerializeAsString());
       sendData(packet.SerializeAsString(), clientId);
-      return false;
-   }
-   response.set_wallet_id(leaf->walletId());
-   response.set_public_key(getPubKey(leaf).toBinStr());
-   packet.set_data(response.SerializeAsString());
-   return sendData(packet.SerializeAsString(), clientId);
+   };
+   bs::core::wallet::TXSignRequest txSignReq;
+   txSignReq.walletId = priWallet->walletId();
+   return RequestPasswordIfNeeded(clientId, txSignReq, headless::CreateSettlWalletType
+      , {}, onPassword);
 }
 
 bool HeadlessContainerListener::onSetSettlementId(const std::string &clientId
