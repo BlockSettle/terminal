@@ -62,7 +62,6 @@ public:
       , const ZmqBIP15XDataConnection::cbNewKey &);
    void logout();
    bool hasUnreadMessages();
-   void switchToChat(const std::string& chatId);
    void setCelerClient(std::shared_ptr<BaseCelerClient> celerClient);
    void updateChat(const bool &isChatTab);
 
@@ -76,8 +75,6 @@ public slots:
 
 private slots:
    void onSendButtonClicked();
-   void onUserClicked(const std::string& index);
-   void onRoomClicked(const std::string& roomId);
    void onMessagesUpdated();
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
