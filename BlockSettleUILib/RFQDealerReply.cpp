@@ -34,6 +34,19 @@ using namespace bs::ui;
 
 constexpr int kSelectAQFileItemIndex = 1;
 
+namespace {
+
+QString getDefaultScriptsDir()
+{
+#if defined(_WIN32) || defined(__APPLE__)
+      return QCoreApplication::applicationDirPath() + QStringLiteral("/scripts");
+#else
+      return QStringLiteral("/usr/share/blocksettle/scripts");
+#endif
+}
+
+} // namespace
+
 RFQDealerReply::RFQDealerReply(QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::RFQDealerReply())
@@ -116,7 +129,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
 
    UtxoReservation::addAdapter(utxoAdapter_);
 
-   auto botFileInfo = QFileInfo(QCoreApplication::applicationDirPath() + QStringLiteral("/RFQBot.qml"));
+   auto botFileInfo = QFileInfo(getDefaultScriptsDir() + QStringLiteral("/RFQBot.qml"));
    if (botFileInfo.exists() && botFileInfo.isFile()) {
       auto list = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
       if (list.indexOf(botFileInfo.absoluteFilePath()) == -1) {
@@ -910,8 +923,19 @@ bool RFQDealerReply::eventFilter(QObject *watched, QEvent *evt)
 
 QString RFQDealerReply::askForAQScript()
 {
-   return QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file"), QCoreApplication::applicationDirPath() + QStringLiteral("/scripts/")
-                                       , tr("QML files (*.qml)"));
+   auto lastDir = appSettings_->get<QString>(ApplicationSettings::LastAqDir);
+   if (lastDir.isEmpty()) {
+      lastDir = getDefaultScriptsDir();
+   }
+
+   auto path = QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file")
+      , lastDir, tr("QML files (*.qml)"));
+
+   if (!path.isEmpty()) {
+      appSettings_->set(ApplicationSettings::LastAqDir, QFileInfo(path).dir().absolutePath());
+   }
+
+   return path;
 }
 
 void RFQDealerReply::showCoinControl()
