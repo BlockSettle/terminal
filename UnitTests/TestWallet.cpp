@@ -2790,7 +2790,14 @@ TEST_F(TestWalletWithArmory, SignSettlement)
    ASSERT_NE(syncLeafPtr, nullptr);
 
    //grab the settlement leaf root pub key (typically the auth key) to check it
-   auto&& settlPubRoot = syncLeafPtr->getRootPubkey();
+   auto promPubRoot = std::make_shared<std::promise<SecureBinaryData>>();
+   auto futPubRoot = promPubRoot->get_future();
+   const auto &cbPubRoot = [promPubRoot](const SecureBinaryData &pubRoot) {
+      promPubRoot->set_value(pubRoot);
+   };
+   syncLeafPtr->getRootPubkey(cbPubRoot);
+   const auto &settlPubRoot = futPubRoot.get();
+
    auto settlRootHash = BtcUtils::getHash160(settlPubRoot);
    EXPECT_EQ(settlementRootAddress.unprefixed(), settlRootHash);
 
@@ -2803,11 +2810,23 @@ TEST_F(TestWalletWithArmory, SignSettlement)
       settlementIDs.push_back(CryptoPRNG::generateRandom(32));
 
    //set a settlemend id
-   syncLeafPtr->setSettlementID(settlementIDs[0]);
+   auto promSettlId = std::make_shared<std::promise<bool>>();
+   auto futSettlId = promSettlId->get_future();
+   const auto &cbSettlId = [promSettlId](bool result) {
+      promSettlId->set_value(result);
+   };
+   syncLeafPtr->setSettlementID(settlementIDs[0], cbSettlId);
+   EXPECT_TRUE(futSettlId.get());
 
    /*create settlement multisig script and fund it*/
-   auto msAddress = syncWallet->getSettlementPayinAddress(
-         settlementIDs[0], counterpartyPubKey, true);
+   auto promMsAddr = std::make_shared<std::promise<bs::Address>>();
+   auto futMsAddr = promMsAddr->get_future();
+   const auto &cbMsAddr = [promMsAddr](const bs::Address &addr) {
+      promMsAddr->set_value(addr);
+   };
+   syncWallet->getSettlementPayinAddress(settlementIDs[0]
+      , counterpartyPubKey, cbMsAddr);
+   const auto msAddress = futMsAddr.get();
 
    /*send to the script*/
    auto armoryInstance = envPtr_->armoryInstance();
@@ -2847,7 +2866,7 @@ TEST_F(TestWalletWithArmory, SignSettlement)
       {
          auto lock = walletPtr_->lockForEncryption(passphrase_);
          signedTx = walletPtr_->signSettlementTXRequest(
-            txReq, settlementIDs[0], counterpartyPubKey, true);
+            txReq, { settlementIDs[0], counterpartyPubKey, true });
       }
 
       //broadcast and wait on zc
