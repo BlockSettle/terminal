@@ -43,7 +43,6 @@ void WalletsManager::setSignContainer(const std::shared_ptr<SignContainer> &cont
 {
    signContainer_ = container;
 
-   connect(signContainer_.get(), &SignContainer::HDWalletCreated, this, &WalletsManager::onHDWalletCreated);
    connect(signContainer_.get(), &SignContainer::AuthLeafAdded, this, &WalletsManager::onAuthLeafAdded);
    connect(signContainer_.get(), &SignContainer::walletsListUpdated, this, &WalletsManager::onWalletsListUpdated);
 }
@@ -333,7 +332,7 @@ WalletsManager::WalletPtr WalletsManager::getDefaultWallet() const
    const auto &priWallet = getPrimaryWallet();
    if (priWallet) {
       const auto &group = priWallet->getGroup(priWallet->getXBTGroupType());
-      
+
       //all leaf paths are always hardened
       result = group ? group->getLeaf(0x80000000) : nullptr;
    }
@@ -362,6 +361,10 @@ void WalletsManager::setUserId(const BinaryData &userId)
    userId_ = userId;
    for (const auto &hdWallet : hdWallets_) {
       hdWallet.second->setUserId(userId);
+   }
+   auto primaryWallet = getPrimaryWallet();
+   if (primaryWallet) {
+      signContainer_->setUserId(userId, primaryWallet->walletId());
    }
 }
 
@@ -950,19 +953,6 @@ void WalletsManager::updateTxDescCache(const std::string &txKey, const QString &
       txDesc_[txKey] = { desc, addrCount };
    }
    cb(desc, addrCount);
-}
-
-void WalletsManager::createWallet(const std::string& name, const std::string& description
-   , bs::core::wallet::Seed seed, bool primary
-   , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
-{
-   if (!signContainer_) {
-      logger_->error("[WalletsManager::{}] - signer is not set - aborting"
-         , __func__);
-      return;
-   }
-   createHdReqId_ = signContainer_->createHDWallet(name, description, primary
-      , seed, pwdData, keyRank);
 }
 
 void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet> newWallet)

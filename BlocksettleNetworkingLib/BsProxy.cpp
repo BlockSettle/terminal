@@ -1,6 +1,7 @@
 #include "BsProxy.h"
 
 #include <QThread>
+#include <QtConcurrent/QtConcurrentRun>
 #include <QNetworkAccessManager>
 #include "AutheIDClient.h"
 #include "BsClient.h"
@@ -99,6 +100,8 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
    nam_ = std::make_shared<QNetworkAccessManager>(this);
 
    connectionManager_ = std::make_shared<ConnectionManager>(logger_);
+
+   threadPool_ = new QThreadPool(this);
 }
 
 // static
@@ -108,7 +111,10 @@ void BsProxy::overrideCelerHost(const std::string &host, int port)
    g_celerPortOverride = port;
 }
 
-BsProxy::~BsProxy() = default;
+BsProxy::~BsProxy()
+{
+   threadPool_->waitForDone();
+}
 
 void BsProxy::onProxyDataFromClient(const std::string &clientId, const std::string &data)
 {
@@ -134,18 +140,29 @@ void BsProxy::onProxyDataFromClient(const std::string &clientId, const std::stri
          case Request::kStartLogin:
             processStartLogin(client, request->request_id(), request->start_login());
             return;
-         case Request::kCancelLogin:
-            processCancelLogin(client, request->request_id(), request->cancel_login());
-            return;
          case Request::kGetLoginResult:
             processGetLoginResult(client, request->request_id(), request->get_login_result());
             return;
+         case Request::kStartSignAddress:
+            processStartSignAddress(client, request->request_id(), request->start_sign_address());
+            return;
+         case Request::kGetSignResult:
+            processGetSignResult(client, request->request_id(), request->get_sign_result());
+            return;
+
+         case Request::kCancelLogin:
+            processCancelLogin(client, request->cancel_login());
+            return;
          case Request::kLogout:
-            processLogout(client, request->request_id(), request->logout());
+            processLogout(client, request->logout());
             return;
          case Request::kCeler:
             processCeler(client, request->celer());
             return;
+         case Request::kCancelSign:
+            processCancelSign(client, request->cancel_sign());
+            return;
+
          case Request::DATA_NOT_SET:
             return;
       }
@@ -242,7 +259,7 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
       return;
    }
 
-   client->autheid = std::make_unique<AutheIDClient>(logger_, nam_, AutheIDClient::AuthKeys{}, params_.autheidTestEnv, this);
+   resetAuthEid(client);
 
    connect(client->autheid.get(), &AutheIDClient::createRequestDone, this, [this, client, requestId] {
       // Check that autheid lives in our thread
@@ -256,9 +273,8 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
       }
 
       Response response;
-      auto d = response.mutable_start_login();
+      response.mutable_start_login();
       client->state = State::WaitClientGetResult;
-      d->set_error_code(int(AutheIDClient::NoError));
       sendResponse(client, requestId, &response);
    });
 
@@ -273,28 +289,19 @@ void BsProxy::processStartLogin(Client *client, int64_t requestId, const Request
       Response response;
       auto d = response.mutable_start_login();
       client->state = State::Closed;
-      d->set_error_code(int(error));
+      d->mutable_error()->set_error_code(int(error));
       sendResponse(client, requestId, &response);
    });
 
    client->state = State::WaitAutheidStart;
    client->email = request.email();
+
+   AutheIDClient::SignRequest loginRequest;
+   loginRequest.email = request.email();
+   loginRequest.title = "Terminal Login";
+   loginRequest.expiration = int(BsClient::autheidLoginTimeout() / std::chrono::seconds(1));
    const bool autoRequestResult = false;
-   const int authTimeout = int(BsClient::getDefaultAutheidAuthTimeout() / std::chrono::seconds(1));
-   client->autheid->authenticate(request.email(), authTimeout, autoRequestResult);
-}
-
-void BsProxy::processCancelLogin(Client *client, int64_t requestId, const Request_CancelLogin &request)
-{
-   SPDLOG_LOGGER_INFO(logger_, "process cancel login request from {}", bs::toHex(client->clientId));
-   if (client->state != State::WaitAutheidResult && client->state != State::WaitClientGetResult) {
-      SPDLOG_LOGGER_ERROR(logger_, "unexpected cancel login request");
-      return;
-   }
-
-   // We could safely close connection, terminal will need to start new one if needed
-   client->state = State::Closed;
-   client->autheid->cancel();
+   client->autheid->sign(loginRequest, autoRequestResult);
 }
 
 void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Request_GetLoginResult &request)
@@ -308,29 +315,45 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
    // Need to disconnect `AutheIDClient::failed` signal here because we don't need old callbacks anymore
    client->autheid->disconnect();
 
-   connect(client->autheid.get(), &AutheIDClient::authSuccess, this, [this, client, requestId](const std::string &jwt) {
-      if (client->state != State::WaitAutheidResult) {
-         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
-         return;
-      }
+   connect(client->autheid.get(), &AutheIDClient::signSuccess, this, [this, client, requestId](const AutheIDClient::SignResult &result) {
+      QtConcurrent::run([this, clientId = client->clientId, requestId, result] {
+         const auto env = params_.autheidTestEnv ?
+            AutheIDClient::AuthEidEnv::Test : AutheIDClient::AuthEidEnv::Prod;
+         auto status = AutheIDClient::verifySignature(result, env);
+         if (!status.valid) {
+            SPDLOG_LOGGER_ERROR(logger_, "auth eid login signature verification failed: {}", status.errorMsg);
+            return;
+         }
 
-      client->state = State::LoggedIn;
+         QMetaObject::invokeMethod(this, [this, clientId, requestId, result, status] {
+            auto client = findClient(clientId);
+            if (!client) {
+               return;
+            }
 
-      Response response;
-      auto d = response.mutable_get_login_result();
-      d->set_error_code(int(AutheIDClient::NoError));
-      sendResponse(client, requestId, &response);
+            if (client->state != State::WaitAutheidResult) {
+               SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+               return;
+            }
 
-      client->celerListener_ = std::make_unique<BsClientCelerListener>();
-      client->celerListener_->proxy_ = this;
-      client->celerListener_->clientId_ = client->clientId;
+            client->state = State::LoggedIn;
 
-      client->celer_ = connectionManager_->CreateCelerClientConnection();
+            Response response;
+            response.mutable_get_login_result();
+            sendResponse(client, requestId, &response);
 
-      const std::string &host = g_celerHostOverride.empty() ? params_.celerHost : g_celerHostOverride;
-      const int port = g_celerHostOverride.empty() ? params_.celerPort : g_celerPortOverride;
+            client->celerListener = std::make_unique<BsClientCelerListener>();
+            client->celerListener->proxy_ = this;
+            client->celerListener->clientId_ = client->clientId;
 
-      client->celer_->openConnection(host, std::to_string(port), client->celerListener_.get());
+            client->celer = connectionManager_->CreateCelerClientConnection();
+
+            const std::string &host = g_celerHostOverride.empty() ? params_.celerHost : g_celerHostOverride;
+            const int port = g_celerHostOverride.empty() ? params_.celerPort : g_celerPortOverride;
+
+            client->celer->openConnection(host, std::to_string(port), client->celerListener.get());
+         });
+      });
    });
 
    connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId](AutheIDClient::ErrorType error) {
@@ -343,7 +366,7 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
 
       Response response;
       auto d = response.mutable_get_login_result();
-      d->set_error_code(int(error));
+      d->mutable_error()->set_error_code(int(error));
       sendResponse(client, requestId, &response);
    });
 
@@ -359,7 +382,7 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
 
       Response response;
       auto d = response.mutable_get_login_result();
-      d->set_error_code(int(AutheIDClient::Cancelled));
+      d->mutable_error()->set_error_code(int(AutheIDClient::Cancelled));
       sendResponse(client, requestId, &response);
    });
 
@@ -367,7 +390,136 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
    client->autheid->requestResult();
 }
 
-void BsProxy::processLogout(Client *client, int64_t requestId, const Request_Logout &request)
+void BsProxy::processStartSignAddress(BsProxy::Client *client, int64_t requestId, const Request_StartSignAddress &request)
+{
+   if (client->state != State::LoggedIn) {
+      SPDLOG_LOGGER_ERROR(logger_, "got unexpected sign request");
+      return;
+   }
+
+   AutheIDClient::SignRequest req;
+   req.email = client->email;
+   req.serialization = AutheIDClient::Serialization::Protobuf;
+   req.invisibleData = request.invisible_data();
+
+   auto type = BsClient::SignAddressReq::Type(request.type());
+   switch (type) {
+      case BsClient::SignAddressReq::AuthAddr:
+         req.title = "Authentication Address";
+         req.description = "Submit auth address for verification";
+         req.expiration = int(std::chrono::duration_cast<std::chrono::seconds>(BsClient::autheidAuthAddressTimeout()).count());
+         break;
+      case BsClient::SignAddressReq::CcAddr:
+         req.title = "Private Market token";
+         req.description = "Submitting CC wallet address to receive PM token";
+         req.expiration = int(std::chrono::duration_cast<std::chrono::seconds>(BsClient::autheidCcAddressTimeout()).count());
+         break;
+      default:
+         SPDLOG_LOGGER_ERROR(logger_, "invalid sign address request (unknown address type)");
+         return;
+   }
+
+   resetAuthEid(client);
+
+   connect(client->autheid.get(), &AutheIDClient::createRequestDone, this, [this, client, requestId] {
+      // Check that autheid lives in our thread
+      assert(thread() == QThread::currentThread());
+
+      // Data must be still available.
+      if (client->state != State::LoggedIn) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+         return;
+      }
+
+      Response response;
+      response.mutable_start_sign_address();
+      sendResponse(client, requestId, &response);
+   });
+
+   connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId](AutheIDClient::ErrorType error) {
+      // Data must be still available.
+      if (client->state != State::WaitAutheidStart) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+         return;
+      }
+
+      Response response;
+      auto d = response.mutable_start_sign_address();
+      d->mutable_error()->set_error_code(int(error));
+      sendResponse(client, requestId, &response);
+   });
+
+   const bool autoRequestResult = false;
+   client->autheid->sign(req, autoRequestResult);
+}
+
+void BsProxy::processGetSignResult(BsProxy::Client *client, int64_t requestId, const Request_GetSignResult &request)
+{
+   if (client->state != State::LoggedIn && !client->autheid) {
+      SPDLOG_LOGGER_ERROR(logger_, "got unexpected get sign result request");
+      return;
+   }
+
+   // Need to disconnect `AutheIDClient::failed` signal here because we don't need old callbacks anymore
+   client->autheid->disconnect();
+
+   connect(client->autheid.get(), &AutheIDClient::signSuccess, this, [this, client, requestId](const AutheIDClient::SignResult &result) {
+      if (client->state != State::LoggedIn) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+         return;
+      }
+
+      Response response;
+      auto d = response.mutable_get_sign_result();
+      d->set_sign_data(result.data.toBinStr());
+      d->set_sign(result.sign.toBinStr());
+      d->set_certificate_client(result.certificateClient.toBinStr());
+      d->set_certificate_issuer(result.certificateIssuer.toBinStr());
+      d->set_ocsp_response(result.ocspResponse.toBinStr());
+      sendResponse(client, requestId, &response);
+   });
+
+   connect(client->autheid.get(), &AutheIDClient::failed, this, [this, client, requestId](AutheIDClient::ErrorType error) {
+      if (client->state != State::LoggedIn) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+         return;
+      }
+
+      Response response;
+      auto d = response.mutable_get_sign_result();
+      d->mutable_error()->set_error_code(int(error));
+      sendResponse(client, requestId, &response);
+   });
+
+   connect(client->autheid.get(), &AutheIDClient::userCancelled, this, [this, client, requestId] {
+      if (client->state != State::LoggedIn) {
+         SPDLOG_LOGGER_ERROR(logger_, "got unexpected result from Auth eID");
+         return;
+      }
+
+      Response response;
+      auto d = response.mutable_get_sign_result();
+      d->mutable_error()->set_error_code(int(AutheIDClient::Cancelled));
+      sendResponse(client, requestId, &response);
+   });
+
+   client->autheid->requestResult();
+}
+
+void BsProxy::processCancelLogin(Client *client, const Request_CancelLogin &request)
+{
+   SPDLOG_LOGGER_INFO(logger_, "process cancel login request from {}", bs::toHex(client->clientId));
+   if (client->state != State::WaitAutheidResult && client->state != State::WaitClientGetResult) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected cancel login request");
+      return;
+   }
+
+   // We could safely close connection, terminal will need to start new one if needed
+   client->state = State::Closed;
+   client->autheid->cancel();
+}
+
+void BsProxy::processLogout(Client *client, const Request_Logout &request)
 {
    // TODO: Close Celer connection
 }
@@ -404,7 +556,17 @@ void BsProxy::processCeler(BsProxy::Client *client, const Request_Celer &request
    com::celertech::baseserver::communication::protobuf::ProtobufMessage message;
    message.set_protobufclassname(fullClassName);
    message.set_protobufmessagecontents(dataOverride);
-   client->celer_->send(message.SerializeAsString());
+   client->celer->send(message.SerializeAsString());
+}
+
+void BsProxy::processCancelSign(BsProxy::Client *client, const Request_CancelSign &request)
+{
+   if (client->state != State::LoggedIn || !client->autheid) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected cancel sign request");
+      return;
+   }
+
+   client->autheid->cancel();
 }
 
 void BsProxy::sendResponse(Client *client, int64_t requestId, Response *response)
@@ -416,6 +578,15 @@ void BsProxy::sendResponse(Client *client, int64_t requestId, Response *response
 void BsProxy::sendMessage(BsProxy::Client *client, Response *response)
 {
    server_->SendDataToClient(client->clientId, response->SerializeAsString());
+}
+
+void BsProxy::resetAuthEid(BsProxy::Client *client)
+{
+   client->autheid = std::make_unique<AutheIDClient>(logger_, nam_, AutheIDClient::AuthKeys{}, params_.autheidTestEnv, this);
+
+   if (!params_.autheidApiKey.empty()) {
+      client->autheid->setApiKey(params_.autheidApiKey);
+   }
 }
 
 BsProxy::Client *BsProxy::findClient(const std::string &clientId)

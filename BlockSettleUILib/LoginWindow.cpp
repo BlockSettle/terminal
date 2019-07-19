@@ -10,7 +10,7 @@
 #include "ui_LoginWindow.h"
 
 namespace {
-   const auto AuthTimeout = int(BsClient::getDefaultAutheidAuthTimeout() / std::chrono::seconds(1));
+   const auto AuthTimeout = int(BsClient::autheidLoginTimeout() / std::chrono::seconds(1));
 }
 
 LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger

@@ -33,7 +33,6 @@ class AssetManager;
 class AuthAddressDialog;
 class AuthAddressManager;
 class AutheIDClient;
-class AuthSignManager;
 class BSMarketDataProvider;
 class BSTerminalSplashScreen;
 class CCFileManager;
@@ -142,7 +141,6 @@ private:
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::shared_ptr<SignersProvider>       signersProvider_;
    std::shared_ptr<AuthAddressManager>    authManager_;
-   std::shared_ptr<AuthSignManager>       authSignManager_;
    std::shared_ptr<ArmoryObject>          armory_;
 
    std::shared_ptr<RequestReplyCommand>   cmdPuBSettings_;

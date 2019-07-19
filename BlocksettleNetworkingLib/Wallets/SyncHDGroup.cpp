@@ -8,6 +8,7 @@ using namespace bs::sync;
 
 std::shared_ptr<hd::Leaf> hd::Group::getLeaf(bs::hd::Path::Elem elem) const
 {
+   elem |= bs::hd::hardFlag;
    const auto itLeaf = leaves_.find(elem);
    if (itLeaf == leaves_.end()) {
       return nullptr;
@@ -42,7 +43,7 @@ std::vector<std::shared_ptr<bs::sync::Wallet>> hd::Group::getAllLeaves() const
 
 std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem, const std::string &walletId)
 {
-   elem |= 0x80000000;
+   elem |= bs::hd::hardFlag;
    const auto prevLeaf = getLeaf(elem);
    if (prevLeaf != nullptr) {
       if (walletId != prevLeaf->walletId()) {

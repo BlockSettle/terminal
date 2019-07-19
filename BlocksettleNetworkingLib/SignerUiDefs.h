@@ -46,7 +46,7 @@ namespace bs {
       // List of signer run modes
       enum class RunMode {
          fullgui,
-         lightgui,
+         litegui,
          headless,
          cli
       };

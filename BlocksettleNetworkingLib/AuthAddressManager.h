@@ -10,12 +10,12 @@
 #include <vector>
 #include <QObject>
 #include <QThreadPool>
+#include "AutheIDClient.h"
 #include "CommonTypes.h"
 #include "WalletEncryption.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "BSErrorCode.h"
 #include "BSErrorCodeStrings.h"
-
 #include "bs_communication.pb.h"
 
 
@@ -34,9 +34,9 @@ namespace bs {
 class AddressVerificator;
 class ApplicationSettings;
 class ArmoryConnection;
+class BsClient;
 class BaseCelerClient;
 class ConnectionManager;
-class AuthSignManager;
 class RequestReplyCommand;
 class ResolverFeed_AuthAddress;
 class SignContainer;
@@ -59,7 +59,6 @@ public:
 
    void init(const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<AuthSignManager> &
       , const std::shared_ptr<SignContainer> &);
    void ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<BaseCelerClient> &);
@@ -82,7 +81,7 @@ public:
    virtual bool CreateNewAuthAddress();
 
    virtual bool SubmitForVerification(const bs::Address &address);
-   virtual bool ConfirmSubmitForVerification(const bs::Address &address, int expireTimeoutSeconds);
+   virtual void ConfirmSubmitForVerification(BsClient *bsClient, const bs::Address &address);
    virtual bool CancelSubmitForVerification(const bs::Address &address);
 
    virtual bool Verify(const bs::Address &address);
@@ -124,7 +123,7 @@ signals:
    void AuthRevokeTxSent();
 
    void AuthAddressConfirmationRequired(float validationAmount);
-   void SignFailed(const QString &text);
+   void signFailed(AutheIDClient::ErrorType error);
 
 private:
    void SetAuthWallet();
@@ -170,9 +169,8 @@ protected:
    ZmqBIP15XDataConnection::cbNewKey      cbApproveConn_ = nullptr;
    std::shared_ptr<ApplicationSettings>   settings_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<AuthSignManager>       authSignManager_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
-   std::shared_ptr<BaseCelerClient>           celerClient_;
+   std::shared_ptr<BaseCelerClient>       celerClient_;
    std::shared_ptr<AddressVerificator>    addressVerificator_;
 
    std::map<int, std::unique_ptr<RequestReplyCommand>>  activeCommands_;

@@ -9,7 +9,9 @@
 
 #include <QString>
 #include <QVariant>
+#include <QPointer>
 
+#include "BsClient.h"
 #include "Wallets/SyncWallet.h"
 
 namespace Blocksettle {
@@ -19,7 +21,6 @@ namespace Blocksettle {
 }
 
 class ApplicationSettings;
-class AuthSignManager;
 class BaseCelerClient;
 
 class CCPubResolver : public bs::sync::CCDataResolver
@@ -63,7 +64,6 @@ class CCFileManager : public CCPubConnection
 Q_OBJECT
 public:
    CCFileManager(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<ApplicationSettings> &appSettings
-      , const std::shared_ptr<AuthSignManager> &
       , const std::shared_ptr<ConnectionManager> &, const ZmqBIP15XDataConnection::cbNewKey &cb = nullptr);
    ~CCFileManager() noexcept override = default;
 
@@ -82,6 +82,8 @@ public:
    bool wasAddressSubmitted(const bs::Address &);
 
    bool hasLocalFile() const;
+
+   void setBsClient(BsClient *bsClient);
 
 signals:
    void CCSecurityDef(bs::network::CCSecurityDef);
@@ -113,7 +115,6 @@ protected:
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<BaseCelerClient>           celerClient_;
-   std::shared_ptr<AuthSignManager>       authSignManager_;
 
    // when user changes PuB connection settings - save to file should be disabled.
    // dev build feature only. final release should have single PuB.
@@ -123,6 +124,7 @@ private:
    bool syncFinished_ = false;
 
    std::shared_ptr<CCPubResolver>   resolver_;
+   QPointer<BsClient> bsClient_;
 
 private:
    bool RequestFromPuB();

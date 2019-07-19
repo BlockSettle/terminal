@@ -8,7 +8,6 @@ enum PacketType
    HeadlessReadyType = 0;
    PeerConnectedType = 1;
    PeerDisconnectedType = 2;
-   SignTxRequestType = 3;
    TxSignedType = 4;
    CancelTxSignType = 5;
    XbtSpentType = 6;
@@ -47,10 +46,20 @@ enum PacketType
 
    ImportWoWalletType = 27;
 
-   SignSettlementTxRequestType = 28;
-
    // Sent from headless signer when unknown terminal is trying to connect
    TerminalHandshakeFailedType = 29;
+
+   DecryptWalletRequestType   = 30;
+}
+
+enum PasswordDialogType
+{
+   SignTx                      = 0;
+   SignPartialTx               = 1;
+   SignSettlementTx            = 2;
+   SignSettlementPartialTx     = 3;
+   CreateAuthLeaf              = 4;
+   CreateHDLeaf                = 5;
 }
 
 message Packet
@@ -159,8 +168,15 @@ message SignTxCancelRequest
 
 message SignSettlementTxRequest
 {
-   SignTxRequest signTXRequest                                        = 1;
-   Blocksettle.Communication.Internal.SettlementInfo settlementInfo   = 2;
+   SignTxRequest signTXRequest                                                = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData   = 2;
+}
+
+message DecryptWalletRequest
+{
+   PasswordDialogType                                    dialogType           = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData   = 2;
+   SignTxRequest                                         signTXRequest        = 3;
 }
 
 message XbtSpentEvent

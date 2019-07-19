@@ -25,7 +25,7 @@ namespace signer {
 
    enum class RunMode {
       fullgui,
-      lightgui,
+      litegui,
       headless,
       cli
    };
