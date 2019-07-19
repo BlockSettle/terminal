@@ -1,7 +1,10 @@
 #!/bin/sh
 
-xdg-icon-resource uninstall --size 64 blocksettle
-xdg-icon-resource uninstall --size 64 blocksettle_signer
+for SIZE in 32 48 64 128 256
+do
+    xdg-icon-resource uninstall --size $SIZE blocksettle
+    xdg-icon-resource uninstall --size $SIZE blocksettle_signer
+done
 
 update-desktop-database
 
