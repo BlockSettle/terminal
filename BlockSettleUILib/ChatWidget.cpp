@@ -106,6 +106,7 @@ public:
       chat_->ui_->searchWidget->clearLineEdit();
       chat_->ui_->searchWidget->setLineEditEnabled(false);
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
+      chat_->ui_->textEditMessages->clear();
 
       chat_->SetLoggedOutOTCState();
       chat_->ui_->frameContactActions->setVisible(false);
