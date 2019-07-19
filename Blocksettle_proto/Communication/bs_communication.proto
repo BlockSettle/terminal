@@ -237,4 +237,5 @@ message GetNetworkSettingsResponse
    optional ConnectionData marketData = 2;
    optional ConnectionData mdhs = 3;
    optional ConnectionData chat = 4;
+   optional ConnectionData proxy = 5;
 }
