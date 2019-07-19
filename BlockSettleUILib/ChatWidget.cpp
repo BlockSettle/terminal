@@ -644,12 +644,15 @@ void ChatWidget::onConfirmContactNewKeyData(
       auto name = QString::fromStdString(contactRecord->contact_id());
 
       ImportKeyBox box(BSMessageBox::question
-                       , tr("Import new Contact '%1' Public Key?").arg(name)
+                       , tr("Do you wish to keep or remove '%1' as a Contact? ").arg(name)
                        , this);
+      box.setWindowTitle(tr("Import Contact ID Key"));
       box.setAddrPort(std::string());
       box.setNewKeyFromBinary(contactRecord->public_key());
       box.setOldKey(std::string());
       box.setCancelVisible(true);
+      box.setConfirmButtonText(tr("Keep"));
+      box.setCancelButtonText(tr("Remove"));
 
       if (box.exec() == QDialog::Accepted) {
          newList.push_back(contact);
@@ -1276,7 +1279,9 @@ void ChatWidget::onContactListConfirmationRequested(const std::vector<std::share
    QString  detailsString = detailsPattern.arg(remoteConfirmed.size()).arg(remoteKeysUpdate.size()).arg(remoteAbsolutelyNew.size());
 
    BSMessageBox bsMessageBox(BSMessageBox::question, tr("Contacts Information Update"),
-      tr("Some contacts information require update."), tr("Do you want to continue?"), detailsString);
+      tr("Do you wish to import your full Contact list?"),
+      tr("Press OK to Import all Contact ID keys. Selecting Cancel will allow you to determine each contact individually."),
+      detailsString);
    int ret = bsMessageBox.exec();
 
    if (QDialog::Accepted == ret) {
