@@ -62,7 +62,7 @@ qt5_add_resources( GENERATED_RESOURCES ${RESOURCE_FILES})
 qt5_add_resources( GENERATED_RESOURCES ${BLOCKSETTLE_UI_INCLUDE_DIR}/armory.qrc)
 
 IF ( APPLE )
-    SET( BUNDLE_NAME "Blocksettle Signer GUI" )
+    SET( BUNDLE_NAME "BlockSettle Signer GUI" )
 
     SET( MACOSX_BUNDLE_BUNDLE_NAME ${BUNDLE_NAME} )
     SET( MACOSX_BUNDLE_GUI_IDENTIFIER "com.blocksettle.signer.gui" )
