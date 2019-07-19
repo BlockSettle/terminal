@@ -34,7 +34,7 @@ class ChatWidgetState;
 class OTCRequestViewModel;
 class ChatTreeModelWrapper;
 class BaseCelerClient;
-
+class QTextEdit;
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
                  , public NewMessageMonitor
@@ -62,7 +62,6 @@ public:
       , const ZmqBIP15XDataConnection::cbNewKey &);
    void logout();
    bool hasUnreadMessages();
-   void switchToChat(const std::string& chatId);
    void setCelerClient(std::shared_ptr<BaseCelerClient> celerClient);
    void updateChat(const bool &isChatTab);
 
@@ -76,8 +75,6 @@ public slots:
 
 private slots:
    void onSendButtonClicked();
-   void onUserClicked(const std::string& index);
-   void onRoomClicked(const std::string& roomId);
    void onMessagesUpdated();
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
@@ -149,6 +146,8 @@ private:
 
    bool TradingAvailableForUser() const;
 
+   void clearCursorSelection(QTextEdit *element);
+
 private:
    QScopedPointer<Ui::ChatWidget> ui_;
 
@@ -161,7 +160,6 @@ private:
    bool isRoom_;
    bool isContactRequest_;
    QSpacerItem *chatUsersVerticalSpacer_;
-   bool isChatMessagesSelected_;
    bool isChatTab_;
 
 private:
