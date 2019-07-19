@@ -193,7 +193,12 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
    bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest);
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
-   bs::hd::WalletInfo *walletInfo = qmlFactory_->createWalletInfo(dialogData->value("WalletId").toString());
+   // wallet id may be stored either in tx or in dialog data
+   QString walletId = dialogData->value("WalletId").toString();
+   if (walletId.isEmpty()) {
+      walletId = txInfo->walletId();
+   }
+   bs::hd::WalletInfo *walletInfo = qmlFactory_->createWalletInfo(walletId);
 
    QString notifyTitle;
    QString notifyMsg = tr("Enter password for %1").arg(walletInfo->name());

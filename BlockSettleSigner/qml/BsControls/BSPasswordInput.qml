@@ -15,6 +15,8 @@ CustomTitleDialogWindow {
 
     title: type === BSPasswordInput.Type.Request ? qsTr("Decrypt Wallet") : qsTr("Notice!")
     width: 350
+    height: 70 + headerPanelHeight + contentItemData.height
+
     rejectable: true
 
     enum Type {
