@@ -1135,6 +1135,7 @@ void BaseChatClient::onFriendRequestRejected(const std::string &contactId)
 
    eraseQueuedMessages(contactId);
 
+   onFriendRequestedRemove(contactId);
 }
 
 void BaseChatClient::onFriendRequestedRemove(const std::string &contactId)
