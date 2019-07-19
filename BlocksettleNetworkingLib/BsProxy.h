@@ -6,6 +6,7 @@
 #include <memory>
 #include <spdlog/logger.h>
 #include <QObject>
+#include "Address.h"
 #include "DataConnectionListener.h"
 
 class QNetworkAccessManager;
@@ -59,12 +60,19 @@ class BsProxy : public QObject
    Q_OBJECT
 
 public:
-   explicit BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyParams &params);
+   BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyParams &params);
    ~BsProxy();
 
    const BsProxyParams &params() const { return params_; }
 
    static void overrideCelerHost(const std::string &host, int port);
+
+   // Returns how signed title and description text should look in the mobile device.
+   // PB will check it to be sure that the user did sign what he saw.
+   static std::string requestTitleAuthAddr();
+   static std::string requestDescAuthAddr(const bs::Address &address);
+   static std::string requestTitleCcAddr();
+   static std::string requestDescCcAddr(const bs::Address &address);
 private:
    friend class BsProxyListener;
    friend class BsClientCelerListener;
