@@ -27,6 +27,14 @@ void BSChatInput::keyPressEvent(QKeyEvent * e)
          emit sendMessage();
       }
       return e->ignore();
+   } else if(e->key() == Qt::Key_C && e->modifiers().testFlag(Qt::ControlModifier)) {
+      // If there no selection than could be that we going to copy text from other element
+      // which cannot have focus.
+      if (!textCursor().hasSelection()) {
+         e->setAccepted(false);
+         return;
+      }
    }
+
    return QTextEdit::keyPressEvent(e);
 }

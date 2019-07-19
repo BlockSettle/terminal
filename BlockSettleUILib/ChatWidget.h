@@ -34,7 +34,7 @@ class ChatWidgetState;
 class OTCRequestViewModel;
 class ChatTreeModelWrapper;
 class BaseCelerClient;
-
+class QTextEdit;
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
                  , public NewMessageMonitor
@@ -146,6 +146,8 @@ private:
 
    bool TradingAvailableForUser() const;
 
+   void clearCursorSelection(QTextEdit *element);
+
 private:
    QScopedPointer<Ui::ChatWidget> ui_;
 
@@ -158,7 +160,6 @@ private:
    bool isRoom_;
    bool isContactRequest_;
    QSpacerItem *chatUsersVerticalSpacer_;
-   bool isChatMessagesSelected_;
    bool isChatTab_;
 
 private:
