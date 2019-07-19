@@ -132,7 +132,8 @@ std::string BsProxy::requestTitleCcAddr()
 // static
 std::string BsProxy::requestDescCcAddr(const bs::Address &address)
 {
-   return fmt::format("Verify address to receive PM token: {}", address.display());
+   // We don't show address details here yet
+   return fmt::format("Submitting CC wallet address to receive PM token");
 }
 
 BsProxy::~BsProxy()
