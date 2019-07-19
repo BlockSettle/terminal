@@ -268,6 +268,10 @@ function evalWorker(method, cppCallback, argList) {
 }
 
 function prepareLiteModeDialog(dialog) {
+    if (!isLiteMode()) {
+        return
+    }
+
     // close previous dialog
     if (currentDialog && typeof currentDialog.close !== "undefined") {
         currentDialog.close()
@@ -435,4 +439,8 @@ function createPasswordDialogForAuthLeaf(jsCallback, passwordDialogData, walletI
     }
 
     prepareLiteModeDialog(dlg)
+}
+
+function isLiteMode(){
+    return mainWindow.isLiteMode
 }

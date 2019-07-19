@@ -23,6 +23,7 @@ import "js/helper.js" as JsHelper
 ApplicationWindow {
     id: mainWindow
 
+    readonly property bool isLiteMode: false
     visible: true
     title: qsTr("BlockSettle Signer")
     width: 800
@@ -144,11 +145,12 @@ ApplicationWindow {
         return function(argList){ qmlFactory.execJsCallback(reqId, argList)}
     }
 
-    function invokeQmlMetod(method, cb, val0, val1, val2, val3, val4, val5, val6, val7) {
-        eval(method)(cb, val0, val1, val2, val3, val4, val5, val6, val7)
-    }
-
     function terminalHandshakeFailed(peerAddress) {
         JsHelper.messageBoxCritical("Authentication failure", "An incoming connection from address " + peerAddress + " has failed to authenticate themselves. Please ensure that you have imported the Terminal ID Key from those Terminals you wish to have access to your wallets.")
+    }
+
+    function invokeQmlMetod(method, cppCallback, argList) {
+        raiseWindow()
+        JsHelper.evalWorker(method, cppCallback, argList)
     }
 }

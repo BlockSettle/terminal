@@ -22,6 +22,7 @@ import "js/helper.js" as JsHelper
 
 ApplicationWindow {
     id: mainWindow
+    readonly property bool isLiteMode: true
 
     visible: false
     title: qsTr("BlockSettle Signer")
