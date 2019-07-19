@@ -839,6 +839,13 @@ void hd::CCLeaf::validationProc()
          if (!validationStarted_ || !ccResolver_) {
             return;
          }
+
+         if (ledger == nullptr) {
+            logger_->error("[CCLeaf::validationProc::cbLedger] failed to get ledger for : {}"
+               , addr.display());
+            return;
+         }
+
          const auto &cbCheck = [this, addr, addressesToCheck](const Tx &tx) {
             const auto &cbResult = [this, tx](bool contained) {
                if (!contained && tx.isInitialized()) {
