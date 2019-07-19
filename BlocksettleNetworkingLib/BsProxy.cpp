@@ -87,8 +87,12 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
    serverListener_ = std::make_unique<BsProxyListener>();
    serverListener_->proxy_ = this;
 
+   const bool ephemeralPeers = false;
+   const bool readClientCookie = false;
+   const bool writeCookie = !params.ownPubKeyDump.empty();
    server_ = std::make_unique<ZmqBIP15XServerConnection>(logger
-      , params.context, &emptyTrustedClientsCallback, false, params.ownKeyFileDir, params.ownKeyFileName);
+      , params.context, &emptyTrustedClientsCallback, ephemeralPeers, params.ownKeyFileDir, params.ownKeyFileName
+      , writeCookie, readClientCookie, params.ownPubKeyDump);
 
    bool result = server_->BindConnection(params.listenAddress, std::to_string(params.listenPort), serverListener_.get());
    if (!result) {
