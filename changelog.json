@@ -1,7 +1,32 @@
 {
-   "latest_version": "0.19.1",
-   "release_date": "16 Jul 2019",
+   "latest_version": "0.19.2",
+   "release_date": "19 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.19.2",
+         "previous_version": "0.19.1",
+         "release_date": "19 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Rename bundle name on OSX",
+            "UI fixes",
+            "Terminal/Decrypt wallet flow refactoring (#316)",
+            "Connect to Celer and autheid using new proxy",
+            "Fix Copy hotkey in chat",
+            "Remove contact on reject",
+            "Fix saving draft message and cleanup text edit when changing room",
+            "CC Buy RFQ (#1135)",
+            "Text correction"
+         ],
+         "bug_fixes": [
+            "Fix regression with missing remote signer pub key",
+            "Fix Windows installer",
+            "Fix crash on CC validation",
+            "Fix RFQ script"
+         ],
+         "revision": "db570a73",
+         "common_revision": "f8e60f0d"
+      },
       {
          "version_string": "0.19.1",
          "previous_version": "0.19.0",
