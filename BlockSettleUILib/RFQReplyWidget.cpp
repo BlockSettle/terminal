@@ -44,6 +44,8 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::quoteReqNotifStatusChanged, ui_->pageRFQReply
       , &RFQDealerReply::quoteReqNotifStatusChanged, Qt::QueuedConnection);
    connect(ui_->pageRFQReply, &RFQDealerReply::autoSignActivated, this, &RFQReplyWidget::onAutoSignActivated);
+   connect(ui_->widgetQuoteRequests->view(), &TreeViewWithEnterKey::enterKeyPressed
+      , this, &RFQReplyWidget::onEnterKeyPressed);
 }
 
 RFQReplyWidget::~RFQReplyWidget() = default;
@@ -306,6 +308,13 @@ void RFQReplyWidget::onDisconnectedFromCeler()
 {
    ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::LoginRequierdPage));
    ui_->pageRFQReply->onCelerDisconnected();
+}
+
+void RFQReplyWidget::onEnterKeyPressed(const QModelIndex &index)
+{
+   if (ui_->pageRFQReply->quoteButton()->isEnabled()) {
+      ui_->pageRFQReply->quoteButton()->click();
+   }
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)
