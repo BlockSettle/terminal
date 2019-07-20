@@ -558,11 +558,11 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
       }
    }
 
-   const auto stmtWallet = walletsManager_->getSettlementWallet();
+/*   const auto stmtWallet = walletsManager_->getSettlementWallet();
    if (!showRegularWallets() && (stmtWallet != nullptr)) {
       const auto stmtNode = new WalletLeafNode(this, stmtWallet, rootNode_->nbChildren(), rootNode_.get());
       rootNode_->add(stmtNode);
-   }
+   }*/   //TODO: add later if decided
    endResetModel();
 
    QModelIndexList selection;

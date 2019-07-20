@@ -42,7 +42,7 @@ public:
               , const std::vector<SecureBinaryData> &encKeys, const bs::wallet::KeyRank &keyRank);
 
    WalletInfo(const Blocksettle::Communication::headless::GetHDWalletInfoResponse &response);
-   WalletInfo(const Blocksettle::Communication::headless::PasswordRequest &request);
+//   WalletInfo(const Blocksettle::Communication::headless::PasswordRequest &request);
 
    // used in signer
    WalletInfo(std::shared_ptr<bs::core::hd::Wallet> hdWallet, QObject *parent = nullptr);
