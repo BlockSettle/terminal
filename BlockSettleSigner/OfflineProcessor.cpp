@@ -262,7 +262,7 @@ void OfflineProcessor::SignTxRequest(const bs::core::wallet::TXSignRequest &txRe
       // remove original request file?
       emit signSuccess(outputFN);
    };
-   adapter_->signOfflineTxRequest(txReq, password, cbSigned);
+   adapter_->signOfflineTxRequest(txReq, cbSigned);
 }
 
 void OfflineProcessor::sendSignFailure(const QString &errorMsg)
