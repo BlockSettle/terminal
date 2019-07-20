@@ -47,6 +47,13 @@ CustomTitleDialogWindow {
         if (!primaryWalletExists) {
             cbPrimary.checked = true
         }
+        rootKeyInput.setFocus()
+    }
+
+    onIsWOChanged: {
+        if (curPage === WalletImportDialog.Page.Select && !isWO) {
+            rootKeyInput.setFocus()
+        }
     }
 
     onEnterPressed: {
@@ -139,6 +146,11 @@ CustomTitleDialogWindow {
                                 Layout.leftMargin: inputLabelsWidth
                                 text: qsTr("Paper Backup")
                                 checked: true
+
+                                onCheckedChanged: {
+                                    if (checked) rootKeyInput.setFocus()
+
+                                }
                             }
                             CustomRadioButton {
                                 id: rbFileBackup
@@ -290,7 +302,7 @@ CustomTitleDialogWindow {
                             id: tfName
                             selectByMouse: true
                             Layout.fillWidth: true
-                            //focus: true // not possible to edit if focus set to true.
+                            focus: true
                             Keys.onEnterPressed: tfDesc.forceActiveFocus()
                             Keys.onReturnPressed: tfDesc.forceActiveFocus()
                         }
@@ -544,7 +556,8 @@ CustomTitleDialogWindow {
                                 var walletInfo = qmlFactory.createWalletInfo(msg)
                                 var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImportWo, true, walletInfo)
                                 mb.bsAccepted.connect(acceptAnimated)
-                            } else {
+                            }
+                            else {
                                 JsHelper.messageBox(BSMessageBox.Type.Critical
                                     , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
                             }
@@ -577,7 +590,8 @@ CustomTitleDialogWindow {
                             if (success) {
                                 var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImport, true, walletInfo)
                                 mb.bsAccepted.connect(acceptAnimated)
-                            } else {
+                            }
+                            else {
                                 JsHelper.messageBox(BSMessageBox.Type.Critical
                                     , qsTr("Import Failed"), qsTr("Import wallet failed with error: \n") + errorMsg)
                             }
