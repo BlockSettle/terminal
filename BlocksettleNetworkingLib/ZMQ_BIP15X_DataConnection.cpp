@@ -41,9 +41,7 @@ void ZmqBIP15XDataConnectionParams::setLocalHeartbeatInterval()
 ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger>& logger
    , const ZmqBIP15XDataConnectionParams &params)
    : logger_(logger)
-   , bipIDCookiePath_(params.cookiePath)
-   , cookie_(params.cookie)
-   , heartbeatInterval_(params.heartbeatInterval)
+   , params_(params)
    // There is some obscure problem with ZMQ if same context reused:
    // ZMQ recreates TCP connections for closed ZMQ sockets.
    // Using new context fixes this problem.
@@ -60,7 +58,7 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
          "wallet file is specified.");
    }
 
-   if (cookie_ != BIP15XCookie::NotUsed && bipIDCookiePath_.empty()) {
+   if (params_.cookie != BIP15XCookie::NotUsed && params_.cookiePath.empty()) {
       throw std::runtime_error("ID cookie creation requested but no name " \
          "supplied. Connection is incomplete.");
    }
@@ -76,7 +74,7 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
       authPeers_ = std::make_unique<AuthorizedPeers>();
    }
 
-   if (cookie_ == BIP15XCookie::MakeClient) {
+   if (params_.cookie == BIP15XCookie::MakeClient) {
       genBIPIDCookie();
    }
 }
@@ -84,13 +82,13 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
 ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection() noexcept
 {
    // If it exists, delete the identity cookie.
-   if (cookie_ == BIP15XCookie::MakeClient) {
+   if (params_.cookie == BIP15XCookie::MakeClient) {
 //      const string absCookiePath =
 //         SystemFilePaths::appDataLocation() + "/" + bipIDCookieName_;
-      if (SystemFileUtils::fileExist(bipIDCookiePath_)) {
-         if (!SystemFileUtils::rmFile(bipIDCookiePath_)) {
+      if (SystemFileUtils::fileExist(params_.cookiePath)) {
+         if (!SystemFileUtils::rmFile(params_.cookiePath)) {
             logger_->error("[{}] Unable to delete client identity cookie ({})."
-               , __func__, bipIDCookiePath_);
+               , __func__, params_.cookiePath);
          }
       }
    }
@@ -182,16 +180,17 @@ void ZmqBIP15XDataConnection::listenFunction()
    while (!fatalError_ && !stopThread) {
       // Wake up from time to time to check heartbeats and connection timeout.
       // periodMs should be small enough.
-      int periodMs = std::max(1, int(std::chrono::duration_cast<std::chrono::milliseconds>(heartbeatInterval_).count() / 10));
+      auto periodMs = isConnected_ ? (params_.heartbeatInterval / std::chrono::milliseconds(1) / 5)
+                                   : (params_.connectionTimeout / std::chrono::milliseconds(1) / 10);
 
-      int result = zmq_poll(poll_items, 3, periodMs);
+      int result = zmq_poll(poll_items, 3, std::max(1, int(periodMs)));
       if (result == -1) {
          logger_->error("[{}] poll failed for {} : {}", __func__
             , connectionName_, zmq_strerror(zmq_errno()));
          break;
       }
 
-      if (!isConnected_ && std::chrono::steady_clock::now() - connectionStarted > 2 * heartbeatInterval_) {
+      if (!isConnected_ && std::chrono::steady_clock::now() - connectionStarted > params_.connectionTimeout) {
          if (bip151HandshakeCompleted_ && !bip150HandshakeCompleted_) {
             SPDLOG_LOGGER_ERROR(logger_, "ZMQ BIP connection is timed out (bip151 was completed, probaly client credential is not valid)");
             onError(DataConnectionListener::HandshakeFailed);
@@ -368,7 +367,7 @@ void ZmqBIP15XDataConnection::triggerHeartbeatCheck()
 
    const auto now = std::chrono::steady_clock::now();
    const auto idlePeriod = now - lastHeartbeatSend_;
-   if (idlePeriod < heartbeatInterval_) {
+   if (idlePeriod < params_.heartbeatInterval) {
       return;
    }
    lastHeartbeatSend_ = now;
@@ -384,20 +383,14 @@ void ZmqBIP15XDataConnection::triggerHeartbeatCheck()
    // sendPacket already sets the timestamp.
    sendPacket(packet);
 
-   // Old servers don't send heartbeats.
-   // TODO: Remove this check when all servers are updated.
-   if (!serverSendsHeartbeat_) {
-      return;
-   }
-
-   if (idlePeriod > heartbeatInterval_ * 2) {
+   if (idlePeriod > params_.heartbeatInterval * 2) {
       logger_->debug("[ZmqBIP15XDataConnection:{}] hibernation detected, reset server's last timestamp", __func__);
       lastHeartbeatReply_ = now;
       return;
    }
 
    auto lastHeartbeatDiff = now - lastHeartbeatReply_;
-   if (lastHeartbeatDiff > heartbeatInterval_ * 2) {
+   if (lastHeartbeatDiff > params_.heartbeatInterval * 2) {
       onError(DataConnectionListener::HeartbeatWaitFailed);
    }
 }
@@ -778,7 +771,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       serverPubkeyProm_ = make_shared<promise<bool>>();
 
       // If it's a local connection, get a cookie with the server's key.
-      if (cookie_ == BIP15XCookie::ReadServer) {
+      if (params_.cookie == BIP15XCookie::ReadServer) {
          // Read the cookie with the key to check.
          BinaryData cookieKey(static_cast<size_t>(BTC_ECKEY_COMPRESSED_LENGTH));
          if (!getServerIDCookie(cookieKey)) {
@@ -1009,7 +1002,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
 // OUTPUT: N/A
 // RETURN: N/A
 void ZmqBIP15XDataConnection::setCBs(const cbNewKey& inNewKeyCB) {
-   if (cookie_ == BIP15XCookie::MakeClient) {
+   if (params_.cookie == BIP15XCookie::MakeClient) {
       logger_->error("[{}] Cannot use callbacks when using cookies.", __func__);
       return;
    }
@@ -1058,7 +1051,7 @@ void ZmqBIP15XDataConnection::updatePeerKeys(const ZmqBIP15XPeers &peers)
 bool ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
    , const string& srvAddrPort)
 {
-   if (cookie_ == BIP15XCookie::ReadServer) {
+   if (params_.cookie == BIP15XCookie::ReadServer) {
       // If we get here, it's because the cookie add failed or the cookie was
       // incorrect. Satisfy the promise to prevent lockup.
       logger_->error("[{}] Server ID key cookie could not be verified", __func__);
@@ -1112,18 +1105,18 @@ bool ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::getServerIDCookie(BinaryData& cookieBuf)
 {
-   if (cookie_ != BIP15XCookie::ReadServer) {
+   if (params_.cookie != BIP15XCookie::ReadServer) {
       return false;
    }
 
-   if (!SystemFileUtils::fileExist(bipIDCookiePath_)) {
+   if (!SystemFileUtils::fileExist(params_.cookiePath)) {
       logger_->error("[{}] Server identity cookie ({}) doesn't exist. Unable "
-         "to verify server identity.", __func__, bipIDCookiePath_);
+         "to verify server identity.", __func__, params_.cookiePath);
       return false;
    }
 
    // Ensure that we only read a compressed key.
-   ifstream cookieFile(bipIDCookiePath_, ios::in | ios::binary);
+   ifstream cookieFile(params_.cookiePath, ios::in | ios::binary);
    cookieFile.read(cookieBuf.getCharPtr(), BIP151PUBKEYSIZE);
    cookieFile.close();
    if (!(CryptoECDSA().VerifyPublicKeyValid(cookieBuf))) {
@@ -1143,31 +1136,31 @@ bool ZmqBIP15XDataConnection::getServerIDCookie(BinaryData& cookieBuf)
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::genBIPIDCookie()
 {
-   if (cookie_ != BIP15XCookie::MakeClient) {
+   if (params_.cookie != BIP15XCookie::MakeClient) {
       logger_->error("[{}] ID cookie creation requested but not allowed."
       , __func__);
       return false;
    }
 
-   if (SystemFileUtils::fileExist(bipIDCookiePath_)) {
-      if (!SystemFileUtils::rmFile(bipIDCookiePath_)) {
+   if (SystemFileUtils::fileExist(params_.cookiePath)) {
+      if (!SystemFileUtils::rmFile(params_.cookiePath)) {
          logger_->error("[{}] Unable to delete client identity cookie ({}). "
-            "Will not write a new cookie.", __func__, bipIDCookiePath_);
+            "Will not write a new cookie.", __func__, params_.cookiePath);
          return false;
       }
    }
 
    // Ensure that we only write the compressed key.
-   ofstream cookieFile(bipIDCookiePath_, ios::out | ios::binary);
+   ofstream cookieFile(params_.cookiePath, ios::out | ios::binary);
    const BinaryData ourIDKey = getOwnPubKey();
    if (ourIDKey.getSize() != BTC_ECKEY_COMPRESSED_LENGTH) {
       logger_->error("[{}] Client identity key ({}) is uncompressed. Will not "
-         "write the identity cookie.", __func__, bipIDCookiePath_);
+         "write the identity cookie.", __func__, params_.cookiePath);
       return false;
    }
 
    logger_->debug("[{}] Writing a new client identity cookie ({}).", __func__
-      ,  bipIDCookiePath_);
+      ,  params_.cookiePath);
    cookieFile.write(getOwnPubKey().getCharPtr(), BTC_ECKEY_COMPRESSED_LENGTH);
    cookieFile.close();
 
