@@ -1,7 +1,26 @@
 {
-   "latest_version": "0.19.2",
-   "release_date": "19 Jul 2019",
+   "latest_version": "0.19.3",
+   "release_date": "20 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.19.3",
+         "previous_version": "0.19.2",
+         "release_date": "20 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Settlement wallet reimplementation",
+            "Use correct default AQ dir on linux",
+            "Submit quote with Enter key",
+            "Show auth address in the Auth eId request description",
+            "BsProxy updates",
+            "Clear messages on Logout"
+         ],
+         "bug_fixes": [
+            "Fix TX"
+         ],
+         "revision": "7da2fa7e",
+         "common_revision": "51dee4ea"
+      },
       {
          "version_string": "0.19.2",
          "previous_version": "0.19.1",
