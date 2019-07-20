@@ -1,6 +1,8 @@
 #ifndef ZMQ_BIP15X_HELPERS_H
 #define ZMQ_BIP15X_HELPERS_H
 
+#include <functional>
+#include <future>
 #include <string>
 #include "BinaryData.h"
 
@@ -35,5 +37,7 @@ public:
    static void updatePeerKeys(AuthorizedPeers *authPeers, const std::vector<ZmqBIP15XPeer> &peers);
 };
 
+using ZmqBipNewKeyCb = std::function<void(const std::string &oldKey, const std::string &newKey
+   , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &prompt)>;
 
 #endif

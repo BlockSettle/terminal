@@ -86,8 +86,7 @@ public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger, const ZmqBIP15XDataConnectionParams &params);
    ~ZmqBIP15XDataConnection() noexcept override;
 
-   using cbNewKey = std::function<void(const std::string &oldKey, const std::string &newKey
-      , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &prompt)>;
+   using cbNewKey = ZmqBipNewKeyCb;
 
    ZmqBIP15XDataConnection(const ZmqBIP15XDataConnection&) = delete;
    ZmqBIP15XDataConnection& operator= (const ZmqBIP15XDataConnection&) = delete;

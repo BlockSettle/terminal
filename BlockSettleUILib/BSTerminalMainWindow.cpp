@@ -16,7 +16,6 @@
 
 #include "AboutDialog.h"
 #include "ArmoryServersProvider.h"
-#include "SignersProvider.h"
 #include "AssetManager.h"
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
@@ -34,9 +33,11 @@
 #include "CreateTransactionDialogSimple.h"
 #include "DialogManager.h"
 #include "HeadlessContainer.h"
+#include "ImportKeyBox.h"
 #include "LoginWindow.h"
-#include "MarketDataProvider.h"
 #include "MDAgreementDialog.h"
+#include "MarketDataProvider.h"
+#include "NetworkSettingsLoader.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
@@ -45,6 +46,7 @@
 #include "RequestReplyCommand.h"
 #include "SelectWalletDialog.h"
 #include "Settings/ConfigDialog.h"
+#include "SignersProvider.h"
 #include "StartupDialog.h"
 #include "StatusBarView.h"
 #include "SystemFileUtils.h"
@@ -54,7 +56,6 @@
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "ImportKeyBox.h"
 
 #include <spdlog/spdlog.h>
 
@@ -187,7 +188,20 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
 void BSTerminalMainWindow::onMDConnectionDetailsRequired()
 {
-   GetNetworkSettingsFromPuB([this]() { OnNetworkSettingsLoaded(); } );
+   networkSettingsLoader_ = std::make_unique<NetworkSettingsLoader>(logMgr_->logger()
+      , applicationSettings_->pubBridgeHost(), applicationSettings_->pubBridgePort(), cbApprovePuB_);
+
+   connect(networkSettingsLoader_.get(), &NetworkSettingsLoader::succeed, this, [this] {
+      networkSettingsReceived(networkSettingsLoader_->settings());
+      networkSettingsLoader_.reset();
+   });
+
+   connect(networkSettingsLoader_.get(), &NetworkSettingsLoader::failed, this, [this](const QString &errorMsg) {
+      showError(tr("Network settings"), errorMsg);
+      networkSettingsLoader_.reset();
+   });
+
+   networkSettingsLoader_->loadSettings();
 }
 
 void BSTerminalMainWindow::onBsConnectionFailed()
@@ -217,128 +231,6 @@ void BSTerminalMainWindow::setWidgetsAuthorized(bool authorized)
    ui_->widgetPortfolio->setAuthorized(authorized);
    ui_->widgetRFQ->setAuthorized(authorized);
    ui_->widgetChart->setAuthorized(authorized);
-}
-
-void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()> &cb)
-{
-   if (networkSettings_.isSet) {
-      cb();
-      return;
-   }
-
-   const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
-   connection->setCBs(cbApprovePuB_);
-
-   Blocksettle::Communication::RequestPacket reqPkt;
-   reqPkt.set_requesttype(Blocksettle::Communication::GetNetworkSettingsType);
-   reqPkt.set_requestdata("");
-
-   const auto &title = tr("Network settings");
-   cmdPuBSettings_ = std::make_shared<RequestReplyCommand>("network_settings", connection, logMgr_->logger());
-
-   const auto &populateAppSettings = [this](NetworkSettings settings) {
-      if (!settings.celer.host.empty()) {
-         BsProxy::overrideCelerHost(settings.celer.host, int(settings.celer.port));
-      }
-      if (!settings.marketData.host.empty()) {
-         applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
-         applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
-      }
-      if (!settings.mdhs.host.empty()) {
-         applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
-         applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
-      }
-#ifndef NDEBUG
-      QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
-      QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
-      if (!settings.chat.host.empty()) {
-         if (chost.isEmpty()) {
-            applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-         }
-         if (cport.isEmpty()) {
-            applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-         }
-      }
-#else
-      if (!settings.chat.host.empty()) {
-         applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-         applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-      }
-#endif // NDEBUG
-   };
-
-   cmdPuBSettings_->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
-      QMetaObject::invokeMethod(this, [this, data, title, cb, populateAppSettings] {
-         if (data.empty()) {
-            showError(title, tr("Empty reply from BlockSettle server"));
-         }
-         cmdPuBSettings_->resetConnection();
-         Blocksettle::Communication::GetNetworkSettingsResponse response;
-         if (!response.ParseFromString(data)) {
-            showError(title, tr("Invalid reply from BlockSettle server"));
-            return;
-         }
-
-         if (response.has_celer()) {
-            networkSettings_.celer = { response.celer().host(), response.celer().port() };
-            networkSettings_.isSet = true;
-         }
-         else {
-            showError(title, tr("Missing Celer connection settings"));
-            return;
-         }
-
-         if (response.has_marketdata()) {
-            networkSettings_.marketData = { response.marketdata().host(), response.marketdata().port() };
-            networkSettings_.isSet = true;
-         }
-         else {
-            showError(title, tr("Missing MD connection settings"));
-            return;
-         }
-
-         if (response.has_mdhs()) {
-            networkSettings_.mdhs = { response.mdhs().host(), response.mdhs().port() };
-            networkSettings_.isSet = true;
-         }
-         // else {
-            // showError(title, tr("Missing MDHS connection settings"));
-            // return false;
-         // }
-
-         if (response.has_chat()) {
-            networkSettings_.chat = { response.chat().host(), response.chat().port() };
-            networkSettings_.isSet = true;
-         }
-         else {
-            showError(title, tr("Missing Chat connection settings"));
-            return;
-         }
-
-         populateAppSettings(networkSettings_);
-         cb();
-      });
-      return true;
-   });
-   cmdPuBSettings_->SetErrorCallback([this, title](const std::string& message) {
-      logMgr_->logger()->error("[GetNetworkSettingsFromPuB] error: {}", message);
-      QMetaObject::invokeMethod(this, [this, title] {
-         showError(title, tr("Failed to obtain network settings from BlockSettle server"));
-         cmdPuBSettings_->resetConnection();
-      });
-   });
-
-   if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->pubBridgeHost()
-      , applicationSettings_->pubBridgePort(), reqPkt.SerializeAsString(), true)) {
-      logMgr_->logger()->error("[GetNetworkSettingsFromPuB] failed to send request");
-      showError(title, tr("Failed to retrieve network settings due to invalid connection to BlockSettle server"));
-   }
-}
-
-void BSTerminalMainWindow::OnNetworkSettingsLoaded()
-{
-   mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
 }
 
 void BSTerminalMainWindow::postSplashscreenActions()
@@ -1200,45 +1092,35 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username)
 
 void BSTerminalMainWindow::onLogin()
 {
-   LoadCCDefinitionsFromPuB();
-
-   GetNetworkSettingsFromPuB([this]() {
-      OnNetworkSettingsLoaded();
-      readyToLogin();
-   });
-}
-
-void BSTerminalMainWindow::readyToLogin()
-{
-   authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
-
-   createBsClient();
-
-   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, bsClient_.get(), this);
+   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, cbApprovePuB_, this);
 
    int rc = loginDialog.exec();
 
-   if (rc == QDialog::Accepted) {
-      currentUserLogin_ = loginDialog.getUsername();
-      std::string jwt;
-      auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
-      setLoginButtonText(currentUserLogin_);
-      setWidgetsAuthorized(true);
-
-#ifndef PRODUCTION_BUILD
-      // TODO: uncomment this section once we have armory connection
-      // if (isArmoryConnected()) {
-         loginToCeler(loginDialog.getUsername().toStdString());
-      // } else {
-         // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
-      // }
-#endif
-
-      // Market data, charts and chat should be available for all Auth eID logins
-      mdProvider_->SubscribeToMD();
-   } else {
+   if (rc != QDialog::Accepted) {
       setWidgetsAuthorized(false);
+      return;
    }
+
+   bsClient_ = loginDialog.getClient();
+
+   connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
+
+   networkSettingsReceived(loginDialog.networkSettings());
+
+   authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
+
+   currentUserLogin_ = loginDialog.getUsername();
+   std::string jwt;
+   auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+   setLoginButtonText(currentUserLogin_);
+   setWidgetsAuthorized(true);
+
+   loginToCeler(loginDialog.getUsername().toStdString());
+
+   // Market data, charts and chat should be available for all Auth eID logins
+   mdProvider_->SubscribeToMD();
+
+   LoadCCDefinitionsFromPuB();
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -1756,6 +1638,41 @@ void BSTerminalMainWindow::InitWidgets()
                              , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_);
 }
 
+void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settings)
+{
+   if (!settings.celer.host.empty()) {
+      BsProxy::overrideCelerHost(settings.celer.host, int(settings.celer.port));
+   }
+   if (!settings.marketData.host.empty()) {
+      applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
+      applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
+   }
+   if (!settings.mdhs.host.empty()) {
+      applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
+      applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
+   }
+#ifndef NDEBUG
+   QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
+   QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
+   if (!settings.chat.host.empty()) {
+      if (chost.isEmpty()) {
+         applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
+      }
+      if (cport.isEmpty()) {
+         applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
+      }
+   }
+#else
+   if (!settings.chat.host.empty()) {
+      applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
+      applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
+   }
+#endif // NDEBUG
+
+   mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
+      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
+}
+
 void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)
 {
    // multi thread scope, it's safe to call this function from different threads
@@ -1773,21 +1690,4 @@ void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &de
       }
 
    }, Qt::QueuedConnection);
-}
-
-
-void BSTerminalMainWindow::createBsClient()
-{
-   BsClientParams params;
-   params.context = std::make_shared<ZmqContext>(logMgr_->logger());
-   params.newServerKeyCallback = [](const BsClientParams::NewKey &newKey) {
-      // FIXME: Show GUI prompt
-      newKey.prompt->set_value(true);
-   };
-
-   bsClient_ = std::make_unique<BsClient>(logMgr_->logger(), params);
-   connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
-
-   authAddrDlg_->setBsClient(bsClient_.get());
-   ccFileManager_->setBsClient(bsClient_.get());
 }

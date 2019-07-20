@@ -26,22 +26,25 @@ namespace bs {
    }
 }
 
+struct NetworkSettings;
+
 class AboutDialog;
 class ArmoryServersProvider;
-class SignersProvider;
 class AssetManager;
 class AuthAddressDialog;
 class AuthAddressManager;
 class AutheIDClient;
 class BSMarketDataProvider;
 class BSTerminalSplashScreen;
+class BaseCelerClient;
 class CCFileManager;
 class CCPortfolioModel;
-class BaseCelerClient;
 class ConnectionManager;
-class QSystemTrayIcon;
 class LoginWindow;
+class NetworkSettingsLoader;
+class QSystemTrayIcon;
 class RequestReplyCommand;
+class SignersProvider;
 class StatusBarView;
 class StatusViewBlockListener;
 class TransactionsViewModel;
@@ -125,9 +128,6 @@ private slots:
    void onTabWidgetCurrentChanged(const int &index);
 
 private:
-   // display login dialog once network settings loaded
-   void readyToLogin();
-
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
    QAction *action_send_ = nullptr;
    QAction *action_receive_ = nullptr;
@@ -141,8 +141,6 @@ private:
    std::shared_ptr<SignersProvider>       signersProvider_;
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<ArmoryObject>          armory_;
-
-   std::shared_ptr<RequestReplyCommand>   cmdPuBSettings_;
 
    std::shared_ptr<StatusBarView>            statusBarView_;
    std::shared_ptr<QSystemTrayIcon>          sysTrayIcon_;
@@ -160,20 +158,6 @@ private:
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
    QString currentUserLogin_;
-
-   struct NetworkSettings {
-      struct Connection {
-         std::string host;
-         uint32_t    port;
-      };
-      Connection  celer;
-      Connection  marketData;
-      Connection  mdhs;
-      Connection  chat;
-      bool        isSet = false;
-   };
-   void GetNetworkSettingsFromPuB(const std::function<void()> &);
-   void OnNetworkSettingsLoaded();
 
 public slots:
    void onReactivate();
@@ -233,11 +217,10 @@ private:
 
    void InitWidgets();
 
-   void createBsClient();
+   void networkSettingsReceived(const NetworkSettings &settings);
 
 private:
    QString           loginButtonText_;
-   NetworkSettings   networkSettings_;
    bool readyToRegisterWallets_ = false;
    bool wasWalletsRegistered_ = false;
    bool initialWalletCreateDialogShown_ = false;
@@ -245,6 +228,8 @@ private:
    bool armoryBDVRegistered_ = false;
    bool walletsSynched_ = false;
    bool deferCCsync_ = false;
+
+   std::unique_ptr<NetworkSettingsLoader> networkSettingsLoader_;
 
    SignContainer::ConnectionError lastSignerError_{};
 
