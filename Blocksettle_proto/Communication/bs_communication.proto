@@ -194,7 +194,6 @@ message ConfirmAuthSubmitRequest
    required string address = 2;
    required AddressNetworkType networkType = 3;
    required AddressScriptType  scriptType = 4;
-   required bytes  publicKey = 5;
    required string userId = 6;
 }
 
@@ -238,4 +237,5 @@ message GetNetworkSettingsResponse
    optional ConnectionData marketData = 2;
    optional ConnectionData mdhs = 3;
    optional ConnectionData chat = 4;
+   optional ConnectionData proxy = 5;
 }

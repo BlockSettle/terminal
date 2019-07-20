@@ -37,6 +37,7 @@ struct BsProxyParams
 
    std::string ownKeyFileDir;
    std::string ownKeyFileName;
+   std::string ownPubKeyDump;
 
    std::string listenAddress{"127.0.0.1"};
    int listenPort{10259};
