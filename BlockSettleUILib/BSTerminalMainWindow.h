@@ -99,13 +99,9 @@ private:
    void setWidgetsAuthorized(bool authorized);
 
 signals:
-   void readyToLogin();
    void armoryServerPromptResultReady();
 
 private slots:
-   // display login dialog once network settings loaded
-   void onReadyToLogin();
-
    void InitTransactionsView();
    void ArmoryIsOffline();
    void SignerReady();
@@ -129,6 +125,9 @@ private slots:
    void onTabWidgetCurrentChanged(const int &index);
 
 private:
+   // display login dialog once network settings loaded
+   void readyToLogin();
+
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
    QAction *action_send_ = nullptr;
    QAction *action_receive_ = nullptr;

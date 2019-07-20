@@ -115,7 +115,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    }
 
    connect(ui_->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
-   connect(this, &BSTerminalMainWindow::readyToLogin, this, &BSTerminalMainWindow::onReadyToLogin);
 
    logMgr_ = std::make_shared<bs::LogManager>();
    logMgr_->add(applicationSettings_->GetLogsConfig());
@@ -1205,11 +1204,11 @@ void BSTerminalMainWindow::onLogin()
 
    GetNetworkSettingsFromPuB([this]() {
       OnNetworkSettingsLoaded();
-      emit readyToLogin();
+      readyToLogin();
    });
 }
 
-void BSTerminalMainWindow::onReadyToLogin()
+void BSTerminalMainWindow::readyToLogin()
 {
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
 
