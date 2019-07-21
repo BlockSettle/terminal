@@ -100,8 +100,9 @@ private:
 
    bool onSignTxRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet
       , Blocksettle::Communication::headless::RequestType requestType);
-   bool onSignPayoutTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSignMultiTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
+   bool onSignSettlementPayoutTxRequest(const std::string &clientId
+      , const Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCreateHDLeaf(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSetUserId(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSyncCCNames(Blocksettle::Communication::headless::RequestPacket &packet);
@@ -116,6 +117,11 @@ private:
    bool onSyncNewAddr(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onExecCustomDialog(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
 
+   bool onCreateSettlWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSetSettlementId(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onGetPayinAddr(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSettlGetRootPubkey(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+
    bool AuthResponse(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    void SignTXResponse(const std::string &clientId, unsigned int id, Blocksettle::Communication::headless::RequestType reqType
       , bs::error::ErrorCode errorCode, const BinaryData &tx = {});
@@ -128,8 +134,7 @@ private:
       , Blocksettle::Communication::headless::AuthWalletResponseType, const std::string &walletId = {});
    void AutoSignActivatedEvent(const std::string &walletId, bool active);
 
-   bool CreateHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::CreateHDLeafRequest &request
-      , const std::vector<bs::wallet::PasswordData> &pwdData);
+   bool createHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::CreateHDLeafRequest &request);
    bool RequestPasswordIfNeeded(const std::string &clientId, const bs::core::wallet::TXSignRequest &
       , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
       , const PasswordReceivedCb &cb);

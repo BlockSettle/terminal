@@ -271,8 +271,8 @@ namespace bs {
             SettlementLeaf(const std::string &walletId, const std::string &name, 
                const std::string &desc, SignContainer *, const std::shared_ptr<spdlog::logger> &);
 
-            SecureBinaryData getRootPubkey(void) const;
-            void setSettlementID(const SecureBinaryData&);
+            void getRootPubkey(const std::function<void(const SecureBinaryData &)> &) const;
+            void setSettlementID(const SecureBinaryData &, const std::function<void(bool)> &);
 
          protected:
             void createAddress(const CbAddress &, const AddrPoolKey &) override;

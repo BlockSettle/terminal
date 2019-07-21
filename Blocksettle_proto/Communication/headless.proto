@@ -9,7 +9,7 @@ enum RequestType
    AuthenticationRequestType   = 1;
    SignTxRequestType           = 2;
    SignPartialTXRequestType    = 3;
-   SignPayoutTXRequestType     = 4;
+   SetSettlementIdType         = 5;
    SetUserIdType               = 6;
    CreateSettlWalletType       = 7;
    CreateHDLeafRequestType     = 8;
@@ -31,9 +31,11 @@ enum RequestType
    ExtendAddressChainType      = 23;
    SyncNewAddressType	       = 24;
    SignSettlementTxRequestType = 25;
-   SignSettlementPartialTxRequestType = 26;
-   SignSettlementPayoutTxRequestType = 27;
+   SignSettlementPartialTxType = 26;
+   SignSettlementPayoutTxType  = 27;
    SyncCCNamesType             = 28;
+   GetSettlPayinAddrType       = 29;
+   SettlGetRootPubkeyType      = 30;
 }
 
 message RequestPacket
@@ -127,25 +129,68 @@ message SignPayoutTXRequest
 {
    bytes    input = 1;
    bytes    recipient = 2;
-   string   authAddress = 3;
-   bytes    settlementId = 4;
-   bytes    password = 8;
+   uint64   fee = 3;
+   SettlementData settlement_data = 4;
 }
 
-message PasswordRequest
+
+message CreateSettlWalletRequest
 {
-   string   walletId = 1;
-   string   prompt = 2;
-   repeated uint32 encTypes = 3;
-   repeated bytes  encKeys = 4;
-   uint32   rankM = 5;
+   string wallet_id = 1;
+   string auth_address = 2;
 }
 
-message PasswordReply
+message CreateSettlWalletResponse
 {
-   uint32   errorCode = 1;
-   string   walletId = 2;
-   bytes    password = 3;
+   string wallet_id = 1;
+   bytes  public_key = 2;
+}
+
+message SetSettlementIdRequest
+{
+   string wallet_id = 1;
+   bytes  settlement_id = 2;
+}
+
+message SetSettlementIdResponse
+{
+   string wallet_id = 1;
+   bool   success = 2;
+}
+
+message SettlementData
+{
+   bytes  settlement_id = 1;
+   bytes  counterparty_pubkey = 2;
+   bool   my_pubkey_first = 3;
+}
+
+message SettlPayinAddressRequest
+{
+   string wallet_id = 1;
+   SettlementData settlement_data = 2;
+}
+
+message SettlPayinAddressResponse
+{
+   string wallet_id = 1;
+   bool   success = 2;
+   string address = 3;
+}
+
+message SettlGetRootPubkeyRequest
+{
+   oneof request {
+      string   wallet_id = 1;
+      string   address = 2;
+   }
+}
+
+message SettlGetRootPubkeyResponse
+{
+   string wallet_id = 1;
+   bool   success = 2;
+   bytes  public_key = 3;
 }
 
 
@@ -294,7 +339,6 @@ message SignTXMultiRequest
    bytes             signerState = 2;
 }
 
-
 enum WalletFormat
 {
    WalletFormatUnknown    = 0;
@@ -420,13 +464,6 @@ message ExtendAddressChainResponse
    }
    string wallet_id = 1;
    repeated AddressPair addresses = 2;
-}
-
-message SettlWalletResponse
-{
-   string walletId = 1;
-   string name = 2;
-   string description = 3;
 }
 
 

@@ -1,12 +1,15 @@
 #include "SettlementMonitor.h"
-
 #include "FastLock.h"
+#include "CoinSelection.h"
+#include "Wallets/SyncWallet.h"
+
 
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
-   : rtWallet_(rtWallet)
+   : ArmoryCallbackTarget(armory.get())
+   , rtWallet_(rtWallet)
    , addressEntry_(entryToAddress(addr))
    , armoryPtr_(armory)
    , logger_(logger)
@@ -21,13 +24,38 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
    , const std::shared_ptr<spdlog::logger>& logger)
-   : rtWallet_(rtWallet)
+   : ArmoryCallbackTarget(armory.get())
+   , rtWallet_(rtWallet)
    , armoryPtr_(armory)
    , logger_(logger)
    , addressString_(addr.display())
 {
    const auto &addrHashes = addrEntry->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
+}
+
+bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection> &armory
+   , const bs::Address &addr, const std::shared_ptr<spdlog::logger> &logger
+   , const std::function<void()> &cbInited)
+   : ArmoryCallbackTarget(armory.get())
+   , armoryPtr_(armory)
+   , logger_(logger)
+   , addressString_(addr.display())
+{
+   const auto walletId = addr.display();
+   rtWallet_ = armory_->instantiateWallet(walletId);
+   armory_->registerWallet(rtWallet_, walletId, walletId, { addr.id() }
+   , [cbInited](const std::string &) { cbInited(); });
+}
+
+void bs::SettlementMonitor::onNewBlock(unsigned int)
+{
+   checkNewEntries();
+}
+
+void bs::SettlementMonitor::onZCReceived(const std::vector<bs::TXEntry> &)
+{
+   checkNewEntries();
 }
 
 void bs::SettlementMonitor::checkNewEntries()
@@ -70,7 +98,7 @@ void bs::SettlementMonitor::checkNewEntries()
             IsPayInTransaction(entry, cbPayIn);
          }
       }
-      catch(std::exception& e) {
+      catch (std::exception& e) {
          if(logger_ != nullptr) {
             logger_->error("[bs::SettlementMonitor::checkNewEntries] Return " \
                "data error - {}", e.what());
@@ -200,6 +228,104 @@ void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEn
    }
 }
 
+void bs::SettlementMonitor::getPayinInput(const std::function<void(UTXO)> &cb
+   , bool allowZC)
+{
+   const auto &cbSpendable = [this, cb, allowZC]
+      (ReturnMessage<std::vector<UTXO>> inputs) {
+      try {
+         auto inUTXOs = inputs.get();
+         if (inUTXOs.empty()) {
+            if (allowZC) {
+               const auto &cbZC = [this, cb]
+               (ReturnMessage<std::vector<UTXO>> zcs)->void {
+                  try {
+                     auto inZCUTXOs = zcs.get();
+                     if (inZCUTXOs.size() == 1) {
+                        cb(inZCUTXOs[0]);
+                     }
+                     else {
+                        cb({});
+                     }
+                  } catch (std::exception& e) {
+                     if (logger_ != nullptr) {
+                        logger_->error("[bs::SettlementWallet::GetInputFor] " \
+                           "Return data error (getSpendableZCList) - {}",
+                           e.what());
+                     }
+                  }
+               };
+               rtWallet_->getSpendableZCList(cbZC);
+            }
+         } else if (inUTXOs.size() == 1) {
+            cb(inUTXOs[0]);
+         }
+         else {
+            cb({});
+         }
+      } catch (const std::exception &e) {
+         if (logger_ != nullptr) {
+            logger_->error("[bs::SettlementWallet::GetInputFor] Return data " \
+               "error (getSpendableTxOutListForValue) - {}", e.what());
+         }
+         cb({});
+      }
+   };
+   rtWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbSpendable);
+}
+
+uint64_t bs::SettlementMonitor::getEstimatedFeeFor(UTXO input, const bs::Address &recvAddr
+   , float feePerByte, unsigned int topBlock)
+{
+   if (!input.isInitialized()) {
+      return 0;
+   }
+   const auto inputAmount = input.getValue();
+   if (input.txinRedeemSizeBytes_ == UINT32_MAX) {
+      const bs::Address scrAddr(input.getRecipientScrAddr());
+      input.txinRedeemSizeBytes_ = (unsigned int)scrAddr.getInputSize();
+   }
+   CoinSelection coinSelection([&input](uint64_t) -> std::vector<UTXO> { return { input }; }
+   , std::vector<AddressBookEntry>{}, inputAmount, topBlock);
+
+   const auto &scriptRecipient = recvAddr.getRecipient(inputAmount);
+   return coinSelection.getFeeForMaxVal(scriptRecipient->getSize(), feePerByte, { input });
+}
+
+bs::core::wallet::TXSignRequest bs::SettlementMonitor::createPayoutTXRequest(const UTXO &input
+   , const bs::Address &recvAddr, float feePerByte, unsigned int topBlock)
+{
+   bs::core::wallet::TXSignRequest txReq;
+   txReq.inputs.push_back(input);
+   uint64_t fee = getEstimatedFeeFor(input, recvAddr, feePerByte, topBlock);
+
+   if (fee < bs::sync::wallet::kMinRelayFee) {
+      fee = bs::sync::wallet::kMinRelayFee;
+   }
+
+   uint64_t value = input.getValue();
+   if (value < fee) {
+      value = 0;
+   } else {
+      value = value - fee;
+   }
+
+   txReq.fee = fee;
+   txReq.recipients.emplace_back(recvAddr.getRecipient(value));
+   return txReq;
+}
+
+UTXO bs::SettlementMonitor::getInputFromTX(const bs::Address &addr
+   , const BinaryData &payinHash, const double amount)
+{
+   const uint64_t value = amount * BTCNumericTypes::BalanceDivider;
+   const uint32_t txHeight = UINT32_MAX;
+
+   return UTXO(value, txHeight, 0, 0, payinHash
+      , BtcUtils::getP2WSHOutputScript(addr.unprefixed()));
+}
+
+
 void bs::PayoutSigner::WhichSignature(const Tx& tx
    , uint64_t value
    , const std::shared_ptr<bs::SettlementAddress> &ae
@@ -323,7 +449,6 @@ bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
    : SettlementMonitor(rtWallet, armory, addr, logger)
-   , ArmoryCallbackTarget(armory.get())
 {}
 
 bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
@@ -331,7 +456,6 @@ bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr
    , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
    , const std::shared_ptr<spdlog::logger>& logger)
    : SettlementMonitor(rtWallet, armory, addrEntry, addr, logger)
-   , ArmoryCallbackTarget(armory.get())
 {}
 
 bs::SettlementMonitorQtSignals::~SettlementMonitorQtSignals() noexcept
@@ -350,16 +474,6 @@ void bs::SettlementMonitorQtSignals::stop()
    armory_->removeTarget(this);
 }
 
-void bs::SettlementMonitorQtSignals::onNewBlock(unsigned int)
-{
-   checkNewEntries();
-}
-
-void bs::SettlementMonitorQtSignals::onZCReceived(const std::vector<bs::TXEntry> &)
-{
-   checkNewEntries();
-}
-
 void bs::SettlementMonitorQtSignals::onPayInDetected(int confirmationsNumber, const BinaryData &txHash)
 {
    emit payInDetected(confirmationsNumber, txHash);
@@ -376,14 +490,14 @@ void bs::SettlementMonitorQtSignals::onPayOutConfirmed(PayoutSigner::Type signed
 }
 
 
-bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
  : SettlementMonitor(rtWallet, armory, addr, logger)
 {}
 
-bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
    , const std::shared_ptr<spdlog::logger>& logger)

@@ -145,14 +145,13 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
    
    const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
    const bool isChatTabActive = mainWinUi_->tabWidget->currentIndex() == chatIndex && QApplication::activeWindow();
-   auto updateChatIconAndCheckNotificationCond = [&](int messageSize) -> bool {
+   auto updateChatIconAndCheckChatTab = [&]() -> bool {
       if (isChatTabActive) {
          mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
       } else {
          mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon(QLatin1String(":/ICON_DOT")));
       }
-
-      return (msg.size() == messageSize && !isChatTabActive);
+      return isChatTabActive;
    };
 
    switch (nt) {
@@ -207,8 +206,9 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       break;
 
    case bs::ui::NotifyType::UpdateUnreadMessage:
-      if (!updateChatIconAndCheckNotificationCond(3))
+      if (updateChatIconAndCheckChatTab() || msg.size() != 3) {
          return;
+      }
 
       title = msg[0].toString();
       text = msg[1].toString();
@@ -223,8 +223,9 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       break;
 
    case bs::ui::NotifyType::FriendRequest:
-      if (!updateChatIconAndCheckNotificationCond(1))
+      if (updateChatIconAndCheckChatTab() || msg.size() != 1) {
          return;
+      }
 
       title = tr("New contact request");
       text = tr("%1 would like to add you as a contact").arg(msg[0].toString());
