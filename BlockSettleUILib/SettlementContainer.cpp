@@ -1,11 +1,10 @@
 #include "SettlementContainer.h"
-#include "ArmoryConnection.h"
 #include "UiUtils.h"
 
 using namespace bs;
 
-SettlementContainer::SettlementContainer(const std::shared_ptr<ArmoryConnection> &armory)
-   : QObject(nullptr), ArmoryCallbackTarget(armory.get())
+SettlementContainer::SettlementContainer()
+   : QObject(nullptr)
 {}
 
 sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const

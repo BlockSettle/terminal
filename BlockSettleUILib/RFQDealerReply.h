@@ -117,6 +117,7 @@ namespace bs {
          void onCreateHDWalletError(unsigned int id, std::string error);
          void onSignerStateUpdated();
          void onAutoSignActivated();
+         void onAuthAddrChanged(int);
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -139,6 +140,7 @@ namespace bs {
          std::shared_ptr<bs::sync::Wallet>   prevWallet_;
          std::shared_ptr<bs::sync::Wallet>   ccWallet_;
          std::shared_ptr<bs::sync::Wallet>   xbtWallet_;
+         std::string authKey_;
 
          std::unordered_map<std::string, double>   sentNotifs_;
          network::QuoteReqNotification    currentQRN_;

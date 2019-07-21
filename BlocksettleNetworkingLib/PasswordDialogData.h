@@ -16,11 +16,12 @@ public:
    PasswordDialogData(QObject *parent = nullptr) : QObject(parent) {}
    PasswordDialogData(const Blocksettle::Communication::Internal::PasswordDialogData &info, QObject *parent = nullptr);
    PasswordDialogData(const PasswordDialogData &src);
+   PasswordDialogData(const QVariantMap &values, QObject *parent = nullptr)
+      : QObject(parent), values_(values) { }
 
    Blocksettle::Communication::Internal::PasswordDialogData toProtobufMessage() const;
 
    QVariantMap values() const;
-   void setValues(const QVariantMap &values);
 
    QVariant value(const QString &key) const;
    QVariant value(const char *key) const;
@@ -31,6 +32,9 @@ public:
 
 signals:
    void dataChanged();
+
+private:
+   void setValues(const QVariantMap &values);
 
 private:
    QVariantMap values_;

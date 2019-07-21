@@ -2,11 +2,9 @@
 #include <QTimer>
 #include <spdlog/spdlog.h>
 #include "Address.h"
-#include "CoreSettlementWallet.h"
 #include "CoreWalletsManager.h"
 #include "CoreHDWallet.h"
 #include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncSettlementWallet.h"
 
 InprocSigner::InprocSigner(const std::shared_ptr<bs::core::WalletsManager> &mgr
    , const std::shared_ptr<spdlog::logger> &logger, const std::string &walletsPath
@@ -50,7 +48,7 @@ bool InprocSigner::Start()
 // a password should be passed directly to signing methods
 
 bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
-   TXSignMode mode, const PasswordType &password, bool)
+   TXSignMode mode, bool)
 {
    if (!txSignReq.isValid()) {
       logger_->error("[{}] Invalid TXSignRequest", __func__);
@@ -82,53 +80,44 @@ bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSign
    return reqId;
 }
 
-bs::signer::RequestId InprocSigner::signPartialTXRequest(const bs::core::wallet::TXSignRequest &txReq
-   , const PasswordType &password)
-{
-   return signTXRequest(txReq, TXSignMode::Partial, password);
-}
-
-bs::signer::RequestId InprocSigner::signPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
-   , const bs::Address &authAddr, const std::string &settlementId, const PasswordType &password)
-{
-   if (!txSignReq.isValid()) {
-      logger_->error("[{}] Invalid TXSignRequest", __func__);
-      return 0;
-   }
-/*   const auto settlWallet = std::dynamic_pointer_cast<bs::core::SettlementWallet>(walletsMgr_->getSettlementWallet());
-   if (!settlWallet) {
-      logger_->error("[{}] failed to find settlement wallet", __func__);
-      return 0;
-   }
-   const auto authWallet = walletsMgr_->getAuthWallet();
-   if (!authWallet) {
-      logger_->error("[{}] failed to find auth wallet", __func__);
-      return 0;
-   }*/
-   bs::core::KeyPair authKeys; // = authWallet->getKeyPairFor(authAddr, password);
-   if (authKeys.privKey.isNull() || authKeys.pubKey.isNull()) {
-      logger_->error("[{}] failed to get priv/pub keys for {}", __func__, authAddr.display());
-      return 0;
-   }
-
-   const auto reqId = seqId_++;
-   try { //FIXME: when we have clarity with settlement wallet
-/*      const auto signedTx = settlWallet->signPayoutTXRequest(txSignReq, authKeys, settlementId);
-      QTimer::singleShot(1, [this, reqId, signedTx] {
-         emit TXSigned(reqId, signedTx, bs::error::ErrorCode::NoError);
-      });*/
-   } catch (const std::exception &e) {
-      QTimer::singleShot(1, [this, reqId, e] {
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::InternalError, e.what());
-      });
-   }
-   return reqId;
-}
-
 bs::signer::RequestId InprocSigner::signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &)
 {
    logger_->info("[{}] currently not supported", __func__);
    return 0;
+}
+
+bs::signer::RequestId InprocSigner::signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &txReq
+   , const bs::core::wallet::SettlementData &sd, const bs::sync::PasswordDialogData &
+   , const std::function<void(bs::error::ErrorCode, const BinaryData &signedTX)> &cb)
+{
+   if (!txReq.isValid()) {
+      logger_->error("[{}] Invalid payout TX sign request", __func__);
+      return 0;
+   }
+   const auto wallet = walletsMgr_->getPrimaryWallet();
+   if (!wallet) {
+      logger_->error("[{}] failed to find primary wallet", __func__);
+      return 0;
+   }
+
+   const auto reqId = seqId_++;
+   try {
+      const auto signedTx = wallet->signSettlementTXRequest(txReq, sd);
+      QTimer::singleShot(1, [this, reqId, signedTx] {
+         emit TXSigned(reqId, signedTx, bs::error::ErrorCode::NoError);
+      });
+      if (cb) {
+         cb(bs::error::ErrorCode::NoError, signedTx);
+      }
+   } catch (const std::exception &e) {
+      QTimer::singleShot(1, [this, reqId, e] {
+         emit TXSigned(reqId, {}, bs::error::ErrorCode::InternalError, e.what());
+      });
+      if (cb) {
+         cb(bs::error::ErrorCode::InternalError, {});
+      }
+   }
+   return reqId;
 }
 
 bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
@@ -195,25 +184,26 @@ bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId
    return reqId;
 }
 
-void InprocSigner::createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &cb)
+void InprocSigner::createSettlementWallet(const bs::Address &authAddr
+   , const std::function<void(const SecureBinaryData &)> &cb)
 {
-/*   auto wallet = walletsMgr_->getSettlementWallet();
-   if (!wallet) {
-      wallet = walletsMgr_->createSettlementWallet(netType_, walletsPath_);
+   const auto priWallet = walletsMgr_->getPrimaryWallet();
+   if (!priWallet) {
+      if (cb)
+         cb({});
+      return;
    }
-   const auto settlWallet = std::make_shared<bs::sync::SettlementWallet>(wallet->walletId(), wallet->name()
-      , "", this, logger_);
-   if (cb) {
-      cb(settlWallet);
-   }*/
-   if (cb) {
-      cb(nullptr);
+   const auto leaf = priWallet->createSettlementLeaf(authAddr);
+   if (!leaf) {
+      if (cb)
+         cb({});
+      return;
    }
-}
-
-bs::signer::RequestId InprocSigner::customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data)
-{
-   return 0;
+   const auto &cbWrap = [cb](bool, const SecureBinaryData &pubKey) {
+      if (cb)
+         cb(pubKey);
+   };
+   getRootPubkey(priWallet->walletId(), cbWrap);
 }
 
 bs::signer::RequestId InprocSigner::setUserId(const BinaryData &userId, const std::string &walletId)
@@ -310,16 +300,13 @@ void InprocSigner::syncHDWallet(const std::string &id, const std::function<void(
 {
    bs::sync::HDWalletData result;
    const auto hdWallet = walletsMgr_->getHDWalletById(id);
-   if (hdWallet) 
-   {
-      for (const auto &group : hdWallet->getGroups()) 
-      {
+   if (hdWallet) {
+      for (const auto &group : hdWallet->getGroups()) {
          bs::sync::HDWalletData::Group groupData;
          groupData.type = static_cast<bs::hd::CoinType>(group->index());
          groupData.extOnly = group->isExtOnly();
 
-         if (groupData.type == bs::hd::CoinType::BlockSettle_Auth)
-         {
+         if (groupData.type == bs::hd::CoinType::BlockSettle_Auth) {
             auto authGroupPtr = 
                std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
             if (authGroupPtr == nullptr)
@@ -328,18 +315,28 @@ void InprocSigner::syncHDWallet(const std::string &id, const std::function<void(
             groupData.salt = authGroupPtr->getSalt();
          }
 
-         for (const auto &leaf : group->getLeaves()) 
-         {
-            //ext only needs to be reflected on headless signer
+         for (const auto &leaf : group->getLeaves()) {
+            BinaryData extraData;
+            if (groupData.type == bs::hd::CoinType::BlockSettle_Settlement) {
+               const auto settlLeaf = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(leaf);
+               if (settlLeaf == nullptr) {
+                  throw std::runtime_error("unexpected leaf type");
+               }
+               const auto rootAsset = settlLeaf->getRootAsset();
+               const auto rootSingle = std::dynamic_pointer_cast<AssetEntry_Single>(rootAsset);
+               if (rootSingle == nullptr) {
+                  throw std::runtime_error("invalid root asset");
+               }
+               extraData = BtcUtils::getHash160(rootSingle->getPubKey()->getCompressedKey());
+            }
             groupData.leaves.push_back(
-               { leaf->walletId(), leaf->index(), leaf->hasExtOnlyAddresses() });
+               { leaf->walletId(), leaf->index(), leaf->hasExtOnlyAddresses(), std::move(extraData) });
          }
 
          result.groups.push_back(groupData);
       }
    }
-   else 
-   {
+   else {
       logger_->error("[{}] failed to find HD wallet with id {}", __func__, id);
    }
 
@@ -549,8 +546,8 @@ void InprocSigner::syncAddressBatch(
       cb(bs::sync::SyncState::NothingToDo);
 }
 
-void InprocSigner::setSettlementID(
-   const std::string& wltId, const SecureBinaryData& settlId)
+void InprocSigner::setSettlementID(const std::string& wltId
+   , const SecureBinaryData &settlId, const std::function<void(bool)> &cb)
 {
    /***
    For remote methods, the caller should wait on return before
@@ -560,9 +557,12 @@ void InprocSigner::setSettlementID(
    auto leafPtr = walletsMgr_->getWalletById(wltId);
    auto settlLeafPtr = 
       std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(leafPtr);
-   if (settlLeafPtr == nullptr)
-      throw std::runtime_error("unexpected leaf type");
-
+   if (settlLeafPtr == nullptr) {
+      if (cb) {
+         cb(false);
+      }
+      return;
+   }
    settlLeafPtr->addSettlementID(settlId);
 
    /*
@@ -571,29 +571,41 @@ void InprocSigner::setSettlementID(
    aren't registered.
    */
    settlLeafPtr->getNewExtAddress();
+   if (cb) {
+      cb(true);
+   }
 }
 
-bs::Address InprocSigner::getSettlementPayinAddress(
-   const std::string& walletID,
-   const SecureBinaryData& settlementID, 
-   const SecureBinaryData& counterPartyPubKey, 
-   bool isMyKeyFirst) const
+void InprocSigner::getSettlementPayinAddress(const std::string& walletID
+   , const bs::core::wallet::SettlementData &sd
+   , const std::function<void(bool, bs::Address)> &cb)
 {
    auto wltPtr = walletsMgr_->getHDWalletById(walletID);
-   if (wltPtr == nullptr)
-      throw std::runtime_error("unknown wallet");
+   if (wltPtr == nullptr) {
+      if (cb) {
+         cb(false, {});
+      }
+      return;
+   }
 
-   return wltPtr->getSettlementPayinAddress(
-      settlementID, counterPartyPubKey, isMyKeyFirst);
+   if (cb) {
+      cb(true, wltPtr->getSettlementPayinAddress(sd));
+   }
 }
 
-SecureBinaryData InprocSigner::getRootPubkey(const std::string& walletID) const
+void InprocSigner::getRootPubkey(const std::string& walletID
+   , const std::function<void(bool, const SecureBinaryData &)> &cb)
 {
    auto leafPtr = walletsMgr_->getWalletById(walletID);
    auto rootPtr = leafPtr->getRootAsset();
    auto rootSingle = std::dynamic_pointer_cast<AssetEntry_Single>(rootPtr);
-   if (rootSingle == nullptr)
-      throw AssetException("unexpected asset type");
+   if (rootSingle == nullptr) {
+      if (cb) {
+         cb(false, {});
+      }
+   }
 
-   return rootSingle->getPubKey()->getCompressedKey();
+   if (cb) {
+      cb(true, rootSingle->getPubKey()->getCompressedKey());
+   }
 }

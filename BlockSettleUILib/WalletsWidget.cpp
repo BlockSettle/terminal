@@ -358,7 +358,7 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
 
    const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances) 
    {
-      if ((curWallet_ == walletsManager_->getSettlementWallet()) && walletsManager_->getAuthWallet()
+      if (/*(curWallet_ == walletsManager_->getSettlementWallet()) &&*/ walletsManager_->getAuthWallet()
          /*&& (curWallet_->getAddrTxN(curAddress_) == 1)*/ && balances[0]) {
          contextMenu->addAction(actRevokeSettl_);
       }
@@ -620,44 +620,39 @@ void WalletsWidget::onEditAddrComment()
 
 void WalletsWidget::onRevokeSettlement()
 {
-   const auto &title = tr("Settlement Revoke");
-   const auto &settlWallet = walletsManager_->getSettlementWallet();
-   const auto &addrIndex = QString::fromStdString(settlWallet->getAddressIndex(curAddress_));
-   const auto settlId = BinaryData::CreateFromHex(addrIndex.section(QLatin1Char('.'), 0, 0).toStdString());
-   const auto sellAuthKey = BinaryData::CreateFromHex(addrIndex.section(QLatin1Char('.'), 2, 2).toStdString());
-   if (addrIndex.isEmpty() || settlId.isNull() || sellAuthKey.isNull()) {
-      BSMessageBox(BSMessageBox::critical, title, tr("Unknown settlement address")).exec();
-      return;
-   }
-   const auto ae = settlWallet->getExistingAddress(settlId);
-   if (ae.isNull()) {
-      BSMessageBox(BSMessageBox::critical, title, tr("Invalid settlement address")).exec();
-      return;
-   }
-
-   const auto &cbSettlInput = [this, settlWallet, sellAuthKey, title, ae] (UTXO utxo) {
-      SelectAddressDialog selectAddressDialog{ walletsManager_, walletsManager_->getDefaultWallet(), this };
-      bs::Address recvAddr;
-      if (selectAddressDialog.exec() == QDialog::Accepted) {
-         recvAddr = selectAddressDialog.getSelectedAddress();
-      }
-      else {
-         return;
-      }
-
-      const auto &cbFee = [this, settlWallet, utxo, recvAddr, sellAuthKey, title, ae](float feePerByte) {
-         try {
-            const auto txReq = settlWallet->createPayoutTXRequest(utxo, recvAddr, feePerByte);
-            const auto authAddr = bs::Address::fromPubKey(sellAuthKey, AddressEntryType_P2WPKH);
-            revokeReqId_ = signingContainer_->signPayoutTXRequest(txReq, authAddr, settlWallet->getAddressIndex(ae));
+   std::shared_ptr<bs::SettlementMonitorCb> monitor;
+   const auto &cbMonitorInited = [this, monitor] {
+      const auto title = tr("Settlement Revoke");
+      const auto &cbSettlInput = [this, title](UTXO input) {
+         if (!input.isInitialized()) {
+            return;
          }
-         catch (const std::exception &e) {
-            BSMessageBox(BSMessageBox::critical, title, tr("Failed to sign revoke pay-out"), QLatin1String(e.what())).exec();
+         SelectAddressDialog selectAddressDialog{ walletsManager_, walletsManager_->getDefaultWallet(), this };
+         bs::Address recvAddr;
+         if (selectAddressDialog.exec() == QDialog::Accepted) {
+            recvAddr = selectAddressDialog.getSelectedAddress();
+         } else {
+            return;
          }
+
+#if 0
+         const auto &cbFee = [this, input, recvAddr, title](float feePerByte) {
+            try {
+               const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(input, recvAddr
+                  , feePerByte, armory_->topBlock());
+               //FIXME: need to retrive SettlementData for revoke - to be decided later
+               revokeReqId_ = signingContainer_->signSettlementPayoutTXRequest(txReq, {}, {});
+            } catch (const std::exception &e) {
+               BSMessageBox(BSMessageBox::critical, title, tr("Failed to sign revoke pay-out"), QLatin1String(e.what())).exec();
+            }
+         };
+         walletsManager_->estimatedFeePerByte(2, cbFee, this);
+#endif   //0
       };
-      walletsManager_->estimatedFeePerByte(2, cbFee, this);
+      monitor->getPayinInput(cbSettlInput, false);
    };
-   settlWallet->getInputFor(ae, cbSettlInput, false);
+   monitor = std::make_shared<bs::SettlementMonitorCb>(armory_, curAddress_, logger_
+      , cbMonitorInited);
 }
 
 void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result)
@@ -673,7 +668,7 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::
    }
 
    if (armory_->broadcastZC(signedTX)) {
-      walletsManager_->getSettlementWallet()->setTransactionComment(signedTX, "Settlement Revoke");
+//      walletsManager_->getSettlementWallet()->setTransactionComment(signedTX, "Settlement Revoke"); //TODO later
    }
    else {
       BSMessageBox(BSMessageBox::critical, title, tr("Failed to send transaction to mempool")).exec();
@@ -682,17 +677,10 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::
 
 void WalletsWidget::onDeleteWallet()
 {
-//   const auto action = qobject_cast<QAction *>(sender());
-//   const auto walletId = action ? action->data().toString() : QString();
-//   if (walletId.isEmpty()) {
-//      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
-//      return;
-//   }
-//   const auto &wallet = walletsManager_->getWalletById(walletId.toStdString());
-//   if (!wallet) {
-//      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
-//      return;
-//   }
-//   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_, connectionManager_
-//                      , logger_, this).exec();
+   const auto action = qobject_cast<QAction *>(sender());
+   const auto walletId = action ? action->data().toString() : QString();
+   if (walletId.isEmpty()) {
+      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
+      return;
+   }
 }

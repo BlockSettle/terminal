@@ -104,6 +104,8 @@ private slots:
 
    void onCreateWalletClicked();
 
+   void onAuthAddrChanged(int);
+
 signals:
    void submitRFQ(const bs::network::RFQ& rfq);
    void update();
@@ -145,7 +147,7 @@ private:
    bool isXBTProduct() const;
    bool checkBalance(double qty) const;
    bs::network::Side::Type getSelectedSide() const;
-   std::string authKey() const;
+   std::string authKey() const { return authKey_; }
    bs::Address recvAddress() const;
 
    void putRFQ(const bs::network::RFQ &);
@@ -192,6 +194,7 @@ private:
    std::shared_ptr<bs::sync::Wallet>   curWallet_;
    std::shared_ptr<bs::sync::Wallet>   ccWallet_;
    std::shared_ptr<bs::sync::Wallet>   recvWallet_;
+   std::string authKey_;
 
    unsigned int      leafCreateReqId_ = 0;
 

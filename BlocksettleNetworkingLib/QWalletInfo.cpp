@@ -32,6 +32,7 @@ WalletInfo::WalletInfo(const headless::GetHDWalletInfoResponse &response)
    keyRank_ = { response.rankm(), response.rankn() };
 }
 
+#if 0
 WalletInfo::WalletInfo(const headless::PasswordRequest &request)
 {
    setRootId(request.walletid());
@@ -43,6 +44,7 @@ WalletInfo::WalletInfo(const headless::PasswordRequest &request)
    }
    keyRank_ = { request.rankm(), 0 };
 }
+#endif //0
 
 WalletInfo::WalletInfo(std::shared_ptr<bs::core::hd::Wallet> hdWallet, QObject *parent)
 {

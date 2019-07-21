@@ -39,12 +39,7 @@ public:
    bool isWalletOffline(const std::string &) const override { return false; }
 
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
-      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
-      , bool keepDuplicatedRecipients = false) override;
-   bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , const PasswordType& password = {}) override;
-   bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::string &settlementId, const PasswordType& password = {}) override;
+      , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) override;
 
    bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &
       , const bs::sync::PasswordDialogData &
@@ -57,9 +52,8 @@ public:
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> & ) override { return 0; }
 
    bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::PasswordDialogData &
-      , const bs::Address &, const std::string &
-      , const std::function<void(bs::error::ErrorCode , const BinaryData &signedTX)> &)  override { return 0; }
+      , const bs::core::wallet::SettlementData &, const bs::sync::PasswordDialogData &
+      , const std::function<void(bs::error::ErrorCode, const BinaryData &signedTX)> &) override;
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
    bs::signer::RequestId CancelSignTx(const BinaryData &) override { return 0; }
@@ -73,8 +67,9 @@ public:
    bs::signer::RequestId DeleteHDRoot(const std::string &) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override;
    bs::signer::RequestId GetInfo(const std::string &) override;
-   void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) override;
-   bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override;
+
+   bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog
+      , const QVariantMap &data) override { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;
@@ -90,12 +85,17 @@ public:
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &
       , bool persistent = true) override;
 
-   bool isReady() const override { return inited_; }
+   void createSettlementWallet(const bs::Address &authAddr
+      , const std::function<void(const SecureBinaryData &)> &) override;
+   void setSettlementID(const std::string &walletId, const SecureBinaryData &id
+      , const std::function<void(bool)> &) override;
+   void getSettlementPayinAddress(const std::string &walletId
+      , const bs::core::wallet::SettlementData &
+      , const std::function<void(bool, bs::Address)> &) override;
+   void getRootPubkey(const std::string &walletID
+      , const std::function<void(bool, const SecureBinaryData &)> &) override;
 
-   void setSettlementID(const std::string&, const SecureBinaryData&) override;
-   bs::Address getSettlementPayinAddress(const std::string&,
-      const SecureBinaryData&, const SecureBinaryData&, bool) const override;
-   SecureBinaryData getRootPubkey(const std::string& walletID) const override;
+   bool isReady() const override { return inited_; }
 
 private:
    std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
