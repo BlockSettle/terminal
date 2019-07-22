@@ -71,7 +71,7 @@ public:
       , const std::function<void(bool)> &);
 
    void signOfflineTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
-      , const std::function<void(const BinaryData &)> &);
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &);
    void createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
    void getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
@@ -93,6 +93,9 @@ public:
    QString headlessPubKey() const;
 
    void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
+
+   std::shared_ptr<QmlBridge> qmlBridge() const;
+   std::shared_ptr<QmlFactory> qmlFactory() const;
 
 signals:
    void ready() const;

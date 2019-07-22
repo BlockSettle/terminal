@@ -46,7 +46,7 @@ public:
    bs::signer::RequestId send(signer::PacketType pt, const std::string &data);
    std::shared_ptr<ZmqBIP15XDataConnection> getDataConnection() { return connection_; }
 
-   void setTxSignCb(bs::signer::RequestId reqId, const std::function<void(const BinaryData &)> &cb) {
+   void setTxSignCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &cb) {
       cbSignReqs_[reqId] = cb;
    }
    void setWalletInfoCb(bs::signer::RequestId reqId
@@ -123,7 +123,7 @@ private:
    SignerAdapter                             * parent_;
 
    bs::signer::RequestId seq_ = 1;
-   std::map<bs::signer::RequestId, std::function<void(const BinaryData &)>>      cbSignReqs_;
+   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode, const BinaryData &)>> cbSignReqs_;
    std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfo_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletData_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletData_;

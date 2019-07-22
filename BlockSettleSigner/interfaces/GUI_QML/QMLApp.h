@@ -27,7 +27,6 @@ namespace spdlog {
 }
 
 class DBusNotification;
-class OfflineProcessor;
 class QmlFactory;
 class QMLStatusUpdater;
 class QmlWalletsViewModel;
@@ -62,10 +61,6 @@ private slots:
    void onConnectionError();
    void onHeadlessBindUpdated(bs::signer::BindStatus status);
    void onWalletsSynced();
-   void onPasswordAccepted(const QString &walletId
-                           , bs::wallet::QPasswordData *passwordData
-                           , bool cancelledByUser);
-   void onOfflinePassword(const bs::core::wallet::TXSignRequest &);
    void onLimitsChanged();
    void onSettingChanged(int);
    void onSysTrayMsgClicked();
@@ -86,7 +81,6 @@ private:
    QSplashScreen              *     splashScreen_ = nullptr;
    QQmlContext                *     ctxt_ = nullptr;
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
-   std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
    std::shared_ptr<WalletsProxy>                walletsProxy_;
    std::shared_ptr<QmlFactory>                  qmlFactory_;
@@ -106,7 +100,6 @@ private:
    DBusNotification *dbus_;
 #endif // BS_USE_DBUS
 
-   std::unordered_set<std::string> offlinePasswordRequests_;
    std::unordered_set<std::string> lastFailedTerminals_;
 };
 

@@ -29,6 +29,7 @@
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
+Q_DECLARE_METATYPE(SecureBinaryData)
 
 #ifdef USE_QWindowsIntegrationPlugin
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
@@ -230,6 +231,7 @@ int main(int argc, char** argv)
    qRegisterMetaType<std::string>();
    qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<BinaryData>();
+   qRegisterMetaType<SecureBinaryData>();
 
    srand(std::time(nullptr));
 
