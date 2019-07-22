@@ -19,6 +19,7 @@ if [ ! -d $libprotobuf ]; then
    exit
 fi
 
+rm -f Ubuntu/usr/bin/RFQBot.qml
 rm -rf Ubuntu/usr/share/blocksettle/scripts
 mkdir -p Ubuntu/usr/share/blocksettle/scripts
 
