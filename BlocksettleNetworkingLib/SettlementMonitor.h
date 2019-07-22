@@ -65,7 +65,7 @@ namespace bs {
 
    std::shared_ptr<SettlementAddress> entryToAddress(const std::shared_ptr<core::SettlementAddressEntry> &);
 
-   class SettlementMonitor
+   class SettlementMonitor : public ArmoryCallbackTarget
    {
    public:
       SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
@@ -76,13 +76,26 @@ namespace bs {
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<SettlementAddress> &, const bs::Address &
          , const std::shared_ptr<spdlog::logger> &);
+      SettlementMonitor(const std::shared_ptr<ArmoryConnection> &
+         , const bs::Address &, const std::shared_ptr<spdlog::logger> &
+         , const std::function<void()> &);
 
-      virtual ~SettlementMonitor() noexcept;
+      ~SettlementMonitor() noexcept override;
+
+      void checkNewEntries();
 
       int getPayinConfirmations() const { return payinConfirmations_; }
       int getPayoutConfirmations() const { return payoutConfirmations_; }
 
       PayoutSigner::Type getPayoutSignerSide() const { return payoutSignedBy_; }
+      void getPayinInput(const std::function<void(UTXO)> &, bool allowZC = true);
+
+      static bs::core::wallet::TXSignRequest createPayoutTXRequest(const UTXO &
+         , const bs::Address &recvAddr, float feePerByte, unsigned int topBlock);
+      static UTXO getInputFromTX(const bs::Address &, const BinaryData &payinHash
+         , const double amount);
+      static uint64_t getEstimatedFeeFor(UTXO input, const bs::Address &recvAddr
+         , float feePerByte, unsigned int topBlock);
 
       int confirmedThreshold() const { return 6; }
 
@@ -94,8 +107,8 @@ namespace bs {
       virtual void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) = 0;
       virtual void onPayOutConfirmed(PayoutSigner::Type signedBy) = 0;
 
-   public:
-      void checkNewEntries();
+      void onNewBlock(unsigned int) override;
+      void onZCReceived(const std::vector<bs::TXEntry> &) override;
 
    private:
       std::atomic_flag                          walletLock_ = ATOMIC_FLAG_INIT;
@@ -127,9 +140,9 @@ namespace bs {
       void SendPayOutNotification(const ClientClasses::LedgerEntry &);
    };
 
-   class SettlementMonitorQtSignals : public QObject, public SettlementMonitor, public ArmoryCallbackTarget
+   class SettlementMonitorQtSignals : public QObject, public SettlementMonitor
    {
-   Q_OBJECT;
+   Q_OBJECT
    public:
       SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
          , const std::shared_ptr<ArmoryConnection> &
@@ -150,10 +163,6 @@ namespace bs {
       void start();
       void stop();
 
-   protected:
-      void onNewBlock(unsigned int) override;
-      void onZCReceived(const std::vector<bs::TXEntry> &) override;
-
    signals:
       void payInDetected(int confirmationsNumber, const BinaryData &txHash);
       void payOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy);
@@ -173,14 +182,18 @@ namespace bs {
       using onPayOutConfirmedCB = std::function<void (PayoutSigner::Type )>;
 
    public:
-      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<core::SettlementAddressEntry> &
          , const std::shared_ptr<spdlog::logger> &);
-      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<SettlementAddress> &, const bs::Address &
          , const std::shared_ptr<spdlog::logger> &);
+      SettlementMonitorCb(const std::shared_ptr<ArmoryConnection> &armory
+         , const bs::Address &addr, const std::shared_ptr<spdlog::logger> &logger
+         , const std::function<void()> &cbInited)
+         : SettlementMonitor(armory, addr, logger, cbInited) {}
       ~SettlementMonitorCb() noexcept override;
 
       SettlementMonitorCb(const SettlementMonitorCb&) = delete;

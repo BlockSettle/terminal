@@ -34,6 +34,19 @@ using namespace bs::ui;
 
 constexpr int kSelectAQFileItemIndex = 1;
 
+namespace {
+
+QString getDefaultScriptsDir()
+{
+#if defined(_WIN32) || defined(__APPLE__)
+      return QCoreApplication::applicationDirPath() + QStringLiteral("/scripts");
+#else
+      return QStringLiteral("/usr/share/blocksettle/scripts");
+#endif
+}
+
+} // namespace
+
 RFQDealerReply::RFQDealerReply(QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::RFQDealerReply())
@@ -54,7 +67,7 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    connect(ui_->pushButtonAdvanced, &QPushButton::clicked, this, &RFQDealerReply::showCoinControl);
 
    connect(ui_->comboBoxWallet, SIGNAL(currentIndexChanged(int)), this, SLOT(walletSelected(int)));
-   connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(updateSubmitButton()));
+   connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(onAuthAddrChanged(int)));
 
    connect(ui_->checkBoxAutoSign, &ToggleSwitch::clicked, this, &RFQDealerReply::onAutoSignActivated);
 
@@ -116,7 +129,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
 
    UtxoReservation::addAdapter(utxoAdapter_);
 
-   auto botFileInfo = QFileInfo(QCoreApplication::applicationDirPath() + QStringLiteral("/RFQBot.qml"));
+   auto botFileInfo = QFileInfo(getDefaultScriptsDir() + QStringLiteral("/RFQBot.qml"));
    if (botFileInfo.exists() && botFileInfo.isFile()) {
       auto list = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
       if (list.indexOf(botFileInfo.absoluteFilePath()) == -1) {
@@ -482,6 +495,37 @@ void RFQDealerReply::priceChanged()
    updateSubmitButton();
 }
 
+void RFQDealerReply::onAuthAddrChanged(int index)
+{
+   const auto authAddr = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
+   if (authAddr.isNull()) {
+      return;
+   }
+   const auto priWallet = walletsManager_->getPrimaryWallet();
+   const auto group = priWallet->getGroup(bs::hd::BlockSettle_Settlement);
+   std::shared_ptr<bs::sync::hd::SettlementLeaf> settlLeaf;
+   if (group) {
+      const auto settlGroup = std::dynamic_pointer_cast<bs::sync::hd::SettlementGroup>(group);
+      if (!settlGroup) {
+         logger_->error("[{}] wrong settlement group type", __func__);
+         return;
+      }
+      settlLeaf = settlGroup->getLeaf(authAddr);
+   }
+
+   const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
+      authKey_ = pubKey.toHexStr();
+      QMetaObject::invokeMethod(this, &RFQDealerReply::updateSubmitButton);
+   };
+
+   if (settlLeaf) {
+      settlLeaf->getRootPubkey(cbPubKey);
+   } else {
+      walletsManager_->createSettlementLeaf(authAddr, cbPubKey);
+      return;
+   }
+}
+
 void RFQDealerReply::updateSubmitButton()
 {
    bool isQRNRepliable = (!currentQRN_.empty() && QuoteProvider::isRepliableStatus(currentQRN_.status));
@@ -506,8 +550,7 @@ void RFQDealerReply::updateSubmitButton()
       return;
    }
 
-   if ((currentQRN_.assetType == bs::network::Asset::SpotXBT)
-      && (ui_->authenticationAddressComboBox->currentIndex() <= kSelectAQFileItemIndex)) {
+   if ((currentQRN_.assetType == bs::network::Asset::SpotXBT) && authKey_.empty()) {
       ui_->pushButtonSubmit->setEnabled(false);
       return;
    }
@@ -667,12 +710,11 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
    if ((itQN != sentNotifs_.end()) && (itQN->second == price)) {
       return false;
    }
-   std::string authKey, txData;
+   std::string txData;
    bool isBid = (qrn.side == bs::network::Side::Buy);
 
    if ((qrn.assetType == bs::network::Asset::SpotXBT) && authAddressManager_ && transData) {
-      authKey = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(ui_->authenticationAddressComboBox->currentIndex())).toHexStr();
-      if (authKey.empty()) {
+      if (authKey_.empty()) {
          logger_->error("[RFQDealerReply::submit] empty auth key");
          return false;
       }
@@ -694,11 +736,11 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                if (!transData->UpdateRecipientAddress(payInRecipId_, addr)) {
                   logger_->warn("[RFQDealerReply::submit] Failed to update address for recipient {}", payInRecipId_);
                }
+               //TODO: set comment if needed
             };
-            walletsManager_->getSettlementWallet()->newAddress(cbSettlAddr,
-               BinaryData::CreateFromHex(qrn.settlementId), BinaryData::CreateFromHex(qrn.requestorAuthPublicKey),
-               BinaryData::CreateFromHex(authKey), comment);
-
+            const auto priWallet = walletsManager_->getPrimaryWallet();
+            priWallet->getSettlementPayinAddress(BinaryData::CreateFromHex(qrn.settlementId)
+               , BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), cbSettlAddr);
          }
          else {
             transData->UpdateRecipientAmount(payInRecipId_, quantity);
@@ -740,7 +782,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
       }
    }
 
-   auto qn = new bs::network::QuoteNotification(qrn, authKey, price, txData);
+   auto qn = new bs::network::QuoteNotification(qrn, authKey_, price, txData);
 
    if (qrn.assetType == bs::network::Asset::PrivateMarket) {
       qn->receiptAddress = getRecvAddress().display();
@@ -910,8 +952,19 @@ bool RFQDealerReply::eventFilter(QObject *watched, QEvent *evt)
 
 QString RFQDealerReply::askForAQScript()
 {
-   return QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file"), QCoreApplication::applicationDirPath() + QStringLiteral("/scripts/")
-                                       , tr("QML files (*.qml)"));
+   auto lastDir = appSettings_->get<QString>(ApplicationSettings::LastAqDir);
+   if (lastDir.isEmpty()) {
+      lastDir = getDefaultScriptsDir();
+   }
+
+   auto path = QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file")
+      , lastDir, tr("QML files (*.qml)"));
+
+   if (!path.isEmpty()) {
+      appSettings_->set(ApplicationSettings::LastAqDir, QFileInfo(path).dir().absolutePath());
+   }
+
+   return path;
 }
 
 void RFQDealerReply::showCoinControl()

@@ -126,6 +126,7 @@ public:
       ChartProduct,
       ChartTimeframe,
       ChartCandleCount,
+      LastAqDir,
       _last
    };
 

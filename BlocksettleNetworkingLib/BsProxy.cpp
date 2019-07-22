@@ -87,8 +87,12 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
    serverListener_ = std::make_unique<BsProxyListener>();
    serverListener_->proxy_ = this;
 
+   const bool ephemeralPeers = false;
+   const bool readClientCookie = false;
+   const bool writeCookie = !params.ownPubKeyDump.empty();
    server_ = std::make_unique<ZmqBIP15XServerConnection>(logger
-      , params.context, &emptyTrustedClientsCallback, false, params.ownKeyFileDir, params.ownKeyFileName);
+      , params.context, &emptyTrustedClientsCallback, ephemeralPeers, params.ownKeyFileDir, params.ownKeyFileName
+      , writeCookie, readClientCookie, params.ownPubKeyDump);
 
    bool result = server_->BindConnection(params.listenAddress, std::to_string(params.listenPort), serverListener_.get());
    if (!result) {
@@ -109,6 +113,31 @@ void BsProxy::overrideCelerHost(const std::string &host, int port)
 {
    g_celerHostOverride = host;
    g_celerPortOverride = port;
+}
+
+// static
+std::string BsProxy::requestTitleAuthAddr()
+{
+   return "Authentication Address";
+}
+
+// static
+std::string BsProxy::requestDescAuthAddr(const bs::Address &address)
+{
+   return fmt::format("Submit auth address for verification: {}", address.display());
+}
+
+// static
+std::string BsProxy::requestTitleCcAddr()
+{
+   return "Private Market token";
+}
+
+// static
+std::string BsProxy::requestDescCcAddr(const bs::Address &address)
+{
+   // We don't show address details here yet
+   return fmt::format("Submitting CC wallet address to receive PM token");
 }
 
 BsProxy::~BsProxy()
@@ -402,16 +431,27 @@ void BsProxy::processStartSignAddress(BsProxy::Client *client, int64_t requestId
    req.serialization = AutheIDClient::Serialization::Protobuf;
    req.invisibleData = request.invisible_data();
 
+   if (request.address().empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "address is not set in the StartSignAddress request");
+      return;
+   }
+
+   auto address = bs::Address(request.address());
+   if (!address.isValid()) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid address in the StartSignAddress request: {}", request.address());
+      return;
+   }
+
    auto type = BsClient::SignAddressReq::Type(request.type());
    switch (type) {
       case BsClient::SignAddressReq::AuthAddr:
-         req.title = "Authentication Address";
-         req.description = "Submit auth address for verification";
+         req.title = requestTitleAuthAddr();
+         req.description = requestDescAuthAddr(address);
          req.expiration = int(std::chrono::duration_cast<std::chrono::seconds>(BsClient::autheidAuthAddressTimeout()).count());
          break;
       case BsClient::SignAddressReq::CcAddr:
-         req.title = "Private Market token";
-         req.description = "Submitting CC wallet address to receive PM token";
+         req.title = requestTitleCcAddr();
+         req.description = requestDescCcAddr(address);
          req.expiration = int(std::chrono::duration_cast<std::chrono::seconds>(BsClient::autheidCcAddressTimeout()).count());
          break;
       default:

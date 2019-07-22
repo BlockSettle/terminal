@@ -17,7 +17,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const bs::network::RFQ &rfq, const bs::network::Quote &quote
    , const std::shared_ptr<TransactionData> &txData)
-   : bs::SettlementContainer(armory), logger_(logger), signingContainer_(container)
+   : bs::SettlementContainer(), logger_(logger), signingContainer_(container)
    , transactionData_(txData)
    , assetMgr_(assetMgr)
    , walletsMgr_(walletsMgr)

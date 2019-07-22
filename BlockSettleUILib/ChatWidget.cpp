@@ -727,6 +727,7 @@ void ChatWidget::setIsRoom(bool isRoom)
 void ChatWidget::onElementSelected(CategoryElement *element)
 {
    ui_->frameContactActions->setVisible(false);
+   ui_->input_textEdit->setReadOnly(false);
    setIsContactRequest(false);
 
    // Save draft message
@@ -771,6 +772,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
                           Chat::ContactStatus::CONTACT_STATUS_INCOMING) {
                   ui_->pushButton_AcceptSend->setText(QObject::tr("ACCEPT"));
                   ui_->pushButton_RejectCancel->setText(QObject::tr("REJECT"));
+                  ui_->input_textEdit->setReadOnly(true);
                }
 
                setIsContactRequest(true);
@@ -808,6 +810,8 @@ void ChatWidget::onElementSelected(CategoryElement *element)
       // Save draft message if any
       if (!ui_->input_textEdit->toPlainText().isEmpty()) {
           draftMessages_[previousChat] = ui_->input_textEdit->toPlainText().toStdString();
+      } else {
+         draftMessages_.remove(previousChat);
       }
 
       // Return back draft message
@@ -1259,6 +1263,7 @@ void ChatWidget::onContactRequestAcceptSendClicked()
 {
    std::string messageText = ui_->input_textEdit->toPlainText().toStdString();
    ui_->input_textEdit->clear();
+   ui_->input_textEdit->setReadOnly(false);
    client_->onContactRequestPositiveAction(currentChat_, messageText);
 }
 
@@ -1311,6 +1316,9 @@ void ChatWidget::onCurrentElementAboutToBeRemoved()
 
 void ChatWidget::onDMMessageReceived(const std::shared_ptr<Chat::Data>& message)
 {
+   if (isVisible() && isActiveWindow()) {
+      return;
+   }
    std::map<std::string, std::shared_ptr<Chat::Data>> newMessages;
    const auto model = client_->getDataModel();
    std::string contactName = model->getContactDisplayName(message->message().sender_id());

@@ -65,6 +65,7 @@ namespace sync {
          std::string          id;
          bs::hd::Path::Elem   index;
          bool extOnly;
+         BinaryData  extraData;
       };
       struct Group {
          bs::hd::CoinType  type;
