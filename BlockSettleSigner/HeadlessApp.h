@@ -28,7 +28,6 @@ namespace Blocksettle {
 class HeadlessContainerListener;
 class SignerAdapterListener;
 class HeadlessSettings;
-class OfflineProcessor;
 class SignerSettings;
 class ZmqBIP15XServerConnection;
 class HeadlessContainerCallbacks;

@@ -3,7 +3,6 @@
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "EasyEncValidator.h"
-#include "OfflineProcessor.h"
 #include "PasswordConfirmValidator.h"
 #include "PdfBackupQmlPrinter.h"
 #include "QMLApp.h"
@@ -83,9 +82,6 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       hideQmlWindow();
    });
 
-   offlineProc_ = std::make_shared<OfflineProcessor>(logger_, adapter_);
-   connect(offlineProc_.get(), &OfflineProcessor::requestPassword, this, &QMLAppObj::onOfflinePassword);
-
    walletsProxy_ = std::make_shared<WalletsProxy>(logger_, adapter_);
    connect(walletsProxy_.get(), &WalletsProxy::walletsChanged, [this] {
       if (walletsProxy_->walletsLoaded()) {
@@ -131,7 +127,6 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    ctxt_->setContextProperty(QStringLiteral("qmlAppObj"), this);
    ctxt_->setContextProperty(QStringLiteral("signerSettings"), settings_.get());
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
-   ctxt_->setContextProperty(QStringLiteral("offlineProc"), offlineProc_.get());
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
 }
 
@@ -203,8 +198,6 @@ void QMLAppObj::registerQtTypes()
 
    qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.WalletsViewModel", 1, 0,
       "WalletsModel", QStringLiteral("Cannot create a WalletsViewModel instance"));
-   qmlRegisterUncreatableType<OfflineProcessor>("com.blocksettle.OfflineProc", 1, 0,
-      "OfflineProcess", QStringLiteral("Cannot create a OfflineProc instance"));
    qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
    qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
@@ -273,28 +266,6 @@ QString QMLAppObj::getUrlPath(const QUrl &url)
       }
 #endif
    return path;
-}
-
-void QMLAppObj::onPasswordAccepted(const QString &walletId
-                                   , bs::wallet::QPasswordData *passwordData
-                                   , bool cancelledByUser)
-{
-   logger_->debug("Password for wallet {} was accepted", walletId.toStdString());
-   adapter_->passwordReceived(walletId.toStdString()
-      , cancelledByUser ? bs::error::ErrorCode::TxCanceled : bs::error::ErrorCode::NoError
-      , passwordData->password);
-   if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
-      offlineProc_->passwordEntered(walletId.toStdString(), passwordData->password, cancelledByUser);
-      offlinePasswordRequests_.erase(walletId.toStdString());
-   }
-}
-
-void QMLAppObj::onOfflinePassword(const bs::core::wallet::TXSignRequest &txReq)
-{
-   offlinePasswordRequests_.insert(txReq.walletId);
-
-   // FIXME: reimplement
-   //requestPasswordForSigningTx(txReq, {}, false);
 }
 
 void QMLAppObj::onSysTrayMsgClicked()

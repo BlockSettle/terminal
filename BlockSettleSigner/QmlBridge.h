@@ -40,7 +40,7 @@ public:
                         QVariant val4 = QVariant(),
                         QVariant val5 = QVariant(),
                         QVariant val6 = QVariant(),
-                        QVariant val7 = QVariant())
+                        QVariant val7 = QVariant()) const
    {
       QVariantList argList;
       if (val0.isValid()) argList.append(val0);
