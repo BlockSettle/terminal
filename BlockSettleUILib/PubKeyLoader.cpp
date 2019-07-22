@@ -2,6 +2,7 @@
 #include <QFile>
 #include "BSMessageBox.h"
 #include "ImportKeyBox.h"
+#include "BSTerminalMainWindow.h"
 
 PubKeyLoader::PubKeyLoader(const std::shared_ptr<ApplicationSettings> &appSettings)
    : appSettings_(appSettings)
@@ -93,7 +94,7 @@ bool PubKeyLoader::saveKey(const KeyType kt, const BinaryData &key)
 }
 
 ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyType kt
-   , QWidget *parent, const std::shared_ptr<ApplicationSettings> &appSettings)
+   , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &appSettings)
 {
    // Define the callback that will be used to determine if the signer's BIP
    // 150 identity key, if it has changed, will be accepted. It needs strings
@@ -101,33 +102,40 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
    //
    // NB: This may need to be altered later. The PuB key should be hard-coded
    // and respected.
-   return [kt, parent, appSettings] (const std::string& oldKey
+   return [kt, bsMainWindow, appSettings] (const std::string& oldKey
          , const std::string& newKeyHex, const std::string& srvAddrPort
          , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
-      QMetaObject::invokeMethod(parent, [kt, parent, appSettings, newKeyHex, newKeyProm, srvAddrPort] {
-         PubKeyLoader loader(appSettings);
-         const auto newKeyBin = BinaryData::CreateFromHex(newKeyHex);
-         const auto oldKeyBin = loader.loadKey(kt);
-         if (oldKeyBin == newKeyBin) {
-            newKeyProm->set_value(true);
-            return;
-         }
+      const auto &deferredDialog = [kt, bsMainWindow, appSettings, newKeyHex, newKeyProm, srvAddrPort]{
+         QMetaObject::invokeMethod(bsMainWindow, [kt, bsMainWindow, appSettings, newKeyHex, newKeyProm, srvAddrPort] {
+            PubKeyLoader loader(appSettings);
+            const auto newKeyBin = BinaryData::CreateFromHex(newKeyHex);
+            const auto oldKeyBin = loader.loadKey(kt);
+            if (oldKeyBin == newKeyBin) {
+               newKeyProm->set_value(true);
+               return;
+            }
 
-         ImportKeyBox box (BSMessageBox::question
-            , QObject::tr("Import %1 ID key?").arg(serverName(kt))
-            , parent);
+            ImportKeyBox box (BSMessageBox::question
+               , QObject::tr("Import %1 ID key?").arg(serverName(kt))
+               , bsMainWindow);
 
-         box.setNewKeyFromBinary(newKeyBin);
-         box.setOldKeyFromBinary(oldKeyBin);
-         box.setAddrPort(srvAddrPort);
+            box.setNewKeyFromBinary(newKeyBin);
+            box.setOldKeyFromBinary(oldKeyBin);
+            box.setAddrPort(srvAddrPort);
 
-         const bool answer = (box.exec() == QDialog::Accepted);
-         if (answer) {
-            loader.saveKey(kt, newKeyBin);
-         }
+            const bool answer = (box.exec() == QDialog::Accepted);
+            if (answer) {
+               loader.saveKey(kt, newKeyBin);
+            }
 
-         newKeyProm->set_value(answer);
-      });
+            newKeyProm->set_value(answer);
+         });
+      };
+
+      BSTerminalMainWindow *mw = qobject_cast<BSTerminalMainWindow *>(bsMainWindow);
+      if (mw) {
+         mw->addDeferredDialog(deferredDialog);
+      }
    };
 }
 
