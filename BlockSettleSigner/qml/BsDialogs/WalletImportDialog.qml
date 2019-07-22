@@ -47,6 +47,7 @@ CustomTitleDialogWindow {
         if (!primaryWalletExists) {
             cbPrimary.checked = true
         }
+        rootKeyInput.forceActiveFocus()
     }
 
     onEnterPressed: {
@@ -290,7 +291,6 @@ CustomTitleDialogWindow {
                             id: tfName
                             selectByMouse: true
                             Layout.fillWidth: true
-                            //focus: true // not possible to edit if focus set to true.
                             Keys.onEnterPressed: tfDesc.forceActiveFocus()
                             Keys.onReturnPressed: tfDesc.forceActiveFocus()
                         }
@@ -380,7 +380,7 @@ CustomTitleDialogWindow {
 
                             onCheckedChanged: {
                                 if (checked) {
-                                    newPasswordWithConfirm.tfPasswordInput.focus = true
+                                    newPasswordWithConfirm.tfPasswordInput.forceActiveFocus()
                                 }
                             }
                         }
@@ -390,7 +390,7 @@ CustomTitleDialogWindow {
 
                             onCheckedChanged: {
                                 if (checked) {
-                                    textInputEmail.focus = true
+                                    textInputEmail.forceActiveFocus()
                                     // show notice dialog
                                     if (!signerSettings.hideEidInfoBox) {
                                         var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
@@ -434,7 +434,6 @@ CustomTitleDialogWindow {
                             id: textInputEmail
                             Layout.fillWidth: true
                             selectByMouse: true
-                            focus: true
                             Keys.onEnterPressed: {
                                 if (btnAccept.enabled) btnAccept.onClicked()
                             }
@@ -544,7 +543,8 @@ CustomTitleDialogWindow {
                                 var walletInfo = qmlFactory.createWalletInfo(msg)
                                 var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImportWo, true, walletInfo)
                                 mb.bsAccepted.connect(acceptAnimated)
-                            } else {
+                            }
+                            else {
                                 JsHelper.messageBox(BSMessageBox.Type.Critical
                                     , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
                             }
@@ -577,7 +577,8 @@ CustomTitleDialogWindow {
                             if (success) {
                                 var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImport, true, walletInfo)
                                 mb.bsAccepted.connect(acceptAnimated)
-                            } else {
+                            }
+                            else {
                                 JsHelper.messageBox(BSMessageBox.Type.Critical
                                     , qsTr("Import Failed"), qsTr("Import wallet failed with error: \n") + errorMsg)
                             }
