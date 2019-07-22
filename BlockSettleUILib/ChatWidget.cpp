@@ -727,6 +727,7 @@ void ChatWidget::setIsRoom(bool isRoom)
 void ChatWidget::onElementSelected(CategoryElement *element)
 {
    ui_->frameContactActions->setVisible(false);
+   ui_->input_textEdit->setReadOnly(false);
    setIsContactRequest(false);
 
    // Save draft message
@@ -771,6 +772,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
                           Chat::ContactStatus::CONTACT_STATUS_INCOMING) {
                   ui_->pushButton_AcceptSend->setText(QObject::tr("ACCEPT"));
                   ui_->pushButton_RejectCancel->setText(QObject::tr("REJECT"));
+                  ui_->input_textEdit->setReadOnly(true);
                }
 
                setIsContactRequest(true);
@@ -1259,6 +1261,7 @@ void ChatWidget::onContactRequestAcceptSendClicked()
 {
    std::string messageText = ui_->input_textEdit->toPlainText().toStdString();
    ui_->input_textEdit->clear();
+   ui_->input_textEdit->setReadOnly(false);
    client_->onContactRequestPositiveAction(currentChat_, messageText);
 }
 
