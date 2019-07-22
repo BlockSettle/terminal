@@ -1,13 +1,13 @@
 #!/bin/sh
 
+set -o errexit  # exit on error
+set -o nounset  # trigger error when expanding unset variables
+
 binpath="../build_terminal/Release/bin"
 binary=$binpath/blocksettle
 scriptpath="../Scripts"
 
-libprotobuf="${DEV_3RD_ROOT}/release/Protobuf/lib"
-if [ "${DEV_3RD_ROOT}X" = "X" ]; then
-   libprotobuf="../../3rd/release/Protobuf/lib"
-fi
+libprotobuf="${DEV_3RD_ROOT=../../3rd}/release/Protobuf/lib"
 
 if [ ! -x $binary ]; then
     echo "Release terminal binary $binary doesn't exist!"
@@ -19,13 +19,15 @@ if [ ! -d $libprotobuf ]; then
    exit
 fi
 
+rm -rf Ubuntu/usr/share/blocksettle/scripts
+mkdir -p Ubuntu/usr/share/blocksettle/scripts
+
 mkdir -p Ubuntu/usr/bin
-mkdir -p Ubuntu/usr/share/blocksettle
 mkdir -p Ubuntu/lib/x86_64-linux-gnu
 
-cp -f $binpath/* Ubuntu/usr/bin
-cp -f $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle/scripts
-cp -f $scriptpath/RFQBot.qml Ubuntu/usr/share/blocksettle/scripts
+cp -f $binpath/* Ubuntu/usr/bin/
+cp -f $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle/scripts/
+cp -f $scriptpath/RFQBot.qml Ubuntu/usr/share/blocksettle/scripts/
 cp -fP $libprotobuf/libprotobuf.so* Ubuntu/lib/x86_64-linux-gnu
 cp -f $libprotobuf/libprotobuf.la Ubuntu/lib/x86_64-linux-gnu
 
