@@ -123,6 +123,9 @@ std::string hd::Group::nameForType(bs::hd::CoinType ct)
 
    case bs::hd::CoinType::BlockSettle_Auth:
       return QObject::tr("Authentication").toStdString();
+
+   case bs::hd::CoinType::BlockSettle_Settlement:
+      return QObject::tr("Settlement").toStdString();
    }
 
    return QObject::tr("Unknown").toStdString();
