@@ -810,6 +810,8 @@ void ChatWidget::onElementSelected(CategoryElement *element)
       // Save draft message if any
       if (!ui_->input_textEdit->toPlainText().isEmpty()) {
           draftMessages_[previousChat] = ui_->input_textEdit->toPlainText().toStdString();
+      } else {
+         draftMessages_.remove(previousChat);
       }
 
       // Return back draft message
@@ -1314,6 +1316,9 @@ void ChatWidget::onCurrentElementAboutToBeRemoved()
 
 void ChatWidget::onDMMessageReceived(const std::shared_ptr<Chat::Data>& message)
 {
+   if (isVisible() && isActiveWindow()) {
+      return;
+   }
    std::map<std::string, std::shared_ptr<Chat::Data>> newMessages;
    const auto model = client_->getDataModel();
    std::string contactName = model->getContactDisplayName(message->message().sender_id());
