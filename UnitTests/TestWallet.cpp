@@ -107,6 +107,7 @@ TEST_F(TestWallet, BIP44_derivation)
 TEST_F(TestWallet, BIP44_primary)
 {
    SecureBinaryData passphrase("passphrase");
+   SecureBinaryData wrongPass("wrongPass");
    ASSERT_NE(envPtr_->walletsMgr(), nullptr);
 
    const bs::core::wallet::Seed seed{ SecureBinaryData("Sample test seed")
@@ -133,6 +134,13 @@ TEST_F(TestWallet, BIP44_primary)
    EXPECT_EQ(leafXbt->getRootId().toHexStr(), "64134dca");
 
    EXPECT_THROW(grpXbt->createLeaf(0), std::exception);
+
+   {
+      auto lock = wallet->lockForEncryption(wrongPass);
+      const auto leaf1 = grpXbt->createLeaf(1, 10);
+      ASSERT_EQ(leaf1, nullptr);
+      EXPECT_EQ(grpXbt->getNumLeaves(), 1);
+   }
 
    {
       auto lock = wallet->lockForEncryption(passphrase);
@@ -1908,12 +1916,19 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    {
       const auto recipient = addrVec[11].getRecipient((uint64_t)(25 * COIN));
       const auto txReq = syncLeaf->createTXRequest(inputs, { recipient });
+      BinaryData txWrongSigned;
+      {
+         auto lock = leaf->lockForEncryption(SecureBinaryData{"wrongPass"});
+         EXPECT_THROW(txWrongSigned = leaf->signTXRequest(txReq), std::exception);
+         EXPECT_TRUE(txWrongSigned.isNull());
+      }
       BinaryData txSigned;
       {
          auto lock = leaf->lockForEncryption(passphrase_);
          txSigned = leaf->signTXRequest(txReq);
          ASSERT_FALSE(txSigned.isNull());
       }
+      EXPECT_NE(txWrongSigned, txSigned);
 
       Tx txObj(txSigned);
       envPtr_->armoryInstance()->pushZC(txSigned);
