@@ -47,13 +47,7 @@ CustomTitleDialogWindow {
         if (!primaryWalletExists) {
             cbPrimary.checked = true
         }
-        rootKeyInput.setFocus()
-    }
-
-    onIsWOChanged: {
-        if (curPage === WalletImportDialog.Page.Select && !isWO) {
-            rootKeyInput.setFocus()
-        }
+        rootKeyInput.forceActiveFocus()
     }
 
     onEnterPressed: {
@@ -146,11 +140,6 @@ CustomTitleDialogWindow {
                                 Layout.leftMargin: inputLabelsWidth
                                 text: qsTr("Paper Backup")
                                 checked: true
-
-                                onCheckedChanged: {
-                                    if (checked) rootKeyInput.setFocus()
-
-                                }
                             }
                             CustomRadioButton {
                                 id: rbFileBackup
@@ -302,7 +291,6 @@ CustomTitleDialogWindow {
                             id: tfName
                             selectByMouse: true
                             Layout.fillWidth: true
-                            focus: true
                             Keys.onEnterPressed: tfDesc.forceActiveFocus()
                             Keys.onReturnPressed: tfDesc.forceActiveFocus()
                         }
@@ -392,7 +380,7 @@ CustomTitleDialogWindow {
 
                             onCheckedChanged: {
                                 if (checked) {
-                                    newPasswordWithConfirm.tfPasswordInput.focus = true
+                                    newPasswordWithConfirm.tfPasswordInput.forceActiveFocus()
                                 }
                             }
                         }
@@ -402,7 +390,7 @@ CustomTitleDialogWindow {
 
                             onCheckedChanged: {
                                 if (checked) {
-                                    textInputEmail.focus = true
+                                    textInputEmail.forceActiveFocus()
                                     // show notice dialog
                                     if (!signerSettings.hideEidInfoBox) {
                                         var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
@@ -446,7 +434,6 @@ CustomTitleDialogWindow {
                             id: textInputEmail
                             Layout.fillWidth: true
                             selectByMouse: true
-                            focus: true
                             Keys.onEnterPressed: {
                                 if (btnAccept.enabled) btnAccept.onClicked()
                             }

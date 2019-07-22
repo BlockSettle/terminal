@@ -39,12 +39,8 @@ ColumnLayout {
     property string  privateRootKeyToCheck
     signal entryComplete()
 
-    Component.onCompleted: {
-        keyLine1.focus = true
-    }
-
-    onVisibleChanged: {
-        keyLine1.focus = true
+    function forceActiveFocus() {
+        keyLine1.forceActiveFocus()
     }
 
     RowLayout {
@@ -66,7 +62,6 @@ ColumnLayout {
             id: keyLine1
             Layout.fillWidth: true
             selectByMouse: true
-            activeFocusOnPress: true
             font: fixedFont
             validator: EasyEncValidator {
                 id: line1Validator;
@@ -108,7 +103,6 @@ ColumnLayout {
                 name: qsTr("Line 2")
             }
             selectByMouse: true
-            activeFocusOnPress: true
             onAcceptableInputChanged: {
                 if (acceptableLines && !keyLine1.acceptableInput) {
                     keyLine1.forceActiveFocus();
