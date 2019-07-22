@@ -17,10 +17,10 @@
 using namespace Blocksettle::Communication;
 
 bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txReq
-   , TXSignMode mode, const PasswordType& password, bool keepDuplicatedRecipients)
+   , TXSignMode mode, bool keepDuplicatedRecipients)
 {
    signer::SignOfflineTxRequest request;
-   request.set_password(password.toBinStr());
+//   request.set_password(password.toBinStr());
    auto evt = request.mutable_tx_request();
 
    evt->set_wallet_id(txReq.walletId);

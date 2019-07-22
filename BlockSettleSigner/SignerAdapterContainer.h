@@ -27,14 +27,16 @@ public:
 
    // Used to sign offline requests from signer
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
-      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
-   , bool keepDuplicatedRecipients = false) override;
-   bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , const PasswordType& password = {}) override { return 0; }
-   bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::string &settlementId, const PasswordType& password = {}) override {
-      return 0;
-   }
+      , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) override;
+
+   void createSettlementWallet(const bs::Address &authAddr
+      , const std::function<void(const SecureBinaryData &)> &) override {}
+   void setSettlementID(const std::string &walletId, const SecureBinaryData &id
+      , const std::function<void(bool)> &) override {}
+   void getSettlementPayinAddress(const std::string &walletId,
+      const bs::core::wallet::SettlementData &, const std::function<void(bool, bs::Address)> &) override {}
+   void getRootPubkey(const std::string &walletID
+      , const std::function<void(bool, const SecureBinaryData &)> &) override {}
 
    bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &
       , const bs::sync::PasswordDialogData &
@@ -47,8 +49,7 @@ public:
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> & ) override { return 0; }
 
    bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::sync::PasswordDialogData &
-      , const bs::Address &, const std::string &
+      , const bs::core::wallet::SettlementData &, const bs::sync::PasswordDialogData &
       , const std::function<void(bs::error::ErrorCode , const BinaryData &signedTX)> &)  override { return 0; }
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }

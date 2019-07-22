@@ -76,7 +76,7 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
 void SignerAdapter::signOfflineTxRequest(const bs::core::wallet::TXSignRequest &txReq
    , const SecureBinaryData &password, const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &cb)
 {
-   const auto reqId = signContainer_->signTXRequest(txReq, SignContainer::TXSignMode::Full, password, true);
+   const auto reqId = signContainer_->signTXRequest(txReq, SignContainer::TXSignMode::Full, true);
    listener_->setTxSignCb(reqId, cb);
 }
 
