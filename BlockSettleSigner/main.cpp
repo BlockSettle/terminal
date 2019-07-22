@@ -1,4 +1,3 @@
-#include <csignal>
 #include <btc/ecc.h>
 #include <iostream>
 #include <spdlog/spdlog.h>
@@ -10,31 +9,25 @@
 #include "HeadlessApp.h"
 #include "HeadlessSettings.h"
 #include "LogManager.h"
+#include "SignalsHandler.h"
 #include "SystemFileUtils.h"
-
-namespace {
-
-   volatile std::sig_atomic_t g_signalStatus;
-
-} //namespace
 
 static int process(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<HeadlessSettings> &settings)
 {
    auto queue = std::make_shared<DispatchQueue>();
 
+   SignalsHandler::registerHandler([queue, logger](int signal) {
+      logger->info("quit signal received, shutdown...");
+      queue->quit();
+   });
+
    HeadlessAppObj appObj(logger, settings, queue);
 
    appObj.start();
 
    while (!queue->done()) {
-      queue->tryProcess(std::chrono::seconds(1));
-
-      if (g_signalStatus != 0) {
-         logger->info("quit signal received, shutdown...");
-         queue->quit();
-         g_signalStatus = 0;
-      }
+      queue->tryProcess();
    }
 
    // Stop all background processing just in case
@@ -110,19 +103,8 @@ static int HeadlessApp(int argc, char **argv)
 #endif
 }
 
-void sigHandler(int signal)
-{
-   g_signalStatus = signal;
-}
-
 int main(int argc, char** argv)
 {
-   g_signalStatus = 0;
-#ifndef WIN32
-   std::signal(SIGINT, sigHandler);
-   std::signal(SIGTERM, sigHandler);
-#endif
-
    SystemFilePaths::setArgV0(argv[0]);
 
    srand(std::time(nullptr));
