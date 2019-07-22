@@ -740,10 +740,10 @@ void RFQTicketXBT::submitButtonClicked()
             const auto &inputs = ccCoinSel_->GetSelectedTransactions();
             auto promAddr = std::make_shared<std::promise<bs::Address>>();
             auto futAddr = promAddr->get_future();
-            const auto &cbAddr = [promAddr](const bs::Address &addr) {
+            const auto cbAddr = [&promAddr](const bs::Address &addr) {
                promAddr->set_value(addr);
             }; //TODO: refactor this
-            wallet->getNewChangeAddress(cbAddr);
+            wallet->getNewExtAddress(cbAddr);
             const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, futAddr.get());
             rfq.coinTxInput = txReq.serializeState().toHexStr();
             utxoAdapter_->reserve(txReq, rfq.requestId);
