@@ -6,6 +6,7 @@ TabButton {
     id: control
     text: parent.text
     property alias cText: text_
+    focusPolicy: Qt.NoFocus
 
     contentItem: Text {
         id: text_

@@ -46,6 +46,8 @@ CustomTitleDialogWindow {
         var w = curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.8) : 470
         var h = curPage === 1 ? (fullScreenMode ? 800 : mainWindow.width * 0.8) : 225
         sizeChanged(w, h)
+
+        if (curPage == 2) rootKeyInput.forceActiveFocus()
     }
 
     BSMessageBox {
