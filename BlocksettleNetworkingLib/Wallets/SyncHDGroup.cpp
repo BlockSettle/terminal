@@ -133,8 +133,10 @@ std::string hd::Group::nameForType(bs::hd::CoinType ct)
 
 std::shared_ptr<hd::Leaf> hd::Group::newLeaf(const std::string &walletId) const
 {
-   return std::make_shared<hd::Leaf>(walletId, walletName_ + "/" + name_, desc_
-      , signContainer_, logger_, type(), extOnlyAddresses_);
+   assert(bs::core::wallet::Type::Bitcoin == type());
+
+   return std::make_shared<hd::XBTLeaf>(walletId, walletName_ + "/" + name_, desc_
+      , signContainer_, logger_, extOnlyAddresses_);
 }
 
 void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &path) const
@@ -219,7 +221,7 @@ bool hd::AuthGroup::addLeaf(const std::shared_ptr<Leaf> &leaf, bool signal)
 std::shared_ptr<hd::Leaf> hd::CCGroup::newLeaf(const std::string &walletId) const
 {
    return std::make_shared<hd::CCLeaf>(walletId, walletName_ + "/" + name_, desc_
-      , signContainer_, logger_, extOnlyAddresses_);
+      , signContainer_, logger_);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

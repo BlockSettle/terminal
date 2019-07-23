@@ -248,23 +248,36 @@ void HeadlessContainer::ProcessCreateHDLeafResponse(unsigned int id, const std::
    bs::error::ErrorCode result = static_cast<bs::error::ErrorCode>(response.errorcode());
    if (result == bs::error::ErrorCode::NoError) {
       const auto path = bs::hd::Path::fromString(response.leaf().path());
-      bs::core::wallet::Type leafType = bs::core::wallet::Type::Unknown;
+
+      std::shared_ptr<bs::sync::hd::Leaf> leaf;
+
       switch (static_cast<bs::hd::CoinType>(path.get(-2))) {
       case bs::hd::CoinType::Bitcoin_main:
       case bs::hd::CoinType::Bitcoin_test:
-         leafType = bs::core::wallet::Type::Bitcoin;
+         leaf = std::make_shared<bs::sync::hd::XBTLeaf>(response.leaf().walletid()
+            , response.leaf().name(), response.leaf().desc(), this, logger_, response.leaf().extonly());
          break;
       case bs::hd::CoinType::BlockSettle_Auth:
-         leafType = bs::core::wallet::Type::Authentication;
+         leaf = std::make_shared<bs::sync::hd::AuthLeaf>(response.leaf().walletid()
+            , response.leaf().name(), response.leaf().desc(), this, logger_);
          break;
       case bs::hd::CoinType::BlockSettle_CC:
-         leafType = bs::core::wallet::Type::ColorCoin;
+         leaf = std::make_shared<bs::sync::hd::CCLeaf>(response.leaf().walletid()
+            , response.leaf().name(), response.leaf().desc(), this, logger_);
          break;
+      case bs::hd::CoinType::BlockSettle_Settlement:
+         leaf = std::make_shared<bs::sync::hd::SettlementLeaf>(response.leaf().walletid()
+            , response.leaf().name(), response.leaf().desc(), this, logger_);
+         break;
+      default:
+         logger_->error("[HeadlessContainer::ProcessCreateHDLeafResponse] failed to get leaf type from path: \'{}\'"
+                        , path.get(-2));
+         emit Error(id, "Unexpected leaf type");
+         return;
       }
-      const auto leaf = std::make_shared<bs::sync::hd::Leaf>(response.leaf().walletid()
-         , response.leaf().name(), response.leaf().desc(), this, logger_
-         , leafType, response.leaf().extonly());
-      logger_->debug("[HeadlessContainer] HDLeaf {} created", response.leaf().walletid());
+
+      logger_->debug("[HeadlessContainer::ProcessCreateHDLeafResponse] HDLeaf {} created of type: {}", response.leaf().walletid()
+                     , static_cast<int>(leaf->type()));
       emit HDLeafCreated(id, leaf);
    }
    else {

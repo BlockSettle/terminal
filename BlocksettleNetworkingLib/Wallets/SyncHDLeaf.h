@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+
 #include "ArmoryConnection.h"
 #include "HDPath.h"
 #include "SyncWallet.h"
@@ -20,26 +21,23 @@ namespace bs {
 
    namespace sync {
       namespace hd {
-         class Group;
-
          class Leaf : public bs::sync::Wallet
          {
-            friend class Group;
+         protected:
+            Leaf(const std::string &walletId, const std::string &name, const std::string &desc
+               , SignContainer *, const std::shared_ptr<spdlog::logger> &
+               , bs::core::wallet::Type type
+               , bool extOnlyAddresses);
 
          public:
             using cb_complete_notify = std::function<void(bs::hd::Path::Elem wallet, bool isValid)>;
-
-            Leaf(const std::string &walletId, const std::string &name, const std::string &desc
-               , SignContainer *, const std::shared_ptr<spdlog::logger> &
-               , bs::core::wallet::Type type = bs::core::wallet::Type::Bitcoin
-               , bool extOnlyAddresses = false);
             ~Leaf() override;
 
             virtual void setPath(const bs::hd::Path &);
             void synchronize(const std::function<void()> &cbDone) override;
 
             void init(bool force = false) override;
-            
+
             const std::string& walletId() const override;
             const std::string& walletIdInt() const override;
 
@@ -148,8 +146,8 @@ namespace bs {
 
             size_t intAddressPoolSize_ = 20;
             size_t extAddressPoolSize_ = 100;
-            std::vector<AddressEntryType> poolAET_ = { 
-               AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH), 
+            std::vector<AddressEntryType> poolAET_ = {
+               AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH),
                AddressEntryType_P2WPKH };
 
             std::set<AddrPoolKey>   tempAddresses_;
@@ -191,6 +189,14 @@ namespace bs {
          };
 
 
+         class XBTLeaf : public Leaf
+         {
+         public:
+            XBTLeaf(const std::string &walletId, const std::string &name, const std::string &desc
+               , SignContainer *, const std::shared_ptr<spdlog::logger> &, bool extOnlyAddresses);
+            ~XBTLeaf() override = default;
+         };
+
          class AuthLeaf : public Leaf
          {
          public:
@@ -212,8 +218,7 @@ namespace bs {
          {
          public:
             CCLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-               , SignContainer *,const std::shared_ptr<spdlog::logger> &
-               , bool extOnlyAddresses = false);
+               , SignContainer *,const std::shared_ptr<spdlog::logger> &);
             ~CCLeaf() override;
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::ColorCoin; }
@@ -268,7 +273,7 @@ namespace bs {
          class SettlementLeaf : public Leaf
          {
          public:
-            SettlementLeaf(const std::string &walletId, const std::string &name, 
+            SettlementLeaf(const std::string &walletId, const std::string &name,
                const std::string &desc, SignContainer *, const std::shared_ptr<spdlog::logger> &);
 
             void getRootPubkey(const std::function<void(const SecureBinaryData &)> &) const;
