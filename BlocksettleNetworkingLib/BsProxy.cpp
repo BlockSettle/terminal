@@ -108,7 +108,7 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
 
    connectionManager_ = std::make_shared<ConnectionManager>(logger_);
 
-   loginHasher_ = std::make_unique<LoginHasher>(params.celerLoginHasherSalt);
+   loginHasher_ = std::make_unique<LoginHasher>(BinaryData::CreateFromHex(params.celerLoginHasherSalt));
 
    threadPool_ = new QThreadPool(this);
 }
