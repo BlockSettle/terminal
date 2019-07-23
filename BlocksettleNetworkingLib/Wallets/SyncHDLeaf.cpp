@@ -681,9 +681,6 @@ hd::XBTLeaf::XBTLeaf(const std::string &walletId, const std::string &name, const
    , SignContainer *container,const std::shared_ptr<spdlog::logger> &logger, bool extOnlyAddresses)
    : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Bitcoin, extOnlyAddresses)
 {
-   intAddressPoolSize_ = 0;
-   extAddressPoolSize_ = 5;
-   poolAET_ = { AddressEntryType_P2WPKH };
 }
 
 
