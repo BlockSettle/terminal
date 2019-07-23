@@ -52,10 +52,8 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitWidth: inputsWidth
             KeyNavigation.tab: confirmPasswordInput
-//            Keys.onEnterPressed: { confirmPasswordInput.forceActiveFocus() }
-//            Keys.onReturnPressed: { confirmPasswordInput.forceActiveFocus() }
 
-            Keys.onEnterPressed: {
+            function setFocusToConfirmInput() {
                 if (lblValidatorText.text.length === 0) {
                     confirmPasswordInput.forceActiveFocus()
                 }
@@ -63,14 +61,10 @@ ColumnLayout {
                     lblValidatorText.visible = true
                 }
             }
-            Keys.onReturnPressed: {
-                if (lblValidatorText.text.length === 0) {
-                    confirmPasswordInput.forceActiveFocus()
-                }
-                else {
-                    lblValidatorText.visible = true
-                }
-            }
+
+            Keys.onEnterPressed: setFocusToConfirmInput()
+            Keys.onReturnPressed: setFocusToConfirmInput()
+
             onActiveFocusChanged: {
                 if (lblValidatorText.text.length !== 0) {
                     lblValidatorText.visible = true
@@ -115,14 +109,15 @@ ColumnLayout {
             implicitWidth: inputsWidth
             validator: PasswordConfirmValidator {}
             KeyNavigation.tab: nextFocusItem === undefined ? null : nextFocusItem
-            Keys.onEnterPressed: {
+
+            function onConfirmEnterPressed() {
                 confirmInputEnterPressed()
-                confirmPasswordInput.focus = nextFocusItem === undefined ? null : nextFocusItem
+                if (nextFocusItem !== undefined) {
+                    nextFocusItem.forceActiveFocus()
+                }
             }
-            Keys.onReturnPressed: {
-                confirmInputEnterPressed()
-                confirmPasswordInput.focus = nextFocusItem === undefined ? null : nextFocusItem
-            }
+            Keys.onEnterPressed: onConfirmEnterPressed()
+            Keys.onReturnPressed: onConfirmEnterPressed()
         }
     }
 

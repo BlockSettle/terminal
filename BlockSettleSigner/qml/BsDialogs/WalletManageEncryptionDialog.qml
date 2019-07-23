@@ -39,6 +39,10 @@ CustomDialog {
     height: 450
     rejectable: true
 
+    Component.onCompleted: {
+        simpleTab.forceActiveFocus()
+    }
+
     Connections {
         target: walletInfo
         onWalletChanged: {
@@ -87,15 +91,6 @@ CustomDialog {
                     text: "Simple"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
-
-                    onClicked: {
-                        if (walletInfo.encType === QPasswordData.Password) {
-                            walletDetailsFrame.passwordInput.focus = true
-                        }
-                        else if (walletInfo.encType === QPasswordData.Auth) {
-                            textInputEmail.focus = true
-                        }
-                    }
                 }
                 CustomTabButton {
                     id: addTabButton
@@ -123,7 +118,7 @@ CustomDialog {
             currentIndex: tabBar.currentIndex
             Layout.fillWidth: true
 
-            Item {
+            FocusScope {
                 id: simpleTab
                 ColumnLayout {
                     spacing: 10
@@ -134,8 +129,6 @@ CustomDialog {
                         inputsWidth: 250
                         nextFocusItem: rbPassword.checked ? newPasswordInput.tfPasswordInput : textInputEmail
                         KeyNavigation.tab: rbPassword.checked ? newPasswordInput.tfPasswordInput : textInputEmail
-                        //Keys.onEnterPressed: newPasswordInput.tfPasswordInput.forceActiveFocus()
-                        //Keys.onReturnPressed: newPasswordInput.tfPasswordInput.forceActiveFocus()
                     }
 
                     CustomHeader {

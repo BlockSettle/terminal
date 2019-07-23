@@ -238,15 +238,16 @@ void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::Re
       return;
    }
 
+   auto result = static_cast<bs::error::ErrorCode>(evt.errorcode());
    const BinaryData tx(evt.signedtx());
-   if (tx.isNull()) {
-      logger_->error("[SignerInterfaceListener::{}] empty TX data", __func__);
+   if (result != bs::error::ErrorCode::NoError) {
+      logger_->error("[SignerInterfaceListener::{}] error on signing tx: {}", __func__, evt.errorcode());
       return;
    }
    if (reqId) {
       const auto &itCb = cbSignReqs_.find(reqId);
       if (itCb != cbSignReqs_.end()) {
-         itCb->second(tx);
+         itCb->second(result, tx);
          cbSignReqs_.erase(itCb);
       }
       else {

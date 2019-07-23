@@ -4,6 +4,7 @@ import "../BsStyles"
 
 Button {
     leftPadding: 0
+    focusPolicy: Qt.NoFocus
 
     property color textColor: BSStyle.textColor
     background: Rectangle {

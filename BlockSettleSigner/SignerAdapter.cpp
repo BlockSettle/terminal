@@ -74,7 +74,7 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
 }
 
 void SignerAdapter::signOfflineTxRequest(const bs::core::wallet::TXSignRequest &txReq
-   , const std::function<void(const BinaryData &)> &cb)
+   , const SecureBinaryData &password, const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &cb)
 {
    const auto reqId = signContainer_->signTXRequest(txReq, SignContainer::TXSignMode::Full, true);
    listener_->setTxSignCb(reqId, cb);
@@ -243,4 +243,14 @@ void SignerAdapter::setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory)
 {
    qmlFactory_ = qmlFactory;
    listener_->setQmlFactory(qmlFactory);
+}
+
+std::shared_ptr<QmlBridge> SignerAdapter::qmlBridge() const
+{
+   return qmlBridge_;
+}
+
+std::shared_ptr<QmlFactory> SignerAdapter::qmlFactory() const
+{
+   return qmlFactory_;
 }

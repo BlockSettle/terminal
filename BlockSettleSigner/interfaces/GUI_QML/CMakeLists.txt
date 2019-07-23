@@ -6,7 +6,6 @@ configure_file(../../SignerVersion.h.in SignerVersion.h)
 FILE(GLOB SOURCES *.cpp)
 LIST(APPEND SOURCES
    ../../AuthProxy.cpp
-   ../../OfflineProcessor.cpp
    ../../PasswordConfirmValidator.cpp
    ../../PdfBackupQmlPrinter.cpp
    ../../QmlFactory.cpp
@@ -24,7 +23,6 @@ LIST(APPEND SOURCES
 FILE(GLOB HEADERS *.h)
 LIST(APPEND HEADERS
    ../../AuthProxy.h
-   ../../OfflineProcessor.h
    ../../PasswordConfirmValidator.h
    ../../PdfBackupQmlPrinter.h
    ../../QmlFactory.h

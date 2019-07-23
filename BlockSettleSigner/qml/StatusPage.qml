@@ -2,7 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import Qt.labs.platform 1.1
-import com.blocksettle.OfflineProc 1.0
+import com.blocksettle.WalletsProxy 1.0
 
 import "StyledControls"
 import "BsControls"
@@ -47,10 +47,18 @@ Item {
 
                             onAccepted: {
                                 let filePath = qmlAppObj.getUrlPath(file)
+                                var signCallback = function(success, msg) {
+                                    if (success) {
+                                        JsHelper.messageBox(BSMessageBox.Type.Success
+                                            , qsTr("Sign Offline TX"), qsTr("Offline TX successfully signed.\n") + msg)
 
-                                // FIXME: rewrite OfflineProcessor.cpp
-                                let reqId = offlineProc.parseFile(filePath)
-                                offlineProc.processRequest(reqId)
+                                    } else {
+                                        JsHelper.messageBox(BSMessageBox.Type.Critical
+                                            , qsTr("Sign Offline TX"), qsTr("Signing Offline TX failed with error:\n") + msg)
+                                    }
+                                }
+
+                                walletsProxy.signOfflineTx(filePath, signCallback)
                             }
                         }
                     }
@@ -250,22 +258,6 @@ Item {
                 Layout.fillHeight: true
                 color: BSStyle.backgroundColor
             }
-        }
-    }
-
-    Connections {
-        target: offlineProc
-        onSignSuccess: function(filePath) {
-            JsHelper.messageBox(BSMessageBox.Type.Success
-                , qsTr("Offline Transaction")
-                , qsTr("Transaction was succesfully signed")
-                , qsTr("Saved to %1").arg(filePath))
-        }
-        onSignFailure: function(errorMsg) {
-            JsHelper.messageBox(BSMessageBox.Type.Critical
-                , qsTr("Offline Transaction")
-                , qsTr("Failed to sign transaction")
-                , errorMsg)
         }
     }
 }

@@ -136,7 +136,7 @@ CustomDialogWindow {
     }
 
     contentItem: FocusScope {
-        id: focus
+        id: contentItemScope
         anchors.fill: parent
         anchors.margins: 0
         focus: true
