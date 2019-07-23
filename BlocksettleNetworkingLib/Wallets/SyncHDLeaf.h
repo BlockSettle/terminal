@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+
 #include "ArmoryConnection.h"
 #include "HDPath.h"
 #include "SyncWallet.h"
@@ -20,12 +21,8 @@ namespace bs {
 
    namespace sync {
       namespace hd {
-         class Group;
-
          class Leaf : public bs::sync::Wallet
          {
-            friend class Group;
-
          public:
             using cb_complete_notify = std::function<void(bs::hd::Path::Elem wallet, bool isValid)>;
 
@@ -39,7 +36,7 @@ namespace bs {
             void synchronize(const std::function<void()> &cbDone) override;
 
             void init(bool force = false) override;
-            
+
             const std::string& walletId() const override;
             const std::string& walletIdInt() const override;
 
@@ -148,8 +145,8 @@ namespace bs {
 
             size_t intAddressPoolSize_ = 20;
             size_t extAddressPoolSize_ = 100;
-            std::vector<AddressEntryType> poolAET_ = { 
-               AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH), 
+            std::vector<AddressEntryType> poolAET_ = {
+               AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH),
                AddressEntryType_P2WPKH };
 
             std::set<AddrPoolKey>   tempAddresses_;
@@ -268,7 +265,7 @@ namespace bs {
          class SettlementLeaf : public Leaf
          {
          public:
-            SettlementLeaf(const std::string &walletId, const std::string &name, 
+            SettlementLeaf(const std::string &walletId, const std::string &name,
                const std::string &desc, SignContainer *, const std::shared_ptr<spdlog::logger> &);
 
             void getRootPubkey(const std::function<void(const SecureBinaryData &)> &) const;
