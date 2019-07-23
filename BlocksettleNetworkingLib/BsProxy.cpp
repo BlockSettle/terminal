@@ -3,18 +3,21 @@
 #include <QThread>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QNetworkAccessManager>
+
 #include "AutheIDClient.h"
 #include "BsClient.h"
 #include "CelerMessageMapper.h"
 #include "ConnectionManager.h"
 #include "DataConnection.h"
 #include "DataConnectionListener.h"
+#include "LoginHasher.h"
 #include "StringUtils.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
-#include "bs_proxy.pb.h"
-#include "rp.pb.h"
+
 #include "NettyCommunication.pb.h"
 #include "UpstreamLoginProto.pb.h"
+#include "bs_proxy.pb.h"
+#include "rp.pb.h"
 
 using namespace Blocksettle::Communication::Proxy;
 using namespace autheid;
@@ -104,6 +107,8 @@ BsProxy::BsProxy(const std::shared_ptr<spdlog::logger> &logger, const BsProxyPar
    nam_ = std::make_shared<QNetworkAccessManager>(this);
 
    connectionManager_ = std::make_shared<ConnectionManager>(logger_);
+
+   loginHasher_ = std::make_unique<LoginHasher>(BinaryData::CreateFromHex(params.celerLoginHasherSalt));
 
    threadPool_ = new QThreadPool(this);
 }
@@ -345,7 +350,7 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
    client->autheid->disconnect();
 
    connect(client->autheid.get(), &AutheIDClient::signSuccess, this, [this, client, requestId](const AutheIDClient::SignResult &result) {
-      QtConcurrent::run([this, clientId = client->clientId, requestId, result] {
+      QtConcurrent::run([this, clientId = client->clientId, email = client->email, requestId, result] {
          const auto env = params_.autheidTestEnv ?
             AutheIDClient::AuthEidEnv::Test : AutheIDClient::AuthEidEnv::Prod;
          auto status = AutheIDClient::verifySignature(result, env);
@@ -354,7 +359,9 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
             return;
          }
 
-         QMetaObject::invokeMethod(this, [this, clientId, requestId, result, status] {
+         std::string celerLogin = loginHasher_->hashLogin(email);
+
+         QMetaObject::invokeMethod(this, [this, clientId, requestId, result, status, celerLogin] {
             auto client = findClient(clientId);
             if (!client) {
                return;
@@ -368,7 +375,8 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
             client->state = State::LoggedIn;
 
             Response response;
-            response.mutable_get_login_result();
+            auto d = response.mutable_get_login_result();
+            d->set_celer_login(celerLogin);
             sendResponse(client, requestId, &response);
 
             client->celerListener = std::make_unique<BsClientCelerListener>();
