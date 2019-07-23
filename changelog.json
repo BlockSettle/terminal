@@ -1,7 +1,28 @@
 {
-   "latest_version": "0.19.3",
-   "release_date": "20 Jul 2019",
+   "latest_version": "0.19.4",
+   "release_date": "23 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.19.4",
+         "previous_version": "0.19.3",
+         "release_date": "23 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix Linux deploy script",
+            "Process Posix signals using sigwait",
+            "Fix Signer/fix focus",
+            "UI fixes",
+            "Disable message until friend request approved"
+         ],
+         "bug_fixes": [
+            "Fix chat notifications",
+            "Fix settlement group display",
+            "FIX CC RFQ",
+            "Fix TX"
+         ],
+         "revision": "ebca9985",
+         "common_revision": "14dcc50f"
+      },
       {
          "version_string": "0.19.3",
          "previous_version": "0.19.2",
