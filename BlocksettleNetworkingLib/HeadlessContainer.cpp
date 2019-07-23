@@ -251,7 +251,6 @@ void HeadlessContainer::ProcessCreateHDLeafResponse(unsigned int id, const std::
 
       std::shared_ptr<bs::sync::hd::Leaf> leaf;
 
-
       switch (static_cast<bs::hd::CoinType>(path.get(-2))) {
       case bs::hd::CoinType::Bitcoin_main:
       case bs::hd::CoinType::Bitcoin_test:
@@ -276,7 +275,6 @@ void HeadlessContainer::ProcessCreateHDLeafResponse(unsigned int id, const std::
          emit Error(id, "Unexpected leaf type");
          return;
       }
-
 
       logger_->debug("[HeadlessContainer::ProcessCreateHDLeafResponse] HDLeaf {} created of type: {}", response.leaf().walletid()
                      , static_cast<int>(leaf->type()));

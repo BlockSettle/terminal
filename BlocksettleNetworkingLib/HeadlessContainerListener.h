@@ -21,6 +21,7 @@ namespace spdlog {
 namespace bs {
    namespace core {
       namespace hd {
+         class Leaf;
          class Node;
          class Wallet;
       }
@@ -126,7 +127,7 @@ private:
    void SignTXResponse(const std::string &clientId, unsigned int id, Blocksettle::Communication::headless::RequestType reqType
       , bs::error::ErrorCode errorCode, const BinaryData &tx = {});
    void CreateHDLeafResponse(const std::string &clientId, unsigned int id, bs::error::ErrorCode result
-      , const std::string &path = {}, const BinaryData &chainCode = {});
+      , const std::shared_ptr<bs::core::hd::Leaf>& leaf = nullptr);
    void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::string &walletId
       , const std::shared_ptr<bs::core::hd::Wallet> &, const std::string &error = {});
    void SyncAddrsResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bs::sync::SyncState);

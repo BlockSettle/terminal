@@ -879,11 +879,11 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
       auto assetPtr = leaf->getRootAsset();
 
       auto rootPtr = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(assetPtr);
-      if (rootPtr == nullptr)
+      if (rootPtr == nullptr) {
          throw AssetException("unexpected root asset type");
-      CreateHDLeafResponse(clientId, id, ErrorCode::NoError,
-         path.toString(),
-         rootPtr->getChaincode());
+      }
+
+      CreateHDLeafResponse(clientId, id, ErrorCode::NoError, leaf);
    };
 
    bs::core::wallet::TXSignRequest txReq;
@@ -894,14 +894,18 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
 }
 
 void HeadlessContainerListener::CreateHDLeafResponse(const std::string &clientId, unsigned int id
-   , ErrorCode result, const std::string &path, const BinaryData &chainCode)
+   , ErrorCode result, const std::shared_ptr<bs::core::hd::Leaf>& leaf)
 {
-   logger_->debug("[HeadlessContainerListener] CreateHDWalletResponse: {}", path);
+   const std::string pathString = leaf->path().toString();
+   logger_->debug("[HeadlessContainerListener] CreateHDWalletResponse: {}", pathString);
    headless::CreateHDLeafResponse response;
    if (result == ErrorCode::NoError) {
-      if (!chainCode.isNull()) {
-         auto leaf = response.mutable_leaf();
-         leaf->set_walletid(path);
+      if (leaf) {
+         auto leafResponse = response.mutable_leaf();
+
+         leafResponse->set_path(pathString);
+         leafResponse->set_walletid(leaf->walletId());
+
          response.set_errorcode(static_cast<uint32_t>(ErrorCode::NoError));
       }
       else {
