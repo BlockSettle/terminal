@@ -581,7 +581,8 @@ void ChatWidget::onConfirmUploadNewPublicKey(const std::string &oldKey, const st
 void ChatWidget::onConfirmContactNewKeyData(
       const std::vector<std::shared_ptr<Chat::Data> > &remoteConfirmed
       , const std::vector<std::shared_ptr<Chat::Data> > &remoteKeysUpdate
-      , const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutelyNew)
+      , const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutelyNew
+      , bool bForceUpdateAllUsers)
 {
    Q_UNUSED(remoteConfirmed)
 
@@ -606,6 +607,11 @@ void ChatWidget::onConfirmContactNewKeyData(
       auto name = QString::fromStdString(contactRecord->display_name());
       if (name.isEmpty()) {
          name = QString::fromStdString(contactRecord->contact_id());
+      }
+
+      if (bForceUpdateAllUsers) {
+         updateList.push_back(contact);
+         continue;
       }
 
       ImportKeyBox box(BSMessageBox::question
@@ -642,6 +648,11 @@ void ChatWidget::onConfirmContactNewKeyData(
       }
       auto contactRecord = contact->mutable_contact_record();
       auto name = QString::fromStdString(contactRecord->contact_id());
+
+      if (bForceUpdateAllUsers) {
+         newList.push_back(contact);
+         continue;
+      }
 
       ImportKeyBox box(BSMessageBox::question
                        , tr("Do you wish to keep or remove '%1' as a Contact? ").arg(name)
@@ -1289,16 +1300,8 @@ void ChatWidget::onContactListConfirmationRequested(const std::vector<std::share
       detailsString);
    int ret = bsMessageBox.exec();
 
-   if (QDialog::Accepted == ret) {
-      onConfirmContactNewKeyData(remoteConfirmed, remoteKeysUpdate, remoteAbsolutelyNew);
-   }
-   else if (QDialog::Rejected == ret) {
-      std::vector<std::shared_ptr<Chat::Data>> mergedList;
-      mergedList.insert(mergedList.end(), remoteKeysUpdate.begin(), remoteKeysUpdate.end());
-      mergedList.insert(mergedList.end(), remoteAbsolutelyNew.begin(), remoteAbsolutelyNew.end());
-      // User canceled contact changes, remove this contacts from friend list
-      client_->OnContactListRejected(mergedList);
-   }
+   onConfirmContactNewKeyData(remoteConfirmed, remoteKeysUpdate,
+                              remoteAbsolutelyNew, QDialog::Accepted == ret);
 }
 
 void ChatWidget::onContactChanged()
