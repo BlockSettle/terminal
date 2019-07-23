@@ -353,7 +353,7 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer
       std::vector<bs::sync::HDWalletData::Leaf> leaves;
       for (int j = 0; j < group.leaves_size(); ++j) {
          const auto leaf = group.leaves(j);
-         leaves.push_back({ leaf.id(), leaf.index() });
+         leaves.push_back({ leaf.id(), leaf.index(), false, leaf.extra_data() });
       }
       result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), leaves });
    }
