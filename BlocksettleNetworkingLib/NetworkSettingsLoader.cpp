@@ -73,6 +73,7 @@ void NetworkSettingsLoader::loadSettings()
          networkSettings_.marketData = { response.marketdata().host(), int(response.marketdata().port()) };
          networkSettings_.mdhs = { response.mdhs().host(), int(response.mdhs().port()) };
          networkSettings_.chat = { response.chat().host(), int(response.chat().port()) };
+         networkSettings_.proxy = { response.proxy().host(), int(response.proxy().port()) };
          networkSettings_.isSet = true;
 
          cmdPuBSettings_.reset();

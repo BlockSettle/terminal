@@ -1,6 +1,5 @@
 #include "BSTerminalMainWindow.h"
 #include "ui_BSTerminalMainWindow.h"
-#include "moc_BSTerminalMainWindow.cpp"
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -11,7 +10,7 @@
 #include <QSystemTrayIcon>
 #include <QToolBar>
 #include <QTreeView>
-
+#include <spdlog/spdlog.h>
 #include <thread>
 
 #include "AboutDialog.h"
@@ -57,31 +56,6 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
-#include <spdlog/spdlog.h>
-
-// tmp
-#include "BsProxy.h"
-
-namespace {
-
-   void startTestProxy(const std::shared_ptr<spdlog::logger> &logger, bool autheidTestEnv)
-   {
-      BsProxyParams params;
-      params.context = std::make_shared<ZmqContext>(logger);
-      params.ownKeyFileDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation).toStdString();
-      params.ownKeyFileName = "bs_proxy_tmp.peers";
-      params.autheidTestEnv = autheidTestEnv;
-      params.autheidApiKey = autheidTestEnv ? "Bearer live_opnKv0PyeML0WvYm66ka2k29qPPoDjS3rzw13bRJzITY" : "Bearer live_17ec2nlP5NzHWkEAQUwVpqhN63fiyDPWGc5Z3ZQ8npaf";
-      //params.celerHost = "104.155.117.179";
-      //params.celerPort = 16001;
-
-      auto proxy = new BsProxy(logger, params);
-      auto thread = new QThread();
-      proxy->moveToThread(thread);
-      thread->start();
-   }
-
-} // namespace
 
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QWidget* parent)
@@ -182,8 +156,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    updateControlEnabledState();
 
    InitWidgets();
-
-   startTestProxy(logMgr_->logger(), applicationSettings_->isAutheidTestEnv());
 }
 
 void BSTerminalMainWindow::onMDConnectionDetailsRequired()
@@ -1621,9 +1593,6 @@ void BSTerminalMainWindow::InitWidgets()
 
 void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settings)
 {
-   if (!settings.celer.host.empty()) {
-      BsProxy::overrideCelerHost(settings.celer.host, int(settings.celer.port));
-   }
    if (!settings.marketData.host.empty()) {
       applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
       applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);

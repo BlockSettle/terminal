@@ -191,8 +191,9 @@ void LoginWindow::onAuthPressed()
       QString login = ui_->lineEditUsername->text().trimmed();
       ui_->lineEditUsername->setText(login);
 
-      // TODO: Copy host and port from PuB
       BsClientParams params;
+      params.connectAddress = networkSettingsLoader_->settings().proxy.host;
+      params.connectPort = networkSettingsLoader_->settings().proxy.port;
       params.context = std::make_shared<ZmqContext>(logger_);
       params.newServerKeyCallback = [](const BsClientParams::NewKey &newKey) {
          // FIXME: Show GUI prompt

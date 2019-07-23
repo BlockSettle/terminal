@@ -18,6 +18,7 @@ struct NetworkSettings {
    NetworkAddress  marketData;
    NetworkAddress  mdhs;
    NetworkAddress  chat;
+   NetworkAddress  proxy;
    bool            isSet = false;
 };
 
