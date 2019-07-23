@@ -18,7 +18,7 @@ bool SingleCelerConnectionListener::ProcessDataFromClient(const std::string& dat
 {
    ProtobufMessage header;
 
-   if (header.ParseFromString(data+'\0')) {
+   if (!header.ParseFromString(data)) {
       logger_->error("[SingleCelerConnectionListener] {}: failed to parse ProtobufMessage({} bytes)"
          , GetName(), data.length());
       return false;

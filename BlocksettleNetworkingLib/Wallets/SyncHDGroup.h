@@ -122,7 +122,7 @@ namespace bs {
                , const std::string &desc, SignContainer *container
                , WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger)
-               : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_CC),
+               : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_Settlement),
                   desc, container, wct, logger) {}
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Settlement; }

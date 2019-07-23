@@ -276,26 +276,27 @@ void RFQReplyWidget::onReadyToAutoSign()
 
 void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)
 {
-   if (walletsManager_ == nullptr) {
-      return;
-   }
+   // TODO: review
 
-   auto hdWallet = walletsManager_->getHDWalletById(hdWalletId.toStdString());
-   if (!hdWallet) {
-      logger_->warn("[RFQReplyWidget::onAutoSignActivated] failed to get HD wallet for id {} - falling back to main primary"
-         , hdWalletId.toStdString());
-      hdWallet = walletsManager_->getPrimaryWallet();
-   }
-   if (!hdWallet) {
-      return;
-   }
+//   if (walletsManager_ == nullptr) {
+//      return;
+//   }
+
+//   auto hdWallet = walletsManager_->getHDWalletById(hdWalletId.toStdString());
+//   if (!hdWallet) {
+//      logger_->warn("[RFQReplyWidget::onAutoSignActivated] failed to get HD wallet for id {} - falling back to main primary"
+//         , hdWalletId.toStdString());
+//      hdWallet = walletsManager_->getPrimaryWallet();
+//   }
+//   if (!hdWallet) {
+//      return;
+//   }
 
 
-   if (signingContainer_->isReady()) {      
-      // not implemented yet
-      signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ActivateAutoSign
-         , {{ QLatin1String("rootId"), hdWalletId }});
-   }
+//   if (signingContainer_->isReady()) {
+//      signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ActivateAutoSign
+//         , {{ QLatin1String("rootId"), hdWalletId }});
+//   }
 }
 
 void RFQReplyWidget::onConnectedToCeler()
