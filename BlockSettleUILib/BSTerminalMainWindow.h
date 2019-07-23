@@ -15,6 +15,8 @@
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "BsClient.h"
 
+#include "ChatProtocol/ChatClientService.h"
+
 namespace Ui {
     class BSTerminalMainWindow;
 }
@@ -271,6 +273,8 @@ private:
    std::unique_ptr<MainWinACT>   act_;
 
    std::unique_ptr<BsClient> bsClient_;
+
+   Chat::ChatClientServicePtr chatClientServicePtr_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

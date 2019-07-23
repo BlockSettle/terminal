@@ -1,3 +1,5 @@
+#include <QtDebug>
+
 #include "BSTerminalMainWindow.h"
 #include "ui_BSTerminalMainWindow.h"
 #include "moc_BSTerminalMainWindow.cpp"
@@ -60,6 +62,8 @@
 
 // tmp
 #include "BsProxy.h"
+
+#include "ChatProtocol/ChatClientService.h"
 
 namespace {
 
@@ -759,6 +763,9 @@ void BSTerminalMainWindow::InitChatView()
    ui_->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
    ui_->widgetChat->setCelerClient(celerConnection_);
 
+   chatClientServicePtr_ = std::make_shared<Chat::ChatClientService>();
+   chatClientServicePtr_->Init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
+
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
    connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);
    connect(ui_->tabWidget, &QTabWidget::currentChanged, this, &BSTerminalMainWindow::onTabWidgetCurrentChanged);
@@ -1222,7 +1229,9 @@ void BSTerminalMainWindow::onReadyToLogin()
    if (rc == QDialog::Accepted) {
       currentUserLogin_ = loginDialog.getUsername();
       std::string jwt;
-      auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+      //auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+      chatClientServicePtr_->LoginToServer(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+
       setLoginButtonText(currentUserLogin_);
       setWidgetsAuthorized(true);
 
