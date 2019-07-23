@@ -373,6 +373,7 @@ void BsProxy::processGetLoginResult(Client *client, int64_t requestId, const Req
             }
 
             client->state = State::LoggedIn;
+            client->celerLogin = celerLogin;
 
             Response response;
             auto d = response.mutable_get_login_result();
@@ -591,7 +592,7 @@ void BsProxy::processCeler(BsProxy::Client *client, const Request_Celer &request
    if (messageType == CelerAPI::LoginRequestType) {
       // Override user's login and password here
       com::celertech::baseserver::communication::login::LoginRequest loginRequest;
-      loginRequest.set_username(client->email);
+      loginRequest.set_username(client->celerLogin);
       // FIXME: Use different passwords
       loginRequest.set_password("Welcome1234");
       dataOverride = loginRequest.SerializeAsString();

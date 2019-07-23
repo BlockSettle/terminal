@@ -98,6 +98,7 @@ private:
       std::unique_ptr<AutheIDClient> autheid;
       State state{};
       std::string email;
+      std::string celerLogin;
 
       // Declare celer listener before celer client itself (it should be destroyed after connection)!
       std::unique_ptr<BsClientCelerListener> celerListener;
