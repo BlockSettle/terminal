@@ -114,6 +114,9 @@ class ProtobufSettings(Configurator):
         self.filter_copy(os.path.join(self.get_build_dir(), 'src'), os.path.join(self.get_install_dir(), 'include'),
                          '.inc', False)
 
+        # copy proto files
+        self.filter_copy(os.path.join(self.get_build_dir(), 'src'), os.path.join(self.get_install_dir(), 'include'),
+                         '.proto', False)
         return True
 
     def install_x(self):
