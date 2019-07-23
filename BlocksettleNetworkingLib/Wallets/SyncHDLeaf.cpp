@@ -16,8 +16,11 @@ hd::Leaf::Leaf(const std::string &walletId, const std::string &name, const std::
    , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger
    , bs::core::wallet::Type type, bool extOnlyAddresses)
    : bs::sync::Wallet(container, logger)
-   , walletId_(walletId), type_(type)
-   , name_(name), desc_(desc), isExtOnly_(extOnlyAddresses)
+   , walletId_(walletId)
+   , type_(type)
+   , name_(name)
+   , desc_(desc)
+   , isExtOnly_(extOnlyAddresses)
 {}
 
 hd::Leaf::~Leaf() = default;
@@ -26,7 +29,7 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
 {
    reset();
 
-   const auto &cbProcess = [this, cbDone](bs::sync::WalletData data) 
+   const auto &cbProcess = [this, cbDone](bs::sync::WalletData data)
    {
       encryptionTypes_ = data.encryptionTypes;
       encryptionKeys_ = data.encryptionKeys;
@@ -471,7 +474,7 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
          }
          fut.wait();
       }
-      
+
       if (cb)
          cb();
    };
@@ -674,6 +677,18 @@ void hd::Leaf::merge(const std::shared_ptr<Wallet> walletPtr)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+hd::XBTLeaf::XBTLeaf(const std::string &walletId, const std::string &name, const std::string &desc
+   , SignContainer *container,const std::shared_ptr<spdlog::logger> &logger, bool extOnlyAddresses)
+   : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Bitcoin, extOnlyAddresses)
+{
+   intAddressPoolSize_ = 0;
+   extAddressPoolSize_ = 5;
+   poolAET_ = { AddressEntryType_P2WPKH };
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 hd::AuthLeaf::AuthLeaf(const std::string &walletId, const std::string &name, const std::string &desc
    , SignContainer *container,const std::shared_ptr<spdlog::logger> &logger)
    : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Authentication, true)
@@ -725,10 +740,10 @@ void hd::AuthLeaf::setUserId(const BinaryData &userId)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::CCLeaf::CCLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-   , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger
-   , bool extOnlyAddresses)
-   : hd::Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::ColorCoin, extOnlyAddresses)
-   , validationStarted_(false), validationEnded_(false)
+   , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger)
+   : hd::Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::ColorCoin, true)
+   , validationStarted_(false)
+   , validationEnded_(false)
 {}
 
 hd::CCLeaf::~CCLeaf()

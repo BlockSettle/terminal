@@ -125,17 +125,17 @@ bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId
 {
    const auto hdWallet = walletsMgr_->getHDWalletById(rootWalletId);
    if (!hdWallet) {
-      logger_->error("[{}] failed to get HD wallet by id {}", __func__, rootWalletId);
+      logger_->error("[InprocSigner::createHDLeaf] failed to get HD wallet by id {}", rootWalletId);
       return 0;
    }
    if (path.length() < 3) {
-      logger_->error("[{}] too short path: {}", __func__, path.toString());
+      logger_->error("[InprocSigner::createHDLeaf] too short path: {}", path.toString());
       return 0;
    }
    const auto groupType = static_cast<bs::hd::CoinType>(path.get(-2));
    const auto group = hdWallet->createGroup(groupType);
    if (!group) {
-      logger_->error("[{}] failed to create/get group for {}", __func__, path.get(-2));
+      logger_->error("[InprocSigner::createHDLeaf] failed to create/get group for {}", path.get(-2));
       return 0;
    }
 
@@ -146,29 +146,29 @@ bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId
    std::shared_ptr<bs::core::hd::Leaf> leaf;
    auto& password = pwdData[0].password;
 
-   try 
+   try
    {
       hdWallet->lockForEncryption(password);
       const auto leafIndex = path.get(2);
       auto leaf = group->createLeaf(leafIndex);
-      if (leaf == nullptr) 
-      {
-         logger_->error("[{}] failed to create/get leaf {}", __func__, path.toString());
+      if (leaf == nullptr) {
+         logger_->error("[InprocSigner::createHDLeaf] failed to create/get leaf {}", path.toString());
          return 0;
       }
    }
    catch (const std::exception &) {
-      logger_->error("[{}] failed to decrypt root node {}", __func__, rootWalletId);
+      logger_->error("[InprocSigner::createHDLeaf] failed to decrypt root node {}", rootWalletId);
       return 0;
    }
 
    const bs::signer::RequestId reqId = seqId_++;
    std::shared_ptr<bs::sync::hd::Leaf> hdLeaf;
+
    switch (groupType) {
    case bs::hd::CoinType::Bitcoin_main:
    case bs::hd::CoinType::Bitcoin_test:
-      hdLeaf = std::make_shared<bs::sync::hd::Leaf>(leaf->walletId(), leaf->name(), ""
-         , this, logger_, leaf->type(), leaf->hasExtOnlyAddresses());
+      hdLeaf = std::make_shared<bs::sync::hd::XBTLeaf>(leaf->walletId(), leaf->name(), ""
+         , this, logger_, leaf->hasExtOnlyAddresses());
       break;
    case bs::hd::CoinType::BlockSettle_Auth:
       hdLeaf = std::make_shared<bs::sync::hd::AuthLeaf>(leaf->walletId(), leaf->name()
@@ -176,10 +176,18 @@ bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId
       break;
    case bs::hd::CoinType::BlockSettle_CC:
       hdLeaf = std::make_shared<bs::sync::hd::CCLeaf>(leaf->walletId(), leaf->name()
-         , "", this, logger_, leaf->hasExtOnlyAddresses());
+         , "", this, logger_);
       break;
-   default:    break;
+   case bs::hd::CoinType::BlockSettle_Settlement:
+      hdLeaf = std::make_shared<bs::sync::hd::SettlementLeaf>(leaf->walletId(), leaf->name()
+         , "", this, logger_);
+      break;
+   default:
+      logger_->error("[InprocSigner::createHDLeaf] unexpected group type: {}"
+                     , groupType);
+      break;
    }
+
    QTimer::singleShot(1, [this, reqId, hdLeaf] {emit HDLeafCreated(reqId, hdLeaf); });
    return reqId;
 }

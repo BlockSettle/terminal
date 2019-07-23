@@ -23,13 +23,14 @@ namespace bs {
       namespace hd {
          class Leaf : public bs::sync::Wallet
          {
-         public:
-            using cb_complete_notify = std::function<void(bs::hd::Path::Elem wallet, bool isValid)>;
-
+         protected:
             Leaf(const std::string &walletId, const std::string &name, const std::string &desc
                , SignContainer *, const std::shared_ptr<spdlog::logger> &
-               , bs::core::wallet::Type type = bs::core::wallet::Type::Bitcoin
-               , bool extOnlyAddresses = false);
+               , bs::core::wallet::Type type
+               , bool extOnlyAddresses);
+
+         public:
+            using cb_complete_notify = std::function<void(bs::hd::Path::Elem wallet, bool isValid)>;
             ~Leaf() override;
 
             virtual void setPath(const bs::hd::Path &);
@@ -188,6 +189,14 @@ namespace bs {
          };
 
 
+         class XBTLeaf : public Leaf
+         {
+         public:
+            XBTLeaf(const std::string &walletId, const std::string &name, const std::string &desc
+               , SignContainer *, const std::shared_ptr<spdlog::logger> &, bool extOnlyAddresses);
+            ~XBTLeaf() override = default;
+         };
+
          class AuthLeaf : public Leaf
          {
          public:
@@ -209,8 +218,7 @@ namespace bs {
          {
          public:
             CCLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-               , SignContainer *,const std::shared_ptr<spdlog::logger> &
-               , bool extOnlyAddresses = false);
+               , SignContainer *,const std::shared_ptr<spdlog::logger> &);
             ~CCLeaf() override;
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::ColorCoin; }

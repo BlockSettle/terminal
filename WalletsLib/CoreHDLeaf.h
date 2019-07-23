@@ -33,16 +33,16 @@ namespace bs {
             friend class SettlementLeaf;
 
          public:
-            Leaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger, 
+            Leaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger,
                wallet::Type type = wallet::Type::Bitcoin);
             ~Leaf();
 
             virtual void init(
-               std::shared_ptr<AssetWallet_Single>, 
+               std::shared_ptr<AssetWallet_Single>,
                const BinaryData& addrAccId);
             virtual std::shared_ptr<hd::Leaf> getCopy(
                std::shared_ptr<AssetWallet_Single>) const;
-            
+
             void setPath(const bs::hd::Path&);
 
             std::string walletId() const override;
@@ -59,7 +59,7 @@ namespace bs {
             std::vector<bs::Address> getPooledAddressList() const override;
             std::vector<bs::Address> getExtAddressList() const override;
             std::vector<bs::Address> getIntAddressList() const override;
-            
+
             unsigned getExtAddressCount() const override;
             unsigned getUsedAddressCount() const override;
             unsigned getIntAddressCount() const override;
@@ -69,18 +69,18 @@ namespace bs {
             bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
             bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
             std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
-                        
+
             std::string getAddressIndex(const bs::Address &) override;
             bs::hd::Path::Elem getAddressIndexForAddr(const BinaryData &addr) const;
             bs::hd::Path::Elem addressIndex(const bs::Address &addr) const;
             bool addressIndexExists(const std::string &index) const override;
-  
+
             std::pair<bs::Address, bool> synchronizeUsedAddressChain(
                const std::string&, AddressEntryType) override;
 
             //index as asset derivation id
             //bool as external (true) or interal (false)
-            bs::Address getAddressByIndex(unsigned, bool, 
+            bs::Address getAddressByIndex(unsigned, bool,
                AddressEntryType aet = AddressEntryType_Default) const;
 
             SecureBinaryData getPublicKeyFor(const bs::Address &) override;
@@ -167,7 +167,7 @@ namespace bs {
 
          public:
             AuthLeaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger);
-            
+
             std::shared_ptr<hd::Leaf> getCopy(
                std::shared_ptr<AssetWallet_Single>) const override;
             BinaryData serialize() const override;
