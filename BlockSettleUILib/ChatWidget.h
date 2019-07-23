@@ -128,7 +128,8 @@ private:
 
    void onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
       const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
-      const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
+      const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew,
+      bool bForceUpdateAllUsers);
 
    // used to display proper widget if OTC room selected.
    // either create OTC or Pull OTC, if was submitted
