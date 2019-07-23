@@ -5,7 +5,6 @@
 #include <mutex>
 #include <set>
 #include <string>
-#include <QObject>
 #include <QStringList>
 #include "DataConnectionListener.h"
 #include "SignContainer.h"

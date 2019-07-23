@@ -371,6 +371,7 @@ message SyncHDWalletResponse
    message Leaf {
       string id = 1;
       uint32 index = 2;
+      bytes  extra_data = 3;
    }
    message Group {
       uint32 type = 1;
