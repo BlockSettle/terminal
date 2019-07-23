@@ -9,7 +9,7 @@ from component_configurator import Configurator
 class ProtobufSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = '3.7.1'
+        self._version = '3.9.0'
         self._package_name = 'protobuf-' + self._version
         self._package_name_url = 'protobuf-cpp-' + self._version
         self._script_revision = '2'
