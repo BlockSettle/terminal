@@ -12,7 +12,7 @@ class ProtobufSettings(Configurator):
         self._version = '3.7.1'
         self._package_name = 'protobuf-' + self._version
         self._package_name_url = 'protobuf-cpp-' + self._version
-        self._script_revision = '1'
+        self._script_revision = '2'
 
         self._package_url = 'https://github.com/protocolbuffers/protobuf/releases/download/v' + \
             self._version + '/' + self._package_name_url + '.tar.gz'
