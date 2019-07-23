@@ -12,7 +12,7 @@ class ProtobufSettings(Configurator):
         self._version = '3.7.1'
         self._package_name = 'protobuf-' + self._version
         self._package_name_url = 'protobuf-cpp-' + self._version
-        self._script_revision = '1'
+        self._script_revision = '2'
 
         self._package_url = 'https://github.com/protocolbuffers/protobuf/releases/download/v' + \
             self._version + '/' + self._package_name_url + '.tar.gz'
@@ -114,6 +114,9 @@ class ProtobufSettings(Configurator):
         self.filter_copy(os.path.join(self.get_build_dir(), 'src'), os.path.join(self.get_install_dir(), 'include'),
                          '.inc', False)
 
+        # copy proto files
+        self.filter_copy(os.path.join(self.get_build_dir(), 'src'), os.path.join(self.get_install_dir(), 'include'),
+                         '.proto', False)
         return True
 
     def install_x(self):

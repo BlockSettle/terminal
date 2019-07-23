@@ -21,9 +21,9 @@ public:
 
    Blocksettle::Communication::Internal::PasswordDialogData toProtobufMessage() const;
 
-   QVariantMap values() const;
+   Q_INVOKABLE QVariantMap values() const;
 
-   QVariant value(const QString &key) const;
+   Q_INVOKABLE QVariant value(const QString &key) const;
    QVariant value(const char *key) const;
 
    void setValue(const QString &key, const QVariant &value);

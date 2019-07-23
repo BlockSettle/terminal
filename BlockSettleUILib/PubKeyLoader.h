@@ -28,7 +28,7 @@ public:
    bool saveKey(const KeyType, const BinaryData &);
 
    static ZmqBIP15XDataConnection::cbNewKey getApprovingCallback(const KeyType
-      , QWidget *parent, const std::shared_ptr<ApplicationSettings> &);
+      , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &);
 
 private:
    static BinaryData loadKeyFromResource(KeyType, ApplicationSettings::EnvConfiguration);

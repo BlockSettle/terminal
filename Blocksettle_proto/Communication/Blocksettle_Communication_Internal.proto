@@ -1,7 +1,30 @@
 syntax = "proto3";
+import "google/protobuf/any.proto";
 
 package Blocksettle.Communication.Internal;
 
+message AnyMessage {
+   oneof value {
+      // any
+      google.protobuf.Any  value_any             = 1;
+
+      // simple types
+      bool                 value_bool            = 2;
+      string               value_string          = 3;
+      int32                value_int32           = 4;
+      double               value_double          = 5;
+      bytes                value_bytes           = 6;
+   }
+}
+
+message RepeatedMessage {
+   repeated google.protobuf.Any        value_array = 1;
+}
+
+message MapMessage {
+   map<string, google.protobuf.Any>    value_map   = 1;
+}
+
 message PasswordDialogData {
-   bytes                    valuesMap         = 1;
+   map<string, google.protobuf.Any>    valuesMap   = 1;
 }

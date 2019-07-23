@@ -640,7 +640,8 @@ void ChatClient::onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageD
 {
    model_->insertContactsMessage(messageData);
 
-   emit DMMessageReceived(messageData);
+   if (messageData->message().sender_id() != currentUserId_)
+      emit DMMessageReceived(messageData);
 }
 
 void ChatClient::onCRMessageReceived(const std::shared_ptr<Chat::Data> &messageData)
