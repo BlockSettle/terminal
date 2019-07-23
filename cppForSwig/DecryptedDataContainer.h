@@ -100,6 +100,11 @@ private:
    void initAfterLock(void);
    void cleanUpBeforeUnlock(void);
 
+   const SecureBinaryData& getDefaultEncryptionKeyId(void) const
+   {
+      return defaultEncryptionKeyId_;
+   }
+
 public:
    DecryptedDataContainer(LMDBEnv* dbEnv, LMDB* dbPtr,
       const SecureBinaryData& defaultEncryptionKey,
@@ -154,10 +159,13 @@ public:
 
    void encryptEncryptionKey(const BinaryData&, const SecureBinaryData&);
    void lockOther(std::shared_ptr<DecryptedDataContainer> other);
-   
+
    const SecureBinaryData& getDefaultKdfId(void) const { return defaultKdfId_; }
-   const SecureBinaryData& getDefaultEncryptionKeyId(void) const
-   { return defaultEncryptionKeyId_; }
+   const SecureBinaryData& getMasterEncryptionKeyId(void) const
+   {
+      return masterEncryptionKeyId_;
+   }
+
 };
 
 #endif
