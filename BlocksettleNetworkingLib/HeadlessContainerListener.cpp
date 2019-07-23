@@ -558,9 +558,9 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
    , headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
    , const PasswordReceivedCb &cb)
 {
-   const auto wallet = walletsMgr_->getWalletById(txReq.walletId);
-   bool needPassword = true;
    std::string walletId = txReq.walletId;
+   const auto wallet = walletsMgr_->getWalletById(walletId);
+   bool needPassword = true;
    if (wallet) {
       needPassword = !wallet->encryptionTypes().empty();
       if (needPassword) {
@@ -571,9 +571,9 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
       }
    }
    else {
-      const auto hdWallet = walletsMgr_->getHDWalletById(txReq.walletId);
+      const auto hdWallet = walletsMgr_->getHDWalletById(walletId);
       if (!hdWallet) {
-         logger_->error("[{}] failed to find wallet {}", __func__, txReq.walletId);
+         logger_->error("[{}] failed to find wallet {}", __func__, walletId);
          return false;
       }
       needPassword = !hdWallet->encryptionTypes().empty();
@@ -975,10 +975,16 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       packet.set_data(response.SerializeAsString());
       sendData(packet.SerializeAsString(), clientId);
    };
-   bs::core::wallet::TXSignRequest txSignReq;
-   txSignReq.walletId = priWallet->walletId();
-   return RequestPasswordIfNeeded(clientId, txSignReq, headless::CreateSettlWalletType
-      , {}, onPassword);
+   Internal::PasswordDialogData dialogData;
+   Internal::AnyMessage msg;     //TODO: this nightmare will be wrapped in a nicer way later
+   msg.set_value_string(priWallet->walletId());
+   google::protobuf::Any any;
+   any.PackFrom(msg);
+   const auto &p = google::protobuf::MapPair<std::string, google::protobuf::Any>("WalletId", any);
+   dialogData.mutable_valuesmap()->insert(std::move(p));
+
+   return RequestPasswordIfNeeded(clientId, { priWallet->walletId() }, headless::CreateSettlWalletType
+      , dialogData, onPassword);
 }
 
 bool HeadlessContainerListener::onSetSettlementId(const std::string &clientId
@@ -1333,6 +1339,20 @@ bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, head
             auto leafData = groupData->add_leaves();
             leafData->set_id(leaf->walletId());
             leafData->set_index(leaf->index());
+
+            if (groupData->type() == bs::hd::CoinType::BlockSettle_Settlement) {
+               const auto settlLeaf = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(leaf);
+               if (settlLeaf == nullptr) {
+                  throw std::runtime_error("unexpected leaf type");
+               }
+               const auto rootAsset = settlLeaf->getRootAsset();
+               const auto rootSingle = std::dynamic_pointer_cast<AssetEntry_Single>(rootAsset);
+               if (rootSingle == nullptr) {
+                  throw std::runtime_error("invalid root asset");
+               }
+               const auto authAddr = BtcUtils::getHash160(rootSingle->getPubKey()->getCompressedKey());
+               leafData->set_extra_data(authAddr.toBinStr());
+            }
          }
       }
    } else {

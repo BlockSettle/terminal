@@ -984,7 +984,7 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
          if (isWoRoot) {
             woWallets_.insert(leafInfo.id());
          }
-         group.leaves.push_back({ leafInfo.id(), leafInfo.index() });
+         group.leaves.push_back({ leafInfo.id(), leafInfo.index(), group.extOnly, leafInfo.extra_data() });
       }
       result.groups.push_back(group);
    }
