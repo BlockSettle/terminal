@@ -32,7 +32,6 @@ namespace bs {
          class DummyWallet;
       }
       class Wallet;
-      class SettlementWallet;
 
       class WalletsManager : public QObject, public ArmoryCallbackTarget, public WalletCallbackTarget
       {
@@ -60,7 +59,6 @@ namespace bs {
 
          size_t walletsCount() const { return wallets_.size(); }
          bool hasPrimaryWallet() const;
-         bool hasSettlementWallet() const { return (settlementWallet_ != nullptr); }
          HDWalletPtr getPrimaryWallet() const;
 //         std::shared_ptr<hd::DummyWallet> getDummyWallet() const { return hdDummyWallet_; }
          std::vector<WalletPtr> getAllWallets() const;
@@ -69,8 +67,9 @@ namespace bs {
          WalletPtr getDefaultWallet() const;
          WalletPtr getCCWallet(const std::string &cc);
 
-         const std::shared_ptr<SettlementWallet> getSettlementWallet() const { return settlementWallet_; }
          const WalletPtr getAuthWallet() const { return authAddressWallet_; }
+         void createSettlementLeaf(const bs::Address &authAddr
+            , const std::function<void(const SecureBinaryData &)> &);
 
          size_t hdWalletsCount() const { return hdWalletsId_.size(); }
          const HDWalletPtr getHDWallet(unsigned) const;
@@ -101,7 +100,6 @@ namespace bs {
          bool getTransactionMainAddress(const Tx &, const std::string &walletId
             , bool isReceiving, const std::function<void(QString, int)> &);
 
-         bool createSettlementWallet() { return true; }
          void adoptNewWallet(const HDWalletPtr &);
 
          bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>, QObject *obj = nullptr);
@@ -137,7 +135,6 @@ namespace bs {
          void onZCReceived(const std::vector<bs::TXEntry> &) override;
          void onZCInvalidated(const std::vector<bs::TXEntry> &) override;
          void onTxBroadcastError(const std::string &txHash, const std::string &errMsg) override;
-         void onRefresh(const std::vector<BinaryData> &ids, bool online) override;
          void onNewBlock(unsigned int) override;
          void onStateChanged(ArmoryState) override;
 
@@ -156,16 +153,13 @@ namespace bs {
          void scanComplete(const std::string &walletId) override;
          void metadataChanged(const std::string &walletId) override;
 
-         bool empty() const { return (wallets_.empty() && !settlementWallet_); }
-
-         void registerSettlementWallet();
+         bool empty() const { return wallets_.empty(); }
 
          void addWallet(const WalletPtr &, bool isHDLeaf = false);
          void addWallet(const HDWalletPtr &);
          void saveWallet(const WalletPtr &);
          void saveWallet(const HDWalletPtr &);
          void eraseWallet(const WalletPtr &);
-         void setSettlementWallet(const std::shared_ptr<bs::sync::SettlementWallet> &);
 
          void updateTxDirCache(const std::string &txKey, Transaction::Direction
             , const std::vector<bs::Address> &inAddrs
@@ -204,7 +198,6 @@ namespace bs {
          std::set<std::string>               hdWalletsId_;
          WalletPtr                           authAddressWallet_;
          BinaryData                          userId_;
-         std::shared_ptr<SettlementWallet>   settlementWallet_;
          std::set<std::string>               newWallets_;
 
          class CCResolver : public CCDataResolver

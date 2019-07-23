@@ -205,7 +205,13 @@ namespace bs {
          };
 
 
-//         size_t getInputScrSize(const std::shared_ptr<AddressEntry> &);
+         struct SettlementData
+         {
+            BinaryData  settlementId;
+            BinaryData  cpPublicKey;
+            bool        ownKeyFirst = true;
+         };
+
          BinaryData computeID(const BinaryData &input);
 
       }  // namepsace wallet

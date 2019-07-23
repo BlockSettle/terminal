@@ -487,7 +487,7 @@ bool CreateTransactionDialog::CreateTransaction()
          txReq_.fee = std::ceil(txReq_.fee * (originalFeePerByte_ / newFeePerByte));
       }
 
-      pendingTXSignId_ = signContainer_->signTXRequest(txReq_, SignContainer::TXSignMode::Full, {}, true);
+      pendingTXSignId_ = signContainer_->signTXRequest(txReq_, SignContainer::TXSignMode::Full, true);
       if (!pendingTXSignId_) {
          throw std::logic_error("Signer failed to send request");
       }

@@ -91,7 +91,7 @@ protected:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<MarketDataProvider>    mdProvider_;
-   std::shared_ptr<BaseCelerClient>           celerClient_;
+   std::shared_ptr<BaseCelerClient>       celerClient_;
 
    bool     securitiesReceived_ = false;
    std::vector<std::string>   currencies_;

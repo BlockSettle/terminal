@@ -138,7 +138,7 @@ namespace bs {
          virtual void getNewExtAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual void getNewIntAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual void getNewChangeAddress(const CbAddress &cb, AddressEntryType aet = AddressEntryType_Default)
-            { getNewIntAddress(cb, aet); }
+            { getNewExtAddress(cb, aet); }
 
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;

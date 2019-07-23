@@ -74,6 +74,7 @@ private slots:
    void onAutoSignActivated(const QString &hdWalletId, bool active);
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
+   void onEnterKeyPressed(const QModelIndex &index);
 
 private:
    void showSettlementDialog(QDialog *dlg);

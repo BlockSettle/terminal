@@ -102,17 +102,10 @@ namespace bs {
             //settlement leaves methods
             std::shared_ptr<hd::Leaf> createSettlementLeaf(const bs::Address&);
 
-            bs::Address getSettlementPayinAddress(
-               const SecureBinaryData&,
-               const SecureBinaryData&,
-               bool) const;
+            bs::Address getSettlementPayinAddress(const wallet::SettlementData &) const;
 
-            BinaryData signSettlementTXRequest(
-               const wallet::TXSignRequest &,
-               const BinaryData& settlementId,
-               const SecureBinaryData& counterPartyPubKey,
-               bool myKeyComesFirst);
-
+            BinaryData signSettlementTXRequest(const wallet::TXSignRequest &
+               , const wallet::SettlementData &);
 
          protected:
             std::string    name_, desc_;

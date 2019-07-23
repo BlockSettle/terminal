@@ -122,13 +122,18 @@ namespace bs {
                , const std::string &desc, SignContainer *container
                , WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger)
-               : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_CC),
+               : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_Settlement),
                   desc, container, wct, logger) {}
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Settlement; }
+            std::shared_ptr<hd::SettlementLeaf> getLeaf(const bs::Address &) const;
+            void addMap(const BinaryData &addr, bs::hd::Path::Elem idx) { addrMap_[addr] = idx; }
 
          protected:
             std::shared_ptr<hd::Leaf> newLeaf(const std::string &walletId) const override;
+
+         private:
+            std::map<BinaryData, bs::hd::Path::Elem>  addrMap_;
          };
 
       }  //namespace hd

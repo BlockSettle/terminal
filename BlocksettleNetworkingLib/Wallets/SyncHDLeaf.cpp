@@ -839,6 +839,13 @@ void hd::CCLeaf::validationProc()
          if (!validationStarted_ || !ccResolver_) {
             return;
          }
+
+         if (ledger == nullptr) {
+            logger_->error("[CCLeaf::validationProc::cbLedger] failed to get ledger for : {}"
+               , addr.display());
+            return;
+         }
+
          const auto &cbCheck = [this, addr, addressesToCheck](const Tx &tx) {
             const auto &cbResult = [this, tx](bool contained) {
                if (!contained && tx.isInitialized()) {
@@ -1107,18 +1114,29 @@ void hd::SettlementLeaf::topUpAddressPool(bool extInt, const std::function<void(
    throw std::runtime_error("Settlement leaves do not yield addresses");
 }
 
-void hd::SettlementLeaf::setSettlementID(const SecureBinaryData& id)
+void hd::SettlementLeaf::setSettlementID(const SecureBinaryData& id
+   , const std::function<void(bool)> &cb)
 {
-   if (signContainer_ == nullptr)
-      throw std::runtime_error("uninitialized sign container");
+   if (signContainer_ == nullptr) {
+      if (cb)
+         cb(false);
+   }
 
-   signContainer_->setSettlementID(walletId(), id);
+   signContainer_->setSettlementID(walletId(), id, cb);
 }
 
-SecureBinaryData hd::SettlementLeaf::getRootPubkey(void) const
+void hd::SettlementLeaf::getRootPubkey(const std::function<void(const SecureBinaryData &)> &cb) const
 {
-   if (signContainer_ == nullptr)
-      throw std::runtime_error("uninitialized sign container");
+   if (signContainer_ == nullptr) {
+      if (cb)
+         cb({});
+      return;
+   }
 
-   return signContainer_->getRootPubkey(walletId());
+   const auto &cbWrap = [cb](bool result, const SecureBinaryData &pubKey) {
+      if (cb) {
+         cb(result ? pubKey : SecureBinaryData{});
+      }
+   };
+   return signContainer_->getRootPubkey(walletId(), cbWrap);
 }

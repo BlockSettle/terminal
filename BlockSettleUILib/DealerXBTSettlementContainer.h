@@ -2,6 +2,7 @@
 #define __DEALER_XBT_SETTLEMENT_CONTAINER_H__
 
 #include "AddressVerificator.h"
+#include "BSErrorCode.h"
 #include "SettlementContainer.h"
 #include "SettlementMonitor.h"
 #include "TransactionData.h"
@@ -67,10 +68,7 @@ private slots:
    void onPayInDetected(int confirmationsNumber, const BinaryData &txHash);
    void onPayOutDetected(bs::PayoutSigner::Type signedBy);
 
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg, bool cancelledByUser);
-
-protected:
-   void onZCReceived(const std::vector<bs::TXEntry> &) override;
+   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string errMsg);
 
 private:
    void onCptyVerified();
@@ -83,14 +81,15 @@ private:
    const double   amount_;
    const bool     autoSign_;
    std::shared_ptr<spdlog::logger>              logger_;
+   std::shared_ptr<ArmoryConnection>            armory_;
    std::shared_ptr<TransactionData>             transactionData_;
-   std::shared_ptr<bs::sync::SettlementWallet>  settlWallet_;
+   std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
    std::shared_ptr<bs::SettlementMonitorCb>     settlMonitor_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signingContainer_;
    AddressVerificationState                     cptyAddressState_ = AddressVerificationState::InProgress;
    bs::Address settlAddr_;
-   std::string settlIdStr_;
+   BinaryData  settlementId_;
    BinaryData  authKey_, reqAuthKey_;
    bool        payInDetected_ = false;
    bool        payInSent_ = false;

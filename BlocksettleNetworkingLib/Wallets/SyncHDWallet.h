@@ -88,8 +88,9 @@ namespace bs {
             void setWCT(WalletCallbackTarget *wct) { wct_ = wct; }
 
             //settlement shenanigans
-            bs::Address getSettlementPayinAddress(
-               const SecureBinaryData&, const SecureBinaryData&, bool) const;
+            void getSettlementPayinAddress(const SecureBinaryData &settlId
+               , const SecureBinaryData &cpPubKey, const bs::sync::Wallet::CbAddress &
+               , bool myFirst = true) const;
 
          protected:
             void addressAdded(const std::string &walletId) override { wct_->addressAdded(walletId); }

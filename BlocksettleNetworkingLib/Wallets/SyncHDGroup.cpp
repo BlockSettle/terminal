@@ -123,6 +123,9 @@ std::string hd::Group::nameForType(bs::hd::CoinType ct)
 
    case bs::hd::CoinType::BlockSettle_Auth:
       return QObject::tr("Authentication").toStdString();
+
+   case bs::hd::CoinType::BlockSettle_Settlement:
+      return QObject::tr("Settlement").toStdString();
    }
 
    return QObject::tr("Unknown").toStdString();
@@ -225,4 +228,13 @@ std::shared_ptr<hd::Leaf> hd::SettlementGroup::newLeaf(const std::string &wallet
 {
    return std::make_shared<hd::SettlementLeaf>(walletId, walletName_ + "/" + name_, desc_
       , signContainer_, logger_);
+}
+
+std::shared_ptr<hd::SettlementLeaf> hd::SettlementGroup::getLeaf(const bs::Address &addr) const
+{
+   const auto &it = addrMap_.find(addr.unprefixed());
+   if (it == addrMap_.end()) {
+      return {};
+   }
+   return std::dynamic_pointer_cast<hd::SettlementLeaf>(hd::Group::getLeaf(it->second));
 }
