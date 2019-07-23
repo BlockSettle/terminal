@@ -25,7 +25,9 @@ rm -f Ubuntu/usr/bin/RFQBot.qml
 rm -rf Ubuntu/usr/share/blocksettle/scripts
 mkdir -p Ubuntu/usr/share/blocksettle/scripts
 
-cp $binpath/* Ubuntu/usr/bin/
+cp $binpath/blocksettle Ubuntu/usr/bin/
+cp $binpath/blocksettle_signer Ubuntu/usr/bin/
+cp $binpath/bs_signer_gui Ubuntu/usr/bin/
 cp $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle/scripts/
 cp $scriptpath/RFQBot.qml Ubuntu/usr/share/blocksettle/scripts/
 cp -P $libprotobuf/libprotobuf.so* Ubuntu/lib/x86_64-linux-gnu/
