@@ -9,14 +9,15 @@
 #include "Address.h"
 #include "DataConnectionListener.h"
 
-class QNetworkAccessManager;
-class QThreadPool;
 class AutheIDClient;
-class ConnectionManager;
+class BsClientCelerListener;
 class BsProxy;
 class BsProxyListener;
-class BsClientCelerListener;
+class ConnectionManager;
 class DataConnection;
+class LoginHasher;
+class QNetworkAccessManager;
+class QThreadPool;
 class ZmqBIP15XServerConnection;
 class ZmqContext;
 
@@ -48,6 +49,7 @@ struct BsProxyParams
 
    std::string celerHost;
    int celerPort{};
+   std::string celerLoginHasherSalt;
 
    // If set BsProxy will check if login is valid before allowing client login
    std::function<bool(BsProxy *proxy, const std::string &login)> verifyCallback;
@@ -138,6 +140,8 @@ private:
    std::unique_ptr<ZmqBIP15XServerConnection> server_;
    std::shared_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<QNetworkAccessManager> nam_{};
+   std::unique_ptr<LoginHasher> loginHasher_;
+
    QThreadPool *threadPool_{};
 };
 

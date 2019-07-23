@@ -80,6 +80,7 @@ message Response
     message GetLoginResult
     {
         AuthEidError error = 1;
+        string celer_login = 2;
     }
 
     message Celer
