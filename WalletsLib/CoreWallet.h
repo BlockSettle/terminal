@@ -369,32 +369,28 @@ namespace bs {
       struct WalletEncryptionLock
       {
       private:
-         std::shared_ptr<AssetWallet_Single> walletPtr_;
-         ReentrantLock walletLock_;
-
-      private:
          WalletEncryptionLock(const WalletEncryptionLock&) = delete;
          WalletEncryptionLock& operator=(const WalletEncryptionLock&) = delete;
          WalletEncryptionLock& operator=(WalletEncryptionLock&&) = delete;
 
       public:
-         WalletEncryptionLock(
-            std::shared_ptr<AssetWallet_Single> wallet,
-            const SecureBinaryData& passphrase) :
-            walletLock_(std::move(wallet->lockDecryptedContainer())),
-            walletPtr_(wallet)
-         {
-            //std::function<SecureBinaryData(const BinaryData&)>
-            auto lbd = [passphrase](const BinaryData&)->SecureBinaryData
+         WalletEncryptionLock(const std::shared_ptr<AssetWallet_Single> &wallet
+            , const SecureBinaryData& passphrase)
+            : walletLock_(std::move(wallet->lockDecryptedContainer()))
+            , walletPtr_(wallet)
+         {  //std::function<SecureBinaryData(const BinaryData&)>
+            auto lbd = [passphrase, this](const BinaryData&)->SecureBinaryData
             {
+               if (++nbTries_ > maxTries_) {
+                  return {};
+               }
                return passphrase;
             };
-
             wallet->setPassphrasePromptLambda(lbd);
          }
          
-         WalletEncryptionLock(WalletEncryptionLock&& lock) :
-            walletLock_(std::move(lock.walletLock_))
+         WalletEncryptionLock(WalletEncryptionLock&& lock)
+            : walletLock_(std::move(lock.walletLock_))
          {
             walletPtr_ = lock.walletPtr_;
          }
@@ -404,6 +400,11 @@ namespace bs {
             walletPtr_->resetPassphrasePromptLambda();
          }
 
+      private:
+         std::shared_ptr<AssetWallet_Single> walletPtr_;
+         ReentrantLock        walletLock_;
+         const unsigned int   maxTries_ = 3;
+         unsigned int         nbTries_ = 0;
       };
 
    }  //namespace core
