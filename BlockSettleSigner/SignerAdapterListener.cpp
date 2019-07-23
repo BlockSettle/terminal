@@ -356,6 +356,20 @@ bool SignerAdapterListener::onSyncHDWallet(const std::string &data, bs::signer::
             auto leafEntry = groupEntry->add_leaves();
             leafEntry->set_id(leaf->walletId());
             leafEntry->set_index(leaf->index());
+
+            if (groupEntry->type() == bs::hd::CoinType::BlockSettle_Settlement) {
+               const auto settlLeaf = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(leaf);
+               if (settlLeaf == nullptr) {
+                  throw std::runtime_error("unexpected leaf type");
+               }
+               const auto rootAsset = settlLeaf->getRootAsset();
+               const auto rootSingle = std::dynamic_pointer_cast<AssetEntry_Single>(rootAsset);
+               if (rootSingle == nullptr) {
+                  throw std::runtime_error("invalid root asset");
+               }
+               const auto authAddr = BtcUtils::getHash160(rootSingle->getPubKey()->getCompressedKey());
+               leafEntry->set_extra_data(authAddr.toBinStr());
+            }
          }
       }
       return sendData(signer::SyncHDWalletType, response.SerializeAsString(), reqId);
