@@ -92,7 +92,7 @@ public:
    static std::chrono::seconds autheidCcAddressTimeout();
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
-   void getLoginResultDone(AutheIDClient::ErrorType status);
+   void getLoginResultDone(AutheIDClient::ErrorType status, const std::string &celerLogin);
    void celerRecv(CelerAPI::CelerMessageType messageType, const std::string &data);
 
    void connected();

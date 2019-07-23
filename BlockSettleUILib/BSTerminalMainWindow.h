@@ -211,8 +211,6 @@ private:
    bool isUserLoggedIn() const;
    bool isArmoryConnected() const;
 
-   void loginToCeler(const std::string& username);
-
    bool goOnlineArmory() const;
 
    void InitWidgets();

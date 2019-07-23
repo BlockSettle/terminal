@@ -38,12 +38,13 @@ public:
    };
 
    QString getUsername() const;
+   const std::string &celerLogin() const { return celerLogin_; }
    std::unique_ptr<BsClient> getClient();
    const NetworkSettings &networkSettings() const;
 
 private slots:
    void onStartLoginDone(AutheIDClient::ErrorType errorCode);
-   void onGetLoginResultDone(AutheIDClient::ErrorType errorCode);
+   void onGetLoginResultDone(AutheIDClient::ErrorType errorCode, const std::string &celerLogin);
    void onTextChanged();
    void onAuthPressed();
    void onTimer();
@@ -66,6 +67,7 @@ private:
    float       timeLeft_{};
    std::unique_ptr<BsClient> bsClient_;
    std::unique_ptr<NetworkSettingsLoader> networkSettingsLoader_;
+   std::string celerLogin_;
 };
 
 #endif // __LOGIN_WINDOW_H__

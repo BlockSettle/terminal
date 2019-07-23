@@ -1050,18 +1050,6 @@ void BSTerminalMainWindow::openCCTokenDialog()
    addDeferredDialog(deferredDialog);
 }
 
-void BSTerminalMainWindow::loginToCeler(const std::string& username)
-{
-   // We don't use password here, BsProxy will manage authentication
-   celerConnection_->LoginToServer(bsClient_.get(), username);
-
-   auto userName = QString::fromStdString(username);
-   currentUserLogin_ = userName;
-   ui_->widgetWallets->setUsername(userName);
-   action_logout_->setVisible(false);
-   action_login_->setEnabled(false);
-}
-
 void BSTerminalMainWindow::onLogin()
 {
    LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, cbApprovePuB_, this);
@@ -1087,7 +1075,13 @@ void BSTerminalMainWindow::onLogin()
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
 
-   loginToCeler(loginDialog.getUsername().toStdString());
+   // We don't use password here, BsProxy will manage authentication
+   SPDLOG_LOGGER_DEBUG(logMgr_->logger(), "got celer login: {}", loginDialog.celerLogin());
+   celerConnection_->LoginToServer(bsClient_.get(), loginDialog.celerLogin());
+
+   ui_->widgetWallets->setUsername(currentUserLogin_);
+   action_logout_->setVisible(false);
+   action_login_->setEnabled(false);
 
    // Market data, charts and chat should be available for all Auth eID logins
    mdProvider_->SubscribeToMD();

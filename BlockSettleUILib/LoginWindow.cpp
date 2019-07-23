@@ -112,7 +112,7 @@ void LoginWindow::onStartLoginDone(AutheIDClient::ErrorType errorCode)
    setState(WaitLoginResult);
 }
 
-void LoginWindow::onGetLoginResultDone(AutheIDClient::ErrorType errorCode)
+void LoginWindow::onGetLoginResultDone(AutheIDClient::ErrorType errorCode, const std::string &celerLogin)
 {
    if (errorCode == AutheIDClient::Cancelled || errorCode == AutheIDClient::Timeout) {
       setState(Idle);
@@ -128,6 +128,7 @@ void LoginWindow::onGetLoginResultDone(AutheIDClient::ErrorType errorCode)
       return;
    }
 
+   celerLogin_ = celerLogin;
    QDialog::accept();
 }
 
