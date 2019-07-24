@@ -3,12 +3,13 @@
 
 #include <memory>
 #include <QObject>
-#include "CoreWallet.h"
-#include "SignerDefs.h"
-#include "QPasswordData.h"
+
 #include "BSErrorCode.h"
+#include "CoreWallet.h"
 #include "QmlBridge.h"
 #include "QmlFactory.h"
+#include "QPasswordData.h"
+#include "SignerDefs.h"
 
 #include "bs_signer.pb.h"
 
@@ -28,7 +29,8 @@ namespace Blocksettle {
       }
    }
 }
-class SignContainer;
+
+class SignAdapterContainer;
 class SignerInterfaceListener;
 
 class SignerAdapter : public QObject
@@ -117,7 +119,7 @@ signals:
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    NetworkType netType_;
-   std::shared_ptr<SignContainer>   signContainer_;
+   std::shared_ptr<SignAdapterContainer>     signContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<QmlFactory>               qmlFactory_;
    std::shared_ptr<SignerInterfaceListener>  listener_;

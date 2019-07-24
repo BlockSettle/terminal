@@ -5,7 +5,7 @@
 #include <QObject>
 #include "CoreWallet.h"
 #include "SignerAdapter.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 
 namespace bs {
    namespace sync {
@@ -16,12 +16,12 @@ namespace spdlog {
    class logger;
 }
 
-class SignAdapterContainer : public SignContainer
+class SignAdapterContainer : public WalletSignerContainer
 {
 public:
    SignAdapterContainer(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<SignerInterfaceListener> &lsn)
-      : SignContainer(logger, OpMode::LocalInproc), listener_(lsn)
+      : WalletSignerContainer(logger, OpMode::LocalInproc), listener_(lsn)
    {}
    ~SignAdapterContainer() noexcept override = default;
 
