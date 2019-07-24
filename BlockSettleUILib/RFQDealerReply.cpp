@@ -36,14 +36,14 @@ constexpr int kSelectAQFileItemIndex = 1;
 
 namespace {
 
-QString getDefaultScriptsDir()
-{
-#if defined(_WIN32) || defined(__APPLE__)
+   QString getDefaultScriptsDir()
+   {
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
       return QCoreApplication::applicationDirPath() + QStringLiteral("/scripts");
 #else
       return QStringLiteral("/usr/share/blocksettle/scripts");
 #endif
-}
+   }
 
 } // namespace
 

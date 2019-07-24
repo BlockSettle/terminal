@@ -92,8 +92,6 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
            this, &QuoteRequestsWidget::onCollapsed);
    connect(ui_->treeViewQuoteRequests, &QTreeView::expanded,
            this, &QuoteRequestsWidget::onExpanded);
-   connect(ui_->treeViewQuoteRequests, &RFQBlotterTreeView::enterKeyPressed,
-           this, &QuoteRequestsWidget::onEnterKeyInQuoteRequestsPressed);
    connect(model_, &QuoteRequestsModel::quoteReqNotifStatusChanged, [this](const bs::network::QuoteReqNotification &qrn) {
       emit quoteReqNotifStatusChanged(qrn);
    });
@@ -321,11 +319,6 @@ void QuoteRequestsWidget::onExpanded(const QModelIndex &index)
 void QuoteRequestsWidget::saveCollapsedState()
 {
    appSettings_->set(ApplicationSettings::Filter_MD_QN, collapsed_);
-}
-
-void QuoteRequestsWidget::onEnterKeyInQuoteRequestsPressed(const QModelIndex &index)
-{
-   onQuoteReqNotifSelected(index);
 }
 
 void QuoteRequestsWidget::expandIfNeeded(const QModelIndex &index)

@@ -44,8 +44,6 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::quoteReqNotifStatusChanged, ui_->pageRFQReply
       , &RFQDealerReply::quoteReqNotifStatusChanged, Qt::QueuedConnection);
    connect(ui_->pageRFQReply, &RFQDealerReply::autoSignActivated, this, &RFQReplyWidget::onAutoSignActivated);
-   connect(ui_->widgetQuoteRequests->view(), &TreeViewWithEnterKey::enterKeyPressed
-      , this, &RFQReplyWidget::onEnterKeyPressed);
 }
 
 RFQReplyWidget::~RFQReplyWidget() = default;
@@ -165,6 +163,9 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
 
    connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQReplyWidget::onConnectedToCeler);
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQReplyWidget::onDisconnectedFromCeler);
+
+   connect(ui_->widgetQuoteRequests->view(), &TreeViewWithEnterKey::enterKeyPressed
+      , this, &RFQReplyWidget::onEnterKeyPressed);
 }
 
 void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn)
@@ -313,8 +314,16 @@ void RFQReplyWidget::onDisconnectedFromCeler()
 
 void RFQReplyWidget::onEnterKeyPressed(const QModelIndex &index)
 {
+   ui_->widgetQuoteRequests->onQuoteReqNotifSelected(index);
+
    if (ui_->pageRFQReply->quoteButton()->isEnabled()) {
       ui_->pageRFQReply->quoteButton()->click();
+      return;
+   }
+
+   if (ui_->pageRFQReply->pullButton()->isEnabled()) {
+      ui_->pageRFQReply->pullButton()->click();
+      return;
    }
 }
 
