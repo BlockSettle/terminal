@@ -106,7 +106,7 @@ public:
 
 
    void decryptWalletRequest(Blocksettle::Communication::signer::PasswordDialogType dialogType
-      , const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+      , const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const bs::core::wallet::TXSignRequest &txReq = {}) override
    {
       signer::DecryptWalletRequest request;

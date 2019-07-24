@@ -217,11 +217,11 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       break;
    case signer::CreateAuthLeaf:
       notifyTitle = tr("Create Auth Leaf");
-      requestPasswordForAuthLeaf(dialogData);
+      requestPasswordForAuthLeaf(dialogData, walletInfo);
       break;
    case signer::CreateHDLeaf:
       notifyTitle = tr("Create Leaf");
-      requestPasswordForAuthLeaf(dialogData);
+      requestPasswordForAuthLeaf(dialogData, walletInfo);
       break;
    default:
       break;
@@ -582,11 +582,12 @@ void SignerInterfaceListener::requestPasswordForSettlementTx(signer::PasswordDia
       , QVariant::fromValue(walletInfo));
 }
 
-void SignerInterfaceListener::requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData)
+void SignerInterfaceListener::requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData
+   , bs::hd::WalletInfo *walletInfo)
 {
    qmlBridge_->invokeQmlMethod("createPasswordDialogForAuthLeaf", createQmlPasswordCallback()
       , QVariant::fromValue(dialogData)
-      , QVariant::fromValue(qmlFactory_->createWalletInfo(dialogData->value("WalletId").toString())));
+      , QVariant::fromValue(walletInfo));
 }
 
 void SignerInterfaceListener::shutdown()
