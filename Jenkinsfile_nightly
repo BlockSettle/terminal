@@ -23,7 +23,7 @@ pipeline {
                             image 'terminal:latest'
                             reuseNode true
                             args '-v /var/cache/3rd/downloads:${WORKSPACE}/3rd/downloads'
-                            args '-v /var/cache/3rd/release_dev:${WORKSPACE}/3rd/release'
+                            args '-v /var/cache/3rd/release_nightly:${WORKSPACE}/3rd/release'
                         }
                     }
                     steps {
