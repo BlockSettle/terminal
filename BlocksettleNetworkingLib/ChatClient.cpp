@@ -34,7 +34,6 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    ChatUtils::registerTypes();
 
    model_ = std::make_shared<ChatClientDataModel>(logger_);
-   userSearchModel_ = std::make_shared<UserSearchModel>();
    model_->setModelChangesHandler(this);
    proxyModel_ = std::make_shared<ChatTreeModelWrapper>();
    proxyModel_->setSourceModel(model_.get());
@@ -48,11 +47,6 @@ ChatClient::~ChatClient() noexcept
 std::shared_ptr<ChatClientDataModel> ChatClient::getDataModel()
 {
    return model_;
-}
-
-std::shared_ptr<UserSearchModel> ChatClient::getUserSearchModel()
-{
-   return userSearchModel_;
 }
 
 std::shared_ptr<ChatTreeModelWrapper> ChatClient::getProxyModel()
