@@ -61,9 +61,6 @@ public:
 
    void init(std::shared_ptr<ChatClient> handler);
 
-public:
-   void clearSearchLineOnNextInput();
-
 public slots:
    void clearLineEdit();
    void startListAutoHide();
@@ -73,6 +70,7 @@ private slots:
    void resetTreeView();
    void showContextMenu(const QPoint &pos);
    void focusResults();
+   void closeResult();
    void onItemClicked(const QModelIndex &index);
    void leaveSearchResults();
    void leaveAndCloseSearchResults();

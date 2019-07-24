@@ -26,6 +26,8 @@ protected:
 
 signals:
    void keyDownPressed();
+   void keyEnterPressed();
+   void keyEscapePressed();
 };
 
 
