@@ -20,12 +20,14 @@ SET(SOURCES
    ${BSNetwork}/ZMQ_BIP15X_ServerConnection.cpp
    ${BSNetwork}/ZMQ_BIP15X_Msg.cpp
    ${BSNetwork}/ZMQ_BIP15X_Helpers.cpp
+   ${BSNetwork}/PasswordDialogDataWrapper.cpp
 )
 
 SET(HEADERS
    HeadlessApp.h
    HeadlessSettings.h
    SignerAdapterListener.h
+   ${BSNetwork}/PasswordDialogDataWrapper.h
 )
 
 INCLUDE_DIRECTORIES( ${COMMON_LIB_INCLUDE_DIR} )
