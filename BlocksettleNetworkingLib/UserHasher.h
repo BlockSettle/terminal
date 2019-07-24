@@ -5,7 +5,7 @@
 #include <string>
 
 class BinaryData;
-class KeyDerivationFunction;
+struct KeyDerivationFunction;
 
 class UserHasher {
 public:

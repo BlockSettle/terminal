@@ -1,6 +1,7 @@
 #include "StringUtils.h"
 
 #include <botan/hex.h>
+#include <locale>
 
 namespace bs {
 
@@ -11,16 +12,18 @@ std::string toHex(const std::string &str, bool uppercase)
 
 std::string toLower(std::string str)
 {
-   std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){
-      return std::tolower(c);
+   std::locale locale("C");
+   std::transform(str.begin(), str.end(), str.begin(), [&locale](unsigned char c){
+      return std::tolower(c, locale);
    });
    return str;
 }
 
 std::string toUpper(std::string str)
 {
-   std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
-      return std::toupper(c);
+   std::locale locale("C");
+   std::transform(str.begin(), str.end(), str.begin(), [&locale](unsigned char c) {
+      return std::toupper(c, locale);
    });
    return str;
 }
