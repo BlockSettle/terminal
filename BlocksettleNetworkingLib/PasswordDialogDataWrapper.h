@@ -25,9 +25,6 @@ public:
 private:
    template<typename T>
    void insertImpl(const std::string &key, T value);
-
-   template<typename T>
-   AnyMessage &setValueImpl(AnyMessage &anyMsg, T value);
 };
 
 

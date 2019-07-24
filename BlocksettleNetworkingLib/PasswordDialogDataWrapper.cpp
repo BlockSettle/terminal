@@ -27,6 +27,30 @@ void PasswordDialogDataWrapper::insert(const std::string &key, const char *data,
    mutable_valuesmap()->insert(p);
 }
 
+static AnyMessage &setValueImpl(AnyMessage &anyMsg, bool value)
+{
+   anyMsg.set_value_bool(value);
+   return anyMsg;
+}
+
+static AnyMessage &setValueImpl(AnyMessage &anyMsg, const std::string &value)
+{
+   anyMsg.set_value_string(value);
+   return anyMsg;
+}
+
+static AnyMessage &setValueImpl(AnyMessage &anyMsg, int32 value)
+{
+   anyMsg.set_value_int32(value);
+   return anyMsg;
+}
+
+static AnyMessage &setValueImpl(AnyMessage &anyMsg, double value)
+{
+   anyMsg.set_value_double(value);
+   return anyMsg;
+}
+
 template<typename T>
 inline void PasswordDialogDataWrapper::insertImpl(const std::string &key, T value)
 {
@@ -40,37 +64,9 @@ inline void PasswordDialogDataWrapper::insertImpl(const std::string &key, T valu
    mutable_valuesmap()->insert(p);
 }
 
-template<typename T>
+/*template<typename T>
 AnyMessage &PasswordDialogDataWrapper::setValueImpl(AnyMessage &anyMsg, T)
 {
    assert(false);
    return anyMsg;
-}
-
-template<>
-AnyMessage &PasswordDialogDataWrapper::setValueImpl<bool>(AnyMessage &anyMsg, bool value)
-{
-   anyMsg.set_value_bool(value);
-   return anyMsg;
-}
-
-template<>
-AnyMessage &PasswordDialogDataWrapper::setValueImpl<const std::string &>(AnyMessage &anyMsg, const std::string &value)
-{
-   anyMsg.set_value_string(value);
-   return anyMsg;
-}
-
-template<>
-AnyMessage &PasswordDialogDataWrapper::setValueImpl<int>(AnyMessage &anyMsg, int32 value)
-{
-   anyMsg.set_value_int32(value);
-   return anyMsg;
-}
-
-template<>
-AnyMessage &PasswordDialogDataWrapper::setValueImpl<double>(AnyMessage &anyMsg, double value)
-{
-   anyMsg.set_value_double(value);
-   return anyMsg;
-}
+}*/

@@ -611,6 +611,10 @@ std::shared_ptr<hd::Leaf> hd::Wallet::createSettlementLeaf(
    if (addrPath.length() == 0)
       throw AssetException("failed to resolve path for settlement address");
 
+   auto leaf = settlGroup->getLeafByPath(addrPath.get(-1));
+   if (leaf) {
+      return leaf;
+   }
    return settlGroup->createLeaf(addr, addrPath);
 }
 
