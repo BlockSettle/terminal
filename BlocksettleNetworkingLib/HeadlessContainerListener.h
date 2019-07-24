@@ -10,6 +10,7 @@
 #include "ServerConnectionListener.h"
 #include "SignerDefs.h"
 #include "BSErrorCode.h"
+#include "PasswordDialogDataWrapper.h"
 
 #include "headless.pb.h"
 #include "bs_signer.pb.h"
@@ -42,7 +43,7 @@ public:
    virtual void clientDisconn(const std::string &) = 0;
 
    virtual void decryptWalletRequest(Blocksettle::Communication::signer::PasswordDialogType dialogType
-      , const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+      , const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const bs::core::wallet::TXSignRequest & = {}) = 0;
 
    virtual void txSigned(const BinaryData &) = 0;
@@ -137,13 +138,13 @@ private:
 
    bool createHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::CreateHDLeafRequest &request);
    bool RequestPasswordIfNeeded(const std::string &clientId, const bs::core::wallet::TXSignRequest &
-      , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+      , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const PasswordReceivedCb &cb);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId
       , const bs::core::wallet::TXMultiSignRequest &, const bs::core::WalletMap &
       , const std::string &prompt, const PasswordsReceivedCb &cb);
    bool RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &
-      , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+      , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const PasswordReceivedCb &cb);
 
    bool CheckSpendLimit(uint64_t value, const std::string &walletId);
