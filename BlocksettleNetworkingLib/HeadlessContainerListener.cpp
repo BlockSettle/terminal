@@ -979,13 +979,8 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       packet.set_data(response.SerializeAsString());
       sendData(packet.SerializeAsString(), clientId);
    };
-   Internal::PasswordDialogData dialogData;
-   Internal::AnyMessage msg;     //TODO: this nightmare will be wrapped in a nicer way later
-   msg.set_value_string(priWallet->walletId());
-   google::protobuf::Any any;
-   any.PackFrom(msg);
-   const auto &p = google::protobuf::MapPair<std::string, google::protobuf::Any>("WalletId", any);
-   dialogData.mutable_valuesmap()->insert(std::move(p));
+   Internal::PasswordDialogDataWrapper dialogData;
+   dialogData.insert("WalletId", priWallet->walletId());
 
    return RequestPasswordIfNeeded(clientId, { priWallet->walletId() }, headless::CreateSettlWalletType
       , dialogData, onPassword);
