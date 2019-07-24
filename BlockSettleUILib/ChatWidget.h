@@ -79,13 +79,11 @@ private slots:
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
    void onSendFriendRequest(const QString &userId);
-   void onRemoveFriendRequest(const QString &userId);
    void onAddChatRooms(const std::vector<std::shared_ptr<Chat::Data> >& roomList);
-   void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::Data>>& users, bool emailEntered);
-   void onSearchUserTextEdited(const QString &text);
    void onConnectedToServer();
    void selectGlobalRoom();
    void onContactRequestAccepted(const std::string &userId);
+   void onChangeChatRoom(const QString &userId);
    void onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey);
    void onContactChanged();
    void onBSChatInputSelectionChanged();
