@@ -12,20 +12,34 @@ std::string toHex(const std::string &str, bool uppercase)
 
 std::string toLower(std::string str)
 {
+#ifdef __APPLE__
+   std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
+      return std::tolower(c);
+   });
+   return str;
+#else
    std::locale locale("C");
-   std::transform(str.begin(), str.end(), str.begin(), [&locale](unsigned char c){
+   std::transform(str.begin(), str.end(), str.begin(), [&locale](unsigned char c) {
       return std::tolower(c, locale);
    });
    return str;
+#endif
 }
 
 std::string toUpper(std::string str)
 {
+#ifdef __APPLE__
+   std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
+      return std::toupper(c);
+   });
+   return str;
+#else
    std::locale locale("C");
    std::transform(str.begin(), str.end(), str.begin(), [&locale](unsigned char c) {
       return std::toupper(c, locale);
    });
    return str;
+#endif
 }
 
 } // namespace bs
