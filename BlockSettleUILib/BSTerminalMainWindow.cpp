@@ -1046,14 +1046,11 @@ void BSTerminalMainWindow::openAccountInfoDialog()
 
 void BSTerminalMainWindow::openCCTokenDialog()
 {
-   const auto &deferredDialog = [this]{
-      if (walletsMgr_->hasPrimaryWallet() || createWallet(true, false)) {
-         CCTokenEntryDialog dialog(walletsMgr_, ccFileManager_, signContainer_, this);
-         dialog.exec();
-      }
-   };
-
-   addDeferredDialog(deferredDialog);
+   // Do not use deferredDialogs_ here as it will deadblock PuB public key processing
+   if (walletsMgr_->hasPrimaryWallet() || createWallet(true, false)) {
+      CCTokenEntryDialog dialog(walletsMgr_, ccFileManager_, signContainer_, this);
+      dialog.exec();
+   }
 }
 
 void BSTerminalMainWindow::onLogin()
