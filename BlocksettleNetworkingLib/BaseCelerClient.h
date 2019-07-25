@@ -66,10 +66,17 @@ public:
 
    bool IsConnected() const;
 
-   std::string userName() const;
-   std::string userId() const;
-   const QString& userType() const;
-   CelerUserType celerUserType() const;
+   // For CelerClient userName and email are the same.
+   // For CelerClientProxy they are different!
+   // Requests to Celer should always use userName, requests to PB and Genoa should use email.
+   const std::string& userName() const { return userName_; }
+
+   // Email will be always in lower case here
+   const std::string& email() const { return email_; }
+
+   const std::string& userId() const;
+   const QString& userType() const { return userType_; }
+   CelerUserType celerUserType() const { return celerUserType_; }
 
    bool tradingAllowed() const;
 
@@ -105,7 +112,7 @@ protected:
    void recvData(CelerAPI::CelerMessageType messageType, const std::string &data);
 
    // Call when there is need to send login request
-   bool SendLogin(const std::string& login, const std::string& password);
+   bool SendLogin(const std::string& login, const std::string& email, const std::string& password);
 
    std::shared_ptr<spdlog::logger> logger_;
 
@@ -131,7 +138,7 @@ private:
 
    bool SendDataToSequence(const std::string& sequenceId, CelerAPI::CelerMessageType messageType, const std::string& message);
 
-   void loginSuccessCallback(const std::string& userName, const std::string& sessionToken, int32_t heartbeatInterval);
+   void loginSuccessCallback(const std::string& userName, const std::string& email, const std::string& sessionToken, int32_t heartbeatInterval);
    void loginFailedCallback(const std::string& errorMessage);
 
    static void AddToSet(const std::string& address, std::unordered_set<std::string> &set);
@@ -146,6 +153,7 @@ private:
 
    std::string sessionToken_;
    std::string userName_;
+   std::string email_;
    QString userType_;
    CelerUserType celerUserType_;
    CelerProperty userId_;

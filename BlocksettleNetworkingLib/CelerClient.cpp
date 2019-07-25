@@ -73,7 +73,7 @@ bool CelerClient::LoginToServer(const std::string &hostname, const std::string &
       return false;
    }
 
-   bool result = BaseCelerClient::SendLogin(login, password);
+   bool result = BaseCelerClient::SendLogin(login, login, password);
    return result;
 }
 

@@ -8,7 +8,7 @@ CelerAccountInfoDialog::CelerAccountInfoDialog(std::shared_ptr<BaseCelerClient> 
  , ui_(new Ui::CelerAccountInfoDialog())
 {
    ui_->setupUi(this);
-   ui_->labelEmailAddress->setText(QString::fromStdString(celerConnection->userName()));
+   ui_->labelEmailAddress->setText(QString::fromStdString(celerConnection->email()));
    ui_->labelUserType->setText(celerConnection->userType());
    connect(ui_->buttonBox, &QDialogButtonBox::rejected, this, &CelerAccountInfoDialog::reject);
 }

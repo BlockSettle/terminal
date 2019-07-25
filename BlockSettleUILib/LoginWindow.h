@@ -37,7 +37,7 @@ public:
       WaitLoginResult,
    };
 
-   QString getUsername() const;
+   QString email() const;
    const std::string &celerLogin() const { return celerLogin_; }
    std::unique_ptr<BsClient> getClient();
    const NetworkSettings &networkSettings() const;

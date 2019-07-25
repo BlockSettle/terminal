@@ -432,7 +432,7 @@ bool AuthAddressManager::SubmitAddressToPublicBridge(const bs::Address &address)
 {
    SubmitAuthAddressForVerificationRequest addressRequest;
 
-   addressRequest.set_username(celerClient_->userName());
+   addressRequest.set_username(celerClient_->email());
    addressRequest.set_addresstype(AddressType::BitcoinsAddressType);
    addressRequest.set_networktype((settings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
       ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
@@ -454,7 +454,7 @@ void AuthAddressManager::ConfirmSubmitForVerification(BsClient *bsClient, const 
 {
    ConfirmAuthSubmitRequest request;
 
-   request.set_username(celerClient_->userName());
+   request.set_username(celerClient_->email());
    request.set_address(address.display());
    request.set_networktype((settings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
       ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
@@ -510,7 +510,7 @@ bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)
 {
    CancelAuthAddressSubmitRequest request;
 
-   request.set_username(celerClient_->userName());
+   request.set_username(celerClient_->email());
    request.set_address(address.display());
    request.set_userid(celerClient_->userId());
 
