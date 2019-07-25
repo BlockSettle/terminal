@@ -220,7 +220,8 @@ void WalletsWidget::setUsername(const QString& username)
 
 void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
 {
-   walletsModel_ = new WalletsViewModel(walletsManager_, defaultWalletId, signingContainer_, ui_->treeViewWallets);
+   const bool showOnlyRegular = true;
+   walletsModel_ = new WalletsViewModel(walletsManager_, defaultWalletId, signingContainer_, ui_->treeViewWallets, showOnlyRegular);
    ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewWallets->setModel(walletsModel_);
    ui_->treeViewWallets->setFocus(Qt::ActiveWindowFocusReason);

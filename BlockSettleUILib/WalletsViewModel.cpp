@@ -257,11 +257,8 @@ public:
 void WalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::sync::hd::Group>> &groups)
 {
    for (const auto &group : groups) {
-      if (viewModel_->showRegularWallets()) {
-         if ((group->type() == bs::core::wallet::Type::Authentication)
-            || (group->type() == bs::core::wallet::Type::ColorCoin)) {
-            continue;
-         }
+      if (viewModel_->showRegularWallets() && (group->type() != bs::core::wallet::Type::Bitcoin)) {
+         continue;
       }
       const auto groupNode = new WalletGroupNode(viewModel_, group->name(), group->description()
          , getNodeType(group->type()), nbChildren(), this);
