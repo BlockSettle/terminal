@@ -19,7 +19,7 @@ BsClient::BsClient(const std::shared_ptr<spdlog::logger> &logger
    connection_ = std::make_unique<ZmqBIP15XDataConnection>(logger, zmqBipParams);
 
    connection_->setCBs([this](const std::string &oldKey, const std::string &newKey
-      , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &prompt)
+      , const std::string& srvAddrPort, const std::shared_ptr<FutureValue<bool>> &prompt)
    {
       BsClientParams::NewKey d;
       d.oldKey = oldKey;
@@ -135,9 +135,35 @@ std::chrono::seconds BsClient::autheidAuthAddressTimeout()
    return std::chrono::seconds(30);
 }
 
+// static
 std::chrono::seconds BsClient::autheidCcAddressTimeout()
 {
    return std::chrono::seconds(90);
+}
+
+// static
+std::string BsClient::requestTitleAuthAddr()
+{
+   return "Authentication Address";
+}
+
+// static
+std::string BsClient::requestDescAuthAddr(const bs::Address &address)
+{
+   return fmt::format("Submit auth address for verification: {}", address.display());
+}
+
+// static
+std::string BsClient::requestTitleCcAddr()
+{
+   return "Private Market token";
+}
+
+// static
+std::string BsClient::requestDescCcAddr(const bs::Address &address)
+{
+   // We don't show address details here yet
+   return fmt::format("Submitting CC wallet address to receive PM token");
 }
 
 void BsClient::OnDataReceived(const std::string &data)

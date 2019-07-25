@@ -1,18 +1,20 @@
 #ifndef BS_CLIENT_H
 #define BS_CLIENT_H
 
-#include <string>
-#include <map>
-#include <memory>
 #include <functional>
 #include <future>
-#include <spdlog/logger.h>
+#include <map>
+#include <memory>
+#include <string>
 #include <QObject>
+#include <spdlog/logger.h>
+
 #include "Address.h"
-#include "autheid_utils.h"
 #include "AutheIDClient.h"
 #include "CelerMessageMapper.h"
 #include "DataConnectionListener.h"
+#include "FutureValue.h"
+#include "autheid_utils.h"
 
 class ZmqContext;
 class ZmqBIP15XDataConnection;
@@ -31,7 +33,7 @@ struct BsClientParams
    {
       std::string oldKey;
       std::string newKey;
-      std::shared_ptr<std::promise<bool>> prompt;
+      std::shared_ptr<FutureValue<bool>> prompt;
    };
 
    using NewKeyCallback = std::function<void(const NewKey &newKey)>;
@@ -90,6 +92,15 @@ public:
    static std::chrono::seconds autheidLoginTimeout();
    static std::chrono::seconds autheidAuthAddressTimeout();
    static std::chrono::seconds autheidCcAddressTimeout();
+
+   // Returns how signed title and description text should look in the mobile device.
+   // PB will check it to be sure that the user did sign what he saw.
+   // NOTE: If text here will be updated make sure to update both PB and Proxy at the same time.
+   static std::string requestTitleAuthAddr();
+   static std::string requestDescAuthAddr(const bs::Address &address);
+   // NOTE: CC address text details are not enforced on PB right now!
+   static std::string requestTitleCcAddr();
+   static std::string requestDescCcAddr(const bs::Address &address);
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
    void getLoginResultDone(AutheIDClient::ErrorType status, const std::string &celerLogin);

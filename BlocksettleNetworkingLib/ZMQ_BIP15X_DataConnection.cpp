@@ -636,9 +636,8 @@ bool ZmqBIP15XDataConnection::closeConnection()
 
    // If a future obj is still waiting, satisfy it to prevent lockup. This
    // shouldn't happen here but it's an emergency fallback.
-   if (serverPubkeyProm_ && !serverPubkeySignalled_) {
-      serverPubkeyProm_->set_value(false);
-      serverPubkeySignalled_ = true;
+   if (serverPubkeyProm_) {
+      serverPubkeyProm_->setValue(false);
    }
 
    SPDLOG_LOGGER_DEBUG(logger_, "[{}] stopping {}", __func__, connectionName_);
@@ -768,7 +767,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       /*packet is server's pubkey, do we have it?*/
 
       //init server promise
-      serverPubkeyProm_ = make_shared<promise<bool>>();
+      serverPubkeyProm_ = std::make_shared<FutureValue<bool>>();
 
       // If it's a local connection, get a cookie with the server's key.
       if (params_.cookie == BIP15XCookie::ReadServer) {
@@ -803,9 +802,8 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       }
       else {
          //set server key promise
-         if (serverPubkeyProm_ && !serverPubkeySignalled_) {
-            serverPubkeyProm_->set_value(true);
-            serverPubkeySignalled_ = true;
+         if (serverPubkeyProm_) {
+            serverPubkeyProm_->setValue(true);
          }
          else {
             logger_->warn("[processHandshake] server public key was already set");
@@ -861,12 +859,10 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       // Do we need to check the server's ID key?
       if (serverPubkeyProm_ != nullptr) {
          //if so, wait on the promise
-         auto fut = serverPubkeyProm_->get_future();
-         fut.wait();
+         bool result = serverPubkeyProm_->waitValue();
 
-         if (fut.get()) {
+         if (result) {
             serverPubkeyProm_.reset();
-            serverPubkeySignalled_ = false;
          }
          else {
             logger_->error("[processHandshake] BIP 150/151 handshake process "
@@ -1002,24 +998,18 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
 // OUTPUT: N/A
 // RETURN: N/A
 void ZmqBIP15XDataConnection::setCBs(const cbNewKey& inNewKeyCB) {
-   if (params_.cookie == BIP15XCookie::MakeClient) {
-      logger_->error("[{}] Cannot use callbacks when using cookies.", __func__);
+   assert(params_.cookie != BIP15XCookie::MakeClient);
+
+   if (!inNewKeyCB) {
+      cbNewKey_ = [this](const std::string &, const std::string, const std::string&
+            , const std::shared_ptr<FutureValue<bool>> &prom) {
+         SPDLOG_LOGGER_DEBUG(logger_, "no new key callback was set - auto-accepting connections");
+         prom->setValue(true);
+      };
       return;
    }
 
-   // Set callbacks only if callbacks actually exist.
-   if (inNewKeyCB) {
-      cbNewKey_ = inNewKeyCB;
-   }
-   else {
-      cbNewKey_ = [this](const std::string &, const std::string, const std::string&
-         , const std::shared_ptr<std::promise<bool>> &prom) {
-         logger_->error("[ZmqBIP15XDataConnection] no new key callback was set - auto-accepting connections");
-         if (prom) {
-            prom->set_value(true);
-         }
-      };
-   }
+   cbNewKey_ = inNewKeyCB;
 }
 
 // Add an authorized peer's BIP 150 identity key manually.
@@ -1055,10 +1045,7 @@ bool ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
       // If we get here, it's because the cookie add failed or the cookie was
       // incorrect. Satisfy the promise to prevent lockup.
       logger_->error("[{}] Server ID key cookie could not be verified", __func__);
-      if (serverPubkeyProm_ && !serverPubkeySignalled_) {
-         serverPubkeyProm_->set_value(false);
-         serverPubkeySignalled_ = true;
-      }
+      serverPubkeyProm_->setValue(false);
       onError(DataConnectionListener::HandshakeFailed);
       return false;
    }
@@ -1075,16 +1062,13 @@ bool ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
    // Ask the user if they wish to accept the new identity key.
    // There shouldn't be any old key, at least in authPeerNameSearch
    cbNewKey_({}, newKey.toHexStr(), srvAddrPort, serverPubkeyProm_);
-   serverPubkeySignalled_ = true;
    bool cbResult = false;
 
    //have we seen the server's pubkey?
    if (serverPubkeyProm_ != nullptr) {
       //if so, wait on the promise
-      auto fut = serverPubkeyProm_->get_future();
-      cbResult = fut.get();
+      cbResult = serverPubkeyProm_->waitValue();
       serverPubkeyProm_.reset();
-      serverPubkeySignalled_ = false;
    }
 
    if (!cbResult) {

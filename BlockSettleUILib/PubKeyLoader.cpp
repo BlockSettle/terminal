@@ -55,8 +55,6 @@ BinaryData PubKeyLoader::loadKeyFromResource(KeyType kt, ApplicationSettings::En
    case ApplicationSettings::EnvConfiguration::Staging:
       filename += QStringLiteral("staging");
       break;
-   default:
-      break;
    }
    if (filename.isEmpty()) {
       return {};
@@ -104,14 +102,14 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
    // and respected.
    return [kt, bsMainWindow, appSettings] (const std::string& oldKey
          , const std::string& newKeyHex, const std::string& srvAddrPort
-         , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
+         , const std::shared_ptr<FutureValue<bool>> &newKeyProm) {
       const auto &deferredDialog = [kt, bsMainWindow, appSettings, newKeyHex, newKeyProm, srvAddrPort]{
          QMetaObject::invokeMethod(bsMainWindow, [kt, bsMainWindow, appSettings, newKeyHex, newKeyProm, srvAddrPort] {
             PubKeyLoader loader(appSettings);
             const auto newKeyBin = BinaryData::CreateFromHex(newKeyHex);
             const auto oldKeyBin = loader.loadKey(kt);
             if (oldKeyBin == newKeyBin) {
-               newKeyProm->set_value(true);
+               newKeyProm->setValue(true);
                return;
             }
 
@@ -128,7 +126,7 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
                loader.saveKey(kt, newKeyBin);
             }
 
-            newKeyProm->set_value(answer);
+            newKeyProm->setValue(answer);
          });
       };
 

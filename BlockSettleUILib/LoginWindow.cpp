@@ -198,7 +198,7 @@ void LoginWindow::onAuthPressed()
       params.context = std::make_shared<ZmqContext>(logger_);
       params.newServerKeyCallback = [](const BsClientParams::NewKey &newKey) {
          // FIXME: Show GUI prompt
-         newKey.prompt->set_value(true);
+         newKey.prompt->setValue(true);
       };
 
       bsClient_ = std::make_unique<BsClient>(logger_, params);

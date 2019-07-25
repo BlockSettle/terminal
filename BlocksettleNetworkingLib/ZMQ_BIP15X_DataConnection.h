@@ -1,15 +1,18 @@
 #ifndef __ZMQ_BIP15X_DATACONNECTION_H__
 #define __ZMQ_BIP15X_DATACONNECTION_H__
 
+#include <deque>
 #include <functional>
 #include <mutex>
-#include <thread>
-#include <deque>
 #include <spdlog/spdlog.h>
+#include <thread>
+
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
-#include "ZmqDataConnection.h"
+#include "FutureValue.h"
 #include "ZMQ_BIP15X_Helpers.h"
+#include "ZmqDataConnection.h"
+
 
 // DESIGN NOTES: Remote data connections must have a callback for when unknown
 // server keys are seen. The callback should ask the user if they'll accept
@@ -160,8 +163,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    const ZmqBIP15XDataConnectionParams params_;
 
-   std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
-   bool  serverPubkeySignalled_ = false;
+   std::shared_ptr<FutureValue<bool>> serverPubkeyProm_;
    std::unique_ptr<AuthorizedPeers> authPeers_;
    mutable std::mutex authPeersMutex_;
    std::unique_ptr<BIP151Connection> bip151Connection_;

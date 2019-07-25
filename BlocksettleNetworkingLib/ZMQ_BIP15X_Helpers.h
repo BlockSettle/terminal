@@ -5,6 +5,7 @@
 #include <future>
 #include <string>
 #include "BinaryData.h"
+#include "FutureValue.h"
 
 class AuthorizedPeers;
 
@@ -38,6 +39,6 @@ public:
 };
 
 using ZmqBipNewKeyCb = std::function<void(const std::string &oldKey, const std::string &newKey
-   , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &prompt)>;
+   , const std::string& srvAddrPort, const std::shared_ptr<FutureValue<bool>> &prompt)>;
 
 #endif
