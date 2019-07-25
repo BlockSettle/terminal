@@ -49,11 +49,22 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
 
    guiConnection_->setLocalHeartbeatInterval();
 
-   if (!guiConnection_->BindConnection("127.0.0.1", settings_->interfacePort()
-      , guiListener_.get())) {
+   int port = 0;
+   bool success = false;
+   int count = 0;
+   while (count < 3 && !success) {
+      port = 10000 + rand() % 50000;
+      success = guiConnection_->BindConnection("127.0.0.1", std::to_string(port)
+         , guiListener_.get());
+      count += 1;
+   }
+
+   if (!success) {
       logger_->error("Failed to bind adapter connection");
       throw std::runtime_error("failed to bind adapter socket");
    }
+
+   interfacePort_ = port;
 
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
@@ -104,7 +115,6 @@ void HeadlessAppObj::stop()
 void HeadlessAppObj::startInterface()
 {
    std::vector<std::string> args;
-   BinaryData serverIDKey(BIP151PUBKEYSIZE);
    switch (settings_->runMode()) {
    case bs::signer::RunMode::headless:
       logger_->debug("[{}] no interface in headless mode", __func__);
@@ -114,22 +124,25 @@ void HeadlessAppObj::startInterface()
          , __func__);
       return;
    case bs::signer::RunMode::litegui:
-      serverIDKey = guiListener_->getServerConn()->getOwnPubKey();
       logger_->debug("[{}] starting litegui", __func__);
       args.push_back("--guimode");
       args.push_back("litegui");
-      args.push_back("--server_id_key");
-      args.push_back(serverIDKey.toHexStr());
       break;
    case bs::signer::RunMode::fullgui:
-      serverIDKey = guiListener_->getServerConn()->getOwnPubKey();
       logger_->debug("[{}] starting fullgui", __func__);
       args.push_back("--guimode");
       args.push_back("fullgui");
-      args.push_back("--server_id_key");
-      args.push_back(serverIDKey.toHexStr());
       break;
    }
+
+   BinaryData serverIDKey(BIP151PUBKEYSIZE);
+   serverIDKey = guiListener_->getServerConn()->getOwnPubKey();
+   args.push_back("--server_id_key");
+   args.push_back(serverIDKey.toHexStr());
+
+   assert(interfacePort_ != 0);
+   args.push_back("--port");
+   args.push_back(std::to_string(interfacePort_));
 
    if (settings_->testNet()) {
       args.push_back("--testnet");
