@@ -10,6 +10,7 @@
 #include "UiUtils.h"
 #include "ZmqContext.h"
 #include "ui_LoginWindow.h"
+#include "FutureValue.h"
 
 namespace {
    const auto AuthTimeout = int(BsClient::autheidLoginTimeout() / std::chrono::seconds(1));

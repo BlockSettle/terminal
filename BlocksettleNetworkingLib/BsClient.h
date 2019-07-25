@@ -13,11 +13,11 @@
 #include "AutheIDClient.h"
 #include "CelerMessageMapper.h"
 #include "DataConnectionListener.h"
-#include "FutureValue.h"
 #include "autheid_utils.h"
 
 class ZmqContext;
 class ZmqBIP15XDataConnection;
+template<typename T> class FutureValue;
 
 namespace Blocksettle { namespace Communication { namespace Proxy {
 class Request;
