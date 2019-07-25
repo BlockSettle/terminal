@@ -28,7 +28,6 @@ pipeline {
                     }
                     steps {
                         sh "cd ./terminal && pip install requests"
-                        sh "cd ./terminal ; git checkout bs_dev ; cd common ; git checkout bs_dev"
                         sh "cd ./terminal && python generate.py ${L_ARGS}"
                         sh "cd ./terminal/terminal.release && make -j 4"
                         sh "cd ./terminal/Deploy && ./deploy.sh"
