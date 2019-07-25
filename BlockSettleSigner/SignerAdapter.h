@@ -39,7 +39,7 @@ class SignerAdapter : public QObject
 public:
    SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<QmlBridge> &qmlBridge
-      , const NetworkType netType, const BinaryData* inSrvIDKey = nullptr);
+      , const NetworkType netType, int signerPort, const BinaryData* inSrvIDKey = nullptr);
    ~SignerAdapter() override;
 
    SignerAdapter(const SignerAdapter&) = delete;
@@ -116,7 +116,7 @@ signals:
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
-   NetworkType netType_;
+   const NetworkType netType_;
    std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<QmlFactory>               qmlFactory_;

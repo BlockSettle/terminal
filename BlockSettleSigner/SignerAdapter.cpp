@@ -14,7 +14,6 @@
 namespace {
 
    const std::string kLocalAddrV4 = "127.0.0.1";
-   const std::string kLocalAddrPort = "23457";
 
 } // namespace
 
@@ -22,8 +21,11 @@ using namespace Blocksettle::Communication;
 
 SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<QmlBridge> &qmlBridge
-   , const NetworkType netType, const BinaryData* inSrvIDKey)
-   : QObject(nullptr), logger_(logger), qmlBridge_(qmlBridge), netType_(netType)
+   , const NetworkType netType, int signerPort, const BinaryData* inSrvIDKey)
+   : QObject(nullptr)
+   ,logger_(logger)
+   , netType_(netType)
+   , qmlBridge_(qmlBridge)
 {
    ZmqBIP15XDataConnectionParams params;
    params.ephemeralPeers = true;
@@ -37,18 +39,18 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
 
    auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, params);
    if (inSrvIDKey) {
-      std::string connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort;
+      std::string connectAddr = kLocalAddrV4 + ":" + std::to_string(signerPort);
       adapterConn->addAuthPeer(ZmqBIP15XPeer(connectAddr, *inSrvIDKey));
 
       // Temporary (?) kludge: Sometimes, the key gets checked with "_1" at the
       // end of the checked key name. This should be checked and corrected
       // elsewhere, but for now, add a kludge to keep the code happy.
-      connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort + "_1";
+      connectAddr = kLocalAddrV4 + ":" + std::to_string(signerPort) + "_1";
       adapterConn->addAuthPeer(ZmqBIP15XPeer(connectAddr, *inSrvIDKey));
    }
 
    listener_ = std::make_shared<SignerInterfaceListener>(logger, qmlBridge_, adapterConn, this);
-   if (!adapterConn->openConnection(kLocalAddrV4, kLocalAddrPort
+   if (!adapterConn->openConnection(kLocalAddrV4, std::to_string(signerPort)
       , listener_.get())) {
       throw std::runtime_error("adapter connection failed");
    }

@@ -96,6 +96,8 @@ public:
    static QString secondsToIntervalStr(int);
    static int intervalStrToSeconds(const QString &);
 
+   int signerPort() { return signerPort_; }
+
 signals:
    void offlineChanged();
    void testNetChanged();
@@ -122,6 +124,7 @@ private:
    std::string writableDir_;
    std::string fileName_;
    std::string srvIDKey_;
+   int signerPort_{};
    bs::signer::ui::RunMode runMode_{};
    std::unique_ptr<Settings> d_;
 };

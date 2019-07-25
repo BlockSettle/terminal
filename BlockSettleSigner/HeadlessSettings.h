@@ -31,7 +31,6 @@ public:
    std::string listenAddress() const;
    std::string acceptFrom() const;
    std::string listenPort() const;
-   std::string interfacePort() const { return "23457"; }
    std::string getTermIDKeyStr() const { return termIDKeyStr_; }
    bool getTermIDKeyBin(BinaryData& keyBuf);
    std::string logFile() const { return logFile_; }

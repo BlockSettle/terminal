@@ -82,6 +82,7 @@ private:
 
    ProcessControl             guiProcess_;
    std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
+   int interfacePort_{};
 };
 
 #endif // __HEADLESS_APP_H__

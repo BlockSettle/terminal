@@ -188,7 +188,7 @@ static int QMLApp(int argc, char **argv)
             "command line. Functionality may be limited.", __func__);
       }
 
-      SignerAdapter adapter(logger, qmlBridge, settings->netType(), &srvIDKey);
+      SignerAdapter adapter(logger, qmlBridge, settings->netType(), settings->signerPort(), &srvIDKey);
       adapter.setCloseHeadless(settings->closeHeadless());
 
       QMLAppObj qmlAppObj(&adapter, logger, settings, splashScreen, engine.rootContext());

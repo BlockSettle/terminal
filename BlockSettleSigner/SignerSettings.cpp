@@ -22,6 +22,9 @@ static QString runModeHelp = QObject::tr("GUI run mode [fullgui|litegui]");
 static const QString srvIDKeyName = QString::fromStdString("server_id_key");
 static QString srvIDKeyHelp = QObject::tr("The server's compressed BIP 150 ID key (hex)");
 
+static const QString portName = QString::fromStdString("port");
+static const QString portHelp = QObject::tr("Local TCP connection port to signer process");
+
 namespace {
 
 double convertFromSatoshi(uint64_t satoshi)
@@ -185,6 +188,7 @@ bool SignerSettings::loadSettings(const QStringList &args)
    parser.addOption({ testnetName, testnetHelp });
    parser.addOption({ runModeName, runModeHelp, runModeName });
    parser.addOption({ srvIDKeyName, srvIDKeyHelp, srvIDKeyName });
+   parser.addOption({ portName, portHelp, portName });
 
    parser.process(args);
 
@@ -209,6 +213,12 @@ bool SignerSettings::loadSettings(const QStringList &args)
 
    if (parser.isSet(srvIDKeyName)) {
       srvIDKey_ = parser.value(srvIDKeyName).toStdString();
+   }
+
+   if (parser.isSet(portName)) {
+      signerPort_ = parser.value(portName).toInt();
+   } else {
+      return false;
    }
 
    // This switch is needed when terminal is started with testnet connection and local signer used.
