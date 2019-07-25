@@ -162,15 +162,11 @@ namespace bs {
             //they need a dedicated setup routine
             std::shared_ptr<hd::Leaf> createLeaf(
                bs::hd::Path::Elem, unsigned lookup = UINT32_MAX) override
-            {
-               throw AccountException("invalid for settlement leaves");
-            }
+            { return nullptr; }
 
             std::shared_ptr<hd::Leaf> createLeaf(
-               const std::string &key, unsigned lookup = UINT32_MAX) override
-            {
-               throw AccountException("invalid for settlement leaves");
-            }
+               const std::string &, unsigned lookup = UINT32_MAX) override
+            { return nullptr; }
 
             std::shared_ptr<hd::SettlementLeaf>
                getLeafForSettlementID(const SecureBinaryData&) const;
