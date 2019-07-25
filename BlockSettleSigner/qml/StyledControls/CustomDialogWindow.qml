@@ -11,6 +11,7 @@ Dialog {
     modal: true
     closePolicy: Popup.NoAutoClose
     spacing: 0
+    margins: 0
 
     background: Rectangle {
         color: BSStyle.backgroundColor

@@ -114,7 +114,6 @@ Item {
 
                             if (walletInfo.encType === QPasswordData.Password) {
                                 var passwordDialog = Qt.createComponent("BsControls/BSPasswordInput.qml").createObject(mainWindow);
-                                passwordDialog.type = BSPasswordInput.Type.Request
                                 passwordDialog.open()
                                 passwordDialog.bsAccepted.connect(function() {
                                     var passwordData = qmlFactory.createPasswordData()

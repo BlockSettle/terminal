@@ -22,8 +22,8 @@ CustomTitleDialogWindow {
         width: parent.width
         spacing: 5
         Layout.fillWidth: true
-        Layout.leftMargin: 10
-        Layout.rightMargin: 10
+        Layout.fillHeight: true
+        Layout.margins: 10
 
         CustomLabelValue{
             Layout.fillWidth: true
@@ -31,9 +31,13 @@ CustomTitleDialogWindow {
         }
     }
 
-    cFooterItem: RowLayout {
+    cFooterItem: ColumnLayout {
+        spacing: 0
+        Layout.margins: 0
+
         CustomButtonBar {
             Layout.fillWidth: true
+            Layout.alignment: Qt.AlignBottom
 
             CustomButton {
                 text: qsTr("Cancel")
@@ -66,7 +70,5 @@ CustomTitleDialogWindow {
                 }
             }
         }
-
     }
-
 }

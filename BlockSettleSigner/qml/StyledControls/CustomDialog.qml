@@ -11,7 +11,28 @@ CustomDialogWindow {
     property bool acceptable: false
     property bool rejectable: false
     property bool abortConfirmation: false
-    property int abortBoxType
+    property int  abortBoxType
+
+    property int cContentHeight: customContentContainer.height
+    property int cFooterHeight: customFooterContainer.height
+    property int cHeaderHeight: customHeaderContainer.height
+
+    property alias customContentContainer: customContentContainer
+    property alias customFooterContainer: customFooterContainer
+    property alias customHeaderContainer: customHeaderContainer
+
+    //height: cContentHeight + cFooterHeight
+    onCContentHeightChanged: {
+        console.log("onCContentHeightChanged " + root + " " + cContentHeight)
+    }
+
+    onCFooterHeightChanged: {
+        console.log("onCFooterHeightChanged " + root + " " + cFooterHeight)
+    }
+
+    onCHeaderHeightChanged: {
+        console.log("onCHeaderHeightChanged " + root + " " + cHeaderHeight)
+    }
 
     ///////////////////
     // suggested to use these functions to close dialog popup with animation
@@ -49,10 +70,13 @@ CustomDialogWindow {
     // (for example if it's multipage dialog, or another popup doalog shown above current
     signal sizeChanged(int w, int h)
     onWidthChanged: {
+        console.log("onWidthChanged " + root + " " + width + " " + height)
+
         sizeChanged(width, height)
     }
     onHeightChanged: {
         sizeChanged(width, height)
+        console.log("onHeightChanged " + root + " " + width + " " + height)
     }
 
     ////////////////////////////
@@ -140,6 +164,9 @@ CustomDialogWindow {
         anchors.fill: parent
         anchors.margins: 0
         focus: true
+//        Layout.alignment: Qt.AlignTop
+//        Layout.fillHeight: true
+//        Layout.margins: 0
 
         Keys.onPressed: {
             event.accepted = true
@@ -175,15 +202,32 @@ CustomDialogWindow {
             anchors.fill: parent
             anchors.margins: 0
             spacing: 0
+            Layout.alignment: Qt.AlignTop
+            Layout.margins: 0
+            //Layout.fillHeight: true
+            clip: true
 
-            RowLayout {
+            ColumnLayout {
                 id: customHeaderContainer
+                Layout.alignment: Qt.AlignTop
+                Layout.margins: 0
+                spacing: 0
+                clip: true
             }
-            RowLayout {
+            ColumnLayout {
                 id: customContentContainer
+                //Layout.fillHeight: true
+                Layout.alignment: Qt.AlignTop
+                spacing: 0
+                Layout.margins: 0
+                clip: true
             }
-            RowLayout {
+            ColumnLayout {
                 id: customFooterContainer
+                Layout.alignment: Qt.AlignBottom
+                spacing: 0
+                Layout.margins: 0
+                clip: true
             }
         }
     }
