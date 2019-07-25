@@ -182,8 +182,8 @@ void WalletACT::onCombinedBalances(const std::map<std::string, CombinedBalances>
 
       total += static_cast<BTCNumericTypes::balance_type>(
          wltBal.second.walletBalanceAndCount_[0]) / BTCNumericTypes::BalanceDivider;
-      spendable += static_cast<BTCNumericTypes::balance_type>(
-         wltBal.second.walletBalanceAndCount_[1]) / BTCNumericTypes::BalanceDivider;
+/*      spendable += static_cast<BTCNumericTypes::balance_type>(
+         wltBal.second.walletBalanceAndCount_[1]) / BTCNumericTypes::BalanceDivider;*/
       unconfirmed += static_cast<BTCNumericTypes::balance_type>(
          wltBal.second.walletBalanceAndCount_[2]) / BTCNumericTypes::BalanceDivider;
 
@@ -194,6 +194,8 @@ void WalletACT::onCombinedBalances(const std::map<std::string, CombinedBalances>
       parent_->updateMap<std::map<BinaryData, std::vector<uint64_t>>>(
          wltBal.second.addressBalances_, parent_->addressBalanceMap_);
    }
+   spendable = total - unconfirmed;
+
    if (ourUpdate) {
       parent_->totalBalance_ = total;
       parent_->spendableBalance_ = spendable;
@@ -243,9 +245,6 @@ bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t
 
    const auto &cbTxOutList = [this, val, cb]
       (const std::vector<UTXO> &txOutList) {
-      // Before invoking the callbacks, process the UTXOs for the purposes of
-      // handling internal/external addresses (UTXO filtering, balance
-      // adjusting, etc.).
       std::vector<UTXO> txOutListCopy = txOutList;
       if (utxoAdapter_) {
          utxoAdapter_->filter(txOutListCopy);
