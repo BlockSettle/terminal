@@ -581,6 +581,25 @@ int hd::Leaf::addAddress(const bs::Address &addr, const std::string &index, Addr
    return id;
 }
 
+bool hd::Leaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t val)
+{  // process the UTXOs for the purposes of handling internal/external addresses
+   const ArmoryConnection::UTXOsCb &cbWrap = [this, cb](const std::vector<UTXO> &utxos) {
+      std::vector<UTXO> filteredUTXOs;
+      for (const auto &utxo : utxos) {
+         const auto nbConf = armory_->getConfirmationsNumber(utxo.getHeight());
+         const auto addr = bs::Address::fromUTXO(utxo);
+         const auto confCutOff = isExternalAddress(addr) ? kExtConfCount : kIntConfCount;
+         if (nbConf >= confCutOff) {
+            filteredUTXOs.emplace_back(std::move(utxo));
+         }
+      }
+      if (cb) {
+         cb(filteredUTXOs);
+      }
+   };
+   return bs::sync::Wallet::getSpendableTxOutList(cbWrap, val);
+}
+
 BTCNumericTypes::balance_type hd::Leaf::getSpendableBalance() const
 {
    return (Wallet::getSpendableBalance() - spendableBalanceCorrection_);
