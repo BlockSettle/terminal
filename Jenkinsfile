@@ -43,7 +43,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Transfer') {
             steps {
                 sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal.deb genoa@10.0.1.36:/var/www/terminal/Linux/bsterminal_${TAG}.deb"
