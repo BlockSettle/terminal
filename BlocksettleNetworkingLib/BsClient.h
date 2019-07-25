@@ -71,6 +71,7 @@ public:
       SignStartedCb startedCb;
       SignedCb signedCb;
       SignFailedCb failedCb;
+      std::string srcCcToken;
    };
 
    BsClient(const std::shared_ptr<spdlog::logger>& logger, const BsClientParams &params
@@ -100,7 +101,7 @@ public:
    static std::string requestDescAuthAddr(const bs::Address &address);
    // NOTE: CC address text details are not enforced on PB right now!
    static std::string requestTitleCcAddr();
-   static std::string requestDescCcAddr(const bs::Address &address);
+   static std::string requestDescCcAddr(const bs::Address &address, const std::string &token);
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
    void getLoginResultDone(AutheIDClient::ErrorType status, const std::string &celerLogin);

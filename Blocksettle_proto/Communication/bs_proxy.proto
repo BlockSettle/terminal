@@ -37,6 +37,9 @@ message Request
     {
         string address = 1;
 
+        // Used with CC address submit, needed to show in the Auth eID signature request
+        string src_cc_token = 4;
+
         bytes invisible_data = 2;
 
         // BsClient::SignAddressReq::Type as int
