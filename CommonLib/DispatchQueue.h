@@ -32,7 +32,7 @@ public:
    bool done() const;
 
    // Try process single function.
-   void tryProcess(std::chrono::milliseconds period = std::chrono::milliseconds::max());
+   void tryProcess();
 
    // Sets quit flag. Thread-safe.
    void quit();

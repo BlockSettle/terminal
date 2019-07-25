@@ -42,7 +42,6 @@ public:
    ChatClient& operator = (ChatClient&&) = delete;
 
    std::shared_ptr<ChatClientDataModel> getDataModel();
-   std::shared_ptr<UserSearchModel> getUserSearchModel();
    std::shared_ptr<ChatTreeModelWrapper> getProxyModel();
 
    std::shared_ptr<Chat::Data> sendOwnMessage(
@@ -147,7 +146,6 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
 
    std::shared_ptr<ChatClientDataModel>   model_;
-   std::shared_ptr<UserSearchModel>       userSearchModel_;
    std::shared_ptr<ChatTreeModelWrapper>  proxyModel_;
 
    bool              emailEntered_{ false };

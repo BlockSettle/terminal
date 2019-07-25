@@ -10,6 +10,7 @@
 #include "ServerConnectionListener.h"
 #include "SignerDefs.h"
 #include "BSErrorCode.h"
+#include "PasswordDialogDataWrapper.h"
 
 #include "headless.pb.h"
 #include "bs_signer.pb.h"
@@ -21,6 +22,7 @@ namespace spdlog {
 namespace bs {
    namespace core {
       namespace hd {
+         class Leaf;
          class Node;
          class Wallet;
       }
@@ -41,7 +43,7 @@ public:
    virtual void clientDisconn(const std::string &) = 0;
 
    virtual void decryptWalletRequest(Blocksettle::Communication::signer::PasswordDialogType dialogType
-      , const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+      , const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const bs::core::wallet::TXSignRequest & = {}) = 0;
 
    virtual void txSigned(const BinaryData &) = 0;
@@ -126,7 +128,7 @@ private:
    void SignTXResponse(const std::string &clientId, unsigned int id, Blocksettle::Communication::headless::RequestType reqType
       , bs::error::ErrorCode errorCode, const BinaryData &tx = {});
    void CreateHDLeafResponse(const std::string &clientId, unsigned int id, bs::error::ErrorCode result
-      , const std::string &path = {}, const BinaryData &chainCode = {});
+      , const std::shared_ptr<bs::core::hd::Leaf>& leaf = nullptr);
    void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::string &walletId
       , const std::shared_ptr<bs::core::hd::Wallet> &, const std::string &error = {});
    void SyncAddrsResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bs::sync::SyncState);
@@ -136,13 +138,13 @@ private:
 
    bool createHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::CreateHDLeafRequest &request);
    bool RequestPasswordIfNeeded(const std::string &clientId, const bs::core::wallet::TXSignRequest &
-      , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+      , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const PasswordReceivedCb &cb);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId
       , const bs::core::wallet::TXMultiSignRequest &, const bs::core::WalletMap &
       , const std::string &prompt, const PasswordsReceivedCb &cb);
    bool RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &
-      , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+      , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const PasswordReceivedCb &cb);
 
    bool CheckSpendLimit(uint64_t value, const std::string &walletId);

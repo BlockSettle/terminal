@@ -150,7 +150,6 @@ private slots:
    void onRowsRemoved(const QModelIndex &parent, int first, int last);   
    void onCollapsed(const QModelIndex &index);
    void onExpanded(const QModelIndex &index);
-   void onEnterKeyInQuoteRequestsPressed(const QModelIndex &index);
 
 private:
    void expandIfNeeded(const QModelIndex &index = QModelIndex());

@@ -1,15 +1,18 @@
 #ifndef __ZMQ_BIP15X_DATACONNECTION_H__
 #define __ZMQ_BIP15X_DATACONNECTION_H__
 
+#include <deque>
 #include <functional>
 #include <mutex>
-#include <thread>
-#include <deque>
 #include <spdlog/spdlog.h>
+#include <thread>
+
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
-#include "ZmqDataConnection.h"
+#include "FutureValue.h"
 #include "ZMQ_BIP15X_Helpers.h"
+#include "ZmqDataConnection.h"
+
 
 // DESIGN NOTES: Remote data connections must have a callback for when unknown
 // server keys are seen. The callback should ask the user if they'll accept
@@ -69,7 +72,9 @@ struct ZmqBIP15XDataConnectionParams
    BIP15XCookie cookie{BIP15XCookie::NotUsed};
 
    // Initialized to ZmqBIP15XServerConnection::getDefaultHeartbeatInterval() by default
-   std::chrono::milliseconds heartbeatInterval;
+   std::chrono::milliseconds heartbeatInterval{};
+
+   std::chrono::milliseconds connectionTimeout{std::chrono::seconds(10)};
 
    ZmqBIP15XDataConnectionParams();
 
@@ -84,8 +89,7 @@ public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger, const ZmqBIP15XDataConnectionParams &params);
    ~ZmqBIP15XDataConnection() noexcept override;
 
-   using cbNewKey = std::function<void(const std::string &oldKey, const std::string &newKey
-      , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &prompt)>;
+   using cbNewKey = ZmqBipNewKeyCb;
 
    ZmqBIP15XDataConnection(const ZmqBIP15XDataConnection&) = delete;
    ZmqBIP15XDataConnection& operator= (const ZmqBIP15XDataConnection&) = delete;
@@ -93,7 +97,7 @@ public:
    ZmqBIP15XDataConnection& operator= (ZmqBIP15XDataConnection&&) = delete;
 
    bool getServerIDCookie(BinaryData& cookieBuf);
-   std::string getCookiePath() const { return bipIDCookiePath_; }
+   std::string getCookiePath() const { return params_.cookiePath; }
    void setCBs(const cbNewKey& inNewKeyCB);
    BinaryData getOwnPubKey() const;
    bool genBIPIDCookie();
@@ -157,8 +161,9 @@ private:
    void sendDisconnectMsg();
 
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
-   bool  serverPubkeySignalled_ = false;
+   const ZmqBIP15XDataConnectionParams params_;
+
+   std::shared_ptr<FutureValue<bool>> serverPubkeyProm_;
    std::unique_ptr<AuthorizedPeers> authPeers_;
    mutable std::mutex authPeersMutex_;
    std::unique_ptr<BIP151Connection> bip151Connection_;
@@ -167,12 +172,9 @@ private:
    uint32_t innerRekeyCount_ = 0;
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
-   const std::string bipIDCookiePath_;
-   const BIP15XCookie cookie_;
 
    cbNewKey cbNewKey_;
 
-   std::chrono::milliseconds heartbeatInterval_;
    std::shared_ptr<ZmqContext>      context_;
 
    ZmqContext::sock_ptr             dataSocket_;

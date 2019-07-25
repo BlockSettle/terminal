@@ -26,11 +26,11 @@ bool DispatchQueue::done() const
    return quit_ && q_.empty();
 }
 
-void DispatchQueue::tryProcess(std::chrono::milliseconds period)
+void DispatchQueue::tryProcess()
 {
    std::unique_lock<std::mutex> lock(lock_);
 
-   cv_.wait_for(lock, period, [this] {
+   cv_.wait(lock, [this] {
       return (!q_.empty() || quit_);
    });
 

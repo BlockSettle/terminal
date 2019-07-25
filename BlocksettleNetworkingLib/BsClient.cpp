@@ -19,7 +19,7 @@ BsClient::BsClient(const std::shared_ptr<spdlog::logger> &logger
    connection_ = std::make_unique<ZmqBIP15XDataConnection>(logger, zmqBipParams);
 
    connection_->setCBs([this](const std::string &oldKey, const std::string &newKey
-      , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &prompt)
+      , const std::string& srvAddrPort, const std::shared_ptr<FutureValue<bool>> &prompt)
    {
       BsClientParams::NewKey d;
       d.oldKey = oldKey;
@@ -37,12 +37,6 @@ BsClient::~BsClient()
 {
    // Stop receiving events from DataConnectionListener before BsClient is partially destroyed
    connection_.reset();
-
-   for (const auto &req : activeRequests_) {
-      if (req.second.timeoutCb) {
-         req.second.timeoutCb();
-      }
-   }
 }
 
 void BsClient::startLogin(const std::string &email)
@@ -68,8 +62,9 @@ void BsClient::getLoginResult()
    Request request;
    request.mutable_get_login_result();
 
-   sendRequest(&request, autheidLoginTimeout(), [this] {
-      emit getLoginResultDone(AutheIDClient::NetworkError);
+   // Add some time to be able get timeout error from the server
+   sendRequest(&request, autheidLoginTimeout() + std::chrono::seconds(3), [this] {
+      emit getLoginResultDone(AutheIDClient::NetworkError, {});
    });
 }
 
@@ -140,9 +135,35 @@ std::chrono::seconds BsClient::autheidAuthAddressTimeout()
    return std::chrono::seconds(30);
 }
 
+// static
 std::chrono::seconds BsClient::autheidCcAddressTimeout()
 {
    return std::chrono::seconds(90);
+}
+
+// static
+std::string BsClient::requestTitleAuthAddr()
+{
+   return "Authentication Address";
+}
+
+// static
+std::string BsClient::requestDescAuthAddr(const bs::Address &address)
+{
+   return fmt::format("Submit auth address for verification: {}", address.display());
+}
+
+// static
+std::string BsClient::requestTitleCcAddr()
+{
+   return "Private Market token";
+}
+
+// static
+std::string BsClient::requestDescCcAddr(const bs::Address &address)
+{
+   // We don't show address details here yet
+   return fmt::format("Submitting CC wallet address to receive PM token");
 }
 
 void BsClient::OnDataReceived(const std::string &data)
@@ -150,7 +171,7 @@ void BsClient::OnDataReceived(const std::string &data)
    auto response = std::make_shared<Response>();
    bool result = response->ParseFromString(data);
    if (!result) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't parse from BS proxy");
+      SPDLOG_LOGGER_ERROR(logger_, "can't parse response from BS proxy");
       return;
    }
 
@@ -227,8 +248,13 @@ void BsClient::sendRequest(Request *request, std::chrono::milliseconds timeout
          return;
       }
 
-      it->second.timeoutCb();
+      // Erase iterator before calling callback!
+      // Callback could be be blocking and iterator might become invalid after callback return.
+      auto callback = std::move(it->second.timeoutCb);
       activeRequests_.erase(it);
+
+      // Callback could be blocking
+      callback();
    });
 
    request->set_request_id(requestId);
@@ -251,7 +277,7 @@ void BsClient::processStartLogin(const Response_StartLogin &response)
 
 void BsClient::processGetLoginResult(const Response_GetLoginResult &response)
 {
-   emit getLoginResultDone(AutheIDClient::ErrorType(response.error().error_code()));
+   emit getLoginResultDone(AutheIDClient::ErrorType(response.error().error_code()), response.celer_login());
 }
 
 void BsClient::processCeler(const Response_Celer &response)

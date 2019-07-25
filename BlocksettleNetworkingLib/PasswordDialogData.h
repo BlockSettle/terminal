@@ -43,4 +43,4 @@ private:
 
 } // namespace sync
 } // namespace bs
-#endif // __SETTLEMENT_INFO_H__
+#endif // __PASSWORD_DIALOG_DATA_H__

@@ -1,17 +1,23 @@
 #ifndef __USER_HASHER_H__
 #define __USER_HASHER_H__
-#include "AssetEncryption.h"
 
 #include <memory>
+#include <string>
+
+class BinaryData;
+struct KeyDerivationFunction;
 
 class UserHasher {
 public:
-   static const unsigned int KeyLength;
-   UserHasher(const BinaryData& iv = SecureBinaryData());
-   std::shared_ptr<KeyDerivationFunction> getKDF();
-   std::string deriveKey(const std::string& rawData);
+   static const int KeyLength;
+
+   UserHasher();
+   UserHasher(const BinaryData& iv);
+
+   std::shared_ptr<KeyDerivationFunction> getKDF() const { return kdf_; }
+
+   std::string deriveKey(const std::string& rawData) const;
 private:
-   SecureBinaryData iv_;
    std::shared_ptr<KeyDerivationFunction> kdf_;
 };
 

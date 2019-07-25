@@ -85,7 +85,6 @@ public:
    void OnConfirmReplacePublicKey(const Chat::Response_ConfirmReplacePublicKey& /*response*/) override;
 
    void OnContactListConfirmed(const ChatDataVectorPtr& /*checked*/, const ChatDataVectorPtr& /*keyUpdate*/, const ChatDataVectorPtr& /*absolutelyNew*/);
-   void OnContactListRejected(const ChatDataVectorPtr& /*rejectedList*/);
    void OnContactNewPublicKeyRejected(const std::string& /*userId*/);
 
    bool sendSearchUsersRequest(const std::string& /*userIdPattern*/);

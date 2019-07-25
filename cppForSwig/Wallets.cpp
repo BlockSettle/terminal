@@ -218,7 +218,7 @@ shared_ptr<AddressAccount> AssetWallet::createAccount(
 {
    auto cipher = make_unique<Cipher_AES>(
       decryptedData_->getDefaultKdfId(),
-      decryptedData_->getDefaultEncryptionKeyId());
+      decryptedData_->getMasterEncryptionKeyId());
 
    //instantiate AddressAccount object from AccountType
    auto account_ptr = make_shared<AddressAccount>(dbEnv_, db_);

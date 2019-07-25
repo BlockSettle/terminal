@@ -259,7 +259,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
           || (reqType == headless::RequestType::SignSettlementPartialTxType);
 
    headless::SignTxRequest request;
-   Blocksettle::Communication::Internal::PasswordDialogData dialogData;
+   Blocksettle::Communication::Internal::PasswordDialogDataWrapper dialogData;
 
    if (reqType == headless::RequestType::SignSettlementTxRequestType){
       headless::SignSettlementTxRequest settlementRequest;
@@ -450,7 +450,7 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
 {
    const auto reqType = headless::SignSettlementPayoutTxType;
    headless::SignSettlementPayoutTxRequest request;
-   Blocksettle::Communication::Internal::PasswordDialogData dialogData;
+   Blocksettle::Communication::Internal::PasswordDialogDataWrapper dialogData;
 
    if (!request.ParseFromString(packet.data())) {
       logger_->error("[{}] failed to parse request", __func__);
@@ -555,12 +555,12 @@ void HeadlessContainerListener::passwordReceived(const std::string &walletId
 
 bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clientId
    , const bs::core::wallet::TXSignRequest &txReq
-   , headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+   , headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
    , const PasswordReceivedCb &cb)
 {
-   const auto wallet = walletsMgr_->getWalletById(txReq.walletId);
-   bool needPassword = true;
    std::string walletId = txReq.walletId;
+   const auto wallet = walletsMgr_->getWalletById(walletId);
+   bool needPassword = true;
    if (wallet) {
       needPassword = !wallet->encryptionTypes().empty();
       if (needPassword) {
@@ -571,9 +571,9 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
       }
    }
    else {
-      const auto hdWallet = walletsMgr_->getHDWalletById(txReq.walletId);
+      const auto hdWallet = walletsMgr_->getHDWalletById(walletId);
       if (!hdWallet) {
-         logger_->error("[{}] failed to find wallet {}", __func__, txReq.walletId);
+         logger_->error("[{}] failed to find wallet {}", __func__, walletId);
          return false;
       }
       needPassword = !hdWallet->encryptionTypes().empty();
@@ -601,7 +601,7 @@ bool HeadlessContainerListener::RequestPasswordsIfNeeded(int reqId, const std::s
    , const std::string &prompt, const PasswordsReceivedCb &cb)
 {
    // FIXME - get settlement info in request
-   Blocksettle::Communication::Internal::PasswordDialogData dialogData;
+   Blocksettle::Communication::Internal::PasswordDialogDataWrapper dialogData;
 
    TempPasswords tempPasswords;
    for (const auto &wallet : walletMap) {
@@ -646,7 +646,7 @@ bool HeadlessContainerListener::RequestPasswordsIfNeeded(int reqId, const std::s
 }
 
 bool HeadlessContainerListener::RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &txReq
-   , headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogData &dialogData
+   , headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
    , const PasswordReceivedCb &cb)
 {
    if (cb) {
@@ -879,11 +879,11 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
       auto assetPtr = leaf->getRootAsset();
 
       auto rootPtr = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(assetPtr);
-      if (rootPtr == nullptr)
+      if (rootPtr == nullptr) {
          throw AssetException("unexpected root asset type");
-      CreateHDLeafResponse(clientId, id, ErrorCode::NoError,
-         path.toString(),
-         rootPtr->getChaincode());
+      }
+
+      CreateHDLeafResponse(clientId, id, ErrorCode::NoError, leaf);
    };
 
    bs::core::wallet::TXSignRequest txReq;
@@ -894,14 +894,18 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
 }
 
 void HeadlessContainerListener::CreateHDLeafResponse(const std::string &clientId, unsigned int id
-   , ErrorCode result, const std::string &path, const BinaryData &chainCode)
+   , ErrorCode result, const std::shared_ptr<bs::core::hd::Leaf>& leaf)
 {
-   logger_->debug("[HeadlessContainerListener] CreateHDWalletResponse: {}", path);
+   const std::string pathString = leaf->path().toString();
+   logger_->debug("[HeadlessContainerListener] CreateHDWalletResponse: {}", pathString);
    headless::CreateHDLeafResponse response;
    if (result == ErrorCode::NoError) {
-      if (!chainCode.isNull()) {
-         auto leaf = response.mutable_leaf();
-         leaf->set_walletid(path);
+      if (leaf) {
+         auto leafResponse = response.mutable_leaf();
+
+         leafResponse->set_path(pathString);
+         leafResponse->set_walletid(leaf->walletId());
+
          response.set_errorcode(static_cast<uint32_t>(ErrorCode::NoError));
       }
       else {
@@ -975,10 +979,11 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       packet.set_data(response.SerializeAsString());
       sendData(packet.SerializeAsString(), clientId);
    };
-   bs::core::wallet::TXSignRequest txSignReq;
-   txSignReq.walletId = priWallet->walletId();
-   return RequestPasswordIfNeeded(clientId, txSignReq, headless::CreateSettlWalletType
-      , {}, onPassword);
+   Internal::PasswordDialogDataWrapper dialogData;
+   dialogData.insert("WalletId", priWallet->walletId());
+
+   return RequestPasswordIfNeeded(clientId, { priWallet->walletId() }, headless::CreateSettlWalletType
+      , dialogData, onPassword);
 }
 
 bool HeadlessContainerListener::onSetSettlementId(const std::string &clientId
@@ -1333,6 +1338,20 @@ bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, head
             auto leafData = groupData->add_leaves();
             leafData->set_id(leaf->walletId());
             leafData->set_index(leaf->index());
+
+            if (groupData->type() == bs::hd::CoinType::BlockSettle_Settlement) {
+               const auto settlLeaf = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(leaf);
+               if (settlLeaf == nullptr) {
+                  throw std::runtime_error("unexpected leaf type");
+               }
+               const auto rootAsset = settlLeaf->getRootAsset();
+               const auto rootSingle = std::dynamic_pointer_cast<AssetEntry_Single>(rootAsset);
+               if (rootSingle == nullptr) {
+                  throw std::runtime_error("invalid root asset");
+               }
+               const auto authAddr = BtcUtils::getHash160(rootSingle->getPubKey()->getCompressedKey());
+               leafData->set_extra_data(authAddr.toBinStr());
+            }
          }
       }
    } else {

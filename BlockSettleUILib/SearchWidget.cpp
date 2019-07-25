@@ -1,31 +1,47 @@
 #include "SearchWidget.h"
 #include "ui_SearchWidget.h"
 #include "UserSearchModel.h"
+#include "ChatSearchListViewItemStyle.h"
+#include "ChatClient.h"
+#include "chat.pb.h"
 
 #include <QTimer>
 #include <QMenu>
+#include <QKeyEvent>
 
-constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
-constexpr int kRowHeigth = 20;
-constexpr int kUserListPaddings = 6;
-constexpr int kMaxVisibleRows = 3;
-constexpr int kBottomSpace = 25;
-constexpr int kFullHeightMargins = 10;
+namespace  {
+   constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
+   constexpr int kRowHeigth = 20;
+   constexpr int kUserListPaddings = 6;
+   constexpr int kMaxVisibleRows = 3;
+   constexpr int kBottomSpace = 25;
+   constexpr int kFullHeightMargins = 10;
+
+   const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"),
+      QRegularExpression::CaseInsensitiveOption);
+}
 
 SearchWidget::SearchWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::SearchWidget)
    , listVisibleTimer_(new QTimer)
+   , userSearchModel_(new UserSearchModel)
 {
    ui_->setupUi(this);
+
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textEdited,
-           this, &SearchWidget::searchUserTextEdited);
+           this, &SearchWidget::onSearchUserTextEdited);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textChanged,
            this, &SearchWidget::searchTextChanged);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textChanged,
            this, &SearchWidget::onInputTextChanged);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyDownPressed,
            this, &SearchWidget::focusResults);
+   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyEnterPressed,
+           this, &SearchWidget::focusResults);
+   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyEscapePressed,
+           this, &SearchWidget::closeResult);
+
    connect(ui_->searchResultTreeView, &ChatSearchListVew::customContextMenuRequested,
            this, &SearchWidget::showContextMenu);
    connect(ui_->searchResultTreeView, &ChatSearchListVew::activated,
@@ -55,9 +71,22 @@ bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
    return QWidget::eventFilter(watched, event);
 }
 
-void SearchWidget::init(std::shared_ptr<ChatSearchActionsHandler> handler)
+void SearchWidget::init(std::shared_ptr<ChatClient> chatClient)
 {
-   ui_->chatSearchLineEdit->setActionsHandler(handler);
+   chatClient_ = chatClient;
+   ui_->chatSearchLineEdit->setActionsHandler(chatClient);
+   userSearchModel_->setItemStyle(std::make_shared<ChatSearchListViewItemStyle>());
+   ui_->searchResultTreeView->setModel(userSearchModel_.get());
+
+   connect(chatClient_.get(), &ChatClient::SearchUserListReceived,
+           this, &SearchWidget::onSearchUserListReceived);
+
+   connect(userSearchModel_.get(), &QAbstractItemModel::rowsInserted,
+           this, &SearchWidget::resetTreeView);
+   connect(userSearchModel_.get(), &QAbstractItemModel::rowsRemoved,
+           this, &SearchWidget::resetTreeView);
+   connect(userSearchModel_.get(), &QAbstractItemModel::modelReset,
+           this, &SearchWidget::resetTreeView);
 
    setMaximumHeight(kBottomSpace + kRowHeigth * kMaxVisibleRows +
                     ui_->chatSearchLineEdit->height() + kUserListPaddings + kFullHeightMargins);
@@ -89,30 +118,6 @@ QString SearchWidget::searchText() const
    return ui_->chatSearchLineEdit->text();
 }
 
-void SearchWidget::setSearchModel(const std::shared_ptr<QAbstractItemModel> &model)
-{
-   if (ui_->searchResultTreeView->model()) {
-      disconnect(ui_->searchResultTreeView->model(), &QAbstractItemModel::rowsInserted,
-                 this, &SearchWidget::resetTreeView);
-      disconnect(ui_->searchResultTreeView->model(), &QAbstractItemModel::rowsRemoved,
-                 this, &SearchWidget::resetTreeView);
-      disconnect(ui_->searchResultTreeView->model(), &QAbstractItemModel::modelReset,
-                 this, &SearchWidget::resetTreeView);
-   }
-   ui_->searchResultTreeView->setModel(model.get());
-   connect(ui_->searchResultTreeView->model(), &QAbstractItemModel::rowsInserted,
-           this, &SearchWidget::resetTreeView);
-   connect(ui_->searchResultTreeView->model(), &QAbstractItemModel::rowsRemoved,
-           this, &SearchWidget::resetTreeView);
-   connect(ui_->searchResultTreeView->model(), &QAbstractItemModel::modelReset,
-           this, &SearchWidget::resetTreeView);
-}
-
-void SearchWidget::clearSearchLineOnNextInput()
-{
-   ui_->chatSearchLineEdit->setResetOnNextInput(true);
-}
-
 void SearchWidget::clearLineEdit()
 {
    ui_->chatSearchLineEdit->clear();
@@ -121,6 +126,60 @@ void SearchWidget::clearLineEdit()
 void SearchWidget::startListAutoHide()
 {
    listVisibleTimer_->start(kShowEmptyFoundUserListTimeoutMs);
+}
+
+void SearchWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::Data> > &users, bool emailEntered)
+{
+   std::vector<UserSearchModel::UserInfo> userInfoList;
+   const QString search = searchText();
+   bool isEmail = kRxEmail.match(search).hasMatch();
+   std::string hash = chatClient_->deriveKey(search.toStdString());
+   for (const auto &user : users) {
+      if (user && user->has_user()) {
+         const std::string &userId = user->user().user_id();
+         if (isEmail && userId != hash) {
+            continue;
+         }
+         auto status = UserSearchModel::UserStatus::ContactUnknown;
+         auto contact = chatClient_->getContact(userId);
+         if (!contact.user_id().empty()) {
+            auto contactStatus = contact.status();
+            switch (contactStatus) {
+            case Chat::CONTACT_STATUS_ACCEPTED:
+               status = UserSearchModel::UserStatus::ContactAccepted;
+               break;
+            case Chat::CONTACT_STATUS_INCOMING:
+               status = UserSearchModel::UserStatus::ContactPendingIncoming;
+               break;
+            case Chat::CONTACT_STATUS_OUTGOING_PENDING:
+            case Chat::CONTACT_STATUS_OUTGOING:
+               status = UserSearchModel::UserStatus::ContactPendingOutgoing;
+               break;
+            case Chat::CONTACT_STATUS_REJECTED:
+               status = UserSearchModel::UserStatus::ContactRejected;
+               break;
+            default:
+               assert(false);
+               break;
+            }
+         }
+         userInfoList.emplace_back(QString::fromStdString(userId), status);
+      }
+   }
+   userSearchModel_->setUsers(userInfoList);
+
+   bool visible = true;
+   if (isEmail) {
+      visible = emailEntered && !userInfoList.empty();
+   } else {
+      visible = !userInfoList.empty();
+   }
+   setListVisible(visible);
+
+   // hide popup after a few sec
+   if (visible && userInfoList.empty()) {
+      startListAutoHide();
+   }
 }
 
 void SearchWidget::setLineEditEnabled(bool value)
@@ -137,6 +196,11 @@ void SearchWidget::setListVisible(bool value)
    ui_->notFoundLabel->setVisible(value && !hasUsers);
    layout()->update();
    listVisibleTimer_->stop();
+
+   // hide popup after a few sec
+   if (value && !hasUsers) {
+      startListAutoHide();
+   }
 }
 
 void SearchWidget::setSearchText(QString value)
@@ -163,11 +227,19 @@ void SearchWidget::showContextMenu(const QPoint &pos)
 
 void SearchWidget::focusResults()
 {
-   if (ui_->searchResultTreeView->isVisible()) {
+   if (ui_->searchResultTreeView->isVisible())
+   {
       ui_->searchResultTreeView->setFocus();
       auto index = ui_->searchResultTreeView->model()->index(0, 0);
       ui_->searchResultTreeView->setCurrentIndex(index);
+   } else {
+      setListVisible(true);
    }
+}
+
+void SearchWidget::closeResult()
+{
+   setListVisible(false);
 }
 
 void SearchWidget::onItemClicked(const QModelIndex &index)
@@ -175,8 +247,8 @@ void SearchWidget::onItemClicked(const QModelIndex &index)
    if (!index.isValid()) {
       return;
    }
-   QString id = index.data(Qt::DisplayRole).toString();
-   auto status = index.data(UserSearchModel::UserStatusRole).value<UserSearchModel::UserStatus>();
+   const QString id = index.data(Qt::DisplayRole).toString();
+   const auto status = index.data(UserSearchModel::UserStatusRole).value<UserSearchModel::UserStatus>();
    switch (status) {
    case UserSearchModel::UserStatus::ContactUnknown: {
       emit addFriendRequied(id);
@@ -185,12 +257,15 @@ void SearchWidget::onItemClicked(const QModelIndex &index)
    case UserSearchModel::UserStatus::ContactAccepted:
    case UserSearchModel::UserStatus::ContactPendingIncoming:
    case UserSearchModel::UserStatus::ContactPendingOutgoing: {
-      emit removeFriendRequired(id);
+      emit showUserRoom(id);
       break;
    }
    default:
       return;
    }
+
+   setListVisible(false);
+   setSearchText({});
 }
 
 void SearchWidget::leaveSearchResults()
@@ -214,4 +289,17 @@ void SearchWidget::onInputTextChanged(const QString &text)
    if (text.isEmpty()) {
       setListVisible(false);
    }
+}
+
+void SearchWidget::onSearchUserTextEdited()
+{
+   setListVisible(false);
+   std::string userToAdd = searchText().toStdString();
+   if (userToAdd.empty() || userToAdd.length() < 3) {
+      setListVisible(false);
+      userSearchModel_->setUsers({});
+      return;
+   }
+
+   chatClient_->onActionSearchUsers(userToAdd);
 }

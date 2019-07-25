@@ -7,13 +7,10 @@
 #include "ChatClientDataModel.h"
 #include "NotificationCenter.h"
 #include "OTCRequestViewModel.h"
-#include "UserHasher.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatTreeModelWrapper.h"
-#include "UserSearchModel.h"
 #include "CelerClient.h"
 #include "ChatProtocol/ChatUtils.h"
-#include "ChatSearchListViewItemStyle.h"
 #include "BSMessageBox.h"
 #include "ImportKeyBox.h"
 
@@ -46,9 +43,6 @@ enum class OTCPages : int
 
 namespace {
    const int maxMessageLength = 20;
-
-   const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"),
-      QRegularExpression::CaseInsensitiveOption);
 }
 
 bool IsOTCChatRoom(const std::string& chatRoom)
@@ -274,7 +268,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
    connect(client_.get(), &ChatClient::ConfirmContactsNewData, this, &ChatWidget::onContactListConfirmationRequested);
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
-   connect(client_.get(), &ChatClient::SearchUserListReceived, this, &ChatWidget::onSearchUserListReceived);
    connect(client_.get(), &ChatClient::ConnectedToServer, this, &ChatWidget::onConnectedToServer);
    connect(client_.get(), &ChatClient::ContactRequestAccepted, this, &ChatWidget::onContactRequestAccepted);
    connect(client_.get(), &ChatClient::RoomsInserted, this, &ChatWidget::selectGlobalRoom);
@@ -289,12 +282,10 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
-   connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
+
    connect(ui_->textEditMessages, &QTextEdit::selectionChanged, this, &ChatWidget::onChatMessagesSelectionChanged);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::addContactRequired, this, &ChatWidget::onSendFriendRequest);
 
-//   connect(client_.get(), &ChatClient::SearchUserListReceived,
-//           this, &ChatWidget::onSearchUserListReceived);
    //connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
 
    connect(ui_->treeViewOTCRequests->selectionModel(), &QItemSelectionModel::selectionChanged
@@ -313,63 +304,6 @@ void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::Data> >&
      // ui_->treeViewUsers->selectFirstRoom();
       const auto &firstRoom = roomList.at(0);
       needsToStartFirstRoom_ = false;
-   }
-}
-
-void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::Data>>& users, bool emailEntered)
-{
-   std::vector<UserSearchModel::UserInfo> userInfoList;
-   QString searchText = ui_->searchWidget->searchText();
-   bool isEmail = kRxEmail.match(searchText).hasMatch();
-   std::string hash = client_->deriveKey(searchText.toStdString());
-   for (const auto &user : users) {
-      if (user && user->has_user()) {
-         const std::string &userId = user->user().user_id();
-         if (isEmail && userId != hash) {
-            continue;
-         }
-         auto status = UserSearchModel::UserStatus::ContactUnknown;
-         auto contact = client_->getContact(userId);
-         if (!contact.user_id().empty()) {
-            auto contactStatus = contact.status();
-            switch (contactStatus) {
-            case Chat::CONTACT_STATUS_ACCEPTED:
-               status = UserSearchModel::UserStatus::ContactAccepted;
-               break;
-            case Chat::CONTACT_STATUS_INCOMING:
-               status = UserSearchModel::UserStatus::ContactPendingIncoming;
-               break;
-            case Chat::CONTACT_STATUS_OUTGOING_PENDING:
-            case Chat::CONTACT_STATUS_OUTGOING:
-               status = UserSearchModel::UserStatus::ContactPendingOutgoing;
-               break;
-            case Chat::CONTACT_STATUS_REJECTED:
-               status = UserSearchModel::UserStatus::ContactRejected;
-               break;
-            default:
-               assert(false);
-               break;
-            }
-         }
-         userInfoList.emplace_back(QString::fromStdString(userId), status);
-      }
-   }
-   client_->getUserSearchModel()->setUsers(userInfoList);
-
-   bool visible = true;
-   if (isEmail) {
-      visible = emailEntered || !userInfoList.empty();
-      if (visible) {
-         ui_->searchWidget->clearSearchLineOnNextInput();
-      }
-   } else {
-      visible = !userInfoList.empty();
-   }
-   ui_->searchWidget->setListVisible(visible);
-
-   // hide popup after a few sec
-   if (visible && userInfoList.empty()) {
-      ui_->searchWidget->startListAutoHide();
    }
 }
 
@@ -413,12 +347,11 @@ void ChatWidget::changeState(ChatWidget::State state)
 void ChatWidget::initSearchWidget()
 {
    ui_->searchWidget->init(client_);
-   ui_->searchWidget->setSearchModel(client_->getUserSearchModel());
-   client_->getUserSearchModel()->setItemStyle(std::make_shared<ChatSearchListViewItemStyle>());
+
    connect(ui_->searchWidget, &SearchWidget::addFriendRequied,
            this, &ChatWidget::onSendFriendRequest);
-   connect(ui_->searchWidget, &SearchWidget::removeFriendRequired,
-           this, &ChatWidget::onRemoveFriendRequest);
+   connect(ui_->searchWidget, &SearchWidget::showUserRoom,
+           this, &ChatWidget::onChangeChatRoom);
 }
 
 bool ChatWidget::isLoggedIn() const
@@ -517,24 +450,6 @@ void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &userId)
    ui_->input_textEdit->setFocus(Qt::FocusReason::MouseFocusReason);
 }
 
-void ChatWidget::onSearchUserTextEdited(const QString& /*text*/)
-{
-   std::string userToAdd = ui_->searchWidget->searchText().toStdString();
-   if (userToAdd.empty() || userToAdd.length() < 3) {
-      ui_->searchWidget->setListVisible(false);
-      client_->getUserSearchModel()->setUsers({});
-      return;
-   }
-
-   QRegularExpressionMatch match = kRxEmail.match(QString::fromStdString(userToAdd));
-   if (match.hasMatch()) {
-      userToAdd = client_->deriveKey(userToAdd);
-   } else if (UserHasher::KeyLength < userToAdd.length()) {
-      return; //Initially max key is 12 symbols
-   }
-   client_->sendSearchUsersRequest(userToAdd);
-}
-
 void ChatWidget::onConnectedToServer()
 {
    const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -547,6 +462,11 @@ void ChatWidget::onConnectedToServer()
 void ChatWidget::onContactRequestAccepted(const std::string &userId)
 {
    ui_->treeViewUsers->setCurrentUserChat(userId);
+}
+
+void ChatWidget::onChangeChatRoom(const QString &userId)
+{
+   ui_->treeViewUsers->setCurrentUserChat(userId.toStdString());
 }
 
 void ChatWidget::onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey)
@@ -581,7 +501,8 @@ void ChatWidget::onConfirmUploadNewPublicKey(const std::string &oldKey, const st
 void ChatWidget::onConfirmContactNewKeyData(
       const std::vector<std::shared_ptr<Chat::Data> > &remoteConfirmed
       , const std::vector<std::shared_ptr<Chat::Data> > &remoteKeysUpdate
-      , const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutelyNew)
+      , const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutelyNew
+      , bool bForceUpdateAllUsers)
 {
    Q_UNUSED(remoteConfirmed)
 
@@ -606,6 +527,11 @@ void ChatWidget::onConfirmContactNewKeyData(
       auto name = QString::fromStdString(contactRecord->display_name());
       if (name.isEmpty()) {
          name = QString::fromStdString(contactRecord->contact_id());
+      }
+
+      if (bForceUpdateAllUsers) {
+         updateList.push_back(contact);
+         continue;
       }
 
       ImportKeyBox box(BSMessageBox::question
@@ -642,6 +568,11 @@ void ChatWidget::onConfirmContactNewKeyData(
       }
       auto contactRecord = contact->mutable_contact_record();
       auto name = QString::fromStdString(contactRecord->contact_id());
+
+      if (bForceUpdateAllUsers) {
+         newList.push_back(contact);
+         continue;
+      }
 
       ImportKeyBox box(BSMessageBox::question
                        , tr("Do you wish to keep or remove '%1' as a Contact? ").arg(name)
@@ -695,12 +626,6 @@ void ChatWidget::onSendFriendRequest(const QString &userId)
    onActionCreatePendingOutgoing (userId.toStdString());
    ui_->treeViewUsers->setCurrentUserChat(userId.toStdString());
    ui_->treeViewUsers->updateCurrentChat();
-   ui_->searchWidget->setListVisible(false);
-}
-
-void ChatWidget::onRemoveFriendRequest(const QString &userId)
-{
-   client_->removeFriendOrRequest(userId.toStdString());
    ui_->searchWidget->setListVisible(false);
 }
 
@@ -1289,16 +1214,8 @@ void ChatWidget::onContactListConfirmationRequested(const std::vector<std::share
       detailsString);
    int ret = bsMessageBox.exec();
 
-   if (QDialog::Accepted == ret) {
-      onConfirmContactNewKeyData(remoteConfirmed, remoteKeysUpdate, remoteAbsolutelyNew);
-   }
-   else if (QDialog::Rejected == ret) {
-      std::vector<std::shared_ptr<Chat::Data>> mergedList;
-      mergedList.insert(mergedList.end(), remoteKeysUpdate.begin(), remoteKeysUpdate.end());
-      mergedList.insert(mergedList.end(), remoteAbsolutelyNew.begin(), remoteAbsolutelyNew.end());
-      // User canceled contact changes, remove this contacts from friend list
-      client_->OnContactListRejected(mergedList);
-   }
+   onConfirmContactNewKeyData(remoteConfirmed, remoteKeysUpdate,
+                              remoteAbsolutelyNew, QDialog::Accepted == ret);
 }
 
 void ChatWidget::onContactChanged()

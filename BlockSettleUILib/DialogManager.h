@@ -3,14 +3,16 @@
 
 #include <QDialog>
 #include <QPoint>
-#include <QRect>
+#include <QList>
+#include <QPointer>
 
+class QWidget;
 class DialogManager : public QObject
 {
    Q_OBJECT
 
 public:
-   explicit DialogManager(const QRect& mainWinowRect);
+   explicit DialogManager(const QWidget* mainWindow);
    ~DialogManager() noexcept = default;
 
    DialogManager(const DialogManager&) = delete;
@@ -22,18 +24,12 @@ public:
    void adjustDialogPosition(QDialog *dialog);
 
 private slots:
-   void onDialogFinished(int result);
+   void onDialogFinished();
 
 private:
-   void reset();
-
-private:
-   QPoint         dialogOffset_;
-   QRect          screenSize_;
-   const QPoint   center_;
-   unsigned int   nbActiveDlgs_ = 0;
-
-   int            rowHeight_ = 0;
+   const QPointer<const QWidget> mainWindow_ = nullptr;
+   QList<QPointer<QDialog>>      activeDlgs_;
+   static const int              offset_ = 10;
 };
 
 #endif // __DIALOG_MANAGER_H__
