@@ -5,6 +5,7 @@
 #include <QMetaType>
 
 #include "chat.pb.h"
+
 #include "ChatCommonTypes.h"
 
 #include <disable_warnings.h>
@@ -43,7 +44,10 @@ public:
    static std::shared_ptr<Chat::Data> decryptMessageAead(const std::shared_ptr<spdlog::logger> &logger
       , const Chat::Data_Message &msg, const BinaryData &remotePubKey, const SecureBinaryData &privKey);
 
-  static std::string jsonAssociatedData(const Chat::Data_Message& msg, const BinaryData& nonce);
+   static std::string jsonAssociatedData(const Chat::Data_Message& msg, const BinaryData& nonce);
+
+   template <typename T>
+   static std::string pbMessageToString(const T& val);
 };
 
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::Data>)

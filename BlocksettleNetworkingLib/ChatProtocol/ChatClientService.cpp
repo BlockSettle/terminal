@@ -10,14 +10,14 @@ namespace Chat
       qRegisterMetaType<ApplicationSettingsPtr>();
       qRegisterMetaType<LoggerPtr>();
       qRegisterMetaType<ZmqBIP15XDataConnection::cbNewKey>();
-
-      /////////// INPUT SIGNALS //////////////
+      
+      ////////// PROXY SIGNALS //////////
       connect(this, &ChatClientService::Init, worker(), &ChatClientLogic::Init);
       connect(this, &ChatClientService::LoginToServer, worker(), &ChatClientLogic::LoginToServer);
 
-      /////////// OUTPUT SIGNALS //////////////
+      ////////// RETURN SIGNALS //////////
       connect(worker(), &ChatClientLogic::chatUserDisplayNameChanged, this, &ChatClientService::chatUserDisplayNameChanged);
-      connect(worker(), &ChatClientLogic::error, this, &ChatClientService::error);
+      connect(worker(), &ChatClientLogic::chatClientError, this, &ChatClientService::chatClientError);
    }
 
 }

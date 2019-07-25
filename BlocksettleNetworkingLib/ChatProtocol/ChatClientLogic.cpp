@@ -26,7 +26,7 @@ namespace Chat
    {
       if (connectionManagerPtr_) {
          // already initialized
-         emit error(ChatClientLogicError::AlreadyInitialized);
+         emit chatClientError(ChatClientLogicError::AlreadyInitialized);
          return;
       }
 
@@ -38,6 +38,14 @@ namespace Chat
       connect(currentUserPtr_.get(), &ChatUser::displayNameChanged, this, &ChatClientLogic::chatUserDisplayNameChanged);
 
       userHasherPtr_ = std::make_shared<UserHasher>();
+
+      connectionLogicPtr_ = std::make_shared<ConnectionLogic>(loggerPtr);
+      connect(this, &ChatClientLogic::dataReceived, connectionLogicPtr_.get(), &ConnectionLogic::onDataReceived);
+      connect(this, &ChatClientLogic::connected, connectionLogicPtr_.get(), &ConnectionLogic::onConnected);
+      connect(this, &ChatClientLogic::disconnected, connectionLogicPtr_.get(), &ConnectionLogic::onDisconnected);
+      connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error), 
+         connectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ConnectionLogic::onError));
+
    }
 
    void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBIP15XDataConnection::cbNewKey& cb)
@@ -45,7 +53,7 @@ namespace Chat
       if (connectionPtr_) {
          loggerPtr_->error("[ChatClientLogic::{}] connecting with not purged connection", __func__);
 
-         emit error(ChatClientLogicError::ConnectionAlreadyUsed);
+         emit chatClientError(ChatClientLogicError::ConnectionAlreadyUsed);
 
          return;
       }
@@ -58,7 +66,7 @@ namespace Chat
          loggerPtr_->error("[ChatClientLogic::{}] failed to open ZMQ data connection", __func__);
          connectionPtr_.reset();
 
-         emit error(ChatClientLogicError::ZmqDataConnectionFailed);
+         emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed);
          return;
       }
 
@@ -77,24 +85,24 @@ namespace Chat
       return applicationSettingsPtr_->get<std::string>(ApplicationSettings::chatServerPort);
    }
 
-   void ChatClientLogic::OnDataReceived(const std::string&)
+   void ChatClientLogic::OnDataReceived(const std::string& data)
    {
-
+      emit dataReceived(data);
    }
 
    void ChatClientLogic::OnConnected(void)
    {
-
+      emit connected();
    }
 
    void ChatClientLogic::OnDisconnected(void)
    {
-
+      emit disconnected();
    }
 
-   void ChatClientLogic::OnError(DataConnectionListener::DataConnectionError)
+   void ChatClientLogic::OnError(DataConnectionListener::DataConnectionError dataConnectionError)
    {
-
+      emit error(dataConnectionError);
    }
 
 }

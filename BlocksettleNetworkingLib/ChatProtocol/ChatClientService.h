@@ -23,12 +23,13 @@ namespace Chat
       explicit ChatClientService(QObject* parent = nullptr);
 
    signals:
+      ////////// PROXY SIGNALS //////////
       void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBIP15XDataConnection::cbNewKey& cb);
 
-      ////////////////////////////////
+      ////////// RETURN SIGNALS //////////
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
-      void error(const ChatClientLogicError& errorCode);
+      void chatClientError(const ChatClientLogicError& errorCode);
    };
 
    using ChatClientServicePtr = std::shared_ptr<ChatClientService>;

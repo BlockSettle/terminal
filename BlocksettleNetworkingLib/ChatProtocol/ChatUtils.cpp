@@ -1,5 +1,7 @@
 #include "ChatUtils.h"
 
+#include "google/protobuf/any.h"
+
 #include "ChatCommonTypes.h"
 #include "Encryption/AEAD_Encryption.h"
 #include "Encryption/AEAD_Decryption.h"
@@ -198,4 +200,11 @@ std::string ChatUtils::jsonAssociatedData(const Chat::Data_Message& msg, const B
    data[QLatin1String("nonce")] = QString::fromStdString(nonce.toHexStr());
    QJsonDocument jsonDocument(data);
    return jsonDocument.toJson(QJsonDocument::Compact).toStdString();
+}
+
+template <typename T>
+std::string ChatUtils::pbMessageToString(const T& val)
+{
+   Any any = Any.PackFrom(val);
+   return any.SerializeAsString();
 }

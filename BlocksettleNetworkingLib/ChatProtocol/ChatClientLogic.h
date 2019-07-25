@@ -4,6 +4,7 @@
 #include <QThread>
 
 #include "ChatProtocol/ChatUser.h"
+#include "ChatProtocol/ConnectionLogic.h"
 
 #include "DataConnectionListener.h"
 
@@ -53,8 +54,13 @@ namespace Chat
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBIP15XDataConnection::cbNewKey& cb);
 
    signals:
+      void dataReceived(const std::string&);
+      void connected(void);
+      void disconnected(void);
+      void error(DataConnectionListener::DataConnectionError);
+
       void finished();
-      void error(const ChatClientLogicError& errorCode);
+      void chatClientError(const ChatClientLogicError& errorCode);
 
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
 
@@ -68,6 +74,7 @@ namespace Chat
       ApplicationSettingsPtr     applicationSettingsPtr_;
       UserHasherPtr              userHasherPtr_;
       ChatUserPtr                currentUserPtr_;
+      ConnectionLogicPtr         connectionLogicPtr_;
    };
 
 }
