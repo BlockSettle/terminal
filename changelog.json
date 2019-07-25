@@ -1,7 +1,25 @@
 {
-   "latest_version": "0.19.5",
-   "release_date": "24 Jul 2019",
+   "latest_version": "0.19.6",
+   "release_date": "25 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.19.6",
+         "previous_version": "0.19.5",
+         "release_date": "25 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Merge pull request #333 from BlockSettle/signer/fix_tx",
+            "Various fixes (#1169)",
+            "Int/Ext address UTXO filtering",
+            "UI fixes",
+            "Allow dealer reply for SpotXBT RFQ",
+            "Allow pull quote request replies using Enter (#1160)",
+            "Wrapper on PasswordDialogData for comfort using (#1158)"
+         ],
+         "bug_fixes": [],
+         "revision": "28201342",
+         "common_revision": "7bc19cf0"
+      },
       {
          "version_string": "0.19.5",
          "previous_version": "0.19.4",
