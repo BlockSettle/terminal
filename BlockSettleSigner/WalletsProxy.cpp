@@ -242,6 +242,9 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
             auto lock = newWallet->lockForEncryption(passwordData->password);
             for (const auto &leaf : group->getLeaves()) {
                auto newLeaf = newGroup->createLeaf(leaf->index());
+               if (!newLeaf) {   // can happen for un-exportable leaves (e.g. settlement)
+                  continue;
+               }
                for (const auto &addr : leaf->getExtAddressList()) {
                   newLeaf->getNewExtAddress(addr.getType());
                }
