@@ -50,6 +50,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<bs::sync::Wallet>         ccWallet_;
    std::string    ccProduct_;
+   std::string    strToken_;
    uint32_t       seed_ = 0;
    unsigned int   createWalletReqId_ = 0;
    bool  walletOk_ = false;
