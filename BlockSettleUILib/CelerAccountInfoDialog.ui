@@ -155,7 +155,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Email </string>
+            <string>Username</string>
            </property>
           </widget>
          </item>
@@ -297,6 +297,7 @@
   </layout>
  </widget>
  <resources>
+  <include location="armory.qrc"/>
   <include location="armory.qrc"/>
  </resources>
  <connections/>
