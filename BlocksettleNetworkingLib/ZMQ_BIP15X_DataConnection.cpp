@@ -9,6 +9,7 @@
 #include "ZMQ_BIP15X_ServerConnection.h"
 #include "ZmqHelperFunctions.h"
 #include "ZMQ_BIP15X_Msg.h"
+#include "FutureValue.h"
 
 using namespace std;
 

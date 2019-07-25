@@ -9,10 +9,10 @@
 
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
-#include "FutureValue.h"
 #include "ZMQ_BIP15X_Helpers.h"
 #include "ZmqDataConnection.h"
 
+template<typename T> class FutureValue;
 
 // DESIGN NOTES: Remote data connections must have a callback for when unknown
 // server keys are seen. The callback should ask the user if they'll accept

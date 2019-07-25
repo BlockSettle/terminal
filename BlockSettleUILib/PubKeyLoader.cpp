@@ -3,6 +3,7 @@
 #include "BSMessageBox.h"
 #include "ImportKeyBox.h"
 #include "BSTerminalMainWindow.h"
+#include "FutureValue.h"
 
 PubKeyLoader::PubKeyLoader(const std::shared_ptr<ApplicationSettings> &appSettings)
    : appSettings_(appSettings)

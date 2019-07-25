@@ -1,4 +1,5 @@
 #include "BsClient.h"
+#include "FutureValue.h"
 
 #include <QTimer>
 #include "Address.h"

@@ -5,9 +5,9 @@
 #include <future>
 #include <string>
 #include "BinaryData.h"
-#include "FutureValue.h"
 
 class AuthorizedPeers;
+template<typename T> class FutureValue;
 
 // Immutable ZMQ BIP15X peer public key, guaranteed to be valid (no need to check pubKey over and over)
 class ZmqBIP15XPeer
