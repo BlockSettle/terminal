@@ -388,7 +388,7 @@ void ChatClient::onActionSearchUsers(const std::string &text)
    QRegularExpressionMatch match = rx_email.match(QString::fromStdString(pattern));
    if (match.hasMatch()) {
       pattern = deriveKey(pattern);
-   } else if (static_cast<int>(UserHasher::KeyLength) < pattern.length()
+   } else if (static_cast<size_t>(UserHasher::KeyLength) < pattern.length()
               || pattern.length() < 3) {
       //Initially max key is 12 symbols
       //and search must be triggerred if pattern have length >= 3

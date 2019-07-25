@@ -4,11 +4,10 @@
 #include "ChatSearchListViewItemStyle.h"
 #include "ChatClient.h"
 #include "chat.pb.h"
-#include "UserHasher.h"
 
 #include <QTimer>
 #include <QMenu>
-#include <memory>
+#include <QKeyEvent>
 
 namespace  {
    constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
@@ -38,6 +37,10 @@ SearchWidget::SearchWidget(QWidget *parent)
            this, &SearchWidget::onInputTextChanged);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyDownPressed,
            this, &SearchWidget::focusResults);
+   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyEnterPressed,
+           this, &SearchWidget::focusResults);
+   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyEscapePressed,
+           this, &SearchWidget::closeResult);
 
    connect(ui_->searchResultTreeView, &ChatSearchListVew::customContextMenuRequested,
            this, &SearchWidget::showContextMenu);
@@ -115,11 +118,6 @@ QString SearchWidget::searchText() const
    return ui_->chatSearchLineEdit->text();
 }
 
-void SearchWidget::clearSearchLineOnNextInput()
-{
-   ui_->chatSearchLineEdit->setResetOnNextInput(true);
-}
-
 void SearchWidget::clearLineEdit()
 {
    ui_->chatSearchLineEdit->clear();
@@ -172,10 +170,7 @@ void SearchWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Ch
 
    bool visible = true;
    if (isEmail) {
-      visible = emailEntered || !userInfoList.empty();
-      if (visible) {
-         clearSearchLineOnNextInput();
-      }
+      visible = emailEntered && !userInfoList.empty();
    } else {
       visible = !userInfoList.empty();
    }
@@ -201,6 +196,11 @@ void SearchWidget::setListVisible(bool value)
    ui_->notFoundLabel->setVisible(value && !hasUsers);
    layout()->update();
    listVisibleTimer_->stop();
+
+   // hide popup after a few sec
+   if (value && !hasUsers) {
+      startListAutoHide();
+   }
 }
 
 void SearchWidget::setSearchText(QString value)
@@ -227,11 +227,19 @@ void SearchWidget::showContextMenu(const QPoint &pos)
 
 void SearchWidget::focusResults()
 {
-   if (ui_->searchResultTreeView->isVisible()) {
+   if (ui_->searchResultTreeView->isVisible())
+   {
       ui_->searchResultTreeView->setFocus();
       auto index = ui_->searchResultTreeView->model()->index(0, 0);
       ui_->searchResultTreeView->setCurrentIndex(index);
+   } else {
+      setListVisible(true);
    }
+}
+
+void SearchWidget::closeResult()
+{
+   setListVisible(false);
 }
 
 void SearchWidget::onItemClicked(const QModelIndex &index)
@@ -255,6 +263,9 @@ void SearchWidget::onItemClicked(const QModelIndex &index)
    default:
       return;
    }
+
+   setListVisible(false);
+   setSearchText({});
 }
 
 void SearchWidget::leaveSearchResults()
@@ -282,6 +293,7 @@ void SearchWidget::onInputTextChanged(const QString &text)
 
 void SearchWidget::onSearchUserTextEdited()
 {
+   setListVisible(false);
    std::string userToAdd = searchText().toStdString();
    if (userToAdd.empty() || userToAdd.length() < 3) {
       setListVisible(false);
@@ -289,11 +301,5 @@ void SearchWidget::onSearchUserTextEdited()
       return;
    }
 
-   QRegularExpressionMatch match = kRxEmail.match(QString::fromStdString(userToAdd));
-   if (match.hasMatch()) {
-      userToAdd = chatClient_->deriveKey(userToAdd);
-   } else if (UserHasher::KeyLength < userToAdd.length()) {
-      return; //Initially max key is 12 symbols
-   }
-   chatClient_->sendSearchUsersRequest(userToAdd);
+   chatClient_->onActionSearchUsers(userToAdd);
 }

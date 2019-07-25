@@ -31,22 +31,19 @@ ChatSearchLineEdit::~ChatSearchLineEdit() = default;
 
 void ChatSearchLineEdit::keyPressEvent(QKeyEvent * e)
 {
-   if (resetOnNextInput_) {
-      clear();
-      resetOnNextInput_ = false;
-   }
    switch (e->key()) {
    case Qt::Key_Enter:     //Qt::Key_Enter   - Numpad Enter key
    case Qt::Key_Return:    //Qt::Key_Return  - Main Enter key
    {
       qDebug("Return/Enter search press %d", e->key());
-      if (handler_) {
-         handler_->onActionSearchUsers(text().toStdString());
-      }
+      emit keyEnterPressed();
       return e->ignore();
    }
    case Qt::Key_Down:     //Qt::Key_Down     - For both standalone and Numpad arrow down keys
       emit keyDownPressed();
+      break;
+   case Qt::Key_Escape:
+      emit keyEscapePressed();
       break;
    default:
       break;
