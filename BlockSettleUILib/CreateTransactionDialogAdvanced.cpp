@@ -167,12 +167,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
             newFPB += feeDiff;
          }
 
-         // SetMinimumFee() may need to be re-thought. RBF is the only
-         // scenario where we really need to enforce a minimum fee in concert
-         // with the minimum fee/byte. For now, the minimum fee will be set
-         // to 0, with the fee/byte enforced elsewhere. Attempting to enforce
-         // a value that won't always be accurate is a bad idea.
-         SetMinimumFee(0, newFPB);
+         advisedFeePerByte_ = newFPB;
          onTransactionUpdated();
          populateFeeList();
          SetInputs(selInputs->GetSelectedTransactions());
