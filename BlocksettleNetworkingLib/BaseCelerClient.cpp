@@ -1,12 +1,13 @@
 #include "BaseCelerClient.h"
 
-#include "DataConnection.h"
 #include "ConnectionManager.h"
+#include "DataConnection.h"
+#include "StringUtils.h"
 
-#include "CelerLoginSequence.h"
 #include "CelerGetUserIdSequence.h"
 #include "CelerGetUserPropertySequence.h"
 #include "CelerLoadUserInfoSequence.h"
+#include "CelerLoginSequence.h"
 #include "CelerPropertiesDefinitions.h"
 #include "CelerSetUserPropertySequence.h"
 
@@ -35,17 +36,16 @@ BaseCelerClient::BaseCelerClient(const std::shared_ptr<spdlog::logger> &logger, 
    celerUserType_ = CelerUserType::Undefined;
 }
 
-bool BaseCelerClient::SendLogin(const std::string& login, const std::string& password)
+bool BaseCelerClient::SendLogin(const std::string& login, const std::string& email, const std::string& password)
 {
    // create user login sequence
-   std::string loginString = login;
    sessionToken_.clear();
 
    celerUserType_ = CelerUserType::Undefined;
 
    auto loginSequence = std::make_shared<CelerLoginSequence>(logger_, login, password);
-   auto onLoginSuccess = [this,loginString](const std::string& sessionToken, int32_t heartbeatInterval) {
-     loginSuccessCallback(loginString, sessionToken, heartbeatInterval);
+   auto onLoginSuccess = [this, login, email](const std::string& sessionToken, int32_t heartbeatInterval) {
+     loginSuccessCallback(login, email, sessionToken, heartbeatInterval);
    };
    auto onLoginFailed = [this](const std::string& errorMessage) {
      loginFailedCallback(errorMessage);
@@ -60,11 +60,12 @@ bool BaseCelerClient::SendLogin(const std::string& login, const std::string& pas
    return true;
 }
 
-void BaseCelerClient::loginSuccessCallback(const std::string& userName, const std::string& sessionToken
+void BaseCelerClient::loginSuccessCallback(const std::string& userName, const std::string& email, const std::string& sessionToken
    , int32_t heartbeatInterval)
 {
    logger_->debug("[CelerClient::loginSuccessCallback] logged in as {}", userName);
    userName_ = userName;
+   email_ = bs::toLower(email);
    sessionToken_ = sessionToken;
    heartbeatInterval_ = heartbeatInterval;
    serverNotAvailable_ = false;
@@ -380,11 +381,6 @@ bool BaseCelerClient::IsConnected() const
    return !sessionToken_.empty();
 }
 
-std::string BaseCelerClient::userName() const
-{
-   return userName_;
-}
-
 void BaseCelerClient::RegisterUserCommand(const std::shared_ptr<BaseCelerCommand>& command)
 {
    activeCommands_.emplace(command->GetSequenceId(), command);
@@ -400,19 +396,9 @@ void BaseCelerClient::recvData(CelerAPI::CelerMessageType messageType, const std
    OnDataReceived(messageType, data);
 }
 
-std::string BaseCelerClient::userId() const
+const std::string& BaseCelerClient::userId() const
 {
    return userId_.value;
-}
-
-const QString& BaseCelerClient::userType() const
-{
-   return userType_;
-}
-
-BaseCelerClient::CelerUserType BaseCelerClient::celerUserType() const
-{
-   return celerUserType_;
 }
 
 std::unordered_set<std::string> BaseCelerClient::GetSubmittedAuthAddressSet() const

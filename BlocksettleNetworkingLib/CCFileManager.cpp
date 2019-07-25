@@ -158,7 +158,7 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
    }
 
    SubmitAddrForInitialDistributionRequest request;
-   request.set_username(celerClient_->userName());
+   request.set_username(celerClient_->email());
    request.set_networktype(networkType(appSettings_));
    request.set_prefixedaddress(address.display());
    request.set_bsseed(seed);

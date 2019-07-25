@@ -1076,7 +1076,7 @@ void BSTerminalMainWindow::onLogin()
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
 
-   currentUserLogin_ = loginDialog.getUsername();
+   currentUserLogin_ = loginDialog.email();
    std::string jwt;
    auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
    setLoginButtonText(currentUserLogin_);
@@ -1084,7 +1084,7 @@ void BSTerminalMainWindow::onLogin()
 
    // We don't use password here, BsProxy will manage authentication
    SPDLOG_LOGGER_DEBUG(logMgr_->logger(), "got celer login: {}", loginDialog.celerLogin());
-   celerConnection_->LoginToServer(bsClient_.get(), loginDialog.celerLogin());
+   celerConnection_->LoginToServer(bsClient_.get(), loginDialog.celerLogin(), loginDialog.email().toStdString());
 
    ui_->widgetWallets->setUsername(currentUserLogin_);
    action_logout_->setVisible(false);

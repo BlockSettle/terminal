@@ -81,7 +81,7 @@ void LoginWindow::onTextChanged()
    updateState();
 }
 
-QString LoginWindow::getUsername() const
+QString LoginWindow::email() const
 {
    return ui_->lineEditUsername->text().toLower();
 }
