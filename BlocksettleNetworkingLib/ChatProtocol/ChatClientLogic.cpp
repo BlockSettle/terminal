@@ -5,6 +5,7 @@
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
 #include "UserHasher.h"
+#include "ProtobufUtils.h"
 
 #include <disable_warnings.h>
 #include <spdlog/spdlog.h>
@@ -24,6 +25,8 @@ namespace Chat
 
    void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettingsPtr, const LoggerPtr& loggerPtr)
    {
+      qDebug() << "ChatClientLogic::Init Thread ID:" << this->thread()->currentThreadId();
+
       if (connectionManagerPtr_) {
          // already initialized
          emit chatClientError(ChatClientLogicError::AlreadyInitialized);
@@ -33,19 +36,22 @@ namespace Chat
       connectionManagerPtr_ = connectionManagerPtr;
       applicationSettingsPtr_ = appSettingsPtr;
       loggerPtr_ = loggerPtr;
-
+      
       currentUserPtr_ = std::make_shared<ChatUser>();
+      const auto publicKey = applicationSettingsPtr_->GetAuthKeys().second;
+      currentUserPtr_->setPublicKey(BinaryData(publicKey.data(), publicKey.size()));
       connect(currentUserPtr_.get(), &ChatUser::displayNameChanged, this, &ChatClientLogic::chatUserDisplayNameChanged);
 
       userHasherPtr_ = std::make_shared<UserHasher>();
 
-      connectionLogicPtr_ = std::make_shared<ConnectionLogic>(loggerPtr);
-      connect(this, &ChatClientLogic::dataReceived, connectionLogicPtr_.get(), &ConnectionLogic::onDataReceived);
-      connect(this, &ChatClientLogic::connected, connectionLogicPtr_.get(), &ConnectionLogic::onConnected);
-      connect(this, &ChatClientLogic::disconnected, connectionLogicPtr_.get(), &ConnectionLogic::onDisconnected);
+      connectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(appSettingsPtr, loggerPtr);
+      connectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
+      connect(this, &ChatClientLogic::dataReceived, connectionLogicPtr_.get(), &ClientConnectionLogic::onDataReceived);
+      connect(this, &ChatClientLogic::connected, connectionLogicPtr_.get(), &ClientConnectionLogic::onConnected);
+      connect(this, &ChatClientLogic::disconnected, connectionLogicPtr_.get(), &ClientConnectionLogic::onDisconnected);
       connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error), 
-         connectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ConnectionLogic::onError));
-
+         connectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
+      connect(connectionLogicPtr_.get(), &ClientConnectionLogic::sendRequestPacket, this, &ChatClientLogic::sendRequestPacket);
    }
 
    void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBIP15XDataConnection::cbNewKey& cb)
@@ -103,6 +109,26 @@ namespace Chat
    void ChatClientLogic::OnError(DataConnectionListener::DataConnectionError dataConnectionError)
    {
       emit error(dataConnectionError);
+   }
+
+   void ChatClientLogic::sendRequestPacket(const google::protobuf::Message& message)
+   {
+      qDebug() << "ChatClientLogic::sendRequestPacket Thread ID:" << this->thread()->currentThreadId();
+
+      loggerPtr_->debug("send: {}", ProtobufUtils::toJsonCompact(message));
+
+      if (!connectionPtr_->isActive())
+      {
+         loggerPtr_->error("[ChatClientLogic::{}] Connection is not alive!", __func__);
+         return;
+      }
+
+      auto packetString = ProtobufUtils::pbMessageToString(message);
+
+      if (!connectionPtr_->send(packetString))
+      {
+         loggerPtr_->error("[ChatClientLogic::{}] Failed to send packet!", __func__);
+      }
    }
 
 }

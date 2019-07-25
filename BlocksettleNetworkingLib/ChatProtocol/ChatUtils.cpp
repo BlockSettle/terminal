@@ -202,9 +202,3 @@ std::string ChatUtils::jsonAssociatedData(const Chat::Data_Message& msg, const B
    return jsonDocument.toJson(QJsonDocument::Compact).toStdString();
 }
 
-template <typename T>
-std::string ChatUtils::pbMessageToString(const T& val)
-{
-   Any any = Any.PackFrom(val);
-   return any.SerializeAsString();
-}

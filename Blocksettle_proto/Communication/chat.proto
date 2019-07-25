@@ -89,12 +89,13 @@ message OtcRange
 message WelcomeRequest
 {
     string user_name = 1;
-    bytes public_key = 2;
+    bytes client_public_key = 2;
 }
 
 message WelcomeResponse
 {
     bool success = 1;
+    bytes server_public_key = 2;
 }
 
 message LogoutRequest

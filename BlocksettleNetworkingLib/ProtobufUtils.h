@@ -9,6 +9,7 @@ public:
    static std::string toJson(const google::protobuf::Message &msg, bool addWhitespace = true);
    static std::string toJsonReadable(const google::protobuf::Message &msg);
    static std::string toJsonCompact(const google::protobuf::Message &msg);
+   static std::string pbMessageToString(const google::protobuf::Message& msg);
 };
 
 #endif

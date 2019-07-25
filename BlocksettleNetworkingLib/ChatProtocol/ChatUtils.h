@@ -4,8 +4,6 @@
 #include <QString>
 #include <QMetaType>
 
-#include "chat.pb.h"
-
 #include "ChatCommonTypes.h"
 
 #include <disable_warnings.h>
@@ -13,6 +11,8 @@
 #include "BinaryData.h"
 #include "SecureBinaryData.h"
 #include <enable_warnings.h>
+
+#include "chat.pb.h"
 
 class BinaryData;
 
@@ -45,9 +45,6 @@ public:
       , const Chat::Data_Message &msg, const BinaryData &remotePubKey, const SecureBinaryData &privKey);
 
    static std::string jsonAssociatedData(const Chat::Data_Message& msg, const BinaryData& nonce);
-
-   template <typename T>
-   static std::string pbMessageToString(const T& val);
 };
 
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::Data>)

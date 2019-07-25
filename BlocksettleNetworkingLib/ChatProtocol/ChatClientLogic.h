@@ -2,9 +2,10 @@
 #define ChatClientLogic_h__
 
 #include <QThread>
+#include <google/protobuf/message.h>
 
 #include "ChatProtocol/ChatUser.h"
-#include "ChatProtocol/ConnectionLogic.h"
+#include "ChatProtocol/ClientConnectionLogic.h"
 
 #include "DataConnectionListener.h"
 
@@ -63,6 +64,9 @@ namespace Chat
       void chatClientError(const ChatClientLogicError& errorCode);
 
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
+
+   private slots:
+      void sendRequestPacket(const google::protobuf::Message& message);
 
    private:
       std::string getChatServerHost() const;
