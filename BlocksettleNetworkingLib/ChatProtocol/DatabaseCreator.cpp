@@ -20,13 +20,6 @@ namespace Chat
    {
       db_ = db;
       loggerPtr_ = loggerPtr;
-/*
-      requiredTables_ = QStringList(
-         {
-            users::TABLE_NAME,
-         }
-      );
-*/
    }
 
    void DatabaseCreator::rebuildDatabase()

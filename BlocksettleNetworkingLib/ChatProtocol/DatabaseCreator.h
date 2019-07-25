@@ -42,13 +42,16 @@ namespace Chat
    {
       Q_OBJECT
    public:
-      DatabaseCreator(const QSqlDatabase& db, const LoggerPtr& loggerPtr, QObject* parent = nullptr);
+      explicit DatabaseCreator(const QSqlDatabase& db, const LoggerPtr& loggerPtr, QObject* parent = nullptr);
 
-      void rebuildDatabase();
+      virtual void rebuildDatabase();
 
    signals:
       void rebuildDone();
       void rebuildError();
+
+   protected:
+      QStringList requiredTables_;
 
    private:
       QString buildCreateCmd(const QString& tableName, const TableStructure& structure);
@@ -58,7 +61,6 @@ namespace Chat
 
       QSqlDatabase db_;
       LoggerPtr loggerPtr_;
-      QStringList requiredTables_;
       TablesMap tablesMap_;
    };
 

@@ -157,4 +157,7 @@ private:
    std::mutex              pendingDataMutex_;
    std::chrono::milliseconds heartbeatInterval_ = getDefaultHeartbeatInterval();
 };
+
+using ZmqBIP15XServerConnectionPtr = std::shared_ptr<ZmqBIP15XServerConnection>;
+
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__
