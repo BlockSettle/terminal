@@ -78,7 +78,7 @@ public:
    void LoadSavedCCDefinitions();
    void ConnectToCelerClient(const std::shared_ptr<BaseCelerClient> &);
 
-   bool SubmitAddressToPuB(const bs::Address &, uint32_t seed);
+   bool SubmitAddressToPuB(const bs::Address &, uint32_t seed, const std::string &srcToken);
    bool wasAddressSubmitted(const bs::Address &);
 
    bool hasLocalFile() const;

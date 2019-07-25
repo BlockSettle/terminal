@@ -145,7 +145,7 @@ void CCFileManager::ProcessGenAddressesResponse(const std::string& response, boo
    }
 }
 
-bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed)
+bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed, const std::string &srcToken)
 {
    if (!celerClient_) {
       logger_->error("[CCFileManager::SubmitAddressToPuB] not connected");
