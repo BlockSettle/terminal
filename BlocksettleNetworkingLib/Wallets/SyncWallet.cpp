@@ -447,7 +447,6 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 
 void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 {
-   logger_->debug("[{}]", __func__);
    init(true);
 
    const auto &cbTX = [this](const Tx &tx) {
