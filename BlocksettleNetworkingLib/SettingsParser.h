@@ -8,8 +8,10 @@
 #include <QVariant>
 
 namespace spdlog {
-class logger;
+   class logger;
 }
+
+Q_DECLARE_METATYPE(std::string)
 
 // Base class for command line arguments parsing.
 //
@@ -56,6 +58,7 @@ public:
       T value_;
    };
 
+   using SettingsStdStringParam = TemplSettingsParam<std::string>;
    using SettingsParam = TemplSettingsParam<QString>;
    using IntSettingsNoCheckParam = TemplSettingsParam<int>;
    using BoolSettingsParam = TemplSettingsParam<bool>;
@@ -88,9 +91,15 @@ protected:
       addParamVariant(param, name, QVariant::fromValue(defValue), descr);
    }
 
-   void addParam(SettingsParam &param, const char* name, const char *defValue, const char* descr)
+   void addParam(SettingsParam& param, const char* name, const char* defValue, const char* descr)
    {
       addParamVariant(param, name, QLatin1String(defValue), descr);
+   }
+
+   template<class T>
+   void addParam(BaseSettingsParam& param, const std::string& name, const T& defValue, const std::string& descr)
+   {
+      addParamVariant(param, name.c_str(), QVariant::fromValue(defValue), descr.c_str());
    }
 
    void addParamVariant(BaseSettingsParam &param, const char* name, const QVariant &defValue, const char* descr);
