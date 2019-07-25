@@ -82,7 +82,7 @@ class WalletsViewModel : public QAbstractItemModel
 Q_OBJECT
 public:
    WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager, const std::string &defaultWalletId
-      , const std::shared_ptr<SignContainer> &sc = nullptr, QObject *parent = nullptr, bool showOnlyRegular = false);
+      , const std::shared_ptr<SignContainer> &sc, QObject *parent, bool showOnlyRegular);
    ~WalletsViewModel() noexcept override = default;
 
    WalletsViewModel(const WalletsViewModel&) = delete;
@@ -151,7 +151,7 @@ private:
    std::shared_ptr<bs::sync::Wallet>      selectedWallet_;
    std::shared_ptr<WalletNode>      rootNode_;
    std::string       defaultWalletId_;
-   bool              showRegularWallets_;
+   const bool        showRegularWallets_;
    std::unordered_map<int, std::string>   hdInfoReqIds_;
    std::unordered_map<std::string, WalletNode::State> signerStates_;
 };
