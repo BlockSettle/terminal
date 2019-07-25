@@ -141,6 +141,7 @@ namespace bs {
          std::shared_ptr<bs::sync::Wallet>   ccWallet_;
          std::shared_ptr<bs::sync::Wallet>   xbtWallet_;
          std::string authKey_;
+         bs::Address authAddr_;
 
          std::unordered_map<std::string, double>   sentNotifs_;
          network::QuoteReqNotification    currentQRN_;
