@@ -41,7 +41,7 @@ class SignerAdapter : public QObject
 public:
    SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<QmlBridge> &qmlBridge
-      , const NetworkType netType, const BinaryData* inSrvIDKey = nullptr);
+      , const NetworkType netType, int signerPort, const BinaryData* inSrvIDKey = nullptr);
    ~SignerAdapter() override;
 
    SignerAdapter(const SignerAdapter&) = delete;
@@ -118,12 +118,13 @@ signals:
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
-   NetworkType netType_;
+   NetworkType                      netType_;
+
    std::shared_ptr<SignAdapterContainer>     signContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<QmlFactory>               qmlFactory_;
    std::shared_ptr<SignerInterfaceListener>  listener_;
-   std::shared_ptr<QmlBridge>  qmlBridge_;
+   std::shared_ptr<QmlBridge>                qmlBridge_;
    bool closeHeadless_{true};
 
    QString headlessPubKey_;
