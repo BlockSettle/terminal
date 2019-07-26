@@ -19,7 +19,7 @@ using namespace Blocksettle::Communication;
 CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const ZmqBIP15XDataConnection::cbNewKey &cb)
+   , const ZmqBipNewKeyCb &cb)
    : CCPubConnection(logger, connectionManager, cb)
    , appSettings_(appSettings)
 {

@@ -8,7 +8,7 @@
 #include <QStringList>
 #include "DataConnectionListener.h"
 #include "SignContainer.h"
-#include "ZMQ_BIP15X_DataConnection.h"
+#include "ZMQ_BIP15X_Helpers.h"
 
 #include "headless.pb.h"
 
@@ -154,7 +154,7 @@ public:
       , const bool ephemeralDataConnKeys = true
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""
-      , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
+      , const ZmqBipNewKeyCb& inNewKeyCB = nullptr);
    ~RemoteSigner() noexcept override = default;
 
    bool Start() override;
@@ -191,7 +191,7 @@ protected:
    const std::string                          ownKeyFileDir_;
    const std::string                          ownKeyFileName_;
    std::shared_ptr<ZmqBIP15XDataConnection>   connection_;
-   const ZmqBIP15XDataConnection::cbNewKey    cbNewKey_;
+   const ZmqBipNewKeyCb    cbNewKey_;
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
@@ -211,7 +211,7 @@ public:
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""
       , double asSpendLimit = 0
-      , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
+      , const ZmqBipNewKeyCb& inNewKeyCB = nullptr);
    ~LocalSigner() noexcept override;
 
    bool Start() override;

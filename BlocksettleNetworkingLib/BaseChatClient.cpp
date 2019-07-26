@@ -7,6 +7,7 @@
 #include "Encryption/IES_Encryption.h"
 #include "Encryption/IES_Decryption.h"
 #include "Encryption/ChatSessionKeyData.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 #include "ProtobufUtils.h"
 #include <disable_warnings.h>
@@ -19,6 +20,8 @@
 
 #include "ChatProtocol/ChatUtils.h"
 
+#include <memory>
+
 BaseChatClient::BaseChatClient(const std::shared_ptr<ConnectionManager>& connectionManager, 
    const std::shared_ptr<spdlog::logger>& logger, const QString& dbFile) 
    : logger_{logger}, connectionManager_{connectionManager}
@@ -27,7 +30,7 @@ BaseChatClient::BaseChatClient(const std::shared_ptr<ConnectionManager>& connect
    contactPublicKeysPtr_ = std::make_shared<Chat::ContactPublicKey>(logger);
    hasher_ = std::make_shared<UserHasher>();
 
-   chatDb_ = make_unique<ChatDB>(logger, dbFile);
+   chatDb_ = std::make_unique<ChatDB>(logger, dbFile);
 
    bool loaded = false;
    setSavedKeys(chatDb_->loadKeys(&loaded));
@@ -130,7 +133,7 @@ void BaseChatClient::OnError(DataConnectionError errorCode)
    logger_->debug("[BaseChatClient::{}] {}", __func__, errorCode);
 }
 
-std::string BaseChatClient::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBIP15XDataConnection::cbNewKey &cb)
+std::string BaseChatClient::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb &cb)
 {
    if (connection_) {
       logger_->error("[BaseChatClient::{}] connecting with not purged connection", __func__);

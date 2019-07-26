@@ -9,8 +9,7 @@
 
 #include "ChatHandleInterfaces.h"
 #include "CommonTypes.h"
-#include "ZMQ_BIP15X_DataConnection.h"
-
+#include "ZMQ_BIP15X_Helpers.h"
 #include <memory>
 
 namespace Ui {
@@ -59,7 +58,7 @@ public:
            , const std::shared_ptr<spdlog::logger>& logger);
 
    std::string login(const std::string& email, const std::string& jwt
-      , const ZmqBIP15XDataConnection::cbNewKey &);
+      , const ZmqBipNewKeyCb &);
    void logout();
    bool hasUnreadMessages();
    void setCelerClient(std::shared_ptr<BaseCelerClient> celerClient);
