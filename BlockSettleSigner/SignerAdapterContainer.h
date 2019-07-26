@@ -5,7 +5,7 @@
 #include <QObject>
 #include "CoreWallet.h"
 #include "SignerAdapter.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 
 namespace bs {
    namespace sync {
@@ -16,12 +16,12 @@ namespace spdlog {
    class logger;
 }
 
-class SignAdapterContainer : public SignContainer
+class SignAdapterContainer : public WalletSignerContainer
 {
 public:
    SignAdapterContainer(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<SignerInterfaceListener> &lsn)
-      : SignContainer(logger, OpMode::LocalInproc), listener_(lsn)
+      : WalletSignerContainer(logger, OpMode::LocalInproc), listener_(lsn)
    {}
    ~SignAdapterContainer() noexcept override = default;
 
@@ -58,9 +58,10 @@ public:
    bs::signer::RequestId setUserId(const BinaryData &, const std::string &) override { return 0; }
    bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override { return 0; }
 
-   bs::signer::RequestId createHDLeaf(const std::string &, const bs::hd::Path &
-       , const std::vector<bs::wallet::PasswordData> & = {}
-       , const std::function<void(bs::error::ErrorCode result)> & = nullptr) override { return 0; }
+   bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}
+      , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) override { return false; }
+
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override { return 0; }
    bs::signer::RequestId GetInfo(const std::string &rootWalletId) override { return 0; }
