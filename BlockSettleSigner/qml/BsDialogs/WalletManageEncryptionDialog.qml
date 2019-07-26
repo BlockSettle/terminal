@@ -65,11 +65,6 @@ CustomDialog {
     }
 
     cContentItem: ColumnLayout {
-        spacing: 0
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-        Layout.margins: 1
-
         ColumnLayout {
             TabBar {
                 id: tabBar
@@ -233,10 +228,6 @@ CustomDialog {
                             }
                         }
                     }
-
-                    Rectangle {
-                        Layout.fillHeight: true
-                    }
                 }
 
             }
@@ -315,7 +306,7 @@ CustomDialog {
                     Layout.fillHeight: true
                     Layout.leftMargin: 10
                     Layout.rightMargin: 10
-                    height: 400
+                    height: 250
                     interactive: false
 
                     model: walletInfo.encKeys
@@ -357,10 +348,6 @@ CustomDialog {
                             }
                         }
                     }
-                }
-
-                Rectangle {
-                    Layout.fillHeight: true
                 }
             }
 

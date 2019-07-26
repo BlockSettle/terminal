@@ -22,13 +22,14 @@ CustomTitleDialogWindow {
     property bool   backup: chkBackup.checked
 
     width: 400
-    height: 250
+    //height: 250
+
     focus: true
     title: qsTr("Delete Wallet")
     rejectable: true
 
 
-    cContentItem: ColumnLayout {       
+    cContentItem: ColumnLayout {
         id: mainLayout
         spacing: 10
 

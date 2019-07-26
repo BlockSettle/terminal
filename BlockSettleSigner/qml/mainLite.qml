@@ -26,40 +26,40 @@ ApplicationWindow {
 
     visible: false
     title: qsTr("BlockSettle Signer")
-    width: 450
-    height: 600
+//    width: 450
+//    height: 600
 //    minimumWidth: 450
 //    minimumHeight: 600
-    onWidthChanged: {
-        if (width > Screen.desktopAvailableWidth) {
-            x = 0
-            width = Screen.desktopAvailableWidth
-        }
-        emitSizeChanged()
-    }
-    onHeightChanged: {
-        if (height > Screen.desktopAvailableHeight) {
-            let frameSize = qmlFactory.frameSize(mainWindow)
-            let h = frameSize.height > height ? frameSize.height - height : 0
-            y = 0
-            height = Screen.desktopAvailableHeight - h
-        }
-        emitSizeChanged()
-    }
+//    onWidthChanged: {
+//        if (width > Screen.desktopAvailableWidth) {
+//            x = 0
+//            width = Screen.desktopAvailableWidth
+//        }
+//        emitSizeChanged()
+//    }
+//    onHeightChanged: {
+//        if (height > Screen.desktopAvailableHeight) {
+//            let frameSize = qmlFactory.frameSize(mainWindow)
+//            let h = frameSize.height > height ? frameSize.height - height : 0
+//            y = 0
+//            height = Screen.desktopAvailableHeight - h
+//        }
+//        emitSizeChanged()
+//    }
 
     property var currentDialog: ({})
 
-    function emitSizeChanged() {
-        sizeChangeTimer.start()
-    }
-    Timer {
-        id: sizeChangeTimer
-        interval: 5
-        repeat: false
-        running: false
-        onTriggered: sizeChanged(mainWindow.width, mainWindow.height)
-    }
-    signal sizeChanged(int w, int h)
+//    function emitSizeChanged() {
+//        sizeChangeTimer.start()
+//    }
+//    Timer {
+//        id: sizeChangeTimer
+//        interval: 5
+//        repeat: false
+//        running: false
+//        onTriggered: sizeChanged(mainWindow.width, mainWindow.height)
+//    }
+//    signal sizeChanged(int w, int h)
 
     Component.onCompleted: {
         mainWindow.flags = Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint |

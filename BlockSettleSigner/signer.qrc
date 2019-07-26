@@ -64,5 +64,8 @@
         <file>qml/BsDialogs/TerminalKeysDialog.qml</file>
         <file>qml/mainLite.qml</file>
         <file>qml/BsDialogs/CCSettlementTransactionDialog.qml</file>
+        <file>qml/BsControls/BSPasswordInputConfirm.qml</file>
+        <file>qml/BsControls/BSPasswordInputToken.qml</file>
+        <file>qml/BsControls/BSPasswordInputAuthLeaf.qml</file>
     </qresource>
 </RCC>

@@ -293,9 +293,8 @@ CustomTitleDialogWindow {
 
                     if (rbPassword.checked) {
                         // auth password
-                        var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
+                        var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInputConfirm.qml").createObject(mainWindow);
                         checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
-                        checkPasswordDialog.type = BSPasswordInput.Type.Confirm
                         checkPasswordDialog.open()
                         checkPasswordDialog.bsAccepted.connect(function(){
                             passwordData.encType = QPasswordData.Password

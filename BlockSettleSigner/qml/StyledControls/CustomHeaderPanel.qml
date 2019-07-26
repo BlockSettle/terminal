@@ -5,8 +5,6 @@ import "../BsStyles"
 Button {
     leftPadding: 10
     rightPadding: 10
-    width: parent.width
-    height: parent.height
 
     background: Rectangle {
         color: BSStyle.dialogHeaderColor

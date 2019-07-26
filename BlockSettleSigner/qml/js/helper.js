@@ -225,7 +225,7 @@ function isSelectedWalletHdRoot(walletsView) {
 //}
 
 function customDialogRequest(dialogName, data) {
-    //if (dialogName === "createNewWalletDialog")
+    // TODO: send initial values (qmlTitleVisible) in createObject params map
     let dlg = eval(dialogName)(data)
     return dlg
 }
@@ -279,17 +279,21 @@ function prepareLiteModeDialog(dialog) {
 
     //dialog.show()
     currentDialog = dialog
-    if (typeof currentDialog.qmlTitleVisible !== "undefined") {
-        currentDialog.qmlTitleVisible = false
+    if (typeof dialog.headerPanel !== "undefined") {
+        dialog.qmlTitleVisible = false
     }
 
-    mainWindow.width = currentDialog.width
-    mainWindow.height = currentDialog.height
+    mainWindow.width = dialog.width
+    mainWindow.height = dialog.height
     mainWindow.moveMainWindowToScreenCenter()
-    mainWindow.title = currentDialog.title
+    mainWindow.title = dialog.title
 
-    currentDialog.dialogsChainFinished.connect(function(){ hide() })
-    currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
+    dialog.dialogsChainFinished.connect(function(){ hide() })
+    dialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
+        if (typeof nextDialog.headerPanel !== "undefined") {
+            nextDialog.qmlTitleVisible = false
+        }
+
         mainWindow.width = nextDialog.width
         mainWindow.height = nextDialog.height
         mainWindow.moveMainWindowToScreenCenter()
@@ -301,7 +305,8 @@ function prepareLiteModeDialog(dialog) {
         })
     })
 
-    currentDialog.sizeChanged.connect(function(w, h){
+    dialog.sizeChanged.connect(function(w, h){
+        console.log("dialog.sizeChanged " + w + " " + h)
         mainWindow.width = w
         mainWindow.height = h
         mainWindow.moveMainWindowToScreenCenter()
@@ -323,12 +328,12 @@ function createNewWalletDialog(data) {
         dlgCreateWallet.seed = newSeed
         dlgCreateWallet.open()
     })
-    if (Object.keys(mainWindow).indexOf("currentDialog") != -1) {
-        mainWindow.sizeChanged.connect(function(w, h) {
-            dlgNewSeed.width = w
-            dlgNewSeed.height = h
-        })
-    }
+//    if (Object.keys(mainWindow).indexOf("currentDialog") != -1) {
+//        mainWindow.sizeChanged.connect(function(w, h) {
+//            dlgNewSeed.width = w
+//            dlgNewSeed.height = h
+//        })
+//    }
     dlgNewSeed.open()
     return dlgNewSeed
 }
@@ -412,21 +417,32 @@ function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, passwor
     dlg.init()
 }
 
-function createPasswordDialogForAuthLeaf(jsCallback, passwordDialogData, walletInfo) {
+function createPasswordDialogForLeaf(jsCallback, passwordDialogData, walletInfo) {
     if (walletInfo.walletId === "") {
-        jsCallback(10, walletInfo.walletId, passwordData)
+        jsCallback(10, walletInfo.walletId, {})
     }
 
     var dlg
 
-    if (walletInfo.encType === 2) {
+    if (walletInfo.encType === QPasswordData.Auth) {
         dlg = requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
             jsCallback(0, walletInfo.walletId, passwordData)
         })
     }
     else if (walletInfo.encType === QPasswordData.Password){
-        dlg = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
-        dlg.type = BSPasswordInput.Type.Request
+        if (passwordDialogData.value("LeafDialogType") === "RequestPasswordForAuthLeaf") {
+            dlg = Qt.createComponent("../BsControls/BSPasswordInputAuthLeaf.qml").createObject(mainWindow
+                , {"walletInfo": walletInfo,
+                   "passwordDialogData": passwordDialogData
+                  })
+        }
+        else if (passwordDialogData.value("LeafDialogType") === "RequestPasswordForToken") {
+            dlg = Qt.createComponent("../BsControls/BSPasswordInputToken.qml").createObject(mainWindow
+                , {"walletInfo": walletInfo,
+                   "passwordDialogData": passwordDialogData
+                  })
+        }
+
         dlg.open()
         dlg.bsAccepted.connect(function() {
             var passwordData = qmlFactory.createPasswordData()

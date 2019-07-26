@@ -199,35 +199,39 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       walletId = txInfo->walletId();
    }
    bs::hd::WalletInfo *walletInfo = qmlFactory_->createWalletInfo(walletId);
+   if (walletId.isEmpty()) {
+      signer::DecryptWalletEvent decryptEvent;
+      decryptEvent.set_wallet_id(walletId.toStdString());
+      decryptEvent.set_errorcode(static_cast<uint32_t>(bs::error::ErrorCode::WalletNotFound));
+      send(signer::PasswordReceivedType, decryptEvent.SerializeAsString());
+   }
 
-   QString notifyTitle;
    QString notifyMsg = tr("Enter password for %1").arg(walletInfo->name());
-
 
    switch (request.dialogtype()) {
    case signer::SignTx:
    case signer::SignPartialTx:
-      notifyTitle = tr("Sign Transaction");
+      dialogData->setValue("Title", tr("Sign Transaction"));
       requestPasswordForTx(request.dialogtype(), dialogData, txInfo, walletInfo);
       break;
    case signer::SignSettlementTx:
    case signer::SignSettlementPartialTx:
-      notifyTitle = tr("Sign Settlement Transaction");
+      dialogData->setValue("Title", tr("Sign Settlement Transaction"));
       requestPasswordForSettlementTx(request.dialogtype(), dialogData, txInfo, walletInfo);
       break;
    case signer::CreateAuthLeaf:
-      notifyTitle = tr("Create Auth Leaf");
+      dialogData->setValue("Title", tr("Create Auth Leaf"));
       requestPasswordForAuthLeaf(dialogData, walletInfo);
       break;
    case signer::CreateHDLeaf:
-      notifyTitle = tr("Create Leaf");
-      requestPasswordForAuthLeaf(dialogData, walletInfo);
+      dialogData->setValue("Title", tr("Create Leaf"));
+      requestPasswordForToken(dialogData, walletInfo);
       break;
    default:
       break;
    }
 
-   emit qmlFactory_->showTrayNotify(notifyTitle, notifyMsg);
+   emit qmlFactory_->showTrayNotify(dialogData->value("Title").toString(), notifyMsg);
 }
 
 void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::RequestId reqId)
@@ -585,9 +589,16 @@ void SignerInterfaceListener::requestPasswordForSettlementTx(signer::PasswordDia
 void SignerInterfaceListener::requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData
    , bs::hd::WalletInfo *walletInfo)
 {
-   qmlBridge_->invokeQmlMethod("createPasswordDialogForAuthLeaf", createQmlPasswordCallback()
-      , QVariant::fromValue(dialogData)
-      , QVariant::fromValue(walletInfo));
+   dialogData->setValue("LeafDialogType", "RequestPasswordForAuthLeaf");
+   qmlBridge_->invokeQmlMethod("createPasswordDialogForLeaf", createQmlPasswordCallback()
+      , QVariant::fromValue(dialogData), QVariant::fromValue(walletInfo));
+}
+
+void SignerInterfaceListener::requestPasswordForToken(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo)
+{
+   dialogData->setValue("LeafDialogType", "RequestPasswordForToken");
+   qmlBridge_->invokeQmlMethod("createPasswordDialogForLeaf", createQmlPasswordCallback()
+      , QVariant::fromValue(dialogData), QVariant::fromValue(walletInfo));
 }
 
 void SignerInterfaceListener::shutdown()
@@ -599,13 +610,13 @@ QmlCallbackBase *SignerInterfaceListener::createQmlPasswordCallback()
 {
    return new bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>
          ([this](int result, const QString &walletId, bs::wallet::QPasswordData *passwordData){
-      signer::DecryptWalletEvent request;
-      request.set_wallet_id(walletId.toStdString());
+      signer::DecryptWalletEvent decryptEvent;
+      decryptEvent.set_wallet_id(walletId.toStdString());
       if (passwordData) {
-         request.set_password(passwordData->binaryPassword().toBinStr());
+         decryptEvent.set_password(passwordData->binaryPassword().toBinStr());
       }
-      request.set_errorcode(static_cast<uint32_t>(result));
-      send(signer::PasswordReceivedType, request.SerializeAsString());
+      decryptEvent.set_errorcode(static_cast<uint32_t>(result));
+      send(signer::PasswordReceivedType, decryptEvent.SerializeAsString());
    });
 }
 
