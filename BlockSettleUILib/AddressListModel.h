@@ -78,7 +78,7 @@ public:
    QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
-   bool setWallets(const Wallets &, bool force = false);
+   bool setWallets(const Wallets &, bool force, bool filterBtcOnly);
 
 private slots:
    void updateWallets();
@@ -92,6 +92,7 @@ private:
    const AddressType          addrType_;
 
    std::atomic_bool           processing_;
+   bool filterBtcOnly_{false};
 
 private:
    void updateWallet(const std::shared_ptr<bs::sync::Wallet> &);

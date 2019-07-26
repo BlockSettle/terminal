@@ -265,13 +265,19 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    connect(ui_->treeViewAddresses->verticalScrollBar(), &QScrollBar::valueChanged, this, &WalletsWidget::scrollChanged);
 }
 
-std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getSelectedWallets() const
+WalletNode *WalletsWidget::getSelectedNode() const
 {
    auto indexes = ui_->treeViewWallets->selectionModel()->selectedIndexes();
    if (!indexes.isEmpty()) {
-      return walletsModel_->getWallets(indexes.first());
+      return walletsModel_->getNode(indexes.first());
    }
-   return {};
+   return nullptr;
+}
+
+std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getSelectedWallets() const
+{
+   auto node = getSelectedNode();
+   return node ? node->wallets() : std::vector<std::shared_ptr<bs::sync::Wallet>>();
 }
 
 std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getFirstWallets() const
@@ -402,7 +408,7 @@ void WalletsWidget::updateAddresses()
       prevSelectedWalletRow_ = ui_->treeViewWallets->selectionModel()->selectedIndexes().first().row();
    }
    
-   addressModel_->setWallets(selectedWallets);
+   addressModel_->setWallets(selectedWallets, false, filterBtcOnly());
    prevSelectedWallets_ = selectedWallets;
 
    keepSelection();
@@ -428,6 +434,13 @@ void WalletsWidget::keepSelection()
    }
    ui_->treeViewAddresses->horizontalScrollBar()->setValue(addressesScrollPos_.x());
    ui_->treeViewAddresses->verticalScrollBar()->setValue(addressesScrollPos_.y());
+}
+
+bool WalletsWidget::filterBtcOnly() const
+{
+   auto selectedNode = getSelectedNode();
+   return selectedNode ? (selectedNode->type() == WalletNode::Type::WalletPrimary
+      || selectedNode->type() == WalletNode::Type::WalletRegular) : false;
 }
 
 void WalletsWidget::treeViewAddressesSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
@@ -487,7 +500,7 @@ void WalletsWidget::onWalletBalanceChanged(std::string walletId)
       }
    }
    if (changedSelected) {
-      addressModel_->setWallets(selectedWallets);
+      addressModel_->setWallets(selectedWallets, false, filterBtcOnly());
    }
 }
 

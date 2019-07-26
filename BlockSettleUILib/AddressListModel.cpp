@@ -44,10 +44,11 @@ AddressListModel::AddressListModel(const std::shared_ptr<bs::sync::WalletsManage
       , this, &AddressListModel::updateData);
 }
 
-bool AddressListModel::setWallets(const Wallets &wallets, bool force)
+bool AddressListModel::setWallets(const Wallets &wallets, bool force, bool filterBtcOnly)
 {
-   if ((wallets != wallets_) || force) {
+   if ((wallets != wallets_) || (filterBtcOnly != filterBtcOnly_) || force) {
       wallets_ = wallets;
+      filterBtcOnly_ = filterBtcOnly;
       updateWallets();
    }
 
@@ -105,6 +106,10 @@ void AddressListModel::updateData(const std::string &walletId)
 
 void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wallet)
 {
+   if (filterBtcOnly_ && wallet->type() != bs::core::wallet::Type::Bitcoin) {
+      return;
+   }
+
    if (wallet->type() == bs::core::wallet::Type::Authentication) {
       const auto addr = bs::Address();
       auto row = createRow(addr, wallet);
