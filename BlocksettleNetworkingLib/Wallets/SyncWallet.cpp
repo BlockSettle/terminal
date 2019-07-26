@@ -486,7 +486,6 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 
 void Wallet::onNewBlock(unsigned int depth)
 {
-   logger_->debug("[{}]", __func__);
    init(true);
 }
 
