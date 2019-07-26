@@ -77,7 +77,10 @@ void CCTokenEntryDialog::tokenChanged()
             path.append(bs::hd::purpose | 0x80000000);
             path.append(bs::hd::BlockSettle_CC | 0x80000000);
             path.append(ccProduct_);
-            createWalletReqId_ = signingContainer_->createHDLeaf(priWallet->walletId(), path);
+
+            bs::sync::PasswordDialogData dialogData;
+            dialogData.setValue("Token", ui_->lineEditToken->text());
+            createWalletReqId_ = signingContainer_->createHDLeaf(priWallet->walletId(), path, {}, dialogData);
          }
          else {
             reject();

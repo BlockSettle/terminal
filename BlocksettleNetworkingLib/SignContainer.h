@@ -100,6 +100,7 @@ public:
 
    virtual bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}
+      , bs::sync::PasswordDialogData dialogData = {}
       , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) = 0;
    virtual bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) = 0;
    virtual bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) = 0;

@@ -121,7 +121,9 @@ bs::signer::RequestId InprocSigner::signSettlementPayoutTXRequest(const bs::core
 }
 
 bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
-   , const std::vector<bs::wallet::PasswordData> &pwdData, const std::function<void(bs::error::ErrorCode result)> &)
+   , const std::vector<bs::wallet::PasswordData> &pwdData
+   , bs::sync::PasswordDialogData
+   , const std::function<void(bs::error::ErrorCode result)> &)
 {
    const auto hdWallet = walletsMgr_->getHDWalletById(rootWalletId);
    if (!hdWallet) {
