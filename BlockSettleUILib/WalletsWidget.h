@@ -32,11 +32,12 @@ class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
+class ConnectionManager;
 class QAction;
 class QMenu;
 class SignContainer;
+class WalletNode;
 class WalletsViewModel;
-class ConnectionManager;
 
 class WalletsWidget : public TabWithShortcut
 {
@@ -57,6 +58,7 @@ public:
 
    void setUsername(const QString& username);
 
+   WalletNode *getSelectedNode() const;
    std::vector<std::shared_ptr<bs::sync::Wallet>> getSelectedWallets() const;
    std::vector<std::shared_ptr<bs::sync::Wallet>> getFirstWallets() const;
 
@@ -74,6 +76,7 @@ private:
    int getUIFilterSettings() const;
    void updateAddressFilters(int filterSettings);
    void keepSelection();
+   bool filterBtcOnly() const;
 
 signals:
    void showContextMenu(QMenu *, QPoint);
