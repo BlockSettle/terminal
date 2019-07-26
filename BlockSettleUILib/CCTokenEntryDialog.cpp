@@ -1,26 +1,26 @@
 #include "CCTokenEntryDialog.h"
 #include "ui_CCTokenEntryDialog.h"
+
 #include "bs_communication.pb.h"
 
 #include <QLineEdit>
 #include <QPushButton>
 #include <spdlog/spdlog.h>
-#include "CCFileManager.h"
+
+#include "BSErrorCodeStrings.h"
 #include "BSMessageBox.h"
+#include "CCFileManager.h"
 #include "SignContainer.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
-
 CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<CCFileManager> &ccFileMgr
-      , const std::shared_ptr<SignContainer> &container
       , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::CCTokenEntryDialog())
    , ccFileMgr_(ccFileMgr)
-   , signingContainer_(container)
    , walletsMgr_(walletsMgr)
 {
    ui_->setupUi(this);
@@ -32,8 +32,8 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsMa
    connect(ccFileMgr_.get(), &CCFileManager::CCInitialSubmitted, this, &CCTokenEntryDialog::onCCInitialSubmitted, Qt::QueuedConnection);
    connect(ccFileMgr_.get(), &CCFileManager::CCSubmitFailed, this, &CCTokenEntryDialog::onCCSubmitFailed, Qt::QueuedConnection);
 
-   connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &CCTokenEntryDialog::onWalletCreated);
-   connect(signingContainer_.get(), &SignContainer::Error, this, &CCTokenEntryDialog::onWalletFailed);
+   connect(walletsMgr.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &CCTokenEntryDialog::onWalletCreated);
+   connect(walletsMgr.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &CCTokenEntryDialog::onWalletFailed);
 
    ccFileMgr_->LoadCCDefinitionsFromPub();
 
@@ -50,6 +50,7 @@ void CCTokenEntryDialog::tokenChanged()
    if (strToken_.empty()) {
       return;
    }
+
    try {
       BinaryData base58In(strToken_);
       base58In.append('\0'); // Remove once base58toScrAddr() is fixed.
@@ -68,23 +69,12 @@ void CCTokenEntryDialog::tokenChanged()
 
          MessageBoxCCWalletQuestion qry(QString::fromStdString(ccProduct_), this);
          if (qry.exec() == QDialog::Accepted) {
-            const auto priWallet = walletsMgr_->getPrimaryWallet();
-            if (!priWallet->getGroup(bs::hd::CoinType::BlockSettle_CC)) {
-               //cc wallet is always ext only
-               priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
+            if (!walletsMgr_->CreateCCLeaf(ccProduct_)) {
+               ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1").arg(QString::fromStdString(ccProduct_)));
             }
-            bs::hd::Path path;
-            path.append(bs::hd::purpose | 0x80000000);
-            path.append(bs::hd::BlockSettle_CC | 0x80000000);
-            path.append(ccProduct_);
-            createWalletReqId_ = signingContainer_->createHDLeaf(priWallet->walletId(), path);
-         }
-         else {
+         } else {
             reject();
          }
-      }
-      else {
-         walletOk_ = true;
       }
    }
    catch (const std::exception &e) {
@@ -95,38 +85,36 @@ void CCTokenEntryDialog::tokenChanged()
 
 void CCTokenEntryDialog::updateOkState()
 {
-   ui_->pushButtonOk->setEnabled(walletOk_);
+   ui_->pushButtonOk->setEnabled(ccWallet_ != nullptr);
 }
 
-void CCTokenEntryDialog::onWalletCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
+void CCTokenEntryDialog::onWalletCreated(const std::string& ccName)
 {
-   if (!createWalletReqId_ || (createWalletReqId_ != id)) {
+   if (ccName != ccProduct_) {
+      // ignore. not current product
       return;
    }
-   createWalletReqId_ = 0;
-   const auto priWallet = walletsMgr_->getPrimaryWallet();
-   const auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
-   group->addLeaf(leaf);
-   ccWallet_ = leaf;
+
+   ccWallet_ = walletsMgr_->getCCWallet(ccProduct_);
+
    if (ccWallet_) {
-      walletOk_ = true;
       ui_->labelTokenHint->setText(tr("Private Market subwallet for %1 created!").arg(QString::fromStdString(ccProduct_)));
-   }
-   else {
+   } else {
       ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1").arg(QString::fromStdString(ccProduct_)));
    }
+
    updateOkState();
 }
 
-void CCTokenEntryDialog::onWalletFailed(unsigned int id, std::string errMsg)
+void CCTokenEntryDialog::onWalletFailed(const std::string& ccName, bs::error::ErrorCode result)
 {
-   if (!createWalletReqId_ || (createWalletReqId_ != id)) {
+   if (ccName != ccProduct_) {
+      // ignore. nit our request
       return;
    }
-   createWalletReqId_ = 0;
-   ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1: %2")
-      .arg(QString::fromStdString(ccProduct_)).arg(QString::fromStdString(errMsg)));
 
+   ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1: %2")
+      .arg(QString::fromStdString(ccProduct_)).arg(bs::error::ErrorCodeToString(result)));
 }
 
 void CCTokenEntryDialog::accept()

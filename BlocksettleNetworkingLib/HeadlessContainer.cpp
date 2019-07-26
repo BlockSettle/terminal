@@ -191,7 +191,7 @@ bs::signer::RequestId HeadlessListener::Send(headless::RequestPacket packet, boo
 }
 
 HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logger, OpMode opMode)
-   : SignContainer(logger, opMode)
+   : WalletSignerContainer(logger, opMode)
 {
    qRegisterMetaType<headless::RequestPacket>();
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Leaf>>();
@@ -209,7 +209,7 @@ void HeadlessContainer::ProcessSignTXResponse(unsigned int id, const std::string
 {
    headless::SignTxReply response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[HeadlessContainer] Failed to parse SignTxReply");
+      logger_->error("[HeadlessContainer::ProcessSignTXResponse] Failed to parse SignTxReply");
       emit TXSigned(id, {}, bs::error::ErrorCode::FailedToParse);
       return;
    }
@@ -220,7 +220,7 @@ void HeadlessContainer::ProcessSettlementSignTXResponse(unsigned int id, const s
 {
    headless::SignTxReply response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] Failed to parse reply", __func__);
+      logger_->error("[HeadlessContainer::ProcessSettlementSignTXResponse] Failed to parse reply");
       emit Error(id, "failed to parse");
       return;
    }
@@ -239,49 +239,39 @@ void HeadlessContainer::ProcessSettlementSignTXResponse(unsigned int id, const s
 void HeadlessContainer::ProcessCreateHDLeafResponse(unsigned int id, const std::string &data)
 {
    headless::CreateHDLeafResponse response;
+
+   auto it = cbCCreateLeafMap_.find(id);
+   std::function<void(bs::error::ErrorCode result)> cb;
+
+   if (it != cbCCreateLeafMap_.end()) {
+      cb = it->second;
+      cbCCreateLeafMap_.erase(it);
+   } else {
+      logger_->debug("[HeadlessContainer::ProcessCreateHDLeafResponse] no CB for create leaf response");
+   }
+
    if (!response.ParseFromString(data)) {
-      logger_->error("[HeadlessContainer] Failed to parse CreateHDWallet reply");
-      emit Error(id, "failed to parse");
+      logger_->error("[HeadlessContainer::ProcessCreateHDLeafResponse] Failed to parse CreateHDWallet reply");
+
+      if (cb) {
+         cb(bs::error::ErrorCode::FailedToParse);
+      }
+
       return;
    }
 
    bs::error::ErrorCode result = static_cast<bs::error::ErrorCode>(response.errorcode());
+
    if (result == bs::error::ErrorCode::NoError) {
       const auto path = bs::hd::Path::fromString(response.leaf().path());
-
-      std::shared_ptr<bs::sync::hd::Leaf> leaf;
-
-      switch (static_cast<bs::hd::CoinType>(path.get(-2))) {
-      case bs::hd::CoinType::Bitcoin_main:
-      case bs::hd::CoinType::Bitcoin_test:
-         leaf = std::make_shared<bs::sync::hd::XBTLeaf>(response.leaf().walletid()
-            , response.leaf().name(), response.leaf().desc(), this, logger_, response.leaf().extonly());
-         break;
-      case bs::hd::CoinType::BlockSettle_Auth:
-         leaf = std::make_shared<bs::sync::hd::AuthLeaf>(response.leaf().walletid()
-            , response.leaf().name(), response.leaf().desc(), this, logger_);
-         break;
-      case bs::hd::CoinType::BlockSettle_CC:
-         leaf = std::make_shared<bs::sync::hd::CCLeaf>(response.leaf().walletid()
-            , response.leaf().name(), response.leaf().desc(), this, logger_);
-         break;
-      case bs::hd::CoinType::BlockSettle_Settlement:
-         leaf = std::make_shared<bs::sync::hd::SettlementLeaf>(response.leaf().walletid()
-            , response.leaf().name(), response.leaf().desc(), this, logger_);
-         break;
-      default:
-         logger_->error("[HeadlessContainer::ProcessCreateHDLeafResponse] failed to get leaf type from path: \'{}\'"
-                        , path.get(-2));
-         emit Error(id, "Unexpected leaf type");
-         return;
-      }
-
-      logger_->debug("[HeadlessContainer::ProcessCreateHDLeafResponse] HDLeaf {} created of type: {}", response.leaf().walletid()
-                     , static_cast<int>(leaf->type()));
-      emit HDLeafCreated(id, leaf);
+      logger_->debug("[HeadlessContainer::ProcessCreateHDLeafResponse] HDLeaf {} created", response.leaf().path());
+   } else {
+      logger_->error("[HeadlessContainer::ProcessCreateHDLeafResponse] failed to create leaf: {}"
+                     , response.errorcode());
    }
-   else {
-      emit Error(id, bs::error::ErrorCodeToString(result).toStdString());
+
+   if (cb) {
+      cb(result);
    }
 }
 
@@ -289,7 +279,7 @@ void HeadlessContainer::ProcessGetHDWalletInfoResponse(unsigned int id, const st
 {
    headless::GetHDWalletInfoResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[HeadlessContainer] Failed to parse GetHDWalletInfo reply");
+      logger_->error("[HeadlessContainer::ProcessGetHDWalletInfoResponse] Failed to parse GetHDWalletInfo reply");
       emit Error(id, "failed to parse");
       return;
    }
@@ -306,7 +296,7 @@ void HeadlessContainer::ProcessAutoSignActEvent(unsigned int id, const std::stri
 {
    headless::AutoSignActEvent event;
    if (!event.ParseFromString(data)) {
-      logger_->error("[HeadlessContainer] Failed to parse SetLimits reply");
+      logger_->error("[HeadlessContainer::ProcessAutoSignActEvent] Failed to parse SetLimits reply");
       emit Error(id, "failed to parse");
       return;
    }
@@ -317,7 +307,7 @@ void HeadlessContainer::ProcessSetUserId(const std::string &data)
 {
    headless::SetUserIdResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] failed to parse response", __func__);
+      logger_->error("[HeadlessContainer::ProcessSetUserId] failed to parse response");
       return;
    }
    if (!response.auth_wallet_id().empty() && (response.response() == headless::AWR_NoError)) {
@@ -372,7 +362,7 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
    , SignContainer::TXSignMode mode, bool keepDuplicatedRecipients)
 {
    if (!txSignReq.isValid()) {
-      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
+      logger_->error("[HeadlessContainer::signTXRequest] Invalid TXSignRequest");
       return 0;
    }
 
@@ -400,7 +390,7 @@ bs::signer::RequestId HeadlessContainer::signSettlementTXRequest(const bs::core:
    , const std::function<void (bs::error::ErrorCode result, const BinaryData &signedTX)> &cb)
 {
    if (!txSignReq.isValid()) {
-      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
+      logger_->error("[HeadlessContainer::signSettlementTXRequest] Invalid TXSignRequest");
       return 0;
    }
 
@@ -424,7 +414,7 @@ bs::signer::RequestId HeadlessContainer::signSettlementPartialTXRequest(const bs
    , const std::function<void (bs::error::ErrorCode, const BinaryData &)> &cb)
 {
    if (!txSignReq.isValid()) {
-      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
+      logger_->error("[HeadlessContainer::signSettlementPartialTXRequest] Invalid TXSignRequest");
       return 0;
    }
 
@@ -455,7 +445,7 @@ bs::signer::RequestId HeadlessContainer::signSettlementPayoutTXRequest(const bs:
    , const std::function<void (bs::error::ErrorCode, const BinaryData &)> &cb)
 {
    if ((txSignReq.inputs.size() != 1) || (txSignReq.recipients.size() != 1) || sd.settlementId.isNull()) {
-      logger_->error("[HeadlessContainer] Invalid PayoutTXSignRequest");
+      logger_->error("[HeadlessContainer::signSettlementPayoutTXRequest] Invalid PayoutTXSignRequest");
       return 0;
    }
    headless::SignSettlementPayoutTxRequest settlementRequest;
@@ -479,7 +469,7 @@ bs::signer::RequestId HeadlessContainer::signSettlementPayoutTXRequest(const bs:
 bs::signer::RequestId HeadlessContainer::signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &txMultiReq)
 {
    if (!txMultiReq.isValid()) {
-      logger_->error("[HeadlessContainer] Invalid TXMultiSignRequest");
+      logger_->error("[HeadlessContainer::signMultiTXRequest] Invalid TXMultiSignRequest");
       return 0;
    }
 
@@ -540,7 +530,7 @@ bs::signer::RequestId HeadlessContainer::setUserId(const BinaryData &userId, con
 
 bs::signer::RequestId HeadlessContainer::syncCCNames(const std::vector<std::string> &ccNames)
 {
-   logger_->debug("[{}] syncing {} CCs", __func__, ccNames.size());
+   logger_->debug("[HeadlessContainer::syncCCNames] syncing {} CCs", ccNames.size());
    headless::SyncCCNamesData request;
    for (const auto &cc : ccNames) {
       request.add_ccnames(cc);
@@ -552,12 +542,12 @@ bs::signer::RequestId HeadlessContainer::syncCCNames(const std::vector<std::stri
    return Send(packet);
 }
 
-bs::signer::RequestId HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
+bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
    , const std::vector<bs::wallet::PasswordData> &pwdData, const std::function<void(bs::error::ErrorCode result)> &cb)
 {
    if (rootWalletId.empty() || (path.length() != 3)) {
-      logger_->error("[HeadlessContainer] Invalid input data for HD wallet creation");
-      return 0;
+      logger_->error("[HeadlessContainer::createHDLeaf] Invalid input data for HD wallet creation");
+      return false;
    }
    headless::CreateHDLeafRequest request;
    request.set_rootwalletid(rootWalletId);
@@ -572,7 +562,20 @@ bs::signer::RequestId HeadlessContainer::createHDLeaf(const std::string &rootWal
    headless::RequestPacket packet;
    packet.set_type(headless::CreateHDLeafRequestType);
    packet.set_data(request.SerializeAsString());
-   return Send(packet);
+   auto createLeafRequestId = Send(packet);
+   if (createLeafRequestId == 0) {
+      logger_->error("[HeadlessContainer::createHDLeaf] failed to send request");
+      return false;
+   }
+
+   if (cb) {
+      cbCCreateLeafMap_.emplace(createLeafRequestId, cb);
+   } else {
+      logger_->warn("[HeadlessContainer::createHDLeaf] cb not set for leaf creation {}"
+                     , path.toString());
+   }
+
+   return true;
 }
 
 bs::signer::RequestId HeadlessContainer::DeleteHDRoot(const std::string &rootWalletId)
@@ -601,7 +604,7 @@ bs::signer::RequestId HeadlessContainer::SendDeleteHDRequest(const std::string &
       request.set_leafwalletid(leafId);
    }
    else {
-      logger_->error("[HeadlessContainer] can't send delete request - both IDs are empty");
+      logger_->error("[HeadlessContainer::SendDeleteHDRequest] can't send delete request - both IDs are empty");
       return 0;
    }
 
@@ -885,7 +888,7 @@ void HeadlessContainer::ProcessSettlWalletCreate(unsigned int id, const std::str
 {
    headless::CreateSettlWalletResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] Failed to parse reply", __func__);
+      logger_->error("[HeadlessContainer::ProcessSettlWalletCreate] Failed to parse reply");
       emit Error(id, "failed to parse");
       return;
    }
@@ -901,7 +904,7 @@ void HeadlessContainer::ProcessSetSettlementId(unsigned int id, const std::strin
 {
    headless::SetSettlementIdResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] Failed to parse reply", __func__);
+      logger_->error("[HeadlessContainer::ProcessSetSettlementId] Failed to parse reply");
       emit Error(id, "failed to parse");
       return;
    }
@@ -917,7 +920,7 @@ void HeadlessContainer::ProcessGetPayinAddr(unsigned int id, const std::string &
 {
    headless::SettlPayinAddressResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] Failed to parse reply", __func__);
+      logger_->error("[HeadlessContainer::ProcessGetPayinAddr] Failed to parse reply");
       emit Error(id, "failed to parse");
       return;
    }
@@ -933,7 +936,7 @@ void HeadlessContainer::ProcessSettlGetRootPubkey(unsigned int id, const std::st
 {
    headless::SettlGetRootPubkeyResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] Failed to parse reply", __func__);
+      logger_->error("[HeadlessContainer::ProcessSettlGetRootPubkey] Failed to parse reply");
       emit Error(id, "failed to parse");
       return;
    }
@@ -949,7 +952,7 @@ void HeadlessContainer::ProcessSyncWalletInfo(unsigned int id, const std::string
 {
    headless::SyncWalletInfoResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] Failed to parse reply", __func__);
+      logger_->error("[HeadlessContainer::ProcessSyncWalletInfo] Failed to parse reply");
       emit Error(id, "failed to parse");
       return;
    }
@@ -975,7 +978,7 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
 {
    headless::SyncHDWalletResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] Failed to parse reply", __func__);
+      logger_->error("[HeadlessContainer::ProcessSyncHDWallet] Failed to parse reply");
       emit Error(id, "failed to parse");
       return;
    }
@@ -1019,7 +1022,7 @@ void HeadlessContainer::ProcessSyncWallet(unsigned int id, const std::string &da
 {
    headless::SyncWalletResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] Failed to parse reply", __func__);
+      logger_->error("[HeadlessContainer::ProcessSyncWallet] Failed to parse reply");
       emit Error(id, "failed to parse");
       return;
    }
@@ -1083,13 +1086,13 @@ void HeadlessContainer::ProcessSyncAddresses(unsigned int id, const std::string 
 {
    headless::SyncAddressesResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] Failed to parse reply", __func__);
+      logger_->error("[HeadlessContainer::ProcessSyncAddresses] Failed to parse reply");
       emit Error(id, "failed to parse");
       return;
    }
    const auto itCb = cbSyncAddrsMap_.find(id);
    if (itCb == cbSyncAddrsMap_.end()) {
-      logger_->error("[{}] no callback found for id {}", __func__, id);
+      logger_->error("[HeadlessContainer::ProcessSyncAddresses] no callback found for id {}", id);
       emit Error(id, "no callback found for id " + std::to_string(id));
       return;
    }
@@ -1103,13 +1106,13 @@ void HeadlessContainer::ProcessExtAddrChain(unsigned int id, const std::string &
 {
    headless::ExtendAddressChainResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[{}] Failed to parse reply", __func__);
+      logger_->error("[HeadlessContainer::ProcessExtAddrChain] Failed to parse reply");
       emit Error(id, "failed to parse");
       return;
    }
    const auto itCb = cbExtAddrsMap_.find(id);
    if (itCb == cbExtAddrsMap_.end()) {
-      logger_->error("[{}] no callback found for id {}", __func__, id);
+      logger_->error("[HeadlessContainer::ProcessExtAddrChain] no callback found for id {}", id);
       emit Error(id, "no callback found for id " + std::to_string(id));
       return;
    }
@@ -1183,7 +1186,7 @@ bool RemoteSigner::Stop()
 bool RemoteSigner::Connect()
 {
    if (!connection_) {
-      logger_->error("[{}] connection not created", __func__);
+      logger_->error("[RemoteSigner::Connect] connection not created");
       return false;
    }
 
@@ -1196,8 +1199,7 @@ bool RemoteSigner::Connect()
 
    bool result = connection_->openConnection(host_.toStdString(), port_.toStdString(), listener_.get());
    if (!result) {
-      logger_->error("[HeadlessContainer] Failed to open connection to "
-         "headless container");
+      logger_->error("[RemoteSigner::Connect] Failed to open connection to headless container");
       return false;
    }
 
@@ -1242,7 +1244,7 @@ void RemoteSigner::Authenticate()
 
 void RemoteSigner::RecreateConnection()
 {
-   logger_->info("[{}] Restart connection...", __func__);
+   logger_->info("[RemoteSigner::RecreateConnection] Restart connection...");
 
    ZmqBIP15XDataConnectionParams params;
    params.ephemeralPeers = ephemeralDataConnKeys_;
@@ -1263,7 +1265,7 @@ void RemoteSigner::RecreateConnection()
       headlessConnFinished_ = false;
    }
    catch (const std::exception &e) {
-      logger_->error("[{}] connection creation failed: {}", __func__, e.what());
+      logger_->error("[RemoteSigner::RecreateConnection] connection creation failed: {}", e.what());
       QTimer::singleShot(10, this, [this] {  // slight delay is required on start-up init
          emit connectionError(ConnectionError::SocketFailed, tr("Connection creation failed"));
       });
@@ -1431,7 +1433,7 @@ bs::signer::RequestId RemoteSigner::signTXRequest(const bs::core::wallet::TXSign
 bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRequest &txSignReq)
 {
    if (!txSignReq.isValid()) {
-      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
+      logger_->error("[HeadlessContainer::signOffline] Invalid TXSignRequest");
       return 0;
    }
 
@@ -1585,14 +1587,14 @@ bool LocalSigner::Start()
       const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer");
 #endif
       if (!QFile::exists(signerAppPath)) {
-         logger_->error("[HeadlessContainer] Signer binary {} not found"
+         logger_->error("[LocalSigner::Start] Signer binary {} not found"
             , signerAppPath.toStdString());
          emit connectionError(UnknownError, tr("missing signer binary"));
          return false;
       }
 
       const auto cmdArgs = args();
-      logger_->debug("[HeadlessContainer] starting {} {}"
+      logger_->debug("[LocalSigner::Start] starting {} {}"
          , signerAppPath.toStdString(), cmdArgs.join(QLatin1Char(' ')).toStdString());
 
 #ifndef NDEBUG
@@ -1604,7 +1606,7 @@ bool LocalSigner::Start()
 
       headlessProcess_->start(signerAppPath, cmdArgs);
       if (!headlessProcess_->waitForStarted(kStartTimeout)) {
-         logger_->error("[HeadlessContainer] Failed to start process");
+         logger_->error("[LocalSigner::Start] Failed to start process");
          headlessProcess_.reset();
          emit connectionError(UnknownError, tr("failed to start process"));
          return false;
@@ -1643,4 +1645,9 @@ void HeadlessListener::tryEmitError(SignContainer::ConnectionError errorCode, co
       wasErrorReported_ = true;
       emit error(errorCode, msg);
    }
+}
+
+bs::signer::RequestId HeadlessListener::newRequestId()
+{
+   return ++id_;
 }

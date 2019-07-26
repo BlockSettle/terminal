@@ -12,20 +12,21 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
+#include "BSErrorCodeStrings.h"
+#include "BSMessageBox.h"
 #include "CoinControlDialog.h"
 #include "CoinControlWidget.h"
 #include "CurrencyPair.h"
+#include "CustomComboBox.h"
 #include "FastLock.h"
-#include "BSMessageBox.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
-#include "UtxoReserveAdapters.h"
-#include "CustomComboBox.h"
 #include "UserScriptRunner.h"
+#include "UtxoReserveAdapters.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -121,8 +122,6 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    connect(aq_, &UserScriptRunner::pullQuoteNotif, this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
 
    if (signingContainer_) {
-      connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQDealerReply::onHDLeafCreated);
-      connect(signingContainer_.get(), &SignContainer::Error, this, &RFQDealerReply::onCreateHDWalletError);
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQDealerReply::onSignerStateUpdated, Qt::QueuedConnection);
       connect(signingContainer_.get(), &SignContainer::disconnected, this, &RFQDealerReply::onSignerStateUpdated, Qt::QueuedConnection);
       connect(signingContainer_.get(), &SignContainer::AutoSignStateChanged, this, &RFQDealerReply::onAutoSignStateChanged);
@@ -175,6 +174,9 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMa
    walletsManager_ = walletsManager;
    UiUtils::fillHDWalletsComboBox(ui_->comboBoxWalletAS, walletsManager_);
    updateAutoSignState();
+
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQDealerReply::onHDLeafCreated);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &RFQDealerReply::onCreateHDWalletError);
 
    if (aq_) {
       aq_->setWalletsManager(walletsManager_);
@@ -452,19 +454,16 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
       if (qrn.side == bs::network::Side::Sell) {
          const auto &ccWallet = getCCWallet(qrn.product);
          if (!ccWallet) {
-            if (leafCreateReqId_) {
-               return;
-            }
-
             if (signingContainer_ && !signingContainer_->isOffline()) {
                MessageBoxCCWalletQuestion qryCCWallet(QString::fromStdString(qrn.product), this);
 
                if (qryCCWallet.exec() == QDialog::Accepted) {
-                  bs::hd::Path path;
-                  path.append(bs::hd::purpose | 0x80000000);
-                  path.append(bs::hd::BlockSettle_CC | 0x80000000);
-                  path.append(qrn.product);
-                  leafCreateReqId_ = signingContainer_->createHDLeaf(walletsManager_->getPrimaryWallet()->walletId(), path);
+                  if (!walletsManager_->CreateCCLeaf(qrn.product)) {
+                     BSMessageBox errorMessage(BSMessageBox::critical, tr("Internal error")
+                        , tr("Failed create CC subwallet.")
+                        , this);
+                     errorMessage.exec();
+                  }
                }
             } else {
                BSMessageBox errorMessage(BSMessageBox::critical, tr("Signer not connected")
@@ -1308,43 +1307,34 @@ void RFQDealerReply::onAutoSignStateChanged(const std::string &walletId, bool ac
    updateAutoSignState();
 }
 
-void RFQDealerReply::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
+void RFQDealerReply::onHDLeafCreated(const std::string& ccName)
 {
-   if (!leafCreateReqId_ || (leafCreateReqId_ != id)) {
+   if (product_ != ccName) {
       return;
    }
-   leafCreateReqId_ = 0;
-   const auto &priWallet = walletsManager_->getPrimaryWallet();
-   auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
-   if (!group) {
-      //CC wallets always are ext only
-      group = priWallet->createGroup(bs::hd::BlockSettle_CC, true);
-   }
-   group->addLeaf(leaf, true);
-   auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(leaf);
-   if (ccLeaf) {
-      ccLeaf->setCCDataResolver(walletsManager_->ccResolver());
-   }
-   else {
-      logger_->error("[{}] invalid CC leaf {}", __func__, leaf->walletId());
+
+   auto ccLeaf = walletsManager_->getCCWallet(ccName);
+   if (ccLeaf == nullptr) {
+      logger_->error("[RFQDealerReply::onHDLeafCreated] CC wallet {} should exists"
+                     , ccName);
+      return;
    }
 
-   ccWallet_ = leaf;
+   ccWallet_ = ccLeaf;
    updateUiWalletFor(currentQRN_);
    reset();
    updateRecvAddresses();
 }
 
-void RFQDealerReply::onCreateHDWalletError(unsigned int id, std::string errMsg)
+void RFQDealerReply::onCreateHDWalletError(const std::string& ccName, bs::error::ErrorCode result)
 {
-   if (!leafCreateReqId_ || (leafCreateReqId_ != id)) {
+   if (product_ != ccName) {
       return;
    }
 
-   leafCreateReqId_ = 0;
    BSMessageBox(BSMessageBox::critical, tr("Failed to create wallet")
       , tr("Failed to create wallet")
-      , tr("%1 Wallet").arg(QString::fromStdString(product_))).exec();
+      , tr("%1 Wallet. Error: %2").arg(QString::fromStdString(product_)).arg(bs::error::ErrorCodeToString(result))).exec();
 }
 
 void RFQDealerReply::onCelerConnected()

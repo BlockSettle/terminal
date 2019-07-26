@@ -1,9 +1,10 @@
 #include "SyncHDWallet.h"
-#include <QtConcurrent/QtConcurrentRun>
-#include "CheckRecipSigner.h"
-#include "SignContainer.h"
-#include "SyncWallet.h"
 
+#include "CheckRecipSigner.h"
+#include "SyncWallet.h"
+#include "WalletSignerContainer.h"
+
+#include <QtConcurrent/QtConcurrentRun>
 
 #define LOG(logger, method, ...) \
 if ((logger)) { \
@@ -21,7 +22,7 @@ hd::Wallet::Wallet(const std::string &walletId, const std::string &name
 }
 
 hd::Wallet::Wallet(const std::string &walletId, const std::string &name
-   , const std::string &desc, SignContainer *container
+   , const std::string &desc, WalletSignerContainer *container
    , const std::shared_ptr<spdlog::logger> &logger)
    : walletId_(walletId), name_(name), desc_(desc)
    , signContainer_(container), logger_(logger)

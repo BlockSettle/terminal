@@ -37,12 +37,11 @@ void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSet
    connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &AuthAddressManager::VerifyWalletAddresses);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::authWalletChanged, this, &AuthAddressManager::onAuthWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &AuthAddressManager::onWalletChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::AuthLeafCreated, this, &AuthAddressManager::onWalletCreated);
 
    // signingContainer_ might be null if user rejects remote signer key
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::TXSigned, this, &AuthAddressManager::onTXSigned);
-      connect(signingContainer_.get(), &SignContainer::Error, this, &AuthAddressManager::onWalletFailed);
-      connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &AuthAddressManager::onWalletCreated);
    }
 
    SetAuthWallet();
@@ -960,51 +959,31 @@ template <typename TVal> TVal AuthAddressManager::lookup(const bs::Address &key,
    return it->second;
 }
 
-void AuthAddressManager::CreateAuthWallet(const std::vector<bs::wallet::PasswordData> &pwdData, bool signal)
+void AuthAddressManager::CreateAuthWallet()
 {
    if (!signingContainer_ || !walletsManager_) {
       emit Error(tr("Unable to create auth wallet"));
       return;
    }
-   const auto &priWallet = walletsManager_->getPrimaryWallet();
-   if (!priWallet) {
-      emit Error(tr("Primary wallet doesn't exist"));
-      return;
-   }
-   const auto &authGrp = priWallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
-   if (authGrp->getLeaf(0u) != nullptr) {
+
+   if (walletsManager_->getAuthWallet() != nullptr) {
       emit Error(tr("Authentication wallet already exists"));
       return;
    }
-   bs::hd::Path path;
-   path.append(bs::hd::purpose | 0x80000000);
-   path.append(bs::hd::CoinType::BlockSettle_Auth | 0x80000000);
-   path.append(0x80000000);
-   createWalletReqId_ = { signingContainer_->createHDLeaf(priWallet->walletId(), path, pwdData), signal };
-}
 
-void AuthAddressManager::onWalletCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
-{
-   if (!createWalletReqId_.first || (createWalletReqId_.first != id)) {
+   if (!walletsManager_->CreateAuthLeaf()) {
+      emit Error(tr("Failed to initate auth wallet creation"));
       return;
    }
-   createWalletReqId_ = { 0, true };
-
-   const auto &priWallet = walletsManager_->getPrimaryWallet();
-   const auto &group = priWallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
-   group->addLeaf(leaf);
-
-   if (createWalletReqId_.second) {
-      emit AuthWalletCreated(QString::fromStdString(leaf->walletId()));
-   }
-   emit walletsManager_->walletChanged(leaf->walletId());
 }
 
-void AuthAddressManager::onWalletFailed(unsigned int id, std::string errMsg)
+void AuthAddressManager::onWalletCreated()
 {
-   if (!createWalletReqId_.first || (createWalletReqId_.first != id)) {
-      return;
+   auto authLeaf = walletsManager_->getAuthWallet();
+
+   if (authLeaf != nullptr) {
+      emit AuthWalletCreated(QString::fromStdString(authLeaf->walletId()));
+   } else {
+      logger_->error("[AuthAddressManager::onWalletCreated] we should be able to get auth wallet at this point");
    }
-   createWalletReqId_ = { 0, true };
-   emit Error(tr("Failed to create auth subwallet: %1").arg(QString::fromStdString(errMsg)));
 }

@@ -103,7 +103,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
          ui_->manageEncryptionButton->setEnabled(false);
       }
       connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &RootWalletPropertiesDialog::onHDWalletInfo);
-      connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RootWalletPropertiesDialog::onHDLeafCreated);
+
       infoReqId_ = signingContainer_->GetInfo(wallet_->walletId());
    }
 
@@ -292,23 +292,6 @@ void RootWalletPropertiesDialog::onRescanBlockchain()
    }*/
    wallet_->startRescan();
    accept();
-}
-
-void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
-{
-   if (!createCCWalletReqs_.empty() && (createCCWalletReqs_.find(id) != createCCWalletReqs_.end())) {
-      const auto cc = createCCWalletReqs_[id];
-      createCCWalletReqs_.erase(id);
-
-      //cc wallets are always ext only
-      const auto group = wallet_->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
-      group->addLeaf(leaf);
-
-      if (createCCWalletReqs_.empty()) {
-         wallet_->startRescan();
-         accept();
-      }
-   }
 }
 
 void RootWalletPropertiesDialog::onModelReset()

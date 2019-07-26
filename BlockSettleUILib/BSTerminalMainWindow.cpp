@@ -366,17 +366,16 @@ void BSTerminalMainWindow::InitAuthManager()
    });
 }
 
-std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
-{  
+std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createSigner()
+{
    if (signersProvider_->currentSignerIsLocal()) {
       return createLocalSigner();
-   }
-   else {
+   } else {
       return createRemoteSigner();
    }
 }
 
-std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
+std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createRemoteSigner()
 {
    SignerHost signerHost = signersProvider_->getCurrentSigner();
    QString resultPort = QString::number(signerHost.port);
@@ -443,7 +442,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
    return remoteSigner;
 }
 
-std::shared_ptr<SignContainer> BSTerminalMainWindow::createLocalSigner()
+std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createLocalSigner()
 {
    QLatin1String localSignerHost("127.0.0.1");
    QString localSignerPort = applicationSettings_->get<QString>(ApplicationSettings::localSignerPort);
@@ -475,7 +474,9 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createLocalSigner()
 
 bool BSTerminalMainWindow::InitSigningContainer()
 {
-   signContainer_ = createSigner();
+   // create local var just to avoid up-casting
+   auto walletSignerContainer = createSigner();
+   signContainer_ = walletSignerContainer;
 
    if (!signContainer_) {
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
@@ -485,7 +486,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError, Qt::QueuedConnection);
    connect(signContainer_.get(), &SignContainer::disconnected, this, &BSTerminalMainWindow::updateControlEnabledState, Qt::QueuedConnection);
 
-   walletsMgr_->setSignContainer(signContainer_);
+   walletsMgr_->setSignContainer(walletSignerContainer);
 
    return true;
 }
@@ -1049,7 +1050,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
 {
    // Do not use deferredDialogs_ here as it will deadblock PuB public key processing
    if (walletsMgr_->hasPrimaryWallet() || createWallet(true, false)) {
-      CCTokenEntryDialog dialog(walletsMgr_, ccFileManager_, signContainer_, this);
+      CCTokenEntryDialog dialog(walletsMgr_, ccFileManager_, this);
       dialog.exec();
    }
 }

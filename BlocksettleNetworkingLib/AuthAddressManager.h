@@ -77,7 +77,7 @@ public:
    virtual bool HaveAuthWallet() const;
    virtual bool HasAuthAddr() const;
 
-   void CreateAuthWallet(const std::vector<bs::wallet::PasswordData> &pwdData = {}, bool signal = true);
+   void CreateAuthWallet();
    virtual bool CreateNewAuthAddress();
 
    virtual bool SubmitForVerification(const bs::Address &address);
@@ -102,8 +102,8 @@ private slots:
    void onAuthWalletChanged();
    void onWalletChanged(const std::string &walletId);
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason);
-   void onWalletCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
-   void onWalletFailed(unsigned int id, std::string errMsg);
+
+   void onWalletCreated();
 
 signals:
    void AddressListUpdated();
@@ -190,7 +190,6 @@ protected:
    std::shared_ptr<SignContainer>      signingContainer_;
    std::unordered_set<unsigned int>    signIdsVerify_;
    std::unordered_set<unsigned int>    signIdsRevoke_;
-   std::pair<unsigned int, bool>       createWalletReqId_ = { 0, true };
 };
 
 #endif // __AUTH_ADDRESS_MANAGER_H__
