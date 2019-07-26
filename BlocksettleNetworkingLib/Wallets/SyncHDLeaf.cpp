@@ -178,8 +178,10 @@ void hd::Leaf::postOnline()
    unconfTgtRegIds_ = setUnconfirmedTarget();
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
-      if ((st != bs::sync::SyncState::Success) && wct_) {
-         wct_->walletReady(walletId());
+      if (st != bs::sync::SyncState::Success) {
+         if (wct_) {
+            wct_->walletReady(walletId());
+         }
          return;
       }
       synchronize([this] {
