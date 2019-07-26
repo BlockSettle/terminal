@@ -92,7 +92,7 @@ bool PubKeyLoader::saveKey(const KeyType kt, const BinaryData &key)
    return true;
 }
 
-ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyType kt
+ZmqBipNewKeyCb PubKeyLoader::getApprovingCallback(const KeyType kt
    , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &appSettings)
 {
    // Define the callback that will be used to determine if the signer's BIP

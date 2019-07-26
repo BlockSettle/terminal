@@ -10,9 +10,8 @@
 #include "ApplicationSettings.h"
 #include "ArmoryObject.h"
 #include "CelerClientProxy.h"
-#include "QWalletInfo.h"
 #include "SignContainer.h"
-#include "ZMQ_BIP15X_DataConnection.h"
+#include "ZMQ_BIP15X_Helpers.h"
 #include "BsClient.h"
 
 namespace Ui {
@@ -231,8 +230,8 @@ private:
 
    SignContainer::ConnectionError lastSignerError_{};
 
-   ZmqBIP15XDataConnection::cbNewKey   cbApprovePuB_ = nullptr;
-   ZmqBIP15XDataConnection::cbNewKey   cbApproveChat_ = nullptr;
+   ZmqBipNewKeyCb   cbApprovePuB_ = nullptr;
+   ZmqBipNewKeyCb   cbApproveChat_ = nullptr;
 
    std::queue<std::function<void(void)>> deferredDialogs_;
    bool deferredDialogRunning_ = false;

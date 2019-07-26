@@ -2,6 +2,7 @@
 #include "ui_BSTerminalMainWindow.h"
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
+#include "spdlog/spdlog.h"
 
 #if defined (Q_OS_WIN)
 #include <shellapi.h>

@@ -1,7 +1,7 @@
 #ifndef __BASE_CHAT_CLIENT_H__
 #define __BASE_CHAT_CLIENT_H__
 
-#include "ZMQ_BIP15X_DataConnection.h"
+#include "ZMQ_BIP15X_Helpers.h"
 #include "DataConnectionListener.h"
 #include "ChatProtocol/ResponseHandler.h"
 #include "Encryption/ChatSessionKey.h"
@@ -50,7 +50,7 @@ public:
    std::string LoginToServer(
       const std::string& /*email*/, 
       const std::string& /*jwt*/,
-      const ZmqBIP15XDataConnection::cbNewKey &/*callback*/
+      const ZmqBipNewKeyCb &/*callback*/
    );
 
    void LogoutFromServer();

@@ -13,7 +13,7 @@
 #include "AutheIDClient.h"
 #include "CommonTypes.h"
 #include "WalletEncryption.h"
-#include "ZMQ_BIP15X_DataConnection.h"
+#include "ZMQ_BIP15X_Helpers.h"
 #include "BSErrorCode.h"
 #include "BSErrorCodeStrings.h"
 #include "bs_communication.pb.h"
@@ -49,7 +49,7 @@ class AuthAddressManager : public QObject
 public:
    AuthAddressManager(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<ArmoryConnection> &
-      , const ZmqBIP15XDataConnection::cbNewKey &);
+      , const ZmqBipNewKeyCb &);
    ~AuthAddressManager() noexcept;
 
    AuthAddressManager(const AuthAddressManager&) = delete;
@@ -166,7 +166,7 @@ private:
 protected:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ArmoryConnection>      armory_;
-   ZmqBIP15XDataConnection::cbNewKey      cbApproveConn_ = nullptr;
+   ZmqBipNewKeyCb      cbApproveConn_ = nullptr;
    std::shared_ptr<ApplicationSettings>   settings_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<ConnectionManager>     connectionManager_;

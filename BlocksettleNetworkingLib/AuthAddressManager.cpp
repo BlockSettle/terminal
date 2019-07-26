@@ -22,7 +22,7 @@ using namespace Blocksettle::Communication;
 
 AuthAddressManager::AuthAddressManager(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const ZmqBIP15XDataConnection::cbNewKey &cb)
+   , const ZmqBipNewKeyCb &cb)
    : QObject(nullptr), logger_(logger), armory_(armory), cbApproveConn_(cb)
 {}
 

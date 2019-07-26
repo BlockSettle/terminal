@@ -998,7 +998,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
 // INPUT:  The callback that will ask the user to confirm the new key. (std::function)
 // OUTPUT: N/A
 // RETURN: N/A
-void ZmqBIP15XDataConnection::setCBs(const cbNewKey& inNewKeyCB) {
+void ZmqBIP15XDataConnection::setCBs(const ZmqBipNewKeyCb& inNewKeyCB) {
    assert(params_.cookie != BIP15XCookie::MakeClient);
 
    if (!inNewKeyCB) {
