@@ -85,11 +85,11 @@ BSPasswordInput {
             Layout.preferredWidth: 110
             Layout.maximumWidth: 110
             Layout.fillWidth: true
-            text: qsTr("Token")
+            text: qsTr("Product")
         }
         CustomLabel {
             Layout.fillWidth: true
-            text: passwordDialogData.value("Token")
+            text: passwordDialogData.value("Product")
         }
     }
 }

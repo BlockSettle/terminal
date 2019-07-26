@@ -225,7 +225,7 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       break;
    case signer::CreateHDLeaf:
       dialogData->setValue("Title", tr("Create Leaf"));
-      requestPasswordForAuthLeaf(dialogData, walletInfo);
+      requestPasswordForToken(dialogData, walletInfo);
       break;
    default:
       break;
