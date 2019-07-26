@@ -43,8 +43,9 @@ CustomTitleDialogWindow {
 
     onCurPageChanged: {
         // Bindings not working here for some reason
+        // dont try to use property with width here
         var w = curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.8) : 470
-        var h = curPage === 1 ? (fullScreenMode ? 800 : mainWindow.width * 0.8) : 225
+        var h = curPage === 1 ? (fullScreenMode ? 800 : mainWindow.width * 0.8) : 260
         sizeChanged(w, h)
 
         if (curPage == 2) rootKeyInput.forceActiveFocus()
