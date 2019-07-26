@@ -259,7 +259,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
           || (reqType == headless::RequestType::SignSettlementPartialTxType);
 
    headless::SignTxRequest request;
-   Blocksettle::Communication::Internal::PasswordDialogDataWrapper dialogData;
+   Internal::PasswordDialogDataWrapper dialogData;
 
    if (reqType == headless::RequestType::SignSettlementTxRequestType){
       headless::SignSettlementTxRequest settlementRequest;
@@ -388,7 +388,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       }
    };
 
-   return RequestPasswordIfNeeded(clientId, txSignReq, reqType, dialogData, onPassword);
+   return RequestPasswordIfNeeded(clientId, rootWalletId, txSignReq, reqType, dialogData, onPassword);
 }
 
 bool HeadlessContainerListener::onCancelSignTx(const std::string &, headless::RequestPacket packet)
@@ -450,7 +450,6 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
 {
    const auto reqType = headless::SignSettlementPayoutTxType;
    headless::SignSettlementPayoutTxRequest request;
-   Blocksettle::Communication::Internal::PasswordDialogDataWrapper dialogData;
 
    if (!request.ParseFromString(packet.data())) {
       logger_->error("[{}] failed to parse request", __func__);
@@ -458,7 +457,7 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
       return false;
    }
 
-   dialogData = request.passworddialogdata();
+   Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
 
    bs::core::wallet::TXSignRequest txSignReq;
    UTXO utxo;
@@ -509,7 +508,7 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
       }
    };
 
-   return RequestPasswordIfNeeded(clientId, txSignReq, reqType, dialogData, onPassword);
+   return RequestPasswordIfNeeded(clientId, txSignReq.walletId, txSignReq, reqType, dialogData, onPassword);
 }
 
 void HeadlessContainerListener::SignTXResponse(const std::string &clientId, unsigned int id, headless::RequestType reqType
@@ -553,12 +552,12 @@ void HeadlessContainerListener::passwordReceived(const std::string &walletId
    passwordReceived({}, walletId, result, password);
 }
 
-bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clientId
+bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clientId, const std::string &walletId
    , const bs::core::wallet::TXSignRequest &txReq
-   , headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
+   , headless::RequestType reqType, const Internal::PasswordDialogDataWrapper &dialogData
    , const PasswordReceivedCb &cb)
 {
-   std::string walletId = txReq.walletId;
+   std::string rootId = walletId;
    const auto wallet = walletsMgr_->getWalletById(walletId);
    bool needPassword = true;
    if (wallet) {
@@ -566,7 +565,7 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
       if (needPassword) {
          const auto &hdRoot = walletsMgr_->getHDRootForLeaf(walletId);
          if (hdRoot) {
-            walletId = hdRoot->walletId();
+            rootId = hdRoot->walletId();
          }
       }
    }
@@ -580,7 +579,7 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
    }
    SecureBinaryData password;
    if (needPassword) {
-      const auto passwordIt = passwords_.find(walletId);
+      const auto passwordIt = passwords_.find(rootId);
       if (passwordIt != passwords_.end()) {
          needPassword = false;
          password = passwordIt->second;
@@ -601,7 +600,7 @@ bool HeadlessContainerListener::RequestPasswordsIfNeeded(int reqId, const std::s
    , const std::string &prompt, const PasswordsReceivedCb &cb)
 {
    // FIXME - get settlement info in request
-   Blocksettle::Communication::Internal::PasswordDialogDataWrapper dialogData;
+   Internal::PasswordDialogDataWrapper dialogData;
 
    TempPasswords tempPasswords;
    for (const auto &wallet : walletMap) {
@@ -646,15 +645,18 @@ bool HeadlessContainerListener::RequestPasswordsIfNeeded(int reqId, const std::s
 }
 
 bool HeadlessContainerListener::RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &txReq
-   , headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
+   , headless::RequestType reqType, const Internal::PasswordDialogDataWrapper &dialogData
    , const PasswordReceivedCb &cb)
 {
    if (cb) {
       auto &callbacks = passwordCallbacks_[txReq.walletId];
       callbacks.push_back(cb);
-      if (callbacks.size() > 1) {
-         return true;
-      }
+      // TODO: review this code
+      // need to clear callbacks if pw input canceled in signer ui
+      // need to use existing password only for similar request type
+//      if (callbacks.size() > 1) {
+//         return true;
+//      }
    }
 
    if (callbacks_) {
@@ -787,7 +789,7 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
       bs::core::wallet::TXSignRequest txReq;
       txReq.walletId = wallet->walletId();
 
-      return RequestPasswordIfNeeded(clientId, txReq, headless::SetUserIdType, request.passworddialogdata(), onPassword);
+      return RequestPasswordIfNeeded(clientId, wallet->walletId(), txReq, headless::SetUserIdType, request.passworddialogdata(), onPassword);
    }
    else {
       // FIXME: implement reset user id
@@ -886,10 +888,7 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
       CreateHDLeafResponse(clientId, id, ErrorCode::NoError, leaf);
    };
 
-   bs::core::wallet::TXSignRequest txReq;
-   txReq.walletId = hdWallet->walletId();
-
-   RequestPasswordIfNeeded(clientId, txReq, headless::CreateHDLeafRequestType, request.passworddialogdata(), onPassword);
+   RequestPasswordIfNeeded(clientId, request.rootwalletid(), {}, headless::CreateHDLeafRequestType, request.passworddialogdata(), onPassword);
    return true;
 }
 
@@ -979,10 +978,11 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       packet.set_data(response.SerializeAsString());
       sendData(packet.SerializeAsString(), clientId);
    };
-   Internal::PasswordDialogDataWrapper dialogData;
+
+   Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
    dialogData.insert("WalletId", priWallet->walletId());
 
-   return RequestPasswordIfNeeded(clientId, { priWallet->walletId() }, headless::CreateSettlWalletType
+   return RequestPasswordIfNeeded(clientId, priWallet->walletId(), {}, headless::CreateSettlWalletType
       , dialogData, onPassword);
 }
 

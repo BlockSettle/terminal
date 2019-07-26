@@ -6,6 +6,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "SystemFileUtils.h"
 #include "BSErrorCodeStrings.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 #include <QCoreApplication>
 #include <QDataStream>
@@ -543,7 +544,8 @@ bs::signer::RequestId HeadlessContainer::syncCCNames(const std::vector<std::stri
 }
 
 bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
-   , const std::vector<bs::wallet::PasswordData> &pwdData, const std::function<void(bs::error::ErrorCode result)> &cb)
+   , const std::vector<bs::wallet::PasswordData> &pwdData, bs::sync::PasswordDialogData dialogData
+   , const std::function<void(bs::error::ErrorCode result)> &cb)
 {
    if (rootWalletId.empty() || (path.length() != 3)) {
       logger_->error("[HeadlessContainer::createHDLeaf] Invalid input data for HD wallet creation");
@@ -553,11 +555,10 @@ bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::
    request.set_rootwalletid(rootWalletId);
    request.set_path(path.toString());
 
-   bs::sync::PasswordDialogData info;
-   info.setValue(QLatin1String("WalletId"), QString::fromStdString(rootWalletId));
+   dialogData.setValue(QLatin1String("WalletId"), QString::fromStdString(rootWalletId));
 
-   auto dialogData = request.mutable_passworddialogdata();
-   *dialogData = info.toProtobufMessage();
+   auto requestDialogData = request.mutable_passworddialogdata();
+   *requestDialogData = dialogData.toProtobufMessage();
 
    headless::RequestPacket packet;
    packet.set_type(headless::CreateHDLeafRequestType);

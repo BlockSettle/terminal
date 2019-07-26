@@ -64,6 +64,7 @@ public:
    // cb is ignored in inproc signer
    bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}
+      , bs::sync::PasswordDialogData dialogData = {}
       , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) override;
    bs::signer::RequestId DeleteHDRoot(const std::string &) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override;

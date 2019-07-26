@@ -136,8 +136,8 @@ private:
       , Blocksettle::Communication::headless::AuthWalletResponseType, const std::string &walletId = {});
    void AutoSignActivatedEvent(const std::string &walletId, bool active);
 
-   bool createHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::CreateHDLeafRequest &request);
-   bool RequestPasswordIfNeeded(const std::string &clientId, const bs::core::wallet::TXSignRequest &
+   bool RequestPasswordIfNeeded(const std::string &clientId, const std::string &walletId
+      , const bs::core::wallet::TXSignRequest &
       , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const PasswordReceivedCb &cb);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId

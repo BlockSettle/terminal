@@ -1438,7 +1438,11 @@ bool WalletsManager::CreateCCLeaf(const std::string &ccName)
    path.append(bs::hd::BlockSettle_CC | bs::hd::hardFlag);
    path.append(ccName);
 
-   return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {},  [this, ccName](bs::error::ErrorCode result)
+   bs::sync::PasswordDialogData dialogData;
+   dialogData.setValue("Title", tr("Create CC Leaf"));
+   dialogData.setValue("Product", QString::fromStdString(ccName));
+
+   return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {}, dialogData,  [this, ccName](bs::error::ErrorCode result)
                                        {
                                           ProcessCreatedCCLeaf(ccName, result);
                                        });
@@ -1496,7 +1500,7 @@ bool WalletsManager::CreateAuthLeaf()
    path.append(bs::hd::CoinType::BlockSettle_Auth | bs::hd::hardFlag);
    path.append(0 | bs::hd::hardFlag);
 
-   return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {},  [this](bs::error::ErrorCode result)
+   return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {}, {},  [this](bs::error::ErrorCode result)
                                        {
                                           ProcessAuthLeafCreateResult(result);
                                        });
