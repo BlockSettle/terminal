@@ -157,6 +157,11 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       return false;
    }
 
+   if (!address.isValid()) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't submit invalid CC address: '{}'", address.display());
+      return false;
+   }
+
    SubmitAddrForInitialDistributionRequest request;
    request.set_username(celerClient_->email());
    request.set_networktype(networkType(appSettings_));
@@ -170,6 +175,7 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
    req.type = BsClient::SignAddressReq::CcAddr;
    req.address = address;
    req.invisibleData = requestDataHash;
+   req.srcCcToken = srcToken;
 
    req.signedCb = [this, address, requestData](const AutheIDClient::SignResult &result) {
       // No need to check result.data (AutheIDClient will check that invisible data is the same)
