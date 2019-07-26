@@ -156,11 +156,6 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
    signingContainer_ = container;
    armory_ = armory;
 
-   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
-      UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
-      onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
-   });
-
    utxoAdapter_ = std::make_shared<bs::RequesterUtxoResAdapter>(nullptr, this);
    connect(quoteProvider.get(), &QuoteProvider::orderUpdated, utxoAdapter_.get(), &bs::OrderUtxoResAdapter::onOrder);
    connect(utxoAdapter_.get(), &bs::OrderUtxoResAdapter::reservedUtxosChanged, this, &RFQTicketXBT::onReservedUtxosChanged, Qt::QueuedConnection);
@@ -342,6 +337,13 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
    connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &RFQTicketXBT::onCreateHDWalletError);
 
    walletsLoaded();
+
+   auto updateAuthAddresses = [this] {
+      UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
+      onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
+   };
+   updateAuthAddresses();
+   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, updateAuthAddresses);
 }
 
 void RFQTicketXBT::walletsLoaded()

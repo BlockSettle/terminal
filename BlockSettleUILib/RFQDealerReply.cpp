@@ -99,11 +99,6 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    armory_ = armory;
    connectionManager_ = connectionManager;
 
-   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
-      UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
-      onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
-   });
-
    utxoAdapter_ = std::make_shared<bs::DealerUtxoResAdapter>(logger_, nullptr);
    connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, utxoAdapter_.get(), &bs::OrderUtxoResAdapter::onOrder);
    connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQDealerReply::onOrderUpdated);
@@ -181,6 +176,13 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMa
    if (aq_) {
       aq_->setWalletsManager(walletsManager_);
    }
+
+   auto updateAuthAddresses = [this] {
+      UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
+      onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
+   };
+   updateAuthAddresses();
+   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, updateAuthAddresses);
 }
 
 bool RFQDealerReply::autoSign() const
