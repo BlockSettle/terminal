@@ -23,7 +23,6 @@ CustomTitleDialogWindow {
 
     width: 400
     //height: 250
-    //height: headerPanelHeight + cContentHeight + cFooterHeight
 
     focus: true
     title: qsTr("Delete Wallet")

@@ -21,18 +21,17 @@ CustomDialogWindow {
     property alias customFooterContainer: customFooterContainer
     property alias customHeaderContainer: customHeaderContainer
 
-    //height: cContentHeight + cFooterHeight
-    onCContentHeightChanged: {
-        console.log("onCContentHeightChanged " + root + " " + cContentHeight)
-    }
+//    onCContentHeightChanged: {
+//        console.log("onCContentHeightChanged " + root + " " + cContentHeight)
+//    }
 
-    onCFooterHeightChanged: {
-        console.log("onCFooterHeightChanged " + root + " " + cFooterHeight)
-    }
+//    onCFooterHeightChanged: {
+//        console.log("onCFooterHeightChanged " + root + " " + cFooterHeight)
+//    }
 
-    onCHeaderHeightChanged: {
-        console.log("onCHeaderHeightChanged " + root + " " + cHeaderHeight)
-    }
+//    onCHeaderHeightChanged: {
+//        console.log("onCHeaderHeightChanged " + root + " " + cHeaderHeight)
+//    }
 
     ///////////////////
     // suggested to use these functions to close dialog popup with animation
@@ -69,15 +68,14 @@ CustomDialogWindow {
     // this signal used in light mode to inform mainwindow if size of dialog is changed
     // (for example if it's multipage dialog, or another popup doalog shown above current
     signal sizeChanged(int w, int h)
-    onWidthChanged: {
-        console.log("onWidthChanged " + root + " " + width + " " + height)
-
-        sizeChanged(width, height)
-    }
-    onHeightChanged: {
-        sizeChanged(width, height)
-        console.log("onHeightChanged " + root + " " + width + " " + height)
-    }
+//    onWidthChanged: {
+//        console.log("onWidthChanged " + root + " " + width + " " + height)
+//        sizeChanged(width, height)
+//    }
+//    onHeightChanged: {
+//        sizeChanged(width, height)
+//        console.log("onHeightChanged " + root + " " + width + " " + height)
+//    }
 
     ////////////////////////////
     /// Dialogs chain management

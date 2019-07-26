@@ -65,11 +65,6 @@ CustomDialog {
     }
 
     cContentItem: ColumnLayout {
-        spacing: 0
-        Layout.fillWidth: true
-        //Layout.fillHeight: true
-        Layout.margins: 1
-
         ColumnLayout {
             TabBar {
                 id: tabBar
