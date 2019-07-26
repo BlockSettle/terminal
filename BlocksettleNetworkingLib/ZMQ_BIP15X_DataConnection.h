@@ -89,8 +89,6 @@ public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger, const ZmqBIP15XDataConnectionParams &params);
    ~ZmqBIP15XDataConnection() noexcept override;
 
-   using cbNewKey = ZmqBipNewKeyCb;
-
    ZmqBIP15XDataConnection(const ZmqBIP15XDataConnection&) = delete;
    ZmqBIP15XDataConnection& operator= (const ZmqBIP15XDataConnection&) = delete;
    ZmqBIP15XDataConnection(ZmqBIP15XDataConnection&&) = delete;
@@ -98,7 +96,7 @@ public:
 
    bool getServerIDCookie(BinaryData& cookieBuf);
    std::string getCookiePath() const { return params_.cookiePath; }
-   void setCBs(const cbNewKey& inNewKeyCB);
+   void setCBs(const ZmqBipNewKeyCb& inNewKeyCB);
    BinaryData getOwnPubKey() const;
    bool genBIPIDCookie();
    void addAuthPeer(const ZmqBIP15XPeer &peer);
@@ -173,7 +171,7 @@ private:
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
 
-   cbNewKey cbNewKey_;
+   ZmqBipNewKeyCb cbNewKey_;
 
    std::shared_ptr<ZmqContext>      context_;
 
@@ -201,7 +199,5 @@ private:
    std::chrono::steady_clock::time_point lastHeartbeatSend_{};
    std::chrono::steady_clock::time_point lastHeartbeatReply_{};
 };
-
-using ZmqBIP15XDataConnectionPtr = std::shared_ptr<ZmqBIP15XDataConnection>;
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__

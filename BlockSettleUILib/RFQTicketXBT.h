@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "BSErrorCode.h"
 #include "CommonTypes.h"
 #include "TransactionData.h"
 
@@ -96,8 +97,8 @@ private slots:
    void updateSubmitButton();
    void submitButtonClicked();
 
-   void onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
-   void onCreateHDWalletError(unsigned int id, std::string error);
+   void onHDLeafCreated(const std::string& ccName);
+   void onCreateHDWalletError(const std::string& ccName, bs::error::ErrorCode result);
 
    void onMaxClicked();
    void onAmountEdited(const QString &);

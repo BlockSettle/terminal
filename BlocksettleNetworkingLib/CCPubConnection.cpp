@@ -12,7 +12,7 @@ using namespace Blocksettle::Communication;
 
 CCPubConnection::CCPubConnection(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ConnectionManager> &connectionManager
-   , const ZmqBIP15XDataConnection::cbNewKey &cb)
+   , const ZmqBipNewKeyCb &cb)
    : logger_{logger}
    , connectionManager_{connectionManager}
    , cbApproveConn_(cb)

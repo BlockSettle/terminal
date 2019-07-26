@@ -64,7 +64,7 @@ class CCFileManager : public CCPubConnection
 Q_OBJECT
 public:
    CCFileManager(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<ApplicationSettings> &appSettings
-      , const std::shared_ptr<ConnectionManager> &, const ZmqBIP15XDataConnection::cbNewKey &cb = nullptr);
+      , const std::shared_ptr<ConnectionManager> &, const ZmqBipNewKeyCb &cb = nullptr);
    ~CCFileManager() noexcept override = default;
 
    CCFileManager(const CCFileManager&) = delete;

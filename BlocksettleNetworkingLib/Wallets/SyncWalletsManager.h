@@ -2,25 +2,28 @@
 #define BS_SYNC_WALLETS_MANAGER_H
 
 #include <memory>
-#include <vector>
 #include <set>
 #include <unordered_map>
-#include <QString>
+#include <vector>
+
+#include <QDateTime>
+#include <QMutex>
 #include <QObject>
 #include <QPointer>
-#include <QMutex>
-#include <QDateTime>
+#include <QString>
+
 #include "ArmoryConnection.h"
+#include "BSErrorCode.h"
 #include "BTCNumericTypes.h"
 #include "CoreWallet.h"
 #include "SyncWallet.h"
 
-
 namespace spdlog {
    class logger;
 }
+
 class ApplicationSettings;
-class SignContainer;
+class WalletSignerContainer;
 
 namespace bs {
    namespace hd {
@@ -50,7 +53,7 @@ namespace bs {
          WalletsManager(WalletsManager&&) = delete;
          WalletsManager& operator = (WalletsManager&&) = delete;
 
-         void setSignContainer(const std::shared_ptr<SignContainer> &container);
+         void setSignContainer(const std::shared_ptr<WalletSignerContainer> &container);
          void reset();
 
          void syncWallets(const CbProgress &cb = nullptr);
@@ -65,9 +68,14 @@ namespace bs {
          WalletPtr getWalletById(const std::string& walletId) const;
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
          WalletPtr getDefaultWallet() const;
+
+         bool CreateCCLeaf(const std::string &cc);
+         bool CreateAuthLeaf();
+
          WalletPtr getCCWallet(const std::string &cc);
 
          const WalletPtr getAuthWallet() const { return authAddressWallet_; }
+
          void createSettlementLeaf(const bs::Address &authAddr
             , const std::function<void(const SecureBinaryData &)> &);
 
@@ -109,6 +117,11 @@ namespace bs {
          void trackAddressChainUse(std::function<void(bool)>);
 
       signals:
+         void CCLeafCreated(const std::string& ccName);
+         void CCLeafCreateFailed(const std::string& ccName, bs::error::ErrorCode result);
+
+         void AuthLeafCreated();
+
          void walletChanged(const std::string &walletId);
          void walletDeleted(const std::string &walletId);
          void walletAdded(const std::string &walletId);
@@ -178,8 +191,11 @@ namespace bs {
          void addToMaintQueue(const MaintQueueCb &);
          void maintenanceThreadFunc();
 
+         void ProcessCreatedCCLeaf(const std::string &cc, bs::error::ErrorCode result);
+         void ProcessAuthLeafCreateResult(bs::error::ErrorCode result);
+
       private:
-         std::shared_ptr<SignContainer>         signContainer_;
+         std::shared_ptr<WalletSignerContainer>         signContainer_;
          std::shared_ptr<spdlog::logger>        logger_;
          std::shared_ptr<ApplicationSettings>   appSettings_;
          std::shared_ptr<ArmoryConnection>      armoryPtr_;
@@ -237,11 +253,11 @@ namespace bs {
 
          std::atomic_bool  synchronized_{ false };
 
-         std::atomic_bool  maintThreadRunning_{ false };
+         std::atomic_bool           maintThreadRunning_{ false };
          std::deque<MaintQueueCb>   maintQueue_;
-         std::thread             maintThread_;
-         std::condition_variable maintCV_;
-         std::mutex              maintMutex_;
+         std::thread                maintThread_;
+         std::condition_variable    maintCV_;
+         std::mutex                 maintMutex_;
 
       };
 

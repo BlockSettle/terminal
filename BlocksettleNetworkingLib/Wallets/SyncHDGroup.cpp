@@ -163,7 +163,7 @@ void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &pa
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthGroup::AuthGroup(const bs::hd::Path &path, const std::string &name
-   , const std::string &desc, SignContainer *container, WalletCallbackTarget *wct
+   , const std::string &desc, WalletSignerContainer *container, WalletCallbackTarget *wct
    , const std::shared_ptr<spdlog::logger>& logger, bool extOnlyAddresses)
    : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_Auth), desc
            , container, wct, logger, extOnlyAddresses)

@@ -8,7 +8,7 @@
 namespace spdlog {
    class logger;
 }
-class SignContainer;
+class WalletSignerContainer;
 
 namespace bs {
    namespace sync {
@@ -26,7 +26,7 @@ namespace bs {
             Wallet(const std::string &walletId, const std::string &name
                , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger = nullptr);
             Wallet(const std::string &walletId, const std::string &name
-               , const std::string &desc, SignContainer *
+               , const std::string &desc, WalletSignerContainer *
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
             ~Wallet() override;
 
@@ -108,7 +108,7 @@ namespace bs {
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>        groups_;
             mutable std::map<std::string, std::shared_ptr<bs::sync::Wallet>>  leaves_;
             BinaryData        userId_;
-            SignContainer  *  signContainer_{};
+            WalletSignerContainer  *  signContainer_{};
             std::shared_ptr<ArmoryConnection>   armory_;
             std::shared_ptr<spdlog::logger>     logger_;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_{bs::wallet::EncryptionType::Password};

@@ -21,7 +21,7 @@
 namespace spdlog {
    class logger;
 }
-class SignContainer;
+class WalletSignerContainer;
 
 namespace bs {
    namespace sync {
@@ -75,7 +75,7 @@ namespace bs {
          friend class WalletACT;
 
       public:
-         Wallet(SignContainer *, const std::shared_ptr<spdlog::logger> &logger = nullptr);
+         Wallet(WalletSignerContainer *, const std::shared_ptr<spdlog::logger> &logger = nullptr);
          virtual ~Wallet();
 
          using CbAddress = std::function<void(const bs::Address &)>;
@@ -102,7 +102,7 @@ namespace bs {
 
          virtual bool containsAddress(const bs::Address &addr) = 0;
          virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
-         
+
          virtual std::vector<std::string> registerWallet(
             const std::shared_ptr<ArmoryConnection> &armory = nullptr, bool asNew = false);
          virtual void unregisterWallet();
@@ -223,8 +223,8 @@ namespace bs {
          bool isRegistered(void) const { return isRegistered_; }
 
       protected:
-         std::string       walletName_;
-         SignContainer  *  signContainer_;
+         std::string                walletName_;
+         WalletSignerContainer*     signContainer_;
          BTCNumericTypes::balance_type spendableBalance_ = 0;
          BTCNumericTypes::balance_type unconfirmedBalance_ = 0;
          BTCNumericTypes::balance_type totalBalance_ = 0;

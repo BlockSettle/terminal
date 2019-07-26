@@ -9,13 +9,13 @@
 #include "FastLock.h"
 #include "ScriptRecipient.h"
 #include "SettlementMonitor.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 
 using namespace bs::sync;
 
 
 SettlementWallet::SettlementWallet(const std::string &walletId, const std::string &name, const std::string &desc
-   , SignContainer *container,const std::shared_ptr<spdlog::logger> &logger)
+   , WalletSignerContainer *container,const std::shared_ptr<spdlog::logger> &logger)
    : PlainWallet(walletId, name, desc, container, logger)
 {}
 

@@ -8,13 +8,14 @@
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
+#include "BSErrorCodeStrings.h"
+#include "BSMessageBox.h"
 #include "CCAmountValidator.h"
 #include "CoinControlDialog.h"
 #include "CoinSelection.h"
 #include "CurrencyPair.h"
 #include "EncryptionUtils.h"
 #include "FXAmountValidator.h"
-#include "BSMessageBox.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -166,8 +167,6 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
    if (signingContainer_) {
-      connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQTicketXBT::onHDLeafCreated);
-      connect(signingContainer_.get(), &SignContainer::Error, this, &RFQTicketXBT::onCreateHDWalletError);
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
    }
 
@@ -234,24 +233,16 @@ void RFQTicketXBT::setCurrentCCWallet(const std::shared_ptr<bs::sync::Wallet>& n
    }
 }
 
-void RFQTicketXBT::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
+void RFQTicketXBT::onHDLeafCreated(const std::string& ccName)
 {
-   if (!leafCreateReqId_ || (leafCreateReqId_ != id)) {
+   if (getProduct().toStdString() != ccName) {
       return;
    }
-   leafCreateReqId_ = 0;
-   const auto &priWallet = walletsManager_->getPrimaryWallet();
-   auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
-   if (!group) {
-      //cc wallets are always ext only
-      group = priWallet->createGroup(bs::hd::BlockSettle_CC, true);
-   }
-   const auto &ccProduct = getProduct().toStdString();
-   group->addLeaf(leaf);
 
-   auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(leaf);
-   if (ccLeaf) {
-      ccLeaf->setCCDataResolver(walletsManager_->ccResolver());
+   auto leaf = walletsManager_->getCCWallet(ccName);
+   if (leaf == nullptr) {
+      showHelp(tr("Leaf not created"));
+      return;
    }
 
    ui_->comboBoxCCWallets->clear();
@@ -269,14 +260,13 @@ void RFQTicketXBT::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sy
    updatePanel();
 }
 
-void RFQTicketXBT::onCreateHDWalletError(unsigned int id, std::string errMsg)
+void RFQTicketXBT::onCreateHDWalletError(const std::string& ccName, bs::error::ErrorCode result)
 {
-   if (!leafCreateReqId_ || (leafCreateReqId_ != id)) {
+   if (getProduct().toStdString() != ccName) {
       return;
    }
 
-   leafCreateReqId_ = 0;
-   showHelp(tr("Failed to create wallet"));
+   showHelp(tr("Failed to create wallet: %1").arg(bs::error::ErrorCodeToString(result)));
 }
 
 void RFQTicketXBT::updateBalances()
@@ -347,6 +337,10 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
 {
    walletsManager_ = walletsManager;
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQTicketXBT::walletsLoaded);
+
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQTicketXBT::onHDLeafCreated);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &RFQTicketXBT::onCreateHDWalletError);
+
    walletsLoaded();
 }
 
@@ -1032,7 +1026,7 @@ void RFQTicketXBT::productSelectionChanged()
                ui_->comboBoxCCWallets->setEnabled(false);
                setCurrentCCWallet(nullptr);
 
-               if (signingContainer_ && !signingContainer_->isOffline()) {
+               if (signingContainer_ && !signingContainer_->isOffline() && walletsManager_) {
                   ui_->pushButtonSubmit->hide();
                   ui_->pushButtonCreateWallet->show();
                   ui_->pushButtonCreateWallet->setEnabled(true);
@@ -1059,12 +1053,8 @@ void RFQTicketXBT::productSelectionChanged()
 void RFQTicketXBT::onCreateWalletClicked()
 {
    ui_->pushButtonCreateWallet->setEnabled(false);
-   bs::hd::Path path;
-   path.append(bs::hd::purpose | bs::hd::hardFlag);
-   path.append(bs::hd::BlockSettle_CC | bs::hd::hardFlag);
-   path.append(bs::hd::Path::keyToElem(getProduct().toStdString()) | bs::hd::hardFlag);
-   leafCreateReqId_ = signingContainer_->createHDLeaf(walletsManager_->getPrimaryWallet()->walletId(), path);
-   if (leafCreateReqId_ == 0) {
+
+   if (!walletsManager_->CreateCCLeaf(getProduct().toStdString())) {
       showHelp(tr("Create CC wallet request failed"));
    }
 }

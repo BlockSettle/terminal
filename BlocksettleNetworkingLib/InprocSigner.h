@@ -1,7 +1,7 @@
 #ifndef INPROC_SIGNER_H
 #define INPROC_SIGNER_H
 
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 #include <vector>
 
 namespace spdlog {
@@ -18,7 +18,7 @@ namespace bs {
 }
 
 
-class InprocSigner : public SignContainer
+class InprocSigner : public WalletSignerContainer
 {
    Q_OBJECT
 public:
@@ -61,7 +61,8 @@ public:
    bs::signer::RequestId setUserId(const BinaryData &, const std::string &walletId) override;
    bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override;
 
-   bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
+   // cb is ignored in inproc signer
+   bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}
       , bs::sync::PasswordDialogData dialogData = {}
       , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) override;

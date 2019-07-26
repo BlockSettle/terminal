@@ -4,7 +4,7 @@
 #include <QLocale>
 #include <QMutexLocker>
 #include "CheckRecipSigner.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 
 const uint32_t kExtConfCount = 6;
 const uint32_t kIntConfCount = 1;
@@ -13,7 +13,7 @@ using namespace bs::sync;
 
 
 hd::Leaf::Leaf(const std::string &walletId, const std::string &name, const std::string &desc
-   , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger
+   , WalletSignerContainer *container, const std::shared_ptr<spdlog::logger> &logger
    , bs::core::wallet::Type type, bool extOnlyAddresses)
    : bs::sync::Wallet(container, logger)
    , walletId_(walletId)
@@ -697,7 +697,7 @@ void hd::Leaf::merge(const std::shared_ptr<Wallet> walletPtr)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::XBTLeaf::XBTLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-   , SignContainer *container,const std::shared_ptr<spdlog::logger> &logger, bool extOnlyAddresses)
+   , WalletSignerContainer *container,const std::shared_ptr<spdlog::logger> &logger, bool extOnlyAddresses)
    : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Bitcoin, extOnlyAddresses)
 {
 }
@@ -706,7 +706,7 @@ hd::XBTLeaf::XBTLeaf(const std::string &walletId, const std::string &name, const
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthLeaf::AuthLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-   , SignContainer *container,const std::shared_ptr<spdlog::logger> &logger)
+   , WalletSignerContainer *container,const std::shared_ptr<spdlog::logger> &logger)
    : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Authentication, true)
 {
    intAddressPoolSize_ = 0;
@@ -756,7 +756,7 @@ void hd::AuthLeaf::setUserId(const BinaryData &userId)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::CCLeaf::CCLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-   , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger)
+   , WalletSignerContainer *container, const std::shared_ptr<spdlog::logger> &logger)
    : hd::Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::ColorCoin, true)
    , validationStarted_(false)
    , validationEnded_(false)
@@ -1127,7 +1127,7 @@ QString hd::CCLeaf::displaySymbol() const
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::SettlementLeaf::SettlementLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-   , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger)
+   , WalletSignerContainer *container, const std::shared_ptr<spdlog::logger> &logger)
    : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Settlement, true)
 {
    intAddressPoolSize_ = 0;

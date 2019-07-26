@@ -9,13 +9,13 @@
 InprocSigner::InprocSigner(const std::shared_ptr<bs::core::WalletsManager> &mgr
    , const std::shared_ptr<spdlog::logger> &logger, const std::string &walletsPath
    , NetworkType netType)
-   : SignContainer(logger, SignContainer::OpMode::LocalInproc)
+   : WalletSignerContainer(logger, SignContainer::OpMode::LocalInproc)
    , walletsMgr_(mgr), walletsPath_(walletsPath), netType_(netType)
 { }
 
 InprocSigner::InprocSigner(const std::shared_ptr<bs::core::hd::Wallet> &wallet
    , const std::shared_ptr<spdlog::logger> &logger)
-   : SignContainer(logger, SignContainer::OpMode::LocalInproc)
+   : WalletSignerContainer(logger, SignContainer::OpMode::LocalInproc)
    , walletsPath_({}), netType_(wallet->networkType())
 {
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
@@ -24,7 +24,7 @@ InprocSigner::InprocSigner(const std::shared_ptr<bs::core::hd::Wallet> &wallet
 
 InprocSigner::InprocSigner(const std::shared_ptr<bs::core::SettlementWallet> &wallet
    , const std::shared_ptr<spdlog::logger> &logger)
-   : SignContainer(logger, SignContainer::OpMode::LocalInproc)
+   : WalletSignerContainer(logger, SignContainer::OpMode::LocalInproc)
    , walletsPath_({}), netType_(wallet->networkType())
 {
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
@@ -120,25 +120,24 @@ bs::signer::RequestId InprocSigner::signSettlementPayoutTXRequest(const bs::core
    return reqId;
 }
 
-bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
-   , const std::vector<bs::wallet::PasswordData> &pwdData
-   , bs::sync::PasswordDialogData
-   , const std::function<void(bs::error::ErrorCode result)> &)
+bool InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
+   , const std::vector<bs::wallet::PasswordData> &pwdData, bs::sync::PasswordDialogData
+   , const std::function<void(bs::error::ErrorCode result)> &cb)
 {
    const auto hdWallet = walletsMgr_->getHDWalletById(rootWalletId);
    if (!hdWallet) {
       logger_->error("[InprocSigner::createHDLeaf] failed to get HD wallet by id {}", rootWalletId);
-      return 0;
+      return false;
    }
    if (path.length() < 3) {
       logger_->error("[InprocSigner::createHDLeaf] too short path: {}", path.toString());
-      return 0;
+      return false;
    }
    const auto groupType = static_cast<bs::hd::CoinType>(path.get(-2));
    const auto group = hdWallet->createGroup(groupType);
    if (!group) {
       logger_->error("[InprocSigner::createHDLeaf] failed to create/get group for {}", path.get(-2));
-      return 0;
+      return false;
    }
 
    if (!walletsPath_.empty()) {
@@ -146,52 +145,25 @@ bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId
    }
 
    std::shared_ptr<bs::core::hd::Leaf> leaf;
-   auto& password = pwdData[0].password;
 
    try
    {
+      const auto& password = pwdData[0].password;
+
       hdWallet->lockForEncryption(password);
       const auto leafIndex = path.get(2);
       auto leaf = group->createLeaf(leafIndex);
-      if (leaf == nullptr) {
-         logger_->error("[InprocSigner::createHDLeaf] failed to create/get leaf {}", path.toString());
-         return 0;
+      if (leaf != nullptr) {
+         return true;
       }
    }
    catch (const std::exception &) {
       logger_->error("[InprocSigner::createHDLeaf] failed to decrypt root node {}", rootWalletId);
-      return 0;
+      return false;
    }
 
-   const bs::signer::RequestId reqId = seqId_++;
-   std::shared_ptr<bs::sync::hd::Leaf> hdLeaf;
-
-   switch (groupType) {
-   case bs::hd::CoinType::Bitcoin_main:
-   case bs::hd::CoinType::Bitcoin_test:
-      hdLeaf = std::make_shared<bs::sync::hd::XBTLeaf>(leaf->walletId(), leaf->name(), ""
-         , this, logger_, leaf->hasExtOnlyAddresses());
-      break;
-   case bs::hd::CoinType::BlockSettle_Auth:
-      hdLeaf = std::make_shared<bs::sync::hd::AuthLeaf>(leaf->walletId(), leaf->name()
-         , "", this, logger_);
-      break;
-   case bs::hd::CoinType::BlockSettle_CC:
-      hdLeaf = std::make_shared<bs::sync::hd::CCLeaf>(leaf->walletId(), leaf->name()
-         , "", this, logger_);
-      break;
-   case bs::hd::CoinType::BlockSettle_Settlement:
-      hdLeaf = std::make_shared<bs::sync::hd::SettlementLeaf>(leaf->walletId(), leaf->name()
-         , "", this, logger_);
-      break;
-   default:
-      logger_->error("[InprocSigner::createHDLeaf] unexpected group type: {}"
-                     , groupType);
-      break;
-   }
-
-   QTimer::singleShot(1, [this, reqId, hdLeaf] {emit HDLeafCreated(reqId, hdLeaf); });
-   return reqId;
+   logger_->error("[InprocSigner::createHDLeaf] failed to create/get leaf {}", path.toString());
+   return false;
 }
 
 void InprocSigner::createSettlementWallet(const bs::Address &authAddr
@@ -199,20 +171,25 @@ void InprocSigner::createSettlementWallet(const bs::Address &authAddr
 {
    const auto priWallet = walletsMgr_->getPrimaryWallet();
    if (!priWallet) {
-      if (cb)
+      if (cb) {
          cb({});
+      }
       return;
    }
+
    const auto leaf = priWallet->createSettlementLeaf(authAddr);
    if (!leaf) {
-      if (cb)
+      if (cb) {
          cb({});
+      }
       return;
    }
    const auto &cbWrap = [cb](bool, const SecureBinaryData &pubKey) {
-      if (cb)
+      if (cb) {
          cb(pubKey);
+      }
    };
+
    getRootPubkey(priWallet->walletId(), cbWrap);
 }
 

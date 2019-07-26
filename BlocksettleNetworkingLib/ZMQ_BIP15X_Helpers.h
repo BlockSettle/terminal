@@ -7,6 +7,7 @@
 #include "BinaryData.h"
 
 class AuthorizedPeers;
+class ZmqBIP15XDataConnection;
 template<typename T> class FutureValue;
 
 // Immutable ZMQ BIP15X peer public key, guaranteed to be valid (no need to check pubKey over and over)
@@ -40,5 +41,7 @@ public:
 
 using ZmqBipNewKeyCb = std::function<void(const std::string &oldKey, const std::string &newKey
    , const std::string& srvAddrPort, const std::shared_ptr<FutureValue<bool>> &prompt)>;
+
+using ZmqBIP15XDataConnectionPtr = std::shared_ptr<ZmqBIP15XDataConnection>;
 
 #endif
