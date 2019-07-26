@@ -27,7 +27,7 @@ CustomTitleDialogWindow {
 
     property bool fullScreenMode: true
     width: curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.75) : 470
-    height: curPage === 1 ? (fullScreenMode ? 800 : mainWindow.height * 0.98) : 225
+    height: curPage === 1 ? (fullScreenMode ? 800 : mainWindow.height * 0.98) : 260
 
     abortConfirmation: true
     abortBoxType: BSAbortBox.WalletCreation

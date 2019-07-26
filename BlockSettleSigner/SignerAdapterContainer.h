@@ -60,6 +60,7 @@ public:
 
    bs::signer::RequestId createHDLeaf(const std::string &, const bs::hd::Path &
        , const std::vector<bs::wallet::PasswordData> & = {}
+       , bs::sync::PasswordDialogData = {}
        , const std::function<void(bs::error::ErrorCode result)> & = nullptr) override { return 0; }
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override { return 0; }

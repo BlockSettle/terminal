@@ -225,7 +225,7 @@ function isSelectedWalletHdRoot(walletsView) {
 //}
 
 function customDialogRequest(dialogName, data) {
-    //if (dialogName === "createNewWalletDialog")
+    // TODO: send initial values (qmlTitleVisible) in createObject params map
     let dlg = eval(dialogName)(data)
     return dlg
 }
@@ -281,12 +281,6 @@ function prepareLiteModeDialog(dialog) {
     currentDialog = dialog
     if (typeof dialog.headerPanel !== "undefined") {
         dialog.qmlTitleVisible = false
-        //dialog.headerPanel.Layout.preferredHeight = 0
-        //dialog.customHeaderContainer.visible = false
-
-
-        ////dialog.headerPanel.height = 0
-        ////dialog.headerPanel.visible = false
     }
 
     mainWindow.width = dialog.width
@@ -298,8 +292,6 @@ function prepareLiteModeDialog(dialog) {
     dialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
         if (typeof nextDialog.headerPanel !== "undefined") {
             nextDialog.qmlTitleVisible = false
-           // nextDialog.headerPanel.Layout.preferredHeight = 0
-
         }
 
         mainWindow.width = nextDialog.width
@@ -425,20 +417,32 @@ function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, passwor
     dlg.init()
 }
 
-function createPasswordDialogForAuthLeaf(jsCallback, passwordDialogData, walletInfo) {
+function createPasswordDialogForLeaf(jsCallback, passwordDialogData, walletInfo) {
     if (walletInfo.walletId === "") {
-        jsCallback(10, walletInfo.walletId, passwordData)
+        jsCallback(10, walletInfo.walletId, {})
     }
 
     var dlg
 
-    if (walletInfo.encType === 2) {
+    if (walletInfo.encType === QPasswordData.Auth) {
         dlg = requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
             jsCallback(0, walletInfo.walletId, passwordData)
         })
     }
     else if (walletInfo.encType === QPasswordData.Password){
-        dlg = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
+        if (passwordDialogData.value("LeafDialogType") === "RequestPasswordForAuthLeaf") {
+            dlg = Qt.createComponent("../BsControls/BSPasswordInputAuthLeaf.qml").createObject(mainWindow
+                , {"walletInfo": walletInfo,
+                   "passwordDialogData": passwordDialogData
+                  })
+        }
+        else if (passwordDialogData.value("LeafDialogType") === "RequestPasswordForToken") {
+            dlg = Qt.createComponent("../BsControls/BSPasswordInputToken.qml").createObject(mainWindow
+                , {"walletInfo": walletInfo,
+                   "passwordDialogData": passwordDialogData
+                  })
+        }
+
         dlg.open()
         dlg.bsAccepted.connect(function() {
             var passwordData = qmlFactory.createPasswordData()

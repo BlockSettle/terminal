@@ -112,6 +112,7 @@ private:
    void requestPasswordForSettlementTx(signer::PasswordDialogType reqType, bs::sync::PasswordDialogData *dialogData
       , bs::wallet::TXInfo *txInfo, bs::hd::WalletInfo *walletInfo);
    void requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo);
+   void requestPasswordForToken(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo);
 
    void shutdown();
    bs::signer::QmlCallbackBase *createQmlPasswordCallback();
