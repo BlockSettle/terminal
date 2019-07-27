@@ -1,7 +1,24 @@
 {
-   "latest_version": "0.19.7",
-   "release_date": "26 Jul 2019",
+   "latest_version": "0.19.8",
+   "release_date": "27 Jul 2019",
    "changes": [
+      {
+         "version_string": "0.19.8",
+         "previous_version": "0.19.7",
+         "release_date": "27 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Signer ui fixes (#334)",
+            "Refactor leaf creation (#338)",
+            "Password request fix",
+            "Fix CC token request",
+            "Refactor leaf creation (#1180)",
+            "Fix display all wallets on wallets tab"
+         ],
+         "bug_fixes": [],
+         "revision": "822ef787",
+         "common_revision": "d222500f"
+      },
       {
          "version_string": "0.19.7",
          "previous_version": "0.19.6",
