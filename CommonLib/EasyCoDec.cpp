@@ -1,6 +1,11 @@
 #include <exception>
 #include "EasyCoDec.h"
 
+#ifdef _WIN32
+#if (_MSC_VER >= 1920)
+#include <stdexcept>
+#endif
+#endif
 
 EasyCoDec::EasyCoDec() : fromHex_({
    { '0', 'a' },

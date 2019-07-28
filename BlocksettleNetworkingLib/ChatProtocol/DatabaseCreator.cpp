@@ -37,11 +37,21 @@ namespace Chat
 
    bool DatabaseCreator::createMissingTables()
    {
-      const auto& existingTables = db_.tables();
+      QStringList existingTables;
+      bool result = false;
+
+      try {
+         existingTables = db_.tables();
+      }
+      catch (std::exception& e)
+      {
+         loggerPtr_->error("[DatabaseCreator::createMissingTables] Error: {}", e.what());
+         return result;
+      }
+
       std::set<QString> tableSet;
       tableSet.insert(existingTables.begin(), existingTables.end());
 
-      bool result = true;
       for (const auto& reqTable : requiredTables_)
       {
          if (tableSet.find(reqTable) == tableSet.end())

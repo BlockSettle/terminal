@@ -52,6 +52,7 @@ namespace Chat
 
    protected:
       QStringList requiredTables_;
+      TablesMap tablesMap_;
 
    private:
       QString buildCreateCmd(const QString& tableName, const TableStructure& structure);
@@ -61,7 +62,6 @@ namespace Chat
 
       QSqlDatabase db_;
       LoggerPtr loggerPtr_;
-      TablesMap tablesMap_;
    };
 
    using DatabaseCreatorPtr = std::shared_ptr<DatabaseCreator>;
