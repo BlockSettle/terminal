@@ -138,6 +138,7 @@ message CreateSettlWalletRequest
 {
    string wallet_id = 1;
    string auth_address = 2;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData    = 3;
 }
 
 message CreateSettlWalletResponse

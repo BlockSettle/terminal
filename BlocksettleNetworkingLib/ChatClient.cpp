@@ -14,6 +14,7 @@
 #include "ChatTreeModelWrapper.h"
 #include "ChatProtocol/ChatUtils.h"
 #include "ProtobufUtils.h"
+#include "EncryptionUtils.h"
 
 #include <QDateTime>
 #include <QRegularExpression>

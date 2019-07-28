@@ -72,7 +72,7 @@ public:
    virtual ~ChatWidgetState() = default;
 
    virtual std::string login(const std::string& email, const std::string& jwt
-      , const ZmqBIP15XDataConnection::cbNewKey &) = 0;
+      , const ZmqBipNewKeyCb &) = 0;
    virtual void logout() = 0;
    virtual void onLoggedOut() { }
    virtual void onSendButtonClicked() = 0;
@@ -109,7 +109,7 @@ public:
    }
 
    std::string login(const std::string& email, const std::string& jwt
-      , const ZmqBIP15XDataConnection::cbNewKey &cb) override {
+      , const ZmqBipNewKeyCb &cb) override {
       chat_->logger_->debug("Set user name {}", email);
       const auto userId = chat_->client_->LoginToServer(email, jwt, cb);
       chat_->ui_->textEditMessages->setOwnUserId(userId);
@@ -151,7 +151,7 @@ public:
    }
 
    std::string login(const std::string& /*email*/, const std::string& /*jwt*/
-      , const ZmqBIP15XDataConnection::cbNewKey &) override {
+      , const ZmqBipNewKeyCb &) override {
       chat_->logger_->info("Already logged in! You should first logout!");
       return std::string();
    }
@@ -384,7 +384,7 @@ void ChatWidget::onMessagesUpdated()
 }
 
 std::string ChatWidget::login(const std::string& email, const std::string& jwt
-   , const ZmqBIP15XDataConnection::cbNewKey &cb)
+   , const ZmqBipNewKeyCb &cb)
 {
    try {
       const auto userId = stateCurrent_->login(email, jwt, cb);

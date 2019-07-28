@@ -5,13 +5,15 @@
 #include <unordered_map>
 #include <QObject>
 #include <BinaryData.h>
+
 #include "SyncWallet.h"
 
 
 namespace spdlog {
    class logger;
 };
-class SignContainer;
+
+class WalletSignerContainer;
 
 namespace bs {
    namespace sync {
@@ -24,7 +26,7 @@ namespace bs {
       {
       public:
          PlainWallet(const std::string &walletId, const std::string &name, const std::string &desc
-            , SignContainer *, const std::shared_ptr<spdlog::logger> &logger);
+            , WalletSignerContainer *, const std::shared_ptr<spdlog::logger> &logger);
          ~PlainWallet() override;
 
          PlainWallet(const PlainWallet&) = delete;

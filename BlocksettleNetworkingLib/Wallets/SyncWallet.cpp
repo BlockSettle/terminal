@@ -4,11 +4,11 @@
 #include <spdlog/spdlog.h>
 #include "CheckRecipSigner.h"
 #include "CoinSelection.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 
 using namespace bs::sync;
 
-Wallet::Wallet(SignContainer *container, const std::shared_ptr<spdlog::logger> &logger)
+Wallet::Wallet(WalletSignerContainer *container, const std::shared_ptr<spdlog::logger> &logger)
    : signContainer_(container), logger_(logger)
 {}
 
@@ -447,7 +447,6 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 
 void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 {
-   logger_->debug("[{}]", __func__);
    init(true);
 
    const auto &cbTX = [this](const Tx &tx) {
@@ -487,7 +486,6 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 
 void Wallet::onNewBlock(unsigned int depth)
 {
-   logger_->debug("[{}]", __func__);
    init(true);
 }
 

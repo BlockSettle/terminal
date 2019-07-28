@@ -9,6 +9,8 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+
+#include "BSErrorCode.h"
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "QWalletInfo.h"
@@ -113,8 +115,8 @@ namespace bs {
          void onAQReply(const bs::network::QuoteReqNotification &qrn, double price);
          void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
          void onOrderUpdated(const bs::network::Order &);
-         void onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
-         void onCreateHDWalletError(unsigned int id, std::string error);
+         void onHDLeafCreated(const std::string& ccName);
+         void onCreateHDWalletError(const std::string& ccName, bs::error::ErrorCode result);
          void onSignerStateUpdated();
          void onAutoSignActivated();
          void onAuthAddrChanged(int);
@@ -154,7 +156,6 @@ namespace bs {
          double   indicAsk_{};
          std::atomic_bool     autoUpdatePrices_{true};
 
-         unsigned int         leafCreateReqId_{};
          std::string          autoSignWalletId_;
 
          std::string product_;

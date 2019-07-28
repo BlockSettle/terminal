@@ -51,7 +51,6 @@ private slots:
    void onHDWalletInfo(unsigned int id, const bs::hd::WalletInfo &walletInfo);
    void onWalletSelected();
    void onRescanBlockchain();
-   void onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void onModelReset();
 
 private:

@@ -9,7 +9,7 @@
 namespace spdlog {
    class logger;
 }
-class SignContainer;
+class WalletSignerContainer;
 
 namespace bs {
    namespace sync {
@@ -25,7 +25,7 @@ namespace bs {
          public:
             Group(const bs::hd::Path &path, const std::string &walletName
                , const std::string &name, const std::string &desc
-               , SignContainer *container, WalletCallbackTarget *wct
+               , WalletSignerContainer *container, WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger
                , bool extOnlyAddresses = false)
                : signContainer_(container)
@@ -65,7 +65,7 @@ namespace bs {
             virtual void initLeaf(std::shared_ptr<hd::Leaf> &, const bs::hd::Path &) const;
 
          protected:
-            SignContainer  *  signContainer_{};
+            WalletSignerContainer  *  signContainer_{};
             std::shared_ptr<spdlog::logger>  logger_;
             bs::hd::Path   path_;
             std::string    walletName_, name_, desc_;
@@ -80,7 +80,7 @@ namespace bs {
          {
          public:
             AuthGroup(const bs::hd::Path &path, const std::string &name
-               , const std::string &desc, SignContainer *, WalletCallbackTarget *wct
+               , const std::string &desc, WalletSignerContainer *, WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger>& logger
                , bool extOnlyAddresses = false);
 
@@ -102,7 +102,7 @@ namespace bs {
          {
          public:
             CCGroup(const bs::hd::Path &path, const std::string &name
-               , const std::string &desc, SignContainer *container
+               , const std::string &desc, WalletSignerContainer *container
                , WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger
                , bool extOnlyAddresses = false)
@@ -119,7 +119,7 @@ namespace bs {
          {
          public:
             SettlementGroup(const bs::hd::Path &path, const std::string &name
-               , const std::string &desc, SignContainer *container
+               , const std::string &desc, WalletSignerContainer *container
                , WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger)
                : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_Settlement),

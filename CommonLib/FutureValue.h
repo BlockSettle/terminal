@@ -17,22 +17,17 @@ public:
    FutureValue(FutureValue&&) = delete;
    FutureValue& operator = (FutureValue&&) = delete;
 
-   bool setValue(T&& value)
+   bool setValue(const T& value)
    {
       std::unique_lock<std::mutex> locker(mutex_);
       if (readyFlag_) {
          return false;
       }
 
-      value_ = std::move(value);
+      value_ = value;
       readyFlag_ = true;
       event_.notify_all();
       return true;
-   }
-
-   bool setValue(const T& value)
-   {
-      return setValue(T(value));
    }
 
    const T& waitValue()

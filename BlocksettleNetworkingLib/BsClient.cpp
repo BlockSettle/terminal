@@ -1,4 +1,5 @@
 #include "BsClient.h"
+#include "FutureValue.h"
 
 #include <QTimer>
 #include "Address.h"
@@ -93,6 +94,7 @@ void BsClient::signAddress(const SignAddressReq &req)
    d->set_type(int(req.type));
    d->set_address(req.address.display());
    d->set_invisible_data(req.invisibleData.toBinStr());
+   d->set_src_cc_token(req.srcCcToken);
 
    auto processCb = [this, req](const Response &response) {
       if (!response.has_start_sign_address()) {
@@ -156,14 +158,14 @@ std::string BsClient::requestDescAuthAddr(const bs::Address &address)
 // static
 std::string BsClient::requestTitleCcAddr()
 {
-   return "Private Market token";
+   return "Private Market Token";
 }
 
 // static
-std::string BsClient::requestDescCcAddr(const bs::Address &address)
+std::string BsClient::requestDescCcAddr(const bs::Address &address, const std::string &token)
 {
    // We don't show address details here yet
-   return fmt::format("Submitting CC wallet address to receive PM token");
+   return token;
 }
 
 void BsClient::OnDataReceived(const std::string &data)

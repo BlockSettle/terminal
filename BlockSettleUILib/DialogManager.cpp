@@ -37,9 +37,14 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
       Q_ASSERT(left);
       Q_ASSERT(right);
 #endif
-      const QPoint leftP = { left.data()->x(), left.data()->y() };
-      const QPoint rightP = { right.data()->x(), right.data()->y() };
-      return leftP.manhattanLength() < rightP.manhattanLength();
+      const QPoint leftP = left.data()->geometry().topLeft();
+      const QPoint rightP = right.data()->geometry().topLeft();
+
+      if (leftP.y() != rightP.y()) {
+         return leftP.y() < rightP.y();
+      }
+
+      return leftP.x() < rightP.x();
    });
    connect(dlg, &QDialog::finished, this, &DialogManager::onDialogFinished);
    dlg->setModal(false);
@@ -51,43 +56,50 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
    dialogTopLeft.setY(std::max(0, center.y() - (dlg->height() / 2)));
 
    const QRect& screenSize = QApplication::desktop()->geometry();
-   if (QApplication::desktop()->screenCount() == 1) {
-      if ((dlg->width() > screenSize.width()) || (dlg->height() > screenSize.height())) {
-         dialogTopLeft = { 0, 0};
+
+   auto findScreenNumder = [](int value, int measure) -> int {
+      int screenNumber = 0;
+      for (; value >= measure; value -= measure) {
+         ++screenNumber;
       }
-   } else {
-      auto findScreenNumder = [](int value, int measure) -> int {
-         int screenNumber = 0;
-         for (; value >= measure; value -= measure) {
-            ++screenNumber;
-         }
-         return screenNumber;
-      };
+      return screenNumber;
+   };
 
-      // Determine screen position
-      const int horScreenNumber = findScreenNumder(center.x(), screenSize.width());
-      const int vertScreenNumber = findScreenNumder(center.y(), screenSize.height());
+   // Determine screen position
+   const int horScreenNumber = findScreenNumder(center.x(), screenSize.width());
+   const int vertScreenNumber = findScreenNumder(center.y(), screenSize.height());
 
-      const QPoint screenTopLeft = { horScreenNumber * screenSize.width(),
-                                     vertScreenNumber * screenSize.height()};
-      const QPoint screenBottomRight = { (horScreenNumber + 1) * screenSize.width(),
-                                         (vertScreenNumber + 1) * screenSize.height()};
+   const QPoint screenTopLeft = { horScreenNumber * screenSize.width(),
+                                  vertScreenNumber * screenSize.height()};
+   const QPoint screenBottomRight = { (horScreenNumber + 1) * screenSize.width(),
+                                      (vertScreenNumber + 1) * screenSize.height()};
 
-      // Adjust X
+   auto adjustX = [&]() {
       if (dialogTopLeft.x() < screenTopLeft.x()) {
          dialogTopLeft.setX(screenTopLeft.x());
       } else if (dialogTopLeft.x() + dlg->width() > screenBottomRight.x()) {
          const int diffX = dialogTopLeft.x() + dlg->width() - screenBottomRight.x();
          dialogTopLeft.setX(std::max(dialogTopLeft.x() - diffX, screenTopLeft.x()));
       }
+   };
 
-      // Adjust Y
+   auto adjustY = [&]() {
       if (dialogTopLeft.y() < screenTopLeft.y()) {
          dialogTopLeft.setY(screenTopLeft.y());
       } else if (dialogTopLeft.y() + dlg->height() > screenBottomRight.y()) {
          const int diffY = dialogTopLeft.y() + dlg->height() - screenBottomRight.y();
          dialogTopLeft.setY(std::max(dialogTopLeft.y() - diffY, screenTopLeft.y()));
       }
+   };
+
+
+   if (QApplication::desktop()->screenCount() == 1) {
+      if ((dlg->width() > screenSize.width()) || (dlg->height() > screenSize.height())) {
+         dialogTopLeft = { 0, 0 };
+      }
+   } else {
+      adjustX();
+      adjustY();
    }
 
    // Make sure that we do not overlap other dialog
@@ -102,17 +114,27 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
       }
 
       const QPoint otherP = other.data()->geometry().topLeft();
-      const QPoint delta = dialogTopLeft - otherP;
+      QPoint delta = dialogTopLeft - otherP;
+
       // If there less then 5 pixels difference
       // update position.
       if (delta.manhattanLength() <= 5) {
-         dialogTopLeft.setX(dialogTopLeft.x() + offset_);
-         dialogTopLeft.setY(dialogTopLeft.y() + offset_);
+         dialogTopLeft.setX(dialogTopLeft.x() + other->width());
+         adjustX();
+
+         // Check again - if true we in the same position
+         delta = dialogTopLeft - otherP;
+         if (delta.manhattanLength() <= 5) {
+            dialogTopLeft.setX(center.x() - (dlg->width() / 2));
+            dialogTopLeft.setY(otherP.y() + other.data()->height());
+            adjustX();
+            adjustY();
+         }
       }
    }
 
-   activeDlgs_.push_back(QPointer<QDialog>(dlg));
    dlg->move(dialogTopLeft);
+   activeDlgs_.push_back(QPointer<QDialog>(dlg));
    dlg->show();
 }
 

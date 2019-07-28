@@ -2,6 +2,7 @@
 
 #include "EncryptionUtils.h"
 #include "AuthorizedPeers.h"
+#include "FutureValue.h"
 
 
 ZmqBIP15XPeer::ZmqBIP15XPeer(const std::string &name, const BinaryData &pubKey)

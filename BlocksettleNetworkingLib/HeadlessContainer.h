@@ -1,14 +1,18 @@
 #ifndef __HEADLESS_CONTAINER_H__
 #define __HEADLESS_CONTAINER_H__
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <string>
+
 #include <QStringList>
+
 #include "DataConnectionListener.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "ZMQ_BIP15X_Helpers.h"
 
 #include "headless.pb.h"
 
@@ -29,7 +33,7 @@ class QProcess;
 class WalletsManager;
 class ZmqBIP15XDataConnection;
 
-class HeadlessContainer : public SignContainer
+class HeadlessContainer : public WalletSignerContainer
 {
    Q_OBJECT
 public:
@@ -69,9 +73,11 @@ public:
    bs::signer::RequestId setUserId(const BinaryData &, const std::string &walletId) override;
    bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override;
 
-   bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
+   bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}
+      , bs::sync::PasswordDialogData dialogData = {}
       , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) override;
+
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override;
    bs::signer::RequestId GetInfo(const std::string &rootWalletId) override;
@@ -129,6 +135,7 @@ protected:
    std::unordered_set<std::string>     missingWallets_;
    std::unordered_set<std::string>     woWallets_;
    std::set<bs::signer::RequestId>     signRequests_;
+
    std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>   cbWalletInfoMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletMap_;
@@ -137,9 +144,11 @@ protected:
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)>>  cbSettlementSignTxMap_;
    std::map<bs::signer::RequestId, std::function<void(const SecureBinaryData &)>>   cbSettlWalletMap_;
-   std::map<bs::signer::RequestId, std::function<void(bool)>>                    cbSettlIdMap_;
-   std::map<bs::signer::RequestId, std::function<void(bool, bs::Address)>>       cbPayinAddrMap_;
+   std::map<bs::signer::RequestId, std::function<void(bool)>>                       cbSettlIdMap_;
+   std::map<bs::signer::RequestId, std::function<void(bool, bs::Address)>>          cbPayinAddrMap_;
    std::map<bs::signer::RequestId, std::function<void(bool, const SecureBinaryData &)>>   cbSettlPubkeyMap_;
+
+   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode result)>>      cbCCreateLeafMap_;
 };
 
 
@@ -154,7 +163,7 @@ public:
       , const bool ephemeralDataConnKeys = true
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""
-      , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
+      , const ZmqBipNewKeyCb& inNewKeyCB = nullptr);
    ~RemoteSigner() noexcept override = default;
 
    bool Start() override;
@@ -191,7 +200,7 @@ protected:
    const std::string                          ownKeyFileDir_;
    const std::string                          ownKeyFileName_;
    std::shared_ptr<ZmqBIP15XDataConnection>   connection_;
-   const ZmqBIP15XDataConnection::cbNewKey    cbNewKey_;
+   const ZmqBipNewKeyCb    cbNewKey_;
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
@@ -211,7 +220,7 @@ public:
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""
       , double asSpendLimit = 0
-      , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
+      , const ZmqBipNewKeyCb& inNewKeyCB = nullptr);
    ~LocalSigner() noexcept override;
 
    bool Start() override;
@@ -231,6 +240,9 @@ private:
 class HeadlessListener : public QObject, public DataConnectionListener
 {
    Q_OBJECT
+
+   friend class RemoteSigner;
+
 public:
    HeadlessListener(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<DataConnection> &conn, NetworkType netType)
@@ -243,7 +255,7 @@ public:
 
    bs::signer::RequestId Send(Blocksettle::Communication::headless::RequestPacket
       , bool updateId = true);
-   bs::signer::RequestId newRequestId() { return ++id_; }
+
    bool isReady() const { return isReady_; }
 
 signals:
@@ -255,15 +267,18 @@ signals:
    void PacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:
-   friend class RemoteSigner;
+   bs::signer::RequestId newRequestId();
 
    void processDisconnectNotification();
    void tryEmitError(SignContainer::ConnectionError errorCode, const QString &msg);
 
+private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<DataConnection>  connection_;
    const NetworkType                netType_;
-   bs::signer::RequestId            id_ = 0;
+
+   std::atomic<bs::signer::RequestId>            id_{0};
+
    // This will be updated from background thread
    std::atomic<bool>                isReady_{false};
    bool                             isConnected_{false};

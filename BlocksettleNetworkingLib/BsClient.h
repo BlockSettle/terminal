@@ -13,11 +13,11 @@
 #include "AutheIDClient.h"
 #include "CelerMessageMapper.h"
 #include "DataConnectionListener.h"
-#include "FutureValue.h"
 #include "autheid_utils.h"
 
 class ZmqContext;
 class ZmqBIP15XDataConnection;
+template<typename T> class FutureValue;
 
 namespace Blocksettle { namespace Communication { namespace Proxy {
 class Request;
@@ -71,6 +71,7 @@ public:
       SignStartedCb startedCb;
       SignedCb signedCb;
       SignFailedCb failedCb;
+      std::string srcCcToken;
    };
 
    BsClient(const std::shared_ptr<spdlog::logger>& logger, const BsClientParams &params
@@ -100,7 +101,7 @@ public:
    static std::string requestDescAuthAddr(const bs::Address &address);
    // NOTE: CC address text details are not enforced on PB right now!
    static std::string requestTitleCcAddr();
-   static std::string requestDescCcAddr(const bs::Address &address);
+   static std::string requestDescCcAddr(const bs::Address &address, const std::string &token);
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
    void getLoginResultDone(AutheIDClient::ErrorType status, const std::string &celerLogin);

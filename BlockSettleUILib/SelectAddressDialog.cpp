@@ -16,7 +16,7 @@ SelectAddressDialog::SelectAddressDialog(const std::shared_ptr<bs::sync::Wallets
    ui_->setupUi(this);
 
    model_ = new AddressListModel(walletsManager, ui_->treeView, addrType);
-   model_->setWallets({wallet_});
+   model_->setWallets({wallet_}, false, false);
    ui_->treeView->setModel(model_);
 
    ui_->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);

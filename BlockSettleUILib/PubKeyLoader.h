@@ -3,7 +3,7 @@
 
 #include "ApplicationSettings.h"
 #include "BinaryData.h"
-#include "ZMQ_BIP15X_DataConnection.h"
+#include "ZMQ_BIP15X_Helpers.h"
 
 class QWidget;
 
@@ -27,7 +27,7 @@ public:
    BinaryData loadKey(const KeyType) const;
    bool saveKey(const KeyType, const BinaryData &);
 
-   static ZmqBIP15XDataConnection::cbNewKey getApprovingCallback(const KeyType
+   static ZmqBipNewKeyCb getApprovingCallback(const KeyType
       , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &);
 
 private:

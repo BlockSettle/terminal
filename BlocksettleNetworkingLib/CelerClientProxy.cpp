@@ -9,7 +9,7 @@ CelerClientProxy::CelerClientProxy(const std::shared_ptr<spdlog::logger> &logger
 
 CelerClientProxy::~CelerClientProxy() = default;
 
-bool CelerClientProxy::LoginToServer(BsClient *client, const std::string &login)
+bool CelerClientProxy::LoginToServer(BsClient *client, const std::string &login, const std::string &email)
 {
    client_ = client;
 
@@ -22,7 +22,7 @@ bool CelerClientProxy::LoginToServer(BsClient *client, const std::string &login)
    });
 
    // Password will be replaced by BsProxy
-   bool result = SendLogin(login, "");
+   bool result = SendLogin(login, email, "");
    return result;
 }
 
