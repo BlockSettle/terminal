@@ -3,6 +3,10 @@
 
 #include <google/protobuf/message.h>
 
+#include <disable_warnings.h>
+#include <spdlog/logger.h>
+#include <enable_warnings.h>
+
 class ProtobufUtils
 {
 public:
