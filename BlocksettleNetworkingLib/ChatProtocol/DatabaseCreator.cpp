@@ -38,7 +38,7 @@ namespace Chat
    bool DatabaseCreator::createMissingTables()
    {
       QStringList existingTables;
-      bool result = false;
+      bool result = true;
 
       try {
          existingTables = db_.tables();
@@ -46,7 +46,7 @@ namespace Chat
       catch (std::exception& e)
       {
          loggerPtr_->error("[DatabaseCreator::createMissingTables] Error: {}", e.what());
-         return result;
+         return false;
       }
 
       std::set<QString> tableSet;
