@@ -919,7 +919,24 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       if (tx.prevStates.size() == 1) {
          importedSignedTX_ = tx.prevStates[0];
 
-         Tx tx(importedSignedTX_);
+         Tx tx;
+         try {
+            tx = Tx(importedSignedTX_);
+         }
+         catch (const BlockDeserializingException &e) {
+            // BlockDeserializingException sometimes does not have meaningful details
+            SPDLOG_LOGGER_ERROR(logger_, "TX import failed: BlockDeserializingException: '{}'", e.what());
+            BSMessageBox(BSMessageBox::critical, tr("Transaction import")
+               , tr("Deserialization failed")).exec();
+            return;
+         }
+         catch (const std::exception &e) {
+            SPDLOG_LOGGER_ERROR(logger_, "TX import failed: '{}'", e.what());
+            BSMessageBox(BSMessageBox::critical, tr("Transaction import")
+               , tr("Import failed"), QString::fromStdString(e.what())).exec();
+            return;
+         }
+
          if (tx.isInitialized()) {
             ui_->pushButtonCreate->setEnabled(true);
 
