@@ -25,6 +25,8 @@ class UserHasher;
 
 namespace Chat
 {
+   Q_DECLARE_METATYPE(DataConnectionListener::DataConnectionError)
+
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
    using ConnectionManagerPtr = std::shared_ptr<ConnectionManager>;
    using ApplicationSettingsPtr = std::shared_ptr<ApplicationSettings>;

@@ -16,6 +16,7 @@ namespace Chat
 
    ChatClientLogic::ChatClientLogic()
    {
+      qRegisterMetaType<DataConnectionListener::DataConnectionError>();
    }
 
    ChatClientLogic::~ChatClientLogic()
