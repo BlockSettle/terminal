@@ -411,6 +411,10 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
    // sort reqs by wallets
    const auto &parsedReqsForWallets = std::make_shared<std::unordered_map<std::string, std::vector<bs::core::wallet::TXSignRequest>>>(); // <wallet_id, reqList>
    for (const auto &req : parsedReqs) {
+      if (!req.prevStates.empty()) {
+         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Transaction already signed"));
+         return;
+      }
       const auto walletsMgr = adapter_->getWalletsManager();
       const auto &wallet = walletsMgr->getWalletById(req.walletId);
       if (!wallet) {
