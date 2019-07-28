@@ -9,7 +9,7 @@ namespace Chat
       qRegisterMetaType<ConnectionManagerPtr>();
       qRegisterMetaType<ApplicationSettingsPtr>();
       qRegisterMetaType<LoggerPtr>();
-      qRegisterMetaType<ZmqBIP15XDataConnection::cbNewKey>();
+      qRegisterMetaType<ZmqBipNewKeyCb>();
       
       ////////// PROXY SIGNALS //////////
       connect(this, &ChatClientService::Init, worker(), &ChatClientLogic::Init);

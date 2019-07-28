@@ -54,7 +54,7 @@ namespace Chat
       connect(connectionLogicPtr_.get(), &ClientConnectionLogic::sendRequestPacket, this, &ChatClientLogic::sendRequestPacket);
    }
 
-   void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBIP15XDataConnection::cbNewKey& cb)
+   void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb)
    {
       if (connectionPtr_) {
          loggerPtr_->error("[ChatClientLogic::{}] connecting with not purged connection", __func__);

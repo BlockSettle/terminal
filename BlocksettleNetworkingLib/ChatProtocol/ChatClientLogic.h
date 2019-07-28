@@ -11,6 +11,7 @@
 
 #include <disable_warnings.h>
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "ZMQ_BIP15X_Helpers.h"
 #include <enable_warnings.h>
 
 namespace spdlog
@@ -52,7 +53,7 @@ namespace Chat
 
    public slots:
       void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
-      void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBIP15XDataConnection::cbNewKey& cb);
+      void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
 
    signals:
       void dataReceived(const std::string&);

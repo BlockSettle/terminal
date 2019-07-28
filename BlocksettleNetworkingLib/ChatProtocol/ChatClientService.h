@@ -13,7 +13,7 @@ namespace Chat
    Q_DECLARE_METATYPE(ConnectionManagerPtr)
    Q_DECLARE_METATYPE(ApplicationSettingsPtr)
    Q_DECLARE_METATYPE(LoggerPtr)
-   Q_DECLARE_METATYPE(ZmqBIP15XDataConnection::cbNewKey);
+   Q_DECLARE_METATYPE(ZmqBipNewKeyCb);
 
    class ChatClientService : public ServiceThread<ChatClientLogic>
    {
@@ -25,7 +25,7 @@ namespace Chat
    signals:
       ////////// PROXY SIGNALS //////////
       void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
-      void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBIP15XDataConnection::cbNewKey& cb);
+      void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
 
       ////////// RETURN SIGNALS //////////
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
