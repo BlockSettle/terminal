@@ -255,6 +255,7 @@ function evalWorker(method, cppCallback, argList) {
     let val6 = argList[6];
     let val7 = argList[7];
 
+    // TODO: try to refactor using .apply
          if (typeof val7 !== 'undefined') eval(method)(jsCallback, val0, val1, val2, val3, val4, val5, val6, val7)
     else if (typeof val6 !== 'undefined') eval(method)(jsCallback, val0, val1, val2, val3, val4, val5, val6)
     else if (typeof val5 !== 'undefined') eval(method)(jsCallback, val0, val1, val2, val3, val4, val5)
@@ -279,20 +280,21 @@ function prepareLiteModeDialog(dialog) {
 
     //dialog.show()
     currentDialog = dialog
-    if (typeof dialog.headerPanel !== "undefined") {
-        dialog.qmlTitleVisible = false
-    }
+//    if (typeof dialog.qmlTitleVisible !== "undefined") {
+//        dialog.qmlTitleVisible = false
+//    }
 
     mainWindow.width = dialog.width
     mainWindow.height = dialog.height
     mainWindow.moveMainWindowToScreenCenter()
-    mainWindow.title = dialog.title
+    //mainWindow.title = dialog.title
+    mainWindow.title = qsTr("BlockSettle Signer")
 
     dialog.dialogsChainFinished.connect(function(){ hide() })
     dialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
-        if (typeof nextDialog.headerPanel !== "undefined") {
-            nextDialog.qmlTitleVisible = false
-        }
+//        if (typeof nextDialog.qmlTitleVisible !== "undefined") {
+//            nextDialog.qmlTitleVisible = false
+//        }
 
         mainWindow.width = nextDialog.width
         mainWindow.height = nextDialog.height
@@ -378,20 +380,20 @@ function activateAutoSignDialog(data) {
 }
 
 function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
-    var dlg = Qt.createComponent("../BsDialogs/TxSignDialog.qml").createObject(mainWindow)
+    var dlg = Qt.createComponent("../BsDialogs/TxSignDialog.qml").createObject(mainWindow
+            , {"prompt": prompt,
+               "txInfo": txInfo,
+               "passwordDialogData": passwordDialogData,
+               "walletInfo": walletInfo
+               })
     prepareLiteModeDialog(dlg)
-
-    dlg.walletInfo = walletInfo
-    dlg.prompt = prompt
-    dlg.txInfo = txInfo
-    dlg.passwordDialogData = passwordDialogData
 
     // FIXME: use bs error codes enum in qml
     dlg.bsAccepted.connect(function() {
-        jsCallback(0, walletInfo.walletId, dlg.passwordData)
+        jsCallback(0, walletInfo.rootId, dlg.passwordData)
     })
     dlg.bsRejected.connect(function() {
-        jsCallback(10, walletInfo.walletId, dlg.passwordData)
+        jsCallback(10, walletInfo.rootId, dlg.passwordData)
     })
     dlg.open()
     dlg.init()
@@ -408,10 +410,10 @@ function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, passwor
 
     // FIXME: use bs error codes enum in qml
     dlg.bsAccepted.connect(function() {
-        jsCallback(0, walletInfo.walletId, dlg.passwordData)
+        jsCallback(0, walletInfo.rootId, dlg.passwordData)
     })
     dlg.bsRejected.connect(function() {
-        jsCallback(10, walletInfo.walletId, dlg.passwordData)
+        jsCallback(10, walletInfo.rootId, dlg.passwordData)
     })
     dlg.open()
     dlg.init()

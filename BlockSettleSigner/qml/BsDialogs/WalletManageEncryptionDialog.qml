@@ -14,7 +14,7 @@ import "../BsStyles"
 import "../StyledControls"
 import "../js/helper.js" as JsHelper
 
-CustomDialog {
+CustomTitleDialogWindow {
     id: root
 
     property WalletInfo walletInfo : WalletInfo {}
@@ -36,7 +36,6 @@ CustomDialog {
 
     title: qsTr("Manage Encryption")
     width: 400
-    height: 450
     rejectable: true
 
     Component.onCompleted: {

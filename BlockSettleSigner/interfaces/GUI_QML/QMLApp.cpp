@@ -58,6 +58,10 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    registerQtTypes();
 
+   if (!adapter_) {
+      return;
+   }
+
    connect(adapter_, &SignerAdapter::ready, this, &QMLAppObj::onReady);
    connect(adapter_, &SignerAdapter::connectionError, this, &QMLAppObj::onConnectionError);
    connect(adapter_, &SignerAdapter::headlessBindUpdated, this, &QMLAppObj::onHeadlessBindUpdated);
