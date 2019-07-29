@@ -31,6 +31,7 @@ namespace Chat
       ////////// RETURN SIGNALS //////////
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
       void chatClientError(const ChatClientLogicError& errorCode);
+      void clientLoggedOutFromServer();
    };
 
    using ChatClientServicePtr = std::shared_ptr<ChatClientService>;

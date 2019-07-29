@@ -11,6 +11,8 @@
 #include <spdlog/spdlog.h>
 #include <enable_warnings.h>
 
+#include "chat.pb.h"
+
 namespace Chat
 {
 
@@ -52,7 +54,9 @@ namespace Chat
       connect(this, &ChatClientLogic::disconnected, connectionLogicPtr_.get(), &ClientConnectionLogic::onDisconnected);
       connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error), 
          connectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
+
       connect(connectionLogicPtr_.get(), &ClientConnectionLogic::sendRequestPacket, this, &ChatClientLogic::sendRequestPacket);
+      connect(connectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
    }
 
    void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb)
@@ -74,6 +78,7 @@ namespace Chat
          connectionPtr_.reset();
 
          emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed);
+         emit clientLoggedOutFromServer();
          return;
       }
 
@@ -132,10 +137,22 @@ namespace Chat
       }
    }
 
-
    void ChatClientLogic::LogoutFromServer()
    {
+      if (!connectionPtr_)
+      {
+         emit clientLoggedOutFromServer();
+         return;
+      }
+
       LogoutRequest logoutRequest;
       sendRequestPacket(logoutRequest);
    }
+
+   void ChatClientLogic::onCloseConnection()
+   {
+      connectionPtr_.reset();
+      emit clientLoggedOutFromServer();
+   }
+
 }

@@ -19,6 +19,7 @@ namespace Chat
       ////////// RETURN SIGNALS //////////
       connect(worker(), &ChatClientLogic::chatUserDisplayNameChanged, this, &ChatClientService::chatUserDisplayNameChanged);
       connect(worker(), &ChatClientLogic::chatClientError, this, &ChatClientService::chatClientError);
+      connect(worker(), &ChatClientLogic::clientLoggedOutFromServer, this, &ChatClientService::clientLoggedOutFromServer);
    }
 
 }

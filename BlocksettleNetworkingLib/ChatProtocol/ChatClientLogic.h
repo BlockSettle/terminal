@@ -68,9 +68,11 @@ namespace Chat
       void chatClientError(const ChatClientLogicError& errorCode);
 
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
+      void clientLoggedOutFromServer();
 
    private slots:
       void sendRequestPacket(const google::protobuf::Message& message);
+      void onCloseConnection();
 
    private:
       std::string getChatServerHost() const;

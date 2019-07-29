@@ -1,6 +1,8 @@
 #include <QtDebug>
 #include <QThread>
 
+#include <google/protobuf/any.pb.h>
+
 #include "ChatProtocol/ClientConnectionLogic.h"
 #include "ProtobufUtils.h"
 #include "chat.pb.h"
@@ -18,9 +20,26 @@ namespace Chat
 
    }
 
-   void ClientConnectionLogic::onDataReceived(const std::string&)
+   void ClientConnectionLogic::onDataReceived(const std::string& data)
    {
+      google::protobuf::Any any;
+      any.ParseFromString(data);
 
+      loggerPtr_->debug("[ClientConnectionLogic::onDataReceived] Data: {}", ProtobufUtils::toJsonReadable(any));
+
+      WelcomeResponse welcomeResponse;
+      if (pbStringToMessage<WelcomeResponse>(data, &welcomeResponse))
+      {
+         handleWelcomeResponse(welcomeResponse);
+         return;
+      }
+
+      LogoutResponse logoutResponse;
+      if (pbStringToMessage<LogoutResponse>(data, &logoutResponse))
+      {
+         handleLogoutResponse(logoutResponse);
+         return;
+      }
    }
 
    void ClientConnectionLogic::onConnected(void)
@@ -42,6 +61,46 @@ namespace Chat
    void ClientConnectionLogic::onError(DataConnectionListener::DataConnectionError)
    {
 
+   }
+
+   template<typename T>
+   bool ClientConnectionLogic::pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg)
+   {
+      google::protobuf::Any any;
+      any.ParseFromString(packetString);
+
+      if (any.Is<T>())
+      {
+         if (!any.UnpackTo(msg))
+         {
+            loggerPtr_->debug("[ServerConnectionLogic::pbStringToMessage] Can't unpack to {}", typeid(T).name());
+            return false;
+         }
+
+         return true;
+      }
+
+      return nullptr;
+   }
+
+   void ClientConnectionLogic::handleWelcomeResponse(const google::protobuf::Message& msg)
+   {
+      WelcomeResponse welcomeResponse;
+      welcomeResponse.CheckTypeAndMergeFrom(msg);
+
+      if (!welcomeResponse.success())
+      {
+         emit closeConnection();
+         return;
+      }
+   }
+
+   void ClientConnectionLogic::handleLogoutResponse(const google::protobuf::Message& msg)
+   {
+      LogoutResponse logoutResponse;
+      logoutResponse.CheckTypeAndMergeFrom(msg);
+
+      emit closeConnection();
    }
 
 }

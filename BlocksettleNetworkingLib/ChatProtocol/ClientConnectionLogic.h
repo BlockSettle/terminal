@@ -14,6 +14,12 @@ namespace spdlog
    class logger;
 }
 
+namespace google {
+   namespace protobuf {
+      class Message;
+   }
+}
+
 namespace Chat
 {
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
@@ -36,8 +42,15 @@ namespace Chat
 
    signals:
       void sendRequestPacket(const google::protobuf::Message& message);
+      void closeConnection();
 
    private:
+      template<typename T>
+      bool pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg);
+
+      void handleWelcomeResponse(const google::protobuf::Message& msg);
+      void handleLogoutResponse(const google::protobuf::Message& msg);
+
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;
       ApplicationSettingsPtr appSettings_;

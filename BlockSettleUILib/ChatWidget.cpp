@@ -441,7 +441,7 @@ void ChatWidget::connectToPb(const std::string &pbUserId)
 void ChatWidget::onLoggedOut()
 {
    stateCurrent_->onLoggedOut();
-   emit LogOut();
+   //emit LogOut();
 }
 
 void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &userId)

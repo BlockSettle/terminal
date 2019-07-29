@@ -1083,6 +1083,7 @@ void BSTerminalMainWindow::onLogin()
    std::string jwt;
    //auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
    chatClientServicePtr_->LoginToServer(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, ui_->widgetChat, &ChatWidget::onLoggedOut);
 
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
