@@ -1104,6 +1104,7 @@ void BSTerminalMainWindow::onLogin()
 void BSTerminalMainWindow::onLogout()
 {
    ui_->widgetWallets->setUsername(QString());
+   chatClientServicePtr_->LogoutFromServer();
    ui_->widgetChat->logout();
    ui_->widgetChart->disconnect();
 

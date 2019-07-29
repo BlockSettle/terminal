@@ -132,4 +132,10 @@ namespace Chat
       }
    }
 
+
+   void ChatClientLogic::LogoutFromServer()
+   {
+      LogoutRequest logoutRequest;
+      sendRequestPacket(logoutRequest);
+   }
 }

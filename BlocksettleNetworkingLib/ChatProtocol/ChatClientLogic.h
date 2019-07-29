@@ -56,6 +56,7 @@ namespace Chat
    public slots:
       void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
+      void LogoutFromServer();
 
    signals:
       void dataReceived(const std::string&);

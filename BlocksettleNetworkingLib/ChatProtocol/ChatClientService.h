@@ -26,6 +26,7 @@ namespace Chat
       ////////// PROXY SIGNALS //////////
       void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
+      void LogoutFromServer();
 
       ////////// RETURN SIGNALS //////////
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);

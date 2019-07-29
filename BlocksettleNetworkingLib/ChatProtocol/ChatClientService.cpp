@@ -14,6 +14,7 @@ namespace Chat
       ////////// PROXY SIGNALS //////////
       connect(this, &ChatClientService::Init, worker(), &ChatClientLogic::Init);
       connect(this, &ChatClientService::LoginToServer, worker(), &ChatClientLogic::LoginToServer);
+      connect(this, &ChatClientService::LogoutFromServer, worker(), &ChatClientLogic::LogoutFromServer);
 
       ////////// RETURN SIGNALS //////////
       connect(worker(), &ChatClientLogic::chatUserDisplayNameChanged, this, &ChatClientService::chatUserDisplayNameChanged);
