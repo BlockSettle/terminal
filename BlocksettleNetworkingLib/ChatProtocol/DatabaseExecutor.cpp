@@ -46,7 +46,7 @@ namespace Chat
    {
       if (!query.exec())
       {
-         loggerPtr_->error("[{}]: Requested query execution error: Query: {}, Error: {}", 
+         loggerPtr_->error("[DatabaseExecutor::checkExecute]: Requested query execution error: Query: {}, Error: {}", 
             query.executedQuery().toStdString(), query.lastError().text().toStdString());
          return false;
       }
