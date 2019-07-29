@@ -442,12 +442,16 @@ BTCNumericTypes::balance_type WalletsManager::getSpendableBalance() const
 
 BTCNumericTypes::balance_type WalletsManager::getUnconfirmedBalance() const
 {
-   return getBalanceSum([](WalletPtr wallet) { return wallet->getUnconfirmedBalance(); });
+   return getBalanceSum([](const WalletPtr &wallet) {
+      return wallet->type() == core::wallet::Type::Bitcoin ? wallet->getUnconfirmedBalance() : 0;
+   });
 }
 
 BTCNumericTypes::balance_type WalletsManager::getTotalBalance() const
 {
-   return getBalanceSum([](WalletPtr wallet) { return wallet->getTotalBalance(); });
+   return getBalanceSum([](const WalletPtr &wallet) {
+      return wallet->type() == core::wallet::Type::Bitcoin ? wallet->getTotalBalance() : 0;
+   });
 }
 
 BTCNumericTypes::balance_type WalletsManager::getBalanceSum(
