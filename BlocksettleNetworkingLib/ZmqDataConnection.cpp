@@ -361,15 +361,13 @@ void ZmqDataConnection::zeroFrameReceived()
 {
    if (isConnected_) {
       if (logger_) {
-         SPDLOG_LOGGER_DEBUG(logger_, "[{}] {} received 0 frame. Disconnected."
-            , __func__, connectionName_);
+         SPDLOG_LOGGER_TRACE(logger_, "{} received 0 frame. Disconnected.", connectionName_);
       }
       isConnected_ = false;
       notifyOnDisconnected();
    } else {
       if (logger_) {
-         SPDLOG_LOGGER_DEBUG(logger_, "[{}] {} received 0 frame. Connected.", __func__
-            , connectionName_);
+         SPDLOG_LOGGER_TRACE(logger_, "{} received 0 frame. Connected.", connectionName_);
       }
       isConnected_ = true;
       notifyOnConnected();
