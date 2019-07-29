@@ -18,10 +18,15 @@ static const unsigned int kWaitTimeoutInSec = 30;
 Q_DECLARE_METATYPE(AddressVerificationState)
 
 ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<AuthAddressManager> &authAddrMgr, const std::shared_ptr<AssetManager> &assetMgr
-   , const std::shared_ptr<SignContainer> &signContainer, const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr, const bs::network::RFQ &rfq
-   , const bs::network::Quote &quote, const std::shared_ptr<TransactionData> &txData)
+   , const std::shared_ptr<AuthAddressManager> &authAddrMgr
+   , const std::shared_ptr<AssetManager> &assetMgr
+   , const std::shared_ptr<SignContainer> &signContainer
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const bs::network::RFQ &rfq
+   , const bs::network::Quote &quote
+   , const std::shared_ptr<TransactionData> &txData
+   , const bs::Address &authAddr)
    : bs::SettlementContainer()
    , logger_(logger)
    , authAddrMgr_(authAddrMgr)
@@ -33,7 +38,10 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , rfq_(rfq)
    , quote_(quote)
    , clientSells_(!rfq.isXbtBuy())
+   , authAddr_(authAddr)
 {
+   assert(authAddr.isValid());
+
    qRegisterMetaType<AddressVerificationState>();
 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
@@ -195,6 +203,55 @@ void ReqXBTSettlementContainer::activate()
    const auto buyAuthKey = clientSells_ ? dealerAuthKey_ : userKey_;
    const auto sellAuthKey = clientSells_ ? userKey_ : dealerAuthKey_;
 
+   const auto priWallet = walletsMgr_->getPrimaryWallet();
+   if (!priWallet) {
+      logger_->error("[{}] missing primary wallet", __func__);
+      return;
+   }
+
+   const auto group = std::dynamic_pointer_cast<bs::sync::hd::SettlementGroup>(priWallet->getGroup(bs::hd::BlockSettle_Settlement));
+   if (!group) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find settlement group");
+      return;
+   }
+
+   auto settlLeaf = group->getLeaf(authAddr_);
+   if (!settlLeaf) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf for auth address '{}'", authAddr_.display());
+      return;
+   }
+
+   QPointer<ReqXBTSettlementContainer> thisPtr = this;
+   settlLeaf->setSettlementID(settlementId_, [thisPtr](bool success) {
+      if (!thisPtr) {
+         return;
+      }
+
+      if (!success) {
+         SPDLOG_LOGGER_ERROR(thisPtr->logger_, "can't find settlement leaf for auth address '{}'", thisPtr->authAddr_.display());
+         return;
+      }
+
+      thisPtr->activateProceed();
+   });
+}
+
+void ReqXBTSettlementContainer::deactivate()
+{
+   stopTimer();
+   if (monitor_) {
+      monitor_->stop();
+   }
+}
+
+void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState state)
+{
+   dealerVerifState_ = state;
+   emit DealerVerificationStateChanged(state);
+}
+
+void ReqXBTSettlementContainer::activateProceed()
+{
    const auto &cbSettlAddr = [this](const bs::Address &addr) {
       settlAddr_ = addr;
 
@@ -202,15 +259,11 @@ void ReqXBTSettlementContainer::activate()
          , [this] {
          monitor_->start([this](int, const BinaryData &) { onPayInZCDetected(); }
          , [this](int confNum, bs::PayoutSigner::Type signedBy) { onPayoutZCDetected(confNum, signedBy); }
-         , [this](bs::PayoutSigner::Type) {});
+         , [](bs::PayoutSigner::Type) {});
       });
    };
 
    const auto priWallet = walletsMgr_->getPrimaryWallet();
-   if (!priWallet) {
-      logger_->error("[{}] missing primary wallet", __func__);
-      return;
-   }
    priWallet->getSettlementPayinAddress(settlementId_, dealerAuthKey_, cbSettlAddr, clientSells_);
 
    recvAddr_ = transactionData_->GetFallbackRecvAddress();
@@ -243,20 +296,6 @@ void ReqXBTSettlementContainer::activate()
    }
 
    fee_ = transactionData_->GetTransactionSummary().totalFee;
-}
-
-void ReqXBTSettlementContainer::deactivate()
-{
-   stopTimer();
-   if (monitor_) {
-      monitor_->stop();
-   }
-}
-
-void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState state)
-{
-   dealerVerifState_ = state;
-   emit DealerVerificationStateChanged(state);
 }
 
 void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX

@@ -67,6 +67,8 @@ public:
    QPushButton* numCcyButton() const;
    QPushButton* denomCcyButton() const;
 
+   bs::Address selectedAuthAddress() const;
+
 public slots:
    void setSecurityId(const QString& productGroup, const QString& currencyPair
       , const QString& bidPrice, const QString& offerPrice);

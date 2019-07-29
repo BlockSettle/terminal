@@ -30,6 +30,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const bs::Address &authAddr
    , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
@@ -45,6 +46,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , celerClient_(celerClient)
    , appSettings_(appSettings)
    , connectionManager_(connectionManager)
+   , authAddr_(authAddr)
 {
    ui_->setupUi(this);
 
@@ -114,7 +116,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
 {
    xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
       , authAddressManager_, assetMgr_, signContainer_, armory_, walletsManager_
-      , rfq_, quote_, transactionData_);
+      , rfq_, quote_, transactionData_, authAddr_);
 
    connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
       , this, &RFQDialog::onSettlementAccepted);
