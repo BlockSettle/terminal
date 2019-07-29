@@ -121,6 +121,36 @@ QScreen *getDisplay(QPoint position)
    return QGuiApplication::primaryScreen();
 }
 
+static int runUnchecked(QApplication &app, const std::shared_ptr<ApplicationSettings> &settings, BSTerminalSplashScreen &splashScreen)
+{
+   BSTerminalMainWindow mainWindow(settings, splashScreen);
+
+#if defined (Q_OS_MAC)
+   QObject::connect(&app, &MacOsApp::reactivateTerminal, &mainWindow, &BSTerminalMainWindow::onReactivate);
+#endif
+
+   if (!settings->get<bool>(ApplicationSettings::launchToTray)) {
+      mainWindow.show();
+   }
+
+   mainWindow.postSplashscreenActions();
+
+   return app.exec();
+}
+
+static int runChecked(QApplication &app, const std::shared_ptr<ApplicationSettings> &settings, BSTerminalSplashScreen &splashScreen)
+{
+   try {
+      return runUnchecked(app, settings, splashScreen);
+   }
+   catch (const std::exception &e) {
+      std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
+      BSMessageBox(BSMessageBox::critical, app.tr("BlockSettle Terminal")
+         , app.tr("Unhandled exception detected: %1").arg(QLatin1String(e.what()))).exec();
+      return EXIT_FAILURE;
+   }
+}
+
 static int GuiApp(int &argc, char** argv)
 {
    Q_INIT_RESOURCE(armory);
@@ -219,31 +249,11 @@ static int GuiApp(int &argc, char** argv)
    splashScreen.show();
    app.processEvents();
 
-#ifndef _DEBUG
-   try {
+#ifdef NDEBUG
+   return runChecked(app, settings, splashScreen);
+#else
+   return runUnchecked(app, settings, splashScreen);
 #endif
-      BSTerminalMainWindow mainWindow(settings, splashScreen);
-
-#if defined (Q_OS_MAC)
-      QObject::connect(&app, &MacOsApp::reactivateTerminal, &mainWindow, &BSTerminalMainWindow::onReactivate);
-#endif
-
-      if (!settings->get<bool>(ApplicationSettings::launchToTray)) {
-         mainWindow.show();
-      }
-
-      mainWindow.postSplashscreenActions();
-
-      return app.exec();
-#ifndef _DEBUG
-   }
-   catch (const std::exception &e) {
-      std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
-      BSMessageBox(BSMessageBox::critical, app.tr("BlockSettle Terminal"), QLatin1String(e.what())).exec();
-      return 1;
-   }
-   return 0;
-#endif // _DEBUG
 }
 
 int main(int argc, char** argv)
