@@ -37,8 +37,6 @@ protected:
 private slots:
    void tokenChanged();
    void updateOkState();
-   void onWalletCreated(const std::string& ccName);
-   void onWalletFailed(const std::string& ccName, bs::error::ErrorCode result);
    void onCCAddrSubmitted(const QString addr);
    void onCCInitialSubmitted(const QString addr);
    void onCCSubmitFailed(const QString addr, const QString &err);

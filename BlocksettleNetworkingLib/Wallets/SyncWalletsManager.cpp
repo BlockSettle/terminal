@@ -1410,7 +1410,7 @@ bs::Address WalletsManager::CCResolver::genesisAddrFor(const std::string &cc) co
 //       , const std::vector<bs::wallet::PasswordData> &pwdData = {}
 //       , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) = 0;
 
-bool WalletsManager::CreateCCLeaf(const std::string &ccName)
+bool WalletsManager::CreateCCLeaf(const std::string &ccName, const std::function<void(bs::error::ErrorCode result)> &cb)
 {
    if (!isCCNameCorrect(ccName)) {
       logger_->error("[WalletsManager::CreateCCLeaf] invalid cc name passed: {}"
@@ -1442,10 +1442,14 @@ bool WalletsManager::CreateCCLeaf(const std::string &ccName)
    dialogData.setValue("Title", tr("Create CC Leaf"));
    dialogData.setValue("Product", QString::fromStdString(ccName));
 
-   return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {}, dialogData,  [this, ccName](bs::error::ErrorCode result)
-                                       {
-                                          ProcessCreatedCCLeaf(ccName, result);
-                                       });
+   const auto &createCCLeafCb = [this, ccName, cb](bs::error::ErrorCode result) {
+      ProcessCreatedCCLeaf(ccName, result);
+      if (cb) {
+         cb(result);
+      }
+   };
+
+   return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {}, dialogData, createCCLeafCb);
 }
 
 void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::ErrorCode result)

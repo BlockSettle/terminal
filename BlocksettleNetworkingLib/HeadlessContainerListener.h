@@ -142,8 +142,8 @@ private:
       , const PasswordReceivedCb &cb);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId
       , const bs::core::wallet::TXMultiSignRequest &, const bs::core::WalletMap &
-      , const std::string &prompt, const PasswordsReceivedCb &cb);
-   bool RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &
+      , const PasswordsReceivedCb &cb);
+   bool RequestPassword(const std::string &rootId, const bs::core::wallet::TXSignRequest &
       , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const PasswordReceivedCb &cb);
 

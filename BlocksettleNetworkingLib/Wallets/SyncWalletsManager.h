@@ -69,7 +69,7 @@ namespace bs {
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
          WalletPtr getDefaultWallet() const;
 
-         bool CreateCCLeaf(const std::string &cc);
+         bool CreateCCLeaf(const std::string &cc, const std::function<void(bs::error::ErrorCode result)> &cb = nullptr);
          bool CreateAuthLeaf();
 
          WalletPtr getCCWallet(const std::string &cc);
