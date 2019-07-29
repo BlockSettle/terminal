@@ -194,14 +194,14 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
    // wallet id may be stored either in tx or in dialog data
-   QString walletId = dialogData->value("WalletId").toString();
-   if (walletId.isEmpty()) {
-      walletId = txInfo->walletId();
+   QString rootId = dialogData->value("WalletId").toString();
+   if (rootId.isEmpty()) {
+      rootId = txInfo->walletId();
    }
-   bs::hd::WalletInfo *walletInfo = qmlFactory_->createWalletInfo(walletId);
-   if (walletId.isEmpty()) {
+   bs::hd::WalletInfo *walletInfo = qmlFactory_->createWalletInfo(rootId);
+   if (rootId.isEmpty()) {
       signer::DecryptWalletEvent decryptEvent;
-      decryptEvent.set_wallet_id(walletId.toStdString());
+      decryptEvent.set_wallet_id(rootId.toStdString());
       decryptEvent.set_errorcode(static_cast<uint32_t>(bs::error::ErrorCode::WalletNotFound));
       send(signer::PasswordReceivedType, decryptEvent.SerializeAsString());
    }

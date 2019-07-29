@@ -31,7 +31,6 @@ CustomTitleDialogWindow {
     title: qsTr("Sign Transaction")
     rejectable: true
     width: 500
-    height: 420 + recvAddresses.height - 24
 
     function clickConfirmBtn() {
         btnConfirm.clicked()

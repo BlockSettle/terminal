@@ -7,7 +7,7 @@ import "../BsStyles"
 // dialog window with header
 CustomDialog {
     id: root
-    property bool qmlTitleVisible: !mainWindow.isLiteMode
+   // property bool qmlTitleVisible: true    //: !mainWindow.isLiteMode
     property alias headerPanel: headerPanel
     height: cHeaderHeight + cContentHeight + cFooterHeight
 
@@ -24,12 +24,12 @@ CustomDialog {
         CustomHeaderPanel {
             id: headerPanel
             Layout.fillWidth: true
-            Layout.preferredHeight: 40
+            //qmlTitleVisible: root.qmlTitleVisible
             text: root.title
         }
     }
 
-    onNextChainDialogChangedOverloaded: {
-        nextDialog.qmlTitleVisible = qmlTitleVisible
-    }
+//    onNextChainDialogChangedOverloaded: {
+//        nextDialog.qmlTitleVisible = qmlTitleVisible
+//    }
 }
