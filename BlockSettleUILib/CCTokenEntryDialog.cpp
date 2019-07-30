@@ -14,6 +14,7 @@
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "BSErrorCodeStrings.h"
 
 CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<CCFileManager> &ccFileMgr
@@ -31,9 +32,6 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsMa
    connect(ccFileMgr_.get(), &CCFileManager::CCAddressSubmitted, this, &CCTokenEntryDialog::onCCAddrSubmitted, Qt::QueuedConnection);
    connect(ccFileMgr_.get(), &CCFileManager::CCInitialSubmitted, this, &CCTokenEntryDialog::onCCInitialSubmitted, Qt::QueuedConnection);
    connect(ccFileMgr_.get(), &CCFileManager::CCSubmitFailed, this, &CCTokenEntryDialog::onCCSubmitFailed, Qt::QueuedConnection);
-
-   connect(walletsMgr.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &CCTokenEntryDialog::onWalletCreated);
-   connect(walletsMgr.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &CCTokenEntryDialog::onWalletFailed);
 
    ccFileMgr_->LoadCCDefinitionsFromPub();
 
@@ -69,9 +67,28 @@ void CCTokenEntryDialog::tokenChanged()
 
          MessageBoxCCWalletQuestion qry(QString::fromStdString(ccProduct_), this);
          if (qry.exec() == QDialog::Accepted) {
-            if (!walletsMgr_->CreateCCLeaf(ccProduct_)) {
-               ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1").arg(QString::fromStdString(ccProduct_)));
-            }
+            const auto createCCLeafCb = [this](bs::error::ErrorCode result){
+               if (result == bs::error::ErrorCode::TxCanceled) {
+                  reject();
+               }
+               else if (result == bs::error::ErrorCode::NoError) {
+                  ccWallet_ = walletsMgr_->getCCWallet(ccProduct_);
+                  if (ccWallet_) {
+                     ui_->labelTokenHint->setText(tr("Private Market subwallet for %1 created!").arg(QString::fromStdString(ccProduct_)));
+                  } else {
+                     ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1").arg(QString::fromStdString(ccProduct_)));
+                  }
+                  updateOkState();
+               }
+               else {
+                  ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1, reason:\n%2")
+                                               .arg(QString::fromStdString(ccProduct_))
+                                               .arg(bs::error::ErrorCodeToString(result)));
+               }
+            };
+
+            walletsMgr_->CreateCCLeaf(ccProduct_, createCCLeafCb);
+
          } else {
             reject();
          }
@@ -86,35 +103,6 @@ void CCTokenEntryDialog::tokenChanged()
 void CCTokenEntryDialog::updateOkState()
 {
    ui_->pushButtonOk->setEnabled(ccWallet_ != nullptr);
-}
-
-void CCTokenEntryDialog::onWalletCreated(const std::string& ccName)
-{
-   if (ccName != ccProduct_) {
-      // ignore. not current product
-      return;
-   }
-
-   ccWallet_ = walletsMgr_->getCCWallet(ccProduct_);
-
-   if (ccWallet_) {
-      ui_->labelTokenHint->setText(tr("Private Market subwallet for %1 created!").arg(QString::fromStdString(ccProduct_)));
-   } else {
-      ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1").arg(QString::fromStdString(ccProduct_)));
-   }
-
-   updateOkState();
-}
-
-void CCTokenEntryDialog::onWalletFailed(const std::string& ccName, bs::error::ErrorCode result)
-{
-   if (ccName != ccProduct_) {
-      // ignore. nit our request
-      return;
-   }
-
-   ui_->labelTokenHint->setText(tr("Failed to create CC subwallet %1: %2")
-      .arg(QString::fromStdString(ccProduct_)).arg(bs::error::ErrorCodeToString(result)));
 }
 
 void CCTokenEntryDialog::accept()
@@ -138,8 +126,7 @@ void CCTokenEntryDialog::onCCAddrSubmitted(const QString)
 {
    QDialog::accept();
    BSMessageBox(BSMessageBox::info, tr("Submission Successful")
-      , tr("The token has been submitted, please note that it might take a while before the"
-         " transaction is broadcast in the Terminal")).exec();
+      , tr("Your token has been submitted. Please allow up to 24h for the transaction to be broadcast.")).exec();
 }
 
 void CCTokenEntryDialog::onCCInitialSubmitted(const QString)

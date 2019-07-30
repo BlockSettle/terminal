@@ -790,6 +790,11 @@ QPushButton* RFQTicketXBT::denomCcyButton() const
    return ui_->pushButtonDenomCcy;
 }
 
+bs::Address RFQTicketXBT::selectedAuthAddress() const
+{
+   return authAddressManager_->GetAddress(ui_->authenticationAddressComboBox->currentIndex());
+}
+
 double RFQTicketXBT::estimatedFee() const
 {
    const auto wallet = getCurrentWallet();

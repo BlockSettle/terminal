@@ -49,6 +49,7 @@ public:
       , const std::shared_ptr<BaseCelerClient> &celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &
+      , const bs::Address &authAddr
       , QWidget* parent = nullptr);
    ~RFQDialog() override;
 
@@ -95,8 +96,10 @@ private:
    std::shared_ptr<bs::SettlementContainer>     curContainer_;
    std::shared_ptr<ReqCCSettlementContainer>    ccSettlContainer_;
    std::shared_ptr<ReqXBTSettlementContainer>   xbtSettlContainer_;
+   const bs::Address authAddr_;
 
    bool  cancelOnClose_ = true;
+   bool isRejectStarted_ = false;
 };
 
 #endif // __RFQ_DIALOG_H__

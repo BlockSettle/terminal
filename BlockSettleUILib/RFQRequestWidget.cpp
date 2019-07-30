@@ -1,19 +1,20 @@
-
 #include "RFQRequestWidget.h"
-#include "ui_RFQRequestWidget.h"
+
+#include <QLineEdit>
+#include <QPushButton>
+
 #include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
 #include "CelerClient.h"
 #include "DialogManager.h"
 #include "NotificationCenter.h"
 #include "OrderListModel.h"
+#include "OrdersView.h"
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "SignContainer.h"
-#include "OrdersView.h"
+#include "ui_RFQRequestWidget.h"
 
-#include <QPushButton>
-#include <QLineEdit>
 
 enum class RFQPages : int
 {
@@ -165,8 +166,10 @@ void RFQRequestWidget::onDisconnectedFromCeler()
 
 void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
 {
+   auto authAddr = ui_->pageRFQTicket->selectedAuthAddress();
+
    RFQDialog* dialog = new RFQDialog(logger_, rfq, ui_->pageRFQTicket->GetTransactionData(), quoteProvider_,
-      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_, connectionManager_, this);
+      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_, connectionManager_, authAddr, this);
 
    dialog->setAttribute(Qt::WA_DeleteOnClose);
 

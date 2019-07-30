@@ -8,6 +8,8 @@
 
 class AuthorizedPeers;
 class ZmqBIP15XDataConnection;
+struct btc_pubkey_;
+using btc_pubkey = btc_pubkey_;
 template<typename T> class FutureValue;
 
 // Immutable ZMQ BIP15X peer public key, guaranteed to be valid (no need to check pubKey over and over)
@@ -21,10 +23,10 @@ public:
    const BinaryData &pubKey() const { return pubKey_; }
 private:
    // key name
-   const std::string name_;
+   std::string name_;
 
    // EC public key (33 bytes if compressed)
-   const BinaryData pubKey_;
+   BinaryData pubKey_;
 };
 
 using ZmqBIP15XPeers = std::vector<ZmqBIP15XPeer>;
@@ -32,6 +34,11 @@ using ZmqBIP15XPeers = std::vector<ZmqBIP15XPeer>;
 class ZmqBIP15XUtils
 {
 public:
+   static BinaryData convertKey(const btc_pubkey &pubKey);
+
+   // Convert to BinaryData, return empty result if key is not compressed
+   static BinaryData convertCompressedKey(const btc_pubkey &pubKey);
+
    static bool isValidPubKey(const BinaryData &pubKey);
 
    static bool addAuthPeer(AuthorizedPeers *authPeers, const ZmqBIP15XPeer &peer);

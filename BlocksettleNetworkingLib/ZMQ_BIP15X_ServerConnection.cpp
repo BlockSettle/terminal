@@ -349,6 +349,11 @@ BinaryData ZmqBIP15XServerConnection::getOwnPubKey(const AuthorizedPeers &authPe
    }
 }
 
+void ZmqBIP15XServerConnection::forceTrustedClients(const ZmqBIP15XPeers &peers)
+{
+   forcedTrustedClients_ = std::move(peers);
+}
+
 // A send function for the data connection that sends data to all clients,
 // somewhat like multicasting.
 //
@@ -720,6 +725,27 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
          {
             //invalid auth setup, kill connection
             return false;
+         }
+
+         if (!forcedTrustedClients_.empty()) {
+            auto chosenKey = ZmqBIP15XUtils::convertCompressedKey(connection->encData_->getChosenAuthPeerKey());
+            if (chosenKey.isNull()) {
+               SPDLOG_LOGGER_ERROR(logger_, "invalid choosed public key for forced trusted clients");
+               return false;
+            }
+
+            bool isValid = false;
+            for (const auto &client : forcedTrustedClients_) {
+               if (client.pubKey() == chosenKey) {
+                  isValid = true;
+                  break;
+               }
+            }
+
+            if (!isValid) {
+               SPDLOG_LOGGER_ERROR(logger_, "drop connection from unknown client, unexpected public key: {}", chosenKey.toHexStr());
+               return false;
+            }
          }
 
          //rekey after succesful BIP150 handshake

@@ -33,10 +33,16 @@ class ReqXBTSettlementContainer : public bs::SettlementContainer
    Q_OBJECT
 public:
    ReqXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<AuthAddressManager> &, const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &, const bs::network::RFQ &
-      , const bs::network::Quote &, const std::shared_ptr<TransactionData> &);
+      , const std::shared_ptr<AuthAddressManager> &
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const bs::network::RFQ &
+      , const bs::network::Quote &
+      , const std::shared_ptr<TransactionData> &
+      , const bs::Address &authAddr
+   );
    ~ReqXBTSettlementContainer() override;
 
    void OrderReceived();
@@ -90,6 +96,7 @@ private:
    void detectDealerTxs();
    void acceptSpotXBT();
    void dealerVerifStateChanged(AddressVerificationState);
+   void activateProceed();
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
@@ -134,6 +141,8 @@ private:
    unsigned int      payoutSignId_ = 0;
    unsigned int      infoReqId_ = 0;
    unsigned int      infoReqIdAuth_ = 0;
+
+   const bs::Address authAddr_;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__

@@ -25,18 +25,6 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
       }
       QString desc = QString(QLatin1String("%1. Default: %2")).arg(param->desc()).arg(defaultValueHelp);
 
-      // There is a small problem with boolean parameters when they used from command line:
-      // Command line parameter does not override value from the settings file.
-      // Let's revert old behavior for now.
-#if 0
-      if (param->defValue_.type() == QVariant::Type::Bool) {
-         // Use short form for boolean flags
-         parser.addOption({ param->name(), desc });
-      }
-      else {
-         parser.addOption({ param->name(), desc, param->name() });
-      }
-#endif
       parser.addOption({ param->name(), desc, param->name() });
    }
 
@@ -44,18 +32,20 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
 
    parser.process(argList);
 
+   auto unsetRequired = requiredParams_;
+
    if (parser.isSet(SettingsFile.name())) {
       QString settingsPathValue = parser.value(SettingsFile.name());
       QFileInfo fileInfo(settingsPathValue);
       if (!fileInfo.exists()) {
-         logger_->error("Settings file does not exist: {}", settingsPathValue.toStdString());
+         SPDLOG_LOGGER_ERROR(logger_, "Settings file does not exist: {}", settingsPathValue.toStdString());
          return false;
       }
 
       QSettings settings(settingsPathValue, QSettings::IniFormat);
 
       if (settings.status() != QSettings::NoError) {
-         logger_->error("Failed to parse settings file: {}", settingsPathValue.toStdString());
+         SPDLOG_LOGGER_ERROR(logger_,"Failed to parse settings file: {}", settingsPathValue.toStdString());
          return false;
       }
 
@@ -69,13 +59,14 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
             if (!result) {
                return false;
             }
+            unsetRequired.erase(param);
          }
          unknownKeys.erase(param->name());
       }
 
       if (!unknownKeys.empty()) {
          for (const QString& key : unknownKeys) {
-            logger_->error("Unknown key '{}' in settings file '{}'"
+            SPDLOG_LOGGER_ERROR(logger_,"Unknown key '{}' in settings file '{}'"
                , key.toStdString(), settingsPathValue.toStdString());
          }
          return false;
@@ -87,11 +78,19 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
          QVariant value = parser.value(param->name());
          bool result = param->setValue(value);
          if (!result) {
-            logger_->error("invalid value '{}' for key '{}' in settings file"
+            SPDLOG_LOGGER_ERROR(logger_,"invalid value '{}' for key '{}' in settings file"
                , value.toString().toStdString(), param->name().toStdString());
             return false;
          }
+         unsetRequired.erase(param);
       }
+   }
+
+   if (!unsetRequired.empty()) {
+      for (auto param : unsetRequired) {
+         SPDLOG_LOGGER_ERROR(logger_, "required parameter {} is not set", param->name().toStdString());
+      }
+      return false;
    }
 
    return true;

@@ -388,6 +388,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       }
    };
 
+   dialogData.insert("WalletId", rootWalletId);
    return RequestPasswordIfNeeded(clientId, rootWalletId, txSignReq, reqType, dialogData, onPassword);
 }
 
@@ -442,7 +443,7 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
          SignTXResponse(clientId, id, reqType, ErrorCode::InternalError);
       }
    };
-   return RequestPasswordsIfNeeded(++reqSeqNo_, clientId, txMultiReq, walletMap, prompt, cbOnAllPasswords);
+   return RequestPasswordsIfNeeded(++reqSeqNo_, clientId, txMultiReq, walletMap, cbOnAllPasswords);
 }
 
 bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::string &clientId
@@ -592,14 +593,16 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
       return true;
    }
 
-   return RequestPassword(clientId, txReq, reqType, dialogData, cb);
+   return RequestPassword(rootId, txReq, reqType, dialogData, cb);
 }
 
 bool HeadlessContainerListener::RequestPasswordsIfNeeded(int reqId, const std::string &clientId
    , const bs::core::wallet::TXMultiSignRequest &txMultiReq, const bs::core::WalletMap &walletMap
-   , const std::string &prompt, const PasswordsReceivedCb &cb)
+   , const PasswordsReceivedCb &cb)
 {
-   // FIXME - get settlement info in request
+   // FIXME: signer ui can't display stacked password input dialogs
+   // Need to rewrite code to support multi password dialog in ui or async loop
+
    Internal::PasswordDialogDataWrapper dialogData;
 
    TempPasswords tempPasswords;
@@ -644,12 +647,12 @@ bool HeadlessContainerListener::RequestPasswordsIfNeeded(int reqId, const std::s
    return true;
 }
 
-bool HeadlessContainerListener::RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &txReq
+bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const bs::core::wallet::TXSignRequest &txReq
    , headless::RequestType reqType, const Internal::PasswordDialogDataWrapper &dialogData
    , const PasswordReceivedCb &cb)
 {
    if (cb) {
-      auto &callbacks = passwordCallbacks_[txReq.walletId];
+      auto &callbacks = passwordCallbacks_[rootId];
       callbacks.push_back(cb);
       // TODO: review this code
       // need to clear callbacks if pw input canceled in signer ui
