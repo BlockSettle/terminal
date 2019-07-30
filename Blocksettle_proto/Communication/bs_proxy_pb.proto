@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.ProxyPb;
+
+message Message
+{
+    message Test
+    {
+    }
+
+    oneof data
+    {
+        Test test = 1;
+    }
+}

@@ -999,8 +999,6 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
 // OUTPUT: N/A
 // RETURN: N/A
 void ZmqBIP15XDataConnection::setCBs(const ZmqBipNewKeyCb& inNewKeyCB) {
-   assert(params_.cookie != BIP15XCookie::MakeClient);
-
    if (!inNewKeyCB) {
       cbNewKey_ = [this](const std::string &, const std::string, const std::string&
             , const std::shared_ptr<FutureValue<bool>> &prom) {

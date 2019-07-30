@@ -15,6 +15,20 @@ ZmqBIP15XPeer::ZmqBIP15XPeer(const std::string &name, const BinaryData &pubKey)
 }
 
 // static
+BinaryData ZmqBIP15XUtils::convertKey(const btc_pubkey &pubKey)
+{
+   return BinaryData(pubKey.pubkey, pubKey.compressed
+                     ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH);
+}
+
+BinaryData ZmqBIP15XUtils::convertCompressedKey(const btc_pubkey &pubKey)
+{
+   if (!pubKey.compressed) {
+      return {};
+   }
+   return convertKey(pubKey);
+}
+
 bool ZmqBIP15XUtils::isValidPubKey(const BinaryData &pubKey)
 {
    // Based on CryptoECDSA::VerifyPublicKeyValid

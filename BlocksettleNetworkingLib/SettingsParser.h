@@ -93,10 +93,17 @@ protected:
       addParamVariant(param, name, QLatin1String(defValue), descr);
    }
 
+   void addRequiredParam(BaseSettingsParam &param, const char* name, const char* descr)
+   {
+      addParam(param, name, QVariant(), descr);
+      requiredParams_.insert(&param);
+   }
+
    void addParamVariant(BaseSettingsParam &param, const char* name, const QVariant &defValue, const char* descr);
 
    std::shared_ptr<spdlog::logger> logger_;
    std::vector<BaseSettingsParam*> params_;
+   std::unordered_set<BaseSettingsParam*> requiredParams_;
    std::unordered_set<std::string> paramsNames_;
 };
 
