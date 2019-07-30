@@ -99,6 +99,7 @@ private:
    const bs::Address authAddr_;
 
    bool  cancelOnClose_ = true;
+   bool isRejectStarted_ = false;
 };
 
 #endif // __RFQ_DIALOG_H__
