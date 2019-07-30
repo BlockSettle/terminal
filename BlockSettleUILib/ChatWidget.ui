@@ -147,7 +147,7 @@
            </widget>
           </item>
           <item>
-           <widget class="ChatClientUserView" name="treeViewUsers">
+           <widget class="QTreeView" name="treeViewUsers">
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
             </property>
@@ -683,11 +683,6 @@
    <class>CreateOTCRequestWidget</class>
    <extends>QWidget</extends>
    <header>CreateOTCRequestWidget.h</header>
-  </customwidget>
-  <customwidget>
-   <class>ChatClientUserView</class>
-   <extends>QTreeView</extends>
-   <header>ChatClientUserView.h</header>
   </customwidget>
   <customwidget>
    <class>CreateOTCResponseWidget</class>

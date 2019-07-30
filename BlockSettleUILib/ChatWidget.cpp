@@ -22,9 +22,14 @@
 #include <QMimeData>
 #include <thread>
 #include <spdlog/spdlog.h>
+#include <ChatPartiesTreeModel.h>
 
 Q_DECLARE_METATYPE(std::vector<std::string>)
 
+#define USE_NEW_TREE_MODEL
+#ifdef USE_NEW_TREE_MODEL
+#include <QTreeView>
+#endif
 
 enum class OTCPages : int
 {
@@ -140,7 +145,9 @@ public:
       chat_->ui_->input_textEdit->setVisible(true);
       chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->searchWidget->setLineEditEnabled(true);
+#ifndef USE_NEW_TREE_MODEL
       chat_->ui_->treeViewUsers->expandAll();
+#endif
       chat_->ui_->labelUserName->setText(QString::fromStdString(chat_->client_->getUserId()));
 
       chat_->SetOTCLoggedInState();
@@ -201,6 +208,14 @@ ChatWidget::ChatWidget(QWidget *parent)
 {
    ui_->setupUi(this);
 
+#ifndef USE_NEW_TREE_MODEL
+      ChatClientUserView* view;
+      view = new ChatClientUserView(ui_->treeViewUsers->parentWidget());
+      auto *pOld = ui_->treeViewUsers->parentWidget()->layout()->replaceWidget(ui_->treeViewUsers, view);
+      ui_->treeViewUsers = view;
+      pOld->widget()->setVisible(false);
+#endif
+
 #ifndef Q_OS_WIN
    ui_->timeLabel->setMinimumSize(ui_->timeLabel->property("minimumSizeLinux").toSize());
 #endif
@@ -248,21 +263,25 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    auto model = client_->getDataModel();
    model->setNewMessageMonitor(this);
    auto proxyModel = client_->getProxyModel();
-   ui_->treeViewUsers->setModel(proxyModel.get());
-   ui_->treeViewUsers->setSortingEnabled(true);
-   ui_->treeViewUsers->sortByColumn(0, Qt::AscendingOrder);
+#ifndef USE_NEW_TREE_MODEL
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setModel(proxyModel.get());
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setSortingEnabled(true);
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->sortByColumn(0, Qt::AscendingOrder);
    connect(proxyModel.get(), &ChatTreeModelWrapper::treeUpdated,
-           ui_->treeViewUsers, &QTreeView::expandAll);
-//   ui_->treeViewUsers->expandAll();
-   ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
-   ui_->treeViewUsers->addWatcher(this);
-   ui_->treeViewUsers->setHandler(this);
+           static_cast<ChatClientUserView*>(ui_->treeViewUsers), &QTreeView::expandAll);
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->expandAll();
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->addWatcher(ui_->textEditMessages);
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->addWatcher(this);
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setHandler(this);
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setActiveChatLabel(ui_->labelActiveChat);
+#else
+   ui_->treeViewUsers->setModel(new ChatPartiesTreeModel(this));
+#endif
    ui_->textEditMessages->setHandler(this);
    ui_->textEditMessages->setMessageReadHandler(client_);
    ui_->textEditMessages->setClient(client_);
    ui_->input_textEdit->setAcceptRichText(false);
 
-   ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
    //ui_->chatSearchLineEdit->setActionsHandler(client_);
 
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
@@ -301,7 +320,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::Data> >& roomList)
 {
    if (roomList.size() > 0 && needsToStartFirstRoom_) {
-     // ui_->treeViewUsers->selectFirstRoom();
+      // ui_->treeViewUsers->selectFirstRoom();
       const auto &firstRoom = roomList.at(0);
       needsToStartFirstRoom_ = false;
    }
@@ -314,8 +333,10 @@ void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 
 void ChatWidget::onContactRequestApproved(const std::string &userId)
 {
-   ui_->treeViewUsers->setCurrentUserChat(userId);
-   ui_->treeViewUsers->updateCurrentChat();
+#ifndef USE_NEW_TREE_MODEL
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setCurrentUserChat(userId);
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->updateCurrentChat();
+#endif
 }
 
 void ChatWidget::changeState(ChatWidget::State state)
@@ -428,7 +449,9 @@ void ChatWidget::updateChat(const bool &isChatTab)
    ui_->textEditMessages->setIsChatTab(isChatTab_);
 
    if (isChatTab_) {
-      ui_->treeViewUsers->updateCurrentChat();
+#ifndef USE_NEW_TREE_MODEL
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->updateCurrentChat();
+#endif
    }
 }
 
@@ -446,7 +469,9 @@ void ChatWidget::onLoggedOut()
 
 void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &userId)
 {
-   ui_->treeViewUsers->setCurrentUserChat(userId.toStdString());
+#ifndef USE_NEW_TREE_MODEL
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setCurrentUserChat(userId.toStdString());
+#endif
    ui_->input_textEdit->setFocus(Qt::FocusReason::MouseFocusReason);
 }
 
@@ -461,12 +486,16 @@ void ChatWidget::onConnectedToServer()
 
 void ChatWidget::onContactRequestAccepted(const std::string &userId)
 {
-   ui_->treeViewUsers->setCurrentUserChat(userId);
+#ifndef USE_NEW_TREE_MODEL
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setCurrentUserChat(userId);
+#endif
 }
 
 void ChatWidget::onChangeChatRoom(const QString &userId)
 {
-   ui_->treeViewUsers->setCurrentUserChat(userId.toStdString());
+#ifndef USE_NEW_TREE_MODEL
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setCurrentUserChat(userId.toStdString());
+#endif
 }
 
 void ChatWidget::onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey)
@@ -600,7 +629,9 @@ bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
       NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
 
       if (isChatTab_) {
-         ui_->treeViewUsers->updateCurrentChat();
+#ifndef USE_NEW_TREE_MODEL
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->updateCurrentChat();
+#endif
       }
    }
 
@@ -624,8 +655,11 @@ void ChatWidget::onSendFriendRequest(const QString &userId)
 {
    //client_->sendFriendRequest(userId.toStdString());
    onActionCreatePendingOutgoing (userId.toStdString());
-   ui_->treeViewUsers->setCurrentUserChat(userId.toStdString());
-   ui_->treeViewUsers->updateCurrentChat();
+#ifndef USE_NEW_TREE_MODEL
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setCurrentUserChat(userId.toStdString());
+   static_cast<ChatClientUserView*>(ui_->treeViewUsers)->updateCurrentChat();
+#endif
+
    ui_->searchWidget->setListVisible(false);
 }
 
@@ -1124,7 +1158,9 @@ void ChatWidget::selectGlobalRoom()
 {
    if (currentChat_.empty()) {
       // find all indexes
-      QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
+#ifndef USE_NEW_TREE_MODEL
+      QModelIndexList indexes = static_cast<ChatClientUserView*>(ui_->treeViewUsers)->model()->match(
+               static_cast<ChatClientUserView*>(ui_->treeViewUsers)->model()->index(0,0),
                                                                   Qt::DisplayRole,
                                                                   QLatin1String("*"),
                                                                   -1,
@@ -1133,11 +1169,12 @@ void ChatWidget::selectGlobalRoom()
       for (auto index : indexes) {
          if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
             if (index.data(ChatClientDataModel::Role::RoomIdRole).toString().toStdString() == ChatUtils::GlobalRoomKey) {
-               ui_->treeViewUsers->setCurrentIndex(index);
+               static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setCurrentIndex(index);
                break;
             }
          }
       }
+#endif
    }
 }
 
