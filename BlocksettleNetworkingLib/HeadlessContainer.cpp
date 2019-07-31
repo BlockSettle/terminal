@@ -226,15 +226,13 @@ void HeadlessContainer::ProcessSettlementSignTXResponse(unsigned int id, const s
       return;
    }
    const auto itCb = cbSettlementSignTxMap_.find(id);
-   if (itCb == cbSettlementSignTxMap_.end()) {
-      emit Error(id, "no callback found for id " + std::to_string(id));
-      return;
+   if (itCb != cbSettlementSignTxMap_.end()) {
+      if (itCb->second) {
+         itCb->second(static_cast<bs::error::ErrorCode>(response.errorcode()), BinaryData(response.signedtx()));
+      }
+      cbSettlementSignTxMap_.erase(itCb);
    }
-
-   if (itCb->second) {
-      itCb->second(static_cast<bs::error::ErrorCode>(response.errorcode()), BinaryData(response.signedtx()));
-   }
-   cbSettlementSignTxMap_.erase(itCb);
+   emit TXSigned(id, response.signedtx(), static_cast<bs::error::ErrorCode>(response.errorcode()));
 }
 
 void HeadlessContainer::ProcessCreateHDLeafResponse(unsigned int id, const std::string &data)

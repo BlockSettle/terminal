@@ -12,6 +12,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "UiUtils.h"
 
 static const unsigned int kWaitTimeoutInSec = 30;
 
@@ -75,8 +76,11 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
       const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(
          bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, qty), recvAddr
          , transactionData_->GetTransactionSummary().feePerByte, armory_->topBlock());
-      const bs::sync::PasswordDialogData dlgData({ {tr("Settlement ID")
-         , QString::fromStdString(settlementId_.toHexStr())} });
+
+      bs::sync::PasswordDialogData dlgData = toPasswordDialogData();
+      dlgData.setValue("SettlementId", QString::fromStdString(settlementId_.toHexStr()));
+      dlgData.setValue("Title", tr("Pay-Out Transaction"));
+
       logger_->debug("[ReqXBTSettlementContainer] pay-out fee={}, payin hash={}", txReq.fee, payinHash.toHexStr(true));
       return signContainer_->signSettlementPayoutTXRequest(txReq, {settlementId_, dealerAuthKey_, !clientSells_ }
          , dlgData);
@@ -95,7 +99,7 @@ void ReqXBTSettlementContainer::acceptSpotXBT()
    if (clientSells_) {
       const auto &cbChangeAddr = [this](const bs::Address &changeAddr) {
          const auto payinTxReq = transactionData_->createTXRequest(false, changeAddr);
-         payinSignId_ = signContainer_->signTXRequest(payinTxReq);
+         payinSignId_ = signContainer_->signSettlementTXRequest(payinTxReq, toPasswordDialogData());
       };
       if (transactionData_->GetTransactionSummary().hasChange) {
          transactionData_->getWallet()->getNewChangeAddress(cbChangeAddr);
@@ -244,6 +248,41 @@ void ReqXBTSettlementContainer::deactivate()
    }
 }
 
+bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() const
+{
+   bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+
+   // rfq details
+   QString qtyProd = UiUtils::XbtCurrency;
+   QString fxProd = QString::fromStdString(fxProduct());
+
+   dialogData.setValue("Title", tr("Settlement Transaction"));
+
+   dialogData.setValue("Price", UiUtils::displayPriceXBT(price()));
+   dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
+
+   dialogData.setValue("Quantity", tr("%1 %2")
+                       .arg(UiUtils::displayAmountForProduct(amount(), qtyProd, bs::network::Asset::Type::SpotXBT))
+                       .arg(qtyProd));
+   dialogData.setValue("TotalValue", tr("%1 %2")
+                 .arg(UiUtils::displayAmountForProduct(amount() * price(), fxProd, bs::network::Asset::Type::SpotXBT))
+                 .arg(fxProd));
+
+
+   // tx details
+   if (weSell()) {
+      dialogData.setValue("TotalSpent", UiUtils::displayQuantity(amount() + UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+   }
+   else {
+      dialogData.setValue("TotalReceived", UiUtils::displayQuantity(amount() - UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+   }
+
+   dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
+   dialogData.setValue("NetworkFee", UiUtils::displayQuantity(UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+
+   return dialogData;
+}
+
 void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState state)
 {
    dealerVerifState_ = state;
@@ -261,41 +300,43 @@ void ReqXBTSettlementContainer::activateProceed()
          , [this](int confNum, bs::PayoutSigner::Type signedBy) { onPayoutZCDetected(confNum, signedBy); }
          , [](bs::PayoutSigner::Type) {});
       });
+
+      recvAddr_ = transactionData_->GetFallbackRecvAddress();
+
+      const auto recipient = transactionData_->RegisterNewRecipient();
+      transactionData_->UpdateRecipientAmount(recipient, amount_, transactionData_->maxSpendAmount());
+      transactionData_->UpdateRecipientAddress(recipient, settlAddr_);
+
+      const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
+      addrVerificator_->StartAddressVerification(std::make_shared<AuthAddress>(dealerAddrSW));
+      addrVerificator_->RegisterBSAuthAddresses();
+      addrVerificator_->RegisterAddresses();
+
+      const auto list = authAddrMgr_->GetVerifiedAddressList();
+      const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
+      userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
+      if (!userKeyOk_) {
+         logger_->warn("[ReqXBTSettlementContainer::activate] userAddr {} not found in verified addrs list[{}]"
+            , userAddress.display(), list.size());
+         return;
+      }
+
+      if (clientSells_) {
+         if (!transactionData_->IsTransactionValid()) {
+            userKeyOk_ = false;
+            logger_->error("[ReqXBTSettlementContainer::activate] transaction data is invalid");
+            emit error(tr("Transaction data is invalid - sending of pay-in is prohibited"));
+            return;
+         }
+      }
+
+      fee_ = transactionData_->GetTransactionSummary().totalFee;
+
+      startSigning();
    };
 
    const auto priWallet = walletsMgr_->getPrimaryWallet();
    priWallet->getSettlementPayinAddress(settlementId_, dealerAuthKey_, cbSettlAddr, clientSells_);
-
-   recvAddr_ = transactionData_->GetFallbackRecvAddress();
-
-   const auto recipient = transactionData_->RegisterNewRecipient();
-   transactionData_->UpdateRecipientAmount(recipient, amount_, transactionData_->maxSpendAmount());
-   transactionData_->UpdateRecipientAddress(recipient, settlAddr_);
-
-   const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
-   addrVerificator_->StartAddressVerification(std::make_shared<AuthAddress>(dealerAddrSW));
-   addrVerificator_->RegisterBSAuthAddresses();
-   addrVerificator_->RegisterAddresses();
-
-   const auto list = authAddrMgr_->GetVerifiedAddressList();
-   const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
-   userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
-   if (!userKeyOk_) {
-      logger_->warn("[ReqXBTSettlementContainer::activate] userAddr {} not found in verified addrs list[{}]"
-         , userAddress.display(), list.size());
-      return;
-   }
-
-   if (clientSells_) {
-      if (!transactionData_->IsTransactionValid()) {
-         userKeyOk_ = false;
-         logger_->error("[ReqXBTSettlementContainer::activate] transaction data is invalid");
-         emit error(tr("Transaction data is invalid - sending of pay-in is prohibited"));
-         return;
-      }
-   }
-
-   fee_ = transactionData_->GetTransactionSummary().totalFee;
 }
 
 void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX

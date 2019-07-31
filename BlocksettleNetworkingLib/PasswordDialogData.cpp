@@ -177,3 +177,8 @@ void bs::sync::PasswordDialogData::setValue(const char *key, const char *value)
 {
    setValue(key, QString::fromLatin1(value));
 }
+
+bool bs::sync::PasswordDialogData::contains(const QString &key)
+{
+   return values_.contains(key);
+}
