@@ -88,6 +88,7 @@ namespace bs {
             std::vector<BinaryData> getAddrHashesInt() const;
 
             virtual void merge(const std::shared_ptr<Wallet>) override;
+            void scan(const std::function<void(bs::sync::SyncState)> &cb) override;
 
             std::vector<std::string> setUnconfirmedTarget(void);
 
@@ -145,7 +146,7 @@ namespace bs {
             bs::hd::Path::Elem  lastIntIdx_ = 0;
             bs::hd::Path::Elem  lastExtIdx_ = 0;
 
-            size_t intAddressPoolSize_ = 20;
+            size_t intAddressPoolSize_ = 100;
             size_t extAddressPoolSize_ = 100;
             std::vector<AddressEntryType> poolAET_ = {
                AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH),
@@ -180,11 +181,18 @@ namespace bs {
             std::mutex  regMutex_;
             std::vector<std::string> unconfTgtRegIds_;
 
+            std::unordered_map<std::string, std::function<void(bs::sync::SyncState)>>  cbScanMap_;
+            std::shared_ptr<AsyncClient::BtcWallet>   scanWallet_;
+            std::string scanRegId_;
+            bool  scanExt_ = true;
+            std::set<BinaryData> activeScannedAddresses_;
+
          private:
             void createAddress(const CbAddress &, AddressEntryType aet, bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey addressIndex(const bs::Address &) const;
             bs::hd::Path::Elem getLastAddrPoolIndex(bs::hd::Path::Elem) const;
+            void resumeScan(const std::string &refreshId);
 
             static std::vector<BinaryData> getRegAddresses(const std::vector<PooledAddress> &src);
          };

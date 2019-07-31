@@ -38,6 +38,9 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
 
 WalletsManager::~WalletsManager() noexcept
 {
+   for (const auto &hdWallet : hdWallets_) {
+      hdWallet.second->setWCT(nullptr);
+   }
    {
       std::unique_lock<std::mutex> lock(maintMutex_);
       maintThreadRunning_ = false;
@@ -400,15 +403,12 @@ WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walle
    return nullptr;
 }
 
-WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &addr) const
+WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &address) const
 {
-   const auto &address = addr.unprefixed();
-   {
-      for (const auto wallet : wallets_) {
-         if (wallet.second && (wallet.second->containsAddress(address)
-            || wallet.second->containsHiddenAddress(address))) {
-            return wallet.second;
-         }
+   for (const auto wallet : wallets_) {
+      if (wallet.second && (wallet.second->containsAddress(address)
+         || wallet.second->containsHiddenAddress(address))) {
+         return wallet.second;
       }
    }
    return nullptr;
@@ -494,6 +494,7 @@ void WalletsManager::walletReady(const std::string &walletId)
    if (rootWallet) {
       const auto &itWallet = newWallets_.find(rootWallet->walletId());
       if (itWallet != newWallets_.end()) {
+         rootWallet->startRescan();
          newWallets_.erase(itWallet);
          rootWallet->synchronize([this, walletId] {
             QMetaObject::invokeMethod(this, [this, walletId] {

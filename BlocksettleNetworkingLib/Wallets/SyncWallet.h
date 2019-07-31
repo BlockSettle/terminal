@@ -171,7 +171,8 @@ namespace bs {
 
          void newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &inData,
             const CbAddresses &cb);
-         void trackChainAddressUse(std::function<void(bs::sync::SyncState)> cb);
+         void trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &cb);
+         virtual void scan(const std::function<void(bs::sync::SyncState)> &cb) {}
          size_t getActiveAddressCount(void);
 
          /***
@@ -182,7 +183,7 @@ namespace bs {
 
          //balance and count
          virtual bool updateBalances(const std::function<void(void)> & = nullptr);
-         virtual bool getAddressTxnCounts(std::function<void(void)> cb = nullptr);
+         virtual bool getAddressTxnCounts(const std::function<void(void)> &cb = nullptr);
          
          //utxos
          virtual bool getSpendableTxOutList(const ArmoryConnection::UTXOsCb &, uint64_t val);
@@ -282,8 +283,6 @@ namespace bs {
          virtual void onNewBlock(unsigned int block) override {
             parent_->onNewBlock(block);
          }
-         void onCombinedBalances(const std::map<std::string, CombinedBalances> &) override;
-         void onCombinedTxnCounts(const std::map<std::string, CombinedCounts> &) override;
          void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) override;
       protected:
          Wallet *parent_;
