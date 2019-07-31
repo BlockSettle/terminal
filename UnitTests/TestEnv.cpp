@@ -87,7 +87,8 @@ void TestEnv::requireArmory()
 
    armoryInstance_ = std::make_shared<ArmoryInstance>();
 
-   auto armoryConnection = std::make_shared<ArmoryObject>(logger_, "", false);
+   auto armoryConnection = std::make_shared<TestArmoryConnection>(
+      armoryInstance_, logger_, "", false);
    ArmorySettings settings;
    settings.runLocally = false;
    settings.socketType = appSettings()->GetArmorySocketType();
