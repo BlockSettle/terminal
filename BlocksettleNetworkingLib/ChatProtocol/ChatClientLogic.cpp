@@ -47,16 +47,19 @@ namespace Chat
 
       userHasherPtr_ = std::make_shared<UserHasher>();
 
-      connectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(appSettingsPtr, loggerPtr);
-      connectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
-      connect(this, &ChatClientLogic::dataReceived, connectionLogicPtr_.get(), &ClientConnectionLogic::onDataReceived);
-      connect(this, &ChatClientLogic::connected, connectionLogicPtr_.get(), &ClientConnectionLogic::onConnected);
-      connect(this, &ChatClientLogic::disconnected, connectionLogicPtr_.get(), &ClientConnectionLogic::onDisconnected);
-      connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error), 
-         connectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
+      setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr, this));
 
-      connect(connectionLogicPtr_.get(), &ClientConnectionLogic::sendRequestPacket, this, &ChatClientLogic::sendRequestPacket);
-      connect(connectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
+      clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr(), appSettingsPtr, loggerPtr);
+      clientConnectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
+      connect(this, &ChatClientLogic::dataReceived, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDataReceived);
+      connect(this, &ChatClientLogic::connected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onConnected);
+      connect(this, &ChatClientLogic::disconnected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDisconnected);
+      connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error), 
+         clientConnectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
+
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::sendRequestPacket, this, &ChatClientLogic::sendRequestPacket);
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr().get(), &ClientPartyLogic::onUserStatusChanged);
    }
 
    void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb)

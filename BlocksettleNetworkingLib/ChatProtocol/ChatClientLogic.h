@@ -6,6 +6,7 @@
 
 #include "ChatProtocol/ChatUser.h"
 #include "ChatProtocol/ClientConnectionLogic.h"
+#include "ChatProtocol/ClientPartyLogic.h"
 
 #include "DataConnectionListener.h"
 
@@ -53,6 +54,8 @@ namespace Chat
       void OnDisconnected(void) override;
       void OnError(DataConnectionListener::DataConnectionError) override;
 
+      Chat::ClientPartyLogicPtr clientPartyLogicPtr() const { return clientPartyLogicPtr_; }
+
    public slots:
       void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
@@ -75,6 +78,7 @@ namespace Chat
       void onCloseConnection();
 
    private:
+      void setClientPartyLogicPtr(Chat::ClientPartyLogicPtr val) { clientPartyLogicPtr_ = val; }
       std::string getChatServerHost() const;
       std::string getChatServerPort() const;
 
@@ -84,7 +88,8 @@ namespace Chat
       ApplicationSettingsPtr     applicationSettingsPtr_;
       UserHasherPtr              userHasherPtr_;
       ChatUserPtr                currentUserPtr_;
-      ConnectionLogicPtr         connectionLogicPtr_;
+      ClientConnectionLogicPtr   clientConnectionLogicPtr_;
+      ClientPartyLogicPtr        clientPartyLogicPtr_;
    };
 
 }

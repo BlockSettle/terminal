@@ -2,6 +2,11 @@
 
 namespace Chat
 {
+   PrivateDirectMessageParty::PrivateDirectMessageParty(const std::string& id, const PartyType& partyType, const PartySubType& partySubType)
+      : Party(id, partyType, partySubType)
+   {
+
+   }
 
    bool PrivateDirectMessageParty::isUserBelongsToParty(const std::string& userName)
    {

@@ -63,4 +63,14 @@ namespace Chat
    {
       loggerPtr_->debug("[PartyModel::handleLocalErrors] Error: {}, what: {}", (int)errorCode, id);
    }
+
+   void PartyModel::clearModel()
+   {
+      for (const auto& element : partyMap_)
+      {
+         emit partyRemoved(element.second);
+      }
+
+      partyMap_.clear();
+   }
 }

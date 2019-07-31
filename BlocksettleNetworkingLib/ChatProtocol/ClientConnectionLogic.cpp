@@ -13,8 +13,8 @@
 namespace Chat
 {
 
-   ClientConnectionLogic::ClientConnectionLogic(const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
-      : appSettings_(appSettings), loggerPtr_(loggerPtr), QObject(parent)
+   ClientConnectionLogic::ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
+      : clientPartyLogicPtr_(clientPartyLogicPtr), appSettings_(appSettings), loggerPtr_(loggerPtr), QObject(parent)
    {
 
    }
@@ -99,6 +99,8 @@ namespace Chat
          emit closeConnection();
          return;
       }
+
+      clientPartyLogicPtr_->handlePartiesFromWelcomePacket(msg);
    }
 
    void ClientConnectionLogic::handleLogoutResponse(const google::protobuf::Message& msg)

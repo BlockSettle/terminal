@@ -13,6 +13,8 @@ namespace Chat
    class PrivateDirectMessageParty : public Party
    {
    public:
+      PrivateDirectMessageParty(const std::string& id, const PartyType& partyType, const PartySubType& partySubType);
+
       Recipients recipients() const { return recipients_; }
       void setRecipients(Recipients val) { recipients_ = val; }
 

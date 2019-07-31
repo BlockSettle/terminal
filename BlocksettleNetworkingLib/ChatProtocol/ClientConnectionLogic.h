@@ -8,6 +8,7 @@
 #include "DataConnectionListener.h"
 #include "ApplicationSettings.h"
 #include "ChatProtocol/ChatUser.h"
+#include "ChatProtocol/ClientPartyLogic.h"
 
 #include "chat.pb.h"
 
@@ -25,7 +26,7 @@ namespace Chat
    {
       Q_OBJECT
    public:
-      explicit ClientConnectionLogic(const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr, QObject* parent = nullptr);
+      explicit ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr, QObject* parent = nullptr);
 
       Chat::ChatUserPtr currentUserPtr() const { return currentUserPtr_; }
       void setCurrentUserPtr(Chat::ChatUserPtr val) { currentUserPtr_ = val; }
@@ -52,9 +53,10 @@ namespace Chat
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;
       ApplicationSettingsPtr appSettings_;
+      ClientPartyLogicPtr clientPartyLogicPtr_;
    };
 
-   using ConnectionLogicPtr = std::shared_ptr<ClientConnectionLogic>;
+   using ClientConnectionLogicPtr = std::shared_ptr<ClientConnectionLogic>;
 }
 
 #endif // ConnectionLogic_h__

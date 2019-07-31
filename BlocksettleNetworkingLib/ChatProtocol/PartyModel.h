@@ -36,6 +36,7 @@ namespace Chat
       void insertParty(const PartyPtr& partyPtr);
       void removeParty(const PartyPtr& partyPtr);
       PartyPtr getPartyById(const std::string& id);
+      void clearModel();
 
    signals:
       void partyInserted(const PartyPtr& partyPtr);
