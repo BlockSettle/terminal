@@ -288,7 +288,7 @@ std::vector<std::string> hd::Wallet::setUnconfirmedTargets()
    return result;
 }
 
-void hd::Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &cb)
+void hd::Wallet::scan(const std::function<void(bs::sync::SyncState)> &cb)
 {
    auto stateMap = std::make_shared<std::map<std::string, bs::sync::SyncState>>();
    const auto &leaves = getLeaves();
@@ -297,9 +297,9 @@ void hd::Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncSta
       const auto &cbScanLeaf = [this, leaf, nbLeaves, stateMap, cb](bs::sync::SyncState state) {
          (*stateMap)[leaf->walletId()] = state;
          if (stateMap->size() == nbLeaves) {
-            bs::sync::SyncState hdState = bs::sync::SyncState::Success;
+            bs::sync::SyncState hdState = bs::sync::SyncState::Failure;
             for (const auto &st : *stateMap) {
-               if (st.second > hdState) {
+               if (st.second < hdState) {
                   hdState = st.second;
                }
             }
@@ -313,20 +313,19 @@ void hd::Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncSta
             });
          }
       };
-      const bool rc = leaf->getAddressTxnCounts([leaf, cbScanLeaf, this] {
-         leaf->trackChainAddressUse(cbScanLeaf);
-      });
+      leaf->scan(cbScanLeaf);
    }
 }
 
 void hd::Wallet::startRescan()
 {
    const auto &cbScanned = [this](bs::sync::SyncState state) {
+//      synchronize([]{});
       if (wct_) {
          wct_->scanComplete(walletId());
       }
    };
-   trackChainAddressUse(cbScanned);
+   scan(cbScanned);
 }
 
 bool hd::Wallet::deleteRemotely()
@@ -375,6 +374,14 @@ void hd::Wallet::merge(const Wallet& rhs)
 
       auto& leafPtr = iter->second;
       leafPtr->merge(leafPair.second);
+   }
+}
+
+void hd::Wallet::setWCT(WalletCallbackTarget *wct)
+{
+   wct_ = wct;
+   for (const auto &leaf : getLeaves()) {
+      leaf->setWCT(wct);
    }
 }
 
