@@ -1,10 +1,10 @@
-#include "ChatProtocol/PartyModel.h"
+#include "ChatProtocol/ClientPartyModel.h"
 
 namespace Chat
 {
 
-   PartyModel::PartyModel(QObject* parent /* = nullptr */)
-      : QObject(parent)
+   ClientPartyModel::ClientPartyModel(const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
+      : PartyModel(loggerPtr, parent)
    {
 
    }

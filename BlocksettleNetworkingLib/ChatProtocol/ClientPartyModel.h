@@ -1,19 +1,32 @@
-#ifndef PartyModel_h__
-#define PartyModel_h__
+#ifndef ClientPartyModel_h__
+#define ClientPartyModel_h__
 
 #include <QObject>
 #include <memory>
+#include <unordered_map>
+#include <vector>
+
+#include "ChatProtocol/PartyModel.h"
+
+namespace spdlog
+{
+   class logger;
+}
 
 namespace Chat
 {
+   using LoggerPtr = std::shared_ptr<spdlog::logger>;
 
-   class PartyModel : public QObject
+   class ClientPartyModel : public PartyModel
    {
       Q_OBJECT
    public:
-      PartyModel(QObject* parent = nullptr);
+      ClientPartyModel(const LoggerPtr& loggerPtr, QObject* parent = nullptr);
+
    };
+
+   using ClientPartyModelPtr = std::shared_ptr<ClientPartyModel>;
 
 }
 
-#endif // PartyModel_h__
+#endif // ClientPartyModel_h__
