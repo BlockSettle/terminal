@@ -2,6 +2,7 @@
 #define PartyModel_h__
 
 #include <QObject>
+#include <memory>
 
 namespace Chat
 {
