@@ -45,7 +45,7 @@ namespace Chat
    private slots:
       void handleLocalErrors(const PartyModelError& errorCode, const std::string& id = "");
 
-   private:
+   protected:
       PartyMap partyMap_;
       LoggerPtr loggerPtr_;
    };
