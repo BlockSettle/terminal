@@ -18,7 +18,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-#define UNITTEST_DB_PORT 59055
+#define UNITTEST_DB_PORT 59095
 
 struct StaticLogger
 {
@@ -157,7 +157,7 @@ public:
    {
       auto&& notif = notifQueue_.pop_front();
       if(notif->type_ != DBNS_NewBlock)
-         throw std::runtime_error("expected new block notification");
+         throw std::runtime_error("expected new block notification (got " + std::to_string(notif->type_) + ")");
       
       return notif->block_;
    }
