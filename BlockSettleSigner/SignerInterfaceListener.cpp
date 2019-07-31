@@ -579,7 +579,7 @@ void SignerInterfaceListener::requestPasswordForSettlementTx(signer::PasswordDia
    bool partial = (reqType == signer::SignSettlementPartialTx);
    QString prompt = (partial ? tr("Outgoing Partial Transaction") : tr("Outgoing Transaction"));
 
-   qmlBridge_->invokeQmlMethod("createCCSettlementTransactionDialog", createQmlPasswordCallback()
+   qmlBridge_->invokeQmlMethod("createSettlementTransactionDialog", createQmlPasswordCallback()
       , prompt
       , QVariant::fromValue(txInfo)
       , QVariant::fromValue(dialogData)
