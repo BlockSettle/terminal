@@ -9,15 +9,11 @@
 #include "ApplicationSettings.h"
 #include "ChatProtocol/ChatUser.h"
 
+#include "chat.pb.h"
+
 namespace spdlog
 {
    class logger;
-}
-
-namespace google {
-   namespace protobuf {
-      class Message;
-   }
 }
 
 namespace Chat
@@ -43,6 +39,7 @@ namespace Chat
    signals:
       void sendRequestPacket(const google::protobuf::Message& message);
       void closeConnection();
+      void userStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
 
    private:
       template<typename T>
@@ -50,6 +47,7 @@ namespace Chat
 
       void handleWelcomeResponse(const google::protobuf::Message& msg);
       void handleLogoutResponse(const google::protobuf::Message& msg);
+      void handleStatusChanged(const google::protobuf::Message& msg);
 
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;

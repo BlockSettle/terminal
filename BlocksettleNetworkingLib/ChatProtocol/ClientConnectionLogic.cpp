@@ -5,7 +5,6 @@
 
 #include "ChatProtocol/ClientConnectionLogic.h"
 #include "ProtobufUtils.h"
-#include "chat.pb.h"
 
 #include <disable_warnings.h>
 #include <spdlog/logger.h>
@@ -38,6 +37,13 @@ namespace Chat
       if (pbStringToMessage<LogoutResponse>(data, &logoutResponse))
       {
          handleLogoutResponse(logoutResponse);
+         return;
+      }
+
+      StatusChanged statusChanged;
+      if (pbStringToMessage<StatusChanged>(data, &statusChanged))
+      {
+         handleStatusChanged(statusChanged);
          return;
       }
    }
@@ -86,7 +92,7 @@ namespace Chat
    void ClientConnectionLogic::handleWelcomeResponse(const google::protobuf::Message& msg)
    {
       WelcomeResponse welcomeResponse;
-      welcomeResponse.CheckTypeAndMergeFrom(msg);
+      welcomeResponse.CopyFrom(msg);
 
       if (!welcomeResponse.success())
       {
@@ -97,10 +103,15 @@ namespace Chat
 
    void ClientConnectionLogic::handleLogoutResponse(const google::protobuf::Message& msg)
    {
-      LogoutResponse logoutResponse;
-      logoutResponse.CheckTypeAndMergeFrom(msg);
-
       emit closeConnection();
+   }
+
+   void ClientConnectionLogic::handleStatusChanged(const google::protobuf::Message& msg)
+   {
+      StatusChanged statusChanged;
+      statusChanged.CopyFrom(msg);
+      
+      emit userStatusChanged(statusChanged.user_name(), statusChanged.client_status());
    }
 
 }
