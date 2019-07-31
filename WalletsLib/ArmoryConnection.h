@@ -178,6 +178,9 @@ public:
 
    std::shared_ptr<AsyncClient::BtcWallet> instantiateWallet(const std::string &walletId);
 
+   std::shared_ptr<AsyncClient::BlockDataViewer> bdv(void) const { return bdv_; }
+
+
 protected:
    void setupConnection(NetworkType, const std::string &host, const std::string &port
       , const std::string &dataDir, const BinaryData &serverKey
