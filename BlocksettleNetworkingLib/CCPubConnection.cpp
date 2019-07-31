@@ -84,23 +84,9 @@ void CCPubConnection::OnDataReceived(const std::string& data)
       return;
    }
 
-   bool sigVerified = false;
-
-   if (!response.has_datasignature()) {
-      logger_->warn("[CCPubConnection::OnDataReceived] Public bridge response of type {} has no signature!"
-         , static_cast<int>(response.responsetype()));
-   } else {
-/*      sigVerified = VerifySignature(response.responsedata(), response.datasignature());
-      if (!sigVerified) {
-         logger_->error("[CCPubConnection::OnDataReceived] Response signature verification failed - response {} dropped"
-            , static_cast<int>(response.responsetype()));
-         return;
-      }*/   //TODO: consider implementing this via resolver - maybe it's not needed here at all (= 0 in this class)
-   }
-
    switch (response.responsetype()) {
    case RequestType::GetCCGenesisAddressesType:
-      ProcessGenAddressesResponse(response.responsedata(), sigVerified, response.datasignature());
+      ProcessGenAddressesResponse(response.responsedata(), response.datasignature());
       break;
    case RequestType::SubmitCCAddrInitialDistribType:
       ProcessSubmitAddrResponse(response.responsedata());

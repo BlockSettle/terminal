@@ -13,8 +13,23 @@
 #include <QFile>
 
 #include "bs_communication.pb.h"
+#include "bs_storage.pb.h"
 
 using namespace Blocksettle::Communication;
+
+namespace {
+
+   AddressNetworkType networkType(NetworkType netType)
+   {
+      return netType == NetworkType::MainNet ? AddressNetworkType::MainNetType : AddressNetworkType::TestNetType;
+   }
+
+   AddressNetworkType networkType(const std::shared_ptr<ApplicationSettings> &settings)
+   {
+      return networkType(settings->get<NetworkType>(ApplicationSettings::netType));
+   }
+
+} // namespace
 
 CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -81,7 +96,7 @@ void CCFileManager::setBsClient(BsClient *bsClient)
 
 void CCFileManager::LoadSavedCCDefinitions()
 {
-   if (!resolver_->loadFromFile(ccFilePath_.toStdString())) {
+   if (!resolver_->loadFromFile(ccFilePath_.toStdString(), appSettings_->get<NetworkType>(ApplicationSettings::netType))) {
       emit LoadingFailed();
       QFile::remove(ccFilePath_);
    }
@@ -97,24 +112,20 @@ bool CCFileManager::wasAddressSubmitted(const bs::Address &addr)
    return celerClient_->IsCCAddressSubmitted(addr.display());
 }
 
-static inline AddressNetworkType networkType(const std::shared_ptr<ApplicationSettings> &settings)
+void CCFileManager::ProcessGenAddressesResponse(const std::string& response, const std::string &sig)
 {
-   return (settings->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
-      ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType;
-}
+   bool sigVerified = resolver_->verifySignature(response, sig);
+   if (!sigVerified) {
+      SPDLOG_LOGGER_ERROR(logger_, "Signature verification failed! Rejecting CC genesis addresses reply.");
+      return;
+   }
 
-void CCFileManager::ProcessGenAddressesResponse(const std::string& response, bool sigVerified, const std::string &sig)
-{
    GetCCGenesisAddressesResponse genAddrResp;
 
    if (!genAddrResp.ParseFromString(response)) {
       logger_->error("[CCFileManager::ProcessCCGenAddressesResponse] data corrupted. Could not parse.");
       return;
    }
-   /*if (!sigVerified) {
-      logger_->error("[CCFileManager::ProcessCCGenAddressesResponse] rejecting unverified reply");
-      return;
-   }*/
 
    if (genAddrResp.networktype() != networkType(appSettings_)) {
       logger_->error("[CCFileManager::ProcessCCGenAddressesResponse] network type mismatch in reply: {}"
@@ -122,25 +133,24 @@ void CCFileManager::ProcessGenAddressesResponse(const std::string& response, boo
       return;
    }
 
-   if (currentRev_ > 0) {
-      if (genAddrResp.revision() == currentRev_) {
-         logger_->debug("[CCFileManager::ProcessCCGenAddressesResponse] having the same revision already");
-         return;
-      }
-      if (genAddrResp.revision() < currentRev_) {
-         logger_->warn("[CCFileManager::ProcessCCGenAddressesResponse] PuB has older revision {} than we ({})"
-            , genAddrResp.revision(), currentRev_);
-      }
+   if (currentRev_ > 0 && genAddrResp.revision() == currentRev_) {
+      logger_->debug("[CCFileManager::ProcessCCGenAddressesResponse] having the same revision already");
+      return;
+   }
+
+   if (genAddrResp.revision() < currentRev_) {
+      logger_->warn("[CCFileManager::ProcessCCGenAddressesResponse] PuB has older revision {} than we ({})"
+         , genAddrResp.revision(), currentRev_);
    }
 
    resolver_->fillFrom(&genAddrResp);
 
    if (saveToFileDisabled_) {
       logger_->debug("[{}] save to file disabled", __func__);
+      return;
    }
-   else {
-      resolver_->saveToFile(ccFilePath_.toStdString(), currentRev_, sig);
-   }
+
+   resolver_->saveToFile(ccFilePath_.toStdString(), response, sig);
 }
 
 bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed, const std::string &srcToken)
@@ -339,7 +349,7 @@ void CCPubResolver::fillFrom(Blocksettle::Communication::GetCCGenesisAddressesRe
    cbLoadComplete_(resp->revision());
 }
 
-bool CCPubResolver::loadFromFile(const std::string &path)
+bool CCPubResolver::loadFromFile(const std::string &path, NetworkType netType)
 {
    QFile f(QString::fromStdString(path));
    if (!f.exists()) {
@@ -350,31 +360,34 @@ bool CCPubResolver::loadFromFile(const std::string &path)
       logger_->error("[CCFileManager::LoadFromFile] failed to open file {} for reading", path);
       return false;
    }
+
    const auto buf = f.readAll();
    if (buf.isEmpty()) {
       logger_->error("[CCFileManager::LoadFromFile] failed to read from {}", path);
       return false;
    }
 
+   Blocksettle::Storage::CCDefinitions msg;
+   bool result = msg.ParseFromArray(buf.data(), buf.size());
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "failed to parse storage file");
+      return false;
+   }
+
+   result = verifySignature(msg.response(), msg.signature());
+   if (!result) {
+      logger_->error("[CCFileManager::LoadFromFile] signature verification failed for {}", path);
+      return false;
+   }
+
    GetCCGenesisAddressesResponse resp;
-   if (!resp.ParseFromString(buf.toStdString())) {
+   if (!resp.ParseFromString(msg.response())) {
       logger_->error("[CCFileManager::LoadFromFile] failed to parse {}", path);
       return false;
    }
-/*   if (resp.networktype() != networkType(appSettings_)) {
+
+   if (resp.networktype() != networkType(netType)) {
       logger_->error("[CCFileManager::LoadFromFile] wrong network type in {}", path);
-      return false;
-   }*/
-
-   if (!resp.has_signature()) {
-      logger_->error("[CCFileManager::LoadFromFile] signature is missing in {}", path);
-      return false;
-   }
-   const auto signature = resp.signature();
-   resp.clear_signature();
-
-   if (!verifySignature(resp.SerializeAsString(), signature)) {
-      logger_->error("[CCFileManager::LoadFromFile] signature verification failed for {}", path);
       return false;
    }
 
@@ -382,35 +395,25 @@ bool CCPubResolver::loadFromFile(const std::string &path)
    return true;
 }
 
-bool CCPubResolver::saveToFile(const std::string &path, unsigned int rev, const std::string &sig)
+bool CCPubResolver::saveToFile(const std::string &path, const std::string &response, const std::string &sig)
 {
-   GetCCGenesisAddressesResponse resp;
-
-   resp.set_networktype(/*networkType(appSettings_)*/AddressNetworkType::TestNetType);
-   resp.set_revision(rev);
-   resp.set_signature(sig);
-
-   for (const auto &ccDef : securities_) {
-      const auto secDef = resp.add_ccsecurities();
-      secDef->set_securityid(ccDef.second.securityId);
-      secDef->set_product(ccDef.second.product);
-      secDef->set_genesisaddr(ccDef.second.genesisAddr.display());
-      secDef->set_satoshisnb(ccDef.second.nbSatoshis);
-      if (!ccDef.second.description.empty()) {
-         secDef->set_description(ccDef.second.description);
-      }
-   }
+   Blocksettle::Storage::CCDefinitions msg;
+   msg.set_response(response);
+   msg.set_signature(sig);
+   auto data = msg.SerializeAsString();
 
    QFile f(QString::fromStdString(path));
    if (!f.open(QIODevice::WriteOnly)) {
       logger_->error("[CCFileManager::SaveToFile] failed to open file {} for writing", path);
       return false;
    }
-   const auto data = resp.SerializeAsString();
-   if (data.size() != (size_t)f.write(data.data(), data.size())) {
+
+   auto writeSize = f.write(data.data(), int(data.size()));
+   if (data.size() != size_t(writeSize)) {
       logger_->error("[CCFileManager::SaveToFile] failed to write to {}", path);
       return false;
    }
+
    return true;
 }
 

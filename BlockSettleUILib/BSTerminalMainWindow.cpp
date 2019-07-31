@@ -186,7 +186,7 @@ void BSTerminalMainWindow::onBsConnectionFailed()
 
 void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
 {
-   if (!ccFileManager_ || ccFileManager_->synchronized()) {
+   if (!ccFileManager_) {
       return;
    }
    const auto &priWallet = walletsMgr_->getPrimaryWallet();

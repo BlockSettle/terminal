@@ -41,14 +41,14 @@ public:
    std::vector<std::string> securities() const override;
 
    void fillFrom(Blocksettle::Communication::GetCCGenesisAddressesResponse *resp);
-   bool loadFromFile(const std::string &path);
-   bool saveToFile(const std::string &path, unsigned int rev
+   bool loadFromFile(const std::string &path, NetworkType netType);
+   bool saveToFile(const std::string &path, const std::string &response
       , const std::string &signature);
 
+   bool verifySignature(const std::string& data, const std::string& signature) const;
 private:
    void add(const bs::network::CCSecurityDef &);
    void clear();
-   bool verifySignature(const std::string& data, const std::string& signature) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -73,7 +73,6 @@ public:
    CCFileManager& operator = (CCFileManager&&) = delete;
 
    std::shared_ptr<bs::sync::CCDataResolver> getResolver() const { return resolver_; }
-   bool synchronized() const { return syncFinished_; }
 
    void LoadSavedCCDefinitions();
    void ConnectToCelerClient(const std::shared_ptr<BaseCelerClient> &);
@@ -103,7 +102,7 @@ private:
    void RemoveAndDisableFileSave();
 
 protected:
-   void ProcessGenAddressesResponse(const std::string& response, bool sigVerified, const std::string &sig) override;
+   void ProcessGenAddressesResponse(const std::string& response, const std::string &sig) override;
    void ProcessSubmitAddrResponse(const std::string& response) override;
 
    bool IsTestNet() const override;
@@ -114,21 +113,15 @@ protected:
 
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
-   std::shared_ptr<BaseCelerClient>           celerClient_;
+   std::shared_ptr<BaseCelerClient>       celerClient_;
 
    // when user changes PuB connection settings - save to file should be disabled.
    // dev build feature only. final release should have single PuB.
    bool saveToFileDisabled_ = false;
 
-   bool syncStarted_ = false;
-   bool syncFinished_ = false;
-
    std::shared_ptr<CCPubResolver>   resolver_;
    QPointer<BsClient> bsClient_;
    QString ccFilePath_;
-
-private:
-   bool RequestFromPuB();
 };
 
 #endif // __CC_FILE_MANAGER_H__
