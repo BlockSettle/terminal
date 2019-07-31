@@ -1344,7 +1344,7 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
    switch (packet.type()) {
    case headless::SignTxRequestType:
    case headless::SignPartialTXRequestType:
-//   case headless::SignPayoutTXRequestType:
+   case headless::SignSettlementPayoutTxType:
    case headless::SignTXMultiRequestType:
       ProcessSignTXResponse(packet.id(), packet.data());
       break;
