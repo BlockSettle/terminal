@@ -475,11 +475,10 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
          for (auto& addrPair : addrVec) {
             addrHashes.push_back(addrPair.first.prefixed());
          }
-         auto promPtr = std::make_shared<std::promise<bool>>();
-         auto fut = promPtr->get_future();
-         auto cbRegistered = [promPtr](const std::string &regId)
+         auto cbRegistered = [cb](const std::string &regId)
          {
-            promPtr->set_value(true);
+            if (cb)
+               cb();
          };
 
          if (extInt) {
@@ -490,7 +489,7 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
             armory_->registerWallet(btcWalletInt_
                , walletIdInt(), walletId(), addrHashes, cbRegistered, true);
          }
-         fut.wait();
+         return;
       }
 
       if (cb) {
