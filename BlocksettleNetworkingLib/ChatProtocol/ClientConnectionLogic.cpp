@@ -86,7 +86,7 @@ namespace Chat
    void ClientConnectionLogic::handleWelcomeResponse(const google::protobuf::Message& msg)
    {
       WelcomeResponse welcomeResponse;
-      welcomeResponse.CheckTypeAndMergeFrom(msg);
+      welcomeResponse.CopyFrom(msg);
 
       if (!welcomeResponse.success())
       {
@@ -98,7 +98,7 @@ namespace Chat
    void ClientConnectionLogic::handleLogoutResponse(const google::protobuf::Message& msg)
    {
       LogoutResponse logoutResponse;
-      logoutResponse.CheckTypeAndMergeFrom(msg);
+      logoutResponse.CopyFrom(msg);
 
       emit closeConnection();
    }
