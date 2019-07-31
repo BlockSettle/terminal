@@ -19,6 +19,8 @@ namespace Chat
       NonexistentClientStatusChanged
    };
 
+   Q_DECLARE_METATYPE(ClientPartyLogicError)
+
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
 
    class ClientPartyLogic : public QObject

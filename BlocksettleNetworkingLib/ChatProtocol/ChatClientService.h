@@ -22,6 +22,8 @@ namespace Chat
    public:
       explicit ChatClientService(QObject* parent = nullptr);
 
+      ClientPartyLogicPtr getClientPartyLogicPtr();
+
    signals:
       ////////// PROXY SIGNALS //////////
       void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);

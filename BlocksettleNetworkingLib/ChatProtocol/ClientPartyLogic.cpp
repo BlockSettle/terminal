@@ -12,6 +12,8 @@ namespace Chat
 
    ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, QObject* parent) : QObject(parent)
    {
+      qRegisterMetaType<ClientPartyLogicError>();
+
       clientPartyModelPtr_ = std::make_shared<ClientPartyModel>(loggerPtr, this);
       connect(this, &ClientPartyLogic::error, this, &ClientPartyLogic::handleLocalErrors);
    }

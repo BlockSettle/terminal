@@ -22,4 +22,9 @@ namespace Chat
       connect(worker(), &ChatClientLogic::clientLoggedOutFromServer, this, &ChatClientService::clientLoggedOutFromServer);
    }
 
+   ClientPartyLogicPtr ChatClientService::getClientPartyLogicPtr()
+   {
+      return worker()->clientPartyLogicPtr();
+   }
+
 }

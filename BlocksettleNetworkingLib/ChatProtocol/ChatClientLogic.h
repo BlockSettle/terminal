@@ -26,8 +26,6 @@ class UserHasher;
 
 namespace Chat
 {
-   Q_DECLARE_METATYPE(DataConnectionListener::DataConnectionError)
-
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
    using ConnectionManagerPtr = std::shared_ptr<ConnectionManager>;
    using ApplicationSettingsPtr = std::shared_ptr<ApplicationSettings>;
@@ -40,6 +38,10 @@ namespace Chat
       ConnectionAlreadyUsed,
       ZmqDataConnectionFailed
    };
+
+   Q_DECLARE_METATYPE(DataConnectionListener::DataConnectionError)
+   Q_DECLARE_METATYPE(ChatClientLogicError)
+   Q_DECLARE_METATYPE(ClientPartyLogicPtr)
 
    class ChatClientLogic : public QObject, public DataConnectionListener
    {
@@ -54,7 +56,7 @@ namespace Chat
       void OnDisconnected(void) override;
       void OnError(DataConnectionListener::DataConnectionError) override;
 
-      Chat::ClientPartyLogicPtr clientPartyLogicPtr() const { return clientPartyLogicPtr_; }
+      ClientPartyLogicPtr clientPartyLogicPtr() const { return clientPartyLogicPtr_; }
 
    public slots:
       void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
@@ -78,7 +80,7 @@ namespace Chat
       void onCloseConnection();
 
    private:
-      void setClientPartyLogicPtr(Chat::ClientPartyLogicPtr val) { clientPartyLogicPtr_ = val; }
+      void setClientPartyLogicPtr(ClientPartyLogicPtr val) { clientPartyLogicPtr_ = val; }
       std::string getChatServerHost() const;
       std::string getChatServerPort() const;
 
