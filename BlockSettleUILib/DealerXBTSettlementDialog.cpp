@@ -70,6 +70,7 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
    connect(settlContainer_.get(), &DealerXBTSettlementContainer::timerExpired, this, &DealerXBTSettlementDialog::onTimerExpired);
    connect(settlContainer_.get(), &DealerXBTSettlementContainer::failed, this, &DealerXBTSettlementDialog::onSettlementFailed);
    connect(settlContainer_.get(), &DealerXBTSettlementContainer::payInDetected, this, &DealerXBTSettlementDialog::payInDetected);
+   connect(settlContainer_.get(), &DealerXBTSettlementContainer::readyToActivate, this, &DealerXBTSettlementDialog::onActivate);
 
    connect(settlContainer_.get(), &DealerXBTSettlementContainer::info, this
       , &DealerXBTSettlementDialog::onInfoFromContainer, Qt::QueuedConnection);
@@ -82,8 +83,6 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
       // we should wait for payin from customer before accept
       //widgetWalletKeys()->setEnabled(false);
    }
-
-   activate();
 }
 
 DealerXBTSettlementDialog::~DealerXBTSettlementDialog() = default;
@@ -164,7 +163,7 @@ void DealerXBTSettlementDialog::onTimerExpired()
    reject();
 }
 
-void DealerXBTSettlementDialog::activate()
+void DealerXBTSettlementDialog::onActivate()
 {
    setWindowTitle(tr("Settlement %1 (XBT)").arg(settlContainer_->weSell() ? tr("Pay-In") : tr("Pay-Out")));
    settlContainer_->activate();

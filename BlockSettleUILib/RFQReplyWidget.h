@@ -71,6 +71,7 @@ private slots:
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId);
    void onReadyToAutoSign();
+   void onReadyToActivate();
    void onAutoSignActivated(const QString &hdWalletId, bool active);
    void onConnectedToCeler();
    void onDisconnectedFromCeler();

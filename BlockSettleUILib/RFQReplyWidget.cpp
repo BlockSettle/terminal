@@ -232,12 +232,12 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             try {
                const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_, order, walletsManager_
                   , quoteProvider_, iTransactionData->second, authAddressManager_->GetBSAddresses(), signingContainer_
-                  , armory_, ui_->pageRFQReply->autoSign());
+                  , armory_);
 
                if (ui_->pageRFQReply->autoSign()) {
                   connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
+                  connect(settlContainer.get(), &bs::SettlementContainer::readyToActivate, this, &RFQReplyWidget::onReadyToActivate);
                   ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
-                  settlContainer->activate();
                } else {
                   auto *dsd = new DealerXBTSettlementDialog(logger_, settlContainer, assetManager_,
                      walletsManager_, signingContainer_, celerClient_, appSettings_, connectionManager_, this);
@@ -273,6 +273,16 @@ void RFQReplyWidget::onReadyToAutoSign()
 //      logger_->warn("[RFQReplyWidget::onReadyToAutoSign] failed to accept");
 //      return;
 //   }
+}
+
+void RFQReplyWidget::onReadyToActivate()
+{
+   const auto settlContainer = qobject_cast<bs::SettlementContainer *>(sender());
+   if (!settlContainer) {
+      logger_->error("[{}] failed to cast sender", __func__);
+      return;
+   }
+   settlContainer->activate();
 }
 
 void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)
