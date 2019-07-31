@@ -125,6 +125,7 @@ private:
 
    std::shared_ptr<CCPubResolver>   resolver_;
    QPointer<BsClient> bsClient_;
+   QString ccFilePath_;
 
 private:
    bool RequestFromPuB();

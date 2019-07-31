@@ -40,6 +40,8 @@ CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
 
    connect(appSettings_.get(), &ApplicationSettings::settingChanged, this, &CCFileManager::onPubSettingsChanged
       , Qt::QueuedConnection);
+
+   ccFilePath_ = appSettings->ccFilePath();
 }
 
 void CCFileManager::onPubSettingsChanged(int setting, QVariant)
@@ -58,11 +60,10 @@ void CCFileManager::onPubSettingsChanged(int setting, QVariant)
 void CCFileManager::RemoveAndDisableFileSave()
 {
    saveToFileDisabled_ = true;
-   const auto path = QString::fromStdString(appSettings_->get<std::string>(ApplicationSettings::ccFileName));
-   if (QFile::exists(path)) {
+   if (QFile::exists(ccFilePath_)) {
       logger_->debug("[CCFileManager::RemoveAndDisableFileSave] remove {} and disable save"
-         , path.toStdString());
-      QFile::remove(path);
+         , ccFilePath_.toStdString());
+      QFile::remove(ccFilePath_);
    } else {
       logger_->debug("[CCFileManager::RemoveAndDisableFileSave] disabling saving on cc gen file");
    }
@@ -70,8 +71,7 @@ void CCFileManager::RemoveAndDisableFileSave()
 
 bool CCFileManager::hasLocalFile() const
 {
-   const auto path = appSettings_->get<QString>(ApplicationSettings::ccFileName);
-   return QFile(path).exists();
+   return QFile(ccFilePath_).exists();
 }
 
 void CCFileManager::setBsClient(BsClient *bsClient)
@@ -81,10 +81,9 @@ void CCFileManager::setBsClient(BsClient *bsClient)
 
 void CCFileManager::LoadSavedCCDefinitions()
 {
-   const auto &path = appSettings_->get<std::string>(ApplicationSettings::ccFileName);
-   if (!resolver_->loadFromFile(path)) {
+   if (!resolver_->loadFromFile(ccFilePath_.toStdString())) {
       emit LoadingFailed();
-      QFile::remove(QString::fromStdString(path));
+      QFile::remove(ccFilePath_);
    }
 }
 
@@ -117,21 +116,21 @@ void CCFileManager::ProcessGenAddressesResponse(const std::string& response, boo
       return;
    }*/
 
+   if (genAddrResp.networktype() != networkType(appSettings_)) {
+      logger_->error("[CCFileManager::ProcessCCGenAddressesResponse] network type mismatch in reply: {}"
+         , (int)genAddrResp.networktype());
+      return;
+   }
+
    if (currentRev_ > 0) {
       if (genAddrResp.revision() == currentRev_) {
          logger_->debug("[CCFileManager::ProcessCCGenAddressesResponse] having the same revision already");
          return;
       }
       if (genAddrResp.revision() < currentRev_) {
-         logger_->warn("[CCFileManager::ProcessCCGenAddressesResponse] PuB has more recent revision {} than we ({})"
+         logger_->warn("[CCFileManager::ProcessCCGenAddressesResponse] PuB has older revision {} than we ({})"
             , genAddrResp.revision(), currentRev_);
       }
-   }
-
-   if (genAddrResp.networktype() != networkType(appSettings_)) {
-      logger_->error("[CCFileManager::ProcessCCGenAddressesResponse] network type mismatch in reply: {}"
-         , (int)genAddrResp.networktype());
-      return;
    }
 
    resolver_->fillFrom(&genAddrResp);
@@ -140,8 +139,7 @@ void CCFileManager::ProcessGenAddressesResponse(const std::string& response, boo
       logger_->debug("[{}] save to file disabled", __func__);
    }
    else {
-      resolver_->saveToFile(appSettings_->get<std::string>(ApplicationSettings::ccFileName)
-         , currentRev_, sig);
+      resolver_->saveToFile(ccFilePath_.toStdString(), currentRev_, sig);
    }
 }
 
@@ -338,7 +336,6 @@ void CCPubResolver::fillFrom(Blocksettle::Communication::GetCCGenesisAddressesRe
       add(ccSecDef);
    }
    logger_->debug("[CCFileManager::ProcessCCGenAddressesResponse] got {} CC gen address[es]", securities_.size());
-
    cbLoadComplete_(resp->revision());
 }
 
