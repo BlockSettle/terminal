@@ -16,6 +16,8 @@ namespace Chat
       return false;
    }
 
+   // TODO: In case of performance problems in chat server 
+   //    consider better solution to find and return all recipients different than given user
    std::string PrivateDirectMessageParty::getSecondRecipient(const std::string& firstRecipientUserName)
    {
       std::string found;
