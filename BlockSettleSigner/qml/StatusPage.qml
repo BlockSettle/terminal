@@ -50,11 +50,11 @@ Item {
                                 var signCallback = function(success, msg) {
                                     if (success) {
                                         JsHelper.messageBox(BSMessageBox.Type.Success
-                                            , qsTr("Sign Offline TX"), qsTr("Offline TX successfully signed.\n") + msg)
+                                            , qsTr("Sign Offline TX"), qsTr("Offline TX successfully signed"), msg)
 
                                     } else {
                                         JsHelper.messageBox(BSMessageBox.Type.Critical
-                                            , qsTr("Sign Offline TX"), qsTr("Signing Offline TX failed with error:\n") + msg)
+                                            , qsTr("Sign Offline TX"), qsTr("Signing Offline TX failed with error:"), msg)
                                     }
                                 }
 

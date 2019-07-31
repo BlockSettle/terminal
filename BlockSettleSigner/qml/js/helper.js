@@ -385,7 +385,7 @@ function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, wall
                "txInfo": txInfo,
                "passwordDialogData": passwordDialogData,
                "walletInfo": walletInfo
-               })
+              })
     prepareLiteModeDialog(dlg)
 
     // FIXME: use bs error codes enum in qml
@@ -399,14 +399,14 @@ function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, wall
     dlg.init()
 }
 
-function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
-    var dlg = Qt.createComponent("../BsDialogs/CCSettlementTransactionDialog.qml").createObject(mainWindow)
+function createSettlementTransactionDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
+    var dlg = Qt.createComponent("../BsDialogs/SettlementTransactionDialog.qml").createObject(mainWindow
+            , {"prompt": prompt,
+               "txInfo": txInfo,
+               "passwordDialogData": passwordDialogData,
+               "walletInfo": walletInfo
+              })
     prepareLiteModeDialog(dlg)
-
-    dlg.walletInfo = walletInfo
-    dlg.prompt = prompt
-    dlg.txInfo = txInfo
-    dlg.passwordDialogData = passwordDialogData
 
     // FIXME: use bs error codes enum in qml
     dlg.bsAccepted.connect(function() {
