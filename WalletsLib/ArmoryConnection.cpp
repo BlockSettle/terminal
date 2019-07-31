@@ -878,6 +878,17 @@ bool ArmoryConnection::getFeeSchedule(const FloatMapCb &cb)
    return true;
 }
 
+bool ArmoryConnection::pushZC(const BinaryData& rawTx) const
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
+      return false;
+   }
+
+   bdv_->broadcastZC(rawTx);
+   return true;
+}
+
 unsigned int ArmoryConnection::getConfirmationsNumber(uint32_t blockNum) const
 {
    const auto curBlock = topBlock();
