@@ -3,15 +3,16 @@
 
 #include "CelerCommandSequence.h"
 
-#include <string>
+#include <chrono>
 #include <functional>
+#include <string>
 
 #include <spdlog/spdlog.h>
 
 class CelerLoginSequence : public CelerCommandSequence<CelerLoginSequence>
 {
 public:
-   using onLoginSuccess_func = std::function< void (const std::string& sessionToken, int32_t heartbeatInterval)>;
+   using onLoginSuccess_func = std::function< void (const std::string& sessionToken, std::chrono::seconds heartbeatInterval)>;
    using onLoginFailed_func = std::function< void (const std::string& errorMessage)>;
 
 public:
@@ -38,7 +39,7 @@ private:
    std::string password_;
 
    std::string errorMessage_;
-   int32_t     heartbeatInterval_;
+   std::chrono::seconds heartbeatInterval_;
    std::string sessionToken_;
 
    onLoginFailed_func   onLoginFailed_;
