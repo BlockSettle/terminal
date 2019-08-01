@@ -919,17 +919,17 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 {
    {
-      std::unique_lock<std::mutex> lock(addrMapsMtx_);
-      addressBalanceMap_.clear();
+      std::unique_lock<std::mutex> lock(*addrMapsMtx_);
+      addressBalanceMap_->clear();
    }
 
    if (!ZConly) {
       const auto &cbRefresh = [this](std::vector<UTXO> utxos) {
          const auto &cbUpdateSpendableBalance = [this](const std::vector<UTXO> &spendableUTXOs) {
-            std::unique_lock<std::mutex> lock(addrMapsMtx_);
+            std::unique_lock<std::mutex> lock(*addrMapsMtx_);
             for (const auto &utxo : spendableUTXOs) {
                const auto &addr = utxo.getRecipientScrAddr();
-               auto &balanceVec = addressBalanceMap_[addr];
+               auto &balanceVec = (*addressBalanceMap_)[addr];
                if (balanceVec.empty()) {
                   balanceVec = { 0, 0, 0 };
                }
@@ -944,9 +944,9 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 
    const auto &cbRefreshZC = [this](const std::vector<UTXO> &utxos) {
       const auto &cbUpdateZcBalance = [this](const std::vector<UTXO> &ZcUTXOs) {
-         std::unique_lock<std::mutex> lock(addrMapsMtx_);
+         std::unique_lock<std::mutex> lock(*addrMapsMtx_);
          for (const auto &utxo : ZcUTXOs) {
-            auto &balanceVec = addressBalanceMap_[utxo.getRecipientScrAddr()];
+            auto &balanceVec = (*addressBalanceMap_)[utxo.getRecipientScrAddr()];
             if (balanceVec.empty()) {
                balanceVec = { 0, 0, 0 };
             }
