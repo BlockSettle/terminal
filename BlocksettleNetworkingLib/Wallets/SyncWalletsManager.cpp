@@ -821,17 +821,26 @@ bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &
    }
 
    const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
-   std::set<bs::Address> addresses;
+   std::set<bs::Address> ownAddresses, foreignAddresses;
    for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
       TxOut out = tx.getTxOutCopy((int)i);
       const auto addr = bs::Address::fromTxOut(out);
-      bool isOurs = (getWalletByAddress(addr) == wallet);
-      if ((isOurs == isReceiving) || (isOurs && isSettlement)) {
-         addresses.insert(addr);
+      const auto addrWallet = getWalletByAddress(addr);
+      if (addrWallet == wallet) {
+         ownAddresses.insert(addr);
+      }
+      else {
+         foreignAddresses.insert(addr);
       }
    }
 
-   const auto &cbProcessAddresses = [this, txKey, cb](const std::set<bs::Address> &addresses) {
+   if (!isReceiving && (ownAddresses.size() == 1) && !foreignAddresses.empty()) {
+      if (!wallet->isExternalAddress(*ownAddresses.begin())) {
+         ownAddresses.clear();   // treat the only own internal address as change and throw away
+      }
+   }
+
+   const auto &lbdProcessAddresses = [this, txKey, cb](const std::set<bs::Address> &addresses) {
       switch (addresses.size()) {
       case 0:
          updateTxDescCache(txKey, tr("no address"), (int)addresses.size(), cb);
@@ -848,44 +857,11 @@ bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &
       }
    };
 
-   if (addresses.empty()) {
-      std::set<BinaryData> opTxHashes;
-      std::map<BinaryData, std::vector<uint32_t>> txOutIndices;
-
-      for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
-         TxIn in = tx.getTxInCopy((int)i);
-         OutPoint op = in.getOutPoint();
-
-         opTxHashes.insert(op.getTxHash());
-         txOutIndices[op.getTxHash()].push_back(op.getTxOutIndex());
-      }
-
-      const auto &cbProcess = [this, txOutIndices, wallet, cbProcessAddresses](const std::vector<Tx> &txs) {
-         std::set<bs::Address> addresses;
-         for (const auto &prevTx : txs) {
-            const auto &itIdx = txOutIndices.find(prevTx.getThisHash());
-            if (itIdx == txOutIndices.end()) {
-               continue;
-            }
-            for (const auto idx : itIdx->second) {
-               const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy((int)idx));
-               if (getWalletByAddress(addr) == wallet) {
-                  addresses.insert(addr);
-               }
-            }
-         }
-         cbProcessAddresses(addresses);
-      };
-      if (opTxHashes.empty()) {
-         logger_->error("[WalletsManager::{}] - empty TX hashes", __func__);
-         return false;
-      }
-      else {
-         armory_->getTXsByHash(opTxHashes, cbProcess);
-      }
+   if (!ownAddresses.empty()) {
+      lbdProcessAddresses(ownAddresses);
    }
    else {
-      cbProcessAddresses(addresses);
+      lbdProcessAddresses(foreignAddresses);
    }
    return true;
 }
