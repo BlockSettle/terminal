@@ -5,7 +5,7 @@
 #include "TransactionData.h"
 #include "Wallets/SyncWallet.h"
 #include "BSErrorCodeStrings.h"
-
+#include "UiUtils.h"
 
 DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
       , const bs::network::Order &order, const std::string &quoteReqId, uint64_t lotSize
@@ -40,6 +40,29 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
 DealerCCSettlementContainer::~DealerCCSettlementContainer()
 {
    bs::UtxoReservation::delAdapter(utxoAdapter_);
+}
+
+bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData() const
+{
+   bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+
+   // rfq details
+   QString qtyProd = UiUtils::XbtCurrency;
+
+   dialogData.setValue("Title", tr("Settlement Payment"));
+
+   dialogData.setValue("Price", UiUtils::displayPriceCC(price()));
+
+   dialogData.setValue("Quantity", tr("%1 %2")
+                 .arg(UiUtils::displayCCAmount(quantity()))
+                 .arg(QString::fromStdString(product())));
+   dialogData.setValue("TotalValue", UiUtils::displayAmount(quantity() * price()));
+
+   // settlement details
+   dialogData.setValue("Payment", tr("Verifying"));
+   dialogData.setValue("GenesisAddress", tr("Verifying"));
+
+   return dialogData;
 }
 
 bool DealerCCSettlementContainer::startSigning()
@@ -121,6 +144,7 @@ void DealerCCSettlementContainer::activate()
    }
 
    startTimer(30);
+   startSigning();
 }
 
 void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)

@@ -52,6 +52,7 @@ public:
    double quantity() const override { return order_.quantity; }
    double price() const override { return order_.price; }
    double amount() const override { return amount_; }
+   bs::sync::PasswordDialogData toPasswordDialogData() const override;
 
    bool weSell() const { return weSell_; }
    uint64_t fee() const { return fee_; }

@@ -256,12 +256,14 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
    , headless::RequestType reqType)
 {
    bool partial = (reqType == headless::RequestType::SignPartialTXRequestType)
-          || (reqType == headless::RequestType::SignSettlementPartialTxType);
+       || (reqType == headless::RequestType::SignSettlementPartialTxType);
 
    headless::SignTxRequest request;
    Internal::PasswordDialogDataWrapper dialogData;
 
-   if (reqType == headless::RequestType::SignSettlementTxRequestType){
+   if (reqType == headless::RequestType::SignSettlementTxRequestType
+       || reqType == headless::RequestType::SignSettlementPartialTxType){
+
       headless::SignSettlementTxRequest settlementRequest;
 
       if (!settlementRequest.ParseFromString(packet.data())) {

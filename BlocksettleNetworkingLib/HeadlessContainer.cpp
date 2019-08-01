@@ -1350,6 +1350,7 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       break;
 
    case headless::SignSettlementTxRequestType:
+   case headless::SignSettlementPartialTxType:
       ProcessSettlementSignTXResponse(packet.id(), packet.data());
       break;
 
