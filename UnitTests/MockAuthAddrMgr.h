@@ -18,7 +18,6 @@ class MockAuthAddrMgr : public AuthAddressManager
 public:
    MockAuthAddrMgr(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ArmoryConnection> &);
 
-   BinaryData GetPublicKey(size_t index) override { return BinaryData(); }
    size_t getDefaultIndex() const override { return 0; }
 
    bool HaveAuthWallet() const override { return false; }

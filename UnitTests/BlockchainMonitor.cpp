@@ -1,54 +1,45 @@
 #include "BlockchainMonitor.h"
-#include <QApplication>
-#include <QDateTime>
-#include <QThread>
+#include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWallet.h"
 
 
-BlockchainMonitor::BlockchainMonitor(const std::shared_ptr<ArmoryObject> &armory)
-   : QObject(nullptr), armory_(armory), receivedNewBlock_(false), receivedZC_(false)
-{
-   connect(armory_.get(), &ArmoryObject::newBlock, [this](unsigned int) { receivedNewBlock_ = true; });
-   connect(armory_.get(), &ArmoryObject::zeroConfReceived
-      , [this](const std::vector<bs::TXEntry> entries) {
-      zcEntries_ = entries;
-      receivedZC_ = true;
-   });
-}
+BlockchainMonitor::BlockchainMonitor(const std::shared_ptr<ArmoryConnection> &armory)
+   : ArmoryCallbackTarget(armory.get())
+{}
 
 uint32_t BlockchainMonitor::waitForNewBlocks(uint32_t targetHeight)
 {
    while (!receivedNewBlock_ || (targetHeight && (armory_->topBlock() < targetHeight))) {
-      QApplication::processEvents();
-      QThread::msleep(1);
+      std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
    }
    receivedNewBlock_ = false;
    return armory_->topBlock();
 }
 
-bool BlockchainMonitor::waitForFlag(std::atomic_bool &flag, double timeoutInSec)
+bool BlockchainMonitor::waitForFlag(std::atomic_bool &flag, const std::chrono::milliseconds timeout)
 {
-   const auto curTime = QDateTime::currentDateTime();
-   while (!flag) {
-      QApplication::processEvents();
-      if (curTime.msecsTo(QDateTime::currentDateTime()) > (timeoutInSec * 1000)) {
-         return false;
+   using namespace std::chrono_literals;
+   const auto napTime = 10ms;
+   for (auto elapsed = 0ms; elapsed < timeout; elapsed += napTime) {
+      if (flag) {
+         return true;
       }
-      QThread::msleep(1);
+      std::this_thread::sleep_for(napTime);
    }
-   flag = false;
-   return true;
+   return false;
 }
 
-bool BlockchainMonitor::waitForWalletReady(const std::shared_ptr<bs::sync::Wallet> &wallet, double timeoutInSec)
+std::vector<bs::TXEntry> BlockchainMonitor::waitForZC()
 {
-   const auto curTime = QDateTime::currentDateTime();
-   while (!wallet->isBalanceAvailable()) {
-      QApplication::processEvents();
-      if (curTime.msecsTo(QDateTime::currentDateTime()) > (timeoutInSec * 1000)) {
-         return false;
+   while (true) {
+      try {
+         auto&& zcVec = zcQueue_.pop_front();
+         return zcVec;
       }
-      QThread::msleep(1);
+      catch (IsEmpty&)
+      {}
+
+      std::this_thread::sleep_for(std::chrono::milliseconds{10});
    }
-   return true;
 }
+

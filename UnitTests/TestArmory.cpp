@@ -7,6 +7,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "TestEnv.h"
 
+using std::make_unique;
 
 double getUTXOsum(const std::shared_ptr<bs::sync::Wallet> &wallet, const std::vector<UTXO> &utxos)
 {
@@ -16,14 +17,17 @@ double getUTXOsum(const std::shared_ptr<bs::sync::Wallet> &wallet, const std::ve
    }
    return sum;
 }
-
+/*
 TEST(Armory, Balances_UTXOs)
 {
    TestEnv::requireArmory();
    const unsigned int ccLotSize = 307;
    const uint64_t fee = 0.0001 * BTCNumericTypes::BalanceDivider;
 
-   auto wallet = std::make_shared<bs::core::hd::Wallet>("test", "", NetworkType::TestNet, TestEnv::logger());
+   auto wallet = std::make_shared<bs::core::hd::Wallet>(
+      "test", "", 
+      NetworkType::TestNet, SecureBinaryData("passphrase"),
+      "./", TestEnv::logger());
 
    auto grp = wallet->createGroup(wallet->getXBTGroupType());
    ASSERT_NE(grp, nullptr);
@@ -66,8 +70,8 @@ TEST(Armory, Balances_UTXOs)
    const auto &cbSend = [](QString result) {
       ASSERT_FALSE(result.isEmpty());
    };
-//   TestEnv::regtestControl()->SendTo(0.5, addr1, cbSend);
-//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+   TestEnv::regtestControl()->SendTo(0.5, addr1, cbSend);
+   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    TestEnv::blockMonitor()->waitForWalletReady(syncLeaf);
    syncLeaf->updateBalances();
@@ -86,11 +90,11 @@ TEST(Armory, Balances_UTXOs)
       const auto &cbSendTX = [](bool result) {
          ASSERT_TRUE(result);
       };
-//      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned1.toHexStr()), cbSendTX);
+      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned1.toHexStr()), cbSendTX);
    };
    ASSERT_TRUE(syncLeaf->getSpendableTxOutList(cbTxOutList1, nullptr));
 
-//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    ASSERT_TRUE(TestEnv::blockMonitor()->waitForWalletReady(syncCcLeaf));
    ASSERT_TRUE(TestEnv::blockMonitor()->waitForWalletReady(syncLeaf));
@@ -123,11 +127,11 @@ TEST(Armory, Balances_UTXOs)
       const auto &cbSendTX = [](bool result) {
          ASSERT_TRUE(result);
       };
-//      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned2.toHexStr()), cbSendTX);
+      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned2.toHexStr()), cbSendTX);
    };
    syncLeaf->getSpendableTxOutList(cbTxOutList2, nullptr);
 
-//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    syncLeaf->updateBalances();
    TestEnv::blockMonitor()->waitForWalletReady(syncCcLeaf);
@@ -169,11 +173,11 @@ TEST(Armory, Balances_UTXOs)
       const auto &cbSendTX = [](bool result) {
          ASSERT_TRUE(result);
       };
-//      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned3.toHexStr()), cbSendTX);
+      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned3.toHexStr()), cbSendTX);
    };
    syncCcLeaf->getSpendableTxOutList(cbTxOutList3, nullptr);
 
-//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    TestEnv::blockMonitor()->waitForWalletReady(syncCcLeaf);
    syncCcLeaf->updateBalances();
@@ -216,8 +220,10 @@ TEST(Armory, Ledger)
    TestEnv::requireArmory();
    const uint64_t fee = 0.0001 * BTCNumericTypes::BalanceDivider;
    const uint64_t amount = 0.1 * BTCNumericTypes::BalanceDivider;
-   auto wallet = std::make_shared<bs::core::hd::Wallet>("test", "", NetworkType::TestNet
-      , TestEnv::logger());
+   auto wallet = std::make_shared<bs::core::hd::Wallet>(
+      "test", "", 
+      NetworkType::TestNet, SecureBinaryData("passphrase"),
+      "./", TestEnv::logger());
 
    auto grp = wallet->createGroup(wallet->getXBTGroupType());
    ASSERT_NE(grp, nullptr);
@@ -247,8 +253,8 @@ TEST(Armory, Ledger)
    const auto &cbSend = [](QString result) {
       ASSERT_FALSE(result.isEmpty());
    };
-//   TestEnv::regtestControl()->SendTo(0.5, addr1, cbSend);
-//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+   TestEnv::regtestControl()->SendTo(0.5, addr1, cbSend);
+   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    ASSERT_TRUE(TestEnv::blockMonitor()->waitForWalletReady(syncLeaf));
 
@@ -267,11 +273,11 @@ TEST(Armory, Ledger)
       const auto &cbSendTx = [](bool result) {
          ASSERT_TRUE(result);
       };
-//      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned1.toHexStr()), cbSendTx);
+      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned1.toHexStr()), cbSendTx);
    };
    syncLeaf->getSpendableTxOutList(cbTxOutList1, nullptr, amount + fee);
 
-//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    TestEnv::blockMonitor()->waitForWalletReady(syncLeaf);
 
@@ -310,11 +316,11 @@ TEST(Armory, Ledger)
       const auto &cbSendTx = [](bool result) {
          ASSERT_TRUE(result);
       };
-//      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned2.toHexStr()), cbSendTx);
+      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned2.toHexStr()), cbSendTx);
    };
    syncLeaf->getSpendableTxOutList(cbTxOutList2, nullptr, amount + fee);
 
-//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    TestEnv::blockMonitor()->waitForWalletReady(syncLeaf);
    syncLeaf->updateBalances();
@@ -413,3 +419,4 @@ TEST(Armory, CoinSelection)
    const auto size2 = txReq.estimateTxVirtSize();
    EXPECT_EQ(size1, size2);
 }
+*/

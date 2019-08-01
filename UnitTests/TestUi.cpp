@@ -84,29 +84,33 @@ TEST(TestUi, Display)
 
 TEST(TestUi, RFQ_entry_CC_sell)
 {
-   TestEnv::requireAssets();
-   TestEnv::walletsMgr()->createWallet("Primary", "", NetworkType::TestNet
-      , TestEnv::appSettings()->GetHomeDir().toStdString(), true);
-   ASSERT_NE(TestEnv::walletsMgr()->getPrimaryWallet(), nullptr);
-   const auto priWallet = TestEnv::walletsMgr()->getPrimaryWallet();
+   SecureBinaryData passphrase("passphrase");
+   bs::core::wallet::Seed seed(CryptoPRNG::generateRandom(32), NetworkType::TestNet);
+
+   TestEnv env(StaticLogger::loggerPtr);
+   env.requireAssets();
+   env.walletsMgr()->createWallet("Primary", "", seed
+      , env.appSettings()->GetHomeDir().toStdString(), passphrase, true);
+   ASSERT_NE(env.walletsMgr()->getPrimaryWallet(), nullptr);
+   const auto priWallet = env.walletsMgr()->getPrimaryWallet();
    const auto ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
    ASSERT_NE(ccGroup, nullptr);
    const auto ccLeaf = ccGroup->createLeaf("BLK");
    ASSERT_NE(ccLeaf, nullptr);
    const auto addr = ccLeaf->getNewExtAddress();
 
-   auto inprocSigner = std::make_shared<InprocSigner>(TestEnv::walletsMgr(), TestEnv::logger(), "", NetworkType::TestNet);
+   auto inprocSigner = std::make_shared<InprocSigner>(env.walletsMgr(), StaticLogger::loggerPtr, "", NetworkType::TestNet);
    inprocSigner->Start();
-   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(TestEnv::logger()
-      , TestEnv::appSettings(), TestEnv::armory());
+   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(StaticLogger::loggerPtr
+      , env.appSettings(), env.armoryConnection());
    syncMgr->setSignContainer(inprocSigner);
    syncMgr->syncWallets();
 
    RFQTicketXBT ticket;
-   ticket.init(TestEnv::authAddrMgr(), TestEnv::assetMgr(), TestEnv::quoteProvider(), nullptr, TestEnv::armory());
+   ticket.init(env.authAddrMgr(), env.assetMgr(), env.quoteProvider(), nullptr, env.armoryConnection());
    ticket.setWalletsManager(syncMgr);
    ticket.resetTicket();
-   emit TestEnv::assetMgr()->securitiesChanged();
+   emit env.assetMgr()->securitiesChanged();
    ticket.setSecuritySell(QLatin1String(bs::network::Asset::toString(bs::network::Asset::PrivateMarket)), QLatin1String("BLK/XBT")
       , QLatin1String("1.23"), QLatin1String("2.34"));
 
@@ -125,7 +129,7 @@ TEST(TestUi, RFQ_entry_CC_sell)
    rfq.quantity = 100;
 
    RequestingQuoteWidget rqw;
-   rqw.SetAssetManager(TestEnv::assetMgr());
+   rqw.SetAssetManager(env.assetMgr());
    rqw.populateDetails(rfq, nullptr);
 
    bs::network::Quote quote;
@@ -144,5 +148,5 @@ TEST(TestUi, RFQ_entry_CC_sell)
    quote.quotingType = bs::network::Quote::Tradeable;
    EXPECT_TRUE(rqw.onQuoteReceived(quote));
 
-   TestEnv::walletsMgr()->deleteWalletFile(priWallet);
+   env.walletsMgr()->deleteWalletFile(priWallet);
 }

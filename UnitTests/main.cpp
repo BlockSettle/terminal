@@ -8,17 +8,12 @@
 
 #include <QApplication>
 #include <QDebug>
-#include <QTimer>
 #include <QFileInfo>
 #include <QThread>
+#include <QTimer>
 #include <QtPlugin>
 
 #include <gtest/gtest.h>
-
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/basic_file_sink.h>
-
-#include <btc/ecc.h>
 
 #include "TestEnv.h"
 #include "BinaryData.h"
@@ -36,25 +31,24 @@ Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
 
 int rc = 0;
-std::shared_ptr<spdlog::logger> logger;
 
 void loggerOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
    QFileInfo fi(QLatin1String(context.file));
    switch (type) {
    case QtDebugMsg:
-      logger->debug("[{}:{}] {}", fi.fileName().toStdString(), context.line, msg.toStdString());
+      StaticLogger::loggerPtr->debug("[{}:{}] {}", fi.fileName().toStdString(), context.line, msg.toStdString());
       break;
    case QtInfoMsg:
-      logger->info("[{}:{}] {}", fi.fileName().toStdString(), context.line, msg.toStdString());
+      StaticLogger::loggerPtr->info("[{}:{}] {}", fi.fileName().toStdString(), context.line, msg.toStdString());
       break;
    case QtWarningMsg:
-      logger->warn("[{}:{}] {}", fi.fileName().toStdString(), context.line, msg.toStdString());
+      StaticLogger::loggerPtr->warn("[{}:{}] {}", fi.fileName().toStdString(), context.line, msg.toStdString());
       break;
    case QtCriticalMsg:
    case QtFatalMsg:
    default:
-      logger->error("[{}:{}] {}", fi.fileName().toStdString(), context.line, msg.toStdString());
+      StaticLogger::loggerPtr->error("[{}:{}] {}", fi.fileName().toStdString(), context.line, msg.toStdString());
       break;
    }
 }
@@ -68,11 +62,16 @@ int main(int argc, char** argv)
    WSAStartup(wVersion, &wsaData);
 #endif
 
-   logger = spdlog::basic_logger_mt("unit_tests", "unit_tests.log");
-   logger->set_pattern("[%D %H:%M:%S.%e] [%l](%t): %v");
-   logger->set_level(spdlog::level::debug);
-   logger->flush_on(spdlog::level::debug);
-   logger->info("Started BS unit tests");
+   StaticLogger::loggerPtr = spdlog::basic_logger_mt("unit_tests", "unit_tests.log");
+   StaticLogger::loggerPtr->set_pattern("[%D %H:%M:%S.%e] [%l](%t): %v");
+   StaticLogger::loggerPtr->set_level(spdlog::level::debug);
+   StaticLogger::loggerPtr->flush_on(spdlog::level::debug);
+   StaticLogger::loggerPtr->info("Started BS unit tests");
+
+   btc_ecc_start();
+   startupBIP151CTX();
+   startupBIP150CTX(4, true);
+   srand(time(0));
 
    ::testing::InitGoogleTest(&argc, argv);
 
@@ -83,7 +82,7 @@ int main(int argc, char** argv)
    qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<BinaryData>();
 
-   ::testing::AddGlobalTestEnvironment(new TestEnv(logger));
+   //::testing::AddGlobalTestEnvironment(new TestEnv(logger));
 
    QTimer::singleShot(0, [] {
       rc = RUN_ALL_TESTS();

@@ -10,6 +10,7 @@
 #include "Address.h"
 #include "BlockchainMonitor.h"
 #include "SettlementMonitor.h"
+#include "TestEnv.h"
 
 
 namespace bs {
@@ -31,19 +32,20 @@ namespace bs {
    }
 }
 
-class TestSettlement : public QObject, public ::testing::Test
+class TestSettlement : public ::testing::Test
 {
-   Q_OBJECT
-
 protected:
    TestSettlement();
 
    void SetUp() override;
    void TearDown() override;
 
-   bool waitForPayIn(double timeoutInSec = 30) { return BlockchainMonitor::waitForFlag(receivedPayIn_, timeoutInSec); }
-   bool waitForPayOut(double timeoutInSec = 30) { return BlockchainMonitor::waitForFlag(receivedPayOut_, timeoutInSec); }
-   bool waitForSettlWallet(double timeoutInSec = 10) { return BlockchainMonitor::waitForFlag(settlWalletReady_, timeoutInSec); }
+   bool waitForPayIn() { return BlockchainMonitor::waitForFlag(receivedPayIn_); }
+   bool waitForPayOut() { return BlockchainMonitor::waitForFlag(receivedPayOut_); }
+//   bool waitForSettlWallet() { return BlockchainMonitor::waitForFlag(settlWalletReady_); }
+   
+   void mineBlocks(unsigned count);
+   void sendTo(uint64_t value, bs::Address& addr);
 
 protected:
    const size_t   nbParties_ = 2;
@@ -58,13 +60,25 @@ protected:
    std::vector<bs::Address>                     fundAddr_;
    SecureBinaryData              settlementId_;
    std::vector<SecureBinaryData> userId_;
-   std::atomic_bool  receivedPayIn_, receivedPayOut_;
+   std::atomic_bool  receivedPayIn_{ false };
+   std::atomic_bool  receivedPayOut_{ false };
    bs::PayoutSigner::Type  poType_ = bs::PayoutSigner::Type::SignatureUndefined;
 
 private:
-   std::atomic_bool  settlWalletReady_;
    QMutex            mtxWalletId_;
    std::set<QString> walletsReady_;
+   std::shared_ptr<TestEnv> envPtr_;
+
+   SecureBinaryData coinbasePrivKey_ =
+      READHEX("0102030405060708090A0B0C0D0E0F1112131415161718191A1B1C1D1E1F");
+   BinaryData coinbasePubKey_;
+   BinaryData coinbaseScrAddr_;
+   std::shared_ptr<ResolverOneAddress> coinbaseFeed_;
+
+   std::map<unsigned, BinaryData> coinbaseHashes_;
+   unsigned coinbaseCounter_ = 0;
+
+   SecureBinaryData passphrase_;
 
 private:
    void onWalletReady(const QString &id);

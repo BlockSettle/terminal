@@ -2,22 +2,38 @@
 #define __TEST_ENV_H__
 
 #include <memory>
+#include <string>
 #include <gtest/gtest.h>
 #include "BlockchainMonitor.h"
 #include "MockAssetMgr.h"
 #include "MockAuthAddrMgr.h"
+#include "Server.h"
+#include "gtest/NodeUnitTest.h"
+#include "BlockDataManagerConfig.h"
+#include "BDM_mainthread.h"
+#include <btc/ecc.h>
 
+#include "ArmoryObject.h"
+#include "Wallets/SyncWallet.h"
+#include "AuthAddressLogic.h"
 
-namespace spdlog {
-   class logger;
-}
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+
+#define UNITTEST_DB_PORT 59095
+
+struct StaticLogger
+{
+   static std::shared_ptr<spdlog::logger> loggerPtr;
+};
+
 namespace bs {
    namespace core {
       class WalletsManager;
    }
 }
 class ApplicationSettings;
-class ArmoryObject;
+class ArmoryConnection;
 class AuthAddressManager;
 class BlockchainMonitor;
 class CelerClient;
@@ -25,40 +41,268 @@ class ConnectionManager;
 class MarketDataProvider;
 class QuoteProvider;
 
-class TestEnv : public testing::Environment
+class ResolverOneAddress : public ResolverFeed
+{
+private:
+   SecureBinaryData privKey_;
+   BinaryData pubKey_;
+   BinaryData hash_;
+
+public:
+   ResolverOneAddress(
+      const SecureBinaryData& privkey,
+      const BinaryData& pubkey) :
+      privKey_(privkey), pubKey_(pubkey)
+   {
+      hash_ = BtcUtils::hash160(pubKey_);
+   }
+
+   BinaryData getByVal(const BinaryData& hash)
+   {
+      if(hash != hash_)
+         throw std::runtime_error("no pubkey for this hash");
+         
+      return pubKey_;
+   }
+
+   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
+   {
+      if(pubkey != pubKey_)
+         throw std::runtime_error("no privkey for this pubkey");
+
+      return privKey_;
+   }
+};
+
+class ResolverManyAddresses : public ResolverFeed
+{
+private:
+   std::map<BinaryData, SecureBinaryData> hashToPubKey_;
+   std::map<SecureBinaryData, SecureBinaryData> pubKeyToPriv_;
+
+public:
+   ResolverManyAddresses(std::set<SecureBinaryData> privKeys)
+   {
+      for (auto& privKey : privKeys)
+      {
+         auto&& pubKey = CryptoECDSA().ComputePublicKey(privKey, true);
+         auto&& hash = BtcUtils::getHash160(pubKey);
+
+         hashToPubKey_.insert(std::make_pair(hash, pubKey));
+         pubKeyToPriv_.insert(std::make_pair(pubKey, privKey));
+      }
+   }
+
+   BinaryData getByVal(const BinaryData& hash)
+   {
+      auto iter = hashToPubKey_.find(hash);
+      if (iter == hashToPubKey_.end())
+         throw std::runtime_error("no pubkey for this hash");
+
+      return iter->second;
+   }
+
+   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
+   {
+      auto iter = pubKeyToPriv_.find(pubkey);
+      if (iter == pubKeyToPriv_.end())
+         throw std::runtime_error("no privkey for this pubkey");
+
+      return iter->second;
+   }
+
+};
+
+class UnitTestWalletACT : public bs::sync::WalletACT
+{
+   static BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
+
+public:
+   UnitTestWalletACT(ArmoryConnection *armory, bs::sync::Wallet *leaf) :
+      bs::sync::WalletACT(armory, leaf)
+   {}
+
+   void onRefresh(const std::vector<BinaryData> &ids, bool online) override
+   {
+      auto dbns = std::make_shared<DBNotificationStruct>(DBNS_Refresh);
+      dbns->ids_ = ids;
+      dbns->online_ = online;
+
+      notifQueue_.push_back(std::move(dbns));
+   }
+
+   void onZCReceived(const std::vector<bs::TXEntry> &zcs) override
+   {
+      auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
+      dbns->zc_ = zcs;
+
+      notifQueue_.push_back(std::move(dbns));
+   }
+
+   void onNewBlock(unsigned int block) override
+   {
+      auto dbns = std::make_shared<DBNotificationStruct>(DBNS_NewBlock);
+      dbns->block_ = block;
+
+      notifQueue_.push_back(std::move(dbns));
+   }
+   
+   static std::shared_ptr<DBNotificationStruct> waitOnNotification(void)
+   {
+      return std::move(notifQueue_.pop_front());
+   }
+
+   static void waitOnRefresh(const std::vector<std::string>& ids)
+   {
+      if (ids.size() == 0)
+         throw std::runtime_error("empty registration id vector");
+
+      std::set<std::string> idSet;
+      idSet.insert(ids.begin(), ids.end());
+      
+      while (true)
+      {
+         auto&& notif = notifQueue_.pop_front();
+         if (notif->type_ != DBNS_Refresh)
+            throw std::runtime_error("expected refresh notification");
+
+         for (auto& refreshId : notif->ids_)
+         {
+            std::string idStr(refreshId.getCharPtr(), refreshId.getSize());
+            auto iter = idSet.find(idStr);
+            if (iter == idSet.end())
+               continue;
+
+            idSet.erase(iter);
+            if (idSet.size() == 0)
+               return;
+         }
+      }
+   }
+
+   static unsigned waitOnNewBlock()
+   {
+      auto&& notif = notifQueue_.pop_front();
+      if(notif->type_ != DBNS_NewBlock)
+         throw std::runtime_error("expected new block notification (got " + std::to_string(notif->type_) + ")");
+      
+      return notif->block_;
+   }
+
+   static std::vector<bs::TXEntry> waitOnZC(bool soft = false)
+   {
+      while (1)
+      {
+         auto&& notif = notifQueue_.pop_front();
+         if (notif->type_ != DBNS_ZC)
+         {
+            if (soft)
+               continue;
+
+            throw std::runtime_error("expected zc notification");
+         }
+
+         return notif->zc_;
+      }
+   }
+
+   static std::shared_ptr<DBNotificationStruct> popNotif()
+   {
+      return notifQueue_.pop_front();
+   }
+
+   //to clear the notification queue
+   static void clear(void)
+   {
+      notifQueue_.clear();
+   }
+};
+
+struct ArmoryInstance
+{
+   /*in process supernode db running off of spoofed unit test network node*/
+
+   const std::string blkdir_;
+   const std::string homedir_;
+   const std::string ldbdir_;
+   int port_;
+
+   std::shared_ptr<NodeUnitTest> nodePtr_;
+
+   BlockDataManagerConfig config_;
+
+   BlockDataManagerThread* theBDMt_;
+   LMDBBlockDatabase* iface_;
+
+   ArmoryInstance();
+   ~ArmoryInstance(void);
+
+   std::map<unsigned, BinaryData> mineNewBlock(ScriptRecipient*, unsigned);
+   void pushZC(const BinaryData&);
+};
+
+class TestArmoryConnection : public ArmoryObject
+{
+   std::shared_ptr<ArmoryInstance> armoryInstance_;
+
+public:
+   TestArmoryConnection(
+      std::shared_ptr<ArmoryInstance> armoryInstance,
+      const std::shared_ptr<spdlog::logger> &loggerRef,
+      const std::string &txCacheFN, 
+      bool cbInMainThread = true) :
+      armoryInstance_(armoryInstance),
+      ArmoryObject(loggerRef, txCacheFN, cbInMainThread)
+   {}
+
+   bool pushZC(const BinaryData& rawTx) const override
+   {
+      if (armoryInstance_ == nullptr)
+         return false;
+
+      armoryInstance_->pushZC(rawTx);
+      return true;
+   }
+};
+
+class TestEnv
 {
 public:
    TestEnv(const std::shared_ptr<spdlog::logger> &);
+   ~TestEnv(void) { shutdown(); }
+
+   void shutdown(void);
    
-   void TearDown() override;
+   std::shared_ptr<ApplicationSettings> appSettings() { return appSettings_; }
+   std::shared_ptr<TestArmoryConnection> armoryConnection() { return armoryConnection_; }
+   std::shared_ptr<ArmoryInstance> armoryInstance() { return armoryInstance_; }
+   std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
+   std::shared_ptr<MockAuthAddrMgr> authAddrMgr() { return authAddrMgr_; }
+   std::shared_ptr<BlockchainMonitor> blockMonitor() { return blockMonitor_; }
+   std::shared_ptr<ConnectionManager> connectionMgr() { return connMgr_; }
+   std::shared_ptr<BaseCelerClient> celerConnection() { return celerConn_; }
+   std::shared_ptr<spdlog::logger> logger() { return logger_; }
+   std::shared_ptr<bs::core::WalletsManager> walletsMgr() { return walletsMgr_; }
+   std::shared_ptr<MarketDataProvider> mdProvider() { return mdProvider_; }
+   std::shared_ptr<QuoteProvider> quoteProvider() { return quoteProvider_; }
 
-   static std::shared_ptr<ApplicationSettings> appSettings() { return appSettings_; }
-   static std::shared_ptr<ArmoryObject> armory() { return armory_; }
-   static std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
-   static std::shared_ptr<MockAuthAddrMgr> authAddrMgr() { return authAddrMgr_; }
-   static std::shared_ptr<BlockchainMonitor> blockMonitor() { return blockMonitor_; }
-   static std::shared_ptr<ConnectionManager> connectionMgr() { return connMgr_; }
-   static std::shared_ptr<CelerClient> celerConnection() { return celerConn_; }
-   static std::shared_ptr<spdlog::logger> logger() { return logger_; }
-   static std::shared_ptr<bs::core::WalletsManager> walletsMgr() { return walletsMgr_; }
-   static std::shared_ptr<MarketDataProvider> mdProvider() { return mdProvider_; }
-   static std::shared_ptr<QuoteProvider> quoteProvider() { return quoteProvider_; }
-
-   static void requireArmory();
-   static void requireAssets();
+   void requireArmory();
+   void requireAssets();
+   void requireConnections();
 
 private:
-   static std::shared_ptr<ApplicationSettings>  appSettings_;
-   static std::shared_ptr<MockAssetManager>     assetMgr_;
-   static std::shared_ptr<MockAuthAddrMgr>      authAddrMgr_;
-   static std::shared_ptr<BlockchainMonitor>    blockMonitor_;
-   static std::shared_ptr<CelerClient>          celerConn_;
-   static std::shared_ptr<ConnectionManager>    connMgr_;
-   static std::shared_ptr<MarketDataProvider>   mdProvider_;
-   static std::shared_ptr<QuoteProvider>        quoteProvider_;
-   static std::shared_ptr<bs::core::WalletsManager>       walletsMgr_;
-   static std::shared_ptr<spdlog::logger>       logger_;
-   static std::shared_ptr<ArmoryObject>     armory_;
+   std::shared_ptr<ApplicationSettings>  appSettings_;
+   std::shared_ptr<MockAssetManager>     assetMgr_;
+   std::shared_ptr<MockAuthAddrMgr>      authAddrMgr_;
+   std::shared_ptr<BlockchainMonitor>    blockMonitor_;
+   std::shared_ptr<BaseCelerClient>      celerConn_;
+   std::shared_ptr<ConnectionManager>    connMgr_;
+   std::shared_ptr<MarketDataProvider>   mdProvider_;
+   std::shared_ptr<QuoteProvider>        quoteProvider_;
+   std::shared_ptr<bs::core::WalletsManager>       walletsMgr_;
+   std::shared_ptr<spdlog::logger>       logger_;
+   std::shared_ptr<TestArmoryConnection> armoryConnection_;
+   std::shared_ptr<ArmoryInstance>       armoryInstance_;
 };
 
 #endif // __TEST_ENV_H__

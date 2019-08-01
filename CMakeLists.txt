@@ -17,6 +17,7 @@ ELSE(CMAKE_BUILD_TYPE STREQUAL "Debug")
 ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 add_definitions(-DNOMINMAX)
+add_definitions(-DCOINBASE_MATURITY_TESTS)
 
 # Force Armory to ignore Crypto++ and use libbtc instead.
 add_definitions(-DLIBBTC_ONLY)
@@ -26,6 +27,7 @@ SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
 SET(AUTH_EID_ROOT ${CMAKE_SOURCE_DIR})
 
 set(CMAKE_MODULE_PATH "${BLOCK_SETTLE_ROOT}/common/build_scripts/CMakeModules")
+set(BUILD_TEST_TOOLS 1)
 
 # set versions info
 # Terminal, PB, PuB and offline tools share same version for consistency
@@ -38,12 +40,6 @@ include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 
 STRING(FIND ${GIT_REFSPEC} "refs/heads/" BRANCH_POSITION)
-
-if (${BRANCH_POSITION} EQUAL -1)
-   SET(GIT_BRANCH "Detached")
-ELSE(${BRANCH_POSITION} EQUAL -1)
-   STRING(REPLACE "refs/heads/" "" GIT_BRANCH ${GIT_REFSPEC})
-ENDIF(${BRANCH_POSITION} EQUAL -1)
 
 IF( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
   MESSAGE( FATAL_ERROR "This is not a Git repository, but it should be.")
@@ -135,9 +131,9 @@ INCLUDE_DIRECTORIES( ${ZEROMQ_INCLUDE_DIR} )
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${ZEROMQ_ROOT}/lib)
 IF( WIN32 )
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-      SET( ZMQ_LIB_NAME "libzmq-v140-mt-gd-4_3_1" )
+      SET( ZMQ_LIB_NAME "libzmq-v140-mt-gd-4_3_2" )
    ELSE()
-      SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_3_1" )
+      SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_3_2" )
    ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 ELSE ()
    SET( ZMQ_LIB_NAME "libzmq.a" "zmq" )
@@ -147,9 +143,9 @@ FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO
 IF( NOT ZMQ_LIB )
    IF( WIN32 )
       IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-         SET( ZMQ_LIB_NAME "libzmq-v141-mt-gd-4_3_1" )
+         SET( ZMQ_LIB_NAME "libzmq-v141-mt-gd-4_3_2" )
       ELSE()
-         SET( ZMQ_LIB_NAME "libzmq-v141-mt-4_3_1" )
+         SET( ZMQ_LIB_NAME "libzmq-v141-mt-4_3_2" )
       ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
    ENDIF( WIN32 )
    FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
@@ -494,7 +490,10 @@ ELSE(WIN32)
    ELSE(APPLE)
       FIND_PACKAGE( Threads REQUIRED )
       FIND_PACKAGE( X11 REQUIRED )
-      FIND_PACKAGE( XCB REQUIRED )
+      FIND_PACKAGE( X11_XCB REQUIRED )
+      FIND_PACKAGE( XCB REQUIRED
+         COMPONENTS XKB RENDERUTIL SYNC XFIXES XINERAMA RANDR RENDER IMAGE SHM KEYSYMS ICCCM SHAPE
+         OPTIONAL_COMPONENTS XINPUT )
       FIND_PACKAGE( Freetype REQUIRED )
       FIND_PACKAGE( Fontconfig REQUIRED )
 
@@ -521,7 +520,7 @@ ELSE(WIN32)
          ${QT5_LIB_ROOT}/libQt5FontDatabaseSupport.a
          ${FREETYPE_LIBRARIES}
          ${FONTCONFIG_LIBRARIES}
-         X11-xcb
+         X11::XCB
          X11
          Xi
          Xrender
@@ -536,6 +535,7 @@ ELSE(WIN32)
          )
 
          LIST (APPEND OS_SPECIFIC_LIBS
+            ${QT5_PLUGINS_ROOT}/platforms/libqxcb.a
             ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
             ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlmysql.a
             mysqlclient

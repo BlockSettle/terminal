@@ -12,7 +12,7 @@ void newKeyCb(const std::string&, const std::string&, const std::string &
 
 MockAuthAddrMgr::MockAuthAddrMgr(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory)
-   : AuthAddressManager(logger, armory, newKeyCb)
+   : AuthAddressManager(logger, armory, nullptr)
 {
    addresses_ = { bs::Address(std::string("2MxeBMYgTeF9XGvgLVLDQg5wW15WiWtGqPf")),
       bs::Address(std::string("2NFWju6yY2UMW8RQ3gPc2bz3CDLNDrfssdp")) };
