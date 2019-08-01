@@ -49,7 +49,7 @@ public:
          case QmlWalletsViewModel::WalletColumns::ColumnName:
             return QString::fromStdString(name_);
          case QmlWalletsViewModel::WalletColumns::ColumnDescription:
-            return type() == Type::WalletPrimary ? QString::fromStdString(desc_) : QVariant();
+            return type() == Type::WalletRegular || type() == Type::WalletPrimary ? QString::fromStdString(desc_) : QVariant();
          case QmlWalletsViewModel::WalletColumns::ColumnID:
             return QString::fromStdString(id());
          case QmlWalletsViewModel::WalletColumns::ColumnType:

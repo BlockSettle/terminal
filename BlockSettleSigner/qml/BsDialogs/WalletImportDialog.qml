@@ -46,8 +46,11 @@ CustomTitleDialogWindow {
     Component.onCompleted: {
         if (!primaryWalletExists) {
             cbPrimary.checked = true
+            tfName.text = qsTr("Primary Wallet");
         }
-        rootKeyInput.forceActiveFocus()
+        else {
+            tfName.text = walletsProxy.generateNextWalletName();
+        }
     }
 
     onEnterPressed: {
