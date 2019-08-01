@@ -187,14 +187,14 @@ void hd::Leaf::postOnline()
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
       if (st != bs::sync::SyncState::Success) {
-         updateBalances([] {});
+         updateBalances();
          if (wct_) {
             wct_->walletReady(walletId());
          }
          return;
       }
       synchronize([this] {
-         updateBalances([] {});
+         updateBalances();
          if (wct_) {
             wct_->walletReady(walletId());
          }
@@ -650,7 +650,7 @@ bool hd::Leaf::getLedgerDelegateForAddress(const bs::Address &addr
       return false;
    }
    {
-      std::unique_lock<std::mutex> lock(cbMutex_);
+      std::unique_lock<std::mutex> lock(*cbMutex_);
       const auto &itCb = cbLedgerByAddr_.find(addr);
       if (itCb != cbLedgerByAddr_.end()) {
          logger_->error("[{}] ledger callback for addr {} already exists", __func__, addr.display());

@@ -10,10 +10,19 @@ using namespace bs::sync;
 
 Wallet::Wallet(WalletSignerContainer *container, const std::shared_ptr<spdlog::logger> &logger)
    : signContainer_(container), logger_(logger)
-{}
+{
+   cbMutex_ = std::make_shared<std::mutex>();
+   cbBalances_ = std::make_shared<std::vector<std::function<void(void)>>>();
+   cbTxNs_ = std::make_shared<std::vector<std::function<void(void)>>>();
+}
 
 Wallet::~Wallet()
 {
+   {
+      std::unique_lock<std::mutex> lock(*cbMutex_);
+      cbBalances_->clear();
+      cbTxNs_->clear();
+   }
    UtxoReservation::delAdapter(utxoAdapter_);
 }
 
@@ -176,20 +185,21 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
    get methods to grab the individual balances
    ***/
 
-/*   size_t cbSize = 0;
+   size_t cbSize = 0;
    {
-      std::unique_lock<std::mutex> lock(cbMutex_);
-      cbSize = cbBalances_.size();
-      cbBalances_.push_back(cb);
+      std::unique_lock<std::mutex> lock(*cbMutex_);
+      cbSize = cbBalances_->size();
+      cbBalances_->push_back(cb);
    }
-   if (cbSize == 0) { */      // temporary disabled
+   if (cbSize == 0) {
       std::vector<std::string> walletIDs;
       walletIDs.push_back(walletId());
       try {
          walletIDs.push_back(walletIdInt());
       } catch (std::exception&) {}
 
-      const auto onCombinedBalances = [this, cb](const std::map<std::string, CombinedBalances> &balanceMap)
+      const auto onCombinedBalances = [this, cbMutex=cbMutex_, cbBalances=cbBalances_]
+         (const std::map<std::string, CombinedBalances> &balanceMap)
       {
          bool ourUpdate = false;
          BTCNumericTypes::balance_type total = 0, spendable = 0, unconfirmed = 0;
@@ -222,19 +232,19 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
             unconfirmedBalance_ = unconfirmed;
             addrCount_ = addrCount;
 
-/*            std::unique_lock<std::mutex> lock(cbMutex_);
-            for (const auto &cb : cbBalances_) {*/    //Temporary disabled
+            std::unique_lock<std::mutex> lock(*cbMutex);
+            for (const auto &cb : *cbBalances) {
                if (cb) {
                   cb();
                }
-/*            }
-            cbBalances_.clear();*/
+            }
+            cbBalances->clear();
          }
       };
       return armory_->getCombinedBalances(walletIDs, onCombinedBalances);
-/*   } else {          // if the callbacks queue is not empty, don't call
+   } else {          // if the callbacks queue is not empty, don't call
       return true;   // armory's RPC - just add the callback and return
-   }*/
+   }
 }
 
 bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t val)
@@ -324,37 +334,39 @@ bool Wallet::getAddressTxnCounts(const std::function<void(void)> &cb)
    Use getAddressTxnCount to get a specific count for a given
    address from the cache.
    ***/
-/*   size_t cbSize = 0;
+   size_t cbSize = 0;
    {
-      std::unique_lock<std::mutex> lock(cbMutex_);
-      cbSize = cbTxNs_.size();
-      cbTxNs_.push_back(cb);
+      std::unique_lock<std::mutex> lock(*cbMutex_);
+      cbSize = cbTxNs_->size();
+      cbTxNs_->push_back(cb);
    }
-   if (cbSize == 0) { */   // temporary disabled
+   if (cbSize == 0) {
       std::vector<std::string> walletIDs;
       walletIDs.push_back(walletId());
       try {
          walletIDs.push_back(walletIdInt());
       } catch (std::exception&) {}
 
-      const auto &cbTxNs = [this, cb](const std::map<std::string, CombinedCounts> &countMap) {
+      const auto &cbTxNs = [this, cbMutex=cbMutex_, cbTxNs=cbTxNs_]
+         (const std::map<std::string, CombinedCounts> &countMap)
+      {
          for (const auto &count : countMap) {
             updateMap<std::map<BinaryData, uint64_t>>(
                count.second.addressTxnCounts_, addressTxNMap_);
          }
-/*         std::unique_lock<std::mutex> lock(cbMutex_);
-         for (const auto &cb : cbTxNs_) {*/
+         std::unique_lock<std::mutex> lock(*cbMutex);
+         for (const auto &cb : *cbTxNs) {
             if (cb) {
                cb();
             }
-/*         }
-         cbTxNs_.clear();*/
+         }
+         cbTxNs->clear();
       };
       return armory_->getCombinedTxNs(walletIDs, cbTxNs);
-/*   }
+   }
    else {
       return true;
-   }*/
+   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -779,7 +791,7 @@ void WalletACT::onLedgerForAddress(const bs::Address &addr
 {
    std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> cb = nullptr;
    {
-      std::unique_lock<std::mutex> lock(parent_->cbMutex_);
+      std::unique_lock<std::mutex> lock(*parent_->cbMutex_);
       const auto &itCb = parent_->cbLedgerByAddr_.find(addr);
       if (itCb == parent_->cbLedgerByAddr_.end()) {
          return;
@@ -799,7 +811,7 @@ bool Wallet::getLedgerDelegateForAddress(const bs::Address &addr
       return false;
    }
    {
-      std::unique_lock<std::mutex> lock(cbMutex_);
+      std::unique_lock<std::mutex> lock(*cbMutex_);
       const auto &itCb = cbLedgerByAddr_.find(addr);
       if (itCb != cbLedgerByAddr_.end()) {
          logger_->error("[{}] ledger callback for addr {} already exists", __func__, addr.display());

@@ -258,14 +258,14 @@ namespace bs {
       private:
          std::string regId_;
          mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
-         std::vector<std::function<void(void)>> cbTxNs_;
-         std::vector<std::function<void(void)>> cbBalances_;
+         std::shared_ptr<std::vector<std::function<void(void)>>>  cbTxNs_;
+         std::shared_ptr<std::vector<std::function<void(void)>>>  cbBalances_;
 
       protected:
          bool firstInit_ = false;
          bool isRegistered_ = false;
 
-         mutable std::mutex   cbMutex_;
+         mutable std::shared_ptr<std::mutex> cbMutex_;
          std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbLedgerByAddr_;
       };
 
