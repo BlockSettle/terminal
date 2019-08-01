@@ -74,7 +74,7 @@ TEST(TestNetwork, IdString)
 
 TEST(TestNetwork, PayinsContainer)
 {
-   bs::PayinsContainer payins(TestEnv::logger());
+   bs::PayinsContainer payins(spdlog::default_logger());
    EXPECT_FALSE(payins.erase("non-existent"));
    const std::string key = "settlement1";
    EXPECT_TRUE(payins.get(key).isNull());
@@ -207,14 +207,14 @@ TEST(TestNetwork, ZMQ_BIP15X)
       bool packetsMatch_ = true;
    };
 
-   const auto srvLsn = std::make_unique<ServerConnListener>(TestEnv::logger());
-   const auto clientLsn = std::make_unique<ClientConnListener>(TestEnv::logger());
+   const auto srvLsn = std::make_unique<ServerConnListener>(spdlog::default_logger());
+   const auto clientLsn = std::make_unique<ClientConnListener>(spdlog::default_logger());
 
    const auto clientConn = std::make_unique<ZmqBIP15XDataConnection>(
-      TestEnv::logger(), getTestParams());
-   const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+      spdlog::default_logger(), getTestParams());
+   const auto zmqContext = std::make_shared<ZmqContext>(spdlog::default_logger());
    auto serverConn = std::make_unique<ZmqBIP15XServerConnection>(
-      TestEnv::logger(), zmqContext, getEmptyPeersCallback());
+      spdlog::default_logger(), zmqContext, getEmptyPeersCallback());
 //   serverConn->enableClientCookieUsage();
    const auto serverKey = serverConn->getOwnPubKey();
 
@@ -411,15 +411,15 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    };
 
    // Create listeners before clients to prevent dangling pointer use after destruction
-   const auto srvLsn = std::make_unique<ServerConnListener>(TestEnv::logger());
-   const auto client2Lsn = std::make_unique<AnotherClientConnListener>(TestEnv::logger());
-   const auto clientLsn = std::make_unique<ClientConnListener>(TestEnv::logger());
+   const auto srvLsn = std::make_unique<ServerConnListener>(spdlog::default_logger());
+   const auto client2Lsn = std::make_unique<AnotherClientConnListener>(spdlog::default_logger());
+   const auto clientLsn = std::make_unique<ClientConnListener>(spdlog::default_logger());
 
    const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
-      TestEnv::logger(), getTestParams());
-   const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+      spdlog::default_logger(), getTestParams());
+   const auto zmqContext = std::make_shared<ZmqContext>(spdlog::default_logger());
    auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-      TestEnv::logger(), zmqContext, getEmptyPeersCallback());
+      spdlog::default_logger(), zmqContext, getEmptyPeersCallback());
    srvLsn->connection_ = serverConn.get();
    const auto serverKey = serverConn->getOwnPubKey();
 
@@ -455,7 +455,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    EXPECT_TRUE(clientConn->closeConnection());
 
    const auto client2Conn = std::make_shared<ZmqBIP15XDataConnection>(
-      TestEnv::logger(), getTestParams());
+      spdlog::default_logger(), getTestParams());
    client2Conn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
    ASSERT_TRUE(client2Conn->openConnection(host, port, client2Lsn.get()));
    EXPECT_TRUE(connectFut2.get());
@@ -561,8 +561,8 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
         pktSize *= 2;
     }
 
-    const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
-    const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
+    const auto srvLsn = std::make_shared<TstServerListener>(spdlog::default_logger());
+    const auto clientLsn = std::make_shared<TstClientListener>(spdlog::default_logger());
 
     struct Messages {
         size_t clientMsgs;
@@ -578,12 +578,12 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
 
     for (size_t i = 0; i < passes; ++i) {
         const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
-            TestEnv::logger(), getTestParams());
-        const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+            spdlog::default_logger(), getTestParams());
+        const auto zmqContext = std::make_shared<ZmqContext>(spdlog::default_logger());
         std::vector<std::string> trustedClients = {
             std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
         auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-            TestEnv::logger(), zmqContext, getEmptyPeersCallback());
+            spdlog::default_logger(), zmqContext, getEmptyPeersCallback());
         const auto serverKey = serverConn->getOwnPubKey();
 
         clientLsn->connected_ = 0;
@@ -635,16 +635,16 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
         pktSize *= 2;
     }
 
-    const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
-    const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
+    const auto srvLsn = std::make_shared<TstServerListener>(spdlog::default_logger());
+    const auto clientLsn = std::make_shared<TstClientListener>(spdlog::default_logger());
 
     const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
-        TestEnv::logger(), getTestParams());
-    const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+        spdlog::default_logger(), getTestParams());
+    const auto zmqContext = std::make_shared<ZmqContext>(spdlog::default_logger());
     std::vector<std::string> trustedClients = {
         std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
     auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-        TestEnv::logger(), zmqContext, getEmptyPeersCallback());
+        spdlog::default_logger(), zmqContext, getEmptyPeersCallback());
     const auto serverKey = serverConn->getOwnPubKey();
 
     const std::string host = "127.0.0.1";
@@ -711,8 +711,8 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
         pktSize *= 2;
     }
 
-    const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
-    const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
+    const auto srvLsn = std::make_shared<TstServerListener>(spdlog::default_logger());
+    const auto clientLsn = std::make_shared<TstClientListener>(spdlog::default_logger());
 
     struct Messages {
         size_t clientMsgs;
@@ -728,12 +728,12 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
 
     for (size_t i = 0; i < passes; ++i) {
         auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
-            TestEnv::logger(), getTestParams());
-        const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+            spdlog::default_logger(), getTestParams());
+        const auto zmqContext = std::make_shared<ZmqContext>(spdlog::default_logger());
         std::vector<std::string> trustedClients = {
             std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
         auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-            TestEnv::logger(), zmqContext, getEmptyPeersCallback());
+            spdlog::default_logger(), zmqContext, getEmptyPeersCallback());
         const auto serverKey = serverConn->getOwnPubKey();
 
         clientLsn->connected_ = false;
@@ -780,17 +780,17 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
 
 TEST(TestNetwork, ZMQ_BIP15X_DisconnectCounters)
 {
-   const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+   const auto zmqContext = std::make_shared<ZmqContext>(spdlog::default_logger());
 
-   const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
-   const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
+   const auto srvLsn = std::make_shared<TstServerListener>(spdlog::default_logger());
+   const auto clientLsn = std::make_shared<TstClientListener>(spdlog::default_logger());
 
    const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
-      TestEnv::logger(), getTestParams());
+      spdlog::default_logger(), getTestParams());
    std::vector<std::string> trustedClients = {
       std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
    auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-      TestEnv::logger(), zmqContext, getEmptyPeersCallback());
+      spdlog::default_logger(), zmqContext, getEmptyPeersCallback());
    const auto serverKey = serverConn->getOwnPubKey();
 
    const std::string host = "127.0.0.1";
@@ -824,15 +824,15 @@ TEST(TestNetwork, ZMQ_BIP15X_DisconnectCounters)
 
 TEST(TestNetwork, ZMQ_BIP15X_ConnectionTimeout)
 {
-   const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+   const auto zmqContext = std::make_shared<ZmqContext>(spdlog::default_logger());
 
-   const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
+   const auto clientLsn = std::make_shared<TstClientListener>(spdlog::default_logger());
 
    auto params = getTestParams();
    params.heartbeatInterval = std::chrono::milliseconds{1};
 
    const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
-      TestEnv::logger(), params);
+      spdlog::default_logger(), params);
 
    ASSERT_TRUE(clientConn->openConnection("localhost", "64000", clientLsn.get()));
 
@@ -846,16 +846,16 @@ TEST(TestNetwork, ZMQ_BIP15X_ConnectionTimeout)
 // Disabled because it's not really a unit test
 TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
 {
-   const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
-   const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
+   const auto srvLsn = std::make_shared<TstServerListener>(spdlog::default_logger());
+   const auto clientLsn = std::make_shared<TstClientListener>(spdlog::default_logger());
 
    const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
-            TestEnv::logger(), getTestParams());
-   const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+            spdlog::default_logger(), getTestParams());
+   const auto zmqContext = std::make_shared<ZmqContext>(spdlog::default_logger());
    std::vector<std::string> trustedClients = {
       std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
    auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-            TestEnv::logger(), zmqContext, getEmptyPeersCallback());
+            spdlog::default_logger(), zmqContext, getEmptyPeersCallback());
    const auto serverKey = serverConn->getOwnPubKey();
 
    const std::string host = "127.0.0.1";
@@ -890,17 +890,17 @@ TEST(TestNetwork, ZMQ_BIP15X_MalformedData)
    generator.seed(1);
 
    for (int i = 0; i < 10; ++i) {
-      const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
-      const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
-      const auto clientLsn2 = std::make_shared<TstClientListener>(TestEnv::logger());
+      const auto srvLsn = std::make_shared<TstServerListener>(spdlog::default_logger());
+      const auto clientLsn = std::make_shared<TstClientListener>(spdlog::default_logger());
+      const auto clientLsn2 = std::make_shared<TstClientListener>(spdlog::default_logger());
 
       const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
-               TestEnv::logger(), getTestParams());
+               spdlog::default_logger(), getTestParams());
       const auto clientConn2 = std::make_shared<ZmqBIP15XDataConnection>(
-               TestEnv::logger(), getTestParams());
-      const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+               spdlog::default_logger(), getTestParams());
+      const auto zmqContext = std::make_shared<ZmqContext>(spdlog::default_logger());
       auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-               TestEnv::logger(), zmqContext, getEmptyPeersCallback());
+               spdlog::default_logger(), zmqContext, getEmptyPeersCallback());
       const auto serverKey = serverConn->getOwnPubKey();
 
       const std::string host = "127.0.0.1";
@@ -945,17 +945,17 @@ TEST(TestNetwork, ZMQ_BIP15X_MalformedData)
 
 TEST(TestNetwork, ZMQ_BIP15X_MalformedSndMore)
 {
-   const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
-   const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
-   const auto clientLsn2 = std::make_shared<TstClientListener>(TestEnv::logger());
+   const auto srvLsn = std::make_shared<TstServerListener>(spdlog::default_logger());
+   const auto clientLsn = std::make_shared<TstClientListener>(spdlog::default_logger());
+   const auto clientLsn2 = std::make_shared<TstClientListener>(spdlog::default_logger());
 
    const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
-            TestEnv::logger(), getTestParams());
+            spdlog::default_logger(), getTestParams());
    const auto clientConn2 = std::make_shared<ZmqBIP15XDataConnection>(
-            TestEnv::logger(), getTestParams());
-   const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+            spdlog::default_logger(), getTestParams());
+   const auto zmqContext = std::make_shared<ZmqContext>(spdlog::default_logger());
    auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-            TestEnv::logger(), zmqContext, getEmptyPeersCallback());
+            spdlog::default_logger(), zmqContext, getEmptyPeersCallback());
    const auto serverKey = serverConn->getOwnPubKey();
 
    const std::string host = "127.0.0.1";
