@@ -139,7 +139,7 @@ void RequestReplyCommand::OnError(DataConnectionError errorCode)
    requestCompleted_->SetEvent();
 }
 
-bool RequestReplyCommand::WaitForRequestedProcessed(uint64_t milliseconds)
+bool RequestReplyCommand::WaitForRequestedProcessed(std::chrono::milliseconds period)
 {
-   return requestCompleted_->WaitForEvent(milliseconds);
+   return requestCompleted_->WaitForEvent(period);
 }
