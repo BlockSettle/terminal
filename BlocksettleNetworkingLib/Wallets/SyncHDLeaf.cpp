@@ -187,14 +187,14 @@ void hd::Leaf::postOnline()
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
       if (st != bs::sync::SyncState::Success) {
-         updateBalances([] {});
+         updateBalances();
          if (wct_) {
             wct_->walletReady(walletId());
          }
          return;
       }
       synchronize([this] {
-         updateBalances([] {});
+         updateBalances();
          if (wct_) {
             wct_->walletReady(walletId());
          }
@@ -650,7 +650,7 @@ bool hd::Leaf::getLedgerDelegateForAddress(const bs::Address &addr
       return false;
    }
    {
-      std::unique_lock<std::mutex> lock(cbMutex_);
+      std::unique_lock<std::mutex> lock(*cbMutex_);
       const auto &itCb = cbLedgerByAddr_.find(addr);
       if (itCb != cbLedgerByAddr_.end()) {
          logger_->error("[{}] ledger callback for addr {} already exists", __func__, addr.display());
@@ -919,17 +919,17 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 {
    {
-      std::unique_lock<std::mutex> lock(addrMapsMtx_);
-      addressBalanceMap_.clear();
+      std::unique_lock<std::mutex> lock(*addrMapsMtx_);
+      addressBalanceMap_->clear();
    }
 
    if (!ZConly) {
       const auto &cbRefresh = [this](std::vector<UTXO> utxos) {
          const auto &cbUpdateSpendableBalance = [this](const std::vector<UTXO> &spendableUTXOs) {
-            std::unique_lock<std::mutex> lock(addrMapsMtx_);
+            std::unique_lock<std::mutex> lock(*addrMapsMtx_);
             for (const auto &utxo : spendableUTXOs) {
                const auto &addr = utxo.getRecipientScrAddr();
-               auto &balanceVec = addressBalanceMap_[addr];
+               auto &balanceVec = (*addressBalanceMap_)[addr];
                if (balanceVec.empty()) {
                   balanceVec = { 0, 0, 0 };
                }
@@ -944,9 +944,9 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 
    const auto &cbRefreshZC = [this](const std::vector<UTXO> &utxos) {
       const auto &cbUpdateZcBalance = [this](const std::vector<UTXO> &ZcUTXOs) {
-         std::unique_lock<std::mutex> lock(addrMapsMtx_);
+         std::unique_lock<std::mutex> lock(*addrMapsMtx_);
          for (const auto &utxo : ZcUTXOs) {
-            auto &balanceVec = addressBalanceMap_[utxo.getRecipientScrAddr()];
+            auto &balanceVec = (*addressBalanceMap_)[utxo.getRecipientScrAddr()];
             if (balanceVec.empty()) {
                balanceVec = { 0, 0, 0 };
             }
