@@ -244,7 +244,7 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
       do {
          if (needsBreakConnectionLoop_.load()) {
             setState(ArmoryState::Cancelled);
-            break;
+            return;
          }
          cbRemote_ = std::make_shared<ArmoryCallback>(this, logger_);
          logger_->debug("[ArmoryConnection::setupConnection] connecting to Armory {}:{}"
@@ -263,20 +263,6 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
             std::this_thread::sleep_for(std::chrono::seconds(10));
             continue;
          }
-
-         // There is a problem with armory keys: we must delete old keys before importing them
-         // (AuthorizedPeers does not replace them, see AuthorizedPeers::addPeer for details).
-         // Because we manage keys using bip150PromptUserRoutine callback this cause a problem
-         // when Armory key changes (it will NOT be replaced despite we accept it trough the callback).
-         // If we don't add keys there it works fine.
-#if 0
-         try {
-            for (const auto &x : bsBIP150PubKeys_) {
-               bdv_->addPublicKey(x);
-            }
-         }
-         catch (...) {}
-#endif
 
          bdv_->setCheckServerKeyPromptLambda(cbBIP151);
 
