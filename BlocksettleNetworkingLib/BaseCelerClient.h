@@ -92,9 +92,8 @@ public:
    virtual void CloseConnection();
 
 public slots:
-   void sendHeartbeat();
-
-   void onTimerRestart();
+   void onSendHbTimeout();
+   void onRecvHbTimeout();
 
 signals:
    void OnConnectedToServer();
@@ -102,7 +101,6 @@ signals:
    void OnConnectionError(int errorCode);
 
    void closingConnection();
-   void restartTimer();
 
 protected:
    // Override to do actual data send
@@ -138,12 +136,13 @@ private:
 
    bool SendDataToSequence(const std::string& sequenceId, CelerAPI::CelerMessageType messageType, const std::string& message);
 
-   void loginSuccessCallback(const std::string& userName, const std::string& email, const std::string& sessionToken, int32_t heartbeatInterval);
+   void loginSuccessCallback(const std::string& userName, const std::string& email, const std::string& sessionToken, std::chrono::seconds heartbeatInterval);
    void loginFailedCallback(const std::string& errorMessage);
 
    static void AddToSet(const std::string& address, std::unordered_set<std::string> &set);
 
-   QTimer                                 *heartbeatTimer_;
+   QTimer                                 *timerSendHb_;
+   QTimer                                 *timerRecvHb_;
 
    using commandsQueueType = std::queue< std::shared_ptr<BaseCelerCommand> >;
    commandsQueueType internalCommands_;
@@ -165,7 +164,7 @@ private:
    CelerProperty        submittedCCAddressListProperty_;
    std::unordered_set<std::string> submittedCCAddressSet_;
 
-   int32_t     heartbeatInterval_;
+   std::chrono::seconds    heartbeatInterval_{};
 
    IdStringGenerator       idGenerator_;
    bool                    userIdRequired_;
