@@ -1,3 +1,5 @@
+#include <QtDebug>
+
 #include "BSTerminalMainWindow.h"
 #include "ui_BSTerminalMainWindow.h"
 
@@ -56,7 +58,6 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "FutureValue.h"
-
 
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QWidget* parent)
@@ -186,7 +187,7 @@ void BSTerminalMainWindow::onBsConnectionFailed()
 
 void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
 {
-   if (!ccFileManager_ || ccFileManager_->synchronized()) {
+   if (!ccFileManager_) {
       return;
    }
    const auto &priWallet = walletsMgr_->getPrimaryWallet();
@@ -629,6 +630,9 @@ void BSTerminalMainWindow::InitChatView()
 {
    ui_->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
    ui_->widgetChat->setCelerClient(celerConnection_);
+
+   chatClientServicePtr_ = std::make_shared<Chat::ChatClientService>();
+   chatClientServicePtr_->Init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
 
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
    connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);
@@ -1077,7 +1081,10 @@ void BSTerminalMainWindow::onLogin()
 
    currentUserLogin_ = loginDialog.email();
    std::string jwt;
-   auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+   //auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+   chatClientServicePtr_->LoginToServer(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, ui_->widgetChat, &ChatWidget::onLoggedOut);
+
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
 
@@ -1098,6 +1105,7 @@ void BSTerminalMainWindow::onLogin()
 void BSTerminalMainWindow::onLogout()
 {
    ui_->widgetWallets->setUsername(QString());
+   chatClientServicePtr_->LogoutFromServer();
    ui_->widgetChat->logout();
    ui_->widgetChart->disconnect();
 
@@ -1132,8 +1140,6 @@ void BSTerminalMainWindow::onUserLoggedIn()
    };
    addDeferredDialog(deferredDialog);
 
-   walletsMgr_->setUserId(userId);
-
    setLoginButtonText(currentUserLogin_);
 }
 
@@ -1147,8 +1153,6 @@ void BSTerminalMainWindow::onUserLoggedOut()
    ui_->actionDeposits->setEnabled(false);
    ui_->actionWithdrawalRequest->setEnabled(false);
    ui_->actionLinkAdditionalBankAccount->setEnabled(false);
-
-   walletsMgr_->setUserId({});
 
    if (walletsMgr_) {
       walletsMgr_->setUserId(BinaryData{});

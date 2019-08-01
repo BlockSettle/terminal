@@ -157,6 +157,13 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 
 void RFQDialog::reject()
 {
+   // curContainer_->cancel call could emit settlementCancelled which will result in RFQDialog::reject re-enter.
+   // This will result in duplicated finished signals. Let's add a workaround for this.
+   if (isRejectStarted_) {
+      return;
+   }
+   isRejectStarted_ = true;
+
    if (cancelOnClose_ && curContainer_) {
       if (!curContainer_->cancel()) {
          logger_->warn("[RFQDialog::reject] settlement container failed to cancel");

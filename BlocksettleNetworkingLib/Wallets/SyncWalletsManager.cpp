@@ -38,6 +38,9 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
 
 WalletsManager::~WalletsManager() noexcept
 {
+   for (const auto &hdWallet : hdWallets_) {
+      hdWallet.second->setWCT(nullptr);
+   }
    {
       std::unique_lock<std::mutex> lock(maintMutex_);
       maintThreadRunning_ = false;
@@ -400,15 +403,12 @@ WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walle
    return nullptr;
 }
 
-WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &addr) const
+WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &address) const
 {
-   const auto &address = addr.unprefixed();
-   {
-      for (const auto wallet : wallets_) {
-         if (wallet.second && (wallet.second->containsAddress(address)
-            || wallet.second->containsHiddenAddress(address))) {
-            return wallet.second;
-         }
+   for (const auto wallet : wallets_) {
+      if (wallet.second && (wallet.second->containsAddress(address)
+         || wallet.second->containsHiddenAddress(address))) {
+         return wallet.second;
       }
    }
    return nullptr;
@@ -442,12 +442,16 @@ BTCNumericTypes::balance_type WalletsManager::getSpendableBalance() const
 
 BTCNumericTypes::balance_type WalletsManager::getUnconfirmedBalance() const
 {
-   return getBalanceSum([](WalletPtr wallet) { return wallet->getUnconfirmedBalance(); });
+   return getBalanceSum([](const WalletPtr &wallet) {
+      return wallet->type() == core::wallet::Type::Bitcoin ? wallet->getUnconfirmedBalance() : 0;
+   });
 }
 
 BTCNumericTypes::balance_type WalletsManager::getTotalBalance() const
 {
-   return getBalanceSum([](WalletPtr wallet) { return wallet->getTotalBalance(); });
+   return getBalanceSum([](const WalletPtr &wallet) {
+      return wallet->type() == core::wallet::Type::Bitcoin ? wallet->getTotalBalance() : 0;
+   });
 }
 
 BTCNumericTypes::balance_type WalletsManager::getBalanceSum(
@@ -490,6 +494,7 @@ void WalletsManager::walletReady(const std::string &walletId)
    if (rootWallet) {
       const auto &itWallet = newWallets_.find(rootWallet->walletId());
       if (itWallet != newWallets_.end()) {
+         rootWallet->startRescan();
          newWallets_.erase(itWallet);
          rootWallet->synchronize([this, walletId] {
             QMetaObject::invokeMethod(this, [this, walletId] {
@@ -816,17 +821,26 @@ bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &
    }
 
    const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
-   std::set<bs::Address> addresses;
+   std::set<bs::Address> ownAddresses, foreignAddresses;
    for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
       TxOut out = tx.getTxOutCopy((int)i);
       const auto addr = bs::Address::fromTxOut(out);
-      bool isOurs = (getWalletByAddress(addr) == wallet);
-      if ((isOurs == isReceiving) || (isOurs && isSettlement)) {
-         addresses.insert(addr);
+      const auto addrWallet = getWalletByAddress(addr);
+      if (addrWallet == wallet) {
+         ownAddresses.insert(addr);
+      }
+      else {
+         foreignAddresses.insert(addr);
       }
    }
 
-   const auto &cbProcessAddresses = [this, txKey, cb](const std::set<bs::Address> &addresses) {
+   if (!isReceiving && (ownAddresses.size() == 1) && !foreignAddresses.empty()) {
+      if (!wallet->isExternalAddress(*ownAddresses.begin())) {
+         ownAddresses.clear();   // treat the only own internal address as change and throw away
+      }
+   }
+
+   const auto &lbdProcessAddresses = [this, txKey, cb](const std::set<bs::Address> &addresses) {
       switch (addresses.size()) {
       case 0:
          updateTxDescCache(txKey, tr("no address"), (int)addresses.size(), cb);
@@ -843,44 +857,11 @@ bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &
       }
    };
 
-   if (addresses.empty()) {
-      std::set<BinaryData> opTxHashes;
-      std::map<BinaryData, std::vector<uint32_t>> txOutIndices;
-
-      for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
-         TxIn in = tx.getTxInCopy((int)i);
-         OutPoint op = in.getOutPoint();
-
-         opTxHashes.insert(op.getTxHash());
-         txOutIndices[op.getTxHash()].push_back(op.getTxOutIndex());
-      }
-
-      const auto &cbProcess = [this, txOutIndices, wallet, cbProcessAddresses](const std::vector<Tx> &txs) {
-         std::set<bs::Address> addresses;
-         for (const auto &prevTx : txs) {
-            const auto &itIdx = txOutIndices.find(prevTx.getThisHash());
-            if (itIdx == txOutIndices.end()) {
-               continue;
-            }
-            for (const auto idx : itIdx->second) {
-               const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy((int)idx));
-               if (getWalletByAddress(addr) == wallet) {
-                  addresses.insert(addr);
-               }
-            }
-         }
-         cbProcessAddresses(addresses);
-      };
-      if (opTxHashes.empty()) {
-         logger_->error("[WalletsManager::{}] - empty TX hashes", __func__);
-         return false;
-      }
-      else {
-         armory_->getTXsByHash(opTxHashes, cbProcess);
-      }
+   if (!ownAddresses.empty()) {
+      lbdProcessAddresses(ownAddresses);
    }
    else {
-      cbProcessAddresses(addresses);
+      lbdProcessAddresses(foreignAddresses);
    }
    return true;
 }

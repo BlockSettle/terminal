@@ -18,6 +18,10 @@
 
 #define SOCK_MAX SIZE_MAX
 
+#if (_MSC_VER >= 1920)
+#include <stdexcept>
+#endif
+
 #else
 #include <sys/types.h>
 #include <sys/socket.h>

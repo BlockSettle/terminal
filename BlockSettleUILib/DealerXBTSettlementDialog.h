@@ -54,6 +54,7 @@ protected:
 
 private slots:
    void onAccepted();
+   void onActivate();
    void validateGUI() override;
 
    void onTimerExpired();
@@ -66,7 +67,6 @@ private slots:
    void onErrorFromContainer(const QString& text);
 
 private:
-   void activate();
    void deactivate();
 
    void disableCancelOnOrder();

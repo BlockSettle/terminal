@@ -71,8 +71,6 @@ public:
    virtual void onError(const std::string &str, const std::string &extra) {}
    virtual void onTxBroadcastError(const std::string &, const std::string &) {}
 
-   virtual void onCombinedBalances(const std::map<std::string, CombinedBalances> &) {}
-   virtual void onCombinedTxnCounts(const std::map<std::string, CombinedCounts> &) {}
    virtual void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) {}
 
 protected:
@@ -131,8 +129,10 @@ public:
       , const std::vector<BinaryData> &addrVec, const RegisterWalletCb&
       , bool asNew = false);
    virtual bool getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb&);
-   virtual bool getCombinedBalances(const std::vector<std::string> &walletIDs);  // will return result to ACT
-   virtual bool getCombinedTxNs(const std::vector<std::string> &walletIDs);      // will return result to ACT
+   virtual bool getCombinedBalances(const std::vector<std::string> &walletIDs
+      , const std::function<void(const std::map<std::string, CombinedBalances> &)> &);
+   virtual bool getCombinedTxNs(const std::vector<std::string> &walletIDs
+      , const std::function<void(const std::map<std::string, CombinedCounts> &)> &);
 
    bool getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &); // result to ACT
    virtual bool getWalletsLedgerDelegate(const LedgerDelegateCb &);

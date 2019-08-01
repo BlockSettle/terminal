@@ -1,5 +1,7 @@
 #include "ChatUtils.h"
 
+#include "google/protobuf/any.h"
+
 #include "ChatCommonTypes.h"
 #include "Encryption/AEAD_Encryption.h"
 #include "Encryption/AEAD_Decryption.h"
@@ -199,3 +201,4 @@ std::string ChatUtils::jsonAssociatedData(const Chat::Data_Message& msg, const B
    QJsonDocument jsonDocument(data);
    return jsonDocument.toJson(QJsonDocument::Compact).toStdString();
 }
+

@@ -29,6 +29,7 @@ public:
    void setValue(const QString &key, const QVariant &value);
    void setValue(const char *key, const QVariant &value);
    void setValue(const char *key, const char *value);
+   Q_INVOKABLE bool contains(const QString &key);
 
 signals:
    void dataChanged();

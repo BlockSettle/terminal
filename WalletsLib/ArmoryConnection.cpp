@@ -244,7 +244,7 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
       do {
          if (needsBreakConnectionLoop_.load()) {
             setState(ArmoryState::Cancelled);
-            break;
+            return;
          }
          cbRemote_ = std::make_shared<ArmoryCallback>(this, logger_);
          logger_->debug("[ArmoryConnection::setupConnection] connecting to Armory {}:{}"
@@ -263,20 +263,6 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
             std::this_thread::sleep_for(std::chrono::seconds(10));
             continue;
          }
-
-         // There is a problem with armory keys: we must delete old keys before importing them
-         // (AuthorizedPeers does not replace them, see AuthorizedPeers::addPeer for details).
-         // Because we manage keys using bip150PromptUserRoutine callback this cause a problem
-         // when Armory key changes (it will NOT be replaced despite we accept it trough the callback).
-         // If we don't add keys there it works fine.
-#if 0
-         try {
-            for (const auto &x : bsBIP150PubKeys_) {
-               bdv_->addPublicKey(x);
-            }
-         }
-         catch (...) {}
-#endif
 
          bdv_->setCheckServerKeyPromptLambda(cbBIP151);
 
@@ -564,19 +550,20 @@ bool ArmoryConnection::getUTXOsForAddress(const bs::Address &addr, const UTXOsCb
 }
 
 
-bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walletIDs)
+bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walletIDs
+   , const std::function<void(const std::map<std::string, CombinedBalances> &)> &cb)
 {
    if (!bdv_ || (state_ != ArmoryState::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this](ReturnMessage<std::map<std::string, CombinedBalances>> retMsg)
+   const auto &cbWrap = [this, cb](ReturnMessage<std::map<std::string, CombinedBalances>> retMsg)
    {
       try {
-         const auto &balances = retMsg.get();
-         addToMaintQueue([balances](ArmoryCallbackTarget *tgt) {
-            tgt->onCombinedBalances(balances);
-         });
+         const auto balances = retMsg.get();
+         if (cb) {
+            cb(balances);
+         }
       }
       catch (const std::exception &e) {
          logger_->error("[ArmoryConnection::getCombinedBalances] failed to get result: {}", e.what());
@@ -586,13 +573,14 @@ bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walle
    return true;
 }
 
-bool ArmoryConnection::getCombinedTxNs(const std::vector<std::string> &walletIDs)
+bool ArmoryConnection::getCombinedTxNs(const std::vector<std::string> &walletIDs
+   , const std::function<void(const std::map<std::string, CombinedCounts> &)> &cb)
 {
    if (!bdv_ || (state_ != ArmoryState::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, walletIDs](ReturnMessage<std::map<std::string, CombinedCounts>> retMsg)
+   const auto &cbWrap = [this, walletIDs, cb](ReturnMessage<std::map<std::string, CombinedCounts>> retMsg)
    {
       try {
          auto counts = retMsg.get();
@@ -601,11 +589,14 @@ bool ArmoryConnection::getCombinedTxNs(const std::vector<std::string> &walletIDs
                counts[id] = {};
             }
          }
-         addToMaintQueue([counts](ArmoryCallbackTarget *tgt) {
-            tgt->onCombinedTxnCounts(counts);
-         });
+         if (cb) {
+            cb(counts);
+         }
       } catch (const std::exception &e) {
          logger_->error("[ArmoryConnection::getCombinedTxNs] failed to get result: {}", e.what());
+         if (cb) {
+            cb({});
+         }
       }
    };
    bdv_->getCombinedAddrTxnCounts(walletIDs, cbWrap);
@@ -911,8 +902,7 @@ void ArmoryConnection::onRefresh(const std::vector<BinaryData>& ids)
          for (const auto &id : ids)
          {
             const auto regIdIt = registrationCallbacks_.find(id.toBinStr());
-            if (regIdIt != registrationCallbacks_.end())
-            {
+            if (regIdIt != registrationCallbacks_.end()) {
                logger_->debug("[{}] found preOnline registration id: {}", __func__
                   , id.toBinStr());
                const auto regId = regIdIt->first;
@@ -921,7 +911,9 @@ void ArmoryConnection::onRefresh(const std::vector<BinaryData>& ids)
 
                //return as soon as possible from this callback, this isn't meant
                //to cascade operations from
-               cb(regId);
+               if (cb) {
+                  cb(regId);
+               }
             }
          }
       }

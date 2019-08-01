@@ -549,13 +549,9 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          newTxKeys->insert(item->id());
          newItems->insert({ item->id(), { item, new TXNode(item) } });
       }
-
-      if (!updatedItems->empty()) {
-         updateBlockHeight(*updatedItems);
-      }
    }
 
-   const auto &cbInited = [this, newItems, newTxKeys, keysMutex]
+   const auto &cbInited = [this, newItems, updatedItems, newTxKeys, keysMutex]
          (const TransactionsViewItem *itemPtr) {
       if (!itemPtr || !itemPtr->initialized) {
          logger_->error("item is not inited");
@@ -565,9 +561,12 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          logger_->warn("TX keys already empty");
          return;
       }
-      QMutexLocker locker(keysMutex.get());
-      newTxKeys->erase(itemPtr->id());
+      {
+         QMutexLocker locker(keysMutex.get());
+         newTxKeys->erase(itemPtr->id());
+      }
       if (newTxKeys->empty()) {
+#if 0
          std::unordered_set<std::string> deletedItems;
          if (rootNode_->hasChildren()) {
             std::vector<int> delRows;
@@ -622,12 +621,16 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          for (const auto &delId : deletedItems) {
             newItems->erase(delId);
          }
+#endif   //0
          if (!newItems->empty()) {
             onNewItems(*newItems);
             if (signalOnEndLoading_) {
                signalOnEndLoading_ = false;
                emit dataLoaded(int(newItems->size()));
             }
+         }
+         if (!updatedItems->empty()) {
+            updateBlockHeight(*updatedItems);
          }
       }
    };
@@ -639,6 +642,9 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       }
    }
    else {
+      if (!updatedItems->empty()) {
+         updateBlockHeight(*updatedItems);
+      }
       emit dataLoaded(0);
    }
 
@@ -1052,7 +1058,7 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
          isCPFP = true;
       }
    }
-   else {
+   if (amount == 0) {
       amount = txEntry.value / BTCNumericTypes::BalanceDivider;
       amountStr = UiUtils::displayAmount(amount);
    }

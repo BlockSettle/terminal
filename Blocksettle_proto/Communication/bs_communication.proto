@@ -149,8 +149,6 @@ message GetCCGenesisAddressesResponse
       required uint64 satoshisNb  = 4;
       optional string description = 5;
    }
-
-   optional bytes   signature = 4;	// only for storage purposes
 }
 
 message SubmitAddrForInitialDistributionRequest

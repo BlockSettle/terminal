@@ -86,6 +86,59 @@ message OtcRange
     uint64 upper = 2;
 }
 
+enum ClientStatus
+{
+	OFFLINE = 0;
+	ONLINE = 1;
+}
+
+enum PartyType
+{
+	GLOBAL = 0;
+	PRIVATE_DIRECT_MESSAGE = 1;
+}
+
+enum PartySubType
+{
+	STANDARD = 0;
+	OTC = 1;
+}
+
+message PartyPacket
+{
+	string id = 1;
+	string display_name = 2;
+	PartyType party_type = 3;
+	PartySubType party_subtype = 4;
+}
+
+message WelcomeRequest
+{
+    string user_name = 1;
+    bytes client_public_key = 2;
+}
+
+message WelcomeResponse
+{
+    bool success = 1;
+    bytes server_public_key = 2;
+	repeated PartyPacket party = 3;
+}
+
+message LogoutRequest
+{
+}
+
+message LogoutResponse
+{
+}
+
+message StatusChanged
+{
+	string user_name = 1;
+	ClientStatus client_status = 2;
+}
+
 message Data
 {
     enum Direction

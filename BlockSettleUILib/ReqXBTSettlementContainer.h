@@ -63,6 +63,8 @@ public:
    double quantity() const override { return quote_.quantity; }
    double price() const override { return quote_.price; }
    double amount() const override { return amount_; }
+   bs::sync::PasswordDialogData toPasswordDialogData() const override;
+
 
    std::string fxProduct() const { return fxProd_; }
    uint64_t fee() const { return fee_; }

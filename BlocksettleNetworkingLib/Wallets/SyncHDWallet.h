@@ -64,7 +64,6 @@ namespace bs {
             std::vector<std::string> setUnconfirmedTargets(void);
 
             void setArmory(const std::shared_ptr<ArmoryConnection> &);
-            void trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &);
             void startRescan();
             bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }
@@ -85,7 +84,7 @@ namespace bs {
                }
             }
 
-            void setWCT(WalletCallbackTarget *wct) { wct_ = wct; }
+            void setWCT(WalletCallbackTarget *);
 
             //settlement shenanigans
             void getSettlementPayinAddress(const SecureBinaryData &settlId
@@ -99,6 +98,7 @@ namespace bs {
             void metadataChanged(const std::string &) override { wct_->metadataChanged(walletId()); }
             void walletCreated(const std::string &walletId) override;
             void walletDestroyed(const std::string &walletId) override;
+            void scan(const std::function<void(bs::sync::SyncState)> &);
 
          protected:
             WalletCallbackTarget *wct_{};

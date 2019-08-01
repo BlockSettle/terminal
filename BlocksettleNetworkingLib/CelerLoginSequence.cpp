@@ -90,7 +90,7 @@ bool CelerLoginSequence::processConnectedEvent(const CelerMessage& message)
       return false;
    }
 
-   heartbeatInterval_ = response.heartbeatintervalinsecs();
+   heartbeatInterval_ = std::chrono::seconds(response.heartbeatintervalinsecs());
 
    return true;
 }

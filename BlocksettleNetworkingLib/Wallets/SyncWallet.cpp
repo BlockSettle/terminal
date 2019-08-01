@@ -32,9 +32,9 @@ void Wallet::synchronize(const std::function<void()> &cbDone)
 {
    const auto &cbProcess = [this, cbDone] (bs::sync::WalletData data) 
    {
+      usedAddresses_.clear();
       netType_ = data.netType;
-      for (const auto &addr : data.addresses) 
-      {
+      for (const auto &addr : data.addresses) {
          addAddress(addr.address, addr.index, addr.address.getType(), false);
          setAddressComment(addr.address, addr.comment, false);
       }
@@ -169,48 +169,6 @@ uint64_t Wallet::getAddrTxN(const bs::Address &addr) const
 //// Combined DB fetch methods
 ////
 ////////////////////////////////////////////////////////////////////////////////
-void WalletACT::onCombinedBalances(const std::map<std::string, CombinedBalances> &balanceMap)
-{
-   bool ourUpdate = false;
-   BTCNumericTypes::balance_type total = 0, spendable = 0, unconfirmed = 0;
-   uint64_t addrCount = 0;
-   for (const auto &wltBal : balanceMap) {
-      if (!parent_->isOwnId(wltBal.first)) {
-         continue;
-      }
-      ourUpdate = true;
-
-      total += static_cast<BTCNumericTypes::balance_type>(
-         wltBal.second.walletBalanceAndCount_[0]) / BTCNumericTypes::BalanceDivider;
-/*      spendable += static_cast<BTCNumericTypes::balance_type>(
-         wltBal.second.walletBalanceAndCount_[1]) / BTCNumericTypes::BalanceDivider;*/
-      unconfirmed += static_cast<BTCNumericTypes::balance_type>(
-         wltBal.second.walletBalanceAndCount_[2]) / BTCNumericTypes::BalanceDivider;
-
-      //wallet txn count
-      addrCount += wltBal.second.walletBalanceAndCount_[3];
-
-      //address balances
-      parent_->updateMap<std::map<BinaryData, std::vector<uint64_t>>>(
-         wltBal.second.addressBalances_, parent_->addressBalanceMap_);
-   }
-   spendable = total - unconfirmed;
-
-   if (ourUpdate) {
-      parent_->totalBalance_ = total;
-      parent_->spendableBalance_ = spendable;
-      parent_->unconfirmedBalance_ = unconfirmed;
-      parent_->addrCount_ = addrCount;
-
-      std::unique_lock<std::mutex> lock(parent_->cbMutex_);
-      for (const auto &cb : parent_->cbBalances_) {
-         if (cb) {
-            cb();
-         }
-      }
-      parent_->cbBalances_.clear();
-   }
-}
 
 bool Wallet::updateBalances(const std::function<void(void)> &cb)
 {  /***
@@ -218,22 +176,65 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
    get methods to grab the individual balances
    ***/
 
-   size_t cbSize = 0;
+/*   size_t cbSize = 0;
    {
       std::unique_lock<std::mutex> lock(cbMutex_);
       cbSize = cbBalances_.size();
       cbBalances_.push_back(cb);
    }
-   if (cbSize == 0) {
+   if (cbSize == 0) { */      // temporary disabled
       std::vector<std::string> walletIDs;
       walletIDs.push_back(walletId());
       try {
          walletIDs.push_back(walletIdInt());
       } catch (std::exception&) {}
-      return armory_->getCombinedBalances(walletIDs);
-   } else {          // if the callbacks queue is not empty, don't call
+
+      const auto onCombinedBalances = [this, cb](const std::map<std::string, CombinedBalances> &balanceMap)
+      {
+         bool ourUpdate = false;
+         BTCNumericTypes::balance_type total = 0, spendable = 0, unconfirmed = 0;
+         uint64_t addrCount = 0;
+         for (const auto &wltBal : balanceMap) {
+            if (!isOwnId(wltBal.first)) {
+               continue;
+            }
+            ourUpdate = true;
+
+            total += static_cast<BTCNumericTypes::balance_type>(
+               wltBal.second.walletBalanceAndCount_[0]) / BTCNumericTypes::BalanceDivider;
+            /*      spendable += static_cast<BTCNumericTypes::balance_type>(
+                     wltBal.second.walletBalanceAndCount_[1]) / BTCNumericTypes::BalanceDivider;*/
+            unconfirmed += static_cast<BTCNumericTypes::balance_type>(
+               wltBal.second.walletBalanceAndCount_[2]) / BTCNumericTypes::BalanceDivider;
+
+            //wallet txn count
+            addrCount += wltBal.second.walletBalanceAndCount_[3];
+
+            //address balances
+            updateMap<std::map<BinaryData, std::vector<uint64_t>>>(
+               wltBal.second.addressBalances_, addressBalanceMap_);
+         }
+         spendable = total - unconfirmed;
+
+         if (ourUpdate) {
+            totalBalance_ = total;
+            spendableBalance_ = spendable;
+            unconfirmedBalance_ = unconfirmed;
+            addrCount_ = addrCount;
+
+/*            std::unique_lock<std::mutex> lock(cbMutex_);
+            for (const auto &cb : cbBalances_) {*/    //Temporary disabled
+               if (cb) {
+                  cb();
+               }
+/*            }
+            cbBalances_.clear();*/
+         }
+      };
+      return armory_->getCombinedBalances(walletIDs, onCombinedBalances);
+/*   } else {          // if the callbacks queue is not empty, don't call
       return true;   // armory's RPC - just add the callback and return
-   }
+   }*/
 }
 
 bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t val)
@@ -314,29 +315,7 @@ bool Wallet::getRBFTxOutList(const ArmoryConnection::UTXOsCb &cb) const
    return true;
 }
 
-void WalletACT::onCombinedTxnCounts(const std::map<std::string, CombinedCounts> &countMap)
-{
-   bool ourUpdate = false;
-   for (const auto &count : countMap) {
-      if (!parent_->isOwnId(count.first)) {
-         continue;
-      }
-      ourUpdate = true;
-      parent_->updateMap<std::map<BinaryData, uint64_t>>(
-         count.second.addressTxnCounts_, parent_->addressTxNMap_);
-   }
-   if (ourUpdate) {
-      std::unique_lock<std::mutex> lock(parent_->cbMutex_);
-      for (const auto &cb : parent_->cbTxNs_) {
-         if (cb) {
-            cb();
-         }
-      }
-      parent_->cbTxNs_.clear();
-   }
-}
-
-bool Wallet::getAddressTxnCounts(std::function<void(void)> cb)
+bool Wallet::getAddressTxnCounts(const std::function<void(void)> &cb)
 {  /***
    Same as updateBalances, this methods grabs the addr txn count
    for all addresses in wallet (inner chain included) and caches
@@ -345,23 +324,37 @@ bool Wallet::getAddressTxnCounts(std::function<void(void)> cb)
    Use getAddressTxnCount to get a specific count for a given
    address from the cache.
    ***/
-   size_t cbSize = 0;
+/*   size_t cbSize = 0;
    {
       std::unique_lock<std::mutex> lock(cbMutex_);
       cbSize = cbTxNs_.size();
       cbTxNs_.push_back(cb);
    }
-   if (cbSize == 0) {
+   if (cbSize == 0) { */   // temporary disabled
       std::vector<std::string> walletIDs;
       walletIDs.push_back(walletId());
       try {
          walletIDs.push_back(walletIdInt());
       } catch (std::exception&) {}
-      return armory_->getCombinedTxNs(walletIDs);
-   }
+
+      const auto &cbTxNs = [this, cb](const std::map<std::string, CombinedCounts> &countMap) {
+         for (const auto &count : countMap) {
+            updateMap<std::map<BinaryData, uint64_t>>(
+               count.second.addressTxnCounts_, addressTxNMap_);
+         }
+/*         std::unique_lock<std::mutex> lock(cbMutex_);
+         for (const auto &cb : cbTxNs_) {*/
+            if (cb) {
+               cb();
+            }
+/*         }
+         cbTxNs_.clear();*/
+      };
+      return armory_->getCombinedTxNs(walletIDs, cbTxNs);
+/*   }
    else {
       return true;
-   }
+   }*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -482,6 +475,19 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
    for (const auto &entry : entries) {
       armory_->getTxByHash(entry.txHash, cbTX);
    }
+   updateBalances([this] {    // TxNs are not updated for ZCs
+      trackChainAddressUse([this](bs::sync::SyncState st) {
+         logger_->debug("{}: new live address found: {}", walletId(), (int)st);
+         if (st == bs::sync::SyncState::Success) {
+            synchronize([this] {
+               logger_->debug("[Wallet::onZeroConfReceived] synchronized after addresses are tracked");
+               if (wct_) {
+                  wct_->addressAdded(walletId());
+               }
+            });
+         }
+      });
+   });
 }
 
 void Wallet::onNewBlock(unsigned int depth)
@@ -855,7 +861,7 @@ void Wallet::newAddresses(
    }
 }
 
-void Wallet::trackChainAddressUse(std::function<void(bs::sync::SyncState)> cb)
+void Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &cb)
 {
    if (!signContainer_) {
       cb(bs::sync::SyncState::NothingToDo);
@@ -864,8 +870,26 @@ void Wallet::trackChainAddressUse(std::function<void(bs::sync::SyncState)> cb)
    //1) round up all addresses that have a tx count
    std::set<BinaryData> usedAddrSet;
    for (auto& addrPair : addressTxNMap_) {
-      if (addrPair.second != 0)
+      if (addrPair.second != 0) {
          usedAddrSet.insert(addrPair.first);
+      }
+   }
+   for (auto& addrPair : addressBalanceMap_) {
+      if (usedAddrSet.find(addrPair.first) != usedAddrSet.end()) {
+         continue;   // skip already added addresses
+      }
+      if (!addrPair.second.empty()) {
+         bool hasBalance = false;
+         for (int i = 0; i < 3; ++i) {
+            if (addrPair.second[i] > 0) {
+               hasBalance = true;
+               break;
+            }
+         }
+         if (hasBalance) {
+            usedAddrSet.insert(addrPair.first);
+         }
+      }
    }
 
    logger_->debug("[{}] {}: {} used address[es]", __func__, walletId(), usedAddrSet.size());

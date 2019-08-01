@@ -23,12 +23,11 @@ BaseCelerClient::BaseCelerClient(const std::shared_ptr<spdlog::logger> &logger, 
    , userIdRequired_(userIdRequired)
    , serverNotAvailable_(false)
 {
-   heartbeatTimer_ = new QTimer(this);
-   heartbeatTimer_->setInterval(30 * 1000);
-   heartbeatTimer_->setSingleShot(false);
+   timerSendHb_ = new QTimer(this);
+   timerRecvHb_ = new QTimer(this);
 
-   connect(heartbeatTimer_, &QTimer::timeout, this, &BaseCelerClient::sendHeartbeat);
-   connect(this, &BaseCelerClient::restartTimer, this, &BaseCelerClient::onTimerRestart);
+   connect(timerSendHb_, &QTimer::timeout, this, &BaseCelerClient::onSendHbTimeout);
+   connect(timerRecvHb_, &QTimer::timeout, this, &BaseCelerClient::onRecvHbTimeout);
 
    connect(this, &BaseCelerClient::closingConnection, this, &BaseCelerClient::CloseConnection, Qt::QueuedConnection);
    RegisterDefaulthandlers();
@@ -44,7 +43,7 @@ bool BaseCelerClient::SendLogin(const std::string& login, const std::string& ema
    celerUserType_ = CelerUserType::Undefined;
 
    auto loginSequence = std::make_shared<CelerLoginSequence>(logger_, login, password);
-   auto onLoginSuccess = [this, login, email](const std::string& sessionToken, int32_t heartbeatInterval) {
+   auto onLoginSuccess = [this, login, email](const std::string& sessionToken, std::chrono::seconds heartbeatInterval) {
      loginSuccessCallback(login, email, sessionToken, heartbeatInterval);
    };
    auto onLoginFailed = [this](const std::string& errorMessage) {
@@ -61,7 +60,7 @@ bool BaseCelerClient::SendLogin(const std::string& login, const std::string& ema
 }
 
 void BaseCelerClient::loginSuccessCallback(const std::string& userName, const std::string& email, const std::string& sessionToken
-   , int32_t heartbeatInterval)
+   , std::chrono::seconds heartbeatInterval)
 {
    logger_->debug("[CelerClient::loginSuccessCallback] logged in as {}", userName);
    userName_ = userName;
@@ -70,9 +69,6 @@ void BaseCelerClient::loginSuccessCallback(const std::string& userName, const st
    heartbeatInterval_ = heartbeatInterval;
    serverNotAvailable_ = false;
    idGenerator_.setUserName(userName);
-
-   heartbeatTimer_->setInterval(heartbeatInterval_ * 1000);
-   heartbeatTimer_->setSingleShot(false);
 
    if (userIdRequired_) {
       auto getUserIdSequence = std::make_shared<CelerLoadUserInfoSequence>(logger_, userName, [this](CelerProperties properties) {
@@ -112,7 +108,13 @@ void BaseCelerClient::loginSuccessCallback(const std::string& userName, const st
       emit OnConnectedToServer();
    }
 
-   emit restartTimer();
+   timerSendHb_->setInterval(heartbeatInterval_);
+   timerSendHb_->start();
+
+   // If there is nothing received for 45 seconds channel will be closed.
+   // Celer will also send heartbeats but only when idle.
+   timerRecvHb_->setInterval(heartbeatInterval_ + std::chrono::seconds(15));
+   timerRecvHb_->start();
 }
 
 void BaseCelerClient::loginFailedCallback(const std::string& errorMessage)
@@ -137,7 +139,8 @@ void BaseCelerClient::AddInternalSequence(const std::shared_ptr<BaseCelerCommand
 
 void BaseCelerClient::CloseConnection()
 {
-   heartbeatTimer_->stop();
+   timerSendHb_->stop();
+   timerRecvHb_->stop();
 
    if (!sessionToken_.empty()) {
       sessionToken_.clear();
@@ -147,6 +150,10 @@ void BaseCelerClient::CloseConnection()
 
 void BaseCelerClient::OnDataReceived(CelerAPI::CelerMessageType messageType, const std::string& data)
 {
+   if (timerRecvHb_->isActive()) {
+      timerRecvHb_->start();
+   }
+
    // internal queue
    while (!internalCommands_.empty()) {
       std::shared_ptr<BaseCelerCommand> command = internalCommands_.front();
@@ -197,8 +204,8 @@ void BaseCelerClient::SendCommandMessagesIfRequired(const std::shared_ptr<BaseCe
 bool BaseCelerClient::sendMessage(CelerAPI::CelerMessageType messageType, const std::string& data)
 {
    // reset heartbeat interval
-   if (heartbeatTimer_->isActive()) {
-      emit restartTimer();
+   if (timerSendHb_->isActive()) {
+      timerSendHb_->start();
    }
 
    onSendData(messageType, data);
@@ -337,11 +344,15 @@ bool BaseCelerClient::SendDataToSequence(const std::string& sequenceId, CelerAPI
    return true;
 }
 
-void BaseCelerClient::sendHeartbeat()
+void BaseCelerClient::onSendHbTimeout()
 {
    Heartbeat heartbeat;
-
    sendMessage(CelerAPI::HeartbeatType, heartbeat.SerializeAsString());
+}
+
+void BaseCelerClient::onRecvHbTimeout()
+{
+   OnDisconnected();
 }
 
 bool BaseCelerClient::ExecuteSequence(const std::shared_ptr<BaseCelerCommand>& command)
@@ -386,13 +397,10 @@ void BaseCelerClient::RegisterUserCommand(const std::shared_ptr<BaseCelerCommand
    activeCommands_.emplace(command->GetSequenceId(), command);
 }
 
-void BaseCelerClient::onTimerRestart()
-{
-   heartbeatTimer_->start();
-}
-
 void BaseCelerClient::recvData(CelerAPI::CelerMessageType messageType, const std::string &data)
 {
+   timerRecvHb_->start();
+
    OnDataReceived(messageType, data);
 }
 

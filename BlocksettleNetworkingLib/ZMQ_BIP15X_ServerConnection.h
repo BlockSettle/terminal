@@ -96,6 +96,12 @@ public:
    static BinaryData getOwnPubKey(const std::string &ownKeyFileDir, const std::string &ownKeyFileName);
    static BinaryData getOwnPubKey(const AuthorizedPeers &authPeers);
 
+   // If set only selected trusted clients will be able connect to the server.
+   // This will work even if startupBIP150CTX was called with publicRequester set to true.
+   // This must be called before starting accepting connections.
+   // Only compressed public keys are supported.
+   // If empty (default) trusted clients are not enforced.
+   void forceTrustedClients(const ZmqBIP15XPeers &peers);
 protected:
    // Overridden functions from ZmqServerConnection.
    ZmqContext::sock_ptr CreateDataSocket() override;
@@ -156,5 +162,10 @@ private:
    PendingMsgs             pendingDataToAll_;
    std::mutex              pendingDataMutex_;
    std::chrono::milliseconds heartbeatInterval_ = getDefaultHeartbeatInterval();
+
+   ZmqBIP15XPeers forcedTrustedClients_;
 };
+
+using ZmqBIP15XServerConnectionPtr = std::shared_ptr<ZmqBIP15XServerConnection>;
+
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__

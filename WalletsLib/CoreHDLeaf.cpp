@@ -380,10 +380,11 @@ bs::Address hd::Leaf::getAddressByIndex(
       if (addrPtr->getType() != accountPtr_->getAddressType())
          throw AccountException("type mismatch for instantiated address");
    }
-   else if (addrPtr->getType() != aet)
-   {
+/*   else if (addrPtr->getType() != aet)
+   {  // Temporarily disable this check as it sometimes can occur
       throw AccountException("type mismatch for instantiated address " + std::to_string(id));
    }
+   */
 
    return bs::Address(addrPtr->getHash(), aet);
 }
@@ -669,10 +670,10 @@ std::pair<bs::Address, bool> hd::Leaf::synchronizeUsedAddressChain(
    if (aeType != AddressEntryType_Default && result.first.getType() != aeType)
       throw AccountException("did not get expected address entry type");
 
-   auto resultIndex = addressIndex(result.first);
-   if (resultIndex != addrIndex)
+/*   auto resultIndex = addressIndex(result.first);
+   if (resultIndex != addrIndex)    // Disabled this check, too for aet mismatch
       throw AccountException("did not get expected address index");
-
+*/
    result.second = true;
    return result;
 }

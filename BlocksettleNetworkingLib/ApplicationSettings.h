@@ -87,7 +87,6 @@ public:
       bsPublicKey,
       logDefault,
       logMessages,
-      ccFileName,
       txCacheFileName,
       nbBackupFilesKeep,
       aqScripts,
@@ -185,6 +184,14 @@ public:
    void selectNetwork();
 
    bool isAutheidTestEnv() const;
+
+   // Returns "prod", "uat", "staging" or "custom"
+   static std::string envName(EnvConfiguration conf);
+
+   // Returns "mainnet", "testnet" or "regtest"
+   static std::string networkName(NetworkType type);
+
+   QString ccFilePath() const;
 
 signals:
    void settingChanged(int setting, QVariant value);
