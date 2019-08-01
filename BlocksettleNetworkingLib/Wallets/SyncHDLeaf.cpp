@@ -830,44 +830,6 @@ hd::AuthLeaf::AuthLeaf(const std::string &walletId, const std::string &name, con
    poolAET_ = { AddressEntryType_P2WPKH };
 }
 
-void hd::AuthLeaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
-{
-   if (userId_.isNull()) {
-      tempAddresses_.insert(key);
-      if (cb) {
-         cb({});
-      }
-   }
-   else {
-      hd::Leaf::createAddress(cb, key);
-   }
-}
-
-void hd::AuthLeaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
-{
-   if (userId_.isNull()) {
-      return;
-   }
-
-   //auth leaf is ext only
-   hd::Leaf::topUpAddressPool(true, cb);
-}
-
-void hd::AuthLeaf::setUserId(const BinaryData &userId)
-{
-   userId_ = userId;
-   if (userId.isNull()) {
-      reset();
-      return;
-   }
-
-   for (const auto &addr : tempAddresses_) {
-      createAddress([](const bs::Address &) {}, addr);
-      lastExtIdx_ = std::max(lastExtIdx_, addr.path.get(-1) + 1);
-   }
-   topUpAddressPool(true);
-}
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

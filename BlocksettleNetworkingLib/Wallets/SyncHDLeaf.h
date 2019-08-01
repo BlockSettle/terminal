@@ -152,7 +152,6 @@ namespace bs {
                AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH),
                AddressEntryType_P2WPKH };
 
-            std::set<AddrPoolKey>   tempAddresses_;
             std::map<AddrPoolKey, bs::Address>  addressPool_;
             std::map<bs::Address, AddrPoolKey>  poolByAddr_;
 
@@ -206,20 +205,12 @@ namespace bs {
             ~XBTLeaf() override = default;
          };
 
+
          class AuthLeaf : public Leaf
          {
          public:
             AuthLeaf(const std::string &walletId, const std::string &name, const std::string &desc
                , WalletSignerContainer *, const std::shared_ptr<spdlog::logger> &);
-
-            void setUserId(const BinaryData &) override;
-
-         protected:
-            void createAddress(const CbAddress &, const AddrPoolKey &) override;
-            void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr) override;
-
-         private:
-            BinaryData              userId_;
          };
 
 
@@ -291,9 +282,6 @@ namespace bs {
          protected:
             void createAddress(const CbAddress &, const AddrPoolKey &) override;
             void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr) override;
-
-         private:
-            BinaryData              userId_;
          };
 
       }  //namespace hd

@@ -89,12 +89,11 @@ namespace bs {
             void setUserId(const BinaryData &usedId) override;
 
          protected:
-            bool addLeaf(const std::shared_ptr<hd::Leaf> &, bool signal = false) override;
             std::shared_ptr<hd::Leaf> newLeaf(const std::string &walletId) const override;
             void initLeaf(std::shared_ptr<hd::Leaf> &, const bs::hd::Path &) const override;
 
+         private:
             BinaryData  userId_;
-            std::unordered_map<bs::hd::Path::Elem, std::shared_ptr<hd::Leaf>>  tempLeaves_;
          };
 
 
