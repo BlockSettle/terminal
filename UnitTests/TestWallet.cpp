@@ -1757,6 +1757,8 @@ class TestWalletWithArmory : public ::testing::Test
 protected:
    void SetUp()
    {
+      UnitTestWalletACT::clear();
+
       envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
       envPtr_->requireArmory();
 

@@ -13,7 +13,9 @@
 #include "BDM_mainthread.h"
 #include <btc/ecc.h>
 
+#include "ArmoryObject.h"
 #include "Wallets/SyncWallet.h"
+#include "AuthAddressLogic.h"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -44,46 +46,71 @@ class ResolverOneAddress : public ResolverFeed
 private:
    SecureBinaryData privKey_;
    BinaryData pubKey_;
+   BinaryData hash_;
 
 public:
    ResolverOneAddress(
       const SecureBinaryData& privkey,
       const BinaryData& pubkey) :
       privKey_(privkey), pubKey_(pubkey)
-   {}
+   {
+      hash_ = BtcUtils::hash160(pubKey_);
+   }
 
    BinaryData getByVal(const BinaryData& hash)
    {
+      if(hash != hash_)
+         throw std::runtime_error("no pubkey for this hash");
+         
       return pubKey_;
    }
 
    const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
    {
+      if(pubkey != pubKey_)
+         throw std::runtime_error("no privkey for this pubkey");
+
       return privKey_;
    }
 };
 
-enum DBNotificationStruct_Enum
+class ResolverManyAddresses : public ResolverFeed
 {
-   DBNS_Refresh,
-   DBNS_ZC,
-   DBNS_NewBlock
-};
+private:
+   std::map<BinaryData, SecureBinaryData> hashToPubKey_;
+   std::map<SecureBinaryData, SecureBinaryData> pubKeyToPriv_;
 
-struct DBNotificationStruct
-{
-   const DBNotificationStruct_Enum type_;
+public:
+   ResolverManyAddresses(std::set<SecureBinaryData> privKeys)
+   {
+      for (auto& privKey : privKeys)
+      {
+         auto&& pubKey = CryptoECDSA().ComputePublicKey(privKey, true);
+         auto&& hash = BtcUtils::getHash160(pubKey);
 
-   std::vector<BinaryData> ids_;
-   bool online_;
+         hashToPubKey_.insert(std::make_pair(hash, pubKey));
+         pubKeyToPriv_.insert(std::make_pair(pubKey, privKey));
+      }
+   }
 
-   std::vector<bs::TXEntry> zc_;
+   BinaryData getByVal(const BinaryData& hash)
+   {
+      auto iter = hashToPubKey_.find(hash);
+      if (iter == hashToPubKey_.end())
+         throw std::runtime_error("no pubkey for this hash");
 
-   unsigned block_;
+      return iter->second;
+   }
 
-   DBNotificationStruct(DBNotificationStruct_Enum type) : 
-      type_(type)
-   {}
+   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
+   {
+      auto iter = pubKeyToPriv_.find(pubkey);
+      if (iter == pubKeyToPriv_.end())
+         throw std::runtime_error("no privkey for this pubkey");
+
+      return iter->second;
+   }
+
 };
 
 class UnitTestWalletACT : public bs::sync::WalletACT
@@ -214,6 +241,30 @@ struct ArmoryInstance
    void pushZC(const BinaryData&);
 };
 
+class TestArmoryConnection : public ArmoryObject
+{
+   std::shared_ptr<ArmoryInstance> armoryInstance_;
+
+public:
+   TestArmoryConnection(
+      std::shared_ptr<ArmoryInstance> armoryInstance,
+      const std::shared_ptr<spdlog::logger> &loggerRef,
+      const std::string &txCacheFN, 
+      bool cbInMainThread = true) :
+      armoryInstance_(armoryInstance),
+      ArmoryObject(loggerRef, txCacheFN, cbInMainThread)
+   {}
+
+   bool pushZC(const BinaryData& rawTx) const override
+   {
+      if (armoryInstance_ == nullptr)
+         return false;
+
+      armoryInstance_->pushZC(rawTx);
+      return true;
+   }
+};
+
 class TestEnv
 {
 public:
@@ -223,7 +274,7 @@ public:
    void shutdown(void);
    
    std::shared_ptr<ApplicationSettings> appSettings() { return appSettings_; }
-   std::shared_ptr<ArmoryConnection> armoryConnection() { return armoryConnection_; }
+   std::shared_ptr<TestArmoryConnection> armoryConnection() { return armoryConnection_; }
    std::shared_ptr<ArmoryInstance> armoryInstance() { return armoryInstance_; }
    std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
    std::shared_ptr<MockAuthAddrMgr> authAddrMgr() { return authAddrMgr_; }
@@ -250,7 +301,7 @@ private:
    std::shared_ptr<QuoteProvider>        quoteProvider_;
    std::shared_ptr<bs::core::WalletsManager>       walletsMgr_;
    std::shared_ptr<spdlog::logger>       logger_;
-   std::shared_ptr<ArmoryConnection>     armoryConnection_;
+   std::shared_ptr<TestArmoryConnection> armoryConnection_;
    std::shared_ptr<ArmoryInstance>       armoryInstance_;
 };
 
