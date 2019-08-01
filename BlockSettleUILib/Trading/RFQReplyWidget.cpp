@@ -212,10 +212,10 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
                settlContainer->activate();
             } else {
-               auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
-                  sr.requestorAuthAddress, walletsManager_, signingContainer_
-                  , celerClient_, appSettings_, connectionManager_, this);
-               showSettlementDialog(settlDlg);
+//               auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
+//                  sr.requestorAuthAddress, walletsManager_, signingContainer_
+//                  , celerClient_, appSettings_, connectionManager_, this);
+//               showSettlementDialog(settlDlg);
             }
          } catch (const std::exception &e) {
             BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
@@ -239,9 +239,9 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                   connect(settlContainer.get(), &bs::SettlementContainer::readyToActivate, this, &RFQReplyWidget::onReadyToActivate);
                   ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
                } else {
-                  auto *dsd = new DealerXBTSettlementDialog(logger_, settlContainer, assetManager_,
-                     walletsManager_, signingContainer_, celerClient_, appSettings_, connectionManager_, this);
-                  showSettlementDialog(dsd);
+//                  auto *dsd = new DealerXBTSettlementDialog(logger_, settlContainer, assetManager_,
+//                     walletsManager_, signingContainer_, celerClient_, appSettings_, connectionManager_, this);
+//                  showSettlementDialog(dsd);
                }
             } catch (const std::exception &e) {
                BSMessageBox box(BSMessageBox::critical, tr("Settlement error")

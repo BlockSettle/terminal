@@ -8,16 +8,19 @@ FILE(GLOB SOURCES
    *.cpp
    ManageEncryption/*.cpp
    Settings/*.cpp
+   Trading/*.cpp
 )
 FILE(GLOB HEADERS
    *.h
    ManageEncryption/*.h
    Settings/*.h
+   Trading/*.h
 )
 FILE(GLOB UI_FILES
    *.ui
    ManageEncryption/*.ui
    Settings/*.ui
+   Trading/*.ui
 )
 
 FILE(GLOB RESOURCE_FILES *.qrc)

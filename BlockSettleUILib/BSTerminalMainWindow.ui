@@ -586,13 +586,13 @@
   <customwidget>
    <class>RFQRequestWidget</class>
    <extends>QWidget</extends>
-   <header>RFQRequestWidget.h</header>
+   <header>Trading/RFQRequestWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>RFQReplyWidget</class>
    <extends>QWidget</extends>
-   <header>RFQReplyWidget.h</header>
+   <header>Trading/RFQReplyWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
