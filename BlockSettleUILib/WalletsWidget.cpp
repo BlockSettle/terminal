@@ -18,7 +18,6 @@
 #include "AssetManager.h"
 #include "BSMessageBox.h"
 #include "NewWalletDialog.h"
-#include "NewWalletSeedDialog.h"
 #include "SelectAddressDialog.h"
 #include "SignContainer.h"
 #include "WalletsViewModel.h"
@@ -27,7 +26,6 @@
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "TreeViewWithEnterKey.h"
-#include "NewWalletSeedConfirmDialog.h"
 #include "ManageEncryption/RootWalletPropertiesDialog.h"
 
 #include "SignerUiDefs.h"
