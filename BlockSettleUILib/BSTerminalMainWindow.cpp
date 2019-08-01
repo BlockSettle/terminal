@@ -1160,9 +1160,6 @@ void BSTerminalMainWindow::onCelerConnected()
    action_logout_->setVisible(true);
 
    onUserLoggedIn();
-
-   // TODO: Use PB contact name from downloaded settings or something
-   ui_->widgetChat->connectToPb("m8ifjy99bpom");
 }
 
 void BSTerminalMainWindow::onCelerDisconnected()
