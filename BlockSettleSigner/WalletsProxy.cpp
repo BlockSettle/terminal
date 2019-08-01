@@ -504,7 +504,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
                                                 , tr("Sign Offline TX")
                                                 , QVariant::fromValue(txInfo)
                                                 , QVariant::fromValue(dialogData)
-                                                , QVariant::fromValue(new bs::hd::WalletInfo));
+                                                , QVariant::fromValue(walletInfo));
       };
 
       requestCbs->push_back(walletCb);

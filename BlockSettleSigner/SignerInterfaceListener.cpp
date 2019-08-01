@@ -216,7 +216,6 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       break;
    case signer::SignSettlementTx:
    case signer::SignSettlementPartialTx:
-      dialogData->setValue("Title", tr("Sign Settlement Transaction"));
       requestPasswordForSettlementTx(request.dialogtype(), dialogData, txInfo, walletInfo);
       break;
    case signer::CreateAuthLeaf:

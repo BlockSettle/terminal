@@ -348,8 +348,9 @@ function importWalletDialog(data) {
 
 function backupWalletDialog(data) {
     var rootId = data["rootId"]
-    var dlg = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
-    dlg.walletInfo = qmlFactory.createWalletInfo(rootId)
+    var dlg = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow
+            , {"walletInfo": qmlFactory.createWalletInfo(rootId)})
+
     // FIXME: save backups dir
     //dlg.targetDir = signerSettings.dirDocuments
     dlg.open()
@@ -358,17 +359,20 @@ function backupWalletDialog(data) {
 
 function deleteWalletDialog(data) {
     var walletId = data["rootId"]
-    var dlg = Qt.createComponent("../BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
-    dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
-    dlg.rootName = walletsProxy.getRootWalletName(walletId)
+    var dlg = Qt.createComponent("../BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow
+            , {"rootName": walletsProxy.getRootWalletName(walletId),
+               "walletInfo": qmlFactory.createWalletInfo(walletId)
+              })
+
     dlg.open()
     return dlg
 }
 
 function manageEncryptionDialog(data) {
     var rootId = data["rootId"]
-    var dlg = Qt.createComponent("../BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow)
-    dlg.walletInfo = qmlFactory.createWalletInfo(rootId)
+    var dlg = Qt.createComponent("../BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow
+            , {"walletInfo": qmlFactory.createWalletInfo(rootId)})
+
     dlg.open()
     return dlg
 }
