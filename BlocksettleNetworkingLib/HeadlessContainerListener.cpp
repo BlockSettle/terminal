@@ -461,6 +461,8 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
 
    bs::core::wallet::TXSignRequest txSignReq;
+   txSignReq.walletId = walletsMgr_->getPrimaryWallet()->walletId();
+
    UTXO utxo;
    utxo.unserialize(request.signpayouttxrequest().input());
    if (utxo.isInitialized()) {
@@ -485,9 +487,9 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
 
    const auto onPassword = [this, txSignReq, sd, clientId, id = packet.id(), reqType]
       (bs::error::ErrorCode result, const SecureBinaryData &pass) {
-      if (result == ErrorCode::TxCanceled) {
-         logger_->error("[HeadlessContainerListener] payout transaction cancelled");
-         SignTXResponse(clientId, id, reqType, ErrorCode::TxCanceled);
+      if (result != ErrorCode::NoError) {
+         logger_->error("[HeadlessContainerListener] payout transaction failed, result from ui: {}", static_cast<int>(result));
+         SignTXResponse(clientId, id, reqType, result);
          return;
       }
 

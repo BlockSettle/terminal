@@ -13,11 +13,11 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const bs::network::Order &order, const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<QuoteProvider> &quoteProvider, const std::shared_ptr<TransactionData> &txData
    , const std::unordered_set<std::string> &bsAddresses, const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
+   , const std::shared_ptr<ArmoryConnection> &armory)
    : bs::SettlementContainer(), armory_(armory), walletsMgr_(walletsMgr), order_(order)
    , weSell_((order.side == bs::network::Side::Buy) ^ (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)
-   , autoSign_(autoSign), logger_(logger), transactionData_(txData), signingContainer_(container)
+   , logger_(logger), transactionData_(txData), signingContainer_(container)
 {
    qRegisterMetaType<AddressVerificationState>();
 
@@ -67,6 +67,8 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
 
       settlMonitor_ = std::make_shared<bs::SettlementMonitorCb>(armory_, addr, logger_
          , [this] { });
+      logger_->debug("[DealerXBTSettlementContainer] ready to activate");
+      emit readyToActivate();
    };
 
    const auto priWallet = walletsMgr->getPrimaryWallet();

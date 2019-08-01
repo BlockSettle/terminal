@@ -44,6 +44,7 @@ namespace bs {
       void info(QString);
 
       void readyToAccept();
+      void readyToActivate();
       void completed();
       void failed();
 

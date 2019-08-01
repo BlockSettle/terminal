@@ -35,7 +35,6 @@ static const QString SettingsCompanyName = QLatin1String("BlockSettle");
 
 static const QString LogFileName = QLatin1String("bs_terminal.log");
 static const QString LogMsgFileName = QLatin1String("bs_terminal_messages.log");
-static const QString CCFileName = QLatin1String("ccgenaddr.signed");
 static const QString TxCacheFileName = QLatin1String("transactions.cache");
 
 static const QString blockDirName = QLatin1String("blocks");
@@ -136,7 +135,6 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { bsPublicKey,             SettingDef(QString(), QLatin1String("022aa8719eadf13ba5bbced2848fb492a4118087b200fdde8ec68a2f5d105b36fa")) },
       { logDefault,              SettingDef(QLatin1String("LogFile"), QStringList() << LogFileName << QString() << QString() << QLatin1String(DefaultLogLevel)) },
       { logMessages,             SettingDef(QLatin1String("LogMsgFile"), QStringList() << LogMsgFileName << QLatin1String("message") << QLatin1String("%C/%m/%d %H:%M:%S.%e [%L]: %v") << QLatin1String(DefaultLogLevel)) },
-      { ccFileName,              SettingDef(QString(), AppendToWritableDir(CCFileName))},
       { txCacheFileName,         SettingDef(QString(), AppendToWritableDir(TxCacheFileName)) },
       { nbBackupFilesKeep,       SettingDef(QString(), 10) },
       { aqScripts,               SettingDef(QLatin1String("AutoQuotingScripts")) },
@@ -656,6 +654,14 @@ bs::LogLevel ApplicationSettings::parseLogLevel(QString level) const
    return bs::LogLevel::debug;
 }
 
+QString ApplicationSettings::ccFilePath() const
+{
+   auto conf = EnvConfiguration(get<int>(ApplicationSettings::envConfiguration));
+   auto netType = get<NetworkType>(ApplicationSettings::netType);
+   auto fileName = fmt::format("ccgenaddr-{}-{}.signed", envName(conf), networkName(netType));
+   return AppendToWritableDir(QString::fromStdString(fileName));
+}
+
 std::pair<autheid::PrivateKey, autheid::PublicKey> ApplicationSettings::GetAuthKeys()
 {
    if (!authPrivKey_.empty() && !authPubKey_.empty()) {
@@ -748,5 +754,38 @@ bool ApplicationSettings::isAutheidTestEnv() const
          return true;
       default:
          return false;
+   }
+}
+
+// static
+std::string ApplicationSettings::envName(ApplicationSettings::EnvConfiguration conf)
+{
+   switch (conf) {
+      case ApplicationSettings::EnvConfiguration::PROD:
+         return "prod";
+      case ApplicationSettings::EnvConfiguration::UAT:
+         return "uat";
+      case ApplicationSettings::EnvConfiguration::Staging:
+         return "staging";
+      case ApplicationSettings::EnvConfiguration::Custom:
+         return "custom";
+   }
+
+   assert(false);
+   return "unknown";
+}
+
+std::string ApplicationSettings::networkName(NetworkType type)
+{
+   switch (type) {
+      case NetworkType::MainNet:
+         return "mainnet";
+      case NetworkType::TestNet:
+         return "testnet";
+      case NetworkType::RegTest:
+         return "regtest";
+      default:
+         assert(false);
+         return "unknown";
    }
 }

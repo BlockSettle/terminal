@@ -15,12 +15,6 @@ sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
    info.setValue("Security", QString::fromStdString(security()));
    info.setValue("Product", QString::fromStdString(product()));
    info.setValue("Side", tr(bs::network::Side::toString(side())));
-   info.setValue("Price", UiUtils::displayPriceCC(price()));
-   info.setValue("Quantity", tr("%1 %2")
-                 .arg(UiUtils::displayCCAmount(quantity()))
-                 .arg(QString::fromStdString(product())));
-   info.setValue("TotalValue", tr("%1").arg(UiUtils::displayAmount(amount())));
-   info.setValue("GenesisAddress", tr("Verifying"));
 
    return info;
 }

@@ -113,3 +113,9 @@ message FundCCGenAddrTransaction
    repeated uint32   amount = 3;
    repeated string   reference = 4;
 }
+
+message CCDefinitions
+{
+   required bytes    response = 1;
+   required bytes    signature = 2;
+}

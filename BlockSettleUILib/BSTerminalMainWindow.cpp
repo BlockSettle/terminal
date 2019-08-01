@@ -187,7 +187,7 @@ void BSTerminalMainWindow::onBsConnectionFailed()
 
 void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
 {
-   if (!ccFileManager_ || ccFileManager_->synchronized()) {
+   if (!ccFileManager_) {
       return;
    }
    const auto &priWallet = walletsMgr_->getPrimaryWallet();
@@ -1140,8 +1140,6 @@ void BSTerminalMainWindow::onUserLoggedIn()
    };
    addDeferredDialog(deferredDialog);
 
-   walletsMgr_->setUserId(userId);
-
    setLoginButtonText(currentUserLogin_);
 }
 
@@ -1155,8 +1153,6 @@ void BSTerminalMainWindow::onUserLoggedOut()
    ui_->actionDeposits->setEnabled(false);
    ui_->actionWithdrawalRequest->setEnabled(false);
    ui_->actionLinkAdditionalBankAccount->setEnabled(false);
-
-   walletsMgr_->setUserId({});
 
    if (walletsMgr_) {
       walletsMgr_->setUserId(BinaryData{});
