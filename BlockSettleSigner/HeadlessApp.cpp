@@ -341,61 +341,6 @@ std::string HeadlessAppObj::getOwnKeyFileName()
    return "remote_signer.peers";
 }
 
-#if 0
-void HeadlessAppObj::OfflineProcessing()
-{
-   const auto cbCLI = [this](const std::shared_ptr<bs::sync::Wallet> &wallet) -> SecureBinaryData {
-      std::cout << "Enter password for wallet " << wallet->name();
-      if (!wallet->description().empty()) {
-         std::cout << " (" << wallet->description() << ")";
-      }
-      (std::cout << ": ").flush();
-      setConsoleEcho(false);
-      std::string password;
-      std::getline(std::cin, password);
-      std::cout << std::endl;
-      setConsoleEcho(true);
-      return password;
-   };
-
-   if (!offlineProc_) {
-      auto adapter = new SignerAdapter(logger_, this);
-      offlineProc_ = std::make_shared<OfflineProcessor>(logger_, adapter, cbCLI);
-   }
-   if (!settings_->requestFiles().empty()) {
-      offlineProc_->ProcessFiles(settings_->requestFiles());
-      emit finished();
-   }
-}
-
-void HeadlessAppObj::setConsoleEcho(bool enable) const
-{
-#ifdef WIN32
-   HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
-   DWORD mode;
-   GetConsoleMode(hStdin, &mode);
-
-   if (!enable) {
-      mode &= ~ENABLE_ECHO_INPUT;
-   }
-   else {
-      mode |= ENABLE_ECHO_INPUT;
-   }
-   SetConsoleMode(hStdin, mode);
-#else
-   struct termios tty;
-   tcgetattr(STDIN_FILENO, &tty);
-   if (!enable) {
-      tty.c_lflag &= ~ECHO;
-   }
-   else {
-      tty.c_lflag |= ECHO;
-   }
-   tcsetattr(STDIN_FILENO, TCSANOW, &tty);
-#endif
-}
-#endif   //0
-
 void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::function<void()> &cb)
 {
    walletsMgr_->reset();

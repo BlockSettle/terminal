@@ -275,20 +275,25 @@ HeadlessContainerCallbacks *SignerAdapterListener::callbacks() const
 bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SignOfflineTxRequest request;
+   signer::SignTxEvent evt;
+
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
-      return false;
+      evt.set_errorcode((int)bs::error::ErrorCode::TxInvalidRequest);
+      return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);;
    }
    const auto wallet = walletsMgr_->getWalletById(request.tx_request().wallet_id());
    if (!wallet) {
       logger_->error("[SignerAdapterListener::{}] failed to find wallet with id {}"
          , __func__, request.tx_request().wallet_id());
-      return false;
+      evt.set_errorcode((int)bs::error::ErrorCode::WalletNotFound);
+      return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);;
    }
    if (wallet->isWatchingOnly()) {
       logger_->error("[SignerAdapterListener::{}] can't sign with watching-only wallet {}"
          , __func__, request.tx_request().wallet_id());
-      return false;
+      evt.set_errorcode((int)bs::error::ErrorCode::WalletNotFound);
+      return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);;
    }
    bs::core::wallet::TXSignRequest txReq;
    txReq.walletId = request.tx_request().wallet_id();
@@ -312,15 +317,16 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
    try {
       auto lock = wallet->lockForEncryption(request.password());
       const auto tx = wallet->signTXRequest(txReq);
-      signer::SignTxEvent evt;
       evt.set_signedtx(tx.toBinStr());
+      evt.set_errorcode((int)bs::error::ErrorCode::NoError);
       return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
    }
    catch (const std::exception &e) {
       logger_->error("[SignerAdapterListener::{}] sign error: {}"
          , __func__, e.what());
    }
-   return false;
+   evt.set_errorcode((int)bs::error::ErrorCode::InvalidPassword);
+   return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
 }
 
 bool SignerAdapterListener::onSyncWalletInfo(bs::signer::RequestId reqId)

@@ -235,30 +235,35 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
 
 void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::RequestId reqId)
 {
+   bs::error::ErrorCode result = bs::error::ErrorCode::NoError;
+   BinaryData tx;
    signer::SignTxEvent evt;
+
    if (!evt.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
-      return;
+      result = bs::error::ErrorCode::TxInvalidRequest;
+   }
+   else {
+      result = static_cast<bs::error::ErrorCode>(evt.errorcode());
+      if (result == bs::error::ErrorCode::NoError) {
+         tx = evt.signedtx();
+         emit parent_->txSigned(tx);
+      }
+      else {
+         logger_->error("[SignerInterfaceListener::{}] error on signing tx: {}", __func__, evt.errorcode());
+      }
    }
 
-   auto result = static_cast<bs::error::ErrorCode>(evt.errorcode());
-   const BinaryData tx(evt.signedtx());
-   if (result != bs::error::ErrorCode::NoError) {
-      logger_->error("[SignerInterfaceListener::{}] error on signing tx: {}", __func__, evt.errorcode());
-      return;
-   }
    if (reqId) {
       const auto &itCb = cbSignReqs_.find(reqId);
       if (itCb != cbSignReqs_.end()) {
          itCb->second(result, tx);
          cbSignReqs_.erase(itCb);
-      }
-      else {
+      } else {
          logger_->debug("[SignerInterfaceListener::{}] failed to find callback for id {}"
             , __func__, reqId);
       }
    }
-   emit parent_->txSigned(tx);
 }
 
 void SignerInterfaceListener::onCancelTx(const std::string &data, bs::signer::RequestId)

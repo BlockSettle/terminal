@@ -27,7 +27,11 @@ public:
 
    // Used to sign offline requests from signer
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
-      , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) override;
+      , const SecureBinaryData &password);
+
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
+      , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) override
+   { return 0; }
 
    void createSettlementWallet(const bs::Address &authAddr
       , const std::function<void(const SecureBinaryData &)> &) override {}
