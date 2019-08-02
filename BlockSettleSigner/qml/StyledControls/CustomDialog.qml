@@ -68,14 +68,10 @@ CustomDialogWindow {
     // this signal used in light mode to inform mainwindow if size of dialog is changed
     // (for example if it's multipage dialog, or another popup doalog shown above current
     signal sizeChanged(int w, int h)
-//    onWidthChanged: {
-//        console.log("onWidthChanged " + root + " " + width + " " + height)
-//        sizeChanged(width, height)
-//    }
-//    onHeightChanged: {
-//        sizeChanged(width, height)
-//        console.log("onHeightChanged " + root + " " + width + " " + height)
-//    }
+
+    onWidthChanged: sizeChanged(root.width, root.height)
+    onHeightChanged: sizeChanged(root.width, root.height)
+
 
     ////////////////////////////
     /// Dialogs chain management

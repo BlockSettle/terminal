@@ -39,15 +39,17 @@ CustomTitleDialogWindow {
 
     title: qsTr("Import Wallet")
     width: 400
-    height: 510
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
     Component.onCompleted: {
         if (!primaryWalletExists) {
             cbPrimary.checked = true
+            tfName.text = qsTr("Primary Wallet");
         }
-        rootKeyInput.forceActiveFocus()
+        else {
+            tfName.text = walletsProxy.generateNextWalletName();
+        }
     }
 
     onEnterPressed: {
@@ -320,6 +322,15 @@ CustomTitleDialogWindow {
                         }
                     }
 
+                    CustomHeader {
+                        text: qsTr("Primary Wallet")
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 25
+                        Layout.topMargin: 5
+                        Layout.leftMargin: 10
+                        Layout.rightMargin: 10
+                    }
+
                     RowLayout {
                         spacing: 5
                         Layout.alignment: Qt.AlignTop
@@ -353,6 +364,42 @@ CustomTitleDialogWindow {
                                     tfName.text = walletsProxy.generateNextWalletName();
                                 }
                             }
+                        }
+                    }
+                    RowLayout {
+                        spacing: 5
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 10
+                        Layout.rightMargin: 10
+
+                        CustomLabel {
+                            Layout.minimumWidth: inputLabelsWidth
+                            Layout.preferredWidth: inputLabelsWidth
+                            Layout.maximumWidth: inputLabelsWidth
+                            Layout.fillWidth: true
+                            text: qsTr("Private Market\nLeafs")
+                        }
+                        CustomLabel {
+                            Layout.fillWidth: true
+                            text: qsTr("Status")
+                        }
+                    }
+                    RowLayout {
+                        spacing: 5
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 10
+                        Layout.rightMargin: 10
+
+                        CustomLabel {
+                            Layout.minimumWidth: inputLabelsWidth
+                            Layout.preferredWidth: inputLabelsWidth
+                            Layout.maximumWidth: inputLabelsWidth
+                            Layout.fillWidth: true
+                            text: qsTr("Authentication\nStatus")
+                        }
+                        CustomLabel {
+                            Layout.fillWidth: true
+                            text: qsTr("Status")
                         }
                     }
 

@@ -28,7 +28,6 @@ CustomTitleDialogWindow {
     property var passwordData: QPasswordData{}
 
     width: 400
-    height: 470
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletCreation
     title: qsTr("Manage encryption")
@@ -122,6 +121,16 @@ CustomTitleDialogWindow {
                 KeyNavigation.tab: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput : textInputEmail
             }
         }
+
+        CustomHeader {
+            text: qsTr("Primary Wallet")
+            Layout.fillWidth: true
+            Layout.preferredHeight: 25
+            Layout.topMargin: 5
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+        }
+
         RowLayout {
             spacing: 5
             Layout.fillWidth: true
@@ -154,6 +163,43 @@ CustomTitleDialogWindow {
                 }
             }
         }
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
+            CustomLabel {
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
+                Layout.fillWidth: true
+                text: qsTr("Private Market\nLeafs")
+            }
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Status")
+            }
+        }
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
+            CustomLabel {
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
+                Layout.fillWidth: true
+                text: qsTr("Authentication\nStatus")
+            }
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Status")
+            }
+        }
+
         CustomHeader {
             id: headerText2
             text: qsTr("Encryption")
