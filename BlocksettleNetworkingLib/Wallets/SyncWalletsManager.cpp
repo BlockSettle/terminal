@@ -1494,5 +1494,5 @@ bool WalletsManager::CreateAuthLeaf()
       return false;
    }
 
-   signContainer_->setUserId(userId_, primaryWallet->walletId());
+   return signContainer_->setUserId(userId_, primaryWallet->walletId()) > 0;
 }
