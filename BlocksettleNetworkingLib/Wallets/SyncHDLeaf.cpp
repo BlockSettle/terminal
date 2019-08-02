@@ -452,7 +452,6 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
    auto fillUpAddressPoolCallback = [this, extInt, cb](
       const std::vector<std::pair<bs::Address, std::string>>& addrVec)
    {
-      logger_->debug("[{}] {} addresses", __func__, addrVec.size());
       /***
       This lambda adds the newly generated addresses to the address pool.
 
