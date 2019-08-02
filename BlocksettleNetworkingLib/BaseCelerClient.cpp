@@ -502,5 +502,5 @@ void BaseCelerClient::AddToSet(const std::string& address, std::unordered_set<st
 
 bool BaseCelerClient::tradingAllowed() const
 {
-   return (bitcoinParticipant_.value == "true");
+   return (IsConnected() && (bitcoinParticipant_.value == "true"));
 }

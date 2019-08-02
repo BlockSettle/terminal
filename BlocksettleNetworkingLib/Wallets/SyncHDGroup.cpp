@@ -174,22 +174,14 @@ hd::AuthGroup::AuthGroup(const bs::hd::Path &path, const std::string &name
 void hd::AuthGroup::setUserId(const BinaryData &userId)
 {
    userId_ = userId;
-
-   if (userId.isNull() && tempLeaves_.empty() && !leaves_.empty()) {
-      for (auto &leaf : leaves_) {
-         leaf.second->setUserId(userId);
-      }
-      tempLeaves_ = leaves_;
-      for (const auto &leaf : tempLeaves_) {
-         deleteLeaf(leaf.first);
-      }
+   for (auto &leaf : leaves_) {
+      leaf.second->setUserId(userId);
    }
-   else if (!tempLeaves_.empty() && leaves_.empty()) {
-      auto leaves = std::move(tempLeaves_);
-      tempLeaves_.clear();
-      for (const auto &tempLeaf : leaves) {
-         tempLeaf.second->setUserId(userId);
-         addLeaf(tempLeaf.second, true);
+
+   if (userId.isNull() && !leaves_.empty()) {
+      const auto leaves = leaves_;
+      for (const auto &leaf : leaves) {
+         deleteLeaf(leaf.first);
       }
    }
 }
@@ -204,15 +196,6 @@ std::shared_ptr<hd::Leaf> hd::AuthGroup::newLeaf(const std::string &walletId) co
 {
    return std::make_shared<hd::AuthLeaf>(walletId, walletName_ + "/" + name_, desc_
       , signContainer_, logger_);
-}
-
-bool hd::AuthGroup::addLeaf(const std::shared_ptr<Leaf> &leaf, bool signal)
-{
-   if (userId_.isNull()) {
-      tempLeaves_[leaf->index()] = leaf;
-      return false;
-   }
-   return hd::Group::addLeaf(leaf, signal);
 }
 
 

@@ -38,6 +38,7 @@ void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSet
    connect(walletsManager_.get(), &bs::sync::WalletsManager::authWalletChanged, this, &AuthAddressManager::onAuthWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &AuthAddressManager::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::AuthLeafCreated, this, &AuthAddressManager::onWalletCreated);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::AuthLeafNotCreated, this, &AuthAddressManager::ConnectionComplete);
 
    // signingContainer_ might be null if user rejects remote signer key
    if (signingContainer_) {
@@ -769,11 +770,7 @@ bool AuthAddressManager::SendGetBSAddressListRequest()
    request.set_requesttype(GetBSFundingAddressListType);
    request.set_requestdata(addressRequest.SerializeAsString());
 
-   const bool rc = SubmitRequestToPB("get_bs_list", request.SerializeAsString());
-   if (!rc) {
-      emit ConnectionComplete();
-   }
-   return rc;
+   return SubmitRequestToPB("get_bs_list", request.SerializeAsString());
 }
 
 bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::string& data)
@@ -846,7 +843,6 @@ void AuthAddressManager::ProcessBSAddressListResponse(const std::string& respons
    ClearAddressList();
    SetBSAddressList(tempList);
    VerifyWalletAddresses();
-   emit ConnectionComplete();
 }
 
 AddressVerificationState AuthAddressManager::GetState(const bs::Address &addr) const
@@ -979,6 +975,8 @@ void AuthAddressManager::CreateAuthWallet()
 
 void AuthAddressManager::onWalletCreated()
 {
+   emit ConnectionComplete();
+
    auto authLeaf = walletsManager_->getAuthWallet();
 
    if (authLeaf != nullptr) {

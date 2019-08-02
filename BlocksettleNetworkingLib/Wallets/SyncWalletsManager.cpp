@@ -955,16 +955,19 @@ void WalletsManager::onAuthLeafAdded(const std::string &walletId)
          logger_->debug("[WalletsManager::onAuthLeafAdded] auth wallet {} unset", authAddressWallet_->walletId());
          deleteWallet(authAddressWallet_);
       }
+      emit AuthLeafNotCreated();
       return;
    }
    const auto wallet = getPrimaryWallet();
    if (!wallet) {
       logger_->error("[WalletsManager::onAuthLeafAdded] no primary wallet loaded");
+      emit AuthLeafNotCreated();
       return;
    }
    auto group = wallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
    if (!group) {
       logger_->error("[WalletsManager::onAuthLeafAdded] no auth group in primary wallet");
+      emit AuthLeafNotCreated();
       return;
    }
 
@@ -979,6 +982,7 @@ void WalletsManager::onAuthLeafAdded(const std::string &walletId)
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsManager::onAuthLeafAdded] failed to create auth leaf: {}", e.what());
+      emit AuthLeafNotCreated();
       return;
    }
    leaf->synchronize([this, leaf] {
