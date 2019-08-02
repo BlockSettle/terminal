@@ -192,8 +192,8 @@ namespace bs {
          void addToMaintQueue(const MaintQueueCb &);
          void maintenanceThreadFunc();
 
-         void ProcessCreatedCCLeaf(const std::string &cc, bs::error::ErrorCode result);
-         void ProcessAuthLeafCreateResult(bs::error::ErrorCode result);
+         void ProcessCreatedCCLeaf(const std::string &cc, bs::error::ErrorCode result
+            , const std::string &walletId);
 
       private:
          std::shared_ptr<WalletSignerContainer>         signContainer_;

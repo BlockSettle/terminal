@@ -494,6 +494,7 @@ void WalletsManager::walletReady(const std::string &walletId)
    if (rootWallet) {
       const auto &itWallet = newWallets_.find(rootWallet->walletId());
       if (itWallet != newWallets_.end()) {
+         logger_->debug("[{}] found new wallet {} - starting rescan", __func__, rootWallet->walletId());
          rootWallet->startRescan();
          newWallets_.erase(itWallet);
          rootWallet->synchronize([this, walletId] {
@@ -1427,8 +1428,9 @@ bool WalletsManager::CreateCCLeaf(const std::string &ccName, const std::function
    dialogData.setValue("Title", tr("Create CC Leaf"));
    dialogData.setValue("Product", QString::fromStdString(ccName));
 
-   const auto &createCCLeafCb = [this, ccName, cb](bs::error::ErrorCode result) {
-      ProcessCreatedCCLeaf(ccName, result);
+   const auto &createCCLeafCb = [this, ccName, cb](bs::error::ErrorCode result
+      , const std::string &walletId) {
+      ProcessCreatedCCLeaf(ccName, result, walletId);
       if (cb) {
          cb(result);
       }
@@ -1437,11 +1439,12 @@ bool WalletsManager::CreateCCLeaf(const std::string &ccName, const std::function
    return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {}, dialogData, createCCLeafCb);
 }
 
-void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::ErrorCode result)
+void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::ErrorCode result
+   , const std::string &walletId)
 {
    if (result == bs::error::ErrorCode::NoError) {
-      logger_->debug("[WalletsManager::ProcessCreatedCCLeaf] CC leaf {} created"
-                     , ccName);
+      logger_->debug("[WalletsManager::ProcessCreatedCCLeaf] CC leaf {} created with id {}"
+                     , ccName, walletId);
 
       auto wallet = getPrimaryWallet();
       if (!wallet) {
@@ -1455,15 +1458,17 @@ void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::
          return;
       }
 
-      auto leaf = group->createLeaf(ccName, wallet->walletId());
+      auto leaf = group->createLeaf(ccName, walletId);
 
       addWallet(leaf);
+      newWallets_.insert(wallet->walletId());
 
-      // XXX register in armory ?
-      // XXX rescan ?
+      leaf->synchronize([this, leaf, ccName] {
+         logger_->debug("CC leaf {} synchronized", ccName);
+         leaf->registerWallet(armoryPtr_, true);
 
-      emit CCLeafCreated(ccName);
-      emit walletChanged(wallet->walletId());
+         emit CCLeafCreated(ccName);
+      });
    } else {
       logger_->error("[WalletsManager::ProcessCreatedCCLeaf] CC leaf {} creation failed: {}"
                      , ccName, static_cast<int>(result));
@@ -1478,26 +1483,16 @@ bool WalletsManager::CreateAuthLeaf()
       return false;
    }
 
-   auto primaryWallet = getPrimaryWallet();
-   if (primaryWallet == nullptr) {
-      logger_->error("[WalletsManager::CreateAuthLeaf] could not create auth leaf. no primary wallet");
+   if (userId_.isNull()) {
+      logger_->error("[WalletsManager::CreateAuthLeaf] can't create auth leaf without user id");
       return false;
    }
 
-   bs::hd::Path path;
-   path.append(bs::hd::purpose | bs::hd::hardFlag);
-   path.append(bs::hd::CoinType::BlockSettle_Auth | bs::hd::hardFlag);
-   path.append(0 | bs::hd::hardFlag);
+   auto primaryWallet = getPrimaryWallet();
+   if (primaryWallet == nullptr) {
+      logger_->error("[WalletsManager::CreateAuthLeaf] could not create auth leaf - no primary wallet");
+      return false;
+   }
 
-   return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {}, {},  [this](bs::error::ErrorCode result)
-                                       {
-                                          ProcessAuthLeafCreateResult(result);
-                                       });
-}
-
-void WalletsManager::ProcessAuthLeafCreateResult(bs::error::ErrorCode result)
-{
-   logger_->debug("[WalletsManager::ProcessAuthLeafCreateResult] auth leaf creation result: {}"
-                  , static_cast<int>(result));
-   // No need to react on positive result, since WalletSignerContainer::AuthLeafAdded should be emitted
+   signContainer_->setUserId(userId_, primaryWallet->walletId());
 }

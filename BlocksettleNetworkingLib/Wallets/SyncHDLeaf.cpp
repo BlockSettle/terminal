@@ -434,10 +434,7 @@ void hd::Leaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
          }
       };
 
-      bool extInt = true;
-      if (key.path.get(-2) == addrTypeInternal)
-         extInt = false;
-
+      const bool extInt = (key.path.get(-2) == addrTypeExternal) ? true : false;
       topUpAddressPool(extInt, topUpCb);
    }
    else {
@@ -455,6 +452,7 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
    auto fillUpAddressPoolCallback = [this, extInt, cb](
       const std::vector<std::pair<bs::Address, std::string>>& addrVec)
    {
+      logger_->debug("[{}] {} addresses", __func__, addrVec.size());
       /***
       This lambda adds the newly generated addresses to the address pool.
 
