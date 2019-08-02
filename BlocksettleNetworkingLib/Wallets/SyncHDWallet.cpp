@@ -313,6 +313,7 @@ void hd::Wallet::scan(const std::function<void(bs::sync::SyncState)> &cb)
             });
          }
       };
+      logger_->debug("[{}] scanning leaf {}...", __func__, leaf->walletId());
       leaf->scan(cbScanLeaf);
    }
 }

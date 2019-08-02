@@ -40,10 +40,10 @@ public:
    virtual void getRootPubkey(const std::string &walletID
       , const std::function<void(bool, const SecureBinaryData &)> &) = 0;
 
+   using CreateHDLeafCb = std::function<void(bs::error::ErrorCode, const std::string &leafWalletId)>;
    virtual bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}
-      , bs::sync::PasswordDialogData dialogData = {}
-      , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) = 0;
+      , bs::sync::PasswordDialogData dialogData = {}, const CreateHDLeafCb &cb = nullptr) = 0;
 
 signals:
    void AuthLeafAdded(const std::string &walletId);

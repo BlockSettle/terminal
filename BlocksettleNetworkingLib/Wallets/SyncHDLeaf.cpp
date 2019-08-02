@@ -434,10 +434,7 @@ void hd::Leaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
          }
       };
 
-      bool extInt = true;
-      if (key.path.get(-2) == addrTypeInternal)
-         extInt = false;
-
+      const bool extInt = (key.path.get(-2) == addrTypeExternal) ? true : false;
       topUpAddressPool(extInt, topUpCb);
    }
    else {
