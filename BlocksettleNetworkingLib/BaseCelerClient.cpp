@@ -111,8 +111,10 @@ void BaseCelerClient::loginSuccessCallback(const std::string& userName, const st
       emit OnConnectedToServer();
    }
 
-   timerSendHb_->setInterval(heartbeatInterval_);
-   timerSendHb_->start();
+   QMetaObject::invokeMethod(this, [this] {
+      timerSendHb_->setInterval(heartbeatInterval_);
+      timerSendHb_->start();
+   });
 
    if (timerRecvHb_) {
       // If there is nothing received for 45 seconds channel will be closed.
@@ -144,7 +146,9 @@ void BaseCelerClient::AddInternalSequence(const std::shared_ptr<BaseCelerCommand
 
 void BaseCelerClient::CloseConnection()
 {
-   timerSendHb_->stop();
+   QMetaObject::invokeMethod(this, [this] {
+      timerSendHb_->stop();
+   });
 
    if (timerRecvHb_) {
       timerRecvHb_->stop();
@@ -211,10 +215,12 @@ void BaseCelerClient::SendCommandMessagesIfRequired(const std::shared_ptr<BaseCe
 
 bool BaseCelerClient::sendMessage(CelerAPI::CelerMessageType messageType, const std::string& data)
 {
-   // reset heartbeat interval
-   if (timerSendHb_->isActive()) {
-      timerSendHb_->start();
-   }
+   QMetaObject::invokeMethod(this, [this] {
+      // reset heartbeat interval
+      if (timerSendHb_->isActive()) {
+         timerSendHb_->start();
+      }
+   });
 
    onSendData(messageType, data);
    return true;
