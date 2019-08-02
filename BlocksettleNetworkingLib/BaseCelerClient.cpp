@@ -15,7 +15,7 @@
 
 using namespace com::celertech::baseserver::communication::protobuf;
 
-BaseCelerClient::BaseCelerClient(const std::shared_ptr<spdlog::logger> &logger, bool userIdRequired)
+BaseCelerClient::BaseCelerClient(const std::shared_ptr<spdlog::logger> &logger, bool userIdRequired, bool useRecvTimer)
    : logger_(logger)
    , userId_(CelerUserProperties::UserIdPropertyName)
    , submittedAuthAddressListProperty_(CelerUserProperties::SubmittedBtcAuthAddressListPropertyName)
@@ -24,10 +24,13 @@ BaseCelerClient::BaseCelerClient(const std::shared_ptr<spdlog::logger> &logger, 
    , serverNotAvailable_(false)
 {
    timerSendHb_ = new QTimer(this);
-   timerRecvHb_ = new QTimer(this);
+
+   if (useRecvTimer) {
+      timerRecvHb_ = new QTimer(this);
+      connect(timerRecvHb_, &QTimer::timeout, this, &BaseCelerClient::onRecvHbTimeout);
+   }
 
    connect(timerSendHb_, &QTimer::timeout, this, &BaseCelerClient::onSendHbTimeout);
-   connect(timerRecvHb_, &QTimer::timeout, this, &BaseCelerClient::onRecvHbTimeout);
 
    connect(this, &BaseCelerClient::closingConnection, this, &BaseCelerClient::CloseConnection, Qt::QueuedConnection);
    RegisterDefaulthandlers();
@@ -111,10 +114,12 @@ void BaseCelerClient::loginSuccessCallback(const std::string& userName, const st
    timerSendHb_->setInterval(heartbeatInterval_);
    timerSendHb_->start();
 
-   // If there is nothing received for 45 seconds channel will be closed.
-   // Celer will also send heartbeats but only when idle.
-   timerRecvHb_->setInterval(heartbeatInterval_ + std::chrono::seconds(15));
-   timerRecvHb_->start();
+   if (timerRecvHb_) {
+      // If there is nothing received for 45 seconds channel will be closed.
+      // Celer will also send heartbeats but only when idle.
+      timerRecvHb_->setInterval(heartbeatInterval_ + std::chrono::seconds(15));
+      timerRecvHb_->start();
+   }
 }
 
 void BaseCelerClient::loginFailedCallback(const std::string& errorMessage)
@@ -140,7 +145,10 @@ void BaseCelerClient::AddInternalSequence(const std::shared_ptr<BaseCelerCommand
 void BaseCelerClient::CloseConnection()
 {
    timerSendHb_->stop();
-   timerRecvHb_->stop();
+
+   if (timerRecvHb_) {
+      timerRecvHb_->stop();
+   }
 
    if (!sessionToken_.empty()) {
       sessionToken_.clear();
@@ -150,7 +158,7 @@ void BaseCelerClient::CloseConnection()
 
 void BaseCelerClient::OnDataReceived(CelerAPI::CelerMessageType messageType, const std::string& data)
 {
-   if (timerRecvHb_->isActive()) {
+   if (timerRecvHb_ && timerRecvHb_->isActive()) {
       timerRecvHb_->start();
    }
 
@@ -399,7 +407,9 @@ void BaseCelerClient::RegisterUserCommand(const std::shared_ptr<BaseCelerCommand
 
 void BaseCelerClient::recvData(CelerAPI::CelerMessageType messageType, const std::string &data)
 {
-   timerRecvHb_->start();
+   if (timerRecvHb_) {
+      timerRecvHb_->start();
+   }
 
    OnDataReceived(messageType, data);
 }

@@ -51,7 +51,7 @@ public:
    using message_handler = std::function<bool (const std::string&)>;
 
 public:
-   BaseCelerClient(const std::shared_ptr<spdlog::logger> &logger, bool userIdRequired = true);
+   BaseCelerClient(const std::shared_ptr<spdlog::logger> &logger, bool userIdRequired, bool useRecvTimer);
    ~BaseCelerClient() noexcept override = default;
 
    BaseCelerClient(const BaseCelerClient&) = delete;
