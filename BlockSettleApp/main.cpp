@@ -64,6 +64,7 @@ public:
 
 signals:
    void reactivateTerminal();
+
 protected:
    bool event(QEvent* ev) override
    {
@@ -121,12 +122,14 @@ QScreen *getDisplay(QPoint position)
    return QGuiApplication::primaryScreen();
 }
 
-static int runUnchecked(QApplication &app, const std::shared_ptr<ApplicationSettings> &settings, BSTerminalSplashScreen &splashScreen)
+static int runUnchecked(QApplication *app, const std::shared_ptr<ApplicationSettings> &settings, BSTerminalSplashScreen &splashScreen)
 {
    BSTerminalMainWindow mainWindow(settings, splashScreen);
 
 #if defined (Q_OS_MAC)
-   QObject::connect(&app, &MacOsApp::reactivateTerminal, &mainWindow, &BSTerminalMainWindow::onReactivate);
+   MacOsApp *macApp = (MacOsApp*)(app);
+
+   QObject::connect(macApp, &MacOsApp::reactivateTerminal, &mainWindow, &BSTerminalMainWindow::onReactivate);
 #endif
 
    if (!settings->get<bool>(ApplicationSettings::launchToTray)) {
@@ -135,18 +138,18 @@ static int runUnchecked(QApplication &app, const std::shared_ptr<ApplicationSett
 
    mainWindow.postSplashscreenActions();
 
-   return app.exec();
+   return app->exec();
 }
 
-static int runChecked(QApplication &app, const std::shared_ptr<ApplicationSettings> &settings, BSTerminalSplashScreen &splashScreen)
+static int runChecked(QApplication *app, const std::shared_ptr<ApplicationSettings> &settings, BSTerminalSplashScreen &splashScreen)
 {
    try {
       return runUnchecked(app, settings, splashScreen);
    }
    catch (const std::exception &e) {
       std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
-      BSMessageBox(BSMessageBox::critical, app.tr("BlockSettle Terminal")
-         , app.tr("Unhandled exception detected: %1").arg(QLatin1String(e.what()))).exec();
+      BSMessageBox(BSMessageBox::critical, app->tr("BlockSettle Terminal")
+         , app->tr("Unhandled exception detected: %1").arg(QLatin1String(e.what()))).exec();
       return EXIT_FAILURE;
    }
 }
@@ -163,6 +166,7 @@ static int GuiApp(int &argc, char** argv)
 #else
    QApplication app(argc, argv);
 #endif
+
 
    QApplication::setQuitOnLastWindowClosed(false);
 
@@ -250,9 +254,9 @@ static int GuiApp(int &argc, char** argv)
    app.processEvents();
 
 #ifdef NDEBUG
-   return runChecked(app, settings, splashScreen);
+   return runChecked(&app, settings, splashScreen);
 #else
-   return runUnchecked(app, settings, splashScreen);
+   return runUnchecked(&app, settings, splashScreen);
 #endif
 }
 
