@@ -73,7 +73,7 @@ private:
 
    bool replyReceived_{false};
    bool result_{false};
-   bool executeOnConnect_{false};
+   std::atomic_bool executeOnConnect_{false};
 
    std::shared_ptr<ManualResetEvent> requestCompleted_;
 };

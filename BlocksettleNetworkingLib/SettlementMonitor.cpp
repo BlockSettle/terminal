@@ -8,12 +8,13 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
-   : ArmoryCallbackTarget(armory.get())
-   , rtWallet_(rtWallet)
+   : rtWallet_(rtWallet)
    , addressEntry_(entryToAddress(addr))
    , armoryPtr_(armory)
    , logger_(logger)
 {
+   init(armory.get());
+
    const auto &addrHashes = addr->getAsset()->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
 
@@ -24,12 +25,13 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
    , const std::shared_ptr<spdlog::logger>& logger)
-   : ArmoryCallbackTarget(armory.get())
-   , rtWallet_(rtWallet)
+   : rtWallet_(rtWallet)
    , armoryPtr_(armory)
    , logger_(logger)
    , addressString_(addr.display())
 {
+   init(armory.get());
+
    const auto &addrHashes = addrEntry->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
 }
@@ -37,11 +39,12 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection> &armory
    , const bs::Address &addr, const std::shared_ptr<spdlog::logger> &logger
    , const std::function<void()> &cbInited)
-   : ArmoryCallbackTarget(armory.get())
-   , armoryPtr_(armory)
+   : armoryPtr_(armory)
    , logger_(logger)
    , addressString_(addr.display())
 {
+   init(armory.get());
+
    const auto walletId = addr.display();
    rtWallet_ = armory_->instantiateWallet(walletId);
    armory_->registerWallet(rtWallet_, walletId, walletId, { addr.id() }
@@ -439,6 +442,7 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
 
 bs::SettlementMonitor::~SettlementMonitor() noexcept
 {
+   cleanup();
    FastLock locker(walletLock_);
    rtWallet_ = nullptr;
 }

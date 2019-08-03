@@ -801,7 +801,8 @@ void BSTerminalMainWindow::initArmory()
 {
    armory_ = std::make_shared<ArmoryObject>(logMgr_->logger()
       , applicationSettings_->get<std::string>(ApplicationSettings::txCacheFileName), true);
-   act_ = make_unique<MainWinACT>(armory_.get(), this);
+   act_ = make_unique<MainWinACT>(this);
+   act_->init(armory_.get());
 }
 
 void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string &hash, const std::string &err)

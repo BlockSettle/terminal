@@ -26,11 +26,13 @@ bool isCCNameCorrect(const std::string& ccName)
 WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ApplicationSettings>& appSettings
    , const std::shared_ptr<ArmoryConnection> &armory)
-   : QObject(nullptr), ArmoryCallbackTarget(armory.get())
+   : QObject(nullptr)
    , logger_(logger)
    , appSettings_(appSettings)
    , armoryPtr_(armory)
 {
+   init(armory.get());
+
    ccResolver_ = std::make_shared<CCResolver>();
    maintThreadRunning_ = true;
    maintThread_ = std::thread(&WalletsManager::maintenanceThreadFunc, this);
@@ -49,6 +51,8 @@ WalletsManager::~WalletsManager() noexcept
    if (maintThread_.joinable()) {
       maintThread_.join();
    }
+
+   cleanup();
 }
 
 void WalletsManager::setSignContainer(const std::shared_ptr<WalletSignerContainer> &container)

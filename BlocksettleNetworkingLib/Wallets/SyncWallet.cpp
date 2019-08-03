@@ -11,9 +11,9 @@ using namespace bs::sync;
 Wallet::Wallet(WalletSignerContainer *container, const std::shared_ptr<spdlog::logger> &logger)
    : signContainer_(container), logger_(logger)
 {
-   spendableBalance_ = std::make_shared<BTCNumericTypes::balance_type>(0);
-   unconfirmedBalance_ = std::make_shared<BTCNumericTypes::balance_type>(0);
-   totalBalance_ = std::make_shared<BTCNumericTypes::balance_type>(0);
+   spendableBalance_ = std::make_shared<std::atomic<BTCNumericTypes::balance_type>>(0);
+   unconfirmedBalance_ = std::make_shared<std::atomic<BTCNumericTypes::balance_type>>(0);
+   totalBalance_ = std::make_shared<std::atomic<BTCNumericTypes::balance_type>>(0);
    addrCount_ = std::make_shared<size_t>(0);
    addrMapsMtx_ = std::make_shared<std::mutex>();
    addressBalanceMap_ = std::make_shared<std::map<BinaryData, std::vector<uint64_t>>>();
@@ -449,8 +449,10 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
       Do not set callback target if it is already initialized. This 
       allows for unit tests to set a custom ACT.
       */
-      if(act_ == nullptr)
-         act_ = make_unique<WalletACT>(armory_.get(), this);
+      if(act_ == nullptr) {
+         act_ = make_unique<WalletACT>(this);
+         act_->init(armory_.get());
+      }
    }
 
    if (!utxoAdapter_) {

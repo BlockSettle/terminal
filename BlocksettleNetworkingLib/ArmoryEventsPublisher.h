@@ -40,8 +40,9 @@ private:
    class PublisherACT : public ArmoryCallbackTarget
    {
    public:
-      PublisherACT(ArmoryConnection *armory, ArmoryEventsPublisher *parent)
-         : ArmoryCallbackTarget(armory), parent_(parent) {}
+      PublisherACT(ArmoryEventsPublisher *parent)
+         : parent_(parent) {}
+      ~PublisherACT() override { cleanup(); }
       void onNewBlock(unsigned int height) override {
          parent_->onNewBlock(height);
       }

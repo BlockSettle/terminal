@@ -208,7 +208,6 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
                          , const bs::Address &filterAddress
                          , QObject* parent)
    : QAbstractItemModel(parent)
-   , ArmoryCallbackTarget(armory.get())
    , logger_(logger)
    , ledgerDelegate_(ledgerDelegate)
    , walletsManager_(walletsManager)
@@ -217,6 +216,7 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
    , filterAddress_(filterAddress)
 {
    init();
+   ArmoryCallbackTarget::init(armory.get());
    loadLedgerEntries();
 }
 
@@ -225,11 +225,11 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
                                  , const std::shared_ptr<spdlog::logger> &logger
                                              , QObject* parent)
    : QAbstractItemModel(parent)
-   , ArmoryCallbackTarget(armory.get())
    , logger_(logger)
    , walletsManager_(walletsManager)
    , allWallets_(true)
 {
+   ArmoryCallbackTarget::init(armory.get());
    init();
 }
 
@@ -249,6 +249,7 @@ void TransactionsViewModel::init()
 
 TransactionsViewModel::~TransactionsViewModel() noexcept
 {
+   cleanup();
    *stopped_ = true;
 }
 
@@ -706,8 +707,9 @@ void TransactionsViewModel::loadLedgerEntries()
 
    QPointer<TransactionsViewModel> thisPtr = this;
    auto rawData = std::make_shared<std::map<int, std::vector<bs::TXEntry>>>();
+   auto rawDataMutex = std::make_shared<std::mutex>();
 
-   const auto &cbPageCount = [thisPtr, stopped = stopped_, logger = logger_, rawData, ledgerDelegate = ledgerDelegate_](ReturnMessage<uint64_t> pageCnt)->void {
+   const auto &cbPageCount = [thisPtr, stopped = stopped_, logger = logger_, rawData, rawDataMutex, ledgerDelegate = ledgerDelegate_](ReturnMessage<uint64_t> pageCnt)->void {
       try {
          int inPageCnt = int(pageCnt.get());
 
@@ -722,29 +724,34 @@ void TransactionsViewModel::loadLedgerEntries()
                logger->debug("[TransactionsViewModel::loadLedgerEntries] stopped");
                break;
             }
-            const auto &cbLedger = [thisPtr, pageId, inPageCnt, rawData, logger]
+
+            const auto &cbLedger = [thisPtr, pageId, inPageCnt, rawData, logger, rawDataMutex]
                (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
                try {
-                 auto le = entries.get();
-                 (*rawData)[pageId] = bs::TXEntry::fromLedgerEntries(le);
-                 QMetaObject::invokeMethod(qApp, [thisPtr, pageId] {
-                    if (thisPtr) {
-                       emit thisPtr->updateProgress(pageId);
-                    }
-                 });
+                  auto le = entries.get();
+
+                  std::lock_guard<std::mutex> lock(*rawDataMutex);
+
+                  (*rawData)[pageId] = bs::TXEntry::fromLedgerEntries(le);
+
+                  if (int(rawData->size()) >= inPageCnt) {
+                     QMetaObject::invokeMethod(qApp, [thisPtr, rawData] {
+                        if (thisPtr) {
+                           thisPtr->ledgerToTxData(*rawData);
+                        }
+                     });
+                  }
                }
                catch (std::exception& e) {
                   logger->error("[TransactionsViewModel::loadLedgerEntries] " \
                      "Return data error (getPageCount) - {}", e.what());
                }
 
-               if (int(rawData->size()) >= inPageCnt) {
-                  QMetaObject::invokeMethod(qApp, [thisPtr, rawData] {
-                     if (thisPtr) {
-                        thisPtr->ledgerToTxData(*rawData);
-                     }
-                  });
-               }
+               QMetaObject::invokeMethod(qApp, [thisPtr, pageId] {
+                  if (thisPtr) {
+                     emit thisPtr->updateProgress(pageId);
+                  }
+               });
             };
             ledgerDelegate->getHistoryPage(uint32_t(pageId), cbLedger);
          }

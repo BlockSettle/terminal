@@ -775,40 +775,42 @@ bool AuthAddressManager::SendGetBSAddressListRequest()
 
 bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::string& data)
 {
-   auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
-   connection->setCBs(cbApproveConn_);
+   QMetaObject::invokeMethod(this, [this, name, data] {
+      auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
+      connection->setCBs(cbApproveConn_);
 
-   requestId_ += 1;
-   int requestId = requestId_;
+      requestId_ += 1;
+      int requestId = requestId_;
 
-   auto command = std::make_unique<RequestReplyCommand>(name, connection, logger_);
+      auto command = std::make_unique<RequestReplyCommand>(name, connection, logger_);
 
-   command->SetReplyCallback([requestId, this](const std::string& data) {
-      OnDataReceived(data);
+      command->SetReplyCallback([requestId, this](const std::string& data) {
+         OnDataReceived(data);
 
-      QMetaObject::invokeMethod(this, [this, requestId] {
-         activeCommands_.erase(requestId);
+         QMetaObject::invokeMethod(this, [this, requestId] {
+            activeCommands_.erase(requestId);
+         });
+         return true;
       });
-      return true;
-   });
 
-   command->SetErrorCallback([requestId, this](const std::string& message) {
-      QMetaObject::invokeMethod(this, [this, requestId, message] {
-         auto it = activeCommands_.find(requestId);
-         if (it != activeCommands_.end()) {
-            logger_->error("[AuthAddressManager::{}] error callback: {}", it->second->GetName(), message);
-            activeCommands_.erase(it);
-         }
+      command->SetErrorCallback([requestId, this](const std::string& message) {
+         QMetaObject::invokeMethod(this, [this, requestId, message] {
+            auto it = activeCommands_.find(requestId);
+            if (it != activeCommands_.end()) {
+               logger_->error("[AuthAddressManager::{}] error callback: {}", it->second->GetName(), message);
+               activeCommands_.erase(it);
+            }
+         });
       });
+
+      if (!command->ExecuteRequest(settings_->pubBridgeHost(), settings_->pubBridgePort()
+            , data, true)) {
+         logger_->error("[AuthAddressManager::SubmitRequestToPB] failed to send request {}", name);
+         return;
+      }
+
+      activeCommands_.emplace(requestId, std::move(command));
    });
-
-   if (!command->ExecuteRequest(settings_->pubBridgeHost(), settings_->pubBridgePort()
-         , data, true)) {
-      logger_->error("[AuthAddressManager::SubmitRequestToPB] failed to send request {}", name);
-      return false;
-   }
-
-   activeCommands_.emplace(requestId, std::move(command));
 
    return true;
 }

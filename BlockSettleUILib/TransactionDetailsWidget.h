@@ -137,11 +137,12 @@ private:
    QMap<QString, QTreeWidgetItem *> inputItems_;
    QMap<QString, QTreeWidgetItem *> outputItems_;
 
-   class TxDetailsACT : ArmoryCallbackTarget
+   class TxDetailsACT : public ArmoryCallbackTarget
    {
    public:
-      TxDetailsACT(ArmoryConnection *armory, TransactionDetailsWidget *parent)
-         : ArmoryCallbackTarget(armory), parent_(parent) {}
+      TxDetailsACT(TransactionDetailsWidget *parent)
+         : parent_(parent) {}
+      ~TxDetailsACT() override { cleanup(); }
       void onNewBlock(unsigned int height) override {
          QMetaObject::invokeMethod(parent_, [this, height] { parent_->onNewBlock(height); });
       }
