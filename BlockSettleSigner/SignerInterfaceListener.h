@@ -84,6 +84,7 @@ public:
 
    void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
 
+   void closeConnection();
 private:
    void processData(const std::string &);
 
@@ -115,8 +116,8 @@ private:
    void requestPasswordForToken(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo);
 
    void shutdown();
-   bs::signer::QmlCallbackBase *createQmlPasswordCallback();
 
+   bs::signer::QmlCallbackBase *createQmlPasswordCallback();
 private:
    std::shared_ptr<spdlog::logger>           logger_;
    std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
@@ -138,7 +139,6 @@ private:
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbAutoSignReqs_;
 
    std::shared_ptr<QmlBridge>  qmlBridge_;
-
 };
 
 
