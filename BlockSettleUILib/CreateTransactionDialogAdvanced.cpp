@@ -887,6 +887,14 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
 void CreateTransactionDialogAdvanced::onCreatePressed()
 {
    if (!importedSignedTX_.isNull()) {
+      if (showUnknownWalletWarning_) {
+         int rc = BSMessageBox(BSMessageBox::question, tr("Unknown Wallet")
+            , tr("Broadcasted transaction will be available in the explorer only.\nProceed?")).exec();
+         if (rc == QDialog::Rejected) {
+            return;
+         }
+      }
+
       if (BroadcastImportedTx()) {
          accept();
       }
@@ -986,8 +994,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                      selInputs->SetUTXOSelection(txHash.first, txHash.second);
                   }
                } else {
-                  BSMessageBox(BSMessageBox::info, tr("Import signed transaction")
-                     , tr("Unknown wallet.\nBroadcasted transaction will be available in the explorer only.")).exec();
+                  thisPtr->showUnknownWalletWarning_ = true;
                   thisPtr->ui_->comboBoxWallets->clear();
                   // labelBalance will still update balance, let's hide it
                   thisPtr->ui_->labelBalance->hide();
