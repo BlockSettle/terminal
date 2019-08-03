@@ -17,6 +17,7 @@
 #include "BTCNumericTypes.h"
 #include "CoreWallet.h"
 #include "SyncWallet.h"
+#include "WalletSignerContainer.h"
 
 namespace spdlog {
    class logger;
@@ -169,6 +170,7 @@ namespace bs {
 
          bool empty() const { return wallets_.empty(); }
 
+         void syncWallet(const bs::sync::WalletInfo &, const std::function<void()> &cbDone);
          void addWallet(const WalletPtr &, bool isHDLeaf = false);
          void addWallet(const HDWalletPtr &);
          void saveWallet(const WalletPtr &);
