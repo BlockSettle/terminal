@@ -10,11 +10,6 @@
 
 namespace Chat
 {
-   Q_DECLARE_METATYPE(ConnectionManagerPtr)
-   Q_DECLARE_METATYPE(ApplicationSettingsPtr)
-   Q_DECLARE_METATYPE(LoggerPtr)
-   Q_DECLARE_METATYPE(ZmqBipNewKeyCb);
-
    class ChatClientService : public ServiceThread<ChatClientLogic>
    {
       Q_OBJECT
@@ -39,5 +34,10 @@ namespace Chat
    using ChatClientServicePtr = std::shared_ptr<ChatClientService>;
 
 }
+
+Q_DECLARE_METATYPE(Chat::ConnectionManagerPtr)
+Q_DECLARE_METATYPE(Chat::ApplicationSettingsPtr)
+Q_DECLARE_METATYPE(Chat::LoggerPtr)
+Q_DECLARE_METATYPE(ZmqBipNewKeyCb);
 
 #endif // ChatClientService_h__

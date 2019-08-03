@@ -39,10 +39,6 @@ namespace Chat
       ZmqDataConnectionFailed
    };
 
-   Q_DECLARE_METATYPE(DataConnectionListener::DataConnectionError)
-   Q_DECLARE_METATYPE(ChatClientLogicError)
-   Q_DECLARE_METATYPE(ClientPartyLogicPtr)
-
    class ChatClientLogic : public QObject, public DataConnectionListener
    {
       Q_OBJECT
@@ -95,5 +91,9 @@ namespace Chat
    };
 
 }
+
+Q_DECLARE_METATYPE(DataConnectionListener::DataConnectionError)
+Q_DECLARE_METATYPE(Chat::ChatClientLogicError)
+Q_DECLARE_METATYPE(Chat::ClientPartyLogicPtr)
 
 #endif // ChatClientLogic_h__

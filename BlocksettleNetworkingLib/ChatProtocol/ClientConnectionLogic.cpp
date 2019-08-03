@@ -86,7 +86,7 @@ namespace Chat
          return true;
       }
 
-      return nullptr;
+      return false;
    }
 
    void ClientConnectionLogic::handleWelcomeResponse(const google::protobuf::Message& msg)

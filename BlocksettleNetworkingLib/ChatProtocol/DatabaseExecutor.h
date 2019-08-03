@@ -1,5 +1,6 @@
 
 #include <QObject>
+#include <memory>
 
 namespace spdlog
 {

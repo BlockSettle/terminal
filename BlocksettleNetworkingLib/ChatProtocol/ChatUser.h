@@ -35,8 +35,7 @@ namespace Chat
       BinaryData publicKey_;
    };
 
-   Q_DECLARE_METATYPE(ChatUserPtr)
-
 }
 
+Q_DECLARE_METATYPE(Chat::ChatUserPtr)
 #endif // ChatUser_h__
