@@ -12,7 +12,6 @@
             "Re-worked sync auth leaf creation",
             "Fix deadlock if armory key was declined (#1205)",
             "Fix blocking if armory is not available (#1200)",
-            "Merge pull request #1201 from BlockSettle/sptoxbt_settlement_fixes",,
             "Terminal/password request fixes (#1198)",
             "CCFileManager fixes (#1197)",
             "Use different ccgenadds.signed file names (#1196)",
