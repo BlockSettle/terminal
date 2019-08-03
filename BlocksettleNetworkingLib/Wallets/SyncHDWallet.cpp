@@ -30,7 +30,12 @@ hd::Wallet::Wallet(const std::string &walletId, const std::string &name
    netType_ = getNetworkType();
 }
 
-hd::Wallet::~Wallet() = default;
+hd::Wallet::~Wallet()
+{
+   for (auto &group : groups_) {
+      group.second->resetWCT();
+   }
+}
 
 void hd::Wallet::synchronize(const std::function<void()> &cbDone)
 {

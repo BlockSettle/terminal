@@ -131,6 +131,13 @@ std::string hd::Group::nameForType(bs::hd::CoinType ct)
    return QObject::tr("Unknown").toStdString();
 }
 
+void hd::Group::resetWCT()
+{
+   for (auto &leaf : leaves_) {
+      leaf.second->setWCT(nullptr);
+   }
+}
+
 std::shared_ptr<hd::Leaf> hd::Group::newLeaf(const std::string &walletId) const
 {
    assert(bs::core::wallet::Type::Bitcoin == type());
