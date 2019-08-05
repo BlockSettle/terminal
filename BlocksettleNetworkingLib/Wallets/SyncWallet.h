@@ -197,7 +197,7 @@ namespace bs {
             act_ = std::make_unique<U>(armory.get(), this);
          }
 
-         void setWCT(WalletCallbackTarget *wct) { wct_ = wct; }
+         void setWCT(WalletCallbackTarget *wct);
 
       protected:
          virtual void onZeroConfReceived(const std::vector<bs::TXEntry>&);

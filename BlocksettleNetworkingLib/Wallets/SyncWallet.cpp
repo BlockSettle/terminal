@@ -334,6 +334,11 @@ bool Wallet::getRBFTxOutList(const ArmoryConnection::UTXOsCb &cb) const
    return true;
 }
 
+void Wallet::setWCT(WalletCallbackTarget *wct)
+{
+   wct_ = wct;
+}
+
 bool Wallet::getAddressTxnCounts(const std::function<void(void)> &cb)
 {  /***
    Same as updateBalances, this methods grabs the addr txn count

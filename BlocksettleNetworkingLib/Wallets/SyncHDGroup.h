@@ -57,6 +57,7 @@ namespace bs {
 
             virtual void setUserId(const BinaryData &) {}
 
+            void resetWCT();
          protected:
             using cb_scan_notify = std::function<void(Group *, bs::hd::Path::Elem wallet, bool isValid)>;
             using cb_scan_read_last = std::function<unsigned int(const std::string &walletId)>;
