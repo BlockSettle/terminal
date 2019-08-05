@@ -9,6 +9,11 @@ BlockchainMonitor::BlockchainMonitor(const std::shared_ptr<ArmoryConnection> &ar
    init(armory.get());
 }
 
+BlockchainMonitor::~BlockchainMonitor()
+{
+   cleanup();
+}
+
 uint32_t BlockchainMonitor::waitForNewBlocks(uint32_t targetHeight)
 {
    while (!receivedNewBlock_ || (targetHeight && (armory_->topBlock() < targetHeight))) {
