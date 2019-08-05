@@ -4,6 +4,7 @@
 #include <QDesktopWidget>
 #include <QWidget>
 #include <cmath>
+#include "QLayout"
 
 DialogManager::DialogManager(const QWidget *mainWindow)
    : mainWindow_(mainWindow)
@@ -17,6 +18,8 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
 
    connect(dlg, &QDialog::finished, this, &DialogManager::onDialogFinished);
    dlg->setModal(false);
+	dlg->layout()->update();
+	dlg->layout()->activate();
 
    const QPoint center = getGeometry(mainWindow_).center();
 
@@ -121,6 +124,7 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
 
    dlg->move(dialogTopLeft);
    activeDlgs_.push_back(QPointer<QDialog>(dlg));
+
    dlg->show();
 }
 
