@@ -160,28 +160,27 @@ public:
 
    static void waitOnRefresh(const std::vector<std::string>& ids)
    {
-      if (ids.size() == 0)
+      if (ids.size() == 0) {
          throw std::runtime_error("empty registration id vector");
-
+      }
       std::set<std::string> idSet;
       idSet.insert(ids.begin(), ids.end());
-      
-      while (true)
-      {
-         auto&& notif = notifQueue_.pop_front();
-         if (notif->type_ != DBNS_Refresh)
-            throw std::runtime_error("expected refresh notification");
 
-         for (auto& refreshId : notif->ids_)
-         {
+      while (true) {
+         const auto &notif = notifQueue_.pop_front();
+         if (notif->type_ != DBNS_Refresh) {
+            throw std::runtime_error("expected refresh notification");
+         }
+         for (auto& refreshId : notif->ids_) {
             std::string idStr(refreshId.getCharPtr(), refreshId.getSize());
             auto iter = idSet.find(idStr);
-            if (iter == idSet.end())
+            if (iter == idSet.end()) {
                continue;
-
+            }
             idSet.erase(iter);
-            if (idSet.size() == 0)
+            if (idSet.size() == 0) {
                return;
+            }
          }
       }
    }
