@@ -14,8 +14,7 @@
 
 
 ArmoryCallbackTarget::ArmoryCallbackTarget()
-{
-}
+{}
 
 ArmoryCallbackTarget::~ArmoryCallbackTarget()
 {

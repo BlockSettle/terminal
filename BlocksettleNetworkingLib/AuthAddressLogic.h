@@ -60,8 +60,7 @@ private:
 
 private:
    bool operator<(const std::shared_ptr<AuthOutpoint>& rhs) const
-   {
-      /*
+   {  /*
       Doesnt work for comparing zc with zc, works with. Works
       with mined vs zc. Only used to setup the first outpoint
       atm.
@@ -71,15 +70,15 @@ private:
       require more data from the db).
       */
 
-      if (rhs == nullptr)
+      if (rhs == nullptr) {
          return true;
-
-      if (txHeight_ != rhs->txHeight_)
+      }
+      if (txHeight_ != rhs->txHeight_) {
          return txHeight_ < rhs->txHeight_;
-
-      if (txIndex_ != rhs->txIndex_)
+      }
+      if (txIndex_ != rhs->txIndex_) {
          return txIndex_ < rhs->txIndex_;
-
+      }
       return txOutIndex_ < rhs->txOutIndex_;
    }
 
@@ -105,9 +104,9 @@ public:
 
    bool isZc(void) const
    {
-      if (!isValid())
+      if (!isValid()) {
          throw std::runtime_error("invalid AuthOutpoint");
-
+      }
       return txHeight_ == UINT32_MAX;
    }
 
@@ -122,15 +121,14 @@ public:
 
    ////
    void updateFrom(const AuthOutpoint& rhs)
-   {
-      /*
+   {  /*
       You only ever update from previous states, so only do
       so to save a spentness marker
       */
 
-      if (!rhs.isSpent_ || isSpent_)
+      if (!rhs.isSpent_ || isSpent_) {
          return;
-
+      }
       isSpent_ = rhs.isSpent_;
       txHeight_ = rhs.txHeight_;
       spenderHash_ = rhs.spenderHash_;
@@ -141,29 +139,35 @@ public:
 ////
 class ValidationAddressACT : public ArmoryCallbackTarget
 {
+public:
+   ValidationAddressACT(ArmoryConnection *armory)
+      : ArmoryCallbackTarget()
+   {
+      init(armory);
+   }
+   ~ValidationAddressACT() override
+   {
+      cleanup();
+   }
+
+   ////
+   void onRefresh(const std::vector<BinaryData> &, bool) override;
+   void onZCReceived(const std::vector<bs::TXEntry> &zcs) override;
+   void onNewBlock(unsigned int) override;
+
+   ////
+   virtual void start();
+   virtual void stop();
+   virtual void setAddressMgr(ValidationAddressManager* vamPtr) { vamPtr_ = vamPtr; }
+
+private:
+   void processNotification(void);
+
 private:
    BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
    std::thread processThr_;
 
    ValidationAddressManager* vamPtr_ = nullptr;
-
-private:
-   void processNotification(void);
-
-public:
-   ValidationAddressACT(ArmoryConnection *armory) :
-      ArmoryCallbackTarget(armory)
-   {}
-
-   ////
-   virtual void onRefresh(const std::vector<BinaryData> &, bool) override;
-   virtual void onZCReceived(const std::vector<bs::TXEntry> &zcs) override;
-   virtual void onNewBlock(unsigned int) override;
-
-   ////
-   virtual void start();
-   virtual void stop();
-   virtual void setMamPtr(ValidationAddressManager* vamPtr) { vamPtr_ = vamPtr; }
 };
 
 ////
@@ -185,22 +189,22 @@ struct ValidationAddressStruct
    std::shared_ptr<AuthOutpoint> getFirsOutpoint(void) const
    {
       auto opIter = outpoints_.find(firstOutpointHash_);
-      if (opIter == outpoints_.end())
+      if (opIter == outpoints_.end()) {
          return nullptr;
-
+      }
       auto ptrIter = opIter->second.find(firstOutpointIndex_);
-      if (ptrIter == opIter->second.end())
+      if (ptrIter == opIter->second.end()) {
          return nullptr;
-
+      }
       return ptrIter->second;
    }
 
    bool isFirstOutpoint(const BinaryData& hash, unsigned index) const
    {
       if (firstOutpointIndex_ == UINT32_MAX ||
-         firstOutpointHash_.getSize() != 32)
+         firstOutpointHash_.getSize() != 32) {
          throw std::runtime_error("uninitialized first outpoint");
-
+      }
       return index == firstOutpointIndex_ &&
          hash == firstOutpointHash_;
    }
@@ -208,8 +212,7 @@ struct ValidationAddressStruct
 
 ////
 class ValidationAddressManager
-{
-   /***
+{  /***
    This class tracks the state of validation addresses, which is
    required to check on the state of a user auth address.
 
@@ -242,22 +245,21 @@ private:
 public:
    ValidationAddressManager(std::shared_ptr<ArmoryConnection>);
    ~ValidationAddressManager(void)
-   {
-      //unregister wallet
-
+   {  //unregister wallet
       //shutdown act
-      if (actPtr_ != nullptr)
+      if (actPtr_ != nullptr) {
          actPtr_->stop();
+      }
    }
 
    void addValidationAddress(const bs::Address &);
 
+   void setCustomACT(const std::shared_ptr<ValidationAddressACT> &);
+
    /*
-   These method return the amount of outpoints received. It
+   These methods return the amount of outpoints received. It
    allows for coverage of the db data flow.
    */
-
-   void setCustomACT(std::shared_ptr<ValidationAddressACT>);
    unsigned goOnline(void);
    unsigned update(void);
 
