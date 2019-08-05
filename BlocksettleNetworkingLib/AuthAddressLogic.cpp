@@ -360,8 +360,7 @@ BinaryData ValidationAddressManager::vetUserAddress(
    const bs::Address& addr,
    std::shared_ptr<ResolverFeed> feedPtr,
    const bs::Address& validationAddr) const
-{
-   /*
+{  /*
    To vet a user address, send it coins from a validation address.
    */
 
@@ -394,11 +393,11 @@ BinaryData ValidationAddressManager::vetUserAddress(
       ReturnMessage<std::vector<UTXO>> utxoVec)->void
    {
       try {
-         auto& utxos = utxoVec.get();
+         const auto& utxos = utxoVec.get();
          if (utxos.size() == 0) {
             throw AuthLogicException("no utxos available to vet with");
          }
-         for (auto& utxo : utxos) {
+         for (const auto& utxo : utxos) {
             //find the validation address for this utxo
             auto scrAddr = utxo.getRecipientScrAddr();
 
@@ -457,7 +456,7 @@ BinaryData ValidationAddressManager::vetUserAddress(
    auto scrAddr = vettingUtxo.getRecipientScrAddr();
    auto addrIter = validationAddresses_.find(scrAddr);
    if (addrIter == validationAddresses_.end()) {
-      return false;
+      throw AuthLogicException("input addr not found in validation addresses");
    }
    signer.addRecipient(addrIter->first.getRecipient(changeVal));
 
@@ -475,8 +474,7 @@ BinaryData ValidationAddressManager::vetUserAddress(
 ////
 BinaryData ValidationAddressManager::revokeValidationAddress(
    const bs::Address& addr, std::shared_ptr<ResolverFeed> feedPtr) const
-{
-   /*
+{  /*
    To revoke a validation address, spend its first UTXO.
    */
 
@@ -494,13 +492,13 @@ BinaryData ValidationAddressManager::revokeValidationAddress(
       (ReturnMessage<std::vector<UTXO>> utxoVec)->void
    {
       try {
-         auto& utxos = utxoVec.get();
-         if (utxos.size() == 0)
+         const auto& utxos = utxoVec.get();
+         if (utxos.size() == 0) {
             throw AuthLogicException("no utxo to revoke");
-
+         }
          auto& maFirstOutpoint = maStructPtr->getFirsOutpoint();
 
-         for (auto& utxo : utxos) {
+         for (const auto& utxo : utxos) {
             if (!maStructPtr->isFirstOutpoint(
                utxo.getTxHash(), utxo.getTxOutIndex())) {
                continue;
@@ -534,7 +532,7 @@ BinaryData ValidationAddressManager::revokeValidationAddress(
    signer.sign();
    auto signedTx = signer.serialize();
    if (signedTx.isNull()) {
-      return false;
+      throw AuthLogicException("failed to sign");
    }
    //broadcast the zc
    connPtr_->pushZC(signedTx);
@@ -571,11 +569,11 @@ BinaryData ValidationAddressManager::revokeUserAddress(
       ReturnMessage<std::vector<UTXO>> utxoVec)->void
    {
       try {
-         auto& utxos = utxoVec.get();
-         if (utxos.size() == 0)
+         const auto& utxos = utxoVec.get();
+         if (utxos.size() == 0) {
             throw AuthLogicException("no utxos to revoke with");
-
-         for (auto& utxo : utxos) {
+         }
+         for (const auto& utxo : utxos) {
             //cannot use the validation address first utxo
             if (validationAddrPtr->isFirstOutpoint(
                utxo.getTxHash(), utxo.getTxOutIndex())) {
