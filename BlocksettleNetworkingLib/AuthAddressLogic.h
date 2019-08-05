@@ -8,8 +8,9 @@
 #include "Address.h"
 #include "Wallets/SyncWallet.h"
 
-#define AUTH_VALUE_THRESHOLD 1000ULL
-#define VALIDATION_CONF_COUNT 6
+
+constexpr unsigned int VALIDATION_CONF_COUNT = 6;
+
 
 class AuthLogicException : public std::runtime_error
 {
