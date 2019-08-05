@@ -496,7 +496,6 @@ BinaryData ValidationAddressManager::revokeValidationAddress(
          if (utxos.size() == 0) {
             throw AuthLogicException("no utxo to revoke");
          }
-         auto& maFirstOutpoint = maStructPtr->getFirsOutpoint();
 
          for (const auto& utxo : utxos) {
             if (!maStructPtr->isFirstOutpoint(
