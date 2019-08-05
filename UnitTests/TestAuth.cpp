@@ -397,7 +397,7 @@ TEST_F(TestAuth, ValidateUserAddress)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-TEST_F(TestAuth, DISABLED_BadUserAddress)
+TEST_F(TestAuth, BadUserAddress)
 {  // This test crashes in Armory code:
    // [ArmoryConnection::getCombinedTxNs] failed to get result: device or resource busy
    //sync wallets
@@ -413,12 +413,14 @@ TEST_F(TestAuth, DISABLED_BadUserAddress)
 
    authWallet_ = syncMgr_->getWalletById(authSignWallet_->walletId());
    xbtWallet_ = syncMgr_->getDefaultWallet();
+   auto hdWallet = syncMgr_->getPrimaryWallet();
+   hdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+
 
    ASSERT_NE(authWallet_, nullptr);
 
    //register wallets
    UnitTestWalletACT::clear();
-   authWallet_->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
    const auto regIDs = syncMgr_->registerWallets();
    UnitTestWalletACT::waitOnRefresh(regIDs);
 
