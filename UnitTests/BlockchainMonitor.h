@@ -23,6 +23,7 @@ class BlockchainMonitor : public ArmoryCallbackTarget
 {
 public:
    BlockchainMonitor(const std::shared_ptr<ArmoryConnection> &);
+   ~BlockchainMonitor() override;
 
    uint32_t waitForNewBlocks(uint32_t targetHeight = 0);
    std::vector<bs::TXEntry> waitForZC(void);
