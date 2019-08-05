@@ -658,7 +658,7 @@ bool ZmqBIP15XDataConnection::closeConnection()
 // The function that processes raw ZMQ connection data. It processes the BIP
 // 150/151 handshake (if necessary) and decrypts the raw data.
 //
-// INPUT:  Reformed message. (const BinaryData&) // TO DO: FIX UP MSG
+// INPUT:  Reformed message. (const BinaryData&) // TODO: FIX UP MSG
 // OUTPUT: None
 // RETURN: None
 void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)

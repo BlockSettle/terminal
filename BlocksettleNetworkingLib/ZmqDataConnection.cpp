@@ -221,10 +221,6 @@ void ZmqDataConnection::listenFunction()
       poll_items[ZmqDataConnection::MonitorSocketIndex].events = ZMQ_POLLIN;
    }
 
-   if (logger_) {
-      SPDLOG_LOGGER_DEBUG(logger_, "[{}] poll thread started for {}", __func__
-         , connectionName_);
-   }
    int result;
 
    auto executionFlag = continueExecution_;
@@ -377,16 +373,9 @@ void ZmqDataConnection::zeroFrameReceived()
 bool ZmqDataConnection::closeConnection()
 {
    if (!isActive()) {
-      if (logger_) {
-         SPDLOG_LOGGER_DEBUG(logger_, "[{}] connection already stopped {}", __func__
-            , connectionName_);
-      }
       return true;
    }
 
-   if (logger_) {
-      SPDLOG_LOGGER_DEBUG(logger_, "[{}] stopping {}", __func__, connectionName_);
-   }
    if (std::this_thread::get_id() == listenThread_.get_id()) {
       //connectino is closed in callback
       listenThread_.detach();

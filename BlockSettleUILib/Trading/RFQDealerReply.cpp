@@ -728,6 +728,21 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
       }
       const double quantity = reversed ? qrn.quantity / price : qrn.quantity;
 
+      const auto priWallet = walletsManager_->getPrimaryWallet();
+      const auto settlementId = BinaryData::CreateFromHex(qrn.settlementId);
+      const auto group = priWallet->getGroup(bs::hd::BlockSettle_Settlement);
+      std::shared_ptr<bs::sync::hd::SettlementLeaf> settlLeaf;
+      if (group) {
+         const auto settlGroup = std::dynamic_pointer_cast<bs::sync::hd::SettlementGroup>(group);
+         if (settlGroup) {
+            settlLeaf = settlGroup->getLeaf(authAddr_);
+         }
+      }
+      if (!settlLeaf) {
+         logger_->error("[RFQDealerReply::submit] failed to get settlement leaf for {}", authAddr_.display());
+         return false;
+      }
+
       if (isBid) {
          if ((payInRecipId_ == UINT_MAX) || !transData->GetRecipientsCount()) {
             const std::string &comment = std::string(bs::network::Side::toString(bs::network::Side::invert(qrn.side)))
@@ -740,21 +755,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                }
                //TODO: set comment if needed
             };
-            const auto priWallet = walletsManager_->getPrimaryWallet();
-            const auto settlementId = BinaryData::CreateFromHex(qrn.settlementId);
             const auto cpAuthPubKey = BinaryData::CreateFromHex(qrn.requestorAuthPublicKey);
-            const auto group = priWallet->getGroup(bs::hd::BlockSettle_Settlement);
-            std::shared_ptr<bs::sync::hd::SettlementLeaf> settlLeaf;
-            if (group) {
-               const auto settlGroup = std::dynamic_pointer_cast<bs::sync::hd::SettlementGroup>(group);
-               if (settlGroup) {
-                  settlLeaf = settlGroup->getLeaf(authAddr_);
-               }
-            }
-            if (!settlLeaf) {
-               logger_->error("[RFQDealerReply::submit] failed to get settlement leaf for {}", authAddr_.display());
-               return false;
-            }
             const auto &cbSetSettlId = [priWallet, settlementId, cpAuthPubKey, cbSettlAddr](bool result) {
                if (!result) {
                   return;
@@ -799,6 +800,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
          }
       }
       else {
+         settlLeaf->setSettlementID(settlementId, [](bool) {});
          transData->SetFallbackRecvAddress(getRecvAddress());
       }
    }

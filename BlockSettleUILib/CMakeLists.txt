@@ -8,16 +8,19 @@ FILE(GLOB SOURCES
    *.cpp
    ManageEncryption/*.cpp
    Settings/*.cpp
+   Trading/*.cpp
 )
 FILE(GLOB HEADERS
    *.h
    ManageEncryption/*.h
    Settings/*.h
+   Trading/*.h
 )
 FILE(GLOB UI_FILES
    *.ui
    ManageEncryption/*.ui
    Settings/*.ui
+   Trading/*.ui
 )
 
 FILE(GLOB RESOURCE_FILES *.qrc)
@@ -28,6 +31,7 @@ INCLUDE_DIRECTORIES( ${BS_NETWORK_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${COMMON_LIB_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${COMMON_UI_LIB_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( Settings )
+INCLUDE_DIRECTORIES( Trading )
 
 qt5_add_resources( GENERATED_RESOURCES ${RESOURCE_FILES})
 qt5_wrap_ui( GENERATED_UI ${UI_FILES} )

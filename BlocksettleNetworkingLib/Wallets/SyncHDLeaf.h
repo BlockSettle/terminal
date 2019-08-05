@@ -152,7 +152,6 @@ namespace bs {
                AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH),
                AddressEntryType_P2WPKH };
 
-            std::set<AddrPoolKey>   tempAddresses_;
             std::map<AddrPoolKey, bs::Address>  addressPool_;
             std::map<bs::Address, AddrPoolKey>  poolByAddr_;
 
@@ -163,7 +162,6 @@ namespace bs {
             std::map<BinaryData, AddrPoolKey>            addrToIndex_;
             cb_complete_notify                           cbScanNotify_ = nullptr;
             std::function<void(const std::string &walletId, unsigned int idx)> cbWriteLast_ = nullptr;
-            volatile bool activateAddressesInvoked_ = false;
             BTCNumericTypes::balance_type spendableBalanceCorrection_ = 0;
 
             struct AddrPrefixedHashes {
@@ -206,20 +204,12 @@ namespace bs {
             ~XBTLeaf() override = default;
          };
 
+
          class AuthLeaf : public Leaf
          {
          public:
             AuthLeaf(const std::string &walletId, const std::string &name, const std::string &desc
                , WalletSignerContainer *, const std::shared_ptr<spdlog::logger> &);
-
-            void setUserId(const BinaryData &) override;
-
-         protected:
-            void createAddress(const CbAddress &, const AddrPoolKey &) override;
-            void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr) override;
-
-         private:
-            BinaryData              userId_;
          };
 
 
@@ -265,14 +255,15 @@ namespace bs {
             class CCWalletACT : public WalletACT
             {
             public:
-               CCWalletACT(ArmoryConnection *armory, Wallet *leaf)
-                  : WalletACT(armory, leaf) {}
+               CCWalletACT(Wallet *leaf)
+                  : WalletACT(leaf) {}
                void onStateChanged(ArmoryState) override;
             };
 
             std::shared_ptr<TxAddressChecker>   checker_;
             std::shared_ptr<CCDataResolver>     ccResolver_;
-            volatile bool  validationStarted_, validationEnded_;
+            std::atomic_bool validationStarted_{false};
+            std::atomic_bool validationEnded_{false};
             double         balanceCorrection_ = 0;
             std::set<UTXO> invalidTx_;
             std::set<BinaryData> invalidTxHash_;
@@ -291,9 +282,6 @@ namespace bs {
          protected:
             void createAddress(const CbAddress &, const AddrPoolKey &) override;
             void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr) override;
-
-         private:
-            BinaryData              userId_;
          };
 
       }  //namespace hd

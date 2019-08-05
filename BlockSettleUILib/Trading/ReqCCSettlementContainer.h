@@ -52,6 +52,7 @@ public:
    double quantity() const override { return quote_.quantity; }
    double price() const override { return quote_.price; }
    double amount() const override { return quantity() * price(); }
+   bs::sync::PasswordDialogData toPasswordDialogData() const override;
 
    bs::hd::WalletInfo walletInfo() const { return walletInfo_; }
    std::string txData() const;

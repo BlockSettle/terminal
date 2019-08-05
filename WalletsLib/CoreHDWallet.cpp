@@ -640,14 +640,17 @@ std::shared_ptr<AddressEntry_P2WSH> hd::Wallet::getAddressPtrForSettlement(
 {
    //get settlement leaf for id
    auto leafPtr = getLeafForSettlementID(settlementID);
+   if (!leafPtr) {
+      throw AssetException("failed to find leaf for settlement id " + settlementID.toHexStr());
+   }
 
    //grab settlement asset from leaf
    auto index = leafPtr->getIndexForSettlementID(settlementID);
    auto myAssetPtr = leafPtr->accountPtr_->getAssetForID(index, true);
    auto myAssetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(myAssetPtr);
-   if (myAssetSingle == nullptr)
+   if (myAssetSingle == nullptr) {
       throw AssetException("unexpected asset type");
-
+   }
    //salt counterparty pubkey
    auto&& counterPartySaltedKey = CryptoECDSA::PubKeyScalarMultiply(
       counterPartyPubKey, settlementID);
@@ -659,13 +662,11 @@ std::shared_ptr<AddressEntry_P2WSH> hd::Wallet::getAddressPtrForSettlement(
    //create ms asset
    std::map<BinaryData, std::shared_ptr<AssetEntry>> assetMap;
 
-   if (isMyKeyFirst)
-   {
+   if (isMyKeyFirst) {
       assetMap.insert(std::make_pair(READHEX("00"), myAssetSingle));
       assetMap.insert(std::make_pair(READHEX("01"), counterPartyAsset));
    }
-   else
-   {
+   else {
       assetMap.insert(std::make_pair(READHEX("00"), counterPartyAsset));
       assetMap.insert(std::make_pair(READHEX("01"), myAssetSingle));
    }

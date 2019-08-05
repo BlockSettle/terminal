@@ -58,14 +58,14 @@ bool RequestReplyCommand::ExecuteRequest(const std::string& host
 
    requestData_ = data;
 
+   executeOnConnect_ = executeOnConnect;
+
    bool connectionOpened = connection_->openConnection(host, port, this);
    if (!connectionOpened) {
       logger_->error("[RequestReplyCommand] {}: failed to open connection to {}:{}"
          ,  name_, host, port);
       return false;
    }
-
-   executeOnConnect_ = executeOnConnect;
 
    if (!executeOnConnect) {
       if (!connection_->send(requestData_)) {
@@ -139,7 +139,7 @@ void RequestReplyCommand::OnError(DataConnectionError errorCode)
    requestCompleted_->SetEvent();
 }
 
-bool RequestReplyCommand::WaitForRequestedProcessed(uint64_t milliseconds)
+bool RequestReplyCommand::WaitForRequestedProcessed(std::chrono::milliseconds period)
 {
-   return requestCompleted_->WaitForEvent(milliseconds);
+   return requestCompleted_->WaitForEvent(period);
 }

@@ -169,6 +169,8 @@ private:
    const float minRelayFeePerByte_ = 5;
 
    bool        feeChangeDisabled_ = false;
+
+   bool        showUnknownWalletWarning_ = false;
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_ADVANCED_H__

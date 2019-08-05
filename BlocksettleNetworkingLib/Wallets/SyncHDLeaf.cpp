@@ -122,22 +122,20 @@ void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
       }
    };
 
-   {
-      std::unique_lock<std::mutex> lock(regMutex_);
-      if (!regIdExt_.empty() || !regIdInt_.empty()) {
-         for (const auto &id : ids) {
-            if (id.isNull()) {
-               continue;
-            }
-            logger_->debug("[{}] {}: id={}, extId={}, intId={}", __func__, walletId()
-               , id.toBinStr(), regIdExt_, regIdInt_);
-            if (id == regIdExt_) {
-               regIdExt_.clear();
-               cbRegisterExt();
-            } else if (id == regIdInt_) {
-               regIdInt_.clear();
-               cbRegisterInt();
-            }
+   std::unique_lock<std::mutex> lock(regMutex_);
+   if (!regIdExt_.empty() || !regIdInt_.empty()) {
+      for (const auto &id : ids) {
+         if (id.isNull()) {
+            continue;
+         }
+         logger_->debug("[{}] {}: id={}, extId={}, intId={}", __func__, walletId()
+            , id.toBinStr(), regIdExt_, regIdInt_);
+         if (id == regIdExt_) {
+            regIdExt_.clear();
+            cbRegisterExt();
+         } else if (id == regIdInt_) {
+            regIdInt_.clear();
+            cbRegisterInt();
          }
       }
    }
@@ -187,14 +185,14 @@ void hd::Leaf::postOnline()
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
       if (st != bs::sync::SyncState::Success) {
-         updateBalances([] {});
+         updateBalances();
          if (wct_) {
             wct_->walletReady(walletId());
          }
          return;
       }
       synchronize([this] {
-         updateBalances([] {});
+         updateBalances();
          if (wct_) {
             wct_->walletReady(walletId());
          }
@@ -218,15 +216,12 @@ void hd::Leaf::init(bool force)
    if (firstInit_ && force) {
       bs::sync::Wallet::init(force);
    }
-
-   if (activateAddressesInvoked_) {
-      return;
-   }
-   activateAddressesInvoked_ = true;
 }
 
 void hd::Leaf::reset()
 {
+   std::lock_guard<std::mutex> lock(regMutex_);
+
    lastIntIdx_ = lastExtIdx_ = 0;
    addressMap_.clear();
    usedAddresses_.clear();
@@ -434,10 +429,7 @@ void hd::Leaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
          }
       };
 
-      bool extInt = true;
-      if (key.path.get(-2) == addrTypeInternal)
-         extInt = false;
-
+      const bool extInt = (key.path.get(-2) == addrTypeExternal) ? true : false;
       topUpAddressPool(extInt, topUpCb);
    }
    else {
@@ -650,7 +642,7 @@ bool hd::Leaf::getLedgerDelegateForAddress(const bs::Address &addr
       return false;
    }
    {
-      std::unique_lock<std::mutex> lock(cbMutex_);
+      std::unique_lock<std::mutex> lock(*cbMutex_);
       const auto &itCb = cbLedgerByAddr_.find(addr);
       if (itCb != cbLedgerByAddr_.end()) {
          logger_->error("[{}] ledger callback for addr {} already exists", __func__, addr.display());
@@ -830,52 +822,12 @@ hd::AuthLeaf::AuthLeaf(const std::string &walletId, const std::string &name, con
    poolAET_ = { AddressEntryType_P2WPKH };
 }
 
-void hd::AuthLeaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
-{
-   if (userId_.isNull()) {
-      tempAddresses_.insert(key);
-      if (cb) {
-         cb({});
-      }
-   }
-   else {
-      hd::Leaf::createAddress(cb, key);
-   }
-}
-
-void hd::AuthLeaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
-{
-   if (userId_.isNull()) {
-      return;
-   }
-
-   //auth leaf is ext only
-   hd::Leaf::topUpAddressPool(true, cb);
-}
-
-void hd::AuthLeaf::setUserId(const BinaryData &userId)
-{
-   userId_ = userId;
-   if (userId.isNull()) {
-      reset();
-      return;
-   }
-
-   for (const auto &addr : tempAddresses_) {
-      createAddress([](const bs::Address &) {}, addr);
-      lastExtIdx_ = std::max(lastExtIdx_, addr.path.get(-1) + 1);
-   }
-   topUpAddressPool(true);
-}
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::CCLeaf::CCLeaf(const std::string &walletId, const std::string &name, const std::string &desc
    , WalletSignerContainer *container, const std::shared_ptr<spdlog::logger> &logger)
    : hd::Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::ColorCoin, true)
-   , validationStarted_(false)
-   , validationEnded_(false)
 {}
 
 hd::CCLeaf::~CCLeaf()
@@ -905,7 +857,8 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
    hd::Leaf::setArmory(armory);
    if (armory_) {
-      act_ = make_unique<CCWalletACT>(armory_.get(), this);
+      act_ = make_unique<CCWalletACT>(this);
+      act_->init(armory.get());
    }
    if (checker_ && armory) {
       checker_->setArmory(armory);
@@ -919,17 +872,17 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 {
    {
-      std::unique_lock<std::mutex> lock(addrMapsMtx_);
-      addressBalanceMap_.clear();
+      std::unique_lock<std::mutex> lock(*addrMapsMtx_);
+      addressBalanceMap_->clear();
    }
 
    if (!ZConly) {
       const auto &cbRefresh = [this](std::vector<UTXO> utxos) {
          const auto &cbUpdateSpendableBalance = [this](const std::vector<UTXO> &spendableUTXOs) {
-            std::unique_lock<std::mutex> lock(addrMapsMtx_);
+            std::unique_lock<std::mutex> lock(*addrMapsMtx_);
             for (const auto &utxo : spendableUTXOs) {
                const auto &addr = utxo.getRecipientScrAddr();
-               auto &balanceVec = addressBalanceMap_[addr];
+               auto &balanceVec = (*addressBalanceMap_)[addr];
                if (balanceVec.empty()) {
                   balanceVec = { 0, 0, 0 };
                }
@@ -944,9 +897,9 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 
    const auto &cbRefreshZC = [this](const std::vector<UTXO> &utxos) {
       const auto &cbUpdateZcBalance = [this](const std::vector<UTXO> &ZcUTXOs) {
-         std::unique_lock<std::mutex> lock(addrMapsMtx_);
+         std::unique_lock<std::mutex> lock(*addrMapsMtx_);
          for (const auto &utxo : ZcUTXOs) {
-            auto &balanceVec = addressBalanceMap_[utxo.getRecipientScrAddr()];
+            auto &balanceVec = (*addressBalanceMap_)[utxo.getRecipientScrAddr()];
             if (balanceVec.empty()) {
                balanceVec = { 0, 0, 0 };
             }

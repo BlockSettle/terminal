@@ -33,7 +33,7 @@ public:
    DealerXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
       , const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<QuoteProvider> &
       , const std::shared_ptr<TransactionData> &, const std::unordered_set<std::string> &bsAddresses
-      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &, bool autoSign);
+      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &);
    ~DealerXBTSettlementContainer() override = default;
 
    bool startSigning();
@@ -52,6 +52,7 @@ public:
    double quantity() const override { return order_.quantity; }
    double price() const override { return order_.price; }
    double amount() const override { return amount_; }
+   bs::sync::PasswordDialogData toPasswordDialogData() const override;
 
    bool weSell() const { return weSell_; }
    uint64_t fee() const { return fee_; }
@@ -79,7 +80,6 @@ private:
    const bool     weSell_;
    std::string    comment_;
    const double   amount_;
-   const bool     autoSign_;
    std::shared_ptr<spdlog::logger>              logger_;
    std::shared_ptr<ArmoryConnection>            armory_;
    std::shared_ptr<TransactionData>             transactionData_;
