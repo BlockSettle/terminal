@@ -43,18 +43,20 @@ struct AddressVerificationData
 
 AddressVerificator::AddressVerificator(const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<ArmoryConnection> &armory
    , const std::string& walletId, verification_callback callback)
-   : ArmoryCallbackTarget(armory.get())
+   : ArmoryCallbackTarget()
    , logger_(logger)
    , walletId_(walletId)
    , userCallback_(callback)
    , stopExecution_(false)
 {
+   init(armory.get());
    startCommandQueue();
 }
 
 AddressVerificator::~AddressVerificator() noexcept
 {
    stopCommandQueue();
+   cleanup();
 }
 
 bool AddressVerificator::startCommandQueue()
@@ -723,22 +725,27 @@ void AddressVerificator::onRefresh(const std::vector<BinaryData> &ids, bool)
    };
    auto pages = std::make_shared<std::map<bs::Address, uint64_t>>();
    auto txHashSet = std::make_shared<std::set<BinaryData>>();
+   auto mutex = std::make_shared<std::mutex>();
+
    for (const auto &bsAddr : bsAddressList_) {
       (*pages)[bsAddr] = 1;
    }
    for (const auto &bsAddr : bsAddressList_) {
-      const auto &cbDelegate = [this, cbTXs, pages, txHashSet, bsAddr]
+      const auto &cbDelegate = [this, cbTXs, pages, txHashSet, bsAddr, mutex]
                                (const std::shared_ptr<AsyncClient::LedgerDelegate> delegate)->void {
-         const auto &cbPageCnt = [this, pages, bsAddr, delegate, txHashSet, cbTXs]
+         const auto &cbPageCnt = [this, pages, bsAddr, delegate, txHashSet, cbTXs, mutex]
                                  (ReturnMessage<uint64_t> pageCnt)->void {
             try {
+               std::lock_guard<std::mutex> lock(*mutex);
                const auto &inPageCnt = pageCnt.get();
                (*pages)[bsAddr] = inPageCnt;
                for (uint64_t i = 0; i < inPageCnt; ++i) {
-                  const auto &cbLedger = [this, pages, bsAddr, txHashSet, cbTXs, i]
+                  const auto &cbLedger = [this, pages, bsAddr, txHashSet, cbTXs, i, mutex]
                      (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+                     std::lock_guard<std::mutex> lock(*mutex);
                      try {
                         for (const auto &entry : entries.get()) {
+                           std::lock_guard<std::mutex> lock(*mutex);
                            txHashSet->insert(entry.getTxHash());
                         }
                      }

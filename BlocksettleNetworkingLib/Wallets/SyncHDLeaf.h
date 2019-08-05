@@ -162,7 +162,6 @@ namespace bs {
             std::map<BinaryData, AddrPoolKey>            addrToIndex_;
             cb_complete_notify                           cbScanNotify_ = nullptr;
             std::function<void(const std::string &walletId, unsigned int idx)> cbWriteLast_ = nullptr;
-            volatile bool activateAddressesInvoked_ = false;
             BTCNumericTypes::balance_type spendableBalanceCorrection_ = 0;
 
             struct AddrPrefixedHashes {
@@ -256,14 +255,15 @@ namespace bs {
             class CCWalletACT : public WalletACT
             {
             public:
-               CCWalletACT(ArmoryConnection *armory, Wallet *leaf)
-                  : WalletACT(armory, leaf) {}
+               CCWalletACT(Wallet *leaf)
+                  : WalletACT(leaf) {}
                void onStateChanged(ArmoryState) override;
             };
 
             std::shared_ptr<TxAddressChecker>   checker_;
             std::shared_ptr<CCDataResolver>     ccResolver_;
-            volatile bool  validationStarted_, validationEnded_;
+            std::atomic_bool validationStarted_{false};
+            std::atomic_bool validationEnded_{false};
             double         balanceCorrection_ = 0;
             std::set<UTXO> invalidTx_;
             std::set<BinaryData> invalidTxHash_;

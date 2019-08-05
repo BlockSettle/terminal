@@ -233,9 +233,9 @@ namespace bs {
          std::map<bs::Address, std::string>  addrComments_;
          std::map<BinaryData, std::string>   txComments_;
 
-         std::shared_ptr<BTCNumericTypes::balance_type>  spendableBalance_;
-         std::shared_ptr<BTCNumericTypes::balance_type>  unconfirmedBalance_;
-         std::shared_ptr<BTCNumericTypes::balance_type>  totalBalance_;
+         std::shared_ptr<std::atomic<BTCNumericTypes::balance_type>>  spendableBalance_;
+         std::shared_ptr<std::atomic<BTCNumericTypes::balance_type>>  unconfirmedBalance_;
+         std::shared_ptr<std::atomic<BTCNumericTypes::balance_type>>  totalBalance_;
          std::shared_ptr<size_t>       addrCount_;
          std::shared_ptr<std::mutex>   addrMapsMtx_;
          std::shared_ptr<std::map<BinaryData, std::vector<uint64_t>>>   addressBalanceMap_;
@@ -262,7 +262,7 @@ namespace bs {
 
       protected:
          bool firstInit_ = false;
-         bool isRegistered_ = false;
+         std::atomic_bool isRegistered_{false};
 
          mutable std::shared_ptr<std::mutex> cbMutex_;
          std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbLedgerByAddr_;
@@ -271,8 +271,11 @@ namespace bs {
       class WalletACT : public ArmoryCallbackTarget
       {
       public:
-         WalletACT(ArmoryConnection *armory, Wallet *leaf)
-            : ArmoryCallbackTarget(armory), parent_(leaf) {}
+         WalletACT(Wallet *leaf)
+            : parent_(leaf)
+         {
+         }
+         ~WalletACT() override { cleanup(); }
          virtual void onRefresh(const std::vector<BinaryData> &ids, bool online) override {
             parent_->onRefresh(ids, online);
          }

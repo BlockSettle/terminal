@@ -208,7 +208,7 @@ void ExplorerWidget::onAddressClicked(QString addressId)
 
    // There really should be an error case here, but for now, assume addr is
    // valid. (It would be very bad if Armory fed up bad addresses!)
-   // TO DO: Add a check for wallets that have already been loaded?
+   // TODO: Add a check for wallets that have already been loaded?
    ui_->Address->setQueryAddr(bsAddress);
    truncateSearchHistory();
    pushTransactionHistory(addressId);
