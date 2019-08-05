@@ -1,5 +1,7 @@
 #include "AuthAddressLogic.h"
 
+constexpr uint64_t AUTH_VALUE_THRESHOLD = 1000;
+
 ///////////////////////////////////////////////////////////////////////////////
 void ValidationAddressACT::onRefresh(const std::vector<BinaryData>& ids, bool online)
 {
@@ -525,7 +527,7 @@ BinaryData ValidationAddressManager::revokeValidationAddress(
    signer.addSpender(spenderPtr);
 
    //revocation output, no need for change
-   signer.addRecipient(addr.getRecipient(firstUtxo.getValue() - 1000ULL));
+   signer.addRecipient(addr.getRecipient((uint64_t)(firstUtxo.getValue() - 1000)));
 
    //sign & serialize tx
    signer.sign();
@@ -609,7 +611,7 @@ BinaryData ValidationAddressManager::revokeUserAddress(
 
    //change
    signer.addRecipient(validationAddr.getRecipient(
-      utxo.getValue() - AUTH_VALUE_THRESHOLD - 1000ULL));
+      utxo.getValue() - AUTH_VALUE_THRESHOLD - 1000));
 
    //sign & serialize tx
    signer.sign();
