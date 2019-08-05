@@ -62,6 +62,7 @@ SignerAdapter::~SignerAdapter()
 {
    if (closeHeadless_) {
       listener_->send(signer::RequestCloseType, "");
+      listener_->closeConnection();
    }
 }
 

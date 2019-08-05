@@ -607,7 +607,14 @@ void SignerInterfaceListener::requestPasswordForToken(bs::sync::PasswordDialogDa
 
 void SignerInterfaceListener::shutdown()
 {
-   QApplication::quit();
+   QMetaObject::invokeMethod(qApp, [] {
+      QApplication::quit();
+   });
+}
+
+void SignerInterfaceListener::closeConnection()
+{
+   connection_->closeConnection();
 }
 
 QmlCallbackBase *SignerInterfaceListener::createQmlPasswordCallback()
