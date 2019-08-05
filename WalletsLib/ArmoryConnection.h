@@ -162,6 +162,7 @@ public:
 
    virtual bool estimateFee(unsigned int nbBlocks, const FloatCb &);
    virtual bool getFeeSchedule(const FloatMapCb&);
+   virtual bool pushZC(const BinaryData&) const;
 
    bool isTransactionVerified(const ClientClasses::LedgerEntry &) const;
    bool isTransactionVerified(uint32_t blockNum) const;
@@ -180,6 +181,9 @@ public:
    using BIP151Cb = std::function<bool(const BinaryData&, const std::string&)>;
 
    std::shared_ptr<AsyncClient::BtcWallet> instantiateWallet(const std::string &walletId);
+
+   std::shared_ptr<AsyncClient::BlockDataViewer> bdv(void) const { return bdv_; }
+
 
 protected:
    void setupConnection(NetworkType, const std::string &host, const std::string &port

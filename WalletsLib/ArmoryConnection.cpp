@@ -14,8 +14,7 @@
 
 
 ArmoryCallbackTarget::ArmoryCallbackTarget()
-{
-}
+{}
 
 ArmoryCallbackTarget::~ArmoryCallbackTarget()
 {
@@ -889,6 +888,17 @@ bool ArmoryConnection::getFeeSchedule(const FloatMapCb &cb)
       }
    };
    bdv_->getFeeSchedule(FEE_STRAT_CONSERVATIVE, cbWrap);
+   return true;
+}
+
+bool ArmoryConnection::pushZC(const BinaryData& rawTx) const
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
+      return false;
+   }
+
+   bdv_->broadcastZC(rawTx);
    return true;
 }
 
