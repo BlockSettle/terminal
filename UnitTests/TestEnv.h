@@ -119,8 +119,14 @@ class UnitTestWalletACT : public bs::sync::WalletACT
 
 public:
    UnitTestWalletACT(ArmoryConnection *armory, bs::sync::Wallet *leaf) :
-      bs::sync::WalletACT(armory, leaf)
-   {}
+      bs::sync::WalletACT(leaf)
+   {
+      init(armory);
+   }
+   ~UnitTestWalletACT() override
+   {
+      cleanup();
+   }
 
    void onRefresh(const std::vector<BinaryData> &ids, bool online) override
    {

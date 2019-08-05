@@ -4,8 +4,10 @@
 
 
 BlockchainMonitor::BlockchainMonitor(const std::shared_ptr<ArmoryConnection> &armory)
-   : ArmoryCallbackTarget(armory.get())
-{}
+   : ArmoryCallbackTarget()
+{
+   init(armory.get());
+}
 
 uint32_t BlockchainMonitor::waitForNewBlocks(uint32_t targetHeight)
 {

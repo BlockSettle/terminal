@@ -48,10 +48,10 @@ public:
    ////
    virtual void start() override {}
    virtual void stop() override {}
-   virtual void setMamPtr(ValidationAddressManager* mamPtr) override
+   void setAddressMgr(ValidationAddressManager* mamPtr) override
    {
       testVamPtr_ = mamPtr;
-      ValidationAddressACT::setMamPtr(mamPtr);
+      ValidationAddressACT::setAddressMgr(mamPtr);
    }
 
    ////

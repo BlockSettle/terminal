@@ -262,19 +262,17 @@ TEST_F(TestAuth, ValidationAddressManager)
    ASSERT_EQ(maw.update(), 0);
    EXPECT_TRUE(maw.isValid(validationAddr_));
 
-   for (unsigned i = 0; i < 5; i++)
-   {
+   std::cout << "1\n";
+   for (unsigned i = 0; i < 5; i++) {
       //generate user address
       bs::Address userAddr(CryptoPRNG::generateRandom(20), AddressEntryType_P2WPKH);
 
       //vet it
-      try
-      {
+      try {
          auto&& txHash = maw.vetUserAddress(userAddr, validationFeed_);
          actPtr_->waitOnZC(txHash);
       }
-      catch (AuthLogicException&)
-      {
+      catch (AuthLogicException&) {
          ASSERT_FALSE(true);
       }
 
@@ -298,7 +296,8 @@ TEST_F(TestAuth, ValidationAddressManager)
       ASSERT_TRUE(maw.hasSpendableOutputs(validationAddr_));
       ASSERT_FALSE(maw.hasZCOutputs(validationAddr_));
    }
-   
+   std::cout << "2\n";
+
    //add a few blocks, check validation address is still valid
    mineBlocks(3);
    EXPECT_EQ(maw.update(), 0);
@@ -318,6 +317,7 @@ TEST_F(TestAuth, ValidationAddressManager)
 
    //should still be valid prior to update
    EXPECT_TRUE(maw.isValid(validationAddr_));
+   std::cout << "3\n";
 
    /*
    Should be invalid after update. There should be 2 new
@@ -334,6 +334,7 @@ TEST_F(TestAuth, ValidationAddressManager)
    mineBlocks(1);
    EXPECT_EQ(maw.update(), 2);
    EXPECT_FALSE(maw.isValid(validationAddr_));
+   std::cout << "4\n";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
