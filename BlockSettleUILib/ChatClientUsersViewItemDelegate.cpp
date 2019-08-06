@@ -4,40 +4,61 @@
 #include <QLineEdit>
 #include "ChatProtocol/ChatUtils.h"
 
-static const int kDotSize = 8;
-static const QString kDotPathname = QLatin1String(":/ICON_DOT");
+#include "ChatPartiesTreeModel.h"
 
-using Role = ChatClientDataModel::Role;
-using OnlineStatus = ChatContactElement::OnlineStatus;
-using ContactStatus = Chat::ContactStatus;
+namespace {
+   const int kDotSize = 8;
+   const QString kDotPathname = QLatin1String{ ":/ICON_DOT" };
+   const QString unknown = QLatin1String{ "<unknown>" };
+
+   // Delete below
+   using Role = ChatClientDataModel::Role;
+   using OnlineStatus = ChatContactElement::OnlineStatus;
+   using ContactStatus = Chat::ContactStatus;
+}
 
 ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(QObject *parent)
    : QStyledItemDelegate (parent)
 {
-
 }
+
+// Previous code need to be deleted after done with styling
+//void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+//{
+//   const ChatUIDefinitions::ChatTreeNodeType nodeType =
+//            qvariant_cast<ChatUIDefinitions::ChatTreeNodeType>(index.data(Role::ItemTypeRole));
+
+//   switch (nodeType) {
+//      case ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode:
+//         return paintCategoryNode(painter, option, index);
+//      case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
+//         return paintRoomsElement(painter, option, index);
+//      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+//      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
+//         return paintContactsElement(painter, option, index);
+//      case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
+//      case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
+//         return paintUserElement(painter, option, index);
+//      default:
+//         return QStyledItemDelegate::paint(painter, option, index);
+//   }
+//}
 
 void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-   const ChatUIDefinitions::ChatTreeNodeType nodeType =
-            qvariant_cast<ChatUIDefinitions::ChatTreeNodeType>(index.data(Role::ItemTypeRole));
+   AbstractParty* internalData = checkAndGetInternalPointer<AbstractParty>(index);
 
-   switch (nodeType) {
-      case ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode:
-         return paintCategoryNode(painter, option, index);
-      case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-         return paintRoomsElement(painter, option, index);
-      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
-      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
-         return paintContactsElement(painter, option, index);
-      case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
-      case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
-         return paintUserElement(painter, option, index);
-      default:
-         return QStyledItemDelegate::paint(painter, option, index);
+   if (UI::ElementType::Container == internalData->elementType()) {
+      paintPartyContainer(painter, option, index);
+   } else if (UI::ElementType::Party == internalData->elementType()) {
+      paintParty(painter, option, index);
+   } else {
+      // You should specify rules for new ElementType explicitly
+      Q_ASSERT(false);
    }
 }
 
+// paintCategoryNode == paintPartyContainer
 void ChatClientUsersViewItemDelegate::paintCategoryNode(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
@@ -53,6 +74,84 @@ void ChatClientUsersViewItemDelegate::paintCategoryNode(QPainter *painter, const
    itemOption.text = index.data(Role::CategoryGroupDisplayName).toString();
 
    QStyledItemDelegate::paint(painter, itemOption, index);
+}
+
+void ChatClientUsersViewItemDelegate::paintPartyContainer(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+   QStyleOptionViewItem itemOption(option);
+
+   if (itemOption.state & QStyle::State_Selected) {
+      painter->save();
+      painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
+      painter->restore();
+   }
+
+   itemOption.palette.setColor(QPalette::Text, itemStyle_.colorCategoryItem());
+
+   PartyContainer* container = checkAndGetInternalPointer<PartyContainer>(index);
+   if (container) {
+      itemOption.text = QString::fromStdString(container->getDisplayName());
+   } else {
+      itemOption.text = unknown;
+   }
+
+   QStyledItemDelegate::paint(painter, itemOption, index);
+}
+
+void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+   QStyleOptionViewItem itemOption(option);
+   if (itemOption.state & QStyle::State_Selected) {
+      painter->save();
+      painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
+      painter->restore();
+   }
+
+   itemOption.palette.setColor(QPalette::Text, itemStyle_.colorRoom());
+   Party* party = checkAndGetInternalPointer<Party>(index);
+   PartyContainer* container = checkAndGetInternalPointer<PartyContainer>(index.parent());
+
+   if (!party || !container) {
+      QStyledItemDelegate::paint(painter, itemOption, index);
+      return;
+   }
+
+   if (Chat::PartyType::GLOBAL == container->getPartyType()) {
+      itemOption.text = QString::fromStdString(party->getDisplayName());
+      QStyledItemDelegate::paint(painter, itemOption, index);
+   } else if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == container->getPartyType()) {
+
+      switch (party->getClientStatus()) {
+      case Chat::ClientStatus::ONLINE: {
+         itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOnline());
+         break;
+      }
+      case Chat::ClientStatus::OFFLINE: {
+         itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOffline());
+         if (option.state & QStyle::State_Selected) {
+            painter->save();
+            painter->fillRect(itemOption.rect, itemStyle_.colorContactOffline());
+            painter->restore();
+         }
+         break;
+      }
+      default: {
+         // You should specify rules for new ClientStatus explicitly
+         Q_ASSERT(false);
+         break;
+      }
+      }
+
+
+   } else {
+      // You should specify rules for new PartyType explicitly
+      Q_ASSERT(false);
+   }
+
+   QStyledItemDelegate::paint(painter, itemOption, index);
+
+   // draw dot
+   // Need new message indicator OTC and private messages
 }
 
 void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
@@ -198,4 +297,14 @@ QWidget *ChatClientUsersViewItemDelegate::createEditor(QWidget *parent, const QS
    QWidget * editor = QStyledItemDelegate::createEditor(parent, option, index);
    editor->setProperty("contact_editor", true);
    return editor;
+}
+
+template<typename AbstractPartySubClass>
+AbstractPartySubClass* ChatClientUsersViewItemDelegate::checkAndGetInternalPointer(const QModelIndex &index) const
+{
+   AbstractPartySubClass* internalData = static_cast<AbstractPartySubClass*>(index.internalPointer());
+#ifndef QT_NO_DEBUG
+   Q_ASSERT(internalData);
+#endif
+   return internalData;
 }

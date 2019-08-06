@@ -51,9 +51,10 @@ void AbstractParty::setDisplayName(const std::string& newName)
 }
 
 // Party
-Party::Party(StateOfParty state, std::string displayName)
+Party::Party(std::string displayName, Chat::PartySubType subType, Chat::ClientStatus status)
    : AbstractParty(displayName)
-   , state_(state)
+   , subType_(subType)
+   , status_(status)
 {
 }
 
@@ -76,7 +77,8 @@ Party::Party(Party&& other)
 bool Party::operator==(const Party& other)
 {
    return static_cast<AbstractParty*>(this) == &other
-         && state_ == other.state_
+         && status_ == other.status_
+         && subType_ == other.subType_
          && parent_ == other.parent_
            ;
 }
@@ -84,7 +86,8 @@ bool Party::operator==(const Party& other)
 void Party::operator=(Party&& other)
 {
     *(static_cast<AbstractParty*>(this)) = other;
-    state_ = other.state_;
+    status_ = other.status_;
+    subType_ = other.subType_;
     parent_ = other.parent_;
     other.parent_ = nullptr;
 }
@@ -92,7 +95,8 @@ void Party::operator=(Party&& other)
 void Party::operator=(const Party& other)
 {
     *(static_cast<AbstractParty*>(this)) = other;
-    state_ = other.state_;
+    status_ = other.status_;
+    subType_ = other.subType_;
     parent_ = other.parent_;
 }
 
@@ -101,18 +105,20 @@ int Party::rowCount() const
    return rowCount_;
 }
 
-ElementType Party::elementType() const
+UI::ElementType Party::elementType() const
 {
-   return ElementType::Party;
+   return UI::ElementType::Party;
 }
 
-QVariant Party::data(PartyRoles role) const
+QVariant Party::data(UI::PartyRoles role) const
 {
-   if (PartyRoles::State == role) {
-      return { static_cast<int>(state_) };
-   } else if (PartyRoles::Type == role) {
+   if (UI::PartyRoles::Status == role) {
+      return { static_cast<int>(status_) };
+   } else if (UI::PartyRoles::Type == role) {
       return { parent_->data(role) };
-   } else if (PartyRoles::Name == role) {
+   } else if (UI::PartyRoles::SubType == role) {
+      return { static_cast<int>(subType_) };
+   } else if (UI::PartyRoles::Name == role) {
       return { QString::fromStdString(displayName_) };
    }
 
@@ -145,17 +151,27 @@ AbstractParty* Party::childItem(int row)
 int Party::childIndex(const AbstractParty* child) const
 {
    Q_UNUSED(child);
-    return 0;
+   return 0;
 }
 
-StateOfParty Party::getStateOfParty() const
+Chat::ClientStatus Party::getClientStatus() const
 {
-    return state_;
+   return status_;
 }
 
-void Party::setStateOfParty(StateOfParty state)
+void Party::setClientStatus(Chat::ClientStatus status)
 {
-    state_ = state;
+   status_ = status;
+}
+
+Chat::PartySubType Party::getPartySubType() const
+{
+   return subType_;
+}
+
+void Party::setPartySubType(Chat::PartySubType subType)
+{
+   subType_ = subType;
 }
 
 void Party::setParent(PartyContainer* parent)
@@ -166,7 +182,7 @@ void Party::setParent(PartyContainer* parent)
 
 // PartyContainer
 
-PartyContainer::PartyContainer(PartyType partyType, std::string displayName, QList<Party>&& children)
+PartyContainer::PartyContainer(Chat::PartyType partyType, std::string displayName, QList<Party>&& children)
    : AbstractParty(displayName)
    , partyType_(partyType)
    , children_(std::move(children))
@@ -190,16 +206,16 @@ int PartyContainer::rowCount() const
    return children_.size();
 }
 
-ElementType PartyContainer::elementType() const
+UI::ElementType PartyContainer::elementType() const
 {
-   return ElementType::Container;
+   return UI::ElementType::Container;
 }
 
-QVariant PartyContainer::data(PartyRoles role) const
+QVariant PartyContainer::data(UI::PartyRoles role) const
 {
-   if (PartyRoles::Type == role) {
+   if (UI::PartyRoles::Type == role) {
       return { static_cast<int>(partyType_) };
-   } else if (PartyRoles::Name == role) {
+   } else if (UI::PartyRoles::Name == role) {
       return { QString::fromStdString(displayName_) };
    }
 
@@ -271,12 +287,12 @@ void PartyContainer::checkRow(int row) const
 #endif
 }
 
-PartyType PartyContainer::getPartyType() const
+Chat::PartyType PartyContainer::getPartyType() const
 {
     return partyType_;
 }
 
-void PartyContainer::setPartyType(PartyType newPartyType)
+void PartyContainer::setPartyType(Chat::PartyType newPartyType)
 {
     partyType_ = newPartyType;
 }
@@ -287,42 +303,52 @@ namespace  {
    void testModel(ChatPartiesTreeModel *model) {
       ChatPartiesTreeModel::PartiesList resetList;
 
-      resetList.push_back({ PartyType::Public, {} });
+      resetList.push_back({ Chat::PartyType::GLOBAL, {} });
       auto &listPublic = resetList.back().second;
       for (int i = 0; i < 10; ++i) {
-          listPublic.push_back(Party(StateOfParty::Online, std::string("User%1") + std::to_string(i)));
+          listPublic.push_back(Party(std::string("User_") + std::to_string(i),
+                                     (i % 2) ? Chat::PartySubType::OTC : Chat::PartySubType::STANDARD,
+                                     (i % 2) ? Chat::ClientStatus::ONLINE : Chat::ClientStatus::OFFLINE));
       }
 
-      resetList.push_back({ PartyType::Private, {} });
+      resetList.push_back({ Chat::PartyType::PRIVATE_DIRECT_MESSAGE, {} });
       auto &listPrivate = resetList.back().second;
       for (int i = 10; i < 20; ++i) {
-          listPrivate.push_back(Party(StateOfParty::Online, std::string("User%1") + std::to_string(i)));
-      }
-
-      resetList.push_back({ PartyType::OTC, {} });
-      auto &listOTC = resetList.back().second;
-      for (int i = 20; i < 30; ++i) {
-          listOTC.push_back(Party(StateOfParty::Online, std::string("User%1") + std::to_string(i)));
+         listPrivate.push_back(Party(std::string("User_") + std::to_string(i),
+                                    (i % 2) ? Chat::PartySubType::OTC : Chat::PartySubType::STANDARD,
+                                    (i % 2) ? Chat::ClientStatus::ONLINE : Chat::ClientStatus::OFFLINE));
       }
 
       model->replaceAllParties(resetList);
 
-      model->addParty(PartyType::Public, Party(StateOfParty::Online, "User1"));
-      model->addParty(PartyType::Private, Party(StateOfParty::Offline, "User20"));
-      model->addParty(PartyType::Private, Party(StateOfParty::Offline, "User21"));
-      model->addParty(PartyType::Private, Party(StateOfParty::Offline, "User22"));
-      model->addParty(PartyType::Private, Party(StateOfParty::Online, "User23"));
-      model->addParty(PartyType::Private, Party(StateOfParty::Offline, "User24"));
-      model->addParty(PartyType::OTC, Party(StateOfParty::Online, "User3"));
+      model->addParty(Chat::PartyType::GLOBAL,
+                      Party("UserExtra1", Chat::PartySubType::STANDARD, Chat::ClientStatus::ONLINE));
+      model->addParty(Chat::PartyType::GLOBAL,
+                      Party("UserExtra2", Chat::PartySubType::STANDARD, Chat::ClientStatus::OFFLINE));
+      model->addParty(Chat::PartyType::GLOBAL,
+                      Party("UserExtra3", Chat::PartySubType::OTC, Chat::ClientStatus::ONLINE));
+      model->addParty(Chat::PartyType::GLOBAL,
+                      Party("UserExtra4", Chat::PartySubType::OTC, Chat::ClientStatus::OFFLINE));
+      model->addParty(Chat::PartyType::PRIVATE_DIRECT_MESSAGE,
+                      Party("UserExtra5", Chat::PartySubType::STANDARD, Chat::ClientStatus::ONLINE));
+      model->addParty(Chat::PartyType::PRIVATE_DIRECT_MESSAGE,
+                      Party("UserExtra6", Chat::PartySubType::STANDARD, Chat::ClientStatus::OFFLINE));
+      model->addParty(Chat::PartyType::PRIVATE_DIRECT_MESSAGE,
+                      Party("UserExtra7", Chat::PartySubType::OTC, Chat::ClientStatus::ONLINE));
+      model->addParty(Chat::PartyType::PRIVATE_DIRECT_MESSAGE,
+                      Party("UserExtra8", Chat::PartySubType::OTC, Chat::ClientStatus::OFFLINE));
 
-      model->removeParty("User1");
-      model->removeParty("User20");
-      model->removeParty("User21");
-      model->removeParty("User23");
+      model->removeParty("UserExtra1");
+      model->removeParty("UserExtra3");
+      model->removeParty("UserExtra6");
+      model->removeParty("UserExtra8");
 
-      model->changeParty(PartyType::Public, Party(StateOfParty::Online, "User22"));
-      model->changeParty(PartyType::OTC, Party(StateOfParty::Online, "User23"));
-      model->changeParty(PartyType::Private, Party(StateOfParty::Online, "User24"));
+      model->changeParty(Chat::PartyType::GLOBAL, Party("UserExtra2",
+                                                        Chat::PartySubType::STANDARD,
+                                                        Chat::ClientStatus::ONLINE));
+      model->changeParty(Chat::PartyType::PRIVATE_DIRECT_MESSAGE, Party("UserExtra4",
+                                                        Chat::PartySubType::OTC,
+                                                        Chat::ClientStatus::OFFLINE));
    }
 }
 
@@ -330,12 +356,11 @@ ChatPartiesTreeModel::ChatPartiesTreeModel(QObject* parent)
    : QAbstractItemModel(parent)
    , partyContainers_(new QList<PartyContainer>)
 {
-   partyContainers_->reserve(static_cast<int>(PartyType::Total));
+   partyContainers_->reserve(static_cast<int>(Chat::PartyType_ARRAYSIZE));
 
    // Order matters
-   partyContainers_->push_back(PartyContainer(PartyType::Private, "Private", {}));
-   partyContainers_->push_back(PartyContainer(PartyType::Public, "Public", {}));
-   partyContainers_->push_back(PartyContainer(PartyType::OTC, "OTC", {}));
+   partyContainers_->push_back(PartyContainer(Chat::PartyType::GLOBAL, "Global", {}));
+   partyContainers_->push_back(PartyContainer(Chat::PartyType::PRIVATE_DIRECT_MESSAGE, "Private", {}));
 
    testModel(this);
 }
@@ -353,7 +378,7 @@ QVariant ChatPartiesTreeModel::data(const QModelIndex& index, int role) const
    AbstractParty* item = static_cast<AbstractParty*>(index.internalPointer());
 
    if (role == Qt::DisplayRole)
-        return item->data(PartyRoles::Name);
+        return item->data(UI::PartyRoles::Name);
 
    return {};
 }
@@ -399,7 +424,7 @@ int ChatPartiesTreeModel::rowCount(const QModelIndex& parent) const
     }
 
    if (!parent.isValid()) {
-      return static_cast<int>(PartyType::Total);
+      return static_cast<int>(Chat::PartyType_ARRAYSIZE);
    }
 
    return static_cast<AbstractParty*>(parent.internalPointer())->rowCount();
@@ -414,14 +439,14 @@ int ChatPartiesTreeModel::columnCount(const QModelIndex& parent) const
 void ChatPartiesTreeModel::internalReplaceAllParties(ChatPartiesTreeModel::PartiesList&& newParties)
 {
     beginResetModel();
-    for (int iType = 0; iType < static_cast<int>(PartyType::Total); ++iType) {
+    for (int iType = 0; iType < static_cast<int>(Chat::PartyType_ARRAYSIZE); ++iType) {
         auto &container = partyContainers_.get()->operator[](static_cast<int>(iType));
         container.replaceAllParties({});
     }
 
     for (;newParties.size() > 0; newParties.pop_back()) {
         auto pairTypeList = newParties.back();
-        PartyType type = pairTypeList.first;
+        Chat::PartyType type = pairTypeList.first;
         QList<Party> list = std::move(pairTypeList.second);
 
         checkType(type);
@@ -433,7 +458,7 @@ void ChatPartiesTreeModel::internalReplaceAllParties(ChatPartiesTreeModel::Parti
     endResetModel();
 }
 
-void ChatPartiesTreeModel::internalAddParty(PartyType type, Party&& party)
+void ChatPartiesTreeModel::internalAddParty(Chat::PartyType type, Party&& party)
 {
     checkType(type);
     auto& container = partyContainers_.get()->operator[](static_cast<int>(type));
@@ -455,7 +480,7 @@ void ChatPartiesTreeModel::internalRemoveParty(const std::string& displayName)
     endRemoveRows();
 }
 
-void ChatPartiesTreeModel::internalChangeParty(PartyType type, Party&& newParty)
+void ChatPartiesTreeModel::internalChangeParty(Chat::PartyType type, Party&& newParty)
 {
     FindPartyResult result = findParty(newParty.getDisplayName());
     if (!result.isValid()) {
@@ -487,7 +512,7 @@ void ChatPartiesTreeModel::internalChangeParty(PartyType type, Party&& newParty)
     dataChanged(childIndex, childIndex);
 }
 
-void ChatPartiesTreeModel::addParty(PartyType type, const Party& party)
+void ChatPartiesTreeModel::addParty(Chat::PartyType type, const Party& party)
 {
     Party newParty = party;
     internalAddParty(type, std::move(newParty));
@@ -498,7 +523,7 @@ void ChatPartiesTreeModel::removeParty(const std::string& displayName)
     internalRemoveParty(displayName);
 }
 
-void ChatPartiesTreeModel::changeParty(PartyType type, const Party& party)
+void ChatPartiesTreeModel::changeParty(Chat::PartyType type, const Party& party)
 {
     Party newParty = party;
     internalChangeParty(type, std::move(newParty));
@@ -513,7 +538,7 @@ void ChatPartiesTreeModel::replaceAllParties(const PartiesList& parties)
 ChatPartiesTreeModel::FindPartyResult ChatPartiesTreeModel::findParty(const std::string& displayName) const
 {
     int iContainer = 0, iParty = 0;
-    for (iParty = 0; iContainer < static_cast<int>(PartyType::Total); ++iContainer) {
+    for (iParty = 0; iContainer < static_cast<int>(Chat::PartyType_ARRAYSIZE); ++iContainer) {
         PartyContainer& container = partyContainers_.get()->operator[](iContainer);
         for (iParty = 0; iParty < container.rowCount(); ++iParty) {
             if (static_cast<Party*>(container.childItem(iParty))->getDisplayName() == displayName) {
@@ -526,7 +551,7 @@ ChatPartiesTreeModel::FindPartyResult ChatPartiesTreeModel::findParty(const std:
         }
     }
 
-    if (iContainer >= static_cast<int>(PartyType::Total)) {
+    if (iContainer >= static_cast<int>(Chat::PartyType_ARRAYSIZE)) {
         return {};
     }
 
@@ -538,11 +563,11 @@ ChatPartiesTreeModel::FindPartyResult ChatPartiesTreeModel::findParty(const std:
     return { iContainer, iParty };
 }
 
-void ChatPartiesTreeModel::checkType(PartyType type) const
+void ChatPartiesTreeModel::checkType(Chat::PartyType type) const
 {
     Q_UNUSED(type);
 #ifndef QT_NO_DEBUG
-   Q_ASSERT(static_cast<int>(type) >= 0 && type < PartyType::Total);
+   Q_ASSERT(static_cast<int>(type) >= 0 && type < Chat::PartyType_ARRAYSIZE);
 #endif
 }
 

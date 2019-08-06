@@ -29,6 +29,7 @@ Q_DECLARE_METATYPE(std::vector<std::string>)
 #define USE_NEW_TREE_MODEL
 #ifdef USE_NEW_TREE_MODEL
 #include <QTreeView>
+#include <ChatClientUsersViewItemDelegate.h>
 #endif
 
 enum class OTCPages : int
@@ -276,6 +277,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setActiveChatLabel(ui_->labelActiveChat);
 #else
    ui_->treeViewUsers->setModel(new ChatPartiesTreeModel(this));
+   ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(this));
 #endif
    ui_->textEditMessages->setHandler(this);
    ui_->textEditMessages->setMessageReadHandler(client_);

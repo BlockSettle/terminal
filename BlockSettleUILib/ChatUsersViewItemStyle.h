@@ -3,6 +3,7 @@
 
 #include <QWidget>
 
+// #UI_ChatParty : Names should be updated bellow as far as termins have been changed
 class ChatUsersViewItemStyle : public QWidget
 {
    Q_OBJECT

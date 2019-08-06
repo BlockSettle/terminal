@@ -2,40 +2,25 @@
 #define CHATPARTYLISTMODEL_H
 
 #include <QAbstractItemModel>
-
-// External enum
-enum class StateOfParty
-{
-   Online = 0,
-   Offline,
-   // and maybe more but i need to think about it
-   PartyRequest,
-   PartyRejected
-};
-
-enum class PartyType
-{
-   Private = 0,	// Friends
-   Public,		// Global chat rooms
-   // and in future will be more ex.:
-   OTC,			// probably this will be showing as Global chat room
-
-   Total
-};
+#include "../BlocksettleNetworkingLib/ChatProtocol/Party.h"
+#include "chat.pb.h"
 
 // Internal enum
-enum class ElementType
-{
-   Container = 0,
-   Party
-};
+namespace UI {
+   enum class ElementType
+   {
+      Container = 0,
+      Party
+   };
 
-enum class PartyRoles
-{
-   State = Qt::UserRole + 1,
-   Type,
-   Name
-};
+   enum class PartyRoles
+   {
+      Status = Qt::UserRole + 1,
+      Type,
+      SubType,
+      Name
+   };
+}
 
 class AbstractParty
 {
@@ -52,8 +37,8 @@ public:
    bool operator==(const AbstractParty& other);
 
    virtual int rowCount() const = 0;
-   virtual ElementType elementType() const = 0;
-   virtual QVariant data(PartyRoles role) const = 0;
+   virtual UI::ElementType elementType() const = 0;
+   virtual QVariant data(UI::PartyRoles role) const = 0;
    virtual int row() const = 0;
    virtual AbstractParty* parentItem() = 0;
    virtual AbstractParty* childItem(int row) = 0;
@@ -64,6 +49,7 @@ public:
    // Properties
    const std::string& getDisplayName() const;
    void setDisplayName(const std::string& newName);
+
 protected:
    std::string          displayName_;
    constexpr static int columnCount_ = 1;
@@ -73,7 +59,7 @@ class PartyContainer;
 class Party : public AbstractParty
 {
 public:
-   Party(StateOfParty state, std::string displayName);
+   Party(std::string displayName, Chat::PartySubType subType, Chat::ClientStatus status);
    virtual ~Party() override;
 
    Party(const Party& other);
@@ -85,21 +71,25 @@ public:
    bool operator==(const Party& other);
 
    virtual int rowCount() const final;
-   virtual ElementType elementType() const final;
-   virtual QVariant data(PartyRoles role) const final;
+   virtual UI::ElementType elementType() const final;
+   virtual QVariant data(UI::PartyRoles role) const final;
    virtual int row() const final;
    virtual AbstractParty* parentItem() final;
    virtual AbstractParty* childItem(int row) final;
    virtual int childIndex(const AbstractParty* child) const final;
 
    // Properties
-   StateOfParty getStateOfParty() const;
-   void setStateOfParty(StateOfParty state);
+   Chat::ClientStatus getClientStatus() const;
+   void setClientStatus(Chat::ClientStatus status);
+
+   Chat::PartySubType getPartySubType() const;
+   void setPartySubType(Chat::PartySubType subType);
 
    void setParent(PartyContainer* parent);
 
 protected:
-   StateOfParty         state_;
+   Chat::PartySubType   subType_;
+   Chat::ClientStatus   status_;
    PartyContainer*      parent_;
    constexpr static int rowCount_ = 0;
 };
@@ -108,22 +98,22 @@ protected:
 class PartyContainer : public AbstractParty
 {
 public:
-   PartyContainer(PartyType partyType, std::string displayName, QList<Party> &&children);
+   PartyContainer(Chat::PartyType partyType, std::string displayName, QList<Party> &&children);
    virtual ~PartyContainer() override;
 
    bool operator==(const PartyContainer &other);
 
    virtual int rowCount() const final;
-   virtual ElementType elementType() const final;
-   virtual QVariant data(PartyRoles role) const final;
+   virtual UI::ElementType elementType() const final;
+   virtual QVariant data(UI::PartyRoles role) const final;
    virtual int row() const final;
    virtual AbstractParty* parentItem() final;
    virtual AbstractParty* childItem(int row) final;
    virtual int childIndex(const AbstractParty* child) const final;
 
    // Properties
-   PartyType getPartyType() const;
-   void setPartyType(PartyType newPartyType);
+   Chat::PartyType getPartyType() const;
+   void setPartyType(Chat::PartyType newPartyType);
 
    // children modificator
    void addParty(Party&& party);
@@ -134,12 +124,10 @@ public:
 private:
    void checkRow(int row) const;
 
-
 protected:
-   PartyType            partyType_;
-   QList<Party> children_;
+   Chat::PartyType   partyType_;
+   QList<Party>      children_;
 };
-
 
 //UserListView : public SomeViewQtWidget
 //{
@@ -163,7 +151,7 @@ public:
    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 
-   using PartiesList = QList<QPair<PartyType, QList<Party>>>;
+   using PartiesList = QList<QPair<Chat::PartyType, QList<Party>>>;
 private:
    struct FindPartyResult {
        constexpr static int iInvalid = -1;
@@ -174,20 +162,20 @@ private:
        bool isValid() const;
    };
    FindPartyResult findParty(const std::string& displayName) const;
-   void checkType(PartyType type) const;
+   void checkType(Chat::PartyType type) const;
 
    void internalReplaceAllParties(PartiesList&& newParties);
-   void internalAddParty(PartyType type, Party&& party);
+   void internalAddParty(Chat::PartyType type, Party&& party);
    void internalRemoveParty(const std::string& displayName);
-   void internalChangeParty(PartyType type, Party&& newParty);
+   void internalChangeParty(Chat::PartyType type, Party&& newParty);
 
 public slots:
    // All those slots should take correct data and transfrom it into ones for internal usage
    // for now for simplcity it's just the same interface in both cases(except slots do not work with rvalue)
    void replaceAllParties(const PartiesList& parties);
-   void addParty(PartyType type, const Party& party);
+   void addParty(Chat::PartyType type, const Party& party);
    void removeParty(const std::string& displayName);
-   void changeParty(PartyType type, const Party& party);
+   void changeParty(Chat::PartyType type, const Party& party);
 
 protected:
    QScopedPointer<QList<PartyContainer>> partyContainers_;
