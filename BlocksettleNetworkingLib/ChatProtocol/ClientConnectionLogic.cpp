@@ -86,7 +86,7 @@ namespace Chat
          return true;
       }
 
-      return nullptr;
+      return false;
    }
 
    void ClientConnectionLogic::handleWelcomeResponse(const google::protobuf::Message& msg)
@@ -112,7 +112,7 @@ namespace Chat
    {
       StatusChanged statusChanged;
       statusChanged.CopyFrom(msg);
-      
+
       emit userStatusChanged(statusChanged.user_name(), statusChanged.client_status());
    }
 

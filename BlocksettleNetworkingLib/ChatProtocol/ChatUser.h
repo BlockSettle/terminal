@@ -12,9 +12,6 @@
 
 namespace Chat
 {
-   class ChatUser;
-
-   using ChatUserPtr = std::shared_ptr<ChatUser>;
 
    class ChatUser : public QObject
    {
@@ -35,8 +32,10 @@ namespace Chat
       BinaryData publicKey_;
    };
 
-   Q_DECLARE_METATYPE(ChatUserPtr)
+   using ChatUserPtr = std::shared_ptr<ChatUser>;
 
 }
+
+Q_DECLARE_METATYPE(Chat::ChatUserPtr)
 
 #endif // ChatUser_h__
