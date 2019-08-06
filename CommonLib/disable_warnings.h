@@ -17,6 +17,8 @@
 #pragma warning(disable : 4101)  // unreferenced local variable
 #endif
 
+// It seems that gcc from 4.7 completly ignore GCC diagnostic pragmas
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
 #if defined(__GNUC__)
   #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2)
     #pragma GCC diagnostic push

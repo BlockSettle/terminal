@@ -14,7 +14,7 @@ namespace Chat
 {
 
    ClientConnectionLogic::ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
-      : clientPartyLogicPtr_(clientPartyLogicPtr), appSettings_(appSettings), loggerPtr_(loggerPtr), QObject(parent)
+      : QObject(parent), loggerPtr_(loggerPtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
    {
 
    }

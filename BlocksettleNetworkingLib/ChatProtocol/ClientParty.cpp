@@ -4,7 +4,7 @@ namespace Chat
 {
 
    ClientParty::ClientParty(const std::string& id, const PartyType& partyType, const PartySubType& partySubType, QObject* parent)
-      : Party(id, partyType, partySubType), QObject(parent)
+      : QObject(parent), Party(id, partyType, partySubType)
    {
       setClientStatus(ClientStatus::OFFLINE);
    }
