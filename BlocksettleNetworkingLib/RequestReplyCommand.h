@@ -3,6 +3,7 @@
 
 #include "DataConnectionListener.h"
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <memory>
 
@@ -45,7 +46,7 @@ public:
 
    bool ExecuteRequest(const std::string& host, const std::string& port
       , const std::string& data, bool executeOnConnect = false);
-   bool WaitForRequestedProcessed(uint64_t milliseconds);
+   bool WaitForRequestedProcessed(std::chrono::milliseconds period);
 
    bool GetExecutionResult() const { return result_; }
    void DropResult() { dropResult_ = true; }
@@ -72,7 +73,7 @@ private:
 
    bool replyReceived_{false};
    bool result_{false};
-   bool executeOnConnect_{false};
+   std::atomic_bool executeOnConnect_{false};
 
    std::shared_ptr<ManualResetEvent> requestCompleted_;
 };

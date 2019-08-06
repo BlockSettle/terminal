@@ -6,6 +6,7 @@
 #include "TransactionData.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "UiUtils.h"
 
 Q_DECLARE_METATYPE(AddressVerificationState)
 
@@ -80,12 +81,44 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }
 
+bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData() const
+{
+   bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+
+   // rfq details
+   QString qtyProd = UiUtils::XbtCurrency;
+
+   dialogData.setValue("Title", tr("Settlement Transaction"));
+
+   dialogData.setValue("Price", UiUtils::displayPriceXBT(price()));
+   dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
+
+   dialogData.setValue("Quantity", tr("%1 %2")
+                       .arg(UiUtils::displayAmountForProduct(amount(), qtyProd, bs::network::Asset::Type::SpotXBT))
+                       .arg(qtyProd));
+   dialogData.setValue("TotalValue", UiUtils::displayCurrencyAmount(amount() * price()));
+
+
+   // tx details
+   if (weSell()) {
+      dialogData.setValue("TotalSpent", UiUtils::displayQuantity(amount() + UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+   }
+   else {
+      dialogData.setValue("TotalReceived", UiUtils::displayQuantity(amount() - UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+   }
+
+   dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
+   dialogData.setValue("NetworkFee", UiUtils::displayQuantity(UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+
+   return dialogData;
+}
+
 bool DealerXBTSettlementContainer::startSigning()
 {
    if (weSell_) {
       try {
          const auto txReq = transactionData_->getSignTxRequest();
-         payinSignId_ = signingContainer_->signTXRequest(txReq, SignContainer::TXSignMode::Full);
+         payinSignId_ = signingContainer_->signSettlementTXRequest(txReq, toPasswordDialogData(), SignContainer::TXSignMode::Full);
       }
       catch (const std::exception &e) {
          logger_->error("[DealerXBTSettlementContainer::onAccepted] Failed to sign pay-in: {}", e.what());
@@ -120,10 +153,8 @@ bool DealerXBTSettlementContainer::startSigning()
          try {
             const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(input
                , receivingAddress, transactionData_->feePerByte(), armory_->topBlock());
-            const bs::sync::PasswordDialogData dlgData({ {tr("Settlement ID")
-               , QString::fromStdString(settlementId_.toHexStr())} });
             payoutSignId_ = signingContainer_->signSettlementPayoutTXRequest(txReq, { settlementId_
-               , reqAuthKey_, !weSell_ }, dlgData);
+               , reqAuthKey_, !weSell_ }, toPasswordDialogData());
          } catch (const std::exception &e) {
             logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());
             emit error(tr("Failed to sign pay-out"));
@@ -160,6 +191,8 @@ void DealerXBTSettlementContainer::activate()
    settlMonitor_->start([this](int confNo, const BinaryData &txHash) { onPayInDetected(confNo, txHash); }
       , [this](int, bs::PayoutSigner::Type signedBy) { onPayOutDetected(signedBy); }
       , [this](bs::PayoutSigner::Type) {});
+
+   startSigning();
 }
 
 void DealerXBTSettlementContainer::deactivate()

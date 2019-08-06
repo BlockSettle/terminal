@@ -85,8 +85,8 @@ private:
    std::unique_ptr<Ui::AddressDetailsWidget> ui_; // The main widget object.
    bs::Address    currentAddr_;
    bool           balanceLoaded_ = false;
-   uint64_t       totalSpent_ = 0;
-   uint64_t       totalReceived_ = 0;
+   std::atomic_uint64_t totalSpent_{};
+   std::atomic_uint64_t totalReceived_{};
    std::unordered_map<std::string, std::shared_ptr<bs::sync::PlainWallet>> dummyWallets_;
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
@@ -99,11 +99,14 @@ private:
    std::map<bs::Address, AddressVerificationState> authAddrStates_;
    std::unordered_set<std::string>     bsAuthAddrs_;
 
+   std::mutex mutex_;
+
    class AddrDetailsACT : public ArmoryCallbackTarget
    {
    public:
-      AddrDetailsACT(ArmoryConnection *armory, AddressDetailsWidget *parent)
-         : ArmoryCallbackTarget(armory), parent_(parent) {}
+      AddrDetailsACT(AddressDetailsWidget *parent)
+         : parent_(parent) {}
+      ~AddrDetailsACT() override { cleanup(); }
       void onRefresh(const std::vector<BinaryData> &ids, bool online) override {
          QMetaObject::invokeMethod(parent_, [this, ids, online] {
             parent_->OnRefresh(ids, online);

@@ -5,9 +5,9 @@
 
 #include <chrono>
 
-IdenticalTimersQueue::IdenticalTimersQueue(const std::shared_ptr<spdlog::logger>& logger, uint64_t intervalMS)
+IdenticalTimersQueue::IdenticalTimersQueue(const std::shared_ptr<spdlog::logger>& logger, std::chrono::milliseconds interval)
    : logger_{logger}
-   , intervalMS_{intervalMS}
+   , interval_{interval}
 {
    threadActive_ = true;
    waitingThread_ = std::thread(&IdenticalTimersQueue::waitingThreadRoutine, this);
@@ -24,9 +24,9 @@ std::shared_ptr<SingleShotTimer> IdenticalTimersQueue::CreateTimer(const std::fu
    return std::make_shared<SingleShotTimer>(logger_, expireCallback, debugName);
 }
 
-int64_t IdenticalTimersQueue::GetCurrentTime() const
+std::chrono::steady_clock::time_point IdenticalTimersQueue::GetCurrentTime() const
 {
-   return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+   return std::chrono::steady_clock::now();
 }
 
 bool IdenticalTimersQueue::ActivateTimer(const std::shared_ptr<SingleShotTimer>& timer)
@@ -37,7 +37,7 @@ bool IdenticalTimersQueue::ActivateTimer(const std::shared_ptr<SingleShotTimer>&
       return false;
    }
 
-   const auto expireTime = GetCurrentTime() + intervalMS_;
+   const auto expireTime = GetCurrentTime() + interval_;
    if (!timer->onActivateExternal(expireTime)) {
       logger_->debug("[IdenticalTimersQueue::ActivateTimer] failed to activate timer");
       return false;
@@ -90,7 +90,7 @@ void IdenticalTimersQueue::waitingThreadRoutine()
          const auto currentTime = GetCurrentTime();
 
          if (currentTime < currentTimer->GetExpireTime()) {
-            const auto waitTime = currentTimer->GetExpireTime() - currentTime;
+            const auto waitTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTimer->GetExpireTime() - currentTime);
             if (timersQueueChanged_.WaitForEvent(waitTime)) {
                // if activated at this point, this should mean stop
                if (!threadActive_) {

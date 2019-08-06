@@ -9,13 +9,15 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<SignContainer> &container, QStatusBar *parent)
-   : QObject(nullptr), ArmoryCallbackTarget(armory.get())
+   : QObject(nullptr)
    , statusBar_(parent)
    , iconSize_(16, 16)
    , armoryConnState_(ArmoryState::Offline)
    , walletsManager_(walletsManager)
    , assetManager_(assetManager)
 {
+   init(armory.get());
+
    for (int s : {16, 24, 32})
    {
       iconCeler_.addFile(QString(QLatin1String(":/ICON_BS_%1")).arg(s), QSize(s, s), QIcon::Normal);
@@ -107,6 +109,8 @@ StatusBarView::~StatusBarView() noexcept
    for (QWidget *separator : separators_) {
       separator->deleteLater();
    }
+
+   cleanup();
 }
 
 void StatusBarView::onStateChanged(ArmoryState state)

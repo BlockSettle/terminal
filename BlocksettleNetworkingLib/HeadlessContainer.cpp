@@ -240,7 +240,7 @@ void HeadlessContainer::ProcessCreateHDLeafResponse(unsigned int id, const std::
    headless::CreateHDLeafResponse response;
 
    auto it = cbCCreateLeafMap_.find(id);
-   std::function<void(bs::error::ErrorCode result)> cb;
+   WalletSignerContainer::CreateHDLeafCb cb = nullptr;
 
    if (it != cbCCreateLeafMap_.end()) {
       cb = it->second;
@@ -253,7 +253,7 @@ void HeadlessContainer::ProcessCreateHDLeafResponse(unsigned int id, const std::
       logger_->error("[HeadlessContainer::ProcessCreateHDLeafResponse] Failed to parse CreateHDWallet reply");
 
       if (cb) {
-         cb(bs::error::ErrorCode::FailedToParse);
+         cb(bs::error::ErrorCode::FailedToParse, {});
       }
 
       return;
@@ -270,7 +270,7 @@ void HeadlessContainer::ProcessCreateHDLeafResponse(unsigned int id, const std::
    }
 
    if (cb) {
-      cb(result);
+      cb(result, response.leaf().walletid());
    }
 }
 
@@ -543,7 +543,7 @@ bs::signer::RequestId HeadlessContainer::syncCCNames(const std::vector<std::stri
 
 bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
    , const std::vector<bs::wallet::PasswordData> &pwdData, bs::sync::PasswordDialogData dialogData
-   , const std::function<void(bs::error::ErrorCode result)> &cb)
+   , const CreateHDLeafCb &cb)
 {
    if (rootWalletId.empty() || (path.length() != 3)) {
       logger_->error("[HeadlessContainer::createHDLeaf] Invalid input data for HD wallet creation");
@@ -1350,6 +1350,7 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       break;
 
    case headless::SignSettlementTxRequestType:
+   case headless::SignSettlementPartialTxType:
       ProcessSettlementSignTXResponse(packet.id(), packet.data());
       break;
 

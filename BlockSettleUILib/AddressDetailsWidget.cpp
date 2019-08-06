@@ -39,7 +39,8 @@ void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    logger_ = inLogger;
    ccResolver_ = resolver;
 
-   act_ = make_unique<AddrDetailsACT>(armory_.get(), this);
+   act_ = make_unique<AddrDetailsACT>(this);
+   act_->init(armory_.get());
 }
 
 void AddressDetailsWidget::setBSAuthAddrs(const std::unordered_set<std::string> &bsAuthAddrs)
@@ -65,7 +66,10 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
    // In case we've been here before, clear all the text.
    clear();
 
-   currentAddr_ = inAddrVal;
+   {
+      std::lock_guard<std::mutex> lock(mutex_);
+      currentAddr_ = inAddrVal;
+   }
 
    // Armory can't directly take an address and return all the required data.
    // Work around this by creating a dummy wallet, adding the explorer address,
@@ -114,8 +118,8 @@ void AddressDetailsWidget::updateFields()
          ui_->addressId->setText(QString::fromStdString(currentAddr_.display()));
       }
       if (balanceLoaded_) {
-         ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_));
-         ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_));
+         ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_.load()));
+         ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_.load()));
          ui_->balance->setText(UiUtils::displayAmount(totalReceived_ - totalSpent_));
       }
    }
@@ -153,7 +157,14 @@ void AddressDetailsWidget::searchForAuth()
    if (!addrVerify_) {
       return;
    }
-   if (addrVerify_->StartAddressVerification(std::make_shared<AuthAddress>(currentAddr_))) {
+
+   std::shared_ptr<AuthAddress> currAddr;
+   {
+      std::lock_guard<std::mutex> lock(mutex_);
+      currAddr = std::make_shared<AuthAddress>(currentAddr_);
+   }
+
+   if (addrVerify_->StartAddressVerification(currAddr)) {
       addrVerify_->RegisterAddresses();
    }
 }

@@ -6,12 +6,12 @@ ManualResetEvent::ManualResetEvent()
 : eventFlag_(false)
 {}
 
-bool ManualResetEvent::WaitForEvent(uint64_t milliseconds)
+bool ManualResetEvent::WaitForEvent(std::chrono::milliseconds period)
 {
    std::unique_lock<std::mutex>  locker(flagMutex_);
-   return event_.wait_for(locker, std::chrono::milliseconds{milliseconds},
-      [this] () { return eventFlag_.load(); }
-      );
+   return event_.wait_for(locker, period, [this] () {
+      return eventFlag_.load();
+   });
 }
 
 void ManualResetEvent::WaitForEvent()

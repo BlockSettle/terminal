@@ -58,6 +58,10 @@ std::shared_ptr<bs::sync::Wallet> SelectWalletDialog::getSelectedWallet() const
 
 void SelectWalletDialog::onDoubleClicked(const QModelIndex& index)
 {
+   if (!selectedWallet_) {
+      return;
+   }
+
    selectedWallet_ = walletsModel_->getWallet(index);
    QDialog::accept();
 }

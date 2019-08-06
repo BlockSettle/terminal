@@ -17,7 +17,7 @@ public:
    ManualResetEvent(ManualResetEvent&&) = delete;
    ManualResetEvent& operator = (ManualResetEvent&&) = delete;
 
-   bool WaitForEvent(uint64_t milliseconds);
+   bool WaitForEvent(std::chrono::milliseconds period);
    void WaitForEvent();
 
    void SetEvent();

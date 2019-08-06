@@ -24,13 +24,13 @@ public:
    SingleShotTimer(SingleShotTimer&&) = delete;
    SingleShotTimer& operator = (SingleShotTimer&&) = delete;
 
-   uint64_t GetExpireTime() const;
+   std::chrono::steady_clock::time_point GetExpireTime() const;
    bool     IsActive() const;
    std::string GetTimerName() const;
 
 private:
    // should be acessed by IdenticalTimersQueue only
-   bool onActivateExternal(uint64_t expireTime);
+   bool onActivateExternal(std::chrono::steady_clock::time_point expireTime);
    void onDeactivateExternal();
    bool onExpireExternal();
 
@@ -41,7 +41,7 @@ private:
 
    std::atomic<bool>       isActive_;
 
-   uint64_t                expireTimestamp_ = 0;
+   std::chrono::steady_clock::time_point expireTimestamp_{};
 };
 
 #endif // __SINGLE_SHOT_TIMER_H__

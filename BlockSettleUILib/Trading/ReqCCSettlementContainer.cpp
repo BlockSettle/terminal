@@ -8,6 +8,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
+#include "UiUtils.h"
 
 static const unsigned int kWaitTimeoutInSec = 30;
 
@@ -51,6 +52,32 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
 ReqCCSettlementContainer::~ReqCCSettlementContainer()
 {
    bs::UtxoReservation::delAdapter(utxoAdapter_);
+}
+
+bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() const
+{
+   bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+
+   if (side() == bs::network::Side::Sell) {
+      dialogData.setValue("Title", tr("Settlement Delivery"));
+   }
+   else {
+      dialogData.setValue("Title", tr("Settlement Payment"));
+   }
+
+   // rfq details
+   dialogData.setValue("Price", UiUtils::displayPriceCC(price()));
+
+   dialogData.setValue("Quantity", tr("%1 %2")
+                 .arg(UiUtils::displayCCAmount(quantity()))
+                 .arg(QString::fromStdString(product())));
+   dialogData.setValue("TotalValue", UiUtils::displayAmount(quantity() * price()));
+
+   // settlement details
+   dialogData.setValue("Payment", tr("Verifying"));
+   dialogData.setValue("GenesisAddress", tr("Verifying"));
+
+   return dialogData;
 }
 
 void ReqCCSettlementContainer::activate()
@@ -114,6 +141,8 @@ void ReqCCSettlementContainer::activate()
       userKeyOk_ = false;
       emit error(tr("Failed to create unsigned CC transaction"));
    }
+
+   startSigning();
 }
 
 void ReqCCSettlementContainer::deactivate()
