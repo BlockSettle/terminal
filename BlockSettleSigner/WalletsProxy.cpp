@@ -241,18 +241,24 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
             }
             auto lock = newWallet->lockForEncryption(passwordData->password);
             for (const auto &leaf : group->getLeaves()) {
-               auto newLeaf = newGroup->createLeaf(leaf->index());
-               if (!newLeaf) {   // can happen for un-exportable leaves (e.g. settlement)
-                  continue;
+               try {
+                  auto newLeaf = newGroup->createLeaf(leaf->index());
+                  if (!newLeaf) {
+                     throw std::runtime_error("uncreatable");
+                  }
+                  for (const auto &addr : leaf->getExtAddressList()) {
+                     newLeaf->getNewExtAddress(addr.getType());
+                  }
+                  for (const auto &addr : leaf->getIntAddressList()) {
+                     newLeaf->getNewIntAddress(addr.getType());
+                  }
+                  logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
+                     , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
                }
-               for (const auto &addr : leaf->getExtAddressList()) {
-                  newLeaf->getNewExtAddress(addr.getType());
+               catch (const std::exception &e) {
+                  logger_->warn("[WalletsProxy::exportWatchingOnly] WO leaf {} ({}/{}) not created: {}"
+                     , leaf->walletId(), group->index(), leaf->index(), e.what());
                }
-               for (const auto &addr : leaf->getIntAddressList()) {
-                  newLeaf->getNewIntAddress(addr.getType());
-               }
-               logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
-                  , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
             }
          }
 
