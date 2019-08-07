@@ -57,8 +57,22 @@ public:
 
    void setAuthorized(bool authorized);
 
+private:
+   void showShieldLoginRequiered();
+   void showShieldReservedTraidingParticipant();
+   void showEditableRFQPage();
+   void prepareAndPopShield(const QString &labelText);
+
+   bool checkConditions(const QString& productGroup);
+
 public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);
+   void onCurrencySelected(const QString& productGroup, const QString& currencyPair
+                           , const QString& bidPrice, const QString& offerPrice);
+   void onBuyClicked(const QString& productGroup, const QString& currencyPair
+                           , const QString& bidPrice, const QString& offerPrice);
+   void onSellClicked(const QString& productGroup, const QString& currencyPair
+                           , const QString& bidPrice, const QString& offerPrice);
 
 private slots:
    void onConnectedToCeler();

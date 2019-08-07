@@ -16,11 +16,40 @@
 #include "ui_RFQRequestWidget.h"
 
 
-enum class RFQPages : int
-{
-   LoginRequierdPage = 0,
-   EditableRFQPage
-};
+namespace  {
+   const QString shieldLogin = QLatin1String("Login to submit RFQs");
+   const QString shieldTraidingParticipantOnly = QLatin1String("Reserved for Trading Participants");
+
+   enum class RFQPages : int
+   {
+      ShieldPage = 0,
+      EditableRFQPage
+   };
+
+   enum class ProductGroup
+   {
+      PM = 0,
+      XBT,
+      FX,
+      NONE
+   };
+
+   ProductGroup getProductGroup(const QString &productGroup)
+   {
+      if (productGroup == QLatin1String("Private Market")) {
+         return ProductGroup::PM;
+      } else if (productGroup == QLatin1String("Spot XBT")) {
+         return ProductGroup::XBT;
+      } else if (productGroup == QLatin1String("Spot FX")) {
+         return ProductGroup::FX;
+      }
+#ifndef QT_NO_DEBUG
+      // You need to add logic for new Product group type
+      Q_ASSERT(false);
+#endif
+      return ProductGroup::NONE;
+   }
+}
 
 RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    : TabWithShortcut(parent)
@@ -96,6 +125,30 @@ void RFQRequestWidget::setAuthorized(bool authorized)
    ui_->widgetMarketData->setAuthorized(authorized);
 }
 
+void RFQRequestWidget::showShieldLoginRequiered()
+{
+   prepareAndPopShield(shieldLogin);
+}
+
+void RFQRequestWidget::showShieldReservedTraidingParticipant()
+{
+   prepareAndPopShield(shieldTraidingParticipantOnly);
+}
+
+void RFQRequestWidget::showEditableRFQPage()
+{
+   ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::EditableRFQPage));
+   ui_->pageRFQTicket->enablePanel();
+}
+
+void RFQRequestWidget::prepareAndPopShield(const QString& labelText)
+{
+   ui_->shieldButton->hide();
+   ui_->shieldText->setText(labelText);
+   ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::ShieldPage));
+   ui_->pageRFQTicket->disablePanel();
+}
+
 void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings)
 {
@@ -129,10 +182,10 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(ordersModel);
    ui_->treeViewOrders->initWithModel(ordersModel);
-   connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, [this](const std::string &quoteId) {
+   connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, this, [](const std::string &quoteId) {
       NotificationCenter::notify(bs::ui::NotifyType::CelerOrder, {true, QString::fromStdString(quoteId)});
    });
-   connect(quoteProvider_.get(), &QuoteProvider::orderFailed, [this](const std::string &quoteId, const std::string &reason) {
+   connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this, [](const std::string &quoteId, const std::string &reason) {
       NotificationCenter::notify(bs::ui::NotifyType::CelerOrder
          , { false, QString::fromStdString(quoteId), QString::fromStdString(reason) });
    });
@@ -145,23 +198,20 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
 
 void RFQRequestWidget::onConnectedToCeler()
 {
-   connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityId);
-   connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
-   connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
+   connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, this, &RFQRequestWidget::onCurrencySelected);
+   connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, this, &RFQRequestWidget::onBuyClicked);
+   connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, this, &RFQRequestWidget::onSellClicked);
 
-   ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::EditableRFQPage));
-   ui_->pageRFQTicket->enablePanel();
+   showEditableRFQPage();
 }
 
 void RFQRequestWidget::onDisconnectedFromCeler()
-{
-   disconnect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityId);
-   disconnect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
-   disconnect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
+{  
+   disconnect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, this, &RFQRequestWidget::onCurrencySelected);
+   disconnect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, this, &RFQRequestWidget::onBuyClicked);
+   disconnect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, this, &RFQRequestWidget::onSellClicked);
 
-
-   ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::LoginRequierdPage));
-   ui_->pageRFQTicket->disablePanel();
+   showShieldLoginRequiered();
 }
 
 void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
@@ -177,4 +227,65 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
    dialog->show();
 
    ui_->pageRFQTicket->resetTicket();
+}
+
+bool RFQRequestWidget::checkConditions(const QString &productGroup)
+{
+   using UserType = CelerClient::CelerUserType;
+   const UserType userType = celerClient_->celerUserType();
+
+   const ProductGroup group = getProductGroup(productGroup);
+
+   switch (userType) {
+   case UserType::Market: {
+      if (group == ProductGroup::XBT || group == ProductGroup::FX) {
+         showShieldReservedTraidingParticipant();
+         return false;
+      } if (ui_->stackedWidgetRFQ->currentIndex() != static_cast<int>(RFQPages::EditableRFQPage)) {
+         showEditableRFQPage();
+      }
+      break;
+   }
+   case UserType::Dealing: {
+      break;
+   }
+   case UserType::Trading: {
+      break;
+   }
+   default: {
+      break;
+   }
+   }
+
+   return true;
+}
+
+void RFQRequestWidget::onCurrencySelected(const QString &productGroup, const QString &currencyPair,
+                                          const QString &bidPrice, const QString &offerPrice)
+{
+   if (!checkConditions(productGroup))
+      return;
+
+   ui_->pageRFQTicket->setSecurityId(productGroup, currencyPair,
+                                     bidPrice, offerPrice);
+}
+
+void RFQRequestWidget::onBuyClicked(const QString &productGroup, const QString &currencyPair,
+                                    const QString &bidPrice, const QString &offerPrice)
+{
+   if (!checkConditions(productGroup))
+      return;
+
+   ui_->pageRFQTicket->setSecuritySell(productGroup, currencyPair,
+                                     bidPrice, offerPrice);
+}
+
+void RFQRequestWidget::onSellClicked(const QString &productGroup, const QString &currencyPair,
+                                     const QString &bidPrice, const QString &offerPrice)
+{
+   if (!checkConditions(productGroup))
+      return;
+
+   ui_->pageRFQTicket->setSecurityBuy(productGroup, currencyPair,
+                                     bidPrice, offerPrice);
 }
