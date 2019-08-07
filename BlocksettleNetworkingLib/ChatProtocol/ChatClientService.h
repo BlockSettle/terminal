@@ -22,13 +22,13 @@ namespace Chat
 
    signals:
       ////////// PROXY SIGNALS //////////
-      void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
+      void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
 
       ////////// RETURN SIGNALS //////////
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
-      void chatClientError(const ChatClientLogicError& errorCode);
+      void chatClientError(const Chat::ChatClientLogicError& errorCode);
       void clientLoggedOutFromServer();
    };
 
@@ -39,6 +39,6 @@ namespace Chat
 Q_DECLARE_METATYPE(Chat::ConnectionManagerPtr)
 Q_DECLARE_METATYPE(Chat::ApplicationSettingsPtr)
 Q_DECLARE_METATYPE(Chat::LoggerPtr)
-Q_DECLARE_METATYPE(ZmqBipNewKeyCb);
+Q_DECLARE_METATYPE(ZmqBipNewKeyCb)
 
 #endif // ChatClientService_h__

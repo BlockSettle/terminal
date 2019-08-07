@@ -59,7 +59,7 @@ namespace Chat
       return nullptr;
    }
 
-   void PartyModel::handleLocalErrors(const PartyModelError& errorCode, const std::string& id)
+   void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& id)
    {
       loggerPtr_->debug("[PartyModel::handleLocalErrors] Error: {}, what: {}", (int)errorCode, id);
    }

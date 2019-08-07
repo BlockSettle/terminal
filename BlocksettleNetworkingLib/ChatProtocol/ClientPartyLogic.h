@@ -33,14 +33,14 @@ namespace Chat
       void handlePartiesFromWelcomePacket(const google::protobuf::Message& msg);
 
    signals:
-      void error(const ClientPartyLogicError& errorCode, const std::string& what);
+      void error(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
       void partyModelChanged();
 
    public slots:
       void onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
 
    private slots:
-      void handleLocalErrors(const ClientPartyLogicError& errorCode, const std::string& what);
+      void handleLocalErrors(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
 
    private:
       LoggerPtr loggerPtr_;

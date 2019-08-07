@@ -39,12 +39,12 @@ namespace Chat
       void clearModel();
 
    signals:
-      void partyInserted(const PartyPtr& partyPtr);
-      void partyRemoved(const PartyPtr& partyPtr);
-      void error(const PartyModelError& errorCode, const std::string& id = "");
+      void partyInserted(const Chat::PartyPtr& partyPtr);
+      void partyRemoved(const Chat::PartyPtr& partyPtr);
+      void error(const Chat::PartyModelError& errorCode, const std::string& id = "");
 
    private slots:
-      void handleLocalErrors(const PartyModelError& errorCode, const std::string& id = "");
+      void handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& id = "");
 
    protected:
       PartyMap partyMap_;

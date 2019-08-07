@@ -55,7 +55,7 @@ namespace Chat
       ClientPartyLogicPtr clientPartyLogicPtr() const { return clientPartyLogicPtr_; }
 
    public slots:
-      void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
+      void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
 
@@ -66,7 +66,7 @@ namespace Chat
       void error(DataConnectionListener::DataConnectionError);
 
       void finished();
-      void chatClientError(const ChatClientLogicError& errorCode);
+      void chatClientError(const Chat::ChatClientLogicError& errorCode);
 
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
       void clientLoggedOutFromServer();
