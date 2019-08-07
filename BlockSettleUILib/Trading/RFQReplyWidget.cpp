@@ -206,17 +206,15 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
                , sr.recipientAddress, sr.txData, signingContainer_, armory_, ui_->pageRFQReply->autoSign());
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
+            connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
-            if (ui_->pageRFQReply->autoSign()) {
-               connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
-               ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
-               settlContainer->activate();
-            } else {
+            ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
+
 //               auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
 //                  sr.requestorAuthAddress, walletsManager_, signingContainer_
 //                  , celerClient_, appSettings_, connectionManager_, this);
 //               showSettlementDialog(settlDlg);
-            }
+            settlContainer->activate();
          } catch (const std::exception &e) {
             BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
                , tr("Failed to start dealer's CC settlement")
@@ -233,17 +231,16 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_, order, walletsManager_
                   , quoteProvider_, iTransactionData->second, authAddressManager_->GetBSAddresses(), signingContainer_
                   , armory_);
+               connect(settlContainer.get(), &bs::SettlementContainer::readyToActivate, this, &RFQReplyWidget::onReadyToActivate);
+               connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
-               if (ui_->pageRFQReply->autoSign()) {
-                  connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
-                  connect(settlContainer.get(), &bs::SettlementContainer::readyToActivate, this, &RFQReplyWidget::onReadyToActivate);
-                  ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
-               } else {
+               ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
+
 //                  auto *dsd = new DealerXBTSettlementDialog(logger_, settlContainer, assetManager_,
 //                     walletsManager_, signingContainer_, celerClient_, appSettings_, connectionManager_, this);
 //                  showSettlementDialog(dsd);
-               }
             } catch (const std::exception &e) {
+               logger_->error("[{}] settlement failed: {}", __func__, e.what());
                BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
                   , tr("Failed to start dealer's settlement")
                   , QString::fromLatin1(e.what())

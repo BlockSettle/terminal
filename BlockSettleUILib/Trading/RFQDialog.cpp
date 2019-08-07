@@ -109,6 +109,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
       else {
          curContainer_ = newCCcontainer();
       }
+      curContainer_->activate();
    }
 }
 
