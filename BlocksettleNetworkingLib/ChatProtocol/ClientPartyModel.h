@@ -19,7 +19,8 @@ namespace Chat
    enum class ClientPartyModelError
    {
       DynamicPointerCast,
-      UserNameNotFound
+      UserNameNotFound,
+      QObjectCast
    };
 
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
@@ -31,12 +32,20 @@ namespace Chat
       ClientPartyModel(const LoggerPtr& loggerPtr, QObject* parent = nullptr);
       IdPartyList getIdPartyList() const;
       ClientPartyPtr getPartyByUserName(const std::string& userName);
+      ClientPartyPtr getClientPartyById(const std::string& id);
 
    signals:
       void error(const ClientPartyModelError& errorCode, const std::string& what = "");
+      void clientPartyStatusChanged(const ClientPartyPtr& clientPartyPtr);
 
    private slots:
       void handleLocalErrors(const ClientPartyModelError& errorCode, const std::string& what);
+      void handlePartyInserted(const PartyPtr& partyPtr);
+      void handlePartyRemoved(const PartyPtr& partyPtr);
+      void handlePartyStatusChanged(const ClientStatus& clientStatus);
+
+   private:
+      ClientPartyPtr castToClientPartyPtr(const PartyPtr& partyPtr);
    };
 
    using ClientPartyModelPtr = std::shared_ptr<ClientPartyModel>;
