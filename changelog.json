@@ -1,7 +1,28 @@
 {
-   "latest_version": "0.19.9",
-   "release_date": "02 Aug 2019",
+   "latest_version": "0.19.10",
+   "release_date": "07 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.19.10",
+         "previous_version": "0.19.9",
+         "release_date": "07 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Auth address validation code"
+         ],
+         "bug_fixes": [
+            "Fix data races reported by TSAN at signer GUI shutdown",
+            "Fix CC leaf creation",
+            "SpotXBT settlement fixes",
+            "Fix RFQ positioning on Windows",
+            "Fix crash when click on non existing wallet",
+            "Notify user if offline TX is for unknown wallet and fix crash",
+            "fix CC leaf creation ( BST-2100 )",
+            "Fix WO export"
+         ],
+         "revision": "9c440be2",
+         "common_revision": "94063e84"
+      },
       {
          "version_string": "0.19.9",
          "previous_version": "0.19.8",
