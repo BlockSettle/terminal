@@ -34,9 +34,10 @@ namespace Chat
    enum class ChatClientLogicError
    {
       NoError,
-      AlreadyInitialized,
+      ConnectionAlreadyInitialized,
       ConnectionAlreadyUsed,
-      ZmqDataConnectionFailed
+      ZmqDataConnectionFailed,
+      ClientPartyNotExist
    };
 
    class ChatClientLogic : public QObject, public DataConnectionListener
@@ -58,7 +59,7 @@ namespace Chat
       void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
-      void InitParty(const std::string& partyId);
+      void SendPartyMessage(const std::string& partyId, const std::string& data);
 
    signals:
       void dataReceived(const std::string&);
@@ -67,7 +68,7 @@ namespace Chat
       void error(DataConnectionListener::DataConnectionError);
 
       void finished();
-      void chatClientError(const Chat::ChatClientLogicError& errorCode);
+      void chatClientError(const Chat::ChatClientLogicError& errorCode, const std::string& what = "");
 
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
       void clientLoggedOutFromServer();
@@ -76,6 +77,7 @@ namespace Chat
    private slots:
       void sendRequestPacket(const google::protobuf::Message& message);
       void onCloseConnection();
+      void handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what);
 
    private:
       void setClientPartyLogicPtr(ClientPartyLogicPtr val) { clientPartyLogicPtr_ = val; }

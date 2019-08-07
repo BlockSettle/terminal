@@ -1,3 +1,5 @@
+#ifndef DatabaseExecutor_h__
+#define DatabaseExecutor_h__
 
 #include <memory>
 #include <QObject>
@@ -29,3 +31,5 @@ namespace Chat
       LoggerPtr loggerPtr_;
    };
 }
+
+#endif // DatabaseExecutor_h__

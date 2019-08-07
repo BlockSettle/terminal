@@ -61,4 +61,20 @@ namespace Chat
       loggerPtr_->debug("[ClientPartyLogic::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
    }
 
+   void ClientPartyLogic::prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
+   {
+      if (PartyType::GLOBAL == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
+      {
+         prepareAndSendGlobalMessage(clientPartyPtr, data);
+         return;
+      }
+
+      emit error(ClientPartyLogicError::SendingDataToUnhandledParty, clientPartyPtr->id());
+   }
+
+   void ClientPartyLogic::prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
+   {
+
+   }
+
 }

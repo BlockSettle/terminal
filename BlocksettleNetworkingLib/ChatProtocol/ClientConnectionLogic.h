@@ -30,6 +30,7 @@ namespace Chat
 
       Chat::ChatUserPtr currentUserPtr() const { return currentUserPtr_; }
       void setCurrentUserPtr(Chat::ChatUserPtr val) { currentUserPtr_ = val; }
+      void SendPartyMessage(const std::string& partyId, const std::string& data);
 
    public slots:
       void onDataReceived(const std::string&);

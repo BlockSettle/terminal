@@ -116,4 +116,9 @@ namespace Chat
       emit userStatusChanged(statusChanged.user_name(), statusChanged.client_status());
    }
 
+   void ClientConnectionLogic::SendPartyMessage(const std::string& partyId, const std::string& data)
+   {
+
+   }
+
 }

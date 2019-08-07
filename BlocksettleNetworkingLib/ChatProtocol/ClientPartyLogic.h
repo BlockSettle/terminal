@@ -16,7 +16,9 @@ namespace Chat
 {
    enum class ClientPartyLogicError
    {
-      NonexistentClientStatusChanged
+      NonexistentClientStatusChanged,
+      PartyNotExist,
+      SendingDataToUnhandledParty
    };
 
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
@@ -31,6 +33,8 @@ namespace Chat
       void setClientPartyModelPtr(Chat::ClientPartyModelPtr val) { clientPartyModelPtr_ = val; }
 
       void handlePartiesFromWelcomePacket(const google::protobuf::Message& msg);
+      void prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
+      void prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
 
    signals:
       void error(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
@@ -43,6 +47,7 @@ namespace Chat
       void handleLocalErrors(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
 
    private:
+      void createNewParty();
       LoggerPtr loggerPtr_;
       ClientPartyModelPtr clientPartyModelPtr_;
    };

@@ -25,7 +25,7 @@ namespace Chat
       void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
-      void InitParty(const std::string& partyId);
+      void SendPartyMessage(const std::string& partyId, const std::string& data);
 
       ////////// RETURN SIGNALS //////////
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);

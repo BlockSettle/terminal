@@ -21,6 +21,8 @@ namespace Chat
       qRegisterMetaType<DataConnectionListener::DataConnectionError>();
       qRegisterMetaType<Chat::ChatClientLogicError>();
       qRegisterMetaType<Chat::ClientPartyLogicPtr>();
+
+      connect(this, &ChatClientLogic::chatClientError, this, &ChatClientLogic::handleLocalErrors);
    }
 
    ChatClientLogic::~ChatClientLogic()
@@ -34,7 +36,7 @@ namespace Chat
 
       if (connectionManagerPtr_) {
          // already initialized
-         emit chatClientError(ChatClientLogicError::AlreadyInitialized);
+         emit chatClientError(ChatClientLogicError::ConnectionAlreadyInitialized);
          return;
       }
 
@@ -160,9 +162,22 @@ namespace Chat
       emit clientLoggedOutFromServer();
    }
 
-   void ChatClientLogic::InitParty(const std::string& partyId)
+   void ChatClientLogic::SendPartyMessage(const std::string& partyId, const std::string& data)
    {
+      ClientPartyPtr clientPartyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
 
+      if (nullptr == clientPartyPtr)
+      {
+         emit chatClientError(ChatClientLogicError::ClientPartyNotExist, partyId);
+         return;
+      }
+     
+      clientPartyLogicPtr_->prepareAndSendMessage(clientPartyPtr, data);
+   }
+
+   void ChatClientLogic::handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what)
+   {
+      loggerPtr_->debug("[ChatClientLogic::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
    }
 
 }
