@@ -17,6 +17,7 @@
 #include "BTCNumericTypes.h"
 #include "CoreWallet.h"
 #include "SyncWallet.h"
+#include "WalletSignerContainer.h"
 
 namespace spdlog {
    class logger;
@@ -121,6 +122,7 @@ namespace bs {
          void CCLeafCreateFailed(const std::string& ccName, bs::error::ErrorCode result);
 
          void AuthLeafCreated();
+         void AuthLeafNotCreated();
 
          void walletChanged(const std::string &walletId);
          void walletDeleted(const std::string &walletId);
@@ -168,6 +170,7 @@ namespace bs {
 
          bool empty() const { return wallets_.empty(); }
 
+         void syncWallet(const bs::sync::WalletInfo &, const std::function<void()> &cbDone);
          void addWallet(const WalletPtr &, bool isHDLeaf = false);
          void addWallet(const HDWalletPtr &);
          void saveWallet(const WalletPtr &);
@@ -191,8 +194,8 @@ namespace bs {
          void addToMaintQueue(const MaintQueueCb &);
          void maintenanceThreadFunc();
 
-         void ProcessCreatedCCLeaf(const std::string &cc, bs::error::ErrorCode result);
-         void ProcessAuthLeafCreateResult(bs::error::ErrorCode result);
+         void ProcessCreatedCCLeaf(const std::string &cc, bs::error::ErrorCode result
+            , const std::string &walletId);
 
       private:
          std::shared_ptr<WalletSignerContainer>         signContainer_;

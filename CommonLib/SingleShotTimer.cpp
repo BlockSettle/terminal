@@ -15,7 +15,7 @@ SingleShotTimer::~SingleShotTimer() noexcept
    isActive_ = false;
 }
 
-bool SingleShotTimer::onActivateExternal(uint64_t expireTime)
+bool SingleShotTimer::onActivateExternal(std::chrono::steady_clock::time_point expireTime)
 {
    if (isActive_) {
       logger_->error("[SingleShotTimer::onActivateExternal] {} timer already active"
@@ -53,7 +53,7 @@ std::string SingleShotTimer::GetTimerName() const
    return timerName_;
 }
 
-uint64_t SingleShotTimer::GetExpireTime() const
+std::chrono::steady_clock::time_point SingleShotTimer::GetExpireTime() const
 {
    return expireTimestamp_;
 }

@@ -109,6 +109,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
       else {
          curContainer_ = newCCcontainer();
       }
+      curContainer_->activate();
    }
 }
 
@@ -125,11 +126,11 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::acceptQuote
       , this, &RFQDialog::onXBTQuoteAccept);
 
-   const auto xbtSettlementWidget = new XBTSettlementTransactionWidget(logger_
-      , celerClient_, appSettings_, xbtSettlContainer_, connectionManager_, this);
+//   const auto xbtSettlementWidget = new XBTSettlementTransactionWidget(logger_
+//      , celerClient_, appSettings_, xbtSettlContainer_, connectionManager_, this);
 
-   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(xbtSettlementWidget);
-   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
+//   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(xbtSettlementWidget);
+//   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
 
    return xbtSettlContainer_;
 }
@@ -146,11 +147,11 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
    connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementCancelled
       , this, &QDialog::close);
 
-   const auto ccSettlementWidget = new CCSettlementTransactionWidget(logger_
-      , celerClient_, appSettings_, ccSettlContainer_, connectionManager_, this);
+//   const auto ccSettlementWidget = new CCSettlementTransactionWidget(logger_
+//      , celerClient_, appSettings_, ccSettlContainer_, connectionManager_, this);
 
-   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(ccSettlementWidget);
-   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
+//   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(ccSettlementWidget);
+//   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
 
    return ccSettlContainer_;
 }

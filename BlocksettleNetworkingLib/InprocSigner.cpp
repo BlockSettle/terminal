@@ -122,21 +122,30 @@ bs::signer::RequestId InprocSigner::signSettlementPayoutTXRequest(const bs::core
 
 bool InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
    , const std::vector<bs::wallet::PasswordData> &pwdData, bs::sync::PasswordDialogData
-   , const std::function<void(bs::error::ErrorCode result)> &cb)
+   , const CreateHDLeafCb &cb)
 {
    const auto hdWallet = walletsMgr_->getHDWalletById(rootWalletId);
    if (!hdWallet) {
       logger_->error("[InprocSigner::createHDLeaf] failed to get HD wallet by id {}", rootWalletId);
+      if (cb) {
+         cb(bs::error::ErrorCode::WalletNotFound, {});
+      }
       return false;
    }
    if (path.length() < 3) {
       logger_->error("[InprocSigner::createHDLeaf] too short path: {}", path.toString());
+      if (cb) {
+         cb(bs::error::ErrorCode::WalletNotFound, {});
+      }
       return false;
    }
    const auto groupType = static_cast<bs::hd::CoinType>(path.get(-2));
    const auto group = hdWallet->createGroup(groupType);
    if (!group) {
       logger_->error("[InprocSigner::createHDLeaf] failed to create/get group for {}", path.get(-2));
+      if (cb) {
+         cb(bs::error::ErrorCode::WalletNotFound, {});
+      }
       return false;
    }
 
@@ -146,23 +155,27 @@ bool InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::P
 
    std::shared_ptr<bs::core::hd::Leaf> leaf;
 
-   try
-   {
+   try {
       const auto& password = pwdData[0].password;
 
-      hdWallet->lockForEncryption(password);
+      auto lock = hdWallet->lockForEncryption(password);
       const auto leafIndex = path.get(2);
       auto leaf = group->createLeaf(leafIndex);
       if (leaf != nullptr) {
+         if (cb) {
+            cb(bs::error::ErrorCode::NoError, leaf->walletId());
+         }
          return true;
       }
    }
-   catch (const std::exception &) {
-      logger_->error("[InprocSigner::createHDLeaf] failed to decrypt root node {}", rootWalletId);
-      return false;
+   catch (const std::exception &e) {
+      logger_->error("[InprocSigner::createHDLeaf] failed to decrypt root node {}: {}"
+         , rootWalletId, e.what());
    }
 
-   logger_->error("[InprocSigner::createHDLeaf] failed to create/get leaf {}", path.toString());
+   if (cb) {
+      cb(bs::error::ErrorCode::InvalidPassword, {});
+   }
    return false;
 }
 

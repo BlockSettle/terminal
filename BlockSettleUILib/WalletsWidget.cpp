@@ -18,7 +18,6 @@
 #include "AssetManager.h"
 #include "BSMessageBox.h"
 #include "NewWalletDialog.h"
-#include "NewWalletSeedDialog.h"
 #include "SelectAddressDialog.h"
 #include "SignContainer.h"
 #include "WalletsViewModel.h"
@@ -27,7 +26,6 @@
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "TreeViewWithEnterKey.h"
-#include "NewWalletSeedConfirmDialog.h"
 #include "ManageEncryption/RootWalletPropertiesDialog.h"
 
 #include "SignerUiDefs.h"
@@ -664,8 +662,8 @@ void WalletsWidget::onRevokeSettlement()
       };
       monitor->getPayinInput(cbSettlInput, false);
    };
-   monitor = std::make_shared<bs::SettlementMonitorCb>(armory_, curAddress_, logger_
-      , cbMonitorInited);
+   monitor = std::make_shared<bs::SettlementMonitorCb>(armory_, logger_, curAddress_
+      , BinaryData{}, BinaryData{}, cbMonitorInited);
 }
 
 void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result)

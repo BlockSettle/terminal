@@ -244,8 +244,9 @@ private:
    class MainWinACT : public ArmoryCallbackTarget
    {
    public:
-      MainWinACT(ArmoryConnection *armory, BSTerminalMainWindow *wnd)
-         : ArmoryCallbackTarget(armory), parent_(wnd) {}
+      MainWinACT(BSTerminalMainWindow *wnd)
+         : parent_(wnd) {}
+      ~MainWinACT() override { cleanup(); }
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
       void onStateChanged(ArmoryState) override;
       void onTxBroadcastError(const std::string &hash, const std::string &error) override;

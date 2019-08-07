@@ -96,7 +96,8 @@ void TransactionDetailsWidget::init(
    logger_ = inLogger;
    walletsMgr_ = walletsMgr;
    ccResolver_ = resolver;
-   act_ = make_unique<TxDetailsACT>(armoryPtr_.get(), this);
+   act_ = make_unique<TxDetailsACT>(this);
+   act_->init(armoryPtr_.get());
 }
 
 // This function uses getTxByHash() to retrieve info about transaction. The

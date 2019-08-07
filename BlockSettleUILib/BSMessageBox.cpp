@@ -150,7 +150,7 @@ MessageBoxCCWalletQuestion::MessageBoxCCWalletQuestion(const QString &ccProduct,
 
 MessageBoxBroadcastError::MessageBoxBroadcastError(const QString &details, QWidget *parent)
    : BSMessageBox(BSMessageBox::critical, tr("Failed to sign"),
-      tr("Transaction signing failure"), tr("An error occurred when signing a transaction.\n%1").arg(details)
+      tr("Transaction signing failure"), details
       , parent) {
 }
 

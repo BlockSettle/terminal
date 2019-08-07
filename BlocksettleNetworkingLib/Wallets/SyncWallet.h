@@ -133,7 +133,7 @@ namespace bs {
          virtual size_t getUsedAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getExtAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getIntAddressCount() const { return usedAddresses_.size(); }
-         virtual size_t getWalletAddressCount() const { return addrCount_; }
+         virtual size_t getWalletAddressCount() const { return *addrCount_; }
 
          virtual void getNewExtAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual void getNewIntAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) = 0;
@@ -197,7 +197,7 @@ namespace bs {
             act_ = std::make_unique<U>(armory.get(), this);
          }
 
-         void setWCT(WalletCallbackTarget *wct) { wct_ = wct; }
+         void setWCT(WalletCallbackTarget *wct);
 
       protected:
          virtual void onZeroConfReceived(const std::vector<bs::TXEntry>&);
@@ -208,9 +208,8 @@ namespace bs {
 
          virtual bool isOwnId(const std::string &wId) const { return (wId == walletId()); }
 
-         template <typename MapT> void updateMap(const MapT &src, MapT &dst) const 
+         template <typename MapT> static void updateMap(const MapT &src, MapT &dst)
          {
-            std::unique_lock<std::mutex> lock(addrMapsMtx_);
             for (const auto &elem : src) {     // std::map::insert doesn't replace elements
                dst[elem.first] = std::move(elem.second);
             }
@@ -226,21 +225,21 @@ namespace bs {
       protected:
          std::string                walletName_;
          WalletSignerContainer*     signContainer_;
-         BTCNumericTypes::balance_type spendableBalance_ = 0;
-         BTCNumericTypes::balance_type unconfirmedBalance_ = 0;
-         BTCNumericTypes::balance_type totalBalance_ = 0;
          std::shared_ptr<ArmoryConnection>   armory_;
          std::shared_ptr<spdlog::logger>     logger_; // May need to be set manually.
          mutable std::vector<bs::Address>    usedAddresses_;
          NetworkType netType_ = NetworkType::Invalid;
-         mutable std::mutex addrMapsMtx_;
-         size_t addrCount_ = 0;
 
          std::map<bs::Address, std::string>  addrComments_;
          std::map<BinaryData, std::string>   txComments_;
 
-         mutable std::map<BinaryData, std::vector<uint64_t> >  addressBalanceMap_;
-         mutable std::map<BinaryData, uint64_t>                addressTxNMap_;
+         std::shared_ptr<std::atomic<BTCNumericTypes::balance_type>>  spendableBalance_;
+         std::shared_ptr<std::atomic<BTCNumericTypes::balance_type>>  unconfirmedBalance_;
+         std::shared_ptr<std::atomic<BTCNumericTypes::balance_type>>  totalBalance_;
+         std::shared_ptr<size_t>       addrCount_;
+         std::shared_ptr<std::mutex>   addrMapsMtx_;
+         std::shared_ptr<std::map<BinaryData, std::vector<uint64_t>>>   addressBalanceMap_;
+         std::shared_ptr<std::map<BinaryData, uint64_t>>                addressTxNMap_;
 
          class UtxoFilterAdapter : public bs::UtxoReservation::Adapter
          {
@@ -258,22 +257,25 @@ namespace bs {
       private:
          std::string regId_;
          mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
-         std::vector<std::function<void(void)>> cbTxNs_;
-         std::vector<std::function<void(void)>> cbBalances_;
+         std::shared_ptr<std::vector<std::function<void(void)>>>  cbTxNs_;
+         std::shared_ptr<std::vector<std::function<void(void)>>>  cbBalances_;
 
       protected:
          bool firstInit_ = false;
-         bool isRegistered_ = false;
+         std::atomic_bool isRegistered_{false};
 
-         mutable std::mutex   cbMutex_;
+         mutable std::shared_ptr<std::mutex> cbMutex_;
          std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbLedgerByAddr_;
       };
 
       class WalletACT : public ArmoryCallbackTarget
       {
       public:
-         WalletACT(ArmoryConnection *armory, Wallet *leaf)
-            : ArmoryCallbackTarget(armory), parent_(leaf) {}
+         WalletACT(Wallet *leaf)
+            : parent_(leaf)
+         {
+         }
+         ~WalletACT() override { cleanup(); }
          virtual void onRefresh(const std::vector<BinaryData> &ids, bool online) override {
             parent_->onRefresh(ids, online);
          }

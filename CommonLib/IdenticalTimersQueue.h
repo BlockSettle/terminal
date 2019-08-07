@@ -17,7 +17,7 @@ class SingleShotTimer;
 class IdenticalTimersQueue
 {
 public:
-   IdenticalTimersQueue(const std::shared_ptr<spdlog::logger>& logger, uint64_t intervalMS);
+   IdenticalTimersQueue(const std::shared_ptr<spdlog::logger>& logger, std::chrono::milliseconds interval);
    ~IdenticalTimersQueue() noexcept;
 
    IdenticalTimersQueue(const IdenticalTimersQueue&) = delete;
@@ -36,11 +36,11 @@ private:
 
    void stopWaitingThread();
 
-   int64_t GetCurrentTime() const;
+   std::chrono::steady_clock::time_point GetCurrentTime() const;
 
 private:
    std::shared_ptr<spdlog::logger> logger_;
-   const uint64_t intervalMS_;
+   const std::chrono::milliseconds interval_;
 
    ManualResetEvent     timersQueueChanged_;
 

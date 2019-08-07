@@ -13,15 +13,23 @@
 #include "SocketIncludes.h"
 
 
-ArmoryCallbackTarget::ArmoryCallbackTarget(ArmoryConnection *armory)
-   : armory_(armory)
+ArmoryCallbackTarget::ArmoryCallbackTarget()
+{}
+
+ArmoryCallbackTarget::~ArmoryCallbackTarget()
 {
-   if (armory_) {
+   assert(!armory_);
+}
+
+void ArmoryCallbackTarget::init(ArmoryConnection *armory)
+{
+   if (!armory_ && armory) {
+      armory_ = armory;
       armory_->addTarget(this);
    }
 }
 
-ArmoryCallbackTarget::~ArmoryCallbackTarget()
+void ArmoryCallbackTarget::cleanup()
 {
    if (armory_) {
       armory_->removeTarget(this);
@@ -78,15 +86,24 @@ bool ArmoryConnection::addTarget(ArmoryCallbackTarget *act)
 
 bool ArmoryConnection::removeTarget(ArmoryCallbackTarget *act)
 {
-   std::unique_lock<std::mutex> lock(cbMutex_);
-   const auto &it = activeTargets_.find(act);
-   if (it == activeTargets_.end()) {
-      logger_->warn("[{}] target {} wasn't added", __func__, (void*)act);
-      return false;
-   }
-   actChanged_ = true;
-   activeTargets_.erase(it);
-   return true;
+   std::promise<bool> done;
+   auto doneFut = done.get_future();
+
+   runOnMaintThread([this, &done, act] () {
+      std::unique_lock<std::mutex> lock(cbMutex_);
+      const auto &it = activeTargets_.find(act);
+      if (it == activeTargets_.end()) {
+         logger_->warn("[{}] target {} wasn't added", __func__, (void*)act);
+         done.set_value(false);
+         return;
+      }
+      actChanged_ = true;
+      activeTargets_.erase(it);
+      done.set_value(true);
+   });
+
+   bool result = doneFut.get();
+   return result;
 }
 
 void ArmoryConnection::maintenanceThreadFunc()
@@ -122,12 +139,15 @@ void ArmoryConnection::maintenanceThreadFunc()
       processDelayedZC();
 
       decltype(actQueue_) tempQueue;
+      decltype(runQueue_) tempRunQueue;
       {
          std::unique_lock<std::mutex> lock(actMutex_);
          tempQueue.swap(actQueue_);
+         tempRunQueue.swap(runQueue_);
       }
-      if (tempQueue.empty()) {
-         continue;
+
+      for (const auto &cb : tempRunQueue) {
+         cb();
       }
 
       for (const auto &cb : tempQueue) {
@@ -158,6 +178,13 @@ void ArmoryConnection::addToMaintQueue(const CallbackQueueCb &cb)
 {
    std::unique_lock<std::mutex> lock(actMutex_);
    actQueue_.push_back(cb);
+   actCV_.notify_one();
+}
+
+void ArmoryConnection::runOnMaintThread(ArmoryConnection::EmptyCb cb)
+{
+   std::unique_lock<std::mutex> lock(actMutex_);
+   runQueue_.push_back(std::move(cb));
    actCV_.notify_one();
 }
 
@@ -864,6 +891,17 @@ bool ArmoryConnection::getFeeSchedule(const FloatMapCb &cb)
    return true;
 }
 
+bool ArmoryConnection::pushZC(const BinaryData& rawTx) const
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
+      return false;
+   }
+
+   bdv_->broadcastZC(rawTx);
+   return true;
+}
+
 unsigned int ArmoryConnection::getConfirmationsNumber(uint32_t blockNum) const
 {
    const auto curBlock = topBlock();
@@ -1048,6 +1086,8 @@ void ArmoryCallback::progress(BDMPhase phase,
    const std::vector<std::string> &walletIdVec, float progress,
    unsigned secondsRem, unsigned progressNumeric)
 {
+   std::lock_guard<std::mutex> lock(mutex_);
+
    logger_->debug("[{}] {}, {} wallets, {} ({}), {} seconds remain", __func__
                   , (int)phase, walletIdVec.size(), progress, progressNumeric
                   , secondsRem);
@@ -1061,6 +1101,8 @@ void ArmoryCallback::progress(BDMPhase phase,
 
 void ArmoryCallback::run(BDMAction action, void* ptr, int block)
 {
+   std::lock_guard<std::mutex> lock(mutex_);
+
    if (!connection_) {
       return;
    }
@@ -1134,6 +1176,7 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
 void ArmoryCallback::disconnected()
 {
    logger_->debug("[{}]", __func__);
+   std::lock_guard<std::mutex> lock(mutex_);
    if (connection_) {
       connection_->regThreadRunning_ = false;
       if (connection_->state() != ArmoryState::Cancelled) {
@@ -1142,6 +1185,10 @@ void ArmoryCallback::disconnected()
    }
 }
 
+void ArmoryCallback::resetConnection() {
+   std::lock_guard<std::mutex> lock(mutex_);
+   connection_ = nullptr;
+}
 
 void bs::TXEntry::merge(const bs::TXEntry &other)
 {
