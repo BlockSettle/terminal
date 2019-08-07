@@ -93,7 +93,7 @@
          <item>
           <widget class="QLabel" name="label">
            <property name="text">
-            <string>Product:</string>
+            <string>Product</string>
            </property>
           </widget>
          </item>
@@ -103,7 +103,7 @@
             <string>XBT</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
            </property>
            <property name="whiteLabel" stdset="0">
             <bool>true</bool>
@@ -134,7 +134,7 @@
          <item>
           <widget class="QLabel" name="label_3">
            <property name="text">
-            <string>Security:</string>
+            <string>Security</string>
            </property>
           </widget>
          </item>
@@ -144,7 +144,7 @@
             <string>EUR/XBT</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
            </property>
            <property name="whiteLabel" stdset="0">
             <bool>true</bool>
@@ -175,7 +175,7 @@
          <item>
           <widget class="QLabel" name="label_5">
            <property name="text">
-            <string>Side:</string>
+            <string>Side</string>
            </property>
           </widget>
          </item>
@@ -185,7 +185,10 @@
             <string>---</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -223,7 +226,92 @@
             <string>---</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="widgetQuantity" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout_8">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_10">
+           <property name="text">
+            <string>Quantity (XBT)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelQuantity">
+           <property name="text">
+            <string>---</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="widgetPrice" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout_7">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_8">
+           <property name="text">
+            <string>Price [EUR]</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelPrice">
+           <property name="text">
+            <string>---</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
            </property>
           </widget>
          </item>

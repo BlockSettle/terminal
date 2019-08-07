@@ -1,6 +1,5 @@
 #include "ChatUtils.h"
 
-#include "ChatCommonTypes.h"
 #include "Encryption/AEAD_Encryption.h"
 #include "Encryption/AEAD_Decryption.h"
 #include "Encryption/IES_Encryption.h"
@@ -34,16 +33,6 @@ namespace {
    }
 
 } // namespace
-
-QString ChatUtils::toString(Chat::OtcRangeType value)
-{
-   return QString::fromStdString(bs::network::OTCRangeID::toString(bs::network::OTCRangeID::Type(value)));
-}
-
-QString ChatUtils::toString(Chat::OtcSide value)
-{
-   return QString::fromStdString(bs::network::ChatOTCSide::toString(bs::network::ChatOTCSide::Type(value)));
-}
 
 bool ChatUtils::messageFlagRead(const Chat::Data_Message &msg, Chat::Data_Message_State flag)
 {

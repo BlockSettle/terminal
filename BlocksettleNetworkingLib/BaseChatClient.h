@@ -7,7 +7,6 @@
 #include "Encryption/ChatSessionKey.h"
 #include "Encryption/ContactPublicKey.h"
 #include "SecureBinaryData.h"
-#include "ChatCommonTypes.h"
 #include "ChatDB.h"
 
 #include <botan/secmem.h>

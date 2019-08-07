@@ -53,26 +53,6 @@ public:
    {
       assert(data->has_contact_record());
    }
-
-   bool OTCTradingStarted() const;
-   bool isOTCRequestor() const;
-   bool haveUpdates() const;
-   bool haveResponse() const;
-
-   std::shared_ptr<Chat::Data> getOTCRequest() const;
-   std::shared_ptr<Chat::Data> getOTCResponse() const;
-   std::shared_ptr<Chat::Data> getLastOTCUpdate() const;
-
-   void cleanupTrading();
-
-protected:
-   void onChildAdded(TreeItem* item) override;
-private:
-   void processOTCMessage(const std::shared_ptr<Chat::Data>& messageData);
-protected:
-   std::shared_ptr<Chat::Data>  otcRequest_ = nullptr;
-   std::shared_ptr<Chat::Data>  otcResponse_ = nullptr;
-   std::shared_ptr<Chat::Data>  otcLastUpdate_ = nullptr;
 };
 
 class ChatContactRequestElement : public ChatContactElement {

@@ -129,10 +129,10 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(ordersModel);
    ui_->treeViewOrders->initWithModel(ordersModel);
-   connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, [this](const std::string &quoteId) {
+   connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, [](const std::string &quoteId) {
       NotificationCenter::notify(bs::ui::NotifyType::CelerOrder, {true, QString::fromStdString(quoteId)});
    });
-   connect(quoteProvider_.get(), &QuoteProvider::orderFailed, [this](const std::string &quoteId, const std::string &reason) {
+   connect(quoteProvider_.get(), &QuoteProvider::orderFailed, [](const std::string &quoteId, const std::string &reason) {
       NotificationCenter::notify(bs::ui::NotifyType::CelerOrder
          , { false, QString::fromStdString(quoteId), QString::fromStdString(reason) });
    });

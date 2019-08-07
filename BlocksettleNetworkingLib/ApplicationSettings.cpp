@@ -73,6 +73,9 @@ static const QString chatServerIPName = QLatin1String("chatserver-ip");
 static const QString chatServerIPHelp = QLatin1String("Chat servcer host ip");
 static const QString chatServerPortName = QLatin1String("chatserver-port");
 static const QString chatServerPortHelp = QLatin1String("Chat server port");
+
+static const QString localSignerPortName = QLatin1String("local-signer-port");
+static const QString localSignerPortHelp = QLatin1String("Local signer port");
 #endif // NDEBUG
 
 namespace {
@@ -365,6 +368,7 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
 #ifndef NDEBUG
    parser.addOption({ chatServerIPName, chatServerIPHelp,  QLatin1String("chatip") });
    parser.addOption({ chatServerPortName, chatServerPortHelp, QLatin1String("chatport") });
+   parser.addOption({ localSignerPortName, localSignerPortHelp, QLatin1String("localsignerport") });
 #endif // NDEBUG
 
 
@@ -399,6 +403,10 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    if (parser.isSet(chatServerPortName)) {
       int vcp = parser.value(chatServerPortName).toInt();
       set(chatServerPort, vcp);
+   }
+   if (parser.isSet(localSignerPortName)) {
+      int value = parser.value(localSignerPortName).toInt();
+      set(localSignerPort, value);
    }
 #endif // NDEBUG
 

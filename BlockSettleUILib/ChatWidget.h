@@ -26,14 +26,16 @@ namespace Chat {
    class OTCRequestData;
 }
 
-class ChatClient;
-class ConnectionManager;
 class ApplicationSettings;
-class ChatWidgetState;
-class OTCRequestViewModel;
-class ChatTreeModelWrapper;
 class BaseCelerClient;
+class ChatClient;
+class ChatTreeModelWrapper;
+class ChatWidgetState;
+class ConnectionManager;
+class OTCRequestViewModel;
+class OtcClient;
 class QTextEdit;
+
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
                  , public NewMessageMonitor
@@ -92,17 +94,15 @@ private slots:
    void onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData);
    void onContactRequestApproved(const std::string &userId);
 
-   // OTC UI slots
-   void OnOTCRequestCreated();
-   void OnCreateResponse();
-   void OnCancelCurrentTrading();
-
-   void OnUpdateTradeRequestor();
-   void OnAcceptTradeRequestor();
-   void OnUpdateTradeResponder();
-   void OnAcceptTradeResponder();
-
    void OnOTCSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+
+   void onOtcRequestSubmit();
+   void onOtcRequestPull();
+   void onOtcResponseAccept();
+   void onOtcResponseUpdate();
+   void onOtcResponseReject();
+
+   void onOtcUpdated(const std::string &contactId);
 
 signals:
    void LoginFailed();
@@ -116,7 +116,7 @@ private:
    void OTCSwitchToGlobalRoom();
    void OTCSwitchToSupportRoom();
    void OTCSwitchToRoom(std::shared_ptr<Chat::Data>& room);
-   void OTCSwitchToContact(std::shared_ptr<Chat::Data>& contact, bool onlineStatus);
+   void OTCSwitchToContact(std::shared_ptr<Chat::Data>& contact);
    void OTCSwitchToResponse(std::shared_ptr<Chat::Data>& response);
 
    void onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
@@ -142,6 +142,8 @@ private:
 
    void clearCursorSelection(QTextEdit *element);
 
+   void updateOtc(const std::string &contactId);
+
 private:
    QScopedPointer<Ui::ChatWidget> ui_;
 
@@ -165,6 +167,8 @@ private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
    int64_t chatLoggedInTimestampUtcInMillis_;
    std::vector<QVariantList> oldMessages_;
+
+   OtcClient *otcClient_{};
 
 private:
    bool isRoom();

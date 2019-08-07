@@ -131,28 +131,6 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
    return byTypes && byData;
 }
 
-bool ChatContactCompleteElement::OTCTradingStarted() const
-{
-   return otcRequest_ != nullptr;
-}
-
-bool ChatContactCompleteElement::isOTCRequestor() const
-{
-   return otcRequest_->direction() == Chat::Data_Direction_SENT;
-}
-
-bool ChatContactCompleteElement::haveUpdates() const
-{
-   return otcLastUpdate_ != nullptr;
-}
-
-bool ChatContactCompleteElement::haveResponse() const
-{
-   return otcResponse_ != nullptr;
-}
-
-
-
 Chat::Data_User* ChatUserElement::getUserData() const
 {
    auto data = getDataObject();
@@ -175,67 +153,4 @@ Chat::Data_User *ChatSearchElement::getUserData() const
 std::shared_ptr<Chat::Data> DisplayableDataNode::getDataObject() const
 {
    return data_;
-}
-
-void ChatContactCompleteElement::onChildAdded(TreeItem* item)
-{
-   if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::MessageDataNode) {
-      auto messageNode = dynamic_cast<TreeMessageNode*>(item);
-      if (messageNode) {
-         auto msg = messageNode->getMessage();
-         auto messageDirection = msg->direction();
-
-         bool isOtc = msg->message().otc_case() != Chat::Data_Message::OTC_NOT_SET;
-         if (messageDirection != Chat::Data_Direction_NOT_SET && isOtc && !msg->message().loaded_from_history()) {
-            processOTCMessage(msg);
-         }
-      }
-   }
-}
-
-void ChatContactCompleteElement::processOTCMessage(const std::shared_ptr<Chat::Data>& messageData)
-{
-   assert(messageData->has_message());
-
-   if (messageData->message().has_otc_request()) {
-      otcRequest_ = messageData;
-      return;
-   }
-
-   if (messageData->message().has_otc_response()) {
-      otcResponse_ = messageData;
-      return;
-   }
-
-   if (messageData->message().has_otc_update()) {
-      otcLastUpdate_ = messageData;
-      return;
-   }
-
-   if (messageData->message().has_otc_close_trading()) {
-      cleanupTrading();
-      return;
-   }
-}
-
-std::shared_ptr<Chat::Data> ChatContactCompleteElement::getOTCRequest() const
-{
-   return otcRequest_;
-}
-
-std::shared_ptr<Chat::Data> ChatContactCompleteElement::getOTCResponse() const
-{
-   return otcResponse_;
-}
-
-std::shared_ptr<Chat::Data> ChatContactCompleteElement::getLastOTCUpdate() const
-{
-   return otcLastUpdate_;
-}
-
-void ChatContactCompleteElement::cleanupTrading()
-{
-   otcRequest_ = nullptr;
-   otcResponse_ = nullptr;
-   otcLastUpdate_ = nullptr;
 }
