@@ -244,6 +244,5 @@ void RFQDialog::onOrderUpdated(const bs::network::Order& order)
 
 void RFQDialog::onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx)
 {
-   logger_->debug("[{}] tx={}", __func__, hexPayoutTx);
    quoteProvider_->AcceptQuote(QString::fromStdString(reqId), quote_, hexPayoutTx);
 }
