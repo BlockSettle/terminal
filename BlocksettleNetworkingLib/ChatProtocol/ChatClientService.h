@@ -18,18 +18,20 @@ namespace Chat
    public:
       explicit ChatClientService(QObject* parent = nullptr);
 
-      ClientPartyLogicPtr getClientPartyLogicPtr();
+      ClientPartyModelPtr getClientPartyModelPtr();
 
    signals:
       ////////// PROXY SIGNALS //////////
       void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
+      void InitParty(const std::string& partyId);
 
       ////////// RETURN SIGNALS //////////
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
       void chatClientError(const Chat::ChatClientLogicError& errorCode);
       void clientLoggedOutFromServer();
+      void partyModelChanged();
    };
 
    using ChatClientServicePtr = std::shared_ptr<ChatClientService>;

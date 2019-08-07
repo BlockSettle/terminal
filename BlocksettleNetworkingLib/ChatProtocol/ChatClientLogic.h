@@ -52,12 +52,13 @@ namespace Chat
       void OnDisconnected(void) override;
       void OnError(DataConnectionListener::DataConnectionError) override;
 
-      ClientPartyLogicPtr clientPartyLogicPtr() const { return clientPartyLogicPtr_; }
+      ClientPartyModelPtr clientPartyModelPtr() const { return clientPartyLogicPtr_->clientPartyModelPtr(); }
 
    public slots:
       void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
+      void InitParty(const std::string& partyId);
 
    signals:
       void dataReceived(const std::string&);
@@ -70,6 +71,7 @@ namespace Chat
 
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
       void clientLoggedOutFromServer();
+      void partyModelChanged();
 
    private slots:
       void sendRequestPacket(const google::protobuf::Message& message);

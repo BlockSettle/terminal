@@ -22,7 +22,7 @@ namespace Chat
       UserNameNotFound,
       QObjectCast
    };
-
+   
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
 
    class ClientPartyModel : public PartyModel

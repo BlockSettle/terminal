@@ -2,8 +2,8 @@
 
 namespace Chat
 {
-   PrivateDirectMessageParty::PrivateDirectMessageParty(const std::string& id, const PartyType& partyType, const PartySubType& partySubType)
-      : Party(id, partyType, partySubType)
+   PrivateDirectMessageParty::PrivateDirectMessageParty(const std::string& id, const PartyType& partyType, const PartySubType& partySubType, const PartyState& partyState)
+      : Party(id, partyType, partySubType, partyState)
    {
 
    }

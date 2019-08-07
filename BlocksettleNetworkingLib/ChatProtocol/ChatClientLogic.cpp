@@ -50,8 +50,9 @@ namespace Chat
       userHasherPtr_ = std::make_shared<UserHasher>();
 
       setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr, this));
+      connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::partyModelChanged, this, &ChatClientLogic::partyModelChanged);
 
-      clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr(), appSettingsPtr, loggerPtr);
+      clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr_, appSettingsPtr, loggerPtr);
       clientConnectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
       connect(this, &ChatClientLogic::dataReceived, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDataReceived);
       connect(this, &ChatClientLogic::connected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onConnected);
@@ -61,7 +62,6 @@ namespace Chat
 
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::sendRequestPacket, this, &ChatClientLogic::sendRequestPacket);
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
-      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr().get(), &ClientPartyLogic::onUserStatusChanged);
    }
 
    void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb)
@@ -158,6 +158,11 @@ namespace Chat
    {
       connectionPtr_.reset();
       emit clientLoggedOutFromServer();
+   }
+
+   void ChatClientLogic::InitParty(const std::string& partyId)
+   {
+
    }
 
 }

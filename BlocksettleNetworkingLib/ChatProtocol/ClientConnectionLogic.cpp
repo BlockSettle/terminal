@@ -16,7 +16,7 @@ namespace Chat
    ClientConnectionLogic::ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
       : QObject(parent), loggerPtr_(loggerPtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
    {
-
+      connect(this, &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr_.get(), &ClientPartyLogic::onUserStatusChanged);
    }
 
    void ClientConnectionLogic::onDataReceived(const std::string& data)

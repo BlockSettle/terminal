@@ -104,12 +104,20 @@ enum PartySubType
 	OTC = 1;
 }
 
+enum PartyState
+{
+    UNINITIALIZED = 0;
+    REQUESTED = 1;
+    INITIALIZED = 2;
+}
+
 message PartyPacket
 {
 	string id = 1;
 	string display_name = 2;
 	PartyType party_type = 3;
 	PartySubType party_subtype = 4;
+    PartyState party_state = 5;
 }
 
 message WelcomeRequest

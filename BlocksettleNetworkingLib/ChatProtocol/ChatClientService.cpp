@@ -15,16 +15,18 @@ namespace Chat
       connect(this, &ChatClientService::Init, worker(), &ChatClientLogic::Init);
       connect(this, &ChatClientService::LoginToServer, worker(), &ChatClientLogic::LoginToServer);
       connect(this, &ChatClientService::LogoutFromServer, worker(), &ChatClientLogic::LogoutFromServer);
+      connect(this, &ChatClientService::InitParty, worker(), &ChatClientLogic::InitParty);
 
       ////////// RETURN SIGNALS //////////
       connect(worker(), &ChatClientLogic::chatUserDisplayNameChanged, this, &ChatClientService::chatUserDisplayNameChanged);
       connect(worker(), &ChatClientLogic::chatClientError, this, &ChatClientService::chatClientError);
       connect(worker(), &ChatClientLogic::clientLoggedOutFromServer, this, &ChatClientService::clientLoggedOutFromServer);
+      connect(worker(), &ChatClientLogic::partyModelChanged, this, &ChatClientService::partyModelChanged);
    }
 
-   ClientPartyLogicPtr ChatClientService::getClientPartyLogicPtr()
+   ClientPartyModelPtr ChatClientService::getClientPartyModelPtr()
    {
-      return worker()->clientPartyLogicPtr();
+      return worker()->clientPartyModelPtr();
    }
 
 }

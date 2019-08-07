@@ -10,12 +10,12 @@
 
 namespace Chat
 {
-
+   
    class ClientParty : public QObject, public Party
    {
       Q_OBJECT
    public:
-      ClientParty(const std::string& id, const PartyType& partyType, const PartySubType& partySubType, QObject* parent = nullptr);
+      ClientParty(const std::string& id, const PartyType& partyType, const PartySubType& partySubType, const PartyState& partyState, QObject* parent = nullptr);
 
       std::string displayName() const { return displayName_; }
       void setDisplayName(std::string val) { displayName_ = val; }
