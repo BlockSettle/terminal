@@ -81,12 +81,13 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
       dlgData.setValue("SettlementId", QString::fromStdString(settlementId_.toHexStr()));
       dlgData.setValue("Title", tr("Pay-Out Transaction"));
 
-      logger_->debug("[ReqXBTSettlementContainer] pay-out fee={}, payin hash={}", txReq.fee, payinHash.toHexStr(true));
-      return signContainer_->signSettlementPayoutTXRequest(txReq, {settlementId_, dealerAuthKey_, !clientSells_ }
-         , dlgData);
+      logger_->debug("[{}] pay-out fee={}, qty={} ({}), payin hash={}", __func__
+         , txReq.fee, qty, qty * BTCNumericTypes::BalanceDivider, payinHash.toHexStr(true));
+      return signContainer_->signSettlementPayoutTXRequest(txReq
+         , {settlementId_, dealerAuthKey_, !clientSells_ }, dlgData);
    }
    catch (const std::exception &e) {
-      logger_->warn("[ReqXBTSettlementContainer] failed to create pay-out transaction based on {}: {}"
+      logger_->warn("[{}] failed to create pay-out transaction based on {}: {}", __func__
          , payinHash.toHexStr(), e.what());
       emit error(tr("Pay-out transaction creation failure: %1").arg(QLatin1String(e.what())));
    }
@@ -204,8 +205,6 @@ void ReqXBTSettlementContainer::activate()
    settlementId_ = BinaryData::CreateFromHex(quote_.settlementId);
    userKey_ = BinaryData::CreateFromHex(quote_.requestorAuthPublicKey);
    dealerAuthKey_ = BinaryData::CreateFromHex(quote_.dealerAuthPublicKey);
-   const auto buyAuthKey = clientSells_ ? dealerAuthKey_ : userKey_;
-   const auto sellAuthKey = clientSells_ ? userKey_ : dealerAuthKey_;
 
    const auto priWallet = walletsMgr_->getPrimaryWallet();
    if (!priWallet) {
@@ -293,9 +292,11 @@ void ReqXBTSettlementContainer::activateProceed()
 {
    const auto &cbSettlAddr = [this](const bs::Address &addr) {
       settlAddr_ = addr;
+      const auto &buyAuthKey = clientSells_ ? dealerAuthKey_ : userKey_;
+      const auto &sellAuthKey = clientSells_ ? userKey_ : dealerAuthKey_;
 
-      monitor_ = std::make_shared<bs::SettlementMonitorCb>(armory_, settlAddr_, logger_
-         , [this] {
+      monitor_ = std::make_shared<bs::SettlementMonitorCb>(armory_, logger_
+         , settlAddr_, buyAuthKey, sellAuthKey, [this] {
          monitor_->start([this](int, const BinaryData &) { onPayInZCDetected(); }
          , [this](int confNum, bs::PayoutSigner::Type signedBy) { onPayoutZCDetected(confNum, signedBy); }
          , [](bs::PayoutSigner::Type) {});
@@ -336,17 +337,18 @@ void ReqXBTSettlementContainer::activateProceed()
    };
 
    const auto priWallet = walletsMgr_->getPrimaryWallet();
-   priWallet->getSettlementPayinAddress(settlementId_, dealerAuthKey_, cbSettlAddr, clientSells_);
+   priWallet->getSettlementPayinAddress(settlementId_, dealerAuthKey_, cbSettlAddr, !clientSells_);
 }
 
 void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
-   , bs::error::ErrorCode, std::string errTxt)
+   , bs::error::ErrorCode errCode, std::string errTxt)
 {
    if (payinSignId_ && (payinSignId_ == id)) {
       payinSignId_ = 0;
-      if (!errTxt.empty()) {
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          emit error(tr("Failed to create Pay-In TX - re-type password and try again"));
-         logger_->error("[ReqXBTSettlementContainer::onTXSigned] Failed to create pay-in TX: {}", errTxt);
+         logger_->error("[ReqXBTSettlementContainer::onTXSigned] Failed to create pay-in TX: {} ({})"
+            , (int)errCode, errTxt);
          emit retry();
          return;
       }
@@ -357,8 +359,9 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
    }
    else if (payoutSignId_ && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
-      if (!errTxt.empty()) {
-         logger_->warn("[ReqXBTSettlementContainer::onTXSigned] Pay-Out sign failure: {}", errTxt);
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+         logger_->warn("[ReqXBTSettlementContainer::onTXSigned] Pay-Out sign failure: {} ({})"
+            , (int)errCode, errTxt);
          emit error(tr("Pay-Out signing failed: %1").arg(QString::fromStdString(errTxt)));
          emit retry();
          return;

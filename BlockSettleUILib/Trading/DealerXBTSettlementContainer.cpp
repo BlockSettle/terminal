@@ -31,6 +31,9 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
 
    if (weSell_) {
       const Tx tx(BinaryData::CreateFromHex(order_.reqTransaction));
+      if (!tx.isInitialized()) {
+         throw std::runtime_error("no requester transaction");
+      }
       const bs::TxChecker txChecker(tx);
       if ((tx.getNumTxIn() != 1) || !txChecker.hasInput(BinaryData::CreateFromHex(order_.dealerTransaction))) {
          throw std::runtime_error("invalid payout spender");
@@ -66,10 +69,13 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       settlAddr_ = addr;
       addrVerificator_->SetBSAddressList(bsAddresses);
 
-      settlMonitor_ = std::make_shared<bs::SettlementMonitorCb>(armory_, addr, logger_
-         , [this] { });
-      logger_->debug("[DealerXBTSettlementContainer] ready to activate");
-      emit readyToActivate();
+      const BinaryData &buyAuthKey = weSell_ ? authKey_ : reqAuthKey_;
+      const BinaryData &sellAuthKey = weSell_ ? reqAuthKey_ : authKey_;
+      settlMonitor_ = std::make_shared<bs::SettlementMonitorCb>(armory_, logger_
+         , addr, buyAuthKey, sellAuthKey, [this] {
+         logger_->debug("[DealerXBTSettlementContainer] ready to activate");
+         emit readyToActivate();
+      });
    };
 
    const auto priWallet = walletsMgr->getPrimaryWallet();
@@ -80,6 +86,8 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
 
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }
+
+DealerXBTSettlementContainer::~DealerXBTSettlementContainer() = default;
 
 bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData() const
 {
@@ -113,57 +121,57 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    return dialogData;
 }
 
-bool DealerXBTSettlementContainer::startSigning()
+bool DealerXBTSettlementContainer::startPayInSigning()
 {
-   if (weSell_) {
-      try {
-         const auto txReq = transactionData_->getSignTxRequest();
-         payinSignId_ = signingContainer_->signSettlementTXRequest(txReq, toPasswordDialogData(), SignContainer::TXSignMode::Full);
-      }
-      catch (const std::exception &e) {
-         logger_->error("[DealerXBTSettlementContainer::onAccepted] Failed to sign pay-in: {}", e.what());
-         emit error(tr("Failed to sign pay-in"));
-         emit failed();
-         return false;
-      }
+   try {
+      const auto txReq = transactionData_->getSignTxRequest();
+      payinSignId_ = signingContainer_->signSettlementTXRequest(txReq, toPasswordDialogData(), SignContainer::TXSignMode::Full);
    }
-   else {
-      const auto &txWallet = transactionData_->getWallet();
-      if (txWallet->type() != bs::core::wallet::Type::Bitcoin) {
-         logger_->error("[DealerSettlDialog::onAccepted] Invalid payout wallet type: {}", (int)txWallet->type());
-         emit error(tr("Invalid payout wallet type"));
-         emit failed();
-         return false;
-      }
-      const auto &receivingAddress = transactionData_->GetFallbackRecvAddress();
-      if (!txWallet->containsAddress(receivingAddress)) {
-         logger_->error("[DealerSettlDialog::onAccepted] Invalid receiving address");
-         emit error(tr("Invalid receiving address"));
-         emit failed();
-         return false;
-      }
-
-      const auto &cbSettlInput = [this, receivingAddress](UTXO input) {
-         if (!input.isInitialized()) {
-            logger_->error("[DealerSettlDialog::onAccepted] Failed to get pay-in input");
-            emit error(tr("Failed to get pay-in UTXO"));
-            emit failed();
-            return;
-         }
-         try {
-            const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(input
-               , receivingAddress, transactionData_->feePerByte(), armory_->topBlock());
-            payoutSignId_ = signingContainer_->signSettlementPayoutTXRequest(txReq, { settlementId_
-               , reqAuthKey_, !weSell_ }, toPasswordDialogData());
-         } catch (const std::exception &e) {
-            logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());
-            emit error(tr("Failed to sign pay-out"));
-            emit failed();
-         }
-      };
-      settlMonitor_->getPayinInput(cbSettlInput);
+   catch (const std::exception &e) {
+      logger_->error("[DealerXBTSettlementContainer::onAccepted] Failed to sign pay-in: {}", e.what());
+      emit error(tr("Failed to sign pay-in"));
+      emit failed();
+      return false;
    }
    return true;
+}
+
+bool DealerXBTSettlementContainer::startPayOutSigning()
+{
+   const auto &txWallet = transactionData_->getWallet();
+   if (txWallet->type() != bs::core::wallet::Type::Bitcoin) {
+      logger_->error("[DealerSettlDialog::onAccepted] Invalid payout wallet type: {}", (int)txWallet->type());
+      emit error(tr("Invalid payout wallet type"));
+      emit failed();
+      return false;
+   }
+   const auto &receivingAddress = transactionData_->GetFallbackRecvAddress();
+   if (!txWallet->containsAddress(receivingAddress)) {
+      logger_->error("[DealerSettlDialog::onAccepted] Invalid receiving address");
+      emit error(tr("Invalid receiving address"));
+      emit failed();
+      return false;
+   }
+
+   const auto &cbSettlInput = [this, receivingAddress](UTXO input) {
+      if (!input.isInitialized()) {
+         logger_->error("[DealerSettlDialog::onAccepted] Failed to get pay-in input");
+         emit error(tr("Failed to get pay-in UTXO"));
+         emit failed();
+         return;
+      }
+      try {
+         const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(input
+            , receivingAddress, transactionData_->feePerByte(), armory_->topBlock());
+         payoutSignId_ = signingContainer_->signSettlementPayoutTXRequest(txReq, { settlementId_
+            , reqAuthKey_, !weSell_ }, toPasswordDialogData());
+      } catch (const std::exception &e) {
+         logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());
+         emit error(tr("Failed to sign pay-out"));
+         emit failed();
+      }
+   };
+   settlMonitor_->getPayinInput(cbSettlInput);
 }
 
 bool DealerXBTSettlementContainer::cancel()
@@ -192,7 +200,9 @@ void DealerXBTSettlementContainer::activate()
       , [this](int, bs::PayoutSigner::Type signedBy) { onPayOutDetected(signedBy); }
       , [this](bs::PayoutSigner::Type) {});
 
-   startSigning();
+   if (weSell_) {
+      startPayInSigning();
+   }
 }
 
 void DealerXBTSettlementContainer::deactivate()
@@ -240,6 +250,8 @@ void DealerXBTSettlementContainer::onPayInDetected(int confirmationsNumber, cons
          settlMonitor_->getPayinInput(cbInput);
       };
       armory_->getTxByHash(txHash, cbTX);
+
+      startPayOutSigning();   //TODO: should be bound to TX validation success
    }
 
    payInDetected_ = true;
@@ -285,12 +297,12 @@ void DealerXBTSettlementContainer::onPayOutDetected(bs::PayoutSigner::Type signe
 }
 
 void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
-   , bs::error::ErrorCode, std::string errMsg)
+   , bs::error::ErrorCode errCode, std::string errMsg)
 {
    if (payoutSignId_ && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
-      if (!errMsg.empty()) {
-         logger_->error("[DealerXBTSettlementContainer::onTXSigned] Failed to sign pay-out: {}", errMsg);
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+         logger_->error("[DealerXBTSettlementContainer::onTXSigned] Failed to sign pay-out: {} ({})", (int)errCode, errMsg);
          emit error(tr("Failed to sign pay-out"));
          emit failed();
          return;
@@ -312,8 +324,8 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
    }
    else if (payinSignId_ && (payinSignId_ == id)) {
       payinSignId_ = 0;
-      if (!errMsg.empty()) {
-         logger_->error("[DealerXBTSettlementContainer::onTXSigned] Failed to sign pay-in: {}", errMsg);
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+         logger_->error("[DealerXBTSettlementContainer::onTXSigned] Failed to sign pay-in: {} ({})", (int)errCode, errMsg);
          emit error(tr("Failed to sign pay-in"));
          emit failed();
          return;
