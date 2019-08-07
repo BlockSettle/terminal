@@ -54,8 +54,11 @@ namespace bs {
 class ArmoryCallbackTarget
 {
 public:
-   ArmoryCallbackTarget(ArmoryConnection *armory);
+   ArmoryCallbackTarget();
    virtual ~ArmoryCallbackTarget();
+
+   void init(ArmoryConnection *armory);
+   void cleanup();
 
    // use empty methods in abstract class to avoid re-implementation in descendants
    // for more brevity if some of them are not needed
@@ -93,11 +96,12 @@ public:
 
    void disconnected() override;
 
-   void resetConnection() { connection_ = nullptr; }
+   void resetConnection();
 
 private:
    ArmoryConnection * connection_ = nullptr;
    std::shared_ptr<spdlog::logger>  logger_;
+   std::mutex mutex_;
 };
 
 // The abstracted connection between BS and Armory. When BS code needs to
@@ -158,6 +162,7 @@ public:
 
    virtual bool estimateFee(unsigned int nbBlocks, const FloatCb &);
    virtual bool getFeeSchedule(const FloatMapCb&);
+   virtual bool pushZC(const BinaryData&) const;
 
    bool isTransactionVerified(const ClientClasses::LedgerEntry &) const;
    bool isTransactionVerified(uint32_t blockNum) const;
@@ -177,6 +182,9 @@ public:
 
    std::shared_ptr<AsyncClient::BtcWallet> instantiateWallet(const std::string &walletId);
 
+   std::shared_ptr<AsyncClient::BlockDataViewer> bdv(void) const { return bdv_; }
+
+
 protected:
    void setupConnection(NetworkType, const std::string &host, const std::string &port
       , const std::string &dataDir, const BinaryData &serverKey
@@ -184,6 +192,9 @@ protected:
 
    using CallbackQueueCb = std::function<void(ArmoryCallbackTarget *)>;
    void addToMaintQueue(const CallbackQueueCb &);
+
+   using EmptyCb = std::function<void()>;
+   void runOnMaintThread(EmptyCb cb);
 
 private:
    void registerBDV(NetworkType);
@@ -220,7 +231,7 @@ protected:
 
    std::atomic_bool              isOnline_;
    std::unordered_map<
-      std::string, std::function<void(const std::string &)>> registrationCallbacks_;
+   std::string, std::function<void(const std::string &)>> registrationCallbacks_;
    std::mutex registrationCallbacksMutex_;
 
    std::mutex  cbMutex_;
@@ -241,6 +252,7 @@ protected:
    std::condition_variable regCV_;
 
    std::deque<CallbackQueueCb>   actQueue_;
+   std::deque<EmptyCb>           runQueue_;
    std::thread    maintThread_;
    std::condition_variable actCV_;
    std::mutex              actMutex_;

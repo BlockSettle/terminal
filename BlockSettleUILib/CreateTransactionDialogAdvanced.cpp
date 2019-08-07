@@ -887,6 +887,14 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
 void CreateTransactionDialogAdvanced::onCreatePressed()
 {
    if (!importedSignedTX_.isNull()) {
+      if (showUnknownWalletWarning_) {
+         int rc = BSMessageBox(BSMessageBox::question, tr("Unknown Wallet")
+            , tr("Broadcasted transaction will be available in the explorer only.\nProceed?")).exec();
+         if (rc == QDialog::Rejected) {
+            return;
+         }
+      }
+
       if (BroadcastImportedTx()) {
          accept();
       }
@@ -952,7 +960,12 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
             }
 
-            const auto &cbTXs = [this, tx, utxoHashes, txOutIndices](const std::vector<Tx> &txs) {
+            QPointer<CreateTransactionDialogAdvanced> thisPtr = this;
+            const auto &cbTXs = [thisPtr, tx, utxoHashes, txOutIndices](const std::vector<Tx> &txs) {
+               if (!thisPtr) {
+                  return;
+               }
+
                std::shared_ptr<bs::sync::Wallet> wallet;
                int64_t totalVal = 0;
 
@@ -966,7 +979,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                      totalVal += prevOut.getValue();
                      if (!wallet) {
                         const auto addr = bs::Address::fromTxOut(prevOut);
-                        const auto &addrWallet = walletsManager_->getWalletByAddress(addr);
+                        const auto &addrWallet = thisPtr->walletsManager_->getWalletByAddress(addr);
                         if (addrWallet) {
                            wallet = addrWallet;
                         }
@@ -975,18 +988,24 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                }
 
                if (wallet) {
-                  SetFixedWallet(wallet->walletId());
-                  auto selInputs = transactionData_->GetSelectedInputs();
+                  thisPtr->SetFixedWallet(wallet->walletId());
+                  auto selInputs = thisPtr->transactionData_->GetSelectedInputs();
                   for (const auto &txHash : utxoHashes) {
                      selInputs->SetUTXOSelection(txHash.first, txHash.second);
                   }
+               } else {
+                  thisPtr->showUnknownWalletWarning_ = true;
+                  thisPtr->ui_->comboBoxWallets->clear();
+                  // labelBalance will still update balance, let's hide it
+                  thisPtr->ui_->labelBalance->hide();
                }
+
                std::vector<std::tuple<bs::Address, double, bool>> recipients;
                for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
                   TxOut out = tx.getTxOutCopy((int)i);
                   const auto addr = bs::Address::fromTxOut(out);
                   if (wallet && (i == (tx.getNumTxOut() - 1)) && (wallet->containsAddress(addr))) {
-                     SetFixedChangeAddress(QString::fromStdString(addr.display()));
+                     thisPtr->SetFixedChangeAddress(QString::fromStdString(addr.display()));
                   }
                   else {
                      recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
@@ -994,9 +1013,9 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                   totalVal -= out.getValue();
                }
                if (!recipients.empty()) {
-                  AddRecipients(recipients);
+                  thisPtr->AddRecipients(recipients);
                }
-               SetPredefinedFee(totalVal);
+               thisPtr->SetPredefinedFee(totalVal);
             };
             armory_->getTXsByHash(txHashSet, cbTXs);
          }

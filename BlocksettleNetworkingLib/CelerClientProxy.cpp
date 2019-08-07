@@ -3,7 +3,7 @@
 #include <spdlog/spdlog.h>
 
 CelerClientProxy::CelerClientProxy(const std::shared_ptr<spdlog::logger> &logger, bool userIdRequired)
-   : BaseCelerClient (logger, userIdRequired)
+   : BaseCelerClient (logger, userIdRequired, true)
 {
 }
 

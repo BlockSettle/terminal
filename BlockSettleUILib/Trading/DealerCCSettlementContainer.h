@@ -46,6 +46,7 @@ public:
    double quantity() const override { return order_.quantity; }
    double price() const override { return order_.price; }
    double amount() const override { return quantity(); }
+   bs::sync::PasswordDialogData toPasswordDialogData() const override;
 
    bool foundRecipAddr() const { return foundRecipAddr_; }
    bool isAmountValid() const { return amountValid_; }

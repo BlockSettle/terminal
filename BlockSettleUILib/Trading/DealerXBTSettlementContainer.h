@@ -34,9 +34,8 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<QuoteProvider> &
       , const std::shared_ptr<TransactionData> &, const std::unordered_set<std::string> &bsAddresses
       , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &);
-   ~DealerXBTSettlementContainer() override = default;
+   ~DealerXBTSettlementContainer() override;
 
-   bool startSigning();
    bool cancel() override;
 
    bool isAcceptable() const override;
@@ -52,6 +51,7 @@ public:
    double quantity() const override { return order_.quantity; }
    double price() const override { return order_.price; }
    double amount() const override { return amount_; }
+   bs::sync::PasswordDialogData toPasswordDialogData() const override;
 
    bool weSell() const { return weSell_; }
    uint64_t fee() const { return fee_; }
@@ -73,6 +73,8 @@ private slots:
 private:
    void onCptyVerified();
    void sendBuyReqPayout();
+   bool startPayInSigning();
+   bool startPayOutSigning();
 
 private:
    const bs::network::Order   order_;

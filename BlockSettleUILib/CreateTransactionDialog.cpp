@@ -549,7 +549,7 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
       return {};
    }
 
-   const auto &transactions = ParseOfflineTXFile(data);
+   auto transactions = ParseOfflineTXFile(data);
    if (transactions.size() != 1) {
       showError(title, tr("Invalid file %1 format").arg(reqFile));
       return {};

@@ -53,7 +53,7 @@ public:
             case WalletsViewModel::WalletRegColumns::ColumnName:
                return QString::fromStdString(name_);
             case WalletsViewModel::WalletRegColumns::ColumnDescription:
-               return QString::fromStdString(desc_);
+               return type() == Type::WalletRegular || type() == Type::WalletPrimary ? QString::fromStdString(desc_) : QVariant();
             case WalletsViewModel::WalletRegColumns::ColumnState:
                return getState();
             case WalletsViewModel::WalletRegColumns::ColumnNbAddresses:
@@ -73,7 +73,7 @@ public:
             case WalletsViewModel::WalletColumns::ColumnName:
                return QString::fromStdString(name_);
             case WalletsViewModel::WalletColumns::ColumnDescription:
-               return QString::fromStdString(desc_);
+               return type() == Type::WalletRegular || type() == Type::WalletPrimary ? QString::fromStdString(desc_) : QVariant();
             case WalletsViewModel::WalletColumns::ColumnState:
                return getState();
             case WalletsViewModel::WalletColumns::ColumnNbAddresses:

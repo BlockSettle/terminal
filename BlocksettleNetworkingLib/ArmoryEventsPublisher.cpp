@@ -49,7 +49,8 @@ bool ArmoryEventsPublisher::connectToArmory(const std::shared_ptr<ArmoryConnecti
       return false;
    }
 
-   act_ = make_unique<PublisherACT>(armoryConnection.get(), this);
+   act_ = make_unique<PublisherACT>(this);
+   act_->init(armoryConnection.get());
    return true;
 }
 

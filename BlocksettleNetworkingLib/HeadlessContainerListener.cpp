@@ -256,12 +256,14 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
    , headless::RequestType reqType)
 {
    bool partial = (reqType == headless::RequestType::SignPartialTXRequestType)
-          || (reqType == headless::RequestType::SignSettlementPartialTxType);
+       || (reqType == headless::RequestType::SignSettlementPartialTxType);
 
    headless::SignTxRequest request;
    Internal::PasswordDialogDataWrapper dialogData;
 
-   if (reqType == headless::RequestType::SignSettlementTxRequestType){
+   if (reqType == headless::RequestType::SignSettlementTxRequestType
+       || reqType == headless::RequestType::SignSettlementPartialTxType){
+
       headless::SignSettlementTxRequest settlementRequest;
 
       if (!settlementRequest.ParseFromString(packet.data())) {
@@ -869,28 +871,34 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
          group = hdWallet->createGroup(groupIndex);
       }
 
-      const auto leafIndex = path.get(2);
-      auto leaf = group->getLeafByPath(leafIndex);
-
-      if (leaf == nullptr) {
-         auto lock = hdWallet->lockForEncryption(pass);
-         leaf = group->createLeaf(leafIndex);
+      try {
+         const auto leafIndex = path.get(2);
+         auto leaf = group->getLeafByPath(leafIndex);
 
          if (leaf == nullptr) {
-            logger_->error("[HeadlessContainerListener] failed to create/get leaf {}", path.toString());
-            CreateHDLeafResponse(clientId, id, ErrorCode::InternalError);
-            return;
+            auto lock = hdWallet->lockForEncryption(pass);
+            leaf = group->createLeaf(leafIndex);
+
+            if (leaf == nullptr) {
+               logger_->error("[HeadlessContainerListener] failed to create/get leaf {}", path.toString());
+               CreateHDLeafResponse(clientId, id, ErrorCode::InternalError);
+               return;
+            }
          }
+
+         auto assetPtr = leaf->getRootAsset();
+
+         auto rootPtr = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(assetPtr);
+         if (rootPtr == nullptr) {
+            throw AssetException("unexpected root asset type");
+         }
+
+         CreateHDLeafResponse(clientId, id, ErrorCode::NoError, leaf);
       }
-
-      auto assetPtr = leaf->getRootAsset();
-
-      auto rootPtr = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(assetPtr);
-      if (rootPtr == nullptr) {
-         throw AssetException("unexpected root asset type");
+      catch (const std::exception &e) {
+         logger_->error("[HeadlessContainerListener::CreateHDLeaf] failed: {}", e.what());
+         CreateHDLeafResponse(clientId, id, ErrorCode::WalletNotFound);
       }
-
-      CreateHDLeafResponse(clientId, id, ErrorCode::NoError, leaf);
    };
 
    RequestPasswordIfNeeded(clientId, request.rootwalletid(), {}, headless::CreateHDLeafRequestType, request.passworddialogdata(), onPassword);
@@ -903,22 +911,13 @@ void HeadlessContainerListener::CreateHDLeafResponse(const std::string &clientId
    const std::string pathString = leaf->path().toString();
    logger_->debug("[HeadlessContainerListener] CreateHDWalletResponse: {}", pathString);
    headless::CreateHDLeafResponse response;
-   if (result == ErrorCode::NoError) {
-      if (leaf) {
-         auto leafResponse = response.mutable_leaf();
+   if (leaf) {
+      auto leafResponse = response.mutable_leaf();
 
-         leafResponse->set_path(pathString);
-         leafResponse->set_walletid(leaf->walletId());
-
-         response.set_errorcode(static_cast<uint32_t>(ErrorCode::NoError));
-      }
-      else {
-         // response.set_errorcode(static_cast<uint32_t>(ErrorCode::FailedToCreateLeaf));
-      }
+      leafResponse->set_path(pathString);
+      leafResponse->set_walletid(leaf->walletId());
    }
-   else {
-      response.set_errorcode(static_cast<uint32_t>(result));
-   }
+   response.set_errorcode(static_cast<uint32_t>(result));
 
    headless::RequestPacket packet;
    packet.set_id(id);
@@ -1597,18 +1596,23 @@ bool HeadlessContainerListener::onExtAddrChain(const std::string &clientId, head
       headless::ExtendAddressChainResponse response;
       response.set_wallet_id(wallet->walletId());
 
-      auto&& newAddrVec = wallet->extendAddressChain(request.count(), request.ext_int());
-      for (const auto &addr : newAddrVec) {
-         auto &&index = wallet->getAddressIndex(addr);
-         auto addrData = response.add_addresses();
-         addrData->set_address(addr.display());
-         addrData->set_index(index);
+      try {
+         auto&& newAddrVec = wallet->extendAddressChain(request.count(), request.ext_int());
+         for (const auto &addr : newAddrVec) {
+            auto &&index = wallet->getAddressIndex(addr);
+            auto addrData = response.add_addresses();
+            addrData->set_address(addr.display());
+            addrData->set_index(index);
+         }
+      }
+      catch (const std::exception &e) {
+         logger_->error("[HeadlessContainerListener::onExtAddrChain] failed: {}", e.what());
       }
 
       headless::RequestPacket packet;
       packet.set_id(id);
-      packet.set_data(response.SerializeAsString());
       packet.set_type(headless::ExtendAddressChainType);
+      packet.set_data(response.SerializeAsString());
       sendData(packet.SerializeAsString(), clientId);
    };
    lbdSend();

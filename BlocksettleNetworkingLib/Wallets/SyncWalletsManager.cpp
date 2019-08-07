@@ -4,7 +4,6 @@
 #include "FastLock.h"
 #include "SyncHDWallet.h"
 #include "SyncSettlementWallet.h"
-#include "WalletSignerContainer.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -26,11 +25,13 @@ bool isCCNameCorrect(const std::string& ccName)
 WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ApplicationSettings>& appSettings
    , const std::shared_ptr<ArmoryConnection> &armory)
-   : QObject(nullptr), ArmoryCallbackTarget(armory.get())
+   : QObject(nullptr)
    , logger_(logger)
    , appSettings_(appSettings)
    , armoryPtr_(armory)
 {
+   init(armory.get());
+
    ccResolver_ = std::make_shared<CCResolver>();
    maintThreadRunning_ = true;
    maintThread_ = std::thread(&WalletsManager::maintenanceThreadFunc, this);
@@ -49,6 +50,8 @@ WalletsManager::~WalletsManager() noexcept
    if (maintThread_.joinable()) {
       maintThread_.join();
    }
+
+   cleanup();
 }
 
 void WalletsManager::setSignContainer(const std::shared_ptr<WalletSignerContainer> &container)
@@ -74,6 +77,48 @@ void WalletsManager::reset()
    emit walletChanged("");
 }
 
+void WalletsManager::syncWallet(const bs::sync::WalletInfo &info, const std::function<void()> &cbDone)
+{
+   logger_->debug("[WalletsManager::syncWallets] syncing wallet {} ({} {})"
+      , info.id, info.name, (int)info.format);
+
+   switch (info.format) {
+   case bs::sync::WalletFormat::HD:
+   {
+      try {
+         const auto hdWallet = std::make_shared<hd::Wallet>(info.id, info.name,
+            info.description, signContainer_.get(), logger_);
+         hdWallet->setWCT(this);
+
+         if (hdWallet) {
+            const auto &cbHDWalletDone = [this, hdWallet, cbDone] {
+               logger_->debug("[WalletsManager::syncWallets] synced HD wallet {}"
+                  , hdWallet->walletId());
+               saveWallet(hdWallet);
+               cbDone();
+            };
+            hdWallet->synchronize(cbHDWalletDone);
+         }
+      } catch (const std::exception &e) {
+         logger_->error("[WalletsManager::syncWallets] failed to create HD wallet "
+            "{}: {}", info.id, e.what());
+         cbDone();
+      }
+      break;
+   }
+
+   case bs::sync::WalletFormat::Settlement:
+      throw std::runtime_error("not implemented");
+      break;
+
+   default:
+      cbDone();
+      logger_->info("[WalletsManager::syncWallets] wallet format {} is not "
+         "supported yet", (int)info.format);
+      break;
+   }
+}
+
 void WalletsManager::syncWallets(const CbProgress &cb)
 {
    const auto &cbWalletInfo = [this, cb](const std::vector<bs::sync::WalletInfo> &wi) {
@@ -82,7 +127,7 @@ void WalletsManager::syncWallets(const CbProgress &cb)
          walletIds->insert(info.id);
 
       for (const auto &info : wi) {
-         const auto &cbDone = [this, walletIds, id=info.id, total=wi.size(), cb]
+         const auto &cbDone = [this, walletIds, id = info.id, total = wi.size(), cb]
          {
             walletIds->erase(id);
             if (cb)
@@ -96,45 +141,7 @@ void WalletsManager::syncWallets(const CbProgress &cb)
             }
          };
 
-         logger_->debug("[WalletsManager::syncWallets] syncing wallet {} ({} {})"
-            , info.id, info.name, (int)info.format);
-         
-         switch (info.format) {
-         case bs::sync::WalletFormat::HD:
-         {
-            try {
-               const auto hdWallet = std::make_shared<hd::Wallet>(info.id, info.name,
-                  info.description, signContainer_.get(), logger_);
-               hdWallet->setWCT(this);
-
-               if (hdWallet) {
-                  const auto &cbHDWalletDone = [this, hdWallet, cbDone] {
-                     logger_->debug("[WalletsManager::syncWallets] synced HD wallet {}"
-                        , hdWallet->walletId());
-                     saveWallet(hdWallet);
-                     cbDone();
-                  };
-                  hdWallet->synchronize(cbHDWalletDone);
-               }
-            }
-            catch (const std::exception &e) {
-               logger_->error("[WalletsManager::syncWallets] failed to create HD wallet "
-                  "{}: {}", info.id, e.what());
-               cbDone();
-            }
-            break;
-         }
-
-         case bs::sync::WalletFormat::Settlement:
-            throw std::runtime_error("not implemented");
-            break;
-
-         default:
-            cbDone();
-            logger_->info("[WalletsManager::syncWallets] wallet format {} is not "
-               "supported yet", (int)info.format);
-            break;
-         }
+         syncWallet(info, cbDone);
       }
 
       logger_->debug("[WalletsManager::syncWallets] initial wallets synchronized");
@@ -355,13 +362,10 @@ void WalletsManager::setUserId(const BinaryData &userId)
 
 const WalletsManager::HDWalletPtr WalletsManager::getHDWallet(unsigned id) const
 {
-   for (auto& wltPair : hdWallets_)
-   {
+   for (auto& wltPair : hdWallets_) {
       if (wltPair.second->containerId_ == id)
          return wltPair.second;
    }
-
-   throw std::runtime_error("unknown wallet int id");
    return nullptr;
 }
 
@@ -494,6 +498,7 @@ void WalletsManager::walletReady(const std::string &walletId)
    if (rootWallet) {
       const auto &itWallet = newWallets_.find(rootWallet->walletId());
       if (itWallet != newWallets_.end()) {
+         logger_->debug("[{}] found new wallet {} - starting rescan", __func__, rootWallet->walletId());
          rootWallet->startRescan();
          newWallets_.erase(itWallet);
          rootWallet->synchronize([this, walletId] {
@@ -603,6 +608,11 @@ bool WalletsManager::deleteWallet(HDWalletPtr wallet)
    }
    hdWallets_.erase(wallet->walletId());
    walletNames_.erase(wallet->name());
+   for (const auto &hdWallet : hdWallets_) {
+      if (hdWallet.second->containerId_ > wallet->containerId_) {
+         hdWallet.second->containerId_--;
+      }
+   }
    const bool result = wallet->deleteRemotely();
    logger_->info("[WalletsManager::{}] - Wallet {} ({}) removed: {}", __func__
       , wallet->name(), wallet->walletId(), result);
@@ -922,30 +932,30 @@ void WalletsManager::startWalletRescan(const HDWalletPtr &hdWallet)
 
 void WalletsManager::onWalletsListUpdated()
 {
-   std::set<std::string> hdWalletIds;
-   hdWalletIds.insert(hdWalletsId_.cbegin(), hdWalletsId_.cend());
-   const auto &cbSyncWallets = [this, hdWalletIds](int cur, int total) {
-      if (cur < total) {
-         return;
+   const auto &cbSyncWallets = [this](const std::vector<bs::sync::WalletInfo> &wi) {
+      std::map<std::string, bs::sync::WalletInfo> hdWallets;
+      for (const auto &info : wi) {
+         hdWallets[info.id] = info;
       }
-      for (const auto &hdWalletId : hdWalletsId_) {
-         if (hdWalletIds.find(hdWalletId) == hdWalletIds.end()) {
-            const auto hdWallet = hdWallets_[hdWalletId];
-            QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletAdded(hdWallet->walletId()); });
-            logger_->debug("[WalletsManager::onWalletsListUpdated] found new wallet {} "
-               "- starting address scan for it", hdWalletId);
-            newWallets_.insert(hdWalletId);
+      for (const auto &hdWallet : hdWallets) {
+         if (hdWalletsId_.find(hdWallet.first) == hdWalletsId_.end()) {
+            syncWallet(hdWallet.second, [this, hdWalletId=hdWallet.first]
+            {
+               const auto hdWallet = hdWallets_[hdWalletId];
+               hdWallet->registerWallet(armoryPtr_);
+               QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletAdded(hdWallet->walletId()); });
+            });
+            newWallets_.insert(hdWallet.first);
          }
       }
-      for (const auto &hdWalletId : hdWalletIds) {
-         if (std::find(hdWalletsId_.cbegin(), hdWalletsId_.cend(), hdWalletId) == hdWalletsId_.cend()) {
-            QMetaObject::invokeMethod(this, [this, hdWalletId] { emit walletDeleted(hdWalletId); });
+      const auto hdWalledsId = hdWalletsId_;
+      for (const auto &hdWalletId : hdWalledsId) {
+         if (hdWallets.find(hdWalletId) == hdWallets.end()) {
+            deleteWallet(hdWallets_[hdWalletId]);
          }
       }
-      registerWallets();
    };
-   reset();
-   syncWallets(cbSyncWallets);
+   signContainer_->syncWalletInfo(cbSyncWallets);
 }
 
 void WalletsManager::onAuthLeafAdded(const std::string &walletId)
@@ -955,16 +965,19 @@ void WalletsManager::onAuthLeafAdded(const std::string &walletId)
          logger_->debug("[WalletsManager::onAuthLeafAdded] auth wallet {} unset", authAddressWallet_->walletId());
          deleteWallet(authAddressWallet_);
       }
+      emit AuthLeafNotCreated();
       return;
    }
    const auto wallet = getPrimaryWallet();
    if (!wallet) {
       logger_->error("[WalletsManager::onAuthLeafAdded] no primary wallet loaded");
+      emit AuthLeafNotCreated();
       return;
    }
    auto group = wallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
    if (!group) {
       logger_->error("[WalletsManager::onAuthLeafAdded] no auth group in primary wallet");
+      emit AuthLeafNotCreated();
       return;
    }
 
@@ -979,6 +992,7 @@ void WalletsManager::onAuthLeafAdded(const std::string &walletId)
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsManager::onAuthLeafAdded] failed to create auth leaf: {}", e.what());
+      emit AuthLeafNotCreated();
       return;
    }
    leaf->synchronize([this, leaf] {
@@ -1423,8 +1437,9 @@ bool WalletsManager::CreateCCLeaf(const std::string &ccName, const std::function
    dialogData.setValue("Title", tr("Create CC Leaf"));
    dialogData.setValue("Product", QString::fromStdString(ccName));
 
-   const auto &createCCLeafCb = [this, ccName, cb](bs::error::ErrorCode result) {
-      ProcessCreatedCCLeaf(ccName, result);
+   const auto &createCCLeafCb = [this, ccName, cb](bs::error::ErrorCode result
+      , const std::string &walletId) {
+      ProcessCreatedCCLeaf(ccName, result, walletId);
       if (cb) {
          cb(result);
       }
@@ -1433,11 +1448,12 @@ bool WalletsManager::CreateCCLeaf(const std::string &ccName, const std::function
    return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {}, dialogData, createCCLeafCb);
 }
 
-void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::ErrorCode result)
+void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::ErrorCode result
+   , const std::string &walletId)
 {
    if (result == bs::error::ErrorCode::NoError) {
-      logger_->debug("[WalletsManager::ProcessCreatedCCLeaf] CC leaf {} created"
-                     , ccName);
+      logger_->debug("[WalletsManager::ProcessCreatedCCLeaf] CC leaf {} created with id {}"
+                     , ccName, walletId);
 
       auto wallet = getPrimaryWallet();
       if (!wallet) {
@@ -1451,15 +1467,17 @@ void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::
          return;
       }
 
-      auto leaf = group->createLeaf(ccName, wallet->walletId());
+      auto leaf = group->createLeaf(ccName, walletId);
 
       addWallet(leaf);
+      newWallets_.insert(wallet->walletId());
 
-      // XXX register in armory ?
-      // XXX rescan ?
+      leaf->synchronize([this, leaf, ccName] {
+         logger_->debug("CC leaf {} synchronized", ccName);
+         leaf->registerWallet(armoryPtr_, true);
 
-      emit CCLeafCreated(ccName);
-      emit walletChanged(wallet->walletId());
+         emit CCLeafCreated(ccName);
+      });
    } else {
       logger_->error("[WalletsManager::ProcessCreatedCCLeaf] CC leaf {} creation failed: {}"
                      , ccName, static_cast<int>(result));
@@ -1474,26 +1492,16 @@ bool WalletsManager::CreateAuthLeaf()
       return false;
    }
 
-   auto primaryWallet = getPrimaryWallet();
-   if (primaryWallet == nullptr) {
-      logger_->error("[WalletsManager::CreateAuthLeaf] could not create auth leaf. no primary wallet");
+   if (userId_.isNull()) {
+      logger_->error("[WalletsManager::CreateAuthLeaf] can't create auth leaf without user id");
       return false;
    }
 
-   bs::hd::Path path;
-   path.append(bs::hd::purpose | bs::hd::hardFlag);
-   path.append(bs::hd::CoinType::BlockSettle_Auth | bs::hd::hardFlag);
-   path.append(0 | bs::hd::hardFlag);
+   auto primaryWallet = getPrimaryWallet();
+   if (primaryWallet == nullptr) {
+      logger_->error("[WalletsManager::CreateAuthLeaf] could not create auth leaf - no primary wallet");
+      return false;
+   }
 
-   return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {}, {},  [this](bs::error::ErrorCode result)
-                                       {
-                                          ProcessAuthLeafCreateResult(result);
-                                       });
-}
-
-void WalletsManager::ProcessAuthLeafCreateResult(bs::error::ErrorCode result)
-{
-   logger_->debug("[WalletsManager::ProcessAuthLeafCreateResult] auth leaf creation result: {}"
-                  , static_cast<int>(result));
-   // No need to react on positive result, since WalletSignerContainer::AuthLeafAdded should be emitted
+   return signContainer_->setUserId(userId_, primaryWallet->walletId()) > 0;
 }
