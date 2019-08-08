@@ -119,10 +119,10 @@ void RFQTicketXBT::setWallets()
       recvWallet_ = curWallet_;
    }
 
-  transactionData_->setWallet(curWallet_, armory_->topBlock());
-  if (prevRecvWallet != recvWallet_) {
-     fillRecvAddresses();
-  }
+   transactionData_->setWallet(curWallet_, armory_->topBlock());
+   if (prevRecvWallet != recvWallet_) {
+      fillRecvAddresses();
+   }
 }
 
 void RFQTicketXBT::resetTicket()

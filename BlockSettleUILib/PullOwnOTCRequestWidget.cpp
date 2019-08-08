@@ -1,7 +1,6 @@
 #include "PullOwnOTCRequestWidget.h"
 
 #include "ui_PullOwnOTCRequestWidget.h"
-#include "ChatProtocol/ChatUtils.h"
 
 PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
    : QWidget(parent)
@@ -9,24 +8,16 @@ PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
 {
    ui_->setupUi(this);
 
-   ui_->pushButtonPull->setEnabled(false);
-   connect(ui_->pushButtonPull, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::OnPullPressed);
+   ui_->widgetRange->hide();
+
+   connect(ui_->pushButtonPull, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::requestPulled);
 }
 
-PullOwnOTCRequestWidget::~PullOwnOTCRequestWidget() noexcept = default;
+PullOwnOTCRequestWidget::~PullOwnOTCRequestWidget() = default;
 
-void PullOwnOTCRequestWidget::OnPullPressed()
+void PullOwnOTCRequestWidget::setOffer(const bs::network::otc::Offer &offer)
 {
-   emit PullOTCRequested();
-}
-
-void PullOwnOTCRequestWidget::setRequestData(const std::shared_ptr<Chat::Data>& otc)
-{
-   assert(otc->has_message());
-   assert(otc->message().has_otc_request());
-
-   ui_->labelSide->setText(ChatUtils::toString(otc->message().otc_request().side()));
-   ui_->labelRange->setText(ChatUtils::toString(otc->message().otc_request().range_type()));
-
-   ui_->pushButtonPull->setEnabled(true);
+   ui_->labelSide->setText(QString::fromStdString(bs::network::otc::toString(offer.ourSide)));
+   ui_->labelPrice->setText(QString::number(offer.price));
+   ui_->labelQuantity->setText(QString::number(offer.amount));
 }

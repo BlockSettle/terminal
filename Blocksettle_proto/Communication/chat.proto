@@ -44,34 +44,6 @@ enum UserStatus
     USER_STATUS_OFFLINE = 2;
 }
 
-enum OtcResult
-{
-    OTC_RESULT_UNSPECIFIED = 0;
-    OTC_RESULT_ACCEPTED = 1;
-    OTC_RESULT_REJECTED = 2;
-    OTC_RESULT_CANCELED = 3;
-    OTC_RESULT_EXPIRED = 4;
-}
-
-// Keep in sync with bs::network::ChatOTCSide::Type
-enum OtcSide
-{
-    OTC_SIDE_UNDEFINED = 0;
-    OTC_SIDE_BUY = 1;
-    OTC_SIDE_SELL = 2;
-};
-
-// Keep in sync with bs::network::OTCRangeID::Type
-enum OtcRangeType
-{
-    OTC_RANGE_1_5     = 0;
-    OTC_RANGE_5_10    = 1;
-    OTC_RANGE_10_50   = 2;
-    OTC_RANGE_50_100  = 3;
-    OTC_RANGE_100_250 = 4;
-    OTC_RANGE_250PLUS = 5;
-};
-
 enum SessionKeyError
 {
     SESSION_NO_ERROR = 0;
@@ -79,12 +51,6 @@ enum SessionKeyError
     SESSION_USER_KEY_NOT_FOUND = 2;
     SESSION_ENCRYPTION_FAILED = 3;
 };
-
-message OtcRange
-{
-    uint64 lower = 1;
-    uint64 upper = 2;
-}
 
 message Data
 {
@@ -135,35 +101,12 @@ message Data
             SENT                      = 0x0008;
         };
 
-        enum Encryption 
+        enum Encryption
         {
             UNENCRYPTED = 0;
             IES = 1;
             AEAD = 2;
         };
-
-        message OtcRequest
-        {
-            OtcSide side = 1;
-            OtcRangeType range_type = 2;
-        }
-
-        message OtcResponse
-        {
-            OtcSide side = 1;
-            OtcRange price = 2;
-            OtcRange quantity = 3;
-        }
-
-        message OtcUpdate
-        {
-            uint64 amount = 1;
-            uint64 price = 2;
-        }
-
-        message OtcCloseTrading
-        {
-        }
 
         string id = 1;
         int64 timestamp_ms = 2;
@@ -178,18 +121,6 @@ message Data
 
         // FIXME: remove this internal field, should not be in the proto file
         bool loaded_from_history = 15;
-
-        oneof otc
-        {
-            OtcRequest otc_request = 20;
-            OtcResponse otc_response = 21;
-            OtcUpdate otc_update = 22;
-            OtcCloseTrading otc_close_trading = 23;
-        }
-    }
-
-    message OtcCloseTrading
-    {
     }
 
     oneof data
@@ -308,16 +239,16 @@ message Request
         bytes sender_session_public_key = 3;
         SessionKeyError session_key_error = 4;
     }
-    
+
     message UploadNewPublicKey
     {
-        enum Confirmation 
+        enum Confirmation
         {
             UNDECIDED = 0;
             CONFIRMED = 1;
             DECLINED = 2;
         };
-        
+
         string auth_id = 1;
         Confirmation confirmation = 2;
         bytes public_key_to_replace = 3;
@@ -456,7 +387,7 @@ message Response
         bytes sender_session_public_key = 3;
         SessionKeyError session_key_error = 4;
     }
-    
+
     message ConfirmReplacePublicKey
     {
         bytes original_public_key = 1;

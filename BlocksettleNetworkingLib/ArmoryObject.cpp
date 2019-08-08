@@ -69,6 +69,11 @@ bool ArmoryObject::startLocalArmoryProcess(const ArmorySettings &settings)
    return false;
 }
 
+bool ArmoryObject::needInvokeCb() const
+{
+   return cbInMainThread_ && (thread() != QThread::currentThread());
+}
+
 void ArmoryObject::setupConnection(const ArmorySettings &settings, const BIP151Cb &bip150PromptUserCb)
 {
    if (settings.runLocally) {
@@ -101,7 +106,7 @@ bool ArmoryObject::getWalletsHistory(const std::vector<std::string> &walletIDs, 
       if (!cb) {
          return;
       }
-      if (cbInMainThread_) {
+      if (needInvokeCb()) {
          QMetaObject::invokeMethod(this, [cb, le] { cb(std::move(le)); });
       } else {
          cb(std::move(le));
@@ -116,7 +121,7 @@ bool ArmoryObject::getLedgerDelegateForAddress(const std::string &walletId, cons
    QPointer<QObject> contextSmartPtr = context;
    const auto &cbWrap = [this, cb, context, contextSmartPtr]
                         (const std::shared_ptr<AsyncClient::LedgerDelegate> &ld) {
-      if (cbInMainThread_) {
+      if (needInvokeCb()) {
          QMetaObject::invokeMethod(this, [cb, ld, context, contextSmartPtr]{
             if (context) {
                if (contextSmartPtr) {
@@ -140,7 +145,7 @@ bool ArmoryObject::getWalletsLedgerDelegate(const LedgerDelegateCb &cb)
       if (!cb) {
          return;
       }
-      if (cbInMainThread_) {
+      if (needInvokeCb()) {
          QMetaObject::invokeMethod(this, [cb, ld] {
             cb(ld);
          });
@@ -155,7 +160,13 @@ bool ArmoryObject::getTxByHash(const BinaryData &hash, const TxCb &cb)
 {
    const auto tx = txCache_.get(hash);
    if (tx.isInitialized()) {
-      cb(tx);
+      if (needInvokeCb()) {
+         QMetaObject::invokeMethod(this, [cb, tx] {
+            cb(tx);
+         });
+      } else {
+         cb(tx);
+      }
       return true;
    }
    const auto &cbWrap = [this, cb, hash](Tx tx) {
@@ -163,7 +174,7 @@ bool ArmoryObject::getTxByHash(const BinaryData &hash, const TxCb &cb)
       if (!cb) {
          return;
       }
-      if (cbInMainThread_) {
+      if (needInvokeCb()) {
          QMetaObject::invokeMethod(this, [cb, tx] { cb(tx); });
       }
       else {
@@ -187,7 +198,13 @@ bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb 
       }
    }
    if (missedHashes.empty()) {
-      cb(*result);
+      if (needInvokeCb()) {
+         QMetaObject::invokeMethod(this, [cb, result] {
+            cb(*result);
+         });
+      } else {
+         cb(*result);
+      }
       return true;
    }
    const auto &cbWrap = [this, cb, result](const std::vector<Tx> &txs) {
@@ -197,7 +214,7 @@ bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb 
          }
          result->push_back(tx);
       }
-      if (cbInMainThread_) {
+      if (needInvokeCb()) {
          QMetaObject::invokeMethod(this, [cb, result] { cb(*result); });
       }
       else {
@@ -213,7 +230,7 @@ bool ArmoryObject::getRawHeaderForTxHash(const BinaryData& inHash, const BinaryD
       if (!callback) {
          return;
       }
-      if (cbInMainThread_) {
+      if (needInvokeCb()) {
          QMetaObject::invokeMethod(this, [callback, header] { callback(std::move(header)); });
       } else {
          callback(header);
@@ -228,7 +245,7 @@ bool ArmoryObject::getHeaderByHeight(const unsigned int inHeight, const BinaryDa
       if (!callback) {
          return;
       }
-      if (cbInMainThread_) {
+      if (needInvokeCb()) {
          QMetaObject::invokeMethod(this, [callback, header] { callback(std::move(header)); });
       } else {
          callback(header);
@@ -246,7 +263,7 @@ bool ArmoryObject::estimateFee(unsigned int nbBlocks, const FloatCb &cb)
       if (!cb) {
          return;
       }
-      if (cbInMainThread_) {
+      if (needInvokeCb()) {
          QMetaObject::invokeMethod(this, [cb, fee] { cb(fee); });
       } else {
          cb(fee);
@@ -264,7 +281,7 @@ bool ArmoryObject::getFeeSchedule(const FloatMapCb &cb)
       if (!cb) {
          return;
       }
-      if (cbInMainThread_) {
+      if (needInvokeCb()) {
          QMetaObject::invokeMethod(this, [cb, fees] { cb(fees); });
       }
       else {

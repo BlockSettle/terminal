@@ -36,8 +36,8 @@ public:
 
 private:
    bs::Address address_;
-   double      amount_;
-   bool        isMax_;
+   double      amount_{};
+   bool        isMax_{};
 };
 
 #endif // __RECIPIENT_CONTAINER_H__

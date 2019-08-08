@@ -14,8 +14,6 @@
 #include "com/celertech/marketdata/api/enums/ProductTypeProto.pb.h"
 #include "com/celertech/marketdata/api/enums/MarketDataEntryTypeProto.pb.h"
 
-#include "ChatCommonTypes.h"
-
 #ifndef NDEBUG
 #include <stdexcept>
 #endif
