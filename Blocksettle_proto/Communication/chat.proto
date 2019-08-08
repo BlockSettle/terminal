@@ -118,6 +118,12 @@ enum EncryptionType
     AEAD = 2;
 }
 
+enum PartyMessageState
+{
+    SENT = 0;
+    RECEIVED = 1;
+}
+
 message PartyPacket
 {
 	string id = 1;
@@ -162,6 +168,7 @@ message PartyMessagePacket
     string message = 4;
     EncryptionType encryption = 5;
     bytes nonce = 6;
+    PartyMessageState party_message_state = 7;
 }
 
 message Data

@@ -7,6 +7,7 @@
 #include "ChatProtocol/ChatUser.h"
 #include "ChatProtocol/ClientConnectionLogic.h"
 #include "ChatProtocol/ClientPartyLogic.h"
+#include "ChatProtocol/ClientDBService.h"
 
 #include "DataConnectionListener.h"
 
@@ -75,9 +76,10 @@ namespace Chat
       void partyModelChanged();
 
    private slots:
-      void sendRequestPacket(const google::protobuf::Message& message);
+      void sendPacket(const google::protobuf::Message& message);
       void onCloseConnection();
       void handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what);
+      void initDbDone();
 
    private:
       void setClientPartyLogicPtr(ClientPartyLogicPtr val) { clientPartyLogicPtr_ = val; }
@@ -92,6 +94,7 @@ namespace Chat
       ChatUserPtr                currentUserPtr_;
       ClientConnectionLogicPtr   clientConnectionLogicPtr_;
       ClientPartyLogicPtr        clientPartyLogicPtr_;
+      ClientDBServicePtr         clientDBServicePtr_;
    };
 
 }

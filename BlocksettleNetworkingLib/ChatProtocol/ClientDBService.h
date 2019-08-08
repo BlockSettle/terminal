@@ -7,6 +7,8 @@
 #include "ChatProtocol/ServiceThread.h"
 #include "ChatProtocol/ClientDBLogic.h"
 
+#include <google/protobuf/message.h>
+
 namespace spdlog
 {
    class logger;
@@ -24,11 +26,16 @@ namespace Chat
 
    signals:
       ////////// PROXY SIGNALS //////////
-      void Init(const Chat::LoggerPtr& loggerPtr, const ApplicationSettingsPtr& appSettings);
+      void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings);
+      void SaveMessage(const google::protobuf::Message& message);
 
       ////////// RETURN SIGNALS //////////
       void initDone();
    };
+
+   using ClientDBServicePtr = std::shared_ptr<ClientDBService>;
 }
+
+Q_DECLARE_METATYPE(Chat::ApplicationSettingsPtr);
 
 #endif // ClientDBService_h__

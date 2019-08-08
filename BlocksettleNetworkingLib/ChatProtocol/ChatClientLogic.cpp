@@ -30,6 +30,30 @@ namespace Chat
 
    }
 
+   void ChatClientLogic::initDbDone()
+   {
+      currentUserPtr_ = std::make_shared<ChatUser>();
+      const auto publicKey = applicationSettingsPtr_->GetAuthKeys().second;
+      currentUserPtr_->setPublicKey(BinaryData(publicKey.data(), publicKey.size()));
+      connect(currentUserPtr_.get(), &ChatUser::displayNameChanged, this, &ChatClientLogic::chatUserDisplayNameChanged);
+
+      userHasherPtr_ = std::make_shared<UserHasher>();
+
+      setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr_, clientDBServicePtr_, this));
+      connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::partyModelChanged, this, &ChatClientLogic::partyModelChanged);
+
+      clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr_, applicationSettingsPtr_, clientDBServicePtr_, loggerPtr_);
+      clientConnectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
+      connect(this, &ChatClientLogic::dataReceived, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDataReceived);
+      connect(this, &ChatClientLogic::connected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onConnected);
+      connect(this, &ChatClientLogic::disconnected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDisconnected);
+      connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error),
+         clientConnectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
+
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::sendPacket, this, &ChatClientLogic::sendPacket);
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
+   }
+
    void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettingsPtr, const LoggerPtr& loggerPtr)
    {
       qDebug() << "ChatClientLogic::Init Thread ID:" << this->thread()->currentThreadId();
@@ -43,27 +67,11 @@ namespace Chat
       connectionManagerPtr_ = connectionManagerPtr;
       applicationSettingsPtr_ = appSettingsPtr;
       loggerPtr_ = loggerPtr;
-      
-      currentUserPtr_ = std::make_shared<ChatUser>();
-      const auto publicKey = applicationSettingsPtr_->GetAuthKeys().second;
-      currentUserPtr_->setPublicKey(BinaryData(publicKey.data(), publicKey.size()));
-      connect(currentUserPtr_.get(), &ChatUser::displayNameChanged, this, &ChatClientLogic::chatUserDisplayNameChanged);
 
-      userHasherPtr_ = std::make_shared<UserHasher>();
+      clientDBServicePtr_ = std::make_shared<ClientDBService>();
+      connect(clientDBServicePtr_.get(), &ClientDBService::initDone, this, &ChatClientLogic::initDbDone);
 
-      setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr, this));
-      connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::partyModelChanged, this, &ChatClientLogic::partyModelChanged);
-
-      clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr_, appSettingsPtr, loggerPtr);
-      clientConnectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
-      connect(this, &ChatClientLogic::dataReceived, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDataReceived);
-      connect(this, &ChatClientLogic::connected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onConnected);
-      connect(this, &ChatClientLogic::disconnected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDisconnected);
-      connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error), 
-         clientConnectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
-
-      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::sendRequestPacket, this, &ChatClientLogic::sendRequestPacket);
-      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
+      clientDBServicePtr_->Init(loggerPtr, appSettingsPtr);
    }
 
    void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb)
@@ -124,7 +132,7 @@ namespace Chat
       emit error(dataConnectionError);
    }
 
-   void ChatClientLogic::sendRequestPacket(const google::protobuf::Message& message)
+   void ChatClientLogic::sendPacket(const google::protobuf::Message& message)
    {
       qDebug() << "ChatClientLogic::sendRequestPacket Thread ID:" << this->thread()->currentThreadId();
 
@@ -153,7 +161,7 @@ namespace Chat
       }
 
       LogoutRequest logoutRequest;
-      sendRequestPacket(logoutRequest);
+      sendPacket(logoutRequest);
    }
 
    void ChatClientLogic::onCloseConnection()
@@ -172,7 +180,7 @@ namespace Chat
          return;
       }
      
-      clientPartyLogicPtr_->prepareAndSendMessage(clientPartyPtr, data);
+      clientConnectionLogicPtr_->prepareAndSendMessage(clientPartyPtr, data);
    }
 
    void ChatClientLogic::handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what)

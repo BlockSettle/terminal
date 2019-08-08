@@ -39,7 +39,6 @@ namespace Chat
 }
 
 Q_DECLARE_METATYPE(Chat::ConnectionManagerPtr)
-Q_DECLARE_METATYPE(Chat::ApplicationSettingsPtr)
 Q_DECLARE_METATYPE(Chat::LoggerPtr)
 Q_DECLARE_METATYPE(ZmqBipNewKeyCb)
 

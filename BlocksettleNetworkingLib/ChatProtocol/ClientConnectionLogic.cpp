@@ -1,5 +1,7 @@
 #include <QtDebug>
 #include <QThread>
+#include <QUuid>
+#include <QDateTime>
 
 #include <google/protobuf/any.pb.h>
 
@@ -13,10 +15,12 @@
 namespace Chat
 {
 
-   ClientConnectionLogic::ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
-      : QObject(parent), loggerPtr_(loggerPtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
+   ClientConnectionLogic::ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings, 
+      const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
+      : QObject(parent), loggerPtr_(loggerPtr), clientDBServicePtr_(clientDBServicePtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
    {
       connect(this, &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr_.get(), &ClientPartyLogic::onUserStatusChanged);
+      connect(this, &ClientConnectionLogic::error, this, &ClientConnectionLogic::handleLocalErrors);
    }
 
    void ClientConnectionLogic::onDataReceived(const std::string& data)
@@ -56,7 +60,7 @@ namespace Chat
       welcomeRequest.set_user_name(currentUserPtr()->displayName());
       welcomeRequest.set_client_public_key(currentUserPtr()->publicKey().toBinStr());
 
-      emit sendRequestPacket(welcomeRequest);
+      emit sendPacket(welcomeRequest);
    }
 
    void ClientConnectionLogic::onDisconnected(void)
@@ -116,9 +120,43 @@ namespace Chat
       emit userStatusChanged(statusChanged.user_name(), statusChanged.client_status());
    }
 
-   void ClientConnectionLogic::SendPartyMessage(const std::string& partyId, const std::string& data)
+   void ClientConnectionLogic::prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
    {
+      if (PartyType::GLOBAL == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
+      {
+         prepareAndSendGlobalMessage(clientPartyPtr, data);
+         return;
+      }
 
+      emit error(ClientConnectionLogicError::SendingDataToUnhandledParty, clientPartyPtr->id());
+   }
+
+   void ClientConnectionLogic::prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
+   {
+      auto partyId = clientPartyPtr->id();
+      auto messageId = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
+      auto timestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+      auto message = data;
+      auto encryption_type = Chat::EncryptionType::UNENCRYPTED;
+      auto party_message_state = Chat::PartyMessageState::SENT;
+
+      PartyMessagePacket partyMessagePacket;
+      partyMessagePacket.set_party_id(partyId);
+      partyMessagePacket.set_message_id(messageId);
+      partyMessagePacket.set_timestamp_ms(timestamp);
+      partyMessagePacket.set_message(message);
+      partyMessagePacket.set_encryption(encryption_type);
+      partyMessagePacket.set_nonce("");
+      partyMessagePacket.set_party_message_state(party_message_state);
+
+      clientDBServicePtr_->SaveMessage(partyMessagePacket);
+
+      emit sendPacket(partyMessagePacket);
+   }
+
+   void ClientConnectionLogic::handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what)
+   {
+      loggerPtr_->debug("[ClientConnectionLogic::handleLocalErrors] Error: {}, what: {}", static_cast<int>(errorCode), what);
    }
 
 }

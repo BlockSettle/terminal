@@ -1,8 +1,6 @@
 #include "ChatProtocol/ClientPartyLogic.h"
 #include "ChatProtocol/ClientParty.h"
 
-#include "chat.pb.h"
-
 #include <disable_warnings.h>
 #include <spdlog/logger.h>
 #include <enable_warnings.h>
@@ -10,10 +8,11 @@
 namespace Chat
 {
 
-   ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, QObject* parent) : QObject(parent)
+   ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBServicePtr& clientDBServicePtr, QObject* parent) : QObject(parent)
    {
       qRegisterMetaType<Chat::ClientPartyLogicError>();
 
+      clientDBServicePtr_ = clientDBServicePtr;
       clientPartyModelPtr_ = std::make_shared<ClientPartyModel>(loggerPtr, this);
       connect(this, &ClientPartyLogic::error, this, &ClientPartyLogic::handleLocalErrors);
    }
@@ -59,22 +58,6 @@ namespace Chat
    void ClientPartyLogic::handleLocalErrors(const ClientPartyLogicError& errorCode, const std::string& what)
    {
       loggerPtr_->debug("[ClientPartyLogic::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
-   }
-
-   void ClientPartyLogic::prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
-   {
-      if (PartyType::GLOBAL == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
-      {
-         prepareAndSendGlobalMessage(clientPartyPtr, data);
-         return;
-      }
-
-      emit error(ClientPartyLogicError::SendingDataToUnhandledParty, clientPartyPtr->id());
-   }
-
-   void ClientPartyLogic::prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
-   {
-
    }
 
 }

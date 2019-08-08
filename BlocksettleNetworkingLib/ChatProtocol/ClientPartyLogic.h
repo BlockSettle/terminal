@@ -6,6 +6,9 @@
 #include <google/protobuf/message.h>
 
 #include "ChatProtocol/ClientPartyModel.h"
+#include "ChatProtocol/ClientDBService.h"
+
+#include <google/protobuf/message.h>
 
 namespace spdlog
 {
@@ -17,8 +20,7 @@ namespace Chat
    enum class ClientPartyLogicError
    {
       NonexistentClientStatusChanged,
-      PartyNotExist,
-      SendingDataToUnhandledParty
+      PartyNotExist
    };
 
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
@@ -27,18 +29,17 @@ namespace Chat
    {
       Q_OBJECT
    public:
-      ClientPartyLogic(const LoggerPtr& loggerPtr, QObject* parent = nullptr);
+      ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBServicePtr& clientDBServicePtr, QObject* parent = nullptr);
 
       Chat::ClientPartyModelPtr clientPartyModelPtr() const { return clientPartyModelPtr_; }
       void setClientPartyModelPtr(Chat::ClientPartyModelPtr val) { clientPartyModelPtr_ = val; }
 
       void handlePartiesFromWelcomePacket(const google::protobuf::Message& msg);
-      void prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
-      void prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
 
    signals:
       void error(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
       void partyModelChanged();
+      void sendPartyMessagePacket(const google::protobuf::Message& message);
 
    public slots:
       void onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
@@ -50,6 +51,7 @@ namespace Chat
       void createNewParty();
       LoggerPtr loggerPtr_;
       ClientPartyModelPtr clientPartyModelPtr_;
+      ClientDBServicePtr clientDBServicePtr_;
    };
 
    using ClientPartyLogicPtr = std::shared_ptr<ClientPartyLogic>;
