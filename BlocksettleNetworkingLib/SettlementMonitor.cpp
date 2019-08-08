@@ -168,7 +168,12 @@ void bs::SettlementMonitor::checkNewEntries()
 void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb](const Tx &tx) {
+   const auto &cbTX = [this, entry, cb, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](const Tx &tx) {
+      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+      if (*quitFlag) {
+         return;
+      }
+
       if (!tx.isInitialized()) {
          logger_->error("[bs::SettlementMonitor::IsPayInTransaction] TX not initialized for {}."
             , entry.getTxHash().toHexStr());
@@ -192,7 +197,12 @@ void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry 
 void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb](const Tx &tx) {
+   const auto &cbTX = [this, entry, cb, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](const Tx &tx) {
+      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+      if (*quitFlag) {
+         return;
+      }
+
       if (!tx.isInitialized()) {
          logger_->error("[bs::SettlementMonitor::IsPayOutTransaction] TX not initialized for {}."
             , entry.getTxHash().toHexStr());
@@ -210,7 +220,12 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
          txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
       }
 
-      const auto &cbTXs = [this, txOutIdx, cb](const std::vector<Tx> &txs) {
+      const auto &cbTXs = [this, txOutIdx, cb, quitFlag, quitFlagLock](const std::vector<Tx> &txs) {
+         std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+         if (*quitFlag) {
+            return;
+         }
+
          for (const auto &prevTx : txs) {
             const auto &itIdx = txOutIdx.find(prevTx.getThisHash());
             if (itIdx == txOutIdx.end()) {
@@ -252,7 +267,12 @@ void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEn
    if (payoutConfirmations_ != confirmationsNumber) {
       payoutConfirmations_ = confirmationsNumber;
 
-      const auto &cbPayoutType = [this](bs::PayoutSigner::Type poType) {
+      const auto &cbPayoutType = [this, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](bs::PayoutSigner::Type poType) {
+         std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+         if (*quitFlag) {
+            return;
+         }
+
          payoutSignedBy_ = poType;
          if (payoutConfirmations_ >= confirmedThreshold()) {
             if (!payoutConfirmedFlag_) {
@@ -275,14 +295,24 @@ void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEn
 void bs::SettlementMonitor::getPayinInput(const std::function<void(UTXO)> &cb
    , bool allowZC)
 {
-   const auto &cbSpendable = [this, cb, allowZC]
+   const auto &cbSpendable = [this, cb, allowZC, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_]
       (ReturnMessage<std::vector<UTXO>> inputs) {
+      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+      if (*quitFlag) {
+         return;
+      }
+
       try {
          auto inUTXOs = inputs.get();
          if (inUTXOs.empty()) {
             if (allowZC) {
-               const auto &cbZC = [this, cb]
+               const auto &cbZC = [this, cb, quitFlag, quitFlagLock]
                (ReturnMessage<std::vector<UTXO>> zcs)->void {
+                  std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+                  if (*quitFlag) {
+                     return;
+                  }
+
                   try {
                      auto inZCUTXOs = zcs.get();
                      if (inZCUTXOs.size() == 1) {
