@@ -416,12 +416,12 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
    // sort reqs by wallets
    const auto &parsedReqsForWallets = std::make_shared<std::unordered_map<std::string, std::vector<bs::core::wallet::TXSignRequest>>>(); // <wallet_id, reqList>
+   const auto walletsMgr = adapter_->getWalletsManager();
    for (const auto &req : parsedReqs) {
       if (!req.prevStates.empty()) {
          invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Transaction already signed"));
          return;
       }
-      const auto walletsMgr = adapter_->getWalletsManager();
       const auto &wallet = walletsMgr->getWalletById(req.walletId);
       if (!wallet) {
          invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to find wallet with ID %1").arg(QString::fromStdString(req.walletId)));
@@ -433,10 +433,9 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
    // sign reqs by wallets
    const auto &requestCbs = std::make_shared<std::vector<std::function<void()>>>();
-   auto reqsIt = parsedReqsForWallets->cbegin();
 
-   while (reqsIt != parsedReqsForWallets->cend()) {
-      const auto &walletCb = [this, fileName, jsCallback, requestCbs, walletId=reqsIt->first, reqs=reqsIt->second]() {
+   for (const auto req : *parsedReqsForWallets) {
+      const auto &walletCb = [this, fileName, jsCallback, requestCbs, walletId=req.first, reqs=req.second]() {
 
          const auto &cb = new bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>
                ([this, fileName, jsCallback, requestCbs, walletId, reqs](int result, const QString &, bs::wallet::QPasswordData *passwordData){
@@ -514,7 +513,6 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
       };
 
       requestCbs->push_back(walletCb);
-      reqsIt++;
    }
 
    // run first cb
