@@ -223,14 +223,13 @@ bool SettlementWallet::createMonitorCommon(const BinaryData &settlementId
    , const std::shared_ptr<spdlog::logger>& logger
    , const CreateMonitorCallback& createMonitorCB)
 {
-   const auto itSD = addrData_.find(settlementId);
    std::shared_ptr<AsyncClient::BtcWallet> addressWallet;
-   if (itSD != addrData_.end()) {
-      addressWallet = getSettlementAddressWallet(itSD->second.address);
+   const SettlementData sd = getSettlDataBySettlementId(settlementId);
+   if (!sd.address.isNull()) {
+      addressWallet = getSettlementAddressWallet(sd.address);
    }
    if (addressWallet) {
-      createMonitorCB(addressWallet, itSD->second.address
-         , itSD->second.buyPubKey, itSD->second.sellPubKey);
+      createMonitorCB(addressWallet, sd.address, sd.buyPubKey, sd.sellPubKey);
    }
    else {
       FastLock locker{lockWalletsMap_};
