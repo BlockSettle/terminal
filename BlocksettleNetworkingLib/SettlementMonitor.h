@@ -114,6 +114,8 @@ namespace bs {
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
 
    private:
+      void initialize();
+
       std::atomic_flag                          walletLock_ = ATOMIC_FLAG_INIT;
       std::shared_ptr<AsyncClient::BtcWallet>   rtWallet_;
       std::set<BinaryData>                      ownAddresses_;
@@ -125,6 +127,9 @@ namespace bs {
       bool payoutConfirmedFlag_ = false;
 
       PayoutSigner::Type payoutSignedBy_ = PayoutSigner::Type::SignatureUndefined;
+
+      std::shared_ptr<bool> quitFlag_;
+      std::shared_ptr<std::recursive_mutex> quitFlagLock_;
 
    protected:
       std::shared_ptr<ArmoryConnection>         armoryPtr_;
