@@ -1009,8 +1009,12 @@ bool HeadlessContainerListener::onSetSettlementId(const std::string &clientId
       sendData(packet.SerializeAsString(), clientId);
       return false;
    }
-   settlLeaf->addSettlementID(request.settlement_id());
-   settlLeaf->getNewExtAddress();
+
+   // Call addSettlementID only once, otherwise addSettlementID will crash
+   if (settlLeaf->getIndexForSettlementID(request.settlement_id()) == UINT32_MAX) {
+      settlLeaf->addSettlementID(request.settlement_id());
+      settlLeaf->getNewExtAddress();
+   }
 
    response.set_success(true);
    response.set_wallet_id(leaf->walletId());
