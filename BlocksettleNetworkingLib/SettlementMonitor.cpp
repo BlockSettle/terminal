@@ -21,6 +21,8 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
 
    const auto &addrHashes = addr->getAsset()->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
+
+   initialize();
 }
 
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
@@ -38,6 +40,8 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
 
    const auto &addrHashes = addrEntry->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
+
+   initialize();
 }
 
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection> &armory
@@ -58,6 +62,8 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection>
       , { addr.id() }, [cbInited](const std::string &) { cbInited(); });
 
    ownAddresses_.insert({ addr.unprefixed() });
+
+   initialize();
 }
 
 void bs::SettlementMonitor::onNewBlock(unsigned int)
@@ -70,12 +76,23 @@ void bs::SettlementMonitor::onZCReceived(const std::vector<bs::TXEntry> &)
    checkNewEntries();
 }
 
+void bs::SettlementMonitor::initialize()
+{
+   quitFlag_ = std::make_shared<bool>(false);
+   quitFlagLock_ = std::make_shared<std::recursive_mutex>();
+}
+
 void bs::SettlementMonitor::checkNewEntries()
 {
    logger_->debug("[SettlementMonitor::checkNewEntries] checking entries for {}"
       , settlAddress_.display());
 
-   const auto &cbHistory = [this](ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+   const auto &cbHistory = [this, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+      if (*quitFlag) {
+         return;
+      }
+
       try {
          auto le = entries.get();
          if (le.empty()) {
@@ -88,7 +105,12 @@ void bs::SettlementMonitor::checkNewEntries()
          }
 
          for (const auto &entry : le) {
-            const auto &cbPayOut = [this, entry](bool ack) {
+            const auto &cbPayOut = [this, entry, quitFlag, quitFlagLock](bool ack) {
+               std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+               if (*quitFlag) {
+                  return;
+               }
+
                if (ack) {
                   SendPayOutNotification(entry);
                }
@@ -98,7 +120,12 @@ void bs::SettlementMonitor::checkNewEntries()
                                  "settlement address {}", settlAddress_.display());
                }
             };
-            const auto &cbPayIn = [this, entry, cbPayOut](bool ack) {
+            const auto &cbPayIn = [this, entry, cbPayOut, quitFlag, quitFlagLock](bool ack) {
+               std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+               if (*quitFlag) {
+                  return;
+               }
+
                if (ack) {
                   SendPayInNotification(armoryPtr_->getConfirmationsNumber(entry),
                                         entry.getTxHash());
@@ -456,6 +483,9 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
 
 bs::SettlementMonitor::~SettlementMonitor() noexcept
 {
+   std::lock_guard<std::recursive_mutex> lock(*quitFlagLock_);
+   *quitFlag_ = true;
+
    cleanup();
    FastLock locker(walletLock_);
    rtWallet_ = nullptr;
