@@ -43,8 +43,9 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<spdlog::logger> &logger, const bs::Address &addr
    , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
-   , const std::function<void()> &cbInited)
-   : armoryPtr_(armory)
+   , const std::function<void()> &cbInited, const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet)
+   : rtWallet_(rtWallet)
+   , armoryPtr_(armory)
    , logger_(logger)
    , settlAddress_(addr)
    , buyAuthKey_(buyAuthKey)
@@ -52,12 +53,19 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection>
 {
    init(armory.get());
 
-   const auto walletId = addr.display();
-   rtWallet_ = armory_->instantiateWallet(walletId);
-   const auto regId = armory_->registerWallet(rtWallet_, walletId, walletId
-      , { addr.id() }, [cbInited](const std::string &) { cbInited(); });
-
    ownAddresses_.insert({ addr.unprefixed() });
+
+   if (!rtWallet) {
+      const auto walletId = addr.display();
+      rtWallet_ = armory_->instantiateWallet(walletId);
+      const auto regId = armory_->registerWallet(rtWallet_, walletId, walletId
+         , { addr.id() }, [cbInited](const std::string &) { cbInited(); });
+   }
+   else {
+      if (cbInited) {
+         cbInited();
+      }
+   }
 }
 
 void bs::SettlementMonitor::onNewBlock(unsigned int)
@@ -462,14 +470,14 @@ bs::SettlementMonitor::~SettlementMonitor() noexcept
 }
 
 
-bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
    : SettlementMonitor(rtWallet, armory, addr, logger)
 {}
 
-bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
    , const std::shared_ptr<spdlog::logger>& logger)

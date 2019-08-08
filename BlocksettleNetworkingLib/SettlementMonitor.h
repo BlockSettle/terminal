@@ -81,7 +81,8 @@ namespace bs {
       SettlementMonitor(const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<spdlog::logger> &, const bs::Address &
          , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
-         , const std::function<void()> &);
+         , const std::function<void()> &
+         , const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet=nullptr);
 
       ~SettlementMonitor() noexcept override;
 
@@ -147,11 +148,11 @@ namespace bs {
    {
    Q_OBJECT
    public:
-      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<core::SettlementAddressEntry> &
          , const std::shared_ptr<spdlog::logger> &);
-      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<SettlementAddress> &
          , const bs::Address &, const std::shared_ptr<spdlog::logger> &);
@@ -196,8 +197,9 @@ namespace bs {
       SettlementMonitorCb(const std::shared_ptr<ArmoryConnection> &armory
          , const std::shared_ptr<spdlog::logger> &logger, const bs::Address &addr
          , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
-         , const std::function<void()> &cbInited)
-         : SettlementMonitor(armory, logger, addr, buyAuthKey, sellAuthKey, cbInited) {}
+         , const std::function<void()> &cbInited
+         , const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet = nullptr)
+         : SettlementMonitor(armory, logger, addr, buyAuthKey, sellAuthKey, cbInited, rtWallet) {}
       ~SettlementMonitorCb() noexcept override;
 
       SettlementMonitorCb(const SettlementMonitorCb&) = delete;
