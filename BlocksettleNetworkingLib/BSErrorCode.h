@@ -9,6 +9,7 @@ enum class ErrorCode
    NoError = 0,
    FailedToParse,
    WalletNotFound,
+   WrongAddress,
    MissingPassword,
    InvalidPassword,
    MissingAuthKeys,
