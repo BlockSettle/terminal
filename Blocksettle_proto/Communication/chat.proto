@@ -171,6 +171,12 @@ message PartyMessagePacket
     PartyMessageState party_message_state = 7;
 }
 
+message PartyMessageStateUpdate
+{
+    string message_id = 1;
+    PartyMessageState party_message_state = 2;
+}
+
 message Data
 {
     enum Direction
