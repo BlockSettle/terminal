@@ -18,8 +18,11 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
 
    connect(dlg, &QDialog::finished, this, &DialogManager::onDialogFinished);
    dlg->setModal(false);
+
+#ifdef Q_OS_WIN
    dlg->layout()->update();
    dlg->layout()->activate();
+#endif
 
    const QPoint center = getGeometry(mainWindow_).center();
 
