@@ -338,11 +338,7 @@ namespace bs {
 
          //find the path and address type for a set of prefixed scrAddr
          virtual std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> indexPathAndTypes(
-            const std::set<BinaryData>&)
-         {
-            throw std::runtime_error("not implemented 7");
-            return std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>>();
-         }
+            const std::set<BinaryData>&) = 0;
 
          Signer getSigner(const wallet::TXSignRequest &,
             bool keepDuplicatedRecipients = false);
