@@ -81,6 +81,7 @@ namespace bs {
             std::string peerId;
             bs::network::otc::Offer offer;
             bs::network::otc::State state{bs::network::otc::State::Idle};
+            BinaryData authPubKey;
             BinaryData random_part1;
             BinaryData random_part2;
 

@@ -74,7 +74,6 @@ private:
    void setupWalletsView();
    void setupTransactionsView();
 
-   void InitConnections();
    void initArmory();
    void connectArmory();
    void connectSigner();

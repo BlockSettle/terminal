@@ -19,12 +19,20 @@ namespace Blocksettle { namespace Communication { namespace Otc {
    class Message_Close;
 }}}
 
+namespace bs { namespace sync {
+   class WalletsManager;
+   namespace hd {
+      class SettlementLeaf;
+   }
+} }
 
 class OtcClient : public QObject
 {
    Q_OBJECT
 public:
-   OtcClient(const std::shared_ptr<spdlog::logger> &logger, QObject *parent = nullptr);
+   OtcClient(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+      , QObject *parent = nullptr);
 
    const bs::network::otc::Peer *peer(const std::string &peerId) const;
 
@@ -56,8 +64,12 @@ private:
 
    void send(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message &msg);
 
+   std::shared_ptr<bs::sync::hd::SettlementLeaf> ourSettlementLeaf();
+
    std::shared_ptr<spdlog::logger> logger_;
    std::unordered_map<std::string, bs::network::otc::Peer> peers_;
+
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
 };
 
 #endif

@@ -36,6 +36,11 @@ class OTCRequestViewModel;
 class OtcClient;
 class QTextEdit;
 
+namespace bs { namespace sync {
+   class WalletsManager;
+} }
+
+
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
                  , public NewMessageMonitor
@@ -57,7 +62,8 @@ public:
 
    void init(const std::shared_ptr<ConnectionManager>& connectionManager
            , const std::shared_ptr<ApplicationSettings> &appSettings
-           , const std::shared_ptr<spdlog::logger>& logger);
+           , const std::shared_ptr<spdlog::logger>& logger
+           , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr);
 
    std::string login(const std::string& email, const std::string& jwt
       , const ZmqBipNewKeyCb &);

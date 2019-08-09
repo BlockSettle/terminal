@@ -4,6 +4,9 @@
 
 #include "BtcUtils.h"
 #include "EncryptionUtils.h"
+#include "Wallets/SyncHDLeaf.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "otc.pb.h"
 
 using namespace Blocksettle::Communication::Otc;
@@ -14,12 +17,16 @@ using namespace bs::network::otc;
 namespace {
 
    const int RandomKeySize = 32;
+   const int PubKeySize = 33;
 
 } // namespace
 
-OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
+OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , QObject *parent)
    : QObject (parent)
    , logger_(logger)
+   , walletsMgr_(walletsMgr)
 {
 }
 
@@ -49,19 +56,45 @@ bool OtcClient::sendOffer(const Offer &offer, const std::string &peerId)
       return false;
    }
 
-   peer->random_part1 = CryptoPRNG::generateRandom(RandomKeySize);
+   auto leaf = ourSettlementLeaf();
+   if (!leaf) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf");
+      return false;
+   }
 
-   Message msg;
-   auto d = msg.mutable_offer();
-   d->set_price(offer.price);
-   d->set_amount(offer.amount);
-   d->set_sender_side(Otc::Side(offer.ourSide));
-   d->set_random_part1(peer->random_part1.toBinStr());
-   send(peer, msg);
+   leaf->getRootPubkey([this, peerId, offer](const SecureBinaryData &pubKey) {
+      if (pubKey.isNull()) {
+         SPDLOG_LOGGER_ERROR(logger_, "invalid pubKey");
+         return;
+      }
 
-   peer->state = State::OfferSent;
-   peer->offer = offer;
-   emit peerUpdated(peerId);
+      auto peer = findPeer(peerId);
+      if (!peer) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+         return;
+      }
+
+      if (peer->state != State::Idle) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}', peer should be in idle state", peerId);
+         return;
+      }
+
+      peer->random_part1 = CryptoPRNG::generateRandom(RandomKeySize);
+
+      Message msg;
+      auto d = msg.mutable_offer();
+      d->set_price(offer.price);
+      d->set_amount(offer.amount);
+      d->set_sender_side(Otc::Side(offer.ourSide));
+      d->set_random_part1(peer->random_part1.toBinStr());
+      d->set_auth_address(pubKey.toBinStr());
+      send(peer, msg);
+
+      peer->state = State::OfferSent;
+      peer->offer = offer;
+      emit peerUpdated(peerId);
+   });
+
    return true;
 }
 
@@ -106,17 +139,104 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
 
    peer->random_part2 = CryptoPRNG::generateRandom(RandomKeySize);
 
-   Message msg;
-   auto d = msg.mutable_accept();
-   d->set_price(offer.price);
-   d->set_amount(offer.amount);
-   d->set_sender_side(Otc::Side(offer.ourSide));
-   d->set_random_part2(peer->random_part2.toBinStr());
-   send(peer, msg);
+   auto leaf = ourSettlementLeaf();
+   if (!leaf) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf");
+      return false;
+   }
 
-   // Add timeout detection here
-   peer->state = State::WaitAcceptAck;
-   emit peerUpdated(peerId);
+   leaf->getRootPubkey([this, peerId, offer](const SecureBinaryData &ourPubKey) {
+      auto peer = findPeer(peerId);
+      if (!peer) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+         return;
+      }
+
+      if (peer->state != State::OfferRecv) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peerId);
+         return;
+      }
+
+      if (ourPubKey.isNull()) {
+         SPDLOG_LOGGER_ERROR(logger_, "invalid pubKey");
+         return;
+      }
+
+      auto leaf = ourSettlementLeaf();
+      if (!leaf) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf");
+         return;
+      }
+
+      auto settlementId = getSettlementId(*peer);
+      assert(!settlementId.isNull());
+
+      leaf->setSettlementID(settlementId, [this, ourPubKey, settlementId, offer, peerId](bool result) {
+         if (!result) {
+            SPDLOG_LOGGER_ERROR(logger_, "setSettlementID failed");
+            return;
+         }
+
+         auto wallet = walletsMgr_->getPrimaryWallet();
+         if (!wallet) {
+            SPDLOG_LOGGER_ERROR(logger_, "can't find primary wallet");
+            return;
+         }
+
+         auto peer = findPeer(peerId);
+         if (!peer) {
+            SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+            return;
+         }
+
+         if (peer->state != State::OfferRecv) {
+            SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peerId);
+            return;
+         }
+
+         auto cbSettlAddr = [this, offer, peerId, ourPubKey](const bs::Address &addr) {
+            if (addr.isNull()) {
+               SPDLOG_LOGGER_ERROR(logger_, "invalid settl addr");
+               return;
+            }
+
+            auto peer = findPeer(peerId);
+            if (!peer) {
+               SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+               return;
+            }
+
+            if (peer->state != State::OfferRecv) {
+               SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peerId);
+               return;
+            }
+
+            Message msg;
+            auto d = msg.mutable_accept();
+            d->set_price(offer.price);
+            d->set_amount(offer.amount);
+            d->set_sender_side(Otc::Side(offer.ourSide));
+            d->set_random_part2(peer->random_part2.toBinStr());
+            d->set_auth_address(ourPubKey.toBinStr());
+            send(peer, msg);
+
+            // Add timeout detection here
+            peer->state = State::WaitAcceptAck;
+            emit peerUpdated(peerId);
+
+            assert(peer->authPubKey.getSize() == PubKeySize);
+
+            SPDLOG_LOGGER_DEBUG(logger_, "#### success: {}", addr.display());
+         };
+
+         const bool myKeyFirst = (peer->offer.ourSide == bs::network::otc::Side::Buy);
+         wallet->getSettlementPayinAddress(settlementId, peer->authPubKey, cbSettlAddr, myKeyFirst);
+
+         SPDLOG_LOGGER_DEBUG(logger_, "success");
+      });
+
+   });
+
    return true;
 }
 
@@ -248,6 +368,11 @@ void OtcClient::processOffer(Peer *peer, const Message_Offer &msg)
       return;
    }
 
+   if (msg.auth_address().size() != PubKeySize) {
+      blockPeer("invalid auth_address in offer", peer);
+      return;
+   }
+
    switch (peer->state) {
       case State::Idle:
          peer->state = State::OfferRecv;
@@ -255,6 +380,7 @@ void OtcClient::processOffer(Peer *peer, const Message_Offer &msg)
          peer->offer.amount = msg.amount();
          peer->offer.price = msg.price();
          peer->random_part1 = msg.random_part1();
+         peer->authPubKey = msg.auth_address();
          emit peerUpdated(peer->peerId);
          break;
 
@@ -301,6 +427,11 @@ void OtcClient::processAccept(Peer *peer, const Message_Accept &msg)
 
          if (msg.price() != peer->offer.price || msg.amount() != peer->offer.amount) {
             blockPeer("unexpected accepted price or amount", peer);
+            return;
+         }
+
+         if (msg.auth_address().size() != PubKeySize) {
+            blockPeer("invalid auth_address in accept", peer);
             return;
          }
 
@@ -385,4 +516,35 @@ void OtcClient::send(Peer *peer, const Message &msg)
 {
    assert(!peer->peerId.empty());
    emit sendMessage(peer->peerId, msg.SerializeAsString());
+}
+
+std::shared_ptr<bs::sync::hd::SettlementLeaf> OtcClient::ourSettlementLeaf()
+{
+   // TODO: Use auth address from selection combobox
+
+   auto wallet = walletsMgr_->getPrimaryWallet();
+   if (!wallet) {
+      SPDLOG_LOGGER_ERROR(logger_, "don't have primary wallet");
+      return nullptr;
+   }
+
+   auto group = wallet->getGroup(bs::hd::BlockSettle_Settlement);
+   if (!group) {
+      SPDLOG_LOGGER_ERROR(logger_, "don't have settlement group");
+      return nullptr;
+   }
+
+   auto leaves = group->getLeaves();
+   if (leaves.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "empty settlements group");
+      return nullptr;
+   }
+
+   auto leaf = std::dynamic_pointer_cast<bs::sync::hd::SettlementLeaf>(leaves.front());
+   if (!leaf) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf");
+      return nullptr;
+   }
+
+   return leaf;
 }
