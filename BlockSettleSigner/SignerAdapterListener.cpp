@@ -314,6 +314,40 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
       txReq.change.value = request.tx_request().change().value();
    }
 
+   std::set<BinaryData> usedAddrSet;
+   std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> parsedMap;
+   for (const auto &utxo : txReq.inputs) {
+      const auto addr = bs::Address::fromUTXO(utxo);
+      usedAddrSet.insert(addr.id());
+   }
+   try {
+      typedef std::map<bs::hd::Path, std::pair<BinaryData, AddressEntryType>> pathMapping;
+      std::map<bs::hd::Path::Elem, pathMapping> mapByPath;
+      parsedMap = wallet->indexPathAndTypes(usedAddrSet);
+
+      for (auto& parsedPair : parsedMap) {
+         auto& mapping = mapByPath[parsedPair.second.first.get(-2)];
+         mapping[parsedPair.second.first] = { parsedPair.first, parsedPair.second.second };
+      }
+
+      unsigned int nbNewAddrs = 0;
+      for (auto& mapping : mapByPath) {
+         for (auto& pathPair : mapping.second) {
+            const auto resultPair = wallet->synchronizeUsedAddressChain(
+               pathPair.first.toString(), pathPair.second.second);
+            if (resultPair.second) {
+               nbNewAddrs++;
+            }
+         }
+      }
+      logger_->debug("[{}] created {} new address[es] after sync", __func__, nbNewAddrs);
+   }
+   catch (const AccountException &e) {
+      logger_->error("[{}] failed to sync addresses: {}", __func__, e.what());
+      evt.set_errorcode((int)bs::error::ErrorCode::WrongAddress);
+      return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);;
+   }
+
    try {
       auto lock = wallet->lockForEncryption(request.password());
       const auto tx = wallet->signTXRequest(txReq);
