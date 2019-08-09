@@ -478,7 +478,7 @@ bool CreateTransactionDialog::CreateTransaction()
       }
 
       const float newFeePerByte = transactionData_->GetTransactionSummary().feePerByte;
-      if (newFeePerByte < originalFeePerByte_) {
+      if ((originalFeePerByte_ - newFeePerByte) > 0.005) {  // allow some rounding
          BSMessageBox(BSMessageBox::info, tr("Error"), tr("Fee per byte is too low"),
             tr("Due to RBF requirements, the current fee per byte (%1) will " \
                "be increased to the original transaction fee rate (%2)")
