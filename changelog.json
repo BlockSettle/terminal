@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.19.10",
-   "release_date": "07 Aug 2019",
+   "latest_version": "0.19.11",
+   "release_date": "09 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.19.11",
+         "previous_version": "0.19.10",
+         "release_date": "09 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Address creation at offline TX signing (BST-2114)",
+            "Add new RFQ shields",
+            "Update default fees",
+            "New error code for offline signing",
+            "Update private OTC (#1228)"
+         ],
+         "bug_fixes": [],
+         "revision": "5519a082",
+         "common_revision": "f7cb1e05"
+      },
       {
          "version_string": "0.19.10",
          "previous_version": "0.19.9",
