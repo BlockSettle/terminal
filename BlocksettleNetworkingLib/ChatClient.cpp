@@ -6,23 +6,47 @@
 #include <botan/auto_rng.h>
 #include <enable_warnings.h>
 
-#include "UserHasher.h"
 #include "ApplicationSettings.h"
-#include "autheid_utils.h"
 #include "ChatClientDataModel.h"
-#include "UserSearchModel.h"
-#include "ChatTreeModelWrapper.h"
 #include "ChatProtocol/ChatUtils.h"
-#include "ProtobufUtils.h"
+#include "ChatTreeModelWrapper.h"
 #include "EncryptionUtils.h"
+#include "ProtobufUtils.h"
+#include "StringUtils.h"
+#include "UserHasher.h"
+#include "UserSearchModel.h"
+#include "autheid_utils.h"
 
 #include <QDateTime>
 #include <QRegularExpression>
 
-
 namespace {
    // FIXME: regular expression for email address does not exist. How can we do that better?
    const QRegularExpression rx_email(QLatin1String(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"), QRegularExpression::CaseInsensitiveOption);
+
+   const std::string OtcPrefix = "OTC:";
+
+   bool isOtcMessage(const std::string &msg) {
+      return msg.find(OtcPrefix) == 0;
+   }
+
+   std::string toOtcMessage(const BinaryData &data)
+   {
+      return OtcPrefix + data.toHexStr();
+   }
+
+   bool fromOtcMessage(const std::string &data, BinaryData *out)
+   {
+      if (!isOtcMessage(data)) {
+         return false;
+      }
+      try {
+         *out = BinaryData::CreateFromHex(data.substr(OtcPrefix.length()));
+         return true;
+      } catch (...) {
+         return false;
+      }
+   }
 }
 
 ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
@@ -81,6 +105,11 @@ void ChatClient::OnLogoutCompleted()
 {
    model_->clearModel();
    emit LoggedOut();
+
+   for (const std::string &user : onlineContacts_) {
+      emit contactDisconnected(user);
+   }
+   onlineContacts_.clear();
 }
 
 void ChatClient::readDatabase()
@@ -116,70 +145,6 @@ std::shared_ptr<Chat::Data> ChatClient::sendOwnMessage(
    logger_->debug("[ChatClient::{}] {}", __func__, message);
 
    return sendMessageDataRequest(messageData, receiver);
-}
-
-std::shared_ptr<Chat::Data> ChatClient::SubmitPrivateOTCRequest(const bs::network::OTCRequest& otcRequest
-   , const std::string &receiver)
-{
-   logger_->debug("[ChatClient::{}]", __func__);
-
-   auto otcMessageData = std::make_shared<Chat::Data>();
-   initMessage(otcMessageData.get(), receiver);
-
-   auto d = otcMessageData->mutable_message();
-   auto otc = d->mutable_otc_request();
-   otc->set_side(Chat::OtcSide(otcRequest.side));
-   otc->set_range_type(Chat::OtcRangeType(otcRequest.amountRange));
-
-   return sendMessageDataRequest(otcMessageData, receiver);
-}
-
-std::shared_ptr<Chat::Data> ChatClient::SubmitPrivateOTCResponse(const bs::network::OTCResponse& otcResponse
-   , const std::string &receiver)
-{
-   auto otcMessageData = std::make_shared<Chat::Data>();
-   initMessage(otcMessageData.get(), receiver);
-
-   auto d = otcMessageData->mutable_message();
-   auto otc = d->mutable_otc_response();
-   otc->set_side(Chat::OtcSide(otcResponse.side));
-   otc->mutable_price()->set_lower(otcResponse.priceRange.lower);
-   otc->mutable_price()->set_upper(otcResponse.priceRange.upper);
-   otc->mutable_quantity()->set_lower(otcResponse.quantityRange.lower);
-   otc->mutable_quantity()->set_upper(otcResponse.quantityRange.upper);
-
-   logger_->debug("[ChatClient::{}]", __func__);
-
-   return sendMessageDataRequest(otcMessageData, receiver);
-}
-
-std::shared_ptr<Chat::Data> ChatClient::SubmitPrivateCancel(const std::string &receiver)
-{
-   auto otcMessageData = std::make_shared<Chat::Data>();
-   initMessage(otcMessageData.get(), receiver);
-
-   auto d = otcMessageData->mutable_message();
-   // Just to select required message type
-   d->mutable_otc_close_trading();
-
-   logger_->debug("[ChatClient::{}] to {}", __func__, receiver);
-
-   return sendMessageDataRequest(otcMessageData, receiver);
-}
-
-std::shared_ptr<Chat::Data> ChatClient::SubmitPrivateUpdate(const bs::network::OTCUpdate& update, const std::string &receiver)
-{
-   auto otcMessageData = std::make_shared<Chat::Data>();
-   initMessage(otcMessageData.get(), receiver);
-
-   auto d = otcMessageData->mutable_message();
-   auto otc = d->mutable_otc_update();
-   otc->set_price(update.price);
-   otc->set_amount(update.amount);
-
-   logger_->debug("[ChatClient::{}] to {}", __func__, receiver);
-
-   return sendMessageDataRequest(otcMessageData, receiver);
 }
 
 std::shared_ptr<Chat::Data> ChatClient::sendRoomOwnMessage(const std::string& message, const std::string& receiver)
@@ -483,7 +448,9 @@ void ChatClient::onRoomsLoaded(const std::vector<std::shared_ptr<Chat::Data>>& r
 
 void ChatClient::onUserListChanged(Chat::Command command, const std::vector<std::string>& userList)
 {
-   for (const auto& user : userList) 
+   std::set<std::string> newOnlineContacts;
+
+   for (const std::string& user : userList)
    {
       auto contact = model_->findContactNode(user);
 
@@ -491,13 +458,11 @@ void ChatClient::onUserListChanged(Chat::Command command, const std::vector<std:
          auto status = ChatContactElement::OnlineStatus::Offline;
          switch (command) {
             case Chat::COMMAND_REPLACE:
-               status = ChatContactElement::OnlineStatus::Online;
-               break;
             case Chat::COMMAND_ADD:
                status = ChatContactElement::OnlineStatus::Online;
+               newOnlineContacts.insert(user);
                break;
-            case Chat::COMMAND_DELETE:
-               status = ChatContactElement::OnlineStatus::Offline;
+            default:
                break;
          }
 
@@ -505,6 +470,20 @@ void ChatClient::onUserListChanged(Chat::Command command, const std::vector<std:
          model_->notifyContactChanged(contact->getDataObject());
       }
    }
+
+   for (const std::string &newUser : newOnlineContacts) {
+      if (onlineContacts_.find(newUser) == onlineContacts_.end()) {
+         emit contactConnected(newUser);
+      }
+   }
+
+   for (const std::string &oldUser : onlineContacts_) {
+      if (newOnlineContacts.find(oldUser) == newOnlineContacts.end()) {
+         emit contactDisconnected(oldUser);
+      }
+   }
+
+   onlineContacts_ = std::move(newOnlineContacts);
 }
 
 void ChatClient::onMessageSent(const std::string& receiverId, const std::string& localId, const std::string& serverId)
@@ -633,6 +612,20 @@ void ChatClient::onCreateOutgoingContact(const std::string &contactId)
 
 void ChatClient::onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData)
 {
+   // For some reasons received message has NOT_SET directions.
+   // Looks like a bug in chat server.
+   if (messageData->direction() == Chat::Data_Direction_RECEIVED || messageData->direction() == Chat::Data_Direction_NOT_SET) {
+      BinaryData data;
+
+      bool isOtc = fromOtcMessage(messageData->message().message(), &data);
+      if (isOtc) {
+         emit otcMessageReceived(messageData->message().sender_id(), data);
+
+         // TODO: Add OTC textual description
+         // For example: *** OTC REQUEST - XBT/EUR - SELL - 6 XBT - 7 500 EUR ***
+      }
+   }
+
    model_->insertContactsMessage(messageData);
 
    if (messageData->message().sender_id() != currentUserId_)
@@ -679,6 +672,11 @@ void ChatClient::loadRoomMessagesFromDB(const std::string& roomId)
          }
       }
    }
+}
+
+void ChatClient::sendOtcMessage(const std::string &contactId, const BinaryData &data)
+{
+   sendOwnMessage(toOtcMessage(data), contactId);
 }
 
 void ChatClient::initMessage(Chat::Data *msg, const std::string &receiver)

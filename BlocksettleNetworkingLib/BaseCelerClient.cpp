@@ -413,10 +413,6 @@ void BaseCelerClient::RegisterUserCommand(const std::shared_ptr<BaseCelerCommand
 
 void BaseCelerClient::recvData(CelerAPI::CelerMessageType messageType, const std::string &data)
 {
-   if (timerRecvHb_) {
-      timerRecvHb_->start();
-   }
-
    OnDataReceived(messageType, data);
 }
 

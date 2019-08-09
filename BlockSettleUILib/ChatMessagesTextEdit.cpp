@@ -45,14 +45,8 @@ QString ChatMessagesTextEdit::data(int row, const Column &column)
        return QString();
    }
 
-   const auto &message = messages_[currentChatId_][row];
-   // PK: Not sure if otc_case check is needed here, but before protobuf switch exact type checked here
-   // (message might optionally have OTC details)
-   if (message->has_message() && message->message().otc_case() == Chat::Data_Message::OTC_NOT_SET) {
-      return dataMessage(row, column);
-   }
-
-   return QLatin1String("[unk]");
+   // TODO: Filter OTC messages
+   return dataMessage(row, column);
 }
 
 QString ChatMessagesTextEdit::dataMessage(int row, const ChatMessagesTextEdit::Column &column)

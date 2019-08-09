@@ -50,7 +50,7 @@ public:
    ~RFQTicketXBT() override;
 
    void init(const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<AssetManager>& assetManager
+      , const std::shared_ptr<AssetManager> &assetManager
       , const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &);

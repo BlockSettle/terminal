@@ -35,6 +35,8 @@ public:
 private:
    bool startLocalArmoryProcess(const ArmorySettings &);
 
+   bool needInvokeCb() const;
+
 private:
    const bool     cbInMainThread_;
    TxCacheFile    txCache_;

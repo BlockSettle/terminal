@@ -1,7 +1,9 @@
 #ifndef STRING_UTILS_H
 #define STRING_UTILS_H
 
+#include <cinttypes>
 #include <string>
+#include <vector>
 
 namespace bs {
 

@@ -4,8 +4,7 @@
 #include <QWidget>
 #include <memory>
 
-#include "CommonTypes.h"
-#include "chat.pb.h"
+#include "OtcTypes.h"
 
 namespace Ui {
    class OTCNegotiationCommonWidget;
@@ -14,39 +13,24 @@ namespace Ui {
 class OTCNegotiationRequestWidget : public QWidget
 {
 Q_OBJECT
+Q_DISABLE_COPY(OTCNegotiationRequestWidget)
 
 public:
    OTCNegotiationRequestWidget(QWidget* parent = nullptr);
-   ~OTCNegotiationRequestWidget() noexcept;
+   ~OTCNegotiationRequestWidget() override;
 
-   OTCNegotiationRequestWidget(const OTCNegotiationRequestWidget&) = delete;
-   OTCNegotiationRequestWidget& operator = (const OTCNegotiationRequestWidget&) = delete;
-
-   OTCNegotiationRequestWidget(OTCNegotiationRequestWidget&&) = delete;
-   OTCNegotiationRequestWidget& operator = (OTCNegotiationRequestWidget&&) = delete;
-
-   void SetUpdateData(const std::shared_ptr<Chat::Data>& update
-                      , const std::shared_ptr<Chat::Data>& initialResponse);
-   void SetResponseData(const std::shared_ptr<Chat::Data>& initialResponse);
-
-   bs::network::OTCUpdate GetUpdate() const;
-
-public slots:
-   void OnDataChanged();
-   void OnAcceptPressed();
+   bs::network::otc::Offer offer() const;
 
 signals:
-   void TradeUpdated();
-   void TradeAccepted();
-   void TradeRejected();
+   void requestCreated();
 
-public:
-   void DisplayResponse(const std::shared_ptr<Chat::Data>& initialResponse);
+private slots:
+   void onSellClicked();
+   void onBuyClicked();
+   void onChanged();
 
 private:
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
-   bool initialUpdate_ = false;
-   bool changed_ = false;
 };
 
 #endif // __OTC_NEGOTIATION_REQUEST_WIDGET_H__
