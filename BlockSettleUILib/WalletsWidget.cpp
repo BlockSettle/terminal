@@ -662,8 +662,8 @@ void WalletsWidget::onRevokeSettlement()
       };
       monitor->getPayinInput(cbSettlInput, false);
    };
-   monitor = std::make_shared<bs::SettlementMonitorCb>(armory_, curAddress_, logger_
-      , cbMonitorInited);
+   monitor = std::make_shared<bs::SettlementMonitorCb>(armory_, logger_, curAddress_
+      , BinaryData{}, BinaryData{}, cbMonitorInited);
 }
 
 void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result)
