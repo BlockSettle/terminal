@@ -13,12 +13,20 @@
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "SignContainer.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "CurrencyPair.h"
 #include "ui_RFQRequestWidget.h"
 
 
 namespace  {
    const QString shieldLogin = QLatin1String("Login to submit RFQs");
    const QString shieldTraidingParticipantOnly = QLatin1String("Reserved for Trading Participants");
+   const QString shieldCreateWallet = QLatin1String("Create Wallet");
+   const QString shieldPromoteToPrimary = QLatin1String("Promote to Primary");
+   const QString shieldCreateXXXWallet = QLatin1String("Create %1 wallet");
+
+   const QString shieldButtonPromote = QLatin1String("Promote");
+   const QString shieldButtonCreate = QLatin1String("Create");
 
    enum class RFQPages : int
    {
@@ -58,6 +66,7 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    ui_->setupUi(this);
 
    connect(ui_->pageRFQTicket, &RFQTicketXBT::submitRFQ, this, &RFQRequestWidget::onRFQSubmit);
+   showShieldLoginRequiered();
 }
 
 RFQRequestWidget::~RFQRequestWidget() = default;
@@ -67,6 +76,14 @@ void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::Wallets
    if (walletsManager_ == nullptr) {
       walletsManager_ = walletsManager;
       ui_->pageRFQTicket->setWalletsManager(walletsManager);
+
+      connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
+      connect(walletsManager_.get(), &bs::sync::WalletsManager::AuthLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
+      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &RFQRequestWidget::forceCheckCondition);
+      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &RFQRequestWidget::forceCheckCondition);
+      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletAdded, this, &RFQRequestWidget::forceCheckCondition);
+      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &RFQRequestWidget::forceCheckCondition);
+      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQRequestWidget::forceCheckCondition);
    }
 }
 
@@ -135,16 +152,39 @@ void RFQRequestWidget::showShieldReservedTraidingParticipant()
    prepareAndPopShield(shieldTraidingParticipantOnly);
 }
 
-void RFQRequestWidget::showEditableRFQPage()
+void RFQRequestWidget::showShieldPromoteToPrimaryWallet()
 {
-   ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::EditableRFQPage));
-   ui_->pageRFQTicket->enablePanel();
+   prepareAndPopShield(shieldPromoteToPrimary, true, shieldButtonPromote);
 }
 
-void RFQRequestWidget::prepareAndPopShield(const QString& labelText)
+void RFQRequestWidget::showShieldCreateXXXLeaf(const QString& product)
 {
-   ui_->shieldButton->hide();
+   prepareAndPopShield(shieldCreateXXXWallet.arg(product), true, shieldButtonCreate);
+}
+
+void RFQRequestWidget::showShieldCreateWallet()
+{
+   prepareAndPopShield(shieldCreateWallet, true, shieldButtonCreate);
+}
+
+void RFQRequestWidget::showEditableRFQPage()
+{
+   ui_->stackedWidgetRFQ->setEnabled(true);
+   ui_->pageRFQTicket->enablePanel();
+   ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::EditableRFQPage));
+}
+
+void RFQRequestWidget::prepareAndPopShield(const QString& labelText,
+      bool showButton /*= false*/, const QString& buttonText /*= QLatinString1()*/)
+{
+   ui_->stackedWidgetRFQ->setEnabled(true);
+
    ui_->shieldText->setText(labelText);
+
+   ui_->shieldButton->setVisible(showButton);
+   ui_->shieldButton->setEnabled(showButton);
+   ui_->shieldButton->setText(buttonText);
+
    ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::ShieldPage));
    ui_->pageRFQTicket->disablePanel();
 }
@@ -164,7 +204,8 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<DialogManager> &dialogManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<ConnectionManager> &connectionManager)
+   , const std::shared_ptr<ConnectionManager> &connectionManager
+)
 {
    logger_ = logger;
    celerClient_ = celerClient;
@@ -198,18 +239,23 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
 
 void RFQRequestWidget::onConnectedToCeler()
 {
-   connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, this, &RFQRequestWidget::onCurrencySelected);
-   connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, this, &RFQRequestWidget::onBuyClicked);
-   connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, this, &RFQRequestWidget::onSellClicked);
+   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected,
+                                          this, &RFQRequestWidget::onCurrencySelected));
+   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked,
+                                          this, &RFQRequestWidget::onBuyClicked));
+   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked,
+                                          this, &RFQRequestWidget::onSellClicked));
+   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::MDHeaderClicked,
+                                          this, &RFQRequestWidget::onDisableSelectedInfo));
 
    showEditableRFQPage();
 }
 
 void RFQRequestWidget::onDisconnectedFromCeler()
 {  
-   disconnect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected, this, &RFQRequestWidget::onCurrencySelected);
-   disconnect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, this, &RFQRequestWidget::onBuyClicked);
-   disconnect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, this, &RFQRequestWidget::onSellClicked);
+   for (QMetaObject::Connection &conn : marketDataConnection) {
+      QObject::disconnect(conn);
+   }
 
    showShieldLoginRequiered();
 }
@@ -229,27 +275,29 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
    ui_->pageRFQTicket->resetTicket();
 }
 
-bool RFQRequestWidget::checkConditions(const QString &productGroup)
+bool RFQRequestWidget::checkConditions(const MarkeSelectedInfo& selectedInfo)
 {
+   ui_->stackedWidgetRFQ->setEnabled(true);
    using UserType = CelerClient::CelerUserType;
    const UserType userType = celerClient_->celerUserType();
 
-   const ProductGroup group = getProductGroup(productGroup);
+   const ProductGroup group = getProductGroup(selectedInfo.productGroup_);
 
    switch (userType) {
    case UserType::Market: {
       if (group == ProductGroup::XBT || group == ProductGroup::FX) {
          showShieldReservedTraidingParticipant();
          return false;
-      } if (ui_->stackedWidgetRFQ->currentIndex() != static_cast<int>(RFQPages::EditableRFQPage)) {
-         showEditableRFQPage();
+      } else if (checkWalletSettings(selectedInfo)) {
+         return false;
       }
       break;
    }
-   case UserType::Dealing: {
-      break;
-   }
+   case UserType::Dealing:
    case UserType::Trading: {
+      if ((group == ProductGroup::XBT || group == ProductGroup::PM) && checkWalletSettings(selectedInfo)) {
+         return false;
+      }
       break;
    }
    default: {
@@ -257,35 +305,99 @@ bool RFQRequestWidget::checkConditions(const QString &productGroup)
    }
    }
 
+   if (ui_->stackedWidgetRFQ->currentIndex() != static_cast<int>(RFQPages::EditableRFQPage)) {
+      showEditableRFQPage();
+   }
+
    return true;
 }
 
-void RFQRequestWidget::onCurrencySelected(const QString &productGroup, const QString &currencyPair,
-                                          const QString &bidPrice, const QString &offerPrice)
+bool RFQRequestWidget::checkWalletSettings(const MarkeSelectedInfo& selectedInfo)
 {
-   if (!checkConditions(productGroup))
-      return;
+   // No wallet at all
+   if (!walletsManager_ || walletsManager_->walletsCount() == 0) {
+      showShieldCreateWallet();
+      ui_->shieldButton->disconnect();
+      connect(ui_->shieldButton, &QPushButton::clicked, this, [this]() {
+         ui_->shieldButton->setDisabled(true);
+         emit requestPrimaryWalletCreation();
+      });
+      return true;
+   }
 
-   ui_->pageRFQTicket->setSecurityId(productGroup, currencyPair,
-                                     bidPrice, offerPrice);
+   // No primary wallet
+   if (!walletsManager_->hasPrimaryWallet()) {
+      showShieldPromoteToPrimaryWallet();
+      ui_->shieldButton->disconnect();
+      connect(ui_->shieldButton, &QPushButton::clicked, this, [this]() {
+         ui_->shieldButton->setDisabled(true);
+         emit requestPrimaryWalletCreation();
+      });
+      return true;
+   }
+
+   // No path
+   const CurrencyPair cp(selectedInfo.currencyPair_.toStdString());
+   const QString currentProduct_ = QString::fromStdString(cp.NumCurrency());
+   if (!walletsManager_->getCCWallet(currentProduct_.toStdString())) {
+      showShieldCreateXXXLeaf(currentProduct_);
+      ui_->shieldButton->disconnect();
+      connect(ui_->shieldButton, &QPushButton::clicked, this, [this, currentProduct_]() {
+         ui_->shieldButton->setDisabled(true);
+         walletsManager_->CreateCCLeaf(currentProduct_.toStdString());
+      });
+      return true;
+   }
+
+   return false;
 }
 
-void RFQRequestWidget::onBuyClicked(const QString &productGroup, const QString &currencyPair,
-                                    const QString &bidPrice, const QString &offerPrice)
+void RFQRequestWidget::forceCheckCondition()
 {
-   if (!checkConditions(productGroup))
+   if (!ui_->widgetMarketData) {
       return;
+   }
 
-   ui_->pageRFQTicket->setSecuritySell(productGroup, currencyPair,
-                                     bidPrice, offerPrice);
+   const auto& currentInfo = ui_->widgetMarketData->getCurrentlySelectedInfo();
+
+   if (!currentInfo.isValid()) {
+      return;
+   }
+
+   onSellClicked(currentInfo);
 }
 
-void RFQRequestWidget::onSellClicked(const QString &productGroup, const QString &currencyPair,
-                                     const QString &bidPrice, const QString &offerPrice)
+void RFQRequestWidget::onCurrencySelected(const MarkeSelectedInfo& selectedInfo)
 {
-   if (!checkConditions(productGroup))
+   if (!checkConditions(selectedInfo)) {
       return;
+   }
 
-   ui_->pageRFQTicket->setSecurityBuy(productGroup, currencyPair,
-                                     bidPrice, offerPrice);
+   ui_->pageRFQTicket->setSecurityId(selectedInfo.productGroup_, selectedInfo.currencyPair_,
+                                     selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+}
+
+void RFQRequestWidget::onBuyClicked(const MarkeSelectedInfo& selectedInfo)
+{
+   if (!checkConditions(selectedInfo)) {
+      return;
+   }
+
+   ui_->pageRFQTicket->setSecuritySell(selectedInfo.productGroup_, selectedInfo.currencyPair_,
+                                       selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+}
+
+void RFQRequestWidget::onSellClicked(const MarkeSelectedInfo& selectedInfo)
+{
+   if (!checkConditions(selectedInfo)) {
+      return;
+   }
+
+   ui_->pageRFQTicket->setSecurityBuy(selectedInfo.productGroup_, selectedInfo.currencyPair_,
+                                       selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+}
+
+void RFQRequestWidget::onDisableSelectedInfo()
+{
+   ui_->stackedWidgetRFQ->setDisabled(true);
 }
