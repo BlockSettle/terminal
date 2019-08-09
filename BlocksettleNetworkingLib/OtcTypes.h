@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 
+#include "BinaryData.h"
+
 namespace bs {
    namespace network {
       namespace otc {
@@ -79,6 +81,8 @@ namespace bs {
             std::string peerId;
             bs::network::otc::Offer offer;
             bs::network::otc::State state{bs::network::otc::State::Idle};
+            BinaryData random_part1;
+            BinaryData random_part2;
 
             Peer(const std::string &peerId)
                : peerId(peerId)

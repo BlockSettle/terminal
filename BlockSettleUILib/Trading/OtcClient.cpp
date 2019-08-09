@@ -1,12 +1,21 @@
 #include "OtcClient.h"
 
 #include <spdlog/spdlog.h>
+
+#include "BtcUtils.h"
+#include "EncryptionUtils.h"
 #include "otc.pb.h"
 
 using namespace Blocksettle::Communication::Otc;
 using namespace Blocksettle::Communication;
 using namespace bs::network;
 using namespace bs::network::otc;
+
+namespace {
+
+   const int RandomKeySize = 32;
+
+} // namespace
 
 OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
    : QObject (parent)
@@ -40,11 +49,14 @@ bool OtcClient::sendOffer(const Offer &offer, const std::string &peerId)
       return false;
    }
 
+   peer->random_part1 = CryptoPRNG::generateRandom(RandomKeySize);
+
    Message msg;
    auto d = msg.mutable_offer();
    d->set_price(offer.price);
    d->set_amount(offer.amount);
    d->set_sender_side(Otc::Side(offer.ourSide));
+   d->set_random_part1(peer->random_part1.toBinStr());
    send(peer, msg);
 
    peer->state = State::OfferSent;
@@ -88,15 +100,18 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
    }
 
    if (peer->state != State::OfferRecv) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't pull offer from '{}', we should be in OfferRecv state", peerId);
+      SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peerId);
       return false;
    }
+
+   peer->random_part2 = CryptoPRNG::generateRandom(RandomKeySize);
 
    Message msg;
    auto d = msg.mutable_accept();
    d->set_price(offer.price);
    d->set_amount(offer.amount);
    d->set_sender_side(Otc::Side(offer.ourSide));
+   d->set_random_part2(peer->random_part2.toBinStr());
    send(peer, msg);
 
    // Add timeout detection here
@@ -125,17 +140,30 @@ bool OtcClient::updateOffer(const Offer &offer, const std::string &peerId)
    assert(offer.amount == peer->offer.amount);
    assert(offer.ourSide == peer->offer.ourSide);
 
+   peer->random_part1 = CryptoPRNG::generateRandom(RandomKeySize);
+
    Message msg;
    auto d = msg.mutable_offer();
    d->set_price(offer.price);
    d->set_amount(offer.amount);
    d->set_sender_side(Otc::Side(offer.ourSide));
+   d->set_random_part1(peer->random_part1.toBinStr());
    send(peer, msg);
 
    peer->state = State::OfferSent;
    peer->offer = offer;
    emit peerUpdated(peerId);
    return true;
+}
+
+// static
+BinaryData OtcClient::getSettlementId(const Peer &peer)
+{
+   if (peer.random_part1.getSize() != RandomKeySize || peer.random_part2.getSize() != RandomKeySize) {
+      return BinaryData();
+   }
+
+   return BtcUtils::getSha256(peer.random_part1 + peer.random_part2);
 }
 
 void OtcClient::peerConnected(const std::string &peerId)
@@ -215,12 +243,18 @@ void OtcClient::processOffer(Peer *peer, const Message_Offer &msg)
       return;
    }
 
+   if (msg.random_part1().size() != RandomKeySize) {
+      blockPeer("invalid random_part1", peer);
+      return;
+   }
+
    switch (peer->state) {
       case State::Idle:
          peer->state = State::OfferRecv;
          peer->offer.ourSide = switchSide(otc::Side(msg.sender_side()));
          peer->offer.amount = msg.amount();
          peer->offer.price = msg.price();
+         peer->random_part1 = msg.random_part1();
          emit peerUpdated(peer->peerId);
          break;
 
@@ -236,6 +270,7 @@ void OtcClient::processOffer(Peer *peer, const Message_Offer &msg)
 
          peer->state = State::OfferRecv;
          peer->offer.price = msg.price();
+         peer->random_part1 = msg.random_part1();
          emit peerUpdated(peer->peerId);
          break;
 
@@ -254,6 +289,11 @@ void OtcClient::processAccept(Peer *peer, const Message_Accept &msg)
 {
    switch (peer->state) {
       case State::OfferSent: {
+         if (msg.random_part2().size() != RandomKeySize) {
+            blockPeer("invalid random_part2", peer);
+            return;
+         }
+
          if (otc::Side(msg.sender_side()) != switchSide(peer->offer.ourSide)) {
             blockPeer("unexpected accepted sender side", peer);
             return;
@@ -263,6 +303,8 @@ void OtcClient::processAccept(Peer *peer, const Message_Accept &msg)
             blockPeer("unexpected accepted price or amount", peer);
             return;
          }
+
+         peer->random_part2 = msg.random_part2();
 
          Message reply;
          auto d = reply.mutable_accept();

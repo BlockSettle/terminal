@@ -33,6 +33,8 @@ public:
    bool acceptOffer(const bs::network::otc::Offer &offer, const std::string &peerId);
    bool updateOffer(const bs::network::otc::Offer &offer, const std::string &peerId);
 
+   static BinaryData getSettlementId(const bs::network::otc::Peer &peer);
+
 public slots:
    void peerConnected(const std::string &peerId);
    void peerDisconnected(const std::string &peerId);
