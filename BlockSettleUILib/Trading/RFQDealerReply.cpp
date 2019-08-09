@@ -407,7 +407,7 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
    ui_->labelRecvAddr->setVisible(isXBT || isPrivMkt);
    ui_->comboBoxRecvAddr->setVisible(isXBT || isPrivMkt);
 
-   dealerSellXBT_ = (isXBT || isPrivMkt) && ((qrn.product == bs::network::XbtCurrency) ^ (qrn.side == bs::network::Side::Sell));
+   dealerSellXBT_ = (isXBT || isPrivMkt) && ((qrn.product == bs::network::XbtCurrency) != (qrn.side == bs::network::Side::Sell));
 
    updateUiWalletFor(qrn);
 
@@ -725,8 +725,7 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
          qn->reqAuthKey = qrn.requestorRecvAddress;
 
          auto wallet = transData->getSigningWallet();
-         auto spendVal = std::make_shared<uint64_t>();
-         *spendVal = 0;
+         auto spendVal = std::make_shared<uint64_t>(0);
 
          const auto &cbFee = [this, qrn, transData, spendVal, wallet, cb, qn](float feePerByte) {
             const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(*spendVal);
