@@ -27,6 +27,7 @@ namespace Chat {
 }
 
 class ApplicationSettings;
+class ArmoryConnection;
 class BaseCelerClient;
 class ChatClient;
 class ChatTreeModelWrapper;
@@ -39,7 +40,6 @@ class QTextEdit;
 namespace bs { namespace sync {
    class WalletsManager;
 } }
-
 
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
@@ -63,7 +63,8 @@ public:
    void init(const std::shared_ptr<ConnectionManager>& connectionManager
            , const std::shared_ptr<ApplicationSettings> &appSettings
            , const std::shared_ptr<spdlog::logger>& logger
-           , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr);
+           , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+           , const std::shared_ptr<ArmoryConnection> &armory);
 
    std::string login(const std::string& email, const std::string& jwt
       , const ZmqBipNewKeyCb &);

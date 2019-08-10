@@ -231,7 +231,8 @@ ChatWidget::~ChatWidget() = default;
 void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager
                  , const std::shared_ptr<ApplicationSettings> &appSettings
                  , const std::shared_ptr<spdlog::logger>& logger
-                 , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
+                 , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+                 , const std::shared_ptr<ArmoryConnection> &armory)
 {
    logger_ = logger;
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
@@ -286,7 +287,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    installEventFilter(this);
 
-   otcClient_ = new OtcClient(logger_, walletsMgr, this);
+   otcClient_ = new OtcClient(logger_, walletsMgr, armory, this);
    connect(client_.get(), &ChatClient::contactConnected, otcClient_, &OtcClient::peerConnected);
    connect(client_.get(), &ChatClient::contactDisconnected, otcClient_, &OtcClient::peerDisconnected);
    connect(client_.get(), &ChatClient::otcMessageReceived, otcClient_, &OtcClient::processMessage);

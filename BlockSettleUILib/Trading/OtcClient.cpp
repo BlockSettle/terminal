@@ -4,6 +4,7 @@
 
 #include "BtcUtils.h"
 #include "EncryptionUtils.h"
+#include "TransactionData.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -23,10 +24,12 @@ namespace {
 
 OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const std::shared_ptr<ArmoryConnection> &armory
    , QObject *parent)
    : QObject (parent)
    , logger_(logger)
    , walletsMgr_(walletsMgr)
+   , armory_(armory)
 {
 }
 
@@ -177,26 +180,15 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
             return;
          }
 
-         auto wallet = walletsMgr_->getPrimaryWallet();
-         if (!wallet) {
-            SPDLOG_LOGGER_ERROR(logger_, "can't find primary wallet");
-            return;
-         }
+         const auto &cbFee = [this, peerId, offer, ourPubKey, settlementId](float feePerByte) {
+            if (feePerByte < 1) {
+               SPDLOG_LOGGER_ERROR(logger_, "invalid fees detected");
+               return;
+            }
 
-         auto peer = findPeer(peerId);
-         if (!peer) {
-            SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
-            return;
-         }
-
-         if (peer->state != State::OfferRecv) {
-            SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peerId);
-            return;
-         }
-
-         auto cbSettlAddr = [this, offer, peerId, ourPubKey](const bs::Address &addr) {
-            if (addr.isNull()) {
-               SPDLOG_LOGGER_ERROR(logger_, "invalid settl addr");
+            auto hdWallet = walletsMgr_->getPrimaryWallet();
+            if (!hdWallet) {
+               SPDLOG_LOGGER_ERROR(logger_, "can't find primary wallet");
                return;
             }
 
@@ -211,28 +203,57 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
                return;
             }
 
-            Message msg;
-            auto d = msg.mutable_accept();
-            d->set_price(offer.price);
-            d->set_amount(offer.amount);
-            d->set_sender_side(Otc::Side(offer.ourSide));
-            d->set_random_part2(peer->random_part2.toBinStr());
-            d->set_auth_address(ourPubKey.toBinStr());
-            send(peer, msg);
+            auto cbSettlAddr = [this, offer, peerId, ourPubKey, feePerByte](const bs::Address &addr) {
+               if (addr.isNull()) {
+                  SPDLOG_LOGGER_ERROR(logger_, "invalid settl addr");
+                  return;
+               }
 
-            // Add timeout detection here
-            peer->state = State::WaitAcceptAck;
-            emit peerUpdated(peerId);
+               auto peer = findPeer(peerId);
+               if (!peer) {
+                  SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+                  return;
+               }
 
-            assert(peer->authPubKey.getSize() == PubKeySize);
+               if (peer->state != State::OfferRecv) {
+                  SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peerId);
+                  return;
+               }
 
-            SPDLOG_LOGGER_DEBUG(logger_, "#### success: {}", addr.display());
+               auto wallet = ourBtcWallet();
+               if (!wallet) {
+                  SPDLOG_LOGGER_ERROR(logger_, "can't find BTC wallet");
+                  return;
+               }
+
+               Message msg;
+               auto d = msg.mutable_accept();
+               d->set_price(offer.price);
+               d->set_amount(offer.amount);
+               d->set_sender_side(Otc::Side(offer.ourSide));
+               d->set_random_part2(peer->random_part2.toBinStr());
+               d->set_auth_address(ourPubKey.toBinStr());
+               send(peer, msg);
+
+               // Add timeout detection here
+               peer->state = State::WaitAcceptAck;
+               emit peerUpdated(peerId);
+
+               assert(peer->authPubKey.getSize() == PubKeySize);
+
+               auto transaction = std::make_shared<TransactionData>([]() {}, nullptr, true, true);
+               transaction->setWallet(wallet, armory_->topBlock());
+               transaction->setFeePerByte(feePerByte);
+
+               SPDLOG_LOGGER_DEBUG(logger_, "#### success: {}", addr.display());
+            };
+
+            const bool myKeyFirst = (peer->offer.ourSide == bs::network::otc::Side::Buy);
+            hdWallet->getSettlementPayinAddress(settlementId, peer->authPubKey, cbSettlAddr, myKeyFirst);
+
+            SPDLOG_LOGGER_DEBUG(logger_, "success");
          };
-
-         const bool myKeyFirst = (peer->offer.ourSide == bs::network::otc::Side::Buy);
-         wallet->getSettlementPayinAddress(settlementId, peer->authPubKey, cbSettlAddr, myKeyFirst);
-
-         SPDLOG_LOGGER_DEBUG(logger_, "success");
+         walletsMgr_->estimatedFeePerByte(2, cbFee, this);
       });
 
    });
@@ -547,4 +568,29 @@ std::shared_ptr<bs::sync::hd::SettlementLeaf> OtcClient::ourSettlementLeaf()
    }
 
    return leaf;
+}
+
+std::shared_ptr<bs::sync::Wallet> OtcClient::ourBtcWallet()
+{
+   // TODO: Use wallet from selection combobox
+
+   auto wallet = walletsMgr_->getPrimaryWallet();
+   if (!wallet) {
+      SPDLOG_LOGGER_ERROR(logger_, "don't have primary wallet");
+      return nullptr;
+   }
+
+   auto group = wallet->getGroup(bs::hd::Bitcoin_test);
+   if (!group) {
+      SPDLOG_LOGGER_ERROR(logger_, "don't have bitcoin group");
+      return nullptr;
+   }
+
+   auto leaves = group->getLeaves();
+   if (leaves.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "empty bitcoin group");
+      return nullptr;
+   }
+
+   return leaves.front();
 }
