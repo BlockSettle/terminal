@@ -24,7 +24,6 @@ public:
 
    void clear();
 
-public:
    void AddLiveOTCRequest(const std::shared_ptr<Chat::Data>& otc);
    bool RemoveOTCByID(const std::string &serverRequestId);
 
@@ -37,18 +36,18 @@ private slots:
 private:
    enum Columns
    {
-      ColumnSecurity = 0,
+      ColumnSecurity,
       ColumnType,
       ColumnProduct,
       ColumnSide,
       ColumnQuantity,
       ColumnDuration,
+
       ColumnCount
    };
-private:
+
    QVariant getRowData(const int column, const std::shared_ptr<Chat::Data>& otc) const;
 
-private:
    std::vector<std::shared_ptr<Chat::Data>>  currentRequests_;
    QTimer                                    refreshTicker_;
 };

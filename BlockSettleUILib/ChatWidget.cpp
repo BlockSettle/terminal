@@ -1,18 +1,19 @@
 #include "ChatWidget.h"
 #include "ui_ChatWidget.h"
 
-#include "BSTerminalMainWindow.h"
 #include "ApplicationSettings.h"
+#include "BSMessageBox.h"
+#include "BSTerminalMainWindow.h"
+#include "CelerClient.h"
 #include "ChatClient.h"
 #include "ChatClientDataModel.h"
+#include "ChatProtocol/ChatUtils.h"
+#include "ChatTreeModelWrapper.h"
+#include "ImportKeyBox.h"
 #include "NotificationCenter.h"
 #include "OTCRequestViewModel.h"
+#include "OtcClient.h"
 #include "ZMQ_BIP15X_DataConnection.h"
-#include "ChatTreeModelWrapper.h"
-#include "CelerClient.h"
-#include "ChatProtocol/ChatUtils.h"
-#include "BSMessageBox.h"
-#include "ImportKeyBox.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -25,6 +26,8 @@
 
 Q_DECLARE_METATYPE(std::vector<std::string>)
 
+using namespace bs::network;
+using namespace bs::network::otc;
 
 enum class OTCPages : int
 {
@@ -219,20 +222,6 @@ ChatWidget::ChatWidget(QWidget *parent)
 
    qRegisterMetaType<std::vector<std::string>>();
 
-   connect(ui_->widgetCreateOTCRequest, &CreateOTCRequestWidget::RequestCreated, this, &ChatWidget::OnOTCRequestCreated);
-   connect(ui_->widgetCreateOTCResponse, &CreateOTCResponseWidget::ResponseCreated, this, &ChatWidget::OnCreateResponse);
-
-   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::PullOTCRequested, this, &ChatWidget::OnCancelCurrentTrading);
-   connect(ui_->widgetCreateOTCResponse, &CreateOTCResponseWidget::ResponseRejected, this, &ChatWidget::OnCancelCurrentTrading);
-
-   connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::TradeUpdated, this, &ChatWidget::OnUpdateTradeRequestor);
-   connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::TradeAccepted, this, &ChatWidget::OnAcceptTradeRequestor);
-   connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::TradeRejected, this, &ChatWidget::OnCancelCurrentTrading);
-
-   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::TradeUpdated, this, &ChatWidget::OnUpdateTradeResponder);
-   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::TradeAccepted, this, &ChatWidget::OnAcceptTradeResponder);
-   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::TradeRejected, this, &ChatWidget::OnCancelCurrentTrading);
-
    connect(ui_->pushButton_AcceptSend, &QPushButton::clicked, this, &ChatWidget::onContactRequestAcceptSendClicked);
    connect(ui_->pushButton_RejectCancel, &QPushButton::clicked, this, &ChatWidget::onContactRequestRejectCancelClicked);
 }
@@ -295,6 +284,21 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    initSearchWidget();
 
    installEventFilter(this);
+
+   otcClient_ = new OtcClient(logger_, this);
+   connect(client_.get(), &ChatClient::contactConnected, otcClient_, &OtcClient::peerConnected);
+   connect(client_.get(), &ChatClient::contactDisconnected, otcClient_, &OtcClient::peerDisconnected);
+   connect(client_.get(), &ChatClient::otcMessageReceived, otcClient_, &OtcClient::processMessage);
+
+   connect(otcClient_, &OtcClient::sendMessage, client_.get(), &ChatClient::sendOtcMessage);
+
+   connect(otcClient_, &OtcClient::peerUpdated, this, &ChatWidget::onOtcUpdated);
+
+   connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::requestCreated, this, &ChatWidget::onOtcRequestSubmit);
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::requestPulled, this, &ChatWidget::onOtcRequestPull);
+   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseAccepted, this, &ChatWidget::onOtcResponseAccept);
+   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseUpdated, this, &ChatWidget::onOtcResponseUpdate);
+   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseRejected, this, &ChatWidget::onOtcResponseReject);
 }
 
 
@@ -657,9 +661,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             if (contact && contact->has_contact_record()) {
                setIsRoom(false);
                currentChat_ = contact->contact_record().contact_id();
-               ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
-               OTCSwitchToContact(contact, cElement->getOnlineStatus()
-                                  == ChatContactElement::OnlineStatus::Online);
+               OTCSwitchToContact(contact);
             }
          }
          break;
@@ -750,28 +752,20 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
          }
          break;
          case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
-            //TODO: Change cast
             auto contact = element->getDataObject();
             if (contact && contact->has_contact_record() && currentChat_ == contact->contact_record().contact_id()) {
-                ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
-               OTCSwitchToContact(contact, cElement->getOnlineStatus()
-                                  == ChatContactElement::OnlineStatus::Online);
+               OTCSwitchToContact(contact);
             }
          }
          break;
          case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
             auto contact = element->getDataObject();
             if (contact && contact->has_contact_record()) {
-               ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
-
+               ChatContactElement *cElement = dynamic_cast<ChatContactElement*>(element);
                //Hide buttons if this current chat, but thme shouldn't be visible
-               bool isButtonsVisible = false;
-               if (currentChat_ == contact->contact_record().contact_id()) {
-                  isButtonsVisible =
-                  (cElement->getContactData()->status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING)
-                  || (cElement->getContactData()->status() == Chat::ContactStatus::CONTACT_STATUS_INCOMING);
-
-               }
+               bool isButtonsVisible = currentChat_ == contact->contact_record().contact_id() &&
+                  (cElement->getContactData()->status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING
+                     || cElement->getContactData()->status() == Chat::ContactStatus::CONTACT_STATUS_INCOMING);
                ui_->frameContactActions->setVisible(isButtonsVisible);
             }
          }
@@ -781,72 +775,6 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
       }
    }
 }
-
-void ChatWidget::OnOTCRequestCreated()
-{
-   const auto side = ui_->widgetCreateOTCRequest->GetSide();
-   const auto range = ui_->widgetCreateOTCRequest->GetRange();
-
-   auto otcRequest = bs::network::OTCRequest{side, range};
-
-   if (currentChat_ == ChatUtils::OtcRoomKey) {
-      // XXXOTC
-      // submit request to OTC room
-   } else {
-      if (!client_->SubmitPrivateOTCRequest(otcRequest, currentChat_)) {
-         logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit"
-                        " OTC request to {}", currentChat_);
-         return;
-      }
-   }
-}
-
-void ChatWidget::OnCreateResponse()
-{
-   if (currentChat_ == ChatUtils::OtcRoomKey) {
-      // XXXOTC
-      // submit cancel to room
-   } else {
-      auto response = ui_->widgetCreateOTCResponse->GetCurrentOTCResponse();
-      if (!client_->SubmitPrivateOTCResponse(response, currentChat_)) {
-         logger_->error("[ChatWidget::OnCancelCurrentTrading] failed to submit response");
-      }
-   }
-}
-
-void ChatWidget::OnCancelCurrentTrading()
-{
-   if (currentChat_ == ChatUtils::OtcRoomKey) {
-      // XXXOTC
-      // submit cancel to room
-   } else {
-      if (!client_->SubmitPrivateCancel(currentChat_)) {
-         logger_->error("[ChatWidget::OnCancelCurrentTrading] failed to submit cancel");
-      }
-   }
-}
-
-void ChatWidget::OnUpdateTradeRequestor()
-{
-   auto update = ui_->widgetNegotiateRequest->GetUpdate();
-   if (!client_->SubmitPrivateUpdate(update, currentChat_)) {
-      logger_->error("[ChatWidget::OnUpdateTradeRequestor] failed to submit update");
-   }
-}
-
-void ChatWidget::OnAcceptTradeRequestor()
-{}
-
-void ChatWidget::OnUpdateTradeResponder()
-{
-   auto update = ui_->widgetNegotiateResponse->GetUpdate();
-   if (!client_->SubmitPrivateUpdate(update, currentChat_)) {
-      logger_->error("[ChatWidget::OnCancelCurrentTrading] failed to submit update");
-   }
-}
-
-void ChatWidget::OnAcceptTradeResponder()
-{}
 
 void ChatWidget::SetOTCLoggedInState()
 {
@@ -860,9 +788,9 @@ void ChatWidget::SetLoggedOutOTCState()
 
 bool ChatWidget::TradingAvailableForUser() const
 {
-   return celerClient_
-      && (   celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Dealing
-             || celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Trading);
+   return celerClient_ && celerClient_->IsConnected() &&
+      (celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Dealing
+         || celerClient_->celerUserType() == BaseCelerClient::CelerUserType::Trading);
 }
 
 void ChatWidget::clearCursorSelection(QTextEdit *element)
@@ -870,6 +798,35 @@ void ChatWidget::clearCursorSelection(QTextEdit *element)
    auto cursor = element->textCursor();
    cursor.clearSelection();
    element->setTextCursor(cursor);
+}
+
+void ChatWidget::updateOtc(const std::string &contactId)
+{
+   auto peer = otcClient_->peer(contactId);
+   if (!peer) {
+      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
+      return;
+   }
+
+   switch (peer->state) {
+      case otc::State::Idle:
+         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
+         break;
+      case otc::State::OfferSent:
+         ui_->widgetPullOwnOTCRequest->setOffer(peer->offer);
+         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCPullOwnOTCRequestPage));
+         break;
+      case otc::State::OfferRecv:
+         ui_->widgetNegotiateResponse->setOffer(peer->offer);
+         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
+         break;
+      case otc::State::WaitAcceptAck:
+         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
+         break;
+      case otc::State::Blacklisted:
+         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
+         break;
+   }
 }
 
 void ChatWidget::OTCSwitchToCommonRoom()
@@ -917,12 +874,10 @@ void ChatWidget::OTCSwitchToRoom(std::shared_ptr<Chat::Data>& room)
    }
 }
 
-void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::Data>& contact,
-                                    bool onlineStatus)
+void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::Data>& contact)
 {
    assert(contact->has_contact_record());
 
-   ui_->stackedWidgetMessages->setCurrentIndex(0);
    ui_->input_textEdit->setFocus();
 
    if (!TradingAvailableForUser()) {
@@ -930,62 +885,12 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::Data>& contact,
       return;
    }
 
-   if (contact->contact_record().status() == Chat::CONTACT_STATUS_ACCEPTED) {
-      auto found = client_->getDataModel()->findContactNode(contact->contact_record().contact_id());
-      auto cNode = static_cast<ChatContactCompleteElement*>(found);
-      if (onlineStatus) {
-         if (cNode->OTCTradingStarted()) {
-            if (cNode->isOTCRequestor()) {
-               if (cNode->haveUpdates()) {
-                  // display requester update from update
-                  ui_->widgetNegotiateRequest->SetUpdateData(cNode->getLastOTCUpdate(), cNode->getOTCResponse());
-                  ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
-               } else {
-                  if (cNode->haveResponse()) {
-                     // display requester update from response
-                     ui_->widgetNegotiateRequest->SetResponseData(cNode->getOTCResponse());
-                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
-                  } else {
-                     // display own request for pull
-                     ui_->widgetPullOwnOTCRequest->setRequestData(cNode->getOTCRequest());
-                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCPullOwnOTCRequestPage));
-                  }
-               }
-            } else {
-               if (cNode->haveUpdates()) {
-                  // display responder update from update
-                  ui_->widgetNegotiateResponse->SetUpdateData(cNode->getLastOTCUpdate(), cNode->getOTCResponse());
-                  ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
-               } else {
-                  if (cNode->haveResponse()) {
-                     // display pull own response
-                     ui_->widgetCreateOTCResponse->SetSubmittedResponse(cNode->getOTCResponse(), cNode->getOTCRequest());
-                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
-                  } else {
-                     // display response widget
-                     ui_->widgetCreateOTCResponse->SetRequestToRespond(cNode->getOTCRequest());
-                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
-                  }
-               }
-            }
-         } else {
-            DisplayCreateOTCWidget();
-         }
-      } else {
-         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
-         cNode->cleanupTrading();
-      }
-   } else {
+   if (contact->contact_record().status() != Chat::CONTACT_STATUS_ACCEPTED) {
       ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactShieldPage));
+      return;
    }
-}
 
-void ChatWidget::OTCSwitchToResponse(std::shared_ptr<Chat::Data> &response)
-{
-   assert(response->has_message());
-   assert(response->message().has_otc_response());
-
-   ui_->stackedWidgetMessages->setCurrentIndex(0);
+   updateOtc(contact->contact_record().contact_id());
 }
 
 void ChatWidget::UpdateOTCRoomWidgetIfRequired()
@@ -1023,6 +928,58 @@ void ChatWidget::OnOTCSelectionChanged(const QItemSelection &selected, const QIt
    // } else {
    //    DisplayCorrespondingOTCRequestWidget();
    // }
+}
+
+void ChatWidget::onOtcRequestSubmit()
+{
+   bool result = otcClient_->sendOffer(ui_->widgetNegotiateRequest->offer(), currentChat_);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "send offer failed");
+      return;
+   }
+}
+
+void ChatWidget::onOtcRequestPull()
+{
+   bool result = otcClient_->pullOrRejectOffer(currentChat_);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "pull offer failed");
+      return;
+   }
+}
+
+void ChatWidget::onOtcResponseAccept()
+{
+   bool result = otcClient_->acceptOffer(ui_->widgetNegotiateResponse->offer(), currentChat_);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "accept offer failed");
+      return;
+   }
+}
+
+void ChatWidget::onOtcResponseUpdate()
+{
+   bool result = otcClient_->updateOffer(ui_->widgetNegotiateResponse->offer(), currentChat_);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "update offer failed");
+      return;
+   }
+}
+
+void ChatWidget::onOtcResponseReject()
+{
+   bool result = otcClient_->pullOrRejectOffer(currentChat_);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "reject offer failed");
+      return;
+   }
+}
+
+void ChatWidget::onOtcUpdated(const std::string &contactId)
+{
+   if (contactId == currentChat_) {
+      updateOtc(currentChat_);
+   }
 }
 
 void ChatWidget::DisplayCreateOTCWidget()

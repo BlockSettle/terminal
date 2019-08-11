@@ -85,8 +85,6 @@ QVariant OTCRequestViewModel::headerData(int section, Qt::Orientation orientatio
 
 QVariant OTCRequestViewModel::getRowData(const int column, const std::shared_ptr<Chat::Data>& otc) const
 {
-   assert(otc->message().has_otc_request());
-
    switch(column) {
    case ColumnSecurity:
       return QLatin1String("EUR/XBT");
@@ -98,10 +96,10 @@ QVariant OTCRequestViewModel::getRowData(const int column, const std::shared_ptr
       return QLatin1String("XBT");
 
    case ColumnSide:
-      return ChatUtils::toString(otc->message().otc_request().side());
+      return QLatin1String("SIDE");
 
    case ColumnQuantity:
-      return ChatUtils::toString(otc->message().otc_request().range_type());
+      return QLatin1String("QUANTITY");
 
    case ColumnDuration:
       {
@@ -121,13 +119,13 @@ QVariant OTCRequestViewModel::getRowData(const int column, const std::shared_ptr
 
 void OTCRequestViewModel::AddLiveOTCRequest(const std::shared_ptr<Chat::Data>& otc)
 {
-   assert(otc->message().has_otc_request());
+//   assert(otc->message().has_otc_request());
 
-   beginInsertRows(QModelIndex{}, currentRequests_.size(), currentRequests_.size());
+//   beginInsertRows(QModelIndex{}, currentRequests_.size(), currentRequests_.size());
 
-   currentRequests_.emplace_back(otc);
+//   currentRequests_.emplace_back(otc);
 
-   endInsertRows();
+//   endInsertRows();
 }
 
 bool OTCRequestViewModel::RemoveOTCByID(const std::string& serverRequestId)
@@ -145,7 +143,7 @@ bool OTCRequestViewModel::RemoveOTCByID(const std::string& serverRequestId)
    //    }
    // }
 
-   return false;
+   return true;
 }
 
 void OTCRequestViewModel::RefreshBoard()

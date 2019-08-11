@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.Otc;
+
+// Keep in sync with bs::network::ChatOTCSide::Type
+enum Side
+{
+    SIDE_UNDEFINED = 0;
+    SIDE_BUY = 1;
+    SIDE_SELL = 2;
+};
+
+// Keep in sync with bs::network::OTCRangeID::Type
+enum Range
+{
+    RANGE_1_5     = 0;
+    RANGE_5_10    = 1;
+    RANGE_10_50   = 2;
+    RANGE_50_100  = 3;
+    RANGE_100_250 = 4;
+    RANGE_250PLUS = 5;
+};
+
+message Message
+{
+    message Offer
+    {
+        Side sender_side = 1;
+        int64 amount = 2;
+        int64 price = 3;
+    }
+
+    message Accept
+    {
+        Side sender_side = 1;
+        int64 amount = 2;
+        int64 price = 3;
+        // Check details here one more time
+        // And pass more
+    }
+
+    message Close
+    {
+    }
+
+    oneof data
+    {
+        Offer offer = 1;
+        Accept accept = 2;
+        Close close = 3;
+    }
+}

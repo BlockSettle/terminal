@@ -33,12 +33,12 @@
 // Mirror of cached Armory wait times - NodeRPC::aggregateFeeEstimates()
 const std::map<unsigned int, QString> feeLevels = {
    { 2, QObject::tr("20 minutes") },
-   { 3, QObject::tr("30 minutes") },
    { 4, QObject::tr("40 minutes") },
-   { 5, QObject::tr("50 minutes") },
    { 6, QObject::tr("1 hour") },
-   { 10, QObject::tr("1 hour 40 minutes") },
-   { 20, QObject::tr("3 hours 20 minutes") }
+   { 12, QObject::tr("2 hours") },
+   { 24, QObject::tr("4 hours") },
+   { 48, QObject::tr("8 hours") },
+   { 144, QObject::tr("24 hours") },
 };
 const size_t kTransactionWeightLimit = 400000;
 

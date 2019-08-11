@@ -1,10 +1,10 @@
 #ifndef __PULL_OWN_OTC_REQUEST_WIDGET_H__
 #define __PULL_OWN_OTC_REQUEST_WIDGET_H__
 
+#include <memory>
 #include <QWidget>
 
-#include "CommonTypes.h"
-#include "chat.pb.h"
+#include "OtcTypes.h"
 
 namespace Ui {
     class PullOwnOTCRequestWidget;
@@ -15,16 +15,13 @@ class PullOwnOTCRequestWidget : public QWidget
 Q_OBJECT
 
 public:
-   PullOwnOTCRequestWidget(QWidget* parent = nullptr );
-   ~PullOwnOTCRequestWidget() noexcept override;
+   explicit PullOwnOTCRequestWidget(QWidget* parent = nullptr);
+   ~PullOwnOTCRequestWidget() override;
 
-   void setRequestData(const std::shared_ptr<Chat::Data>& otc);
-
-private slots:
-   void OnPullPressed();
+   void setOffer(const bs::network::otc::Offer &offer);
 
 signals:
-   void PullOTCRequested();
+   void requestPulled();
 
 private:
    std::unique_ptr<Ui::PullOwnOTCRequestWidget> ui_;

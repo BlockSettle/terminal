@@ -141,8 +141,8 @@ private:
 
    static void AddToSet(const std::string& address, std::unordered_set<std::string> &set);
 
-   QTimer                                 *timerSendHb_;
-   QTimer                                 *timerRecvHb_;
+   QTimer                                 *timerSendHb_{};
+   QTimer                                 *timerRecvHb_{};
 
    using commandsQueueType = std::queue< std::shared_ptr<BaseCelerCommand> >;
    commandsQueueType internalCommands_;
