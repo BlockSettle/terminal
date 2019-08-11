@@ -130,18 +130,30 @@ namespace Chat
    {
       QString cmd = QString(QLatin1String("DESCRIBE `%1`")).arg(tableName);
 
-      QSqlQuery infoQuery;
-      if (!ExecuteQuery(cmd, infoQuery))
-      {
-         throw std::runtime_error("Can't get table info (table: " + tableName.toStdString() + ")");
-         return false;
-      }
-
       QStringList tableColumns;
-
-      while (infoQuery.next())
+      QSqlQuery infoQuery;
+      if (ExecuteQuery(cmd, infoQuery))
       {
-         tableColumns << infoQuery.value(0).toString();
+         while (infoQuery.next())
+         {
+            tableColumns << infoQuery.value(0).toString();
+         }
+      }
+      else
+      {
+         // describe failed, check if you can list columns from sqlite
+         cmd = QString(QLatin1String("PRAGMA table_info(%1)")).arg(tableName);
+
+         if (!ExecuteQuery(cmd, infoQuery))
+         {
+            throw std::runtime_error("Can't get table info (table: " + tableName.toStdString() + ")");
+            return false;
+         }
+
+         while (infoQuery.next())
+         {
+            tableColumns << infoQuery.value(1).toString();
+         }
       }
 
       const TableStructure& tableStruct = tablesMap_.value(tableName);
