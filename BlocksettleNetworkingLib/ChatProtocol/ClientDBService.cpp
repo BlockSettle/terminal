@@ -12,5 +12,6 @@ namespace Chat
       connect(this, &ClientDBService::Init, worker(), &ClientDBLogic::Init);
 
       ////////// RETURN SIGNALS //////////
+      connect(worker(), &ClientDBLogic::initDone, this, &ClientDBService::initDone);
    }
 }
