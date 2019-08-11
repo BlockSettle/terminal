@@ -188,4 +188,17 @@ namespace Chat
       loggerPtr_->debug("[ChatClientLogic::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
    }
 
+   void ChatClientLogic::SetMessageSeen(const std::string& partyId, const std::string& messageId)
+   {
+      ClientPartyPtr clientPartyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
+
+      if (nullptr == clientPartyPtr)
+      {
+         emit chatClientError(ChatClientLogicError::ClientPartyNotExist, partyId);
+         return;
+      }
+
+      clientConnectionLogicPtr_->setMessageSeen(clientPartyPtr, message_id);
+   }
+
 }

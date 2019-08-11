@@ -26,7 +26,8 @@ namespace Chat
    enum class ClientConnectionLogicError
    {
       SendingDataToUnhandledParty,
-      UnhandledPacket
+      UnhandledPacket,
+      MessageSeenForWrongTypeOfParty
    };
 
    class ClientConnectionLogic : public QObject
@@ -42,6 +43,7 @@ namespace Chat
 
       void prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
       void prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
+      void setMessageSeen(const ClientPartyPtr& clientPartyPtr, const std::string& messageId);
 
    public slots:
       void onDataReceived(const std::string&);

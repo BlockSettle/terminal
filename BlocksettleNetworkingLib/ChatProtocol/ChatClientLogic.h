@@ -61,6 +61,7 @@ namespace Chat
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
       void SendPartyMessage(const std::string& partyId, const std::string& data);
+      void SetMessageSeen(const std::string& partyId, const std::string& messageId);
 
    signals:
       void dataReceived(const std::string&);

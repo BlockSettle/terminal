@@ -201,7 +201,7 @@ namespace Chat
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
 
       // TODO: handle here state changes of the rest of message types
-      if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyState() && Chat::PartySubType::STANDARD)
+      if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyState() && Chat::PartySubType::STANDARD == clientPartyPtr->partySubType())
       {
          // private chat, reply that message was received
          PartyMessageStateUpdate partyMessageStateUpdate;
@@ -214,7 +214,28 @@ namespace Chat
 
       // save received message state in db
       auto partyMessageState = Chat::PartyMessageState::RECEIVED;
-      clientDBServicePtr_->updateMessageState(partyMessagePacket.party_id(), partyMessageState);
+      clientDBServicePtr_->updateMessageState(partyMessagePacket.message_id(), partyMessageState);
+   }
+
+   void ClientConnectionLogic::setMessageSeen(const ClientPartyPtr& clientPartyPtr, const std::string& messageId)
+   {
+      if (!(Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyState() && Chat::PartySubType::STANDARD == clientPartyPtr->partySubType()))
+      {
+         emit error(ClientConnectionLogicError::MessageSeenForWrongTypeOfParty, clientPartyPtr->id());
+         return;
+      }
+
+      auto partyMessageState = Chat::PartyMessageState::SEEN;
+
+      // private chat, reply that message was received
+      PartyMessageStateUpdate partyMessageStateUpdate;
+      partyMessageStateUpdate.set_party_id(clientPartyPtr->id());
+      partyMessageStateUpdate.set_message_id(messageId);
+      partyMessageStateUpdate.set_party_message_state(partyMessageState);
+
+      emit sendPacket(partyMessageStateUpdate);
+
+      clientDBServicePtr_->updateMessageState(messageId, partyMessageState);
    }
 
 }
