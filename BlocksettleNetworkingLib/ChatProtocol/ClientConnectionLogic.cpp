@@ -6,6 +6,8 @@
 #include <google/protobuf/any.pb.h>
 
 #include "ChatProtocol/ClientConnectionLogic.h"
+#include "ChatProtocol/ClientPartyLogic.h"
+#include "ChatProtocol/ClientPartyModel.h"
 #include "ProtobufUtils.h"
 
 #include <disable_warnings.h>
@@ -50,6 +52,23 @@ namespace Chat
          handleStatusChanged(statusChanged);
          return;
       }
+
+      PartyMessageStateUpdate partyMessageStateUpdate;
+      if (pbStringToMessage<PartyMessageStateUpdate>(data, &partyMessageStateUpdate))
+      {
+         handlePartyMessageStateUpdate(partyMessageStateUpdate);
+         return;
+      }
+
+      PartyMessagePacket partyMessagePacket;
+      if (pbStringToMessage<PartyMessagePacket>(data, &partyMessagePacket))
+      {
+         handlePartyMessagePacket(partyMessagePacket);
+         return;
+      }
+
+      QString what = QString::fromLatin1("data: %1").arg(QString::fromStdString(data));
+      emit error(ClientConnectionLogicError::UnhandledPacket, what.toStdString());
    }
 
    void ClientConnectionLogic::onConnected(void)
@@ -120,6 +139,14 @@ namespace Chat
       emit userStatusChanged(statusChanged.user_name(), statusChanged.client_status());
    }
 
+   void ClientConnectionLogic::handlePartyMessageStateUpdate(const google::protobuf::Message& msg)
+   {
+      PartyMessageStateUpdate partyMessageStateUpdate;
+      partyMessageStateUpdate.CopyFrom(msg);
+
+      clientDBServicePtr_->updateMessageState(partyMessageStateUpdate.message_id(), partyMessageStateUpdate.party_message_state());
+   }
+
    void ClientConnectionLogic::prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
    {
       if (PartyType::GLOBAL == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
@@ -137,26 +164,57 @@ namespace Chat
       auto messageId = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
       auto timestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
       auto message = data;
-      auto encryption_type = Chat::EncryptionType::UNENCRYPTED;
-      auto party_message_state = Chat::PartyMessageState::SENT;
+      auto encryptionType = Chat::EncryptionType::UNENCRYPTED;
+      auto partyMessageState = Chat::PartyMessageState::UNSENT;
 
       PartyMessagePacket partyMessagePacket;
       partyMessagePacket.set_party_id(partyId);
       partyMessagePacket.set_message_id(messageId);
       partyMessagePacket.set_timestamp_ms(timestamp);
       partyMessagePacket.set_message(message);
-      partyMessagePacket.set_encryption(encryption_type);
+      partyMessagePacket.set_encryption(encryptionType);
       partyMessagePacket.set_nonce("");
-      partyMessagePacket.set_party_message_state(party_message_state);
+      partyMessagePacket.set_party_message_state(partyMessageState);
 
-      clientDBServicePtr_->SaveMessage(partyMessagePacket);
+      clientDBServicePtr_->saveMessage(partyMessagePacket);
 
       emit sendPacket(partyMessagePacket);
+
+      partyMessageState = Chat::PartyMessageState::SENT;
+      clientDBServicePtr_->updateMessageState(messageId, partyMessageState);
    }
 
    void ClientConnectionLogic::handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what)
    {
       loggerPtr_->debug("[ClientConnectionLogic::handleLocalErrors] Error: {}, what: {}", static_cast<int>(errorCode), what);
+   }
+
+   void ClientConnectionLogic::handlePartyMessagePacket(const google::protobuf::Message& msg)
+   {
+      PartyMessagePacket partyMessagePacket;
+      partyMessagePacket.CopyFrom(msg);
+
+      // save message as it is
+      clientDBServicePtr_->saveMessage(partyMessagePacket);
+
+      ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
+
+      // TODO: handle here state changes of the rest of message types
+      if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyState() && Chat::PartySubType::STANDARD)
+      {
+         // private chat, reply that message was received
+         PartyMessageStateUpdate partyMessageStateUpdate;
+         partyMessageStateUpdate.set_party_id(partyMessagePacket.party_id());
+         partyMessageStateUpdate.set_message_id(partyMessagePacket.message_id());
+         partyMessageStateUpdate.set_party_message_state(Chat::PartyMessageState::RECEIVED);
+
+         emit sendPacket(partyMessageStateUpdate);
+      }
+
+      // save received message state in db
+      auto partyMessageState = Chat::PartyMessageState::RECEIVED;
+      clientDBServicePtr_->updateMessageState(partyMessagePacket.party_id(), partyMessageState);
    }
 
 }

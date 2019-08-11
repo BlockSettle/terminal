@@ -15,6 +15,8 @@ namespace Chat
       clientDBServicePtr_ = clientDBServicePtr;
       clientPartyModelPtr_ = std::make_shared<ClientPartyModel>(loggerPtr, this);
       connect(this, &ClientPartyLogic::error, this, &ClientPartyLogic::handleLocalErrors);
+      connect(clientDBServicePtr.get(), &ClientDBService::messageInserted, clientPartyModelPtr_.get(), &ClientPartyModel::messageInserted);
+      connect(clientDBServicePtr.get(), &ClientDBService::messageStateChanged, clientPartyModelPtr_.get(), &ClientPartyModel::messageStateChanged);
    }
 
    void ClientPartyLogic::handlePartiesFromWelcomePacket(const google::protobuf::Message& msg)

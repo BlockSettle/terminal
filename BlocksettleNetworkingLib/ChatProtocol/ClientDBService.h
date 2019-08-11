@@ -27,10 +27,14 @@ namespace Chat
    signals:
       ////////// PROXY SIGNALS //////////
       void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings);
-      void SaveMessage(const google::protobuf::Message& message);
+      void saveMessage(const google::protobuf::Message& message);
+      void updateMessageState(const std::string& message_id, const int party_message_state);
 
       ////////// RETURN SIGNALS //////////
       void initDone();
+      void messageInserted(const std::string& partyId, const std::string& messageId, const std::string& message,
+         const qint64 timestamp, const int party_message_state);
+      void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
    };
 
    using ClientDBServicePtr = std::shared_ptr<ClientDBService>;

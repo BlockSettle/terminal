@@ -86,8 +86,10 @@ enum EncryptionType
 
 enum PartyMessageState
 {
-    SENT = 0;
-    RECEIVED = 1;
+    UNSENT = 0;
+    SENT = 1;
+    RECEIVED = 2;
+    SEEN = 3;
 }
 
 message PartyPacket
@@ -139,8 +141,9 @@ message PartyMessagePacket
 
 message PartyMessageStateUpdate
 {
-    string message_id = 1;
-    PartyMessageState party_message_state = 2;
+    string party_id = 1;
+    string message_id = 2;
+    PartyMessageState party_message_state = 3;
 }
 
 message Data

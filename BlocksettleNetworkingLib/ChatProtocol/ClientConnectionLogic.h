@@ -25,7 +25,8 @@ namespace Chat
 
    enum class ClientConnectionLogicError
    {
-      SendingDataToUnhandledParty
+      SendingDataToUnhandledParty,
+      UnhandledPacket
    };
 
    class ClientConnectionLogic : public QObject
@@ -64,6 +65,8 @@ namespace Chat
       void handleWelcomeResponse(const google::protobuf::Message& msg);
       void handleLogoutResponse(const google::protobuf::Message& msg);
       void handleStatusChanged(const google::protobuf::Message& msg);
+      void handlePartyMessageStateUpdate(const google::protobuf::Message& msg);
+      void handlePartyMessagePacket(const google::protobuf::Message& msg);
 
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;

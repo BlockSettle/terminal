@@ -37,6 +37,9 @@ namespace Chat
    signals:
       void error(const ClientPartyModelError& errorCode, const std::string& what = "");
       void clientPartyStatusChanged(const ClientPartyPtr& clientPartyPtr);
+      void messageInserted(const std::string& partyId, const std::string& messageId, const std::string& message,
+         const qint64 timestamp, const int party_message_state);
+      void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
 
    private slots:
       void handleLocalErrors(const ClientPartyModelError& errorCode, const std::string& what);
