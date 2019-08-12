@@ -859,8 +859,10 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
    hd::Leaf::setArmory(armory);
    if (armory_) {
-      act_ = make_unique<CCWalletACT>(this);
-      act_->init(armory.get());
+      if (!act_) {
+         act_ = make_unique<CCWalletACT>(this);
+         act_->init(armory.get());
+      }
    }
    if (checker_ && armory) {
       checker_->setArmory(armory);
