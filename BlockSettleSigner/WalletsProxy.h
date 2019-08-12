@@ -31,6 +31,7 @@ class WalletsProxy : public QObject
    Q_PROPERTY(bool loaded READ walletsLoaded NOTIFY walletsChanged)
    Q_PROPERTY(QStringList walletNames READ walletNames NOTIFY walletsChanged)
    Q_PROPERTY(QString defaultBackupLocation READ defaultBackupLocation NOTIFY walletsChanged)
+   Q_PROPERTY(bool hasCCInfo READ hasCCInfo NOTIFY ccInfoChanged)
 
 public:
    WalletsProxy(const std::shared_ptr<spdlog::logger> &, SignerAdapter *);
@@ -85,6 +86,7 @@ public:
 signals:
    void walletError(const QString &walletId, const QString &errMsg) const;
    void walletsChanged();
+   void ccInfoChanged();
 
 private slots:
    void onWalletsChanged();
@@ -96,12 +98,14 @@ private:
    QStringList walletNames() const;
    Q_INVOKABLE QJSValue invokeJsCallBack(QJSValue jsCallback, QJSValueList args);
    std::shared_ptr<bs::sync::hd::Wallet> getWoSyncWallet(const bs::sync::WatchingOnlyWallet &) const;
+   bool hasCCInfo() const { return hasCCInfo_; }
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    SignerAdapter  *  adapter_{};
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    bool walletsSynchronized_ = false;
+   bool hasCCInfo_ = false;
 };
 
 #endif // __WALLETS_PROXY_H__

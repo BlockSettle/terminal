@@ -18,6 +18,7 @@ CustomTitleDialogWindow {
     id: root
 
     property bool primaryWalletExists: walletsProxy.primaryWalletExists
+    property bool ccInfoLoaded: walletsProxy.hasCCInfo
     property string password
     property QSeed seed: QSeed{}
     property WalletInfo walletInfo: WalletInfo{}
@@ -43,7 +44,7 @@ CustomTitleDialogWindow {
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
     Component.onCompleted: {
-        if (!primaryWalletExists) {
+        if (!primaryWalletExists && ccInfoLoaded) {
             cbPrimary.checked = true
             tfName.text = qsTr("Primary Wallet");
         }
@@ -343,8 +344,8 @@ CustomTitleDialogWindow {
                             id: cbPrimary
                             Layout.fillWidth: true
                             Layout.leftMargin: inputLabelsWidth + 5
-                            enabled: !primaryWalletExists
-                            checked: !primaryWalletExists
+                            enabled: !primaryWalletExists && ccInfoLoaded
+                            checked: !primaryWalletExists && ccInfoLoaded
                             text: qsTr("Primary Wallet")
 
                             ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")

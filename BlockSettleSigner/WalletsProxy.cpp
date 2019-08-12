@@ -33,6 +33,10 @@ WalletsProxy::WalletsProxy(const std::shared_ptr<spdlog::logger> &logger
    : QObject(nullptr), logger_(logger), adapter_(adapter)
 {
    connect(adapter_, &SignerAdapter::ready, this, &WalletsProxy::setWalletsManager);
+   connect(adapter_, &SignerAdapter::ccInfoReceived, [this](bool result) {
+      hasCCInfo_ = result;
+      emit ccInfoChanged();
+   });
 }
 
 void WalletsProxy::setWalletsManager()
