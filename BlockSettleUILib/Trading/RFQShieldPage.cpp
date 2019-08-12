@@ -7,7 +7,7 @@ namespace {
    const QString shieldTradingParticipantOnly = QObject::tr("Reserved for Trading Participants");
    const QString shieldDealingParticipantOnly = QObject::tr("Reserved for Dealing Participants");
 
-   const QString shieldCreateXXXWallet = QObject::tr("Create %1 wallet");
+   const QString shieldCreateCCWallet = QObject::tr("Create %1 wallet");
    const QString shieldCreateXBTWallet = QObject::tr("Generate an Authentication Address");
 
    const QString shieldCreateWallet = QObject::tr("To %1 in XBT related product, you require a wallet");
@@ -65,7 +65,7 @@ void RFQShieldPage::showShieldCreateLeaf(const QString& product)
    if (product == QLatin1String("XBT")) {
       prepareShield(shieldCreateXBTWallet, true, shieldButtonGenerate);
    } else {
-      prepareShield(shieldCreateXXXWallet.arg(product), true, shieldButtonCreate);
+      prepareShield(shieldCreateCCWallet.arg(product), true, shieldButtonCreate);
    }
 }
 
