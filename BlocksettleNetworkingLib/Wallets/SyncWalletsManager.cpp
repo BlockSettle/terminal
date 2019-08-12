@@ -1173,15 +1173,13 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
       }
       fee *= BTCNumericTypes::BalanceDivider / 1000.0;
       if (fee != 0) {
-         if (fee < 5) {
-            fee = 5;
-         }
          feePerByte_[blocks] = fee;
          lastFeePerByte_[blocks] = QDateTime::currentDateTime();
          invokeFeeCallbacks(blocks, fee);
          return;
       }
 
+      SPDLOG_LOGGER_WARN(logger_, "Fees estimation are not available, use hardcoded values!");
       if (blocks > 3) {
          feePerByte_[blocks] = 50;
       }
