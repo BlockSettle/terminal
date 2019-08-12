@@ -157,7 +157,6 @@ Section "install"
 #	${Endif}
 #	${If} ${SectionIsSelected} ${SEC_SIGN}
             File ..\..\build_terminal\Release\bin\Release\blocksettle_signer.exe
-            File ..\..\build_terminal\Release\bin\Release\bs_signer_gui.exe
 #	${Endif}
         SetOutPath $INSTDIR\scripts
         File ..\..\Scripts\DealerAutoQuote.qml
@@ -192,7 +191,6 @@ Section "Uninstall"
     !insertmacro DELETE_SMGROUP_SHORTCUT "BlockSettle Signer"
     Delete /REBOOTOK $INSTDIR\blocksettle.exe
     Delete /REBOOTOK $INSTDIR\blocksettle_signer.exe
-    Delete /REBOOTOK $INSTDIR\bs_signer_gui.exe
     Delete /REBOOTOK $INSTDIR\libzmq-v141-mt-4_3_2.dll
     Delete /REBOOTOK $INSTDIR\msvcp140.dll
     Delete /REBOOTOK $INSTDIR\vcruntime140.dll

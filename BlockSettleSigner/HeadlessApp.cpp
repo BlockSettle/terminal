@@ -47,6 +47,8 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    guiListener_ = std::make_unique<SignerAdapterListener>(this, guiConnection_.get()
       , logger_, walletsMgr_, queue_, params);
 
+   settings_->setServerIdKey(guiListener_->getServerConn()->getOwnPubKey());
+
    guiConnection_->setLocalHeartbeatInterval();
 
    int port = 0;
@@ -64,7 +66,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
       throw std::runtime_error("failed to bind adapter socket");
    }
 
-   interfacePort_ = port;
+   settings_->setInterfacePort(port);
 
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
@@ -77,8 +79,6 @@ HeadlessAppObj::~HeadlessAppObj() noexcept = default;
 
 void HeadlessAppObj::start()
 {
-   startInterface();
-
    logger_->debug("[{}] loading wallets from dir <{}>", __func__
       , settings_->getWalletsDir());
    const auto &cbProgress = [this](int cur, int total) {
@@ -112,6 +112,7 @@ void HeadlessAppObj::stop()
    terminalListener_->resetConnection(nullptr);
 }
 
+#if 0    //kept for reference
 void HeadlessAppObj::startInterface()
 {
    std::vector<std::string> args;
@@ -186,6 +187,7 @@ void HeadlessAppObj::startInterface()
       logger_->error("Failed to run {}", guiPath);
    }
 }
+#endif   //0
 
 void HeadlessAppObj::startTerminalsProcessing()
 {
@@ -286,7 +288,7 @@ void HeadlessAppObj::startTerminalsProcessing()
    terminalListener_->resetConnection(terminalConnection_.get());
 
    bool result = terminalConnection_->BindConnection(settings_->listenAddress()
-      , settings_->listenPort(), terminalListener_.get());
+      , std::to_string(settings_->listenPort()), terminalListener_.get());
 
    if (!result) {
       logger_->error("Failed to bind to {}:{}"
@@ -390,7 +392,7 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
 {
    const bool prevOffline = settings_->offline();
    const std::string prevListenAddress = settings_->listenAddress();
-   const std::string prevListenPort = settings_->listenPort();
+   const auto prevListenPort = settings_->listenPort();
    const auto prevTrustedTerminals = settings_->trustedTerminals();
    const std::string prevListenFrom = settings_->acceptFrom();
 

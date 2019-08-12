@@ -9,6 +9,7 @@
 namespace Blocksettle { namespace Communication { namespace signer {
    class Settings;
 } } }
+class HeadlessSettings;
 
 //SignerSettings should be separated to headless and GUI parts once all the communication will be stabilized
 class SignerSettings : public QObject
@@ -42,7 +43,7 @@ public:
    SignerSettings(SignerSettings&&) = delete;
    SignerSettings& operator = (SignerSettings&&) = delete;
 
-   bool loadSettings(const QStringList &args);
+   bool loadSettings(const std::shared_ptr<HeadlessSettings> &);
 
    QString serverIDKeyStr() const;
 
