@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <memory>
 #include <functional>
+#include "CommonTypes.h"
 #include "Wallets/SyncWalletsManager.h"
 
 namespace Ui {
@@ -20,27 +21,21 @@ public:
 
    void setShieldButtonAction(std::function<void(void)>&& action);
 
-   void showShieldLoginRequiered();
-   void showShieldReservedTraidingParticipant();
+   void showShieldLoginRequired();
+   void showShieldReservedTradingParticipant();
    void showShieldReservedDealingParticipant();
    void showShieldPromoteToPrimaryWallet();
    void showShieldCreateWallet();
    void showShieldSelectTarget();
-   void showShieldCreateXXXLeaf(const QString& product);
+   void showShieldCreateLeaf(const QString& product);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager);
    void setTabType(QString&& tabType);
 
    bool checkWalletSettings(const QString &product);
 
-   enum class ProductGroup
-   {
-      PM = 0,
-      XBT,
-      FX,
-      NONE
-   };
-   static ProductGroup getProductGroup(const QString &productGroup);
+   using ProductType = bs::network::Asset::Type;
+   static ProductType getProductGroup(const QString &productGroup);
 
 signals:
    void requestPrimaryWalletCreation();

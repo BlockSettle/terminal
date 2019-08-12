@@ -46,7 +46,7 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
       , &RFQDealerReply::quoteReqNotifStatusChanged, Qt::QueuedConnection);
    connect(ui_->pageRFQReply, &RFQDealerReply::autoSignActivated, this, &RFQReplyWidget::onAutoSignActivated);
 
-   ui_->shieldPage->showShieldLoginRequiered();
+   ui_->shieldPage->showShieldLoginRequired();
    popShield();
 }
 
@@ -320,7 +320,7 @@ void RFQReplyWidget::onConnectedToCeler()
 
 void RFQReplyWidget::onDisconnectedFromCeler()
 {
-   ui_->shieldPage->showShieldLoginRequiered();
+   ui_->shieldPage->showShieldLoginRequired();
    popShield();
    ui_->pageRFQReply->onCelerDisconnected();
 }
@@ -399,13 +399,13 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
    using UserType = CelerClient::CelerUserType;
    const UserType userType = celerClient_->celerUserType();
 
-   using GroupType = RFQShieldPage::ProductGroup;
+   using GroupType = RFQShieldPage::ProductType;
    const GroupType group = RFQShieldPage::getProductGroup(productGroup);
 
    switch (userType) {
    case UserType::Market: {
-      if (group == GroupType::XBT || group == GroupType::FX) {
-         ui_->shieldPage->showShieldReservedTraidingParticipant();
+      if (group == GroupType::SpotXBT || group == GroupType::SpotFX) {
+         ui_->shieldPage->showShieldReservedTradingParticipant();
          popShield();
          return false;
       }
@@ -416,10 +416,10 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
       break;
    }
    case UserType::Trading: {
-      if (group == GroupType::XBT) {
+      if (group == GroupType::SpotXBT) {
          ui_->shieldPage->showShieldReservedDealingParticipant();
          return false;
-      } else if (group == GroupType::PM &&
+      } else if (group == GroupType::PrivateMarket &&
             ui_->shieldPage->checkWalletSettings(QString::fromStdString(request.product))) {
          popShield();
          return false;
@@ -427,7 +427,7 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
       break;
    }
    case UserType::Dealing: {
-      if ((group == GroupType::XBT || group == GroupType::PM) &&
+      if ((group == GroupType::SpotXBT || group == GroupType::PrivateMarket) &&
             ui_->shieldPage->checkWalletSettings(QString::fromStdString(request.product))) {
          popShield();
          return false;

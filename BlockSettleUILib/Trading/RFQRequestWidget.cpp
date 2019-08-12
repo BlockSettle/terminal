@@ -36,7 +36,7 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    connect(ui_->pageRFQTicket, &RFQTicketXBT::submitRFQ, this, &RFQRequestWidget::onRFQSubmit);
    connect(ui_->shieldPage, &RFQShieldPage::requestPrimaryWalletCreation, this, &RFQRequestWidget::requestPrimaryWalletCreation);
    
-   ui_->shieldPage->showShieldLoginRequiered();
+   ui_->shieldPage->showShieldLoginRequired();
    popShield();
 }
 
@@ -209,7 +209,7 @@ void RFQRequestWidget::onDisconnectedFromCeler()
       QObject::disconnect(conn);
    }
 
-   ui_->shieldPage->showShieldLoginRequiered();
+   ui_->shieldPage->showShieldLoginRequired();
    popShield();
 }
 
@@ -234,13 +234,13 @@ bool RFQRequestWidget::checkConditions(const MarkeSelectedInfo& selectedInfo)
    using UserType = CelerClient::CelerUserType;
    const UserType userType = celerClient_->celerUserType();
 
-   using GroupType = RFQShieldPage::ProductGroup;
+   using GroupType = RFQShieldPage::ProductType;
    const GroupType group = RFQShieldPage::getProductGroup(selectedInfo.productGroup_);
 
    switch (userType) {
    case UserType::Market: {
-      if (group == GroupType::XBT || group == GroupType::FX) {
-         ui_->shieldPage->showShieldReservedTraidingParticipant();
+      if (group == GroupType::SpotFX || group == GroupType::SpotXBT) {
+         ui_->shieldPage->showShieldReservedTradingParticipant();
          popShield();
          return false;
       } else if (checkWalletSettings(selectedInfo)) {
@@ -250,7 +250,7 @@ bool RFQRequestWidget::checkConditions(const MarkeSelectedInfo& selectedInfo)
    }
    case UserType::Dealing:
    case UserType::Trading: {
-      if ((group == GroupType::XBT || group == GroupType::PM) && checkWalletSettings(selectedInfo)) {
+      if ((group == GroupType::SpotXBT || group == GroupType::PrivateMarket) && checkWalletSettings(selectedInfo)) {
          return false;
       }
       break;

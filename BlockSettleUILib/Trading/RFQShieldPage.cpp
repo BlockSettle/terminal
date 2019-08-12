@@ -3,23 +3,23 @@
 
 namespace {
    // Label texts
-   const QString shieldLogin = QLatin1String("Login to submit RFQs");
-   const QString shieldTraidingParticipantOnly = QLatin1String("Reserved for Trading Participants");
-   const QString shieldDealingParticipantOnly = QLatin1String("Reserved for Dealing Participants");
+   const QString shieldLogin = QObject::tr("Login to submit RFQs");
+   const QString shieldTradingParticipantOnly = QObject::tr("Reserved for Trading Participants");
+   const QString shieldDealingParticipantOnly = QObject::tr("Reserved for Dealing Participants");
 
-   const QString shieldCreateXXXWallet = QLatin1String("Create %1 wallet");
-   const QString shieldCreateXBTWallet = QLatin1String("Generate an Authentication Address");
+   const QString shieldCreateXXXWallet = QObject::tr("Create %1 wallet");
+   const QString shieldCreateXBTWallet = QObject::tr("Generate an Authentication Address");
 
-   const QString shieldCreateWallet = QLatin1String("To %1 in XBT related product, you require a wallet");
-   const QString shieldPromoteToPrimary = QLatin1String("To %1 in XBT related products, you’re required to have a wallet which" \
+   const QString shieldCreateWallet = QObject::tr("To %1 in XBT related product, you require a wallet");
+   const QString shieldPromoteToPrimary = QObject::tr("To %1 in XBT related products, you’re required to have a wallet which" \
       " can contain the paths required for correctly sorting your tokens and holding" \
       " your Authentication Address(es)");
-   const QString shieldUnselectedTargetRequest = QLatin1String("In the Market Data window, please click on the product / security you wish to %1");
+   const QString shieldUnselectedTargetRequest = QObject::tr("In the Market Data window, please click on the product / security you wish to %1");
 
    // Button texts
-   const QString shieldButtonPromote = QLatin1String("Promote");
-   const QString shieldButtonCreate = QLatin1String("Create");
-   const QString shieldButtonGenerate = QLatin1String("Generate");
+   const QString shieldButtonPromote = QObject::tr("Promote");
+   const QString shieldButtonCreate = QObject::tr("Create");
+   const QString shieldButtonGenerate = QObject::tr("Generate");
 }
 
 RFQShieldPage::RFQShieldPage(QWidget *parent) :
@@ -40,14 +40,14 @@ void RFQShieldPage::setShieldButtonAction(std::function<void(void)>&& action)
    });
 }
 
-void RFQShieldPage::showShieldLoginRequiered()
+void RFQShieldPage::showShieldLoginRequired()
 {
    prepareShield(shieldLogin);
 }
 
-void RFQShieldPage::showShieldReservedTraidingParticipant()
+void RFQShieldPage::showShieldReservedTradingParticipant()
 {
-   prepareShield(shieldTraidingParticipantOnly);
+   prepareShield(shieldTradingParticipantOnly);
 }
 
 void RFQShieldPage::showShieldReservedDealingParticipant()
@@ -60,7 +60,7 @@ void RFQShieldPage::showShieldPromoteToPrimaryWallet()
    prepareShield(shieldPromoteToPrimary.arg(tabType_), true, shieldButtonPromote);
 }
 
-void RFQShieldPage::showShieldCreateXXXLeaf(const QString& product)
+void RFQShieldPage::showShieldCreateLeaf(const QString& product)
 {
    if (product == QLatin1String("XBT")) {
       prepareShield(shieldCreateXBTWallet, true, shieldButtonGenerate);
@@ -101,7 +101,7 @@ bool RFQShieldPage::checkWalletSettings(const QString &product)
 
    // No path
    if (!walletsManager_->getCCWallet(product.toStdString())) {
-      showShieldCreateXXXLeaf(product);
+      showShieldCreateLeaf(product);
       setShieldButtonAction([this, product]() {
          walletsManager_->CreateCCLeaf(product.toStdString());
       });
@@ -111,22 +111,22 @@ bool RFQShieldPage::checkWalletSettings(const QString &product)
    return false;
 }
 
-RFQShieldPage::ProductGroup RFQShieldPage::getProductGroup(const QString &productGroup)
+RFQShieldPage::ProductType RFQShieldPage::getProductGroup(const QString &productGroup)
 {
    if (productGroup == QLatin1String("Private Market")) {
-      return ProductGroup::PM;
+      return ProductType::PrivateMarket;
    }
    else if (productGroup == QLatin1String("Spot XBT")) {
-      return ProductGroup::XBT;
+      return ProductType::SpotXBT;
    }
    else if (productGroup == QLatin1String("Spot FX")) {
-      return ProductGroup::FX;
+      return ProductType::SpotFX;
    }
 #ifndef QT_NO_DEBUG
    // You need to add logic for new Product group type
    Q_ASSERT(false);
 #endif
-   return ProductGroup::NONE;
+   return ProductType::Undefined;
 }
 
 void RFQShieldPage::showShieldCreateWallet()
