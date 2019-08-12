@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.19.11",
-   "release_date": "09 Aug 2019",
+   "latest_version": "0.20.0",
+   "release_date": "12 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.0",
+         "previous_version": "0.19.11",
+         "release_date": "12 Aug 2019",
+         "release_type": "prod",
+         "improvements": [
+            "Merge signer binaries into one process (BST-1883)",
+            "Add shield to dealing tab (#1243)"
+         ],
+         "bug_fixes": [
+            "Fee fixes (#1242)",
+            "CPFP fee fix-up ( BST-1974 )"
+         ],
+         "revision": "5f8bd75a",
+         "common_revision": "9c97dc9d"
+      },
       {
          "version_string": "0.19.11",
          "previous_version": "0.19.10",
