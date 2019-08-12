@@ -240,6 +240,7 @@ namespace bs {
 
             void setArmory(const std::shared_ptr<ArmoryConnection> &) override;
 
+            void restartValidation();
          protected:
             void onZeroConfReceived(const std::vector<bs::TXEntry> &) override;
 

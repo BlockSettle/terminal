@@ -1,16 +1,18 @@
 #include "SyncHDLeaf.h"
 
-#include <unordered_map>
-#include <QLocale>
-#include <QMutexLocker>
+#include "AddressValidationState.h"
 #include "CheckRecipSigner.h"
 #include "WalletSignerContainer.h"
+
+#include <unordered_map>
+
+#include <QLocale>
+#include <QMutexLocker>
 
 const uint32_t kExtConfCount = 6;
 const uint32_t kIntConfCount = 1;
 
 using namespace bs::sync;
-
 
 hd::Leaf::Leaf(const std::string &walletId, const std::string &name, const std::string &desc
    , WalletSignerContainer *container, const std::shared_ptr<spdlog::logger> &logger
@@ -912,14 +914,19 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
    hd::Leaf::getSpendableZCList(cbRefreshZC);
 }
 
+void hd::CCLeaf::restartValidation()
+{
+   validationProc();
+}
+
 void hd::CCLeaf::validationProc()
 {
    validationStarted_ = true;
-   if (!armory_ || (armory_->state() != ArmoryState::Ready)) {
+   if (!armory_ || (armory_->state() != ArmoryState::Ready) || !isRegistered_) {
       validationStarted_ = false;
       return;
    }
-   validationEnded_ = true;
+
    refreshInvalidUTXOs();
    hd::Leaf::init();
 
@@ -927,14 +934,26 @@ void hd::CCLeaf::validationProc()
       return;
    }
 
-   auto addressesToCheck = std::make_shared<std::map<bs::Address, int>>();
+   auto onValidationCompletedCB = [this]()
+   {
+      validationEnded_ = true;
+      if (wct_) {
+         wct_->walletReset(walletId());
+      }
+   };
 
-   for (const auto &addr : getUsedAddressList()) {
-      addressesToCheck->emplace(addr, -1);
+   auto addressList = getUsedAddressList();
+   if (addressList.empty()) {
+      onValidationCompletedCB();
+      return;
    }
 
-   for (const auto &addr : getUsedAddressList()) {
-      const auto &cbLedger = [this, addr, addressesToCheck]
+   auto addressValidationState = std::make_shared<AddressValidationState>(onValidationCompletedCB);
+
+   addressValidationState->SetAddressList(addressList);
+
+   for (const auto &addr : addressList) {
+      const auto &cbLedger = [this, addr, addressValidationState]
                               (const std::shared_ptr<AsyncClient::LedgerDelegate> &ledger) {
          if (!validationStarted_ || !ccResolver_) {
             return;
@@ -946,55 +965,43 @@ void hd::CCLeaf::validationProc()
             return;
          }
 
-         const auto &cbCheck = [this, addr, addressesToCheck](const Tx &tx) {
-            const auto &cbResult = [this, tx](bool contained) {
-               if (!contained && tx.isInitialized()) {
-                  invalidTxHash_.insert(tx.getThisHash());
-               }
-            };
-            checker_->containsInputAddress(tx, cbResult, ccResolver_->lotSizeFor(suffix_));
-
-            auto it = addressesToCheck->find(addr);
-            if (it != addressesToCheck->end()) {
-               it->second = it->second - 1;
-               if (it->second <= 0) {
-                  addressesToCheck->erase(it);
-               }
-            }
-
-            bool empty = true;
-            for (const auto& it : *addressesToCheck) {
-               if (it.second > 0) {
-                  empty = false;
-                  break;
-               }
-            }
-
-            if (empty && wct_) {
-               wct_->walletReset(walletId());
-            }
-         };
-
-         const auto &cbHistory = [this, cbCheck, addr, addressesToCheck]
-         (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
-            try {
-               const auto &le = entries.get();
-               (*addressesToCheck)[addr] = le.size();
-
-               for (const auto &entry : le) {
-                  armory_->getTxByHash(entry.getTxHash(), cbCheck);
-               }
-            } catch (const std::exception &e) {
-               if (logger_ != nullptr) {
-                  logger_->error("[hd::CCLeaf::validationProc] Return data " \
-                     "error - {}", e.what());
-               }
-            }
-         };
-         const auto &cbPages = [this,  cbHistory, ledger] (ReturnMessage<uint64_t> pages) {
+         const auto &cbPages = [this, addr, addressValidationState, ledger] (ReturnMessage<uint64_t> pages) {
             try {
                const auto pageCnt = pages.get();
+
+               addressValidationState->SetAddressPagesCount(addr, pageCnt);
                for (uint32_t pageId = 0; pageId < pageCnt; ++pageId) {
+                  const auto &cbCheck = [this, addr, pageId, addressValidationState](const Tx &tx) {
+                     const auto &cbResult = [this, tx, addressValidationState, addr, pageId](bool contained) {
+                        if (!contained && tx.isInitialized()) {
+                           invalidTxHash_.insert(tx.getThisHash());
+                        }
+                        // if this is last TX for last page or last address  -
+                        // onValidationCompletedCB will be called from within addressValidationState
+                        addressValidationState->OnTxProcessed(addr, pageId);
+                     };
+
+                     checker_->containsInputAddress(tx, cbResult, ccResolver_->lotSizeFor(suffix_));
+                  };
+
+                  const auto &cbHistory = [this, addr, pageId, addressValidationState, cbCheck](ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)
+                  {
+                     try {
+                        const auto &le = entries.get();
+                        addressValidationState->SetAddressPageTxCount(addr, pageId, le.size());
+
+                        for (const auto &entry : le) {
+                           armory_->getTxByHash(entry.getTxHash(), cbCheck);
+                        }
+                     } catch (const std::exception &e) {
+                        if (logger_ != nullptr) {
+                           logger_->error("[hd::CCLeaf::validationProc] Return data " \
+                              "error - {}. Validation never be marked as completed for : {}", e.what()
+                              , walletId());
+                        }
+                     }
+                  };
+
                   ledger->getHistoryPage(pageId, cbHistory);
                }
             }
