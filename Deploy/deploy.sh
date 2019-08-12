@@ -27,7 +27,6 @@ mkdir -p Ubuntu/usr/share/blocksettle/scripts
 
 cp $binpath/blocksettle Ubuntu/usr/bin/
 cp $binpath/blocksettle_signer Ubuntu/usr/bin/
-cp $binpath/bs_signer_gui Ubuntu/usr/bin/
 cp $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle/scripts/
 cp $scriptpath/RFQBot.qml Ubuntu/usr/share/blocksettle/scripts/
 cp -P $libprotobuf/libprotobuf.so* Ubuntu/lib/x86_64-linux-gnu/
@@ -38,6 +37,5 @@ echo "deb package generated"
 
 rm -f Ubuntu/usr/bin/blocksettle
 rm -f Ubuntu/usr/bin/blocksettle_signer
-rm -f Ubuntu/usr/bin/bs_signer_gui
 rm -f Ubuntu/usr/share/blocksettle/scripts/*
 rm -f Ubuntu/lib/x86_64-linux-gnu/*
