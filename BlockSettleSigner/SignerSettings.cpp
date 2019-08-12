@@ -11,17 +11,19 @@
 #include "SystemFileUtils.h"
 #include "bs_signer.pb.h"
 #include "HeadlessSettings.h"
-#include <QDebug>
 using namespace Blocksettle::Communication;
 
 static const QString testnetName = QString::fromStdString("testnet");
 static const QString testnetHelp = QObject::tr("Set bitcoin network type to testnet");
 
 static const QString runModeName = QString::fromStdString("guimode");
-static QString runModeHelp = QObject::tr("GUI run mode [fullgui|lightgui]");
+static QString runModeHelp = QObject::tr("GUI run mode [fullgui|litegui]");
 
 static const QString srvIDKeyName = QString::fromStdString("server_id_key");
 static QString srvIDKeyHelp = QObject::tr("The server's compressed BIP 150 ID key (hex)");
+
+static const QString portName = QString::fromStdString("port");
+static const QString portHelp = QObject::tr("Local TCP connection port to signer process");
 
 namespace {
 
@@ -176,47 +178,15 @@ QString SignerSettings::limitManualPwKeepStr() const
    return secondsToIntervalStr(d_->limit_pass_keep_time());
 }
 
-bool SignerSettings::loadSettings(const QStringList &args)
+bool SignerSettings::loadSettings(const std::shared_ptr<HeadlessSettings> &mainSettings)
 {
-   QMetaEnum runModesEnum = QMetaEnum::fromType<bs::signer::ui::RunMode>();
-
-   QCommandLineParser parser;
-   parser.setApplicationDescription(QObject::tr("BlockSettle Signer"));
-   parser.addHelpOption();
-   parser.addOption({ testnetName, testnetHelp });
-   parser.addOption({ runModeName, runModeHelp, runModeName });
-   parser.addOption({ srvIDKeyName, srvIDKeyHelp, srvIDKeyName });
-
-   parser.process(args);
-
-   if (parser.isSet(runModeName)) {
-      int runModeValue = runModesEnum.keyToValue(parser.value(runModeName).toLatin1());
-      if (runModeValue < 0) {
-         return false;
-      }
-      runMode_ = static_cast<bs::signer::ui::RunMode>(runModeValue);
-      if (runMode_ != bs::signer::ui::RunMode::fullgui && runMode_ != bs::signer::ui::RunMode::lightgui) {
-         return false;
-      }
-   }
-   else {
-#ifdef NDEBUG
-      QMessageBox::critical(nullptr, tr("Error"), tr("Please start blocksettle_signer instead"));
+   if (!mainSettings) {
       return false;
-#else
-      return true;
-#endif
    }
-
-   if (parser.isSet(srvIDKeyName)) {
-      srvIDKey_ = parser.value(srvIDKeyName).toStdString();
-   }
-
-   // This switch is needed when terminal is started with testnet connection and local signer used.
-   // Once settings are managed on the headless signer side we could use something better here.
-   if (parser.isSet(testnetName)) {
-      d_->set_test_net(true);
-   }
+   runMode_ = static_cast<bs::signer::ui::RunMode>(mainSettings->runMode());
+   srvIDKey_ = mainSettings->serverIdKey().toHexStr();
+   signerPort_ = mainSettings->interfacePort();
+   d_->set_test_net(mainSettings->testNet());
 
    if (d_->test_net()) {
       NetworkConfig::selectNetwork(NETWORK_MODE_TESTNET);

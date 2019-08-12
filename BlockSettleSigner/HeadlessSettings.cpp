@@ -121,8 +121,8 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       exit(0);
    }
 
-   if (guiMode == "lightgui") {
-      runMode_ = bs::signer::RunMode::lightgui;
+   if (guiMode == "litegui") {
+      runMode_ = bs::signer::RunMode::litegui;
    }
    else if (guiMode == "fullgui") {
       runMode_ = bs::signer::RunMode::fullgui;
@@ -216,15 +216,15 @@ std::string HeadlessSettings::acceptFrom() const
    return d_->accept_from();
 }
 
-std::string HeadlessSettings::listenPort() const
+int HeadlessSettings::listenPort() const
 {
    if (overrideListenPort_.isValid()) {
-      return std::to_string(overrideListenPort_.getValue());
+      return overrideListenPort_.getValue();
    }
    if (d_->listen_port() == 0) {
-      return "23456";
+      return 23456;
    }
-   return std::to_string(d_->listen_port());
+   return d_->listen_port();
 }
 
 bs::signer::Limits HeadlessSettings::limits() const

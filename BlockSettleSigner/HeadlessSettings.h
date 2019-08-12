@@ -30,8 +30,7 @@ public:
    std::string getWalletsDir() const { return walletsDir_; }
    std::string listenAddress() const;
    std::string acceptFrom() const;
-   std::string listenPort() const;
-   std::string interfacePort() const { return "23457"; }
+   int listenPort() const;
    std::string getTermIDKeyStr() const { return termIDKeyStr_; }
    bool getTermIDKeyBin(BinaryData& keyBuf);
    std::string logFile() const { return logFile_; }
@@ -42,10 +41,17 @@ public:
 
    bs::signer::RunMode runMode() const { return runMode_; }
 
+   BinaryData serverIdKey() const { return serverIdKey_; }
+   void setServerIdKey(const BinaryData &key) { serverIdKey_ = key; }
+
+   int interfacePort() const { return interfacePort_; }
+   void setInterfacePort(int port) { interfacePort_ = port; }
+
    void update(const Settings&);
 
    static bool loadSettings(Settings *settings, const std::string &fileName);
    static bool saveSettings(const Settings &settings, const std::string &fileName);
+
 private:
    std::shared_ptr<spdlog::logger>  logger_;
 
@@ -54,6 +60,8 @@ private:
    bs::signer::RunMode runMode_;
    std::string walletsDir_;
    std::unique_ptr<Settings> d_;
+   BinaryData  serverIdKey_;
+   int interfacePort_{};
 
    SettableField<bool> overrideTestNet_;
    SettableField<std::string> overrideListenAddress_;

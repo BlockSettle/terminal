@@ -19,13 +19,6 @@ TextField {
 
         Button {
             id: button
-//            contentItem: Text {
-//                text: "👁"
-//                color: BSStyle.textColor
-//                font.pixelSize: 12 + (button.pressed ? 1 : 0)
-//                horizontalAlignment: Text.AlignHCenter
-//                verticalAlignment: Text.AlignVCenter
-//            }
             contentItem: Rectangle {
                 color: "transparent"
                 Image {

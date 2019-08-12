@@ -1,7 +1,216 @@
 {
-   "latest_version": "0.19.1",
-   "release_date": "16 Jul 2019",
+   "latest_version": "0.20.0",
+   "release_date": "12 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.0",
+         "previous_version": "0.19.11",
+         "release_date": "12 Aug 2019",
+         "release_type": "prod",
+         "improvements": [
+            "Merge signer binaries into one process (BST-1883)",
+            "Add shield to dealing tab (#1243)"
+         ],
+         "bug_fixes": [
+            "Fee fixes (#1242)",
+            "CPFP fee fix-up ( BST-1974 )"
+         ],
+         "revision": "5f8bd75a",
+         "common_revision": "9c97dc9d"
+      },
+      {
+         "version_string": "0.19.11",
+         "previous_version": "0.19.10",
+         "release_date": "09 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Address creation at offline TX signing (BST-2114)",
+            "Add new RFQ shields",
+            "Update default fees",
+            "New error code for offline signing",
+            "Update private OTC (#1228)"
+         ],
+         "bug_fixes": [],
+         "revision": "5519a082",
+         "common_revision": "f7cb1e05"
+      },
+      {
+         "version_string": "0.19.10",
+         "previous_version": "0.19.9",
+         "release_date": "07 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Auth address validation code"
+         ],
+         "bug_fixes": [
+            "Fix data races reported by TSAN at signer GUI shutdown",
+            "Fix CC leaf creation",
+            "SpotXBT settlement fixes",
+            "Fix RFQ positioning on Windows",
+            "Fix crash when click on non existing wallet",
+            "Notify user if offline TX is for unknown wallet and fix crash",
+            "fix CC leaf creation ( BST-2100 )",
+            "Fix WO export"
+         ],
+         "revision": "9c440be2",
+         "common_revision": "94063e84"
+      },
+      {
+         "version_string": "0.19.9",
+         "previous_version": "0.19.8",
+         "release_date": "02 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Signer ui - Settlement pw dialog fixes (#342)",
+            "Re-worked sync auth leaf creation",
+            "Fix deadlock if armory key was declined (#1205)",
+            "Fix blocking if armory is not available (#1200)",
+            "Terminal/password request fixes (#1198)",
+            "CCFileManager fixes (#1197)",
+            "Use different ccgenadds.signed file names (#1196)",
+            "Terminal/password request fixes (#1192)",
+            "Fix invalid TX import crash",
+            "Fix signer crash with XBT trade (#1189)",
+            "Show all tracked addresses on import"
+         ],
+         "bug_fixes": [
+            "Signer UI updates and fixes",
+            "Terminal UI updates and fixes"
+         ],
+         "revision": "c1faa45d",
+         "common_revision": "b2c59814"
+      },
+      {
+         "version_string": "0.19.8",
+         "previous_version": "0.19.7",
+         "release_date": "27 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Signer ui fixes (#334)",
+            "Refactor leaf creation (#338)",
+            "Password request fix",
+            "Fix CC token request",
+            "Refactor leaf creation (#1180)",
+            "Fix display all wallets on wallets tab"
+         ],
+         "bug_fixes": [],
+         "revision": "822ef787",
+         "common_revision": "d222500f"
+      },
+      {
+         "version_string": "0.19.7",
+         "previous_version": "0.19.6",
+         "release_date": "26 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Random signer GUI port",
+            "Show CC token in the auth eid signature request",
+            "Fix Celer login ( CC token submit )",
+            "Removed lower fee limit for CPFP"
+         ],
+         "bug_fixes": [],
+         "revision": "1427d231",
+         "common_revision": "0dbc90b4"
+      },
+      {
+         "version_string": "0.19.6",
+         "previous_version": "0.19.5",
+         "release_date": "25 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Merge pull request #333 from BlockSettle/signer/fix_tx",
+            "Various fixes (#1169)",
+            "Int/Ext address UTXO filtering",
+            "UI fixes",
+            "Allow dealer reply for SpotXBT RFQ",
+            "Allow pull quote request replies using Enter (#1160)",
+            "Wrapper on PasswordDialogData for comfort using (#1158)"
+         ],
+         "bug_fixes": [],
+         "revision": "28201342",
+         "common_revision": "7bc19cf0"
+      },
+      {
+         "version_string": "0.19.5",
+         "previous_version": "0.19.4",
+         "release_date": "24 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Settlement leaf creation",
+            "Restore user PopUp on chat",
+            "Change logic for determinate screen popup position",
+            "Armory code update",
+            "Protobuf update to 3.9.0"
+         ],
+         "bug_fixes": [],
+         "revision": "00ced849",
+         "common_revision": "64038276"
+      },
+      {
+         "version_string": "0.19.4",
+         "previous_version": "0.19.3",
+         "release_date": "23 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix Linux deploy script",
+            "Process Posix signals using sigwait",
+            "Fix Signer/fix focus",
+            "UI fixes",
+            "Disable message until friend request approved"
+         ],
+         "bug_fixes": [
+            "Fix chat notifications",
+            "Fix settlement group display",
+            "FIX CC RFQ",
+            "Fix TX"
+         ],
+         "revision": "ebca9985",
+         "common_revision": "14dcc50f"
+      },
+      {
+         "version_string": "0.19.3",
+         "previous_version": "0.19.2",
+         "release_date": "20 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Settlement wallet reimplementation",
+            "Use correct default AQ dir on linux",
+            "Submit quote with Enter key",
+            "Show auth address in the Auth eId request description",
+            "BsProxy updates",
+            "Clear messages on Logout"
+         ],
+         "bug_fixes": [
+            "Fix TX"
+         ],
+         "revision": "7da2fa7e",
+         "common_revision": "51dee4ea"
+      },
+      {
+         "version_string": "0.19.2",
+         "previous_version": "0.19.1",
+         "release_date": "19 Jul 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Rename bundle name on OSX",
+            "UI fixes",
+            "Terminal/Decrypt wallet flow refactoring (#316)",
+            "Connect to Celer and autheid using new proxy",
+            "Fix Copy hotkey in chat",
+            "Remove contact on reject",
+            "Fix saving draft message and cleanup text edit when changing room",
+            "CC Buy RFQ (#1135)",
+            "Text correction"
+         ],
+         "bug_fixes": [
+            "Fix regression with missing remote signer pub key",
+            "Fix Windows installer",
+            "Fix crash on CC validation",
+            "Fix RFQ script"
+         ],
+         "revision": "db570a73",
+         "common_revision": "f8e60f0d"
+      },
       {
          "version_string": "0.19.1",
          "previous_version": "0.19.0",

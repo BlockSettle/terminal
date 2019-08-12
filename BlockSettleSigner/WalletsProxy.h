@@ -65,6 +65,8 @@ public:
       , QString fileName, bool isPrintable, bs::wallet::QPasswordData *passwordData
       , const QJSValue &jsCallback);
 
+   Q_INVOKABLE void signOfflineTx(const QString& fileName, const QJSValue &jsCallback);
+
    Q_INVOKABLE QString getRootWalletId(const QString &walletId) const;
    Q_INVOKABLE QString getRootWalletName(const QString &walletId) const;
 

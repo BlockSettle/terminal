@@ -47,13 +47,26 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    guiListener_ = std::make_unique<SignerAdapterListener>(this, guiConnection_.get()
       , logger_, walletsMgr_, queue_, params);
 
+   settings_->setServerIdKey(guiListener_->getServerConn()->getOwnPubKey());
+
    guiConnection_->setLocalHeartbeatInterval();
 
-   if (!guiConnection_->BindConnection("127.0.0.1", settings_->interfacePort()
-      , guiListener_.get())) {
+   int port = 0;
+   bool success = false;
+   int count = 0;
+   while (count < 3 && !success) {
+      port = 10000 + rand() % 50000;
+      success = guiConnection_->BindConnection("127.0.0.1", std::to_string(port)
+         , guiListener_.get());
+      count += 1;
+   }
+
+   if (!success) {
       logger_->error("Failed to bind adapter connection");
       throw std::runtime_error("failed to bind adapter socket");
    }
+
+   settings_->setInterfacePort(port);
 
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
@@ -66,8 +79,6 @@ HeadlessAppObj::~HeadlessAppObj() noexcept = default;
 
 void HeadlessAppObj::start()
 {
-   startInterface();
-
    logger_->debug("[{}] loading wallets from dir <{}>", __func__
       , settings_->getWalletsDir());
    const auto &cbProgress = [this](int cur, int total) {
@@ -101,10 +112,10 @@ void HeadlessAppObj::stop()
    terminalListener_->resetConnection(nullptr);
 }
 
+#if 0    //kept for reference
 void HeadlessAppObj::startInterface()
 {
    std::vector<std::string> args;
-   BinaryData serverIDKey(BIP151PUBKEYSIZE);
    switch (settings_->runMode()) {
    case bs::signer::RunMode::headless:
       logger_->debug("[{}] no interface in headless mode", __func__);
@@ -113,23 +124,26 @@ void HeadlessAppObj::startInterface()
       logger_->warn("[{}] cli run mode is not supported yet"
          , __func__);
       return;
-   case bs::signer::RunMode::lightgui:
-      serverIDKey = guiListener_->getServerConn()->getOwnPubKey();
-      logger_->debug("[{}] starting lightgui", __func__);
+   case bs::signer::RunMode::litegui:
+      logger_->debug("[{}] starting litegui", __func__);
       args.push_back("--guimode");
-      args.push_back("lightgui");
-      args.push_back("--server_id_key");
-      args.push_back(serverIDKey.toHexStr());
+      args.push_back("litegui");
       break;
    case bs::signer::RunMode::fullgui:
-      serverIDKey = guiListener_->getServerConn()->getOwnPubKey();
       logger_->debug("[{}] starting fullgui", __func__);
       args.push_back("--guimode");
       args.push_back("fullgui");
-      args.push_back("--server_id_key");
-      args.push_back(serverIDKey.toHexStr());
       break;
    }
+
+   BinaryData serverIDKey(BIP151PUBKEYSIZE);
+   serverIDKey = guiListener_->getServerConn()->getOwnPubKey();
+   args.push_back("--server_id_key");
+   args.push_back(serverIDKey.toHexStr());
+
+   assert(interfacePort_ != 0);
+   args.push_back("--port");
+   args.push_back(std::to_string(interfacePort_));
 
    if (settings_->testNet()) {
       args.push_back("--testnet");
@@ -137,7 +151,7 @@ void HeadlessAppObj::startInterface()
 
 #ifdef __APPLE__
    std::string guiPath = SystemFilePaths::applicationDirIfKnown()
-      + "/Blocksettle Signer Gui.app/Contents/MacOS/Blocksettle Signer GUI";
+      + "/BlockSettle Signer Gui.app/Contents/MacOS/BlockSettle Signer GUI";
 #else
 
    std::string guiPath = SystemFilePaths::applicationDirIfKnown();
@@ -173,6 +187,7 @@ void HeadlessAppObj::startInterface()
       logger_->error("Failed to run {}", guiPath);
    }
 }
+#endif   //0
 
 void HeadlessAppObj::startTerminalsProcessing()
 {
@@ -199,8 +214,8 @@ void HeadlessAppObj::startTerminalsProcessing()
    if (settings_->getTermIDKeyStr().empty()) {
       makeServerCookie = false;
       absTermCookiePath = "";
-      ourKeyFileDir = SystemFilePaths::appDataLocation();
-      ourKeyFileName = "remote_signer.peers";
+      ourKeyFileDir = getOwnKeyFileDir();
+      ourKeyFileName = getOwnKeyFileName();
    }
 
    // The whitelisted key set depends on whether or not the signer is meant to
@@ -273,14 +288,14 @@ void HeadlessAppObj::startTerminalsProcessing()
    terminalListener_->resetConnection(terminalConnection_.get());
 
    bool result = terminalConnection_->BindConnection(settings_->listenAddress()
-      , settings_->listenPort(), terminalListener_.get());
+      , std::to_string(settings_->listenPort()), terminalListener_.get());
 
    if (!result) {
       logger_->error("Failed to bind to {}:{}"
          , settings_->listenAddress(), settings_->listenPort());
 
-      // Abort only if lightgui used, fullgui should just show error message instead
-      if (settings_->runMode() == bs::signer::RunMode::lightgui) {
+      // Abort only if litegui used, fullgui should just show error message instead
+      if (settings_->runMode() == bs::signer::RunMode::litegui) {
          throw std::runtime_error("failed to bind listening socket");
       }
    }
@@ -309,60 +324,24 @@ ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
    return terminalConnection_.get();
 }
 
-#if 0
-void HeadlessAppObj::OfflineProcessing()
+BinaryData HeadlessAppObj::signerPubKey() const
 {
-   const auto cbCLI = [this](const std::shared_ptr<bs::sync::Wallet> &wallet) -> SecureBinaryData {
-      std::cout << "Enter password for wallet " << wallet->name();
-      if (!wallet->description().empty()) {
-         std::cout << " (" << wallet->description() << ")";
-      }
-      (std::cout << ": ").flush();
-      setConsoleEcho(false);
-      std::string password;
-      std::getline(std::cin, password);
-      std::cout << std::endl;
-      setConsoleEcho(true);
-      return password;
-   };
+   if (terminalConnection_) {
+      return terminalConnection_->getOwnPubKey();
+   }
 
-   if (!offlineProc_) {
-      auto adapter = new SignerAdapter(logger_, this);
-      offlineProc_ = std::make_shared<OfflineProcessor>(logger_, adapter, cbCLI);
-   }
-   if (!settings_->requestFiles().empty()) {
-      offlineProc_->ProcessFiles(settings_->requestFiles());
-      emit finished();
-   }
+   return ZmqBIP15XServerConnection::getOwnPubKey(getOwnKeyFileDir(), getOwnKeyFileName());
 }
 
-void HeadlessAppObj::setConsoleEcho(bool enable) const
+std::string HeadlessAppObj::getOwnKeyFileDir()
 {
-#ifdef WIN32
-   HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
-   DWORD mode;
-   GetConsoleMode(hStdin, &mode);
-
-   if (!enable) {
-      mode &= ~ENABLE_ECHO_INPUT;
-   }
-   else {
-      mode |= ENABLE_ECHO_INPUT;
-   }
-   SetConsoleMode(hStdin, mode);
-#else
-   struct termios tty;
-   tcgetattr(STDIN_FILENO, &tty);
-   if (!enable) {
-      tty.c_lflag &= ~ECHO;
-   }
-   else {
-      tty.c_lflag |= ECHO;
-   }
-   tcsetattr(STDIN_FILENO, TCSANOW, &tty);
-#endif
+   return SystemFilePaths::appDataLocation();
 }
-#endif   //0
+
+std::string HeadlessAppObj::getOwnKeyFileName()
+{
+   return "remote_signer.peers";
+}
 
 void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::function<void()> &cb)
 {
@@ -413,7 +392,7 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
 {
    const bool prevOffline = settings_->offline();
    const std::string prevListenAddress = settings_->listenAddress();
-   const std::string prevListenPort = settings_->listenPort();
+   const auto prevListenPort = settings_->listenPort();
    const auto prevTrustedTerminals = settings_->trustedTerminals();
    const std::string prevListenFrom = settings_->acceptFrom();
 

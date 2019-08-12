@@ -3,7 +3,7 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 
 import com.blocksettle.TXInfo 1.0
-import com.blocksettle.SettlementInfo 1.0
+import com.blocksettle.PasswordDialogData 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
@@ -18,19 +18,19 @@ CustomTitleDialogWindow {
     property string prompt
     property WalletInfo walletInfo: WalletInfo{}
     property TXInfo txInfo: TXInfo {}
-    property SettlementInfo settlementInfo: SettlementInfo {}
+    property PasswordDialogData passwordDialogData: PasswordDialogData {}
     property QPasswordData passwordData: QPasswordData{}
-    property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
+
+    property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property int addressRowHeight: 24
     //property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
     property int recvAddrHeight: 22
 
     id: root
-    title: qsTr("Sign Settlement Transaction")
+    title: passwordDialogData.value("Title")
     rejectable: true
     width: 500
-    height: 420 + recvAddresses.height - 24
 
     function clickConfirmBtn() {
         btnConfirm.clicked()
@@ -97,7 +97,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Product Group")
             }
             CustomLabelValue {
-                text: settlementInfo.productGroup
+                text: passwordDialogData.value("ProductGroup")
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -107,7 +107,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Security ID")
             }
             CustomLabelValue {
-                text: settlementInfo.security
+                text: passwordDialogData.value("Security")
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -117,7 +117,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Product")
             }
             CustomLabelValue {
-                text: settlementInfo.product
+                text: passwordDialogData.value("Product")
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -127,7 +127,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Side")
             }
             CustomLabelValue {
-                text: settlementInfo.side
+                text: passwordDialogData.value("Side")
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -137,7 +137,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Quantity")
             }
             CustomLabelValue {
-                text: settlementInfo.quantity
+                text: passwordDialogData.value("Quantity")
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -147,7 +147,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Price")
             }
             CustomLabelValue {
-                text: settlementInfo.price
+                text: passwordDialogData.value("Price")
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -157,7 +157,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Total Value (XBT)")
             }
             CustomLabelValue {
-                text: settlementInfo.totalValue
+                text: passwordDialogData.value("TotalValue")
                 Layout.alignment: Qt.AlignRight
             }
         }
@@ -170,6 +170,11 @@ CustomTitleDialogWindow {
             rowSpacing: 0
 
             CustomHeader {
+                visible: passwordDialogData.contains("Payment")
+                           || passwordDialogData.contains("GenesisAddress")
+                           || passwordDialogData.contains("RequesterAuthAddress")
+                           || passwordDialogData.contains("ResponderAuthAddress")
+
                 Layout.fillWidth: true
                 Layout.columnSpan: 2
                 text: qsTr("Settlement Details")
@@ -178,25 +183,109 @@ CustomTitleDialogWindow {
 
             // Payment
             CustomLabel {
+                visible: passwordDialogData.contains("Payment")
                 Layout.fillWidth: true
                 text: qsTr("Payment")
             }
             CustomLabelValue {
-                text: settlementInfo.payment
+                visible: passwordDialogData.contains("Payment")
+                text: passwordDialogData.value("Payment")
                 Layout.alignment: Qt.AlignRight
             }
 
             // Genesis Address
             CustomLabel {
+                visible: passwordDialogData.contains("GenesisAddress")
                 Layout.fillWidth: true
                 text: qsTr("Genesis Address")
             }
             CustomLabelValue {
-                text: settlementInfo.genesisAddress
+                visible: passwordDialogData.contains("GenesisAddress")
+                text: passwordDialogData.value("GenesisAddress")
                 Layout.alignment: Qt.AlignRight
             }
+
+            // Requester Authentication Address
+            CustomLabel {
+                visible: passwordDialogData.contains("RequesterAuthAddress")
+                Layout.fillWidth: true
+                text: qsTr("Requester\nAuthentication Address")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("RequesterAuthAddress")
+                text: passwordDialogData.value("RequesterAuthAddress")
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Responder Authentication Address
+            CustomLabel {
+                visible: passwordDialogData.contains("ResponderAuthAddress")
+                Layout.fillWidth: true
+                text: qsTr("Responder\nAuthentication Address")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("ResponderAuthAddress")
+                text: passwordDialogData.value("ResponderAuthAddress")
+                Layout.alignment: Qt.AlignRight
+            }
+
         }
 
+        GridLayout {
+            id: gridTxDetails
+            columns: 2
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            rowSpacing: 0
+
+            CustomHeader {
+                visible: passwordDialogData.contains("TransactionAmount")
+                           || passwordDialogData.contains("NetworkFee")
+                           || passwordDialogData.contains("TotalSpent")
+
+                Layout.fillWidth: true
+                Layout.columnSpan: 2
+                text: qsTr("Transaction Details")
+                Layout.preferredHeight: 25
+            }
+
+            // TX Amount
+            CustomLabel {
+                visible: passwordDialogData.contains("TransactionAmount")
+                Layout.fillWidth: true
+                text: qsTr("Transaction Amount")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("TransactionAmount")
+                text: passwordDialogData.value("TransactionAmount")
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Network Fee
+            CustomLabel {
+                visible: passwordDialogData.contains("NetworkFee")
+                Layout.fillWidth: true
+                text: qsTr("Network Fee")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("NetworkFee")
+                text: passwordDialogData.value("NetworkFee")
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Total Spent
+            CustomLabel {
+                visible: passwordDialogData.contains("TotalSpent")
+                Layout.fillWidth: true
+                text: qsTr("Total Spent")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("TotalSpent")
+                text: passwordDialogData.value("TotalSpent")
+                Layout.alignment: Qt.AlignRight
+            }
+
+        }
         RowLayout {
             spacing: 5
             Layout.fillWidth: true

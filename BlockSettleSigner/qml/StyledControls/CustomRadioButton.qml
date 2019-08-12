@@ -5,6 +5,7 @@ import "../BsStyles"
 RadioButton {
     id: control
     text: parent.text
+    focusPolicy: Qt.NoFocus
 
     indicator: Rectangle {
         implicitWidth: 16

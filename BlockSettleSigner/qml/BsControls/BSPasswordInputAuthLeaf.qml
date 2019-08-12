@@ -1,24 +1,20 @@
 import QtQuick 2.9
-import QtQuick.Layouts 1.3
-import QtQuick.Controls 2.2
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.4
+import QtQuick.Layouts 1.11
 
-import com.blocksettle.AuthSignWalletObject 1.0
+import com.blocksettle.PasswordDialogData 1.0
 import com.blocksettle.WalletInfo 1.0
-import com.blocksettle.AutheIDClient 1.0
-import com.blocksettle.QPasswordData 1.0
 
 import "../StyledControls"
+import "../BsStyles"
 
-ColumnLayout {
+BSPasswordInput {
     id: root
-    property WalletInfo walletInfo : WalletInfo {}
-    property alias password: passwordInput.text
-    property alias passwordInput: passwordInput
-    property int inputsWidth
-    property var nextFocusItem
 
-    signal passwordEntered()
+    property WalletInfo walletInfo: WalletInfo{}
+    property PasswordDialogData passwordDialogData: PasswordDialogData {}
+
+    title: passwordDialogData.value("Title")
 
     CustomHeader {
         text: qsTr("Wallet Details")
@@ -70,8 +66,7 @@ ColumnLayout {
     }
 
     CustomHeader {
-        text: qsTr("Enter Password")
-        visible: walletInfo.encType === QPasswordData.Password
+        text: qsTr("Auth Leaf Details")
         Layout.fillWidth: true
         Layout.preferredHeight: 25
         Layout.topMargin: 5
@@ -86,45 +81,16 @@ ColumnLayout {
         Layout.rightMargin: 10
 
         CustomLabel {
-            visible: walletInfo.encType === QPasswordData.Password
-            elide: Label.ElideRight
-            text: qsTr("Password")
-            wrapMode: Text.WordWrap
             Layout.minimumWidth: 110
             Layout.preferredWidth: 110
             Layout.maximumWidth: 110
             Layout.fillWidth: true
+            text: qsTr("Email")
         }
-        CustomPasswordTextInput {
-            id: passwordInput
-            visible: walletInfo.encType === QPasswordData.Password
-            focus: true
-            //placeholderText: qsTr("Old Password")
+        CustomLabel {
             Layout.fillWidth: true
-            Layout.preferredWidth: inputsWidth
-            KeyNavigation.tab: nextFocusItem === undefined ? null : nextFocusItem
-            Keys.onEnterPressed: {
-                if (nextFocusItem !== undefined) nextFocusItem.forceActiveFocus()
-                passwordEntered()
-            }
-            Keys.onReturnPressed: {
-                if (nextFocusItem !== undefined) nextFocusItem.forceActiveFocus()
-                passwordEntered()
-            }
-        }
-
-        CustomLabel {
-            id: labelAuth
-            Layout.preferredWidth: 110
-            visible: walletInfo.encType === QPasswordData.Auth
-            text: qsTr("Encryption")
-        }
-        CustomLabel {
-            id: labelAuthStatus
-            visible: walletInfo.encType === QPasswordData.Auth
-            text: "Auth eID"
+            text: passwordDialogData.value("Email")
         }
     }
-
 }
 

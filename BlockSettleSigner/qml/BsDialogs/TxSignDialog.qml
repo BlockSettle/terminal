@@ -3,6 +3,7 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 
 import com.blocksettle.TXInfo 1.0
+import com.blocksettle.PasswordDialogData 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
@@ -17,10 +18,12 @@ CustomTitleDialogWindow {
     property string prompt
     property WalletInfo walletInfo: WalletInfo{}
     property TXInfo txInfo: TXInfo {}
+    property PasswordDialogData passwordDialogData: PasswordDialogData {}
     property QPasswordData passwordData: QPasswordData{}
+    property AuthSignWalletObject  authSign: AuthSignWalletObject{}
+
     property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property bool   cancelledByUser: false
-    property AuthSignWalletObject  authSign: AuthSignWalletObject{}
     property int addressRowHeight: 24
     property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
 
@@ -28,7 +31,6 @@ CustomTitleDialogWindow {
     title: qsTr("Sign Transaction")
     rejectable: true
     width: 500
-    height: 420 + recvAddresses.height - 24
 
     function clickConfirmBtn() {
         btnConfirm.clicked()

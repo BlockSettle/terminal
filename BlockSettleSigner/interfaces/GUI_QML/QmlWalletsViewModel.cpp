@@ -49,7 +49,7 @@ public:
          case QmlWalletsViewModel::WalletColumns::ColumnName:
             return QString::fromStdString(name_);
          case QmlWalletsViewModel::WalletColumns::ColumnDescription:
-            return QString::fromStdString(desc_);
+            return type() == Type::WalletRegular || type() == Type::WalletPrimary ? QString::fromStdString(desc_) : QVariant();
          case QmlWalletsViewModel::WalletColumns::ColumnID:
             return QString::fromStdString(id());
          case QmlWalletsViewModel::WalletColumns::ColumnType:
@@ -301,11 +301,6 @@ void QmlWalletsViewModel::loadWallets(const std::string &)
       hdNode->addGroups(hdWallet->getGroups());
    }
 
-   const auto stmtWallet = walletsManager_->getSettlementWallet();
-   if (stmtWallet) {
-      const auto stmtNode = new QmlWalletLeafNode(this, stmtWallet, rootNode_->nbChildren(), rootNode_.get());
-      rootNode_->add(stmtNode);
-   }
    endResetModel();
 }
 

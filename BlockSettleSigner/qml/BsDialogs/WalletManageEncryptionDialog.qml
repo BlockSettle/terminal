@@ -14,7 +14,7 @@ import "../BsStyles"
 import "../StyledControls"
 import "../js/helper.js" as JsHelper
 
-CustomDialog {
+CustomTitleDialogWindow {
     id: root
 
     property WalletInfo walletInfo : WalletInfo {}
@@ -36,8 +36,11 @@ CustomDialog {
 
     title: qsTr("Manage Encryption")
     width: 400
-    height: 450
     rejectable: true
+
+    Component.onCompleted: {
+        simpleTab.forceActiveFocus()
+    }
 
     Connections {
         target: walletInfo
@@ -61,11 +64,6 @@ CustomDialog {
     }
 
     cContentItem: ColumnLayout {
-        spacing: 0
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-        Layout.margins: 1
-
         ColumnLayout {
             TabBar {
                 id: tabBar
@@ -114,7 +112,7 @@ CustomDialog {
             currentIndex: tabBar.currentIndex
             Layout.fillWidth: true
 
-            Item {
+            FocusScope {
                 id: simpleTab
                 ColumnLayout {
                     spacing: 10
@@ -125,8 +123,6 @@ CustomDialog {
                         inputsWidth: 250
                         nextFocusItem: rbPassword.checked ? newPasswordInput.tfPasswordInput : textInputEmail
                         KeyNavigation.tab: rbPassword.checked ? newPasswordInput.tfPasswordInput : textInputEmail
-                        //Keys.onEnterPressed: newPasswordInput.tfPasswordInput.forceActiveFocus()
-                        //Keys.onReturnPressed: newPasswordInput.tfPasswordInput.forceActiveFocus()
                     }
 
                     CustomHeader {
@@ -231,10 +227,6 @@ CustomDialog {
                             }
                         }
                     }
-
-                    Rectangle {
-                        Layout.fillHeight: true
-                    }
                 }
 
             }
@@ -313,7 +305,7 @@ CustomDialog {
                     Layout.fillHeight: true
                     Layout.leftMargin: 10
                     Layout.rightMargin: 10
-                    height: 400
+                    height: 250
                     interactive: false
 
                     model: walletInfo.encKeys
@@ -355,10 +347,6 @@ CustomDialog {
                             }
                         }
                     }
-                }
-
-                Rectangle {
-                    Layout.fillHeight: true
                 }
             }
 

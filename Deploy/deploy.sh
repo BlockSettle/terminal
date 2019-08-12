@@ -1,13 +1,13 @@
 #!/bin/sh
 
+set -o errexit  # exit on error
+set -o nounset  # trigger error when expanding unset variables
+
 binpath="../build_terminal/Release/bin"
 binary=$binpath/blocksettle
 scriptpath="../Scripts"
 
-libprotobuf="${DEV_3RD_ROOT}/release/Protobuf/lib"
-if [ "${DEV_3RD_ROOT}X" = "X" ]; then
-   libprotobuf="../../3rd/release/Protobuf/lib"
-fi
+libprotobuf="${DEV_3RD_ROOT=../../3rd}/release/Protobuf/lib"
 
 if [ ! -x $binary ]; then
     echo "Release terminal binary $binary doesn't exist!"
@@ -20,21 +20,22 @@ if [ ! -d $libprotobuf ]; then
 fi
 
 mkdir -p Ubuntu/usr/bin
-mkdir -p Ubuntu/usr/share/blocksettle
 mkdir -p Ubuntu/lib/x86_64-linux-gnu
-mkdir -p $binpath/scripts
+rm -f Ubuntu/usr/bin/RFQBot.qml
+rm -rf Ubuntu/usr/share/blocksettle/scripts
+mkdir -p Ubuntu/usr/share/blocksettle/scripts
 
-cp -f $binpath/* Ubuntu/usr/bin
-cp -f $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle
-cp -f $scriptpath/RFQBot.qml $binpath/scripts
-cp -fP $libprotobuf/libprotobuf.so* Ubuntu/lib/x86_64-linux-gnu
-cp -f $libprotobuf/libprotobuf.la Ubuntu/lib/x86_64-linux-gnu
+cp $binpath/blocksettle Ubuntu/usr/bin/
+cp $binpath/blocksettle_signer Ubuntu/usr/bin/
+cp $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle/scripts/
+cp $scriptpath/RFQBot.qml Ubuntu/usr/share/blocksettle/scripts/
+cp -P $libprotobuf/libprotobuf.so* Ubuntu/lib/x86_64-linux-gnu/
+cp $libprotobuf/libprotobuf.la Ubuntu/lib/x86_64-linux-gnu/
 
 dpkg -b Ubuntu bsterminal.deb
 echo "deb package generated"
 
 rm -f Ubuntu/usr/bin/blocksettle
 rm -f Ubuntu/usr/bin/blocksettle_signer
-rm -f Ubuntu/usr/bin/bs_signer_gui
-rm -f Ubuntu/usr/share/blocksettle/DealerAutoQuote.qml
+rm -f Ubuntu/usr/share/blocksettle/scripts/*
 rm -f Ubuntu/lib/x86_64-linux-gnu/*

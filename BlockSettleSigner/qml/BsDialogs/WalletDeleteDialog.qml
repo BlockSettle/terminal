@@ -22,13 +22,14 @@ CustomTitleDialogWindow {
     property bool   backup: chkBackup.checked
 
     width: 400
-    height: 250
+    //height: 250
+
     focus: true
     title: qsTr("Delete Wallet")
     rejectable: true
 
 
-    cContentItem: ColumnLayout {       
+    cContentItem: ColumnLayout {
         id: mainLayout
         spacing: 10
 
@@ -114,13 +115,11 @@ CustomTitleDialogWindow {
                         var dlgBkp = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
                         dlgBkp.setNextChainDialog(root)
                         dlgBkp.walletInfo = walletInfo
+                        dlgBkp.woBackupAllowed = false
                         // FIXME: save backups dir
                         //dlgBkp.targetDir = signerSettings.dirDocuments
                         dlgBkp.bsAccepted.connect(function() {
                             walletsProxy.deleteWallet(walletInfo.rootId, deleteCallback)
-                        })
-                        dlgBkp.bsResized.connect(function() {
-                            mainWindow.moveMainWindowToScreenCenter()
                         })
                         dlgBkp.open()
 

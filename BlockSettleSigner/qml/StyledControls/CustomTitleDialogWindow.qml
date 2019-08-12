@@ -7,14 +7,29 @@ import "../BsStyles"
 // dialog window with header
 CustomDialog {
     id: root
-    property bool qmlTitleVisible: true
-    cHeaderItem: RowLayout {
+   // property bool qmlTitleVisible: true    //: !mainWindow.isLiteMode
+    property alias headerPanel: headerPanel
+    height: cHeaderHeight + cContentHeight + cFooterHeight
+
+    function isApplicationWindow(item) {
+        return item instanceof ApplicationWindow
+    }
+
+    cHeaderItem: ColumnLayout {
+        id: layout
+        spacing: 0
+        Layout.alignment: Qt.AlignTop
+        Layout.margins: 0
+
         CustomHeaderPanel {
+            id: headerPanel
             Layout.fillWidth: true
-            Layout.preferredHeight: qmlTitleVisible ? 40 : 0
-            height: qmlTitleVisible ? 40 : 0
+            //qmlTitleVisible: root.qmlTitleVisible
             text: root.title
-            visible: qmlTitleVisible
         }
     }
+
+//    onNextChainDialogChangedOverloaded: {
+//        nextDialog.qmlTitleVisible = qmlTitleVisible
+//    }
 }

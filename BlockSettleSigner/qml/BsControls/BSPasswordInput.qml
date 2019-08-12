@@ -5,64 +5,47 @@ import QtQuick.Layouts 1.11
 import "../StyledControls"
 import "../BsStyles"
 
-// used for password confirmation in wallet create/import dialog
 CustomTitleDialogWindow {
     id: root
 
-    property string passwordToCheck
     property alias enteredPassword : passwordInput.text
-    property bool passwordCorrect: passwordInput.text.length !== 0 && (passwordToCheck.length ===0 || passwordInput.text === passwordToCheck)
+    default property alias details: detailsContainer.data
 
-    title: type === BSPasswordInput.Type.Request ? qsTr("Decrypt Wallet") : qsTr("Notice!")
+    property alias btnReject : btnReject
+    property alias btnAccept : btnAccept
+    property alias passwordInput : passwordInput
+
+    title: qsTr("Decrypt Wallet")
     width: 350
     rejectable: true
 
-    enum Type {
-       Confirm = 0,
-       Request = 1
-    }
-    property int type: BSPasswordInput.Type.Confirm
+//    Component.onCompleted: {
+//        details.parent = detailsContainer
+//    }
 
     cContentItem: ColumnLayout {
+        id: contentItemData
         Layout.fillWidth: true
+        Layout.alignment: Qt.AlignTop
+        Layout.margins: 0
+
         ColumnLayout {
             Layout.preferredWidth: root.width
+            spacing: 0
+            Layout.margins: 0
+            Layout.alignment: Qt.AlignTop
 
-            CustomHeader {
-                text: qsTr("Please take care of your assets!")
-                visible: type === BSPasswordInput.Type.Confirm
+
+            ColumnLayout {
+                id: detailsContainer
+                Layout.margins: 0
+                spacing: 0
                 Layout.fillWidth: true
-                Layout.preferredHeight: 25
-                Layout.topMargin: 5
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-            }
-
-            CustomLabel{
-                id: labelDetails_
-                visible: type === BSPasswordInput.Type.Confirm
-                text: qsTr("No one can help you recover your bitcoins if you forget the passphrase and don't have a backup! \
-Your Wallet and any backups are useless if you lose them.\
-<br><br>A backup protects your wallet forever, against hard drive loss and losing your passphrase. \
-It also protects you from theft, if the wallet was encrypted and the backup wasn't stolen with it. \
-Please make a backup and keep it in a safe place.\
-<br><br>Please enter your passphrase one more time to indicate that you are aware of the risks of losing your passphrase!")
-                padding: 10
-                textFormat: Text.RichText
-                Layout.preferredWidth: root.width - 20
-                horizontalAlignment: Text.AlignLeft
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-
-                onLinkActivated: Qt.openUrlExternally(link)
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.NoButton
-                    cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
-                }
+                Layout.alignment: Qt.AlignTop
             }
 
             CustomHeader {
+                Layout.alignment: Qt.AlignTop
                 text: qsTr("Enter password")
                 Layout.fillWidth: true
                 Layout.preferredHeight: 25
@@ -108,10 +91,9 @@ Please make a backup and keep it in a safe place.\
         CustomButtonBar {
             id: buttonBar
             Layout.fillWidth: true
-            Layout.preferredHeight: 45
 
             CustomButton {
-                id: rejectButton_
+                id: btnReject
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 anchors.margins: 5
@@ -123,11 +105,10 @@ Please make a backup and keep it in a safe place.\
 
             CustomButtonPrimary {
                 id: btnAccept
-                enabled: passwordCorrect
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.margins: 5
-                text: type === BSPasswordInput.Type.Request ? qsTr("Ok") : qsTr("Continue")
+                text: qsTr("Ok")
                 onClicked: {
                     acceptAnimated()
                 }

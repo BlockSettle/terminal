@@ -18,7 +18,15 @@
 #include "WalletsProxy.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "BSErrorCodeStrings.h"
+#include "OfflineSigner.h"
+#include "TXInfo.h"
 
+#include "signer.pb.h"
+
+#include <memory>
+
+using namespace Blocksettle;
 
 WalletsProxy::WalletsProxy(const std::shared_ptr<spdlog::logger> &logger
    , SignerAdapter *adapter)
@@ -233,15 +241,24 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
             }
             auto lock = newWallet->lockForEncryption(passwordData->password);
             for (const auto &leaf : group->getLeaves()) {
-               auto newLeaf = newGroup->createLeaf(leaf->index());
-               for (const auto &addr : leaf->getExtAddressList()) {
-                  newLeaf->getNewExtAddress(addr.getType());
+               try {
+                  auto newLeaf = newGroup->createLeaf(leaf->index());
+                  if (!newLeaf) {
+                     throw std::runtime_error("uncreatable");
+                  }
+                  for (const auto &addr : leaf->getExtAddressList()) {
+                     newLeaf->getNewExtAddress(addr.getType());
+                  }
+                  for (const auto &addr : leaf->getIntAddressList()) {
+                     newLeaf->getNewIntAddress(addr.getType());
+                  }
+                  logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
+                     , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
                }
-               for (const auto &addr : leaf->getIntAddressList()) {
-                  newLeaf->getNewIntAddress(addr.getType());
+               catch (const std::exception &e) {
+                  logger_->warn("[WalletsProxy::exportWatchingOnly] WO leaf {} ({}/{}) not created: {}"
+                     , leaf->walletId(), group->index(), leaf->index(), e.what());
                }
-               logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
-                  , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
             }
          }
 
@@ -371,6 +388,139 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
    return true;
 }
 
+void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCallback)
+{
+   logger_->debug("Processing file {}...", fileName.toStdString());
+   QFile file(fileName);
+   if (!file.exists()) {
+      invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("File %1 doesn't exist").arg(fileName));
+      return;
+   }
+
+   if (!file.open(QIODevice::ReadOnly)) {
+      invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to open %1 for reading").arg(fileName));
+      return;
+   }
+
+   const auto &data = file.readAll().toStdString();
+   if (data.empty()) {
+      invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("File %1 contains no data").arg(fileName));
+      return;
+   }
+
+   const auto &parsedReqs = ParseOfflineTXFile(data);
+   if (parsedReqs.empty()) {
+      invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("File %1 contains no TX sign requests").arg(fileName));
+      return;
+   }
+
+   // sort reqs by wallets
+   const auto &parsedReqsForWallets = std::make_shared<std::unordered_map<std::string, std::vector<bs::core::wallet::TXSignRequest>>>(); // <wallet_id, reqList>
+   const auto walletsMgr = adapter_->getWalletsManager();
+   for (const auto &req : parsedReqs) {
+      if (!req.prevStates.empty()) {
+         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Transaction already signed"));
+         return;
+      }
+      const auto &wallet = walletsMgr->getWalletById(req.walletId);
+      if (!wallet) {
+         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to find wallet with ID %1").arg(QString::fromStdString(req.walletId)));
+         return;
+      }
+
+      parsedReqsForWallets->operator[](req.walletId).push_back(req);
+   }
+
+   // sign reqs by wallets
+   const auto &requestCbs = std::make_shared<std::vector<std::function<void()>>>();
+
+   for (const auto req : *parsedReqsForWallets) {
+      const auto &walletCb = [this, fileName, jsCallback, requestCbs, walletId=req.first, reqs=req.second]() {
+
+         const auto &cb = new bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>
+               ([this, fileName, jsCallback, requestCbs, walletId, reqs](int result, const QString &, bs::wallet::QPasswordData *passwordData){
+
+            auto errorCode = static_cast<bs::error::ErrorCode>(result);
+            if (errorCode == bs::error::ErrorCode::TxCanceled) {
+               return;
+            }
+            else {
+               const auto &cbSigned = [this, fileName, jsCallback, requestCbs, walletId, reqs] (bs::error::ErrorCode result, const BinaryData &signedTX) {
+                  if (result != bs::error::ErrorCode::NoError) {
+                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to sign request, error code: %1, file: %2")
+                                      .arg(static_cast<int>(result))
+                                      .arg(fileName));
+                     return;
+                  }
+                  QFileInfo fi(fileName);
+                  QString outputFN = fi.path() + QLatin1String("/") + fi.baseName() + QLatin1String("_signed.bin");
+                  QFile f(outputFN);
+                  if (f.exists()) {
+                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("File %1 already exists").arg(outputFN));
+                     return;
+                  }
+                  if (!f.open(QIODevice::WriteOnly)) {
+                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to open %1 for writing").arg(outputFN));
+                     return;
+                  }
+
+                  Storage::Signer::SignedTX response;
+                  response.set_transaction(signedTX.toBinStr());
+                  response.set_comment(reqs[0].comment);
+
+                  Storage::Signer::File fileContainer;
+                  auto container = fileContainer.add_payload();
+                  container->set_type(Storage::Signer::SignedTXFileType);
+                  container->set_data(response.SerializeAsString());
+
+                  const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
+                  if (f.write(data) != data.size()) {
+                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to write TX response data to %1").arg(outputFN));
+                     return;
+                  }
+
+                  logger_->info("Created signed TX response file in {}", outputFN.toStdString());
+                  if (requestCbs->empty()) {
+                     // remove original request file?
+                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(true) << tr("Signed TX saved to %1").arg(outputFN));
+                  }
+                  else {
+                     // run next dialog for next wallet
+                     auto fn = std::move(requestCbs->back());
+                     requestCbs->pop_back();
+                     fn();
+                  }
+               };
+               adapter_->signOfflineTxRequest(reqs[0], passwordData->binaryPassword(), cbSigned);
+            }
+         });
+
+
+         // TODO: send to qml list of txInfo
+         bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(reqs[0]);
+         QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
+
+         bs::sync::PasswordDialogData *dialogData = new bs::sync::PasswordDialogData();
+         QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
+
+         bs::hd::WalletInfo *walletInfo = adapter_->qmlFactory()->createWalletInfo(walletId);
+
+         adapter_->qmlBridge()->invokeQmlMethod("createTxSignDialog", cb
+                                                , tr("Sign Offline TX")
+                                                , QVariant::fromValue(txInfo)
+                                                , QVariant::fromValue(dialogData)
+                                                , QVariant::fromValue(walletInfo));
+      };
+
+      requestCbs->push_back(walletCb);
+   }
+
+   // run first cb
+   auto fn = std::move(requestCbs->back());
+   requestCbs->pop_back();
+   fn();
+}
+
 bool WalletsProxy::walletNameExists(const QString &name) const
 {
    return walletsMgr_->walletNameExists(name.toStdString());
@@ -413,10 +563,11 @@ void WalletsProxy::createWallet(bool isPrimary
       return;
    }
 
-   auto cb = [this, jsCallback] (bool success, const std::string &msg) {
-      QMetaObject::invokeMethod(this, [this, success, msg, jsCallback] {
+   auto cb = [this, jsCallback] (bs::error::ErrorCode errorCode) {
+      QMetaObject::invokeMethod(this, [this, errorCode, jsCallback] {
          QJSValueList args;
-         args << QJSValue(success) << QString::fromStdString(msg);
+         args << QJSValue(errorCode == bs::error::ErrorCode::NoError)
+              << bs::error::ErrorCodeToString(errorCode);
          invokeJsCallBack(jsCallback, args);
       });
    };

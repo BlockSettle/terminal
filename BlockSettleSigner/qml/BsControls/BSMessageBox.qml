@@ -32,17 +32,18 @@ CustomTitleDialogWindow {
        Critical = 4
     }
     width: 350
+    //height: 70 + headerPanelHeight + contentItemData.height
     acceptable: true
     rejectable: true
 
     cContentItem: ColumnLayout {
+        id: contentItemData
         Layout.fillWidth: true
 
         RowLayout {
             id: rowLayout_0
             Layout.fillWidth: true
             spacing: 5
-            Layout.preferredWidth: root.width
 
             Image {
                 id: image

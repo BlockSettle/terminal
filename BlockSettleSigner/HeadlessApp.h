@@ -6,7 +6,6 @@
 #include <memory>
 #include "CoreWallet.h"
 #include "EncryptionUtils.h"
-#include "ProcessControl.h"
 #include "SignerDefs.h"
 #include "BSErrorCode.h"
 
@@ -28,7 +27,6 @@ namespace Blocksettle {
 class HeadlessContainerListener;
 class SignerAdapterListener;
 class HeadlessSettings;
-class OfflineProcessor;
 class SignerSettings;
 class ZmqBIP15XServerConnection;
 class HeadlessContainerCallbacks;
@@ -59,9 +57,12 @@ public:
 
    ZmqBIP15XServerConnection* connection() const;
    bs::signer::BindStatus signerBindStatus() const { return signerBindStatus_; }
+   BinaryData signerPubKey() const;
+
+   static std::string getOwnKeyFileDir();
+   static std::string getOwnKeyFileName();
 
 private:
-   void startInterface();
    void startTerminalsProcessing();
    void stopTerminalsProcessing();
 
@@ -78,7 +79,6 @@ private:
    std::unique_ptr<ZmqBIP15XServerConnection>   terminalConnection_;
    std::unique_ptr<ZmqBIP15XServerConnection>   guiConnection_;
 
-   ProcessControl             guiProcess_;
    std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
 };
 

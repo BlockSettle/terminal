@@ -50,6 +50,7 @@ Q_DECLARE_METATYPE(std::vector<UTXO>)
 Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
 Q_DECLARE_METATYPE(std::shared_ptr<std::promise<bool>>)
 Q_DECLARE_METATYPE(ArmorySettings)
+Q_DECLARE_METATYPE(CelerAPI::CelerMessageType);
 
 #include <QEvent>
 #include <QApplicationStateChangeEvent>
@@ -63,6 +64,7 @@ public:
 
 signals:
    void reactivateTerminal();
+
 protected:
    bool event(QEvent* ev) override
    {
@@ -120,6 +122,38 @@ QScreen *getDisplay(QPoint position)
    return QGuiApplication::primaryScreen();
 }
 
+static int runUnchecked(QApplication *app, const std::shared_ptr<ApplicationSettings> &settings, BSTerminalSplashScreen &splashScreen)
+{
+   BSTerminalMainWindow mainWindow(settings, splashScreen);
+
+#if defined (Q_OS_MAC)
+   MacOsApp *macApp = (MacOsApp*)(app);
+
+   QObject::connect(macApp, &MacOsApp::reactivateTerminal, &mainWindow, &BSTerminalMainWindow::onReactivate);
+#endif
+
+   if (!settings->get<bool>(ApplicationSettings::launchToTray)) {
+      mainWindow.show();
+   }
+
+   mainWindow.postSplashscreenActions();
+
+   return app->exec();
+}
+
+static int runChecked(QApplication *app, const std::shared_ptr<ApplicationSettings> &settings, BSTerminalSplashScreen &splashScreen)
+{
+   try {
+      return runUnchecked(app, settings, splashScreen);
+   }
+   catch (const std::exception &e) {
+      std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
+      BSMessageBox(BSMessageBox::critical, app->tr("BlockSettle Terminal")
+         , app->tr("Unhandled exception detected: %1").arg(QLatin1String(e.what()))).exec();
+      return EXIT_FAILURE;
+   }
+}
+
 static int GuiApp(int &argc, char** argv)
 {
    Q_INIT_RESOURCE(armory);
@@ -132,6 +166,7 @@ static int GuiApp(int &argc, char** argv)
 #else
    QApplication app(argc, argv);
 #endif
+
 
    QApplication::setQuitOnLastWindowClosed(false);
 
@@ -190,6 +225,7 @@ static int GuiApp(int &argc, char** argv)
    qRegisterMetaType<AsyncClient::LedgerDelegate>();
    qRegisterMetaType<std::shared_ptr<std::promise<bool>>>();
    qRegisterMetaType<ArmorySettings>();
+   qRegisterMetaType<CelerAPI::CelerMessageType>();
 
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();
@@ -217,31 +253,11 @@ static int GuiApp(int &argc, char** argv)
    splashScreen.show();
    app.processEvents();
 
-#ifndef _DEBUG
-   try {
+#ifdef NDEBUG
+   return runChecked(&app, settings, splashScreen);
+#else
+   return runUnchecked(&app, settings, splashScreen);
 #endif
-      BSTerminalMainWindow mainWindow(settings, splashScreen);
-
-#if defined (Q_OS_MAC)
-      QObject::connect(&app, &MacOsApp::reactivateTerminal, &mainWindow, &BSTerminalMainWindow::onReactivate);
-#endif
-
-      if (!settings->get<bool>(ApplicationSettings::launchToTray)) {
-         mainWindow.show();
-      }
-
-      mainWindow.postSplashscreenActions();
-
-      return app.exec();
-#ifndef _DEBUG
-   }
-   catch (const std::exception &e) {
-      std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
-      BSMessageBox(BSMessageBox::critical, app.tr("BlockSettle Terminal"), QLatin1String(e.what())).exec();
-      return 1;
-   }
-   return 0;
-#endif // _DEBUG
 }
 
 int main(int argc, char** argv)

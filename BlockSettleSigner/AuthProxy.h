@@ -12,6 +12,7 @@
 #include <QObject>
 
 class ApplicationSettings;
+class ConnectionManager;
 
 namespace spdlog {
    class logger;

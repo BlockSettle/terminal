@@ -28,15 +28,17 @@ CustomTitleDialogWindow {
     property var passwordData: QPasswordData{}
 
     width: 400
-    height: 470
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletCreation
     title: qsTr("Manage encryption")
 
     Component.onCompleted: {
-        tfName.text = walletsProxy.generateNextWalletName();
         if (!primaryWalletExists) {
             cbPrimary.checked = true
+            tfName.text = qsTr("Primary Wallet");
+        }
+        else {
+            tfName.text = walletsProxy.generateNextWalletName();
         }
     }
 
@@ -119,6 +121,16 @@ CustomTitleDialogWindow {
                 KeyNavigation.tab: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput : textInputEmail
             }
         }
+
+        CustomHeader {
+            text: qsTr("Primary Wallet")
+            Layout.fillWidth: true
+            Layout.preferredHeight: 25
+            Layout.topMargin: 5
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+        }
+
         RowLayout {
             spacing: 5
             Layout.fillWidth: true
@@ -141,9 +153,53 @@ CustomTitleDialogWindow {
                 // enabled: !primaryWalletExists
                 onCheckedChanged: {
                     if (primaryWalletExists) cbPrimary.checked = false;
+
+                    if (!primaryWalletExists && (tfName.text === walletsProxy.generateNextWalletName() || tfName.text.length === 0)) {
+                        tfName.text = qsTr("Primary Wallet");
+                    }
+                    else if (tfName.text === qsTr("Primary Wallet")  || tfName.text.length === 0){
+                        tfName.text = walletsProxy.generateNextWalletName();
+                    }
                 }
             }
         }
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
+            CustomLabel {
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
+                Layout.fillWidth: true
+                text: qsTr("Private Market\nLeafs")
+            }
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Status")
+            }
+        }
+        RowLayout {
+            spacing: 5
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
+            CustomLabel {
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
+                Layout.fillWidth: true
+                text: qsTr("Authentication\nStatus")
+            }
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Status")
+            }
+        }
+
         CustomHeader {
             id: headerText2
             text: qsTr("Encryption")
@@ -168,6 +224,13 @@ CustomTitleDialogWindow {
                 onCheckedChanged: {
                     if (checked) {
                         newPasswordWithConfirm.tfPasswordInput.focus = true
+                    }
+
+                    if (!primaryWalletExists && tfName.text === walletsProxy.generateNextWalletName()) {
+                        tfName.text = qsTr("Primary Wallet");
+                    }
+                    else if (tfName.text === qsTr("Primary Wallet")){
+                        tfName.text = walletsProxy.generateNextWalletName();
                     }
                 }
             }
@@ -276,9 +339,8 @@ CustomTitleDialogWindow {
 
                     if (rbPassword.checked) {
                         // auth password
-                        var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
+                        var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInputConfirm.qml").createObject(mainWindow);
                         checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
-                        checkPasswordDialog.type = BSPasswordInput.Type.Confirm
                         checkPasswordDialog.open()
                         checkPasswordDialog.bsAccepted.connect(function(){
                             passwordData.encType = QPasswordData.Password

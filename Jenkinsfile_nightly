@@ -23,7 +23,7 @@ pipeline {
                             image 'terminal:latest'
                             reuseNode true
                             args '-v /var/cache/3rd/downloads:${WORKSPACE}/3rd/downloads'
-                            args '-v /var/cache/3rd/release_dev:${WORKSPACE}/3rd/release'
+                            args '-v /var/cache/3rd/release_nightly:${WORKSPACE}/3rd/release'
                         }
                     }
                     steps {
@@ -39,7 +39,7 @@ pipeline {
                     }
                     steps {
                         sh 'ssh admin@10.1.60.206 "rm -rf ~/Workspace/terminal"'
-                        sh 'ssh admin@10.1.60.206 "cd ~/Workspace ; git clone --single-branch --branch ${BRANCH} git@github.com:BlockSettle/terminal.git ; cd terminal ; git submodule init ; git submodule update"'
+                        sh 'ssh admin@10.1.60.206 "cd ~/Workspace ; git clone --single-branch --branch bs_dev git@github.com:BlockSettle/terminal.git ; cd terminal ; git submodule init ; git submodule update ; cd common; git checkout bs_dev ; git pull"'
                         sh 'ssh admin@10.1.60.206 "export PATH=/usr/local/opt/ccache/libexec:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin ; ccache -s ; cd /Users/admin/Workspace/terminal/Deploy/MacOSX ; security unlock-keychain -p ${MAC_CHAIN_PAS} login.keychain ; ./package.sh"'
                         sh "scp admin@10.1.60.206:~/Workspace/terminal/Deploy/MacOSX/BlockSettle.dmg ${WORKSPACE}/terminal/Deploy/BlockSettle.dmg"
                     }
@@ -52,6 +52,7 @@ pipeline {
                         expression { params.OS == 'Windows' || params.OS == 'All' }
                     }
                     steps {
+                        bat "cd terminal\\common && git checkout bs_dev && git pull"
                         bat 'set DEV_3RD_ROOT=C:\\Jenkins\\workspace\\3rd&& "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal && python generate.py release'
                         bat '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal\\terminal.release && devenv BS_Terminal.sln /build Release"'
                         bat "cd terminal\\Deploy\\Windows\\ && deploy.bat"
@@ -67,7 +68,7 @@ pipeline {
                         expression { params.OS == 'Linux' || params.OS == 'All' }
                     }
                     steps {
-                        sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal.deb genoa@10.0.1.36:/var/www/terminal/Linux/bsterminal_${BRANCH}.deb"
+                        sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal.deb genoa@10.0.1.36:/var/www/terminal/Linux/bsterminal_bs_dev.deb"
                     }
                 }
                 stage('Transfer MacOS app') {
@@ -75,7 +76,7 @@ pipeline {
                         expression { params.OS == 'MacOS' || params.OS == 'All' }
                     }
                     steps {
-                        sh "scp ${WORKSPACE}/terminal/Deploy/BlockSettle.dmg genoa@10.0.1.36:/var/www/terminal/MacOSX/BlockSettle_${BRANCH}.dmg"
+                        sh "scp ${WORKSPACE}/terminal/Deploy/BlockSettle.dmg genoa@10.0.1.36:/var/www/terminal/MacOSX/BlockSettle_bs_dev.dmg"
                     }
                 }
                 stage('Transfer Windows app') {
@@ -83,8 +84,8 @@ pipeline {
                         expression { params.OS == 'Windows' || params.OS == 'All' }
                     }
                     steps {
-                        sh 'scp -p2222 admin@10.0.1.135:C:/Jenkins/workspace/terminal_dev/terminal/Deploy/bsterminal_installer.exe ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe'
-                        sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe genoa@10.0.1.36:/var/www/terminal/Windows/bsterminal_installer_${BRANCH}.exe"
+                        sh 'scp -p2222 admin@10.0.1.135:C:/Jenkins/workspace/terminal_nightly/terminal/Deploy/bsterminal_installer.exe ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe'
+                        sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe genoa@10.0.1.36:/var/www/terminal/Windows/bsterminal_installer_bs_dev.exe"
                     }
                 }
             }
