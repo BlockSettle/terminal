@@ -23,7 +23,6 @@
 
 #include <stdexcept>
 
-//static const size_t kP2WPKHOutputSize = 35;
 static const float kDustFeePerByte = 3.0;
 
 
@@ -155,19 +154,12 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
          originalFee_ = origFee;
          originalFeePerByte_ = feePerByte;
 
-         // CPFP has no enforced rules for fees. We use the following
-         // algorithm for determining the fee/byte. If the current 2-block
-         // fee is less than the fee used by the parent, stick to the current
-         // 2-block fee. If not, add the difference to the 2-block fee and
-         // use the result for the child fee. Simple but it should work. A
-         // little tinkering may be worthwhile later.
-         const float feeDiff = fee - originalFee_;
-         float newFPB = fee;
-         if (std::signbit(feeDiff) == false) { // Is the diff positive?
-            newFPB += feeDiff;
+         addedFee_ = (fee - feePerByte) * txSize;
+         if (addedFee_ < 0) {
+            addedFee_ = 0;
          }
 
-         advisedFeePerByte_ = newFPB;
+         advisedFeePerByte_ = feePerByte + addedFee_ / txSize;
          onTransactionUpdated();
          populateFeeList();
          SetInputs(selInputs->GetSelectedTransactions());
@@ -588,6 +580,16 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
       ui_->spinBoxFeesManualTotal->setValue(summary.txVirtSize);
    }
 
+   if (addedFee_ > 0) {
+      const float newTotalFee = transactionData_->feePerByte() * summary.txVirtSize + addedFee_;
+      const float newFeePerByte = newTotalFee / summary.txVirtSize;
+      if (!qFuzzyCompare(newTotalFee, advisedFeePerByte_) || !qFuzzyCompare(newFeePerByte, advisedFeePerByte_)) {
+         QMetaObject::invokeMethod(this, [this, newTotalFee, newFeePerByte] {
+            setAdvisedFees(newTotalFee, newFeePerByte);
+         });
+      }
+   }
+
    QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateCreateButton
       , Qt::QueuedConnection);
 }
@@ -811,6 +813,26 @@ void CreateTransactionDialogAdvanced::AddManualFeeEntries(float feePerByte, floa
    ui_->comboBoxFeeSuggestions->addItem(tr("Total Network Fee"));
 }
 
+void CreateTransactionDialogAdvanced::setAdvisedFees(float totalFee, float feePerByte)
+{
+   advisedTotalFee_ = totalFee;
+   advisedFeePerByte_ = feePerByte;
+
+   if (advisedFeePerByte_ > 0) {
+      const auto index = ui_->comboBoxFeeSuggestions->count() - 2;
+      if (qFuzzyIsNull(advisedTotalFee_)) {
+         ui_->comboBoxFeeSuggestions->setCurrentIndex(index);
+         feeSelectionChanged(index);
+      }
+   }
+
+   if (advisedTotalFee_ > 0) {
+      const auto index = ui_->comboBoxFeeSuggestions->count() - 1;
+      ui_->comboBoxFeeSuggestions->setCurrentIndex(index);
+      feeSelectionChanged(index);
+   }
+}
+
 void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsigned int, float> &feeValues)
 {
    if (feeChangeDisabled_) {
@@ -829,11 +851,8 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    AddManualFeeEntries(manualFeePerByte
       , (minTotalFee_ > 0) ? minTotalFee_ : transactionData_->totalFee());
 
-   if (advisedFeePerByte_ > 0) {
-      const auto index = ui_->comboBoxFeeSuggestions->count() - 2;
-      ui_->comboBoxFeeSuggestions->setCurrentIndex(index);
-      feeSelectionChanged(index);
-   }
+   setAdvisedFees(advisedTotalFee_, advisedFeePerByte_);
+
    if (feeValues.empty()) {
       feeSelectionChanged(0);
    }
