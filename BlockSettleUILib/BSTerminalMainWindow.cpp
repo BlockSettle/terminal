@@ -856,9 +856,10 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       if (wallet->isPrimary()) {
          return true;
       }
-      BSMessageBox qry(BSMessageBox::question, tr("Create primary wallet"), tr("Promote to primary wallet")
-         , tr("In order to execute trades and take delivery of XBT and Equity Tokens, you are required to"
-            " have a Primary Wallet which supports the sub-wallets required to interact with the system.")
+      BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
+         , tr("To trade through BlockSettle, you are required to have a wallet which"
+            " supports the sub-wallets required to interact with the system. Each Terminal"
+            " may only have one Primary Wallet. Do you wish to promote your wallet?")
          .arg(QString::fromStdString(wallet->name())), this);
       if (qry.exec() == QDialog::Accepted) {
          //auth wallets are always ext only
@@ -1116,7 +1117,8 @@ void BSTerminalMainWindow::onLogout()
 void BSTerminalMainWindow::onUserLoggedIn()
 {
    ui_->actionAccountInformation->setEnabled(true);
-   ui_->actionAuthenticationAddresses->setEnabled(true);
+   ui_->actionAuthenticationAddresses->setEnabled(celerConnection_->celerUserType()
+      != BaseCelerClient::CelerUserType::Market);
    ui_->actionOneTimePassword->setEnabled(true);
    ui_->actionEnterColorCoinToken->setEnabled(true);
 
