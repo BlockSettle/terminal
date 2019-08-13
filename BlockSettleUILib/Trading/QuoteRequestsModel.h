@@ -96,7 +96,6 @@ public:
    void SetAssetManager(const std::shared_ptr<AssetManager>& assetManager);
    const bs::network::QuoteReqNotification &getQuoteReqNotification(const std::string &id) const;
    double getPrice(const std::string &security, Role) const;
-   QString getMarketSecurity(const QModelIndex &index);
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
 

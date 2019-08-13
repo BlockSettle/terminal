@@ -65,8 +65,14 @@ signals:
    void requestPrimaryWalletCreation();
 
 private:
+   void showShieldLoginRequiered();
+   void showShieldReservedTraidingParticipant();
+   void showShieldPromoteToPrimaryWallet();
+   void showShieldCreateWallet();
+   void showShieldCreateXXXLeaf(const QString& product);
+
    void showEditableRFQPage();
-   void popShield();
+   void prepareAndPopShield(const QString& labelText, bool showButton = false, const QString& ButtonText = QLatin1String());
 
    bool checkConditions(const MarkeSelectedInfo& productGroup);
    bool checkWalletSettings(const MarkeSelectedInfo& productGroup);
