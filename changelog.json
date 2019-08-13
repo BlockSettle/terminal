@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.20.0",
-   "release_date": "12 Aug 2019",
+   "latest_version": "0.20.1",
+   "release_date": "13 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.1",
+         "previous_version": "0.20.0",
+         "release_date": "13 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix light GUI signer quit",
+            "Revert \"Add shield to dealing tab (#1243)\"",
+            "Update wallet file names",
+            "Propagate the CC info flag to signer UI ( BST-2088 )"
+         ],
+         "bug_fixes": [],
+         "revision": "ad74f3ce",
+         "common_revision": "64b4dac1"
+      },
       {
          "version_string": "0.20.0",
          "previous_version": "0.19.11",
