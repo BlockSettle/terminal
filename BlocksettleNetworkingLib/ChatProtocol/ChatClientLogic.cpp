@@ -198,7 +198,7 @@ namespace Chat
          return;
       }
 
-      clientConnectionLogicPtr_->setMessageSeen(clientPartyPtr, message_id);
+      clientConnectionLogicPtr_->setMessageSeen(clientPartyPtr, messageId);
    }
 
 }
