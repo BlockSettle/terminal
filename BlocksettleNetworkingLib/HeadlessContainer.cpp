@@ -1582,7 +1582,7 @@ bool LocalSigner::Start()
       bundleDir.cdUp();
       bundleDir.cdUp();
       bundleDir.cdUp();
-      const auto signerAppPath = bundleDir.absoluteFilePath(QLatin1String("blocksettle_signer"));
+      const auto signerAppPath = bundleDir.absoluteFilePath(QLatin1String("BlockSettle Signer.app/Contents/MacOS/BlockSettle Signer"));
 #else
       const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer");
 #endif
