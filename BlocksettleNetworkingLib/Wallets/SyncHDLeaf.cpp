@@ -352,6 +352,7 @@ std::vector<std::string> hd::Leaf::registerWallet(
                return;
          }
          isRegistered_ = true;
+         OnLeafRegistrationCompleted();
       };
 
       std::unique_lock<std::mutex> lock(regMutex_);
