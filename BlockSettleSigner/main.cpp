@@ -106,6 +106,10 @@ namespace bs {
                   return EXIT_FAILURE;
                }
 #endif   //NDEBUG
+
+               QMetaObject::invokeMethod(qApp, [] {
+                  QApplication::quit();
+               });
             });
          }
 
