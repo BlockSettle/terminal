@@ -20,6 +20,7 @@ CustomTitleDialogWindow {
     id: root
 
     property bool primaryWalletExists: walletsProxy.primaryWalletExists
+    property bool hasCCInfoLoaded: walletsProxy.hasCCInfo
 
     property int inputLabelsWidth: 110
 
@@ -33,7 +34,7 @@ CustomTitleDialogWindow {
     title: qsTr("Manage encryption")
 
     Component.onCompleted: {
-        if (!primaryWalletExists) {
+        if (!primaryWalletExists && hasCCInfoLoaded) {
             cbPrimary.checked = true
             tfName.text = qsTr("Primary Wallet");
         }
@@ -142,7 +143,8 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
                 Layout.leftMargin: inputLabelsWidth + 5
                 text: qsTr("Primary Wallet")
-                checked: !primaryWalletExists
+                checked: !primaryWalletExists && hasCCInfoLoaded
+                enabled: hasCCInfoLoaded
 
                 ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
                 ToolTip.delay: 150

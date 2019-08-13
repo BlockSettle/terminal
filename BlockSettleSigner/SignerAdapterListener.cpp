@@ -18,8 +18,7 @@ class HeadlessContainerCallbacksImpl : public HeadlessContainerCallbacks
 public:
    HeadlessContainerCallbacksImpl(SignerAdapterListener *owner)
       : owner_(owner)
-   {
-   }
+   {}
 
    void peerConn(const std::string &ip) override
    {
@@ -41,6 +40,13 @@ public:
          owner_->logger_->info("Quit because terminal disconnected unexpectedly and litegui used");
          owner_->queue_->quit();
       }
+   }
+
+   void ccNamesReceived(bool result) override
+   {
+      signer::TerminalEvent evt;
+      evt.set_cc_info_received(result);
+      bool rc = owner_->sendData(signer::TerminalEventType, evt.SerializeAsString());
    }
 
    signer::SignTxRequest createSignTxRequest(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt)
@@ -99,11 +105,11 @@ public:
 
    void terminalHandshakeFailed(const std::string &peerAddress) override
    {
-      signer::TerminalHandshakeFailed evt;
-      evt.set_peeraddress(peerAddress);
-      owner_->sendData(signer::TerminalHandshakeFailedType, evt.SerializeAsString());
+      signer::TerminalEvent evt;
+      evt.set_peer_address(peerAddress);
+      evt.set_handshake_ok(false);
+      owner_->sendData(signer::TerminalEventType, evt.SerializeAsString());
    }
-
 
    void decryptWalletRequest(Blocksettle::Communication::signer::PasswordDialogType dialogType
       , const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
@@ -260,6 +266,8 @@ void SignerAdapterListener::sendStatusUpdate()
    evt.set_signer_bind_status(signer::BindStatus(app_->signerBindStatus()));
    evt.set_signer_pub_key(app_->signerPubKey().toBinStr());
    sendData(signer::UpdateStatusType, evt.SerializeAsString());
+
+   callbacks_->ccNamesReceived(!walletsMgr_->ccLeaves().empty());
 }
 
 void SignerAdapterListener::resetConnection()

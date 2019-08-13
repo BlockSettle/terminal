@@ -46,6 +46,7 @@ public:
    void resetConnection();
 
    HeadlessContainerCallbacks *callbacks() const;
+
 protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
    void OnClientConnected(const std::string &clientId) override;
@@ -79,6 +80,7 @@ protected:
    void shutdownIfNeeded();
 
    bool sendReady();
+
 private:
    friend class HeadlessContainerCallbacksImpl;
 

@@ -106,7 +106,7 @@ private:
    void onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    void onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
    void onUpdateStatus(const std::string &data);
-   void onTerminalHandshakeFailed(const std::string &data);
+   void onTerminalEvent(const std::string &data);
 
    void requestPasswordForTx(signer::PasswordDialogType reqType, bs::sync::PasswordDialogData *dialogData
       , bs::wallet::TXInfo *txInfo, bs::hd::WalletInfo *walletInfo);
