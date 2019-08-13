@@ -314,7 +314,7 @@ void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)
 
 void RFQReplyWidget::onConnectedToCeler()
 {
-   ui_->shieldPage->showShieldSelectTarget();
+   ui_->shieldPage->showShieldSelectTargetDealing();
    popShield();
    ui_->pageRFQReply->onCelerConnected();
 }
@@ -392,7 +392,7 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
    ui_->stackedWidget->setEnabled(true);
 
    if (productGroup.isEmpty() || request.product.empty()) {
-      ui_->shieldPage->showShieldSelectTarget();
+      ui_->shieldPage->showShieldSelectTargetDealing();
       popShield();
       return true;
    }
@@ -405,8 +405,13 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
 
    switch (userType) {
    case UserType::Market: {
-      if (group == GroupType::SpotXBT || group == GroupType::SpotFX) {
+      if (group == GroupType::SpotFX) {
          ui_->shieldPage->showShieldReservedTradingParticipant();
+         popShield();
+         return false;
+      }
+      else if (group == GroupType::SpotXBT) {
+         ui_->shieldPage->showShieldReservedDealingParticipant();
          popShield();
          return false;
       }
