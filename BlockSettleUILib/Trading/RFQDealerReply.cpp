@@ -28,7 +28,6 @@
 #include "UserScriptRunner.h"
 #include "UtxoReserveAdapters.h"
 #include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 using namespace bs::ui;

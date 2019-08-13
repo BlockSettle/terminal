@@ -5,7 +5,6 @@
 #include "SignContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 
@@ -199,11 +198,11 @@ public:
          , wallet->getUsedAddressCount())
       , wallet_(wallet)
    { }
-   WalletLeafNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::SettlementWallet> &wallet, int row, WalletNode *parent)
-      : WalletRootNode(vm, wallet->name(), wallet->description(), Type::Leaf, row, parent
-         , 0, 0, 0, wallet->getUsedAddressCount())
-      , wallet_(wallet)
-   { }
+   //WalletLeafNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::SettlementWallet> &wallet, int row, WalletNode *parent)
+   //   : WalletRootNode(vm, wallet->name(), wallet->description(), Type::Leaf, row, parent
+   //      , 0, 0, 0, wallet->getUsedAddressCount())
+   //   , wallet_(wallet)
+   //{ }
 
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return {wallet_}; }
 
