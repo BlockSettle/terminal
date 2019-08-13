@@ -130,7 +130,7 @@ public:
    RFQBlotterTreeView* view() const;
 
 signals:
-   void Selected(const QString& productGroup, const bs::network::QuoteReqNotification& qrc, double indicBid, double indicAsk);
+   void Selected(const bs::network::QuoteReqNotification &, double indicBid, double indicAsk);
    void quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn);
 
 public slots:

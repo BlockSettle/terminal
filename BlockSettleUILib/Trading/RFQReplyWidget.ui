@@ -308,7 +308,7 @@
         <property name="currentIndex">
          <number>0</number>
         </property>
-        <widget class="RFQShieldPage" name="shieldPage"/>
+        <widget class="RFQReplyLoginRequiredShield" name="loginRequired"/>
         <widget class="QWidget" name="RFQWidget">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -439,9 +439,9 @@
    <header>RFQDealerReply.h</header>
   </customwidget>
   <customwidget>
-   <class>RFQShieldPage</class>
+   <class>RFQReplyLoginRequiredShield</class>
    <extends>QWidget</extends>
-   <header>RFQShieldPage.h</header>
+   <header>RFQReplyLoginRequiredShield.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -152,10 +152,7 @@ void QuoteRequestsWidget::onQuoteReqNotifSelected(const QModelIndex& index)
          offerPx = bestQPx - pip;
       }
    }
-
-   const QString productGroup = model_->getMarketSecurity(sortModel_->mapToSource(index));
-
-   emit Selected(productGroup, qrn, bidPx, offerPx);
+   emit Selected(qrn, bidPx, offerPx);
 }
 
 void QuoteRequestsWidget::addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &container)
@@ -296,7 +293,7 @@ void QuoteRequestsWidget::onRowsRemoved(const QModelIndex &, int, int)
 {
    const auto &indices = ui_->treeViewQuoteRequests->selectionModel()->selectedIndexes();
    if (indices.isEmpty()) {
-      emit Selected({}, bs::network::QuoteReqNotification(), 0, 0);
+      emit Selected(bs::network::QuoteReqNotification(), 0, 0);
    }
    else {
       onQuoteReqNotifSelected(indices.first());

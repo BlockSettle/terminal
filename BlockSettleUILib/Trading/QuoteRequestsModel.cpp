@@ -1100,24 +1100,6 @@ double QuoteRequestsModel::getPrice(const std::string &security, Role role) cons
    return 0;
 }
 
-QString QuoteRequestsModel::getMarketSecurity(const QModelIndex &index)
-{
-   for (auto parent = index; parent.isValid(); parent = parent.parent()) {
-         IndexHelper *idx = static_cast<IndexHelper*>(parent.internalPointer());
-
-         if (idx->type_ != DataType::Market) {
-            continue;
-         }
-
-         Market *marketInfo = static_cast<Market*>(idx->data_);
-         if (marketInfo) {
-            return marketInfo->security_;
-         }
-   }
-
-   return {};
-}
-
 QString QuoteRequestsModel::quoteReqStatusDesc(bs::network::QuoteReqNotification::Status status)
 {
    switch (status) {
