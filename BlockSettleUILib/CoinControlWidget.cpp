@@ -155,6 +155,8 @@ void CoinControlWidget::initWidget(const std::shared_ptr<SelectedTransactionInpu
 
    ui_->checkBoxUseAllSelected->setChecked(selectedInputs->UseAutoSel());
    onAutoSelClicked(selectedInputs->UseAutoSel() ? Qt::Checked : Qt::Unchecked);
+
+   ui_->treeViewUTXO->sortByColumn(CoinControlModel::ColumnName, Qt::AscendingOrder);
 }
 
 void CoinControlWidget::applyChanges(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs)
