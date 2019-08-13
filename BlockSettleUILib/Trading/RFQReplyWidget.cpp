@@ -31,7 +31,7 @@ using namespace bs::ui;
 
 enum class DealingPages : int
 {
-   LoginRequierdPage = 0,
+   ShieldPage = 0,
    DealingPage
 };
 
@@ -40,10 +40,14 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
    , ui_(new Ui::RFQReplyWidget())
 {
    ui_->setupUi(this);
+   ui_->shieldPage->setTabType(QLatin1String("dealing"));
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::quoteReqNotifStatusChanged, ui_->pageRFQReply
       , &RFQDealerReply::quoteReqNotifStatusChanged, Qt::QueuedConnection);
    connect(ui_->pageRFQReply, &RFQDealerReply::autoSignActivated, this, &RFQReplyWidget::onAutoSignActivated);
+
+   ui_->shieldPage->showShieldLoginRequired();
+   popShield();
 }
 
 RFQReplyWidget::~RFQReplyWidget() = default;
@@ -53,6 +57,7 @@ void RFQReplyWidget::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMa
    if (!walletsManager_ && walletsManager) {
       walletsManager_ = walletsManager;
       ui_->pageRFQReply->setWalletsManager(walletsManager_);
+      ui_->shieldPage->setWalletsManager(walletsManager_);
 
       if (signingContainer_) {
          auto primaryWallet = walletsManager_->getPrimaryWallet();
@@ -133,11 +138,13 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
 
    ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_,
                                   appSettings, celerClient_);
-   ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_, appSettings, connectionManager, signingContainer_, armory_, mdProvider);
+   ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_,
+                           appSettings, connectionManager, signingContainer_, armory_, mdProvider);
 
-   connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, ui_->pageRFQReply, &RFQDealerReply::setQuoteReqNotification);
-   connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, quoteProvider_.get()
-      , &QuoteProvider::SubmitQuoteNotif, Qt::QueuedConnection);
+
+   connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, this, &RFQReplyWidget::onSelected);
+
+   connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, quoteProvider_.get(), &QuoteProvider::SubmitQuoteNotif, Qt::QueuedConnection);
    connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteReqNotifReplied);
    connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, this, &RFQReplyWidget::onReplied);
    connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, quoteProvider_.get(), &QuoteProvider::CancelQuoteNotif);
@@ -152,8 +159,7 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
 
    connect(quoteProvider_.get(), &QuoteProvider::quoteRejected, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteRejected);
 
-   connect(quoteProvider_.get(), &QuoteProvider::quoteNotifCancelled, ui_->widgetQuoteRequests
-      , &QuoteRequestsWidget::onQuoteNotifCancelled);
+   connect(quoteProvider_.get(), &QuoteProvider::quoteNotifCancelled, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteNotifCancelled);
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQReplyWidget::onSignTxRequested);
 
    auto ordersModel = new OrderListModel(quoteProvider_, assetManager, this);
@@ -164,8 +170,7 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQReplyWidget::onConnectedToCeler);
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQReplyWidget::onDisconnectedFromCeler);
 
-   connect(ui_->widgetQuoteRequests->view(), &TreeViewWithEnterKey::enterKeyPressed
-      , this, &RFQReplyWidget::onEnterKeyPressed);
+   connect(ui_->widgetQuoteRequests->view(), &TreeViewWithEnterKey::enterKeyPressed, this, &RFQReplyWidget::onEnterKeyPressed);
 }
 
 void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn)
@@ -309,13 +314,15 @@ void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)
 
 void RFQReplyWidget::onConnectedToCeler()
 {
-   ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::DealingPage));
+   ui_->shieldPage->showShieldSelectTarget();
+   popShield();
    ui_->pageRFQReply->onCelerConnected();
 }
 
 void RFQReplyWidget::onDisconnectedFromCeler()
 {
-   ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::LoginRequierdPage));
+   ui_->shieldPage->showShieldLoginRequired();
+   popShield();
    ui_->pageRFQReply->onCelerDisconnected();
 }
 
@@ -332,6 +339,15 @@ void RFQReplyWidget::onEnterKeyPressed(const QModelIndex &index)
       ui_->pageRFQReply->pullButton()->click();
       return;
    }
+}
+
+void RFQReplyWidget::onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk)
+{
+   if (!checkConditions(productGroup, request)) {
+      return;
+   }
+
+   ui_->pageRFQReply->setQuoteReqNotification(request, indicBid, indicAsk);
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)
@@ -369,4 +385,80 @@ void RFQReplyWidget::showSettlementDialog(QDialog *dlg)
    dialogManager_->adjustDialogPosition(dlg);
 
    dlg->show();
+}
+
+bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::network::QuoteReqNotification& request)
+{
+   ui_->stackedWidget->setEnabled(true);
+
+   if (productGroup.isEmpty() || request.product.empty()) {
+      ui_->shieldPage->showShieldSelectTarget();
+      popShield();
+      return true;
+   }
+
+   using UserType = CelerClient::CelerUserType;
+   const UserType userType = celerClient_->celerUserType();
+
+   using GroupType = RFQShieldPage::ProductType;
+   const GroupType group = RFQShieldPage::getProductGroup(productGroup);
+
+   switch (userType) {
+   case UserType::Market: {
+      if (group == GroupType::SpotXBT || group == GroupType::SpotFX) {
+         ui_->shieldPage->showShieldReservedTradingParticipant();
+         popShield();
+         return false;
+      }
+      else if (ui_->shieldPage->checkWalletSettings(QString::fromStdString(request.product))) {
+         popShield();
+         return false;
+      }
+      break;
+   }
+   case UserType::Trading: {
+      if (group == GroupType::SpotXBT) {
+         ui_->shieldPage->showShieldReservedDealingParticipant();
+         return false;
+      } else if (group == GroupType::PrivateMarket &&
+            ui_->shieldPage->checkWalletSettings(QString::fromStdString(request.product))) {
+         popShield();
+         return false;
+      }
+      break;
+   }
+   case UserType::Dealing: {
+      if ((group == GroupType::SpotXBT || group == GroupType::PrivateMarket) &&
+            ui_->shieldPage->checkWalletSettings(QString::fromStdString(request.product))) {
+         popShield();
+         return false;
+      }
+      break;
+      break;
+   }
+   default: {
+      break;
+   }
+   }
+
+   if (ui_->stackedWidget->currentIndex() != static_cast<int>(DealingPages::DealingPage)) {
+      showEditableRFQPage();
+   }
+
+   return true;
+}
+
+void RFQReplyWidget::popShield()
+{
+   ui_->stackedWidget->setEnabled(true);
+
+   ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::ShieldPage));
+   ui_->pageRFQReply->setDisabled(true);
+}
+
+void RFQReplyWidget::showEditableRFQPage()
+{
+   ui_->stackedWidget->setEnabled(true);
+   ui_->pageRFQReply->setEnabled(true);
+   ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::DealingPage));
 }
