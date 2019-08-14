@@ -966,6 +966,8 @@ void HeadlessContainer::ProcessSyncWalletInfo(unsigned int id, const std::string
          , walletInfo.description(), mapFrom(walletInfo.nettype()), walletInfo.watching_only() });
       if (walletInfo.watching_only()) {
          woWallets_.insert(walletInfo.id());
+      } else {
+         woWallets_.erase(walletInfo.id());
       }
    }
    itCb->second(result);
