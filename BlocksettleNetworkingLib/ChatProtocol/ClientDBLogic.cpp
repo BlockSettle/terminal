@@ -26,11 +26,12 @@ namespace Chat
       connect(this, &ClientDBLogic::error, this, &ClientDBLogic::handleLocalErrors);
    }
 
-   void ClientDBLogic::Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings)
+   void ClientDBLogic::Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, const ChatUserPtr& chatUserPtr)
    {
       loggerPtr_ = loggerPtr;
       applicationSettingsPtr_ = appSettings;
       cryptManagerPtr_ = std::make_shared<CryptManager>(loggerPtr, this);
+      currentChatUserPtr_ = chatUserPtr;
 
       setLogger(loggerPtr);
 
@@ -118,8 +119,7 @@ namespace Chat
             partyMessagePacket.timestamp_ms(), partyMessagePacket.party_message_state());
          });
 
-      auto publicKey = BinaryData(applicationSettingsPtr_->GetAuthKeys().second.data(), applicationSettingsPtr_->GetAuthKeys().second.size());
-      QFuture<PartyMessagePacket> future = cryptManagerPtr_->encryptMessageIes(partyMessagePacket, publicKey);
+      QFuture<PartyMessagePacket> future = cryptManagerPtr_->encryptMessageIes(partyMessagePacket, currentChatUserPtr_->publicKey());
 
       watcher->setFuture(future);
    }

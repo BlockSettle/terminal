@@ -8,6 +8,7 @@
 
 #include <disable_warnings.h>
 #include "BinaryData.h"
+#include "SecureBinaryData.h"
 #include <enable_warnings.h>
 
 namespace Chat
@@ -24,12 +25,16 @@ namespace Chat
       BinaryData publicKey() const { return publicKey_; }
       void setPublicKey(BinaryData val) { publicKey_ = val; }
 
+      SecureBinaryData privateKey() const { return privateKey_; }
+      void setPrivateKey(SecureBinaryData val) { privateKey_ = val; }
+
    signals:
       void displayNameChanged(const std::string& displayName);
 
    private:
       std::string displayName_;
       BinaryData publicKey_;
+      SecureBinaryData privateKey_;
    };
 
    using ChatUserPtr = std::shared_ptr<ChatUser>;

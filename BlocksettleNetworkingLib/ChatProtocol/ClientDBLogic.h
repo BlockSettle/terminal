@@ -6,6 +6,7 @@
 #include "ChatProtocol/DatabaseExecutor.h"
 #include "ChatProtocol/ClientDatabaseCreator.h"
 #include "ChatProtocol/CryptManager.h"
+#include "ChatProtocol/ChatUser.h"
 
 class QSqlDatabase;
 class ApplicationSettings;
@@ -32,7 +33,7 @@ namespace Chat
       ClientDBLogic(QObject* parent = nullptr);
 
    public slots:
-      void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings);
+      void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, const ChatUserPtr& chatUserPtr);
       void updateMessageState(const std::string& message_id, const int party_message_state);
       void saveMessage(const std::string& data);
       void createNewParty(const std::string& partyId);
@@ -57,6 +58,7 @@ namespace Chat
       ApplicationSettingsPtr     applicationSettingsPtr_;
       ClientDatabaseCreatorPtr   databaseCreatorPtr_;
       CryptManagerPtr            cryptManagerPtr_;
+      ChatUserPtr                currentChatUserPtr_;
    };
 
    using ClientDBLogicPtr = std::shared_ptr<ClientDBLogic>;

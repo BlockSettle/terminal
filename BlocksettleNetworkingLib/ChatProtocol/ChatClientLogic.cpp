@@ -35,8 +35,15 @@ namespace Chat
    void ChatClientLogic::initDbDone()
    {
       currentUserPtr_ = std::make_shared<ChatUser>();
-      const auto publicKey = applicationSettingsPtr_->GetAuthKeys().second;
-      currentUserPtr_->setPublicKey(BinaryData(publicKey.data(), publicKey.size()));
+      currentUserPtr_->setPrivateKey(SecureBinaryData(
+         applicationSettingsPtr_->GetAuthKeys().first.data(),
+         applicationSettingsPtr_->GetAuthKeys().first.size()
+      ));
+      currentUserPtr_->setPublicKey(BinaryData(
+         applicationSettingsPtr_->GetAuthKeys().second.data(),
+         applicationSettingsPtr_->GetAuthKeys().second.size()
+      ));
+
       connect(currentUserPtr_.get(), &ChatUser::displayNameChanged, this, &ChatClientLogic::chatUserDisplayNameChanged);
 
       setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr_, clientDBServicePtr_, this));
@@ -77,7 +84,7 @@ namespace Chat
       clientDBServicePtr_ = std::make_shared<ClientDBService>();
       connect(clientDBServicePtr_.get(), &ClientDBService::initDone, this, &ChatClientLogic::initDbDone);
 
-      clientDBServicePtr_->Init(loggerPtr, appSettingsPtr);
+      clientDBServicePtr_->Init(loggerPtr, appSettingsPtr, currentUserPtr_);
    }
 
    void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb)
@@ -224,6 +231,14 @@ namespace Chat
    void ChatClientLogic::testProperlyConnected()
    {
       SendPartyMessage("Global", "test");
+   }
+
+   void ChatClientLogic::RequestPrivateParty(const std::string& userName)
+   {
+      // 1. create private party
+      // 2. push me to party
+      // 3. send request
+      //clientConnectionLogicPtr_->prepareRequestPrivateParty(userName);
    }
 
 }

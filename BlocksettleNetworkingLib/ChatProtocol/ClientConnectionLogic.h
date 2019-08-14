@@ -42,8 +42,9 @@ namespace Chat
       void SendPartyMessage(const std::string& partyId, const std::string& data);
 
       void prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
-      void prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
       void setMessageSeen(const ClientPartyPtr& clientPartyPtr, const std::string& messageId);
+
+      void prepareRequestPrivateParty(const std::string& userName);
 
    public slots:
       void onDataReceived(const std::string&);
@@ -66,8 +67,8 @@ namespace Chat
       void handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "");
 
    private:
-//      template<typename T>
-//      bool pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg);
+      void prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
+      void prepareAndSendPrivateMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
 
       void handleWelcomeResponse(const google::protobuf::Message& msg);
       void handleLogoutResponse(const google::protobuf::Message& msg);

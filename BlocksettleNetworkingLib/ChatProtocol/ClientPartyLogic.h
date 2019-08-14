@@ -7,6 +7,7 @@
 
 #include "ChatProtocol/ClientPartyModel.h"
 #include "ChatProtocol/ClientDBService.h"
+#include "ChatProtocol/ChatUser.h"
 
 #include <google/protobuf/message.h>
 
@@ -20,7 +21,8 @@ namespace Chat
    enum class ClientPartyLogicError
    {
       NonexistentClientStatusChanged,
-      PartyNotExist
+      PartyNotExist,
+      DynamicPointerCast
    };
 
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
@@ -36,10 +38,13 @@ namespace Chat
 
       void handlePartiesFromWelcomePacket(const google::protobuf::Message& msg);
 
+      void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName);
+
    signals:
       void error(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
       void partyModelChanged();
       void sendPartyMessagePacket(const google::protobuf::Message& message);
+      void privatePartyCreated(const PartyPtr& partyPtr);
 
    public slots:
       void onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus);

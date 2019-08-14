@@ -39,11 +39,6 @@ namespace Chat
             continue;
          }
 
-         if (PartyType::PRIVATE_DIRECT_MESSAGE != clientPartyPtr->partyType())
-         {
-            continue;
-         }
-
          if (userName == clientPartyPtr->displayName())
          {
             return clientPartyPtr;

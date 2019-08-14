@@ -156,6 +156,12 @@ namespace Chat
          return;
       }
 
+      if (PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
+      {
+         prepareAndSendPrivateMessage(clientPartyPtr, data);
+         return;
+      }
+
       emit error(ClientConnectionLogicError::SendingDataToUnhandledParty, clientPartyPtr->id());
    }
 
@@ -240,6 +246,16 @@ namespace Chat
    {
       auto partyMessageState = Chat::PartyMessageState::SENT;
       clientDBServicePtr_->updateMessageState(messageId, partyMessageState);
+   }
+
+   void ClientConnectionLogic::prepareAndSendPrivateMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
+   {
+      // TODO
+   }
+
+   void ClientConnectionLogic::prepareRequestPrivateParty(const std::string& userName)
+   {
+
    }
 
 }

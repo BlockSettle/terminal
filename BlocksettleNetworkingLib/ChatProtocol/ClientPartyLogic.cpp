@@ -1,5 +1,8 @@
+#include <QUuid>
+
 #include "ChatProtocol/ClientPartyLogic.h"
 #include "ChatProtocol/ClientParty.h"
+#include "ChatProtocol/ClientPrivateDMParty.h"
 
 #include <disable_warnings.h>
 #include <spdlog/logger.h>
@@ -56,6 +59,12 @@ namespace Chat
          return;
       }
 
+      // don't change status for other than private parties
+      if (PartyType::PRIVATE_DIRECT_MESSAGE != clientPartyPtr->partyType())
+      {
+         return;
+      }
+
       clientPartyPtr->setClientStatus(clientStatus);
    }
 
@@ -67,6 +76,47 @@ namespace Chat
    void ClientPartyLogic::handlePartyInserted(const Chat::PartyPtr& partyPtr)
    {
       clientDBServicePtr_->createNewParty(partyPtr->id());
+   }
+
+   void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName)
+   {
+      // check if party exist
+      IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
+
+      for (const auto& partyId : idPartyList)
+      {
+         ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(partyId);
+         if (PartyType::PRIVATE_DIRECT_MESSAGE != clientPartyPtr->partyType() && PartySubType::STANDARD != clientPartyPtr->partySubType())
+         {
+            continue;
+         }
+
+         ClientPrivateDMPartyPtr clientPrivateDMParty = std::dynamic_pointer_cast<ClientPrivateDMParty>(clientPartyPtr);
+
+         if (!clientPrivateDMParty)
+         {
+            emit error(ClientPartyLogicError::DynamicPointerCast, partyId);
+            continue;
+         }
+
+         Recipients recipients = clientPrivateDMParty->getRecipientsExceptMe(currentUserPtr->displayName());
+         for (const auto recipient : recipients)
+         {
+            if (recipient == remoteUserName)
+            {
+               // party already existed
+               return;
+            }
+         }
+
+         // party not exist, create new one
+         ClientPrivateDMPartyPtr newClientPrivateDMPartyPtr = 
+            std::make_shared<ClientPrivateDMParty>(QUuid::createUuid().toString().toStdString());
+
+         newClientPrivateDMPartyPtr->setDisplayName(remoteUserName);
+
+         clientPartyModelPtr_->insertParty(clientPartyPtr);
+      }
    }
 
 }

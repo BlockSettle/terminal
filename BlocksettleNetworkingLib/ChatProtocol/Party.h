@@ -13,7 +13,8 @@ namespace Chat
    {
    public:
       Party();
-      Party(const std::string& id, const PartyType& partyType, const PartySubType& partySubType, const PartyState& partyState);
+      Party(const PartyType& partyType, const PartySubType& partySubType = PartySubType::STANDARD, const PartyState& partyState = PartyState::UNINITIALIZED);
+      Party(const std::string& id, const PartyType& partyType, const PartySubType& partySubType = PartySubType::STANDARD, const PartyState& partyState = PartyState::UNINITIALIZED);
 
       virtual ~Party() {}
 
