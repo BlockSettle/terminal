@@ -20,9 +20,8 @@ namespace bs {
 
       class SettlementWallet : public PlainWallet
       {
-      private:
-         SettlementWallet(const std::shared_ptr<spdlog::logger> &logger);
       public:
+         SettlementWallet(const std::shared_ptr<spdlog::logger> &logger);
          ~SettlementWallet() override = default;
 
          SettlementWallet(const SettlementWallet&) = delete;
