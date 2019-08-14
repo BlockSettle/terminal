@@ -526,53 +526,6 @@ bs::SettlementMonitor::~SettlementMonitor() noexcept
    rtWallet_ = nullptr;
 }
 
-
-bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
-   , const std::shared_ptr<spdlog::logger>& logger)
-   : SettlementMonitor(rtWallet, armory, addr, logger)
-{}
-
-bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
-   , const std::shared_ptr<spdlog::logger>& logger)
-   : SettlementMonitor(rtWallet, armory, addrEntry, addr, logger)
-{}
-
-bs::SettlementMonitorQtSignals::~SettlementMonitorQtSignals() noexcept
-{
-   stop();
-}
-
-void bs::SettlementMonitorQtSignals::start()
-{
-   //armory_->addTarget(this);   // auto-added in constructor
-   checkNewEntries();
-}
-
-void bs::SettlementMonitorQtSignals::stop()
-{
-   armory_->removeTarget(this);
-}
-
-void bs::SettlementMonitorQtSignals::onPayInDetected(int confirmationsNumber, const BinaryData &txHash)
-{
-   emit payInDetected(confirmationsNumber, txHash);
-}
-
-void bs::SettlementMonitorQtSignals::onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy)
-{
-   emit payOutDetected(confirmationsNumber, signedBy);
-}
-
-void bs::SettlementMonitorQtSignals::onPayOutConfirmed(PayoutSigner::Type signedBy)
-{
-   emit payOutConfirmed(signedBy);
-}
-
-
 bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
