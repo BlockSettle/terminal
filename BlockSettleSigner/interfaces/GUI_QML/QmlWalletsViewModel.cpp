@@ -3,7 +3,6 @@
 #include <QTreeView>
 #include <QSortFilterProxyModel>
 #include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 
@@ -113,11 +112,6 @@ public:
    QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet, bool isWO
       , int row, QmlWalletNode *parent)
       : QmlWalletRootNode(vm, wallet->shortName(), wallet->description(), Type::Leaf, isWO, row, parent)
-      , wallet_(wallet)
-   { }
-   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::SettlementWallet> &wallet
-      , int row, QmlWalletNode *parent)
-      : QmlWalletRootNode(vm, "Settlement", "Settlement wallet", Type::Leaf, false, row, parent)
       , wallet_(wallet)
    { }
 
