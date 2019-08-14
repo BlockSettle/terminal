@@ -220,19 +220,14 @@ void SelectedTransactionInputs::SetTransactionSelection(size_t i, const bool isS
 
 bool SelectedTransactionInputs::SetUTXOSelection(const BinaryData &hash, uint32_t txOutIndex, const bool selected)
 {
-   size_t index = SIZE_MAX;
    for (size_t i = 0; i < GetTotalTransactionsCount(); i++) {
       const auto &utxo = GetTransaction(i);
       if ((utxo.getTxHash() == hash) && (txOutIndex == utxo.getTxOutIndex())) {
-         index = i;
-         break;
+         SetTransactionSelection(i, selected);
+         return true;
       }
    }
-   if (index == SIZE_MAX) {
-      return false;
-   }
-   SetTransactionSelection(index, selected);
-   return true;
+   return false;
 }
 
 void SelectedTransactionInputs::SetCPFPTransactionSelection(size_t i, const bool isSelected)
