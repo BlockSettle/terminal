@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.20.1",
-   "release_date": "13 Aug 2019",
+   "latest_version": "0.20.2",
+   "release_date": "14 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.2",
+         "previous_version": "0.20.1",
+         "release_date": "14 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Minor text fixes on shields",
+            "Update inputs sort order in Coin Control ( BST-2078 )"
+         ],
+         "bug_fixes": [
+            "Fix CC balance on start"
+         ],
+         "revision": "678bb5f5",
+         "common_revision": "7ed25556"
+      },
       {
          "version_string": "0.20.1",
          "previous_version": "0.20.0",
