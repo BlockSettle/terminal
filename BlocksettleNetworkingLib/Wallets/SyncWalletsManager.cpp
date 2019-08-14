@@ -86,7 +86,7 @@ void WalletsManager::syncWallet(const bs::sync::WalletInfo &info, const std::fun
    {
       try {
          const auto hdWallet = std::make_shared<hd::Wallet>(info.id, info.name,
-            info.description, signContainer_.get(), logger_);
+            info.description, info.watchOnly, signContainer_.get(), logger_);
          hdWallet->setWCT(this);
 
          if (hdWallet) {
