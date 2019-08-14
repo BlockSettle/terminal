@@ -1,7 +1,6 @@
 #include "HeadlessContainer.h"
 
 #include "ConnectionManager.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "SystemFileUtils.h"

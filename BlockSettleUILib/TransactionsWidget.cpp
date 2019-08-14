@@ -12,7 +12,6 @@
 #include "TransactionsViewModel.h"
 #include "TransactionDetailDialog.h"
 #include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 

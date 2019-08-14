@@ -3,7 +3,6 @@
 #include "ApplicationSettings.h"
 #include "FastLock.h"
 #include "SyncHDWallet.h"
-#include "SyncSettlementWallet.h"
 
 #include <QCoreApplication>
 #include <QDir>
