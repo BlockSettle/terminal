@@ -336,6 +336,10 @@ bool hd::Wallet::deleteRemotely()
 
 bool hd::Wallet::isPrimary() const
 {
+   if (isOffline()) {
+      return false;
+   }
+
    if ((getGroup(bs::hd::CoinType::BlockSettle_Auth) != nullptr)
       && (getGroup(getXBTGroupType()) != nullptr)) {
       return true;
