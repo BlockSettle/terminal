@@ -438,7 +438,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
    // sign reqs by wallets
    const auto &requestCbs = std::make_shared<std::vector<std::function<void()>>>();
 
-   for (const auto req : *parsedReqsForWallets) {
+   for (const auto &req : *parsedReqsForWallets) {
       const auto &walletCb = [this, fileName, jsCallback, requestCbs, walletId=req.first, reqs=req.second]() {
 
          const auto &cb = new bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>
