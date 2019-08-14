@@ -5,10 +5,10 @@
 #include "Wallets/SyncWallet.h"
 
 SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
-   , bool swTransactionsOnly, bool confirmedOnly
+   , bool isSegWitInputsOnly, bool confirmedOnly
    , const CbSelectionChanged &selectionChanged, const std::function<void()> &cbInputsReset)
    : QObject(nullptr), wallet_(wallet)
-   , swTransactionsOnly_(swTransactionsOnly)
+   , isSegWitInputsOnly_(isSegWitInputsOnly)
    , confirmedOnly_(confirmedOnly)
    , selectionChanged_(selectionChanged)
 {
@@ -19,7 +19,7 @@ SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::s
    , const std::vector<UTXO> &utxos
    , const CbSelectionChanged &selectionChanged)
    : QObject(nullptr), wallet_(wallet)
-   , swTransactionsOnly_(false)
+   , isSegWitInputsOnly_(false)
    , confirmedOnly_(false)
    , selectionChanged_(selectionChanged)
    , useAutoSel_(false)
@@ -42,7 +42,7 @@ void SelectedTransactionInputs::Reload(const std::vector<UTXO> &utxos)
 void SelectedTransactionInputs::SetFixedInputs(const std::vector<UTXO> &inputs)
 {
    cpfpInputs_.clear();
-   inputs_ = swTransactionsOnly_ ? filterNonSWInputs(inputs) : inputs;
+   inputs_ = isSegWitInputsOnly_ ? filterNonSWInputs(inputs) : inputs;
 
    resetSelection();
 }

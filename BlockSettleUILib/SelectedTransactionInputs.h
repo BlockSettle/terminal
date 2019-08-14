@@ -22,7 +22,7 @@ public:
 
 public:
    SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
-      , bool swTransactionsOnly, bool confirmedOnly = false
+      , bool isSegWitInputsOnly, bool confirmedOnly = false
       , const CbSelectionChanged &selectionChanged = nullptr
       , const std::function<void()> &cbInputsReset = nullptr);
    SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &
@@ -74,7 +74,7 @@ private slots:
 
 private:
    std::shared_ptr<bs::sync::Wallet>   wallet_;
-   const bool                    swTransactionsOnly_;
+   const bool                    isSegWitInputsOnly_;
    const bool                    confirmedOnly_;
    std::vector<UTXO>             inputs_;
    std::vector<UTXO>             cpfpInputs_;
