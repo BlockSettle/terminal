@@ -373,10 +373,6 @@ bs::core::wallet::TXSignRequest bs::SettlementMonitor::createPayoutTXRequest(con
    txReq.inputs.push_back(input);
    uint64_t fee = getEstimatedFeeFor(input, recvAddr, feePerByte, topBlock);
 
-   if (fee < bs::sync::wallet::kMinRelayFee) {
-      fee = bs::sync::wallet::kMinRelayFee;
-   }
-
    uint64_t value = input.getValue();
    if (value < fee) {
       value = 0;

@@ -936,6 +936,8 @@ bool CreateTransactionDialogAdvanced::HaveSignedImportedTransaction() const
 
 void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions)
 {
+   QPointer<CreateTransactionDialogAdvanced> thisPtr = this;
+
    ui_->pushButtonCreate->setEnabled(false);
    ui_->pushButtonCreate->setText(tr("Broadcast"));
 
@@ -979,7 +981,6 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
             }
 
-            QPointer<CreateTransactionDialogAdvanced> thisPtr = this;
             const auto &cbTXs = [thisPtr, tx, utxoHashes, txOutIndices](const std::vector<Tx> &txs) {
                if (!thisPtr) {
                   return;
@@ -1007,11 +1008,20 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                }
 
                if (wallet) {
-                  thisPtr->SetFixedWallet(wallet->walletId());
-                  auto selInputs = thisPtr->transactionData_->GetSelectedInputs();
-                  for (const auto &txHash : utxoHashes) {
-                     selInputs->SetUTXOSelection(txHash.first, txHash.second);
-                  }
+                  auto cbInputsReceived = [thisPtr, utxoHashes] {
+                     if (!thisPtr) {
+                        return;
+                     }
+                     auto selInputs = thisPtr->transactionData_->GetSelectedInputs();
+                     for (const auto &utxo : utxoHashes) {
+                        bool result = selInputs->SetUTXOSelection(utxo.first, utxo.second);
+                        if (!result) {
+                           SPDLOG_LOGGER_WARN(thisPtr->logger_, "selecting input failed for imported TX");
+                        }
+                     }
+                  };
+
+                  thisPtr->SetFixedWallet(wallet->walletId(), cbInputsReceived);
                } else {
                   thisPtr->showUnknownWalletWarning_ = true;
                   thisPtr->ui_->comboBoxWallets->clear();
@@ -1026,9 +1036,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                   if (wallet && (i == (tx.getNumTxOut() - 1)) && (wallet->containsAddress(addr))) {
                      thisPtr->SetFixedChangeAddress(QString::fromStdString(addr.display()));
                   }
-                  else {
-                     recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
-                  }
+                  recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
                   totalVal -= out.getValue();
                }
                if (!recipients.empty()) {
@@ -1039,18 +1047,27 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
             armory_->getTXsByHash(txHashSet, cbTXs);
          }
       }
-   } else {
-      SetFixedWallet(tx.walletId);
+   } else { // unsigned TX
+      auto cbInputsReceived = [thisPtr, inputs = tx.inputs] {
+         if (!thisPtr) {
+            return;
+         }
+         auto selInputs = thisPtr->transactionData_->GetSelectedInputs();
+         for (const auto &utxo : inputs) {
+            bool result = selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
+            if (!result) {
+               SPDLOG_LOGGER_WARN(thisPtr->logger_, "selecting input failed for imported TX");
+            }
+         }
+      };
+      SetFixedWallet(tx.walletId, cbInputsReceived);
+
       if (tx.change.value) {
          SetFixedChangeAddress(QString::fromStdString(tx.change.address.display()));
       }
       SetPredefinedFee(tx.fee);
       labelEstimatedFee()->setText(UiUtils::displayAmount(tx.fee));
       ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
-      auto selInputs = transactionData_->GetSelectedInputs();
-      for (const auto &utxo : tx.inputs) {
-         selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
-      }
 
       std::vector<std::tuple<bs::Address, double, bool>> recipients;
       for (const auto &recip : tx.recipients) {
