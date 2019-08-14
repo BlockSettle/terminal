@@ -33,35 +33,36 @@ namespace Chat
       loggerPtr_->debug("[ClientConnectionLogic::onDataReceived] Data: {}", ProtobufUtils::toJsonReadable(any));
 
       WelcomeResponse welcomeResponse;
-      if (pbStringToMessage<WelcomeResponse>(data, &welcomeResponse))
+      if (ProtobufUtils::pbStringToMessage<WelcomeResponse>(data, &welcomeResponse))
       {
          handleWelcomeResponse(welcomeResponse);
+         emit testProperlyConnected();
          return;
       }
 
       LogoutResponse logoutResponse;
-      if (pbStringToMessage<LogoutResponse>(data, &logoutResponse))
+      if (ProtobufUtils::pbStringToMessage<LogoutResponse>(data, &logoutResponse))
       {
          handleLogoutResponse(logoutResponse);
          return;
       }
 
       StatusChanged statusChanged;
-      if (pbStringToMessage<StatusChanged>(data, &statusChanged))
+      if (ProtobufUtils::pbStringToMessage<StatusChanged>(data, &statusChanged))
       {
          handleStatusChanged(statusChanged);
          return;
       }
 
       PartyMessageStateUpdate partyMessageStateUpdate;
-      if (pbStringToMessage<PartyMessageStateUpdate>(data, &partyMessageStateUpdate))
+      if (ProtobufUtils::pbStringToMessage<PartyMessageStateUpdate>(data, &partyMessageStateUpdate))
       {
          handlePartyMessageStateUpdate(partyMessageStateUpdate);
          return;
       }
 
       PartyMessagePacket partyMessagePacket;
-      if (pbStringToMessage<PartyMessagePacket>(data, &partyMessagePacket))
+      if (ProtobufUtils::pbStringToMessage<PartyMessagePacket>(data, &partyMessagePacket))
       {
          handlePartyMessagePacket(partyMessagePacket);
          return;
@@ -91,7 +92,7 @@ namespace Chat
    {
 
    }
-
+/*
    template<typename T>
    bool ClientConnectionLogic::pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg)
    {
@@ -111,7 +112,7 @@ namespace Chat
 
       return false;
    }
-
+*/
    void ClientConnectionLogic::handleWelcomeResponse(const google::protobuf::Message& msg)
    {
       WelcomeResponse welcomeResponse;
@@ -176,12 +177,9 @@ namespace Chat
       partyMessagePacket.set_nonce("");
       partyMessagePacket.set_party_message_state(partyMessageState);
 
-      clientDBServicePtr_->saveMessage(partyMessagePacket);
+      clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
 
       emit sendPacket(partyMessagePacket);
-
-      partyMessageState = Chat::PartyMessageState::SENT;
-      clientDBServicePtr_->updateMessageState(messageId, partyMessageState);
    }
 
    void ClientConnectionLogic::handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what)
@@ -195,7 +193,7 @@ namespace Chat
       partyMessagePacket.CopyFrom(msg);
 
       // save message as it is
-      clientDBServicePtr_->saveMessage(partyMessagePacket);
+      clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
 
       ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
@@ -235,6 +233,12 @@ namespace Chat
 
       emit sendPacket(partyMessageStateUpdate);
 
+      clientDBServicePtr_->updateMessageState(messageId, partyMessageState);
+   }
+
+   void ClientConnectionLogic::messagePacketSent(const std::string& messageId)
+   {
+      auto partyMessageState = Chat::PartyMessageState::SENT;
       clientDBServicePtr_->updateMessageState(messageId, partyMessageState);
    }
 

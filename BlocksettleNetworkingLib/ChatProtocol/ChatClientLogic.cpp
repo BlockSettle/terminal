@@ -1,5 +1,7 @@
 #include <QtDebug>
 
+#include <google/protobuf/any.pb.h>
+
 #include "ChatProtocol/ChatClientLogic.h"
 
 #include "ConnectionManager.h"
@@ -37,8 +39,6 @@ namespace Chat
       currentUserPtr_->setPublicKey(BinaryData(publicKey.data(), publicKey.size()));
       connect(currentUserPtr_.get(), &ChatUser::displayNameChanged, this, &ChatClientLogic::chatUserDisplayNameChanged);
 
-      userHasherPtr_ = std::make_shared<UserHasher>();
-
       setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr_, clientDBServicePtr_, this));
       connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::partyModelChanged, this, &ChatClientLogic::partyModelChanged);
 
@@ -49,9 +49,13 @@ namespace Chat
       connect(this, &ChatClientLogic::disconnected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDisconnected);
       connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error),
          clientConnectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
+      connect(this, &ChatClientLogic::messagePacketSent, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::messagePacketSent);
 
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::sendPacket, this, &ChatClientLogic::sendPacket);
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
+
+      // TODO: remove
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::testProperlyConnected, this, &ChatClientLogic::testProperlyConnected);
    }
 
    void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettingsPtr, const LoggerPtr& loggerPtr)
@@ -63,6 +67,8 @@ namespace Chat
          emit chatClientError(ChatClientLogicError::ConnectionAlreadyInitialized);
          return;
       }
+
+      userHasherPtr_ = std::make_shared<UserHasher>();
 
       connectionManagerPtr_ = connectionManagerPtr;
       applicationSettingsPtr_ = appSettingsPtr;
@@ -149,6 +155,19 @@ namespace Chat
       if (!connectionPtr_->send(packetString))
       {
          loggerPtr_->error("[ChatClientLogic::{}] Failed to send packet!", __func__);
+         return;
+      }
+
+      google::protobuf::Any any;
+      any.PackFrom(message);
+
+      if (any.Is<PartyMessagePacket>())
+      {
+         // update message state to SENT value
+         PartyMessagePacket partyMessagePacket;
+         any.UnpackTo(&partyMessagePacket);
+
+         emit messagePacketSent(partyMessagePacket.message_id());
       }
    }
 
@@ -199,6 +218,12 @@ namespace Chat
       }
 
       clientConnectionLogicPtr_->setMessageSeen(clientPartyPtr, messageId);
+   }
+
+   // TODO: remove
+   void ChatClientLogic::testProperlyConnected()
+   {
+      SendPartyMessage("Global", "test");
    }
 
 }

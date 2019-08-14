@@ -12,6 +12,7 @@ namespace Chat
       connect(this, &ClientDBService::Init, worker(), &ClientDBLogic::Init);
       connect(this, &ClientDBService::saveMessage, worker(), &ClientDBLogic::saveMessage);
       connect(this, &ClientDBService::updateMessageState, worker(), &ClientDBLogic::updateMessageState);
+      connect(this, &ClientDBService::createNewParty, worker(), &ClientDBLogic::createNewParty);
 
       ////////// RETURN SIGNALS //////////
       connect(worker(), &ClientDBLogic::initDone, this, &ClientDBService::initDone);

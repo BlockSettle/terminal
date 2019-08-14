@@ -17,6 +17,8 @@ namespace Chat
       connect(this, &ClientPartyLogic::error, this, &ClientPartyLogic::handleLocalErrors);
       connect(clientDBServicePtr.get(), &ClientDBService::messageInserted, clientPartyModelPtr_.get(), &ClientPartyModel::messageInserted);
       connect(clientDBServicePtr.get(), &ClientDBService::messageStateChanged, clientPartyModelPtr_.get(), &ClientPartyModel::messageStateChanged);
+
+      connect(clientPartyModelPtr_.get(), &ClientPartyModel::partyInserted, this, &ClientPartyLogic::handlePartyInserted);
    }
 
    void ClientPartyLogic::handlePartiesFromWelcomePacket(const google::protobuf::Message& msg)
@@ -60,6 +62,11 @@ namespace Chat
    void ClientPartyLogic::handleLocalErrors(const ClientPartyLogicError& errorCode, const std::string& what)
    {
       loggerPtr_->debug("[ClientPartyLogic::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
+   }
+
+   void ClientPartyLogic::handlePartyInserted(const Chat::PartyPtr& partyPtr)
+   {
+      clientDBServicePtr_->createNewParty(partyPtr->id());
    }
 
 }

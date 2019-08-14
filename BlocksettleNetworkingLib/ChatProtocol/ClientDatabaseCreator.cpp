@@ -28,7 +28,7 @@ namespace Chat
          {
             { // Table columns
                {
-                  {party::PARTY_TABLE_ID, QLatin1String("CHAR(16) PRIMARY KEY")},
+                  {party::PARTY_TABLE_ID, QLatin1String("INTEGER PRIMARY KEY AUTOINCREMENT")},
                   {party::PARTY_ID, QLatin1String("CHAR(32) NOT NULL")}
                }
             }
@@ -38,8 +38,8 @@ namespace Chat
          {
             {
                {
-                  {partyMessage::PARTY_MESSAGE_TABLE_ID, QLatin1String("CHAR(16) PRIMARY KEY")},
-                  {partyMessage::PARTY_TABLE_ID, QLatin1String("CHAR(16) NOT NULL")},
+                  {partyMessage::PARTY_MESSAGE_TABLE_ID, QLatin1String("INTEGER PRIMARY KEY AUTOINCREMENT")},
+                  {partyMessage::PARTY_TABLE_ID, QLatin1String("INTEGER NOT NULL")},
                   {partyMessage::MESSAGE_ID, QLatin1String("CHAR(32) NOT NULL")},
                   {partyMessage::TIMESTAMP, QLatin1String("INTEGER NOT NULL")},
                   {partyMessage::MESSAGE_STATE, QLatin1String("INTEGER NOT NULL")},

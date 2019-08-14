@@ -46,9 +46,9 @@ namespace Chat
 
    private slots:
       void handleLocalErrors(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
+      void handlePartyInserted(const Chat::PartyPtr& partyPtr);
 
    private:
-      void createNewParty();
       LoggerPtr loggerPtr_;
       ClientPartyModelPtr clientPartyModelPtr_;
       ClientDBServicePtr clientDBServicePtr_;

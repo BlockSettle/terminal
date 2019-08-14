@@ -63,11 +63,16 @@ namespace Chat
       void SendPartyMessage(const std::string& partyId, const std::string& data);
       void SetMessageSeen(const std::string& partyId, const std::string& messageId);
 
+      // TODO: remove
+      void testProperlyConnected();
+
    signals:
       void dataReceived(const std::string&);
       void connected(void);
       void disconnected(void);
       void error(DataConnectionListener::DataConnectionError);
+
+      void messagePacketSent(const std::string& messageId);
 
       void finished();
       void chatClientError(const Chat::ChatClientLogicError& errorCode, const std::string& what = "");

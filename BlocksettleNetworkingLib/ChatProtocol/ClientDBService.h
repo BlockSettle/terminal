@@ -27,8 +27,9 @@ namespace Chat
    signals:
       ////////// PROXY SIGNALS //////////
       void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings);
-      void saveMessage(const google::protobuf::Message& message);
+      void saveMessage(const std::string& data);
       void updateMessageState(const std::string& message_id, const int party_message_state);
+      void createNewParty(const std::string& partyId);
 
       ////////// RETURN SIGNALS //////////
       void initDone();

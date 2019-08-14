@@ -5,8 +5,7 @@
 
 #include "ChatProtocol/DatabaseExecutor.h"
 #include "ChatProtocol/ClientDatabaseCreator.h"
-
-#include <google/protobuf/message.h>
+#include "ChatProtocol/CryptManager.h"
 
 class QSqlDatabase;
 class ApplicationSettings;
@@ -22,8 +21,7 @@ namespace Chat
       GetTablePartyId,
       SaveMessage,
       UpdateMessageState,
-      GetPartyIdByMessageId,
-      GetPartyIdByMessageIdNotFound
+      PartyMessagePacketCasting
    };
 
    class ClientDBLogic : public DatabaseExecutor
@@ -36,7 +34,8 @@ namespace Chat
    public slots:
       void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings);
       void updateMessageState(const std::string& message_id, const int party_message_state);
-      void saveMessage(const google::protobuf::Message& message);
+      void saveMessage(const std::string& data);
+      void createNewParty(const std::string& partyId);
 
    signals:
       void initDone();
@@ -51,12 +50,13 @@ namespace Chat
 
    private:
       bool getPartyIdByMessageId(const std::string& messageId, std::string& partyId);
-      bool getPartyIdFromDB(const std::string& partyId, std::string& tablePartyId);
-      bool insertPartyId(const std::string& partyId, std::string& tablePartyId);
+      bool getPartyIdFromDB(const std::string& partyId, std::string& partyTableId);
+      bool insertPartyId(const std::string& partyId, std::string& partyTableId);
       QSqlDatabase getDb() const;
 
       ApplicationSettingsPtr     applicationSettingsPtr_;
       ClientDatabaseCreatorPtr   databaseCreatorPtr_;
+      CryptManagerPtr            cryptManagerPtr_;
    };
 
    using ClientDBLogicPtr = std::shared_ptr<ClientDBLogic>;

@@ -51,18 +51,23 @@ namespace Chat
       void onDisconnected(void);
       void onError(DataConnectionListener::DataConnectionError);
 
+      void messagePacketSent(const std::string& messageId);
+
    signals:
       void sendPacket(const google::protobuf::Message& message);
       void closeConnection();
       void userStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
       void error(const Chat::ClientConnectionLogicError& errorCode, const std::string& what);
 
+      // TODO: remove
+      void testProperlyConnected();
+
    private slots:
       void handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "");
 
    private:
-      template<typename T>
-      bool pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg);
+//      template<typename T>
+//      bool pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg);
 
       void handleWelcomeResponse(const google::protobuf::Message& msg);
       void handleLogoutResponse(const google::protobuf::Message& msg);
