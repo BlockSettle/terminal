@@ -10,11 +10,12 @@ namespace {
    const QString shieldCreateCCWallet = QObject::tr("Create %1 wallet");
    const QString shieldCreateXBTWallet = QObject::tr("Generate an Authentication Address");
 
-   const QString shieldCreateWallet = QObject::tr("To %1 in XBT related product, you require a wallet");
-   const QString shieldPromoteToPrimary = QObject::tr("To %1 in XBT related products, you’re required to have a wallet which" \
+   const QString shieldCreateWallet = QObject::tr("To %1 in XBT related products, you require a wallet");
+   const QString shieldPromoteToPrimary = QObject::tr("To %1 in XBT related products, you're required to have a wallet which" \
       " can contain the paths required for correctly sorting your tokens and holding" \
       " your Authentication Address(es)");
-   const QString shieldUnselectedTargetRequest = QObject::tr("In the Market Data window, please click on the product / security you wish to %1");
+   const QString shieldTradeUnselectedTargetRequest = QObject::tr("In the Market Data window, please click on the product / security you wish to trade");
+   const QString shieldDealingUnselectedTargetRequest = QObject::tr("In the Quote Request Blotter, please click on the product / security you wish to quote");
 
    // Button texts
    const QString shieldButtonPromote = QObject::tr("Promote");
@@ -134,9 +135,14 @@ void RFQShieldPage::showShieldCreateWallet()
    prepareShield(shieldCreateWallet.arg(tabType_), true, shieldButtonCreate);
 }
 
-void RFQShieldPage::showShieldSelectTarget()
+void RFQShieldPage::showShieldSelectTargetTrade()
 {
-   prepareShield(shieldUnselectedTargetRequest.arg(tabType_));
+   prepareShield(shieldTradeUnselectedTargetRequest);
+}
+
+void RFQShieldPage::showShieldSelectTargetDealing()
+{
+   prepareShield(shieldDealingUnselectedTargetRequest);
 }
 
 void RFQShieldPage::prepareShield(const QString& labelText,

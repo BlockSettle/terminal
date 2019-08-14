@@ -199,7 +199,7 @@ void RFQRequestWidget::onConnectedToCeler()
    marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::MDHeaderClicked,
                                           this, &RFQRequestWidget::onDisableSelectedInfo));
 
-   ui_->shieldPage->showShieldSelectTarget();
+   ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
 }
 
@@ -326,6 +326,6 @@ void RFQRequestWidget::onSellClicked(const MarkeSelectedInfo& selectedInfo)
 
 void RFQRequestWidget::onDisableSelectedInfo()
 {
-   ui_->shieldPage->showShieldSelectTarget();
+   ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
 }

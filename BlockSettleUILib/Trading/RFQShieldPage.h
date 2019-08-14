@@ -26,7 +26,8 @@ public:
    void showShieldReservedDealingParticipant();
    void showShieldPromoteToPrimaryWallet();
    void showShieldCreateWallet();
-   void showShieldSelectTarget();
+   void showShieldSelectTargetTrade();
+   void showShieldSelectTargetDealing();
    void showShieldCreateLeaf(const QString& product);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager);
