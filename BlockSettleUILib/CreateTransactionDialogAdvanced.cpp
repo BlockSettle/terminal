@@ -1039,18 +1039,28 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
             armory_->getTXsByHash(txHashSet, cbTXs);
          }
       }
-   } else {
-      SetFixedWallet(tx.walletId);
+   } else { // unsigned TX
+      QPointer<CreateTransactionDialogAdvanced> thisPtr = this;
+      auto cbInputsReceived = [this, thisPtr, inputs = tx.inputs] {
+         if (!thisPtr) {
+            return;
+         }
+         auto selInputs = transactionData_->GetSelectedInputs();
+         for (const auto &utxo : inputs) {
+            bool result = selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
+            if (!result) {
+               SPDLOG_LOGGER_WARN(logger_, "selecting input failed for imported TX");
+            }
+         }
+      };
+      SetFixedWallet(tx.walletId, cbInputsReceived);
+
       if (tx.change.value) {
          SetFixedChangeAddress(QString::fromStdString(tx.change.address.display()));
       }
       SetPredefinedFee(tx.fee);
       labelEstimatedFee()->setText(UiUtils::displayAmount(tx.fee));
       ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
-      auto selInputs = transactionData_->GetSelectedInputs();
-      for (const auto &utxo : tx.inputs) {
-         selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
-      }
 
       std::vector<std::tuple<bs::Address, double, bool>> recipients;
       for (const auto &recip : tx.recipients) {
