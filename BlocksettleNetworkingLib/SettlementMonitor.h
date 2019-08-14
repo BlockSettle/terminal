@@ -149,40 +149,6 @@ namespace bs {
       void SendPayOutNotification(const ClientClasses::LedgerEntry &);
    };
 
-   class SettlementMonitorQtSignals : public QObject, public SettlementMonitor
-   {
-   Q_OBJECT
-   public:
-      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-         , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<core::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &);
-      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-         , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<SettlementAddress> &
-         , const bs::Address &, const std::shared_ptr<spdlog::logger> &);
-      ~SettlementMonitorQtSignals() noexcept override;
-
-      SettlementMonitorQtSignals(const SettlementMonitorQtSignals&) = delete;
-      SettlementMonitorQtSignals& operator = (const SettlementMonitorQtSignals&) = delete;
-
-      SettlementMonitorQtSignals(SettlementMonitorQtSignals&&) = delete;
-      SettlementMonitorQtSignals& operator = (SettlementMonitorQtSignals&&) = delete;
-
-      void start();
-      void stop();
-
-   signals:
-      void payInDetected(int confirmationsNumber, const BinaryData &txHash);
-      void payOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy);
-      void payOutConfirmed(PayoutSigner::Type signedBy);
-
-   protected:
-      void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) override;
-      void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) override;
-      void onPayOutConfirmed(PayoutSigner::Type signedBy) override;
-   };
-
    class SettlementMonitorCb : public SettlementMonitor
    {
    public:
