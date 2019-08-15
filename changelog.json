@@ -1,7 +1,51 @@
 {
-   "latest_version": "0.20.0",
-   "release_date": "12 Aug 2019",
+   "latest_version": "0.20.3",
+   "release_date": "15 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.3",
+         "previous_version": "0.20.2",
+         "release_date": "15 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix signed TX import",
+            "Fix wrong WO flag if replaced with full wallet",
+            "Do not allow WO to be primary ( BST-2065 )"
+         ],
+         "bug_fixes": [],
+         "revision": "261669bb",
+         "common_revision": "4c085e14"
+      },
+      {
+         "version_string": "0.20.2",
+         "previous_version": "0.20.1",
+         "release_date": "14 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Minor text fixes on shields",
+            "Update inputs sort order in Coin Control ( BST-2078 )"
+         ],
+         "bug_fixes": [
+            "Fix CC balance on start"
+         ],
+         "revision": "678bb5f5",
+         "common_revision": "7ed25556"
+      },
+      {
+         "version_string": "0.20.1",
+         "previous_version": "0.20.0",
+         "release_date": "13 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix light GUI signer quit",
+            "Revert \"Add shield to dealing tab (#1243)\"",
+            "Update wallet file names",
+            "Propagate the CC info flag to signer UI ( BST-2088 )"
+         ],
+         "bug_fixes": [],
+         "revision": "ad74f3ce",
+         "common_revision": "64b4dac1"
+      },
       {
          "version_string": "0.20.0",
          "previous_version": "0.19.11",

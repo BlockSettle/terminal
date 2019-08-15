@@ -115,6 +115,7 @@ signals:
    void headlessPubKeyChanged(const QString &headlessPubKey) const;
    void terminalHandshakeFailed(const std::string &peerAddress);
    void signerPubKeyUpdated(const BinaryData &pubKey) const;
+   void ccInfoReceived(bool) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

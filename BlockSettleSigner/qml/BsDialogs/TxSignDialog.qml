@@ -156,7 +156,7 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("Transaction Weight")
+                text: qsTr("Virtual Tx Size")
             }
             CustomLabelValue {
                 text: txInfo.txVirtSize
