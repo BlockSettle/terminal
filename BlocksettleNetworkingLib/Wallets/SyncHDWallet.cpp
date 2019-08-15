@@ -14,18 +14,10 @@ if ((logger)) { \
 using namespace bs::sync;
 
 hd::Wallet::Wallet(const std::string &walletId, const std::string &name
-   , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger)
-   : walletId_(walletId), name_(name), desc_(desc)
-   , logger_(logger)
-{
-   netType_ = getNetworkType();
-}
-
-hd::Wallet::Wallet(const std::string &walletId, const std::string &name
-   , const std::string &desc, WalletSignerContainer *container
+   , const std::string &desc, bool isOffline, WalletSignerContainer *container
    , const std::shared_ptr<spdlog::logger> &logger)
    : walletId_(walletId), name_(name), desc_(desc)
-   , signContainer_(container), logger_(logger)
+   , signContainer_(container), logger_(logger), isOffline_(isOffline)
 {
    netType_ = getNetworkType();
 }
@@ -344,6 +336,10 @@ bool hd::Wallet::deleteRemotely()
 
 bool hd::Wallet::isPrimary() const
 {
+   if (isOffline()) {
+      return false;
+   }
+
    if ((getGroup(bs::hd::CoinType::BlockSettle_Auth) != nullptr)
       && (getGroup(getXBTGroupType()) != nullptr)) {
       return true;

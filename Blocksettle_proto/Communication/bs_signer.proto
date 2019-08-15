@@ -42,12 +42,9 @@ enum PacketType
 
    SyncSettingsRequestType = 25;
 
-   UpdateStatusType = 26;
-
+   UpdateStatusType   = 26;
    ImportWoWalletType = 27;
-
-   // Sent from headless signer when unknown terminal is trying to connect
-   TerminalHandshakeFailedType = 29;
+   TerminalEventType  = 29;
 
    DecryptWalletRequestType   = 30;
 }
@@ -372,7 +369,9 @@ message ImportWoWalletRequest
    bytes  content = 2;
 }
 
-message TerminalHandshakeFailed
+message TerminalEvent
 {
-   string peerAddress = 1;
+   string peer_address = 1;
+   bool   handshake_ok = 2;
+   bool   cc_info_received = 3;
 }

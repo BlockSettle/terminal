@@ -810,6 +810,9 @@ bool HeadlessContainerListener::onSyncCCNames(headless::RequestPacket &packet)
    headless::SyncCCNamesData request;
    if (!request.ParseFromString(packet.data())) {
       logger_->error("[{}] failed to parse request", __func__);
+      if (callbacks_) {
+         callbacks_->ccNamesReceived(false);
+      }
       return false;
    }
    logger_->debug("[{}] received {} CCs", __func__, request.ccnames_size());
@@ -817,6 +820,9 @@ bool HeadlessContainerListener::onSyncCCNames(headless::RequestPacket &packet)
    for (int i = 0; i < request.ccnames_size(); ++i) {
       const auto cc = request.ccnames(i);
       ccNames.emplace_back(std::move(cc));
+   }
+   if (callbacks_) {
+      callbacks_->ccNamesReceived(true);
    }
    walletsMgr_->setCCLeaves(ccNames);
    return true;

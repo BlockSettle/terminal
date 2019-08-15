@@ -47,15 +47,16 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
          return;
       }
 
-      ui_->pushButtonDeleteServer->setDisabled(ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty());
-      ui_->pushButtonEditServer->setDisabled(ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty());
+      bool isEmpty = ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty();
+      ui_->pushButtonDeleteServer->setDisabled(isEmpty);
+      ui_->pushButtonEditServer->setDisabled(isEmpty);
+      ui_->pushButtonConnect->setDisabled(isEmpty);
+      ui_->pushButtonSelectServer->setDisabled(isEmpty);
 
-      if (selected.indexes().first().row() < ArmoryServersProvider::kDefaultServersCount) {
+      if (!isEmpty && selected.indexes().first().row() < ArmoryServersProvider::kDefaultServersCount) {
          ui_->pushButtonDeleteServer->setDisabled(true);
          ui_->pushButtonEditServer->setDisabled(true);
       }
-      ui_->pushButtonConnect->setDisabled(ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty());
-      ui_->pushButtonSelectServer->setDisabled(ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty());
 
       resetForm();
 

@@ -17,7 +17,6 @@ namespace bs {
 }
 class ArmoryConnection;
 class SignContainer;
-class TransactionData;
 
 
 class DealerCCSettlementContainer : public bs::SettlementContainer
@@ -26,7 +25,7 @@ class DealerCCSettlementContainer : public bs::SettlementContainer
 public:
    DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
       , const std::string &quoteReqId, uint64_t lotSize, const bs::Address &genAddr, const std::string &ownRecvAddr
-      , const std::shared_ptr<TransactionData> &, const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<bs::sync::Wallet> &, const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &, bool autoSign);
    ~DealerCCSettlementContainer() override;
 
@@ -72,7 +71,6 @@ private:
    const bs::Address          genesisAddr_;
    const bool                 autoSign_;
    const bool                 delivery_;
-   std::shared_ptr<TransactionData>    transactionData_;
    std::shared_ptr<bs::sync::Wallet>   wallet_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;

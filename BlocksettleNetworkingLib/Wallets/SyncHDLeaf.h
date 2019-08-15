@@ -91,6 +91,8 @@ namespace bs {
 
             std::vector<std::string> setUnconfirmedTarget(void);
 
+            virtual void OnLeafRegistrationCompleted() {};
+
          protected:
             struct AddrPoolKey {
                bs::hd::Path  path;
@@ -227,6 +229,8 @@ namespace bs {
             void setArmory(const std::shared_ptr<ArmoryConnection> &) override;
 
             void restartValidation();
+
+            void OnLeafRegistrationCompleted() override { restartValidation();  }
          protected:
             void onZeroConfReceived(const std::vector<bs::TXEntry> &) override;
 

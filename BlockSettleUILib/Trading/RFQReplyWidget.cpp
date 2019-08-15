@@ -57,6 +57,7 @@ void RFQReplyWidget::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMa
    if (!walletsManager_ && walletsManager) {
       walletsManager_ = walletsManager;
       ui_->pageRFQReply->setWalletsManager(walletsManager_);
+      ui_->shieldPage->setWalletsManager(walletsManager_);
 
       if (signingContainer_) {
          auto primaryWallet = walletsManager_->getPrimaryWallet();
@@ -208,7 +209,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          try {
             const auto settlContainer = std::make_shared<DealerCCSettlementContainer>(logger_, order, quoteReqId
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
-               , sr.recipientAddress, sr.txData, signingContainer_, armory_, ui_->pageRFQReply->autoSign());
+               , sr.recipientAddress, sr.txData->getWallet(), signingContainer_, armory_, ui_->pageRFQReply->autoSign());
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
             connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
@@ -313,7 +314,7 @@ void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)
 
 void RFQReplyWidget::onConnectedToCeler()
 {
-   ui_->shieldPage->showShieldSelectTarget();
+   ui_->shieldPage->showShieldSelectTargetDealing();
    popShield();
    ui_->pageRFQReply->onCelerConnected();
 }
@@ -391,7 +392,7 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
    ui_->stackedWidget->setEnabled(true);
 
    if (productGroup.isEmpty() || request.product.empty()) {
-      ui_->shieldPage->showShieldSelectTarget();
+      ui_->shieldPage->showShieldSelectTargetDealing();
       popShield();
       return true;
    }
@@ -404,8 +405,13 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
 
    switch (userType) {
    case UserType::Market: {
-      if (group == GroupType::SpotXBT || group == GroupType::SpotFX) {
+      if (group == GroupType::SpotFX) {
          ui_->shieldPage->showShieldReservedTradingParticipant();
+         popShield();
+         return false;
+      }
+      else if (group == GroupType::SpotXBT) {
+         ui_->shieldPage->showShieldReservedDealingParticipant();
          popShield();
          return false;
       }

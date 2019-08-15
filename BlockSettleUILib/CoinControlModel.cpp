@@ -10,12 +10,23 @@
 #include "UiUtils.h"
 #include "Wallets/SyncWallet.h"
 
+
 class TransactionNode;
 class CoinControlNode
 {
 public:
-   CoinControlNode(const QString& name, const QString &comment, int row, CoinControlNode *parent = nullptr)
-      : name_(name)
+   // Default sort order is native, then nested and then CPFP root node
+   enum class Type
+   {
+      DoesNotMatter,
+      Native,
+      Nested,
+      CpfpRoot,
+   };
+
+   CoinControlNode(Type type, const QString& name, const QString &comment, int row, CoinControlNode *parent = nullptr)
+      : type_(type)
+      , name_(name)
       , comment_(comment)
       , row_(row)
       , parent_(parent)
@@ -75,7 +86,13 @@ public:
    }
 
    void sort(int column, Qt::SortOrder order);
+
+   static Type detectType(const bs::Address& address) {
+      return (address.getType() & ADDRESS_NESTED_MASK) ? Type::Nested : Type::Native;
+   }
+
 private:
+   const Type                 type_;
    QString                    name_;
    QString                    comment_;
    QList<CoinControlNode*>    childs_;
@@ -88,7 +105,7 @@ class TransactionNode : public CoinControlNode
 public:
    TransactionNode(bool isSelected, int transactionIndex, const UTXO& transaction, const std::shared_ptr<bs::sync::Wallet> &wallet
       , CoinControlNode *parent)
-      : CoinControlNode(QString::fromStdString(transaction.getTxHash().toHexStr(true)), QString(), parent->childrenCount(), parent)
+      : CoinControlNode(CoinControlNode::Type::DoesNotMatter, QString::fromStdString(transaction.getTxHash().toHexStr(true)), QString(), parent->childrenCount(), parent)
       , checkedState_(isSelected ? Qt::Checked : Qt::Unchecked)
       , transactionIndex_(transactionIndex)
    {
@@ -155,8 +172,8 @@ public:
 class AddressNode : public CoinControlNode
 {
 public:
-   AddressNode(const QString& name, const QString &comment, int row, CoinControlNode *parent = nullptr)
-      : CoinControlNode(name, comment, row, parent)
+   AddressNode(Type type, const QString& name, const QString &comment, int row, CoinControlNode *parent = nullptr)
+      : CoinControlNode(type, name, comment, row, parent)
       , utxoCount_(0)
    {}
    ~AddressNode() noexcept override = default;
@@ -272,7 +289,7 @@ void CoinControlNode::sort(int column, Qt::SortOrder order) {
       bool res = true;
       switch(column){
       case 0:
-         res = left->getName().compare(right->getName()) < 0;
+         res = (left->type_ != right->type_) ? (left->type_ < right->type_) : (left->getName().compare(right->getName()) < 0);
          break;
       case 1:
          res = left->getUtxoCount() < right->getUtxoCount();
@@ -296,7 +313,7 @@ CoinControlModel::CoinControlModel(const std::shared_ptr<SelectedTransactionInpu
    : QAbstractItemModel(parent)
    , wallet_(selectedInputs->GetWallet())
 {
-   root_ = std::make_shared<AddressNode>(tr("Unspent transactions"), QString(), 0);
+   root_ = std::make_shared<AddressNode>(CoinControlNode::Type::DoesNotMatter, tr("Unspent transactions"), QString(), 0);
    loadInputs(selectedInputs);
 }
 
@@ -471,7 +488,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
       AddressNode *addressNode = nullptr;
 
       if (addressIt == addressNodes_.end()) {
-         addressNode = new AddressNode(QString::fromStdString(address.display())
+         addressNode = new AddressNode(CoinControlNode::detectType(address), QString::fromStdString(address.display())
             , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(input.getRecipientScrAddr())), (int)addressNodes_.size(), root_.get());
          root_->appendChildrenNode(addressNode);
          addressNodes_.emplace(addrStr, addressNode);
@@ -483,7 +500,8 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
 
    const auto cpfpList = selectedInputs->GetCPFPInputs();
    if (!cpfpList.empty()) {
-      cpfp_ = std::make_shared<AddressNode>(tr("CPFP Eligible Outputs"), tr("Child-Pays-For-Parent transactions"), addressNodes_.size(), root_.get());
+      cpfp_ = std::make_shared<AddressNode>(CoinControlNode::Type::CpfpRoot, tr("CPFP Eligible Outputs"), tr("Child-Pays-For-Parent transactions")
+         , addressNodes_.size(), root_.get());
       root_->appendChildrenNode(cpfp_.get());
       for (size_t i = 0; i < cpfpList.size(); i++) {
          const auto &input = cpfpList[i];
@@ -494,7 +512,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
 
          if (itAddr == cpfpNodes_.end()) {
             const int row = cpfpNodes_.size();
-            addressNode = new AddressNode(QString::fromStdString(address.display())
+            addressNode = new AddressNode(CoinControlNode::Type::DoesNotMatter, QString::fromStdString(address.display())
                , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(input.getRecipientScrAddr())), row, cpfp_.get());
             cpfp_->appendChildrenNode(addressNode);
             cpfpNodes_[addrStr] = addressNode;

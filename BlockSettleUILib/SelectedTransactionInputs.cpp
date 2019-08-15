@@ -5,10 +5,10 @@
 #include "Wallets/SyncWallet.h"
 
 SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
-   , bool swTransactionsOnly, bool confirmedOnly
+   , bool isSegWitInputsOnly, bool confirmedOnly
    , const CbSelectionChanged &selectionChanged, const std::function<void()> &cbInputsReset)
    : QObject(nullptr), wallet_(wallet)
-   , swTransactionsOnly_(swTransactionsOnly)
+   , isSegWitInputsOnly_(isSegWitInputsOnly)
    , confirmedOnly_(confirmedOnly)
    , selectionChanged_(selectionChanged)
 {
@@ -19,7 +19,7 @@ SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::s
    , const std::vector<UTXO> &utxos
    , const CbSelectionChanged &selectionChanged)
    : QObject(nullptr), wallet_(wallet)
-   , swTransactionsOnly_(false)
+   , isSegWitInputsOnly_(false)
    , confirmedOnly_(false)
    , selectionChanged_(selectionChanged)
    , useAutoSel_(false)
@@ -42,7 +42,7 @@ void SelectedTransactionInputs::Reload(const std::vector<UTXO> &utxos)
 void SelectedTransactionInputs::SetFixedInputs(const std::vector<UTXO> &inputs)
 {
    cpfpInputs_.clear();
-   inputs_ = swTransactionsOnly_ ? filterNonSWInputs(inputs) : inputs;
+   inputs_ = isSegWitInputsOnly_ ? filterNonSWInputs(inputs) : inputs;
 
    resetSelection();
 }
@@ -220,19 +220,14 @@ void SelectedTransactionInputs::SetTransactionSelection(size_t i, const bool isS
 
 bool SelectedTransactionInputs::SetUTXOSelection(const BinaryData &hash, uint32_t txOutIndex, const bool selected)
 {
-   size_t index = SIZE_MAX;
    for (size_t i = 0; i < GetTotalTransactionsCount(); i++) {
       const auto &utxo = GetTransaction(i);
       if ((utxo.getTxHash() == hash) && (txOutIndex == utxo.getTxOutIndex())) {
-         index = i;
-         break;
+         SetTransactionSelection(i, selected);
+         return true;
       }
    }
-   if (index == SIZE_MAX) {
-      return false;
-   }
-   SetTransactionSelection(index, selected);
-   return true;
+   return false;
 }
 
 void SelectedTransactionInputs::SetCPFPTransactionSelection(size_t i, const bool isSelected)

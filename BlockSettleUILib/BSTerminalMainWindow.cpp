@@ -859,7 +859,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
          , tr("To trade through BlockSettle, you are required to have a wallet which"
             " supports the sub-wallets required to interact with the system. Each Terminal"
-            " may only have one Primary Wallet. Do you wish to promote your wallet?")
+            " may only have one Primary Wallet. Do you wish to promote '%1'?")
          .arg(QString::fromStdString(wallet->name())), this);
       if (qry.exec() == QDialog::Accepted) {
          //auth wallets are always ext only

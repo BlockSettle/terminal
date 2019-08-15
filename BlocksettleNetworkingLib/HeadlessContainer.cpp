@@ -1,7 +1,6 @@
 #include "HeadlessContainer.h"
 
 #include "ConnectionManager.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "SystemFileUtils.h"
@@ -966,6 +965,8 @@ void HeadlessContainer::ProcessSyncWalletInfo(unsigned int id, const std::string
          , walletInfo.description(), mapFrom(walletInfo.nettype()), walletInfo.watching_only() });
       if (walletInfo.watching_only()) {
          woWallets_.insert(walletInfo.id());
+      } else {
+         woWallets_.erase(walletInfo.id());
       }
    }
    itCb->second(result);

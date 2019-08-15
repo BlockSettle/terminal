@@ -51,6 +51,8 @@ public:
    virtual void xbtSpent(int64_t, bool) = 0;
    virtual void customDialog(const std::string &, const std::string &) = 0;
    virtual void terminalHandshakeFailed(const std::string &peerAddress) = 0;
+
+   virtual void ccNamesReceived(bool) = 0;
 };
 
 class HeadlessContainerListener : public ServerConnectionListener

@@ -10,7 +10,6 @@
 #include "TransactionData.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 
