@@ -1,3 +1,4 @@
+import argparse
 import os
 import platform
 import shutil
@@ -21,7 +22,7 @@ from build_scripts.websockets_settings    import WebsocketsSettings
 from build_scripts.zeromq_settings        import ZeroMQSettings
 from build_scripts.botan_settings         import BotanSettings
 
-def generate_project(build_mode):
+def generate_project(build_mode, cmake_flags):
    project_settings = Settings(build_mode)
 
    print('Checking 3rd party components')
@@ -95,6 +96,10 @@ def generate_project(build_mode):
    # to remove cmake 3.10 dev warnings
    command.append('-Wno-dev')
 
+   if cmake_flags != None:
+      for flag in cmake_flags.split():
+         command.append(flag)
+
    result = subprocess.call(command)
    if result == 0:
       print('Project generated to :' + build_dir)
@@ -104,15 +109,18 @@ def generate_project(build_mode):
       return 1
 
 if __name__ == '__main__':
-   build_mode = 'release'
+   input_parser = argparse.ArgumentParser()
+   input_parser.add_argument('build_mode',
+                             help='Build mode to be used by the project generator [ debug | release ]',
+                             nargs='?',
+                             action='store',
+                             default='release',
+                             choices=['debug', 'release'])
+   input_parser.add_argument('-cmake-flags',
+                             action='store',
+                             type=str,
+                             help='Additional CMake flags. Example: "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_FLAGS=-fuse-ld=gold"')
 
-   if len(sys.argv) != 1:
-      low_args = [ a.lower() for a in sys.argv[1:] ]
-      for a in low_args:
-         if a == 'release' or a == 'debug':
-            build_mode = a
-         else:
-            print('Undefined parameter: ', a)
-            sys.exit(1)
+   args = input_parser.parse_args()
 
-   sys.exit(generate_project(build_mode))
+   sys.exit(generate_project(args.build_mode, args.cmake_flags))
