@@ -631,7 +631,12 @@ bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walle
 
    request.recipients = recipients;
    request.RBF = isRBF;
-   request.fee = fee;
+
+   if (isRBF && (fee < wallet::kMinRelayFee)) {
+      request.fee = wallet::kMinRelayFee;
+   } else {
+      request.fee = fee;
+   }
 
    const uint64_t changeAmount = inputAmount - (spendAmount + fee);
    if (changeAmount) {
