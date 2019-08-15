@@ -38,6 +38,8 @@ namespace bs {
 
       namespace wallet {
 
+         constexpr uint64_t kMinRelayFee = 1000;
+
          struct Comment
          {
             enum Type {
