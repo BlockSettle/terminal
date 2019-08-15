@@ -813,7 +813,7 @@ void HeadlessContainer::extendAddressChain(
 }
 
 void HeadlessContainer::syncNewAddresses(const std::string &walletId
-   , const std::vector<std::pair<std::string, AddressEntryType>> &inData
+   , const std::vector<std::string> &inData
    , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb
    , bool persistent)
 {
@@ -821,8 +821,7 @@ void HeadlessContainer::syncNewAddresses(const std::string &walletId
    request.set_wallet_id(walletId);
    for (const auto &in : inData) {
       auto addrData = request.add_addresses();
-      addrData->set_index(in.first);
-      addrData->set_aet(in.second);
+      addrData->set_index(in);
    }
 
    headless::RequestPacket packet;
@@ -999,7 +998,8 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
          if (isWoRoot) {
             woWallets_.insert(leafInfo.id());
          }
-         group.leaves.push_back({ leafInfo.id(), leafInfo.index(), group.extOnly, leafInfo.extra_data() });
+         group.leaves.push_back({ leafInfo.id(), bs::hd::Path::fromString(leafInfo.path())
+            , group.extOnly, leafInfo.extra_data() });
       }
       result.groups.push_back(group);
    }

@@ -931,15 +931,16 @@ void BSTerminalMainWindow::onReceive()
          }
       }
    }
-   SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(walletsMgr_, selWalletId, this);
+   SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(
+      walletsMgr_, selWalletId, this);
    selectWalletDialog->exec();
 
    if (selectWalletDialog->result() == QDialog::Rejected) {
       return;
    }
 
-   NewAddressDialog* newAddressDialog = new NewAddressDialog(selectWalletDialog->getSelectedWallet()
-      , signContainer_, selectWalletDialog->isNestedSegWitAddress(), this);
+   NewAddressDialog* newAddressDialog = new NewAddressDialog(
+      selectWalletDialog->getSelectedWallet(), signContainer_, this);
    newAddressDialog->show();
 }
 

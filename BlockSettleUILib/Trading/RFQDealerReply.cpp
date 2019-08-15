@@ -1007,7 +1007,7 @@ void RFQDealerReply::showCoinControl()
    if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
       CoinControlDialog(ccCoinSel_, true, this).exec();
    } else {
-      CoinControlDialog(transactionData_->GetSelectedInputs(), true, this).exec();
+      CoinControlDialog(transactionData_->getSelectedInputs(), true, this).exec();
    }
 }
 

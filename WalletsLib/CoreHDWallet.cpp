@@ -157,26 +157,25 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
       return result;
    }
 
-   const bs::hd::Path path({ bs::hd::purpose, ct });
    switch (ct) {
    case bs::hd::CoinType::BlockSettle_Auth:
       result = std::make_shared<AuthGroup>(
-         walletPtr_, path, netType_, logger_);
+         walletPtr_, netType_, logger_);
       break;
 
    case bs::hd::CoinType::BlockSettle_CC:
       result = std::make_shared<CCGroup>(
-         walletPtr_, path, netType_, logger_);
+         walletPtr_, netType_, logger_);
       break;
 
    case bs::hd::CoinType::BlockSettle_Settlement:
       result = std::make_shared<SettlementGroup>(
-         walletPtr_, path, netType_, logger_);
+         walletPtr_, netType_, logger_);
       break;
 
    default:
       result = std::make_shared<Group>(
-         walletPtr_, path, netType_, extOnlyFlag_, logger_);
+         walletPtr_, ct, netType_, extOnlyFlag_, logger_);
       break;
    }
    addGroup(result);
@@ -201,7 +200,9 @@ std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
 void hd::Wallet::createStructure(unsigned lookup)
 {
    const auto groupXBT = createGroup(getXBTGroupType());
-   groupXBT->createLeaf(0u, lookup);
+   for (const auto &aet : groupXBT->getAddressTypeSet()) {
+      groupXBT->createLeaf(aet, 0u, lookup);
+   }
    writeGroupsToDB();
 }
 
@@ -332,23 +333,27 @@ void hd::Wallet::readFromDB()
          BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
 
          //sanity check on the key
-         if (keyBDR.getSize() == 0 || keyBDR.getPtr()[0] != BS_GROUP_PREFIX)
+         if (keyBDR.getSize() == 0 || keyBDR.getPtr()[0] != BS_GROUP_PREFIX) {
             break;
-
+         }
          BinaryRefReader brrVal(valueBDR);
          auto valsize = brrVal.get_var_int();
-         if (valsize != brrVal.getSizeRemaining())
-            throw WalletException("entry val size mismatch");
-         
+         if (valsize != brrVal.getSizeRemaining()) {
+            throw WalletException("entry val size mismatch: " + std::to_string(valsize)
+               + " vs " + std::to_string(brrVal.getSizeRemaining()));
+         }
          try {
             const auto group = hd::Group::deserialize(walletPtr_,
                keyBDR, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
                  , name_, desc_, netType_, logger_);
-            if (group != nullptr)
+            if (group != nullptr) {
                addGroup(group);
+               logger_->debug("[{}] group {} added", __func__, (uint32_t)group->index());
+            }
          }
-         catch (const std::exception&) 
-         {}
+         catch (const std::exception &e) {
+            logger_->error("[{}] error reading group: {}", __func__, e.what());
+         }
 
          dbIter.advance();
       }
@@ -360,8 +365,9 @@ void hd::Wallet::readFromDB()
 
 void hd::Wallet::writeGroupsToDB(bool force)
 {
-   for (const auto &group : groups_)
+   for (const auto &group : groups_) {
       group.second->commit(force);
+   }
 }
 
 BinaryDataRef hd::Wallet::getDataRefForKey(LMDB* db, const BinaryData& key) const
@@ -611,7 +617,7 @@ std::shared_ptr<hd::Leaf> hd::Wallet::createSettlementLeaf(
    if (addrPath.length() == 0)
       throw AssetException("failed to resolve path for settlement address");
 
-   auto leaf = settlGroup->getLeafByPath(addrPath.get(-1));
+   auto leaf = settlGroup->getLeafByPath(addrPath);
    if (leaf) {
       return leaf;
    }

@@ -77,7 +77,7 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
    const auto walletId = CryptoPRNG::generateRandom(8).toHexStr();
    const auto dummyWallet = std::make_shared<bs::sync::PlainWallet>(walletId
       , "temporary", "Dummy explorer wallet", nullptr, logger_);
-   dummyWallet->addAddress(inAddrVal, {}, AddressEntryType_Default, false);
+   dummyWallet->addAddress(inAddrVal, {}, false);
    const auto regIds = dummyWallet->registerWallet(armory_, true);
    for (const auto &regId : regIds) {
       dummyWallets_[regId] = dummyWallet;

@@ -384,8 +384,8 @@ void RFQTicketXBT::fillRecvAddresses()
 
 void RFQTicketXBT::showCoinControl()
 {
-   if (transactionData_ && transactionData_->GetSelectedInputs()) {
-      CoinControlDialog(transactionData_->GetSelectedInputs(), true, this).exec();
+   if (transactionData_ && transactionData_->getSelectedInputs()) {
+      CoinControlDialog(transactionData_->getSelectedInputs(), true, this).exec();
    }
 }
 

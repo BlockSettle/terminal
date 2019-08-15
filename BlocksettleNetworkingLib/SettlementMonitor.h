@@ -2,7 +2,7 @@
 #define __SETTLEMENT_MONITOR_H__
 
 #include "ArmoryConnection.h"
-#include "SettlementAddressEntry.h"
+#include "CoreWallet.h"
 
 #include <spdlog/spdlog.h>
 
@@ -65,15 +65,15 @@ namespace bs {
          , const std::shared_ptr<ArmoryConnection> &, std::function<void(Type)>);
    };
 
-   std::shared_ptr<SettlementAddress> entryToAddress(const std::shared_ptr<core::SettlementAddressEntry> &);
+//   std::shared_ptr<SettlementAddress> entryToAddress(const std::shared_ptr<core::SettlementAddressEntry> &);
 
    class SettlementMonitor : public ArmoryCallbackTarget
    {
    public:
-      SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+/*      SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<core::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &);
+         , const std::shared_ptr<spdlog::logger> &);*/
       SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<SettlementAddress> &, const bs::Address &
@@ -153,10 +153,10 @@ namespace bs {
    {
    Q_OBJECT
    public:
-      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
+/*      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<core::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &);
+         , const std::shared_ptr<spdlog::logger> &);*/
       SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<SettlementAddress> &
@@ -191,10 +191,10 @@ namespace bs {
       using onPayOutConfirmedCB = std::function<void (PayoutSigner::Type )>;
 
    public:
-      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
+/*      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<core::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &);
+         , const std::shared_ptr<spdlog::logger> &);*/
       SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<SettlementAddress> &, const bs::Address &
