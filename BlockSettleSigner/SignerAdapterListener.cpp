@@ -315,26 +315,26 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
    }
 
    std::set<BinaryData> usedAddrSet;
-   std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> parsedMap;
+   std::map<BinaryData, bs::hd::Path> parsedMap;
    for (const auto &utxo : txReq.inputs) {
       const auto addr = bs::Address::fromUTXO(utxo);
       usedAddrSet.insert(addr.id());
    }
    try {
-      typedef std::map<bs::hd::Path, std::pair<BinaryData, AddressEntryType>> pathMapping;
+      typedef std::map<bs::hd::Path, BinaryData> pathMapping;
       std::map<bs::hd::Path::Elem, pathMapping> mapByPath;
-      parsedMap = wallet->indexPathAndTypes(usedAddrSet);
+      parsedMap = wallet->indexPath(usedAddrSet);
 
       for (auto& parsedPair : parsedMap) {
-         auto& mapping = mapByPath[parsedPair.second.first.get(-2)];
-         mapping[parsedPair.second.first] = { parsedPair.first, parsedPair.second.second };
+         auto& mapping = mapByPath[parsedPair.second.get(-2)];
+         mapping[parsedPair.second] = parsedPair.first;
       }
 
       unsigned int nbNewAddrs = 0;
       for (auto& mapping : mapByPath) {
          for (auto& pathPair : mapping.second) {
             const auto resultPair = wallet->synchronizeUsedAddressChain(
-               pathPair.first.toString(), pathPair.second.second);
+               pathPair.first.toString());
             if (resultPair.second) {
                nbNewAddrs++;
             }
@@ -395,7 +395,7 @@ bool SignerAdapterListener::onSyncHDWallet(const std::string &data, bs::signer::
          for (const auto &leaf : group->getLeaves()) {
             auto leafEntry = groupEntry->add_leaves();
             leafEntry->set_id(leaf->walletId());
-            leafEntry->set_index(leaf->index());
+            leafEntry->set_path(leaf->path().toString());
 
             if (groupEntry->type() == bs::hd::CoinType::BlockSettle_Settlement) {
                const auto settlLeaf = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(leaf);
@@ -473,8 +473,7 @@ bool SignerAdapterListener::sendWoWallet(const std::shared_ptr<bs::core::hd::Wal
       for (const auto &leaf : group->getLeaves()) {
          auto leafEntry = groupEntry->add_leaves();
          leafEntry->set_id(leaf->walletId());
-         leafEntry->set_index(leaf->index());
-//         leafEntry->set_public_key(leaf->getPubKey().toBinStr());
+         leafEntry->set_path(leaf->path().toString());
          for (const auto &addr : leaf->getUsedAddressList()) {
             auto addrEntry = leafEntry->add_addresses();
             addrEntry->set_index(leaf->getAddressIndex(addr));
