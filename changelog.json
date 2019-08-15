@@ -1,7 +1,21 @@
 {
-   "latest_version": "0.20.2",
-   "release_date": "14 Aug 2019",
+   "latest_version": "0.20.3",
+   "release_date": "15 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.3",
+         "previous_version": "0.20.2",
+         "release_date": "15 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix signed TX import",
+            "Fix wrong WO flag if replaced with full wallet",
+            "Do not allow WO to be primary ( BST-2065 )"
+         ],
+         "bug_fixes": [],
+         "revision": "261669bb",
+         "common_revision": "4c085e14"
+      },
       {
          "version_string": "0.20.2",
          "previous_version": "0.20.1",
