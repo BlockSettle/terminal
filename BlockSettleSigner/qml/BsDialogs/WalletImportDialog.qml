@@ -140,7 +140,7 @@ CustomTitleDialogWindow {
 
                             CustomRadioButton {
                                 id: rbPaperBackup
-                                Layout.leftMargin: inputLabelsWidth
+                                Layout.leftMargin: rootKeyInput.inputLabelsWidth
                                 text: qsTr("Paper Backup")
                                 checked: true
                             }
