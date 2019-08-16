@@ -109,8 +109,7 @@ protected:
 
    void mineBlocks(unsigned);
    BinaryData sendTo(uint64_t, bs::Address&);
-   bs::Address getNewAddress(std::shared_ptr<bs::sync::Wallet> wltPtr,
-      bool ext, AddressEntryType aet = AddressEntryType_Default);
+   bs::Address getNewAddress(std::shared_ptr<bs::sync::Wallet> wltPtr, bool ext);
 
 protected:
    const double   initialAmount_ = 1.01;

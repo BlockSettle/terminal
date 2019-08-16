@@ -85,9 +85,8 @@ void TestSettlement::SetUp()
       auto grp = hdWallet->createGroup(hdWallet->getXBTGroupType());
       {
          auto lock = hdWallet->lockForEncryption(passphrase_);
-         leaf = grp->createLeaf(0);
-         addr = leaf->getNewExtAddress(
-            AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+         leaf = grp->createLeaf(AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH), 0);
+         addr = leaf->getNewExtAddress();
       }
 
       sendTo(amount, addr);
@@ -99,7 +98,7 @@ void TestSettlement::SetUp()
       authGrp->setSalt(CryptoPRNG::generateRandom(32));
       {
          auto lock = hdWallet->lockForEncryption(passphrase_);
-         authLeaf = authGrp->createLeaf(0);
+         authLeaf = authGrp->createLeaf(AddressEntryType_Default, 0);
          authAddr = authLeaf->getNewExtAddress();
       }
 

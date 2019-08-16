@@ -95,7 +95,7 @@ TEST(TestUi, RFQ_entry_CC_sell)
    const auto priWallet = env.walletsMgr()->getPrimaryWallet();
    const auto ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
    ASSERT_NE(ccGroup, nullptr);
-   const auto ccLeaf = ccGroup->createLeaf("BLK");
+   const auto ccLeaf = ccGroup->createLeaf(AddressEntryType_Default, "BLK");
    ASSERT_NE(ccLeaf, nullptr);
    const auto addr = ccLeaf->getNewExtAddress();
 
