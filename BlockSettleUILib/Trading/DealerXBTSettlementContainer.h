@@ -23,7 +23,6 @@ namespace bs {
 class ArmoryConnection;
 class SignContainer;
 class QuoteProvider;
-class TransactionData;
 
 
 class DealerXBTSettlementContainer : public bs::SettlementContainer

@@ -1,7 +1,6 @@
 #include "HeadlessContainer.h"
 
 #include "ConnectionManager.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "SystemFileUtils.h"
@@ -967,6 +966,8 @@ void HeadlessContainer::ProcessSyncWalletInfo(unsigned int id, const std::string
          , walletInfo.description(), mapFrom(walletInfo.nettype()), walletInfo.watching_only() });
       if (walletInfo.watching_only()) {
          woWallets_.insert(walletInfo.id());
+      } else {
+         woWallets_.erase(walletInfo.id());
       }
    }
    itCb->second(result);
@@ -1582,7 +1583,7 @@ bool LocalSigner::Start()
       bundleDir.cdUp();
       bundleDir.cdUp();
       bundleDir.cdUp();
-      const auto signerAppPath = bundleDir.absoluteFilePath(QLatin1String("blocksettle_signer"));
+      const auto signerAppPath = bundleDir.absoluteFilePath(QLatin1String("BlockSettle Signer.app/Contents/MacOS/BlockSettle Signer"));
 #else
       const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer");
 #endif

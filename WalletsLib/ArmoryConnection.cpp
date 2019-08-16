@@ -843,7 +843,7 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, const FloatCb &cb)
          }
       }
    };
-   bdv_->estimateFee(nbBlocks, FEE_STRAT_CONSERVATIVE, cbWrap);
+   bdv_->estimateFee(nbBlocks, FEE_STRAT_ECONOMICAL, cbWrap);
    return true;
 }
 
@@ -887,7 +887,7 @@ bool ArmoryConnection::getFeeSchedule(const FloatMapCb &cb)
             , e.what());
       }
    };
-   bdv_->getFeeSchedule(FEE_STRAT_CONSERVATIVE, cbWrap);
+   bdv_->getFeeSchedule(FEE_STRAT_ECONOMICAL, cbWrap);
    return true;
 }
 

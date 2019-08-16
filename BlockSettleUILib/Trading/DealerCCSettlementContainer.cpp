@@ -1,16 +1,17 @@
 #include "DealerCCSettlementContainer.h"
+
 #include <spdlog/spdlog.h>
+
+#include "BSErrorCodeStrings.h"
 #include "CheckRecipSigner.h"
 #include "SignContainer.h"
-#include "TransactionData.h"
-#include "Wallets/SyncWallet.h"
-#include "BSErrorCodeStrings.h"
 #include "UiUtils.h"
+#include "Wallets/SyncWallet.h"
 
 DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
       , const bs::network::Order &order, const std::string &quoteReqId, uint64_t lotSize
       , const bs::Address &genAddr, const std::string &ownRecvAddr
-      , const std::shared_ptr<TransactionData> &txData, const std::shared_ptr<SignContainer> &container
+      , const std::shared_ptr<bs::sync::Wallet> &wallet, const std::shared_ptr<SignContainer> &container
       , const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
    : bs::SettlementContainer()
    , logger_(logger)
@@ -20,8 +21,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , genesisAddr_(genAddr)
    , autoSign_(autoSign)
    , delivery_(order.side == bs::network::Side::Sell)
-   , transactionData_(txData)
-   , wallet_(txData->getSigningWallet())
+   , wallet_(wallet)
    , signingContainer_(container)
    , txReqData_(BinaryData::CreateFromHex(order.reqTransaction))
    , ownRecvAddr_(ownRecvAddr)

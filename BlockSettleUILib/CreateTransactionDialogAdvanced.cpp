@@ -23,7 +23,6 @@
 
 #include <stdexcept>
 
-//static const size_t kP2WPKHOutputSize = 35;
 static const float kDustFeePerByte = 3.0;
 
 
@@ -155,19 +154,12 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
          originalFee_ = origFee;
          originalFeePerByte_ = feePerByte;
 
-         // CPFP has no enforced rules for fees. We use the following
-         // algorithm for determining the fee/byte. If the current 2-block
-         // fee is less than the fee used by the parent, stick to the current
-         // 2-block fee. If not, add the difference to the 2-block fee and
-         // use the result for the child fee. Simple but it should work. A
-         // little tinkering may be worthwhile later.
-         const float feeDiff = fee - originalFee_;
-         float newFPB = fee;
-         if (std::signbit(feeDiff) == false) { // Is the diff positive?
-            newFPB += feeDiff;
+         addedFee_ = (fee - feePerByte) * txSize;
+         if (addedFee_ < 0) {
+            addedFee_ = 0;
          }
 
-         advisedFeePerByte_ = newFPB;
+         advisedFeePerByte_ = feePerByte + addedFee_ / txSize;
          onTransactionUpdated();
          populateFeeList();
          SetInputs(selInputs->GetSelectedTransactions());
@@ -588,6 +580,16 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
       ui_->spinBoxFeesManualTotal->setValue(summary.txVirtSize);
    }
 
+   if (addedFee_ > 0) {
+      const float newTotalFee = transactionData_->feePerByte() * summary.txVirtSize + addedFee_;
+      const float newFeePerByte = newTotalFee / summary.txVirtSize;
+      if (!qFuzzyCompare(newTotalFee, advisedFeePerByte_) || !qFuzzyCompare(newFeePerByte, advisedFeePerByte_)) {
+         QMetaObject::invokeMethod(this, [this, newTotalFee, newFeePerByte] {
+            setAdvisedFees(newTotalFee, newFeePerByte);
+         });
+      }
+   }
+
    QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateCreateButton
       , Qt::QueuedConnection);
 }
@@ -636,7 +638,7 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
 
    const double curBalance = transactionData_->GetTransactionSummary().availableBalance;
    if (curBalance < (spendBalance + totalFee)) {
-      BSMessageBox lowInputs(BSMessageBox::question, tr("Not enough inputs balance")
+      BSMessageBox lowInputs(BSMessageBox::question, tr("Insufficient Input Amount")
          , tr("Currently your inputs don't allow to spend the balance added to output[s]. Delete [some of] them?"));
       if (lowInputs.exec() == QDialog::Accepted) {
          while (outputsModel_->rowCount({})) {
@@ -811,6 +813,26 @@ void CreateTransactionDialogAdvanced::AddManualFeeEntries(float feePerByte, floa
    ui_->comboBoxFeeSuggestions->addItem(tr("Total Network Fee"));
 }
 
+void CreateTransactionDialogAdvanced::setAdvisedFees(float totalFee, float feePerByte)
+{
+   advisedTotalFee_ = totalFee;
+   advisedFeePerByte_ = feePerByte;
+
+   if (advisedFeePerByte_ > 0) {
+      const auto index = ui_->comboBoxFeeSuggestions->count() - 2;
+      if (qFuzzyIsNull(advisedTotalFee_)) {
+         ui_->comboBoxFeeSuggestions->setCurrentIndex(index);
+         feeSelectionChanged(index);
+      }
+   }
+
+   if (advisedTotalFee_ > 0) {
+      const auto index = ui_->comboBoxFeeSuggestions->count() - 1;
+      ui_->comboBoxFeeSuggestions->setCurrentIndex(index);
+      feeSelectionChanged(index);
+   }
+}
+
 void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsigned int, float> &feeValues)
 {
    if (feeChangeDisabled_) {
@@ -829,11 +851,8 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    AddManualFeeEntries(manualFeePerByte
       , (minTotalFee_ > 0) ? minTotalFee_ : transactionData_->totalFee());
 
-   if (advisedFeePerByte_ > 0) {
-      const auto index = ui_->comboBoxFeeSuggestions->count() - 2;
-      ui_->comboBoxFeeSuggestions->setCurrentIndex(index);
-      feeSelectionChanged(index);
-   }
+   setAdvisedFees(advisedTotalFee_, advisedFeePerByte_);
+
    if (feeValues.empty()) {
       feeSelectionChanged(0);
    }
@@ -917,6 +936,8 @@ bool CreateTransactionDialogAdvanced::HaveSignedImportedTransaction() const
 
 void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions)
 {
+   QPointer<CreateTransactionDialogAdvanced> thisPtr = this;
+
    ui_->pushButtonCreate->setEnabled(false);
    ui_->pushButtonCreate->setText(tr("Broadcast"));
 
@@ -960,7 +981,6 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
             }
 
-            QPointer<CreateTransactionDialogAdvanced> thisPtr = this;
             const auto &cbTXs = [thisPtr, tx, utxoHashes, txOutIndices](const std::vector<Tx> &txs) {
                if (!thisPtr) {
                   return;
@@ -988,11 +1008,20 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                }
 
                if (wallet) {
-                  thisPtr->SetFixedWallet(wallet->walletId());
-                  auto selInputs = thisPtr->transactionData_->GetSelectedInputs();
-                  for (const auto &txHash : utxoHashes) {
-                     selInputs->SetUTXOSelection(txHash.first, txHash.second);
-                  }
+                  auto cbInputsReceived = [thisPtr, utxoHashes] {
+                     if (!thisPtr) {
+                        return;
+                     }
+                     auto selInputs = thisPtr->transactionData_->GetSelectedInputs();
+                     for (const auto &utxo : utxoHashes) {
+                        bool result = selInputs->SetUTXOSelection(utxo.first, utxo.second);
+                        if (!result) {
+                           SPDLOG_LOGGER_WARN(thisPtr->logger_, "selecting input failed for imported TX");
+                        }
+                     }
+                  };
+
+                  thisPtr->SetFixedWallet(wallet->walletId(), cbInputsReceived);
                } else {
                   thisPtr->showUnknownWalletWarning_ = true;
                   thisPtr->ui_->comboBoxWallets->clear();
@@ -1007,9 +1036,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                   if (wallet && (i == (tx.getNumTxOut() - 1)) && (wallet->containsAddress(addr))) {
                      thisPtr->SetFixedChangeAddress(QString::fromStdString(addr.display()));
                   }
-                  else {
-                     recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
-                  }
+                  recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
                   totalVal -= out.getValue();
                }
                if (!recipients.empty()) {
@@ -1020,18 +1047,27 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
             armory_->getTXsByHash(txHashSet, cbTXs);
          }
       }
-   } else {
-      SetFixedWallet(tx.walletId);
+   } else { // unsigned TX
+      auto cbInputsReceived = [thisPtr, inputs = tx.inputs] {
+         if (!thisPtr) {
+            return;
+         }
+         auto selInputs = thisPtr->transactionData_->GetSelectedInputs();
+         for (const auto &utxo : inputs) {
+            bool result = selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
+            if (!result) {
+               SPDLOG_LOGGER_WARN(thisPtr->logger_, "selecting input failed for imported TX");
+            }
+         }
+      };
+      SetFixedWallet(tx.walletId, cbInputsReceived);
+
       if (tx.change.value) {
          SetFixedChangeAddress(QString::fromStdString(tx.change.address.display()));
       }
       SetPredefinedFee(tx.fee);
       labelEstimatedFee()->setText(UiUtils::displayAmount(tx.fee));
       ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
-      auto selInputs = transactionData_->GetSelectedInputs();
-      for (const auto &utxo : tx.inputs) {
-         selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
-      }
 
       std::vector<std::tuple<bs::Address, double, bool>> recipients;
       for (const auto &recip : tx.recipients) {
