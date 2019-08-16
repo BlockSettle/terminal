@@ -8,7 +8,6 @@
 #include "ChatProtocol/ClientConnectionLogic.h"
 #include "ChatProtocol/ClientPartyLogic.h"
 #include "ChatProtocol/ClientPartyModel.h"
-#include "ChatProtocol/ClientPrivateDMParty.h"
 #include "ProtobufUtils.h"
 
 #include <disable_warnings.h>
@@ -263,31 +262,31 @@ namespace Chat
          return;
       }
 
-      ClientPrivateDMPartyPtr clientPrivateDMPartyPtr = std::dynamic_pointer_cast<ClientPrivateDMParty>(partyPtr);
+      ClientPartyPtr clientPartyPtr = std::dynamic_pointer_cast<ClientParty>(partyPtr);
 
-      if (nullptr == clientPrivateDMPartyPtr)
+      if (nullptr == clientPartyPtr)
       {
          return;
       }
 
       // update party state
-      clientPrivateDMPartyPtr->setPartyState(PartyState::REQUESTED);
+      clientPartyPtr->setPartyState(PartyState::REQUESTED);
 
-      PrivatePartyRequest privatePartRequest;
-      PartyPacket *partyPacket = privatePartRequest.mutable_party_packet();
+      PrivatePartyRequest privatePartyRequest;
+      PartyPacket *partyPacket = privatePartyRequest.mutable_party_packet();
       partyPacket->set_party_id(partyId);
-      partyPacket->set_display_name(clientPrivateDMPartyPtr->getSecondRecipient(currentUserPtr()->displayName()));
-      partyPacket->set_party_type(clientPrivateDMPartyPtr->partyType());
-      partyPacket->set_party_subtype(clientPrivateDMPartyPtr->partySubType());
-      partyPacket->set_party_state(clientPrivateDMPartyPtr->partyState());
+      partyPacket->set_display_name(clientPartyPtr->getSecondRecipient(currentUserPtr()->displayName()));
+      partyPacket->set_party_type(clientPartyPtr->partyType());
+      partyPacket->set_party_subtype(clientPartyPtr->partySubType());
+      partyPacket->set_party_state(clientPartyPtr->partyState());
 
-      for (const std::string& recipient : clientPrivateDMPartyPtr->getRecipientsExceptMe(currentUserPtr()->displayName()))
+      for (const std::string& recipient : clientPartyPtr->recipients())
       {
-         PartyRecipient* partyRecipient = privatePartRequest.add_recipient();
+         PartyRecipient* partyRecipient = privatePartyRequest.add_recipient();
          partyRecipient->set_user_name(recipient);
       }
 
-      emit sendPacket(privatePartRequest);
+      emit sendPacket(privatePartyRequest);
    }
 
 }

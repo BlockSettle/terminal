@@ -6,7 +6,7 @@ namespace Chat
    ClientParty::ClientParty(
       const std::string& id, const PartyType& partyType, const PartySubType& partySubType, 
       const PartyState& partyState, QObject* parent)
-      : QObject(parent), Party(id, partyType, partySubType, partyState), clientStatus_(ClientStatus::OFFLINE)
+      : QObject(parent), PrivateDirectMessageParty(id, partyType, partySubType, partyState), clientStatus_(ClientStatus::OFFLINE)
    {
    }
 
