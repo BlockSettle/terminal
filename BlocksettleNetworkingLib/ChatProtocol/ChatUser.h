@@ -41,6 +41,4 @@ namespace Chat
 
 }
 
-Q_DECLARE_METATYPE(Chat::ChatUserPtr)
-
 #endif // ChatUser_h__

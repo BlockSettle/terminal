@@ -33,7 +33,7 @@ namespace Chat
       ClientDBLogic(QObject* parent = nullptr);
 
    public slots:
-      void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, const ChatUserPtr& chatUserPtr);
+      void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::ChatUserPtr& chatUserPtr);
       void updateMessageState(const std::string& message_id, const int party_message_state);
       void saveMessage(const std::string& data);
       void createNewParty(const std::string& partyId);

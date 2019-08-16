@@ -5,7 +5,6 @@ namespace Chat
 
    ChatUser::ChatUser(QObject *parent) : QObject(parent)
    {
-      qRegisterMetaType<Chat::ChatUserPtr>();
    }
 
    std::string ChatUser::displayName() const

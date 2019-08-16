@@ -80,7 +80,7 @@ namespace Chat
 
    void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName)
    {
-      // check if party exist
+      // check if private party exist
       IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
 
       for (const auto& partyId : idPartyList)
@@ -105,6 +105,7 @@ namespace Chat
             if (recipient == remoteUserName)
             {
                // party already existed
+               emit privatePartyAlreadyExist(clientPrivateDMParty->id());
                return;
             }
          }
@@ -114,8 +115,19 @@ namespace Chat
             std::make_shared<ClientPrivateDMParty>(QUuid::createUuid().toString().toStdString());
 
          newClientPrivateDMPartyPtr->setDisplayName(remoteUserName);
+         // setup recipients for new private party
+         recipients.clear();
+         recipients.push_back(currentUserPtr->displayName());
+         recipients.push_back(remoteUserName);
+         newClientPrivateDMPartyPtr->setRecipients(recipients);
 
+         // update model
          clientPartyModelPtr_->insertParty(clientPartyPtr);
+
+         // save party in db
+         clientDBServicePtr_->createNewParty(newClientPrivateDMPartyPtr->id());
+
+         emit privatePartyCreated(newClientPrivateDMPartyPtr->id());
       }
    }
 

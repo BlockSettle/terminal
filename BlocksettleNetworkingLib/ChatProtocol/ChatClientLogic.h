@@ -109,5 +109,6 @@ namespace Chat
 Q_DECLARE_METATYPE(DataConnectionListener::DataConnectionError)
 Q_DECLARE_METATYPE(Chat::ChatClientLogicError)
 Q_DECLARE_METATYPE(Chat::ClientPartyLogicPtr)
+Q_DECLARE_METATYPE(Chat::ChatUserPtr);
 
 #endif // ChatClientLogic_h__
