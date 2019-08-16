@@ -81,7 +81,7 @@ public:
       const std::set<BinaryData>& addrSet, std::function<void(bs::sync::SyncState)>) override {}
    void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
       const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override {}
-   void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
+   void syncNewAddresses(const std::string &walletId, const std::vector<std::string> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) override {}
 
    bool isWalletOffline(const std::string &id) const override { return (woWallets_.find(id) != woWallets_.end()); }
