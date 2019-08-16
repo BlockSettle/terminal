@@ -246,15 +246,15 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
             auto lock = newWallet->lockForEncryption(passwordData->password);
             for (const auto &leaf : group->getLeaves()) {
                try {
-                  auto newLeaf = newGroup->createLeaf(leaf->path());
+                  auto newLeaf = newGroup->createLeaf(leaf->index());
                   if (!newLeaf) {
                      throw std::runtime_error("uncreatable");
                   }
                   for (const auto &addr : leaf->getExtAddressList()) {
-                     newLeaf->getNewExtAddress();
+                     newLeaf->getNewExtAddress(addr.getType());
                   }
                   for (const auto &addr : leaf->getIntAddressList()) {
-                     newLeaf->getNewIntAddress();
+                     newLeaf->getNewIntAddress(addr.getType());
                   }
                   logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
                      , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
@@ -599,7 +599,7 @@ std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sy
       for (const auto &groupEntry : wo.groups) {
          auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type), false);
          for (const auto &leafEntry : groupEntry.leaves) {
-            group->createLeaf(leafEntry.path, leafEntry.id);
+            group->createLeaf(leafEntry.index, leafEntry.id);
          }
       }
       return result;
