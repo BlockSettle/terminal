@@ -12,7 +12,7 @@ namespace Chat
 {
    using Recipients = std::vector<std::string>;
 
-   class PrivateDirectMessageParty : public virtual Party
+   class PrivateDirectMessageParty : public Party
    {
    public:
       PrivateDirectMessageParty(

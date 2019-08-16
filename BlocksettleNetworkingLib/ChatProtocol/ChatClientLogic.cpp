@@ -234,6 +234,7 @@ namespace Chat
    void ChatClientLogic::testProperlyConnected()
    {
       SendPartyMessage("Global", "test");
+      RequestPrivateParty("test");
    }
 
    void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName)

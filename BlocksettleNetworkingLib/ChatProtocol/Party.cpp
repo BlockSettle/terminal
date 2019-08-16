@@ -8,7 +8,7 @@ namespace Chat
    Party::Party()
    {
       // default states
-      std::string uuid = QUuid::createUuid().toString().toStdString();
+      std::string uuid = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
       setId(uuid);
       setPartyType(PartyType::GLOBAL);
       setPartySubType(PartySubType::STANDARD);
@@ -16,7 +16,7 @@ namespace Chat
 
    Party::Party(const PartyType& partyType, const PartySubType& partySubType, const PartyState& partyState)
    {
-      setId(QUuid::createUuid().toString().toStdString());
+      setId(QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString());
       setPartyType(partyType);
       setPartySubType(partySubType);
       setPartyState(partyState);
