@@ -14,10 +14,19 @@ namespace Chat
       setPartySubType(PartySubType::STANDARD);
    }
 
-   Party::Party(const std::string& id, const PartyType& partyType, const PartySubType& partySubType)
+   Party::Party(const PartyType& partyType, const PartySubType& partySubType, const PartyState& partyState)
+   {
+      setId(QUuid::createUuid().toString().toStdString());
+      setPartyType(partyType);
+      setPartySubType(partySubType);
+      setPartyState(partyState);
+   }
+
+   Party::Party(const std::string& id, const PartyType& partyType, const PartySubType& partySubType, const PartyState& partyState)
    {
       setId(id);
       setPartyType(partyType);
       setPartySubType(partySubType);
+      setPartyState(partyState);
    }
 }

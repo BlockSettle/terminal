@@ -2,8 +2,15 @@
 
 namespace Chat
 {
-   PrivateDirectMessageParty::PrivateDirectMessageParty(const std::string& id, const PartyType& partyType, const PartySubType& partySubType)
-      : Party(id, partyType, partySubType)
+
+   PrivateDirectMessageParty::PrivateDirectMessageParty(const PartyType& partyType, const PartySubType& partySubType, const PartyState& partyState)
+      : Party(partyType, partySubType, partyState)
+   {
+
+   }
+
+   PrivateDirectMessageParty::PrivateDirectMessageParty(const std::string& id, const PartyType& partyType, const PartySubType& partySubType, const PartyState& partyState)
+      : Party(id, partyType, partySubType, partyState)
    {
 
    }
@@ -39,4 +46,21 @@ namespace Chat
 
       return found;
    }
+
+   Recipients PrivateDirectMessageParty::getRecipientsExceptMe(const std::string& me)
+   {
+      Recipients recipients;
+      for (const auto& recipientUserName : recipients_)
+      {
+         if (recipientUserName == me)
+         {
+            continue;
+         }
+
+         recipients.push_back(recipientUserName);
+      }
+
+      return recipients;
+   }
+
 }

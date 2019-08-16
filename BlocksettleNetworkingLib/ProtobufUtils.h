@@ -2,6 +2,7 @@
 #define PROTOBUF_UTILS_H
 
 #include <google/protobuf/message.h>
+#include <google/protobuf/any.pb.h>
 
 #include <disable_warnings.h>
 #include <spdlog/logger.h>
@@ -14,6 +15,27 @@ public:
    static std::string toJsonReadable(const google::protobuf::Message &msg);
    static std::string toJsonCompact(const google::protobuf::Message &msg);
    static std::string pbMessageToString(const google::protobuf::Message& msg);
+   template<typename T>
+   static bool pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg);
 };
+
+template<typename T>
+bool ProtobufUtils::pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg)
+{
+   google::protobuf::Any any;
+   any.ParseFromString(packetString);
+
+   if (any.Is<T>())
+   {
+      if (!any.UnpackTo(msg))
+      {
+         return false;
+      }
+
+      return true;
+   }
+
+   return false;
+}
 
 #endif

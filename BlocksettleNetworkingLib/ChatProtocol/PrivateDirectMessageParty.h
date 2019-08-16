@@ -10,16 +10,28 @@ namespace Chat
 {
    using Recipients = std::vector<std::string>;
 
-   class PrivateDirectMessageParty : public Party
+   class PrivateDirectMessageParty : public virtual Party
    {
    public:
-      PrivateDirectMessageParty(const std::string& id, const PartyType& partyType, const PartySubType& partySubType);
+      PrivateDirectMessageParty(
+         const PartyType& partyType = PartyType::PRIVATE_DIRECT_MESSAGE, 
+         const PartySubType& partySubType = PartySubType::STANDARD, 
+         const PartyState& partyState = PartyState::UNINITIALIZED
+      );
+
+      PrivateDirectMessageParty(
+         const std::string& id, 
+         const PartyType& partyType = PartyType::PRIVATE_DIRECT_MESSAGE, 
+         const PartySubType& partySubType = PartySubType::STANDARD, 
+         const PartyState& partyState = PartyState::UNINITIALIZED
+      );
 
       Recipients recipients() const { return recipients_; }
       void setRecipients(Recipients val) { recipients_ = val; }
 
       bool isUserBelongsToParty(const std::string& userName);
       std::string getSecondRecipient(const std::string& firstRecipientUserName);
+      Recipients getRecipientsExceptMe(const std::string& me);
 
    private:
       Recipients recipients_;

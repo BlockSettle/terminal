@@ -44,7 +44,8 @@ namespace bs {
       enum Type {
          SignatureUndefined,
          SignedByBuyer,
-         SignedBySeller
+         SignedBySeller,
+         Failed
       };
 
       static const char *toString(const Type t) {
@@ -58,7 +59,8 @@ namespace bs {
 
       static void WhichSignature(const Tx &
          , uint64_t value
-         , const std::shared_ptr<SettlementAddress> &
+         , const bs::Address &settlAddr
+         , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
          , const std::shared_ptr<spdlog::logger> &
          , const std::shared_ptr<ArmoryConnection> &, std::function<void(Type)>);
    };
@@ -77,8 +79,10 @@ namespace bs {
          , const std::shared_ptr<SettlementAddress> &, const bs::Address &
          , const std::shared_ptr<spdlog::logger> &);
       SettlementMonitor(const std::shared_ptr<ArmoryConnection> &
-         , const bs::Address &, const std::shared_ptr<spdlog::logger> &
-         , const std::function<void()> &);
+         , const std::shared_ptr<spdlog::logger> &, const bs::Address &
+         , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
+         , const std::function<void()> &
+         , const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet=nullptr);
 
       ~SettlementMonitor() noexcept override;
 
@@ -111,11 +115,11 @@ namespace bs {
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
 
    private:
+      void initialize();
+
       std::atomic_flag                          walletLock_ = ATOMIC_FLAG_INIT;
       std::shared_ptr<AsyncClient::BtcWallet>   rtWallet_;
       std::set<BinaryData>                      ownAddresses_;
-
-      std::shared_ptr<SettlementAddress>  addressEntry_;
 
       int payinConfirmations_ = -1;
       int payoutConfirmations_ = -1;
@@ -125,10 +129,15 @@ namespace bs {
 
       PayoutSigner::Type payoutSignedBy_ = PayoutSigner::Type::SignatureUndefined;
 
+      std::shared_ptr<bool> quitFlag_;
+      std::shared_ptr<std::recursive_mutex> quitFlagLock_;
+
    protected:
       std::shared_ptr<ArmoryConnection>         armoryPtr_;
       std::shared_ptr<spdlog::logger>           logger_;
-      std::string                               addressString_;
+      bs::Address    settlAddress_;
+      BinaryData     buyAuthKey_;
+      BinaryData     sellAuthKey_;
 
    protected:
       void IsPayInTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
@@ -144,14 +153,14 @@ namespace bs {
    {
    Q_OBJECT
    public:
-      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<core::SettlementAddressEntry> &
          , const std::shared_ptr<spdlog::logger> &);
-      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<SettlementAddress> &, const bs::Address &
-         , const std::shared_ptr<spdlog::logger> &);
+         , const std::shared_ptr<SettlementAddress> &
+         , const bs::Address &, const std::shared_ptr<spdlog::logger> &);
       ~SettlementMonitorQtSignals() noexcept override;
 
       SettlementMonitorQtSignals(const SettlementMonitorQtSignals&) = delete;
@@ -191,9 +200,11 @@ namespace bs {
          , const std::shared_ptr<SettlementAddress> &, const bs::Address &
          , const std::shared_ptr<spdlog::logger> &);
       SettlementMonitorCb(const std::shared_ptr<ArmoryConnection> &armory
-         , const bs::Address &addr, const std::shared_ptr<spdlog::logger> &logger
-         , const std::function<void()> &cbInited)
-         : SettlementMonitor(armory, addr, logger, cbInited) {}
+         , const std::shared_ptr<spdlog::logger> &logger, const bs::Address &addr
+         , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
+         , const std::function<void()> &cbInited
+         , const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet = nullptr)
+         : SettlementMonitor(armory, logger, addr, buyAuthKey, sellAuthKey, cbInited, rtWallet) {}
       ~SettlementMonitorCb() noexcept override;
 
       SettlementMonitorCb(const SettlementMonitorCb&) = delete;

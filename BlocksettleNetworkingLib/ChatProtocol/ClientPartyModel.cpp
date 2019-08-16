@@ -11,6 +11,8 @@ namespace Chat
       : PartyModel(loggerPtr, parent)
    {
       connect(this, &ClientPartyModel::error, this, &ClientPartyModel::handleLocalErrors);
+      connect(this, &ClientPartyModel::partyInserted, this, &ClientPartyModel::handlePartyInserted);
+      connect(this, &ClientPartyModel::partyRemoved, this, &ClientPartyModel::handlePartyRemoved);
    }
 
    IdPartyList ClientPartyModel::getIdPartyList() const
@@ -30,18 +32,15 @@ namespace Chat
 
       for (const auto& partyId : idPartyList)
       {
-         PartyPtr partyPtr = getPartyById(partyId);
+         ClientPartyPtr clientPartyPtr = getClientPartyById(partyId);
 
-         if (partyPtr->partyType() == PartyType::PRIVATE_DIRECT_MESSAGE)
+         if (nullptr == clientPartyPtr)
          {
-            ClientPartyPtr clientPartyPtr = std::dynamic_pointer_cast<ClientParty>(partyPtr);
+            continue;
+         }
 
-            if (!clientPartyPtr)
-            {
-               emit error(ClientPartyModelError::DynamicPointerCast, userName);
-               continue;
-            }
-
+         if (userName == clientPartyPtr->displayName())
+         {
             return clientPartyPtr;
          }
       }
@@ -54,6 +53,72 @@ namespace Chat
    void ClientPartyModel::handleLocalErrors(const ClientPartyModelError& errorCode, const std::string& what)
    {
       loggerPtr_->debug("[ClientPartyModel::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
+   }
+
+   void ClientPartyModel::handlePartyInserted(const PartyPtr& partyPtr)
+   {
+      ClientPartyPtr clientPartyPtr = getClientPartyById(partyPtr->id());
+
+      if (nullptr == clientPartyPtr)
+      {
+         return;
+      }
+
+      connect(clientPartyPtr.get(), &ClientParty::clientStatusChanged, this, &ClientPartyModel::handlePartyStatusChanged);
+   }
+
+   void ClientPartyModel::handlePartyRemoved(const PartyPtr& partyPtr)
+   {
+      ClientPartyPtr clientPartyPtr = getClientPartyById(partyPtr->id());
+
+      if (nullptr == clientPartyPtr)
+      {
+         return;
+      }
+
+      disconnect(clientPartyPtr.get(), &ClientParty::clientStatusChanged, this, &ClientPartyModel::handlePartyStatusChanged);
+   }
+
+   void ClientPartyModel::handlePartyStatusChanged(const ClientStatus&)
+   {
+      ClientParty* clientParty = qobject_cast<ClientParty*>(sender());
+
+      if (!clientParty)
+      {
+         emit error(ClientPartyModelError::QObjectCast);
+         return;
+      }
+
+      ClientPartyPtr clientPartyPtr = getClientPartyById(clientParty->id());
+
+      if (!clientPartyPtr)
+      {
+         return;
+      }
+
+      emit clientPartyStatusChanged(clientPartyPtr);
+   }
+
+   ClientPartyPtr ClientPartyModel::castToClientPartyPtr(const PartyPtr& partyPtr)
+   {
+      ClientPartyPtr clientPartyPtr = std::dynamic_pointer_cast<ClientParty>(partyPtr);
+
+      if (!clientPartyPtr)
+      {
+         emit error(ClientPartyModelError::DynamicPointerCast, partyPtr->id());
+         return nullptr;
+      }
+
+      return clientPartyPtr;
+   }
+
+   ClientPartyPtr ClientPartyModel::getClientPartyById(const std::string& id)
+   {
+      PartyPtr partyPtr = getPartyById(id);
+
+      ClientPartyPtr clientPartyPtr = castToClientPartyPtr(partyPtr);
+
+      return clientPartyPtr;
    }
 
 }

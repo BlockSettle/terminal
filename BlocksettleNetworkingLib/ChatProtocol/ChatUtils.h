@@ -4,7 +4,7 @@
 #include <QString>
 #include <QMetaType>
 
-#include "ChatCommonTypes.h"
+#include "chat.pb.h"
 
 #include <disable_warnings.h>
 #include <spdlog/spdlog.h>
@@ -22,9 +22,6 @@ public:
    static const char *GlobalRoomKey;
    static const char *OtcRoomKey;
    static const char *SupportRoomKey;
-
-   static QString toString(Chat::OtcRangeType value);
-   static QString toString(Chat::OtcSide value);
 
    static bool messageFlagRead(const Chat::Data_Message &msg, Chat::Data_Message_State flag);
    static void messageFlagSet(Chat::Data_Message *msg, Chat::Data_Message_State state);

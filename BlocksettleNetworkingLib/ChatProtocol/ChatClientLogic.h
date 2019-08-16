@@ -7,6 +7,7 @@
 #include "ChatProtocol/ChatUser.h"
 #include "ChatProtocol/ClientConnectionLogic.h"
 #include "ChatProtocol/ClientPartyLogic.h"
+#include "ChatProtocol/ClientDBService.h"
 
 #include "DataConnectionListener.h"
 
@@ -34,9 +35,10 @@ namespace Chat
    enum class ChatClientLogicError
    {
       NoError,
-      AlreadyInitialized,
+      ConnectionAlreadyInitialized,
       ConnectionAlreadyUsed,
-      ZmqDataConnectionFailed
+      ZmqDataConnectionFailed,
+      ClientPartyNotExist
    };
 
    class ChatClientLogic : public QObject, public DataConnectionListener
@@ -52,12 +54,18 @@ namespace Chat
       void OnDisconnected(void) override;
       void OnError(DataConnectionListener::DataConnectionError) override;
 
-      ClientPartyLogicPtr clientPartyLogicPtr() const { return clientPartyLogicPtr_; }
+      ClientPartyModelPtr clientPartyModelPtr() const { return clientPartyLogicPtr_->clientPartyModelPtr(); }
 
    public slots:
-      void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
+      void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
+      void SendPartyMessage(const std::string& partyId, const std::string& data);
+      void SetMessageSeen(const std::string& partyId, const std::string& messageId);
+      void RequestPrivateParty(const std::string& userName);
+
+      // TODO: remove
+      void testProperlyConnected();
 
    signals:
       void dataReceived(const std::string&);
@@ -65,15 +73,20 @@ namespace Chat
       void disconnected(void);
       void error(DataConnectionListener::DataConnectionError);
 
+      void messagePacketSent(const std::string& messageId);
+
       void finished();
-      void chatClientError(const ChatClientLogicError& errorCode);
+      void chatClientError(const Chat::ChatClientLogicError& errorCode, const std::string& what = "");
 
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
       void clientLoggedOutFromServer();
+      void partyModelChanged();
 
    private slots:
-      void sendRequestPacket(const google::protobuf::Message& message);
+      void sendPacket(const google::protobuf::Message& message);
       void onCloseConnection();
+      void handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what);
+      void initDbDone();
 
    private:
       void setClientPartyLogicPtr(ClientPartyLogicPtr val) { clientPartyLogicPtr_ = val; }
@@ -88,6 +101,7 @@ namespace Chat
       ChatUserPtr                currentUserPtr_;
       ClientConnectionLogicPtr   clientConnectionLogicPtr_;
       ClientPartyLogicPtr        clientPartyLogicPtr_;
+      ClientDBServicePtr         clientDBServicePtr_;
    };
 
 }

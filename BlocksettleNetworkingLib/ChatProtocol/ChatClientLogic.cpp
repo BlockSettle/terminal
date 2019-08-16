@@ -1,5 +1,7 @@
 #include <QtDebug>
 
+#include <google/protobuf/any.pb.h>
+
 #include "ChatProtocol/ChatClientLogic.h"
 
 #include "ConnectionManager.h"
@@ -19,13 +21,48 @@ namespace Chat
    ChatClientLogic::ChatClientLogic()
    {
       qRegisterMetaType<DataConnectionListener::DataConnectionError>();
-      qRegisterMetaType<ChatClientLogicError>();
-      qRegisterMetaType<ClientPartyLogicPtr>();
+      qRegisterMetaType<Chat::ChatClientLogicError>();
+      qRegisterMetaType<Chat::ClientPartyLogicPtr>();
+
+      connect(this, &ChatClientLogic::chatClientError, this, &ChatClientLogic::handleLocalErrors);
    }
 
    ChatClientLogic::~ChatClientLogic()
    {
 
+   }
+
+   void ChatClientLogic::initDbDone()
+   {
+      currentUserPtr_ = std::make_shared<ChatUser>();
+      currentUserPtr_->setPrivateKey(SecureBinaryData(
+         applicationSettingsPtr_->GetAuthKeys().first.data(),
+         applicationSettingsPtr_->GetAuthKeys().first.size()
+      ));
+      currentUserPtr_->setPublicKey(BinaryData(
+         applicationSettingsPtr_->GetAuthKeys().second.data(),
+         applicationSettingsPtr_->GetAuthKeys().second.size()
+      ));
+
+      connect(currentUserPtr_.get(), &ChatUser::displayNameChanged, this, &ChatClientLogic::chatUserDisplayNameChanged);
+
+      setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr_, clientDBServicePtr_, this));
+      connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::partyModelChanged, this, &ChatClientLogic::partyModelChanged);
+
+      clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr_, applicationSettingsPtr_, clientDBServicePtr_, loggerPtr_);
+      clientConnectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
+      connect(this, &ChatClientLogic::dataReceived, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDataReceived);
+      connect(this, &ChatClientLogic::connected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onConnected);
+      connect(this, &ChatClientLogic::disconnected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDisconnected);
+      connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error),
+         clientConnectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
+      connect(this, &ChatClientLogic::messagePacketSent, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::messagePacketSent);
+
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::sendPacket, this, &ChatClientLogic::sendPacket);
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
+
+      // TODO: remove
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::testProperlyConnected, this, &ChatClientLogic::testProperlyConnected);
    }
 
    void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettingsPtr, const LoggerPtr& loggerPtr)
@@ -34,34 +71,20 @@ namespace Chat
 
       if (connectionManagerPtr_) {
          // already initialized
-         emit chatClientError(ChatClientLogicError::AlreadyInitialized);
+         emit chatClientError(ChatClientLogicError::ConnectionAlreadyInitialized);
          return;
       }
+
+      userHasherPtr_ = std::make_shared<UserHasher>();
 
       connectionManagerPtr_ = connectionManagerPtr;
       applicationSettingsPtr_ = appSettingsPtr;
       loggerPtr_ = loggerPtr;
-      
-      currentUserPtr_ = std::make_shared<ChatUser>();
-      const auto publicKey = applicationSettingsPtr_->GetAuthKeys().second;
-      currentUserPtr_->setPublicKey(BinaryData(publicKey.data(), publicKey.size()));
-      connect(currentUserPtr_.get(), &ChatUser::displayNameChanged, this, &ChatClientLogic::chatUserDisplayNameChanged);
 
-      userHasherPtr_ = std::make_shared<UserHasher>();
+      clientDBServicePtr_ = std::make_shared<ClientDBService>();
+      connect(clientDBServicePtr_.get(), &ClientDBService::initDone, this, &ChatClientLogic::initDbDone);
 
-      setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr, this));
-
-      clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr(), appSettingsPtr, loggerPtr);
-      clientConnectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
-      connect(this, &ChatClientLogic::dataReceived, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDataReceived);
-      connect(this, &ChatClientLogic::connected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onConnected);
-      connect(this, &ChatClientLogic::disconnected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDisconnected);
-      connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error), 
-         clientConnectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
-
-      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::sendRequestPacket, this, &ChatClientLogic::sendRequestPacket);
-      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
-      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr().get(), &ClientPartyLogic::onUserStatusChanged);
+      clientDBServicePtr_->Init(loggerPtr, appSettingsPtr, currentUserPtr_);
    }
 
    void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb)
@@ -122,7 +145,7 @@ namespace Chat
       emit error(dataConnectionError);
    }
 
-   void ChatClientLogic::sendRequestPacket(const google::protobuf::Message& message)
+   void ChatClientLogic::sendPacket(const google::protobuf::Message& message)
    {
       qDebug() << "ChatClientLogic::sendRequestPacket Thread ID:" << this->thread()->currentThreadId();
 
@@ -139,6 +162,19 @@ namespace Chat
       if (!connectionPtr_->send(packetString))
       {
          loggerPtr_->error("[ChatClientLogic::{}] Failed to send packet!", __func__);
+         return;
+      }
+
+      google::protobuf::Any any;
+      any.PackFrom(message);
+
+      if (any.Is<PartyMessagePacket>())
+      {
+         // update message state to SENT value
+         PartyMessagePacket partyMessagePacket;
+         any.UnpackTo(&partyMessagePacket);
+
+         emit messagePacketSent(partyMessagePacket.message_id());
       }
    }
 
@@ -151,13 +187,58 @@ namespace Chat
       }
 
       LogoutRequest logoutRequest;
-      sendRequestPacket(logoutRequest);
+      sendPacket(logoutRequest);
    }
 
    void ChatClientLogic::onCloseConnection()
    {
       connectionPtr_.reset();
       emit clientLoggedOutFromServer();
+   }
+
+   void ChatClientLogic::SendPartyMessage(const std::string& partyId, const std::string& data)
+   {
+      ClientPartyPtr clientPartyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
+
+      if (nullptr == clientPartyPtr)
+      {
+         emit chatClientError(ChatClientLogicError::ClientPartyNotExist, partyId);
+         return;
+      }
+     
+      clientConnectionLogicPtr_->prepareAndSendMessage(clientPartyPtr, data);
+   }
+
+   void ChatClientLogic::handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what)
+   {
+      loggerPtr_->debug("[ChatClientLogic::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
+   }
+
+   void ChatClientLogic::SetMessageSeen(const std::string& partyId, const std::string& messageId)
+   {
+      ClientPartyPtr clientPartyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
+
+      if (nullptr == clientPartyPtr)
+      {
+         emit chatClientError(ChatClientLogicError::ClientPartyNotExist, partyId);
+         return;
+      }
+
+      clientConnectionLogicPtr_->setMessageSeen(clientPartyPtr, messageId);
+   }
+
+   // TODO: remove
+   void ChatClientLogic::testProperlyConnected()
+   {
+      SendPartyMessage("Global", "test");
+   }
+
+   void ChatClientLogic::RequestPrivateParty(const std::string& userName)
+   {
+      // 1. create private party
+      // 2. push me to party
+      // 3. send request
+      //clientConnectionLogicPtr_->prepareRequestPrivateParty(userName);
    }
 
 }

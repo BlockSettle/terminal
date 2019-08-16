@@ -46,14 +46,6 @@ public:
 
    std::shared_ptr<Chat::Data> sendOwnMessage(
          const std::string& message, const std::string &receiver);
-   std::shared_ptr<Chat::Data> SubmitPrivateOTCRequest(const bs::network::OTCRequest& otcRequest
-                                                       , const std::string &receiver);
-   std::shared_ptr<Chat::Data> SubmitPrivateOTCResponse(const bs::network::OTCResponse& otcResponse
-                                                        , const std::string &receiver);
-   std::shared_ptr<Chat::Data> SubmitPrivateCancel(const std::string &receiver);
-   std::shared_ptr<Chat::Data> SubmitPrivateUpdate(const bs::network::OTCUpdate& update
-                                                   , const std::string &receiver);
-
    std::shared_ptr<Chat::Data> sendRoomOwnMessage(
          const std::string& message, const std::string &receiver);
 
@@ -74,9 +66,12 @@ public:
    void retrieveUserMessages(const std::string &userId);
    void loadRoomMessagesFromDB(const std::string& roomId);
 
+public slots:
+   void sendOtcMessage(const std::string &contactId, const BinaryData &data);
+
 private:
    void initMessage(Chat::Data *msg, const std::string& receiver);
-   void updateMessageStateAndSave(const std::shared_ptr<Chat::Data>& message, const Chat::Data_Message_State& state);
+   void updateMessageStateAndSave(const std::shared_ptr<Chat::Data>& message, const Chat::Data_Message_State& state) override;
 
    void readDatabase();
 
@@ -97,6 +92,10 @@ signals:
    void RoomsInserted();
    void ContactChanged();
    void DMMessageReceived(const std::shared_ptr<Chat::Data>& messageData);
+
+   void contactConnected(const std::string &contactId);
+   void contactDisconnected(const std::string &contactId);
+   void otcMessageReceived(const std::string &contactId, const BinaryData &data);
 
 protected:
    BinaryData getOwnAuthPublicKey() const override;
@@ -149,6 +148,8 @@ private:
    std::shared_ptr<ChatTreeModelWrapper>  proxyModel_;
 
    bool              emailEntered_{ false };
+
+   std::set<std::string> onlineContacts_;
 };
 
 #endif   // CHAT_CLIENT_H

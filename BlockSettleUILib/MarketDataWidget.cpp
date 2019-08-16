@@ -7,6 +7,14 @@
 
 constexpr int EMPTY_COLUMN_WIDTH = 0;
 
+bool MarkeSelectedInfo::isValid() const
+{
+   return !productGroup_.isEmpty() &&
+      !currencyPair_.isEmpty() &&
+      !bidPrice_.isEmpty() &&
+      !offerPrice_.isEmpty()
+      ;
+}
 
 MarketDataWidget::MarketDataWidget(QWidget* parent)
    : QWidget(parent)
@@ -122,6 +130,25 @@ void MarketDataWidget::ChangeMDSubscriptionState()
    }
 }
 
+MarkeSelectedInfo MarketDataWidget::getRowInfo(const QModelIndex& index) const
+{
+   if (!index.isValid() || !index.parent().isValid()) {
+      return {};
+   }
+
+   auto pairIndex = mdSortFilterModel_->index(index.row(), static_cast<int>(MarketDataModel::MarketDataColumns::Product), index.parent());
+   auto bidIndex = mdSortFilterModel_->index(index.row(), static_cast<int>(MarketDataModel::MarketDataColumns::BidPrice), index.parent());
+   auto offerIndex = mdSortFilterModel_->index(index.row(), static_cast<int>(MarketDataModel::MarketDataColumns::OfferPrice), index.parent());
+
+   MarkeSelectedInfo selectedInfo;
+   selectedInfo.productGroup_ = mdSortFilterModel_->data(index.parent()).toString();
+   selectedInfo.currencyPair_ = mdSortFilterModel_->data(pairIndex).toString();
+   selectedInfo.bidPrice_ = mdSortFilterModel_->data(bidIndex).toString();
+   selectedInfo.offerPrice_ = mdSortFilterModel_->data(offerIndex).toString();
+
+   return selectedInfo;
+}
+
 TreeViewWithEnterKey* MarketDataWidget::view() const
 {
    return ui_->treeViewMarketData;
@@ -131,6 +158,16 @@ void MarketDataWidget::setAuthorized(bool authorized)
 {
    ui_->pushButtonMDConnection->setEnabled(!authorized);
    authorized_ = authorized;
+}
+
+MarkeSelectedInfo MarketDataWidget::getCurrentlySelectedInfo() const
+{
+   if (!ui_->treeViewMarketData) {
+      return {};
+   }
+
+   const QModelIndex index = ui_->treeViewMarketData->selectionModel()->currentIndex();
+   return getRowInfo(index);
 }
 
 void MarketDataWidget::onMDRejected(const std::string &security, const std::string &reason)
@@ -144,38 +181,32 @@ void MarketDataWidget::onMDRejected(const std::string &security, const std::stri
 
 void MarketDataWidget::onRowClicked(const QModelIndex& index)
 {
-   if (!filteredView_) {
+   if (!filteredView_ || !index.isValid()) {
       return;
    }
 
+   // Tab clicked
    if (!index.parent().isValid()) {
+      emit MDHeaderClicked();
       return;
    }
 
-   auto pairIndex = mdSortFilterModel_->index(index.row(), static_cast<int>(MarketDataModel::MarketDataColumns::Product), index.parent());
-   auto bidIndex = mdSortFilterModel_->index(index.row(), static_cast<int>(MarketDataModel::MarketDataColumns::BidPrice), index.parent());
-   auto offerIndex = mdSortFilterModel_->index(index.row(), static_cast<int>(MarketDataModel::MarketDataColumns::OfferPrice), index.parent());
-
-   QString group;
-   QString currencyPair;
-
-   group = mdSortFilterModel_->data(index.parent()).toString();
-   currencyPair = mdSortFilterModel_->data(pairIndex).toString();
-
-   QString bidPrice = mdSortFilterModel_->data(bidIndex).toString();
-   QString offerPrice = mdSortFilterModel_->data(offerIndex).toString();
+   MarkeSelectedInfo selectedInfo = getRowInfo(index);
 
    switch (static_cast<MarketDataModel::MarketDataColumns>(index.column()))
    {
-      case MarketDataModel::MarketDataColumns::BidPrice:
-         emit BuyClicked(group, currencyPair, bidPrice, offerPrice);
-         break;
-      case MarketDataModel::MarketDataColumns::OfferPrice:
-         emit SellClicked(group, currencyPair, bidPrice, offerPrice);
-         break;
-      default:
-         emit CurrencySelected(group, currencyPair, bidPrice, offerPrice);
-         break;
+   case MarketDataModel::MarketDataColumns::BidPrice: {
+      emit BuyClicked(selectedInfo);
+      break;
+   }
+   case MarketDataModel::MarketDataColumns::OfferPrice: {
+      emit SellClicked(selectedInfo);
+      break;
+   }
+   default: {
+      emit CurrencySelected(selectedInfo);
+      break;
+   }
    }
 }
 

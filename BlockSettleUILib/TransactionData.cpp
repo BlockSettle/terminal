@@ -123,7 +123,7 @@ TransactionData::TransactionSummary TransactionData::GetTransactionSummary() con
 void TransactionData::InvalidateTransactionData()
 {
    usedUTXO_.clear();
-   memset((void*)&summary_, 0, sizeof(summary_));
+   summary_ = TransactionSummary{};
    maxAmount_ = 0;
 
    UpdateTransactionData();

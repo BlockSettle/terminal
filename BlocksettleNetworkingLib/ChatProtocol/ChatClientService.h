@@ -13,22 +13,24 @@ namespace Chat
    class ChatClientService : public ServiceThread<ChatClientLogic>
    {
       Q_OBJECT
-         
+
    public:
       explicit ChatClientService(QObject* parent = nullptr);
 
-      ClientPartyLogicPtr getClientPartyLogicPtr();
+      ClientPartyModelPtr getClientPartyModelPtr();
 
    signals:
       ////////// PROXY SIGNALS //////////
-      void Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettings, const LoggerPtr& loggerPtr);
+      void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
+      void SendPartyMessage(const std::string& partyId, const std::string& data);
 
       ////////// RETURN SIGNALS //////////
       void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
-      void chatClientError(const ChatClientLogicError& errorCode);
+      void chatClientError(const Chat::ChatClientLogicError& errorCode);
       void clientLoggedOutFromServer();
+      void partyModelChanged();
    };
 
    using ChatClientServicePtr = std::shared_ptr<ChatClientService>;
@@ -36,8 +38,7 @@ namespace Chat
 }
 
 Q_DECLARE_METATYPE(Chat::ConnectionManagerPtr)
-Q_DECLARE_METATYPE(Chat::ApplicationSettingsPtr)
 Q_DECLARE_METATYPE(Chat::LoggerPtr)
-Q_DECLARE_METATYPE(ZmqBipNewKeyCb);
+Q_DECLARE_METATYPE(ZmqBipNewKeyCb)
 
 #endif // ChatClientService_h__

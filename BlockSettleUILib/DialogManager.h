@@ -27,6 +27,9 @@ private slots:
    void onDialogFinished();
 
 private:
+   bool prepare(QDialog* dlg);
+   const QRect getGeometry(const QWidget* widget) const;
+private:
    const QPointer<const QWidget> mainWindow_ = nullptr;
    QList<QPointer<QDialog>>      activeDlgs_;
 };

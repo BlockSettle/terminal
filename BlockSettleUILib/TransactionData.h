@@ -25,28 +25,28 @@ class TransactionData
 public:
    struct TransactionSummary
    {
-      bool     initialized;
+      bool     initialized{};
       // usedTransactions - count of utxo that will be used in transaction
-      size_t   usedTransactions;
+      size_t   usedTransactions{};
 
       // outputsCount - number of recipients ( without change )
-      size_t   outputsCount;
+      size_t   outputsCount{};
 
       // availableBalance - total available balance. in case of manual selection - same as selectedBalance
-      double   availableBalance;
+      double   availableBalance{};
 
       // selectedBalance - balance of selected inputs
-      double   selectedBalance;
+      double   selectedBalance{};
 
       // balanceToSpent - total amount received by recipients
-      double   balanceToSpend;
+      double   balanceToSpend{};
 
-      size_t   txVirtSize;
-      uint64_t totalFee;
-      double   feePerByte;
+      size_t   txVirtSize{};
+      uint64_t totalFee{};
+      double   feePerByte{};
 
-      bool     hasChange;
-      bool     isAutoSelected;
+      bool     hasChange{};
+      bool     isAutoSelected{};
    };
 
    using onTransactionChanged = std::function<void()>;

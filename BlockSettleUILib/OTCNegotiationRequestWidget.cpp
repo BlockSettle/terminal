@@ -16,93 +16,46 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
    ui_->spinBoxOffer->setAccelerated(true);
    ui_->spinBoxQuantity->setAccelerated(true);
 
-   ui_->pushButtonCancel->setText(tr("Reject"));
-   ui_->pushButtonAccept->setText(tr("Respond"));
+   ui_->pushButtonCancel->hide();
+   ui_->pushButtonAccept->setText(tr("Submit"));
 
-   // changed
-   connect(ui_->spinBoxOffer, QOverload<int>::of(&QSpinBox::valueChanged)
-      , this, &OTCNegotiationRequestWidget::OnDataChanged);
-   connect(ui_->spinBoxQuantity, QOverload<int>::of(&QSpinBox::valueChanged)
-      , this, &OTCNegotiationRequestWidget::OnDataChanged);
-   // push buttons
-   connect(ui_->pushButtonCancel, &QPushButton::pressed, this, &OTCNegotiationRequestWidget::TradeRejected);
-   connect(ui_->pushButtonAccept, &QPushButton::pressed, this, &OTCNegotiationRequestWidget::OnAcceptPressed);
+   connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onBuyClicked);
+   connect(ui_->pushButtonSell, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onSellClicked);
+   connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::requestCreated);
+
+   connect(ui_->spinBoxOffer, qOverload<int>(&QSpinBox::valueChanged), this, &OTCNegotiationRequestWidget::onChanged);
+   connect(ui_->spinBoxQuantity, qOverload<int>(&QSpinBox::valueChanged), this, &OTCNegotiationRequestWidget::onChanged);
+
+   ui_->widgetSideInfo->hide();
+
+   onSellClicked();
+   onChanged();
 }
 
-OTCNegotiationRequestWidget::~OTCNegotiationRequestWidget() noexcept = default;
+OTCNegotiationRequestWidget::~OTCNegotiationRequestWidget() = default;
 
-void OTCNegotiationRequestWidget::DisplayResponse(const std::shared_ptr<Chat::Data>& initialResponse)
+bs::network::otc::Offer OTCNegotiationRequestWidget::offer() const
 {
-   assert(initialResponse->has_message() && initialResponse->message().has_otc_response());
-
-   if (initialResponse->message().otc_response().side() == Chat::OTC_SIDE_SELL) {
-      ui_->labelSide->setText(tr("Sell"));
-   } else if (initialResponse->message().otc_response().side() == Chat::OTC_SIDE_BUY) {
-      ui_->labelSide->setText(tr("Buy"));
-   } else {
-      ui_->labelSide->setText(tr("Undefined"));
-   }
-
-   const auto &priceRange = initialResponse->message().otc_response().price();
-   const auto &amountRange = initialResponse->message().otc_response().quantity();
-
-   ui_->spinBoxOffer->setMinimum(priceRange.lower());
-   ui_->spinBoxOffer->setMaximum(priceRange.upper());
-   ui_->spinBoxOffer->setValue(priceRange.lower());
-
-   ui_->spinBoxQuantity->setMinimum(amountRange.lower());
-   ui_->spinBoxQuantity->setMaximum(amountRange.upper());
-   ui_->spinBoxQuantity->setValue(amountRange.lower());
-
-   changed_ = false;
+   bs::network::otc::Offer result;
+   result.ourSide = ui_->pushButtonSell->isChecked() ? bs::network::otc::Side::Sell : bs::network::otc::Side::Buy;
+   result.price = ui_->spinBoxOffer->value();
+   result.amount = ui_->spinBoxQuantity->value();
+   return result;
 }
 
-void OTCNegotiationRequestWidget::SetResponseData(const std::shared_ptr<Chat::Data>& initialResponse)
+void OTCNegotiationRequestWidget::onSellClicked()
 {
-   assert(initialResponse->has_message() && initialResponse->message().has_otc_response());
-
-   DisplayResponse(initialResponse);
-   initialUpdate_ = true;
-   ui_->pushButtonAccept->setText(tr("Respond"));
+   ui_->pushButtonSell->setChecked(true);
+   ui_->pushButtonBuy->setChecked(false);
 }
 
-void OTCNegotiationRequestWidget::SetUpdateData(const std::shared_ptr<Chat::Data>& update
-                                                , const std::shared_ptr<Chat::Data>& initialResponse)
+void OTCNegotiationRequestWidget::onBuyClicked()
 {
-   assert(initialResponse->has_message() && initialResponse->message().has_otc_response());
-   assert(update->has_message() && update->message().has_otc_update());
-
-   DisplayResponse(initialResponse);
-   initialUpdate_ = false;
-   ui_->spinBoxOffer->setValue(update->message().otc_update().price());
-   ui_->spinBoxQuantity->setValue(update->message().otc_update().amount());
-   ui_->pushButtonAccept->setText(tr("Accept"));
-   changed_ = false;
+   ui_->pushButtonSell->setChecked(false);
+   ui_->pushButtonBuy->setChecked(true);
 }
 
-bs::network::OTCUpdate OTCNegotiationRequestWidget::GetUpdate() const
+void OTCNegotiationRequestWidget::onChanged()
 {
-   bs::network::OTCUpdate update;
-
-   update.amount = ui_->spinBoxQuantity->value();
-   update.price = ui_->spinBoxOffer->value();
-
-   return update;
-}
-
-void OTCNegotiationRequestWidget::OnDataChanged()
-{
-   if (!changed_ && !initialUpdate_) {
-      changed_ = true;
-      ui_->pushButtonAccept->setText(tr("Update"));
-   }
-}
-
-void OTCNegotiationRequestWidget::OnAcceptPressed()
-{
-   if (changed_ || initialUpdate_) {
-      emit TradeUpdated();
-   } else {
-      emit TradeAccepted();
-   }
+   ui_->pushButtonAccept->setEnabled(ui_->spinBoxOffer->value() > 0 && ui_->spinBoxQuantity->value() > 0);
 }

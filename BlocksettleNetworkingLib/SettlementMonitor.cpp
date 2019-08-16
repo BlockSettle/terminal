@@ -9,16 +9,19 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
    : rtWallet_(rtWallet)
-   , addressEntry_(entryToAddress(addr))
+   , settlAddress_(addr->getPrefixedHash())
    , armoryPtr_(armory)
    , logger_(logger)
 {
    init(armory.get());
+   initialize();
+
+   const auto ae = entryToAddress(addr);
+   buyAuthKey_ = ae->buyChainedPubKey();
+   sellAuthKey_ = ae->sellChainedPubKey();
 
    const auto &addrHashes = addr->getAsset()->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
-
-   addressString_ = bs::Address{addr->getPrefixedHash()}.display();
 }
 
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
@@ -28,27 +31,44 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
    : rtWallet_(rtWallet)
    , armoryPtr_(armory)
    , logger_(logger)
-   , addressString_(addr.display())
+   , settlAddress_(addr)
+   , buyAuthKey_(addrEntry->buyChainedPubKey())
+   , sellAuthKey_(addrEntry->sellChainedPubKey())
 {
    init(armory.get());
+   initialize();
 
    const auto &addrHashes = addrEntry->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
 }
 
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection> &armory
-   , const bs::Address &addr, const std::shared_ptr<spdlog::logger> &logger
-   , const std::function<void()> &cbInited)
-   : armoryPtr_(armory)
+   , const std::shared_ptr<spdlog::logger> &logger, const bs::Address &addr
+   , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
+   , const std::function<void()> &cbInited, const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet)
+   : rtWallet_(rtWallet)
+   , armoryPtr_(armory)
    , logger_(logger)
-   , addressString_(addr.display())
+   , settlAddress_(addr)
+   , buyAuthKey_(buyAuthKey)
+   , sellAuthKey_(sellAuthKey)
 {
    init(armory.get());
+   initialize();
 
-   const auto walletId = addr.display();
-   rtWallet_ = armory_->instantiateWallet(walletId);
-   armory_->registerWallet(rtWallet_, walletId, walletId, { addr.id() }
-   , [cbInited](const std::string &) { cbInited(); });
+   ownAddresses_.insert({ addr.unprefixed() });
+
+   if (!rtWallet) {
+      const auto walletId = addr.display();
+      rtWallet_ = armory_->instantiateWallet(walletId);
+      const auto regId = armory_->registerWallet(rtWallet_, walletId, walletId
+         , { addr.id() }, [cbInited](const std::string &) { cbInited(); });
+   }
+   else {
+      if (cbInited) {
+         cbInited();
+      }
+   }
 }
 
 void bs::SettlementMonitor::onNewBlock(unsigned int)
@@ -61,35 +81,56 @@ void bs::SettlementMonitor::onZCReceived(const std::vector<bs::TXEntry> &)
    checkNewEntries();
 }
 
+void bs::SettlementMonitor::initialize()
+{
+   quitFlag_ = std::make_shared<bool>(false);
+   quitFlagLock_ = std::make_shared<std::recursive_mutex>();
+}
+
 void bs::SettlementMonitor::checkNewEntries()
 {
    logger_->debug("[SettlementMonitor::checkNewEntries] checking entries for {}"
-      , addressString_);
+      , settlAddress_.display());
 
-   const auto &cbHistory = [this](ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+   const auto &cbHistory = [this, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+      if (*quitFlag) {
+         return;
+      }
+
       try {
          auto le = entries.get();
          if (le.empty()) {
             logger_->debug("[SettlementMonitor::checkNewEntries] empty history page for {}"
-               , addressString_);
+               , settlAddress_.display());
             return;
          } else {
             logger_->debug("[SettlementMonitor::checkNewEntries] get {} entries for {}"
-               , le.size(), addressString_);
+               , le.size(), settlAddress_.display());
          }
 
          for (const auto &entry : le) {
-            const auto &cbPayOut = [this, entry](bool ack) {
+            const auto &cbPayOut = [this, entry, quitFlag, quitFlagLock](bool ack) {
+               std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+               if (*quitFlag) {
+                  return;
+               }
+
                if (ack) {
                   SendPayOutNotification(entry);
                }
                else {
                   logger_->error("[SettlementMonitor::checkNewEntries] not "
                                  "payin or payout transaction detected for "
-                                 "settlement address {}", addressString_);
+                                 "settlement address {}", settlAddress_.display());
                }
             };
-            const auto &cbPayIn = [this, entry, cbPayOut](bool ack) {
+            const auto &cbPayIn = [this, entry, cbPayOut, quitFlag, quitFlagLock](bool ack) {
+               std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+               if (*quitFlag) {
+                  return;
+               }
+
                if (ack) {
                   SendPayInNotification(armoryPtr_->getConfirmationsNumber(entry),
                                         entry.getTxHash());
@@ -127,7 +168,12 @@ void bs::SettlementMonitor::checkNewEntries()
 void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb](const Tx &tx) {
+   const auto &cbTX = [this, entry, cb, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](const Tx &tx) {
+      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+      if (*quitFlag) {
+         return;
+      }
+
       if (!tx.isInitialized()) {
          logger_->error("[bs::SettlementMonitor::IsPayInTransaction] TX not initialized for {}."
             , entry.getTxHash().toHexStr());
@@ -137,8 +183,8 @@ void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry 
 
       for (int i = 0; i < tx.getNumTxOut(); ++i) {
          TxOut out = tx.getTxOutCopy(i);
-         auto address = out.getScrAddressStr();
-         if (ownAddresses_.find(address) != ownAddresses_.end()) {
+         const auto address = bs::Address::fromTxOut(out);
+         if (ownAddresses_.find(address.unprefixed()) != ownAddresses_.end()) {
             cb(true);
             return;
          }
@@ -151,7 +197,12 @@ void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry 
 void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb](const Tx &tx) {
+   const auto &cbTX = [this, entry, cb, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](const Tx &tx) {
+      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+      if (*quitFlag) {
+         return;
+      }
+
       if (!tx.isInitialized()) {
          logger_->error("[bs::SettlementMonitor::IsPayOutTransaction] TX not initialized for {}."
             , entry.getTxHash().toHexStr());
@@ -169,7 +220,12 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
          txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
       }
 
-      const auto &cbTXs = [this, txOutIdx, cb](const std::vector<Tx> &txs) {
+      const auto &cbTXs = [this, txOutIdx, cb, quitFlag, quitFlagLock](const std::vector<Tx> &txs) {
+         std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+         if (*quitFlag) {
+            return;
+         }
+
          for (const auto &prevTx : txs) {
             const auto &itIdx = txOutIdx.find(prevTx.getThisHash());
             if (itIdx == txOutIdx.end()) {
@@ -177,8 +233,8 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
             }
             for (const auto &txOutI : itIdx->second) {
                const TxOut prevOut = prevTx.getTxOutCopy(txOutI);
-               const auto &address = prevOut.getScrAddressStr();
-               if (ownAddresses_.find(address) != ownAddresses_.end()) {
+               const auto address = bs::Address::fromTxOut(prevOut);
+               if (ownAddresses_.find(address.unprefixed()) != ownAddresses_.end()) {
                   cb(true);
                   return;
                }
@@ -196,7 +252,7 @@ void bs::SettlementMonitor::SendPayInNotification(const int confirmationsNumber,
    if ((confirmationsNumber != payinConfirmations_) && (!payinInBlockChain_)){
 
       logger_->debug("[SettlementMonitor::SendPayInNotification] payin detected for {}. Confirmations: {}"
-            , addressString_, confirmationsNumber);
+            , settlAddress_.display(), confirmationsNumber);
 
       onPayInDetected(confirmationsNumber, txHash);
 
@@ -211,19 +267,24 @@ void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEn
    if (payoutConfirmations_ != confirmationsNumber) {
       payoutConfirmations_ = confirmationsNumber;
 
-      const auto &cbPayoutType = [this](bs::PayoutSigner::Type poType) {
+      const auto &cbPayoutType = [this, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](bs::PayoutSigner::Type poType) {
+         std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+         if (*quitFlag) {
+            return;
+         }
+
          payoutSignedBy_ = poType;
          if (payoutConfirmations_ >= confirmedThreshold()) {
             if (!payoutConfirmedFlag_) {
                payoutConfirmedFlag_ = true;
                logger_->debug("[SettlementMonitor::SendPayOutNotification] confirmed payout for {}"
-                  , addressString_);
+                  , settlAddress_.display());
                onPayOutConfirmed(payoutSignedBy_);
             }
          }
          else {
             logger_->debug("[SettlementMonitor::SendPayOutNotification] payout for {}. Confirmations: {}"
-               , addressString_, payoutConfirmations_);
+               , settlAddress_.display(), payoutConfirmations_);
             onPayOutDetected(payoutConfirmations_, payoutSignedBy_);
          }
       };
@@ -234,14 +295,24 @@ void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEn
 void bs::SettlementMonitor::getPayinInput(const std::function<void(UTXO)> &cb
    , bool allowZC)
 {
-   const auto &cbSpendable = [this, cb, allowZC]
+   const auto &cbSpendable = [this, cb, allowZC, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_]
       (ReturnMessage<std::vector<UTXO>> inputs) {
+      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+      if (*quitFlag) {
+         return;
+      }
+
       try {
          auto inUTXOs = inputs.get();
          if (inUTXOs.empty()) {
             if (allowZC) {
-               const auto &cbZC = [this, cb]
+               const auto &cbZC = [this, cb, quitFlag, quitFlagLock]
                (ReturnMessage<std::vector<UTXO>> zcs)->void {
+                  std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
+                  if (*quitFlag) {
+                     return;
+                  }
+
                   try {
                      auto inZCUTXOs = zcs.get();
                      if (inZCUTXOs.size() == 1) {
@@ -331,12 +402,13 @@ UTXO bs::SettlementMonitor::getInputFromTX(const bs::Address &addr
 
 void bs::PayoutSigner::WhichSignature(const Tx& tx
    , uint64_t value
-   , const std::shared_ptr<bs::SettlementAddress> &ae
+   , const bs::Address &settlAddr
+   , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory, std::function<void(Type)> cb)
 {
-   if (!tx.isInitialized()) {
-      cb(SignatureUndefined);
+   if (!tx.isInitialized() || buyAuthKey.isNull() || sellAuthKey.isNull()) {
+      cb(Failed);
       return;
    }
 
@@ -348,7 +420,9 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
    auto result = std::make_shared<Result>();
    result->value = value;
 
-   const auto &cbProcess = [result, ae, tx, cb, logger](const std::vector<Tx> &txs) {
+   const auto &cbProcess = [result, settlAddr, buyAuthKey, sellAuthKey, tx, cb, logger]
+      (const std::vector<Tx> &txs)
+   {
       for (const auto &prevTx : txs) {
          const auto &txHash = prevTx.getThisHash();
          for (const auto &txOutIdx : result->txOutIdx[txHash]) {
@@ -358,16 +432,16 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
          result->txHashSet.erase(txHash);
       }
 
-      uint32_t txHeight = UINT32_MAX;
-      uint32_t txIndex = 0, txOutIndex = 0;
-      const unsigned inputId = 0;
+      constexpr uint32_t txIndex = 0;
+      constexpr uint32_t txOutIndex = 0;
+      constexpr int inputId = 0;
 
-      const auto settlAddrHash = BtcUtils::getSha256(ae->getScript());
       const TxIn in = tx.getTxInCopy(inputId);
       const OutPoint op = in.getOutPoint();
       const auto payinHash = op.getTxHash();
 
-      UTXO utxo(result->value, txHeight, txIndex, txOutIndex, payinHash, BtcUtils::getP2WSHOutputScript(settlAddrHash));
+      UTXO utxo(result->value, UINT32_MAX, txIndex, txOutIndex, payinHash
+         , BtcUtils::getP2WSHOutputScript(settlAddr.unprefixed()));
 
       //serialize signed tx
       auto txdata = tx.serialize();
@@ -394,17 +468,18 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
                , tx.getThisHash().toHexStr());
          }
 
-         if (inputState.isSignedForPubKey(ae->buyChainedPubKey())) {
+         if (inputState.isSignedForPubKey(buyAuthKey)) {
             cb(SignedByBuyer);
-            return;
-         } else if (inputState.isSignedForPubKey(ae->sellChainedPubKey())) {
+         } else if (inputState.isSignedForPubKey(sellAuthKey)) {
             cb(SignedBySeller);
-            return;
+         } else {
+            cb(SignatureUndefined);
          }
+         return;
       } catch (const std::exception &e) {
-         logger->error("[PayoutSigner::WhichSignature] exception {}", e.what());
+         logger->error("[PayoutSigner::WhichSignature] failed: {}", e.what());
       }
-      cb(SignatureUndefined);
+      cb(Failed);
    };
    if (value == 0) {    // needs to be a sum of inputs in this case
       for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
@@ -432,7 +507,8 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
    const uint64_t value = amount < 0 ? -amount : amount;
 
    const auto &cbTX = [this, value, cb](const Tx &tx) {
-      bs::PayoutSigner::WhichSignature(tx, value, addressEntry_, logger_, armoryPtr_, cb);
+      bs::PayoutSigner::WhichSignature(tx, value, settlAddress_, buyAuthKey_, sellAuthKey_
+         , logger_, armoryPtr_, cb);
    };
 
    if (!armoryPtr_->getTxByHash(entry.getTxHash(), cbTX)) {
@@ -442,20 +518,23 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
 
 bs::SettlementMonitor::~SettlementMonitor() noexcept
 {
+   std::lock_guard<std::recursive_mutex> lock(*quitFlagLock_);
+   *quitFlag_ = true;
+
    cleanup();
    FastLock locker(walletLock_);
    rtWallet_ = nullptr;
 }
 
 
-bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
    : SettlementMonitor(rtWallet, armory, addr, logger)
 {}
 
-bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
    , const std::shared_ptr<spdlog::logger>& logger)
@@ -537,7 +616,7 @@ void bs::SettlementMonitorCb::onPayInDetected(int confirmationsNumber, const Bin
       onPayInDetected_(confirmationsNumber, txHash);
    } else {
       logger_->error("[SettlementMonitorCb::onPayInDetected] cb not set for {}"
-         , addressString_);
+         , settlAddress_.display());
    }
 }
 
@@ -547,7 +626,7 @@ void bs::SettlementMonitorCb::onPayOutDetected(int confirmationsNumber, PayoutSi
       onPayOutDetected_(confirmationsNumber, signedBy);
    } else {
       logger_->error("[SettlementMonitorCb::onPayOutDetected] cb not set for {}"
-         , addressString_);
+         , settlAddress_.display());
    }
 }
 
@@ -557,6 +636,6 @@ void bs::SettlementMonitorCb::onPayOutConfirmed(PayoutSigner::Type signedBy)
       onPayOutConfirmed_(signedBy);
    } else {
       logger_->error("[SettlementMonitorCb::onPayOutConfirmed] cb not set for {}"
-         , addressString_);
+         , settlAddress_.display());
    }
 }

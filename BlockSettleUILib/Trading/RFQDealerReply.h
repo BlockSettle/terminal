@@ -198,7 +198,7 @@ namespace bs {
          bool checkBalance() const;
          QDoubleSpinBox *getActivePriceWidget() const;
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
-         bool submitReply(const std::shared_ptr<TransactionData> transData
+         void submitReply(const std::shared_ptr<TransactionData> transData
             , const network::QuoteReqNotification &qrn, double price
             , std::function<void(bs::network::QuoteNotification)>);
          void tryEnableAutoSign();

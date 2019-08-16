@@ -6,6 +6,7 @@
 #include <memory>
 #include "CommonTypes.h"
 #include "TabWithShortcut.h"
+#include "MarketDataWidget.h"
 
 namespace Ui {
     class RFQRequestWidget;
@@ -49,7 +50,8 @@ public:
          , const std::shared_ptr<DialogManager> &dialogManager
          , const std::shared_ptr<SignContainer> &
          , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<ConnectionManager> &connectionManager);
+         , const std::shared_ptr<ConnectionManager> &connectionManager
+   );
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -57,12 +59,37 @@ public:
 
    void setAuthorized(bool authorized);
 
+   
+
+signals:
+   void requestPrimaryWalletCreation();
+
+private:
+   void showShieldLoginRequiered();
+   void showShieldReservedTraidingParticipant();
+   void showShieldPromoteToPrimaryWallet();
+   void showShieldCreateWallet();
+   void showShieldCreateXXXLeaf(const QString& product);
+
+   void showEditableRFQPage();
+   void prepareAndPopShield(const QString& labelText, bool showButton = false, const QString& ButtonText = QLatin1String());
+
+   bool checkConditions(const MarkeSelectedInfo& productGroup);
+   bool checkWalletSettings(const MarkeSelectedInfo& productGroup);
+
 public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);
+   void onCurrencySelected(const MarkeSelectedInfo& selectedInfo);
+   void onBuyClicked(const MarkeSelectedInfo& selectedInfo);
+   void onSellClicked(const MarkeSelectedInfo& selectedInfo);
+   void onDisableSelectedInfo();
 
 private slots:
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
+
+public slots:
+   void forceCheckCondition();
 
 private:
    std::unique_ptr<Ui::RFQRequestWidget> ui_;
@@ -79,6 +106,8 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<ConnectionManager>  connectionManager_;
+
+   QList<QMetaObject::Connection>   marketDataConnection;
 };
 
 #endif // __RFQ_REQUEST_WIDGET_H__

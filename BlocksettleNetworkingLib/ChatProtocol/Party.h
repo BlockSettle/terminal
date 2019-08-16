@@ -13,7 +13,8 @@ namespace Chat
    {
    public:
       Party();
-      Party(const std::string& id, const PartyType& partyType, const PartySubType& partySubType);
+      Party(const PartyType& partyType, const PartySubType& partySubType = PartySubType::STANDARD, const PartyState& partyState = PartyState::UNINITIALIZED);
+      Party(const std::string& id, const PartyType& partyType, const PartySubType& partySubType = PartySubType::STANDARD, const PartyState& partyState = PartyState::UNINITIALIZED);
 
       virtual ~Party() {}
 
@@ -26,10 +27,14 @@ namespace Chat
       virtual Chat::PartySubType partySubType() const { return partySubType_; }
       virtual void setPartySubType(Chat::PartySubType val) { partySubType_ = val; }
 
+      virtual Chat::PartyState partyState() const { return partyState_; }
+      virtual void setPartyState(Chat::PartyState val) { partyState_ = val; }
+
    private:
       std::string id_;
       PartyType partyType_;
       PartySubType partySubType_;
+      PartyState partyState_;
    };
 
    using PartyPtr = std::shared_ptr<Party>;

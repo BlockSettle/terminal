@@ -17,6 +17,8 @@ inline QString ErrorCodeToString(bs::error::ErrorCode errorCode) {
       return QObject::tr("Failed to parse request");
    case bs::error::ErrorCode::WalletNotFound:
       return QObject::tr("Failed to find wallet");
+   case bs::error::ErrorCode::WrongAddress:
+      return QObject::tr("Wrong address in the wallet");
    case bs::error::ErrorCode::MissingPassword:
       return QObject::tr("Missing password for encrypted wallet");
    case bs::error::ErrorCode::InvalidPassword:

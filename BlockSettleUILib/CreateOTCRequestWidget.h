@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <memory>
 
-#include "ChatCommonTypes.h"
+#include "OtcTypes.h"
 
 namespace Ui {
    class CreateOTCRequestWidget;
@@ -19,23 +19,9 @@ public:
    CreateOTCRequestWidget(QWidget* parent = nullptr);
    ~CreateOTCRequestWidget() override;
 
-   bs::network::ChatOTCSide::Type GetSide() const;
-   bs::network::OTCRangeID::Type GetRange() const;
-
-   void setSubmitButtonEnabled(bool enabled);
-
 private slots:
-
-   void OnSellClicked();
-   void OnBuyClicked();
-
-   void OnRangeSelected(int index);
-
-signals:
-   void RequestCreated();
-
-private:
-   void RequestUpdated();
+   void onSellClicked();
+   void onBuyClicked();
 
 private:
    std::unique_ptr<Ui::CreateOTCRequestWidget> ui_;
