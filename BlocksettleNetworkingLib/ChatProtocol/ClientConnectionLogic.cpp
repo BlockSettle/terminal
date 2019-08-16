@@ -275,7 +275,7 @@ namespace Chat
 
       PrivatePartyRequest privatePartRequest;
       PartyPacket *partyPacket = privatePartRequest.mutable_party_packet();
-      partyPacket->set_id(partyId);
+      partyPacket->set_party_id(partyId);
       partyPacket->set_display_name(clientPrivateDMPartyPtr->getSecondRecipient(currentUserPtr()->displayName()));
       partyPacket->set_party_type(clientPrivateDMPartyPtr->partyType());
       partyPacket->set_party_subtype(clientPrivateDMPartyPtr->partySubType());

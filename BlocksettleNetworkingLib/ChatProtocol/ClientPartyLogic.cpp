@@ -38,7 +38,7 @@ namespace Chat
          if (partyPacket.party_type() == PartyType::GLOBAL)
          {
             ClientPartyPtr clientPartyPtr = std::make_shared<ClientParty>(
-               partyPacket.id(), partyPacket.party_type(), partyPacket.party_subtype(), partyPacket.party_state());
+               partyPacket.party_id(), partyPacket.party_type(), partyPacket.party_subtype(), partyPacket.party_state());
 
             clientPartyPtr->setDisplayName(partyPacket.display_name());
 

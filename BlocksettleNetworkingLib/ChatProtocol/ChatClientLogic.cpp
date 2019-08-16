@@ -238,11 +238,6 @@ namespace Chat
 
    void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName)
    {
-      // TODO: remove comments
-      // 1. create private party
-      // 2. push me to party
-      // 3. send request
-
       clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName);
    }
 

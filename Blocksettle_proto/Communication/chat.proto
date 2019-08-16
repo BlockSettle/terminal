@@ -95,7 +95,7 @@ enum PartyMessageState
 
 message PartyPacket
 {
-	string id = 1;
+	string party_id = 1;
 	string display_name = 2;
 	PartyType party_type = 3;
 	PartySubType party_subtype = 4;
