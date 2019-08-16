@@ -466,7 +466,17 @@ size_t TransactionData::getVirtSize(const UtxoSelection& inUTXOSel) const
 
 void TransactionData::setFeePerByte(float feePerByte)
 {
-   feePerByte_ = feePerByte;
+   // Our fees estimation is not 100% accurate (we can't know how much witness size will have,
+   // because we don't know signature(s) size in advance, it could be 73, 72, and 71).
+   // As the result we might hit "min fee relay not meet" error (when actual fees is lower then 1 sat/bytes).
+   // Let's add a workaround for this: don't allow feePerByte be less than 1.005f (that's just empirical estimate)
+   const float minRelayFeeFixed = 1.005f;
+
+   if (feePerByte >= 1.0f && feePerByte < minRelayFeeFixed) {
+      feePerByte_ = minRelayFeeFixed;
+   } else {
+      feePerByte_ = feePerByte;
+   }
    totalFee_ = 0;
    InvalidateTransactionData();
 }
