@@ -90,65 +90,12 @@ Item {
                     enabled: !signerStatus.offline
                     checked: signerStatus.autoSignActive
                     onClicked: {
-                        var walletInfo = qmlFactory.createWalletInfo(signerSettings.autoSignWallet)
                         var newState = checked
                         // don't change switch state by click
                         // change state by received signal
                         checked = !newState
 
-                        if (newState) {
-                            var autoSignCallback = function(success, errorMsg) {
-                                if (success) {
-                                    JsHelper.messageBox(BSMessageBox.Type.Success
-                                        , qsTr("Wallet Auto Sign")
-                                        , qsTr("Auto Signing enabled for wallet %1")
-                                            .arg(walletInfo.rootId))
-                                }
-                                else {
-                                    JsHelper.messageBox(BSMessageBox.Type.Critical
-                                        , qsTr("Wallet Auto Sign")
-                                        , qsTr("Failed to enable auto signing.")
-                                        , errorString)
-                                }
-                            }
-
-                            if (walletInfo.encType === QPasswordData.Password) {
-                                var passwordDialog = Qt.createComponent("BsControls/BSPasswordInput.qml").createObject(mainWindow);
-                                passwordDialog.open()
-                                passwordDialog.bsAccepted.connect(function() {
-                                    var passwordData = qmlFactory.createPasswordData()
-                                    passwordData.encType = QPasswordData.Password
-                                    passwordData.encKey = ""
-                                    passwordData.textPassword = passwordDialog.enteredPassword
-
-                                    signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
-                                })
-                            }
-                            else if (walletInfo.encType === QPasswordData.Auth) {
-                                JsHelper.requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
-                                    signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
-                                })
-                            }
-
-                        }
-                        else {
-                            var autoSignDisableCallback = function(success, errorMsg) {
-                                if (success) {
-                                    JsHelper.messageBox(BSMessageBox.Type.Success
-                                        , qsTr("Wallet Auto Sign")
-                                        , qsTr("Auto Signing disabled for wallet %1")
-                                            .arg(walletInfo.rootId))
-                                }
-                                else {
-                                    JsHelper.messageBox(BSMessageBox.Type.Critical
-                                        , qsTr("Wallet Auto Sign")
-                                        , qsTr("Failed to disable auto signing.")
-                                        , errorString)
-                                }
-                            }
-
-                            signerStatus.activateAutoSign(walletInfo.rootId, 0, false, autoSignDisableCallback)
-                        }
+                        JsHelper.tryChangeAutoSign(newState, signerSettings.autoSignWallet, true)
                     }
                 }
             }

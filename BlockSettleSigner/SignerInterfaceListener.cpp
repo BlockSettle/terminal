@@ -487,7 +487,6 @@ void SignerInterfaceListener::onExecCustomDialog(const std::string &data, bs::si
    QVariantMap variantData;
    stream >> variantData;
 
-
    emit parent_->customDialogRequest(QString::fromStdString(evt.dialogname()), variantData);
 }
 

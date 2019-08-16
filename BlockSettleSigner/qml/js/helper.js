@@ -227,6 +227,7 @@ function isSelectedWalletHdRoot(walletsView) {
 function customDialogRequest(dialogName, data) {
     // TODO: send initial values (qmlTitleVisible) in createObject params map
     let dlg = eval(dialogName)(data)
+    // NOTE: activateAutoSignDialog won't return dialog
     return dlg
 }
 
@@ -379,8 +380,80 @@ function manageEncryptionDialog(data) {
 
 function activateAutoSignDialog(data) {
     var walletId = data["rootId"]
-    signerSettings.autoSignWallet = walletId
-    signerStatus.activateAutoSign(walletId)
+    var enable = data["enable"]
+    tryChangeAutoSign(enable, walletId, false)
+}
+
+function tryActivateAutoSign(walletInfo, showResult) {
+    var autoSignCallback = function(success, errorMsg) {
+        if (!showResult) {
+            return
+        }
+
+        if (success) {
+            JsHelper.messageBox(BSMessageBox.Type.Success
+                , qsTr("Wallet Auto Sign")
+                , qsTr("Auto Signing enabled for wallet %1").arg(walletInfo.rootId))
+        } else {
+            JsHelper.messageBox(BSMessageBox.Type.Critical
+                , qsTr("Wallet Auto Sign")
+                , qsTr("Failed to enable auto signing.")
+                , errorString)
+        }
+    }
+
+    if (walletInfo.encType === QPasswordData.Password) {
+        var passwordDialog = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
+        prepareLiteModeDialog(passwordDialog)
+        passwordDialog.open()
+        passwordDialog.bsAccepted.connect(function() {
+            var passwordData = qmlFactory.createPasswordData()
+            passwordData.encType = QPasswordData.Password
+            passwordData.encKey = ""
+            passwordData.textPassword = passwordDialog.enteredPassword
+
+            signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
+        })
+    }
+    else if (walletInfo.encType === QPasswordData.Auth) {
+        JsHelper.requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
+            signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
+        })
+    }
+}
+
+function tryDeactivateAutoSign(walletInfo, showResult) {
+    var autoSignDisableCallback = function(success, errorMsg) {
+        if (!showResult) {
+            return
+        }
+
+        if (success) {
+            JsHelper.messageBox(BSMessageBox.Type.Success
+                , qsTr("Wallet Auto Sign")
+                , qsTr("Auto Signing disabled for wallet %1")
+                    .arg(walletInfo.rootId))
+        }
+        else {
+            JsHelper.messageBox(BSMessageBox.Type.Critical
+                , qsTr("Wallet Auto Sign")
+                , qsTr("Failed to disable auto signing.")
+                , errorString)
+        }
+    }
+
+    signerStatus.activateAutoSign(walletInfo.rootId, 0, false, autoSignDisableCallback)
+}
+
+function tryChangeAutoSign(newState, walletId, showResult) {
+    var walletInfo = qmlFactory.createWalletInfo(walletId)
+
+    if (newState) {
+        tryActivateAutoSign(walletInfo, showResult)
+    }
+    else {
+        tryDeactivateAutoSign(walletInfo, showResult)
+    }
 }
 
 function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
