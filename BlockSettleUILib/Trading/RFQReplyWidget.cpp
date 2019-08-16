@@ -44,7 +44,6 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::quoteReqNotifStatusChanged, ui_->pageRFQReply
       , &RFQDealerReply::quoteReqNotifStatusChanged, Qt::QueuedConnection);
-   connect(ui_->pageRFQReply, &RFQDealerReply::autoSignActivated, this, &RFQReplyWidget::onAutoSignActivated);
 
    ui_->shieldPage->showShieldLoginRequired();
    popShield();
@@ -285,31 +284,6 @@ void RFQReplyWidget::onReadyToActivate()
       return;
    }
    settlContainer->activate();
-}
-
-void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)
-{
-   // TODO: review
-
-//   if (walletsManager_ == nullptr) {
-//      return;
-//   }
-
-//   auto hdWallet = walletsManager_->getHDWalletById(hdWalletId.toStdString());
-//   if (!hdWallet) {
-//      logger_->warn("[RFQReplyWidget::onAutoSignActivated] failed to get HD wallet for id {} - falling back to main primary"
-//         , hdWalletId.toStdString());
-//      hdWallet = walletsManager_->getPrimaryWallet();
-//   }
-//   if (!hdWallet) {
-//      return;
-//   }
-
-
-//   if (signingContainer_->isReady()) {
-//      signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ActivateAutoSign
-//         , {{ QLatin1String("rootId"), hdWalletId }});
-//   }
 }
 
 void RFQReplyWidget::onConnectedToCeler()

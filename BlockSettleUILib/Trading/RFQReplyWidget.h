@@ -72,7 +72,6 @@ private slots:
    void onSignTxRequested(QString orderId, QString reqId);
    void onReadyToAutoSign();
    void onReadyToActivate();
-   void onAutoSignActivated(const QString &hdWalletId, bool active);
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
    void onEnterKeyPressed(const QModelIndex &index);

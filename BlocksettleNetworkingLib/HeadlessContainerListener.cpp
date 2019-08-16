@@ -1238,13 +1238,6 @@ bs::error::ErrorCode HeadlessContainerListener::activateAutoSign(const std::stri
    if (!wallet) {
       return ErrorCode::WalletNotFound;
    }
-   if (!wallet->encryptionTypes().empty()) {
-      throw std::runtime_error("disabled 2");
-/*      const auto decrypted = wallet->getRootNode(password);
-      if (!decrypted) {
-         return bs::error::ErrorCode::InvalidPassword;
-      }*/
-   }
    passwords_[wallet->walletId()] = password;
 
    // multicast event
