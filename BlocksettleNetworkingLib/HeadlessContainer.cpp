@@ -991,7 +991,7 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
    for (int i = 0; i < response.groups_size(); ++i) {
       const auto groupInfo = response.groups(i);
       bs::sync::HDWalletData::Group group;
-      group.type = static_cast<bs::hd::CoinType>(groupInfo.type());
+      group.type = static_cast<bs::hd::CoinType>(groupInfo.type() | bs::hd::hardFlag);
       group.extOnly = groupInfo.ext_only();
       group.salt = groupInfo.salt();
       for (int j = 0; j < groupInfo.leaves_size(); ++j) {

@@ -1335,7 +1335,7 @@ bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, head
       response.set_walletid(hdWallet->walletId());
       for (const auto &group : hdWallet->getGroups()) {
          auto groupData = response.add_groups();
-         groupData->set_type(group->index());
+         groupData->set_type(group->index() | bs::hd::hardFlag);
          groupData->set_ext_only(hdWallet->isExtOnly());
 
          if (group->index() == bs::hd::CoinType::BlockSettle_Auth) {

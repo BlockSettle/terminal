@@ -812,6 +812,9 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
          if (settlGroup) {
             settlLeaf = settlGroup->getLeaf(authAddr_);
          }
+         else {
+            logger_->error("[RFQDealerReply::submit] failed to get settlement group");
+         }
       }
       if (!settlLeaf) {
          logger_->error("[RFQDealerReply::submit] failed to get settlement leaf for {}", authAddr_.display());
