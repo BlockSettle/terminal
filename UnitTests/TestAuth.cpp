@@ -122,8 +122,8 @@ BinaryData TestAuth::sendTo(uint64_t value, bs::Address& addr)
 }
 
 ////
-bs::Address TestAuth::getNewAddress(std::shared_ptr<bs::sync::Wallet> wltPtr,
-   bool ext, AddressEntryType aet)
+bs::Address TestAuth::getNewAddress(std::shared_ptr<bs::sync::Wallet> wltPtr
+   , bool ext)
 {
    auto promAddr = std::make_shared<std::promise<bs::Address>>();
    auto futAddr = promAddr->get_future();
@@ -131,10 +131,10 @@ bs::Address TestAuth::getNewAddress(std::shared_ptr<bs::sync::Wallet> wltPtr,
       promAddr->set_value(addr);
    };
    if (ext) {
-      wltPtr->getNewExtAddress(cbAddr, aet);
+      wltPtr->getNewExtAddress(cbAddr);
    }
    else {
-      wltPtr->getNewIntAddress(cbAddr, aet);
+      wltPtr->getNewIntAddress(cbAddr);
    }
    return futAddr.get();
 };
@@ -207,7 +207,7 @@ void TestAuth::SetUp()
 
    {
       auto lock = priWallet->lockForEncryption(passphrase_);
-      authSignWallet_ = authGroup->createLeaf(0x41555448/*"AUTH"*/);
+      authSignWallet_ = authGroup->createLeaf(AddressEntryType_Default, 0x41555448);
       if (!authSignWallet_)
          return;
    }
@@ -217,15 +217,17 @@ void TestAuth::SetUp()
    if (!xbtGroup)
       return;
 
-   const auto xbtLeaf = xbtGroup->getLeafByPath(0);
-   if (!xbtLeaf)
+   const bs::hd::Path xbtPath({bs::hd::Purpose::Native, priWallet->getXBTGroupType(), 0});
+   const auto xbtLeaf = xbtGroup->getLeafByPath(xbtPath);
+   if (!xbtLeaf) {
       return;
-
+   }
    {
       auto lock = priWallet->lockForEncryption(passphrase_);
-      xbtSignWallet_ = xbtGroup->createLeaf(1);
-      if (!xbtSignWallet_)
+      xbtSignWallet_ = xbtGroup->createLeaf(AddressEntryType_Default, 1);
+      if (!xbtSignWallet_) {
          return;
+      }
    }
 
    //setup sync manager

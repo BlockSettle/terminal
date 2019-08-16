@@ -6,10 +6,8 @@
 #include "ApplicationSettings.h"
 #include "CoreHDLeaf.h"
 #include "CoreHDWallet.h"
-#include "CoreSettlementWallet.h"
 #include "CoreWalletsManager.h"
 #include "InprocSigner.h"
-#include "SettlementAddressEntry.h"
 #include "SystemFileUtils.h"
 #include "TestEnv.h"
 #include "UiUtils.h"
@@ -74,12 +72,14 @@ TEST_F(TestWallet, BIP44_derivation)
    {
       auto lock = wallet->lockForEncryption(passphrase);
       wallet->createStructure();
+      ASSERT_NE(wallet->getGroup(wallet->getXBTGroupType()), nullptr);
    }
 
    const auto grpXbt = wallet->getGroup(wallet->getXBTGroupType());
    ASSERT_NE(grpXbt, nullptr);
 
-   const auto leafXbt = grpXbt->getLeafByPath(0);
+   const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, wallet->getXBTGroupType(), 0 });
+   const auto leafXbt = grpXbt->getLeafByPath(xbtPath);
    EXPECT_NE(leafXbt, nullptr);
 
    auto val = leafXbt->getExtAddressCount();
@@ -127,35 +127,35 @@ TEST_F(TestWallet, BIP44_primary)
    const auto grpXbt = wallet->getGroup(wallet->getXBTGroupType());
    ASSERT_NE(grpXbt, nullptr);
 
-   const auto leafXbt = grpXbt->getLeafByPath(0);
+   const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, wallet->getXBTGroupType(), 0 });
+   const auto leafXbt = grpXbt->getLeafByPath(xbtPath);
    EXPECT_NE(leafXbt, nullptr);
    EXPECT_EQ(leafXbt->shortName(), "0'");
-   EXPECT_EQ(leafXbt->name(), "m/44'/1'/0'");
+   EXPECT_EQ(leafXbt->name(), "44'/1'/0'");
    EXPECT_EQ(leafXbt->getRootId().toHexStr(), "64134dca");
 
-   EXPECT_THROW(grpXbt->createLeaf(0), std::exception);
+   EXPECT_THROW(grpXbt->createLeaf(AddressEntryType_Default, 0), std::exception);
 
    {
       auto lock = wallet->lockForEncryption(wrongPass);
-      const auto leaf1 = grpXbt->createLeaf(1, 10);
-      ASSERT_EQ(leaf1, nullptr);
-      EXPECT_EQ(grpXbt->getNumLeaves(), 1);
+      EXPECT_THROW(grpXbt->createLeaf(AddressEntryType_Default, 1, 10), std::exception);
+      EXPECT_EQ(grpXbt->getNumLeaves(), 2);
    }
 
    {
       auto lock = wallet->lockForEncryption(passphrase);
-      const auto leaf1 = grpXbt->createLeaf(1, 10);
+      const auto leaf1 = grpXbt->createLeaf(AddressEntryType_P2WPKH, 1, 10);
       ASSERT_NE(leaf1, nullptr);
-      EXPECT_EQ(grpXbt->getNumLeaves(), 2);
+      EXPECT_EQ(grpXbt->getNumLeaves(), 3);
       EXPECT_EQ(leaf1->shortName(), "1'");
-      EXPECT_EQ(leaf1->name(), "m/44'/1'/1'");
+      EXPECT_EQ(leaf1->name(), "44'/1'/1'");
       //EXPECT_EQ(leaf1->description(), "test");
       EXPECT_TRUE(envPtr_->walletsMgr()->deleteWalletFile(leaf1));
-      EXPECT_EQ(grpXbt->getNumLeaves(), 1);
+      EXPECT_EQ(grpXbt->getNumLeaves(), 2);
 
       const auto grpCC = wallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
-      const auto leafCC = grpCC->createLeaf(7568, 10);
-      EXPECT_EQ(leafCC->name(), "m/44'/16979'/7568'"); //16979 == 0x4253
+      const auto leafCC = grpCC->createLeaf(AddressEntryType_P2WPKH, 7568, 10);
+      EXPECT_EQ(leafCC->name(), "44'/16979'/7568'"); //16979 == 0x4253
    }
 
    auto inprocSigner = std::make_shared<InprocSigner>(
@@ -171,8 +171,8 @@ TEST_F(TestWallet, BIP44_primary)
 
    QComboBox cbox;
    UiUtils::fillWalletsComboBox(&cbox, syncMgr);
-   EXPECT_EQ(cbox.count(), 1);
-   EXPECT_EQ(cbox.currentText().toStdString(), syncXbtLeaf->name());
+   EXPECT_EQ(cbox.count(), 2);
+//   EXPECT_EQ(cbox.currentText().toStdString(), syncXbtLeaf->name());
 
    EXPECT_TRUE(envPtr_->walletsMgr()->deleteWalletFile(wallet));
    EXPECT_EQ(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
@@ -189,7 +189,7 @@ TEST_F(TestWallet, BIP44_address)
    auto lock = wallet->lockForEncryption(passphrase);
    auto grp = wallet->createGroup(wallet->getXBTGroupType());
    ASSERT_NE(grp, nullptr);
-   auto leaf = grp->createLeaf(0, 10);
+   auto leaf = grp->createLeaf(AddressEntryType_Default, 0, 10);
    ASSERT_NE(leaf, nullptr);
    EXPECT_EQ(leaf->getUsedAddressCount(), 0);
 
@@ -219,7 +219,7 @@ TEST_F(TestWallet, BIP44_WatchingOnly)
    std::shared_ptr<bs::core::hd::Leaf> leaf1;
    {
       auto lock = wallet->lockForEncryption(passphrase);
-      leaf1 = grp->createLeaf(0, 10);
+      leaf1 = grp->createLeaf(AddressEntryType_Default, 0, 10);
       ASSERT_NE(leaf1, nullptr);
       EXPECT_FALSE(leaf1->isWatchingOnly());
       for (size_t i = 0; i < nbAddresses; i++) {
@@ -227,7 +227,7 @@ TEST_F(TestWallet, BIP44_WatchingOnly)
       }
       EXPECT_EQ(leaf1->getUsedAddressCount(), nbAddresses);
 
-      auto leaf2 = grp->createLeaf(1, 10);
+      auto leaf2 = grp->createLeaf(AddressEntryType_Default, 1, 10);
       ASSERT_NE(leaf2, nullptr);
       for (size_t i = 0; i < nbAddresses; i++) {
          leaf2->getNewExtAddress();
@@ -241,10 +241,12 @@ TEST_F(TestWallet, BIP44_WatchingOnly)
    auto woGroup = woWallet->getGroup(woWallet->getXBTGroupType());
    ASSERT_NE(woGroup, nullptr);
 
-   auto woLeaf1 = woGroup->getLeafByPath(0);
+   const bs::hd::Path xbtPath1({ bs::hd::Purpose::Native, woWallet->getXBTGroupType(), 0 });
+   auto woLeaf1 = woGroup->getLeafByPath(xbtPath1);
    ASSERT_NE(woLeaf1, nullptr);
    EXPECT_TRUE(woLeaf1->isWatchingOnly());
-   auto woLeaf2 = woGroup->getLeafByPath(1);
+   const bs::hd::Path xbtPath2({ bs::hd::Purpose::Native, woWallet->getXBTGroupType(), 1 });
+   auto woLeaf2 = woGroup->getLeafByPath(xbtPath2);
    ASSERT_NE(woLeaf2, nullptr);
    EXPECT_TRUE(woLeaf2->isWatchingOnly());
    EXPECT_EQ(woLeaf1->getUsedAddressCount(), nbAddresses);
@@ -253,88 +255,24 @@ TEST_F(TestWallet, BIP44_WatchingOnly)
    const auto addrList = leaf1->getUsedAddressList();
    for (size_t i = 0; i < nbAddresses; i++) {
       const auto index = woLeaf1->addressIndex(addrList[i]);
-      const auto addr = leaf1->getAddressByIndex(index, true, addrList[i].getType());
+      const auto addr = leaf1->getAddressByIndex(index, true);
       EXPECT_EQ(addrList[i].prefixed(), addr.prefixed()) << "addresses at " << index << " are unequal";
    }
    EXPECT_EQ(leaf1->getUsedAddressCount(), nbAddresses);
 
    EXPECT_TRUE(woWallet->isWatchingOnly());
    EXPECT_NE(woWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth), nullptr);
-   EXPECT_THROW(woGroup->createLeaf(2), std::exception);
+   EXPECT_THROW(woGroup->createLeaf(AddressEntryType_Default, 2), std::exception);
 
    EXPECT_TRUE(wallet->eraseFile());
    EXPECT_TRUE(woWallet->eraseFile());
-}
-
-TEST_F(TestWallet, Settlement)
-{
-   btc_ecc_start();
-
-   const std::string filename = walletFolder_ + std::string("/settlement_test_wallet.lmdb");
-   constexpr size_t nKeys = 3;
-   BinaryData settlementId[nKeys];
-   for (size_t i = 0; i < nKeys; i++) {
-      settlementId[i] = CryptoPRNG::generateRandom(32);
-   }
-   BinaryData buyPrivKey[nKeys];
-   for (size_t i = 0; i < nKeys; i++) {
-      buyPrivKey[i] = CryptoPRNG::generateRandom(32);
-   }
-   BinaryData sellPrivKey[nKeys];
-   for (size_t i = 0; i < nKeys; i++) {
-      sellPrivKey[i] = CryptoPRNG::generateRandom(32);
-   }
-   CryptoECDSA crypto;
-   BinaryData buyPubKey[nKeys];
-   for (size_t i = 0; i < nKeys; i++) {
-      buyPubKey[i] = crypto.CompressPoint(crypto.ComputePublicKey(buyPrivKey[i]));
-      ASSERT_EQ(buyPubKey[i].getSize(), 33);
-   }
-   BinaryData sellPubKey[nKeys];
-   for (size_t i = 0; i < nKeys; i++) {
-      sellPubKey[i] = crypto.CompressPoint(crypto.ComputePublicKey(sellPrivKey[i]));
-      ASSERT_EQ(sellPubKey[i].getSize(), 33);
-      ASSERT_NE(buyPubKey[i], sellPubKey[i]);
-   }
-
-   std::shared_ptr<bs::core::SettlementAddressEntry> addrEntry1;
-   {
-      bs::core::SettlementWallet wallet1(NetworkType::TestNet);
-      wallet1.saveToFile(filename);
-      addrEntry1 = wallet1.newAddress(settlementId[0], buyPubKey[0], sellPubKey[0], "Test comment");
-      ASSERT_EQ(wallet1.getUsedAddressCount(), 1);
-      EXPECT_EQ(bs::Address(addrEntry1->getPrefixedHash()), wallet1.getUsedAddressList()[0]);
-      EXPECT_EQ(wallet1.getAddressComment(addrEntry1->getPrefixedHash()), "Test comment");
-   }
-
-   {
-      bs::core::SettlementWallet wallet2(NetworkType::TestNet, filename);
-      ASSERT_EQ(wallet2.getUsedAddressCount(), 1);
-      EXPECT_EQ(bs::Address(addrEntry1->getPrefixedHash()), wallet2.getUsedAddressList()[0]);
-      EXPECT_EQ(wallet2.getAddressComment(addrEntry1->getPrefixedHash()), "Test comment");
-      wallet2.newAddress(settlementId[1], buyPubKey[1], sellPubKey[1]);
-      EXPECT_EQ(wallet2.getUsedAddressCount(), 2);
-   }
-
-   {
-      bs::core::SettlementWallet wallet3(NetworkType::TestNet, filename);
-      EXPECT_EQ(wallet3.getUsedAddressCount(), 2);
-      EXPECT_EQ(bs::Address(addrEntry1->getPrefixedHash()), wallet3.getUsedAddressList()[0]);
-      wallet3.newAddress(settlementId[2], buyPubKey[2], sellPubKey[2]);
-      EXPECT_EQ(wallet3.getUsedAddressCount(), 3);
-   }
-
-   {
-      bs::core::SettlementWallet wallet4(NetworkType::TestNet, filename);
-      EXPECT_EQ(wallet4.getUsedAddressCount(), 3);
-   }
 }
 
 TEST_F(TestWallet, ExtOnlyAddresses)
 {
    SecureBinaryData passphrase("test");
    const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
-   bs::core::hd::Wallet wallet1("test", "", seed, passphrase, walletFolder_, envPtr_->logger());
+   bs::core::hd::Wallet wallet1("test1", "", seed, passphrase, walletFolder_, envPtr_->logger());
    wallet1.setExtOnly();
 
    std::shared_ptr<bs::core::hd::Leaf> leaf1;
@@ -344,7 +282,7 @@ TEST_F(TestWallet, ExtOnlyAddresses)
       auto grp1 = wallet1.createGroup(wallet1.getXBTGroupType());
       ASSERT_NE(grp1, nullptr);
 
-      leaf1 = grp1->createLeaf(0);
+      leaf1 = grp1->createLeaf(AddressEntryType_Default, 0);
       ASSERT_NE(leaf1, nullptr);
       EXPECT_TRUE(leaf1->hasExtOnlyAddresses());
    }
@@ -354,7 +292,7 @@ TEST_F(TestWallet, ExtOnlyAddresses)
    EXPECT_EQ(index1, "0/0");
 
    const bs::core::wallet::Seed seed2{ SecureBinaryData("test seed 2"), NetworkType::TestNet };
-   bs::core::hd::Wallet wallet2("test", "", seed2, passphrase);
+   bs::core::hd::Wallet wallet2("test2", "", seed2, passphrase, walletFolder_, envPtr_->logger());
 
    std::shared_ptr<bs::core::hd::Leaf> leaf2;
    {
@@ -363,7 +301,7 @@ TEST_F(TestWallet, ExtOnlyAddresses)
       auto grp2 = wallet2.createGroup(wallet2.getXBTGroupType());
       ASSERT_NE(grp2, nullptr);
 
-      leaf2 = grp2->createLeaf(0);
+      leaf2 = grp2->createLeaf(AddressEntryType_Default, 0);
       ASSERT_NE(leaf2, nullptr);
       EXPECT_FALSE(leaf2->hasExtOnlyAddresses());
    }
@@ -380,10 +318,11 @@ TEST_F(TestWallet, ExtOnlyAddresses)
 TEST_F(TestWallet, CreateDestroyLoad)
 {
    //setup bip32 node
-   BIP32_Node base_node;
-   base_node.initFromSeed(SecureBinaryData("test seed"));
+   BIP32_Node baseNodeNative, baseNodeNested;
+   baseNodeNative.initFromSeed(SecureBinaryData("test seed"));
+   baseNodeNested.initFromSeed(SecureBinaryData("test seed"));
 
-   std::vector<bs::Address> extAddrVec;
+   std::vector<bs::Address> extAddrVecNative, extAddrVecNested;
    std::vector<bs::Address> intAddrVec;
    std::set<BinaryData> grabbedAddrHash;
 
@@ -404,80 +343,92 @@ TEST_F(TestWallet, CreateDestroyLoad)
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
       ASSERT_TRUE(groupPtr != nullptr);
 
-      auto leafPtr = groupPtr->getLeafByPath(0);
-      ASSERT_TRUE(leafPtr != nullptr);
+      const bs::hd::Path xbtPathNative({ bs::hd::Purpose::Native, walletPtr->getXBTGroupType(), 0 });
+      const bs::hd::Path xbtPathNested({ bs::hd::Purpose::Nested, walletPtr->getXBTGroupType(), 0 });
+      auto leafPtrNative = groupPtr->getLeafByPath(xbtPathNative);
+      auto leafPtrNested = groupPtr->getLeafByPath(xbtPathNested);
+      ASSERT_NE(leafPtrNative, nullptr);
+      ASSERT_NE(leafPtrNested, nullptr);
 
       //reproduce the keys as bip32 nodes
-      std::vector<unsigned> derPath = {
-         0x8000002c, //44' 
+      std::vector<unsigned> derPathNative = {
+         0x8000002c, //44'
+         0x80000001, //1'
+         0x80000000  //0'
+      };
+      std::vector<unsigned> derPathNested = {
+         0x80000031, //49'
          0x80000001, //1'
          0x80000000  //0'
       };
 
-      for (auto& path : derPath)
-         base_node.derivePrivate(path);
+      for (auto& path : derPathNative) {
+         baseNodeNative.derivePrivate(path);
+      }
+      for (auto& path : derPathNested) {
+         baseNodeNested.derivePrivate(path);
+      }
 
       //grab a bunch of addresses
-      for (unsigned i = 0; i < 5; i++)
-         extAddrVec.push_back(leafPtr->getNewExtAddress());
-
-      for (unsigned i = 0; i < 5; i++)
-      {
-         extAddrVec.push_back(leafPtr->getNewExtAddress(
-            AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)));
+      for (unsigned i = 0; i < 5; i++) {
+         extAddrVecNative.push_back(leafPtrNative->getNewExtAddress());
       }
-
-      for (unsigned i = 0; i < 5; i++)
-         intAddrVec.push_back(leafPtr->getNewIntAddress());
-
+      for (unsigned i = 0; i < 5; i++) {
+         extAddrVecNested.push_back(leafPtrNested->getNewExtAddress());
+      }
+      for (unsigned i = 0; i < 5; i++) {
+         intAddrVec.push_back(leafPtrNative->getNewIntAddress());
+      }
       //check address maps
-      BIP32_Node ext_node = base_node;
-      ext_node.derivePrivate(0);
-      for (unsigned i = 0; i < 5; i++)
-      {
-         auto addr_node = ext_node;
-         addr_node.derivePrivate(i);
-         auto addr_hash = BtcUtils::getHash160(addr_node.getPublicKey());
-         EXPECT_EQ(addr_hash, extAddrVec[i].unprefixed());
+      BIP32_Node extNode = baseNodeNative;
+      extNode.derivePrivate(0);
+      for (unsigned i = 0; i < 5; i++) {
+         auto addrNode = extNode;
+         addrNode.derivePrivate(i);
+         auto addrHash = BtcUtils::getHash160(addrNode.getPublicKey());
+         EXPECT_EQ(addrHash, extAddrVecNative[i].unprefixed());
       }
 
-      for (unsigned i = 5; i < 10; i++)
-      {
-         auto addr_node = ext_node;
-         addr_node.derivePrivate(i);
-         auto scrHash = BtcUtils::getHash160(addr_node.getPublicKey());
+      extNode = baseNodeNested;
+      extNode.derivePrivate(0);
+      for (unsigned i = 0; i < 5; i++) {
+         auto addrNode = extNode;
+         addrNode.derivePrivate(i);
+         auto scrHash = BtcUtils::getHash160(addrNode.getPublicKey());
          auto addrHash = BtcUtils::getP2WPKHOutputScript(scrHash);
          auto p2shHash = BtcUtils::getHash160(addrHash);
-         EXPECT_EQ(p2shHash, extAddrVec[i].unprefixed());
+         EXPECT_EQ(p2shHash, extAddrVecNested[i].unprefixed());
       }
 
-      BIP32_Node int_node = base_node;
-      int_node.derivePrivate(1);
-      for (unsigned i = 0; i < 5; i++)
-      {
-         auto addr_node = int_node;
-         addr_node.derivePrivate(i);
-         auto addr_hash = BtcUtils::getHash160(addr_node.getPublicKey());
+      BIP32_Node intNode = baseNodeNative;
+      intNode.derivePrivate(1);
+      for (unsigned i = 0; i < 5; i++) {
+         auto addrNode = intNode;
+         addrNode.derivePrivate(i);
+         auto addr_hash = BtcUtils::getHash160(addrNode.getPublicKey());
          EXPECT_EQ(addr_hash, intAddrVec[i].unprefixed());
       }
 
       //check chain use counters
-      EXPECT_EQ(leafPtr->getUsedAddressCount(), 15);
-      EXPECT_EQ(leafPtr->getExtAddressCount(), 10);
-      EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
+      EXPECT_EQ(leafPtrNative->getUsedAddressCount(), 10);
+      EXPECT_EQ(leafPtrNative->getExtAddressCount(), 5);
+      EXPECT_EQ(leafPtrNative->getIntAddressCount(), 5);
+      EXPECT_EQ(leafPtrNested->getUsedAddressCount(), 5);
+      EXPECT_EQ(leafPtrNested->getExtAddressCount(), 5);
 
       //fetch used address list, turn it into a set, 
       //same with grabbed addresses, check they match
-      auto usedAddrList = leafPtr->getUsedAddressList();
+      auto usedAddrList = leafPtrNative->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
-      for (auto& addr : usedAddrList)
+      for (auto& addr : usedAddrList) {
          usedAddrHash.insert(addr.unprefixed());
+      }
 
-      grabbedAddrHash.insert(extAddrVec.begin(), extAddrVec.end());
+      grabbedAddrHash.insert(extAddrVecNative.begin(), extAddrVecNative.end());
       grabbedAddrHash.insert(intAddrVec.begin(), intAddrVec.end());
 
-      ASSERT_EQ(grabbedAddrHash.size(), 15);
-      EXPECT_EQ(usedAddrHash.size(), 15);
+      ASSERT_EQ(grabbedAddrHash.size(), 10);
+      EXPECT_EQ(usedAddrHash.size(), 10);
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
 
       //wallet object will be destroyed when this scope exits
@@ -494,22 +445,23 @@ TEST_F(TestWallet, CreateDestroyLoad)
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
       ASSERT_TRUE(groupPtr != nullptr);
 
-      auto leafPtr = groupPtr->getLeafByPath(0);
+      const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, walletPtr->getXBTGroupType(), 0 });
+      auto leafPtr = groupPtr->getLeafByPath(xbtPath);
       ASSERT_TRUE(leafPtr != nullptr);
 
       //fetch used address list, turn it into a set, 
       auto usedAddrList = leafPtr->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
-      for (auto& addr : usedAddrList)
+      for (auto& addr : usedAddrList) {
          usedAddrHash.insert(addr.unprefixed());
-      
+      }
       //test it vs grabbed addresses
-      EXPECT_EQ(usedAddrHash.size(), 15);
+      EXPECT_EQ(usedAddrHash.size(), 10);
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafPtr->getUsedAddressCount(), 15);
-      EXPECT_EQ(leafPtr->getExtAddressCount(), 10);
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 10);
+      EXPECT_EQ(leafPtr->getExtAddressCount(), 5);
       EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
 
       ////////////////
@@ -519,7 +471,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
       auto groupWO = woCopy->getGroup(bs::hd::Bitcoin_test);
       ASSERT_TRUE(groupPtr != nullptr);
 
-      auto leafWO = groupWO->getLeafByPath(0);
+      auto leafWO = groupWO->getLeafByPath(xbtPath);
       ASSERT_TRUE(leafPtr != nullptr);
 
       //fetch used address list, turn it into a set, 
@@ -529,12 +481,12 @@ TEST_F(TestWallet, CreateDestroyLoad)
          woAddrHash.insert(addr.unprefixed());
 
       //test it vs grabbed addresses
-      EXPECT_EQ(woAddrHash.size(), 15);
+      EXPECT_EQ(woAddrHash.size(), 10);
       EXPECT_EQ(woAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafWO->getUsedAddressCount(), 15);
-      EXPECT_EQ(leafWO->getExtAddressCount(), 10);
+      EXPECT_EQ(leafWO->getUsedAddressCount(), 10);
+      EXPECT_EQ(leafWO->getExtAddressCount(), 5);
       EXPECT_EQ(leafWO->getIntAddressCount(), 5);
 
       //exiting this scope will destroy both loaded wallet and wo copy object
@@ -557,7 +509,8 @@ TEST_F(TestWallet, CreateDestroyLoad)
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
       ASSERT_TRUE(groupPtr != nullptr);
 
-      auto leafPtr = groupPtr->getLeafByPath(0);
+      const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, walletPtr->getXBTGroupType(), 0 });
+      auto leafPtr = groupPtr->getLeafByPath(xbtPath);
       ASSERT_TRUE(leafPtr != nullptr);
 
       //fetch used address list, turn it into a set, 
@@ -567,12 +520,12 @@ TEST_F(TestWallet, CreateDestroyLoad)
          usedAddrHash.insert(addr.unprefixed());
 
       //test it vs grabbed addresses
-      EXPECT_EQ(usedAddrHash.size(), 15);
+      EXPECT_EQ(usedAddrHash.size(), 10);
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafPtr->getUsedAddressCount(), 15);
-      EXPECT_EQ(leafPtr->getExtAddressCount(), 10);
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 10);
+      EXPECT_EQ(leafPtr->getExtAddressCount(), 5);
       EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
    }
 }
@@ -582,7 +535,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
    SecureBinaryData passphrase("test");
    std::string filename;
 
-   std::vector<bs::Address> extAddrVec;
+   std::vector<bs::Address> extAddrVecNative, extAddrVecNested;
    std::vector<bs::Address> intAddrVec;
 
    //bip32 derived counterpart
@@ -595,8 +548,10 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       0x80000000  //0'
    };
 
-   for (auto& path : derPath)
+   for (auto& path : derPath) {
       base_node.derivePrivate(path);
+   }
+   const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, bs::hd::Bitcoin_test, 0 });
 
    {
       //create a wallet
@@ -631,22 +586,22 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 
       //grab sync wallet
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
-      auto leafPtr = groupPtr->getLeafByPath(0);
+      auto leafPtr = groupPtr->getLeafByPath(xbtPath);
       auto syncWallet = syncMgr->getWalletById(leafPtr->walletId());
 
       //grab addresses from sync wallet
 
-      const auto &lbdGetSyncAddress = [syncWallet](bool ext, AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+      const auto &lbdGetSyncAddress = [syncWallet](bool ext) -> bs::Address {
          auto promAddr = std::make_shared<std::promise<bs::Address>>();
          auto futAddr = promAddr->get_future();
          const auto &cbAddr = [promAddr](const bs::Address &addr) {
             promAddr->set_value(addr);
          };
          if (ext) {
-            syncWallet->getNewExtAddress(cbAddr, aet);
+            syncWallet->getNewExtAddress(cbAddr);
          }
          else {
-            syncWallet->getNewChangeAddress(cbAddr, aet);
+            syncWallet->getNewChangeAddress(cbAddr);
          }
          return futAddr.get();
       };
@@ -654,15 +609,14 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       //p2wpkh
       for (unsigned i = 0; i < 5; i++) {
          const auto addr = lbdGetSyncAddress(true);
-         extAddrVec.push_back(addr);
+         extAddrVecNative.push_back(addr);
       }
 
       //nested p2wpkh
-      for (unsigned i = 0; i < 4; i++) {
-         const auto addr = lbdGetSyncAddress(true,
-            AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
-         extAddrVec.push_back(addr);
-      }
+/*      for (unsigned i = 0; i < 4; i++) {
+         const auto addr = lbdGetSyncAddress(true);   //TODO: should get from another leaf
+         extAddrVecNested.push_back(addr);
+      }*/
 
       //change addresses, p2wpkh
       for (unsigned i = 0; i < 5; i++) {
@@ -671,40 +625,37 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       }
 
       //check used addr count
-      EXPECT_EQ(syncWallet->getUsedAddressCount(), 14);
-      EXPECT_EQ(syncWallet->getExtAddressCount(), 9);
+      EXPECT_EQ(syncWallet->getUsedAddressCount(), 10);
+      EXPECT_EQ(syncWallet->getExtAddressCount(), 5);
       EXPECT_EQ(syncWallet->getIntAddressCount(), 5);
       syncWallet->syncAddresses();
 
       //check address maps
-      BIP32_Node ext_node = base_node;
-      ext_node.derivePrivate(0);
-      for (unsigned i = 0; i < 5; i++)
-      {
-         auto addr_node = ext_node;
-         addr_node.derivePrivate(i);
-         auto addr_hash = BtcUtils::getHash160(addr_node.getPublicKey());
-         EXPECT_EQ(addr_hash, extAddrVec[i].unprefixed());
+      BIP32_Node extNode = base_node;
+      extNode.derivePrivate(0);
+      for (unsigned i = 0; i < 5; i++) {
+         auto addrNode = extNode;
+         addrNode.derivePrivate(i);
+         auto addrHash = BtcUtils::getHash160(addrNode.getPublicKey());
+         EXPECT_EQ(addrHash, extAddrVecNative[i].unprefixed());
       }
 
-      for (unsigned i = 5; i < 9; i++)
-      {
-         auto addr_node = ext_node;
-         addr_node.derivePrivate(i);
-         auto scrHash = BtcUtils::getHash160(addr_node.getPublicKey());
+/*      for (unsigned i = 0; i < 4; i++) {
+         auto addrNode = extNode;
+         addrNode.derivePrivate(i);
+         auto scrHash = BtcUtils::getHash160(addrNode.getPublicKey());
          auto addrHash = BtcUtils::getP2WPKHOutputScript(scrHash);
          auto p2shHash = BtcUtils::getHash160(addrHash);
-         EXPECT_EQ(p2shHash, extAddrVec[i].unprefixed());
-      }
+         EXPECT_EQ(p2shHash, extAddrVecNested[i].unprefixed());
+      }*/
 
-      BIP32_Node int_node = base_node;
-      int_node.derivePrivate(1);
-      for (unsigned i = 0; i < 5; i++)
-      {
-         auto addr_node = int_node;
-         addr_node.derivePrivate(i);
-         auto addr_hash = BtcUtils::getHash160(addr_node.getPublicKey());
-         EXPECT_EQ(addr_hash, intAddrVec[i].unprefixed());
+      BIP32_Node intNode = base_node;
+      intNode.derivePrivate(1);
+      for (unsigned i = 0; i < 5; i++) {
+         auto addrNode = intNode;
+         addrNode.derivePrivate(i);
+         auto addrHash = BtcUtils::getHash160(addrNode.getPublicKey());
+         EXPECT_EQ(addrHash, intAddrVec[i].unprefixed());
       }
    
       //shut it all down
@@ -737,14 +688,14 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 
       //grab sync wallet
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
-      auto leafPtr = groupPtr->getLeafByPath(0);
+      auto leafPtr = groupPtr->getLeafByPath(xbtPath);
       auto syncWallet = syncMgr->getWalletById(leafPtr->walletId());
 
       //check used addr count
       EXPECT_EQ(syncWallet->getUsedAddressCount(), leafPtr->getUsedAddressCount());
-      EXPECT_EQ(syncWallet->getUsedAddressCount(), 14);
+      EXPECT_EQ(syncWallet->getUsedAddressCount(), 10);
       EXPECT_EQ(syncWallet->getExtAddressCount(), leafPtr->getExtAddressCount());
-      EXPECT_EQ(syncWallet->getExtAddressCount(), 9);
+      EXPECT_EQ(syncWallet->getExtAddressCount(), 5);
       EXPECT_EQ(syncWallet->getIntAddressCount(), leafPtr->getIntAddressCount());
       EXPECT_EQ(syncWallet->getIntAddressCount(), 5);
 
@@ -752,29 +703,30 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       auto&& usedAddrList = syncWallet->getUsedAddressList();
 
       std::set<BinaryData> originalSet;
-      for (auto& addr : extAddrVec)
+      for (auto& addr : extAddrVecNative) {
          originalSet.insert(addr.prefixed());
-      for(auto& addr : intAddrVec)
+      }
+      for (auto& addr : intAddrVec) {
          originalSet.insert(addr.prefixed());
-
+      }
       std::set<BinaryData> loadedSet;
-      for (auto& addr : usedAddrList)
+      for (auto& addr : usedAddrList) {
          loadedSet.insert(addr.prefixed());
-
-      EXPECT_EQ(originalSet.size(), 14);
-      EXPECT_EQ(loadedSet.size(), 14);
+      }
+      EXPECT_EQ(originalSet.size(), 10);
+      EXPECT_EQ(loadedSet.size(), 10);
       EXPECT_EQ(originalSet, loadedSet);
 
-      const auto &lbdGetSyncAddress = [syncWallet](bool ext, AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+      const auto &lbdGetSyncAddress = [syncWallet](bool ext) -> bs::Address {
          auto promAddr = std::make_shared<std::promise<bs::Address>>();
          auto futAddr = promAddr->get_future();
          const auto &cbAddr = [promAddr](const bs::Address &addr) {
             promAddr->set_value(addr);
          };
          if (ext) {
-            syncWallet->getNewExtAddress(cbAddr, aet);
+            syncWallet->getNewExtAddress(cbAddr);
          } else {
-            syncWallet->getNewIntAddress(cbAddr, aet);
+            syncWallet->getNewIntAddress(cbAddr);
          }
          return futAddr.get();
       };
@@ -783,10 +735,10 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       auto newAddrExt = lbdGetSyncAddress(true);
       BIP32_Node ext_node = base_node;
       ext_node.derivePrivate(0);
-      ext_node.derivePrivate(9);
+      ext_node.derivePrivate(5);
       auto newAddrExtHash = BtcUtils::getHash160(ext_node.getPublicKey());
       EXPECT_EQ(newAddrExtHash, newAddrExt.unprefixed());
-      extAddrVec.push_back(newAddrExt);
+      extAddrVecNative.push_back(newAddrExt);
 
       auto newAddrInt = lbdGetSyncAddress(false);
       BIP32_Node int_node = base_node;
@@ -797,8 +749,8 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       intAddrVec.push_back(newAddrInt);
 
       //check used addr count again
-      EXPECT_EQ(syncWallet->getUsedAddressCount(), 16);
-      EXPECT_EQ(syncWallet->getExtAddressCount(), 10);
+      EXPECT_EQ(syncWallet->getUsedAddressCount(), 12);
+      EXPECT_EQ(syncWallet->getExtAddressCount(), 6);
       EXPECT_EQ(syncWallet->getIntAddressCount(), 6);
       syncWallet->syncAddresses();
 
@@ -827,7 +779,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 
       //grab sync wallet
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
-      auto leafPtr = groupPtr->getLeafByPath(0);
+      auto leafPtr = groupPtr->getLeafByPath(xbtPath);
       auto syncWallet = syncMgr->getWalletById(leafPtr->walletId());
 
       //check used addr count
@@ -839,16 +791,19 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       auto&& usedAddrList = syncWallet->getUsedAddressList();
 
       std::set<BinaryData> originalSet;
-      for (auto& addr : extAddrVec)
+      for (auto& addr : extAddrVecNative) {
          originalSet.insert(addr.prefixed());
-      for (auto& addr : intAddrVec)
+      }
+      for (auto& addr : intAddrVec) {
          originalSet.insert(addr.prefixed());
+      }
 
       std::set<BinaryData> loadedSet;
-      for (auto& addr : usedAddrList)
+      for (auto& addr : usedAddrList) {
          loadedSet.insert(addr.prefixed());
+      }
 
-      EXPECT_EQ(originalSet.size(), 16);
+      EXPECT_EQ(originalSet.size(), 12);
       EXPECT_EQ(originalSet.size(), loadedSet.size());
       EXPECT_EQ(originalSet, loadedSet);
    }
@@ -884,7 +839,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
 
       {
          auto lock = walletPtr->lockForEncryption(passphrase);
-         leafPtr = group->createLeaf(0x800000b1, 10);
+         leafPtr = group->createLeaf(AddressEntryType_Default, 0x800000b1, 10);
          ASSERT_TRUE(leafPtr != nullptr);
          ASSERT_TRUE(leafPtr->hasExtOnlyAddresses());
       }
@@ -943,6 +898,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       filename = walletPtr->getFileName();
    }
 
+   const bs::hd::Path authPath({ bs::hd::Purpose::Native, bs::hd::BlockSettle_Auth, 0xb1 });
    {
       //load from file
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
@@ -956,7 +912,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       ASSERT_TRUE(authGroupPtr != nullptr);
       EXPECT_EQ(authGroupPtr->getSalt(), salt);
 
-      auto leafPtr = groupPtr->getLeafByPath(0xb1);
+      auto leafPtr = groupPtr->getLeafByPath(authPath);
       ASSERT_TRUE(leafPtr != nullptr);
       ASSERT_TRUE(leafPtr->hasExtOnlyAddresses());
 
@@ -1001,19 +957,19 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       EXPECT_TRUE(woCopy->isWatchingOnly());
 
       auto groupWO = woCopy->getGroup(bs::hd::BlockSettle_Auth);
-      ASSERT_TRUE(groupWO != nullptr);
+      ASSERT_NE(groupWO, nullptr);
 
       auto authGroupWO = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(groupWO);
-      ASSERT_TRUE(authGroupWO != nullptr);
+      ASSERT_NE(authGroupWO, nullptr);
       EXPECT_EQ(authGroupWO->getSalt(), salt);
 
-      auto leafWO = groupWO->getLeafByPath(0xb1);
-      ASSERT_TRUE(leafWO != nullptr);
+      auto leafWO = groupWO->getLeafByPath(authPath);
+      ASSERT_NE(leafWO, nullptr);
       EXPECT_TRUE(leafWO->hasExtOnlyAddresses());
       EXPECT_TRUE(leafWO->isWatchingOnly());
 
       auto authLeafWO = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leafWO);
-      ASSERT_TRUE(authLeafWO != nullptr);
+      ASSERT_NE(authLeafWO, nullptr);
       EXPECT_EQ(authLeafWO->getSalt(), salt);
 
       //fetch used address list, turn it into a set, 
@@ -1054,7 +1010,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       ASSERT_TRUE(authGroupWO != nullptr);
       EXPECT_EQ(authGroupWO->getSalt(), salt);
 
-      auto leafWO = authGroupWO->getLeafByPath(0xb1);
+      auto leafWO = authGroupWO->getLeafByPath(authPath);
       ASSERT_TRUE(leafWO != nullptr);
       ASSERT_TRUE(leafWO->hasExtOnlyAddresses());
 
@@ -1123,7 +1079,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
 
       {
          auto lock = walletPtr->lockForEncryption(passphrase);
-         leafPtr = group->createLeaf(0, 10);
+         leafPtr = group->createLeaf(AddressEntryType_Default, 0, 10);
          ASSERT_TRUE(leafPtr != nullptr);
          ASSERT_TRUE(leafPtr->hasExtOnlyAddresses());
       }
@@ -1135,7 +1091,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
       //grab auth address and its pubkey
       authAddr = authLeafPtr->getNewExtAddress();
       authPubKey = authLeafPtr->getPublicKeyFor(authAddr);
-      
+
       {
          //need to lock for leaf creation
          auto lock = walletPtr->lockForEncryption(passphrase);
@@ -1196,16 +1152,18 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
    }
 
    //reload
+   const bs::hd::Path settlPath({ bs::hd::Purpose::Native, bs::hd::BlockSettle_Settlement, 0 });
    {
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet);
+         filename, NetworkType::TestNet, "", StaticLogger::loggerPtr);
 
       //grab settlement group
       auto group = walletPtr->getGroup(bs::hd::BlockSettle_Settlement);
       ASSERT_NE(group, nullptr);
 
       //get settlement leaf from auth address path
-      auto settlLeaf = group->getLeafByPath(0);
+
+      auto settlLeaf = group->getLeafByPath(settlPath);
       ASSERT_NE(settlLeaf, nullptr);
 
       auto usedAddrList = settlLeaf->getUsedAddressList();
@@ -1239,14 +1197,14 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
    //wo
    {
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet);
+         filename, NetworkType::TestNet, "", StaticLogger::loggerPtr);
 
       //grab settlement group
       auto group = walletPtr->getGroup(bs::hd::BlockSettle_Settlement);
       ASSERT_NE(group, nullptr);
 
       //get settlement leaf from auth address path
-      auto settlLeaf = group->getLeafByPath(0);
+      auto settlLeaf = group->getLeafByPath(settlPath);
       auto settlLeafPtr = 
          std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(settlLeaf);
       ASSERT_NE(settlLeafPtr, nullptr);
@@ -1281,14 +1239,14 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
    //reload WO, check again
    {
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet);
+         filename, NetworkType::TestNet, "", StaticLogger::loggerPtr);
 
       //grab settlement group
       auto group = walletPtr->getGroup(bs::hd::BlockSettle_Settlement);
       ASSERT_NE(group, nullptr);
 
       //get settlement leaf from auth address path
-      auto settlLeaf = group->getLeafByPath(0);
+      auto settlLeaf = group->getLeafByPath(settlPath);
       auto settlLeafPtr =
          std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(settlLeaf);
       ASSERT_NE(settlLeafPtr, nullptr);
@@ -1320,9 +1278,10 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
       0x80000001, //1'
       0x80000000  //0'
    };
-
-   for (auto& path : derPath)
+   for (auto& path : derPath) {
       base_node.derivePrivate(path);
+   }
+   const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, bs::hd::Bitcoin_test, 0 });
 
    {
       //create a wallet
@@ -1345,7 +1304,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 
       //grab sync wallet
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
-      auto leafPtr = groupPtr->getLeafByPath(0);
+      auto leafPtr = groupPtr->getLeafByPath(xbtPath);
       auto syncWallet = syncMgr->getWalletById(leafPtr->walletId());
 
       /*
@@ -1357,7 +1316,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 
       auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
       ASSERT_TRUE(syncLeaf != nullptr);
-      EXPECT_EQ(syncLeaf->getAddressPoolSize(), 60);
+      EXPECT_EQ(syncLeaf->getAddressPoolSize(), 20);
 
       //grab addresses from sync wallet
       const auto &lbdGetSyncAddress = [syncWallet](bool ext, AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
@@ -1367,9 +1326,9 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
             promAddr->set_value(addr);
          };
          if (ext) {
-            syncWallet->getNewExtAddress(cbAddr, aet);
+            syncWallet->getNewExtAddress(cbAddr);
          } else {
-            syncWallet->getNewChangeAddress(cbAddr, aet);
+            syncWallet->getNewChangeAddress(cbAddr);
          }
          return futAddr.get();
       };
@@ -1393,9 +1352,9 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 
       /***
       This shouldn't have triggered a pool top up. 20 addresses
-      were pulled from the pool, 40 should be left
+      were pulled from the pool, 0 should be left
       ***/
-      EXPECT_EQ(syncLeaf->getAddressPoolSize(), 40);
+      EXPECT_EQ(syncLeaf->getAddressPoolSize(), 0);
 
       {
          //pull 1 more external address, should trigger top up
@@ -1403,10 +1362,9 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
          extAddrVec.push_back(addr);
 
          /***
-         This will add 300 addresses to the pool (100 new 
-         assets * 3 addr types), minus the one just grabbed.
+         This will add 100 addresses to the pool, minus the one just grabbed.
          ***/
-         EXPECT_EQ(syncLeaf->getAddressPoolSize(), 339);
+         EXPECT_EQ(syncLeaf->getAddressPoolSize(), 99);
       }
 
       const auto &lbdGetIntAddress = [syncWallet](AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
@@ -1415,7 +1373,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
          const auto &cbAddr = [promAddr](const bs::Address &addr) {
             promAddr->set_value(addr);
          };
-         syncWallet->getNewIntAddress(cbAddr, aet);
+         syncWallet->getNewIntAddress(cbAddr);
          return futAddr.get();
       };
 
@@ -1425,10 +1383,9 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
          intAddrVec.push_back(addr);
 
          /***
-         This will add 60 addresses to the pool (20 new
-         assets * 3 addr types), minus the one just grabbed.
+         This will add 100 addresses to the pool, minus the one just grabbed.
          ***/
-         EXPECT_EQ(syncLeaf->getAddressPoolSize(), 398);
+         EXPECT_EQ(syncLeaf->getAddressPoolSize(), 198);
       }
 
       //check address maps
@@ -1443,8 +1400,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 
       BIP32_Node int_node = base_node;
       int_node.derivePrivate(1);
-      for (unsigned i = 0; i < 11; i++)
-      {
+      for (unsigned i = 0; i < 11; i++) {
          auto addr_node = int_node;
          addr_node.derivePrivate(i);
          auto addr_hash = BtcUtils::getHash160(addr_node.getPublicKey());
@@ -1456,27 +1412,24 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
          auto addr = lbdGetSyncAddress(true);
          extAddrVec.push_back(addr);
       }
-      EXPECT_EQ(syncLeaf->getAddressPoolSize(), 378);
+      EXPECT_EQ(syncLeaf->getAddressPoolSize(), 178);
 
-      //grab another 20 internal addresses, should trigger top up
-
-      for (unsigned i = 0; i < 20; i++) {
+      //grab another 100 internal addresses, should trigger top up
+      for (unsigned i = 0; i < 100; i++) {
          const auto addr = lbdGetIntAddress();
          intAddrVec.push_back(addr);
       }
-      EXPECT_EQ(syncLeaf->getAddressPoolSize(), 418);
+      EXPECT_EQ(syncLeaf->getAddressPoolSize(), 178);
 
       //check address maps
-      for (unsigned i = 0; i < 31; i++)
-      {
+      for (unsigned i = 0; i < 31; i++) {
          auto addr_node = ext_node;
          addr_node.derivePrivate(i);
          auto addr_hash = BtcUtils::getHash160(addr_node.getPublicKey());
          EXPECT_EQ(addr_hash, extAddrVec[i].unprefixed());
       }
 
-      for (unsigned i = 0; i < 31; i++)
-      {
+      for (unsigned i = 0; i < 31; i++) {
          auto addr_node = int_node;
          addr_node.derivePrivate(i);
          auto addr_hash = BtcUtils::getHash160(addr_node.getPublicKey());
@@ -1505,31 +1458,26 @@ TEST_F(TestWallet, ImportExport_Easy16)
       auto grp1 = wallet1->createGroup(wallet1->getXBTGroupType());
       {
          auto lock = wallet1->lockForEncryption(passphrase);
-         leaf1 = grp1->createLeaf(0u);
+         leaf1 = grp1->createLeaf(AddressEntryType_Default, 0u);
          addr1 = leaf1->getNewExtAddress();
       }
 
       //grab clear text seed
       std::shared_ptr<bs::core::wallet::Seed> seed1;
-      try
-      {
+      try {
          //wallet isn't locked, should throw
          seed1 = std::make_shared<bs::core::wallet::Seed>(
             wallet1->getDecryptedSeed());
          ASSERT_TRUE(false);
       }
-      catch (...)
-      {
-      }
+      catch (...) { }
 
-      try
-      {
+      try {
          auto lock = wallet1->lockForEncryption(passphrase);
          seed1 = std::make_shared<bs::core::wallet::Seed>(
             wallet1->getDecryptedSeed());
       }
-      catch (...)
-      {
+      catch (...) {
          ASSERT_TRUE(false);
       }
 
@@ -1560,7 +1508,7 @@ TEST_F(TestWallet, ImportExport_Easy16)
       bs::Address addr2;
       {
          auto lock = wallet2->lockForEncryption(passphrase);
-         leaf2 = grp2->createLeaf(0u);
+         leaf2 = grp2->createLeaf(AddressEntryType_Default, 0u);
          addr2 = leaf2->getNewExtAddress();
       }
 
@@ -1592,25 +1540,20 @@ TEST_F(TestWallet, ImportExport_Easy16)
 
    //grab seed
    std::shared_ptr<bs::core::wallet::Seed> seed3;
-   try
-   {
+   try {
       //wallet isn't locked, should throw
       seed3 = std::make_shared<bs::core::wallet::Seed>(
          wallet3->getDecryptedSeed());
       ASSERT_TRUE(false);
    }
-   catch (...)
-   {
-   }
+   catch (...) { }
 
-   try
-   {
+   try {
       auto lock = wallet3->lockForEncryption(passphrase);
       seed3 = std::make_shared<bs::core::wallet::Seed>(
          wallet3->getDecryptedSeed());
    }
-   catch (...)
-   {
+   catch (...) {
       ASSERT_TRUE(false);
    }
 
@@ -1619,7 +1562,8 @@ TEST_F(TestWallet, ImportExport_Easy16)
 
 
    //check addr & id
-   auto leaf3 = grp3->getLeafByPath(0u);
+   const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, bs::hd::Bitcoin_test, 0 });
+   auto leaf3 = grp3->getLeafByPath(xbtPath);
    auto addr3 = leaf3->getAddressByIndex(0, true);
    EXPECT_EQ(leaf1Id, leaf3->walletId());
    EXPECT_EQ(addr1, addr3);
@@ -1645,31 +1589,26 @@ TEST_F(TestWallet, ImportExport_xpriv)
       auto grp1 = wallet1->createGroup(wallet1->getXBTGroupType());
       {
          auto lock = wallet1->lockForEncryption(passphrase);
-         leaf1 = grp1->createLeaf(0u);
+         leaf1 = grp1->createLeaf(AddressEntryType_Default, 0u);
          addr1 = leaf1->getNewExtAddress();
       }
 
       //grab clear text seed
       std::shared_ptr<bs::core::wallet::Seed> seed1;
-      try
-      {
+      try {
          //wallet isn't locked, should throw
          seed1 = std::make_shared<bs::core::wallet::Seed>(
             wallet1->getDecryptedSeed());
          ASSERT_TRUE(false);
       }
-      catch (...)
-      {
-      }
+      catch (...) { }
 
-      try
-      {
+      try {
          auto lock = wallet1->lockForEncryption(passphrase);
          seed1 = std::make_shared<bs::core::wallet::Seed>(
             wallet1->getDecryptedSeed());
       }
-      catch (...)
-      {
+      catch (...) {
          ASSERT_TRUE(false);
       }
 
@@ -1699,7 +1638,7 @@ TEST_F(TestWallet, ImportExport_xpriv)
       bs::Address addr2;
       {
          auto lock = wallet2->lockForEncryption(passphrase);
-         leaf2 = grp2->createLeaf(0u);
+         leaf2 = grp2->createLeaf(AddressEntryType_Default, 0u);
          addr2 = leaf2->getNewExtAddress();
       }
 
@@ -1744,7 +1683,8 @@ TEST_F(TestWallet, ImportExport_xpriv)
    }
 
    //check addr & id
-   auto leaf3 = grp3->getLeafByPath(0u);
+   const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, bs::hd::Bitcoin_test, 0 });
+   auto leaf3 = grp3->getLeafByPath(xbtPath);
    auto addr3 = leaf3->getAddressByIndex(0, true);
    EXPECT_EQ(leaf1Id, leaf3->walletId());
    EXPECT_EQ(addr1, addr3);
@@ -1773,7 +1713,7 @@ protected:
       auto grp = walletPtr_->createGroup(walletPtr_->getXBTGroupType());
       {
          auto lock = walletPtr_->lockForEncryption(passphrase_);
-         leafPtr_ = grp->createLeaf(0, 10);
+         leafPtr_ = grp->createLeaf(AddressEntryType_Default, 0, 10);
       }
    }
 
@@ -1821,7 +1761,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    ASSERT_TRUE(syncLeaf != nullptr);
 
    //check wallet has 10 assets per account
-   ASSERT_EQ(syncLeaf->getAddressPoolSize(), 60);
+   ASSERT_EQ(syncLeaf->getAddressPoolSize(), 20);
 
    const auto &lbdGetExtAddress = [syncWallet](AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
       auto promAddr = std::make_shared<std::promise<bs::Address>>();
@@ -1829,7 +1769,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
       const auto &cbAddr = [promAddr](const bs::Address &addr) {
          promAddr->set_value(addr);
       };
-      syncWallet->getNewExtAddress(cbAddr, aet);
+      syncWallet->getNewExtAddress(cbAddr);
       return futAddr.get();
    };
 
@@ -1839,10 +1779,10 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    ***/
 
    std::vector<bs::Address> addrVec;
-   for (unsigned i = 0; i < 12; i++)
+   for (unsigned i = 0; i < 12; i++) {
       addrVec.push_back(lbdGetExtAddress());
-
-   EXPECT_EQ(syncLeaf->getAddressPoolSize(), 348);
+   }
+   EXPECT_EQ(syncLeaf->getAddressPoolSize(), 108);
 
    //ext address creation should result in ext address chain extention, 
    //which will trigger the registration of the new addresses. There
@@ -1999,19 +1939,19 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       UnitTestWalletACT::waitOnRefresh(regIDs);
 
       //check wallet has 10 assets per account
-      ASSERT_EQ(syncLeaf->getAddressPoolSize(), 60);
+      ASSERT_EQ(syncLeaf->getAddressPoolSize(), 20);
 
-      const auto &lbdGetAddress = [syncWallet](bool ext, AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+      const auto &lbdGetAddress = [syncWallet](bool ext) -> bs::Address {
          auto promAddr = std::make_shared<std::promise<bs::Address>>();
          auto futAddr = promAddr->get_future();
          const auto &cbAddr = [promAddr](const bs::Address &addr) {
             promAddr->set_value(addr);
          };
          if (ext) {
-            syncWallet->getNewExtAddress(cbAddr, aet);
+            syncWallet->getNewExtAddress(cbAddr);
          }
          else {
-            syncWallet->getNewIntAddress(cbAddr, aet);
+            syncWallet->getNewIntAddress(cbAddr);
          }
          return futAddr.get();
       };
@@ -2019,8 +1959,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       //pull 13 ext addresses
       for (unsigned i = 0; i < 12; i++)
          extVec.push_back(lbdGetAddress(true));
-      extVec.push_back(lbdGetAddress(true,
-         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)));
+      extVec.push_back(lbdGetAddress(true));
 
       //ext address creation should result in ext address chain extention, 
       //which will trigger the registration of the new addresses. There
@@ -2176,7 +2115,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       auto grp = walletPtr_->createGroup(walletPtr_->getXBTGroupType());
       {
          auto lock = walletPtr_->lockForEncryption(passphrase_);
-         leafPtr_ = grp->createLeaf(0, 100);
+         leafPtr_ = grp->createLeaf(AddressEntryType_Default, 0, 100);
       }
 
       //sync with db
@@ -2220,7 +2159,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       ASSERT_TRUE(syncLeaf != nullptr);
 
       //check wallet has 100 assets per account
-      ASSERT_EQ(syncLeaf->getAddressPoolSize(), 600);
+      ASSERT_EQ(syncLeaf->getAddressPoolSize(), 200);
 
       //update balances
       auto promPtr2 = std::make_shared<std::promise<bool>>();
@@ -2257,30 +2196,28 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       //check ext[12] is p2sh_p2wpkh
       const auto &extAddrList = syncLeaf->getExtAddressList();
       ASSERT_EQ(extAddrList.size(), 14);
-      EXPECT_EQ(extAddrList[12].getType(),
-         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+      EXPECT_EQ(extAddrList[12].getType(), AddressEntryType_P2WPKH); // only one type for leaf now
 
       //check address list matches
       EXPECT_EQ(extAddrList, extVec);
 
-      const auto &lbdLeafGetAddress = [syncLeaf](bool ext, AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+      const auto &lbdLeafGetAddress = [syncLeaf](bool ext) -> bs::Address {
          auto promAddr = std::make_shared<std::promise<bs::Address>>();
          auto futAddr = promAddr->get_future();
          const auto &cbAddr = [promAddr](const bs::Address &addr) {
             promAddr->set_value(addr);
          };
          if (ext) {
-            syncLeaf->getNewExtAddress(cbAddr, aet);
+            syncLeaf->getNewExtAddress(cbAddr);
          }
          else {
-            syncLeaf->getNewIntAddress(cbAddr, aet);
+            syncLeaf->getNewIntAddress(cbAddr);
          }
          return futAddr.get();
       };
 
       //pull more addresses
-      extVec.push_back(lbdLeafGetAddress(true,
-         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)));
+      extVec.push_back(lbdLeafGetAddress(true));
 
       for (unsigned i = 0; i < 5; i++)
          intVec.push_back(lbdLeafGetAddress(false));
@@ -2353,7 +2290,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       ASSERT_TRUE(syncLeaf != nullptr);
 
       //check wallet has 100 assets per account
-      ASSERT_EQ(syncLeaf->getAddressPoolSize(), 600);
+      ASSERT_EQ(syncLeaf->getAddressPoolSize(), 200);
 
       //update balances
       auto promPtr2 = std::make_shared<std::promise<bool>>();
@@ -2384,10 +2321,8 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       //check ext[12] & [15] are p2sh_p2wpkh
       const auto &extAddrList = syncLeaf->getExtAddressList();
       ASSERT_EQ(extAddrList.size(), 15);
-      EXPECT_EQ(extAddrList[12].getType(),
-         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
-      EXPECT_EQ(extAddrList[14].getType(),
-         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+      EXPECT_EQ(extAddrList[12].getType(), AddressEntryType_P2WPKH);
+      EXPECT_EQ(extAddrList[14].getType(), AddressEntryType_P2WPKH);
 
       //check address list matches
       EXPECT_EQ(extAddrList, extVec);
@@ -2399,8 +2334,7 @@ TEST_F(TestWalletWithArmory, Comments)
    const std::string addrComment("Test address comment");
    const std::string txComment("Test TX comment");
 
-   auto addr = leafPtr_->getNewExtAddress(
-      AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+   auto addr = leafPtr_->getNewExtAddress();
    ASSERT_FALSE(addr.isNull());
 
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
@@ -2466,11 +2400,9 @@ TEST_F(TestWalletWithArmory, Comments)
 
 TEST_F(TestWalletWithArmory, ZCBalance)
 {
-   const auto addr1 = leafPtr_->getNewExtAddress(AddressEntryType_P2WPKH);
-   const auto addr2 = leafPtr_->getNewExtAddress(
-      AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
-   const auto changeAddr = leafPtr_->getNewChangeAddress(
-      AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+   const auto addr1 = leafPtr_->getNewExtAddress();
+   const auto addr2 = leafPtr_->getNewExtAddress();
+   const auto changeAddr = leafPtr_->getNewChangeAddress();
    EXPECT_EQ(leafPtr_->getUsedAddressCount(), 3);
 
    //add an extra address not part of the wallet
@@ -2651,10 +2583,10 @@ TEST_F(TestWalletWithArmory, ZCBalance)
 
 TEST_F(TestWalletWithArmory, SimpleTX_bech32)
 {
-   const auto addr1 = leafPtr_->getNewExtAddress(AddressEntryType_P2WPKH);
-   const auto addr2 = leafPtr_->getNewExtAddress(AddressEntryType_P2WPKH);
-   const auto addr3 = leafPtr_->getNewExtAddress(AddressEntryType_P2WPKH);
-   const auto changeAddr = leafPtr_->getNewChangeAddress(AddressEntryType_P2WPKH);
+   const auto addr1 = leafPtr_->getNewExtAddress();
+   const auto addr2 = leafPtr_->getNewExtAddress();
+   const auto addr3 = leafPtr_->getNewExtAddress();
+   const auto changeAddr = leafPtr_->getNewChangeAddress();
    EXPECT_EQ(leafPtr_->getUsedAddressCount(), 4);
 
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
@@ -2781,7 +2713,8 @@ TEST_F(TestWalletWithArmory, SignSettlement)
       CryptoECDSA().ComputePublicKey(counterpartyPrivKey, true);
 
    auto btcGroup = walletPtr_->getGroup(bs::hd::Bitcoin_test);
-   auto spendLeaf = btcGroup->getLeafByPath(0);
+   const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, bs::hd::Bitcoin_test, 0 });
+   auto spendLeaf = btcGroup->getLeafByPath(xbtPath);
    auto settlementRootAddress = spendLeaf->getNewExtAddress();
 
    {

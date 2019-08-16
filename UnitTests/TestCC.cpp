@@ -82,7 +82,7 @@ void TestCC::SetUp()
 
    {
       auto lock = priWallet->lockForEncryption(passphrase_);
-      ccSignWallet_ = ccGroup->createLeaf(0x00667675/*"BLK"*/);
+      ccSignWallet_ = ccGroup->createLeaf(AddressEntryType_Default, 0x00667675/*"BLK"*/);
       if (!ccSignWallet_)
          return;
    }
@@ -91,13 +91,14 @@ void TestCC::SetUp()
    if (!xbtGroup)
       return;
 
-   const auto xbtLeaf = xbtGroup->getLeafByPath(0);
-   if (!xbtLeaf)
+   const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, priWallet->getXBTGroupType(), 0 });
+   const auto xbtLeaf = xbtGroup->getLeafByPath(xbtPath);
+   if (!xbtLeaf) {
       return;
-
+   }
    {
       auto lock = priWallet->lockForEncryption(passphrase_);
-      xbtSignWallet_ = xbtGroup->createLeaf(1);
+      xbtSignWallet_ = xbtGroup->createLeaf(AddressEntryType_Default, 1);
       if (!xbtSignWallet_)
          return;
    }
@@ -126,8 +127,7 @@ void TestCC::SetUp()
    const auto &cbGenAddr = [promGenAddr](const bs::Address &addr) {
       promGenAddr->set_value(addr);
    };
-   xbtWallet_->getNewExtAddress(cbGenAddr,
-      AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+   xbtWallet_->getNewExtAddress(cbGenAddr);
    genesisAddr_ = futGenAddr.get();
    resolver_ = std::make_shared<CCResolver>(envPtr_->assetMgr()->getCCLotSize("BLK"), genesisAddr_);
    auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(ccWallet_);
