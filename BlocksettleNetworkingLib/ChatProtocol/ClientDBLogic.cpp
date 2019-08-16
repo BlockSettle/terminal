@@ -102,7 +102,7 @@ namespace Chat
          query.prepare(cmd);
          query.bindValue(QLatin1String(":party_table_id"), QString::fromStdString(tablePartyId));
          query.bindValue(QLatin1String(":message_id"), QString::fromStdString(partyMessagePacket.message_id()));
-         query.bindValue(QLatin1String(":timestamp"), partyMessagePacket.timestamp_ms());
+         query.bindValue(QLatin1String(":timestamp"), qint64(partyMessagePacket.timestamp_ms()));
          query.bindValue(QLatin1String(":message_state"), partyMessagePacket.party_message_state());
          query.bindValue(QLatin1String(":encryption_type"), partyMessagePacket.encryption());
          query.bindValue(QLatin1String(":nonce"), QByteArray::fromStdString(partyMessagePacket.nonce()));
@@ -126,7 +126,8 @@ namespace Chat
 
    void ClientDBLogic::createNewParty(const std::string& partyId)
    {
-      if (getPartyIdFromDB(partyId, std::string()))
+      std::string idTableParty;
+      if (getPartyIdFromDB(partyId, idTableParty))
       {
          // party already exist in db
          return;
