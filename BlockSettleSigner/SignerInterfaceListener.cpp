@@ -362,7 +362,8 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer
       std::vector<bs::sync::HDWalletData::Leaf> leaves;
       for (int j = 0; j < group.leaves_size(); ++j) {
          const auto leaf = group.leaves(j);
-         leaves.push_back({ leaf.id(), leaf.index(), false, leaf.extra_data() });
+         leaves.push_back({ leaf.id(), bs::hd::Path::fromString(leaf.path())
+            , false, leaf.extra_data() });
       }
       result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), leaves });
    }
@@ -433,7 +434,7 @@ void SignerInterfaceListener::onCreateWO(const std::string &data, bs::signer::Re
             addresses.push_back({ addr.index()
                , static_cast<AddressEntryType>(addr.aet()) });
          }
-         leaves.push_back({ leaf.id(), leaf.index(), leaf.public_key()
+         leaves.push_back({ leaf.id(), bs::hd::Path::fromString(leaf.path()), leaf.public_key()
             , leaf.chain_code(), addresses });
       }
       result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), leaves });
