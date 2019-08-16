@@ -286,48 +286,33 @@ namespace bs {
          virtual unsigned getIntAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getWalletAddressCount() const { return addrCount_; }
 
-         virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
-         virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
-         virtual bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) { return getNewExtAddress(aet); }
+         virtual bs::Address getNewExtAddress() = 0;
+         virtual bs::Address getNewIntAddress() = 0;
+         virtual bs::Address getNewChangeAddress() { return getNewIntAddress(); }
          virtual std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) = 0;
          virtual std::string getAddressIndex(const bs::Address &) = 0;
-         virtual bool addressIndexExists(const std::string &index) const = 0;
          
-         virtual bs::hd::Path::Elem getExtPath(void) const
-         {
-            throw std::runtime_error("not implemented 5");
-         }
-         virtual bs::hd::Path::Elem getIntPath(void) const
-         {
-            throw std::runtime_error("not implemented 6");
-         }
+         virtual bs::hd::Path::Elem getExtPath(void) const = 0;
+         virtual bs::hd::Path::Elem getIntPath(void) const = 0;
 
          /***
          Used to keep track of sync wallet used address index increments on the 
          Armory wallet side
          ***/
          virtual std::pair<bs::Address, bool> synchronizeUsedAddressChain(
-            const std::string&, AddressEntryType)
-         {
-            throw WalletException("illegal method");
-         }
+            const std::string&) = 0;
 
          /***
          Called by the sign container in reponse to sync wallet's topUpAddressPool
          Will result in public address chain extention on the relevant Armory address account
          ***/
-         virtual std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt)
-         {
-            throw WalletException("illegal method");
-         }
+         virtual std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt) = 0;
 
          virtual std::shared_ptr<ResolverFeed> getResolver(void) const = 0;
 
          virtual BinaryData signTXRequest(const wallet::TXSignRequest &
             , bool keepDuplicatedRecipients = false);
          virtual BinaryData signPartialTXRequest(const wallet::TXSignRequest &);
-
-         //         virtual bool isSegWitInput(const UTXO& input);
 
          virtual SecureBinaryData getPublicKeyFor(const bs::Address &) = 0;
          virtual SecureBinaryData getPubChainedKeyFor(const bs::Address &addr) { return getPublicKeyFor(addr); }
@@ -336,9 +321,8 @@ namespace bs {
          virtual void shutdown(void) = 0;
          virtual std::string getFilename(void) const = 0;
 
-         //find the path and address type for a set of prefixed scrAddr
-         virtual std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> indexPathAndTypes(
-            const std::set<BinaryData>&) = 0;
+         //find the path for a set of prefixed scrAddr
+         virtual std::map<BinaryData, bs::hd::Path> indexPath(const std::set<BinaryData>&) = 0;
 
          Signer getSigner(const wallet::TXSignRequest &,
             bool keepDuplicatedRecipients = false);
@@ -347,8 +331,6 @@ namespace bs {
          virtual std::shared_ptr<LMDBEnv> getDBEnv() = 0;
          virtual LMDB *getDB() = 0;
 
-      private:
-
       protected:
          std::string       walletName_;
          std::shared_ptr<spdlog::logger>   logger_; // May need to be set manually.
@@ -356,7 +338,6 @@ namespace bs {
          mutable std::set<BinaryData>           addressHashes_;
          size_t            addrCount_ = 0;
       };
-
 
       using KeyMap = std::unordered_map<std::string, SecureBinaryData>; // key is wallet id
       using WalletMap = std::unordered_map<std::string, std::shared_ptr<Wallet>>;   // key is wallet id
@@ -405,9 +386,5 @@ namespace bs {
 
    }  //namespace core
 }  //namespace bs
-
-
-/*bool operator ==(const bs::Wallet &, const bs::Wallet &);
-bool operator !=(const bs::Wallet &, const bs::Wallet &);*/
 
 #endif //BS_CORE_WALLET_H

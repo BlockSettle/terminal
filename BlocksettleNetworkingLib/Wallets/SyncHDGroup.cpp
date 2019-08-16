@@ -6,19 +6,25 @@
 using namespace bs::sync;
 
 
-std::shared_ptr<hd::Leaf> hd::Group::getLeaf(bs::hd::Path::Elem elem) const
+static bs::hd::Path fixedPath(const bs::hd::Path &path)
 {
-   elem |= bs::hd::hardFlag;
-   const auto itLeaf = leaves_.find(elem);
+   if (path.length() < 3) {
+      throw std::runtime_error("invalid path length " + std::to_string(path.length()));
+   }
+   auto leafPath = path;
+   for (size_t i = 0; i < 3; ++i) {
+      leafPath.setHardened(i);
+   }
+   return leafPath;
+}
+
+std::shared_ptr<hd::Leaf> hd::Group::getLeaf(const bs::hd::Path &path) const
+{
+   const auto itLeaf = leaves_.find(fixedPath(path));
    if (itLeaf == leaves_.end()) {
       return nullptr;
    }
    return itLeaf->second;
-}
-
-std::shared_ptr<hd::Leaf> hd::Group::getLeaf(const std::string &key) const
-{
-   return getLeaf(bs::hd::Path::keyToElem(key));
 }
 
 std::vector<std::shared_ptr<hd::Leaf>> hd::Group::getLeaves() const
@@ -41,10 +47,10 @@ std::vector<std::shared_ptr<bs::sync::Wallet>> hd::Group::getAllLeaves() const
    return result;
 }
 
-std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem, const std::string &walletId)
+std::shared_ptr<hd::Leaf> hd::Group::createLeaf(const bs::hd::Path &path, const std::string &walletId)
 {
-   elem |= bs::hd::hardFlag;
-   const auto prevLeaf = getLeaf(elem);
+   const auto pathLeaf = fixedPath(path);
+   const auto prevLeaf = getLeaf(pathLeaf);
    if (prevLeaf != nullptr) {
       if (walletId != prevLeaf->walletId()) {
          logger_->warn("[{}] wallet ids mismatch, new: {}, existing: {}", __func__, walletId
@@ -52,22 +58,15 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem, const s
       }
       return prevLeaf;
    }
-   auto pathLeaf = path_;
-   pathLeaf.append(elem);
    auto result = newLeaf(walletId);
    initLeaf(result, pathLeaf);
    addLeaf(result, true);
    return result;
 }
 
-std::shared_ptr<hd::Leaf> hd::Group::createLeaf(const std::string &key, const std::string &walletId)
-{
-   return createLeaf(bs::hd::Path::keyToElem(key), walletId);
-}
-
 bool hd::Group::addLeaf(const std::shared_ptr<hd::Leaf> &leaf, bool signal)
 {
-   leaves_[leaf->index()] = leaf;
+   leaves_[leaf->path()] = leaf;
    const auto id = leaf->walletId();
    if (!id.empty()) {
       wct_->walletCreated(id);
@@ -75,25 +74,25 @@ bool hd::Group::addLeaf(const std::shared_ptr<hd::Leaf> &leaf, bool signal)
    return true;
 }
 
-bool hd::Group::deleteLeaf(const bs::hd::Path::Elem &elem)
+bool hd::Group::deleteLeaf(const bs::hd::Path &path)
 {
-   const auto &leaf = getLeaf(elem);
+   const auto &leaf = getLeaf(path);
    if (leaf == nullptr) {
       return false;
    }
    const auto walletId = leaf->walletId();
-   leaves_.erase(elem);
+   leaves_.erase(fixedPath(path));
    wct_->walletDestroyed(walletId);
    return true;
 }
 
 bool hd::Group::deleteLeaf(const std::shared_ptr<bs::sync::Wallet> &wallet)
 {
-   bs::hd::Path::Elem elem = 0;
+   bs::hd::Path path;
    bool found = false;
    for (const auto &leaf : leaves_) {
       if (leaf.second->walletId() == wallet->walletId()) {
-         elem = leaf.first;
+         path = leaf.first;
          found = true;
          break;
       }
@@ -101,16 +100,12 @@ bool hd::Group::deleteLeaf(const std::shared_ptr<bs::sync::Wallet> &wallet)
    if (!found) {
       return false;
    }
-   return deleteLeaf(elem);
-}
-
-bool hd::Group::deleteLeaf(const std::string &key)
-{
-   return deleteLeaf(bs::hd::Path::keyToElem(key));
+   return deleteLeaf(path);
 }
 
 std::string hd::Group::nameForType(bs::hd::CoinType ct)
 {
+   ct = static_cast<bs::hd::CoinType>(ct | bs::hd::hardFlag);
    switch (ct) {
    case bs::hd::CoinType::Bitcoin_main:
       return QObject::tr("XBT").toStdString();
@@ -155,25 +150,15 @@ void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &pa
    leaf->setPath(path);
 }
 
-/*void hd::Group::copyLeaf(std::shared_ptr<hd::Group> &target, bs::hd::Path::Elem leafIndex
-   , const std::shared_ptr<hd::Leaf> &leaf) const
-{
-   auto wallet = newLeaf(leaf->walletId());
-   auto path = path_;
-   path.append(leafIndex, true);
-   wallet->init(path);
-   leaf->copyTo(wallet);
-   target->addLeaf(wallet);
-}*/
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-hd::AuthGroup::AuthGroup(const bs::hd::Path &path, const std::string &name
-   , const std::string &desc, WalletSignerContainer *container, WalletCallbackTarget *wct
+hd::AuthGroup::AuthGroup(const std::string &name, const std::string &desc
+   , WalletSignerContainer *container, WalletCallbackTarget *wct
    , const std::shared_ptr<spdlog::logger>& logger, bool extOnlyAddresses)
-   : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_Auth), desc
-           , container, wct, logger, extOnlyAddresses)
+   : Group(bs::hd::CoinType::BlockSettle_Auth, name
+      , nameForType(bs::hd::CoinType::BlockSettle_Auth), desc
+      , container, wct, logger, extOnlyAddresses)
 {
    scanPortion_ = 5;
 }

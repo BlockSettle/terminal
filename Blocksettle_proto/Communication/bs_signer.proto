@@ -220,7 +220,7 @@ message SyncHDWalletResponse
 {
    message Leaf {
       string id = 1;
-      uint32 index = 2;
+      string path = 2;
       bytes  extra_data = 3;
    }
    message Group {
@@ -273,7 +273,7 @@ message CreateWatchingOnlyResponse
    }
    message Leaf {
       string id = 1;
-      uint32 index = 2;
+      string path = 2;
       bytes  public_key = 3;
       bytes  chain_code = 4;
       repeated Address addresses = 5;

@@ -36,11 +36,10 @@ namespace bs {
 
          bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Settlement; }
 
-         void getNewExtAddress(const CbAddress &, AddressEntryType) override {}  // can't generate address without input data
-         void getNewIntAddress(const CbAddress &, AddressEntryType) override {}  // can't generate address without input data
+         void getNewExtAddress(const CbAddress &) override {}  // can't generate address without input data
+         void getNewIntAddress(const CbAddress &) override {}  // can't generate address without input data
 
          std::string getAddressIndex(const bs::Address &) override;
-         bool addressIndexExists(const std::string &index) const override;
 
          void refreshWallets(const std::vector<BinaryData>& ids);
 

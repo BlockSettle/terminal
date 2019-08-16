@@ -152,31 +152,31 @@ std::shared_ptr<hd::Leaf> hd::Wallet::getLeaf(const std::string &id) const
 std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
 {
    std::shared_ptr<Group> result;
+   ct = static_cast<bs::hd::CoinType>(ct | bs::hd::hardFlag);
    result = getGroup(ct);
    if (result) {
       return result;
    }
 
-   const bs::hd::Path path({ bs::hd::purpose, ct });
    switch (ct) {
    case bs::hd::CoinType::BlockSettle_Auth:
       result = std::make_shared<AuthGroup>(
-         walletPtr_, path, netType_, logger_);
+         walletPtr_, netType_, logger_);
       break;
 
    case bs::hd::CoinType::BlockSettle_CC:
       result = std::make_shared<CCGroup>(
-         walletPtr_, path, netType_, logger_);
+         walletPtr_, netType_, logger_);
       break;
 
    case bs::hd::CoinType::BlockSettle_Settlement:
       result = std::make_shared<SettlementGroup>(
-         walletPtr_, path, netType_, logger_);
+         walletPtr_, netType_, logger_);
       break;
 
    default:
       result = std::make_shared<Group>(
-         walletPtr_, path, netType_, extOnlyFlag_, logger_);
+         walletPtr_, ct, netType_, extOnlyFlag_, logger_);
       break;
    }
    addGroup(result);
@@ -186,11 +186,12 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
 
 void hd::Wallet::addGroup(const std::shared_ptr<hd::Group> &group)
 {
-   groups_[group->index()] = group;
+   groups_[group->index() | bs::hd::hardFlag] = group;
 }
 
 std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
 {
+   ct = static_cast<bs::hd::CoinType>(ct | bs::hd::hardFlag);
    const auto &itGroup = groups_.find(static_cast<bs::hd::Path::Elem>(ct));
    if (itGroup == groups_.end()) {
       return nullptr;
@@ -201,7 +202,10 @@ std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
 void hd::Wallet::createStructure(unsigned lookup)
 {
    const auto groupXBT = createGroup(getXBTGroupType());
-   groupXBT->createLeaf(0u, lookup);
+   assert(groupXBT);
+   for (const auto &aet : groupXBT->getAddressTypeSet()) {
+      groupXBT->createLeaf(aet, 0u, lookup);
+   }
    writeGroupsToDB();
 }
 
@@ -245,8 +249,9 @@ bool hd::Wallet::eraseFile()
 
 const std::string& hd::Wallet::getFileName() const
 {
-   if (walletPtr_ == nullptr)
+   if (walletPtr_ == nullptr) {
       throw WalletException("wallet is not initialized, cannot return filename");
+   }
    return walletPtr_->getDbFilename();
 }
 
@@ -306,8 +311,9 @@ void hd::Wallet::readFromDB()
 
    {  //header data
       auto typeBdr = getDataRefForKey(WALLETTYPE_KEY);
-      if (typeBdr.getSize() != 1) 
+      if (typeBdr.getSize() != 1) {
          throw WalletException("invalid netType length");
+      }
       netType_ = static_cast<NetworkType>(typeBdr.getPtr()[0]);
 
       name_ = getDataRefForKey(WALLETNAME_KEY).toBinStr();
@@ -324,7 +330,6 @@ void hd::Wallet::readFromDB()
 
       dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
       while (dbIter.isValid()) {
-         
          auto iterkey = dbIter.key();
          auto itervalue = dbIter.value();
 
@@ -332,23 +337,31 @@ void hd::Wallet::readFromDB()
          BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
 
          //sanity check on the key
-         if (keyBDR.getSize() == 0 || keyBDR.getPtr()[0] != BS_GROUP_PREFIX)
+         if (keyBDR.getSize() == 0 || keyBDR.getPtr()[0] != BS_GROUP_PREFIX) {
             break;
-
+         }
          BinaryRefReader brrVal(valueBDR);
          auto valsize = brrVal.get_var_int();
-         if (valsize != brrVal.getSizeRemaining())
-            throw WalletException("entry val size mismatch");
-         
+         if (valsize != brrVal.getSizeRemaining()) {
+            throw WalletException("entry val size mismatch: " + std::to_string(valsize)
+               + " vs " + std::to_string(brrVal.getSizeRemaining()));
+         }
          try {
             const auto group = hd::Group::deserialize(walletPtr_,
                keyBDR, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
                  , name_, desc_, netType_, logger_);
-            if (group != nullptr)
+            if (group != nullptr) {
                addGroup(group);
+               if (logger_) {
+                  logger_->debug("[{}] group {} added", __func__, (uint32_t)group->index());
+               }
+            }
          }
-         catch (const std::exception&) 
-         {}
+         catch (const std::exception &e) {
+            if (logger_) {
+               logger_->error("[{}] error reading group: {}", __func__, e.what());
+            }
+         }
 
          dbIter.advance();
       }
@@ -360,8 +373,9 @@ void hd::Wallet::readFromDB()
 
 void hd::Wallet::writeGroupsToDB(bool force)
 {
-   for (const auto &group : groups_)
+   for (const auto &group : groups_) {
       group.second->commit(force);
+   }
 }
 
 BinaryDataRef hd::Wallet::getDataRefForKey(LMDB* db, const BinaryData& key) const
@@ -528,14 +542,13 @@ void hd::Wallet::setExtOnly()
 }
 
 bs::core::wallet::Seed hd::Wallet::getDecryptedSeed(void) const
-{
-   /***
+{  /***
    Expects wallet to be locked and passphrase lambda set
    ***/
 
-   if (walletPtr_ == nullptr)
+   if (walletPtr_ == nullptr) {
       throw WalletException("uninitialized armory wallet");
-
+   }
    auto seedPtr = walletPtr_->getEncryptedSeed();
    if(seedPtr == nullptr)
       throw WalletException("wallet has no seed");
@@ -546,8 +559,7 @@ bs::core::wallet::Seed hd::Wallet::getDecryptedSeed(void) const
 }
 
 SecureBinaryData hd::Wallet::getDecryptedRootXpriv(void) const
-{
-   /***
+{  /***
    Expects wallet to be locked and passphrase lambda set
    ***/
 
@@ -576,46 +588,47 @@ SecureBinaryData hd::Wallet::getDecryptedRootXpriv(void) const
 
 std::shared_ptr<hd::Leaf> hd::Wallet::createSettlementLeaf(
    const bs::Address& addr)
-{
-   /*
+{  /*
    This method expects the wallet locked and passprhase lambda set 
    for a full wallet.
    */
 
    //does this wallet have a settlement group?
    auto group = getGroup(bs::hd::BlockSettle_Settlement);
-   if (group == nullptr)
+   if (group == nullptr) {
       group = createGroup(bs::hd::BlockSettle_Settlement);
-
+   }
    auto settlGroup = std::dynamic_pointer_cast<hd::SettlementGroup>(group);
-   if (settlGroup == nullptr)
+   if (settlGroup == nullptr) {
       throw AccountException("unexpected settlement group type");
+   }
 
    //get hd path for addr
    auto getPathForAddr = [this, &addr](void)->bs::hd::Path
    {
-      for (auto& groupPair : groups_)
-      {
-         for (auto& leafPair : groupPair.second->leaves_)
-         {
+      for (auto& groupPair : groups_) {
+         for (auto& leafPair : groupPair.second->leaves_) {
             auto path = leafPair.second->getPathForAddress(addr);
-            if (path.length() != 0)
+            if (path.length() != 0) {
                return path;
+            }
          }
       }
-
       return {};
    };
 
    auto addrPath = getPathForAddr();
-   if (addrPath.length() == 0)
+   if (addrPath.length() == 0) {
       throw AssetException("failed to resolve path for settlement address");
+   }
 
-   auto leaf = settlGroup->getLeafByPath(addrPath.get(-1));
+   const bs::hd::Path settlLeafPath({ bs::hd::Purpose::Native
+      , bs::hd::BlockSettle_Settlement, addrPath.get(-1) });
+   auto leaf = settlGroup->getLeafByPath(settlLeafPath);
    if (leaf) {
       return leaf;
    }
-   return settlGroup->createLeaf(addr, addrPath);
+   return settlGroup->createLeaf(addr, settlLeafPath);
 }
 
 std::shared_ptr<AssetEntry> hd::Wallet::getAssetForAddress(

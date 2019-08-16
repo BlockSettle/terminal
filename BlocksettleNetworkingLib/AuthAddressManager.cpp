@@ -315,9 +315,11 @@ bool AuthAddressManager::RevokeAddress(const bs::Address &address)
       }
 
       const auto &cbFee = [this, verificationChangeInput](float feePerByte) {
-         const auto &priWallet = walletsManager_->getPrimaryWallet();
-         const auto &group = priWallet->getGroup(priWallet->getXBTGroupType());
-         const auto &wallet = group->getLeaf(0);
+         const auto priWallet = walletsManager_->getPrimaryWallet();
+         const auto group = priWallet->getGroup(priWallet->getXBTGroupType());
+         const bs::hd::Path authLeafPath({ bs::hd::Purpose::Native
+            , bs::hd::CoinType::BlockSettle_Auth, 0 });
+         const auto wallet = group ? group->getLeaf(authLeafPath) : nullptr;
          if (!wallet) {
             emit Error(tr("no XBT wallet found"));
             logger_->error("[AuthAddressManager::RevokeAddress] XBT/0 wallet missing");

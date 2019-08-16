@@ -321,7 +321,8 @@ WalletsManager::WalletPtr WalletsManager::getDefaultWallet() const
       const auto &group = priWallet->getGroup(priWallet->getXBTGroupType());
 
       //all leaf paths are always hardened
-      result = group ? group->getLeaf(bs::hd::hardFlag) : nullptr;
+      const bs::hd::Path leafPath({ bs::hd::Purpose::Native, priWallet->getXBTGroupType(), 0});
+      result = group ? group->getLeaf(leafPath) : nullptr;
    }
    return result;
 }
@@ -344,7 +345,9 @@ WalletsManager::WalletPtr WalletsManager::getCCWallet(const std::string &cc)
       //cc wallet is always ext only
       ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
    }
-   return ccGroup->getLeaf(cc);
+   const bs::hd::Path ccLeafPath({ bs::hd::Purpose::Native, bs::hd::CoinType::BlockSettle_CC
+      , bs::hd::Path::keyToElem(cc) });
+   return ccGroup->getLeaf(ccLeafPath);
 }
 
 void WalletsManager::setUserId(const BinaryData &userId)
@@ -980,14 +983,17 @@ void WalletsManager::onAuthLeafAdded(const std::string &walletId)
       return;
    }
 
+   const bs::hd::Path authPath({ bs::hd::Purpose::Native, bs::hd::CoinType::BlockSettle_Auth, 0 });
    logger_->debug("[WalletsManager::onAuthLeafAdded] creating auth leaf with id {}", walletId);
-   auto leaf = group->getLeaf(0 | bs::hd::hardFlag);
+   auto leaf = group->getLeaf(authPath);
    if (leaf) {
       logger_->warn("[WalletsManager::onAuthLeafAdded] auth leaf already exists");
-      group->deleteLeaf(0 | bs::hd::hardFlag);
+      group->deleteLeaf(authPath);
    }
    try {
-      leaf = group->createLeaf(bs::hd::hardFlag, walletId);
+      const bs::hd::Path authPath({ static_cast<bs::hd::Path::Elem>(bs::hd::Purpose::Native)
+         , bs::hd::CoinType::BlockSettle_Auth, 0 });
+      leaf = group->createLeaf(authPath, walletId);
    }
    catch (const std::exception &e) {
       logger_->error("[WalletsManager::onAuthLeafAdded] failed to create auth leaf: {}", e.what());
@@ -1426,7 +1432,7 @@ bool WalletsManager::CreateCCLeaf(const std::string &ccName, const std::function
 
    bs::hd::Path path;
 
-   path.append(bs::hd::purpose | bs::hd::hardFlag);
+   path.append(static_cast<bs::hd::Path::Elem>(bs::hd::Purpose::Native) | bs::hd::hardFlag);
    path.append(bs::hd::BlockSettle_CC | bs::hd::hardFlag);
    path.append(ccName);
 
@@ -1464,7 +1470,9 @@ void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::
          return;
       }
 
-      auto leaf = group->createLeaf(ccName, walletId);
+      const bs::hd::Path ccLeafPath({ bs::hd::Purpose::Native, bs::hd::CoinType::BlockSettle_CC
+         , bs::hd::Path::keyToElem(ccName) });
+      auto leaf = group->createLeaf(ccLeafPath, walletId);
 
       addWallet(leaf);
       newWallets_.insert(wallet->walletId());

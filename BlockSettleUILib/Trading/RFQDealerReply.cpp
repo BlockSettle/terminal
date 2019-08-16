@@ -812,6 +812,9 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
          if (settlGroup) {
             settlLeaf = settlGroup->getLeaf(authAddr_);
          }
+         else {
+            logger_->error("[RFQDealerReply::submit] failed to get settlement group");
+         }
       }
       if (!settlLeaf) {
          logger_->error("[RFQDealerReply::submit] failed to get settlement leaf for {}", authAddr_.display());
@@ -1006,7 +1009,7 @@ void RFQDealerReply::showCoinControl()
    if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
       CoinControlDialog(ccCoinSel_, true, this).exec();
    } else {
-      CoinControlDialog(transactionData_->GetSelectedInputs(), true, this).exec();
+      CoinControlDialog(transactionData_->getSelectedInputs(), true, this).exec();
    }
 }
 
