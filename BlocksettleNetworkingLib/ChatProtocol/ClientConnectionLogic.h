@@ -44,7 +44,7 @@ namespace Chat
       void prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
       void setMessageSeen(const ClientPartyPtr& clientPartyPtr, const std::string& messageId);
 
-      void prepareRequestPrivateParty(const std::string& userName);
+      void prepareRequestPrivateParty(const std::string& partyId);
 
    public slots:
       void onDataReceived(const std::string&);

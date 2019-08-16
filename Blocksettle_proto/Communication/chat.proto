@@ -74,7 +74,8 @@ enum PartyState
 {
     UNINITIALIZED = 0;
     REQUESTED = 1;
-    INITIALIZED = 2;
+    REJECTED = 2;
+    INITIALIZED = 3;
 }
 
 enum EncryptionType
@@ -144,6 +145,17 @@ message PartyMessageStateUpdate
     string party_id = 1;
     string message_id = 2;
     PartyMessageState party_message_state = 3;
+}
+
+message PartyRecipient
+{
+    string user_name = 1;
+}
+
+message PrivatePartyRequest
+{
+    PartyPacket party_packet = 1;
+    repeated PartyRecipient recipient = 2;
 }
 
 message Data

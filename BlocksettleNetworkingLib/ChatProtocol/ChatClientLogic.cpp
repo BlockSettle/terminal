@@ -39,6 +39,8 @@ namespace Chat
 
       setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr_, clientDBServicePtr_, this));
       connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::partyModelChanged, this, &ChatClientLogic::partyModelChanged);
+      connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::privatePartyCreated, this, &ChatClientLogic::privatePartyCreated);
+      connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::privatePartyAlreadyExist, this, &ChatClientLogic::privatePartyAlreadyExist);
 
       clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr_, applicationSettingsPtr_, clientDBServicePtr_, loggerPtr_);
       clientConnectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
@@ -234,13 +236,24 @@ namespace Chat
       SendPartyMessage("Global", "test");
    }
 
-   void ChatClientLogic::RequestPrivateParty(const std::string& userName)
+   void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName)
    {
-      //clientPartyLogicPtr_->crea
+      // TODO: remove comments
       // 1. create private party
       // 2. push me to party
       // 3. send request
-      //clientConnectionLogicPtr_->prepareRequestPrivateParty(userName);
+
+      clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName);
+   }
+
+   void ChatClientLogic::privatePartyCreated(const std::string& partyId)
+   {
+      clientConnectionLogicPtr_->prepareRequestPrivateParty(partyId);
+   }
+
+   void ChatClientLogic::privatePartyAlreadyExist(const std::string& partyId)
+   {
+      clientConnectionLogicPtr_->prepareRequestPrivateParty(partyId);
    }
 
 }

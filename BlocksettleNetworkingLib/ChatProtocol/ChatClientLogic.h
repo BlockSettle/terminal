@@ -87,6 +87,8 @@ namespace Chat
       void onCloseConnection();
       void handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what);
       void initDbDone();
+      void privatePartyCreated(const std::string& partyId);
+      void privatePartyAlreadyExist(const std::string& partyId);
 
    private:
       void setClientPartyLogicPtr(ClientPartyLogicPtr val) { clientPartyLogicPtr_ = val; }

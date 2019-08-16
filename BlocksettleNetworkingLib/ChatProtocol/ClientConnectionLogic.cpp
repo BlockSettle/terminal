@@ -8,6 +8,7 @@
 #include "ChatProtocol/ClientConnectionLogic.h"
 #include "ChatProtocol/ClientPartyLogic.h"
 #include "ChatProtocol/ClientPartyModel.h"
+#include "ChatProtocol/ClientPrivateDMParty.h"
 #include "ProtobufUtils.h"
 
 #include <disable_warnings.h>
@@ -253,9 +254,40 @@ namespace Chat
       // TODO
    }
 
-   void ClientConnectionLogic::prepareRequestPrivateParty(const std::string& userName)
+   void ClientConnectionLogic::prepareRequestPrivateParty(const std::string& partyId)
    {
+      PartyPtr partyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
 
+      if (nullptr == partyPtr)
+      {
+         return;
+      }
+
+      ClientPrivateDMPartyPtr clientPrivateDMPartyPtr = std::dynamic_pointer_cast<ClientPrivateDMParty>(partyPtr);
+
+      if (nullptr == clientPrivateDMPartyPtr)
+      {
+         return;
+      }
+
+      // update party state
+      clientPrivateDMPartyPtr->setPartyState(PartyState::REQUESTED);
+
+      PrivatePartyRequest privatePartRequest;
+      PartyPacket *partyPacket = privatePartRequest.mutable_party_packet();
+      partyPacket->set_id(partyId);
+      partyPacket->set_display_name(clientPrivateDMPartyPtr->getSecondRecipient(currentUserPtr()->displayName()));
+      partyPacket->set_party_type(clientPrivateDMPartyPtr->partyType());
+      partyPacket->set_party_subtype(clientPrivateDMPartyPtr->partySubType());
+      partyPacket->set_party_state(clientPrivateDMPartyPtr->partyState());
+
+      for (const std::string& recipient : clientPrivateDMPartyPtr->getRecipientsExceptMe(currentUserPtr()->displayName()))
+      {
+         PartyRecipient* partyRecipient = privatePartRequest.add_recipient();
+         partyRecipient->set_user_name(recipient);
+      }
+
+      emit sendPacket(privatePartRequest);
    }
 
 }
