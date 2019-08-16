@@ -638,7 +638,7 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
 
    const double curBalance = transactionData_->GetTransactionSummary().availableBalance;
    if (curBalance < (spendBalance + totalFee)) {
-      BSMessageBox lowInputs(BSMessageBox::question, tr("Not enough inputs balance")
+      BSMessageBox lowInputs(BSMessageBox::question, tr("Insufficient Input Amount")
          , tr("Currently your inputs don't allow to spend the balance added to output[s]. Delete [some of] them?"));
       if (lowInputs.exec() == QDialog::Accepted) {
          while (outputsModel_->rowCount({})) {
