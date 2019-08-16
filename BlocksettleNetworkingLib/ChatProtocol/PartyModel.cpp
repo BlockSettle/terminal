@@ -59,6 +59,28 @@ namespace Chat
       return nullptr;
    }
 
+   PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& id)
+   {
+      PartyPtr partyPtr = getPartyById(id);
+
+      if (!partyPtr)
+      {
+         emit error(PartyModelError::CouldNotFindParty, id);
+         return nullptr;
+      }
+
+      PrivateDirectMessagePartyPtr privateDMPartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
+
+      if (nullptr == privateDMPartyPtr)
+      {
+         // this should not happen
+         emit error(PartyModelError::PrivatePartyCasting, id);
+         return nullptr;
+      }
+
+      return privateDMPartyPtr;
+   }
+
    void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& id)
    {
       loggerPtr_->debug("[PartyModel::handleLocalErrors] Error: {}, what: {}", (int)errorCode, id);

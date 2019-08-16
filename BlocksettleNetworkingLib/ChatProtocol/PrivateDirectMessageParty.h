@@ -1,6 +1,8 @@
 #ifndef PrivateDirectMessageParty_h__
 #define PrivateDirectMessageParty_h__
 
+#include <QMetaType>
+
 #include "Party.h"
 
 #include <memory>
@@ -40,5 +42,7 @@ namespace Chat
    using PrivateDirectMessagePartyPtr = std::shared_ptr<PrivateDirectMessageParty>;
 
 }
+
+Q_DECLARE_METATYPE(Chat::PrivateDirectMessagePartyPtr)
 
 #endif // PrivateDirectMessageParty_h__
