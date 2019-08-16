@@ -54,7 +54,7 @@ public:
 public:
    TransactionData(const onTransactionChanged &changedCallback = nullptr
       , const std::shared_ptr<spdlog::logger> &logger = nullptr
-      , bool SWOnly = false, bool confirmedOnly = false);
+      , bool isSegWitInputsOnly = false, bool confirmedOnly = false);
    ~TransactionData() noexcept;
 
    TransactionData(const TransactionData&) = delete;
@@ -165,7 +165,7 @@ private:
 
    bs::core::wallet::TXSignRequest  unsignedTxReq_;
 
-   const bool  swTransactionsOnly_;
+   const bool  isSegWitInputsOnly_;
    const bool  confirmedInputs_;
 
    std::vector<UTXO>    reservedUTXO_;

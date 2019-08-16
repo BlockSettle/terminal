@@ -361,7 +361,14 @@ bool Wallet::getAddressTxnCounts(const std::function<void(void)> &cb)
          walletIDs.push_back(walletIdInt());
       } catch (std::exception&) {}
 
-      const auto &cbTxNs = [cbMutex=cbMutex_, cbTxNs=cbTxNs_, addrMapsMtx=addrMapsMtx_
+      decltype(cbTxNs_) cbTxNsCopy = std::make_shared<std::vector<std::function<void(void)>>>();
+
+      {
+         std::unique_lock<std::mutex> lock(*cbMutex_);
+         cbTxNsCopy->swap(*cbTxNs_);
+      }
+
+      const auto &cbTxNs = [cbTxNsCollection=cbTxNsCopy, addrMapsMtx=addrMapsMtx_
          , addrTxNMap=addressTxNMap_]
          (const std::map<std::string, CombinedCounts> &countMap)
       {
@@ -370,13 +377,12 @@ bool Wallet::getAddressTxnCounts(const std::function<void(void)> &cb)
             updateMap<std::map<BinaryData, uint64_t>>(
                count.second.addressTxnCounts_, *addrTxNMap);
          }
-         std::unique_lock<std::mutex> lock(*cbMutex);
-         for (const auto &cb : *cbTxNs) {
+
+         for (const auto &cb : *cbTxNsCollection) {
             if (cb) {
                cb();
             }
          }
-         cbTxNs->clear();
       };
       return armory_->getCombinedTxNs(walletIDs, cbTxNs);
    }

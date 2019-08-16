@@ -650,7 +650,6 @@ void BaseChatClient::OnUsersList(const Chat::Response_UsersList& response)
 
 void BaseChatClient::OnMessages(const Chat::Response_Messages &response)
 {
-   ChatDataVectorPtr messages;
    for (const auto &msg : response.messages()) {
       auto msgCopy = std::make_shared<Chat::Data>(msg);
 

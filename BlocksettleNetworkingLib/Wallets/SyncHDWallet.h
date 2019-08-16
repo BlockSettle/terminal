@@ -24,9 +24,7 @@ namespace bs {
             using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
             Wallet(const std::string &walletId, const std::string &name
-               , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger = nullptr);
-            Wallet(const std::string &walletId, const std::string &name
-               , const std::string &desc, WalletSignerContainer *
+               , const std::string &desc, bool isOffline, WalletSignerContainer * = nullptr
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
             ~Wallet() override;
 
@@ -41,6 +39,7 @@ namespace bs {
             std::vector<SecureBinaryData> encryptionKeys() const;
             bs::wallet::KeyRank encryptionRank() const;
             bool isPrimary() const;
+            bool isOffline() const { return isOffline_; }
             NetworkType networkType() const { return netType_; }
 
             std::shared_ptr<Group> getGroup(bs::hd::CoinType ct) const;
@@ -114,6 +113,7 @@ namespace bs {
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_{bs::wallet::EncryptionType::Password};
             std::vector<SecureBinaryData>          encryptionKeys_;
             std::pair<unsigned int, unsigned int>  encryptionRank_{ 1, 1 };
+            const bool isOffline_;
 
          private:
             std::unordered_set<std::string>  scannedLeaves_;

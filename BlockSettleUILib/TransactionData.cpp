@@ -19,7 +19,7 @@ static const size_t kMaxTxStdWeight = 400000;
 
 
 TransactionData::TransactionData(const onTransactionChanged &changedCallback
-   , const std::shared_ptr<spdlog::logger> &logger , bool SWOnly, bool confOnly)
+   , const std::shared_ptr<spdlog::logger> &logger , bool isSegWitInputsOnly, bool confOnly)
    : changedCallback_(changedCallback)
    , logger_(logger)
    , wallet_(nullptr)
@@ -27,7 +27,7 @@ TransactionData::TransactionData(const onTransactionChanged &changedCallback
    , feePerByte_(0)
    , nextId_(0)
    , coinSelection_(nullptr)
-   , swTransactionsOnly_(SWOnly)
+   , isSegWitInputsOnly_(isSegWitInputsOnly)
    , confirmedInputs_(confOnly)
 {}
 
@@ -59,7 +59,7 @@ bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet,
       inputsLoaded_ = false;
 
       selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
-         , swTransactionsOnly_, confirmedInputs_
+         , isSegWitInputsOnly_, confirmedInputs_
          , [this]() {
             inputsLoaded_ = true;
             InvalidateTransactionData();
@@ -79,7 +79,7 @@ bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet,
       }
       else {
          selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
-            , swTransactionsOnly_, confirmedInputs_
+            , isSegWitInputsOnly_, confirmedInputs_
             , [this] { InvalidateTransactionData(); }
             , cbInputsReset);
       }
