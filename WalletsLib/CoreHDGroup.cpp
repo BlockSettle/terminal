@@ -232,9 +232,7 @@ std::shared_ptr<hd::Leaf> hd::Group::newLeaf(AddressEntryType aet) const
    default:    break;
    }
 
-#ifndef NDEBUG
    assert(false);
-#endif
    return nullptr;
 }
 
