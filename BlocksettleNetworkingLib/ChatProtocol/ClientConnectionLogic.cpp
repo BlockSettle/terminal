@@ -68,6 +68,13 @@ namespace Chat
          return;
       }
 
+      PrivatePartyRequest privatePartyRequest;
+      if (ProtobufUtils::pbStringToMessage<PrivatePartyRequest>(data, &privatePartyRequest))
+      {
+         handlePrivatePartyRequest(privatePartyRequest);
+         return;
+      }
+
       QString what = QString::fromLatin1("data: %1").arg(QString::fromStdString(data));
       emit error(ClientConnectionLogicError::UnhandledPacket, what.toStdString());
    }
@@ -287,6 +294,47 @@ namespace Chat
       }
 
       emit sendPacket(privatePartyRequest);
+   }
+
+   void ClientConnectionLogic::handlePrivatePartyRequest(const google::protobuf::Message& msg)
+   {
+      PrivatePartyRequest privatePartyRequest;
+      privatePartyRequest.CopyFrom(msg);
+
+      // 1. check if model have this same party id
+      // 2. if have and local party state is initialized then reply initialized state
+      // 3. if not create new private party
+      // 4. save party id in db
+
+      ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      PartyPtr partyPtr = clientPartyModelPtr->getClientPartyById(privatePartyRequest.party_packet().party_id());
+
+      // local party exist
+      if (partyPtr)
+      {
+         if (PartyState::INITIALIZED == partyPtr->partyState() || PartyState::REJECTED == partyPtr->partyState())
+         {
+            // party is in initialized or rejected state (already accepted)
+            // send this state to requester
+            sendPrivatePartyState(partyPtr->id(), partyPtr->partyState());
+            return;
+         }
+
+         return;
+      }
+
+      // local party not exist, create new one
+      clientPartyLogicPtr_->createPrivatePartyFromPrivatePartyRequest(currentUserPtr(), privatePartyRequest);
+   }
+
+   void ClientConnectionLogic::sendPrivatePartyState(const std::string& partyId, const Chat::PartyState& partyState)
+   {
+      PrivatePartyRequest privatePartyRequest;
+      PartyPacket* partyPacket = privatePartyRequest.mutable_party_packet();
+      partyPacket->set_party_id(partyId);
+      partyPacket->set_party_state(partyState);
+
+      sendPacket(privatePartyRequest);
    }
 
 }

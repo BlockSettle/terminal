@@ -128,4 +128,32 @@ namespace Chat
       emit privatePartyCreated(newClientPrivatePartyPtr->id());
    }
 
+   void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const google::protobuf::Message& msg)
+   {
+      PrivatePartyRequest privatePartyRequest;
+      privatePartyRequest.CopyFrom(msg);
+
+      ClientPartyPtr newClientPrivatePartyPtr =
+         std::make_shared<ClientParty>(
+            privatePartyRequest.party_packet().party_id(), 
+            privatePartyRequest.party_packet().party_type(),
+            privatePartyRequest.party_packet().party_subtype()
+         );
+
+      Recipients recipients;
+      for (int i = 0; i < privatePartyRequest.recipient_size(); i++)
+      {
+         recipients.push_back(privatePartyRequest.recipient(i).user_name());
+      }
+
+      // update model
+      clientPartyModelPtr_->insertParty(newClientPrivatePartyPtr);
+      emit partyModelChanged();
+
+      // save party in db
+      clientDBServicePtr_->createNewParty(newClientPrivatePartyPtr->id());
+
+      // ! Do NOT emit here privatePartyCreated, it's connected with party request
+   }
+
 }

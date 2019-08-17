@@ -54,6 +54,9 @@ namespace Chat
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::sendPacket, this, &ChatClientLogic::sendPacket);
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
 
+      // close connection from callback
+      connect(this, &ChatClientLogic::disconnected, this, &ChatClientLogic::onCloseConnection);
+
       // TODO: remove
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::testProperlyConnected, this, &ChatClientLogic::testProperlyConnected);
    }
@@ -96,8 +99,6 @@ namespace Chat
          loggerPtr_->error("[ChatClientLogic::{}] connecting with not purged connection", __func__);
 
          emit chatClientError(ChatClientLogicError::ConnectionAlreadyUsed);
-
-         return;
       }
 
       connectionPtr_ = connectionManagerPtr_->CreateZMQBIP15XDataConnection();
@@ -195,6 +196,11 @@ namespace Chat
 
    void ChatClientLogic::onCloseConnection()
    {
+      if (nullptr == connectionPtr_)
+      {
+         return;
+      }
+
       connectionPtr_.reset();
       emit clientLoggedOutFromServer();
    }
@@ -234,7 +240,7 @@ namespace Chat
    void ChatClientLogic::testProperlyConnected()
    {
       SendPartyMessage("Global", "test");
-      RequestPrivateParty("test");
+      RequestPrivateParty("mcpxrd3tt9xi");
    }
 
    void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName)

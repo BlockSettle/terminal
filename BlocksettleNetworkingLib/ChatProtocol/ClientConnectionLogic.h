@@ -53,6 +53,7 @@ namespace Chat
       void onError(DataConnectionListener::DataConnectionError);
 
       void messagePacketSent(const std::string& messageId);
+      void sendPrivatePartyState(const std::string& partyId, const Chat::PartyState& partyState);
 
    signals:
       void sendPacket(const google::protobuf::Message& message);
@@ -75,6 +76,7 @@ namespace Chat
       void handleStatusChanged(const google::protobuf::Message& msg);
       void handlePartyMessageStateUpdate(const google::protobuf::Message& msg);
       void handlePartyMessagePacket(const google::protobuf::Message& msg);
+      void handlePrivatePartyRequest(const google::protobuf::Message& msg);
 
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;
