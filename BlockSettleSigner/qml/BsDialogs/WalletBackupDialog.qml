@@ -35,6 +35,8 @@ CustomTitleDialogWindow {
     property bool fullBackupMode: tabBar.currentIndex === 0
     property bool woBackupAllowed: true
 
+    property bool isWoWallet: false
+
     width: 400
     height: 495
 
@@ -48,7 +50,7 @@ CustomTitleDialogWindow {
         // need to update object since bindings working only for basic types
         walletDetailsFrame.walletInfo = walletInfo
         if (walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)) {
-            fullBackupTabButton.enabled = false
+            isWoWallet = true
             tabBar.currentIndex = 1
         }
     }
@@ -77,7 +79,7 @@ CustomTitleDialogWindow {
                 text: "Full"
                 cText.font.capitalization: Font.MixedCase
                 implicitHeight: 35
-                enabled: !walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)
+                enabled: !isWoWallet
             }
             CustomTabButton {
                 id: woBackupTabButton
