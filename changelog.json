@@ -1,7 +1,27 @@
 {
-   "latest_version": "0.20.3",
-   "release_date": "15 Aug 2019",
+   "latest_version": "0.20.4",
+   "release_date": "17 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.4",
+         "previous_version": "0.20.3",
+         "release_date": "17 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Single leaf per address type",
+            "Hide settlement wallet from generate address dialog"
+         ],
+         "bug_fixes": [
+            "Auto-sign fixes (#1266)",
+            "Fix rare \"fee relay not met\" error",
+            "Fix CC buy RFQ",
+            "Fix payout fees estimation (#1264)",
+            "Fix WO to WO export"
+
+         ],
+         "revision": "e34669eb",
+         "common_revision": "fdd5b727"
+      },
       {
          "version_string": "0.20.3",
          "previous_version": "0.20.2",
