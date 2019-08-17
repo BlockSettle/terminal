@@ -297,10 +297,10 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
                   if (!newLeaf) {
                      throw std::runtime_error("uncreatable");
                   }
-                  for (const auto &addr : leaf->getExtAddressList()) {
+                  for (int i = int(leaf->getExtAddressCount()); i > 0; --i) {
                      newLeaf->getNewExtAddress();
                   }
-                  for (const auto &addr : leaf->getIntAddressList()) {
+                  for (int i = int(leaf->getIntAddressCount()); i > 0; --i) {
                      newLeaf->getNewIntAddress();
                   }
                   logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
