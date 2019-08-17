@@ -36,7 +36,6 @@ public:
       , const std::shared_ptr<TransactionData> &);
    ~ReqCCSettlementContainer() override;
 
-   bool startSigning();
    bool cancel() override;
 
    bool isAcceptable() const override;
@@ -60,7 +59,10 @@ public:
 
 signals:
    void settlementCancelled();
+   // in current implementation that means that TX was signed.
    void settlementAccepted();
+   // RFQDialog could send accept on quote. should be emitted only after settlementAccepted
+   // since it is used to save signed data in RFQDialog
    void sendOrder();
    void genAddrVerified(bool result, QString error);
    void paymentVerified(bool result, QString error);
@@ -70,7 +72,9 @@ private slots:
    void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo& walletInfo);
 
 private:
+   // read comments in source code
    bool createCCUnsignedTXdata();
+   bool startSigning();
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;

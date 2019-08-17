@@ -192,6 +192,9 @@ void RFQDialog::onQuoteReceived(const bs::network::Quote& quote)
 void RFQDialog::onSettlementAccepted()
 {
    if (ccSettlContainer_) {
+      // KLUDGE
+      // since CC settlement/sign is a mess now, there is a trick to save "sign request" for RFQ
+      // but it is actually fine, except the fact that we might force user to sign before submitting order ( accepting quote )
       const auto itCCOrder = ccReqIdToOrder_.find(QString::fromStdString(rfq_.requestId));
       if (itCCOrder != ccReqIdToOrder_.end()) {
          quoteProvider_->SignTxRequest(itCCOrder->second, ccSettlContainer_->txSignedData());
@@ -224,6 +227,7 @@ void RFQDialog::onSignTxRequested(QString orderId, QString reqId)
 {
    const auto itCCtx = ccTxMap_.find(reqId.toStdString());
    if (itCCtx == ccTxMap_.end()) {
+      // KLUDGE
       logger_->debug("[RFQDialog] signTX for reqId={} requested before signing", reqId.toStdString());
       ccReqIdToOrder_[reqId] = orderId;
       return;
