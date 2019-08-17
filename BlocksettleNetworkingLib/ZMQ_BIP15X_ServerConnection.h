@@ -102,6 +102,10 @@ public:
    // Only compressed public keys are supported.
    // If empty (default) trusted clients are not enforced.
    void forceTrustedClients(const ZmqBIP15XPeers &peers);
+
+   // Could be called only from IO thread callbacks.
+   // Returns null if clientId is not known or was not yet authenticated.
+   std::unique_ptr<ZmqBIP15XPeer> getClientKey(const std::string &clientId) const;
 protected:
    // Overridden functions from ZmqServerConnection.
    ZmqContext::sock_ptr CreateDataSocket() override;
