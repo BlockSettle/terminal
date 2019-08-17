@@ -177,6 +177,14 @@ void SignerAdapter::importWoWallet(const std::string &filename, const BinaryData
    listener_->setWatchOnlyCb(reqId, cb);
 }
 
+void SignerAdapter::exportWoWallet(const std::string &rootWalletId, const SignerAdapter::ExportWoCb &cb)
+{
+   signer::ExportWoWalletRequest request;
+   request.set_rootwalletid(rootWalletId);
+   const auto reqId = listener_->send(signer::ExportWoWalletType, request.SerializeAsString());
+   listener_->setExportWatchOnlyCb(reqId, cb);
+}
+
 void SignerAdapter::deleteWallet(const std::string &rootWalletId, const std::function<void (bool, const std::string &)> &cb)
 {
    headless::DeleteHDWalletRequest request;
