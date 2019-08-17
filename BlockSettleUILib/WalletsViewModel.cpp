@@ -329,15 +329,15 @@ QVariant WalletsViewModel::data(const QModelIndex &index, int role) const
       if (showRegularWallets_) {
          switch (static_cast<WalletRegColumns>(index.column()))
          {
-         case WalletRegColumns::ColumnNbAddresses:
-            return Qt::AlignRight;
-         default:
-            return QVariant();
+            case WalletRegColumns::ColumnNbAddresses:
+               return Qt::AlignRight;
+            default:
+               return QVariant();
          }
       }
-      else {
-         switch (static_cast<WalletColumns>(index.column()))
-         {
+
+      switch (static_cast<WalletColumns>(index.column()))
+      {
          case WalletColumns::ColumnSpendableBalance:
          case WalletColumns::ColumnUnconfirmedBalance:
          case WalletColumns::ColumnTotalBalance:
@@ -345,9 +345,7 @@ QVariant WalletsViewModel::data(const QModelIndex &index, int role) const
             return Qt::AlignRight;
          default:
             return QVariant();
-         }
       }
-      return QVariant();
    }
 
    return getNode(index)->data(index.column(), role);
