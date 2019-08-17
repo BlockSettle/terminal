@@ -726,9 +726,11 @@ void AuthAddressManager::onWalletChanged(const std::string &walletId)
       listUpdated = true;
       addresses_ = newAddresses;
       for (const auto &addr : newAddresses) {
-         SetState(addr, AddressVerificationState::Verified);
+         QTimer::singleShot(std::chrono::milliseconds(100), this, [this, addr] {
+            SetState(addr, AddressVerificationState::Verified);
+            emit VerifiedAddressListUpdated();
+         });
       }
-      emit VerifiedAddressListUpdated();
 
       // FIXME: address verification is disabled temporarily
 /*      for (size_t i = addresses_.size(); i < count; i++) {

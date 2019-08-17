@@ -254,6 +254,13 @@ AddressEntryType bs::Address::guessAddressType(const BinaryData &addr)
    return AddressEntryType_Default;
 }
 
+// static
+size_t bs::Address::getPayoutWitnessDataSize()
+{
+   // Payout TX has more complicated witness data (because it uses 1 of 2 signatures).
+   return 148;
+}
+
 std::string bs::Address::display(Format format) const
 {
    if (!isProperHash()) {

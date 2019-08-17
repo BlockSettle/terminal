@@ -366,16 +366,14 @@ uint64_t bs::SettlementMonitor::getEstimatedFeeFor(UTXO input, const bs::Address
    return coinSelection.getFeeForMaxVal(scriptRecipient->getSize(), feePerByte, { input });
 }
 
-bs::core::wallet::TXSignRequest bs::SettlementMonitor::createPayoutTXRequest(const UTXO &input
+bs::core::wallet::TXSignRequest bs::SettlementMonitor::createPayoutTXRequest(UTXO input
    , const bs::Address &recvAddr, float feePerByte, unsigned int topBlock)
 {
    bs::core::wallet::TXSignRequest txReq;
    txReq.inputs.push_back(input);
+   input.isInputSW_ = true;
+   input.witnessDataSizeBytes_ = unsigned(bs::Address::getPayoutWitnessDataSize());
    uint64_t fee = getEstimatedFeeFor(input, recvAddr, feePerByte, topBlock);
-
-   if (fee < bs::sync::wallet::kMinRelayFee) {
-      fee = bs::sync::wallet::kMinRelayFee;
-   }
 
    uint64_t value = input.getValue();
    if (value < fee) {
