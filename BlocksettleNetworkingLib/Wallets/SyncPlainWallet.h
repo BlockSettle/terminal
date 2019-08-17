@@ -34,7 +34,7 @@ namespace bs {
          PlainWallet& operator = (const PlainWallet&) = delete;
          PlainWallet& operator = (PlainWallet&&) = delete;
 
-         int addAddress(const bs::Address &, const std::string &index, AddressEntryType
+         int addAddress(const bs::Address &, const std::string &index
             , bool sync = true) override;
          bool containsAddress(const bs::Address &addr) override;
 
@@ -43,13 +43,10 @@ namespace bs {
          void setDescription(const std::string &desc) override { desc_ = desc; }
          bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Bitcoin; }
 
-         void getNewExtAddress(const CbAddress &, AddressEntryType aet) override;
-         void getNewIntAddress(const CbAddress &cb, AddressEntryType aet) override {
-            getNewExtAddress(cb, aet);
-         }
+         void getNewExtAddress(const CbAddress &) override;
+         void getNewIntAddress(const CbAddress &cb) override { getNewExtAddress(cb); }
          size_t getUsedAddressCount() const override { return usedAddresses_.size(); }
          std::string getAddressIndex(const bs::Address &) override;
-         bool addressIndexExists(const std::string &index) const override;
 
          bool deleteRemotely() override;
 

@@ -15,9 +15,9 @@ PlainWallet::PlainWallet(const std::string &walletId, const std::string &name, c
 PlainWallet::~PlainWallet() = default;
 
 int PlainWallet::addAddress(const bs::Address &addr, const std::string &index
-   , AddressEntryType aet, bool sync)
+   , bool sync)
 {
-   const int id = Wallet::addAddress(addr, index, aet, sync);
+   const int id = Wallet::addAddress(addr, index, sync);
    addrPrefixedHashes_.insert(addr.id());
    return id;
 }
@@ -53,19 +53,16 @@ std::string PlainWallet::getAddressIndex(const bs::Address &addr)
    return std::to_string(index);
 }
 
-bool PlainWallet::addressIndexExists(const std::string &index) const
-{
-   const auto id = std::stoi(index);
-   return ((id >= 0) && (id < usedAddresses_.size()));
-}
-
 bool PlainWallet::containsAddress(const bs::Address &addr)
 {
    return (addressIndex(addr) >= 0);
 }
 
-void PlainWallet::getNewExtAddress(const CbAddress &, AddressEntryType)
+void PlainWallet::getNewExtAddress(const CbAddress &cb)
 {  // should have a pool to return immediately
+   if (cb) {
+      cb({});
+   }
 }
 
 bool PlainWallet::deleteRemotely()

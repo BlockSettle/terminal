@@ -21,8 +21,8 @@ class NewAddressDialog : public QDialog
 Q_OBJECT
 
 public:
-   NewAddressDialog(const std::shared_ptr<bs::sync::Wallet>& wallet, const std::shared_ptr<SignContainer> &
-      , bool isNested = false, QWidget* parent = nullptr);
+   NewAddressDialog(const std::shared_ptr<bs::sync::Wallet>& wallet
+      , const std::shared_ptr<SignContainer> &, QWidget* parent = nullptr);
    ~NewAddressDialog() override;
 
 protected:

@@ -38,8 +38,6 @@ namespace bs {
 
       namespace wallet {
 
-         constexpr uint64_t kMinRelayFee = 1000;
-
          struct Comment
          {
             enum Type {
@@ -135,16 +133,14 @@ namespace bs {
          virtual size_t getIntAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getWalletAddressCount() const { return *addrCount_; }
 
-         virtual void getNewExtAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) = 0;
-         virtual void getNewIntAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) = 0;
-         virtual void getNewChangeAddress(const CbAddress &cb, AddressEntryType aet = AddressEntryType_Default)
-            { getNewExtAddress(cb, aet); }
+         virtual void getNewExtAddress(const CbAddress &) = 0;
+         virtual void getNewIntAddress(const CbAddress &) = 0;
+         virtual void getNewChangeAddress(const CbAddress &cb) { getNewExtAddress(cb); }
 
          virtual std::string getAddressIndex(const bs::Address &) = 0;
-         virtual bool addressIndexExists(const std::string &index) const = 0;
 
          //Adds an arbitrary address identified by index
-         virtual int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true);
+         virtual int addAddress(const bs::Address &, const std::string &index, bool sync = true);
 
          void syncAddresses();
 
@@ -169,8 +165,7 @@ namespace bs {
          virtual bool deleteRemotely() { return false; } //stub
          virtual void merge(const std::shared_ptr<Wallet>) = 0;
 
-         void newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &inData,
-            const CbAddresses &cb);
+         void newAddresses(const std::vector<std::string> &inData, const CbAddresses &cb);
          void trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &cb);
          virtual void scan(const std::function<void(bs::sync::SyncState)> &cb) {}
          size_t getActiveAddressCount(void);

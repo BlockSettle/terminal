@@ -8,7 +8,7 @@
 
 
 NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wallet
-   , const std::shared_ptr<SignContainer> &container, bool isNested, QWidget* parent)
+   , const std::shared_ptr<SignContainer> &container, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::NewAddressDialog())
    , wallet_(wallet)
@@ -41,9 +41,7 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wall
          });
       }
    };
-   wallet_->getNewExtAddress(cbAddr, isNested ?
-      static_cast<AddressEntryType>(AddressEntryType_P2SH|AddressEntryType_P2WPKH)
-      : AddressEntryType_P2WPKH);
+   wallet_->getNewExtAddress(cbAddr);
 
    if (address_.isNull()) {
       copyButton->setEnabled(false);

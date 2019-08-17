@@ -336,8 +336,10 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
       bool isLast = (i == 0);
       if (candle.timestamp() >= lastCandle_.timestamp() 
          || lastCandle_.timestamp() - candle.timestamp() < IntervalWidth( interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp(), Qt::TimeSpec::UTC))) {
-         logger_->error("Invalid distance between candles from mdhs. The last timestamp: {}  new timestamp: {}",
-                        lastCandle_.timestamp(), candle.timestamp());
+         if (lastCandle_.timestamp() != 0) {
+            logger_->error("Invalid distance between candles from mdhs. The last timestamp: {}  new timestamp: {}",
+                           lastCandle_.timestamp(), candle.timestamp());
+         }
       }
       else {
          if (lastCandle_.timestamp() - candle.timestamp() != IntervalWidth(

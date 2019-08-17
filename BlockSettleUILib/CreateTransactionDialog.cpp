@@ -270,7 +270,8 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
       pushButtonCreate()->setText(tr("Broadcast"));
    }
    if ((transactionData_->getWallet() != currentWallet) || resetInputs) {
-      transactionData_->setWallet(currentWallet, armory_->topBlock(), resetInputs, cbInputsReset);
+      transactionData_->setWallet(currentWallet, armory_->topBlock()
+         , resetInputs, cbInputsReset);
    }
 }
 
@@ -343,6 +344,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
       accept();
       return;
    }
+   const auto wallet = walletsManager_->getWalletById(walletId);
 
    try {
       if (result != bs::error::ErrorCode::NoError) {
@@ -437,13 +439,15 @@ bool CreateTransactionDialog::CreateTransaction()
    }
 
    std::string offlineFilePath;
+   const auto currentWallet = walletsManager_->getWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
+   const auto walletId = currentWallet->walletId();
 
-   if (signContainer_->isWalletOffline(transactionData_->getWallet()->walletId())) {
+   if (signContainer_->isWalletOffline(walletId)) {
       QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 
       const qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();
-      auto rootWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
-      const std::string &walletId = rootWallet ? rootWallet->walletId() : transactionData_->getWallet()->walletId();
+      auto rootWallet = walletsManager_->getHDRootForLeaf(walletId);
+      const std::string &walletId = rootWallet ? rootWallet->walletId() : walletId;
       const std::string fileName = fmt::format("{}_{}.bin", walletId, timestamp);
 
       QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));

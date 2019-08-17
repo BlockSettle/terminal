@@ -102,7 +102,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
    allowAutoSelInputs_ = false;
 
    const auto &cbTXs = [this, tx, wallet, txOutIndices](const std::vector<Tx> &txs) {
-      auto selInputs = transactionData_->GetSelectedInputs();
+      auto selInputs = transactionData_->getSelectedInputs();
       selInputs->SetUseAutoSel(false);
       int64_t origFee = 0;
       unsigned int cntOutputs = 0;
@@ -198,7 +198,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
                TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
                totalVal += prevOut.getValue();
             }
-            if (!transactionData_->GetSelectedInputs()->SetUTXOSelection(txHash, txOutIdx)) {
+            if (!transactionData_->getSelectedInputs()->SetUTXOSelection(txHash, txOutIdx)) {
                if (logger_ != nullptr) {
                   logger_->error("[{}] No input(s) found for TX {}."
                                  , __func__, txHash.toHexStr(true));
@@ -290,7 +290,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       SetMinimumFee(newMinFee, originalFeePerByte_ + 1.0);
       advisedFeePerByte_ = originalFeePerByte_ + 1.0;
       populateFeeList();
-      SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
+      SetInputs(transactionData_->getSelectedInputs()->GetSelectedTransactions());
    };
 
    const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](std::vector<UTXO> inUTXOs) {
@@ -562,7 +562,7 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
    // desirable to change this one day. RBF TXs can change inputs but only if
    // all other inputs are RBF-enabled. Properly refactored, the user could
    // select only RBF-enabled inputs that are waiting for a conf.
-   if (!isRBF_ && transactionData_->GetSelectedInputs()->UseAutoSel()) {
+   if (!isRBF_ && transactionData_->getSelectedInputs()->UseAutoSel()) {
       usedInputsModel_->updateInputs(transactionData_->inputs());
    }
 
@@ -631,7 +631,7 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
    const double prevBalance = transactionData_->GetTransactionSummary().availableBalance;
    const double spendBalance = transactionData_->GetTotalRecipientsAmount();
    const double totalFee = transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider;
-   CoinControlDialog dlg(transactionData_->GetSelectedInputs(), allowAutoSelInputs_, this);
+   CoinControlDialog dlg(transactionData_->getSelectedInputs(), allowAutoSelInputs_, this);
    if (dlg.exec() == QDialog::Accepted) {
       SetInputs(dlg.selectedInputs());
    }
@@ -890,9 +890,7 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
                , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::ChangeAddress));
             promAddr->set_value(addr);
          };
-         transactionData_->getWallet()->getNewChangeAddress(cbAddr
-            , ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH
-            : static_cast<AddressEntryType>(AddressEntryType_P2SH|AddressEntryType_P2WPKH));
+         transactionData_->getWallet()->getNewChangeAddress(cbAddr);
          const auto changeAddr = futAddr.get();
          transactionData_->getWallet()->syncAddresses();
          return changeAddr;
@@ -1012,7 +1010,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                      if (!thisPtr) {
                         return;
                      }
-                     auto selInputs = thisPtr->transactionData_->GetSelectedInputs();
+                     auto selInputs = thisPtr->transactionData_->getSelectedInputs();
                      for (const auto &utxo : utxoHashes) {
                         bool result = selInputs->SetUTXOSelection(utxo.first, utxo.second);
                         if (!result) {
@@ -1052,7 +1050,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          if (!thisPtr) {
             return;
          }
-         auto selInputs = thisPtr->transactionData_->GetSelectedInputs();
+         auto selInputs = thisPtr->transactionData_->getSelectedInputs();
          for (const auto &utxo : inputs) {
             bool result = selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
             if (!result) {

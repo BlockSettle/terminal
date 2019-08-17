@@ -4,10 +4,17 @@
 #include <string>
 #include <set>
 #include <vector>
+#include "Addresses.h"
 
 
 namespace bs {
    namespace hd {
+
+      class PathException : public std::runtime_error
+      {
+      public:
+         PathException(const std::string &s) : std::runtime_error(s) {}
+      };
 
       class Path
       {
@@ -35,6 +42,7 @@ namespace bs {
          std::string toString() const;
 
          bool isHardened(size_t index) const;
+         void setHardened(size_t index, bool value = true);
 
          static Path fromString(const std::string &);
          static Elem keyToElem(const std::string &key);
@@ -46,7 +54,15 @@ namespace bs {
       };
 
 
-      static const Path::Elem purpose = 44;  // BIP44-compatible
+      enum Purpose : Path::Elem {
+         Native = 44,   // BIP44
+         Nested = 49,   // BIP49
+         NonSegWit = 84 // BIP84
+      };
+
+      Purpose purpose(AddressEntryType);
+      AddressEntryType addressType(Path::Elem);
+
       static const Path::Elem hardFlag = 0x80000000;
 
       enum CoinType : Path::Elem {

@@ -544,17 +544,6 @@ BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest
 }
 
 
-/*size_t wallet::getInputScrSize(const std::shared_ptr<AddressEntry> &addrEntry)
-{
-   if (addrEntry) {
-      switch (addrEntry->getType()) {
-      case AddressEntryType_P2SH:   return 64;
-      default:    return addrEntry->getInputSize();
-      }
-   }
-   return 65;
-}*/
-
 BinaryData wallet::computeID(const BinaryData &input)
 {
    auto result = BtcUtils::computeID(input);
@@ -564,14 +553,3 @@ BinaryData wallet::computeID(const BinaryData &input)
    }
    return result;
 }
-
-
-/*bool operator ==(const Wallet &a, const Wallet &b)
-{
-   return (a.GetWalletId() == b.GetWalletId());
-}
-
-bool operator !=(const Wallet &a, const Wallet &b)
-{
-   return (a.GetWalletId() != b.GetWalletId());
-}*/
