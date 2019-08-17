@@ -282,15 +282,15 @@ namespace Chat
       PrivatePartyRequest privatePartyRequest;
       PartyPacket *partyPacket = privatePartyRequest.mutable_party_packet();
       partyPacket->set_party_id(partyId);
-      partyPacket->set_display_name(clientPartyPtr->getSecondRecipient(currentUserPtr()->displayName()));
+      partyPacket->set_display_name(clientPartyPtr->getSecondRecipient(currentUserPtr()->displayName())->userName());
       partyPacket->set_party_type(clientPartyPtr->partyType());
       partyPacket->set_party_subtype(clientPartyPtr->partySubType());
       partyPacket->set_party_state(clientPartyPtr->partyState());
 
-      for (const std::string& recipient : clientPartyPtr->recipients())
+      for (const PartyRecipientPtr& recipient : clientPartyPtr->recipients())
       {
-         PartyRecipient* partyRecipient = privatePartyRequest.add_recipient();
-         partyRecipient->set_user_name(recipient);
+         PartyRecipientPacket* partyRecipientPacket = privatePartyRequest.add_recipient();
+         partyRecipientPacket->set_user_name(recipient->userName());
       }
 
       emit sendPacket(privatePartyRequest);

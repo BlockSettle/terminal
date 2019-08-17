@@ -95,10 +95,10 @@ namespace Chat
             continue;
          }
 
-         Recipients recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr->displayName());
+         PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr->displayName());
          for (const auto recipient : recipients)
          {
-            if (recipient == remoteUserName)
+            if (recipient->userName() == remoteUserName)
             {
                // party already existed
                emit privatePartyAlreadyExist(clientPartyPtr->id());
@@ -113,9 +113,9 @@ namespace Chat
 
       newClientPrivatePartyPtr->setDisplayName(remoteUserName);
       // setup recipients for new private party
-      Recipients recipients;
-      recipients.push_back(currentUserPtr->displayName());
-      recipients.push_back(remoteUserName);
+      PartyRecipientsPtrList recipients;
+      recipients.push_back(std::make_shared<PartyRecipient>(currentUserPtr->displayName()));
+      recipients.push_back(std::make_shared<PartyRecipient>(remoteUserName));
       newClientPrivatePartyPtr->setRecipients(recipients);
 
       // update model
@@ -140,10 +140,14 @@ namespace Chat
             privatePartyRequest.party_packet().party_subtype()
          );
 
-      Recipients recipients;
+      PartyRecipientsPtrList recipients;
       for (int i = 0; i < privatePartyRequest.recipient_size(); i++)
       {
-         recipients.push_back(privatePartyRequest.recipient(i).user_name());
+         PartyRecipientPtr recipient = std::make_shared<PartyRecipient>(
+               privatePartyRequest.recipient(i).user_name(), privatePartyRequest.recipient(i).public_key()
+         );
+
+         recipients.push_back(recipient);
       }
 
       // update model

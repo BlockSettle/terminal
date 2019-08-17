@@ -17,9 +17,9 @@ namespace Chat
 
    bool PrivateDirectMessageParty::isUserBelongsToParty(const std::string& userName)
    {
-      for (const auto& recipientUserName : recipients_)
+      for (const auto& recipient : recipients_)
       {
-         if (recipientUserName == userName)
+         if (recipient->userName() == userName)
          {
             return true;
          }
@@ -30,34 +30,34 @@ namespace Chat
 
    // TODO: In case of performance problems in chat server 
    //    consider better solution to find and return all recipients different than given user
-   std::string PrivateDirectMessageParty::getSecondRecipient(const std::string& firstRecipientUserName)
+   PartyRecipientPtr PrivateDirectMessageParty::getSecondRecipient(const std::string& firstRecipientUserName)
    {
-      std::string found;
+      PartyRecipientPtr found;
 
-      for (const auto& recipientUserName : recipients_)
+      for (const auto& recipient : recipients_)
       {
-         if (recipientUserName == firstRecipientUserName)
+         if (recipient->userName() == firstRecipientUserName)
          {
             continue;
          }
 
-         found = recipientUserName;
+         found = recipient;
       }
 
       return found;
    }
 
-   Recipients PrivateDirectMessageParty::getRecipientsExceptMe(const std::string& me)
+   PartyRecipientsPtrList PrivateDirectMessageParty::getRecipientsExceptMe(const std::string& me)
    {
-      Recipients recipients;
-      for (const auto& recipientUserName : recipients_)
+      PartyRecipientsPtrList recipients;
+      for (const auto& recipient : recipients_)
       {
-         if (recipientUserName == me)
+         if (recipient->userName() == me)
          {
             continue;
          }
 
-         recipients.push_back(recipientUserName);
+         recipients.push_back(recipient);
       }
 
       return recipients;
