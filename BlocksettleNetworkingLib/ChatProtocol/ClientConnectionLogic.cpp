@@ -289,7 +289,7 @@ namespace Chat
 
       for (const PartyRecipientPtr& recipient : clientPartyPtr->recipients())
       {
-         PartyRecipientPacket* partyRecipientPacket = privatePartyRequest.add_recipient();
+         PartyRecipientPacket* partyRecipientPacket = partyPacket->add_recipient();
          partyRecipientPacket->set_user_name(recipient->userName());
       }
 

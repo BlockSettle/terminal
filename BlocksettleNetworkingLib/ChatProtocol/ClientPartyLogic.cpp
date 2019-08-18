@@ -133,18 +133,20 @@ namespace Chat
       PrivatePartyRequest privatePartyRequest;
       privatePartyRequest.CopyFrom(msg);
 
+      PartyPacket partyPacket = privatePartyRequest.party_packet();
+
       ClientPartyPtr newClientPrivatePartyPtr =
          std::make_shared<ClientParty>(
-            privatePartyRequest.party_packet().party_id(), 
-            privatePartyRequest.party_packet().party_type(),
-            privatePartyRequest.party_packet().party_subtype()
+            partyPacket.party_id(),
+            partyPacket.party_type(),
+            partyPacket.party_subtype()
          );
 
       PartyRecipientsPtrList recipients;
-      for (int i = 0; i < privatePartyRequest.recipient_size(); i++)
+      for (int i = 0; i < partyPacket.recipient_size(); i++)
       {
          PartyRecipientPtr recipient = std::make_shared<PartyRecipient>(
-               privatePartyRequest.recipient(i).user_name(), privatePartyRequest.recipient(i).public_key()
+            partyPacket.recipient(i).user_name(), partyPacket.recipient(i).public_key()
          );
 
          recipients.push_back(recipient);
