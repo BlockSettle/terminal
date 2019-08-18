@@ -64,6 +64,11 @@ public:
 
 signals:
    void orderFilled();
+   void requestPrimaryWalletCreation();
+
+
+public slots:
+   void forceCheckCondition();
 
 private slots:
    void onReplied(bs::network::QuoteNotification qn);

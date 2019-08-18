@@ -69,7 +69,7 @@ private:
    void popShield();
 
    bool checkConditions(const MarkeSelectedInfo& productGroup);
-   bool checkWalletSettings(const MarkeSelectedInfo& productGroup);
+   bool checkWalletSettings(bs::network::Asset::Type productType, const MarkeSelectedInfo& productGroup);
 
 public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);
