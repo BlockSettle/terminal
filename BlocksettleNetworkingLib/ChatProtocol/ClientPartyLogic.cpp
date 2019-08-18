@@ -34,15 +34,25 @@ namespace Chat
       {
          const PartyPacket& partyPacket = welcomeResponse.party(i);
 
-         if (partyPacket.party_type() == PartyType::GLOBAL)
+         ClientPartyPtr clientPartyPtr = std::make_shared<ClientParty>(
+            partyPacket.party_id(), partyPacket.party_type(), partyPacket.party_subtype(), partyPacket.party_state());
+         clientPartyPtr->setDisplayName(partyPacket.display_name());
+
+         if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
          {
-            ClientPartyPtr clientPartyPtr = std::make_shared<ClientParty>(
-               partyPacket.party_id(), partyPacket.party_type(), partyPacket.party_subtype(), partyPacket.party_state());
+            PartyRecipientsPtrList recipients;
+            for (int i = 0; i < partyPacket.recipient_size(); i++)
+            {
+               PartyRecipientPacket recipient = partyPacket.recipient(i);
+               PartyRecipientPtr recipientPtr =
+                  std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key());
+               recipients.push_back(recipientPtr);
+            }
 
-            clientPartyPtr->setDisplayName(partyPacket.display_name());
-
-            clientPartyModelPtr_->insertParty(clientPartyPtr);
+            clientPartyPtr->setRecipients(recipients);
          }
+
+         clientPartyModelPtr_->insertParty(clientPartyPtr);
       }
 
       emit partyModelChanged();

@@ -99,27 +99,7 @@ namespace Chat
    {
 
    }
-/*
-   template<typename T>
-   bool ClientConnectionLogic::pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg)
-   {
-      google::protobuf::Any any;
-      any.ParseFromString(packetString);
 
-      if (any.Is<T>())
-      {
-         if (!any.UnpackTo(msg))
-         {
-            loggerPtr_->debug("[ServerConnectionLogic::pbStringToMessage] Can't unpack to {}", typeid(T).name());
-            return false;
-         }
-
-         return true;
-      }
-
-      return false;
-   }
-*/
    void ClientConnectionLogic::handleWelcomeResponse(const google::protobuf::Message& msg)
    {
       WelcomeResponse welcomeResponse;
