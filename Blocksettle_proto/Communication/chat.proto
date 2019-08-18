@@ -163,12 +163,14 @@ message RequestSessionKeyExchange
 {
     string sender_user_name = 1;
     bytes encoded_public_key = 2;
+    string receiver_user_name = 3;
 }
 
 message ReplySessionKeyExchange
 {
     string sender_user_name = 1;
     bytes encoded_public_key = 2;
+    string receiver_user_name = 3;
 }
 
 message Data

@@ -72,8 +72,8 @@ namespace Chat
       void prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
       void prepareAndSendPrivateMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
 
-      void requestSessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey);
-      void replySessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey);
+      void requestSessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey);
+      void replySessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey);
 
       void handleWelcomeResponse(const google::protobuf::Message& msg);
       void handleLogoutResponse(const google::protobuf::Message& msg);

@@ -335,20 +335,22 @@ namespace Chat
       sendPacket(privatePartyRequest);
    }
 
-   void ClientConnectionLogic::requestSessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey)
+   void ClientConnectionLogic::requestSessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey)
    {
       RequestSessionKeyExchange requestSessionKey;
-      requestSessionKey.set_sender_user_name(userName);
+      requestSessionKey.set_sender_user_name(currentUserPtr()->displayName());
       requestSessionKey.set_encoded_public_key(encodedLocalSessionPublicKey.toBinStr());
+      requestSessionKey.set_receiver_user_name(receieverUserName);
 
       sendPacket(requestSessionKey);
    }
 
-   void ClientConnectionLogic::replySessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey)
+   void ClientConnectionLogic::replySessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey)
    {
       ReplySessionKeyExchange replyKeyExchange;
-      replyKeyExchange.set_sender_user_name(userName);
+      replyKeyExchange.set_sender_user_name(currentUserPtr()->displayName());
       replyKeyExchange.set_encoded_public_key(encodedLocalSessionPublicKey.toBinStr());
+      replyKeyExchange.set_receiver_user_name(receieverUserName);
 
       sendPacket(replyKeyExchange);
    }
