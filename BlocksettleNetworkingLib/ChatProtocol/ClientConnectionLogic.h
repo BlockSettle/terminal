@@ -10,6 +10,7 @@
 #include "ChatProtocol/ChatUser.h"
 #include "ChatProtocol/ClientPartyLogic.h"
 #include "ChatProtocol/ClientDBService.h"
+#include "ChatProtocol/SessionKeyHolder.h"
 
 #include "chat.pb.h"
 
@@ -71,18 +72,24 @@ namespace Chat
       void prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
       void prepareAndSendPrivateMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
 
+      void requestSessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey);
+      void replySessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey);
+
       void handleWelcomeResponse(const google::protobuf::Message& msg);
       void handleLogoutResponse(const google::protobuf::Message& msg);
       void handleStatusChanged(const google::protobuf::Message& msg);
       void handlePartyMessageStateUpdate(const google::protobuf::Message& msg);
       void handlePartyMessagePacket(const google::protobuf::Message& msg);
       void handlePrivatePartyRequest(const google::protobuf::Message& msg);
+      void handleRequestSessionKeyExchange(const google::protobuf::Message& msg);
+      void handleReplySessionKeyExchange(const google::protobuf::Message& msg);
 
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;
       ApplicationSettingsPtr appSettings_;
       ClientPartyLogicPtr clientPartyLogicPtr_;
       ClientDBServicePtr clientDBServicePtr_;
+      SessionKeyHolderPtr sessionKeyHolderPtr_;
    };
 
    using ClientConnectionLogicPtr = std::shared_ptr<ClientConnectionLogic>;

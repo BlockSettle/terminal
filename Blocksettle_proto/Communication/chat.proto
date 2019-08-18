@@ -159,6 +159,18 @@ message PrivatePartyRequest
     PartyPacket party_packet = 1;
 }
 
+message RequestSessionKeyExchange
+{
+    string sender_user_name = 1;
+    bytes encoded_public_key = 2;
+}
+
+message ReplySessionKeyExchange
+{
+    string sender_user_name = 1;
+    bytes encoded_public_key = 2;
+}
+
 message Data
 {
     enum Direction

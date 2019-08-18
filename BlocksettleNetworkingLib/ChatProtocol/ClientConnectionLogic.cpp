@@ -23,6 +23,10 @@ namespace Chat
    {
       connect(this, &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr_.get(), &ClientPartyLogic::onUserStatusChanged);
       connect(this, &ClientConnectionLogic::error, this, &ClientConnectionLogic::handleLocalErrors);
+
+      sessionKeyHolderPtr_ = std::make_shared<SessionKeyHolder>(loggerPtr_, this);
+      connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::requestSessionKeyExchange, this, &ClientConnectionLogic::requestSessionKeyExchange);
+      connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::replySessionKeyExchange, this, &ClientConnectionLogic::replySessionKeyExchange);
    }
 
    void ClientConnectionLogic::onDataReceived(const std::string& data)
@@ -72,6 +76,20 @@ namespace Chat
       if (ProtobufUtils::pbStringToMessage<PrivatePartyRequest>(data, &privatePartyRequest))
       {
          handlePrivatePartyRequest(privatePartyRequest);
+         return;
+      }
+
+      RequestSessionKeyExchange requestSessionKey;
+      if (ProtobufUtils::pbStringToMessage<RequestSessionKeyExchange>(data, &requestSessionKey))
+      {
+         handleRequestSessionKeyExchange(requestSessionKey);
+         return;
+      }
+
+      ReplySessionKeyExchange replyKeyExchange;
+      if (ProtobufUtils::pbStringToMessage<ReplySessionKeyExchange>(data, &replyKeyExchange))
+      {
+         handleReplySessionKeyExchange(replyKeyExchange);
          return;
       }
 
@@ -316,5 +334,40 @@ namespace Chat
 
       sendPacket(privatePartyRequest);
    }
+
+   void ClientConnectionLogic::requestSessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey)
+   {
+      RequestSessionKeyExchange requestSessionKey;
+      requestSessionKey.set_sender_user_name(userName);
+      requestSessionKey.set_encoded_public_key(encodedLocalSessionPublicKey.toBinStr());
+
+      sendPacket(requestSessionKey);
+   }
+
+   void ClientConnectionLogic::replySessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey)
+   {
+      ReplySessionKeyExchange replyKeyExchange;
+      replyKeyExchange.set_sender_user_name(userName);
+      replyKeyExchange.set_encoded_public_key(encodedLocalSessionPublicKey.toBinStr());
+
+      sendPacket(replyKeyExchange);
+   }
+
+   void ClientConnectionLogic::handleRequestSessionKeyExchange(const google::protobuf::Message& msg)
+   {
+      RequestSessionKeyExchange requestKeyExchange;
+      requestKeyExchange.CopyFrom(msg);
+
+      sessionKeyHolderPtr_->onIncomingRequestSessionKeyExchange(requestKeyExchange.sender_user_name(), requestKeyExchange.encoded_public_key(), currentUserPtr()->privateKey());
+   }
+
+   void ClientConnectionLogic::handleReplySessionKeyExchange(const google::protobuf::Message& msg)
+   {
+      ReplySessionKeyExchange replyKeyExchange;
+      replyKeyExchange.CopyFrom(msg);
+
+      sessionKeyHolderPtr_->onIncomingReplySessionKeyExchange(replyKeyExchange.sender_user_name(), replyKeyExchange.encoded_public_key());
+   }
+
 
 }
