@@ -1,7 +1,6 @@
 #include "HeadlessContainer.h"
 
 #include "ConnectionManager.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "SystemFileUtils.h"
@@ -813,7 +812,7 @@ void HeadlessContainer::extendAddressChain(
 }
 
 void HeadlessContainer::syncNewAddresses(const std::string &walletId
-   , const std::vector<std::pair<std::string, AddressEntryType>> &inData
+   , const std::vector<std::string> &inData
    , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb
    , bool persistent)
 {
@@ -821,8 +820,7 @@ void HeadlessContainer::syncNewAddresses(const std::string &walletId
    request.set_wallet_id(walletId);
    for (const auto &in : inData) {
       auto addrData = request.add_addresses();
-      addrData->set_index(in.first);
-      addrData->set_aet(in.second);
+      addrData->set_index(in);
    }
 
    headless::RequestPacket packet;
@@ -967,6 +965,8 @@ void HeadlessContainer::ProcessSyncWalletInfo(unsigned int id, const std::string
          , walletInfo.description(), mapFrom(walletInfo.nettype()), walletInfo.watching_only() });
       if (walletInfo.watching_only()) {
          woWallets_.insert(walletInfo.id());
+      } else {
+         woWallets_.erase(walletInfo.id());
       }
    }
    itCb->second(result);
@@ -991,7 +991,7 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
    for (int i = 0; i < response.groups_size(); ++i) {
       const auto groupInfo = response.groups(i);
       bs::sync::HDWalletData::Group group;
-      group.type = static_cast<bs::hd::CoinType>(groupInfo.type());
+      group.type = static_cast<bs::hd::CoinType>(groupInfo.type() | bs::hd::hardFlag);
       group.extOnly = groupInfo.ext_only();
       group.salt = groupInfo.salt();
       for (int j = 0; j < groupInfo.leaves_size(); ++j) {
@@ -999,7 +999,8 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
          if (isWoRoot) {
             woWallets_.insert(leafInfo.id());
          }
-         group.leaves.push_back({ leafInfo.id(), leafInfo.index(), group.extOnly, leafInfo.extra_data() });
+         group.leaves.push_back({ leafInfo.id(), bs::hd::Path::fromString(leafInfo.path())
+            , group.extOnly, leafInfo.extra_data() });
       }
       result.groups.push_back(group);
    }
@@ -1582,7 +1583,7 @@ bool LocalSigner::Start()
       bundleDir.cdUp();
       bundleDir.cdUp();
       bundleDir.cdUp();
-      const auto signerAppPath = bundleDir.absoluteFilePath(QLatin1String("blocksettle_signer"));
+      const auto signerAppPath = bundleDir.absoluteFilePath(QLatin1String("BlockSettle Signer.app/Contents/MacOS/BlockSettle Signer"));
 #else
       const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer");
 #endif

@@ -40,10 +40,12 @@ void bs::TxAddressChecker::containsInputAddress(Tx tx, std::function<void(bool)>
          cb(false);
       }
    };
+
    if (!armory_) {
       cb(false);
       return;
    }
+
    if (!armory_->getTxByHash(op.getTxHash(), cbTX)) {
       cb(false);
    }

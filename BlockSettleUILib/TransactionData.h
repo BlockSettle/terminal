@@ -54,7 +54,7 @@ public:
 public:
    TransactionData(const onTransactionChanged &changedCallback = nullptr
       , const std::shared_ptr<spdlog::logger> &logger = nullptr
-      , bool SWOnly = false, bool confirmedOnly = false);
+      , bool isSegWitInputsOnly = false, bool confirmedOnly = false);
    ~TransactionData() noexcept;
 
    TransactionData(const TransactionData&) = delete;
@@ -67,7 +67,8 @@ public:
 
    bool setWallet(const std::shared_ptr<bs::sync::Wallet> &, uint32_t topBlock
       , bool resetInputs = false, const std::function<void()> &cbInputsReset = nullptr);
-   bool setWalletAndInputs(const std::shared_ptr<bs::sync::Wallet> &, const std::vector<UTXO> &, uint32_t topBlock);
+   bool setWalletAndInputs(const std::shared_ptr<bs::sync::Wallet> &
+      , const std::vector<UTXO> &, uint32_t topBlock);
    void setSigningWallet(const std::shared_ptr<bs::sync::Wallet>& wallet) { signWallet_ = wallet; }
    std::shared_ptr<bs::sync::Wallet> getWallet() const { return wallet_; }
    std::shared_ptr<bs::sync::Wallet> getSigningWallet() const { return signWallet_; }
@@ -111,7 +112,7 @@ public:
       , const std::vector<std::shared_ptr<ScriptRecipient>> &, const BinaryData &prevData
       , const std::vector<UTXO> &inputs = {});
 
-   std::shared_ptr<SelectedTransactionInputs> GetSelectedInputs();
+   std::shared_ptr<SelectedTransactionInputs> getSelectedInputs() { return selectedInputs_; }
    TransactionSummary GetTransactionSummary() const;
 
    double CalculateMaxAmount(const bs::Address &recipient = {}, bool force = false) const;
@@ -146,7 +147,8 @@ private:
    onTransactionChanged             changedCallback_;
    std::shared_ptr<spdlog::logger>  logger_;
 
-   std::shared_ptr<bs::sync::Wallet>            wallet_, signWallet_;
+   std::shared_ptr<bs::sync::Wallet>            wallet_;
+   std::shared_ptr<bs::sync::Wallet>            signWallet_;
    std::shared_ptr<SelectedTransactionInputs>   selectedInputs_;
 
    float       feePerByte_;
@@ -165,7 +167,7 @@ private:
 
    bs::core::wallet::TXSignRequest  unsignedTxReq_;
 
-   const bool  swTransactionsOnly_;
+   const bool  isSegWitInputsOnly_;
    const bool  confirmedInputs_;
 
    std::vector<UTXO>    reservedUTXO_;

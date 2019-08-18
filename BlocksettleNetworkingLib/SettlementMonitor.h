@@ -2,7 +2,7 @@
 #define __SETTLEMENT_MONITOR_H__
 
 #include "ArmoryConnection.h"
-#include "SettlementAddressEntry.h"
+#include "CoreWallet.h"
 
 #include <spdlog/spdlog.h>
 
@@ -65,15 +65,13 @@ namespace bs {
          , const std::shared_ptr<ArmoryConnection> &, std::function<void(Type)>);
    };
 
-   std::shared_ptr<SettlementAddress> entryToAddress(const std::shared_ptr<core::SettlementAddressEntry> &);
-
    class SettlementMonitor : public ArmoryCallbackTarget
    {
    public:
-      SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+/*      SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<core::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &);
+         , const std::shared_ptr<spdlog::logger> &);*/
       SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<SettlementAddress> &, const bs::Address &
@@ -94,7 +92,7 @@ namespace bs {
       PayoutSigner::Type getPayoutSignerSide() const { return payoutSignedBy_; }
       void getPayinInput(const std::function<void(UTXO)> &, bool allowZC = true);
 
-      static bs::core::wallet::TXSignRequest createPayoutTXRequest(const UTXO &
+      static bs::core::wallet::TXSignRequest createPayoutTXRequest(UTXO
          , const bs::Address &recvAddr, float feePerByte, unsigned int topBlock);
       static UTXO getInputFromTX(const bs::Address &, const BinaryData &payinHash
          , const double amount);
@@ -149,40 +147,6 @@ namespace bs {
       void SendPayOutNotification(const ClientClasses::LedgerEntry &);
    };
 
-   class SettlementMonitorQtSignals : public QObject, public SettlementMonitor
-   {
-   Q_OBJECT
-   public:
-      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-         , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<core::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &);
-      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-         , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<SettlementAddress> &
-         , const bs::Address &, const std::shared_ptr<spdlog::logger> &);
-      ~SettlementMonitorQtSignals() noexcept override;
-
-      SettlementMonitorQtSignals(const SettlementMonitorQtSignals&) = delete;
-      SettlementMonitorQtSignals& operator = (const SettlementMonitorQtSignals&) = delete;
-
-      SettlementMonitorQtSignals(SettlementMonitorQtSignals&&) = delete;
-      SettlementMonitorQtSignals& operator = (SettlementMonitorQtSignals&&) = delete;
-
-      void start();
-      void stop();
-
-   signals:
-      void payInDetected(int confirmationsNumber, const BinaryData &txHash);
-      void payOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy);
-      void payOutConfirmed(PayoutSigner::Type signedBy);
-
-   protected:
-      void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) override;
-      void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) override;
-      void onPayOutConfirmed(PayoutSigner::Type signedBy) override;
-   };
-
    class SettlementMonitorCb : public SettlementMonitor
    {
    public:
@@ -191,10 +155,10 @@ namespace bs {
       using onPayOutConfirmedCB = std::function<void (PayoutSigner::Type )>;
 
    public:
-      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
+/*      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<core::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &);
+         , const std::shared_ptr<spdlog::logger> &);*/
       SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<SettlementAddress> &, const bs::Address &

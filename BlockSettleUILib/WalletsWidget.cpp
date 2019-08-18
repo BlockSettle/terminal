@@ -23,7 +23,7 @@
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
 #include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncSettlementWallet.h"
+#include "SettlementMonitor.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "TreeViewWithEnterKey.h"
 #include "ManageEncryption/RootWalletPropertiesDialog.h"

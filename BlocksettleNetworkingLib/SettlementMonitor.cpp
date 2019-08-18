@@ -4,7 +4,7 @@
 #include "Wallets/SyncWallet.h"
 
 
-bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+/*bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
@@ -22,7 +22,7 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
 
    const auto &addrHashes = addr->getAsset()->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
-}
+}*/
 
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
@@ -366,16 +366,14 @@ uint64_t bs::SettlementMonitor::getEstimatedFeeFor(UTXO input, const bs::Address
    return coinSelection.getFeeForMaxVal(scriptRecipient->getSize(), feePerByte, { input });
 }
 
-bs::core::wallet::TXSignRequest bs::SettlementMonitor::createPayoutTXRequest(const UTXO &input
+bs::core::wallet::TXSignRequest bs::SettlementMonitor::createPayoutTXRequest(UTXO input
    , const bs::Address &recvAddr, float feePerByte, unsigned int topBlock)
 {
    bs::core::wallet::TXSignRequest txReq;
    txReq.inputs.push_back(input);
+   input.isInputSW_ = true;
+   input.witnessDataSizeBytes_ = unsigned(bs::Address::getPayoutWitnessDataSize());
    uint64_t fee = getEstimatedFeeFor(input, recvAddr, feePerByte, topBlock);
-
-   if (fee < bs::sync::wallet::kMinRelayFee) {
-      fee = bs::sync::wallet::kMinRelayFee;
-   }
 
    uint64_t value = input.getValue();
    if (value < fee) {
@@ -493,12 +491,12 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
    }
 }
 
-std::shared_ptr<bs::SettlementAddress> bs::entryToAddress(
+/*std::shared_ptr<bs::SettlementAddress> bs::entryToAddress(
    const std::shared_ptr<bs::core::SettlementAddressEntry> &ae)
 {
    return std::make_shared<bs::SettlementAddress>(ae->getAsset()->supportedAddrHashes()
       , ae->getAsset()->buyChainedPubKey(), ae->getAsset()->sellChainedPubKey());
-}
+}*/
 
 void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntry &entry
    , std::function<void(PayoutSigner::Type)> cb) const
@@ -526,59 +524,14 @@ bs::SettlementMonitor::~SettlementMonitor() noexcept
    rtWallet_ = nullptr;
 }
 
-
-bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
-   , const std::shared_ptr<spdlog::logger>& logger)
-   : SettlementMonitor(rtWallet, armory, addr, logger)
-{}
-
-bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
-   , const std::shared_ptr<spdlog::logger>& logger)
-   : SettlementMonitor(rtWallet, armory, addrEntry, addr, logger)
-{}
-
-bs::SettlementMonitorQtSignals::~SettlementMonitorQtSignals() noexcept
-{
-   stop();
-}
-
-void bs::SettlementMonitorQtSignals::start()
-{
-   //armory_->addTarget(this);   // auto-added in constructor
-   checkNewEntries();
-}
-
-void bs::SettlementMonitorQtSignals::stop()
-{
-   armory_->removeTarget(this);
-}
-
-void bs::SettlementMonitorQtSignals::onPayInDetected(int confirmationsNumber, const BinaryData &txHash)
-{
-   emit payInDetected(confirmationsNumber, txHash);
-}
-
-void bs::SettlementMonitorQtSignals::onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy)
-{
-   emit payOutDetected(confirmationsNumber, signedBy);
-}
-
-void bs::SettlementMonitorQtSignals::onPayOutConfirmed(PayoutSigner::Type signedBy)
-{
-   emit payOutConfirmed(signedBy);
-}
-
-
+/*bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
 bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
+>>>>>>> bs_dev
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
  : SettlementMonitor(rtWallet, armory, addr, logger)
-{}
+{}*/
 
 bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory

@@ -51,7 +51,7 @@ void Wallet::synchronize(const std::function<void()> &cbDone)
       usedAddresses_.clear();
       netType_ = data.netType;
       for (const auto &addr : data.addresses) {
-         addAddress(addr.address, addr.index, addr.address.getType(), false);
+         addAddress(addr.address, addr.index, false);
          setAddressComment(addr.address, addr.comment, false);
       }
 
@@ -361,7 +361,14 @@ bool Wallet::getAddressTxnCounts(const std::function<void(void)> &cb)
          walletIDs.push_back(walletIdInt());
       } catch (std::exception&) {}
 
-      const auto &cbTxNs = [cbMutex=cbMutex_, cbTxNs=cbTxNs_, addrMapsMtx=addrMapsMtx_
+      decltype(cbTxNs_) cbTxNsCopy = std::make_shared<std::vector<std::function<void(void)>>>();
+
+      {
+         std::unique_lock<std::mutex> lock(*cbMutex_);
+         cbTxNsCopy->swap(*cbTxNs_);
+      }
+
+      const auto &cbTxNs = [cbTxNsCollection=cbTxNsCopy, addrMapsMtx=addrMapsMtx_
          , addrTxNMap=addressTxNMap_]
          (const std::map<std::string, CombinedCounts> &countMap)
       {
@@ -370,13 +377,12 @@ bool Wallet::getAddressTxnCounts(const std::function<void(void)> &cb)
             updateMap<std::map<BinaryData, uint64_t>>(
                count.second.addressTxnCounts_, *addrTxNMap);
          }
-         std::unique_lock<std::mutex> lock(*cbMutex);
-         for (const auto &cb : *cbTxNs) {
+
+         for (const auto &cb : *cbTxNsCollection) {
             if (cb) {
                cb();
             }
          }
-         cbTxNs->clear();
       };
       return armory_->getCombinedTxNs(walletIDs, cbTxNs);
    }
@@ -625,12 +631,7 @@ bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walle
 
    request.recipients = recipients;
    request.RBF = isRBF;
-
-   if (isRBF && (fee < wallet::kMinRelayFee)) {
-      request.fee = wallet::kMinRelayFee;
-   } else {
-      request.fee = fee;
-   }
+   request.fee = fee;
 
    const uint64_t changeAmount = inputAmount - (spendAmount + fee);
    if (changeAmount) {
@@ -841,23 +842,20 @@ bool Wallet::getLedgerDelegateForAddress(const bs::Address &addr
 }
 
 int Wallet::addAddress(const bs::Address &addr, const std::string &index
-   , AddressEntryType aet, bool sync)
+   , bool sync)
 {
-   if (!addr.isNull())
+   if (!addr.isNull()) {
       usedAddresses_.push_back(addr);
-
-   if (sync && signContainer_) 
-   {
+   }
+   if (sync && signContainer_) {
       std::string idxCopy = index;
-      if (idxCopy.empty() && !addr.isNull()) 
-      {
-         aet = addr.getType();
+      if (idxCopy.empty() && !addr.isNull()) {
          idxCopy = getAddressIndex(addr);
-         if (idxCopy.empty()) 
+         if (idxCopy.empty()) {
             idxCopy = addr.display();
+         }
       }
-
-      signContainer_->syncNewAddress(walletId(), idxCopy, aet, nullptr);
+      signContainer_->syncNewAddress(walletId(), idxCopy, nullptr);
    }
 
    return (usedAddresses_.size() - 1);
@@ -877,8 +875,7 @@ void Wallet::syncAddresses()
    }
 }
 
-void Wallet::newAddresses(
-   const std::vector<std::pair<std::string, AddressEntryType>> &inData
+void Wallet::newAddresses(const std::vector<std::string> &inData
    , const CbAddresses &cb)
 {
    if (signContainer_) {

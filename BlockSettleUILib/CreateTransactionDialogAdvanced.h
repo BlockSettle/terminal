@@ -125,6 +125,7 @@ private:
    void onOutputRemoved();
 
    void AddManualFeeEntries(float feePerByte, float totalFee);
+   void setAdvisedFees(float totalFee, float feePerByte);
    void SetMinimumFee(float totalFee, float feePerByte = 0);
 
    void SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset = nullptr);
@@ -166,6 +167,8 @@ private:
    float       minTotalFee_ = 0;
    float       minFeePerByte_ = 0;
    float       advisedFeePerByte_ = 0;
+   float       advisedTotalFee_ = 0;
+   float       addedFee_ = 0;
    const float minRelayFeePerByte_ = 5;
 
    bool        feeChangeDisabled_ = false;

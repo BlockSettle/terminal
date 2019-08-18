@@ -72,13 +72,17 @@ private slots:
    void onSignTxRequested(QString orderId, QString reqId);
    void onReadyToAutoSign();
    void onReadyToActivate();
-   void onAutoSignActivated(const QString &hdWalletId, bool active);
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
    void onEnterKeyPressed(const QModelIndex &index);
 
+   void onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk);
+
 private:
    void showSettlementDialog(QDialog *dlg);
+   bool checkConditions(const QString& productGroup, const bs::network::QuoteReqNotification& request);
+   void popShield();
+   void showEditableRFQPage();
 
 private:
    using transaction_data_ptr = std::shared_ptr<TransactionData>;

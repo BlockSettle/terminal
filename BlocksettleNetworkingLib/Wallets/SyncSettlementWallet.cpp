@@ -188,11 +188,6 @@ std::string SettlementWallet::getAddressIndex(const bs::Address &addr)
    return itSettlId->second.toHexStr();
 }
 
-bool SettlementWallet::addressIndexExists(const std::string &index) const
-{
-   return !getSettlDataBySettlementId(BinaryData::CreateFromHex(index)).address.isNull();
-}
-
 bool SettlementWallet::containsAddress(const bs::Address &addr)
 {
    if (addrPrefixedHashes_.find(addr.prefixed()) != addrPrefixedHashes_.end()) {

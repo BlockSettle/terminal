@@ -5,7 +5,6 @@
 #include "SignContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 
@@ -199,11 +198,6 @@ public:
          , wallet->getUsedAddressCount())
       , wallet_(wallet)
    { }
-   WalletLeafNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::SettlementWallet> &wallet, int row, WalletNode *parent)
-      : WalletRootNode(vm, wallet->name(), wallet->description(), Type::Leaf, row, parent
-         , 0, 0, 0, wallet->getUsedAddressCount())
-      , wallet_(wallet)
-   { }
 
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return {wallet_}; }
 
@@ -243,7 +237,7 @@ public:
 
    void addLeaves(const std::vector<std::shared_ptr<bs::sync::Wallet>> &leaves) {
       for (const auto &leaf : leaves) {
-         if (viewModel_->showRegularWallets() && (leaf == viewModel_->getAuthWallet())) {
+         if (viewModel_->showRegularWallets() && (leaf->type() != bs::core::wallet::Type::Bitcoin)) {
             continue;
          }
          const auto leafNode = new WalletLeafNode(viewModel_, leaf, nbChildren(), this);
@@ -257,11 +251,8 @@ public:
 void WalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::sync::hd::Group>> &groups)
 {
    for (const auto &group : groups) {
-      if (viewModel_->showRegularWallets()) {
-         if ((group->type() == bs::core::wallet::Type::Authentication)
-            || (group->type() == bs::core::wallet::Type::ColorCoin)) {
-            continue;
-         }
+      if (viewModel_->showRegularWallets() && (group->type() != bs::core::wallet::Type::Bitcoin)) {
+         continue;
       }
       const auto groupNode = new WalletGroupNode(viewModel_, group->name(), group->description()
          , getNodeType(group->type()), nbChildren(), this);
@@ -338,15 +329,15 @@ QVariant WalletsViewModel::data(const QModelIndex &index, int role) const
       if (showRegularWallets_) {
          switch (static_cast<WalletRegColumns>(index.column()))
          {
-         case WalletRegColumns::ColumnNbAddresses:
-            return Qt::AlignRight;
-         default:
-            return QVariant();
+            case WalletRegColumns::ColumnNbAddresses:
+               return Qt::AlignRight;
+            default:
+               return QVariant();
          }
       }
-      else {
-         switch (static_cast<WalletColumns>(index.column()))
-         {
+
+      switch (static_cast<WalletColumns>(index.column()))
+      {
          case WalletColumns::ColumnSpendableBalance:
          case WalletColumns::ColumnUnconfirmedBalance:
          case WalletColumns::ColumnTotalBalance:
@@ -354,9 +345,7 @@ QVariant WalletsViewModel::data(const QModelIndex &index, int role) const
             return Qt::AlignRight;
          default:
             return QVariant();
-         }
       }
-      return QVariant();
    }
 
    return getNode(index)->data(index.column(), role);

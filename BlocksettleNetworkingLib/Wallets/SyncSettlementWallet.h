@@ -13,7 +13,6 @@ namespace spdlog {
 };
 
 namespace bs {
-   class SettlementMonitorQtSignals;
    class SettlementMonitorCb;
 
    namespace sync {
@@ -37,17 +36,12 @@ namespace bs {
 
          bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Settlement; }
 
-         void getNewExtAddress(const CbAddress &, AddressEntryType) override {}  // can't generate address without input data
-         void getNewIntAddress(const CbAddress &, AddressEntryType) override {}  // can't generate address without input data
+         void getNewExtAddress(const CbAddress &) override {}  // can't generate address without input data
+         void getNewIntAddress(const CbAddress &) override {}  // can't generate address without input data
 
          std::string getAddressIndex(const bs::Address &) override;
-         bool addressIndexExists(const std::string &index) const override;
 
          void refreshWallets(const std::vector<BinaryData>& ids);
-
-         // return monitor that send QT signals and subscribed to zc/new block notification via qt
-         //bool createMonitorQtSignals(const bs::Address &, const std::shared_ptr<spdlog::logger> &
-         //   , const std::function<void(const std::shared_ptr<SettlementMonitorQtSignals>&)>& userCB);
 
          // pure callback monitor. you should manually ask to update and set
          // callbacks to get notifications

@@ -41,7 +41,7 @@ namespace bs {
                std::shared_ptr<AssetWallet_Single>,
                const BinaryData& addrAccId);
             virtual std::shared_ptr<hd::Leaf> getCopy(
-               std::shared_ptr<AssetWallet_Single>) const;
+               std::shared_ptr<AssetWallet_Single>) const = 0;
 
             void setPath(const bs::hd::Path&);
 
@@ -65,29 +65,25 @@ namespace bs {
             unsigned getIntAddressCount() const override;
 
             bool isExternalAddress(const Address &) const override;
-            bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
+            bs::Address getNewExtAddress() override;
+            bs::Address getNewIntAddress() override;
+            bs::Address getNewChangeAddress() override;
             std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
 
             std::string getAddressIndex(const bs::Address &) override;
             bs::hd::Path::Elem getAddressIndexForAddr(const BinaryData &addr) const;
             bs::hd::Path::Elem addressIndex(const bs::Address &addr) const;
-            bool addressIndexExists(const std::string &index) const override;
 
-            std::pair<bs::Address, bool> synchronizeUsedAddressChain(
-               const std::string&, AddressEntryType) override;
+            std::pair<bs::Address, bool> synchronizeUsedAddressChain(const std::string&) override;
 
-            //index as asset derivation id
-            //bool as external (true) or interal (false)
-            bs::Address getAddressByIndex(unsigned, bool,
-               AddressEntryType aet = AddressEntryType_Default) const;
+            bs::Address getAddressByIndex(unsigned int index, bool ext) const;
 
             SecureBinaryData getPublicKeyFor(const bs::Address &) override;
             std::shared_ptr<ResolverFeed> getResolver(void) const;
 
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
+            virtual AddressEntryType addressType() const = 0;
             virtual BinaryData serialize() const;
 
             static std::pair<std::shared_ptr<hd::Leaf>, BinaryData> deserialize(
@@ -98,8 +94,7 @@ namespace bs {
             WalletEncryptionLock lockForEncryption(const SecureBinaryData& passphrase);
             std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt) override;
 
-            std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> indexPathAndTypes(
-               const std::set<BinaryData>&) override;
+            std::map<BinaryData, bs::hd::Path> indexPath(const std::set<BinaryData>&) override;
 
             virtual bs::hd::Path::Elem getExtPath(void) const { return addrTypeExternal_; }
             virtual bs::hd::Path::Elem getIntPath(void) const { return addrTypeInternal_; }
@@ -113,19 +108,19 @@ namespace bs {
          protected:
             void reset();
 
+            bs::Address newAddress();
+            bs::Address newInternalAddress();
+
             bs::hd::Path getPathForAddress(const bs::Address &) const;
 
             struct AddrPoolKey {
                bs::hd::Path      path;
-               AddressEntryType  aet;
 
                bool operator==(const AddrPoolKey &other) const {
-                  return ((path == other.path) && (aet == other.aet));
+                  return (path == other.path);
                }
             };
             using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
-            std::vector<PooledAddress> generateAddresses(bs::hd::Path::Elem prefix, bs::hd::Path::Elem start
-               , size_t nb, AddressEntryType aet);
 
             std::shared_ptr<LMDBEnv> getDBEnv() { return accountPtr_->getDbEnv(); }
             LMDB* getDB() { return db_; }
@@ -138,23 +133,60 @@ namespace bs {
             std::string suffix_;
             LMDB* db_ = nullptr;
             const NetworkType netType_;
-
-         private:
-            std::shared_ptr<AssetWallet_Single> walletPtr_;
             std::shared_ptr<::AddressAccount> accountPtr_;
 
          private:
-            bs::Address newAddress(AddressEntryType aet);
-            bs::Address newInternalAddress(AddressEntryType aet);
+            std::shared_ptr<AssetWallet_Single> walletPtr_;
 
-            std::shared_ptr<AddressEntry> getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr
-               , AddressEntryType ae_type = AddressEntryType_Default);
+         private:
             void topUpAddressPool(size_t count, bool intExt);
             bs::hd::Path::Elem getLastAddrPoolIndex() const;
          };
 
 
-         class AuthLeaf : public Leaf
+         class LeafNative : public Leaf
+         {
+         public:
+            LeafNative(NetworkType netType, std::shared_ptr<spdlog::logger> logger,
+               wallet::Type type = wallet::Type::Bitcoin)
+               : Leaf(netType, logger, type) {}
+
+            std::shared_ptr<hd::Leaf> getCopy(std::shared_ptr<AssetWallet_Single>) const override;
+
+         protected:
+            AddressEntryType addressType() const override { return AddressEntryType_P2WPKH; }
+         };
+
+
+         class LeafNested : public Leaf
+         {
+         public:
+            LeafNested(NetworkType netType, std::shared_ptr<spdlog::logger> logger)
+               : Leaf(netType, logger, wallet::Type::Bitcoin) {}
+
+            std::shared_ptr<hd::Leaf> getCopy(std::shared_ptr<AssetWallet_Single>) const override;
+
+         protected:
+            AddressEntryType addressType() const override {
+               return static_cast<AddressEntryType>(AddressEntryType_P2SH | AddressEntryType_P2WPKH);
+            }
+         };
+
+
+         class LeafNonSW : public Leaf
+         {
+         public:
+            LeafNonSW(NetworkType netType, std::shared_ptr<spdlog::logger> logger)
+               : Leaf(netType, logger, wallet::Type::Bitcoin) {}
+
+            std::shared_ptr<hd::Leaf> getCopy(std::shared_ptr<AssetWallet_Single>) const override;
+
+         protected:
+            AddressEntryType addressType() const override { return AddressEntryType_P2PKH; }
+         };
+
+
+         class AuthLeaf : public LeafNative
          {
             friend class hd::Leaf;
             friend class hd::AuthGroup;
@@ -176,22 +208,22 @@ namespace bs {
          };
 
 
-         class CCLeaf : public Leaf
+         class CCLeaf : public LeafNative
          {
          public:
             CCLeaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger)
-               : hd::Leaf(netType, logger, wallet::Type::ColorCoin) {}
+               : LeafNative(netType, logger, wallet::Type::ColorCoin) {}
             ~CCLeaf() override = default;
 
             wallet::Type type() const override { return wallet::Type::ColorCoin; }
          };
 
 
-         class SettlementLeaf : public Leaf
+         class SettlementLeaf : public LeafNative
          {
          public:
             SettlementLeaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger)
-               : hd::Leaf(netType, logger, wallet::Type::ColorCoin) {}
+               : LeafNative(netType, logger, wallet::Type::ColorCoin) {}
             ~SettlementLeaf() override = default;
 
             BinaryData serialize() const override;
