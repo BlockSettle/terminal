@@ -30,6 +30,9 @@ namespace Chat
       PartyRecipientsPtrList recipients() const { return recipients_; }
       void setRecipients(PartyRecipientsPtrList val) { recipients_ = val; }
 
+      void insertOrUpdateRecipient(const PartyRecipientPtr& partyRecipientPtr);
+      PartyRecipientPtr getRecipient(const std::string& userName);
+
       bool isUserBelongsToParty(const std::string& userName);
       PartyRecipientPtr getSecondRecipient(const std::string& firstRecipientUserName);
       PartyRecipientsPtrList getRecipientsExceptMe(const std::string& me);
@@ -43,5 +46,6 @@ namespace Chat
 }
 
 Q_DECLARE_METATYPE(Chat::PrivateDirectMessagePartyPtr)
+Q_DECLARE_METATYPE(Chat::PartyRecipientsPtrList)
 
 #endif // PrivateDirectMessageParty_h__

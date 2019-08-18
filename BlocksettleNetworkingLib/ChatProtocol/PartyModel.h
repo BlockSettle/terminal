@@ -40,6 +40,7 @@ namespace Chat
       PartyPtr getPartyById(const std::string& id);
       PrivateDirectMessagePartyPtr getPrivatePartyById(const std::string& id);
       void clearModel();
+      void insertOrUpdateParty(const PartyPtr& partyPtr);
 
    signals:
       void partyInserted(const Chat::PartyPtr& partyPtr);

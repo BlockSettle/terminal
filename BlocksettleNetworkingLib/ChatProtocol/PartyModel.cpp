@@ -95,4 +95,38 @@ namespace Chat
 
       partyMap_.clear();
    }
+
+   void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
+   {
+      // private party
+      if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPtr->partyType() && PartySubType::STANDARD == partyPtr->partySubType())
+      {
+         PrivateDirectMessagePartyPtr privatePartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
+         PrivateDirectMessagePartyPtr existingPartyPtr = getPrivatePartyById(partyPtr->id());
+
+         // party not exist, insert
+         if (nullptr == existingPartyPtr)
+         {
+            insertParty(privatePartyPtr);
+            return;
+         }
+
+         // party exist, update
+         for (const auto recipientPtr : privatePartyPtr->recipients())
+         {
+            existingPartyPtr->insertOrUpdateRecipient(recipientPtr);
+         }
+         return;
+      }
+
+      // other party types
+      PartyPtr existingPartyPtr = getPrivatePartyById(partyPtr->id());
+
+      // if not exist, insert new, otherwise do nothing
+      if (nullptr == existingPartyPtr)
+      {
+         insertParty(partyPtr);
+         return;
+      }
+   }
 }
