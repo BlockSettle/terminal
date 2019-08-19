@@ -238,6 +238,9 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::ImportWoWalletType:
       rc = onImportWoWallet(packet.data(), packet.id());
       break;
+   case signer::ExportWoWalletType:
+      rc = onExportWoWallet(packet.data(), packet.id());
+      break;
    case signer::SyncSettingsRequestType:
       rc = onSyncSettings(packet.data());
       break;
@@ -773,6 +776,47 @@ bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer
    }
    walletsListUpdated();
    return sendWoWallet(woWallet, signer::ImportWoWalletType, reqId);
+}
+
+bool SignerAdapterListener::onExportWoWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::ExportWoWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      return false;
+   }
+
+   auto woWallet = walletsMgr_->getHDWalletById(request.rootwalletid());
+   if (!woWallet) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find wallet with walletId: {}", request.rootwalletid());
+      return false;
+   }
+
+   if (!woWallet->isWatchingOnly()) {
+      SPDLOG_LOGGER_ERROR(logger_, "not a WO wallet: {}", request.rootwalletid());
+      return false;
+   }
+
+   std::ifstream file(woWallet->getFileName(), std::ios::in | std::ios::binary | std::ios::ate);
+   if (!file.is_open()) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't open WO file for read: {}", woWallet->getFileName());
+      return false;
+   }
+
+   auto size = file.tellg();
+   std::string content;
+   content.resize(size_t(size));
+
+   if (size == 0) {
+      SPDLOG_LOGGER_ERROR(logger_, "empty WO file: {}", woWallet->getFileName());
+      return false;
+   }
+
+   file.seekg(0, std::ios::beg);
+   file.read(&content.front(), size);
+
+   signer::ExportWoWalletResponse response;
+   response.set_content(std::move(content));
+   return sendData(signer::ExportWoWalletType, response.SerializeAsString(), reqId);
 }
 
 void SignerAdapterListener::walletsListUpdated()
