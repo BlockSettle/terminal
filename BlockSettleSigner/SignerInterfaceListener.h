@@ -118,10 +118,15 @@ private:
       , bs::wallet::TXInfo *txInfo, bs::hd::WalletInfo *walletInfo);
    void requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo);
    void requestPasswordForToken(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo);
+   void requestPasswordForPromoteHDWallet(bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo);
 
    void shutdown();
 
    bs::signer::QmlCallbackBase *createQmlPasswordCallback();
+
+protected:
+   void requestPasswordForDialogType(QString&& dialogType, bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo);
+
 private:
    std::shared_ptr<spdlog::logger>           logger_;
    std::shared_ptr<ZmqBIP15XDataConnection>  connection_;

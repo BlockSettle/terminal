@@ -67,5 +67,6 @@
         <file>qml/BsControls/BSPasswordInputConfirm.qml</file>
         <file>qml/BsControls/BSPasswordInputToken.qml</file>
         <file>qml/BsControls/BSPasswordInputAuthLeaf.qml</file>
+        <file>qml/BsControls/BSPasswordInputPromoteWallet.qml</file>
     </qresource>
 </RCC>

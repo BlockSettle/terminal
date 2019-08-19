@@ -229,6 +229,9 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       dialogData->setValue("Title", tr("Create Leaf"));
       requestPasswordForToken(dialogData, walletInfo);
       break;
+   case signer::PromoteHDWallet:
+      requestPasswordForPromoteHDWallet(dialogData, walletInfo);
+      break;
    default:
       break;
    }
@@ -620,16 +623,18 @@ void SignerInterfaceListener::requestPasswordForSettlementTx(signer::PasswordDia
 void SignerInterfaceListener::requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData
    , bs::hd::WalletInfo *walletInfo)
 {
-   dialogData->setValue("LeafDialogType", "RequestPasswordForAuthLeaf");
-   qmlBridge_->invokeQmlMethod("createPasswordDialogForLeaf", createQmlPasswordCallback()
-      , QVariant::fromValue(dialogData), QVariant::fromValue(walletInfo));
+   dialogData->setValue("DialogType", "RequestPasswordForAuthLeaf");
+   requestPasswordForDialogType(QLatin1String("RequestPasswordForAuthLeaf"), dialogData, walletInfo);
 }
 
 void SignerInterfaceListener::requestPasswordForToken(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo)
 {
-   dialogData->setValue("LeafDialogType", "RequestPasswordForToken");
-   qmlBridge_->invokeQmlMethod("createPasswordDialogForLeaf", createQmlPasswordCallback()
-      , QVariant::fromValue(dialogData), QVariant::fromValue(walletInfo));
+   requestPasswordForDialogType(QLatin1String("RequestPasswordForToken"), dialogData, walletInfo);
+}
+
+void SignerInterfaceListener::requestPasswordForPromoteHDWallet(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo)
+{
+   requestPasswordForDialogType(QLatin1String("RequestPasswordForPromoteHDWallet"), dialogData, walletInfo);
 }
 
 void SignerInterfaceListener::shutdown()
@@ -656,6 +661,13 @@ QmlCallbackBase *SignerInterfaceListener::createQmlPasswordCallback()
       decryptEvent.set_errorcode(static_cast<uint32_t>(result));
       send(signer::PasswordReceivedType, decryptEvent.SerializeAsString());
    });
+}
+
+void SignerInterfaceListener::requestPasswordForDialogType(QString&& dialogType, bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo)
+{
+   dialogData->setValue("DialogType", dialogType);
+   qmlBridge_->invokeQmlMethod("createPasswordDialogForType", createQmlPasswordCallback()
+                               , QVariant::fromValue(dialogData), QVariant::fromValue(walletInfo));
 }
 
 void SignerInterfaceListener::setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory)

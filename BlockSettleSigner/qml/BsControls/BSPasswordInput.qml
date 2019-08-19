@@ -55,25 +55,28 @@ CustomTitleDialogWindow {
             }
 
             RowLayout {
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                Layout.topMargin: 5
+                Layout.bottomMargin: 5
+
                 CustomLabel {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 110
+                    Layout.preferredWidth: 110
+                    Layout.maximumWidth: 110
+                    text: qsTr("Password")
+                }
+
+                CustomTextInput {
+                    id: passwordInput
                     Layout.fillWidth: true
                     Layout.topMargin: 5
                     Layout.bottomMargin: 5
-                    Layout.leftMargin: 10
-                    Layout.rightMargin: 10
-                    Layout.preferredWidth: 110
-                    text: qsTr("Password")
-                }
-                CustomTextInput {
-                    id: passwordInput
-                    Layout.topMargin: 5
-                    Layout.bottomMargin: 5
-                    Layout.leftMargin: 10
-                    Layout.rightMargin: 10
                     focus: true
                     echoMode: TextField.Password
                     //placeholderText: qsTr("Password")
-                    Layout.fillWidth: true
+
 
                     Keys.onEnterPressed: {
                         if (btnAccept.enabled) btnAccept.onClicked()
