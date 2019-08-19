@@ -216,8 +216,55 @@ QString WalletsProxy::getWoWalletFile(const QString &walletId) const
 void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &filePath
    , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
-   logger_->debug("[{}] path={}", __func__, filePath.toStdString());
-   const auto &cbResult = [this, walletId, filePath, jsCallback, passwordData](const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
+   auto successCallback = [this, jsCallback, walletId, filePath] {
+      SPDLOG_LOGGER_DEBUG(logger_, "WO export succeed");
+      QMetaObject::invokeMethod(this, [this, jsCallback] {
+         QJSValueList args;
+         args << QJSValue(true) << QStringLiteral("");
+         invokeJsCallBack(jsCallback, args);
+      });
+   };
+
+   auto failCallback = [this, jsCallback, walletId, filePath](const std::string &errorMsg) {
+      SPDLOG_LOGGER_ERROR(logger_, "export failed: {}", errorMsg);
+      QMetaObject::invokeMethod(this, [this, jsCallback, walletId, filePath, errorMsg] {
+         QJSValueList args;
+         QString message = tr("Failed to save watching-only wallet for %1 to %2: %3")
+               .arg(walletId).arg(filePath).arg(QString::fromStdString(errorMsg));
+         args << QJSValue(false) << message;
+         invokeJsCallBack(jsCallback, args);
+      });
+   };
+
+   if (walletsMgr_->isWatchingOnly(walletId.toStdString())) {
+      SPDLOG_LOGGER_DEBUG(logger_, "copy WO from WO wallet to '{}'", filePath.toStdString());
+
+      adapter_->exportWoWallet(walletId.toStdString(), [walletId, successCallback, failCallback, filePath](const BinaryData &content) {
+         if (content.isNull()) {
+            failCallback("can't read WO file");
+            return;
+         }
+
+         QFile f(filePath);
+         bool result = f.open(QIODevice::WriteOnly);
+         if (!result) {
+            failCallback("can't open output file");
+            return;
+         }
+
+         auto size = f.write(reinterpret_cast<const char*>(content.getPtr()), int(content.getSize()));
+         if (size != int(content.getSize())) {
+            failCallback("write failed");
+            return;
+         }
+
+         successCallback();
+      });
+      return;
+   }
+
+   SPDLOG_LOGGER_DEBUG(logger_, "export WO from full wallet to '{}'", filePath.toStdString());
+   const auto &cbResult = [this, walletId, filePath, successCallback, failCallback, passwordData](const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
       std::shared_ptr<bs::core::hd::Wallet> newWallet;
       try {
          const auto hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
@@ -250,10 +297,10 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
                   if (!newLeaf) {
                      throw std::runtime_error("uncreatable");
                   }
-                  for (const auto &addr : leaf->getExtAddressList()) {
+                  for (int i = int(leaf->getExtAddressCount()); i > 0; --i) {
                      newLeaf->getNewExtAddress();
                   }
-                  for (const auto &addr : leaf->getIntAddressList()) {
+                  for (int i = int(leaf->getIntAddressCount()); i > 0; --i) {
                      newLeaf->getNewIntAddress();
                   }
                   logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
@@ -301,23 +348,11 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
          if (newWallet) {
             newWallet->eraseFile();
          }
-
-         logger_->error("[WalletsProxy::exportWatchingOnly] {}", e.what());
-         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, filePath, errorMessage = e.what()] {
-            QJSValueList args;
-            QString message = tr("Failed to save watching-only wallet for %1 to %2: %3")
-                  .arg(walletId).arg(filePath).arg(QString::fromStdString(errorMessage));
-            args << QJSValue(false) << message;
-            invokeJsCallBack(jsCallback, args);
-         });
+         failCallback(e.what());
          return;
       }
 
-      QMetaObject::invokeMethod(this, [this, jsCallback] {
-         QJSValueList args;
-         args << QJSValue(true) << QStringLiteral("");
-         invokeJsCallBack(jsCallback, args);
-      });
+      successCallback();
    };
    adapter_->createWatchingOnlyWallet(walletId, passwordData->password, cbResult);
 }

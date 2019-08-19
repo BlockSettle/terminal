@@ -63,6 +63,9 @@ public:
    using CreateWoCb = std::function<void(const bs::sync::WatchingOnlyWallet &)>;
    void importWoWallet(const std::string &filename, const BinaryData &content, const CreateWoCb &cb);
 
+   using ExportWoCb = std::function<void(const BinaryData &content)>;
+   void exportWoWallet(const std::string &rootWalletId, const ExportWoCb &cb);
+
    void deleteWallet(const std::string &rootWalletId, const std::function<void(bool, const std::string&)> &cb);
 
    void syncSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &);

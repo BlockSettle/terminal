@@ -62,6 +62,9 @@ public:
    void setWatchOnlyCb(bs::signer::RequestId reqId, const std::function<void(const bs::sync::WatchingOnlyWallet &)> &cb) {
       cbWO_[reqId] = cb;
    }
+   void setExportWatchOnlyCb(bs::signer::RequestId reqId, const std::function<void(const BinaryData &)> &cb) {
+      cbExportWO_[reqId] = cb;
+   }
    void setDecryptNodeCb(bs::signer::RequestId reqId
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb) {
       cbDecryptNode_[reqId] = cb;
@@ -99,6 +102,7 @@ private:
    void onSyncHDWallet(const std::string &data, bs::signer::RequestId);
    void onSyncWallet(const std::string &data, bs::signer::RequestId);
    void onCreateWO(const std::string &data, bs::signer::RequestId);
+   void onExportWO(const std::string &data, bs::signer::RequestId);
    void onDecryptedKey(const std::string &data, bs::signer::RequestId);
    void onReloadWallets(bs::signer::RequestId);
    void onExecCustomDialog(const std::string &data, bs::signer::RequestId);
@@ -130,6 +134,7 @@ private:
    std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletData_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletData_;
    std::map<bs::signer::RequestId, std::function<void(const bs::sync::WatchingOnlyWallet &)>>   cbWO_;
+   std::map<bs::signer::RequestId, std::function<void(const BinaryData &)>>      cbExportWO_;
    std::map<bs::signer::RequestId
       , std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)>>   cbDecryptNode_;
    std::map<bs::signer::RequestId, std::function<void()>>   cbReloadWallets_;

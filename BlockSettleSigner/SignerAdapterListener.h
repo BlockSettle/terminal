@@ -74,6 +74,7 @@ protected:
    bool onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    bool onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
    bool onImportWoWallet(const std::string &data, bs::signer::RequestId);
+   bool onExportWoWallet(const std::string &data, bs::signer::RequestId);
    bool onSyncSettings(const std::string &data);
 
    void walletsListUpdated();
