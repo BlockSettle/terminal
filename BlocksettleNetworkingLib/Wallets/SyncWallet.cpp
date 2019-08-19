@@ -36,9 +36,9 @@ Wallet::~Wallet()
 const std::string& Wallet::walletIdInt(void) const
 {
    /***
-   Overload this if your wallet class supports internal chains. 
-   A wallet object without an internal chain should throw a 
-   runtime error. 
+   Overload this if your wallet class supports internal chains.
+   A wallet object without an internal chain should throw a
+   runtime error.
    ***/
 
    throw std::runtime_error("no internal chain");
@@ -46,7 +46,7 @@ const std::string& Wallet::walletIdInt(void) const
 
 void Wallet::synchronize(const std::function<void()> &cbDone)
 {
-   const auto &cbProcess = [this, cbDone] (bs::sync::WalletData data) 
+   const auto &cbProcess = [this, cbDone] (bs::sync::WalletData data)
    {
       usedAddresses_.clear();
       netType_ = data.netType;
@@ -58,8 +58,9 @@ void Wallet::synchronize(const std::function<void()> &cbDone)
       for (const auto &txComment : data.txComments)
          setTransactionComment(txComment.txHash, txComment.comment, false);
 
-      if (cbDone)
+      if (cbDone) {
          cbDone();
+      }
    };
 
    signContainer_->syncWallet(walletId(), cbProcess);
@@ -122,9 +123,9 @@ bool Wallet::setTransactionComment(const BinaryData &txOrHash, const std::string
 
 bool Wallet::isBalanceAvailable() const
 {
-   return 
-      (armory_ != nullptr) && 
-      (armory_->state() == ArmoryState::Ready) && 
+   return
+      (armory_ != nullptr) &&
+      (armory_->state() == ArmoryState::Ready) &&
       isRegistered();
 }
 
@@ -160,8 +161,9 @@ std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
    std::unique_lock<std::mutex> lock(*addrMapsMtx_);
 
    auto iter = addressBalanceMap_->find(addr.prefixed());
-   if (iter == addressBalanceMap_->end())
+   if (iter == addressBalanceMap_->end()) {
       return {};
+   }
 
    return iter->second;
 }
@@ -174,8 +176,9 @@ uint64_t Wallet::getAddrTxN(const bs::Address &addr) const
    std::unique_lock<std::mutex> lock(*addrMapsMtx_);
 
    auto iter = addressTxNMap_->find(addr.prefixed());
-   if (iter == addressTxNMap_->end())
+   if (iter == addressTxNMap_->end()) {
       return 0;
+   }
 
    return iter->second;
 }
@@ -260,8 +263,9 @@ bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t
 {
    //combined utxo fetch method
 
-   if (!isBalanceAvailable())
+   if (!isBalanceAvailable()) {
       return false;
+   }
 
    const auto &cbTxOutList = [this, val, cb]
       (const std::vector<UTXO> &txOutList) {
@@ -302,8 +306,9 @@ bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t
 
 bool Wallet::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const
 {
-   if (!isBalanceAvailable())
+   if (!isBalanceAvailable()) {
       return false;
+   }
 
    std::vector<std::string> walletIDs;
    walletIDs.push_back(walletId());
@@ -319,8 +324,9 @@ bool Wallet::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const
 
 bool Wallet::getRBFTxOutList(const ArmoryConnection::UTXOsCb &cb) const
 {
-   if (!isBalanceAvailable())
+   if (!isBalanceAvailable()) {
       return false;
+   }
 
    std::vector<std::string> walletIDs;
    walletIDs.push_back(walletId());
@@ -455,9 +461,9 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
    if (!armory_ && (armory != nullptr)) {
       armory_ = armory;
-      
+
       /*
-      Do not set callback target if it is already initialized. This 
+      Do not set callback target if it is already initialized. This
       allows for unit tests to set a custom ACT.
       */
       if(act_ == nullptr) {
@@ -556,21 +562,21 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConn
    setArmory(armory);
 
    if (armory_) {
-      const auto &cbRegister = [this](const std::string &) 
+      const auto &cbRegister = [this](const std::string &)
       {
-         logger_->debug("Wallet ready: {}", walletId());
+         logger_->debug("[bs::sync::Wallet::registerWallet] Wallet ready: {}", walletId());
          isRegistered_ = true;
       };
 
       const auto wallet = armory_->instantiateWallet(walletId());
       regId_ = armory_->registerWallet(wallet
          , walletId(), walletId(), getAddrHashes(), cbRegister, asNew);
-      logger_->debug("[{}] register wallet {}, {} addresses = {}"
-         , __func__, walletId(), getAddrHashes().size(), regId_);
+      logger_->debug("[bs::sync::Wallet::registerWallet] register wallet {}, {} addresses = {}"
+         , walletId(), getAddrHashes().size(), regId_);
       return { regId_ };
    }
    else {
-      logger_->error("[{}] no armory", __func__);
+      logger_->error("[bs::sync::Wallet::registerWallet] no armory");
    }
    return {};
 }
@@ -833,7 +839,7 @@ bool Wallet::getLedgerDelegateForAddress(const bs::Address &addr
       std::unique_lock<std::mutex> lock(*cbMutex_);
       const auto &itCb = cbLedgerByAddr_.find(addr);
       if (itCb != cbLedgerByAddr_.end()) {
-         logger_->error("[{}] ledger callback for addr {} already exists", __func__, addr.display());
+         logger_->error("[bs::sync::Wallet::getLedgerDelegateForAddress] ledger callback for addr {} already exists", addr.display());
          return false;
       }
       cbLedgerByAddr_[addr] = cb;
@@ -847,6 +853,7 @@ int Wallet::addAddress(const bs::Address &addr, const std::string &index
    if (!addr.isNull()) {
       usedAddresses_.push_back(addr);
    }
+
    if (sync && signContainer_) {
       std::string idxCopy = index;
       if (idxCopy.empty() && !addr.isNull()) {
@@ -866,6 +873,7 @@ void Wallet::syncAddresses()
    if (armory_) {
       registerWallet();
    }
+
    if (signContainer_) {
       std::set<BinaryData> addrSet;
       for (const auto &addr : getUsedAddressList()) {
@@ -880,10 +888,9 @@ void Wallet::newAddresses(const std::vector<std::string> &inData
 {
    if (signContainer_) {
       signContainer_->syncNewAddresses(walletId(), inData, cb);
-   }
-   else {
+   } else {
       if (logger_) {
-         logger_->warn("[{}] no signer set", __func__);
+         logger_->error("[bs::sync::Wallet::newAddresses] no signer set");
       }
    }
 }
@@ -919,7 +926,7 @@ void Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncState)>
       }
    }
 
-   logger_->debug("[{}] {}: {} used address[es]", __func__, walletId(), usedAddrSet.size());
+   logger_->debug("[bs::sync::Wallet::trackChainAddressUse] {}: {} used address[es]", walletId(), usedAddrSet.size());
    //2) send to armory wallet for processing
    signContainer_->syncAddressBatch(walletId(), usedAddrSet, cb);
 }
@@ -927,11 +934,12 @@ void Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncState)>
 size_t Wallet::getActiveAddressCount()
 {
    std::unique_lock<std::mutex> lock(*addrMapsMtx_);
-   
+
    size_t count = 0;
    for (auto& addrBal : *addressBalanceMap_) {
-      if (addrBal.second[0] != 0)
+      if (addrBal.second[0] != 0) {
          ++count;
+      }
    }
 
    return count;

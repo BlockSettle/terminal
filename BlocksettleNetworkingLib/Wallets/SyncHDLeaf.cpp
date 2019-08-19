@@ -2,6 +2,7 @@
 
 #include "AddressValidationState.h"
 #include "CheckRecipSigner.h"
+#include "FastLock.h"
 #include "WalletSignerContainer.h"
 
 #include <unordered_map>
@@ -58,8 +59,11 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
       for (const auto &addr : data.addrPool) {
          //addPool normally won't contain comments
          const auto path = bs::hd::Path::fromString(addr.index);
-         addressPool_[{ path }] = addr.address;
-         poolByAddr_[addr.address] = { path };
+         {
+            FastLock locker{addressPoolLock_};
+            addressPool_[{ path }] = addr.address;
+            poolByAddr_[addr.address] = { path };
+         }
       }
 
       for (const auto &txComment : data.txComments) {
@@ -130,7 +134,7 @@ void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
          if (id.isNull()) {
             continue;
          }
-         logger_->debug("[{}] {}: id={}, extId={}, intId={}", __func__, walletId()
+         logger_->debug("[sync::hd::Leaf::onRefresh] {}: id={}, extId={}, intId={}", walletId()
             , id.toBinStr(), regIdExt_, regIdInt_);
          if (id == regIdExt_) {
             regIdExt_.clear();
@@ -335,9 +339,13 @@ std::vector<BinaryData> hd::Leaf::getAddrHashesExt() const
 {
    std::vector<BinaryData> result;
    result.insert(result.end(), addrPrefixedHashes_.external.cbegin(), addrPrefixedHashes_.external.cend());
-   for (const auto &addr : addressPool_) {
-      if (addr.first.path.get(-2) == addrTypeExternal) {
-         result.push_back(addr.second.id());
+
+   {
+      FastLock locker{addressPoolLock_};
+      for (const auto &addr : addressPool_) {
+         if (addr.first.path.get(-2) == addrTypeExternal) {
+            result.push_back(addr.second.id());
+         }
       }
    }
    return result;
@@ -347,9 +355,12 @@ std::vector<BinaryData> hd::Leaf::getAddrHashesInt() const
 {
    std::vector<BinaryData> result;
    result.insert(result.end(), addrPrefixedHashes_.internal.cbegin(), addrPrefixedHashes_.internal.cend());
-   for (const auto &addr : addressPool_) {
-      if (addr.first.path.get(-2) == addrTypeInternal) {
-         result.push_back(addr.second.id());
+   {
+      FastLock locker{addressPoolLock_};
+      for (const auto &addr : addressPool_) {
+         if (addr.first.path.get(-2) == addrTypeInternal) {
+            result.push_back(addr.second.id());
+         }
       }
    }
    return result;
@@ -387,8 +398,8 @@ std::vector<std::string> hd::Leaf::registerWallet(
             , walletIdInt(), walletId(), addrsInt, cbRegistered, asNew);
          regIds.push_back(regIdInt_);
       }
-      logger_->debug("[{}] registered {}+{} addresses in {}, {} regIds {} {}"
-         , __func__, addrsExt.size(), addrsInt.size(), walletId(), regIds.size()
+      logger_->debug("[sync::hd::Leaf::registerWallet] registered {}+{} addresses in {}, {} regIds {} {}"
+         , addrsExt.size(), addrsInt.size(), walletId(), regIds.size()
          , regIdExt_, regIdInt_);
       return regIds;
    }
@@ -414,7 +425,10 @@ void hd::Leaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
    const auto &swapKey = [this, key](void) -> bs::Address
    {
       bs::Address result;
+
+      FastLock locker{addressPoolLock_};
       const auto addrPoolIt = addressPool_.find(key);
+
       if (addrPoolIt != addressPool_.end()) {
          result = std::move(addrPoolIt->second);
          addressPool_.erase(addrPoolIt->first);
@@ -459,7 +473,7 @@ void hd::Leaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
 void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
 {
    if (!signContainer_) {
-      logger_->error("[{}] uninited signer container", __func__);
+      logger_->error("[sync::hd::Leaf::topUpAddressPool] uninited signer container");
       throw std::runtime_error("uninitialized sign container");
    }
 
@@ -476,6 +490,8 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
 
       for (const auto &addrPair : addrVec) {
          const auto path = bs::hd::Path::fromString(addrPair.second);
+
+         FastLock locker{addressPoolLock_};
          addressPool_[{ path }] = addrPair.first;
          poolByAddr_[addrPair.first] = { path };
       }
@@ -516,7 +532,7 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
 void hd::Leaf::scan(const std::function<void(bs::sync::SyncState)> &cb)
 {
    if (!signContainer_) {
-      logger_->error("[{}] no sign container set", __func__);
+      logger_->error("[sync::hd::Leaf::scan] no sign container set");
       cb(bs::sync::SyncState::NothingToDo);
       return;
    }
@@ -552,7 +568,7 @@ void hd::Leaf::resumeScan(const std::string &refreshId)
 {
    const auto &cbIt = cbScanMap_.find(refreshId);
    if (cbIt == cbScanMap_.end()) {
-      logger_->error("[{}] failed to find scan callback for id {}", __func__, refreshId);
+      logger_->error("[sync::hd::Leaf::resumeScan] failed to find scan callback for id {}", refreshId);
       return;
    }
    const auto cb = cbIt->second;
@@ -560,7 +576,7 @@ void hd::Leaf::resumeScan(const std::string &refreshId)
 
    const auto &cbTxNs = [this, cb](const std::map<std::string, CombinedCounts> &countMap) {
       if (countMap.size() != 1) {
-         logger_->warn("[Leaf::resumeScan] invalid countMap size: {}", countMap.size());
+         logger_->warn("[hd::Leaf::resumeScan] invalid countMap size: {}", countMap.size());
          if (cb) {
             cb(bs::sync::SyncState::Failure);
          }
@@ -568,7 +584,7 @@ void hd::Leaf::resumeScan(const std::string &refreshId)
       }
       const auto itCounts = countMap.find(scanWallet_->walletID());
       if (itCounts == countMap.end()) {
-         logger_->warn("[Leaf::resumeScan] invalid countMap (scan wallet id not found)");
+         logger_->warn("[hd::Leaf::resumeScan] invalid countMap (scan wallet id not found)");
          if (cb) {
             cb(bs::sync::SyncState::Failure);
          }
@@ -576,10 +592,10 @@ void hd::Leaf::resumeScan(const std::string &refreshId)
       }
 
       const auto &lbdCompleteScan = [this, cb](bs::sync::SyncState state) {
-         logger_->debug("[Leaf::resumeScan] completing scan with state {} and {} address[es]"
+         logger_->debug("[hd::Leaf::resumeScan] completing scan with state {} and {} address[es]"
             , (int)state, activeScannedAddresses_.size());
          synchronize([this] {
-            logger_->debug("[Leaf::resumeScan] synchronized after scan is complete");
+            logger_->debug("[hd::Leaf::resumeScan] synchronized after scan is complete");
             if (wct_) {
                wct_->addressAdded(walletId());
             }
@@ -593,7 +609,7 @@ void hd::Leaf::resumeScan(const std::string &refreshId)
          cbScanMap_.clear();
       };
       if (itCounts->second.addressTxnCounts_.empty()) {
-         logger_->debug("[Leaf::resumeScan] ext: {} found no more active addresses", scanExt_);
+         logger_->debug("[hd::Leaf::resumeScan] ext: {} found no more active addresses", scanExt_);
          if (scanExt_) {
             if (isExtOnly_) {
                signContainer_->syncAddressBatch(walletId(), activeScannedAddresses_, lbdCompleteScan);
@@ -664,7 +680,7 @@ bool hd::Leaf::getLedgerDelegateForAddress(const bs::Address &addr
       std::unique_lock<std::mutex> lock(*cbMutex_);
       const auto &itCb = cbLedgerByAddr_.find(addr);
       if (itCb != cbLedgerByAddr_.end()) {
-         logger_->error("[{}] ledger callback for addr {} already exists", __func__, addr.display());
+         logger_->error("[sync::hd::Leaf::getLedgerDelegateForAddress] ledger callback for addr {} already exists", addr.display());
          return false;
       }
       cbLedgerByAddr_[addr] = cb;
@@ -768,21 +784,6 @@ bool hd::Leaf::isExternalAddress(const bs::Address &addr) const
    return (path.get(-2) == addrTypeExternal);
 }
 
-bs::hd::Path::Elem hd::Leaf::getLastAddrPoolIndex(bs::hd::Path::Elem addrType) const
-{
-   bs::hd::Path::Elem result = 0;
-   for (const auto &addr : addressPool_) {
-      const auto &path = addr.first.path;
-      if (path.get(-2) == addrType) {
-         result = qMax(result, path.get(-1));
-      }
-   }
-   if (!result) {
-      result = (addrType == addrTypeInternal) ? lastIntIdx_ : lastExtIdx_;
-   }
-   return result;
-}
-
 void hd::Leaf::merge(const std::shared_ptr<Wallet> walletPtr)
 {
    //rudimentary implementation, flesh it out on the go
@@ -795,8 +796,11 @@ void hd::Leaf::merge(const std::shared_ptr<Wallet> walletPtr)
    txComments_.insert(
       leafPtr->txComments_.begin(), leafPtr->txComments_.end());
 
-   addressPool_ = leafPtr->addressPool_;
-   poolByAddr_ = leafPtr->poolByAddr_;
+   {
+      FastLock locker{addressPoolLock_};
+      addressPool_ = leafPtr->addressPool_;
+      poolByAddr_ = leafPtr->poolByAddr_;
+   }
 
    intAddresses_ = leafPtr->intAddresses_;
    extAddresses_ = leafPtr->extAddresses_;
@@ -924,7 +928,7 @@ void hd::CCLeaf::restartValidation()
 void hd::CCLeaf::validationProc()
 {
    validationStarted_ = true;
-   if (!armory_ || (armory_->state() != ArmoryState::Ready) || !isRegistered_) {
+   if (!armory_ || (armory_->state() != ArmoryState::Ready) || !isRegistered_ || checker_ == nullptr) {
       validationStarted_ = false;
       return;
    }
