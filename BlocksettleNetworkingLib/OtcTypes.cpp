@@ -1,6 +1,9 @@
 #include "OtcTypes.h"
 
 #include <cassert>
+#include <cmath>
+
+#include "BTCNumericTypes.h"
 
 std::string bs::network::otc::toString(bs::network::otc::Side side)
 {
@@ -101,4 +104,24 @@ bool bs::network::otc::Offer::operator==(const Offer &other) const
 bool bs::network::otc::Offer::operator!=(const Offer &other) const
 {
    return !(*this == other);
+}
+
+double bs::network::otc::satToBtc(int64_t value)
+{
+   return double(value) / BTCNumericTypes::BalanceDivider;
+}
+
+int64_t bs::network::otc::btcToSat(double value)
+{
+   return std::llround(value * BTCNumericTypes::BalanceDivider);
+}
+
+double bs::network::otc::fromCents(int64_t value)
+{
+   return double(value) / 100.;
+}
+
+int64_t bs::network::otc::toCents(double value)
+{
+   return std::llround(value * 100);
 }

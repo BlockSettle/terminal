@@ -90,6 +90,12 @@ namespace bs {
             {
             }
          };
+
+         double satToBtc(int64_t value);
+         int64_t btcToSat(double value);
+
+         double fromCents(int64_t value);
+         int64_t toCents(double value);
       }
    }
 }
