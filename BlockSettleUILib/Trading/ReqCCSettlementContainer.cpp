@@ -142,8 +142,6 @@ void ReqCCSettlementContainer::activate()
       userKeyOk_ = false;
       emit error(tr("Failed to create unsigned CC transaction"));
    }
-
-   startSigning();
 }
 
 void ReqCCSettlementContainer::deactivate()
@@ -151,6 +149,7 @@ void ReqCCSettlementContainer::deactivate()
    stopTimer();
 }
 
+// KLUDGE currently this code not just making unsigned TX, but also initiate signing
 bool ReqCCSettlementContainer::createCCUnsignedTXdata()
 {
    const auto wallet = transactionData_->getSigningWallet();
@@ -177,7 +176,9 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
       ccTxData_.inputs = utxoAdapter_->get(id());
       logger_->debug("[CCSettlementTransactionWidget::createCCUnsignedTXdata] {} CC inputs reserved ({} recipients)"
          , ccTxData_.inputs.size(), ccTxData_.recipients.size());
-      emit sendOrder();
+
+      // KLUDGE - in current implementation, we should sign first to have sell/buy process aligned
+      startSigning();
    }
    else {
       const auto &cbFee = [this](float feePerByte) {
@@ -193,7 +194,8 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                , dealerTx_, utxos);
                logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
                utxoAdapter_->reserve(ccTxData_.walletId, id(), ccTxData_.inputs);
-               QMetaObject::invokeMethod(this, [this] { emit sendOrder(); });
+
+               startSigning();
             }
             catch (const std::exception &e) {
                logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] Failed to create partial CC TX to {}: {}"
@@ -224,7 +226,11 @@ bool ReqCCSettlementContainer::startSigning()
    const auto &cbTx = [this](bs::error::ErrorCode result, const BinaryData &signedTX) {
       if (result == bs::error::ErrorCode::NoError) {
          ccTxSigned_ = signedTX.toHexStr();
+
+         // notify RFQ dialog that signed half could be saved
          emit settlementAccepted();
+         // and quote could be accepted
+         emit sendOrder();
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
          emit settlementCancelled();

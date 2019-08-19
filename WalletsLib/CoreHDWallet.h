@@ -50,9 +50,9 @@ namespace bs {
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
             //stand in for the botched bs encryption code. too expensive to clean up after this mess
-            virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return { bs::wallet::EncryptionType::Password }; }
-            virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
-            virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 1, 1 }; }
+            std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return { bs::wallet::EncryptionType::Password }; }
+            std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
+            std::pair<unsigned int, unsigned int> encryptionRank() const { return { 1, 1 }; }
 
             ~Wallet(void);
 
@@ -73,11 +73,11 @@ namespace bs {
             void addGroup(const std::shared_ptr<Group> &group);
             size_t getNumGroups() const { return groups_.size(); }
             std::vector<std::shared_ptr<Group>> getGroups() const;
-            virtual size_t getNumLeaves() const;
+            size_t getNumLeaves() const;
             std::vector<std::shared_ptr<Leaf>> getLeaves() const;
             std::shared_ptr<Leaf> getLeaf(const std::string &id) const;
 
-            virtual std::string walletId() const { return walletPtr_->getID(); }
+            std::string walletId() const { return walletPtr_->getID(); }
             std::string name() const { return name_; }
             std::string description() const { return desc_; }
 

@@ -44,6 +44,7 @@ enum PacketType
 
    UpdateStatusType   = 26;
    ImportWoWalletType = 27;
+   ExportWoWalletType = 31;
    TerminalEventType  = 29;
 
    DecryptWalletRequestType   = 30;
@@ -368,6 +369,16 @@ message ImportWoWalletRequest
 {
    string filename = 1;
    bytes  content = 2;
+}
+
+message ExportWoWalletRequest
+{
+   string rootWalletId = 1;
+}
+
+message ExportWoWalletResponse
+{
+   bytes content = 1;
 }
 
 message TerminalEvent

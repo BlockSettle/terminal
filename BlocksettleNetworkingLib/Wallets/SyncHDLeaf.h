@@ -140,6 +140,7 @@ namespace bs {
             size_t intAddressPoolSize_ = 100;
             size_t extAddressPoolSize_ = 100;
 
+            mutable std::atomic_flag            addressPoolLock_ = ATOMIC_FLAG_INIT;
             std::map<AddrPoolKey, bs::Address>  addressPool_;
             std::map<bs::Address, AddrPoolKey>  poolByAddr_;
 
@@ -176,7 +177,6 @@ namespace bs {
             void createAddress(const CbAddress &, bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey addressIndex(const bs::Address &) const;
-            bs::hd::Path::Elem getLastAddrPoolIndex(bs::hd::Path::Elem) const;
             void resumeScan(const std::string &refreshId);
 
             static std::vector<BinaryData> getRegAddresses(const std::vector<PooledAddress> &src);
