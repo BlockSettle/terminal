@@ -19,8 +19,8 @@ namespace Chat
       Q_OBJECT
    public:
       ChatUser(QObject *parent = nullptr);
-      std::string displayName() const;
-      void setDisplayName(const std::string& displayName);
+      std::string userName() const;
+      void setUserName(const std::string& displayName);
 
       BinaryData publicKey() const { return publicKey_; }
       void setPublicKey(BinaryData val) { publicKey_ = val; }
@@ -29,10 +29,10 @@ namespace Chat
       void setPrivateKey(SecureBinaryData val) { privateKey_ = val; }
 
    signals:
-      void displayNameChanged(const std::string& displayName);
+      void userNameChanged(const std::string& displayName);
 
    private:
-      std::string displayName_;
+      std::string userName_;
       BinaryData publicKey_;
       SecureBinaryData privateKey_;
    };

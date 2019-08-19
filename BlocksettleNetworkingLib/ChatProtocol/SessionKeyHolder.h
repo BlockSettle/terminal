@@ -36,6 +36,7 @@ namespace Chat
 
    signals:
       void sessionKeysForUser(const Chat::SessionKeyDataPtr& sessionKeyDataPtr);
+      void sessionKeysForUserFailed(const std::string& userName);
       void error(const Chat::SessionKeyHolderError& error, const std::string& what);
       void requestSessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey);
       void replySessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey);

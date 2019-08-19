@@ -35,7 +35,7 @@ namespace Chat
 
    void ChatClientLogic::initDbDone()
    {
-      connect(currentUserPtr_.get(), &ChatUser::displayNameChanged, this, &ChatClientLogic::chatUserDisplayNameChanged);
+      connect(currentUserPtr_.get(), &ChatUser::userNameChanged, this, &ChatClientLogic::chatUserUserNameChanged);
 
       setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr_, clientDBServicePtr_, this));
       connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::partyModelChanged, this, &ChatClientLogic::partyModelChanged);
@@ -114,7 +114,7 @@ namespace Chat
          return;
       }
 
-      currentUserPtr_->setDisplayName(userHasherPtr_->deriveKey(email));
+      currentUserPtr_->setUserName(userHasherPtr_->deriveKey(email));
 
 //    currentJwt_ = jwt;
    }
@@ -239,8 +239,8 @@ namespace Chat
    // TODO: remove
    void ChatClientLogic::testProperlyConnected()
    {
-      SendPartyMessage("Global", "test");
-      RequestPrivateParty("ds7n8iy8fdsy");
+      //SendPartyMessage("be5e97b6-c147-47f7-b61c-a476e23153e2", "test");
+      //RequestPrivateParty("ds7n8iy8fdsy");
    }
 
    void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName)

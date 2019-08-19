@@ -26,6 +26,7 @@ namespace Chat
       if (remotePublicKey.getSize() == 0)
       {
          emit error(SessionKeyHolderError::PublicKeyEmpty, userName);
+         emit sessionKeysForUserFailed(userName);
          return;
       }
 
@@ -44,6 +45,7 @@ namespace Chat
       if (encodedPublicKey.getSize() == 0)
       {
          emit error(SessionKeyHolderError::IesEncoding, userName);
+         emit sessionKeysForUserFailed(userName);
          return;
       }
 
@@ -139,6 +141,7 @@ namespace Chat
       if (sessionRemotePublicKey.getSize() == 0)
       {
          emit error(SessionKeyHolderError::IesDecoding, userName);
+         emit sessionKeysForUserFailed(userName);
          return;
       }
 
@@ -150,6 +153,7 @@ namespace Chat
       if (encodedPublicKey.getSize() == 0)
       {
          emit error(SessionKeyHolderError::IesEncoding, userName);
+         emit sessionKeysForUserFailed(userName);
          return;
       }
 
@@ -167,6 +171,7 @@ namespace Chat
       if (sessionRemotePublicKey.getSize() == 0)
       {
          emit error(SessionKeyHolderError::IesDecoding, userName);
+         emit sessionKeysForUserFailed(userName);
          return;
       }
 

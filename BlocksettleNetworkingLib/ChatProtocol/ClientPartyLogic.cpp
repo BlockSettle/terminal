@@ -105,7 +105,7 @@ namespace Chat
             continue;
          }
 
-         PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr->displayName());
+         PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
          for (const auto recipient : recipients)
          {
             if (recipient->userName() == remoteUserName)
@@ -124,7 +124,7 @@ namespace Chat
       newClientPrivatePartyPtr->setDisplayName(remoteUserName);
       // setup recipients for new private party
       PartyRecipientsPtrList recipients;
-      recipients.push_back(std::make_shared<PartyRecipient>(currentUserPtr->displayName()));
+      recipients.push_back(std::make_shared<PartyRecipient>(currentUserPtr->userName()));
       recipients.push_back(std::make_shared<PartyRecipient>(remoteUserName));
       newClientPrivatePartyPtr->setRecipients(recipients);
 

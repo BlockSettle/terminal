@@ -28,7 +28,7 @@ namespace Chat
       void SendPartyMessage(const std::string& partyId, const std::string& data);
 
       ////////// RETURN SIGNALS //////////
-      void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
+      void chatUserUserNameChanged(const std::string& chatUserDisplayName);
       void chatClientError(const Chat::ChatClientLogicError& errorCode);
       void clientLoggedOutFromServer();
       void partyModelChanged();

@@ -27,6 +27,8 @@ namespace Chat
       sessionKeyHolderPtr_ = std::make_shared<SessionKeyHolder>(loggerPtr_, this);
       connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::requestSessionKeyExchange, this, &ClientConnectionLogic::requestSessionKeyExchange);
       connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::replySessionKeyExchange, this, &ClientConnectionLogic::replySessionKeyExchange);
+      connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::sessionKeysForUser, this, &ClientConnectionLogic::sessionKeysForUser);
+      connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::sessionKeysForUserFailed, this, &ClientConnectionLogic::sessionKeysForUserFailed);
    }
 
    void ClientConnectionLogic::onDataReceived(const std::string& data)
@@ -102,7 +104,7 @@ namespace Chat
       qDebug() << "ClientConnectionLogic::onConnected Thread ID:" << this->thread()->currentThreadId();
 
       Chat::WelcomeRequest welcomeRequest;
-      welcomeRequest.set_user_name(currentUserPtr()->displayName());
+      welcomeRequest.set_user_name(currentUserPtr()->userName());
       welcomeRequest.set_client_public_key(currentUserPtr()->publicKey().toBinStr());
 
       emit sendPacket(welcomeRequest);
@@ -253,11 +255,6 @@ namespace Chat
       clientDBServicePtr_->updateMessageState(messageId, partyMessageState);
    }
 
-   void ClientConnectionLogic::prepareAndSendPrivateMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
-   {
-      // TODO
-   }
-
    void ClientConnectionLogic::prepareRequestPrivateParty(const std::string& partyId)
    {
       PartyPtr partyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
@@ -280,7 +277,7 @@ namespace Chat
       PrivatePartyRequest privatePartyRequest;
       PartyPacket *partyPacket = privatePartyRequest.mutable_party_packet();
       partyPacket->set_party_id(partyId);
-      partyPacket->set_display_name(clientPartyPtr->getSecondRecipient(currentUserPtr()->displayName())->userName());
+      partyPacket->set_display_name(clientPartyPtr->getSecondRecipient(currentUserPtr()->userName())->userName());
       partyPacket->set_party_type(clientPartyPtr->partyType());
       partyPacket->set_party_subtype(clientPartyPtr->partySubType());
       partyPacket->set_party_state(clientPartyPtr->partyState());
@@ -338,7 +335,7 @@ namespace Chat
    void ClientConnectionLogic::requestSessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey)
    {
       RequestSessionKeyExchange requestSessionKey;
-      requestSessionKey.set_sender_user_name(currentUserPtr()->displayName());
+      requestSessionKey.set_sender_user_name(currentUserPtr()->userName());
       requestSessionKey.set_encoded_public_key(encodedLocalSessionPublicKey.toBinStr());
       requestSessionKey.set_receiver_user_name(receieverUserName);
 
@@ -348,7 +345,7 @@ namespace Chat
    void ClientConnectionLogic::replySessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey)
    {
       ReplySessionKeyExchange replyKeyExchange;
-      replyKeyExchange.set_sender_user_name(currentUserPtr()->displayName());
+      replyKeyExchange.set_sender_user_name(currentUserPtr()->userName());
       replyKeyExchange.set_encoded_public_key(encodedLocalSessionPublicKey.toBinStr());
       replyKeyExchange.set_receiver_user_name(receieverUserName);
 
@@ -371,5 +368,46 @@ namespace Chat
       sessionKeyHolderPtr_->onIncomingReplySessionKeyExchange(replyKeyExchange.sender_user_name(), replyKeyExchange.encoded_public_key());
    }
 
+   void ClientConnectionLogic::prepareAndSendPrivateMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
+   {
+      // prepare
+      auto partyId = clientPartyPtr->id();
+      auto messageId = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
+      auto timestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+      auto message = data;
+      auto encryptionType = Chat::EncryptionType::UNENCRYPTED;
+      auto partyMessageState = Chat::PartyMessageState::UNSENT;
 
+      PartyMessagePacket partyMessagePacket;
+      partyMessagePacket.set_party_id(partyId);
+      partyMessagePacket.set_message_id(messageId);
+      partyMessagePacket.set_timestamp_ms(timestamp);
+      partyMessagePacket.set_message(message);
+      partyMessagePacket.set_encryption(encryptionType);
+      partyMessagePacket.set_nonce("");
+      partyMessagePacket.set_party_message_state(partyMessageState);
+
+      // save in db
+      clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
+
+      // call session key handler
+      PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr()->userName());
+      for (const auto recipient : recipients)
+      {
+         sessionKeyHolderPtr_->requestSessionKeysForUser(recipient->userName(), recipient->publicKey());
+      }
+   }
+
+   void ClientConnectionLogic::sessionKeysForUser(const Chat::SessionKeyDataPtr& sessionKeyDataPtr)
+   {
+      // read msg from db
+      // encrypt by aead
+      // send msg
+      // delete msg in db
+   }
+
+   void ClientConnectionLogic::sessionKeysForUserFailed(const std::string& userName)
+   {
+
+   }
 }

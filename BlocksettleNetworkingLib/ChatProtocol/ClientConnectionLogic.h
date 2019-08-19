@@ -56,6 +56,9 @@ namespace Chat
       void messagePacketSent(const std::string& messageId);
       void sendPrivatePartyState(const std::string& partyId, const Chat::PartyState& partyState);
 
+      void sessionKeysForUser(const Chat::SessionKeyDataPtr& sessionKeyDataPtr);
+      void sessionKeysForUserFailed(const std::string& userName);
+
    signals:
       void sendPacket(const google::protobuf::Message& message);
       void closeConnection();
