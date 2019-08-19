@@ -1,5 +1,6 @@
 #include "OtcClient.h"
 
+#include <QTimer>
 #include <spdlog/spdlog.h>
 
 #include "BtcUtils.h"
@@ -20,16 +21,60 @@ namespace {
    const int RandomKeySize = 32;
    const int PubKeySize = 33;
 
+   bs::sync::PasswordDialogData toPasswordDialogData()
+   {
+      bs::sync::PasswordDialogData dialogData;
+
+      dialogData.setValue("ProductGroup", QObject::tr("qqq"));
+
+//      dialogData.setValue("ProductGroup", tr(bs::network::Asset::toString(assetType())));
+//      dialogData.setValue("Security", QString::fromStdString(security()));
+//      dialogData.setValue("Product", QString::fromStdString(product()));
+//      dialogData.setValue("Side", tr(bs::network::Side::toString(side())));
+
+//      // rfq details
+//      QString qtyProd = UiUtils::XbtCurrency;
+//      QString fxProd = QString::fromStdString(fxProduct());
+
+//      dialogData.setValue("Title", tr("Settlement Transaction"));
+
+//      dialogData.setValue("Price", UiUtils::displayPriceXBT(price()));
+//      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
+
+//      dialogData.setValue("Quantity", tr("%1 %2")
+//                          .arg(UiUtils::displayAmountForProduct(amount(), qtyProd, bs::network::Asset::Type::SpotXBT))
+//                          .arg(qtyProd));
+//      dialogData.setValue("TotalValue", tr("%1 %2")
+//                    .arg(UiUtils::displayAmountForProduct(amount() * price(), fxProd, bs::network::Asset::Type::SpotXBT))
+//                    .arg(fxProd));
+
+
+//      // tx details
+//      if (weSell()) {
+//         dialogData.setValue("TotalSpent", UiUtils::displayQuantity(amount() + UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+//      }
+//      else {
+//         dialogData.setValue("TotalReceived", UiUtils::displayQuantity(amount() - UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+//      }
+
+//      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
+//      dialogData.setValue("NetworkFee", UiUtils::displayQuantity(UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+
+      return dialogData;
+   }
+
 } // namespace
 
 OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<SignContainer> &signContainer
    , QObject *parent)
    : QObject (parent)
    , logger_(logger)
    , walletsMgr_(walletsMgr)
    , armory_(armory)
+   , signContainer_(signContainer)
 {
 }
 
@@ -203,8 +248,8 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
                return;
             }
 
-            auto cbSettlAddr = [this, offer, peerId, ourPubKey, feePerByte](const bs::Address &addr) {
-               if (addr.isNull()) {
+            auto cbSettlAddr = [this, offer, peerId, ourPubKey, feePerByte](const bs::Address &settlAddr) {
+               if (settlAddr.isNull()) {
                   SPDLOG_LOGGER_ERROR(logger_, "invalid settl addr");
                   return;
                }
@@ -245,7 +290,27 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
                transaction->setWallet(wallet, armory_->topBlock());
                transaction->setFeePerByte(feePerByte);
 
-               SPDLOG_LOGGER_DEBUG(logger_, "#### success: {}", addr.display());
+               auto index = transaction->RegisterNewRecipient();
+               assert(index == 0);
+               transaction->UpdateRecipient(0, offer.amount / BTCNumericTypes::BalanceDivider, settlAddr);
+               QTimer::singleShot(std::chrono::seconds(1), [this, transaction] {
+                  auto txRequest = transaction->createTXRequest();
+                  auto reqId = signContainer_->signSettlementTXRequest(txRequest, toPasswordDialogData());
+
+                  connect(signContainer_.get(), &SignContainer::TXSigned, this, [this, reqId](bs::signer::RequestId id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason) {
+                     if (reqId != id) {
+                        return;
+                     }
+                     if (result != bs::error::ErrorCode::NoError) {
+                        return;
+                     }
+                     armory_->broadcastZC(signedTX);
+                  });
+
+                  return;
+               });
+
+               SPDLOG_LOGGER_DEBUG(logger_, "#### success: {}", settlAddr.display());
             };
 
             const bool myKeyFirst = (peer->offer.ourSide == bs::network::otc::Side::Buy);

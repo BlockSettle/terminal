@@ -36,6 +36,7 @@ class ConnectionManager;
 class OTCRequestViewModel;
 class OtcClient;
 class QTextEdit;
+class SignContainer;
 
 namespace bs { namespace sync {
    class WalletsManager;
@@ -64,7 +65,8 @@ public:
            , const std::shared_ptr<ApplicationSettings> &appSettings
            , const std::shared_ptr<spdlog::logger>& logger
            , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-           , const std::shared_ptr<ArmoryConnection> &armory);
+           , const std::shared_ptr<ArmoryConnection> &armory
+           , const std::shared_ptr<SignContainer> &signContainer);
 
    std::string login(const std::string& email, const std::string& jwt
       , const ZmqBipNewKeyCb &);

@@ -622,7 +622,7 @@ void BSTerminalMainWindow::InitWalletsView()
 
 void BSTerminalMainWindow::InitChatView()
 {
-   ui_->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"), walletsMgr_, armory_);
+   ui_->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"), walletsMgr_, armory_, signContainer_);
    ui_->widgetChat->setCelerClient(celerConnection_);
 
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
