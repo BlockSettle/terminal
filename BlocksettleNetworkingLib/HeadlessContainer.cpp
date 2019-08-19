@@ -492,6 +492,20 @@ bs::signer::RequestId HeadlessContainer::signMultiTXRequest(const bs::core::wall
    return id;
 }
 
+bs::signer::RequestId HeadlessContainer::updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId)
+{
+   headless::UpdateDialogDataRequest updateDialogDataRequest;
+   updateDialogDataRequest.set_dialogid(dialogId);
+   *(updateDialogDataRequest.mutable_passworddialogdata()) = dialogData.toProtobufMessage();
+
+   headless::RequestPacket packet;
+   packet.set_type(headless::UpdateDialogDataType);
+
+   packet.set_data(updateDialogDataRequest.SerializeAsString());
+   const auto reqId = Send(packet);
+   return reqId;
+}
+
 bs::signer::RequestId HeadlessContainer::CancelSignTx(const BinaryData &txId)
 {
    headless::CancelSignTx request;

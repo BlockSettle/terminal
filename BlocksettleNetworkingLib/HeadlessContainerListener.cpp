@@ -172,6 +172,9 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
    case headless::CancelSignTxRequestType:
       return onCancelSignTx(clientId, packet);
 
+   case headless::UpdateDialogDataType:
+      return onUpdateDialogData(clientId, packet);
+
    case headless::SignTxRequestType:
    case headless::SignSettlementTxRequestType:
    case headless::SignPartialTXRequestType:
@@ -406,6 +409,21 @@ bool HeadlessContainerListener::onCancelSignTx(const std::string &, headless::Re
       callbacks_->cancelTxSign(request.txid());
    }
 
+   return true;
+}
+
+bool HeadlessContainerListener::onUpdateDialogData(const std::string &clientId, headless::RequestPacket packet)
+{
+   headless::UpdateDialogDataRequest request;
+
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      return false;
+   }
+
+   if (callbacks_) {
+      callbacks_->updateDialogData(request.passworddialogdata());
+   }
    return true;
 }
 

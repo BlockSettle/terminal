@@ -8,6 +8,8 @@
 #include "UiUtils.h"
 #include "Wallets/SyncWallet.h"
 
+#include <QPointer>
+
 DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
       , const bs::network::Order &order, const std::string &quoteReqId, uint64_t lotSize
       , const bs::Address &genAddr, const std::string &ownRecvAddr
@@ -30,6 +32,9 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
 {
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
       , &DealerCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
+//   connect(this, &DealerCCSettlementContainer::timerExpired, this,
+//      &DealerCCSettlementDialog::reject);
+//   connect(this, &DealerCCSettlementContainer::failed, this, &QDialog::reject);
 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
@@ -59,8 +64,8 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData()
    dialogData.setValue("TotalValue", UiUtils::displayAmount(quantity() * price()));
 
    // settlement details
-   dialogData.setValue("Payment", tr("Verifying"));
-   dialogData.setValue("GenesisAddress", tr("Verifying"));
+   dialogData.setValue("InputAmount", UiUtils::displayAmount(txReq_.inputAmount()));
+   dialogData.setValue("ReturnAmount", UiUtils::displayAmount(txReq_.change.value));
 
    return dialogData;
 }
@@ -73,7 +78,13 @@ bool DealerCCSettlementContainer::startSigning()
       return false;
    }
 
-   const auto &cbTx = [this](bs::error::ErrorCode result, const BinaryData &signedTX) {
+   QPointer<DealerCCSettlementContainer> context(this);
+   const auto &cbTx = [this, context, logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
+      if (!context) {
+         logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
+         return;
+      }
+
       if (result == bs::error::ErrorCode::NoError) {
          emit signTxRequest(orderId_, signedTX.toHexStr());
          emit completed();
@@ -89,17 +100,16 @@ bool DealerCCSettlementContainer::startSigning()
       }
    };
 
-   bs::core::wallet::TXSignRequest txReq;
-   txReq.walletId = wallet_->walletId();
-   txReq.prevStates = { txReqData_ };
-   txReq.populateUTXOs = true;
-   txReq.inputs = utxoAdapter_->get(id());
+   txReq_.walletId = wallet_->walletId();
+   txReq_.prevStates = { txReqData_ };
+   txReq_.populateUTXOs = true;
+   txReq_.inputs = utxoAdapter_->get(id());
    logger_->debug("[DealerCCSettlementContainer::accept] signing with wallet {}, {} inputs"
-      , wallet_->name(), txReq.inputs.size());
+      , wallet_->name(), txReq_.inputs.size());
 
    emit info(tr("Waiting for TX half signing..."));
 
-   bs::signer::RequestId signId = signingContainer_->signSettlementPartialTXRequest(txReq, toPasswordDialogData(), cbTx);
+   bs::signer::RequestId signId = signingContainer_->signSettlementPartialTXRequest(txReq_, toPasswordDialogData(), cbTx);
    return (signId > 0);
 }
 
@@ -159,6 +169,11 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
       emit error(tr("Failed to verify counterparty's transaction"));
       wallet_ = nullptr;
    }
+
+//   bs::sync::PasswordDialogData pd;
+//   pd.setValue("DeliveryUTXOVerified", addressVerified);
+//   pd.setValue("SigningAllowed", addressVerified);
+//   signingContainer_->updateDialogData(pd);
 }
 
 bool DealerCCSettlementContainer::isAcceptable() const

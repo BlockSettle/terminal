@@ -74,8 +74,9 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
    dialogData.setValue("TotalValue", UiUtils::displayAmount(quantity() * price()));
 
    // settlement details
-   dialogData.setValue("Payment", tr("Verifying"));
-   dialogData.setValue("GenesisAddress", tr("Verifying"));
+   dialogData.setValue("InputAmount", UiUtils::displayAmount(ccTxData_.inputAmount()));
+   dialogData.setValue("ReturnAmount", UiUtils::displayAmount(ccTxData_.change.value));
+
 
    return dialogData;
 }

@@ -36,6 +36,7 @@ enum RequestType
    SyncCCNamesType             = 28;
    GetSettlPayinAddrType       = 29;
    SettlGetRootPubkeyType      = 30;
+   UpdateDialogDataType        = 31; // update fields in password input dialogs in signer ui
 }
 
 message RequestPacket
@@ -491,4 +492,10 @@ message SyncNewAddressRequest
 message SyncCCNamesData
 {
    repeated string ccNames = 1;
+}
+
+message UpdateDialogDataRequest
+{
+   uint32                                                dialogId              = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData    = 2;
 }

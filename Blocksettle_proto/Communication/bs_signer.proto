@@ -47,6 +47,7 @@ enum PacketType
    TerminalEventType  = 29;
 
    DecryptWalletRequestType   = 30;
+   UpdateDialogDataType       = 31; // update fields in password input dialogs in signer ui
 }
 
 enum PasswordDialogType

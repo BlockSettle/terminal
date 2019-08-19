@@ -118,6 +118,12 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
    dialogData.setValue("NetworkFee", UiUtils::displayQuantity(UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
 
+   // settlement details
+   try {
+      dialogData.setValue("InputAmount", UiUtils::displayAmount(transactionData_->getSignTxRequest().inputAmount()));
+      dialogData.setValue("ReturnAmount", UiUtils::displayAmount(transactionData_->getSignTxRequest().change.value));
+   } catch (...) {}
+
    return dialogData;
 }
 

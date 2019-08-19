@@ -182,3 +182,14 @@ bool bs::sync::PasswordDialogData::contains(const QString &key)
 {
    return values_.contains(key);
 }
+
+void bs::sync::PasswordDialogData::merge(const bs::sync::PasswordDialogData &other)
+{
+   auto it = other.values().begin();
+   while (it != other.values().end()) {
+      values_.insert(it.key(), it.value());
+   }
+   if (!other.values().isEmpty()) {
+      emit dataChanged();
+   }
+}

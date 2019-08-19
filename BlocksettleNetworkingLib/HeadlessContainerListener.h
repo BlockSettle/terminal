@@ -48,6 +48,7 @@ public:
 
    virtual void txSigned(const BinaryData &) = 0;
    virtual void cancelTxSign(const BinaryData &) = 0;
+   virtual void updateDialogData(const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData) = 0;
    virtual void xbtSpent(int64_t, bool) = 0;
    virtual void customDialog(const std::string &, const std::string &) = 0;
    virtual void terminalHandshakeFailed(const std::string &peerAddress) = 0;
@@ -96,6 +97,7 @@ protected:
 private:
    using PasswordReceivedCb = std::function<void(bs::error::ErrorCode result, const SecureBinaryData &password)>;
    using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, SecureBinaryData> &)>;
+
    void passwordReceived(const std::string &clientId, const std::string &walletId
       , bs::error::ErrorCode result, const SecureBinaryData &password);
 
@@ -112,6 +114,7 @@ private:
    bool onSyncCCNames(Blocksettle::Communication::headless::RequestPacket &packet);
    bool onGetHDWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCancelSignTx(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onUpdateDialogData(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onSyncWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onSyncHDWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onSyncWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
