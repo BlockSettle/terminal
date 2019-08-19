@@ -65,8 +65,3 @@ void SelectWalletDialog::onDoubleClicked(const QModelIndex& index)
    selectedWallet_ = walletsModel_->getWallet(index);
    QDialog::accept();
 }
-
-bool SelectWalletDialog::isNestedSegWitAddress() const
-{
-   return ui_->radioButtonAddrNestedSegWit->isChecked();
-}

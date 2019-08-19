@@ -6,7 +6,6 @@
 #include <unordered_map>
 #include "BTCNumericTypes.h"
 #include "EncryptionUtils.h"
-#include "CoreSettlementWallet.h"
 #include "CoreWallet.h"
 
 
@@ -78,7 +77,6 @@ namespace bs {
          std::unordered_set<std::string>     walletNames_;
          //std::vector<BinaryData>             walletsId_;
          std::vector<std::string>            hdWalletsId_;
-         std::shared_ptr<SettlementWallet>   settlementWallet_;
          std::vector<std::string>            ccLeaves_;
       };
 

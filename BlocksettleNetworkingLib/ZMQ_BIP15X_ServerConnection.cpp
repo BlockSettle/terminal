@@ -354,6 +354,24 @@ void ZmqBIP15XServerConnection::forceTrustedClients(const ZmqBIP15XPeers &peers)
    forcedTrustedClients_ = std::move(peers);
 }
 
+std::unique_ptr<ZmqBIP15XPeer> ZmqBIP15XServerConnection::getClientKey(const string &clientId) const
+{
+   assert(std::this_thread::get_id() == listenThreadId());
+
+   auto it = socketConnMap_.find(clientId);
+   if (it == socketConnMap_.end() || !it->second->bip150HandshakeCompleted_ || !it->second->bip151HandshakeCompleted_) {
+      return nullptr;
+   }
+
+   auto pubKey = ZmqBIP15XUtils::convertCompressedKey(it->second->encData_->getChosenAuthPeerKey());
+   if (pubKey.isNull()) {
+      SPDLOG_LOGGER_ERROR(logger_, "ZmqBIP15XUtils::convertCompressedKey failed");
+      return nullptr;
+   }
+
+   return std::make_unique<ZmqBIP15XPeer>("", pubKey);
+}
+
 // A send function for the data connection that sends data to all clients,
 // somewhat like multicasting.
 //

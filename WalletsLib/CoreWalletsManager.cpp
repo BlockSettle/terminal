@@ -6,7 +6,6 @@
 #include "BIP150_151.h"
 #include "CoreWalletsManager.h"
 #include "CoreHDWallet.h"
-#include "CorePlainWallet.h"
 #include "SystemFileUtils.h"
 
 using namespace bs::core;
@@ -125,42 +124,8 @@ void WalletsManager::backupWallet(const HDWalletPtr &wallet, const std::string &
 
 bool WalletsManager::isWalletFile(const std::string &fileName) const
 {
-   if ((fileName.find(SettlementWallet::fileNamePrefix()) == 0)
-      || (fileName.find(PlainWallet::fileNamePrefix(false)) == 0)) {
-      return false;
-   }
    return true;
 }
-
-#if 0
-WalletsManager::WalletPtr WalletsManager::createSettlementWallet(NetworkType netType, const std::string &walletsPath)
-{
-   logger_->debug("Creating settlement wallet");
-   try {
-      settlementWallet_ = std::make_shared<SettlementWallet>(netType, logger_);
-      if (!walletsPath.empty()) {
-         settlementWallet_->saveToDir(walletsPath);
-      }
-   }
-   catch (const std::exception &e) {
-      logger_->error("Failed to create Settlement wallet: {}", e.what());
-   }
-   return settlementWallet_;
-}
-
-WalletsManager::WalletPtr WalletsManager::getAuthWallet() const
-{
-   const auto priWallet = getPrimaryWallet();
-   if (!priWallet) {
-      return nullptr;
-   }
-   const auto group = priWallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
-   if (!group) {
-      return nullptr;
-   }
-   return group->getLeafByPath(0u);
-}
-#endif   //0
 
 WalletsManager::HDWalletPtr WalletsManager::getPrimaryWallet() const
 {
@@ -340,7 +305,7 @@ WalletsManager::HDWalletPtr WalletsManager::createWallet(
          newWallet->createGroup(bs::hd::CoinType::BlockSettle_Settlement);
          auto group = newWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
          for (const auto &cc : ccLeaves_) {
-            group->createLeaf(cc);
+            group->createLeaf(AddressEntryType_Default, cc);
          }
       }
    }

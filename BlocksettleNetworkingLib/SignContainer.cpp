@@ -15,7 +15,7 @@ SignContainer::SignContainer(const std::shared_ptr<spdlog::logger> &logger, OpMo
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Wallet>>();
 }
 
-void SignContainer::syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType aet
+void SignContainer::syncNewAddress(const std::string &walletId, const std::string &index
    , const std::function<void(const bs::Address &)> &cb)
 {
    const auto &cbAddrs = [cb](const std::vector<std::pair<bs::Address, std::string>> &outAddrs) {
@@ -27,7 +27,7 @@ void SignContainer::syncNewAddress(const std::string &walletId, const std::strin
             cb({});
       }
    };
-   syncNewAddresses(walletId, { {index, aet} }, cbAddrs);
+   syncNewAddresses(walletId, { index }, cbAddrs);
 }
 
 

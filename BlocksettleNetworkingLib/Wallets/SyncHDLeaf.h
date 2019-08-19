@@ -43,7 +43,7 @@ namespace bs {
 
             std::string description() const override;
             void setDescription(const std::string &desc) override { desc_ = desc; }
-            std::string shortName() const override { return suffix_; }
+            std::string shortName() const override;
             bs::core::wallet::Type type() const override { return type_; }
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const override { return encryptionTypes_; }
             std::vector<SecureBinaryData> encryptionKeys() const override { return encryptionKeys_; }
@@ -67,15 +67,14 @@ namespace bs {
             size_t getAddressPoolSize() const { return addressPool_.size(); }
 
             bool isExternalAddress(const Address &) const override;
-            void getNewExtAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) override;
-            void getNewIntAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) override;
-            void getNewChangeAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) override;
+            void getNewExtAddress(const CbAddress &) override;
+            void getNewIntAddress(const CbAddress &) override;
+            void getNewChangeAddress(const CbAddress &) override;
             std::string getAddressIndex(const bs::Address &) override;
-            bool addressIndexExists(const std::string &index) const override;
             bool getLedgerDelegateForAddress(const bs::Address &
                , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &) override;
 
-            int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true) override;
+            int addAddress(const bs::Address &, const std::string &index, bool sync = true) override;
 
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
@@ -97,22 +96,13 @@ namespace bs {
          protected:
             struct AddrPoolKey {
                bs::hd::Path  path;
-               AddressEntryType  aet;
 
                bool empty() const { return (path.length() == 0); }
                bool operator < (const AddrPoolKey &other) const {
-                  if (path == other.path) {
-                     return aet < other.aet;
-                  }
                   return (path < other.path);
                }
                bool operator==(const AddrPoolKey &other) const {
-                  return ((path == other.path) && (aet == other.aet));
-               }
-            };
-            struct AddrPoolHasher {
-               std::size_t operator()(const AddrPoolKey &key) const {
-                  return (std::hash<std::string>()(key.path.toString()) ^ std::hash<int>()((int)key.aet));
+                  return (path == other.path);
                }
             };
 
@@ -130,7 +120,6 @@ namespace bs {
          protected:
             const bs::hd::Path::Elem   addrTypeExternal = 0u;
             const bs::hd::Path::Elem   addrTypeInternal = 1u;
-            const AddressEntryType defaultAET_ = AddressEntryType_P2WPKH;
 
             mutable std::string     walletId_, walletIdInt_;
             bs::core::wallet::Type  type_;
@@ -150,15 +139,11 @@ namespace bs {
 
             size_t intAddressPoolSize_ = 100;
             size_t extAddressPoolSize_ = 100;
-            std::vector<AddressEntryType> poolAET_ = {
-               AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH),
-               AddressEntryType_P2WPKH };
 
             std::map<AddrPoolKey, bs::Address>  addressPool_;
             std::map<bs::Address, AddrPoolKey>  poolByAddr_;
 
          private:
-            std::unordered_map<AddrPoolKey, bs::Address, AddrPoolHasher>   addressMap_;
             std::vector<bs::Address>                     intAddresses_;
             std::vector<bs::Address>                     extAddresses_;
             std::map<BinaryData, AddrPoolKey>            addrToIndex_;
@@ -188,7 +173,7 @@ namespace bs {
             std::set<BinaryData> activeScannedAddresses_;
 
          private:
-            void createAddress(const CbAddress &, AddressEntryType aet, bool isInternal = false);
+            void createAddress(const CbAddress &, bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey addressIndex(const bs::Address &) const;
             bs::hd::Path::Elem getLastAddrPoolIndex(bs::hd::Path::Elem) const;
@@ -223,6 +208,7 @@ namespace bs {
             ~CCLeaf() override;
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::ColorCoin; }
+            std::string shortName() const override { return suffix_; }
 
             void setCCDataResolver(const std::shared_ptr<CCDataResolver> &resolver);
             void init(bool force) override;

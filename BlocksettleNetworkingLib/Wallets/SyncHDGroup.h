@@ -23,35 +23,32 @@ namespace bs {
             friend class bs::sync::hd::Wallet;
 
          public:
-            Group(const bs::hd::Path &path, const std::string &walletName
+            Group(bs::hd::Path::Elem index, const std::string &walletName
                , const std::string &name, const std::string &desc
                , WalletSignerContainer *container, WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger
                , bool extOnlyAddresses = false)
                : signContainer_(container)
-               , logger_(logger), path_(path)
+               , logger_(logger), index_(index)
                , walletName_(walletName), name_(name), desc_(desc)
                , extOnlyAddresses_(extOnlyAddresses)
                , wct_(wct) {}
             virtual ~Group() = default;
 
             size_t getNumLeaves() const { return leaves_.size(); }
-            std::shared_ptr<hd::Leaf> getLeaf(bs::hd::Path::Elem) const;
-            std::shared_ptr<hd::Leaf> getLeaf(const std::string &key) const;
+            std::shared_ptr<hd::Leaf> getLeaf(const bs::hd::Path &) const;
+//            std::shared_ptr<hd::Leaf> getLeaf(const std::string &key) const;
             std::vector<std::shared_ptr<hd::Leaf>> getLeaves() const;
             std::vector<std::shared_ptr<bs::sync::Wallet>> getAllLeaves() const;
-            std::shared_ptr<hd::Leaf> createLeaf(bs::hd::Path::Elem, const std::string &walletId);
-            std::shared_ptr<hd::Leaf> createLeaf(const std::string &key, const std::string &walletId);
+            std::shared_ptr<hd::Leaf> createLeaf(const bs::hd::Path &, const std::string &walletId);
             virtual std::shared_ptr<hd::Leaf> newLeaf(const std::string &walletId) const;
             virtual bool addLeaf(const std::shared_ptr<hd::Leaf> &, bool signal = false);
             bool deleteLeaf(const std::shared_ptr<bs::sync::Wallet> &);
-            bool deleteLeaf(const bs::hd::Path::Elem &);
-            bool deleteLeaf(const std::string &key);
+            bool deleteLeaf(const bs::hd::Path &);
             static std::string nameForType(bs::hd::CoinType ct);
 
             virtual bs::core::wallet::Type type() const { return bs::core::wallet::Type::Bitcoin; }
-            const bs::hd::Path &path() const { return path_; }
-            bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
+            bs::hd::Path::Elem index() const { return index_; }
             std::string name() const { return name_; }
             std::string description() const { return desc_; }
 
@@ -68,10 +65,10 @@ namespace bs {
          protected:
             WalletSignerContainer  *  signContainer_{};
             std::shared_ptr<spdlog::logger>  logger_;
-            bs::hd::Path   path_;
+            bs::hd::Path::Elem   index_;
             std::string    walletName_, name_, desc_;
             bool        extOnlyAddresses_;
-            std::unordered_map<bs::hd::Path::Elem, std::shared_ptr<hd::Leaf>> leaves_;
+            std::map<bs::hd::Path, std::shared_ptr<hd::Leaf>>  leaves_;
             unsigned int   scanPortion_ = 200;
             WalletCallbackTarget *wct_{};
          };
@@ -80,8 +77,8 @@ namespace bs {
          class AuthGroup : public Group
          {
          public:
-            AuthGroup(const bs::hd::Path &path, const std::string &name
-               , const std::string &desc, WalletSignerContainer *, WalletCallbackTarget *wct
+            AuthGroup(const std::string &name, const std::string &desc
+               , WalletSignerContainer *, WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger>& logger
                , bool extOnlyAddresses = false);
 
@@ -101,13 +98,14 @@ namespace bs {
          class CCGroup : public Group
          {
          public:
-            CCGroup(const bs::hd::Path &path, const std::string &name
-               , const std::string &desc, WalletSignerContainer *container
+            CCGroup(const std::string &name, const std::string &desc
+               , WalletSignerContainer *container
                , WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger
                , bool extOnlyAddresses = false)
-               : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_CC),
-                  desc, container, wct, logger, extOnlyAddresses) {}
+               : Group(bs::hd::CoinType::BlockSettle_CC, name
+                  , nameForType(bs::hd::CoinType::BlockSettle_CC)
+                  , desc, container, wct, logger, extOnlyAddresses) {}
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::ColorCoin; }
 
@@ -118,22 +116,22 @@ namespace bs {
          class SettlementGroup : public Group
          {
          public:
-            SettlementGroup(const bs::hd::Path &path, const std::string &name
-               , const std::string &desc, WalletSignerContainer *container
-               , WalletCallbackTarget *wct
+            SettlementGroup(const std::string &name, const std::string &desc
+               , WalletSignerContainer *container, WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger)
-               : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_Settlement),
-                  desc, container, wct, logger) {}
+               : Group(bs::hd::CoinType::BlockSettle_Settlement, name
+                  , nameForType(bs::hd::CoinType::BlockSettle_Settlement)
+                  , desc, container, wct, logger) {}
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Settlement; }
             std::shared_ptr<hd::SettlementLeaf> getLeaf(const bs::Address &) const;
-            void addMap(const BinaryData &addr, bs::hd::Path::Elem idx) { addrMap_[addr] = idx; }
+            void addMap(const BinaryData &addr, const bs::hd::Path &path) { addrMap_[addr] = path; }
 
          protected:
             std::shared_ptr<hd::Leaf> newLeaf(const std::string &walletId) const override;
 
          private:
-            std::map<BinaryData, bs::hd::Path::Elem>  addrMap_;
+            std::map<BinaryData, bs::hd::Path>  addrMap_;
          };
 
       }  //namespace hd

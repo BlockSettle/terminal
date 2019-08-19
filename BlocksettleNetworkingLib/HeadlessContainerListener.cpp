@@ -755,7 +755,8 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
       }
    }
 
-   auto leaf = authGroup->getLeafByPath(0x80000000);
+   const bs::hd::Path authPath({bs::hd::Purpose::Native, bs::hd::BlockSettle_Auth, 0});
+   auto leaf = authGroup->getLeafByPath(authPath);
    if (leaf) {
       const auto authLeaf = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leaf);
       if (authLeaf && (authLeaf->getSalt() == salt)) {
@@ -778,7 +779,7 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
          }
          try {
             auto lock = wallet->lockForEncryption(password);
-            auto leaf = group->createLeaf(0 + bs::hd::hardFlag, 5);
+            auto leaf = group->createLeaf(AddressEntryType_Default, 0 + bs::hd::hardFlag, 5);
             if (leaf) {
                setUserIdResponse(clientId, id, headless::AWR_NoError, leaf->walletId());
                return;
@@ -878,12 +879,11 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
       }
 
       try {
-         const auto leafIndex = path.get(2);
-         auto leaf = group->getLeafByPath(leafIndex);
+         auto leaf = group->getLeafByPath(path);
 
          if (leaf == nullptr) {
             auto lock = hdWallet->lockForEncryption(pass);
-            leaf = group->createLeaf(leafIndex);
+            leaf = group->createLeaf(path);
 
             if (leaf == nullptr) {
                logger_->error("[HeadlessContainerListener] failed to create/get leaf {}", path.toString());
@@ -1238,13 +1238,6 @@ bs::error::ErrorCode HeadlessContainerListener::activateAutoSign(const std::stri
    if (!wallet) {
       return ErrorCode::WalletNotFound;
    }
-   if (!wallet->encryptionTypes().empty()) {
-      throw std::runtime_error("disabled 2");
-/*      const auto decrypted = wallet->getRootNode(password);
-      if (!decrypted) {
-         return bs::error::ErrorCode::InvalidPassword;
-      }*/
-   }
    passwords_[wallet->walletId()] = password;
 
    // multicast event
@@ -1335,7 +1328,7 @@ bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, head
       response.set_walletid(hdWallet->walletId());
       for (const auto &group : hdWallet->getGroups()) {
          auto groupData = response.add_groups();
-         groupData->set_type(group->index());
+         groupData->set_type(group->index() | bs::hd::hardFlag);
          groupData->set_ext_only(hdWallet->isExtOnly());
 
          if (group->index() == bs::hd::CoinType::BlockSettle_Auth) {
@@ -1351,7 +1344,7 @@ bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, head
          for (const auto &leaf : group->getLeaves()) {
             auto leafData = groupData->add_leaves();
             leafData->set_id(leaf->walletId());
-            leafData->set_index(leaf->index());
+            leafData->set_path(leaf->path().toString());
 
             if (groupData->type() == bs::hd::CoinType::BlockSettle_Settlement) {
                const auto settlLeaf = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(leaf);
@@ -1523,9 +1516,9 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, hea
    }
 
    //resolve the path and address type for addrSet
-   std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> parsedMap;
+   std::map<BinaryData, bs::hd::Path> parsedMap;
    try {
-      parsedMap = std::move(wallet->indexPathAndTypes(addrSet));
+      parsedMap = std::move(wallet->indexPath(addrSet));
    } catch (AccountException &e) {
       //failure to find even on of the addresses means the wallet chain needs 
       //extended further
@@ -1535,57 +1528,28 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, hea
       return false;
    }
 
-   //order addresses by path
-   typedef std::map<bs::hd::Path, std::pair<BinaryData, AddressEntryType>> pathMapping;
-   std::map<bs::hd::Path::Elem, pathMapping> mapByPath;
-
+   std::map<bs::hd::Path::Elem, std::set<bs::hd::Path>> mapByPath;
    for (auto& parsedPair : parsedMap) {
-      auto elem = parsedPair.second.first.get(-2);
+      auto elem = parsedPair.second.get(-2);
       auto& mapping = mapByPath[elem];
-
-      auto addrPair = std::make_pair(parsedPair.first, parsedPair.second.second);
-      mapping.insert(std::make_pair(parsedPair.second.first, addrPair));
-   }
-
-   //strip out addresses using the wallet's default type
-   for (auto& mapping : mapByPath) {
-      auto& addrMap = mapping.second;
-      auto iter = addrMap.begin();
-      while (iter != addrMap.end()) {
-         if (iter->second.second == AddressEntryType_Default) {
-            auto eraseIter = iter++;
-
-            /*
-            Do not erase this default address if it's the last one in
-            the map. The default address type is not a significant piece
-            of data to synchronize a wallet's used address chain length,
-            however the last instantiated address is relevant, regardless
-            of its type
-            */
-
-            if (iter != addrMap.end())
-               addrMap.erase(eraseIter);
-
-            continue;
-         }
-         ++iter;
-      }
+      mapping.insert(parsedPair.second);
    }
 
    //request each chain for the relevant address types
    bool update = false;
    for (auto& mapping : mapByPath) {
-      for (auto& pathPair : mapping.second) {
-         auto resultPair = wallet->synchronizeUsedAddressChain(
-            pathPair.first.toString(), pathPair.second.second);
+      for (auto& path : mapping.second) {
+         auto resultPair = wallet->synchronizeUsedAddressChain(path.toString());
          update |= resultPair.second;
       }
    }
 
-   if (update)
+   if (update) {
       SyncAddrsResponse(clientId, packet.id(), request.wallet_id(), bs::sync::SyncState::Success);
-   else
+   }
+   else {
       SyncAddrsResponse(clientId, packet.id(), request.wallet_id(), bs::sync::SyncState::NothingToDo);
+   }
    return true;
 }
 
@@ -1648,8 +1612,8 @@ bool HeadlessContainerListener::onSyncNewAddr(const std::string &clientId, headl
    for (int i = 0; i < request.addresses_size(); ++i) {
       const auto inData = request.addresses(i);
       auto outData = response.add_addresses();
-      outData->set_address(wallet->synchronizeUsedAddressChain(inData.index()
-         , static_cast<AddressEntryType>(inData.aet())).first.display());
+      const auto addr = wallet->synchronizeUsedAddressChain(inData.index()).first.display();
+      outData->set_address(addr);
       outData->set_index(inData.index());
    }
 

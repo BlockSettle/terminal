@@ -26,7 +26,6 @@ public:
    ~SelectWalletDialog() override;
 
    std::shared_ptr<bs::sync::Wallet> getSelectedWallet() const;
-   bool isNestedSegWitAddress() const;
 
 public slots:
    void onSelectionChanged();

@@ -3,11 +3,26 @@
 #include "BtcUtils.h"
 #include "HDPath.h"
 
+namespace bs {
+   namespace hd {
+      static const std::vector<hd::Purpose> supportedPurposes{
+         hd::Purpose::Native, hd::Purpose::Nested, hd::Purpose::NonSegWit
+      };
+   }
+}
+
 using namespace bs;
 
-hd::Path::Path(const std::vector<Elem> &elems) : path_(elems)
+
+hd::Path::Path(const std::vector<Elem> &elems)
+   : path_(elems), isAbsolute_(false)
 {
-   isAbsolute_ = (path_[0] == hd::purpose);
+   for (const auto &purpose : hd::supportedPurposes) {
+      if (path_[0] == static_cast<Elem>(purpose)) {
+         isAbsolute_ = true;
+         break;
+      }
+   }
    if (isAbsolute_) {
       //Goofy path hardening, the nodes should be properly flagged to begin with
       //Only resorting to this so as to not blow up the entire code base. Maybe 
@@ -21,6 +36,16 @@ hd::Path::Path(const std::vector<Elem> &elems) : path_(elems)
 bool hd::Path::isHardened(size_t index) const
 {
    return (path_[index] & hardFlag);
+}
+
+void hd::Path::setHardened(size_t index, bool value)
+{
+   if (value) {
+      path_[index] |= hardFlag;
+   }
+   else {
+      path_[index] &= ~hardFlag;
+   }
 }
 
 hd::Path::Elem hd::Path::get(int index) const
@@ -56,7 +81,7 @@ void hd::Path::append(Elem elem)
 hd::Path::Elem hd::Path::keyToElem(const std::string &key)
 {
    if (key.empty()) {
-      throw std::runtime_error("empty string key");
+      throw PathException("empty string key");
    }
    const auto hash = BtcUtils::getSha256(key);
    hd::Path::Elem result = 0;
@@ -80,7 +105,7 @@ hd::Path::Elem hd::Path::keyToElem(const std::string &key)
       }
    }
    if (result == 0) {
-      throw std::runtime_error("failed to generate index from key");
+      throw PathException("failed to generate index from key");
    }
    return result;
 }
@@ -108,15 +133,15 @@ void hd::Path::append(const std::string &key)
 
 std::string hd::Path::toString() const
 {
-   if (path_.empty())
-      throw std::runtime_error("empty path");
-
+   if (path_.empty()) {
+      throw PathException("empty path");
+   }
    std::string result = isAbsolute_ ? "m/" : "";
-   for (size_t i = 0; i < path_.size(); i++) 
-   {
+   for (size_t i = 0; i < path_.size(); i++) {
       result.append(elemToKey(path_[i]));
-      if (i < (path_.size() - 1)) 
+      if (i < (path_.size() - 1)) {
          result.append("/");
+      }
    }
    return result;
 }
@@ -153,30 +178,32 @@ hd::Path hd::Path::fromString(const std::string &s)
    }
 
    Path result;
-   for (unsigned i = 0; i < stringVec.size(); i++) 
-   {
+   for (unsigned i = 0; i < stringVec.size(); i++) {
       auto elem = stringVec[i];
-      if ((elem == "m") && i == 0)
+      if ((elem == "m") && (i == 0)) {
          continue;
-
-      if (!isValidPathElem(elem)) 
-      {
+      }
+      if (!isValidPathElem(elem)) {
          /***
          BIP32 path codec is crucial to wallet consistency, it should 
          abort on failures, or at least fail gracefully. Before this 
          throw, it would just continue on errors. This isn't acceptable 
          behavior.
          ***/
-         throw std::runtime_error("invalid element in BIP32 path");
+         throw PathException("invalid element in BIP32 path");
       }
       auto pe = static_cast<Elem>(std::stoul(elem));
-      if (elem.find("'") != std::string::npos)
+      if (elem.find("'") != std::string::npos) {
          pe |= hardFlag; //proper way to signify hardness, stick to the spec!
+      }
       result.append(pe);
    }
 
-   if ((result.get(0) & ~hardFlag) == hd::purpose) {
-      result.isAbsolute_ = true;
+   const auto firstElem = result.get(0) & ~hardFlag;
+   for (const auto &purpose : hd::supportedPurposes) {
+      if (firstElem == static_cast<Elem>(purpose)) {
+         result.isAbsolute_ = true;
+      }
    }
    return result;
 }
@@ -194,4 +221,36 @@ bool hd::Path::operator < (const hd::Path &other) const
       }
    }
    return false;
+}
+
+
+hd::Purpose bs::hd::purpose(AddressEntryType aet)
+{
+   switch (aet) {
+   case AddressEntryType_Default:
+   case AddressEntryType_P2WPKH:
+      return hd::Purpose::Native;
+   case AddressEntryType_P2SH:
+   case static_cast<AddressEntryType>(AddressEntryType_P2SH | AddressEntryType_P2WPKH):
+      return hd::Purpose::Nested;
+   case AddressEntryType_P2PKH:
+      return hd::Purpose::NonSegWit;
+   default:
+      throw PathException("failed to get purpose for address type "
+         + std::to_string((int)aet));
+   }
+}
+
+AddressEntryType bs::hd::addressType(hd::Path::Elem purpose)
+{
+   switch (static_cast<hd::Purpose>(purpose & ~hardFlag)) {
+   case Purpose::Native:
+      return AddressEntryType_P2WPKH;
+   case Purpose::Nested:
+      return static_cast<AddressEntryType>(AddressEntryType_P2SH | AddressEntryType_P2WPKH);
+   case Purpose::NonSegWit:
+      return AddressEntryType_P2PKH;
+   default:
+      throw PathException("failed to get address type for purpose");
+   }
 }

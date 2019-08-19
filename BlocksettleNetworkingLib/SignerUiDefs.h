@@ -37,10 +37,10 @@ namespace bs {
             return QStringLiteral("manageEncryptionDialog");
          case DialogType::ActivateAutoSign:
             return QStringLiteral("activateAutoSignDialog");
-
-         default:
-            return QStringLiteral("");
          }
+
+         assert(false);
+         return QStringLiteral("");
       }
 
       // List of signer run modes

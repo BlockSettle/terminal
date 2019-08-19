@@ -61,6 +61,8 @@ namespace bs {
       static bs::Address fromRecipient(const std::shared_ptr<ScriptRecipient> &);
       static AddressEntryType guessAddressType(const BinaryData &addr);
 
+      static size_t getPayoutWitnessDataSize();
+
    private:
       Format               format_ = Format::Binary;
       AddressEntryType     aet_;

@@ -27,8 +27,6 @@ public:
       , const std::string &walletsPath, NetworkType);
    InprocSigner(const std::shared_ptr<bs::core::hd::Wallet> &
       , const std::shared_ptr<spdlog::logger> &);
-   InprocSigner(const std::shared_ptr<bs::core::SettlementWallet> &
-      , const std::shared_ptr<spdlog::logger> &);
    ~InprocSigner() noexcept = default;
 
    bool Start() override;
@@ -82,7 +80,7 @@ public:
    void syncAddressBatch(const std::string &walletId, const std::set<BinaryData>& addrSet,
       std::function<void(bs::sync::SyncState)> cb) override;
 
-   void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
+   void syncNewAddresses(const std::string &walletId, const std::vector<std::string> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &
       , bool persistent = true) override;
 

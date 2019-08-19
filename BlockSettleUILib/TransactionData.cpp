@@ -22,11 +22,8 @@ TransactionData::TransactionData(const onTransactionChanged &changedCallback
    , const std::shared_ptr<spdlog::logger> &logger , bool isSegWitInputsOnly, bool confOnly)
    : changedCallback_(changedCallback)
    , logger_(logger)
-   , wallet_(nullptr)
-   , selectedInputs_(nullptr)
    , feePerByte_(0)
    , nextId_(0)
-   , coinSelection_(nullptr)
    , isSegWitInputsOnly_(isSegWitInputsOnly)
    , confirmedInputs_(confOnly)
 {}
@@ -48,10 +45,10 @@ bool TransactionData::InputsLoadedFromArmory() const
    return inputsLoaded_;
 }
 
-bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet, uint32_t topBlock
-   , bool resetInputs, const std::function<void()> &cbInputsReset)
+bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet
+   , uint32_t topBlock, bool resetInputs, const std::function<void()> &cbInputsReset)
 {
-   if (wallet == nullptr) {
+   if (!wallet) {
       return false;
    }
    if (wallet != wallet_) {
@@ -61,15 +58,15 @@ bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet,
       selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
          , isSegWitInputsOnly_, confirmedInputs_
          , [this]() {
-            inputsLoaded_ = true;
-            InvalidateTransactionData();
-         }, cbInputsReset);
+         inputsLoaded_ = true;
+         InvalidateTransactionData();
+      }, cbInputsReset);
 
-      coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
-            return this->selectedInputs_->GetSelectedTransactions();
-         }
+      coinSelection_ = std::make_shared<CoinSelection>([this, wallet](uint64_t) {
+         return selectedInputs_->GetSelectedTransactions();
+      }
          , std::vector<AddressBookEntry>{}
-         , static_cast<uint64_t>(wallet_->getSpendableBalance() * BTCNumericTypes::BalanceDivider)
+      , static_cast<uint64_t>(wallet->getSpendableBalance() * BTCNumericTypes::BalanceDivider)
          , topBlock);
       InvalidateTransactionData();
    }
@@ -81,38 +78,32 @@ bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet,
          selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
             , isSegWitInputsOnly_, confirmedInputs_
             , [this] { InvalidateTransactionData(); }
-            , cbInputsReset);
+         , cbInputsReset);
       }
       InvalidateTransactionData();
    }
-
    return true;
 }
 
 bool TransactionData::setWalletAndInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
    , const std::vector<UTXO> &utxos, uint32_t topBlock)
 {
-   if (wallet == nullptr) {
+   if (!wallet) {
       return false;
    }
    wallet_ = wallet;
-   selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_, utxos
-      , [this] { InvalidateTransactionData(); });
 
-   coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
-      return this->selectedInputs_->GetSelectedTransactions();
+   selectedInputs_ = std::make_shared<SelectedTransactionInputs>(
+      wallet, utxos, [this] { InvalidateTransactionData(); });
+
+   coinSelection_ = std::make_shared<CoinSelection>([this, wallet](uint64_t) {
+      return selectedInputs_->GetSelectedTransactions();
    }
       , std::vector<AddressBookEntry>{}
-   , static_cast<uint64_t>(wallet_->getSpendableBalance() * BTCNumericTypes::BalanceDivider)
+   , static_cast<uint64_t>(wallet->getSpendableBalance() * BTCNumericTypes::BalanceDivider)
       , topBlock);
    InvalidateTransactionData();
-
    return true;
-}
-
-std::shared_ptr<SelectedTransactionInputs> TransactionData::GetSelectedInputs()
-{
-   return selectedInputs_;
 }
 
 TransactionData::TransactionSummary TransactionData::GetTransactionSummary() const
@@ -155,12 +146,12 @@ void TransactionData::enableTransactionUpdate()
 
 bool TransactionData::UpdateTransactionData()
 {
-   if ((selectedInputs_ == nullptr) || (wallet_ == nullptr)) {
+   if (!selectedInputs_ || !wallet_) {
       return false;
    }
+   uint64_t availableBalance = 0;
 
    std::vector<UTXO> transactions = decorateUTXOs();
-   uint64_t availableBalance = 0;
    for (const auto &tx : transactions) {
       availableBalance += tx.getValue();
    }
@@ -207,8 +198,7 @@ bool TransactionData::UpdateTransactionData()
             std::round((float)summary_.totalFee / (float)summary_.txVirtSize);
          summary_.hasChange = false;
          summary_.selectedBalance = UiUtils::amountToBtc(availableBalance);
-      }
-      else if (selectedInputs_->UseAutoSel()) {
+      } else if (selectedInputs_->UseAutoSel()) {
          UtxoSelection selection;
          try {
             selection = coinSelection_->getUtxoSelectionForRecipients(payment
@@ -232,8 +222,7 @@ bool TransactionData::UpdateTransactionData()
          summary_.feePerByte = selection.fee_byte_;
          summary_.hasChange = selection.hasChange_;
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
-      }
-      else {
+      } else {
          UtxoSelection selection = computeSizeAndFee(transactions, payment);
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
@@ -247,10 +236,10 @@ bool TransactionData::UpdateTransactionData()
          summary_.hasChange = selection.hasChange_;
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
 
-/*         if (!selection.hasChange_) {  // sometimes selection calculation is too intelligent - prevent change address removal
-            summary_.totalFee = totalFee();
-            summary_.feePerByte = feePerByte();
-         }*/
+         /*         if (!selection.hasChange_) {  // sometimes selection calculation is too intelligent - prevent change address removal
+                     summary_.totalFee = totalFee();
+                     summary_.feePerByte = feePerByte();
+                  }*/
       }
       summary_.usedTransactions = usedUTXO_.size();
    }
@@ -264,9 +253,9 @@ bool TransactionData::UpdateTransactionData()
 // Calculate the maximum fee for a given recipient.
 double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool force) const
 {
-   if ((selectedInputs_ == nullptr) || (wallet_ == nullptr)) {
+   if (!coinSelection_) {
       if (logger_) {
-         logger_->error("[TransactionData::CalculateMaxAmount] selInputs or wallet are missing");
+         logger_->error("[TransactionData::CalculateMaxAmount] wallet is missing");
       }
       return std::numeric_limits<double>::infinity();
    }
@@ -367,7 +356,7 @@ bool TransactionData::RecipientsReady() const
 std::vector<UTXO> TransactionData::decorateUTXOs(const std::vector<UTXO> &inUTXOs) const
 {
    std::vector<UTXO> inputUTXOs;
-   if ((selectedInputs_ == nullptr || wallet_ == nullptr) && inUTXOs.empty()) {
+   if (!selectedInputs_ && inUTXOs.empty()) {
       return inputUTXOs;
    }
 
@@ -466,7 +455,17 @@ size_t TransactionData::getVirtSize(const UtxoSelection& inUTXOSel) const
 
 void TransactionData::setFeePerByte(float feePerByte)
 {
-   feePerByte_ = feePerByte;
+   // Our fees estimation is not 100% accurate (we can't know how much witness size will have,
+   // because we don't know signature(s) size in advance, it could be 73, 72, and 71).
+   // As the result we might hit "min fee relay not meet" error (when actual fees is lower then 1 sat/bytes).
+   // Let's add a workaround for this: don't allow feePerByte be less than 1.005f (that's just empirical estimate)
+   const float minRelayFeeFixed = 1.005f;
+
+   if (feePerByte >= 1.0f && feePerByte < minRelayFeeFixed) {
+      feePerByte_ = minRelayFeeFixed;
+   } else {
+      feePerByte_ = feePerByte;
+   }
    totalFee_ = 0;
    InvalidateTransactionData();
 }
@@ -530,9 +529,6 @@ void TransactionData::ReserveUtxosFor(double amount, const std::string &reserveI
 
 void TransactionData::ReloadSelection(const std::vector<UTXO> &utxos)
 {
-   if (!selectedInputs_) {
-      return;
-   }
    selectedInputs_->Reload(utxos);
    InvalidateTransactionData();
 }
@@ -558,8 +554,7 @@ std::vector<UTXO> TransactionData::inputs() const
 
 bool TransactionData::IsTransactionValid() const
 {
-   return (wallet_ != nullptr)
-      && (selectedInputs_ != nullptr)
+   return wallet_ && selectedInputs_
       && summary_.usedTransactions != 0
       && (!qFuzzyIsNull(feePerByte_) || totalFee_ != 0 || summary_.totalFee != 0)
       && RecipientsReady();
@@ -753,6 +748,9 @@ std::vector<std::shared_ptr<ScriptRecipient>> TransactionData::GetRecipientList(
 
 bs::core::wallet::TXSignRequest TransactionData::createUnsignedTransaction(bool isRBF, const bs::Address &changeAddress)
 {
+   if (!wallet_) {
+      return {};
+   }
    unsignedTxReq_ = wallet_->createTXRequest(inputs(), GetRecipientList(), summary_.totalFee, isRBF, changeAddress);
    if (!unsignedTxReq_.isValid()) {
       throw std::runtime_error("missing unsigned TX");
@@ -770,18 +768,23 @@ bs::core::wallet::TXSignRequest TransactionData::getSignTxRequest() const
 }
 
 bs::core::wallet::TXSignRequest TransactionData::createTXRequest(bool isRBF
-                                                 , const bs::Address &changeAddr
-                                                , const uint64_t& origFee) const
+   , const bs::Address &changeAddr, const uint64_t& origFee) const
 {
+   if (!wallet_) {
+      return {};
+   }
    return wallet_->createTXRequest(inputs(), GetRecipientList()
-                                   , summary_.totalFee, isRBF, changeAddr
-                                   , origFee);
+      , summary_.totalFee, isRBF, changeAddr, origFee);
 }
 
 bs::core::wallet::TXSignRequest TransactionData::createPartialTXRequest(uint64_t spendVal, float feePerByte
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const BinaryData &prevData
    , const std::vector<UTXO> &utxos)
 {
+   if (!wallet_) {
+      return {};
+   }
+
    auto promAddr = std::make_shared<std::promise<bs::Address>>();
    auto futAddr = promAddr->get_future();
    const auto &cbAddr = [promAddr](const bs::Address &addr) {
