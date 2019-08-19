@@ -2,7 +2,6 @@
 
 #include "ChatProtocol/ClientPartyLogic.h"
 #include "ChatProtocol/ClientParty.h"
-#include "ChatProtocol/ClientPrivateDMParty.h"
 
 #include <disable_warnings.h>
 #include <spdlog/logger.h>
@@ -35,15 +34,25 @@ namespace Chat
       {
          const PartyPacket& partyPacket = welcomeResponse.party(i);
 
-         if (partyPacket.party_type() == PartyType::GLOBAL)
+         ClientPartyPtr clientPartyPtr = std::make_shared<ClientParty>(
+            partyPacket.party_id(), partyPacket.party_type(), partyPacket.party_subtype(), partyPacket.party_state());
+         clientPartyPtr->setDisplayName(partyPacket.display_name());
+
+         if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
          {
-            ClientPartyPtr clientPartyPtr = std::make_shared<ClientParty>(
-               partyPacket.id(), partyPacket.party_type(), partyPacket.party_subtype(), partyPacket.party_state());
+            PartyRecipientsPtrList recipients;
+            for (int i = 0; i < partyPacket.recipient_size(); i++)
+            {
+               PartyRecipientPacket recipient = partyPacket.recipient(i);
+               PartyRecipientPtr recipientPtr =
+                  std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key());
+               recipients.push_back(recipientPtr);
+            }
 
-            clientPartyPtr->setDisplayName(partyPacket.display_name());
-
-            clientPartyModelPtr_->insertParty(clientPartyPtr);
+            clientPartyPtr->setRecipients(recipients);
          }
+
+         clientPartyModelPtr_->insertParty(clientPartyPtr);
       }
 
       emit partyModelChanged();
@@ -80,43 +89,87 @@ namespace Chat
 
    void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName)
    {
-      // check if party exist
+      // check if private party exist
       IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
 
       for (const auto& partyId : idPartyList)
       {
          ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(partyId);
-         if (PartyType::PRIVATE_DIRECT_MESSAGE != clientPartyPtr->partyType() && PartySubType::STANDARD != clientPartyPtr->partySubType())
+         if (!clientPartyPtr)
          {
             continue;
          }
 
-         ClientPrivateDMPartyPtr clientPrivateDMParty = std::dynamic_pointer_cast<ClientPrivateDMParty>(clientPartyPtr);
-
-         if (!clientPrivateDMParty)
+         if (PartyType::PRIVATE_DIRECT_MESSAGE != clientPartyPtr->partyType() || PartySubType::STANDARD != clientPartyPtr->partySubType())
          {
-            emit error(ClientPartyLogicError::DynamicPointerCast, partyId);
             continue;
          }
 
-         Recipients recipients = clientPrivateDMParty->getRecipientsExceptMe(currentUserPtr->displayName());
+         PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
          for (const auto recipient : recipients)
          {
-            if (recipient == remoteUserName)
+            if (recipient->userName() == remoteUserName)
             {
                // party already existed
+               emit privatePartyAlreadyExist(clientPartyPtr->id());
                return;
             }
          }
-
-         // party not exist, create new one
-         ClientPrivateDMPartyPtr newClientPrivateDMPartyPtr = 
-            std::make_shared<ClientPrivateDMParty>(QUuid::createUuid().toString().toStdString());
-
-         newClientPrivateDMPartyPtr->setDisplayName(remoteUserName);
-
-         clientPartyModelPtr_->insertParty(clientPartyPtr);
       }
+
+      // party not exist, create new one
+      ClientPartyPtr newClientPrivatePartyPtr =
+         std::make_shared<ClientParty>(QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString(), PartyType::PRIVATE_DIRECT_MESSAGE, PartySubType::STANDARD);
+
+      newClientPrivatePartyPtr->setDisplayName(remoteUserName);
+      // setup recipients for new private party
+      PartyRecipientsPtrList recipients;
+      recipients.push_back(std::make_shared<PartyRecipient>(currentUserPtr->userName()));
+      recipients.push_back(std::make_shared<PartyRecipient>(remoteUserName));
+      newClientPrivatePartyPtr->setRecipients(recipients);
+
+      // update model
+      clientPartyModelPtr_->insertParty(newClientPrivatePartyPtr);
+      emit partyModelChanged();
+
+      // save party in db
+      clientDBServicePtr_->createNewParty(newClientPrivatePartyPtr->id());
+
+      emit privatePartyCreated(newClientPrivatePartyPtr->id());
+   }
+
+   void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const google::protobuf::Message& msg)
+   {
+      PrivatePartyRequest privatePartyRequest;
+      privatePartyRequest.CopyFrom(msg);
+
+      PartyPacket partyPacket = privatePartyRequest.party_packet();
+
+      ClientPartyPtr newClientPrivatePartyPtr =
+         std::make_shared<ClientParty>(
+            partyPacket.party_id(),
+            partyPacket.party_type(),
+            partyPacket.party_subtype()
+         );
+
+      PartyRecipientsPtrList recipients;
+      for (int i = 0; i < partyPacket.recipient_size(); i++)
+      {
+         PartyRecipientPtr recipient = std::make_shared<PartyRecipient>(
+            partyPacket.recipient(i).user_name(), partyPacket.recipient(i).public_key()
+         );
+
+         recipients.push_back(recipient);
+      }
+
+      // update model
+      clientPartyModelPtr_->insertParty(newClientPrivatePartyPtr);
+      emit partyModelChanged();
+
+      // save party in db
+      clientDBServicePtr_->createNewParty(newClientPrivatePartyPtr->id());
+
+      // ! Do NOT emit here privatePartyCreated, it's connected with party request
    }
 
 }

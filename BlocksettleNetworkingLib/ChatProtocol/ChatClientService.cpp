@@ -18,7 +18,7 @@ namespace Chat
       connect(this, &ChatClientService::SendPartyMessage, worker(), &ChatClientLogic::SendPartyMessage);
 
       ////////// RETURN SIGNALS //////////
-      connect(worker(), &ChatClientLogic::chatUserDisplayNameChanged, this, &ChatClientService::chatUserDisplayNameChanged);
+      connect(worker(), &ChatClientLogic::chatUserUserNameChanged, this, &ChatClientService::chatUserUserNameChanged);
       connect(worker(), &ChatClientLogic::chatClientError, this, &ChatClientService::chatClientError);
       connect(worker(), &ChatClientLogic::clientLoggedOutFromServer, this, &ChatClientService::clientLoggedOutFromServer);
       connect(worker(), &ChatClientLogic::partyModelChanged, this, &ChatClientService::partyModelChanged);

@@ -10,6 +10,7 @@
 #include "ChatProtocol/ChatUser.h"
 #include "ChatProtocol/ClientPartyLogic.h"
 #include "ChatProtocol/ClientDBService.h"
+#include "ChatProtocol/SessionKeyHolder.h"
 
 #include "chat.pb.h"
 
@@ -44,7 +45,7 @@ namespace Chat
       void prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
       void setMessageSeen(const ClientPartyPtr& clientPartyPtr, const std::string& messageId);
 
-      void prepareRequestPrivateParty(const std::string& userName);
+      void prepareRequestPrivateParty(const std::string& partyId);
 
    public slots:
       void onDataReceived(const std::string&);
@@ -53,6 +54,10 @@ namespace Chat
       void onError(DataConnectionListener::DataConnectionError);
 
       void messagePacketSent(const std::string& messageId);
+      void sendPrivatePartyState(const std::string& partyId, const Chat::PartyState& partyState);
+
+      void sessionKeysForUser(const Chat::SessionKeyDataPtr& sessionKeyDataPtr);
+      void sessionKeysForUserFailed(const std::string& userName);
 
    signals:
       void sendPacket(const google::protobuf::Message& message);
@@ -70,17 +75,24 @@ namespace Chat
       void prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
       void prepareAndSendPrivateMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
 
+      void requestSessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey);
+      void replySessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey);
+
       void handleWelcomeResponse(const google::protobuf::Message& msg);
       void handleLogoutResponse(const google::protobuf::Message& msg);
       void handleStatusChanged(const google::protobuf::Message& msg);
       void handlePartyMessageStateUpdate(const google::protobuf::Message& msg);
       void handlePartyMessagePacket(const google::protobuf::Message& msg);
+      void handlePrivatePartyRequest(const google::protobuf::Message& msg);
+      void handleRequestSessionKeyExchange(const google::protobuf::Message& msg);
+      void handleReplySessionKeyExchange(const google::protobuf::Message& msg);
 
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;
       ApplicationSettingsPtr appSettings_;
       ClientPartyLogicPtr clientPartyLogicPtr_;
       ClientDBServicePtr clientDBServicePtr_;
+      SessionKeyHolderPtr sessionKeyHolderPtr_;
    };
 
    using ClientConnectionLogicPtr = std::shared_ptr<ClientConnectionLogic>;

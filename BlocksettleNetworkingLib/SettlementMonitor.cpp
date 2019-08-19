@@ -3,51 +3,11 @@
 #include "CoinSelection.h"
 #include "Wallets/SyncWallet.h"
 
-
-bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
-   , const std::shared_ptr<spdlog::logger>& logger)
-   : rtWallet_(rtWallet)
-   , settlAddress_(addr->getPrefixedHash())
-   , armoryPtr_(armory)
-   , logger_(logger)
-{
-   init(armory.get());
-   initialize();
-
-   const auto ae = entryToAddress(addr);
-   buyAuthKey_ = ae->buyChainedPubKey();
-   sellAuthKey_ = ae->sellChainedPubKey();
-
-   const auto &addrHashes = addr->getAsset()->supportedAddrHashes();
-   ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
-}
-
-bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
-   , const std::shared_ptr<spdlog::logger>& logger)
-   : rtWallet_(rtWallet)
-   , armoryPtr_(armory)
-   , logger_(logger)
-   , settlAddress_(addr)
-   , buyAuthKey_(addrEntry->buyChainedPubKey())
-   , sellAuthKey_(addrEntry->sellChainedPubKey())
-{
-   init(armory.get());
-   initialize();
-
-   const auto &addrHashes = addrEntry->supportedAddrHashes();
-   ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
-}
-
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<spdlog::logger> &logger, const bs::Address &addr
-   , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
-   , const std::function<void()> &cbInited, const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet)
-   : rtWallet_(rtWallet)
-   , armoryPtr_(armory)
+   , const SecureBinaryData &buyAuthKey, const SecureBinaryData &sellAuthKey
+   , const std::function<void()> &cbInited)
+   : armoryPtr_(armory)
    , logger_(logger)
    , settlAddress_(addr)
    , buyAuthKey_(buyAuthKey)
@@ -58,17 +18,11 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection>
 
    ownAddresses_.insert({ addr.unprefixed() });
 
-   if (!rtWallet) {
-      const auto walletId = addr.display();
-      rtWallet_ = armory_->instantiateWallet(walletId);
-      const auto regId = armory_->registerWallet(rtWallet_, walletId, walletId
-         , { addr.id() }, [cbInited](const std::string &) { cbInited(); });
-   }
-   else {
-      if (cbInited) {
-         cbInited();
-      }
-   }
+   const auto walletId = addr.display();
+   rtWallet_ = armory_->instantiateWallet(walletId);
+   const auto regId = armory_->registerWallet(rtWallet_, walletId, walletId
+      , { addr.id() }
+      , [cbInited](const std::string &) { cbInited(); });
 }
 
 void bs::SettlementMonitor::onNewBlock(unsigned int)
@@ -366,16 +320,14 @@ uint64_t bs::SettlementMonitor::getEstimatedFeeFor(UTXO input, const bs::Address
    return coinSelection.getFeeForMaxVal(scriptRecipient->getSize(), feePerByte, { input });
 }
 
-bs::core::wallet::TXSignRequest bs::SettlementMonitor::createPayoutTXRequest(const UTXO &input
+bs::core::wallet::TXSignRequest bs::SettlementMonitor::createPayoutTXRequest(UTXO input
    , const bs::Address &recvAddr, float feePerByte, unsigned int topBlock)
 {
    bs::core::wallet::TXSignRequest txReq;
    txReq.inputs.push_back(input);
+   input.isInputSW_ = true;
+   input.witnessDataSizeBytes_ = unsigned(bs::Address::getPayoutWitnessDataSize());
    uint64_t fee = getEstimatedFeeFor(input, recvAddr, feePerByte, topBlock);
-
-   if (fee < bs::sync::wallet::kMinRelayFee) {
-      fee = bs::sync::wallet::kMinRelayFee;
-   }
 
    uint64_t value = input.getValue();
    if (value < fee) {
@@ -420,7 +372,7 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
    auto result = std::make_shared<Result>();
    result->value = value;
 
-   const auto &cbProcess = [result, settlAddr, buyAuthKey, sellAuthKey, tx, cb, logger]
+   const auto cbProcess = [result, settlAddr, buyAuthKey, sellAuthKey, tx, cb, logger]
       (const std::vector<Tx> &txs)
    {
       for (const auto &prevTx : txs) {
@@ -445,6 +397,7 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
 
       //serialize signed tx
       auto txdata = tx.serialize();
+
       auto bctx = BCTX::parse(txdata);
 
       std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
@@ -493,13 +446,6 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
    }
 }
 
-std::shared_ptr<bs::SettlementAddress> bs::entryToAddress(
-   const std::shared_ptr<bs::core::SettlementAddressEntry> &ae)
-{
-   return std::make_shared<bs::SettlementAddress>(ae->getAsset()->supportedAddrHashes()
-      , ae->getAsset()->buyChainedPubKey(), ae->getAsset()->sellChainedPubKey());
-}
-
 void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntry &entry
    , std::function<void(PayoutSigner::Type)> cb) const
 {
@@ -525,20 +471,6 @@ bs::SettlementMonitor::~SettlementMonitor() noexcept
    FastLock locker(walletLock_);
    rtWallet_ = nullptr;
 }
-
-bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
-   , const std::shared_ptr<spdlog::logger>& logger)
- : SettlementMonitor(rtWallet, armory, addr, logger)
-{}
-
-bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
-   , const std::shared_ptr<spdlog::logger>& logger)
-   : SettlementMonitor(rtWallet, armory, addrEntry, addr, logger)
-{}
 
 bs::SettlementMonitorCb::~SettlementMonitorCb() noexcept
 {

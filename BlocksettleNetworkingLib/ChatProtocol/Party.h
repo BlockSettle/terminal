@@ -1,8 +1,11 @@
 #ifndef Party_h__
 #define Party_h__
 
+#include <QMetaType>
+
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "chat.pb.h"
 
@@ -38,6 +41,9 @@ namespace Chat
    };
 
    using PartyPtr = std::shared_ptr<Party>;
+   using PartyPtrList = std::vector<PartyPtr>;
 }
+
+Q_DECLARE_METATYPE(Chat::PartyPtrList)
 
 #endif // Party_h__

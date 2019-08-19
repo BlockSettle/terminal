@@ -85,7 +85,6 @@ namespace bs {
          QPushButton* quoteButton() const;
 
       signals:
-         void autoSignActivated(const QString &hdWalletId, bool active);
          void submitQuoteNotif(network::QuoteNotification);
          void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
 
@@ -178,6 +177,8 @@ namespace bs {
 
          std::shared_ptr<DealerUtxoResAdapter>  utxoAdapter_;
 
+         bool autoSignState_{false};
+
       private:
          void reset();
          void validateGUI();
@@ -203,7 +204,6 @@ namespace bs {
             , std::function<void(bs::network::QuoteNotification)>);
          void tryEnableAutoSign();
          void disableAutoSign();
-         void updateAutoSignState();
       };
 
    }  //namespace ui

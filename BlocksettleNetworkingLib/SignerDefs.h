@@ -63,7 +63,7 @@ namespace sync {
    {
       struct Leaf {
          std::string          id;
-         bs::hd::Path::Elem   index;
+         bs::hd::Path         path;
          bool extOnly;
          BinaryData  extraData;
       };
@@ -113,7 +113,7 @@ namespace sync {
       };
       struct Leaf {
          std::string          id;
-         bs::hd::Path::Elem   index;
+         bs::hd::Path         path;
          BinaryData           publicKey;
          BinaryData           chainCode;
          std::vector<Address> addresses;

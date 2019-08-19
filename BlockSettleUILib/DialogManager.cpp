@@ -6,6 +6,11 @@
 #include <cmath>
 #include "QLayout"
 
+namespace {
+   // In unix based os impposible to predict system header height
+   const int unixHeightDelta = 50;
+}
+
 DialogManager::DialogManager(const QWidget *mainWindow)
    : mainWindow_(mainWindow)
 {
@@ -24,11 +29,19 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
    dlg->layout()->activate();
 #endif
 
-   const QPoint center = getGeometry(mainWindow_).center();
+   QPoint center = getGeometry(mainWindow_).center();
+#ifndef Q_OS_WIN
+   center.setY(center.y() - unixHeightDelta);
+#endif
+
 
    const QRect inputGeometry = getGeometry(dlg);
    const QRect screenSize = getGeometry(QApplication::desktop());
+#ifdef Q_OS_WIN
    const QRect available = QApplication::desktop()->availableGeometry();
+#else
+   const QRect available = QApplication::desktop()->screenGeometry();
+#endif
    // For windows those value could be negative
    // For Ubuntu & OSX they should be zero
    const int deltaX = std::abs(screenSize.x());

@@ -103,9 +103,9 @@ public:
    virtual bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog
       , const QVariantMap &data = QVariantMap()) = 0;
 
-   virtual void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
+   virtual void syncNewAddress(const std::string &walletId, const std::string &index
       , const std::function<void(const bs::Address &)> &);
-   virtual void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
+   virtual void syncNewAddresses(const std::string &walletId, const std::vector<std::string> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) = 0;
 
    const OpMode &opMode() const { return mode_; }

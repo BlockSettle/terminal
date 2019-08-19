@@ -23,6 +23,12 @@ namespace Chat
    {
       connect(this, &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr_.get(), &ClientPartyLogic::onUserStatusChanged);
       connect(this, &ClientConnectionLogic::error, this, &ClientConnectionLogic::handleLocalErrors);
+
+      sessionKeyHolderPtr_ = std::make_shared<SessionKeyHolder>(loggerPtr_, this);
+      connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::requestSessionKeyExchange, this, &ClientConnectionLogic::requestSessionKeyExchange);
+      connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::replySessionKeyExchange, this, &ClientConnectionLogic::replySessionKeyExchange);
+      connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::sessionKeysForUser, this, &ClientConnectionLogic::sessionKeysForUser);
+      connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::sessionKeysForUserFailed, this, &ClientConnectionLogic::sessionKeysForUserFailed);
    }
 
    void ClientConnectionLogic::onDataReceived(const std::string& data)
@@ -68,6 +74,27 @@ namespace Chat
          return;
       }
 
+      PrivatePartyRequest privatePartyRequest;
+      if (ProtobufUtils::pbStringToMessage<PrivatePartyRequest>(data, &privatePartyRequest))
+      {
+         handlePrivatePartyRequest(privatePartyRequest);
+         return;
+      }
+
+      RequestSessionKeyExchange requestSessionKey;
+      if (ProtobufUtils::pbStringToMessage<RequestSessionKeyExchange>(data, &requestSessionKey))
+      {
+         handleRequestSessionKeyExchange(requestSessionKey);
+         return;
+      }
+
+      ReplySessionKeyExchange replyKeyExchange;
+      if (ProtobufUtils::pbStringToMessage<ReplySessionKeyExchange>(data, &replyKeyExchange))
+      {
+         handleReplySessionKeyExchange(replyKeyExchange);
+         return;
+      }
+
       QString what = QString::fromLatin1("data: %1").arg(QString::fromStdString(data));
       emit error(ClientConnectionLogicError::UnhandledPacket, what.toStdString());
    }
@@ -77,7 +104,7 @@ namespace Chat
       qDebug() << "ClientConnectionLogic::onConnected Thread ID:" << this->thread()->currentThreadId();
 
       Chat::WelcomeRequest welcomeRequest;
-      welcomeRequest.set_user_name(currentUserPtr()->displayName());
+      welcomeRequest.set_user_name(currentUserPtr()->userName());
       welcomeRequest.set_client_public_key(currentUserPtr()->publicKey().toBinStr());
 
       emit sendPacket(welcomeRequest);
@@ -92,27 +119,7 @@ namespace Chat
    {
 
    }
-/*
-   template<typename T>
-   bool ClientConnectionLogic::pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg)
-   {
-      google::protobuf::Any any;
-      any.ParseFromString(packetString);
 
-      if (any.Is<T>())
-      {
-         if (!any.UnpackTo(msg))
-         {
-            loggerPtr_->debug("[ServerConnectionLogic::pbStringToMessage] Can't unpack to {}", typeid(T).name());
-            return false;
-         }
-
-         return true;
-      }
-
-      return false;
-   }
-*/
    void ClientConnectionLogic::handleWelcomeResponse(const google::protobuf::Message& msg)
    {
       WelcomeResponse welcomeResponse;
@@ -248,12 +255,158 @@ namespace Chat
       clientDBServicePtr_->updateMessageState(messageId, partyMessageState);
    }
 
-   void ClientConnectionLogic::prepareAndSendPrivateMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
+   void ClientConnectionLogic::prepareRequestPrivateParty(const std::string& partyId)
    {
-      // TODO
+      PartyPtr partyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
+
+      if (nullptr == partyPtr)
+      {
+         return;
+      }
+
+      ClientPartyPtr clientPartyPtr = std::dynamic_pointer_cast<ClientParty>(partyPtr);
+
+      if (nullptr == clientPartyPtr)
+      {
+         return;
+      }
+
+      // update party state
+      clientPartyPtr->setPartyState(PartyState::REQUESTED);
+
+      PrivatePartyRequest privatePartyRequest;
+      PartyPacket *partyPacket = privatePartyRequest.mutable_party_packet();
+      partyPacket->set_party_id(partyId);
+      partyPacket->set_display_name(clientPartyPtr->getSecondRecipient(currentUserPtr()->userName())->userName());
+      partyPacket->set_party_type(clientPartyPtr->partyType());
+      partyPacket->set_party_subtype(clientPartyPtr->partySubType());
+      partyPacket->set_party_state(clientPartyPtr->partyState());
+
+      for (const PartyRecipientPtr& recipient : clientPartyPtr->recipients())
+      {
+         PartyRecipientPacket* partyRecipientPacket = partyPacket->add_recipient();
+         partyRecipientPacket->set_user_name(recipient->userName());
+      }
+
+      emit sendPacket(privatePartyRequest);
    }
 
-   void ClientConnectionLogic::prepareRequestPrivateParty(const std::string& userName)
+   void ClientConnectionLogic::handlePrivatePartyRequest(const google::protobuf::Message& msg)
+   {
+      PrivatePartyRequest privatePartyRequest;
+      privatePartyRequest.CopyFrom(msg);
+
+      // 1. check if model have this same party id
+      // 2. if have and local party state is initialized then reply initialized state
+      // 3. if not create new private party
+      // 4. save party id in db
+
+      ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      PartyPtr partyPtr = clientPartyModelPtr->getClientPartyById(privatePartyRequest.party_packet().party_id());
+
+      // local party exist
+      if (partyPtr)
+      {
+         if (PartyState::INITIALIZED == partyPtr->partyState() || PartyState::REJECTED == partyPtr->partyState())
+         {
+            // party is in initialized or rejected state (already accepted)
+            // send this state to requester
+            sendPrivatePartyState(partyPtr->id(), partyPtr->partyState());
+            return;
+         }
+
+         return;
+      }
+
+      // local party not exist, create new one
+      clientPartyLogicPtr_->createPrivatePartyFromPrivatePartyRequest(currentUserPtr(), privatePartyRequest);
+   }
+
+   void ClientConnectionLogic::sendPrivatePartyState(const std::string& partyId, const Chat::PartyState& partyState)
+   {
+      PrivatePartyRequest privatePartyRequest;
+      PartyPacket* partyPacket = privatePartyRequest.mutable_party_packet();
+      partyPacket->set_party_id(partyId);
+      partyPacket->set_party_state(partyState);
+
+      sendPacket(privatePartyRequest);
+   }
+
+   void ClientConnectionLogic::requestSessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey)
+   {
+      RequestSessionKeyExchange requestSessionKey;
+      requestSessionKey.set_sender_user_name(currentUserPtr()->userName());
+      requestSessionKey.set_encoded_public_key(encodedLocalSessionPublicKey.toBinStr());
+      requestSessionKey.set_receiver_user_name(receieverUserName);
+
+      sendPacket(requestSessionKey);
+   }
+
+   void ClientConnectionLogic::replySessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey)
+   {
+      ReplySessionKeyExchange replyKeyExchange;
+      replyKeyExchange.set_sender_user_name(currentUserPtr()->userName());
+      replyKeyExchange.set_encoded_public_key(encodedLocalSessionPublicKey.toBinStr());
+      replyKeyExchange.set_receiver_user_name(receieverUserName);
+
+      sendPacket(replyKeyExchange);
+   }
+
+   void ClientConnectionLogic::handleRequestSessionKeyExchange(const google::protobuf::Message& msg)
+   {
+      RequestSessionKeyExchange requestKeyExchange;
+      requestKeyExchange.CopyFrom(msg);
+
+      sessionKeyHolderPtr_->onIncomingRequestSessionKeyExchange(requestKeyExchange.sender_user_name(), requestKeyExchange.encoded_public_key(), currentUserPtr()->privateKey());
+   }
+
+   void ClientConnectionLogic::handleReplySessionKeyExchange(const google::protobuf::Message& msg)
+   {
+      ReplySessionKeyExchange replyKeyExchange;
+      replyKeyExchange.CopyFrom(msg);
+
+      sessionKeyHolderPtr_->onIncomingReplySessionKeyExchange(replyKeyExchange.sender_user_name(), replyKeyExchange.encoded_public_key());
+   }
+
+   void ClientConnectionLogic::prepareAndSendPrivateMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
+   {
+      // prepare
+      auto partyId = clientPartyPtr->id();
+      auto messageId = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
+      auto timestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+      auto message = data;
+      auto encryptionType = Chat::EncryptionType::UNENCRYPTED;
+      auto partyMessageState = Chat::PartyMessageState::UNSENT;
+
+      PartyMessagePacket partyMessagePacket;
+      partyMessagePacket.set_party_id(partyId);
+      partyMessagePacket.set_message_id(messageId);
+      partyMessagePacket.set_timestamp_ms(timestamp);
+      partyMessagePacket.set_message(message);
+      partyMessagePacket.set_encryption(encryptionType);
+      partyMessagePacket.set_nonce("");
+      partyMessagePacket.set_party_message_state(partyMessageState);
+
+      // save in db
+      clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
+
+      // call session key handler
+      PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr()->userName());
+      for (const auto recipient : recipients)
+      {
+         sessionKeyHolderPtr_->requestSessionKeysForUser(recipient->userName(), recipient->publicKey());
+      }
+   }
+
+   void ClientConnectionLogic::sessionKeysForUser(const Chat::SessionKeyDataPtr& sessionKeyDataPtr)
+   {
+      // read msg from db
+      // encrypt by aead
+      // send msg
+      // delete msg in db
+   }
+
+   void ClientConnectionLogic::sessionKeysForUserFailed(const std::string& userName)
    {
 
    }

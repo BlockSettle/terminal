@@ -43,9 +43,9 @@ namespace Chat
       try {
          existingTables = db_.tables();
       }
-      catch (std::exception& e)
+      catch (std::exception&)
       {
-         loggerPtr_->error("[DatabaseCreator::createMissingTables] Error: {}", e.what());
+         loggerPtr_->error("[DatabaseCreator::createMissingTables]: Failed to create tables in {}, Error: {}", db_.connectionName().toStdString(), db_.lastError().text().toStdString());
          return false;
       }
 

@@ -2,7 +2,7 @@
 #define __SETTLEMENT_MONITOR_H__
 
 #include "ArmoryConnection.h"
-#include "SettlementAddressEntry.h"
+#include "CoreWallet.h"
 
 #include <spdlog/spdlog.h>
 
@@ -13,32 +13,6 @@
 #include <QObject>
 
 namespace bs {
-
-   class SettlementAddress
-   {
-   public:
-      SettlementAddress(const std::vector<BinaryData> &scripts
-         , const BinaryData &buyKey, const BinaryData &sellKey)
-         : scripts_(scripts), buyPubKey_(buyKey), sellPubKey_(sellKey) {}
-
-      std::vector<BinaryData> supportedAddrHashes() const { return scripts_; }
-      BinaryData getScript() const {
-         if (!scripts_.empty()) {
-            return scripts_[0];
-         }
-         return {};
-      }
-
-      BinaryData buyChainedPubKey() const { return buyPubKey_; }
-      BinaryData sellChainedPubKey() const { return sellPubKey_; }
-
-   private:
-      std::vector<BinaryData> scripts_;
-      BinaryData  buyPubKey_;
-      BinaryData  sellPubKey_;
-   };
-
-
    struct PayoutSigner
    {
       enum Type {
@@ -65,24 +39,13 @@ namespace bs {
          , const std::shared_ptr<ArmoryConnection> &, std::function<void(Type)>);
    };
 
-   std::shared_ptr<SettlementAddress> entryToAddress(const std::shared_ptr<core::SettlementAddressEntry> &);
-
    class SettlementMonitor : public ArmoryCallbackTarget
    {
    public:
-      SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-         , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<core::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &);
-      SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-         , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<SettlementAddress> &, const bs::Address &
-         , const std::shared_ptr<spdlog::logger> &);
       SettlementMonitor(const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<spdlog::logger> &, const bs::Address &
-         , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
-         , const std::function<void()> &
-         , const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet=nullptr);
+         , const SecureBinaryData &buyAuthKey, const SecureBinaryData &sellAuthKey
+         , const std::function<void()> &);
 
       ~SettlementMonitor() noexcept override;
 
@@ -94,7 +57,7 @@ namespace bs {
       PayoutSigner::Type getPayoutSignerSide() const { return payoutSignedBy_; }
       void getPayinInput(const std::function<void(UTXO)> &, bool allowZC = true);
 
-      static bs::core::wallet::TXSignRequest createPayoutTXRequest(const UTXO &
+      static bs::core::wallet::TXSignRequest createPayoutTXRequest(UTXO
          , const bs::Address &recvAddr, float feePerByte, unsigned int topBlock);
       static UTXO getInputFromTX(const bs::Address &, const BinaryData &payinHash
          , const double amount);
@@ -133,11 +96,11 @@ namespace bs {
       std::shared_ptr<std::recursive_mutex> quitFlagLock_;
 
    protected:
-      std::shared_ptr<ArmoryConnection>         armoryPtr_;
-      std::shared_ptr<spdlog::logger>           logger_;
-      bs::Address    settlAddress_;
-      BinaryData     buyAuthKey_;
-      BinaryData     sellAuthKey_;
+      std::shared_ptr<ArmoryConnection>   armoryPtr_;
+      std::shared_ptr<spdlog::logger>     logger_;
+      bs::Address                         settlAddress_;
+      SecureBinaryData                    buyAuthKey_;
+      SecureBinaryData                    sellAuthKey_;
 
    protected:
       void IsPayInTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
@@ -157,20 +120,11 @@ namespace bs {
       using onPayOutConfirmedCB = std::function<void (PayoutSigner::Type )>;
 
    public:
-      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-         , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<core::SettlementAddressEntry> &
-         , const std::shared_ptr<spdlog::logger> &);
-      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet
-         , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<SettlementAddress> &, const bs::Address &
-         , const std::shared_ptr<spdlog::logger> &);
       SettlementMonitorCb(const std::shared_ptr<ArmoryConnection> &armory
          , const std::shared_ptr<spdlog::logger> &logger, const bs::Address &addr
-         , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
-         , const std::function<void()> &cbInited
-         , const std::shared_ptr<AsyncClient::BtcWallet> &rtWallet = nullptr)
-         : SettlementMonitor(armory, logger, addr, buyAuthKey, sellAuthKey, cbInited, rtWallet) {}
+         , const SecureBinaryData &buyAuthKey, const SecureBinaryData &sellAuthKey
+         , const std::function<void()> &cbInited)
+         : SettlementMonitor(armory, logger, addr, buyAuthKey, sellAuthKey, cbInited) {}
       ~SettlementMonitorCb() noexcept override;
 
       SettlementMonitorCb(const SettlementMonitorCb&) = delete;

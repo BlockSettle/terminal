@@ -230,9 +230,10 @@ protected:
    std::atomic_bool  maintThreadRunning_{ false };
 
    std::atomic_bool              isOnline_;
-   std::unordered_map<
-   std::string, std::function<void(const std::string &)>> registrationCallbacks_;
-   std::mutex registrationCallbacksMutex_;
+
+   using refreshCB = std::function<void(const std::string &)>;
+   std::unordered_map<std::string, refreshCB>   registrationCallbacks_;
+   std::mutex                                   registrationCallbacksMutex_;
 
    std::mutex  cbMutex_;
    std::map<BinaryData, std::vector<TxCb>>   txCallbacks_;

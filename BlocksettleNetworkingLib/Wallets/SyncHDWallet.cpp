@@ -20,6 +20,12 @@ hd::Wallet::Wallet(const std::string &walletId, const std::string &name
    , signContainer_(container), logger_(logger), isOffline_(isOffline)
 {
    netType_ = getNetworkType();
+   if (isOffline) {
+      encryptionTypes_.push_back(bs::wallet::EncryptionType::Unencrypted);
+   } else {
+      // FIXME: Add Auth eID
+      encryptionTypes_.push_back(bs::wallet::EncryptionType::Password);
+   }
 }
 
 hd::Wallet::~Wallet()
@@ -31,9 +37,9 @@ hd::Wallet::~Wallet()
 
 void hd::Wallet::synchronize(const std::function<void()> &cbDone)
 {
-   if (!signContainer_)
+   if (!signContainer_) {
       return;
-
+   }
    const auto &cbProcess = [this, cbDone](HDWalletData data)
    {
       for (const auto &grpData : data.groups) {
@@ -56,13 +62,13 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
          }
 
          for (const auto &leafData : grpData.leaves) {
-            auto leaf = group->getLeaf(leafData.index);
+            auto leaf = group->getLeaf(leafData.path);
             if (!leaf) {
-               leaf = group->createLeaf(leafData.index, leafData.id);
+               leaf = group->createLeaf(leafData.path, leafData.id);
             }
             if (!leaf) {
                LOG(logger_, error, "[hd::Wallet::synchronize] failed to create leaf {}/{} with id {}"
-                  , (uint32_t)grpData.type, leafData.index, leafData.id);
+                  , (uint32_t)grpData.type, leafData.path.toString(), leafData.id);
                continue;
             }
             if (grpData.type == bs::hd::CoinType::BlockSettle_Settlement) {
@@ -73,7 +79,7 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
                if (!settlGroup) {
                   throw std::runtime_error("invalid settlement group type");
                }
-               settlGroup->addMap(leafData.extraData, leafData.index);
+               settlGroup->addMap(leafData.extraData, leafData.path);
             }
          }
       }
@@ -157,31 +163,31 @@ std::shared_ptr<bs::sync::Wallet> hd::Wallet::getLeaf(const std::string &id) con
 
 std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct, bool isExtOnly)
 {
+   ct = static_cast<bs::hd::CoinType>(ct | bs::hd::hardFlag);
    std::shared_ptr<hd::Group> result;
    result = getGroup(ct);
    if (result) {
       return result;
    }
 
-   const bs::hd::Path path({ bs::hd::purpose, ct });
    switch (ct) {
    case bs::hd::CoinType::BlockSettle_Auth:
-      result = std::make_shared<hd::AuthGroup>(path, name_, desc_, signContainer_
+      result = std::make_shared<hd::AuthGroup>(name_, desc_, signContainer_
          , this, logger_, isExtOnly);
       break;
 
    case bs::hd::CoinType::BlockSettle_CC:
-      result = std::make_shared<hd::CCGroup>(path, name_, desc_, signContainer_
+      result = std::make_shared<hd::CCGroup>(name_, desc_, signContainer_
          , this, logger_, isExtOnly);
       break;
 
    case bs::hd::CoinType::BlockSettle_Settlement:
-      result = std::make_shared<hd::SettlementGroup>(
-         path, name_, desc_, signContainer_, this, logger_);
+      result = std::make_shared<hd::SettlementGroup>(name_, desc_
+         , signContainer_, this, logger_);
       break;
 
    default:
-      result = std::make_shared<hd::Group>(path, name_, hd::Group::nameForType(ct)
+      result = std::make_shared<hd::Group>(ct, name_, hd::Group::nameForType(ct)
          , desc_, signContainer_, this, logger_, isExtOnly);
       break;
    }

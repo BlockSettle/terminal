@@ -44,6 +44,7 @@ enum PacketType
 
    UpdateStatusType   = 26;
    ImportWoWalletType = 27;
+   ExportWoWalletType = 31;
    TerminalEventType  = 29;
 
    DecryptWalletRequestType   = 30;
@@ -220,7 +221,7 @@ message SyncHDWalletResponse
 {
    message Leaf {
       string id = 1;
-      uint32 index = 2;
+      string path = 2;
       bytes  extra_data = 3;
    }
    message Group {
@@ -273,7 +274,7 @@ message CreateWatchingOnlyResponse
    }
    message Leaf {
       string id = 1;
-      uint32 index = 2;
+      string path = 2;
       bytes  public_key = 3;
       bytes  chain_code = 4;
       repeated Address addresses = 5;
@@ -367,6 +368,16 @@ message ImportWoWalletRequest
 {
    string filename = 1;
    bytes  content = 2;
+}
+
+message ExportWoWalletRequest
+{
+   string rootWalletId = 1;
+}
+
+message ExportWoWalletResponse
+{
+   bytes content = 1;
 }
 
 message TerminalEvent

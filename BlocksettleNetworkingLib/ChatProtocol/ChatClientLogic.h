@@ -78,7 +78,7 @@ namespace Chat
       void finished();
       void chatClientError(const Chat::ChatClientLogicError& errorCode, const std::string& what = "");
 
-      void chatUserDisplayNameChanged(const std::string& chatUserDisplayName);
+      void chatUserUserNameChanged(const std::string& chatUserDisplayName);
       void clientLoggedOutFromServer();
       void partyModelChanged();
 
@@ -87,6 +87,8 @@ namespace Chat
       void onCloseConnection();
       void handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what);
       void initDbDone();
+      void privatePartyCreated(const std::string& partyId);
+      void privatePartyAlreadyExist(const std::string& partyId);
 
    private:
       void setClientPartyLogicPtr(ClientPartyLogicPtr val) { clientPartyLogicPtr_ = val; }
@@ -109,5 +111,6 @@ namespace Chat
 Q_DECLARE_METATYPE(DataConnectionListener::DataConnectionError)
 Q_DECLARE_METATYPE(Chat::ChatClientLogicError)
 Q_DECLARE_METATYPE(Chat::ClientPartyLogicPtr)
+Q_DECLARE_METATYPE(Chat::ChatUserPtr);
 
 #endif // ChatClientLogic_h__

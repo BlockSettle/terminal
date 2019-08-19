@@ -58,7 +58,9 @@ double AssetManager::getBalance(const std::string& currency, const std::shared_p
       if (priWallet) {
          const auto &group = priWallet->getGroup(bs::hd::BlockSettle_CC);
          if (group) {
-            const auto &wallet = group->getLeaf(currency);
+            const bs::hd::Path ccLeafPath({ bs::hd::Purpose::Native, bs::hd::CoinType::BlockSettle_CC
+               , bs::hd::Path::keyToElem(currency) });
+            const auto &wallet = group->getLeaf(ccLeafPath);
             if (wallet) {
                return wallet->getTotalBalance();
             }

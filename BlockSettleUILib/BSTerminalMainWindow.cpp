@@ -935,15 +935,16 @@ void BSTerminalMainWindow::onReceive()
          }
       }
    }
-   SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(walletsMgr_, selWalletId, this);
+   SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(
+      walletsMgr_, selWalletId, this);
    selectWalletDialog->exec();
 
    if (selectWalletDialog->result() == QDialog::Rejected) {
       return;
    }
 
-   NewAddressDialog* newAddressDialog = new NewAddressDialog(selectWalletDialog->getSelectedWallet()
-      , signContainer_, selectWalletDialog->isNestedSegWitAddress(), this);
+   NewAddressDialog* newAddressDialog = new NewAddressDialog(
+      selectWalletDialog->getSelectedWallet(), signContainer_, this);
    newAddressDialog->show();
 }
 
@@ -1594,10 +1595,15 @@ void BSTerminalMainWindow::InitWidgets()
    ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
                              , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_);
 
-   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, [this]() {
-      if (createWallet(true))
+   auto primaryWalletCreationCb = [this]() {
+      if (createWallet(true)) {
          ui_->widgetRFQ->forceCheckCondition();
-   });
+         ui_->widgetRFQReply->forceCheckCondition();
+      }
+   };
+
+   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, primaryWalletCreationCb);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this, primaryWalletCreationCb);
 }
 
 void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settings)

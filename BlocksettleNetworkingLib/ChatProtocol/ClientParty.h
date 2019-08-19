@@ -4,14 +4,14 @@
 #include <QObject>
 #include <memory>
 
-#include "ChatProtocol/Party.h"
+#include "ChatProtocol/PrivateDirectMessageParty.h"
 
 #include "chat.pb.h"
 
 namespace Chat
 {
    
-   class ClientParty : public QObject, public virtual Party
+   class ClientParty : public QObject, public PrivateDirectMessageParty
    {
       Q_OBJECT
    public:
