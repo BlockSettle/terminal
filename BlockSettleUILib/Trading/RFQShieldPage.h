@@ -29,13 +29,13 @@ public:
    void showShieldSelectTargetTrade();
    void showShieldSelectTargetDealing();
    void showShieldCreateLeaf(const QString& product);
+   void showShielddGenerateAuthAddress();
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager);
    void setTabType(QString&& tabType);
 
-   bool checkWalletSettings(const QString &product);
-
    using ProductType = bs::network::Asset::Type;
+   bool checkWalletSettings(ProductType productType, const QString &product);
    static ProductType getProductGroup(const QString &productGroup);
 
 signals:
