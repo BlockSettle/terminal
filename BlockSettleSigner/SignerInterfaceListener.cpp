@@ -97,6 +97,9 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::DecryptWalletRequestType:
       onDecryptWalletRequested(packet.data());
       break;
+   case signer::UpdateDialogDataType:
+      onUpdateDialogData(packet.data(), packet.id());
+      break;
    case signer::CancelTxSignType:
       onCancelTx(packet.data(), packet.id());
       break;
@@ -264,6 +267,21 @@ void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::Re
             , __func__, reqId);
       }
    }
+}
+
+void SignerInterfaceListener::onUpdateDialogData(const std::string &data, RequestId)
+{
+   headless::UpdateDialogDataRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+
+   bs::sync::PasswordDialogData *dialogData = new bs::sync::PasswordDialogData(request.passworddialogdata());
+   QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
+
+   qmlBridge_->invokeQmlMethod("updateDialogData", nullptr
+      , QVariant::fromValue(dialogData));
 }
 
 void SignerInterfaceListener::onCancelTx(const std::string &data, bs::signer::RequestId)

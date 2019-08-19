@@ -57,6 +57,7 @@ public:
       , const std::function<void(bs::error::ErrorCode , const BinaryData &signedTX)> &)  override { return 0; }
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
+   bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) override { return 0; }
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override { return 0; }
 
    bs::signer::RequestId setUserId(const BinaryData &, const std::string &) override { return 0; }

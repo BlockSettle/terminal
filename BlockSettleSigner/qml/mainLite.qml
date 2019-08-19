@@ -108,7 +108,7 @@ ApplicationWindow {
         }
     }
 
-    function invokeQmlMetod(method, cppCallback, argList) {
+    function invokeQmlMethod(method, cppCallback, argList) {
         raiseWindow()
         JsHelper.evalWorker(method, cppCallback, argList)
     }

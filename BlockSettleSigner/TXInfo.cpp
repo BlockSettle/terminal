@@ -27,7 +27,16 @@ bs::core::wallet::TXSignRequest TXInfo::getCoreSignTxRequest(const signer::SignT
    return  txReq;
 }
 
-QStringList TXInfo::recvAddresses() const
+QStringList TXInfo::inputs() const
+{
+   QStringList result;
+   for (const auto &input : txReq_.inputs) {
+      result.push_back(QString::fromStdString(bs::Address::fromUTXO(input).display()));
+   }
+   return result;
+}
+
+QStringList TXInfo::recipients() const
 {
    QStringList result;
    for (const auto &recip : txReq_.recipients) {

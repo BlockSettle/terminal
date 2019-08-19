@@ -87,6 +87,13 @@ public:
       owner_->sendData(signer::CancelTxSignType, evt.SerializeAsString());
    }
 
+   void updateDialogData(const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData) override
+   {
+      headless::UpdateDialogDataRequest request;
+      *request.mutable_passworddialogdata() = dialogData;
+      owner_->sendData(signer::UpdateDialogDataType, request.SerializeAsString());
+   }
+
    void xbtSpent(int64_t value, bool autoSign) override
    {
       signer::XbtSpentEvent evt;

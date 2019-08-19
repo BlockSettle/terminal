@@ -25,7 +25,7 @@ CustomTitleDialogWindow {
     property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property bool   cancelledByUser: false
     property int addressRowHeight: 24
-    property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
+    property int recipientsAddrHeight: txInfo.recipients.length < 4 ? txInfo.recipients.length * addressRowHeight : addressRowHeight * 3
 
     id: root
     title: qsTr("Sign Transaction")
@@ -121,12 +121,12 @@ CustomTitleDialogWindow {
                 }
 
                 ListView {
-                    id: recvAddresses
+                    id: recipients
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignRight
-                    model: txInfo.recvAddresses
+                    model: txInfo.recipients
                     clip: true
-                    Layout.preferredHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
+                    Layout.preferredHeight: recipientsAddrHeight
 
                     flickableDirection: Flickable.VerticalFlick
                     boundsBehavior: Flickable.StopAtBounds
@@ -138,7 +138,7 @@ CustomTitleDialogWindow {
                         id: addressRect
                         color: "transparent"
                         height: 22
-                        width: recvAddresses.width
+                        width: recipients.width
 
                         CustomLabelValue {
                             id: labelTxWalletId
@@ -149,7 +149,6 @@ CustomTitleDialogWindow {
                             font: fixedFont
                         }
                     }
-
                 }
             }
 

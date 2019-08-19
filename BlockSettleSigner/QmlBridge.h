@@ -52,7 +52,7 @@ public:
       if (val6.isValid()) argList.append(val6);
       if (val7.isValid()) argList.append(val7);
 
-      QMetaObject::invokeMethod(rootQmlObj_, "invokeQmlMetod"
+      QMetaObject::invokeMethod(rootQmlObj_, "invokeQmlMethod"
          , Q_ARG(QVariant, QString::fromLatin1(method))
          , Q_ARG(QVariant, QVariant::fromValue(cb))
          , Q_ARG(QVariant, QVariant::fromValue(argList)));
