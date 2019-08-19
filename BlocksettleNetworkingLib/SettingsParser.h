@@ -53,7 +53,7 @@ public:
          return true;
       }
 
-      T value_;
+      T value_{};
    };
 
    using SettingsParam = TemplSettingsParam<QString>;

@@ -102,6 +102,13 @@ namespace Chat
       if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPtr->partyType() && PartySubType::STANDARD == partyPtr->partySubType())
       {
          PrivateDirectMessagePartyPtr privatePartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
+
+         if (nullptr == privatePartyPtr)
+         {
+            emit error(PartyModelError::DynamicPointerCast, partyPtr->id());
+            return;
+         }
+
          PrivateDirectMessagePartyPtr existingPartyPtr = getPrivatePartyById(partyPtr->id());
 
          // party not exist, insert
