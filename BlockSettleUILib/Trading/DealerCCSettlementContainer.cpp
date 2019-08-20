@@ -32,9 +32,6 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
 {
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
       , &DealerCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
-//   connect(this, &DealerCCSettlementContainer::timerExpired, this,
-//      &DealerCCSettlementDialog::reject);
-//   connect(this, &DealerCCSettlementContainer::failed, this, &QDialog::reject);
 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
