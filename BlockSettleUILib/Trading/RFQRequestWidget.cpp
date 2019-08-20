@@ -243,14 +243,15 @@ bool RFQRequestWidget::checkConditions(const MarkeSelectedInfo& selectedInfo)
          ui_->shieldPage->showShieldReservedTradingParticipant();
          popShield();
          return false;
-      } else if (checkWalletSettings(selectedInfo)) {
+      } else if (checkWalletSettings(group, selectedInfo)) {
          return false;
       }
       break;
    }
    case UserType::Dealing:
    case UserType::Trading: {
-      if ((group == GroupType::SpotXBT || group == GroupType::PrivateMarket) && checkWalletSettings(selectedInfo)) {
+      if ((group == GroupType::SpotXBT || group == GroupType::PrivateMarket) &&
+         checkWalletSettings(group, selectedInfo)) {
          return false;
       }
       break;
@@ -267,11 +268,11 @@ bool RFQRequestWidget::checkConditions(const MarkeSelectedInfo& selectedInfo)
    return true;
 }
 
-bool RFQRequestWidget::checkWalletSettings(const MarkeSelectedInfo& selectedInfo)
+bool RFQRequestWidget::checkWalletSettings(bs::network::Asset::Type productType, const MarkeSelectedInfo& selectedInfo)
 {
    const CurrencyPair cp(selectedInfo.currencyPair_.toStdString());
    const QString currentProduct = QString::fromStdString(cp.NumCurrency());
-   if (ui_->shieldPage->checkWalletSettings(currentProduct)) {
+   if (ui_->shieldPage->checkWalletSettings(productType, currentProduct)) {
       popShield();
       return true;
    }

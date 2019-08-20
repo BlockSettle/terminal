@@ -8,7 +8,7 @@ namespace {
    const QString shieldDealingParticipantOnly = QObject::tr("Reserved for Dealing Participants");
 
    const QString shieldCreateCCWallet = QObject::tr("Create %1 wallet");
-   const QString shieldCreateXBTWallet = QObject::tr("Generate an Authentication Address");
+   const QString shieldGenerateAuthAddress = QObject::tr("Generate an Authentication Address");
 
    const QString shieldCreateWallet = QObject::tr("To %1 in XBT related products, you require a wallet");
    const QString shieldPromoteToPrimary = QObject::tr("To %1 in XBT related products, you're required to have a wallet which" \
@@ -63,11 +63,12 @@ void RFQShieldPage::showShieldPromoteToPrimaryWallet()
 
 void RFQShieldPage::showShieldCreateLeaf(const QString& product)
 {
-   if (product == QLatin1String("XBT")) {
-      prepareShield(shieldCreateXBTWallet, true, shieldButtonGenerate);
-   } else {
-      prepareShield(shieldCreateCCWallet.arg(product), true, shieldButtonCreate);
-   }
+   prepareShield(shieldCreateCCWallet.arg(product), true, shieldButtonCreate);
+}
+
+void RFQShieldPage::showShielddGenerateAuthAddress()
+{
+   prepareShield(shieldGenerateAuthAddress, true, shieldButtonGenerate);
 }
 
 void RFQShieldPage::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager)
@@ -80,7 +81,7 @@ void RFQShieldPage::setTabType(QString&& tabType)
    tabType_ = std::move(tabType);
 }
 
-bool RFQShieldPage::checkWalletSettings(const QString &product)
+bool RFQShieldPage::checkWalletSettings(RFQShieldPage::ProductType productType, const QString& product)
 {
    // No wallet at all
    if (!walletsManager_ || walletsManager_->walletsCount() == 0) {
@@ -100,8 +101,15 @@ bool RFQShieldPage::checkWalletSettings(const QString &product)
       return true;
    }
 
-   // No path
-   if (!walletsManager_->getCCWallet(product.toStdString())) {
+   if (productType == ProductType::SpotXBT) {
+      if (!walletsManager_->getAuthWallet()) {
+         showShielddGenerateAuthAddress();
+         setShieldButtonAction([this]() {
+            walletsManager_->CreateAuthLeaf();
+         });
+         return true;
+      }
+   } else if (!walletsManager_->getCCWallet(product.toStdString())) {
       showShieldCreateLeaf(product);
       setShieldButtonAction([this, product]() {
          walletsManager_->CreateCCLeaf(product.toStdString());
