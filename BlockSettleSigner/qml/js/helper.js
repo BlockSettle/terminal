@@ -538,7 +538,7 @@ function createPasswordDialogForLeaf(jsCallback, passwordDialogData, walletInfo)
     prepareLiteModeDialog(dlg)
 }
 
-function updateDialogData(passwordDialogData) {
+function updateDialogData(jsCallback, passwordDialogData) {
     console.log("Updating password dialog " + currentDialog + ", updated keys: " + passwordDialogData.keys())
     if (!currentDialog || typeof currentDialog.passwordDialogData === "undefined") {
         return

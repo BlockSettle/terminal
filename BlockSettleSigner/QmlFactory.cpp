@@ -1,5 +1,6 @@
 #include "QmlFactory.h"
 #include <QApplication>
+#include <QStyle>
 #include <QClipboard>
 #include <QQuickWindow>
 #include <QKeyEvent>
@@ -128,6 +129,11 @@ QRect QmlFactory::frameSize(QObject *window) const
       return win->frameGeometry();
    }
    return QRect();
+}
+
+int QmlFactory::titleBarHeight()
+{
+   return QApplication::style()->pixelMetric(QStyle::PM_TitleBarHeight);
 }
 
 void QmlFactory::installEventFilterToObj(QObject *object)

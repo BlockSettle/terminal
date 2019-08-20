@@ -230,6 +230,7 @@ CustomTitleDialogWindow {
             RowLayout {
                 Layout.columnSpan: 2
                 Layout.fillWidth: true
+                visible: passwordDialogData.contains("InputsList")
 
                 CustomLabel {
                     text: qsTr("Payment UTXO(s)")
@@ -271,6 +272,7 @@ CustomTitleDialogWindow {
             RowLayout {
                 Layout.columnSpan: 2
                 Layout.fillWidth: true
+                visible: passwordDialogData.contains("RecipientsList")
 
                 CustomLabel {
                     text: qsTr("Delivery UTXO(s)")
@@ -304,35 +306,12 @@ CustomTitleDialogWindow {
                             horizontalAlignment: Text.AlignRight
                             verticalAlignment: Text.AlignTop
                             font: fixedFont
-                            color: passwordDialogData.deliveryUTXOVerified ? BSStyle.inputsInvalidColor : BSStyle.inputsValidColor
+                            color: passwordDialogData.deliveryUTXOVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
                         }
                     }
                 }
             }
 
-
-//            CustomLabel {
-//                visible: passwordDialogData.contains("PaymentUTXO")
-//                Layout.fillWidth: true
-//                text: qsTr("Payment UTXO(s)")
-//            }
-//            CustomLabelValue {
-//                visible: passwordDialogData.contains("PaymentUTXO")
-//                text: passwordDialogData.value("PaymentUTXO")
-//                Layout.alignment: Qt.AlignRight
-//            }
-
-//            // Delivery UTXO(s)
-//            CustomLabel {
-//                visible: passwordDialogData.contains("DeliveryUTXO")
-//                Layout.fillWidth: true
-//                text: qsTr("Payment UTXO(s)")
-//            }
-//            CustomLabelValue {
-//                visible: passwordDialogData.contains("DeliveryUTXO")
-//                text: passwordDialogData.value("DeliveryUTXO")
-//                Layout.alignment: Qt.AlignRight
-//            }
         }
 
         GridLayout {
