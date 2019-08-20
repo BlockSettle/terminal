@@ -662,7 +662,7 @@ QmlCallbackBase *SignerInterfaceListener::createQmlPasswordCallback()
    });
 }
 
-void SignerInterfaceListener::requestPasswordForDialogType(QString&& dialogType, bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo)
+void SignerInterfaceListener::requestPasswordForDialogType(const QString& dialogType, bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo)
 {
    dialogData->setValue("DialogType", dialogType);
    qmlBridge_->invokeQmlMethod("createPasswordDialogForType", createQmlPasswordCallback()

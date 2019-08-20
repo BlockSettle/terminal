@@ -125,7 +125,7 @@ private:
    bs::signer::QmlCallbackBase *createQmlPasswordCallback();
 
 protected:
-   void requestPasswordForDialogType(QString&& dialogType, bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo);
+   void requestPasswordForDialogType(const QString& dialogType, bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo);
 
 private:
    std::shared_ptr<spdlog::logger>           logger_;
