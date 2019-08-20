@@ -22,6 +22,7 @@ namespace Chat
       connect(worker(), &ChatClientLogic::chatClientError, this, &ChatClientService::chatClientError);
       connect(worker(), &ChatClientLogic::clientLoggedOutFromServer, this, &ChatClientService::clientLoggedOutFromServer);
       connect(worker(), &ChatClientLogic::partyModelChanged, this, &ChatClientService::partyModelChanged);
+      connect(worker(), &ChatClientLogic::initDone, this, &ChatClientService::initDone);
    }
 
    ClientPartyModelPtr ChatClientService::getClientPartyModelPtr()

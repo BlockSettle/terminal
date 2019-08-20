@@ -31,6 +31,7 @@ namespace Chat
       void chatClientError(const Chat::ChatClientLogicError& errorCode);
       void clientLoggedOutFromServer();
       void partyModelChanged();
+      void initDone();
    };
 
    using ChatClientServicePtr = std::shared_ptr<ChatClientService>;

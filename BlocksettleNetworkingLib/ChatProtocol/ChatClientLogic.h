@@ -81,6 +81,7 @@ namespace Chat
       void chatUserUserNameChanged(const std::string& chatUserDisplayName);
       void clientLoggedOutFromServer();
       void partyModelChanged();
+      void initDone();
 
    private slots:
       void sendPacket(const google::protobuf::Message& message);

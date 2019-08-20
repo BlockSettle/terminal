@@ -1,5 +1,5 @@
 #include "ChatPartiesTreeModel.h"
-
+/*
 // Abstract Party
 AbstractParty::AbstractParty(std::string const& displayName)
    : displayName_(displayName)
@@ -357,8 +357,8 @@ namespace {
 }
 
 ChatPartiesTreeModel::ChatPartiesTreeModel(QObject* parent)
-   : QAbstractItemModel(parent)
-   , partyContainers_(new QList<PartyContainer>)
+   : QAbstractItemModel(parent),
+   partyContainers_(new QList<PartyContainer>)
 {
    partyContainers_->reserve(static_cast<int>(Chat::PartyType_ARRAYSIZE));
 
@@ -366,7 +366,7 @@ ChatPartiesTreeModel::ChatPartiesTreeModel(QObject* parent)
    partyContainers_->push_back(PartyContainer(Chat::PartyType::GLOBAL, "Global", {}));
    partyContainers_->push_back(PartyContainer(Chat::PartyType::PRIVATE_DIRECT_MESSAGE, "Private", {}));
 
-   testModel(this);
+   //testModel(this);
 }
 
 ChatPartiesTreeModel::~ChatPartiesTreeModel()
@@ -589,4 +589,187 @@ ChatPartiesTreeModel::FindPartyResult::FindPartyResult()
 bool ChatPartiesTreeModel::FindPartyResult::isValid() const
 {
    return iContainer_ != FindPartyResult::iInvalid && iParty_ != FindPartyResult::iInvalid;
+}
+*/
+
+ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& chatClientServicePtr, QObject* parent)
+   : QAbstractItemModel(parent),
+   chatClientServicePtr_(chatClientServicePtr)
+{
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatPartiesTreeModel::partyModelChanged);
+
+   rootItem_ = new PartyTreeItem({});
+}
+
+ChatPartiesTreeModel::~ChatPartiesTreeModel()
+{
+}
+
+void ChatPartiesTreeModel::partyModelChanged()
+{
+   Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
+
+   beginResetModel();
+
+   PartyTreeItem* globalSection = new PartyTreeItem(QString(QLatin1String("Global")), rootItem_);
+   PartyTreeItem* privateSection = new PartyTreeItem(QString(QLatin1String("Private")), rootItem_);
+
+   Chat::IdPartyList idPartyList = clientPartyModelPtr->getIdPartyList();
+
+   for (const auto& id : idPartyList)
+   {
+      Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(id);
+
+      if (clientPartyPtr->partyType() == Chat::PartyType::GLOBAL)
+      {
+         QVariant stored;
+         stored.setValue(clientPartyPtr);
+         PartyTreeItem* globalItem = new PartyTreeItem(stored, globalSection);
+         globalSection->insertChildren(globalItem);
+      }
+
+      if (clientPartyPtr->partyType() == Chat::PartyType::PRIVATE_DIRECT_MESSAGE)
+      {
+         QVariant stored;
+         stored.setValue(clientPartyPtr);
+         PartyTreeItem* privateItem = new PartyTreeItem(stored, privateSection);
+         privateSection->insertChildren(privateItem);
+      }
+   }
+
+   rootItem_->insertChildren(globalSection);
+   rootItem_->insertChildren(privateSection);
+
+   endResetModel();
+/*
+   rootItem->insertChildren(0, 2, 0);
+
+   for (int i = 0; i < rootItem->childCount(); i++)
+   {
+      PartyTreeItem* sectionItem = rootItem->child(i);
+      sectionItem->setData(i, QVariant(QLatin1String("Global")));
+      sectionItem->insertChildren(0, globalList.size(), 0);
+      for (int j = 0; j < sectionItem->childCount(); j++)
+      {
+         PartyTreeItem* item = sectionItem->child(i);
+         item->setData(0, globalList.at(i));
+      }
+   }
+*/
+}
+
+PartyTreeItem* ChatPartiesTreeModel::getItem(const QModelIndex& index) const
+{
+   if (index.isValid()) {
+      PartyTreeItem* item = static_cast<PartyTreeItem*>(index.internalPointer());
+      if (item)
+      {
+         return item;
+      }
+   }
+
+   return rootItem_;
+}
+
+QVariant ChatPartiesTreeModel::data(const QModelIndex& index, int role) const
+{
+   if (!index.isValid()) {
+      return QVariant();
+   }
+
+   if (role != Qt::DisplayRole && role != Qt::EditRole)
+      return QVariant();
+
+   PartyTreeItem* item = getItem(index);
+
+   return item->data();
+/*
+   AbstractParty* item = static_cast<AbstractParty*>(index.internalPointer());
+
+   if (role == Qt::DisplayRole)
+      return item->data(UI::PartyRoles::Name);
+*/
+   return {};
+}
+
+QModelIndex ChatPartiesTreeModel::index(int row, int column, const QModelIndex& parent) const
+{
+   if (parent.isValid() && parent.column() != 0)
+      return QModelIndex();
+
+   PartyTreeItem* parentItem = getItem(parent);
+
+   PartyTreeItem* childItem = parentItem->child(row);
+   if (childItem)
+      return createIndex(row, column, childItem);
+   else
+      return QModelIndex();
+/*
+   if (!hasIndex(row, column, parent))
+      return QModelIndex();
+
+
+   if (!parent.isValid()) {
+      return createIndex(row, column, &(partyContainers_.get()->operator[](row)));
+   }
+
+   PartyContainer* container = static_cast<PartyContainer*>(parent.internalPointer());
+#ifndef QT_NO_DEBUG
+   Q_ASSERT(container);
+#endif
+   if (!container) {
+      return {};
+   }
+   return createIndex(row, column, container->childItem(row));
+*/
+}
+
+QModelIndex ChatPartiesTreeModel::parent(const QModelIndex& index) const
+{
+   if (!index.isValid())
+      return QModelIndex();
+
+   PartyTreeItem* childItem = getItem(index);
+   PartyTreeItem* parentItem = childItem->parent();
+
+   if (parentItem == rootItem_)
+      return QModelIndex();
+
+   return createIndex(parentItem->childNumber(), 0, parentItem);
+/*
+   if (!index.isValid())
+      return {};
+
+   auto* children = static_cast<AbstractParty*>(index.internalPointer());
+   auto* parent = children->parentItem();
+
+   if (!parent) {
+      return {};
+   }
+
+   return createIndex(parent->row(), 0, parent);
+*/
+}
+
+int ChatPartiesTreeModel::rowCount(const QModelIndex& parent) const
+{
+   PartyTreeItem* parentItem = getItem(parent);
+
+   return parentItem->childCount();
+/*
+   if (parent.column() > 0) {
+      return 0;
+   }
+
+   if (!parent.isValid()) {
+      return static_cast<int>(Chat::PartyType_ARRAYSIZE);
+   }
+
+   return static_cast<AbstractParty*>(parent.internalPointer())->rowCount();
+*/
+}
+
+int ChatPartiesTreeModel::columnCount(const QModelIndex& parent) const
+{
+   return rootItem_->columnCount();
 }

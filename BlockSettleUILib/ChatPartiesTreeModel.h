@@ -3,8 +3,9 @@
 
 #include <QAbstractItemModel>
 #include "../BlocksettleNetworkingLib/ChatProtocol/Party.h"
+#include "ChatProtocol/ChatClientService.h"
 #include "chat.pb.h"
-
+/*
 // Internal enum
 namespace UI {
    enum class ElementType
@@ -179,6 +180,106 @@ public slots:
 
 protected:
    QScopedPointer<QList<PartyContainer>> partyContainers_;
+};
+*/
+
+class PartyTreeItem
+{
+public:
+   PartyTreeItem(const QVariant& data, PartyTreeItem* parent = nullptr)
+   {
+      parentItem = parent;
+      itemData = data;
+   }
+
+   ~PartyTreeItem()
+   {
+      qDeleteAll(childItems);
+   }
+
+   PartyTreeItem* child(int number)
+   {
+      return childItems.value(number);
+   }
+
+   int childCount() const
+   {
+      return childItems.count();
+   }
+
+   int columnCount() const
+   {
+      return 1;
+   }
+
+   QVariant data() const
+   {
+      return itemData;
+   }
+
+   bool insertChildren(PartyTreeItem* item)
+   {
+      childItems.push_back(item);
+      return true;
+   }
+
+   PartyTreeItem* parent()
+   {
+      return parentItem;
+   }
+
+   bool removeChildren(int position, int count)
+   {
+      if (position < 0 || position + count > childItems.size())
+         return false;
+
+      for (int row = 0; row < count; ++row)
+         delete childItems.takeAt(position);
+
+      return true;
+   }
+
+   int childNumber() const
+   {
+      if (parentItem)
+         return parentItem->childItems.indexOf(const_cast<PartyTreeItem*>(this));
+
+      return 0;
+   }
+
+   bool setData(const QVariant& value)
+   {
+      itemData = value;
+      return true;
+   }
+
+private:
+   QList<PartyTreeItem*> childItems;
+   QVariant itemData;
+   PartyTreeItem* parentItem;
+};
+
+class ChatPartiesTreeModel : public QAbstractItemModel
+{
+   Q_OBJECT
+public:
+   ChatPartiesTreeModel(const Chat::ChatClientServicePtr& chatClientServicePtr, QObject* parent = nullptr);
+   ~ChatPartiesTreeModel();
+
+   QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+   QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
+   QModelIndex parent(const QModelIndex& index) const override;
+   int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+   int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+
+public slots:
+   void partyModelChanged();
+
+private:
+   PartyTreeItem* getItem(const QModelIndex& index) const;
+
+   Chat::ChatClientServicePtr chatClientServicePtr_;
+   PartyTreeItem* rootItem_;
 };
 
 #endif // CHATPARTYLISTMODEL_H

@@ -628,11 +628,15 @@ void BSTerminalMainWindow::InitWalletsView()
 
 void BSTerminalMainWindow::InitChatView()
 {
-   ui_->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
-   ui_->widgetChat->setCelerClient(celerConnection_);
-
    chatClientServicePtr_ = std::make_shared<Chat::ChatClientService>();
+
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, [this]() {
+      ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_, logMgr_->logger("chat"));
+   });
+
    chatClientServicePtr_->Init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
+
+   ui_->widgetChat->setCelerClient(celerConnection_);
 
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
    connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);

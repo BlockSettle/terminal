@@ -46,6 +46,7 @@ namespace Chat
       void partyInserted(const Chat::PartyPtr& partyPtr);
       void partyRemoved(const Chat::PartyPtr& partyPtr);
       void error(const Chat::PartyModelError& errorCode, const std::string& id = "");
+      void partyModelChanged();
 
    private slots:
       void handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& id = "");

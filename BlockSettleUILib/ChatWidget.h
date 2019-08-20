@@ -7,6 +7,7 @@
 #include <QStringListModel>
 #include <QWidget>
 
+#include "ChatProtocol/ChatClientService.h"
 #include "ChatHandleInterfaces.h"
 #include "CommonTypes.h"
 #include "ZMQ_BIP15X_Helpers.h"
@@ -55,9 +56,10 @@ public:
    explicit ChatWidget(QWidget *parent = nullptr);
    ~ChatWidget() override;
 
-   void init(const std::shared_ptr<ConnectionManager>& connectionManager
-           , const std::shared_ptr<ApplicationSettings> &appSettings
-           , const std::shared_ptr<spdlog::logger>& logger);
+   void init(const std::shared_ptr<ConnectionManager>& connectionManager,
+      const std::shared_ptr<ApplicationSettings> &appSettings,
+      const Chat::ChatClientServicePtr& chatClientServicePtr,
+      const std::shared_ptr<spdlog::logger>& logger);
 
    std::string login(const std::string& email, const std::string& jwt
       , const ZmqBipNewKeyCb &);
@@ -66,35 +68,56 @@ public:
    void setCelerClient(std::shared_ptr<BaseCelerClient> celerClient);
    void updateChat(const bool &isChatTab);
 
+   // ViewItemWatcher interface
+   void onElementSelected(CategoryElement* element) override;
+   void onMessageChanged(std::shared_ptr<Chat::Data> message) override;
+   void onElementUpdated(CategoryElement* element) override;
+   void onCurrentElementAboutToBeRemoved() override;
+
+   // NewMessageMonitor interface
+   void onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat::Data>> newMessages) override;
+
+   // ChatItemActionsHandler interface
+   void onActionCreatePendingOutgoing(const std::string& userId) override;
+   void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   bool onActionIsFriend(const std::string& userId) override;
+
+signals:
+   void LoginFailed();
+   void LogOut();
+
 public slots:
    void onLoggedOut();
-   void onNewChatMessageTrayNotificationClicked(const QString &userId);
+   void onNewChatMessageTrayNotificationClicked(const QString& userId);
 
 private slots:
    void onSendButtonClicked();
    void onMessagesUpdated();
    void onLoginFailed();
-   void onUsersDeleted(const std::vector<std::string> &);
-   void onSendFriendRequest(const QString &userId);
+   void onUsersDeleted(const std::vector<std::string>&);
+   void onSendFriendRequest(const QString& userId);
    void onAddChatRooms(const std::vector<std::shared_ptr<Chat::Data> >& roomList);
    void onConnectedToServer();
    void selectGlobalRoom();
-   void onContactRequestAccepted(const std::string &userId);
-   void onChangeChatRoom(const QString &userId);
-   void onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey);
+   void onContactRequestAccepted(const std::string& userId);
+   void onChangeChatRoom(const QString& userId);
+   void onConfirmUploadNewPublicKey(const std::string& oldKey, const std::string& newKey);
    void onContactChanged();
    void onBSChatInputSelectionChanged();
    void onChatMessagesSelectionChanged();
    void onContactRequestAcceptSendClicked();
    void onContactRequestRejectCancelClicked();
    void onContactListConfirmationRequested(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
-                                           const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
-                                           const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
+      const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
+      const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
 
    void onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData);
-   void onContactRequestApproved(const std::string &userId);
+   void onContactRequestApproved(const std::string& userId);
 
-   void OnOTCSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+   void OnOTCSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
    void onOtcRequestSubmit();
    void onOtcRequestPull();
@@ -102,11 +125,7 @@ private slots:
    void onOtcResponseUpdate();
    void onOtcResponseReject();
 
-   void onOtcUpdated(const std::string &contactId);
-
-signals:
-   void LoginFailed();
-   void LogOut();
+   void onOtcUpdated(const std::string& contactId);
 
 private:
    void SetOTCLoggedInState();
@@ -144,33 +163,6 @@ private:
 
    void updateOtc(const std::string &contactId);
 
-private:
-   QScopedPointer<Ui::ChatWidget> ui_;
-
-   std::shared_ptr<ChatClient>      client_;
-   std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<BaseCelerClient>     celerClient_;
-
-   std::string serverPublicKey_;
-   std::string  currentChat_;
-   bool isRoom_;
-   bool isContactRequest_;
-   QSpacerItem *chatUsersVerticalSpacer_;
-   bool isChatTab_;
-
-private:
-   std::shared_ptr<ChatWidgetState> stateCurrent_;
-   QMap<std::string, std::string> draftMessages_;
-   bool needsToStartFirstRoom_;
-
-private:
-   OTCRequestViewModel *otcRequestViewModel_ = nullptr;
-   int64_t chatLoggedInTimestampUtcInMillis_;
-   std::vector<QVariantList> oldMessages_;
-
-   OtcClient *otcClient_{};
-
-private:
    bool isRoom();
    bool isContactRequest();
    void setIsContactRequest(bool);
@@ -179,26 +171,30 @@ private:
    void initSearchWidget();
    bool isLoggedIn() const;
 
-   bool eventFilter(QObject *sender, QEvent *event) override;
+   bool eventFilter(QObject* sender, QEvent* event) override;
 
-   // ViewItemWatcher interface
-public:
-   void onElementSelected(CategoryElement *element) override;
-   void onMessageChanged(std::shared_ptr<Chat::Data> message) override;
-   void onElementUpdated(CategoryElement *element) override;
-   void onCurrentElementAboutToBeRemoved() override;
+   QScopedPointer<Ui::ChatWidget> ui_;
 
-   // NewMessageMonitor interface
-public:
-   void onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat::Data>> newMessages) override;
+   std::shared_ptr<ChatClient>      client_;
+   std::shared_ptr<spdlog::logger>  logger_;
+   std::shared_ptr<BaseCelerClient> celerClient_;
+   Chat::ChatClientServicePtr    chatClientServicePtr_;
 
-   // ChatItemActionsHandler interface
-public:
-   void onActionCreatePendingOutgoing(const std::string &userId) override;
-   void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) override;
-   void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) override;
-   void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) override;
-   void onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord) override;
-   bool onActionIsFriend(const std::string &userId) override;
+   std::string serverPublicKey_;
+   std::string  currentChat_;
+   bool isRoom_;
+   bool isContactRequest_;
+   QSpacerItem *chatUsersVerticalSpacer_;
+   bool isChatTab_;
+
+   std::shared_ptr<ChatWidgetState> stateCurrent_;
+   QMap<std::string, std::string> draftMessages_;
+   bool needsToStartFirstRoom_;
+
+   OTCRequestViewModel *otcRequestViewModel_ = nullptr;
+   int64_t chatLoggedInTimestampUtcInMillis_;
+   std::vector<QVariantList> oldMessages_;
+
+   OtcClient *otcClient_{};
 };
 #endif // CHAT_WIDGET_H
