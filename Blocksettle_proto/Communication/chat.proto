@@ -74,7 +74,8 @@ enum PartyState
 {
     UNINITIALIZED = 0;
     REQUESTED = 1;
-    INITIALIZED = 2;
+    REJECTED = 2;
+    INITIALIZED = 3;
 }
 
 enum EncryptionType
@@ -92,13 +93,20 @@ enum PartyMessageState
     SEEN = 3;
 }
 
+message PartyRecipientPacket
+{
+    string user_name = 1;
+    bytes public_key = 2;
+}
+
 message PartyPacket
 {
-	string id = 1;
+	string party_id = 1;
 	string display_name = 2;
 	PartyType party_type = 3;
 	PartySubType party_subtype = 4;
     PartyState party_state = 5;
+    repeated PartyRecipientPacket recipient = 6;
 }
 
 message WelcomeRequest
@@ -144,6 +152,25 @@ message PartyMessageStateUpdate
     string party_id = 1;
     string message_id = 2;
     PartyMessageState party_message_state = 3;
+}
+
+message PrivatePartyRequest
+{
+    PartyPacket party_packet = 1;
+}
+
+message RequestSessionKeyExchange
+{
+    string sender_user_name = 1;
+    bytes encoded_public_key = 2;
+    string receiver_user_name = 3;
+}
+
+message ReplySessionKeyExchange
+{
+    string sender_user_name = 1;
+    bytes encoded_public_key = 2;
+    string receiver_user_name = 3;
 }
 
 message Data

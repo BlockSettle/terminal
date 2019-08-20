@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "ChatProtocol/Party.h"
+#include "ChatProtocol/PrivateDirectMessageParty.h"
 
 namespace spdlog
 {
@@ -24,7 +25,8 @@ namespace Chat
       InsertExistingParty,
       RemovingNonexistingParty,
       CouldNotFindParty,
-      DynamicPointerCast
+      DynamicPointerCast,
+      PrivatePartyCasting
    };
 
    class PartyModel : public QObject
@@ -36,7 +38,9 @@ namespace Chat
       void insertParty(const PartyPtr& partyPtr);
       void removeParty(const PartyPtr& partyPtr);
       PartyPtr getPartyById(const std::string& id);
+      PrivateDirectMessagePartyPtr getPrivatePartyById(const std::string& id);
       void clearModel();
+      void insertOrUpdateParty(const PartyPtr& partyPtr);
 
    signals:
       void partyInserted(const Chat::PartyPtr& partyPtr);

@@ -39,12 +39,14 @@ namespace Chat
       void handlePartiesFromWelcomePacket(const google::protobuf::Message& msg);
 
       void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName);
+      void createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const google::protobuf::Message& msg);
 
    signals:
       void error(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
       void partyModelChanged();
       void sendPartyMessagePacket(const google::protobuf::Message& message);
-      void privatePartyCreated(const PartyPtr& partyPtr);
+      void privatePartyCreated(const std::string& partyId);
+      void privatePartyAlreadyExist(const std::string& partyId);
 
    public slots:
       void onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus);

@@ -23,33 +23,32 @@ namespace Chat
       }
    }
 
-   const static QMap <QString, TableStructure> clientTablesMap{
+   const static QMap <QString, TableStructure> clientTablesMap {
       {party::TABLE_NAME,
          {
-            { // Table columns
-               {
-                  {party::PARTY_TABLE_ID, QLatin1String("INTEGER PRIMARY KEY AUTOINCREMENT")},
-                  {party::PARTY_ID, QLatin1String("CHAR(32) NOT NULL")}
-               }
+            { //Table columns
+               {party::PARTY_TABLE_ID, QLatin1String("INTEGER PRIMARY KEY AUTOINCREMENT")},
+               {party::PARTY_ID, QLatin1String("CHAR(32) NOT NULL")}
             }
          }
       },
       {partyMessage::TABLE_NAME,
          {
-            {
-               {
-                  {partyMessage::PARTY_MESSAGE_TABLE_ID, QLatin1String("INTEGER PRIMARY KEY AUTOINCREMENT")},
-                  {partyMessage::PARTY_TABLE_ID, QLatin1String("INTEGER NOT NULL")},
-                  {partyMessage::MESSAGE_ID, QLatin1String("CHAR(32) NOT NULL")},
-                  {partyMessage::TIMESTAMP, QLatin1String("INTEGER NOT NULL")},
-                  {partyMessage::MESSAGE_STATE, QLatin1String("INTEGER NOT NULL")},
-                  {partyMessage::ENCRYPTION_TYPE, QLatin1String("INTEGER NOT NULL")},
-                  {partyMessage::NONCE, QLatin1String("BLOB")},
-                  {partyMessage::MESSAGE_TEXT, QLatin1String("TEXT")}
-               }
+            { //Table columns
+               {partyMessage::PARTY_MESSAGE_TABLE_ID, QLatin1String("INTEGER PRIMARY KEY AUTOINCREMENT")},
+               {partyMessage::PARTY_TABLE_ID, QLatin1String("INTEGER NOT NULL")},
+               {partyMessage::MESSAGE_ID, QLatin1String("CHAR(32) NOT NULL")},
+               {partyMessage::TIMESTAMP, QLatin1String("INTEGER NOT NULL")},
+               {partyMessage::MESSAGE_STATE, QLatin1String("INTEGER NOT NULL")},
+               {partyMessage::ENCRYPTION_TYPE, QLatin1String("INTEGER NOT NULL")},
+               {partyMessage::NONCE, QLatin1String("BLOB")},
+               {partyMessage::MESSAGE_TEXT, QLatin1String("TEXT")}
+            },
+            { //Foreign keys
+               {partyMessage::PARTY_TABLE_ID, party::TABLE_NAME, party::PARTY_TABLE_ID}
             }
          }
-      },
+      }
    };
 
    ClientDatabaseCreator::ClientDatabaseCreator(const QSqlDatabase& db, const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)

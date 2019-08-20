@@ -49,4 +49,11 @@ namespace bs {
       return str;
    }
 
+   bool isValidEmail(const std::string &str)
+   {
+      auto at = std::find(str.begin(), str.end(), '@');
+      auto dot = std::find(at, str.end(), '.');
+      return (at != str.end()) && (dot != str.end());
+   }
+
 } // namespace bs

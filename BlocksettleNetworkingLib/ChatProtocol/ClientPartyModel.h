@@ -40,6 +40,7 @@ namespace Chat
       void messageInserted(const std::string& partyId, const std::string& messageId, const std::string& message,
          const qint64 timestamp, const int party_message_state);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
+      void partyStateChanged(const std::string& partyId, const Chat::PartyState& partyState);
 
    private slots:
       void handleLocalErrors(const ClientPartyModelError& errorCode, const std::string& what);

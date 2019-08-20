@@ -20,6 +20,12 @@ hd::Wallet::Wallet(const std::string &walletId, const std::string &name
    , signContainer_(container), logger_(logger), isOffline_(isOffline)
 {
    netType_ = getNetworkType();
+   if (isOffline) {
+      encryptionTypes_.push_back(bs::wallet::EncryptionType::Unencrypted);
+   } else {
+      // FIXME: Add Auth eID
+      encryptionTypes_.push_back(bs::wallet::EncryptionType::Password);
+   }
 }
 
 hd::Wallet::~Wallet()
