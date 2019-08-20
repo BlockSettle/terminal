@@ -36,7 +36,8 @@ enum RequestType
    SyncCCNamesType             = 28;
    GetSettlPayinAddrType       = 29;
    SettlGetRootPubkeyType      = 30;
-   UpdateDialogDataType        = 31; // update fields in password input dialogs in signer ui
+   PromoteHDWalletRequestType  = 31;
+   UpdateDialogDataType        = 32; // update fields in password input dialogs in signer ui
 }
 
 message RequestPacket
@@ -260,6 +261,12 @@ message CreateHDLeafRequest
    Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData = 3;
 }
 
+message PromoteHDWalletRequest
+{
+   string   rootWalletId = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData = 3;
+}
+
 message HDLeafWO
 {
    string   name = 1;
@@ -296,6 +303,11 @@ message CreateHDLeafResponse
    HDLeafWO  leaf        = 2;
 }
 
+message PromoteHDWalletResponse
+{
+   uint32    errorCode   = 1;
+   string    rootWalletId = 2;
+}
 
 message DeleteHDWalletRequest
 {

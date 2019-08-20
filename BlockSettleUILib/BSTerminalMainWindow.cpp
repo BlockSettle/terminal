@@ -862,8 +862,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
             " may only have one Primary Wallet. Do you wish to promote '%1'?")
          .arg(QString::fromStdString(wallet->name())), this);
       if (qry.exec() == QDialog::Accepted) {
-         //auth wallets are always ext only
-         wallet->createGroup(bs::hd::CoinType::BlockSettle_Auth, true);
+         walletsMgr_->PromoteHDWallet(wallet->walletId());
          return true;
       }
       return false;
@@ -1587,10 +1586,15 @@ void BSTerminalMainWindow::InitWidgets()
    ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
                              , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_);
 
-   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, [this]() {
-      if (createWallet(true))
+   auto primaryWalletCreationCb = [this]() {
+      if (createWallet(true)) {
          ui_->widgetRFQ->forceCheckCondition();
-   });
+         ui_->widgetRFQReply->forceCheckCondition();
+      }
+   };
+
+   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, primaryWalletCreationCb);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this, primaryWalletCreationCb);
 }
 
 void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settings)

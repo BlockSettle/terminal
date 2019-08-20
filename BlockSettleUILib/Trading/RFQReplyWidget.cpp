@@ -43,6 +43,9 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::quoteReqNotifStatusChanged, ui_->pageRFQReply
       , &RFQDealerReply::quoteReqNotifStatusChanged, Qt::QueuedConnection);
+   connect(ui_->shieldPage, &RFQShieldPage::requestPrimaryWalletCreation,
+      this, &RFQReplyWidget::requestPrimaryWalletCreation);
+
 
    ui_->shieldPage->showShieldLoginRequired();
    popShield();
@@ -169,6 +172,15 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQReplyWidget::onDisconnectedFromCeler);
 
    connect(ui_->widgetQuoteRequests->view(), &TreeViewWithEnterKey::enterKeyPressed, this, &RFQReplyWidget::onEnterKeyPressed);
+}
+
+void RFQReplyWidget::forceCheckCondition()
+{
+   const QModelIndex index = ui_->widgetQuoteRequests->view()->selectionModel()->currentIndex();
+   if (!index.isValid()) {
+      return;
+   }
+   ui_->widgetQuoteRequests->onQuoteReqNotifSelected(index);
 }
 
 void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn)
@@ -388,7 +400,7 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
          popShield();
          return false;
       }
-      else if (ui_->shieldPage->checkWalletSettings(QString::fromStdString(request.product))) {
+      else if (ui_->shieldPage->checkWalletSettings(group, QString::fromStdString(request.product))) {
          popShield();
          return false;
       }
@@ -399,7 +411,7 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
          ui_->shieldPage->showShieldReservedDealingParticipant();
          return false;
       } else if (group == GroupType::PrivateMarket &&
-            ui_->shieldPage->checkWalletSettings(QString::fromStdString(request.product))) {
+            ui_->shieldPage->checkWalletSettings(group, QString::fromStdString(request.product))) {
          popShield();
          return false;
       }
@@ -407,7 +419,7 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
    }
    case UserType::Dealing: {
       if ((group == GroupType::SpotXBT || group == GroupType::PrivateMarket) &&
-            ui_->shieldPage->checkWalletSettings(QString::fromStdString(request.product))) {
+            ui_->shieldPage->checkWalletSettings(group, QString::fromStdString(request.product))) {
          popShield();
          return false;
       }
