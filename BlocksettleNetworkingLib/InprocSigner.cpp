@@ -112,7 +112,8 @@ bs::signer::RequestId InprocSigner::signSettlementPayoutTXRequest(const bs::core
 }
 
 bool InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
-   , const std::vector<bs::wallet::PasswordData> &pwdData, bs::sync::PasswordDialogData
+   , const std::vector<bs::wallet::PasswordData> &pwdData
+   , bs::sync::PasswordDialogData
    , const CreateHDLeafCb &cb)
 {
    const auto hdWallet = walletsMgr_->getHDWalletById(rootWalletId);
@@ -167,6 +168,13 @@ bool InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::P
       cb(bs::error::ErrorCode::InvalidPassword, {});
    }
    return false;
+}
+
+bool InprocSigner::promoteHDWallet(const std::string&,
+                                   bs::sync::PasswordDialogData,
+                                   const WalletSignerContainer::PromoteHDWalletCb&)
+{
+   throw std::bad_function_call();
 }
 
 void InprocSigner::createSettlementWallet(const bs::Address &authAddr
