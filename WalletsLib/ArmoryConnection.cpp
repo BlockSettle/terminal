@@ -1154,8 +1154,9 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
       break;
 
    case BDMAction_NodeStatus: {
-      logger_->debug("[ArmoryCallback::run] BDMAction_NodeStatus");
       const auto nodeStatus = *reinterpret_cast<ClientClasses::NodeStatusStruct *>(ptr);
+      logger_->debug("[ArmoryCallback::run] BDMAction_NodeStatus: status={}, RPC status={}"
+         , (int)nodeStatus.status(), (int)nodeStatus.rpcStatus());
       connection_->addToMaintQueue([nodeStatus](ArmoryCallbackTarget *tgt) {
          tgt->onNodeStatus(nodeStatus.status(), nodeStatus.isSegWitEnabled(), nodeStatus.rpcStatus());
       });
