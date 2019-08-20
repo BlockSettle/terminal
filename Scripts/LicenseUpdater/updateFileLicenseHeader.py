@@ -12,37 +12,37 @@ import os
 excludedir = []
 
 def update_source(filename, oldcopyright, copyright):
-    utfstr = chr(0xef)+chr(0xbb)+chr(0xbf)
-    with open(filename, 'r') as filetochange: fdata = filetochange.read()
-    isUTF = False
-    if (fdata.startswith(utfstr)):
-        isUTF = True
-        fdata = fdata[3:]
-    if (oldcopyright != None):
-        if (fdata.startswith(oldcopyright)):
-            fdata = fdata[len(oldcopyright):]
-    if not (fdata.startswith(copyright)):
-        print("updating " + filename)
-        fdata = copyright + fdata
-        if (isUTF):
-            with open(filename, 'w') as modified: modified.write(utfstr+fdata)
-        else:
-            with open(filename, 'w') as modified: modified.write(fdata)
+   utfstr = chr(0xef)+chr(0xbb)+chr(0xbf)
+   with open(filename, 'r') as filetochange: fdata = filetochange.read()
+   isUTF = False
+   if (fdata.startswith(utfstr)):
+      isUTF = True
+      fdata = fdata[3:]
+   if (oldcopyright != None):
+      if (fdata.startswith(oldcopyright)):
+         fdata = fdata[len(oldcopyright):]
+   if not (fdata.startswith(copyright)):
+      print("updating " + filename)
+      fdata = copyright + fdata
+      if (isUTF):
+         with open(filename, 'w') as modified: modified.write(utfstr+fdata)
+      else:
+         with open(filename, 'w') as modified: modified.write(fdata)
 
 def recursive_traversal(dir, oldcopyright, copyright):
-    global excludedir
-    fns = os.listdir(dir)
-    for fn in fns:
-        fullfn = os.path.join(dir,fn)
-        if (fullfn in excludedir):
-            continue
-        if (os.path.isdir(fullfn)):
-            recursive_traversal(fullfn, oldcopyright, copyright)
-        else:
-            if (fullfn.endswith(".hpp") or fullfn.endswith(".cpp") or fullfn.endswith(".h") or fullfn.endswith(".c")):
-                update_source(fullfn, "/*\n\n" + oldcopyright + "\n*/\n", "/*\n\n" + copyright + "\n*/\n")
+   global excludedir
+   fns = os.listdir(dir)
+   for fn in fns:
+      fullfn = os.path.join(dir,fn)
+      if (fullfn in excludedir):
+         continue
+      if (os.path.isdir(fullfn)):
+         recursive_traversal(fullfn, oldcopyright, copyright)
+      else:
+         if (fullfn.endswith(".hpp") or fullfn.endswith(".cpp") or fullfn.endswith(".h") or fullfn.endswith(".c")):
+            update_source(fullfn, "/*\n\n" + oldcopyright + "\n*/\n", "/*\n\n" + copyright + "\n*/\n")
 
 with open('oldlicense.txt', 'r') as oldfile: oldlicense = oldfile.read()
 with open('newlicense.txt', 'r') as newfile: newlicense = newfile.read()
-recursive_traversal("../../.", oldlicense, newlicense)
+recursive_traversal(".", oldlicense, newlicense)
 exit()
