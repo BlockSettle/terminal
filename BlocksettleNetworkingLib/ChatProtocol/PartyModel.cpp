@@ -23,12 +23,14 @@ namespace Chat
          partyMap_.erase(partyPtr->id());
 
          emit partyRemoved(oldPartyPtr);
+         emit partyModelChanged();
          emit error(PartyModelError::InsertExistingParty, partyPtr->id());
       }
 
       partyMap_[partyPtr->id()] = partyPtr;
 
       emit partyInserted(partyPtr);
+      emit partyModelChanged();
    }
 
    void PartyModel::removeParty(const PartyPtr& partyPtr)
@@ -39,6 +41,7 @@ namespace Chat
          partyMap_.erase(partyPtr->id());
 
          emit partyRemoved(oldPartyPtr);
+         emit partyModelChanged();
          return;
       }
 
@@ -94,6 +97,7 @@ namespace Chat
       }
 
       partyMap_.clear();
+      emit partyModelChanged();
    }
 
    void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)

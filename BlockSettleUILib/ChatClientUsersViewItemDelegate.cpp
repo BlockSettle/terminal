@@ -46,6 +46,18 @@ ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(QObject *parent
 
 void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
+   PartyTreeItem* internalData = static_cast<PartyTreeItem*>(index.internalPointer());
+   QVariant val = internalData->data();
+   if (val.canConvert<QString>())
+   {
+      paintPartyContainer(painter, option, index);
+   }
+
+   if (val.canConvert<Chat::ClientPartyPtr>())
+   {
+      paintParty(painter, option, index);
+   }
+/*
    AbstractParty* internalData = checkAndGetInternalPointer<AbstractParty>(index);
 
    if (UI::ElementType::Container == internalData->elementType()) {
@@ -56,6 +68,7 @@ void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptio
       // You should specify rules for new ElementType explicitly
       Q_ASSERT(false);
    }
+*/
 }
 
 // paintCategoryNode == paintPartyContainer
@@ -87,65 +100,63 @@ void ChatClientUsersViewItemDelegate::paintPartyContainer(QPainter *painter, con
    }
 
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorCategoryItem());
-
+   PartyTreeItem* internalData = static_cast<PartyTreeItem*>(index.internalPointer());
+   itemOption.text = internalData->data().toString();
+/*
    PartyContainer* container = checkAndGetInternalPointer<PartyContainer>(index);
    if (container) {
       itemOption.text = QString::fromStdString(container->getDisplayName());
    } else {
       itemOption.text = unknown;
    }
-
+*/
    QStyledItemDelegate::paint(painter, itemOption, index);
 }
 
 void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
-   if (itemOption.state & QStyle::State_Selected) {
+   if (itemOption.state & QStyle::State_Selected)
+   {
       painter->save();
       painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
       painter->restore();
    }
 
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorRoom());
-   Party* party = checkAndGetInternalPointer<Party>(index);
-   PartyContainer* container = checkAndGetInternalPointer<PartyContainer>(index.parent());
+   PartyTreeItem* party = static_cast<PartyTreeItem*>(index.internalPointer());
+   Chat::ClientPartyPtr clientPartyPtr = party->data().value<Chat::ClientPartyPtr>();
 
-   if (!party || !container) {
-      QStyledItemDelegate::paint(painter, itemOption, index);
-      return;
-   }
+   itemOption.text = QString::fromStdString(clientPartyPtr->displayName());
 
-   if (Chat::PartyType::GLOBAL == container->getPartyType()) {
-      itemOption.text = QString::fromStdString(party->getDisplayName());
-      QStyledItemDelegate::paint(painter, itemOption, index);
-   } else if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == container->getPartyType()) {
-
-      switch (party->getClientStatus()) {
-      case Chat::ClientStatus::ONLINE: {
-         itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOnline());
+   if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyType())
+   {
+      switch (clientPartyPtr->clientStatus())
+      {
+         case Chat::ClientStatus::ONLINE:
+         {
+            itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOnline());
+         }
          break;
-      }
-      case Chat::ClientStatus::OFFLINE: {
-         itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOffline());
-         if (option.state & QStyle::State_Selected) {
-            painter->save();
-            painter->fillRect(itemOption.rect, itemStyle_.colorContactOffline());
-            painter->restore();
+
+         case Chat::ClientStatus::OFFLINE:
+         {
+            itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOffline());
+            if (option.state & QStyle::State_Selected)
+            {
+               painter->save();
+               painter->fillRect(itemOption.rect, itemStyle_.colorContactOffline());
+               painter->restore();
+            }
+         }
+         break;
+
+         default: 
+         {
+            // You should specify rules for new ClientStatus explicitly
          }
          break;
       }
-      default: {
-         // You should specify rules for new ClientStatus explicitly
-         Q_ASSERT(false);
-         break;
-      }
-      }
-
-
-   } else {
-      // You should specify rules for new PartyType explicitly
-      Q_ASSERT(false);
    }
 
    QStyledItemDelegate::paint(painter, itemOption, index);

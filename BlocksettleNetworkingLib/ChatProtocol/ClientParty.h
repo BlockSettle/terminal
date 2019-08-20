@@ -41,4 +41,6 @@ namespace Chat
 
 }
 
+Q_DECLARE_METATYPE(Chat::ClientPartyPtr)
+
 #endif // ClientParty_h__

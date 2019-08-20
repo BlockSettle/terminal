@@ -59,6 +59,8 @@ namespace Chat
 
       // TODO: remove
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::testProperlyConnected, this, &ChatClientLogic::testProperlyConnected);
+
+      emit initDone();
    }
 
    void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettingsPtr, const LoggerPtr& loggerPtr)

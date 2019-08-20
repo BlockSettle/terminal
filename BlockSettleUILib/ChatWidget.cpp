@@ -25,6 +25,8 @@
 #include <spdlog/spdlog.h>
 #include <ChatPartiesTreeModel.h>
 
+#include "ChatProtocol/ClientPartyModel.h"
+
 Q_DECLARE_METATYPE(std::vector<std::string>)
 
 
@@ -247,9 +249,10 @@ ChatWidget::ChatWidget(QWidget *parent)
 
 ChatWidget::~ChatWidget() = default;
 
-void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager
-                 , const std::shared_ptr<ApplicationSettings> &appSettings
-                 , const std::shared_ptr<spdlog::logger>& logger)
+void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager,
+   const std::shared_ptr<ApplicationSettings> &appSettings,
+   const Chat::ChatClientServicePtr& chatClientServicePtr,
+   const std::shared_ptr<spdlog::logger>& logger)
 {
    logger_ = logger;
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
@@ -268,7 +271,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setHandler(this);
    static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setActiveChatLabel(ui_->labelActiveChat);
 #else
-   ui_->treeViewUsers->setModel(new ChatPartiesTreeModel(this));
+   chatClientServicePtr_ = chatClientServicePtr;
+   ui_->treeViewUsers->setModel(new ChatPartiesTreeModel(chatClientServicePtr_, this));
    ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(this));
 #endif
    ui_->textEditMessages->setHandler(this);
