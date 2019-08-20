@@ -46,7 +46,7 @@ public:
       , bs::sync::PasswordDialogData dialogData = {}, const CreateHDLeafCb &cb = nullptr) = 0;
 
    using PromoteHDWalletCb = std::function<void(bs::error::ErrorCode, const std::string &leafWalletId)>;
-   virtual bool promoteHDWallet(const std::string& rootWalletId
+   virtual bool promoteHDWallet(const std::string& rootWalletId, const BinaryData &userId
       , bs::sync::PasswordDialogData dialogData = {}, const PromoteHDWalletCb& cb = nullptr) = 0;
 
 signals:
