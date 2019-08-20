@@ -212,21 +212,19 @@ private:
    bool isUserLoggedIn() const;
    bool isArmoryConnected() const;
 
-   bool goOnlineArmory() const;
-
    void InitWidgets();
 
    void networkSettingsReceived(const NetworkSettings &settings);
 
 private:
    QString           loginButtonText_;
-   bool readyToRegisterWallets_ = false;
-   bool wasWalletsRegistered_ = false;
+
    bool initialWalletCreateDialogShown_ = false;
-   bool armoryKeyDialogShown_ = false;
-   bool armoryBDVRegistered_ = false;
-   bool walletsSynched_ = false;
    bool deferCCsync_ = false;
+
+   bool wasWalletsRegistered_ = false;
+   bool walletsSynched_ = false;
+   bool isArmoryReady_ = false;
 
    std::unique_ptr<NetworkSettingsLoader> networkSettingsLoader_;
 

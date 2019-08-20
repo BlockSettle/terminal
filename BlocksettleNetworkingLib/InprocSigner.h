@@ -27,7 +27,7 @@ public:
       , const std::string &walletsPath, NetworkType);
    InprocSigner(const std::shared_ptr<bs::core::hd::Wallet> &
       , const std::shared_ptr<spdlog::logger> &);
-   ~InprocSigner() noexcept = default;
+   ~InprocSigner() noexcept override = default;
 
    bool Start() override;
    bool Stop() override { return true; }
@@ -60,15 +60,15 @@ public:
    bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override;
 
    // cb is ignored in inproc signer
-   bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
+   bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}
       , bs::sync::PasswordDialogData dialogData = {}, const CreateHDLeafCb &cb = nullptr) override;
+   bool promoteHDWallet(const std::string&, bs::sync::PasswordDialogData = {}, const PromoteHDWalletCb& = nullptr) override;
    bs::signer::RequestId DeleteHDRoot(const std::string &) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override;
    bs::signer::RequestId GetInfo(const std::string &) override;
 
-   bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog
-      , const QVariantMap &data) override { return 0; }
+   bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType, const QVariantMap&) override { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;

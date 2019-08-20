@@ -108,6 +108,7 @@ private:
    bool onSignSettlementPayoutTxRequest(const std::string &clientId
       , const Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCreateHDLeaf(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
+   bool onPromoteHDWallet(const std::string& clientId, Blocksettle::Communication::headless::RequestPacket& packet);
    bool onSetUserId(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSyncCCNames(Blocksettle::Communication::headless::RequestPacket &packet);
    bool onGetHDWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
@@ -131,6 +132,8 @@ private:
       , bs::error::ErrorCode errorCode, const BinaryData &tx = {});
    void CreateHDLeafResponse(const std::string &clientId, unsigned int id, bs::error::ErrorCode result
       , const std::shared_ptr<bs::core::hd::Leaf>& leaf = nullptr);
+   void CreatePromoteHDWalletResponse(const std::string& clientId, unsigned int id, bs::error::ErrorCode result,
+                                const std::string& walletId);
    void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::string &walletId
       , const std::shared_ptr<bs::core::hd::Wallet> &, const std::string &error = {});
    void SyncAddrsResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bs::sync::SyncState);
