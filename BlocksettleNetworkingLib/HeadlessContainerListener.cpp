@@ -1016,6 +1016,7 @@ bool HeadlessContainerListener::onPromoteHDWallet(const std::string& clientId, h
             , walletsMgr_->ccLeaves().size());
          group = hdWallet->createGroup(bs::hd::BlockSettle_CC);
          if (group) {
+            auto lock = hdWallet->lockForEncryption(pass);
             for (const auto &cc : walletsMgr_->ccLeaves()) {
                try {
                   group->createLeaf(AddressEntryType_P2WPKH, cc);
