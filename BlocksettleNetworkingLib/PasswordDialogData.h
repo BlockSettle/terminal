@@ -33,7 +33,7 @@ public:
    void setValue(const char *key, const char *value);
    Q_INVOKABLE bool contains(const QString &key);
    bool contains(const char *key) { return contains(QString::fromLatin1(key)); }
-   Q_INVOKABLE void merge(const PasswordDialogData &other);
+   Q_INVOKABLE void merge(PasswordDialogData *other);
 
 signals:
    void dataChanged();
@@ -41,9 +41,7 @@ signals:
 private:
    void setValues(const QVariantMap &values);
 
-   bool deliveryUTXOVerified() {
-      return contains("DeliveryUTXOVerified") && value("DeliveryUTXOVerified").toBool();
-   }
+   bool deliveryUTXOVerified() { return value("DeliveryUTXOVerified").toBool(); }
 
 private:
    QVariantMap values_;

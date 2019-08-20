@@ -63,9 +63,48 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData()
                  .arg(QString::fromStdString(product())));
    dialogData.setValue("TotalValue", UiUtils::displayAmount(quantity() * price()));
 
+   // tx details
+   if (side() == bs::network::Side::Buy) {
+      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(txReq_.inputAmount())));
+
+      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(txReq_.change.value)));
+
+      dialogData.setValue("PaymentAmount", QStringLiteral("(%1)-%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(txReq_.inputAmount() - txReq_.change.value)));
+
+      dialogData.setValue("DeliveryReceived", QStringLiteral("(%1)+%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(txReq_.change.value)));
+   }
+   else {
+      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(txReq_.inputAmount())));
+
+      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(txReq_.change.value)));
+
+      dialogData.setValue("DeliveryAmount", QStringLiteral("(%1)-%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(txReq_.inputAmount() - txReq_.change.value)));
+
+      dialogData.setValue("PaymentReceived", QStringLiteral("(%1)+%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(amount())));
+   }
+
    // settlement details
-   dialogData.setValue("InputAmount", UiUtils::displayAmount(txReq_.inputAmount()));
-   dialogData.setValue("ReturnAmount", UiUtils::displayAmount(txReq_.change.value));
+   dialogData.setValue("DeliveryUTXOVerified", genAddrVerified_);
+   dialogData.setValue("SigningAllowed", genAddrVerified_);
+
+   dialogData.setValue("RecipientsList", true);
+   dialogData.setValue("InputsList", true);
 
    return dialogData;
 }
@@ -170,10 +209,10 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
       wallet_ = nullptr;
    }
 
-//   bs::sync::PasswordDialogData pd;
-//   pd.setValue("DeliveryUTXOVerified", addressVerified);
-//   pd.setValue("SigningAllowed", addressVerified);
-//   signingContainer_->updateDialogData(pd);
+   bs::sync::PasswordDialogData pd;
+   pd.setValue("DeliveryUTXOVerified", addressVerified);
+   pd.setValue("SigningAllowed", addressVerified);
+   signingContainer_->updateDialogData(pd);
 }
 
 bool DealerCCSettlementContainer::isAcceptable() const
@@ -184,6 +223,7 @@ bool DealerCCSettlementContainer::isAcceptable() const
 bool DealerCCSettlementContainer::cancel()
 {
    utxoAdapter_->unreserve(id());
+   signingContainer_->CancelSignTx(txReq_.serializeState());
    cancelled_ = true;
    return true;
 }

@@ -32,6 +32,8 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
    connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &ReqCCSettlementContainer::onWalletInfo);
+   connect(this, &ReqCCSettlementContainer::genAddressVerified, this
+      , &ReqCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
 
    const auto &signingWallet = transactionData_->getSigningWallet();
    if (signingWallet) {
@@ -73,10 +75,49 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
                  .arg(QString::fromStdString(product())));
    dialogData.setValue("TotalValue", UiUtils::displayAmount(quantity() * price()));
 
-   // settlement details
-   dialogData.setValue("InputAmount", UiUtils::displayAmount(ccTxData_.inputAmount()));
-   dialogData.setValue("ReturnAmount", UiUtils::displayAmount(ccTxData_.change.value));
+   // tx details
+   if (side() == bs::network::Side::Buy) {
+      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(ccTxData_.inputAmount())));
 
+      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(ccTxData_.change.value)));
+
+      dialogData.setValue("PaymentAmount", QStringLiteral("(%1)-%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(ccTxData_.inputAmount() - ccTxData_.change.value)));
+
+      dialogData.setValue("DeliveryReceived", QStringLiteral("(%1)+%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(ccTxData_.change.value)));
+   }
+   else {
+      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount())));
+
+      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(ccTxData_.change.value)));
+
+      dialogData.setValue("DeliveryAmount", QStringLiteral("(%1)-%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount() - ccTxData_.change.value)));
+
+      dialogData.setValue("PaymentReceived", QStringLiteral("(%1)+%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(amount())));
+   }
+
+
+   // settlement details
+   dialogData.setValue("DeliveryUTXOVerified", genAddrVerified_);
+   dialogData.setValue("SigningAllowed", genAddrVerified_);
+
+   dialogData.setValue("RecipientsList", true);
+   dialogData.setValue("InputsList", true);
 
    return dialogData;
 }
@@ -122,20 +163,20 @@ void ReqCCSettlementContainer::activate()
    emit paymentVerified(foundRecipAddr && amountValid, QString{});
 
    if (genAddress_.isNull()) {
-      emit genAddrVerified(false, tr("GA is null"));
+      emit genAddressVerified(false, tr("GA is null"));
    }
    else if (side() == bs::network::Side::Buy) {
       emit info(tr("Waiting for genesis address verification to complete..."));
 
       const auto &cbHasInput = [this](bool has) {
          userKeyOk_ = has;
-         emit genAddrVerified(has, has ? QString{} : tr("GA check failed"));
+         emit genAddressVerified(has, has ? QString{} : tr("GA check failed"));
       };
       signer_.hasInputAddress(genAddress_, cbHasInput, lotSize_);
    }
    else {
       userKeyOk_ = true;
-      emit genAddrVerified(true, QString{});
+      emit genAddressVerified(true, QString{});
    }
 
    if (!createCCUnsignedTXdata()) {
@@ -258,6 +299,16 @@ void ReqCCSettlementContainer::onWalletInfo(unsigned int reqId, const bs::hd::Wa
    walletInfo_.setKeyRank(walletInfo.keyRank());
 
    emit walletInfoReceived();
+}
+
+void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const QString &error)
+{
+   genAddrVerified_ = addressVerified;
+
+   bs::sync::PasswordDialogData pd;
+   pd.setValue("DeliveryUTXOVerified", addressVerified);
+   pd.setValue("SigningAllowed", addressVerified);
+   signingContainer_->updateDialogData(pd);
 }
 
 bool ReqCCSettlementContainer::isAcceptable() const

@@ -107,21 +107,53 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue("TotalValue", UiUtils::displayCurrencyAmount(amount() * price()));
 
 
-   // tx details
-   if (weSell()) {
-      dialogData.setValue("TotalSpent", UiUtils::displayQuantity(amount() + UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
-   }
-   else {
-      dialogData.setValue("TotalReceived", UiUtils::displayQuantity(amount() - UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
-   }
-
-   dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
-   dialogData.setValue("NetworkFee", UiUtils::displayQuantity(UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
-
-   // settlement details
    try {
-      dialogData.setValue("InputAmount", UiUtils::displayAmount(transactionData_->getSignTxRequest().inputAmount()));
-      dialogData.setValue("ReturnAmount", UiUtils::displayAmount(transactionData_->getSignTxRequest().change.value));
+      bs::core::wallet::TXSignRequest txData = transactionData_->getSignTxRequest();
+
+      // tx details
+      if (side() == bs::network::Side::Buy) {
+         dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                       .arg(UiUtils::XbtCurrency)
+                       .arg(UiUtils::displayAmount(txData.inputAmount())));
+
+         dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                       .arg(UiUtils::XbtCurrency)
+                       .arg(UiUtils::displayAmount(txData.change.value)));
+
+         dialogData.setValue("PaymentAmount", QStringLiteral("(%1)-%2")
+                       .arg(UiUtils::XbtCurrency)
+                       .arg(UiUtils::displayAmount(txData.inputAmount() - txData.change.value)));
+
+         dialogData.setValue("DeliveryReceived", QStringLiteral("(%1)+%2")
+                       .arg(QString::fromStdString(product()))
+                       .arg(UiUtils::displayCCAmount(txData.change.value)));
+      }
+      else {
+         dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                       .arg(QString::fromStdString(product()))
+                       .arg(UiUtils::displayCCAmount(txData.inputAmount())));
+
+         dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                       .arg(QString::fromStdString(product()))
+                       .arg(UiUtils::displayCCAmount(txData.change.value)));
+
+         dialogData.setValue("DeliveryAmount", QStringLiteral("(%1)-%2")
+                       .arg(QString::fromStdString(product()))
+                       .arg(UiUtils::displayCCAmount(txData.inputAmount() - txData.change.value)));
+
+         dialogData.setValue("PaymentReceived", QStringLiteral("(%1)+%2")
+                       .arg(UiUtils::XbtCurrency)
+                       .arg(UiUtils::displayAmount(amount())));
+      }
+
+      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
+      dialogData.setValue("NetworkFee", UiUtils::displayQuantity(UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+
+      // settlement details
+      dialogData.setValue("InputAmount", UiUtils::displayAmount(txData.inputAmount()));
+      dialogData.setValue("ReturnAmount", UiUtils::displayAmount(txData.change.value));
+
+
    } catch (...) {}
 
    return dialogData;
