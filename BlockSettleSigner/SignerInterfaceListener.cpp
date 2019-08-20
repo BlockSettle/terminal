@@ -623,7 +623,6 @@ void SignerInterfaceListener::requestPasswordForSettlementTx(signer::PasswordDia
 void SignerInterfaceListener::requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData
    , bs::hd::WalletInfo *walletInfo)
 {
-   dialogData->setValue("DialogType", "RequestPasswordForAuthLeaf");
    requestPasswordForDialogType(QLatin1String("RequestPasswordForAuthLeaf"), dialogData, walletInfo);
 }
 
