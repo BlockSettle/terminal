@@ -56,6 +56,7 @@ void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::Wallets
       connect(walletsManager_.get(), &bs::sync::WalletsManager::walletAdded, this, &RFQRequestWidget::forceCheckCondition);
       connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &RFQRequestWidget::forceCheckCondition);
       connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQRequestWidget::forceCheckCondition);
+      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletPromotedToPrimary, this, &RFQRequestWidget::forceCheckCondition);
    }
 }
 

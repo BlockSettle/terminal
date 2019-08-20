@@ -862,8 +862,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
             " may only have one Primary Wallet. Do you wish to promote '%1'?")
          .arg(QString::fromStdString(wallet->name())), this);
       if (qry.exec() == QDialog::Accepted) {
-         //auth wallets are always ext only
-         wallet->createGroup(bs::hd::CoinType::BlockSettle_Auth, true);
+         walletsMgr_->PromoteHDWallet(wallet->walletId());
          return true;
       }
       return false;

@@ -58,6 +58,7 @@ enum PasswordDialogType
    SignSettlementPartialTx     = 3;
    CreateAuthLeaf              = 4;
    CreateHDLeaf                = 5;
+   PromoteHDWallet	       = 6;
 }
 
 message Packet
