@@ -315,6 +315,7 @@ void BSTerminalMainWindow::LoadWallets()
    logMgr_->logger()->debug("Loading wallets");
 
    wasWalletsRegistered_ = false;
+   walletsSynched_ = false;
 
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, [this] {
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
@@ -322,13 +323,8 @@ void BSTerminalMainWindow::LoadWallets()
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
       walletsSynched_ = true;
-      goOnlineArmory();
       updateControlEnabledState();
-
-      if (readyToRegisterWallets_ && !wasWalletsRegistered_) {
-         wasWalletsRegistered_ = true;
-         walletsMgr_->registerWallets();
-      }
+      CompleteDBConnection();
       act_->onRefresh({}, true);
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
@@ -661,12 +657,17 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
 {
    switch (state) {
    case ArmoryState::Ready:
-      QMetaObject::invokeMethod(parent_, &BSTerminalMainWindow::CompleteUIOnlineView);
+      QMetaObject::invokeMethod(parent_, [this] {
+         parent_->isArmoryReady_ = true;
+         parent_->CompleteDBConnection();
+         parent_->CompleteUIOnlineView();
+      });
       break;
    case ArmoryState::Connected:
-      parent_->armoryBDVRegistered_ = true;
-      parent_->goOnlineArmory();
-      QMetaObject::invokeMethod(parent_, &BSTerminalMainWindow::CompleteDBConnection);
+      QMetaObject::invokeMethod(parent_, [this] {
+         parent_->wasWalletsRegistered_ = false;
+         parent_->armory_->goOnline();
+      });
       break;
    case ArmoryState::Offline:
       QMetaObject::invokeMethod(parent_, &BSTerminalMainWindow::ArmoryIsOffline);
@@ -705,11 +706,12 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
 
 void BSTerminalMainWindow::CompleteDBConnection()
 {
-   logMgr_->logger("ui")->debug("BSTerminalMainWindow::CompleteDBConnection {}", walletsMgr_->hdWalletsCount());
-   if (walletsMgr_ && walletsMgr_->hdWalletsCount()) {
+   if (!wasWalletsRegistered_ && walletsSynched_ && isArmoryReady_) {
+      // Fix race with BDMAction_Refresh and BDMAction_Ready: register wallets AFTER armory becames ready.
+      // Otherwise BDMAction_Refresh might come before BDMAction_Ready causing a lot of problems.
       walletsMgr_->registerWallets();
+      wasWalletsRegistered_ = true;
    }
-   readyToRegisterWallets_ = true;
 }
 
 void BSTerminalMainWindow::onReactivate()
@@ -1456,7 +1458,6 @@ void BSTerminalMainWindow::onButtonUserClicked() {
 
 void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, const std::string &srvIPPort, std::shared_ptr<std::promise<bool>> promiseObj)
 {
-   armoryKeyDialogShown_ = true;
    QList<ArmoryServer> servers = armoryServersProvider_->servers();
    int serverIndex = armoryServersProvider_->indexOfIpPort(srvIPPort);
    if (serverIndex >= 0) {
@@ -1539,31 +1540,6 @@ void BSTerminalMainWindow::onTabWidgetCurrentChanged(const int &index)
    const int chatIndex = ui_->tabWidget->indexOf(ui_->widgetChat);
    const bool isChatTab = index == chatIndex;
    ui_->widgetChat->updateChat(isChatTab);
-}
-
-// A function that puts Armory online if certain conditions are met. The primary
-// intention is to ensure that a terminal with no wallets can connect to Armory
-// while not interfering with the online process for terminals with wallets.
-//
-// INPUT:  N/A
-// OUTPUT: N/A
-// RETURN: True if online, false if not.
-bool BSTerminalMainWindow::goOnlineArmory() const
-{
-   // Go online under the following conditions:
-   // - The Armory connection isn't already online.
-   // - The Armory BDV is registered.
-   // - The terminal has properly synched the wallet state.
-   // - The wallet manager has no wallets, including a settlement wallet. (NOTE:
-   //   Settlement wallets are auto-generated. A future PR will change that.)
-   if (armory_ && !armory_->isOnline() && armoryBDVRegistered_
-      /*&& !walletsMgr_->hasSettlementWallet()*/) {
-      logMgr_->logger()->info("[{}] - Armory connection is going online without "
-         "wallets.", __func__);
-      return armory_->goOnline();
-   }
-
-   return armory_->isOnline();
 }
 
 void BSTerminalMainWindow::InitWidgets()
