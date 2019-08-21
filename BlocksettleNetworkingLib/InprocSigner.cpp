@@ -170,9 +170,8 @@ bool InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::P
    return false;
 }
 
-bool InprocSigner::promoteHDWallet(const std::string&,
-                                   bs::sync::PasswordDialogData,
-                                   const WalletSignerContainer::PromoteHDWalletCb&)
+bool InprocSigner::promoteHDWallet(const std::string &, const BinaryData &
+   , bs::sync::PasswordDialogData , const WalletSignerContainer::PromoteHDWalletCb &)
 {
    throw std::bad_function_call();
 }

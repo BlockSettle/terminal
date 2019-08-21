@@ -1504,7 +1504,6 @@ bool WalletsManager::PromoteHDWallet(const std::string& walletId, const std::fun
 
    bs::sync::PasswordDialogData dialogData;
    dialogData.setValue("Title", tr("Promote To Primary Wallet"));
-//   dialogData.setValue("Private Market", tr(""));
    dialogData.setValue("XBT", tr("Authentification Addresses"));
 
    const auto& promoteHDWalletCb = [this, cb](bs::error::ErrorCode result
@@ -1514,8 +1513,7 @@ bool WalletsManager::PromoteHDWallet(const std::string& walletId, const std::fun
          cb(result);
       }
    };
-
-   return signContainer_->promoteHDWallet(walletId, dialogData, promoteHDWalletCb);
+   return signContainer_->promoteHDWallet(walletId, userId_, dialogData, promoteHDWalletCb);
 }
 
 void WalletsManager::ProcessPromoteHDWallet(bs::error::ErrorCode result, const std::string& walletId)

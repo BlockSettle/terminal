@@ -152,6 +152,9 @@ private:
       , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const PasswordReceivedCb &cb);
 
+   bool createAuthLeaf(const std::shared_ptr<bs::core::hd::Wallet> &, const BinaryData &salt
+      , const SecureBinaryData &password);
+
    bool CheckSpendLimit(uint64_t value, const std::string &walletId);
 
 private:
