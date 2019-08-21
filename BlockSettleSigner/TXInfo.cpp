@@ -4,6 +4,17 @@
 using namespace bs::wallet;
 using namespace Blocksettle::Communication;
 
+void TXInfo::init()
+{
+   txId_ = QString::fromStdString(txReq_.serializeState().toBinStr());
+}
+
+void TXInfo::setTxId(const QString &txId)
+{
+   txId_ = txId;
+   emit dataChanged();
+}
+
 bs::core::wallet::TXSignRequest TXInfo::getCoreSignTxRequest(const signer::SignTxRequest &req)
 {
    bs::core::wallet::TXSignRequest txReq;
