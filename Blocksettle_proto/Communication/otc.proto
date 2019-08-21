@@ -62,3 +62,48 @@ message Message
         Close close = 3;
     }
 }
+
+message PbRequest
+{
+    message Start
+    {
+        Side sender_side = 1;
+
+        int64 amount = 2;
+        int64 price = 3;
+
+        bytes random_part1 = 4;
+        bytes random_part2 = 5;
+        bytes settlement_id = 6;
+
+        bytes seller_auth_address = 7;
+        bytes buyer_auth_address = 8;
+
+        // Used to check fees and other details (UTXO for payin, settlement address etc)
+        bytes unsigned_payin = 9;
+        bytes unsigned_payout = 10;
+        bytes unsigned_payout_fallback = 11;
+
+        string seller_chat_id = 12;
+        string buyer_chat_id = 13;
+    }
+
+    oneof data
+    {
+        Start start = 1;
+    }
+}
+
+message PbResponse
+{
+    message Start
+    {
+        bool success = 1;
+        string error_msg = 2;
+    }
+
+    oneof data
+    {
+        Start start = 1;
+    }
+}

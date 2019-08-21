@@ -4,12 +4,9 @@ package Blocksettle.Communication.ProxyPb;
 
 message Message
 {
-    message Test
-    {
-    }
+    string email = 1;
 
-    oneof data
-    {
-        Test test = 1;
-    }
+    // Serialized Blocksettle.Communication.Otc.PbRequest (from proxy)
+    // or Blocksettle.Communication.Otc.PbResponse (from server)
+    bytes data = 2;
 }
