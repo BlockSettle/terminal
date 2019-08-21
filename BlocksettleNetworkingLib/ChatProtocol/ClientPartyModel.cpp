@@ -116,6 +116,12 @@ namespace Chat
    {
       PartyPtr partyPtr = getPartyById(id);
 
+      if (nullptr == partyPtr)
+      {
+         emit error(ClientPartyModelError::PartyNotFound, id);
+         return nullptr;
+      }
+
       ClientPartyPtr clientPartyPtr = castToClientPartyPtr(partyPtr);
 
       return clientPartyPtr;

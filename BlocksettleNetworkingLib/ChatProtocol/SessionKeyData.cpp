@@ -1,5 +1,18 @@
 #include "ChatProtocol/SessionKeyData.h"
 
+#include <disable_warnings.h>
+#include <botan/bigint.h>
+#include <botan/base64.h>
+#include <botan/auto_rng.h>
+#include <enable_warnings.h>
+
+namespace {
+   size_t defaultNonceSize()
+   {
+      return 24;
+   }
+}
+
 namespace Chat
 {
 
@@ -13,6 +26,24 @@ namespace Chat
       : userName_(userName), localSessionPublicKey_(localSessionPublicKey), localSessionPrivateKey_(localSessionPrivateKey)
    {
 
+   }
+
+   BinaryData SessionKeyData::nonce()
+   {
+      if (nonce_.empty())
+      {
+         // generate new nonce
+         Botan::AutoSeeded_RNG rng;
+         nonce_ = rng.random_vec(defaultNonceSize());
+         return BinaryData(nonce_.data(), nonce_.size());
+      }
+
+      // increment nonce 
+      Botan::BigInt bigIntNonce;
+      bigIntNonce.binary_decode(nonce_);
+      bigIntNonce++;
+      nonce_ = Botan::BigInt::encode_locked(bigIntNonce);
+      return BinaryData(nonce_.data(), nonce_.size());
    }
 
 }

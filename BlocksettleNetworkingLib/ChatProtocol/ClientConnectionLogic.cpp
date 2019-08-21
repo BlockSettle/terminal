@@ -2,6 +2,7 @@
 #include <QThread>
 #include <QUuid>
 #include <QDateTime>
+#include <QFutureWatcher>
 
 #include <google/protobuf/any.pb.h>
 
@@ -18,8 +19,8 @@ namespace Chat
 {
 
    ClientConnectionLogic::ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings, 
-      const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
-      : QObject(parent), loggerPtr_(loggerPtr), clientDBServicePtr_(clientDBServicePtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
+      const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, const Chat::CryptManagerPtr& cryptManagerPtr, QObject* parent /* = nullptr */)
+      : QObject(parent), cryptManagerPtr_(cryptManagerPtr), loggerPtr_(loggerPtr), clientDBServicePtr_(clientDBServicePtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
    {
       connect(this, &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr_.get(), &ClientPartyLogic::onUserStatusChanged);
       connect(this, &ClientConnectionLogic::error, this, &ClientConnectionLogic::handleLocalErrors);
@@ -29,6 +30,8 @@ namespace Chat
       connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::replySessionKeyExchange, this, &ClientConnectionLogic::replySessionKeyExchange);
       connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::sessionKeysForUser, this, &ClientConnectionLogic::sessionKeysForUser);
       connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::sessionKeysForUserFailed, this, &ClientConnectionLogic::sessionKeysForUserFailed);
+
+      connect(clientDBServicePtr_.get(), &ClientDBService::messageLoaded, this, &ClientConnectionLogic::messageLoaded);
    }
 
    void ClientConnectionLogic::onDataReceived(const std::string& data)
@@ -159,7 +162,7 @@ namespace Chat
    {
       if (PartyType::GLOBAL == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
       {
-         prepareAndSendGlobalMessage(clientPartyPtr, data);
+         prepareAndSendPublicMessage(clientPartyPtr, data);
          return;
       }
 
@@ -172,7 +175,7 @@ namespace Chat
       emit error(ClientConnectionLogicError::SendingDataToUnhandledParty, clientPartyPtr->id());
    }
 
-   void ClientConnectionLogic::prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
+   void ClientConnectionLogic::prepareAndSendPublicMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
    {
       auto partyId = clientPartyPtr->id();
       auto messageId = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
@@ -205,27 +208,106 @@ namespace Chat
       PartyMessagePacket partyMessagePacket;
       partyMessagePacket.CopyFrom(msg);
 
-      // save message as it is
-      clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
-
       ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
 
       // TODO: handle here state changes of the rest of message types
       if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyState() && Chat::PartySubType::STANDARD == clientPartyPtr->partySubType())
       {
-         // private chat, reply that message was received
-         PartyMessageStateUpdate partyMessageStateUpdate;
-         partyMessageStateUpdate.set_party_id(partyMessagePacket.party_id());
-         partyMessageStateUpdate.set_message_id(partyMessagePacket.message_id());
-         partyMessageStateUpdate.set_party_message_state(Chat::PartyMessageState::RECEIVED);
-
-         emit sendPacket(partyMessageStateUpdate);
+         incomingPrivatePartyMessage(msg);
+         return;
       }
 
-      // save received message state in db
-      auto partyMessageState = Chat::PartyMessageState::RECEIVED;
-      clientDBServicePtr_->updateMessageState(partyMessagePacket.message_id(), partyMessageState);
+      if (Chat::PartyType::GLOBAL == clientPartyPtr->partyState() && Chat::PartySubType::STANDARD == clientPartyPtr->partySubType())
+      {
+         incomingGlobalPartyMessage(msg);
+         return;
+      }
+   }
+
+   void ClientConnectionLogic::incomingGlobalPartyMessage(const google::protobuf::Message& msg)
+   {
+      PartyMessagePacket partyMessagePacket;
+      partyMessagePacket.CopyFrom(msg);
+
+      ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
+
+      saveIncomingPartyMessageAndUpdateState(partyMessagePacket, PartyMessageState::RECEIVED);
+   }
+
+   void ClientConnectionLogic::incomingPrivatePartyMessage(const google::protobuf::Message& msg)
+   {
+      PartyMessagePacket partyMessagePacket;
+      partyMessagePacket.CopyFrom(msg);
+
+      ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
+
+      if (partyMessagePacket.encryption() == EncryptionType::AEAD)
+      {
+         SessionKeyDataPtr sessionKeyDataPtr = sessionKeyHolderPtr_->sessionKeyDataForUser(clientPartyPtr->displayName());
+
+         BinaryData nonce = sessionKeyDataPtr->nonce();
+         std::string associatedData = cryptManagerPtr_->jsonAssociatedData(clientPartyPtr->id(), nonce);
+
+         QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
+         connect(watcher, &QFutureWatcher<std::string>::finished,
+            [this, watcher, partyMessagePacket, nonce]() mutable
+            {
+               std::string decryptedMessage = watcher->result();
+               watcher->deleteLater();
+
+               partyMessagePacket.set_message(decryptedMessage);
+
+               saveIncomingPartyMessageAndUpdateState(partyMessagePacket, PartyMessageState::RECEIVED);
+            });
+
+         QFuture<std::string> future = cryptManagerPtr_->decryptMessageAEAD(partyMessagePacket.message(), associatedData,
+            sessionKeyDataPtr->localSessionPrivateKey(), nonce, sessionKeyDataPtr->remoteSessionPublicKey());
+
+         watcher->setFuture(future);
+      }
+
+      if (partyMessagePacket.encryption() == EncryptionType::IES)
+      {
+         QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
+         connect(watcher, &QFutureWatcher<std::string>::finished,
+            [this, watcher, partyMessagePacket]() mutable
+            {
+               std::string decryptedMessage = watcher->result();
+               watcher->deleteLater();
+
+               partyMessagePacket.set_message(decryptedMessage);
+
+               saveIncomingPartyMessageAndUpdateState(partyMessagePacket, PartyMessageState::RECEIVED);
+            });
+
+         QFuture<std::string> future = cryptManagerPtr_->decryptMessageIES(partyMessagePacket.message(), currentUserPtr()->privateKey());
+         watcher->setFuture(future);
+      }
+   }
+
+   void ClientConnectionLogic::saveIncomingPartyMessageAndUpdateState(const google::protobuf::Message& msg, const PartyMessageState& partyMessageState)
+   {
+      PartyMessagePacket partyMessagePacket;
+      partyMessagePacket.CopyFrom(msg);
+
+      //save message
+      clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
+
+      // private chat, reply that message was received
+      partyMessagePacket.set_party_message_state(PartyMessageState::RECEIVED);
+
+      PartyMessageStateUpdate partyMessageStateUpdate;
+      partyMessageStateUpdate.set_party_id(partyMessagePacket.party_id());
+      partyMessageStateUpdate.set_message_id(partyMessagePacket.message_id());
+      partyMessageStateUpdate.set_party_message_state(partyMessagePacket.party_message_state());
+
+      emit sendPacket(partyMessageStateUpdate);
+
+      // update message state in db
+      clientDBServicePtr_->updateMessageState(partyMessagePacket.message_id(), partyMessagePacket.party_message_state());
    }
 
    void ClientConnectionLogic::setMessageSeen(const ClientPartyPtr& clientPartyPtr, const std::string& messageId)
@@ -401,13 +483,107 @@ namespace Chat
    void ClientConnectionLogic::sessionKeysForUser(const Chat::SessionKeyDataPtr& sessionKeyDataPtr)
    {
       // read msg from db
-      // encrypt by aead
-      // send msg
-      // delete msg in db
+      std::string receiverUserName = sessionKeyDataPtr->userName();
+      ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      PartyPtr partyPtr = clientPartyModelPtr->getPartyByUserName(receiverUserName);
+
+      clientDBServicePtr_->readUnsentMessages(partyPtr->id());
    }
 
    void ClientConnectionLogic::sessionKeysForUserFailed(const std::string& userName)
    {
+      // ! not implemented
+      // this function is called after sendmessage
+   }
+
+   void ClientConnectionLogic::messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
+      const std::string& message, const int encryptionType, const std::string& nonce, const int partyMessageState)
+   {
+      Q_UNUSED(encryptionType);
+      Q_UNUSED(partyMessageState);
+
+      // 1. encrypt by aead
+      // 2. send msg
+      // 3. update message state in db
+
+      // we need only unsent messages
+      if (PartyMessageState::UNSENT != partyMessageState)
+      {
+         return;
+      }
+
+      ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyId);
+
+      PartyRecipientsPtrList recipients = clientPartyPtr->recipients();
+      for (const PartyRecipientPtr& recipient : recipients)
+      {
+         // we need to be sure here that sessionKeyDataPtr is properly initialized
+         SessionKeyDataPtr sessionKeyDataPtr = sessionKeyHolderPtr_->sessionKeyDataForUser(recipient->userName());
+         if (!sessionKeyDataPtr->isInitialized())
+         {
+            // sorry, not today
+            continue;
+         }
+
+         // use AEAD encryption for online clients
+         if (clientPartyPtr->clientStatus() == ClientStatus::ONLINE)
+         {
+            BinaryData nonce = sessionKeyDataPtr->nonce();
+            std::string associatedData = cryptManagerPtr_->jsonAssociatedData(partyId, nonce);
+
+            QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
+            connect(watcher, &QFutureWatcher<std::string>::finished,
+               [this, watcher, clientPartyPtr, messageId, timestamp, sessionKeyDataPtr, nonce]()
+               {
+                  std::string encryptedMessage = watcher->result();
+                  watcher->deleteLater();
+
+                  PartyMessagePacket partyMessagePacket;
+                  partyMessagePacket.set_party_id(clientPartyPtr->id());
+                  partyMessagePacket.set_message_id(messageId);
+                  partyMessagePacket.set_timestamp_ms(timestamp);
+                  partyMessagePacket.set_encryption(EncryptionType::AEAD);
+                  partyMessagePacket.set_nonce(nonce.toBinStr());
+                  partyMessagePacket.set_party_message_state(PartyMessageState::SENT);
+
+                  sendPacket(partyMessagePacket);
+
+                  clientDBServicePtr_->updateMessageState(messageId, PartyMessageState::SENT);
+               });
+
+            QFuture<std::string> future = cryptManagerPtr_->encryptMessageAEAD(
+               message, associatedData, sessionKeyDataPtr->localSessionPrivateKey(), nonce, sessionKeyDataPtr->remoteSessionPublicKey());
+
+            watcher->setFuture(future);
+
+            continue;
+         }
+
+         // in other case use IES encryption
+         QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
+         connect(watcher, &QFutureWatcher<std::string>::finished,
+            [this, watcher, clientPartyPtr, messageId, timestamp, sessionKeyDataPtr, nonce]()
+            {
+               std::string encryptedMessage = watcher->result();
+               watcher->deleteLater();
+
+               PartyMessagePacket partyMessagePacket;
+               partyMessagePacket.set_party_id(clientPartyPtr->id());
+               partyMessagePacket.set_message_id(messageId);
+               partyMessagePacket.set_timestamp_ms(timestamp);
+               partyMessagePacket.set_encryption(EncryptionType::IES);
+               partyMessagePacket.set_party_message_state(PartyMessageState::SENT);
+
+               sendPacket(partyMessagePacket);
+
+               clientDBServicePtr_->updateMessageState(messageId, PartyMessageState::SENT);
+            });
+
+         QFuture<std::string> future = cryptManagerPtr_->encryptMessageIES(message, recipient->publicKey());
+
+         watcher->setFuture(future);
+      }
 
    }
 }

@@ -30,7 +30,7 @@ namespace Chat
          return;
       }
 
-      SessionKeyDataPtr sessionKeyDataPtr = sessionDataKeyForUser(userName);
+      SessionKeyDataPtr sessionKeyDataPtr = sessionKeyDataForUser(userName);
 
       if (sessionKeyDataPtr->isInitialized())
       {
@@ -71,7 +71,7 @@ namespace Chat
       }
    }
 
-   SessionKeyDataPtr SessionKeyHolder::sessionDataKeyForUser(const std::string& userName)
+   SessionKeyDataPtr SessionKeyHolder::sessionKeyDataForUser(const std::string& userName)
    {
       const auto it = sessionKeyDataList_.find(userName);
       if (it == sessionKeyDataList_.end())
@@ -132,7 +132,7 @@ namespace Chat
 
    void SessionKeyHolder::onIncomingRequestSessionKeyExchange(const std::string& userName, const BinaryData& incomingEncodedPublicKey, const SecureBinaryData& ownPrivateKey)
    {
-      SessionKeyDataPtr sessionKeyDataPtr = sessionDataKeyForUser(userName);
+      SessionKeyDataPtr sessionKeyDataPtr = sessionKeyDataForUser(userName);
       sessionKeyDataPtr->setInitialized(false);
 
       // decrypt by ies received public key
@@ -162,7 +162,7 @@ namespace Chat
 
    void SessionKeyHolder::onIncomingReplySessionKeyExchange(const std::string& userName, const BinaryData& incomingEncodedPublicKey)
    {
-      SessionKeyDataPtr sessionKeyDataPtr = sessionDataKeyForUser(userName);
+      SessionKeyDataPtr sessionKeyDataPtr = sessionKeyDataForUser(userName);
       sessionKeyDataPtr->setInitialized(false);
 
       // decrypt by ies received public key

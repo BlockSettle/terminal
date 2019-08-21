@@ -5,6 +5,8 @@
 #include <QFuture>
 #include <memory>
 
+#include "ChatProtocol/SessionKeyData.h"
+
 namespace spdlog
 {
    class logger;
@@ -14,8 +16,6 @@ class BinaryData;
 
 namespace Chat
 {
-   class PartyMessagePacket;
-
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
 
    class CryptManager : public QObject
@@ -24,14 +24,25 @@ namespace Chat
    public:
       CryptManager(const Chat::LoggerPtr& loggerPtr, QObject* parent = nullptr);
 
-      QFuture<PartyMessagePacket> encryptMessageIes(const PartyMessagePacket& partyMessagePacket, const BinaryData& pubKey);
-      //static std::shared_ptr<Chat::Data> decryptMessageIes(const Chat::Data_Message& msg, const SecureBinaryData& privKey);
+      QFuture<std::string> encryptMessageIES(const std::string& message, const BinaryData& ownPublicKey);
+      QFuture<std::string> decryptMessageIES(const std::string& message, const SecureBinaryData& ownPrivateKey);
+
+      QFuture<std::string> encryptMessageAEAD(const std::string& message, const std::string& associatedData, 
+         const SecureBinaryData& localPrivateKey, const BinaryData& nonce, const BinaryData& remotePublicKey);
+      QFuture<std::string> decryptMessageAEAD(const std::string& message, const std::string& associatedData, 
+         const SecureBinaryData& localPrivateKey, const BinaryData& nonce, const BinaryData& remotePublicKey);
+
+      std::string jsonAssociatedData(const std::string& partyId, const BinaryData& nonce);
 
    private:
+      std::string validateUtf8(const Botan::SecureVector<uint8_t>& data);
+
       LoggerPtr loggerPtr_;
    };
 
    using CryptManagerPtr = std::shared_ptr<CryptManager>;
 }
+
+Q_DECLARE_METATYPE(Chat::CryptManagerPtr)
 
 #endif // CryptManager_h__

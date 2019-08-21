@@ -3,6 +3,9 @@
 
 #include "ChatProtocol/CryptManager.h"
 #include "Encryption/IES_Encryption.h"
+#include "Encryption/IES_Decryption.h"
+#include "Encryption/AEAD_Encryption.h"
+#include "Encryption/AEAD_Decryption.h"
 
 #include <disable_warnings.h>
 #include <spdlog/logger.h>
@@ -10,8 +13,6 @@
 #include "BinaryData.h"
 #include "SecureBinaryData.h"
 #include <enable_warnings.h>
-
-#include "chat.pb.h"
 
 namespace Chat
 {
@@ -21,24 +22,116 @@ namespace Chat
 
    }
 
-   QFuture<PartyMessagePacket> CryptManager::encryptMessageIes(const PartyMessagePacket& partyMessagePacket, const BinaryData& pubKey)
+   std::string CryptManager::validateUtf8(const Botan::SecureVector<uint8_t>& data)
    {
-      auto encryptMessageWorker = [this, pubKey](PartyMessagePacket partyMessagePacket) {
+      std::string result = QString::fromUtf8(reinterpret_cast<const char*>(data.data()), data.size()).toStdString();
+      if (result.size() != data.size() && !std::equal(data.begin(), data.end(), result.begin())) {
+         throw std::runtime_error("invalid utf text detected");
+      }
+      return result;
+   }
 
+   QFuture<std::string> CryptManager::encryptMessageIES(const std::string& message, const BinaryData& ownPublicKey)
+   {
+      auto encryptMessageWorker = [this, ownPublicKey](std::string message)
+      {
          auto cipher = Encryption::IES_Encryption::create(loggerPtr_);
 
-         cipher->setPublicKey(pubKey);
-         cipher->setData(partyMessagePacket.message());
+         cipher->setPublicKey(ownPublicKey);
+         cipher->setData(message);
 
          Botan::SecureVector<uint8_t> output;
          cipher->finish(output);
 
-         partyMessagePacket.set_encryption(Chat::EncryptionType::IES);
-         partyMessagePacket.set_message(Botan::base64_encode(output));
+         std::string encryptedMessage = Botan::base64_encode(output);
 
-         return partyMessagePacket;
+         return encryptedMessage;
       };
 
-      return QtConcurrent::run(encryptMessageWorker, partyMessagePacket);
+      return QtConcurrent::run(encryptMessageWorker, message);
+   }
+
+   QFuture<std::string> CryptManager::decryptMessageIES(const std::string& message, const SecureBinaryData& ownPrivateKey)
+   {
+      auto decryptMessageWorker = [this, ownPrivateKey](std::string message)
+      {
+         auto decipher = Encryption::IES_Decryption::create(loggerPtr_);
+
+         decipher->setPrivateKey(ownPrivateKey);
+         auto data = Botan::base64_decode(message);
+         decipher->setData(std::string(data.begin(), data.end()));
+
+         Botan::SecureVector<uint8_t> output;
+         decipher->finish(output);
+
+         std::string decryptedMessage = validateUtf8(output);
+
+         return decryptedMessage;
+      };
+
+      return QtConcurrent::run(decryptMessageWorker, message);
+   }
+
+   std::string CryptManager::jsonAssociatedData(const std::string& partyId, const BinaryData& nonce)
+   {
+      QJsonObject data;
+      data[QLatin1String("partyId")] = QString::fromStdString(partyId);
+      data[QLatin1String("nonce")] = QString::fromStdString(nonce.toHexStr());
+      QJsonDocument jsonDocument(data);
+      return jsonDocument.toJson(QJsonDocument::Compact).toStdString();
+   }
+
+   QFuture<std::string> CryptManager::encryptMessageAEAD(const std::string& message, const std::string& associatedData,
+      const SecureBinaryData& localPrivateKey, const BinaryData& nonce, const BinaryData& remotePublicKey)
+   {
+      auto encryptMessageWorker = [this, associatedData, localPrivateKey, nonce, remotePublicKey](std::string message)
+      {
+         auto cipher = Encryption::AEAD_Encryption::create(loggerPtr_);
+
+         cipher->setPrivateKey(localPrivateKey);
+         cipher->setPublicKey(remotePublicKey);
+         cipher->setNonce(Botan::SecureVector<uint8_t>(nonce.getPtr(), nonce.getPtr() + nonce.getSize()));
+         cipher->setData(message);
+         loggerPtr_->info("[ChatUtils::{}] jsonAssociatedData: {}", __func__, associatedData);
+         cipher->setAssociatedData(associatedData);
+
+         Botan::SecureVector<uint8_t> output;
+         cipher->finish(output);
+
+         std::string encryptedMessage = Botan::base64_encode(output);
+
+         return encryptedMessage;
+      };
+
+      return QtConcurrent::run(encryptMessageWorker, message);
+   }
+
+   QFuture<std::string> CryptManager::decryptMessageAEAD(const std::string& message, const std::string& associatedData,
+      const SecureBinaryData& localPrivateKey, const BinaryData& nonce, const BinaryData& remotePublicKey)
+   {
+      auto decryptMessageWorker = [this, associatedData, localPrivateKey, nonce, remotePublicKey](std::string message)
+      {
+         auto decipher = Encryption::AEAD_Decryption::create(loggerPtr_);
+
+         auto data = Botan::base64_decode(message);
+         decipher->setData(std::string(data.begin(), data.end()));
+         decipher->setPrivateKey(localPrivateKey);
+         decipher->setPublicKey(remotePublicKey);
+
+         const Botan::SecureVector<uint8_t>& nonceVector = Botan::SecureVector<uint8_t>(nonce.getPtr(), nonce.getPtr() + nonce.getSize());
+         decipher->setNonce(nonceVector);
+
+         loggerPtr_->info("[CryptManager::decryptMessageAEAD] jsonAssociatedData: {}", associatedData);
+         decipher->setAssociatedData(associatedData);
+
+         Botan::SecureVector<uint8_t> output;
+         decipher->finish(output);
+
+         std::string decryptedMessage = validateUtf8(output);
+
+         return decryptedMessage;
+      };
+
+      return QtConcurrent::run(decryptMessageWorker, message);
    }
 }
