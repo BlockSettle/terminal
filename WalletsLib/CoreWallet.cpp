@@ -262,6 +262,23 @@ size_t wallet::TXSignRequest::estimateTxVirtSize() const
    return 0;
 }
 
+uint64_t wallet::TXSignRequest::inputAmount() const
+{
+   uint64_t result = 0;
+   for (const auto &utxo: inputs) {
+      result += utxo.getValue();
+   }
+   return result;
+}
+
+uint64_t wallet::TXSignRequest::amount() const
+{
+   uint64_t result = 0;
+   for (const auto &recip : recipients) {
+      result += recip->getValue();
+   }
+   return result;
+}
 
 bool wallet::TXMultiSignRequest::isValid() const noexcept
 {

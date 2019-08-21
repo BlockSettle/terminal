@@ -16,6 +16,10 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
 
+namespace {
+   const auto kAutheIdTimeout = int(BsClient::autheidCcAddressTimeout() / std::chrono::seconds(1));
+}
+
 CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<CCFileManager> &ccFileMgr
       , QWidget *parent)
@@ -27,6 +31,7 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsMa
    ui_->setupUi(this);
 
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &CCTokenEntryDialog::accept);
+   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CCTokenEntryDialog::onCancel);
    connect(ui_->lineEditToken, &QLineEdit::textEdited, this, &CCTokenEntryDialog::tokenChanged);
 
    connect(ccFileMgr_.get(), &CCFileManager::CCAddressSubmitted, this, &CCTokenEntryDialog::onCCAddrSubmitted, Qt::QueuedConnection);
@@ -36,6 +41,11 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsMa
    ccFileMgr_->LoadCCDefinitionsFromPub();
 
    updateOkState();
+
+   ui_->progressBar->setMaximum(kAutheIdTimeout * 10);
+
+   timer_.setInterval(100);
+   connect(&timer_, &QTimer::timeout, this, &CCTokenEntryDialog::onTimer);
 }
 
 CCTokenEntryDialog::~CCTokenEntryDialog() = default;
@@ -120,6 +130,12 @@ void CCTokenEntryDialog::accept()
       }
    };
    ccWallet_->getNewExtAddress(cbAddr);
+
+   ui_->progressBar->setValue(kAutheIdTimeout * 10);
+   timeLeft_ = kAutheIdTimeout;
+   timer_.start();
+   ui_->stackedWidgetAuth->setCurrentWidget(ui_->pageAuth);
+   ui_->labelToken->setText(ui_->lineEditToken->text());
 }
 
 void CCTokenEntryDialog::onCCAddrSubmitted(const QString)
@@ -139,4 +155,26 @@ void CCTokenEntryDialog::onCCSubmitFailed(const QString, const QString &err)
    reject();
    BSMessageBox(BSMessageBox::critical, tr("CC Token submit failure")
       , tr("Failed to submit Private Market token to BlockSettle"), err, this).exec();
+}
+
+void CCTokenEntryDialog::onTimer()
+{
+   timeLeft_ -= timer_.interval() / 1000.0;
+
+   if (timeLeft_ < 0) {
+      return;
+   }
+
+   ui_->progressBar->setValue(int(timeLeft_ * 10));
+   ui_->labelTimeLeft->setText(tr("%1 seconds left").arg(int(timeLeft_)));
+}
+
+void CCTokenEntryDialog::onCancel()
+{
+   ui_->stackedWidgetAuth->setCurrentWidget(ui_->pageEnter);
+   timeLeft_ = 0;
+   timer_.stop();
+
+   // FIXME:
+   // implement cancelation
 }

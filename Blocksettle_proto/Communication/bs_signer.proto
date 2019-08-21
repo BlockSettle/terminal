@@ -48,6 +48,7 @@ enum PacketType
    TerminalEventType  = 29;
 
    DecryptWalletRequestType   = 30;
+   UpdateDialogDataType       = 32; // update fields in password input dialogs in signer ui
 }
 
 enum PasswordDialogType
@@ -157,12 +158,6 @@ message SignTxEvent
 {
    uint32         errorCode = 1;
    bytes          signedTX = 2;
-   //bytes          tx_hash = 3;
-}
-
-message SignTxCancelRequest
-{
-   bytes  tx_hash = 1;
 }
 
 message SignSettlementTxRequest

@@ -189,6 +189,8 @@ namespace bs {
             BinaryData txId() const { return getSigner().getTxId(); }
             size_t estimateTxVirtSize() const;
 
+            uint64_t amount() const;
+            uint64_t inputAmount() const;
          private:
             Signer getSigner() const;
          };

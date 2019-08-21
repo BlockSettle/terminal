@@ -38,7 +38,7 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CCSettlementTransactionWidget::onCancel);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &CCSettlementTransactionWidget::onAccept);
-   connect(settlContainer_.get(), &ReqCCSettlementContainer::genAddrVerified, this, &CCSettlementTransactionWidget::onGenAddrVerified, Qt::QueuedConnection);
+   connect(settlContainer_.get(), &ReqCCSettlementContainer::genAddressVerified, this, &CCSettlementTransactionWidget::onGenAddrVerified, Qt::QueuedConnection);
    connect(settlContainer_.get(), &ReqCCSettlementContainer::paymentVerified, this, &CCSettlementTransactionWidget::onPaymentVerified, Qt::QueuedConnection);
    connect(settlContainer_.get(), &ReqCCSettlementContainer::error, this, &CCSettlementTransactionWidget::onError);
    connect(settlContainer_.get(), &ReqCCSettlementContainer::info, this, &CCSettlementTransactionWidget::onInfo);
