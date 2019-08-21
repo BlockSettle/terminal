@@ -644,7 +644,7 @@ QProgressBar {
 
 QProgressBar::chunk {
   background-color: #22C064;
-  width: 1px;}
+  border-radius: 2px;}
 
 QCalendarWidget {
   padding: 0;
