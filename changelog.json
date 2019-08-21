@@ -1,7 +1,24 @@
 {
-   "latest_version": "0.20.4",
-   "release_date": "17 Aug 2019",
+   "latest_version": "0.20.5",
+   "release_date": "21 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.5",
+         "previous_version": "0.20.4",
+         "release_date": "21 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Add promote hd wallet sign dialog (#362)",
+            "improved wallet promotion in signer ( BST-2088 )",
+            "Add new dialog for HD wallet Promotion (#1277)",
+            "Do not prompt for password re-exporting WO wallet"
+         ],
+         "bug_fixes": [
+            "CCTokenEntryDialog fix (#1279)"
+         ],
+         "revision": "7124f1f1",
+         "common_revision": "8af26119"
+      },
       {
          "version_string": "0.20.4",
          "previous_version": "0.20.3",
@@ -17,7 +34,6 @@
             "Fix CC buy RFQ",
             "Fix payout fees estimation (#1264)",
             "Fix WO to WO export"
-
          ],
          "revision": "e34669eb",
          "common_revision": "fdd5b727"
