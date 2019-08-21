@@ -98,6 +98,9 @@ public slots:
    void onMessageStatusChanged(const std::string& messageId, const std::string &chatId, int newStatus);
    void urlActivated(const QUrl &link);
 
+   void onSingleMessageUpdate2(const std::string& partyId, const std::string& messageId, const std::string& message,
+      const qint64 timestamp, const int party_message_state);
+   
 private slots:
    void copyActionTriggered();
    void copyLinkLocationActionTriggered();

@@ -294,6 +294,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::LogoutFromServer, this, &ChatWidget::onLoggedOut);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
 
+   auto chatModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
+   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageArrived, ui_->textEditMessages, &ChatMessagesTextEdit::onSingleMessageUpdate2);
+
 
 
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
@@ -712,6 +715,7 @@ void ChatWidget::onElementSelected(const PartyTreeItem* chatUserListElement)
    setIsRoom(true);
    currentChat_ = clientParty->id();
    ui_->input_textEdit->setReadOnly(false);
+   ui_->textEditMessages->switchToChat(currentChat_, false);
 
    //if (element) {
    //   switch (element->getType()) {

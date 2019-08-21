@@ -451,6 +451,22 @@ void ChatMessagesTextEdit::onSingleMessageUpdate(const std::shared_ptr<Chat::Dat
    emit rowsInserted();
 }
 
+void ChatMessagesTextEdit::onSingleMessageUpdate2(const std::string& partyId, const std::string& messageId, const std::string& message, const qint64 timestamp, const int party_message_state)
+{
+   std::shared_ptr<Chat::Data> msg{ new Chat::Data };
+   auto* messageData = msg->mutable_message();
+
+   messageData->set_id(messageId);
+   messageData->set_sender_id(partyId);
+   messageData->set_receiver_id(partyId);
+   messageData->set_state(party_message_state);
+   messageData->set_timestamp_ms(timestamp);
+   messageData->set_message(message);
+
+   insertMessage(msg);
+   emit rowsInserted();
+}
+
 void ChatMessagesTextEdit::onMessageIdUpdate(const std::string& oldId, const std::string& newId, const std::string& chatId)
 {
    std::shared_ptr<Chat::Data> message = findMessage(chatId, oldId);
