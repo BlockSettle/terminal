@@ -25,14 +25,15 @@ class TXInfo : public QObject
    Q_PROPERTY(double changeAmount READ changeAmount NOTIFY dataChanged)
    Q_PROPERTY(double inputAmount READ inputAmount NOTIFY dataChanged)
    Q_PROPERTY(bool hasChange READ hasChange NOTIFY dataChanged)
-   Q_PROPERTY(QString txId READ txId NOTIFY dataChanged)
+   Q_PROPERTY(QString txId READ txId WRITE setTxId NOTIFY dataChanged)
    Q_PROPERTY(QString walletId READ walletId NOTIFY dataChanged)
 
 public:
    TXInfo() : QObject(), txReq_() {}
-   TXInfo(const bs::core::wallet::TXSignRequest &txReq) : QObject(), txReq_(txReq) {}
-   TXInfo(const Blocksettle::Communication::signer::SignTxRequest &txRequest): QObject(), txReq_(getCoreSignTxRequest(txRequest)) {}
-   TXInfo(const TXInfo &src) : QObject(), txReq_(src.txReq_) { }
+   TXInfo(const bs::core::wallet::TXSignRequest &txReq) : QObject(), txReq_(txReq) { init(); }
+   TXInfo(const Blocksettle::Communication::signer::SignTxRequest &txRequest)
+      : QObject(), txReq_(getCoreSignTxRequest(txRequest)) { init();}
+   TXInfo(const TXInfo &src) : QObject(), txReq_(src.txReq_) { init(); }
 
    static bs::core::wallet::TXSignRequest getCoreSignTxRequest(const Blocksettle::Communication::signer::SignTxRequest &req);
 
@@ -46,14 +47,19 @@ public:
    bool hasChange() const { return (txReq_.change.value > 0); }
    double changeAmount() const { return txReq_.change.value / BTCNumericTypes::BalanceDivider; }
    double inputAmount() const;
-   QString txId() const { return QString::fromStdString(txReq_.serializeState().toBinStr()); }
+   QString txId() const { return txId_; }
+   void setTxId(const QString &);
    QString walletId() const { return QString::fromStdString(txReq_.walletId); }
 
 signals:
    void dataChanged();
 
 private:
+   void init();
+
+private:
    const bs::core::wallet::TXSignRequest  txReq_;
+   QString  txId_;
 };
 
 }  //namespace wallet
