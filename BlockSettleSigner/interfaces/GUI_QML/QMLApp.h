@@ -55,7 +55,6 @@ public:
 
 signals:
    void cancelSignTx(const QString &txId);
-   void cancelSignSettlement(const QString &settlementId);
 
 private slots:
    void onReady();
@@ -66,7 +65,7 @@ private slots:
    void onSettingChanged(int);
    void onSysTrayMsgClicked();
    void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
-   void onCancelSignTx(const BinaryData &txHash, const std::string &settlId);
+   void onCancelSignTx(const BinaryData &txId);
    void onCustomDialogRequest(const QString &dialogName, const QVariantMap &data);
    void onTerminalHandshakeFailed(const std::string &peerAddress);
    void onSignerPubKeyUpdated(const BinaryData &pubKey);

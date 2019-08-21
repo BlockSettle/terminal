@@ -307,16 +307,7 @@ void SignerInterfaceListener::onCancelTx(const std::string &data, bs::signer::Re
    }
 
    QMetaObject::invokeMethod(parent_, [this, evt] {
-      switch (evt.cancel_case()) {
-      case headless::CancelSignTx::CancelCase::kTxHash :
-         emit parent_->cancelTxSign(evt.tx_hash(), {});
-         break;
-      case headless::CancelSignTx::CancelCase::kSettlementId :
-         emit parent_->cancelTxSign({}, evt.settlement_id());
-         break;
-      default:
-         logger_->error("[SignerInterfaceListener::{}] failed to parse, no hash or id set", __func__);
-      }
+      emit parent_->cancelTxSign(evt.tx_id());
    });
 }
 

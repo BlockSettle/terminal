@@ -108,7 +108,7 @@ signals:
    void headlessBindUpdated(bs::signer::BindStatus status) const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
-   void cancelTxSign(const BinaryData &txHash, const std::string &settlId);
+   void cancelTxSign(const BinaryData &txId);
    void txSigned(const BinaryData &);
    void xbtSpent(const qint64 value, bool autoSign);
    void autoSignActivated(const std::string &walletId);

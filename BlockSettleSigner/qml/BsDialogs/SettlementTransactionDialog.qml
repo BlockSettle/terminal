@@ -68,7 +68,7 @@ CustomTitleDialogWindow {
     Connections {
         target: qmlAppObj
 
-        onCancelSignSettlement: {
+        onCancelSignTx: {
             console.log("SettlementTransactionDialog.qml, cancel requested for id=" + settlementId)
             if (settlementId === passwordDialogData.value("SettlementId")) {
                 rejectAnimated()

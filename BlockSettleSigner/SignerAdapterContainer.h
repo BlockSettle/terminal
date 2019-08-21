@@ -59,7 +59,7 @@ public:
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
 
    bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &, uint32_t = 0) override { return 0; }
-   bs::signer::RequestId CancelSignTx(const BinaryData &, const std::string &) override { return 0; }
+   bs::signer::RequestId CancelSignTx(const BinaryData &tx) override { return 0; }
 
    bs::signer::RequestId setUserId(const BinaryData &, const std::string &) override { return 0; }
    bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override { return 0; }

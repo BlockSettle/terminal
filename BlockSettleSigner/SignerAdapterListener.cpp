@@ -80,15 +80,10 @@ public:
       owner_->sendData(signer::TxSignedType, evt.SerializeAsString());
    }
 
-   void cancelTxSign(const BinaryData &txHash, const std::string &settlId) override
+   void cancelTxSign(const BinaryData &txId) override
    {
       headless::CancelSignTx evt;
-      if (txHash.isNull()) {
-         evt.set_settlement_id(settlId);
-      }
-      else {
-         evt.set_tx_hash(txHash.toBinStr());
-      }
+      evt.set_tx_id(txId.toBinStr());
       owner_->sendData(signer::CancelTxSignType, evt.SerializeAsString());
    }
 

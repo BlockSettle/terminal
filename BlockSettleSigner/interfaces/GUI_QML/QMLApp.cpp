@@ -285,14 +285,9 @@ void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
    }
 }
 
-void QMLAppObj::onCancelSignTx(const BinaryData &txHash, const std::string &settlId)
+void QMLAppObj::onCancelSignTx(const BinaryData &txId)
 {
-   if (txHash.isNull()) {
-      emit cancelSignSettlement(QString::fromStdString(settlId));
-   }
-   else {
-      emit cancelSignTx(QString::fromStdString(txHash.toBinStr()));
-   }
+   emit cancelSignTx(QString::fromStdString(txId.toBinStr()));
 }
 
 void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantMap &data)
