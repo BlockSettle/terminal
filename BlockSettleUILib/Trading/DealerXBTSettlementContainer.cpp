@@ -172,6 +172,7 @@ bool DealerXBTSettlementContainer::startPayOutSigning()
       }
    };
    settlMonitor_->getPayinInput(cbSettlInput);
+   return true;
 }
 
 bool DealerXBTSettlementContainer::cancel()
