@@ -42,7 +42,7 @@ namespace Chat
       connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::privatePartyCreated, this, &ChatClientLogic::privatePartyCreated);
       connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::privatePartyAlreadyExist, this, &ChatClientLogic::privatePartyAlreadyExist);
 
-      clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr_, applicationSettingsPtr_, clientDBServicePtr_, loggerPtr_);
+      clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr_, applicationSettingsPtr_, clientDBServicePtr_, loggerPtr_, cryptManagerPtr_, this);
       clientConnectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
       connect(this, &ChatClientLogic::dataReceived, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDataReceived);
       connect(this, &ChatClientLogic::connected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onConnected);
@@ -74,6 +74,7 @@ namespace Chat
       }
 
       userHasherPtr_ = std::make_shared<UserHasher>();
+      cryptManagerPtr_ = std::make_shared<CryptManager>(loggerPtr);
 
       connectionManagerPtr_ = connectionManagerPtr;
       applicationSettingsPtr_ = appSettingsPtr;
@@ -92,7 +93,7 @@ namespace Chat
          applicationSettingsPtr_->GetAuthKeys().second.size()
       ));
 
-      clientDBServicePtr_->Init(loggerPtr, appSettingsPtr, currentUserPtr_);
+      clientDBServicePtr_->Init(loggerPtr, appSettingsPtr, currentUserPtr_, cryptManagerPtr_);
    }
 
    void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb)
@@ -241,7 +242,7 @@ namespace Chat
    // TODO: remove
    void ChatClientLogic::testProperlyConnected()
    {
-      //SendPartyMessage("be5e97b6-c147-47f7-b61c-a476e23153e2", "test");
+      //SendPartyMessage("Global", "test");
       //RequestPrivateParty("ds7n8iy8fdsy");
    }
 

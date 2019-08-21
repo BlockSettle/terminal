@@ -22,7 +22,8 @@ namespace Chat
       GetTablePartyId,
       SaveMessage,
       UpdateMessageState,
-      PartyMessagePacketCasting
+      PartyMessagePacketCasting,
+      DeleteMessage
    };
 
    class ClientDBLogic : public DatabaseExecutor
@@ -33,17 +34,22 @@ namespace Chat
       ClientDBLogic(QObject* parent = nullptr);
 
    public slots:
-      void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::ChatUserPtr& chatUserPtr);
+      void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::ChatUserPtr& chatUserPtr,
+         const Chat::CryptManagerPtr& cryptManagerPtr);
       void updateMessageState(const std::string& message_id, const int party_message_state);
       void saveMessage(const std::string& data);
       void createNewParty(const std::string& partyId);
+      void readUnsentMessages(const std::string& partyId);
+      void deleteMessage(const std::string& messageId);
 
    signals:
       void initDone();
       void error(const Chat::ClientDBLogicError& errorCode, const std::string& what = "");
-      void messageInserted(const std::string& partyId, const std::string& messageId, const std::string& message,
+      void messageArrived(const std::string& partyId, const std::string& messageId, const std::string& message,
          const qint64 timestamp, const int party_message_state);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
+      void messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
+         const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);
 
    private slots:
       void rebuildError();

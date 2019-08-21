@@ -65,11 +65,12 @@ void AuthAddressManager::SetAuthWallet()
 bool AuthAddressManager::setup()
 {
    if (!HaveAuthWallet()) {
-      logger_->debug("Auth wallet missing");
+      logger_->debug("[AuthAddressManager::setup] Auth wallet missing");
       addressVerificator_.reset();
       return false;
    }
    if (addressVerificator_) {
+      logger_->debug("[AuthAddressManager::setup] addressVerificator_ already exist");
       return true;
    }
 
@@ -77,6 +78,7 @@ bool AuthAddressManager::setup()
       , [this](const std::shared_ptr<AuthAddress> addr, AddressVerificationState state)
    {
       if (!addressVerificator_) {
+         logger_->error("[AuthAddressManager::setup] Failed to create AddressVerificator object");
          return;
       }
       const auto address = addr->GetChainedAddress();
@@ -132,7 +134,24 @@ bool AuthAddressManager::WalletAddressesLoaded()
 
 bool AuthAddressManager::IsReady() const
 {
-   return HasAuthAddr() && HaveBSAddressList() && armory_ && armory_->isOnline();
+   if (!HasAuthAddr()) {
+      logger_->error("[AuthAddressManager::IsReady] Not ready, HasAuthAddr() == false");
+      return false;
+   }
+   if (!HaveBSAddressList()) {
+      logger_->error("[AuthAddressManager::IsReady] Not ready, HaveBSAddressList() == false");
+      return false;
+   }
+   if (!armory_) {
+      logger_->error("[AuthAddressManager::IsReady] Not ready, armory_ is null");
+      return false;
+   }
+   if (!armory_->isOnline()) {
+      logger_->error("[AuthAddressManager::IsReady] Not ready, armory_->isOnline() == false");
+      return false;
+   }
+
+   return true;
 }
 
 bool AuthAddressManager::HaveAuthWallet() const
@@ -632,13 +651,23 @@ void AuthAddressManager::ProcessErrorResponse(const std::string& responseString)
 
 void AuthAddressManager::VerifyWalletAddresses()
 {
-   if (IsReady()) {
-      VerifyWalletAddressesFunction();
+   if (!addressVerificator_) {
+      logger_->error("[AuthAddressManager::VerifyWalletAddresses] Failed to VerifyWalletAddresses, addressVerificator_ is null");
+      return;
    }
+
+   if (!IsReady()) {
+      logger_->error("[AuthAddressManager::VerifyWalletAddresses] Failed to VerifyWalletAddresses, Not Ready (!IsReady())");
+      return;
+   }
+
+   VerifyWalletAddressesFunction();
 }
 
 void AuthAddressManager::VerifyWalletAddressesFunction()
 {
+   logger_->debug("[AuthAddressManager::VerifyWalletAddressesFunction] Starting to VerifyWalletAddresses");
+
    if (!HaveBSAddressList()) {
       logger_->debug("AuthAddressManager doesn't have BS addresses");
       return;
@@ -716,6 +745,8 @@ void AuthAddressManager::ClearAddressList()
 
 void AuthAddressManager::onWalletChanged(const std::string &walletId)
 {
+   logger_->debug("[AuthAddressManager::onWalletChanged]");
+
    bool listUpdated = false;
    if ((authWallet_ != nullptr) && (walletId == authWallet_->walletId())) {
       const auto &newAddresses = authWallet_->getUsedAddressList();
@@ -726,7 +757,7 @@ void AuthAddressManager::onWalletChanged(const std::string &walletId)
       listUpdated = true;
       addresses_ = newAddresses;
       for (const auto &addr : newAddresses) {
-         QTimer::singleShot(std::chrono::milliseconds(100), this, [this, addr] {
+         QTimer::singleShot(std::chrono::milliseconds(5000), this, [this, addr] {
             SetState(addr, AddressVerificationState::Verified);
             emit VerifiedAddressListUpdated();
          });

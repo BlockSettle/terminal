@@ -13,7 +13,7 @@
 #include "FutureValue.h"
 
 namespace {
-   const auto AuthTimeout = int(BsClient::autheidLoginTimeout() / std::chrono::seconds(1));
+   const auto kAutheIdTimeout = int(BsClient::autheidLoginTimeout() / std::chrono::seconds(1));
 }
 
 LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
@@ -27,7 +27,7 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
    , cbApprove_(cbApprove)
 {
    ui_->setupUi(this);
-   ui_->progressBar->setMaximum(AuthTimeout * 2); // update every 0.5 sec
+   ui_->progressBar->setMaximum(kAutheIdTimeout * 2); // update every 0.5 sec
    const auto version = ui_->loginVersionLabel->text().replace(QLatin1String("{Version}")
       , tr("Version %1").arg(QString::fromStdString(AboutDialog::version())));
    ui_->loginVersionLabel->setText(version);
@@ -182,7 +182,7 @@ void LoginWindow::onAuthPressed()
       return;
    }
 
-   timeLeft_ = AuthTimeout;
+   timeLeft_ = kAutheIdTimeout;
 
    networkSettingsLoader_ = std::make_unique<NetworkSettingsLoader>(logger_
       , settings_->pubBridgeHost(), settings_->pubBridgePort(), cbApprove_);

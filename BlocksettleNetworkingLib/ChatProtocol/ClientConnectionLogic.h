@@ -11,6 +11,7 @@
 #include "ChatProtocol/ClientPartyLogic.h"
 #include "ChatProtocol/ClientDBService.h"
 #include "ChatProtocol/SessionKeyHolder.h"
+#include "ChatProtocol/CryptManager.h"
 
 #include "chat.pb.h"
 
@@ -36,7 +37,8 @@ namespace Chat
       Q_OBJECT
    public:
       explicit ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings, 
-         const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, QObject* parent = nullptr);
+         const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, const Chat::CryptManagerPtr& cryptManagerPtr,
+         QObject* parent = nullptr);
 
       Chat::ChatUserPtr currentUserPtr() const { return currentUserPtr_; }
       void setCurrentUserPtr(Chat::ChatUserPtr val) { currentUserPtr_ = val; }
@@ -70,9 +72,11 @@ namespace Chat
 
    private slots:
       void handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "");
+      void messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
+         const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);
 
    private:
-      void prepareAndSendGlobalMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
+      void prepareAndSendPublicMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
       void prepareAndSendPrivateMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);
 
       void requestSessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey);
@@ -87,12 +91,17 @@ namespace Chat
       void handleRequestSessionKeyExchange(const google::protobuf::Message& msg);
       void handleReplySessionKeyExchange(const google::protobuf::Message& msg);
 
+      void incomingGlobalPartyMessage(const google::protobuf::Message& msg);
+      void incomingPrivatePartyMessage(const google::protobuf::Message& msg);
+      void saveIncomingPartyMessageAndUpdateState(const google::protobuf::Message& msg, const PartyMessageState& partyMessageState);
+
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;
       ApplicationSettingsPtr appSettings_;
       ClientPartyLogicPtr clientPartyLogicPtr_;
       ClientDBServicePtr clientDBServicePtr_;
       SessionKeyHolderPtr sessionKeyHolderPtr_;
+      CryptManagerPtr cryptManagerPtr_;
    };
 
    using ClientConnectionLogicPtr = std::shared_ptr<ClientConnectionLogic>;

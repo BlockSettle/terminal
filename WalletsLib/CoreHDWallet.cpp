@@ -473,18 +473,18 @@ static bool nextCombi(std::vector<int> &a , const int n, const int m)
 
 bool hd::Wallet::changePassword(const SecureBinaryData& newPass)
 {
-   if (newPass.getSize() == 0)
+   if (newPass.getSize() == 0) {
       return false;
+   }
 
-   //we assume the wallet passphrase prompt lambda has been set
-   auto lock = walletPtr_->lockDecryptedContainer();
-   try
-   {
+//   auto lock = walletPtr_->lockDecryptedContainer();
+   // we assume there's an old password lock on the upper level
+   try {
       walletPtr_->changeMasterPassphrase(newPass);
       return true;
    }
-   catch (std::exception&)
-   {
+   catch (const std::exception &e) {
+      logger_->error("[{}] got error: {}", __func__, e.what());
       return false;
    }
 }

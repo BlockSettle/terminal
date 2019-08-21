@@ -11,7 +11,6 @@
 #include "CelerClient.h"
 #include "CelerSubmitQuoteNotifSequence.h"
 #include "DealerCCSettlementContainer.h"
-#include "DealerCCSettlementDialog.h"
 #include "DealerXBTSettlementContainer.h"
 #include "DealerXBTSettlementDialog.h"
 #include "DialogManager.h"

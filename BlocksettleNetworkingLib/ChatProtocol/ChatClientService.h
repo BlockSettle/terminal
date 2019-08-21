@@ -25,6 +25,7 @@ namespace Chat
       void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
       void SendPartyMessage(const std::string& partyId, const std::string& data);
+      void RequestPrivateParty(const std::string& userName);
 
       ////////// RETURN SIGNALS //////////
       void chatUserUserNameChanged(const std::string& chatUserDisplayName);

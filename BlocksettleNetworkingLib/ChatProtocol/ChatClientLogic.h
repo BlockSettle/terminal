@@ -8,6 +8,7 @@
 #include "ChatProtocol/ClientConnectionLogic.h"
 #include "ChatProtocol/ClientPartyLogic.h"
 #include "ChatProtocol/ClientDBService.h"
+#include "ChatProtocol/CryptManager.h"
 
 #include "DataConnectionListener.h"
 
@@ -105,6 +106,7 @@ namespace Chat
       ClientConnectionLogicPtr   clientConnectionLogicPtr_;
       ClientPartyLogicPtr        clientPartyLogicPtr_;
       ClientDBServicePtr         clientDBServicePtr_;
+      CryptManagerPtr            cryptManagerPtr_;
    };
 
 }

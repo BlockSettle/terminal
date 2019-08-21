@@ -33,6 +33,7 @@ namespace Chat
       void requestSessionKeysForUser(const std::string& userName, const BinaryData& remotePublicKey);
       void onIncomingRequestSessionKeyExchange(const std::string& userName, const BinaryData& incomingEncodedPublicKey, const SecureBinaryData& ownPrivateKey);
       void onIncomingReplySessionKeyExchange(const std::string& userName, const BinaryData& incomingEncodedPublicKey);
+      SessionKeyDataPtr sessionKeyDataForUser(const std::string& userName);
 
    signals:
       void sessionKeysForUser(const Chat::SessionKeyDataPtr& sessionKeyDataPtr);
@@ -48,7 +49,6 @@ namespace Chat
       BinaryData iesEncryptLocalSessionPublicKey(const Chat::SessionKeyDataPtr& sessionKeyDataPtr, const BinaryData& remotePublicKey) const;
       BinaryData iesDecryptData(const BinaryData& encodedData, const SecureBinaryData& privateKey);
       void generateLocalKeys(const Chat::SessionKeyDataPtr& sessionKeyDataPtr);
-      SessionKeyDataPtr sessionDataKeyForUser(const std::string& userName);
 
       LoggerPtr loggerPtr_;
       std::unordered_map<std::string, SessionKeyDataPtr> sessionKeyDataList_;

@@ -68,6 +68,8 @@ public:
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
 
+   bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) override;
+
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override;
 
    bs::signer::RequestId setUserId(const BinaryData &, const std::string &walletId) override;
@@ -76,7 +78,7 @@ public:
    bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData>& = {}, bs::sync::PasswordDialogData dialogData = {}, const CreateHDLeafCb &cb = nullptr) override;
 
-   bool promoteHDWallet(const std::string& rootWalletId
+   bool promoteHDWallet(const std::string& rootWalletId, const BinaryData &userId
       , bs::sync::PasswordDialogData dialogData = {}, const PromoteHDWalletCb& cb = nullptr) override;
 
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
