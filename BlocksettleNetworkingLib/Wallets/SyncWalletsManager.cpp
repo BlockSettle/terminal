@@ -1493,6 +1493,62 @@ void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::
    }
 }
 
+bool WalletsManager::PromoteHDWallet(const std::string& walletId, const std::function<void(bs::error::ErrorCode result)>& cb)
+{
+   const auto primaryWallet = getPrimaryWallet();
+   if (primaryWallet != nullptr) {
+      logger_->error("[WalletsManager::PromoteWallet] Primary wallet already exists {}"
+                     , primaryWallet->walletId());
+      return false;
+   }
+
+   bs::sync::PasswordDialogData dialogData;
+   dialogData.setValue("Title", tr("Promote To Primary Wallet"));
+   dialogData.setValue("XBT", tr("Authentification Addresses"));
+
+   const auto& promoteHDWalletCb = [this, cb](bs::error::ErrorCode result
+      , const std::string &walletId) {
+      ProcessPromoteHDWallet(result, walletId);
+      if (cb) {
+         cb(result);
+      }
+   };
+   return signContainer_->promoteHDWallet(walletId, userId_, dialogData, promoteHDWalletCb);
+}
+
+void WalletsManager::ProcessPromoteHDWallet(bs::error::ErrorCode result, const std::string& walletId)
+{
+   if (result == bs::error::ErrorCode::NoError) {
+      auto const wallet = getHDWalletById(walletId);
+      if (!wallet) {
+         logger_->error("[WalletsManager::ProcessPromoteWalletID] Wallet {} to promote is not exists",
+                        walletId);
+         return;
+      }
+
+      auto const primaryWallet = getPrimaryWallet();
+      if (primaryWallet) {
+         if (primaryWallet->walletId() == walletId) {
+            // Wallet is already primary, nothing to do
+            return;
+         }
+
+         logger_->error("[WalletsManager::ProcessPromoteWalletID] Primary wallet already exists");
+         return;
+      }
+
+      logger_->debug("[WalletsManager::ProcessPromoteWalletID] Primary wallet is {}"
+                     , walletId);
+      wallet->createGroup(bs::hd::CoinType::BlockSettle_Auth, true);
+
+      emit walletPromotedToPrimary(walletId);
+   } else {
+      logger_->error("[WalletsManager::ProcessPromoteWalletID] Wallet {} promotion failed: {}"
+                     , walletId, static_cast<int>(result));
+      emit walletPromotionFailed(walletId, result);
+   }
+}
+
 bool WalletsManager::CreateAuthLeaf()
 {
    if (getAuthWallet() != nullptr) {

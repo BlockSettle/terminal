@@ -172,6 +172,9 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
    case headless::CancelSignTxRequestType:
       return onCancelSignTx(clientId, packet);
 
+   case headless::UpdateDialogDataType:
+      return onUpdateDialogData(clientId, packet);
+
    case headless::SignTxRequestType:
    case headless::SignSettlementTxRequestType:
    case headless::SignPartialTXRequestType:
@@ -186,6 +189,9 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
 
    case headless::CreateHDLeafRequestType:
       return onCreateHDLeaf(clientId, packet);
+
+   case headless::PromoteHDWalletRequestType:
+      return onPromoteHDWallet(clientId, packet);
 
    case headless::SetUserIdType:
       return onSetUserId(clientId, packet);
@@ -292,7 +298,6 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       if (utxo.isInitialized()) {
          txSignReq.inputs.push_back(utxo);
          inputVal += utxo.getValue();
-         logger_->debug("[{}] UTXO {}, addr {}", __func__, utxo.getTxHash().toHexStr(true), bs::Address::fromUTXO(utxo).display());
       }
    }
 
@@ -403,9 +408,24 @@ bool HeadlessContainerListener::onCancelSignTx(const std::string &, headless::Re
    }
 
    if (callbacks_) {
-      callbacks_->cancelTxSign(request.txid());
+      callbacks_->cancelTxSign(request.tx_id());
    }
 
+   return true;
+}
+
+bool HeadlessContainerListener::onUpdateDialogData(const std::string &clientId, headless::RequestPacket packet)
+{
+   headless::UpdateDialogDataRequest request;
+
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      return false;
+   }
+
+   if (callbacks_) {
+      callbacks_->updateDialogData(request.passworddialogdata());
+   }
    return true;
 }
 
@@ -542,13 +562,22 @@ void HeadlessContainerListener::SignTXResponse(const std::string &clientId, unsi
 void HeadlessContainerListener::passwordReceived(const std::string &clientId, const std::string &walletId
    , bs::error::ErrorCode result, const SecureBinaryData &password)
 {
-   const auto cbsIt = passwordCallbacks_.find(walletId);
-   if (cbsIt != passwordCallbacks_.end()) {
-      for (const auto &cb : cbsIt->second) {
-         cb(result, password);
-      }
-      passwordCallbacks_.erase(cbsIt);
+   if (deferredPasswordRequests_.empty()) {
+      logger_->error("[HeadlessContainerListener::{}] failed to find password received callback {}", __func__);
+      return;
    }
+   const PasswordReceivedCb &cb = std::move(deferredPasswordRequests_.front().second);
+   if (cb) {
+      cb(result, password);
+   }
+
+   // at this point password workflow finished for deferredPasswordRequests_.front() dialog
+   // now we can remove dialog and it's callback
+   deferredPasswordRequests_.pop();
+   deferredDialogRunning_ = false;
+
+   // execute next pw dialog
+   RunDeferredPwDialog();
 }
 
 void HeadlessContainerListener::passwordReceived(const std::string &walletId
@@ -655,49 +684,61 @@ bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const
    , headless::RequestType reqType, const Internal::PasswordDialogDataWrapper &dialogData
    , const PasswordReceivedCb &cb)
 {
-   if (cb) {
-      auto &callbacks = passwordCallbacks_[rootId];
-      callbacks.push_back(cb);
-      // TODO: review this code
-      // need to clear callbacks if pw input canceled in signer ui
-      // need to use existing password only for similar request type
-//      if (callbacks.size() > 1) {
-//         return true;
-//      }
-   }
+   // TODO:
+   // if deferredDialogRunning_ is set to true, no one else pw dialog might be displayed
+   // need to implement some timer which will control dialogs queue for case when proxyCallback not fired
+   // and deferredDialogRunning_ flag not cleared
 
-   if (callbacks_) {
-      switch (reqType) {
-      case headless::SignTxRequestType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignTx, dialogData, txReq);
-         break;
-      case headless::SignPartialTXRequestType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignPartialTx, dialogData, txReq);
-         break;
+   const VoidCb &deferredPwDialog = [this, reqType, dialogData, txReq](){
+      if (callbacks_) {
+         switch (reqType) {
+         case headless::SignTxRequestType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignTx, dialogData, txReq);
+            break;
+         case headless::SignPartialTXRequestType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignPartialTx, dialogData, txReq);
+            break;
 
-      case headless::SignSettlementTxRequestType:
-      case headless::SignSettlementPayoutTxType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementTx, dialogData, txReq);
-         break;
-      case headless::SignSettlementPartialTxType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementPartialTx, dialogData, txReq);
-         break;
+         case headless::SignSettlementTxRequestType:
+         case headless::SignSettlementPayoutTxType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementTx, dialogData, txReq);
+            break;
+         case headless::SignSettlementPartialTxType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementPartialTx, dialogData, txReq);
+            break;
 
-      case headless::CreateHDLeafRequestType:
-      case headless::CreateSettlWalletType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dialogData);
-         break;
-      case headless::SetUserIdType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dialogData);
-         break;
+         case headless::CreateHDLeafRequestType:
+         case headless::CreateSettlWalletType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dialogData);
+            break;
+         case headless::SetUserIdType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dialogData);
+            break;
+         case headless::PromoteHDWalletRequestType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::PromoteHDWallet, dialogData);
+            break;
 
-      default:
-         logger_->warn("[{}] unknown request for password request: {}", __func__, (int)reqType);
-         return false;
+         default:
+            logger_->warn("[{}] unknown request for password request: {}", __func__, (int)reqType);
+         }
       }
-      return true;
+   };
+   deferredPasswordRequests_.push({deferredPwDialog, cb});
+   RunDeferredPwDialog();
+
+   return true;
+}
+
+void HeadlessContainerListener::RunDeferredPwDialog()
+{
+   if (deferredPasswordRequests_.empty()) {
+      return;
    }
-   return false;
+
+   if(!deferredDialogRunning_) {
+      deferredDialogRunning_ = true;
+      deferredPasswordRequests_.front().first(); // run stored lambda
+   }
 }
 
 bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headless::RequestPacket &packet)
@@ -911,6 +952,126 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
    return true;
 }
 
+bool HeadlessContainerListener::createAuthLeaf(const std::shared_ptr<bs::core::hd::Wallet> &wallet
+   , const BinaryData &salt, const SecureBinaryData &password)
+{
+   if (salt.isNull()) {
+      logger_->error("[{}] can't create auth leaf with empty salt", __func__);
+      return false;
+   }
+   const auto group = wallet->getGroup(bs::hd::BlockSettle_Auth);
+   if (!group) {
+      logger_->error("[{}] primary wallet misses Auth group", __func__);
+      return false;
+   }
+   const auto authGroup = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
+   if (!authGroup) {
+      logger_->error("[{}] Auth group has wrong type", __func__);
+      return false;
+   }
+
+   const auto prevSalt = authGroup->getSalt();
+   if (prevSalt.isNull()) {
+      try {
+         authGroup->setSalt(salt);
+      } catch (const std::exception &e) {
+         logger_->error("[{}] error setting auth salt: {}", __func__, e.what());
+         return false;
+      }
+   } else {
+      if (prevSalt != salt) {
+         logger_->error("[{}] salts don't match - aborting", __func__);
+         return false;
+      }
+   }
+
+   const bs::hd::Path authPath({ bs::hd::Purpose::Native, bs::hd::BlockSettle_Auth, 0 });
+   auto leaf = authGroup->getLeafByPath(authPath);
+   if (leaf) {
+      const auto authLeaf = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leaf);
+      if (authLeaf && (authLeaf->getSalt() == salt)) {
+         logger_->debug("[{}] auth leaf for {} aready exists", __func__, salt.toHexStr());
+         return true;
+      } else {
+         logger_->error("[{}] auth leaf salts mismatch", __func__);
+         return false;
+      }
+   }
+
+   try {
+      auto lock = wallet->lockForEncryption(password);
+      auto leaf = group->createLeaf(AddressEntryType_Default, 0 + bs::hd::hardFlag, 5);
+      if (leaf) {
+         return true;
+      } else {
+         logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf");
+      }
+   } catch (const std::exception &e) {
+      logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf: {}", e.what());
+   }
+   return false;
+}
+
+bool HeadlessContainerListener::onPromoteHDWallet(const std::string& clientId, headless::RequestPacket& packet)
+{
+   headless::PromoteHDWalletRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[HeadlessContainerListener] failed to parse PromoteHDWalletRequest");
+      return false;
+   }
+
+   const std::string &walletId = request.rootwalletid();
+   const auto hdWallet = walletsMgr_->getHDWalletById(walletId);
+   if (!hdWallet) {
+      logger_->error("[HeadlessContainerListener] failed to find root HD wallet by id {}", walletId);
+      CreatePromoteHDWalletResponse(clientId, packet.id(), ErrorCode::WalletNotFound, walletId);
+      return false;
+   }
+
+   const auto onPassword = [this, hdWallet, walletId, clientId, id = packet.id(), userId=request.user_id()]
+      (bs::error::ErrorCode result, const SecureBinaryData &pass)
+   {
+      std::shared_ptr<bs::core::hd::Node> leafNode;
+      if (result != ErrorCode::NoError) {
+         logger_->error("[HeadlessContainerListener] no password for encrypted wallet");
+         CreatePromoteHDWalletResponse(clientId, id, result, walletId);
+         return;
+      }
+
+      auto group = hdWallet->getGroup(bs::hd::BlockSettle_Auth);
+      if (!group) {
+         group = hdWallet->createGroup(bs::hd::BlockSettle_Auth);
+      }
+      if (!createAuthLeaf(hdWallet, userId, pass)) {
+         logger_->error("[HeadlessContainerListener::onPromoteHDWallet] failed to create auth leaf");
+      }
+
+      if (!walletsMgr_->ccLeaves().empty()) {
+         logger_->debug("[HeadlessContainerListener::onPromoteHDWallet] creating {} CC leaves"
+            , walletsMgr_->ccLeaves().size());
+         group = hdWallet->createGroup(bs::hd::BlockSettle_CC);
+         if (group) {
+            auto lock = hdWallet->lockForEncryption(pass);
+            for (const auto &cc : walletsMgr_->ccLeaves()) {
+               try {
+                  group->createLeaf(AddressEntryType_P2WPKH, cc);
+               }  // existing leaf creation failure is ignored
+               catch (...) {}
+            }
+         }
+         else {
+            logger_->error("[HeadlessContainerListener::onPromoteHDWallet] failed to create CC group");
+         }
+      }
+      CreatePromoteHDWalletResponse(clientId, id, ErrorCode::NoError, walletId);
+      walletsListUpdated();
+   };
+
+   RequestPasswordIfNeeded(clientId, request.rootwalletid(), {}, headless::PromoteHDWalletRequestType
+      , request.passworddialogdata(), onPassword);
+   return true;
+}
+
 void HeadlessContainerListener::CreateHDLeafResponse(const std::string &clientId, unsigned int id
    , ErrorCode result, const std::shared_ptr<bs::core::hd::Leaf>& leaf)
 {
@@ -931,7 +1092,25 @@ void HeadlessContainerListener::CreateHDLeafResponse(const std::string &clientId
    packet.set_data(response.SerializeAsString());
 
    if (!sendData(packet.SerializeAsString(), clientId)) {
-      logger_->error("[HeadlessContainerListener] failed to send response CreateHDWallet packet");
+      logger_->error("[HeadlessContainerListener] failed to send response CreateHDLeaf packet");
+   }
+}
+
+void HeadlessContainerListener::CreatePromoteHDWalletResponse(const std::string& clientId, unsigned int id,
+                                                        ErrorCode result, const std::string& walletId)
+{
+   logger_->debug("[HeadlessContainerListener] PromoteHDWalletResponse: {}", id);
+   headless::PromoteHDWalletResponse response;
+   response.set_rootwalletid(walletId);
+   response.set_errorcode(static_cast<uint32_t>(result));
+
+   headless::RequestPacket packet;
+   packet.set_id(id);
+   packet.set_type(headless::PromoteHDWalletRequestType);
+   packet.set_data(response.SerializeAsString());
+
+   if (!sendData(packet.SerializeAsString(), clientId)) {
+      logger_->error("[HeadlessContainerListener] failed to send response PromoteHDWallet packet");
    }
 }
 

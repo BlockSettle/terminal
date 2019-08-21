@@ -93,6 +93,9 @@ public:
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
 
    virtual bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) = 0;
+
+   virtual bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) = 0;
+
    virtual bs::signer::RequestId CancelSignTx(const BinaryData &txId) = 0;
 
    virtual bs::signer::RequestId setUserId(const BinaryData &, const std::string &walletId) = 0;

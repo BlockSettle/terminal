@@ -64,12 +64,13 @@ signals:
    // RFQDialog could send accept on quote. should be emitted only after settlementAccepted
    // since it is used to save signed data in RFQDialog
    void sendOrder();
-   void genAddrVerified(bool result, QString error);
+   void genAddressVerified(bool result, QString error);
    void paymentVerified(bool result, QString error);
    void walletInfoReceived();
 
 private slots:
    void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo& walletInfo);
+   void onGenAddressVerified(bool addressVerified, const QString &error);
 
 private:
    // read comments in source code
@@ -97,6 +98,7 @@ private:
    BinaryData                 requesterTx_;
    bs::core::wallet::TXSignRequest  ccTxData_;
    std::string                ccTxSigned_;
+   bool                       genAddrVerified_ = false;
 
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
    bs::hd::WalletInfo walletInfo_;

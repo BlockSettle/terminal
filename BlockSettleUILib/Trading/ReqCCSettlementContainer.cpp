@@ -32,6 +32,8 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
    connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &ReqCCSettlementContainer::onWalletInfo);
+   connect(this, &ReqCCSettlementContainer::genAddressVerified, this
+      , &ReqCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
 
    const auto &signingWallet = transactionData_->getSigningWallet();
    if (signingWallet) {
@@ -73,9 +75,49 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
                  .arg(QString::fromStdString(product())));
    dialogData.setValue("TotalValue", UiUtils::displayAmount(quantity() * price()));
 
+   // tx details
+   if (side() == bs::network::Side::Buy) {
+      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(ccTxData_.inputAmount())));
+
+      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(ccTxData_.change.value)));
+
+      dialogData.setValue("PaymentAmount", QStringLiteral("(%1)-%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(ccTxData_.inputAmount() - ccTxData_.change.value)));
+
+      dialogData.setValue("DeliveryReceived", QStringLiteral("(%1)+%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(ccTxData_.change.value)));
+   }
+   else {
+      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount())));
+
+      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(ccTxData_.change.value)));
+
+      dialogData.setValue("DeliveryAmount", QStringLiteral("(%1)-%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount() - ccTxData_.change.value)));
+
+      dialogData.setValue("PaymentReceived", QStringLiteral("(%1)+%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(amount())));
+   }
+
+
    // settlement details
-   dialogData.setValue("Payment", tr("Verifying"));
-   dialogData.setValue("GenesisAddress", tr("Verifying"));
+   dialogData.setValue("DeliveryUTXOVerified", genAddrVerified_);
+   dialogData.setValue("SigningAllowed", genAddrVerified_);
+
+   dialogData.setValue("RecipientsList", true);
+   dialogData.setValue("InputsList", true);
 
    return dialogData;
 }
@@ -121,20 +163,20 @@ void ReqCCSettlementContainer::activate()
    emit paymentVerified(foundRecipAddr && amountValid, QString{});
 
    if (genAddress_.isNull()) {
-      emit genAddrVerified(false, tr("GA is null"));
+      emit genAddressVerified(false, tr("GA is null"));
    }
    else if (side() == bs::network::Side::Buy) {
       emit info(tr("Waiting for genesis address verification to complete..."));
 
       const auto &cbHasInput = [this](bool has) {
          userKeyOk_ = has;
-         emit genAddrVerified(has, has ? QString{} : tr("GA check failed"));
+         emit genAddressVerified(has, has ? QString{} : tr("GA check failed"));
       };
       signer_.hasInputAddress(genAddress_, cbHasInput, lotSize_);
    }
    else {
       userKeyOk_ = true;
-      emit genAddrVerified(true, QString{});
+      emit genAddressVerified(true, QString{});
    }
 
    if (!createCCUnsignedTXdata()) {
@@ -222,7 +264,13 @@ bool ReqCCSettlementContainer::startSigning()
       }
    }
 
-   const auto &cbTx = [this](bs::error::ErrorCode result, const BinaryData &signedTX) {
+   QPointer<ReqCCSettlementContainer> context(this);
+   const auto &cbTx = [this, context, logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
+      if (!context) {
+         logger->warn("[ReqCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
+         return;
+      }
+
       if (result == bs::error::ErrorCode::NoError) {
          ccTxSigned_ = signedTX.toHexStr();
 
@@ -235,7 +283,7 @@ bool ReqCCSettlementContainer::startSigning()
          emit settlementCancelled();
       }
       else {
-         logger_->warn("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
+         logger->warn("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
          emit error(tr("own TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
       }
    };
@@ -259,6 +307,16 @@ void ReqCCSettlementContainer::onWalletInfo(unsigned int reqId, const bs::hd::Wa
    emit walletInfoReceived();
 }
 
+void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const QString &error)
+{
+   genAddrVerified_ = addressVerified;
+
+   bs::sync::PasswordDialogData pd;
+   pd.setValue("DeliveryUTXOVerified", addressVerified);
+   pd.setValue("SigningAllowed", addressVerified);
+   signingContainer_->updateDialogData(pd);
+}
+
 bool ReqCCSettlementContainer::isAcceptable() const
 {
    return userKeyOk_;
@@ -269,6 +327,7 @@ bool ReqCCSettlementContainer::cancel()
    deactivate();
    utxoAdapter_->unreserve(id());
    emit settlementCancelled();
+   signingContainer_->CancelSignTx(id());
    return true;
 }
 

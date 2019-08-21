@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <QDialog>
+#include <QTimer>
 
 #include "BinaryData.h"
 #include "BSErrorCode.h"
@@ -41,6 +42,8 @@ private slots:
    void onCCInitialSubmitted(const QString addr);
    void onCCSubmitFailed(const QString addr, const QString &err);
 
+   void onTimer();
+   void onCancel();
 private:
    std::unique_ptr<Ui::CCTokenEntryDialog>   ui_;
 
@@ -51,6 +54,9 @@ private:
    std::string    ccProduct_;
    std::string    strToken_;
    uint32_t       seed_ = 0;
+
+   QTimer      timer_;
+   double      timeLeft_{};
 };
 
 #endif // __CC_TOKEN_ENTRY_DIALOG_H__

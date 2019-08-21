@@ -6,6 +6,7 @@
 #include "CheckRecipSigner.h"
 #include "SettlementContainer.h"
 #include "UtxoReservation.h"
+#include "CoreWallet.h"
 
 namespace spdlog {
    class logger;
@@ -83,6 +84,7 @@ private:
    unsigned int      signId_ = 0;
    bool              cancelled_ = false;
    bs::CheckRecipSigner signer_;
+   bs::core::wallet::TXSignRequest txReq_;
 
    QString walletName_;
 };

@@ -58,6 +58,7 @@ void AuthAddressConfirmDialog::onUiTimerTick()
    } else {
       const int countMs = int(std::chrono::duration_cast<std::chrono::milliseconds>(timeLeft).count());
       ui_->progressBarTimeout->setValue(countMs);
+      ui_->labelTimeLeft->setText(tr("%1 seconds left").arg(int(countMs / 1000.0)));
    }
 }
 

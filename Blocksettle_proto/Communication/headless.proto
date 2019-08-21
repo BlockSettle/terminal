@@ -36,6 +36,8 @@ enum RequestType
    SyncCCNamesType             = 28;
    GetSettlPayinAddrType       = 29;
    SettlGetRootPubkeyType      = 30;
+   PromoteHDWalletRequestType  = 31;
+   UpdateDialogDataType        = 32; // update fields in password input dialogs in signer ui
 }
 
 message RequestPacket
@@ -110,7 +112,7 @@ message SignTxReply
 
 message CancelSignTx
 {
-   bytes txId = 1;
+   bytes  tx_id       = 1;
 }
 
 message SignSettlementTxRequest
@@ -259,6 +261,13 @@ message CreateHDLeafRequest
    Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData = 3;
 }
 
+message PromoteHDWalletRequest
+{
+   string   rootWalletId = 1;
+   bytes    user_id = 2;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData = 3;
+}
+
 message HDLeafWO
 {
    string   name = 1;
@@ -295,6 +304,11 @@ message CreateHDLeafResponse
    HDLeafWO  leaf        = 2;
 }
 
+message PromoteHDWalletResponse
+{
+   uint32    errorCode   = 1;
+   string    rootWalletId = 2;
+}
 
 message DeleteHDWalletRequest
 {
@@ -491,4 +505,10 @@ message SyncNewAddressRequest
 message SyncCCNamesData
 {
    repeated string ccNames = 1;
+}
+
+message UpdateDialogDataRequest
+{
+   uint32                                                dialogId              = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData    = 2;
 }

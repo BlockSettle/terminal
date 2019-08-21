@@ -11,6 +11,9 @@ sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData info;
 
+   info.setValue("SettlementId", QString::fromStdString(id()));
+   info.setValue("Duration", durationMs());
+
    info.setValue("ProductGroup", tr(bs::network::Asset::toString(assetType())));
    info.setValue("Security", QString::fromStdString(security()));
    info.setValue("Product", QString::fromStdString(product()));
