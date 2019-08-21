@@ -292,14 +292,23 @@ void SignerInterfaceListener::onUpdateDialogData(const std::string &data, Reques
 
 void SignerInterfaceListener::onCancelTx(const std::string &data, bs::signer::RequestId)
 {
-   signer::SignTxCancelRequest evt;
+   headless::CancelSignTx evt;
    if (!evt.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
 
    QMetaObject::invokeMethod(parent_, [this, evt] {
-      emit parent_->cancelTxSign(evt.tx_hash());
+      switch (evt.cancel_case()) {
+      case headless::CancelSignTx::CancelCase::kTxHash :
+         emit parent_->cancelTxSign(evt.tx_hash(), {});
+         break;
+      case headless::CancelSignTx::CancelCase::kSettlementId :
+         emit parent_->cancelTxSign({}, evt.settlement_id());
+         break;
+      default:
+         logger_->error("[SignerInterfaceListener::{}] failed to parse, no hash or id set", __func__);
+      }
    });
 }
 
