@@ -645,17 +645,21 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
    }
    bs::wallet::KeyRank keyRank = {request.rankm(), request.rankn()};
 
-   bool result = wallet->changePassword(request.newpassword(0).password() /*pwdData, keyRank
-                                        , BinaryData::CreateFromHex(request.oldpassword())
-                                        , request.addnew(), request.removeold(), request.dryrun()*/);
-
+   bool result = false;
+   {
+      auto lock = wallet->lockForEncryption(request.oldpassword());
+      result = wallet->changePassword(request.newpassword(0).password());
+      /*pwdData, keyRank, BinaryData::CreateFromHex(request.oldpassword())
+       , request.addnew(), request.removeold(), request.dryrun()*/
+   }
    if (result) {
       walletsListUpdated();
    }
 
    response.set_success(result);
    response.set_rootwalletid(request.rootwalletid());
-   logger_->info("[SignerAdapterListener::{}] password changed for wallet {} with result {}", __func__, request.rootwalletid(), result);
+   logger_->info("[SignerAdapterListener::{}] password changed for wallet {} with result {}"
+      , __func__, request.rootwalletid(), result);
    return sendData(signer::ChangePasswordRequestType, response.SerializeAsString(), reqId);
 }
 
