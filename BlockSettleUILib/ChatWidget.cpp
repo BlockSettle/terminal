@@ -154,9 +154,7 @@ public:
       chat_->ui_->input_textEdit->setVisible(true);
       chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->searchWidget->setLineEditEnabled(true);
-#ifndef USE_NEW_TREE_MODEL
       chat_->ui_->treeViewUsers->expandAll();
-#endif
       chat_->ui_->labelUserName->setText(QString::fromStdString(chat_->client_->getUserId()));
 
       chat_->SetOTCLoggedInState();
@@ -183,16 +181,19 @@ public:
    void onSendButtonClicked()  override {
       std::string messageText = chat_->ui_->input_textEdit->toPlainText().toStdString();
 
-      if (!messageText.empty() && !chat_->currentChat_.empty()) {
-         if (chat_->isContactRequest()) {
-            chat_->onContactRequestAcceptSendClicked();
-         } else if (!chat_->isRoom()) {
-            auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
-         } else {
-            auto msg = chat_->client_->sendRoomOwnMessage(messageText, chat_->currentChat_);
-         }
-         chat_->ui_->input_textEdit->clear();
-      }
+      //if (!messageText.empty() && !chat_->currentChat_.empty()) {
+      //   if (chat_->isContactRequest()) {
+      //      chat_->onContactRequestAcceptSendClicked();
+      //   } else if (!chat_->isRoom()) {
+      //      auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
+      //   } else {
+      //      auto msg = chat_->client_->sendRoomOwnMessage(messageText, chat_->currentChat_);
+      //   }
+      //   chat_->ui_->input_textEdit->clear();
+      //}
+
+      chat_->chatClientServicePtr_->SendPartyMessage(chat_->currentChat_, messageText);
+      chat_->ui_->input_textEdit->clear();
    }
 
    void onMessagesUpdated() override {
@@ -272,8 +273,14 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setActiveChatLabel(ui_->labelActiveChat);
 #else
    chatClientServicePtr_ = chatClientServicePtr;
-   ui_->treeViewUsers->setModel(new ChatPartiesTreeModel(chatClientServicePtr_, this));
-   ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(this));
+   ChatPartiesTreeModel* chatTreeModel = new ChatPartiesTreeModel(chatClientServicePtr_, this);
+   ChatPartiesSortProxyModel* charTreeSortModel = new ChatPartiesSortProxyModel(chatTreeModel);
+   charTreeSortModel->setSourceModel(chatTreeModel);
+   ui_->treeViewUsers->setModel(charTreeSortModel);
+   ui_->treeViewUsers->sortByColumn(0, Qt::AscendingOrder);
+   ui_->treeViewUsers->setSortingEnabled(true);
+   ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(charTreeSortModel, this));
+   connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserClicked);
 #endif
    ui_->textEditMessages->setHandler(this);
    ui_->textEditMessages->setMessageReadHandler(client_);
@@ -282,10 +289,17 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    //ui_->chatSearchLineEdit->setActionsHandler(client_);
 
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::LoginToServer, this, &ChatWidget::onConnectedToServer);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLoggedOut);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::LogoutFromServer, this, &ChatWidget::onLoggedOut);
+   connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
+
+
+
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
    connect(client_.get(), &ChatClient::ConfirmContactsNewData, this, &ChatWidget::onContactListConfirmationRequested);
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
-   connect(client_.get(), &ChatClient::ConnectedToServer, this, &ChatWidget::onConnectedToServer);
+   
    connect(client_.get(), &ChatClient::ContactRequestAccepted, this, &ChatWidget::onContactRequestAccepted);
    connect(client_.get(), &ChatClient::RoomsInserted, this, &ChatWidget::selectGlobalRoom);
    connect(client_.get(), &ChatClient::NewContactRequest, this, [=] (const std::string &userId) {
@@ -297,7 +311,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::DMMessageReceived, this, &ChatWidget::onDMMessageReceived);
    connect(client_.get(), &ChatClient::ContactRequestApproved, this, &ChatWidget::onContactRequestApproved);
 
-   connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
+   
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
 
    connect(ui_->textEditMessages, &QTextEdit::selectionChanged, this, &ChatWidget::onChatMessagesSelectionChanged);
@@ -453,6 +467,8 @@ void ChatWidget::updateChat(const bool &isChatTab)
    if (isChatTab_) {
 #ifndef USE_NEW_TREE_MODEL
    static_cast<ChatClientUserView*>(ui_->treeViewUsers)->updateCurrentChat();
+#else
+
 #endif
    }
 }
@@ -677,7 +693,7 @@ void ChatWidget::setIsRoom(bool isRoom)
    isRoom_ = isRoom;
 }
 
-void ChatWidget::onElementSelected(CategoryElement *element)
+void ChatWidget::onElementSelected(const PartyTreeItem* chatUserListElement)
 {
    ui_->frameContactActions->setVisible(false);
    ui_->input_textEdit->setReadOnly(false);
@@ -686,76 +702,87 @@ void ChatWidget::onElementSelected(CategoryElement *element)
    // Save draft message
    const std::string previousChat = currentChat_;
 
-   if (element) {
-      switch (element->getType()) {
-         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement: {
-            //TODO: Change cast
-            auto room = element->getDataObject();
-            if (room && room->has_room()) {
-               setIsRoom(true);
-               currentChat_ = room->room().id();
-               OTCSwitchToRoom(room);
-            }
-         }
-         break;
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
-            //TODO: Change cast
-            auto contact = element->getDataObject();
-            if (contact && contact->has_contact_record()) {
-               setIsRoom(false);
-               currentChat_ = contact->contact_record().contact_id();
-               OTCSwitchToContact(contact);
-            }
-         }
-         break;
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
-            auto contact = element->getDataObject();
-            if (contact && contact->has_contact_record()) {
-               setIsRoom(false);
-               currentChat_ = contact->contact_record().contact_id();
-               ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
-
-               if (cElement->getContactData()->status() ==
-                   Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING) {
-                  ui_->pushButton_AcceptSend->setText(QObject::tr("SEND"));
-                  ui_->pushButton_RejectCancel->setText(QObject::tr("CANCEL"));
-               } else if (cElement->getContactData()->status() ==
-                          Chat::ContactStatus::CONTACT_STATUS_INCOMING) {
-                  ui_->pushButton_AcceptSend->setText(QObject::tr("ACCEPT"));
-                  ui_->pushButton_RejectCancel->setText(QObject::tr("REJECT"));
-                  ui_->input_textEdit->setReadOnly(true);
-               }
-
-               setIsContactRequest(true);
-               ui_->frameContactActions->setVisible(true);
-            }
-         }
-         break;
-         // XXXOTC
-         // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement: {
-         //    ui_->stackedWidgetMessages->setCurrentIndex(0);
-         //    auto response = element->getDataObject();
-         //    if (response) {
-         //       setIsRoom(false);
-         //       currentChat_ = QString::fromStdString(response->serverResponseId());
-         //    }
-         // }
-         // break;
-         // case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement: {
-         //    ui_->stackedWidgetMessages->setCurrentIndex(0);
-         //    auto response = element->getDataObject();
-         //    if (response) {
-         //       setIsRoom(false);
-         //       currentChat_ = QString::fromStdString(response->serverResponseId());
-         //       OTCSwitchToResponse(response);
-         //    }
-         // }
-         // break;
-         default:
-            break;
-
-      }
+   if (chatUserListElement->modelType() != UI::ElementType::Party) {
+      return;
    }
+   Chat::ClientPartyPtr clientParty = chatUserListElement->data().value<Chat::ClientPartyPtr>();
+   if (!clientParty)
+      return;
+
+   setIsRoom(true);
+   currentChat_ = clientParty->id();
+   ui_->input_textEdit->setReadOnly(false);
+
+   //if (element) {
+   //   switch (element->getType()) {
+   //      case ChatUIDefinitions::ChatTreeNodeType::RoomsElement: {
+   //         //TODO: Change cast
+   //         auto room = element->getDataObject();
+   //         if (room && room->has_room()) {
+   //            setIsRoom(true);
+   //            currentChat_ = room->room().id();
+   //            OTCSwitchToRoom(room);
+   //         }
+   //      }
+   //      break;
+   //      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
+   //         //TODO: Change cast
+   //         auto contact = element->getDataObject();
+   //         if (contact && contact->has_contact_record()) {
+   //            setIsRoom(false);
+   //            currentChat_ = contact->contact_record().contact_id();
+   //            OTCSwitchToContact(contact);
+   //         }
+   //      }
+   //      break;
+   //      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
+   //         auto contact = element->getDataObject();
+   //         if (contact && contact->has_contact_record()) {
+   //            setIsRoom(false);
+   //            currentChat_ = contact->contact_record().contact_id();
+   //            ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
+
+   //            if (cElement->getContactData()->status() ==
+   //                Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING) {
+   //               ui_->pushButton_AcceptSend->setText(QObject::tr("SEND"));
+   //               ui_->pushButton_RejectCancel->setText(QObject::tr("CANCEL"));
+   //            } else if (cElement->getContactData()->status() ==
+   //                       Chat::ContactStatus::CONTACT_STATUS_INCOMING) {
+   //               ui_->pushButton_AcceptSend->setText(QObject::tr("ACCEPT"));
+   //               ui_->pushButton_RejectCancel->setText(QObject::tr("REJECT"));
+   //               ui_->input_textEdit->setReadOnly(true);
+   //            }
+
+   //            setIsContactRequest(true);
+   //            ui_->frameContactActions->setVisible(true);
+   //         }
+   //      }
+   //      break;
+   //      // XXXOTC
+   //      // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement: {
+   //      //    ui_->stackedWidgetMessages->setCurrentIndex(0);
+   //      //    auto response = element->getDataObject();
+   //      //    if (response) {
+   //      //       setIsRoom(false);
+   //      //       currentChat_ = QString::fromStdString(response->serverResponseId());
+   //      //    }
+   //      // }
+   //      // break;
+   //      // case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement: {
+   //      //    ui_->stackedWidgetMessages->setCurrentIndex(0);
+   //      //    auto response = element->getDataObject();
+   //      //    if (response) {
+   //      //       setIsRoom(false);
+   //      //       currentChat_ = QString::fromStdString(response->serverResponseId());
+   //      //       OTCSwitchToResponse(response);
+   //      //    }
+   //      // }
+   //      // break;
+   //      default:
+   //         break;
+
+   //   }
+   //}
 
    if (previousChat != currentChat_) {
       // Save draft message if any
@@ -1023,6 +1050,13 @@ void ChatWidget::onOtcUpdated(const std::string &contactId)
    if (contactId == currentChat_) {
       updateOtc(currentChat_);
    }
+}
+
+void ChatWidget::onUserClicked(const QModelIndex& index)
+{
+   ChatPartiesSortProxyModel *chartProxyModel = static_cast<ChatPartiesSortProxyModel *>(ui_->treeViewUsers->model());
+   PartyTreeItem* chatUserListElement = chartProxyModel->getInternalData(index);
+   onElementSelected(chatUserListElement);
 }
 
 void ChatWidget::DisplayCreateOTCWidget()

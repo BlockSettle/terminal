@@ -5,24 +5,25 @@
 #include "../BlocksettleNetworkingLib/ChatProtocol/Party.h"
 #include "ChatProtocol/ChatClientService.h"
 #include "chat.pb.h"
-/*
 // Internal enum
 namespace UI {
    enum class ElementType
    {
-      Container = 0,
+      Root = 0,
+      Container,
       Party
    };
 
-   enum class PartyRoles
-   {
-      Status = Qt::UserRole + 1,
-      Type,
-      SubType,
-      Name
-   };
+   //enum class PartyRoles
+   //{
+   //   Status = Qt::UserRole + 1,
+   //   Type,
+   //   SubType,
+   //   Name
+   //};
 }
 
+/*
 class AbstractParty
 {
 public:
@@ -60,7 +61,7 @@ class PartyContainer;
 class Party : public AbstractParty
 {
 public:
-   Party(std::string displayName, Chat::PartySubType subType, Chat::ClientStatus status);
+   Party(const std::string& displayName, Chat::PartySubType subType, Chat::ClientStatus status);
    virtual ~Party() override;
 
    Party(const Party& other);
@@ -99,7 +100,7 @@ protected:
 class PartyContainer : public AbstractParty
 {
 public:
-   PartyContainer(Chat::PartyType partyType, std::string displayName, QList<Party> &&children);
+   PartyContainer(Chat::PartyType partyType, const std::string& displayName, QList<Party> &&children);
    virtual ~PartyContainer() override;
 
    bool operator==(const PartyContainer &other);
@@ -138,11 +139,12 @@ protected:
 //   onRightMouseClick();	// open item menu
 //}
 
+using PartiesList = QList<QList<Party>>;
 class ChatPartiesTreeModel : public QAbstractItemModel
 {
    Q_OBJECT
 public:
-   ChatPartiesTreeModel(QObject *parent = nullptr);
+   ChatPartiesTreeModel(Chat::ChatClientServicePtr chatClientServicePtr, QObject *parent = nullptr);
    virtual ~ChatPartiesTreeModel() override;
 
    // Model virtual functions
@@ -152,7 +154,6 @@ public:
    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 
-   using PartiesList = QList<QPair<Chat::PartyType, QList<Party>>>;
 private:
    struct FindPartyResult {
        constexpr static int iInvalid = -1;
@@ -171,40 +172,44 @@ private:
    void internalChangeParty(Chat::PartyType type, Party&& newParty);
 
 public slots:
-   // All those slots should take correct data and transfrom it into ones for internal usage
-   // for now for simplcity it's just the same interface in both cases(except slots do not work with rvalue)
-   void replaceAllParties(const PartiesList& parties);
-   void addParty(Chat::PartyType type, const Party& party);
-   void removeParty(const std::string& displayName);
-   void changeParty(Chat::PartyType type, const Party& party);
+   // All those slots should take correct data and transform it into ones for internal usage
+   // for now for simplicity it's just the same interface in both cases(except slots do not work with rvalue)
+   void partyModelChanged();
+   //void addParty(Chat::PartyType type, const Party& party);
+   //void removeParty(const std::string& displayName);
+   //void changeParty(Chat::PartyType type, const Party& party);
 
 protected:
    QScopedPointer<QList<PartyContainer>> partyContainers_;
+   Chat::ChatClientServicePtr chatClientServicePtr_;
 };
 */
+
 
 class PartyTreeItem
 {
 public:
-   PartyTreeItem(const QVariant& data, PartyTreeItem* parent = nullptr)
+   PartyTreeItem(const QVariant& data, UI::ElementType modelType, PartyTreeItem* parent = nullptr)
+      : itemData_(data)
+      , modelType_(modelType)
+      , parentItem_(parent)
    {
-      parentItem = parent;
-      itemData = data;
    }
 
    ~PartyTreeItem()
    {
-      qDeleteAll(childItems);
+      qDeleteAll(childItems_);
    }
 
    PartyTreeItem* child(int number)
    {
-      return childItems.value(number);
+      Q_ASSERT(number >= 0 && number < childItems_.size());
+      return childItems_.value(number);
    }
 
    int childCount() const
    {
-      return childItems.count();
+      return childItems_.count();
    }
 
    int columnCount() const
@@ -214,49 +219,63 @@ public:
 
    QVariant data() const
    {
-      return itemData;
+      return itemData_;
    }
 
    bool insertChildren(PartyTreeItem* item)
    {
-      childItems.push_back(item);
+      childItems_.push_back(item);
       return true;
    }
 
    PartyTreeItem* parent()
    {
-      return parentItem;
+      return parentItem_;
    }
 
    bool removeChildren(int position, int count)
    {
-      if (position < 0 || position + count > childItems.size())
+      if (position < 0 || position + count > childItems_.size()) {
          return false;
+      }
 
       for (int row = 0; row < count; ++row)
-         delete childItems.takeAt(position);
+         delete childItems_.takeAt(position);
 
       return true;
    }
 
+   void removeAll() {
+      qDeleteAll(childItems_);
+      childItems_.clear();
+   }
+
    int childNumber() const
    {
-      if (parentItem)
-         return parentItem->childItems.indexOf(const_cast<PartyTreeItem*>(this));
+      if (parentItem_) {
+         return parentItem_->childItems_.indexOf(const_cast<PartyTreeItem*>(this));
+      }
 
+      Q_ASSERT(false);
       return 0;
    }
 
    bool setData(const QVariant& value)
    {
-      itemData = value;
+      itemData_ = value;
       return true;
    }
 
+   UI::ElementType modelType() const 
+   {
+      return modelType_;
+   }
+
 private:
-   QList<PartyTreeItem*> childItems;
-   QVariant itemData;
-   PartyTreeItem* parentItem;
+   QList<PartyTreeItem*> childItems_;
+   QVariant itemData_;
+   PartyTreeItem* parentItem_;
+   UI::ElementType modelType_;
 };
 
 class ChatPartiesTreeModel : public QAbstractItemModel
@@ -272,8 +291,9 @@ public:
    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 
-public slots:
+private slots:
    void partyModelChanged();
+   void resetAll();
 
 private:
    PartyTreeItem* getItem(const QModelIndex& index) const;
@@ -281,5 +301,28 @@ private:
    Chat::ChatClientServicePtr chatClientServicePtr_;
    PartyTreeItem* rootItem_;
 };
+
+// #TODO: Move this code in different file
+#include <QSortFilterProxyModel>
+
+class ChatPartiesSortProxyModel : public QSortFilterProxyModel
+{
+   Q_OBJECT
+public:
+   explicit ChatPartiesSortProxyModel(QObject *parent = nullptr);
+
+   //void setFilterKey(const QString &pattern,
+   //   int role = Qt::DisplayRole,
+   //   bool caseSensitive = false);
+
+   PartyTreeItem* getInternalData(const QModelIndex& index) const;
+
+protected:
+
+   bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
+   bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
+
+};
+
 
 #endif // CHATPARTYLISTMODEL_H

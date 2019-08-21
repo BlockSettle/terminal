@@ -17,8 +17,9 @@ namespace {
    using ContactStatus = Chat::ContactStatus;
 }
 
-ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(QObject *parent)
+ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(QPointer<QSortFilterProxyModel> proxyModel, QObject *parent)
    : QStyledItemDelegate (parent)
+   , proxyModel_(proxyModel)
 {
 }
 
@@ -46,29 +47,22 @@ ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(QObject *parent
 
 void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-   PartyTreeItem* internalData = static_cast<PartyTreeItem*>(index.internalPointer());
-   QVariant val = internalData->data();
-   if (val.canConvert<QString>())
-   {
-      paintPartyContainer(painter, option, index);
+   if (!index.isValid()) {
+      return;
    }
 
-   if (val.canConvert<Chat::ClientPartyPtr>())
-   {
-      paintParty(painter, option, index);
+   const QModelIndex& sourceIndex = proxyModel_ ? proxyModel_->mapToSource(index) : index;
+   if (!sourceIndex.isValid()) {
+      return;
    }
-/*
-   AbstractParty* internalData = checkAndGetInternalPointer<AbstractParty>(index);
 
-   if (UI::ElementType::Container == internalData->elementType()) {
-      paintPartyContainer(painter, option, index);
-   } else if (UI::ElementType::Party == internalData->elementType()) {
-      paintParty(painter, option, index);
-   } else {
-      // You should specify rules for new ElementType explicitly
-      Q_ASSERT(false);
+   PartyTreeItem* internalData = static_cast<PartyTreeItem*>(sourceIndex.internalPointer());
+   if (internalData->modelType() == UI::ElementType::Container) {
+      paintPartyContainer(painter, option, sourceIndex);
    }
-*/
+   else if (internalData->modelType() == UI::ElementType::Party) {
+      paintParty(painter, option, sourceIndex);
+   }
 }
 
 // paintCategoryNode == paintPartyContainer
@@ -101,15 +95,9 @@ void ChatClientUsersViewItemDelegate::paintPartyContainer(QPainter *painter, con
 
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorCategoryItem());
    PartyTreeItem* internalData = static_cast<PartyTreeItem*>(index.internalPointer());
+   Q_ASSERT(internalData && internalData->data().canConvert<QString>());
    itemOption.text = internalData->data().toString();
-/*
-   PartyContainer* container = checkAndGetInternalPointer<PartyContainer>(index);
-   if (container) {
-      itemOption.text = QString::fromStdString(container->getDisplayName());
-   } else {
-      itemOption.text = unknown;
-   }
-*/
+
    QStyledItemDelegate::paint(painter, itemOption, index);
 }
 
@@ -126,8 +114,6 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorRoom());
    PartyTreeItem* party = static_cast<PartyTreeItem*>(index.internalPointer());
    Chat::ClientPartyPtr clientPartyPtr = party->data().value<Chat::ClientPartyPtr>();
-
-   itemOption.text = QString::fromStdString(clientPartyPtr->displayName());
 
    if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyType())
    {
@@ -154,6 +140,7 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
          default: 
          {
             // You should specify rules for new ClientStatus explicitly
+            Q_ASSERT(false);
          }
          break;
       }

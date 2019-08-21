@@ -156,7 +156,7 @@ ChatClientUserView::ChatClientUserView(QWidget *parent)
 {
    setContextMenuPolicy(Qt::CustomContextMenu);
    connect(this, &QAbstractItemView::customContextMenuRequested, this, &ChatClientUserView::onCustomContextMenu);
-   setItemDelegate(new ChatClientUsersViewItemDelegate(this));
+   setItemDelegate(new ChatClientUsersViewItemDelegate({}, this));
 
    // expand/collapse categories only on single click
    setExpandsOnDoubleClick(false);

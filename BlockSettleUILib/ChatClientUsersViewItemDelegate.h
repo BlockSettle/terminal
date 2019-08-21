@@ -3,12 +3,14 @@
 
 #include <QStyledItemDelegate>
 #include "ChatUsersViewItemStyle.h"
+#include "QPointer"
 
+class QSortFilterProxyModel;
 class ChatClientUsersViewItemDelegate : public QStyledItemDelegate
 {
    Q_OBJECT
 public:
-   explicit ChatClientUsersViewItemDelegate(QObject *parent = nullptr);
+   explicit ChatClientUsersViewItemDelegate(QPointer<QSortFilterProxyModel> proxyModel, QObject *parent = nullptr);
 
 signals:
 
@@ -36,5 +38,6 @@ private:
    // QAbstractItemDelegate interface
 public:
    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+   QPointer<QSortFilterProxyModel> proxyModel_;
 };
 #endif // CHATCLIENTUSERSVIEWITEMDELEGATE_H

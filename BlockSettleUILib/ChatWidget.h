@@ -36,6 +36,7 @@ class ConnectionManager;
 class OTCRequestViewModel;
 class OtcClient;
 class QTextEdit;
+class PartyTreeItem;
 
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
@@ -69,7 +70,8 @@ public:
    void updateChat(const bool &isChatTab);
 
    // ViewItemWatcher interface
-   void onElementSelected(CategoryElement* element) override;
+   void onElementSelected(const PartyTreeItem* chatUserListElement);
+   void onElementSelected(CategoryElement *element) override {};
    void onMessageChanged(std::shared_ptr<Chat::Data> message) override;
    void onElementUpdated(CategoryElement* element) override;
    void onCurrentElementAboutToBeRemoved() override;
@@ -126,6 +128,9 @@ private slots:
    void onOtcResponseReject();
 
    void onOtcUpdated(const std::string& contactId);
+
+
+   void onUserClicked(const QModelIndex& index);
 
 private:
    void SetOTCLoggedInState();
