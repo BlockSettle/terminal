@@ -969,7 +969,7 @@ bool HeadlessContainerListener::createAuthLeaf(const std::shared_ptr<bs::core::h
       if (leaf) {
          return true;
       } else {
-         logger_->warn("[HeadlessContainerListener::onSetUserId] failed to create auth leaf");
+         logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf");
       }
    } catch (const std::exception &e) {
       logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf: {}", e.what());
