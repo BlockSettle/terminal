@@ -1,6 +1,8 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.3
 import QtQuick.Layouts 1.0
+import QtQuick.Window 2.1
+import com.blocksettle.QmlFactory 1.0
 
 import "../BsStyles"
 import "../BsControls"
@@ -69,8 +71,19 @@ CustomDialogWindow {
     // (for example if it's multipage dialog, or another popup doalog shown above current
     signal sizeChanged(int w, int h)
 
-    onWidthChanged: sizeChanged(root.width, root.height)
-    onHeightChanged: sizeChanged(root.width, root.height)
+    onWidthChanged: {
+        if (root.width > Screen.desktopAvailableWidth) {
+            root.width = Screen.desktopAvailableWidth - 16
+        }
+        sizeChanged(root.width, root.height)
+    }
+    onHeightChanged: {
+        if (root.height > Screen.desktopAvailableHeight) {
+            let h = qmlFactory.titleBarHeight() + 16 // + extra window margins
+            root.height = Screen.desktopAvailableHeight - h
+        }
+        sizeChanged(root.width, root.height)
+    }
 
 
     ////////////////////////////

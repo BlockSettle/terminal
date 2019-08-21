@@ -96,6 +96,7 @@ public:
    Q_INVOKABLE void setClipboard(const QString &text) const;
    Q_INVOKABLE QString getClipboard() const;
    Q_INVOKABLE QRect frameSize(QObject *window) const;
+   Q_INVOKABLE int titleBarHeight();
    Q_INVOKABLE void installEventFilterToObj(QObject *object);
    bool eventFilter(QObject *object, QEvent *event) override;
 

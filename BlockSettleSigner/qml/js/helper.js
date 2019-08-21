@@ -244,7 +244,9 @@ function evalWorker(method, cppCallback, argList) {
         if (typeof cbArg6 !== 'undefined') cbArgList[6] = cbArg6
         if (typeof cbArg7 !== 'undefined') cbArgList[7] = cbArg7
 
-        cppCallback.exec(cbArgList)
+        if (cppCallback) {
+            cppCallback.exec(cbArgList)
+        }
     }
 
     let val0 = argList[0];
@@ -539,6 +541,14 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
     }
 
     prepareLiteModeDialog(dlg)
+}
+
+function updateDialogData(jsCallback, passwordDialogData) {
+    console.log("Updating password dialog " + currentDialog + ", updated keys: " + passwordDialogData.keys())
+    if (!currentDialog || typeof currentDialog.passwordDialogData === "undefined") {
+        return
+    }
+    currentDialog.passwordDialogData.merge(passwordDialogData)
 }
 
 function isLiteMode(){

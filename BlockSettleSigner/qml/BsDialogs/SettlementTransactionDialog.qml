@@ -12,6 +12,7 @@ import com.blocksettle.QPasswordData 1.0
 
 import "../StyledControls"
 import "../BsControls"
+import "../BsStyles"
 import "../js/helper.js" as JsHelper
 
 CustomTitleDialogWindow {
@@ -22,10 +23,11 @@ CustomTitleDialogWindow {
     property QPasswordData passwordData: QPasswordData{}
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
 
-    property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
-    property int addressRowHeight: 24
-    //property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
-    property int recvAddrHeight: 22
+    readonly property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
+    readonly property int addressRowHeight: 24
+    readonly property int recipientsAddrHeight: txInfo.recipients.length < 4 ? txInfo.recipients.length * addressRowHeight : addressRowHeight * 3
+
+    readonly property int duration: passwordDialogData.value("Duration") / 1000.0 - 1
 
     id: root
     title: passwordDialogData.value("Title")
@@ -67,7 +69,8 @@ CustomTitleDialogWindow {
         target: qmlAppObj
 
         onCancelSignTx: {
-            if (txId === txInfo.txId) {
+            console.log("SettlementTransactionDialog.qml, cancel requested for id=" + settlementId)
+            if (settlementId === passwordDialogData.value("SettlementId")) {
                 rejectAnimated()
             }
         }
@@ -170,38 +173,33 @@ CustomTitleDialogWindow {
             rowSpacing: 0
 
             CustomHeader {
-                visible: passwordDialogData.contains("Payment")
-                           || passwordDialogData.contains("GenesisAddress")
-                           || passwordDialogData.contains("RequesterAuthAddress")
-                           || passwordDialogData.contains("ResponderAuthAddress")
-
                 Layout.fillWidth: true
                 Layout.columnSpan: 2
                 text: qsTr("Settlement Details")
                 Layout.preferredHeight: 25
             }
 
-            // Payment
+            // SettlementAddress
             CustomLabel {
-                visible: passwordDialogData.contains("Payment")
+                visible: passwordDialogData.contains("SettlementAddress")
                 Layout.fillWidth: true
-                text: qsTr("Payment")
+                text: qsTr("Settlement Address")
             }
             CustomLabelValue {
-                visible: passwordDialogData.contains("Payment")
-                text: passwordDialogData.value("Payment")
+                visible: passwordDialogData.contains("SettlementAddress")
+                text: passwordDialogData.value("SettlementAddress")
                 Layout.alignment: Qt.AlignRight
             }
 
-            // Genesis Address
+            // SettlementId
             CustomLabel {
-                visible: passwordDialogData.contains("GenesisAddress")
+                visible: passwordDialogData.contains("SettlementId")
                 Layout.fillWidth: true
-                text: qsTr("Genesis Address")
+                text: qsTr("Settlement Id")
             }
             CustomLabelValue {
-                visible: passwordDialogData.contains("GenesisAddress")
-                text: passwordDialogData.value("GenesisAddress")
+                visible: passwordDialogData.contains("SettlementId")
+                text: passwordDialogData.value("SettlementId")
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -209,7 +207,7 @@ CustomTitleDialogWindow {
             CustomLabel {
                 visible: passwordDialogData.contains("RequesterAuthAddress")
                 Layout.fillWidth: true
-                text: qsTr("Requester\nAuthentication Address")
+                text: qsTr("Requester Auth")
             }
             CustomLabelValue {
                 visible: passwordDialogData.contains("RequesterAuthAddress")
@@ -221,12 +219,98 @@ CustomTitleDialogWindow {
             CustomLabel {
                 visible: passwordDialogData.contains("ResponderAuthAddress")
                 Layout.fillWidth: true
-                text: qsTr("Responder\nAuthentication Address")
+                text: qsTr("Responder Auth")
             }
             CustomLabelValue {
                 visible: passwordDialogData.contains("ResponderAuthAddress")
                 text: passwordDialogData.value("ResponderAuthAddress")
                 Layout.alignment: Qt.AlignRight
+            }
+
+            // Payment UTXO(s)
+            RowLayout {
+                Layout.columnSpan: 2
+                Layout.fillWidth: true
+                visible: passwordDialogData.contains("InputsList")
+
+                CustomLabel {
+                    text: qsTr("Payment UTXO(s)")
+                    Layout.alignment: Qt.AlignTop
+                }
+
+                ListView {
+                    id: inputs
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignRight
+                    model: txInfo.inputs
+                    clip: true
+                    Layout.preferredHeight: txInfo.inputs.length < 4 ? txInfo.inputs.length * addressRowHeight : addressRowHeight * 3
+
+                    flickableDirection: Flickable.VerticalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar {
+                        active: true
+                    }
+
+                    delegate: Rectangle {
+                        id: inputsAddressRect
+                        color: "transparent"
+                        height: 22
+                        width: inputs.width
+
+                        CustomLabelValue {
+                            text: modelData
+                            anchors.fill: inputsAddressRect
+                            horizontalAlignment: Text.AlignRight
+                            verticalAlignment: Text.AlignTop
+                            font: fixedFont
+                        }
+                    }
+                }
+            }
+
+            // Delivery UTXO(s)
+            RowLayout {
+                Layout.columnSpan: 2
+                Layout.fillWidth: true
+                visible: passwordDialogData.contains("RecipientsList")
+
+                CustomLabel {
+                    text: qsTr("Delivery UTXO(s)")
+                    Layout.alignment: Qt.AlignTop
+                }
+
+                ListView {
+                    id: recipients
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignRight
+                    model: txInfo.recipients
+                    clip: true
+                    Layout.preferredHeight: recipientsAddrHeight
+
+                    flickableDirection: Flickable.VerticalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar {
+                        active: true
+                    }
+
+                    delegate: Rectangle {
+                        id: recipientsAddressRect
+                        color: "transparent"
+                        height: 22
+                        width: recipients.width
+
+                        CustomLabelValue {
+                            id: labelTxWalletId
+                            text: modelData
+                            anchors.fill: recipientsAddressRect
+                            horizontalAlignment: Text.AlignRight
+                            verticalAlignment: Text.AlignTop
+                            font: fixedFont
+                            color: passwordDialogData.deliveryUTXOVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+                        }
+                    }
+                }
             }
 
         }
@@ -239,25 +323,33 @@ CustomTitleDialogWindow {
             rowSpacing: 0
 
             CustomHeader {
-                visible: passwordDialogData.contains("TransactionAmount")
-                           || passwordDialogData.contains("NetworkFee")
-                           || passwordDialogData.contains("TotalSpent")
-
                 Layout.fillWidth: true
                 Layout.columnSpan: 2
                 text: qsTr("Transaction Details")
                 Layout.preferredHeight: 25
             }
 
-            // TX Amount
+            // Input Amount
             CustomLabel {
-                visible: passwordDialogData.contains("TransactionAmount")
+                visible: passwordDialogData.contains("InputAmount")
                 Layout.fillWidth: true
-                text: qsTr("Transaction Amount")
+                text: qsTr("Input Amount")
             }
             CustomLabelValue {
-                visible: passwordDialogData.contains("TransactionAmount")
-                text: passwordDialogData.value("TransactionAmount")
+                visible: passwordDialogData.contains("InputAmount")
+                text: passwordDialogData.value("InputAmount")
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Return Amount
+            CustomLabel {
+                visible: passwordDialogData.contains("ReturnAmount")
+                Layout.fillWidth: true
+                text: qsTr("Return Amount")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("ReturnAmount")
+                text: passwordDialogData.value("ReturnAmount")
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -273,19 +365,80 @@ CustomTitleDialogWindow {
                 Layout.alignment: Qt.AlignRight
             }
 
-            // Total Spent
+            // Settlement Pay-In
             CustomLabel {
-                visible: passwordDialogData.contains("TotalSpent")
+                visible: passwordDialogData.contains("SettlementPayIn")
                 Layout.fillWidth: true
-                text: qsTr("Total Spent")
+                text: qsTr("Settlement Pay-In")
             }
             CustomLabelValue {
-                visible: passwordDialogData.contains("TotalSpent")
-                text: passwordDialogData.value("TotalSpent")
+                visible: passwordDialogData.contains("SettlementPayIn")
+                text: passwordDialogData.value("SettlementPayIn")
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Settlement Pay-Out
+            CustomLabel {
+                visible: passwordDialogData.contains("SettlementPayOut")
+                Layout.fillWidth: true
+                text: qsTr("Settlement Pay-Out")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("SettlementPayOut")
+                text: passwordDialogData.value("SettlementPayOut")
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Delivery Amount
+            CustomLabel {
+                visible: passwordDialogData.contains("DeliveryAmount")
+                Layout.fillWidth: true
+                text: qsTr("Delivery Amount")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("DeliveryAmount")
+                text: passwordDialogData.value("DeliveryAmount")
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Payment Received
+            CustomLabel {
+                visible: passwordDialogData.contains("PaymentReceived")
+                Layout.fillWidth: true
+                text: qsTr("Payment Received")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("PaymentReceived")
+                text: passwordDialogData.value("PaymentReceived")
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Delivery Amount
+            CustomLabel {
+                visible: passwordDialogData.contains("PaymentAmount")
+                Layout.fillWidth: true
+                text: qsTr("Payment Amount")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("PaymentAmount")
+                text: passwordDialogData.value("PaymentAmount")
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Payment Received
+            CustomLabel {
+                visible: passwordDialogData.contains("DeliveryReceived")
+                Layout.fillWidth: true
+                text: qsTr("Delivery Received")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.contains("DeliveryReceived")
+                text: passwordDialogData.value("DeliveryReceived")
                 Layout.alignment: Qt.AlignRight
             }
 
         }
+
         RowLayout {
             spacing: 5
             Layout.fillWidth: true
@@ -343,7 +496,7 @@ CustomTitleDialogWindow {
 
             Timer {
                 id: timer
-                property real timeLeft: 120
+                property real timeLeft: duration
                 interval: 500
                 running: true
                 repeat: true
@@ -364,7 +517,7 @@ CustomTitleDialogWindow {
 //                Layout.fillWidth: true
 //            }
             CustomLabelValue {
-                text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed((0)))
+                text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed(0))
                 Layout.fillWidth: true
             }
 
@@ -374,7 +527,7 @@ CustomTitleDialogWindow {
                 Layout.maximumHeight: 6
                 Layout.bottomMargin: 10
                 Layout.fillWidth: true
-                to: 120
+                to: duration
                 value: timer.timeLeft
             }
         }

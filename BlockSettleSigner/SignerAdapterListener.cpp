@@ -80,11 +80,18 @@ public:
       owner_->sendData(signer::TxSignedType, evt.SerializeAsString());
    }
 
-   void cancelTxSign(const BinaryData &txHash) override
+   void cancelTxSign(const BinaryData &txId) override
    {
-      signer::SignTxCancelRequest evt;
-      evt.set_tx_hash(txHash.toBinStr());
+      headless::CancelSignTx evt;
+      evt.set_tx_id(txId.toBinStr());
       owner_->sendData(signer::CancelTxSignType, evt.SerializeAsString());
+   }
+
+   void updateDialogData(const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData) override
+   {
+      headless::UpdateDialogDataRequest request;
+      *request.mutable_passworddialogdata() = dialogData;
+      owner_->sendData(signer::UpdateDialogDataType, request.SerializeAsString());
    }
 
    void xbtSpent(int64_t value, bool autoSign) override
