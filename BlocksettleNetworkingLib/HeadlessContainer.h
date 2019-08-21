@@ -68,6 +68,8 @@ public:
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
 
+   bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) override;
+
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override;
 
    bs::signer::RequestId setUserId(const BinaryData &, const std::string &walletId) override;

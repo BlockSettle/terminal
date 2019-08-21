@@ -37,6 +37,7 @@ enum RequestType
    GetSettlPayinAddrType       = 29;
    SettlGetRootPubkeyType      = 30;
    PromoteHDWalletRequestType  = 31;
+   UpdateDialogDataType        = 32; // update fields in password input dialogs in signer ui
 }
 
 message RequestPacket
@@ -111,7 +112,7 @@ message SignTxReply
 
 message CancelSignTx
 {
-   bytes txId = 1;
+   bytes  tx_id       = 1;
 }
 
 message SignSettlementTxRequest
@@ -504,4 +505,10 @@ message SyncNewAddressRequest
 message SyncCCNamesData
 {
    repeated string ccNames = 1;
+}
+
+message UpdateDialogDataRequest
+{
+   uint32                                                dialogId              = 1;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData    = 2;
 }
