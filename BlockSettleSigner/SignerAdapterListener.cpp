@@ -526,8 +526,18 @@ bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::sign
       privKeyStr = seed.toXpriv().toBinStr();
    }
    catch (const WalletException &e) {
-      logger_->error("[SignerAdapterListener::{}] failed to decrypt wallet with id {}"
-         , __func__, request.wallet_id());
+      logger_->error("[SignerAdapterListener::onGetDecryptedNode] failed to decrypt wallet with id {}: {}"
+         , request.wallet_id(), e.what());
+      return false;
+   }
+   catch (const DecryptedDataContainerException &e) {
+      logger_->error("[SignerAdapterListener::onGetDecryptedNode] wallet {} decryption failure: {}"
+         , request.wallet_id(), e.what());
+      return false;
+   }
+   catch (...) {
+      logger_->error("[SignerAdapterListener::onGetDecryptedNode] wallet {} decryption error"
+         , request.wallet_id());
       return false;
    }
 

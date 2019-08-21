@@ -369,6 +369,16 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
       (const SecureBinaryData &privKey, const SecureBinaryData &chainCode) {
       QString fn = fileName;
 
+      if (privKey.isNull()) {
+         logger_->error("[WalletsProxy] error decrypting private key");
+         const auto errText = tr("Failed to decrypt private key for wallet %1").arg(walletId);
+         emit walletError(walletId, errText);
+         QMetaObject::invokeMethod(this, [this, jsCallback, errText] {
+            invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << errText);
+         });
+         return;
+      }
+
       std::string privKeyString;
       EasyCoDec::Data seedData;
       try {
@@ -380,7 +390,11 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
          privKeyString = privKey.toBinStr();
       } catch (const std::exception &e) {
          logger_->error("[WalletsProxy] failed to encode private key: {}", e.what());
-         emit walletError(walletId, tr("Failed to encode private key for wallet %1").arg(walletId));
+         const auto errText = tr("Failed to encode private key for wallet %1").arg(walletId);
+         emit walletError(walletId, errText);
+         QMetaObject::invokeMethod(this, [this, jsCallback, errText] {
+            invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << errText);
+         });
          return;
       }
 

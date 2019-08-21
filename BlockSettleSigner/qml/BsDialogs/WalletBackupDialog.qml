@@ -240,9 +240,15 @@ CustomTitleDialogWindow {
                         passwordData.textPassword = walletDetailsFrame.password
 
                         if (fullBackupMode) {
-                            walletsProxy.backupPrivateKey(walletInfo.walletId
+                            rc = walletsProxy.backupPrivateKey(walletInfo.walletId
                                , targetFile, isPrintable
                                , passwordData, exportCallback)
+                            if (! rc) {
+                                JsHelper.messageBox(BSMessageBox.Type.Critical
+                                    , qsTr("Error")
+                                    , qsTr("Wallet export failed")
+                                    , qsTr("Internal error"))
+                            }
                         }
                         else {
                             walletsProxy.exportWatchingOnly(walletInfo.walletId
