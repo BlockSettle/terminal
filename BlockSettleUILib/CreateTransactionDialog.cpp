@@ -161,7 +161,7 @@ void CreateTransactionDialog::reject()
       }
 
       if (txReq_.isValid() && signContainer_) {
-         signContainer_->CancelSignTx(txReq_.serializeState(), {});
+         signContainer_->CancelSignTx(txReq_.serializeState());
       }
    }
 

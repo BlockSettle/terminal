@@ -409,7 +409,7 @@ bool HeadlessContainerListener::onCancelSignTx(const std::string &, headless::Re
    }
 
    if (callbacks_) {
-      callbacks_->cancelTxSign(request.tx_hash(), request.settlement_id());
+      callbacks_->cancelTxSign(request.tx_id());
    }
 
    return true;

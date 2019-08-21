@@ -48,7 +48,7 @@ public:
       , const bs::core::wallet::TXSignRequest & = {}) = 0;
 
    virtual void txSigned(const BinaryData &) = 0;
-   virtual void cancelTxSign(const BinaryData &, const std::string &) = 0;
+   virtual void cancelTxSign(const BinaryData &txId) = 0;
    virtual void updateDialogData(const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData) = 0;
    virtual void xbtSpent(int64_t, bool) = 0;
    virtual void customDialog(const std::string &, const std::string &) = 0;

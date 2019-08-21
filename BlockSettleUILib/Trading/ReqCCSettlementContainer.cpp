@@ -327,7 +327,7 @@ bool ReqCCSettlementContainer::cancel()
    deactivate();
    utxoAdapter_->unreserve(id());
    emit settlementCancelled();
-   signingContainer_->CancelSignTx({}, id());
+   signingContainer_->CancelSignTx(id());
    return true;
 }
 

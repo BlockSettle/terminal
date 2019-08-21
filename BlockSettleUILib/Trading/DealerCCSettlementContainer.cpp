@@ -220,7 +220,7 @@ bool DealerCCSettlementContainer::isAcceptable() const
 bool DealerCCSettlementContainer::cancel()
 {
    utxoAdapter_->unreserve(id());
-   signingContainer_->CancelSignTx({}, id());
+   signingContainer_->CancelSignTx(id());
    cancelled_ = true;
    return true;
 }
