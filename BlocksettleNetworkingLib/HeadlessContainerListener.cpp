@@ -298,7 +298,6 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       if (utxo.isInitialized()) {
          txSignReq.inputs.push_back(utxo);
          inputVal += utxo.getValue();
-         logger_->debug("[{}] UTXO {}, addr {}", __func__, utxo.getTxHash().toHexStr(true), bs::Address::fromUTXO(utxo).display());
       }
    }
 
