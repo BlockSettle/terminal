@@ -291,6 +291,9 @@
           <height>16777215</height>
          </size>
         </property>
+        <property name="minimum">
+         <double>1.000000000000000</double>
+        </property>
         <property name="maximum">
          <double>1000000.000000000000000</double>
         </property>
@@ -316,11 +319,14 @@
         <property name="decimals">
          <number>3</number>
         </property>
+        <property name="minimum">
+         <double>0.001000000000000</double>
+        </property>
         <property name="maximum">
          <double>10000.000000000000000</double>
         </property>
         <property name="singleStep">
-         <double>0.010000000000000</double>
+         <double>0.001000000000000</double>
         </property>
        </widget>
       </item>
