@@ -264,7 +264,13 @@ bool ReqCCSettlementContainer::startSigning()
       }
    }
 
-   const auto &cbTx = [this](bs::error::ErrorCode result, const BinaryData &signedTX) {
+   QPointer<ReqCCSettlementContainer> context(this);
+   const auto &cbTx = [this, context, logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
+      if (!context) {
+         logger->warn("[ReqCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
+         return;
+      }
+
       if (result == bs::error::ErrorCode::NoError) {
          ccTxSigned_ = signedTX.toHexStr();
 
@@ -277,7 +283,7 @@ bool ReqCCSettlementContainer::startSigning()
          emit settlementCancelled();
       }
       else {
-         logger_->warn("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
+         logger->warn("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
          emit error(tr("own TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
       }
    };
@@ -321,6 +327,7 @@ bool ReqCCSettlementContainer::cancel()
    deactivate();
    utxoAdapter_->unreserve(id());
    emit settlementCancelled();
+   signingContainer_->CancelSignTx({}, id());
    return true;
 }
 

@@ -409,7 +409,7 @@ bool HeadlessContainerListener::onCancelSignTx(const std::string &, headless::Re
    }
 
    if (callbacks_) {
-      callbacks_->cancelTxSign(request.txid());
+      callbacks_->cancelTxSign(request.tx_hash(), request.settlement_id());
    }
 
    return true;
@@ -563,13 +563,22 @@ void HeadlessContainerListener::SignTXResponse(const std::string &clientId, unsi
 void HeadlessContainerListener::passwordReceived(const std::string &clientId, const std::string &walletId
    , bs::error::ErrorCode result, const SecureBinaryData &password)
 {
-   const auto cbsIt = passwordCallbacks_.find(walletId);
-   if (cbsIt != passwordCallbacks_.end()) {
-      for (const auto &cb : cbsIt->second) {
-         cb(result, password);
-      }
-      passwordCallbacks_.erase(cbsIt);
+   if (deferredPasswordRequests_.empty()) {
+      logger_->error("[HeadlessContainerListener::{}] failed to find password received callback {}", __func__);
+      return;
    }
+   const PasswordReceivedCb &cb = std::move(deferredPasswordRequests_.front().second);
+   if (cb) {
+      cb(result, password);
+   }
+
+   // at this point password workflow finished for deferredPasswordRequests_.front() dialog
+   // now we can remove dialog and it's callback
+   deferredPasswordRequests_.pop();
+   deferredDialogRunning_ = false;
+
+   // execute next pw dialog
+   RunDeferredPwDialog();
 }
 
 void HeadlessContainerListener::passwordReceived(const std::string &walletId
@@ -676,52 +685,61 @@ bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const
    , headless::RequestType reqType, const Internal::PasswordDialogDataWrapper &dialogData
    , const PasswordReceivedCb &cb)
 {
-   if (cb) {
-      auto &callbacks = passwordCallbacks_[rootId];
-      callbacks.push_back(cb);
-      // TODO: review this code
-      // need to clear callbacks if pw input canceled in signer ui
-      // need to use existing password only for similar request type
-//      if (callbacks.size() > 1) {
-//         return true;
-//      }
-   }
+   // TODO:
+   // if deferredDialogRunning_ is set to true, no one else pw dialog might be displayed
+   // need to implement some timer which will control dialogs queue for case when proxyCallback not fired
+   // and deferredDialogRunning_ flag not cleared
 
-   if (callbacks_) {
-      switch (reqType) {
-      case headless::SignTxRequestType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignTx, dialogData, txReq);
-         break;
-      case headless::SignPartialTXRequestType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignPartialTx, dialogData, txReq);
-         break;
+   const VoidCb &deferredPwDialog = [this, reqType, dialogData, txReq](){
+      if (callbacks_) {
+         switch (reqType) {
+         case headless::SignTxRequestType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignTx, dialogData, txReq);
+            break;
+         case headless::SignPartialTXRequestType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignPartialTx, dialogData, txReq);
+            break;
 
-      case headless::SignSettlementTxRequestType:
-      case headless::SignSettlementPayoutTxType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementTx, dialogData, txReq);
-         break;
-      case headless::SignSettlementPartialTxType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementPartialTx, dialogData, txReq);
-         break;
+         case headless::SignSettlementTxRequestType:
+         case headless::SignSettlementPayoutTxType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementTx, dialogData, txReq);
+            break;
+         case headless::SignSettlementPartialTxType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementPartialTx, dialogData, txReq);
+            break;
 
-      case headless::CreateHDLeafRequestType:
-      case headless::CreateSettlWalletType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dialogData);
-         break;
-      case headless::SetUserIdType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dialogData);
-         break;
-      case headless::PromoteHDWalletRequestType:
-         callbacks_->decryptWalletRequest(signer::PasswordDialogType::PromoteHDWallet, dialogData);
-         break;
+         case headless::CreateHDLeafRequestType:
+         case headless::CreateSettlWalletType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dialogData);
+            break;
+         case headless::SetUserIdType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dialogData);
+            break;
+         case headless::PromoteHDWalletRequestType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::PromoteHDWallet, dialogData);
+            break;
 
-      default:
-         logger_->warn("[{}] unknown request for password request: {}", __func__, (int)reqType);
-         return false;
+         default:
+            logger_->warn("[{}] unknown request for password request: {}", __func__, (int)reqType);
+         }
       }
-      return true;
+   };
+   deferredPasswordRequests_.push({deferredPwDialog, cb});
+   RunDeferredPwDialog();
+
+   return true;
+}
+
+void HeadlessContainerListener::RunDeferredPwDialog()
+{
+   if (deferredPasswordRequests_.empty()) {
+      return;
    }
-   return false;
+
+   if(!deferredDialogRunning_) {
+      deferredDialogRunning_ = true;
+      deferredPasswordRequests_.front().first(); // run stored lambda
+   }
 }
 
 bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headless::RequestPacket &packet)

@@ -112,7 +112,10 @@ message SignTxReply
 
 message CancelSignTx
 {
-   bytes txId = 1;
+   oneof cancel {
+      bytes  tx_hash       = 1;
+      string settlement_id = 2;
+   }
 }
 
 message SignSettlementTxRequest

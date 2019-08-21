@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <queue>
 #include "BinaryData.h"
 #include "CoreWallet.h"
 #include "EncryptionUtils.h"
@@ -47,7 +48,7 @@ public:
       , const bs::core::wallet::TXSignRequest & = {}) = 0;
 
    virtual void txSigned(const BinaryData &) = 0;
-   virtual void cancelTxSign(const BinaryData &) = 0;
+   virtual void cancelTxSign(const BinaryData &, const std::string &) = 0;
    virtual void updateDialogData(const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData) = 0;
    virtual void xbtSpent(int64_t, bool) = 0;
    virtual void customDialog(const std::string &, const std::string &) = 0;
@@ -95,6 +96,7 @@ protected:
    void onClientError(const std::string &clientId, ServerConnectionListener::ClientError errorCode, int socket) override;
 
 private:
+   using VoidCb = std::function<void(void)>;
    using PasswordReceivedCb = std::function<void(bs::error::ErrorCode result, const SecureBinaryData &password)>;
    using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, SecureBinaryData> &)>;
 
@@ -154,6 +156,7 @@ private:
    bool RequestPassword(const std::string &rootId, const bs::core::wallet::TXSignRequest &
       , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const PasswordReceivedCb &cb);
+   void RunDeferredPwDialog();
 
    bool CheckSpendLimit(uint64_t value, const std::string &walletId);
 
@@ -168,9 +171,10 @@ private:
    bs::signer::Limits                  limits_;
    std::unordered_set<std::string>     connectedClients_;
 
-   std::unordered_map<std::string, std::vector<PasswordReceivedCb>>  passwordCallbacks_; // map<wallet_id, std::vector<PasswordReceivedCb>>
    std::unordered_map<std::string, SecureBinaryData>                 passwords_;
    //std::unordered_set<std::string>  autoSignPwdReqs_;
+   std::queue<std::pair<VoidCb, PasswordReceivedCb>> deferredPasswordRequests_;
+   bool deferredDialogRunning_ = false;
 
    struct TempPasswords {
       std::unordered_map<std::string, std::unordered_set<std::string>>  rootLeaves;

@@ -96,7 +96,7 @@ public:
 
    virtual bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) = 0;
 
-   virtual bs::signer::RequestId CancelSignTx(const BinaryData &txId) = 0;
+   virtual bs::signer::RequestId CancelSignTx(const BinaryData &txHash, const std::string &settlId) = 0;
 
    virtual bs::signer::RequestId setUserId(const BinaryData &, const std::string &walletId) = 0;
    virtual bs::signer::RequestId syncCCNames(const std::vector<std::string> &) = 0;

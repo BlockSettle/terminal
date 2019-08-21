@@ -130,7 +130,7 @@ bool DealerCCSettlementContainer::startSigning()
          emit failed();
       }
       else {
-         logger_->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
+         logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
          emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
          emit failed();
       }
@@ -220,7 +220,7 @@ bool DealerCCSettlementContainer::isAcceptable() const
 bool DealerCCSettlementContainer::cancel()
 {
    utxoAdapter_->unreserve(id());
-   signingContainer_->CancelSignTx(txReq_.serializeState());
+   signingContainer_->CancelSignTx({}, id());
    cancelled_ = true;
    return true;
 }

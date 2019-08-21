@@ -544,10 +544,15 @@ bs::signer::RequestId HeadlessContainer::updateDialogData(const bs::sync::Passwo
    return reqId;
 }
 
-bs::signer::RequestId HeadlessContainer::CancelSignTx(const BinaryData &txId)
+bs::signer::RequestId HeadlessContainer::CancelSignTx(const BinaryData &txHash, const std::string &settlId)
 {
    headless::CancelSignTx request;
-   request.set_txid(txId.toBinStr());
+   if (txHash.isNull()) {
+      request.set_settlement_id(settlId);
+   }
+   else {
+      request.set_tx_hash(txHash.toBinStr());
+   }
 
    headless::RequestPacket packet;
    packet.set_type(headless::CancelSignTxRequestType);

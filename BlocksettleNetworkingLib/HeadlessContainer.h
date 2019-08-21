@@ -70,7 +70,7 @@ public:
 
    bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) override;
 
-   bs::signer::RequestId CancelSignTx(const BinaryData &txId) override;
+   bs::signer::RequestId CancelSignTx(const BinaryData &txHash, const std::string &settlId) override;
 
    bs::signer::RequestId setUserId(const BinaryData &, const std::string &walletId) override;
    bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override;
