@@ -489,9 +489,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
    }
    peer->payinTxIdFromSeller = BinaryData(msg.payin_tx_id());
 
-   createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId]
-      (const OtcClientDeal &deal)
-   {
+   createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId](OtcClientDeal &&deal) {
       if (!deal.success) {
          SPDLOG_LOGGER_ERROR(logger_, "creating pay-out sign request fails");
          return;
@@ -688,7 +686,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
                      auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, payinTxId, amount);
                      result.payoutFallback = bs::SettlementMonitor::createPayoutTXRequest(
                         payinUTXO, fallbackAddr, feePerByte, armory_->topBlock());
-                     cb(result);
+                     cb(std::move(result));
                      return;
                   }
 
@@ -700,7 +698,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
                   auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer.payinTxIdFromSeller, amount);
                   result.payout = bs::SettlementMonitor::createPayoutTXRequest(
                      payinUTXO, outputAddr, feePerByte, armory_->topBlock());
-                  cb(result);
+                  cb(std::move(result));
                }, Qt::QueuedConnection);
             };
 
@@ -720,9 +718,7 @@ void OtcClient::sendSellerAccepts(Peer *peer)
    assert(ourPubKey_.getSize() == PubKeySize);
    auto settlementId = CryptoPRNG::generateRandom(SettlementIdSize);
 
-   createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId]
-      (const OtcClientDeal &deal)
-   {
+   createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId](OtcClientDeal &&deal) {
       if (!deal.success) {
          SPDLOG_LOGGER_ERROR(logger_, "creating pay-in sign request fails: {}", deal.errorMsg);
          return;

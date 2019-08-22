@@ -79,7 +79,7 @@ signals:
    void peerUpdated(const std::string &peerId);
 
 private:
-   using OtcClientDealCb = std::function<void(const OtcClientDeal &deal)>;
+   using OtcClientDealCb = std::function<void(OtcClientDeal &&deal)>;
 
    void processBuyerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_BuyerOffers &msg);
    void processSellerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_SellerOffers &msg);
