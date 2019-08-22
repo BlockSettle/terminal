@@ -1,6 +1,7 @@
 #ifndef OTC_CLIENT_H
 #define OTC_CLIENT_H
 
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <QObject>
