@@ -29,7 +29,9 @@ namespace Chat
    {
       SendingDataToUnhandledParty,
       UnhandledPacket,
-      MessageSeenForWrongTypeOfParty
+      MessageSeenForWrongTypeOfParty,
+      CouldNotFindParty,
+      DynamicPointerCast
    };
 
    class ClientConnectionLogic : public QObject

@@ -213,13 +213,13 @@ namespace Chat
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
 
       // TODO: handle here state changes of the rest of message types
-      if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyState() && Chat::PartySubType::STANDARD == clientPartyPtr->partySubType())
+      if (PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
       {
          incomingPrivatePartyMessage(msg);
          return;
       }
 
-      if (Chat::PartyType::GLOBAL == clientPartyPtr->partyState() && Chat::PartySubType::STANDARD == clientPartyPtr->partySubType())
+      if (PartyType::GLOBAL == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
       {
          incomingGlobalPartyMessage(msg);
          return;
@@ -297,18 +297,47 @@ namespace Chat
       //save message
       clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
 
-      // private chat, reply that message was received
-      partyMessagePacket.set_party_message_state(PartyMessageState::RECEIVED);
+      ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      PartyPtr partyPtr = clientPartyModelPtr->getPartyById(partyMessagePacket.party_id());
 
-      PartyMessageStateUpdate partyMessageStateUpdate;
-      partyMessageStateUpdate.set_party_id(partyMessagePacket.party_id());
-      partyMessageStateUpdate.set_message_id(partyMessagePacket.message_id());
-      partyMessageStateUpdate.set_party_message_state(partyMessagePacket.party_message_state());
+      if (nullptr == partyPtr)
+      {
+         emit error(ClientConnectionLogicError::CouldNotFindParty, partyMessagePacket.party_id());
+         return;
+      }
 
-      emit sendPacket(partyMessageStateUpdate);
+      if (PartyType::GLOBAL == partyPtr->partyType() && PartySubType::STANDARD == partyPtr->partySubType())
+      {
+         // for global we only updating state in local db
+         clientDBServicePtr_->updateMessageState(partyMessagePacket.message_id(), partyMessageState);
+         return;
+      }
 
-      // update message state in db
-      clientDBServicePtr_->updateMessageState(partyMessagePacket.message_id(), partyMessagePacket.party_message_state());
+      if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPtr->partyType() && PartySubType::STANDARD == partyPtr->partySubType())
+      {
+         // for private we need to reply message state as RECEIVED
+         // and then save in local db
+         PrivateDirectMessagePartyPtr privateDMPartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
+         if (nullptr == privateDMPartyPtr)
+         {
+            emit error(ClientConnectionLogicError::DynamicPointerCast, partyMessagePacket.party_id());
+            return;
+         }
+
+         // set message state as RECEIVED
+         partyMessagePacket.set_party_message_state(partyMessageState);
+
+         // reply new message state
+         PartyMessageStateUpdate partyMessageStateUpdate;
+         partyMessageStateUpdate.set_party_id(partyMessagePacket.party_id());
+         partyMessageStateUpdate.set_message_id(partyMessagePacket.message_id());
+         partyMessageStateUpdate.set_party_message_state(partyMessagePacket.party_message_state());
+
+         emit sendPacket(partyMessageStateUpdate);
+
+         // update message state in db
+         clientDBServicePtr_->updateMessageState(partyMessagePacket.message_id(), partyMessagePacket.party_message_state());
+      }
    }
 
    void ClientConnectionLogic::setMessageSeen(const ClientPartyPtr& clientPartyPtr, const std::string& messageId)

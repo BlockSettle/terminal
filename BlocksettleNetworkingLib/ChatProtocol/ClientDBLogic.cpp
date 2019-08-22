@@ -85,52 +85,43 @@ namespace Chat
          return;
       }
 
-      QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
-      connect(watcher, &QFutureWatcher<std::string>::finished, 
-         [this, watcher, partyMessagePacket]() mutable 
-         {
-            std::string encryptedMessage = watcher->result();
-            watcher->deleteLater();
-
-            std::string tablePartyId;
-
-            if (!getPartyIdFromDB(partyMessagePacket.party_id(), tablePartyId))
-            {
-               emit error(ClientDBLogicError::GetTablePartyId, partyMessagePacket.message_id());
-               return;
-            }
-
-            const QString cmd = QLatin1String("INSERT INTO party_message (party_table_id, message_id, timestamp, message_state, encryption_type, nonce, message_text, sender) "
-               "VALUES (:party_table_id, :message_id, :timestamp, :message_state, :encryption_type, :nonce, :message_text, :sender)");
-
-            QSqlQuery query(getDb());
-            query.prepare(cmd);
-            query.bindValue(QLatin1String(":party_table_id"), QString::fromStdString(tablePartyId));
-            query.bindValue(QLatin1String(":message_id"), QString::fromStdString(partyMessagePacket.message_id()));
-            query.bindValue(QLatin1String(":timestamp"), qint64(partyMessagePacket.timestamp_ms()));
-            query.bindValue(QLatin1String(":message_state"), partyMessagePacket.party_message_state());
-            query.bindValue(QLatin1String(":encryption_type"), partyMessagePacket.encryption());
-            query.bindValue(QLatin1String(":nonce"), QByteArray::fromStdString(partyMessagePacket.nonce()));
-            query.bindValue(QLatin1String(":message_text"), QString::fromStdString(encryptedMessage));
-            query.bindValue(QLatin1String(":sender"), QString::fromStdString(partyMessagePacket.sender()));
-
-            if (!checkExecute(query))
-            {
-               emit error(ClientDBLogicError::SaveMessage, partyMessagePacket.message_id());
-               return;
-            }
-
-            // ! signaled by ClientPartyModel in gui
-            MessagePtr messagePtr = std::make_shared<Message>(partyMessagePacket.party_id(), partyMessagePacket.message_id(),
-               static_cast<long long>(partyMessagePacket.timestamp_ms()), static_cast<int>(partyMessagePacket.party_message_state()), partyMessagePacket.message(),
-               partyMessagePacket.sender());
-
-            emit messageArrived(messagePtr);
-         });
-
       QFuture<std::string> future = cryptManagerPtr_->encryptMessageIES(partyMessagePacket.message(), currentChatUserPtr_->publicKey());
+      std::string encryptedMessage = future.result();
 
-      watcher->setFuture(future);
+      std::string tablePartyId;
+
+      if (!getPartyIdFromDB(partyMessagePacket.party_id(), tablePartyId))
+      {
+         emit error(ClientDBLogicError::GetTablePartyId, partyMessagePacket.message_id());
+         return;
+      }
+
+      const QString cmd = QLatin1String("INSERT INTO party_message (party_table_id, message_id, timestamp, message_state, encryption_type, nonce, message_text, sender) "
+         "VALUES (:party_table_id, :message_id, :timestamp, :message_state, :encryption_type, :nonce, :message_text, :sender)");
+
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QLatin1String(":party_table_id"), QString::fromStdString(tablePartyId));
+      query.bindValue(QLatin1String(":message_id"), QString::fromStdString(partyMessagePacket.message_id()));
+      query.bindValue(QLatin1String(":timestamp"), qint64(partyMessagePacket.timestamp_ms()));
+      query.bindValue(QLatin1String(":message_state"), partyMessagePacket.party_message_state());
+      query.bindValue(QLatin1String(":encryption_type"), partyMessagePacket.encryption());
+      query.bindValue(QLatin1String(":nonce"), QByteArray::fromStdString(partyMessagePacket.nonce()));
+      query.bindValue(QLatin1String(":message_text"), QString::fromStdString(encryptedMessage));
+      query.bindValue(QLatin1String(":sender"), QString::fromStdString(partyMessagePacket.sender()));
+
+      if (!checkExecute(query))
+      {
+         emit error(ClientDBLogicError::SaveMessage, partyMessagePacket.message_id());
+         return;
+      }
+
+      // ! signaled by ClientPartyModel in gui
+      MessagePtr messagePtr = std::make_shared<Message>(partyMessagePacket.party_id(), partyMessagePacket.message_id(),
+         static_cast<long long>(partyMessagePacket.timestamp_ms()), static_cast<int>(partyMessagePacket.party_message_state()), partyMessagePacket.message(),
+         partyMessagePacket.sender());
+
+      emit messageArrived(messagePtr);
    }
 
    void ClientDBLogic::createNewParty(const std::string& partyId)
