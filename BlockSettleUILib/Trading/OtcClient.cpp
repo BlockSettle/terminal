@@ -76,6 +76,25 @@ namespace {
 
 } // namespace
 
+struct OtcClientDeal
+{
+   BinaryData settlementId;
+
+   bs::core::wallet::TXSignRequest payin;
+   bs::core::wallet::TXSignRequest payoutFallback;
+   bs::core::wallet::TXSignRequest payout;
+
+   bool success{false};
+   std::string errorMsg;
+
+   static OtcClientDeal error(const std::string &msg)
+   {
+      OtcClientDeal result;
+      result.errorMsg = msg;
+      return result;
+   }
+};
+
 OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<ArmoryConnection> &armory
@@ -105,6 +124,8 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    });
 }
 
+OtcClient::~OtcClient() = default;
+
 const Peer *OtcClient::peer(const std::string &peerId) const
 {
    auto it = peers_.find(peerId);
@@ -112,6 +133,11 @@ const Peer *OtcClient::peer(const std::string &peerId) const
       return nullptr;
    }
    return &it->second;
+}
+
+void OtcClient::setCurrentUserId(const std::string &userId)
+{
+   currentUserId_ = userId;
 }
 
 bool OtcClient::sendOffer(const Offer &offer, const std::string &peerId)
@@ -324,6 +350,11 @@ void OtcClient::processMessage(const std::string &peerId, const BinaryData &data
    emit peerUpdated(peerId);
 }
 
+void OtcClient::processPbMessage(const BinaryData &data)
+{
+
+}
+
 void OtcClient::processBuyerOffers(Peer *peer, const Message_BuyerOffers &msg)
 {
    if (!isValidOffer(msg.offer())) {
@@ -459,9 +490,9 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
    peer->payinTxIdFromSeller = BinaryData(msg.payin_tx_id());
 
    createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId]
-      (SignRequestPtr payin, SignRequestPtr payoutFallback, SignRequestPtr payout)
+      (const OtcClientDeal &deal)
    {
-      if (!payout) {
+      if (!deal.success) {
          SPDLOG_LOGGER_ERROR(logger_, "creating pay-out sign request fails");
          return;
       }
@@ -488,10 +519,23 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
 
       changePeerState(peer, State::Idle);
 
-      // TODO: Send buyer details to PB
-      SPDLOG_LOGGER_INFO(logger_, "#### success ####");
+      PbRequest request;
+      auto d = request.mutable_start();
+      d->set_sender_side(SIDE_BUY);
+      d->set_price(peer->offer.price);
+      d->set_amount(peer->offer.amount);
+      d->set_settlement_id(settlementId.toBinStr());
+      d->set_auth_address_buyer(ourPubKey_.toBinStr());
+      d->set_auth_address_seller(peer->authPubKey.toBinStr());
+      d->set_unsigned_payout(deal.payout.serializeState().toBinStr());
+      d->set_chat_id_buyer(currentUserId_);
+      d->set_chat_id_seller(peer->peerId);
+      sendPbMessage(request.SerializeAsString());
+
       *peer = Peer(peer->peerId);
       emit peerUpdated(peer->peerId);
+
+      SPDLOG_LOGGER_INFO(logger_, "#### success ####");
    });
 }
 
@@ -502,7 +546,26 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
       return;
    }
 
-   // TODO: Send seller details to PB
+   const auto it = deals_.find(peer->peerId);
+   if (it == deals_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find active deal");
+      return;
+   }
+   const auto &deal = it->second;
+   assert(deal->success);
+
+   PbRequest request;
+   auto d = request.mutable_start();
+   d->set_sender_side(SIDE_SELL);
+   d->set_price(peer->offer.price);
+   d->set_amount(peer->offer.amount);
+   d->set_settlement_id(deal->settlementId.toBinStr());
+   d->set_auth_address_buyer(ourPubKey_.toBinStr());
+   d->set_auth_address_seller(peer->authPubKey.toBinStr());
+   d->set_unsigned_payout(deal->payout.serializeState().toBinStr());
+   d->set_chat_id_buyer(currentUserId_);
+   d->set_chat_id_seller(peer->peerId);
+   emit sendPbMessage(request.SerializeAsString());
 
    SPDLOG_LOGGER_INFO(logger_, "#### success ####");
    *peer = Peer(peer->peerId);
@@ -549,7 +612,7 @@ void OtcClient::send(Peer *peer, const Message &msg)
    emit sendMessage(peer->peerId, msg.SerializeAsString());
 }
 
-void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer, const SignRequestsCb &cb)
+void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer, const OtcClientDealCb &cb)
 {
    assert(peer.authPubKey.getSize() == PubKeySize);
    assert(settlementId.getSize() == SettlementIdSize);
@@ -560,44 +623,38 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
 
    auto leaf = ourSettlementLeaf();
    if (!leaf) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf");
-      cb(nullptr, nullptr, nullptr);
+      cb(OtcClientDeal::error("can't find settlement leaf"));
       return;
    }
 
 
    leaf->setSettlementID(settlementId, [this, settlementId, peer, cb](bool result) {
       if (!result) {
-         SPDLOG_LOGGER_ERROR(logger_, "setSettlementID failed");
-         cb(nullptr, nullptr, nullptr);
+         cb(OtcClientDeal::error("setSettlementID failed"));
          return;
       }
 
       auto cbFee = [this, cb, peer, settlementId](float feePerByte) {
          if (feePerByte < 1) {
-            SPDLOG_LOGGER_ERROR(logger_, "invalid fees detected");
-            cb(nullptr, nullptr, nullptr);
+            cb(OtcClientDeal::error("invalid fees"));
             return;
          }
 
          auto hdWallet = walletsMgr_->getPrimaryWallet();
          if (!hdWallet) {
-            SPDLOG_LOGGER_ERROR(logger_, "can't find primary wallet");
-            cb(nullptr, nullptr, nullptr);
+            cb(OtcClientDeal::error("can't find primary wallet"));
             return;
          }
 
          auto cbSettlAddr = [this, cb, peer, feePerByte, settlementId](const bs::Address &settlAddr) {
             if (settlAddr.isNull()) {
-               SPDLOG_LOGGER_ERROR(logger_, "invalid settl addr");
-               cb(nullptr, nullptr, nullptr);
+               cb(OtcClientDeal::error("invalid settl addr"));
                return;
             }
 
             auto wallet = ourBtcWallet();
             if (!wallet) {
-               SPDLOG_LOGGER_ERROR(logger_, "can't find BTC wallet");
-               cb(nullptr, nullptr, nullptr);
+               cb(OtcClientDeal::error("can't find BTC wallet"));
                return;
             }
 
@@ -618,29 +675,32 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
                      transaction->UpdateRecipient(0, amount, settlAddr);
 
                      if (!transaction->IsTransactionValid()) {
-                        SPDLOG_LOGGER_ERROR(logger_, "invalid pay-in transaction");
-                        cb(nullptr, nullptr, nullptr);
+                        cb(OtcClientDeal::error("invalid pay-in transaction"));
                         return;
                      }
 
-                     auto payinTx = std::make_unique<bs::core::wallet::TXSignRequest>(transaction->createTXRequest());
-                     auto payinTxId = payinTx->txId();
+                     OtcClientDeal result;
+                     result.success = true;
+                     result.settlementId = settlementId;
+                     result.payin = transaction->createTXRequest();
+                     auto payinTxId = result.payin.txId();
                      auto fallbackAddr = transaction->GetFallbackRecvAddress();
                      auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, payinTxId, amount);
-                     auto payoutTxFallback = std::make_unique<bs::core::wallet::TXSignRequest>(bs::SettlementMonitor::createPayoutTXRequest(
-                        payinUTXO, fallbackAddr, feePerByte, armory_->topBlock()));
-
-                     cb(std::move(payinTx), std::move(payoutTxFallback), nullptr);
+                     result.payoutFallback = bs::SettlementMonitor::createPayoutTXRequest(
+                        payinUTXO, fallbackAddr, feePerByte, armory_->topBlock());
+                     cb(result);
                      return;
                   }
 
                   // Buyer
+                  OtcClientDeal result;
+                  result.success = true;
+                  result.settlementId = settlementId;
                   auto outputAddr = transaction->GetFallbackRecvAddress();
                   auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer.payinTxIdFromSeller, amount);
-                  auto payoutTx = std::make_unique<bs::core::wallet::TXSignRequest>(bs::SettlementMonitor::createPayoutTXRequest(
-                     payinUTXO, outputAddr, feePerByte, armory_->topBlock()));
-
-                  cb(nullptr, nullptr, std::move(payoutTx));
+                  result.payout = bs::SettlementMonitor::createPayoutTXRequest(
+                     payinUTXO, outputAddr, feePerByte, armory_->topBlock());
+                  cb(result);
                }, Qt::QueuedConnection);
             };
 
@@ -661,10 +721,10 @@ void OtcClient::sendSellerAccepts(Peer *peer)
    auto settlementId = CryptoPRNG::generateRandom(SettlementIdSize);
 
    createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId]
-      (SignRequestPtr payin, SignRequestPtr payoutFallback, SignRequestPtr payout)
+      (const OtcClientDeal &deal)
    {
-      if (!payin || !payoutFallback) {
-         SPDLOG_LOGGER_ERROR(logger_, "creating pay-in sign request fails");
+      if (!deal.success) {
+         SPDLOG_LOGGER_ERROR(logger_, "creating pay-in sign request fails: {}", deal.errorMsg);
          return;
       }
 
@@ -684,7 +744,7 @@ void OtcClient::sendSellerAccepts(Peer *peer)
          return;
       }
 
-      auto payinTxId = payin->txId();
+      auto payinTxId = deal.payin.txId();
 
       Message msg;
       auto d = msg.mutable_seller_accepts();
@@ -695,6 +755,8 @@ void OtcClient::sendSellerAccepts(Peer *peer)
       send(peer, msg);
 
       changePeerState(peer, State::SentPayinInfo);
+
+      deals_.emplace(peer->peerId, std::make_unique<OtcClientDeal>(deal));
    });
 }
 

@@ -90,20 +90,18 @@ message PbRequest
         int64 amount = 2;
         int64 price = 3;
 
-        bytes random_part1 = 4;
-        bytes random_part2 = 5;
-        bytes settlement_id = 6;
+        bytes settlement_id = 4;
 
-        bytes seller_auth_address = 7;
-        bytes buyer_auth_address = 8;
+        bytes auth_address_seller = 5;
+        bytes auth_address_buyer = 6;
 
         // Used to check fees and other details (UTXO for payin, settlement address etc)
-        bytes unsigned_payin = 9;
-        bytes unsigned_payout = 10;
-        bytes unsigned_payout_fallback = 11;
+        bytes unsigned_payin = 7;
+        bytes unsigned_payout = 8;
+        bytes unsigned_payout_fallback = 9;
 
-        string seller_chat_id = 12;
-        string buyer_chat_id = 13;
+        string chat_id_seller = 10;
+        string chat_id_buyer = 11;
     }
 
     oneof data

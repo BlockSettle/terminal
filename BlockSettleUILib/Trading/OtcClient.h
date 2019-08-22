@@ -44,6 +44,7 @@ namespace bs {
 
 class ArmoryConnection;
 class SignContainer;
+struct OtcClientDeal;
 
 class OtcClient : public QObject
 {
@@ -54,8 +55,11 @@ public:
       , const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<SignContainer> &signContainer
       , QObject *parent = nullptr);
+   ~OtcClient() override;
 
    const bs::network::otc::Peer *peer(const std::string &peerId) const;
+
+   void setCurrentUserId(const std::string &userId);
 
    bool sendOffer(const bs::network::otc::Offer &offer, const std::string &peerId);
    bool pullOrRejectOffer(const std::string &peerId);
@@ -66,16 +70,16 @@ public slots:
    void peerConnected(const std::string &peerId);
    void peerDisconnected(const std::string &peerId);
    void processMessage(const std::string &peerId, const BinaryData &data);
+   void processPbMessage(const BinaryData &data);
 
 signals:
    void sendMessage(const std::string &peerId, const BinaryData &data);
+   void sendPbMessage(const BinaryData &data);
 
    void peerUpdated(const std::string &peerId);
 
 private:
-   using SignRequestPtr = std::unique_ptr<bs::core::wallet::TXSignRequest>;
-
-   using SignRequestsCb = std::function<void(SignRequestPtr payin, SignRequestPtr payoutFallback, SignRequestPtr payout)>;
+   using OtcClientDealCb = std::function<void(const OtcClientDeal &deal)>;
 
    void processBuyerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_BuyerOffers &msg);
    void processSellerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_SellerOffers &msg);
@@ -90,7 +94,7 @@ private:
 
    void send(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message &msg);
 
-   void createRequests(const BinaryData &settlementId, const bs::network::otc::Peer &peer, const SignRequestsCb &cb);
+   void createRequests(const BinaryData &settlementId, const bs::network::otc::Peer &peer, const OtcClientDealCb &cb);
 
    void sendSellerAccepts(bs::network::otc::Peer *peer);
 
@@ -108,6 +112,10 @@ private:
    std::shared_ptr<SignContainer> signContainer_;
 
    BinaryData ourPubKey_;
+
+   std::string currentUserId_;
+
+   std::map<std::string, std::unique_ptr<OtcClientDeal>> deals_;
 };
 
 #endif

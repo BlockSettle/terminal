@@ -445,6 +445,8 @@ void ChatWidget::onConnectedToServer()
    const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    chatLoggedInTimestampUtcInMillis_ =  timestamp.count();
    changeState(State::LoggedIn);
+
+   otcClient_->setCurrentUserId(client_->currentUserId());
 }
 
 void ChatWidget::onContactRequestAccepted(const std::string &userId)
