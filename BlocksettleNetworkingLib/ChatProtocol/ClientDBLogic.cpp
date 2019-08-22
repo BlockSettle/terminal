@@ -122,7 +122,7 @@ namespace Chat
 
             // ! signaled by ClientPartyModel in gui
             MessagePtr messagePtr = std::make_shared<Message>(partyMessagePacket.party_id(), partyMessagePacket.message_id(),
-               partyMessagePacket.timestamp_ms(), partyMessagePacket.party_message_state(), partyMessagePacket.message(),
+               static_cast<long long>(partyMessagePacket.timestamp_ms()), static_cast<int>(partyMessagePacket.party_message_state()), partyMessagePacket.message(),
                partyMessagePacket.sender());
 
             emit messageArrived(messagePtr);
