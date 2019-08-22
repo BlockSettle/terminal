@@ -15,6 +15,10 @@ namespace Chat
       Message(const std::string& partyId, const std::string& messageId, const long long timestamp,
          const int partyMessageState, const std::string& messageText, const std::string& sender);
 
+      Message(const Message& m2);
+
+      Message& operator=(const Message& rhs);
+
       std::string partyId() const { return partyId_; }
       void setPartyId(std::string val) { partyId_ = val; }
 
