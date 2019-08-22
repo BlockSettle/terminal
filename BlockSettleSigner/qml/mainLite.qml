@@ -28,6 +28,7 @@ ApplicationWindow {
     title: qsTr("BlockSettle Signer")
 
     property var currentDialog: ({})
+    readonly property int resizeAnimationDuration: 25
 
     Component.onCompleted: {
         mainWindow.flags = Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint |
@@ -35,11 +36,11 @@ ApplicationWindow {
                 Qt.WindowTitleHint | Qt.WindowCloseButtonHint
         hide()
         qmlFactory.installEventFilterToObj(mainWindow)
+        qmlFactory.applyWindowFix(mainWindow)
     }
 
-    background: Rectangle {
-        color: BSStyle.backgroundColor
-    }
+    color: BSStyle.backgroundColor
+
     overlay.modal: Rectangle {
         color: BSStyle.backgroundModalColor
     }
@@ -84,5 +85,51 @@ ApplicationWindow {
     function moveMainWindowToScreenCenter() {
         mainWindow.x = Screen.virtualX + (Screen.width - mainWindow.width) / 2
         mainWindow.y = Screen.virtualY + (Screen.height - mainWindow.height) / 2
+    }
+
+    function resizeAnimated(w,h) {
+        mwWidthAnimation.from = mainWindow.width
+        mwWidthAnimation.to = w
+        mwWidthAnimation.start()
+
+        mwHeightAnimation.from = mainWindow.height
+        mwHeightAnimation.to = h
+        mwHeightAnimation.start()
+
+        mwXAnimation.from = mainWindow.x
+        mwXAnimation.to = Screen.virtualX + (Screen.width - w) / 2
+        mwXAnimation.start()
+
+        mwYAnimation.from = mainWindow.y
+        mwYAnimation.to = Screen.virtualY + (Screen.height - h) / 2
+        mwYAnimation.start()
+    }
+
+
+
+    NumberAnimation {
+        id: mwWidthAnimation
+        target: mainWindow
+        property: "width"
+        duration: resizeAnimationDuration
+    }
+    NumberAnimation {
+        id: mwHeightAnimation
+        target: mainWindow
+        property: "height"
+        duration: resizeAnimationDuration
+    }
+
+    NumberAnimation {
+        id: mwXAnimation
+        target: mainWindow
+        property: "x"
+        duration: resizeAnimationDuration
+    }
+    NumberAnimation {
+        id: mwYAnimation
+        target: mainWindow
+        property: "y"
+        duration: resizeAnimationDuration
     }
 }

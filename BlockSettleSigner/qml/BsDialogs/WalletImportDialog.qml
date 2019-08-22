@@ -339,11 +339,18 @@ CustomTitleDialogWindow {
                         Layout.leftMargin: 10
                         Layout.rightMargin: 10
 
+                        CustomLabel {
+                            Layout.minimumWidth: inputLabelsWidth
+                            Layout.preferredWidth: inputLabelsWidth
+                            Layout.maximumWidth: inputLabelsWidth
+                            Layout.fillWidth: true
+                            text: qsTr("Primary Wallet")
+                        }
 
                         CustomCheckBox {
                             id: cbPrimary
                             Layout.fillWidth: true
-                            Layout.leftMargin: inputLabelsWidth + 5
+                            //Layout.leftMargin: inputLabelsWidth + 5
                             enabled: !primaryWalletExists && ccInfoLoaded
                             checked: !primaryWalletExists && ccInfoLoaded
                             text: qsTr("Primary Wallet")
@@ -367,42 +374,42 @@ CustomTitleDialogWindow {
                             }
                         }
                     }
-                    RowLayout {
-                        spacing: 5
-                        Layout.fillWidth: true
-                        Layout.leftMargin: 10
-                        Layout.rightMargin: 10
+//                    RowLayout {
+//                        spacing: 5
+//                        Layout.fillWidth: true
+//                        Layout.leftMargin: 10
+//                        Layout.rightMargin: 10
 
-                        CustomLabel {
-                            Layout.minimumWidth: inputLabelsWidth
-                            Layout.preferredWidth: inputLabelsWidth
-                            Layout.maximumWidth: inputLabelsWidth
-                            Layout.fillWidth: true
-                            text: qsTr("Private Market\nLeafs")
-                        }
-                        CustomLabel {
-                            Layout.fillWidth: true
-                            text: qsTr("Status")
-                        }
-                    }
-                    RowLayout {
-                        spacing: 5
-                        Layout.fillWidth: true
-                        Layout.leftMargin: 10
-                        Layout.rightMargin: 10
+//                        CustomLabel {
+//                            Layout.minimumWidth: inputLabelsWidth
+//                            Layout.preferredWidth: inputLabelsWidth
+//                            Layout.maximumWidth: inputLabelsWidth
+//                            Layout.fillWidth: true
+//                            text: qsTr("Private Market\nLeafs")
+//                        }
+//                        CustomLabel {
+//                            Layout.fillWidth: true
+//                            text: qsTr("Status")
+//                        }
+//                    }
+//                    RowLayout {
+//                        spacing: 5
+//                        Layout.fillWidth: true
+//                        Layout.leftMargin: 10
+//                        Layout.rightMargin: 10
 
-                        CustomLabel {
-                            Layout.minimumWidth: inputLabelsWidth
-                            Layout.preferredWidth: inputLabelsWidth
-                            Layout.maximumWidth: inputLabelsWidth
-                            Layout.fillWidth: true
-                            text: qsTr("Authentication\nStatus")
-                        }
-                        CustomLabel {
-                            Layout.fillWidth: true
-                            text: qsTr("Status")
-                        }
-                    }
+//                        CustomLabel {
+//                            Layout.minimumWidth: inputLabelsWidth
+//                            Layout.preferredWidth: inputLabelsWidth
+//                            Layout.maximumWidth: inputLabelsWidth
+//                            Layout.fillWidth: true
+//                            text: qsTr("Authentication\nStatus")
+//                        }
+//                        CustomLabel {
+//                            Layout.fillWidth: true
+//                            text: qsTr("Status")
+//                        }
+//                    }
 
                     CustomHeader {
                         id: headerText2

@@ -31,9 +31,8 @@ ApplicationWindow {
     minimumWidth: 800
     minimumHeight: 600
 
-    background: Rectangle {
-        color: BSStyle.backgroundColor
-    }
+    color: BSStyle.backgroundColor
+
     overlay.modal: Rectangle {
         color: BSStyle.backgroundModalColor
     }

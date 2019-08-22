@@ -21,6 +21,9 @@ CustomTitleDialogWindow {
     property QPasswordData newPasswordData: QPasswordData {}
     property QPasswordData oldPasswordData: QPasswordData {}
 
+    property bool primaryWalletExists: walletsProxy.primaryWalletExists
+    property bool hasCCInfoLoaded: walletsProxy.hasCCInfo
+
     property bool acceptableOld : walletInfo.encType === QPasswordData.Password ? walletDetailsFrame.password.length : true
     property bool acceptableNewPw : newPasswordInput.acceptableInput
     property bool acceptableNewAuth : textInputEmail.text.length > 3
@@ -88,22 +91,22 @@ CustomTitleDialogWindow {
                 }
                 CustomTabButton {
                     id: addTabButton
-                    enabled: walletInfo.encType !== QPasswordData.Unencrypted
+                    //enabled: walletInfo.encType !== QPasswordData.Unencrypted
 
-                    //enabled: walletInfo.encType === QPasswordData.Auth
+                    enabled: walletInfo.encType === QPasswordData.Auth
                     text: "Add Device"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
                 }
-                CustomTabButton {
-                    id: deleteTabButton
-                    enabled: walletInfo.encType !== QPasswordData.Unencrypted
+//                CustomTabButton {
+//                    id: deleteTabButton
+//                    //enabled: walletInfo.encType !== QPasswordData.Unencrypted
 
-                    //enabled: walletInfo.encType === QPasswordData.Auth
-                    text: "Device List"
-                    cText.font.capitalization: Font.MixedCase
-                    implicitHeight: 35
-                }
+//                    enabled: walletInfo.encType === QPasswordData.Auth
+//                    text: "Device List"
+//                    cText.font.capitalization: Font.MixedCase
+//                    implicitHeight: 35
+//                }
             }
         }
 
@@ -124,6 +127,44 @@ CustomTitleDialogWindow {
                         nextFocusItem: rbPassword.checked ? newPasswordInput.tfPasswordInput : textInputEmail
                         KeyNavigation.tab: rbPassword.checked ? newPasswordInput.tfPasswordInput : textInputEmail
                     }
+
+                    // do we show Primary Wallet section for wallet encryption dialog?
+//                    CustomHeader {
+//                        text: qsTr("Primary Wallet")
+//                        Layout.fillWidth: true
+//                        Layout.preferredHeight: 25
+//                        Layout.topMargin: 5
+//                        Layout.leftMargin: 10
+//                        Layout.rightMargin: 10
+//                    }
+
+//                    RowLayout {
+//                        spacing: 5
+//                        Layout.fillWidth: true
+//                        Layout.leftMargin: 10
+//                        Layout.rightMargin: 10
+
+//                        CustomCheckBox {
+//                            id: cbPrimary
+//                            Layout.fillWidth: true
+//                            Layout.leftMargin: inputLabelsWidth + 5
+//                            text: qsTr("Primary Wallet")
+//                            checked: !primaryWalletExists && hasCCInfoLoaded
+//                            enabled: hasCCInfoLoaded
+
+//                            ToolTip.text: qsTr("A primary Wallet already exists.")
+//                            ToolTip.delay: 150
+//                            ToolTip.timeout: 5000
+//                            ToolTip.visible: cbPrimary.hovered && primaryWalletExists
+
+//                            // workaround on https://bugreports.qt.io/browse/QTBUG-30801
+//                            // enabled: !primaryWalletExists
+//                            onCheckedChanged: {
+//                                if (primaryWalletExists) cbPrimary.checked = false;
+//                            }
+//                        }
+//                    }
+
 
                     CustomHeader {
                         text: qsTr("New Encryption")
@@ -240,17 +281,17 @@ CustomTitleDialogWindow {
                 Layout.rightMargin: 10
                 Layout.fillWidth: true
 
-                CustomLabel {
-                    text: "Auth eID disabled"
-                    color: BSStyle.textColor
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignTop
-                    visible: walletInfo.encType === QPasswordData.Password
-                    Layout.preferredWidth: root.width - 20
-                    horizontalAlignment: Text.AlignHCenter
-                    padding: 20
-                    topPadding: 30
-                }
+//                CustomLabel {
+//                    text: "Auth eID disabled"
+//                    color: BSStyle.textColor
+//                    Layout.fillWidth: true
+//                    Layout.alignment: Qt.AlignTop
+//                    visible: walletInfo.encType === QPasswordData.Password
+//                    Layout.preferredWidth: root.width - 20
+//                    horizontalAlignment: Text.AlignHCenter
+//                    padding: 20
+//                    topPadding: 30
+//                }
 
                 CustomLabel {
                     Layout.preferredWidth: root.width - 20
@@ -260,33 +301,10 @@ CustomTitleDialogWindow {
                     color: walletInfo.encType === QPasswordData.Auth ? BSStyle.labelsTextColor : BSStyle.labelsTextDisabledColor
 
                     text: "Add the ability to sign transactions from your other Auth eID devices.\
-\n\n\n Only one signature from one device will be required to sign requests.\
-\n\n\n First you'll have to follow the Add Device instructions in your Auth eID app.\n When completed please proceed here.\
-\n\n\n Once you press Add Device your activated Auth eID will receive a signing request for adding device.\
+\n\n Only one signature from one device will be required to sign requests.\
+\n\n First you'll have to follow the Add Device instructions in your Auth eID app.\n When completed please proceed here.\
+\n\n Once you press Add Device your activated Auth eID will receive a signing request for adding device.\
 \n Once you sign the request a new signing request will be sent to your new device."
-                }
-
-            }
-
-            ColumnLayout {
-                id: deleteTab
-
-                spacing: 5
-                Layout.topMargin: 15
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-                Layout.fillWidth: true
-
-                CustomLabel {
-                    text: "Auth eID disabled"
-                    color: BSStyle.textColor
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignTop
-                    visible: walletInfo.encType !== QPasswordData.Auth
-                    Layout.preferredWidth: root.width - 20
-                    horizontalAlignment: Text.AlignHCenter
-                    padding: 20
-                    topPadding: 30
                 }
 
                 CustomHeader {
@@ -305,7 +323,7 @@ CustomTitleDialogWindow {
                     Layout.fillHeight: true
                     Layout.leftMargin: 10
                     Layout.rightMargin: 10
-                    height: 250
+                    height: 200
                     interactive: false
 
                     model: walletInfo.encKeys
@@ -319,7 +337,6 @@ CustomTitleDialogWindow {
                             Layout.fillWidth: true
                             Layout.preferredWidth: 250
                         }
-
 
                         Button {
                             Layout.alignment: Qt.AlignRight
@@ -349,6 +366,88 @@ CustomTitleDialogWindow {
                     }
                 }
             }
+
+//            ColumnLayout {
+//                id: deleteTab
+
+//                spacing: 5
+//                Layout.topMargin: 15
+//                Layout.leftMargin: 10
+//                Layout.rightMargin: 10
+//                Layout.fillWidth: true
+
+//                CustomLabel {
+//                    text: "Auth eID disabled"
+//                    color: BSStyle.textColor
+//                    Layout.fillWidth: true
+//                    Layout.alignment: Qt.AlignTop
+//                    visible: walletInfo.encType !== QPasswordData.Auth
+//                    Layout.preferredWidth: root.width - 20
+//                    horizontalAlignment: Text.AlignHCenter
+//                    padding: 20
+//                    topPadding: 30
+//                }
+
+//                CustomHeader {
+//                    text: qsTr("Devices")
+//                    textColor: walletInfo.encType === QPasswordData.Auth ? BSStyle.textColor : BSStyle.labelsTextDisabledColor
+//                    Layout.fillWidth: true
+//                    Layout.preferredHeight: 25
+//                    Layout.topMargin: 5
+//                    Layout.leftMargin: 10
+//                    Layout.rightMargin: 10
+//                }
+
+//                ListView {
+//                    id: devicesView
+//                    Layout.fillWidth: true
+//                    Layout.fillHeight: true
+//                    Layout.leftMargin: 10
+//                    Layout.rightMargin: 10
+//                    height: 250
+//                    interactive: false
+
+//                    model: walletInfo.encKeys
+
+//                    delegate: RowLayout {
+//                        Layout.preferredWidth: devicesView.width
+//                        Layout.preferredHeight: 30
+
+//                        CustomLabel {
+//                            text: JsHelper.parseEncKeyToDeviceName(modelData)
+//                            Layout.fillWidth: true
+//                            Layout.preferredWidth: 250
+//                        }
+
+
+//                        Button {
+//                            Layout.alignment: Qt.AlignRight
+//                            background: Rectangle { color: "transparent" }
+//                            Image {
+//                                anchors.fill: parent
+//                                source: "qrc:/resources/cancel.png"
+//                            }
+//                            Layout.preferredWidth: 18
+//                            Layout.preferredHeight: 18
+
+//                            onClicked: {
+//                                // remove device
+//                                if (walletInfo.encKeys.length < 2) {
+//                                    JsHelper.messageBoxCritical("Wallet encryption", "Can't remove last device")
+//                                    return
+//                                }
+
+//                                JsHelper.removeEidDevice(index
+//                                    , walletInfo
+//                                    , function(oldPwEidData){
+//                                        var ok = walletsProxy.removeEidDevice(walletInfo.walletId, oldPwEidData , index)
+//                                        var mb = JsHelper.resultBox(BSResultBox.RemoveDevice, ok, walletInfo)
+//                                })
+//                            }
+//                        }
+//                    }
+//                }
+//            }
 
         }
     }

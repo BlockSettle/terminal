@@ -287,10 +287,9 @@ function prepareLiteModeDialog(dialog) {
 //        dialog.qmlTitleVisible = false
 //    }
 
-    mainWindow.width = dialog.width
-    mainWindow.height = dialog.height
     mainWindow.moveMainWindowToScreenCenter()
-    //mainWindow.title = dialog.title
+    mainWindow.resizeAnimated(dialog.width, dialog.height)
+
     mainWindow.title = qsTr("BlockSettle Signer")
 
     dialog.dialogsChainFinished.connect(function(){ hide() })
@@ -299,22 +298,19 @@ function prepareLiteModeDialog(dialog) {
 //            nextDialog.qmlTitleVisible = false
 //        }
 
-        mainWindow.width = nextDialog.width
-        mainWindow.height = nextDialog.height
         mainWindow.moveMainWindowToScreenCenter()
+        mainWindow.resizeAnimated(nextDialog.width, nextDialog.height)
 
         nextDialog.sizeChanged.connect(function(w, h){
-            mainWindow.width = w
-            mainWindow.height = h
             mainWindow.moveMainWindowToScreenCenter()
+            mainWindow.resizeAnimated(w, h)
         })
     })
 
     dialog.sizeChanged.connect(function(w, h){
         console.log("dialog.sizeChanged " + w + " " + h)
-        mainWindow.width = w
-        mainWindow.height = h
         mainWindow.moveMainWindowToScreenCenter()
+        mainWindow.resizeAnimated(w, h)
     })
     raiseWindow(mainWindow)
 }

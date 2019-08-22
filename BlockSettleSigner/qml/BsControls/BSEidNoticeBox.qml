@@ -25,7 +25,7 @@ Please keep your mobile devices up-to-date with the latest software updates, and
 
     acceptable: true
     cancelButtonVisible: false
-    width: 500
+    width: 400
 
     messageDialogContentItem: RowLayout {
         Layout.leftMargin: 72
