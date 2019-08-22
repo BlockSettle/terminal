@@ -12,14 +12,26 @@ namespace spdlog {
    class logger;
 }
 
-namespace Blocksettle { namespace Communication { namespace Otc {
-   class Message;
-   class Message_Offer;
-   class Message_Accept;
-   class Message_Close;
-}}}
+namespace Blocksettle {
+   namespace Communication {
+      namespace Otc {
+         class Message;
+         class Message_BuyerOffers;
+         class Message_SellerOffers;
+         class Message_BuyerAccepts;
+         class Message_SellerAccepts;
+         class Message_BuyerAcks;
+         class Message_Close;
+      }
+   }
+}
 
 namespace bs {
+   namespace core {
+      namespace wallet {
+         struct TXSignRequest;
+      }
+   }
    namespace sync {
       class Wallet;
       class WalletsManager;
@@ -49,8 +61,6 @@ public:
    bool acceptOffer(const bs::network::otc::Offer &offer, const std::string &peerId);
    bool updateOffer(const bs::network::otc::Offer &offer, const std::string &peerId);
 
-   static BinaryData getSettlementId(const bs::network::otc::Peer &peer);
-
 public slots:
    void peerConnected(const std::string &peerId);
    void peerDisconnected(const std::string &peerId);
@@ -62,8 +72,15 @@ signals:
    void peerUpdated(const std::string &peerId);
 
 private:
-   void processOffer(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_Offer &msg);
-   void processAccept(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_Accept &msg);
+   using SignRequestPtr = std::unique_ptr<bs::core::wallet::TXSignRequest>;
+
+   using SignRequestsCb = std::function<void(SignRequestPtr payin, SignRequestPtr payoutFallback, SignRequestPtr payout)>;
+
+   void processBuyerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_BuyerOffers &msg);
+   void processSellerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_SellerOffers &msg);
+   void processBuyerAccepts(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_BuyerAccepts &msg);
+   void processSellerAccepts(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_SellerAccepts &msg);
+   void processBuyerAcks(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_BuyerAcks &msg);
    void processClose(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_Close &msg);
 
    void blockPeer(const std::string &reason, bs::network::otc::Peer *peer);
@@ -72,8 +89,14 @@ private:
 
    void send(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message &msg);
 
+   void createRequests(const BinaryData &settlementId, const bs::network::otc::Peer &peer, const SignRequestsCb &cb);
+
+   void sendSellerAccepts(bs::network::otc::Peer *peer);
+
    std::shared_ptr<bs::sync::hd::SettlementLeaf> ourSettlementLeaf();
    std::shared_ptr<bs::sync::Wallet> ourBtcWallet();
+
+   void changePeerState(bs::network::otc::Peer *peer, bs::network::otc::State state);
 
    std::shared_ptr<spdlog::logger> logger_;
    std::unordered_map<std::string, bs::network::otc::Peer> peers_;
@@ -82,6 +105,8 @@ private:
 
    std::shared_ptr<ArmoryConnection> armory_;
    std::shared_ptr<SignContainer> signContainer_;
+
+   BinaryData ourPubKey_;
 };
 
 #endif

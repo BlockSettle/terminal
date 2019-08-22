@@ -823,7 +823,8 @@ void ChatWidget::updateOtc(const std::string &contactId)
          ui_->widgetNegotiateResponse->setOffer(peer->offer);
          ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
          break;
-      case otc::State::WaitAcceptAck:
+      case otc::State::SentPayinInfo:
+      case otc::State::WaitPayinInfo:
          ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
          break;
       case otc::State::Blacklisted:

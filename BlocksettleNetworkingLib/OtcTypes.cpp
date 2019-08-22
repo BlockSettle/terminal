@@ -85,7 +85,8 @@ std::string bs::network::otc::toString(bs::network::otc::State state)
    switch (state) {
       case State::OfferSent:        return "OfferSent";
       case State::OfferRecv:        return "OfferRecv";
-      case State::WaitAcceptAck:    return "WaitAcceptAck";
+      case State::WaitPayinInfo:    return "WaitPayinInfo";
+      case State::SentPayinInfo:    return "SentPayinInfo";
       case State::Idle:             return "Idle";
       case State::Blacklisted:      return "Blacklisted";
    }

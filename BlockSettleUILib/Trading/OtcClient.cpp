@@ -18,14 +18,13 @@ using namespace bs::network::otc;
 
 namespace {
 
-   const int RandomKeySize = 32;
+   const int SettlementIdSize = 32;
+   const int TxHashSize = 32;
    const int PubKeySize = 33;
 
    bs::sync::PasswordDialogData toPasswordDialogData()
    {
       bs::sync::PasswordDialogData dialogData;
-
-      dialogData.setValue("ProductGroup", QObject::tr("qqq"));
 
 //      dialogData.setValue("ProductGroup", tr(bs::network::Asset::toString(assetType())));
 //      dialogData.setValue("Security", QString::fromStdString(security()));
@@ -63,6 +62,17 @@ namespace {
       return dialogData;
    }
 
+   bool isValidOffer(const Message_Offer &offer)
+   {
+      return offer.price() > 0 && offer.amount() > 0;
+   }
+
+   void copyOffer(const Offer &src, Message_Offer *dst)
+   {
+      dst->set_price(src.price);
+      dst->set_amount(src.amount);
+   }
+
 } // namespace
 
 OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
@@ -76,6 +86,22 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , armory_(armory)
    , signContainer_(signContainer)
 {
+   connect(walletsMgr.get(), &bs::sync::WalletsManager::walletsSynchronized, this, [this] {
+      auto leaf = ourSettlementLeaf();
+      if (!leaf) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf");
+         return;
+      }
+
+      leaf->getRootPubkey([this](const SecureBinaryData &ourPubKey) {
+         if (ourPubKey.isNull()) {
+            SPDLOG_LOGGER_ERROR(logger_, "invalid pubKey");
+            return;
+         }
+
+         ourPubKey_ = ourPubKey;
+      });
+   });
 }
 
 const Peer *OtcClient::peer(const std::string &peerId) const
@@ -89,6 +115,8 @@ const Peer *OtcClient::peer(const std::string &peerId) const
 
 bool OtcClient::sendOffer(const Offer &offer, const std::string &peerId)
 {
+   SPDLOG_LOGGER_DEBUG(logger_, "send offer to {} (price: {}, amount: {})", peerId, offer.price, offer.amount);
+
    assert(offer.ourSide != otc::Side::Unknown);
    assert(offer.amount > 0);
    assert(offer.price > 0);
@@ -104,50 +132,28 @@ bool OtcClient::sendOffer(const Offer &offer, const std::string &peerId)
       return false;
    }
 
-   auto leaf = ourSettlementLeaf();
-   if (!leaf) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf");
-      return false;
+   Message msg;
+   if (offer.ourSide == otc::Side::Buy) {
+      auto d = msg.mutable_buyer_offers();
+      copyOffer(offer, d->mutable_offer());
+
+      assert(!ourPubKey_.isNull());
+      d->set_auth_address_buyer(ourPubKey_.toBinStr());
+   } else {
+      auto d = msg.mutable_seller_offers();
+      copyOffer(offer, d->mutable_offer());
    }
+   send(peer, msg);
 
-   leaf->getRootPubkey([this, peerId, offer](const SecureBinaryData &pubKey) {
-      if (pubKey.isNull()) {
-         SPDLOG_LOGGER_ERROR(logger_, "invalid pubKey");
-         return;
-      }
-
-      auto peer = findPeer(peerId);
-      if (!peer) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
-         return;
-      }
-
-      if (peer->state != State::Idle) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}', peer should be in idle state", peerId);
-         return;
-      }
-
-      peer->random_part1 = CryptoPRNG::generateRandom(RandomKeySize);
-
-      Message msg;
-      auto d = msg.mutable_offer();
-      d->set_price(offer.price);
-      d->set_amount(offer.amount);
-      d->set_sender_side(Otc::Side(offer.ourSide));
-      d->set_random_part1(peer->random_part1.toBinStr());
-      d->set_auth_address(pubKey.toBinStr());
-      send(peer, msg);
-
-      peer->state = State::OfferSent;
-      peer->offer = offer;
-      emit peerUpdated(peerId);
-   });
-
+   peer->offer = offer;
+   changePeerState(peer, State::OfferSent);
    return true;
 }
 
 bool OtcClient::pullOrRejectOffer(const std::string &peerId)
 {
+   SPDLOG_LOGGER_DEBUG(logger_, "pull of reject offer from {}", peerId);
+
    auto peer = findPeer(peerId);
    if (!peer) {
       SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
@@ -163,16 +169,18 @@ bool OtcClient::pullOrRejectOffer(const std::string &peerId)
    msg.mutable_close();
    send(peer, msg);
 
-   peer->state = State::Idle;
-   emit peerUpdated(peerId);
+   changePeerState(peer, State::Idle);
    return true;
 }
 
 bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::string &peerId)
 {
+   SPDLOG_LOGGER_DEBUG(logger_, "accept offer from {} (price: {}, amount: {})", peerId, offer.price, offer.amount);
+
    assert(offer.ourSide != otc::Side::Unknown);
    assert(offer.amount > 0);
    assert(offer.price > 0);
+   assert(ourPubKey_.getSize() == PubKeySize);
 
    auto peer = findPeer(peerId);
    if (!peer) {
@@ -185,149 +193,29 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
       return false;
    }
 
-   peer->random_part2 = CryptoPRNG::generateRandom(RandomKeySize);
+   assert(offer == peer->offer);
 
-   auto leaf = ourSettlementLeaf();
-   if (!leaf) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf");
-      return false;
+   if (peer->offer.ourSide == otc::Side::Sell) {
+      sendSellerAccepts(peer);
+      return true;
    }
 
-   leaf->getRootPubkey([this, peerId, offer](const SecureBinaryData &ourPubKey) {
-      auto peer = findPeer(peerId);
-      if (!peer) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
-         return;
-      }
+   // Need to get other details from seller first.
+   // They should be available from Accept reply.
+   Message msg;
+   auto d = msg.mutable_buyer_accepts();
+   copyOffer(offer, d->mutable_offer());
+   d->set_auth_address_buyer(ourPubKey_.toBinStr());
+   send(peer, msg);
 
-      if (peer->state != State::OfferRecv) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peerId);
-         return;
-      }
-
-      if (ourPubKey.isNull()) {
-         SPDLOG_LOGGER_ERROR(logger_, "invalid pubKey");
-         return;
-      }
-
-      auto leaf = ourSettlementLeaf();
-      if (!leaf) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf");
-         return;
-      }
-
-      auto settlementId = getSettlementId(*peer);
-      assert(!settlementId.isNull());
-
-      leaf->setSettlementID(settlementId, [this, ourPubKey, settlementId, offer, peerId](bool result) {
-         if (!result) {
-            SPDLOG_LOGGER_ERROR(logger_, "setSettlementID failed");
-            return;
-         }
-
-         const auto &cbFee = [this, peerId, offer, ourPubKey, settlementId](float feePerByte) {
-            if (feePerByte < 1) {
-               SPDLOG_LOGGER_ERROR(logger_, "invalid fees detected");
-               return;
-            }
-
-            auto hdWallet = walletsMgr_->getPrimaryWallet();
-            if (!hdWallet) {
-               SPDLOG_LOGGER_ERROR(logger_, "can't find primary wallet");
-               return;
-            }
-
-            auto peer = findPeer(peerId);
-            if (!peer) {
-               SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
-               return;
-            }
-
-            if (peer->state != State::OfferRecv) {
-               SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peerId);
-               return;
-            }
-
-            auto cbSettlAddr = [this, offer, peerId, ourPubKey, feePerByte](const bs::Address &settlAddr) {
-               if (settlAddr.isNull()) {
-                  SPDLOG_LOGGER_ERROR(logger_, "invalid settl addr");
-                  return;
-               }
-
-               auto peer = findPeer(peerId);
-               if (!peer) {
-                  SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
-                  return;
-               }
-
-               if (peer->state != State::OfferRecv) {
-                  SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peerId);
-                  return;
-               }
-
-               auto wallet = ourBtcWallet();
-               if (!wallet) {
-                  SPDLOG_LOGGER_ERROR(logger_, "can't find BTC wallet");
-                  return;
-               }
-
-               Message msg;
-               auto d = msg.mutable_accept();
-               d->set_price(offer.price);
-               d->set_amount(offer.amount);
-               d->set_sender_side(Otc::Side(offer.ourSide));
-               d->set_random_part2(peer->random_part2.toBinStr());
-               d->set_auth_address(ourPubKey.toBinStr());
-               send(peer, msg);
-
-               // Add timeout detection here
-               peer->state = State::WaitAcceptAck;
-               emit peerUpdated(peerId);
-
-               assert(peer->authPubKey.getSize() == PubKeySize);
-
-               auto transaction = std::make_shared<TransactionData>([]() {}, nullptr, true, true);
-               transaction->setWallet(wallet, armory_->topBlock());
-               transaction->setFeePerByte(feePerByte);
-
-               auto index = transaction->RegisterNewRecipient();
-               assert(index == 0);
-               transaction->UpdateRecipient(0, offer.amount / BTCNumericTypes::BalanceDivider, settlAddr);
-               QTimer::singleShot(std::chrono::seconds(1), [this, transaction] {
-                  auto txRequest = transaction->createTXRequest();
-                  auto reqId = signContainer_->signSettlementTXRequest(txRequest, toPasswordDialogData());
-
-                  connect(signContainer_.get(), &SignContainer::TXSigned, this, [this, reqId](bs::signer::RequestId id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason) {
-                     if (reqId != id) {
-                        return;
-                     }
-                     if (result != bs::error::ErrorCode::NoError) {
-                        return;
-                     }
-                     armory_->broadcastZC(signedTX);
-                  });
-
-                  return;
-               });
-
-               SPDLOG_LOGGER_DEBUG(logger_, "#### success: {}", settlAddr.display());
-            };
-
-            const bool myKeyFirst = (peer->offer.ourSide == bs::network::otc::Side::Buy);
-            hdWallet->getSettlementPayinAddress(settlementId, peer->authPubKey, cbSettlAddr, myKeyFirst);
-
-            SPDLOG_LOGGER_DEBUG(logger_, "success");
-         };
-         walletsMgr_->estimatedFeePerByte(2, cbFee, this);
-      });
-
-   });
-
+   changePeerState(peer, State::WaitPayinInfo);
    return true;
 }
 
 bool OtcClient::updateOffer(const Offer &offer, const std::string &peerId)
 {
+   SPDLOG_LOGGER_DEBUG(logger_, "update offer from {} (price: {}, amount: {})", peerId, offer.price, offer.amount);
+
    assert(offer.ourSide != otc::Side::Unknown);
    assert(offer.amount > 0);
    assert(offer.price > 0);
@@ -343,33 +231,27 @@ bool OtcClient::updateOffer(const Offer &offer, const std::string &peerId)
       return false;
    }
 
+   // Only price could be updated, amount and side must be the same
    assert(offer.amount == peer->offer.amount);
    assert(offer.ourSide == peer->offer.ourSide);
 
-   peer->random_part1 = CryptoPRNG::generateRandom(RandomKeySize);
+   peer->offer = offer;
 
    Message msg;
-   auto d = msg.mutable_offer();
-   d->set_price(offer.price);
-   d->set_amount(offer.amount);
-   d->set_sender_side(Otc::Side(offer.ourSide));
-   d->set_random_part1(peer->random_part1.toBinStr());
+   if (offer.ourSide == otc::Side::Buy) {
+      auto d = msg.mutable_buyer_offers();
+      copyOffer(offer, d->mutable_offer());
+
+      assert(!ourPubKey_.isNull());
+      d->set_auth_address_buyer(ourPubKey_.toBinStr());
+   } else {
+      auto d = msg.mutable_seller_offers();
+      copyOffer(offer, d->mutable_offer());
+   }
    send(peer, msg);
 
-   peer->state = State::OfferSent;
-   peer->offer = offer;
-   emit peerUpdated(peerId);
+   changePeerState(peer, State::OfferSent);
    return true;
-}
-
-// static
-BinaryData OtcClient::getSettlementId(const Peer &peer)
-{
-   if (peer.random_part1.getSize() != RandomKeySize || peer.random_part2.getSize() != RandomKeySize) {
-      return BinaryData();
-   }
-
-   return BtcUtils::getSha256(peer.random_part1 + peer.random_part2);
 }
 
 void OtcClient::peerConnected(const std::string &peerId)
@@ -415,11 +297,20 @@ void OtcClient::processMessage(const std::string &peerId, const BinaryData &data
    }
 
    switch (message.data_case()) {
-      case Message::kOffer:
-         processOffer(peer, message.offer());
+      case Message::kBuyerOffers:
+         processBuyerOffers(peer, message.buyer_offers());
          break;
-      case Message::kAccept:
-         processAccept(peer, message.accept());
+      case Message::kSellerOffers:
+         processSellerOffers(peer, message.seller_offers());
+         break;
+      case Message::kBuyerAccepts:
+         processBuyerAccepts(peer, message.buyer_accepts());
+         break;
+      case Message::kSellerAccepts:
+         processSellerAccepts(peer, message.seller_accepts());
+         break;
+      case Message::kBuyerAcks:
+         processBuyerAcks(peer, message.buyer_acks());
          break;
       case Message::kClose:
          processClose(peer, message.close());
@@ -432,62 +323,44 @@ void OtcClient::processMessage(const std::string &peerId, const BinaryData &data
    emit peerUpdated(peerId);
 }
 
-void OtcClient::processOffer(Peer *peer, const Message_Offer &msg)
+void OtcClient::processBuyerOffers(Peer *peer, const Message_BuyerOffers &msg)
 {
-   if (!isValidSide(otc::Side(msg.sender_side()))) {
-      blockPeer("invalid offer side", peer);
+   if (!isValidOffer(msg.offer())) {
+      blockPeer("invalid offer", peer);
       return;
    }
 
-   if (msg.amount() <= 0) {
-      blockPeer("invalid offer amount", peer);
+   if (msg.auth_address_buyer().size() != PubKeySize) {
+      blockPeer("invalid auth_address_buyer in buyer offer", peer);
       return;
    }
-
-   if (msg.price() <= 0) {
-      blockPeer("invalid offer price", peer);
-      return;
-   }
-
-   if (msg.random_part1().size() != RandomKeySize) {
-      blockPeer("invalid random_part1", peer);
-      return;
-   }
-
-   if (msg.auth_address().size() != PubKeySize) {
-      blockPeer("invalid auth_address in offer", peer);
-      return;
-   }
+   peer->authPubKey = msg.auth_address_buyer();
 
    switch (peer->state) {
       case State::Idle:
-         peer->state = State::OfferRecv;
-         peer->offer.ourSide = switchSide(otc::Side(msg.sender_side()));
-         peer->offer.amount = msg.amount();
-         peer->offer.price = msg.price();
-         peer->random_part1 = msg.random_part1();
-         peer->authPubKey = msg.auth_address();
-         emit peerUpdated(peer->peerId);
+         peer->offer.ourSide = otc::Side::Sell;
+         peer->offer.amount = msg.offer().amount();
+         peer->offer.price = msg.offer().price();
+         changePeerState(peer, State::OfferRecv);
          break;
 
       case State::OfferSent:
-         if (peer->offer.ourSide != switchSide(otc::Side(msg.sender_side()))) {
+         if (peer->offer.ourSide != otc::Side::Sell) {
             blockPeer("unexpected side in counter-offer", peer);
             return;
          }
-         if (peer->offer.amount != msg.amount()) {
+         if (peer->offer.amount != msg.offer().amount()) {
             blockPeer("invalid amount in counter-offer", peer);
             return;
          }
 
-         peer->state = State::OfferRecv;
-         peer->offer.price = msg.price();
-         peer->random_part1 = msg.random_part1();
-         emit peerUpdated(peer->peerId);
+         peer->offer.price = msg.offer().price();
+         changePeerState(peer, State::OfferRecv);
          break;
 
       case State::OfferRecv:
-      case State::WaitAcceptAck:
+      case State::WaitPayinInfo:
+      case State::SentPayinInfo:
          blockPeer("unexpected offer", peer);
          break;
 
@@ -497,67 +370,39 @@ void OtcClient::processOffer(Peer *peer, const Message_Offer &msg)
    }
 }
 
-void OtcClient::processAccept(Peer *peer, const Message_Accept &msg)
+void OtcClient::processSellerOffers(Peer *peer, const Message_SellerOffers &msg)
 {
+   if (!isValidOffer(msg.offer())) {
+      blockPeer("invalid offer", peer);
+      return;
+   }
+
    switch (peer->state) {
-      case State::OfferSent: {
-         if (msg.random_part2().size() != RandomKeySize) {
-            blockPeer("invalid random_part2", peer);
-            return;
-         }
-
-         if (otc::Side(msg.sender_side()) != switchSide(peer->offer.ourSide)) {
-            blockPeer("unexpected accepted sender side", peer);
-            return;
-         }
-
-         if (msg.price() != peer->offer.price || msg.amount() != peer->offer.amount) {
-            blockPeer("unexpected accepted price or amount", peer);
-            return;
-         }
-
-         if (msg.auth_address().size() != PubKeySize) {
-            blockPeer("invalid auth_address in accept", peer);
-            return;
-         }
-
-         peer->random_part2 = msg.random_part2();
-
-         Message reply;
-         auto d = reply.mutable_accept();
-         d->set_sender_side(Otc::Side(peer->offer.ourSide));
-         d->set_amount(peer->offer.amount);
-         d->set_price(peer->offer.price);
-         send(peer, reply);
-
-         // TODO: Send details to PB
-         *peer = Peer(peer->peerId);
-         break;
-      }
-
-      case State::WaitAcceptAck: {
-         auto senderSide = otc::Side(msg.sender_side());
-         auto expectedSenderSide = switchSide(otc::Side(peer->offer.ourSide));
-         if (senderSide != expectedSenderSide) {
-            blockPeer(fmt::format("unexpected accepted sender side: {}, expected: {}"
-               , toString(senderSide), toString(expectedSenderSide)), peer);
-            return;
-         }
-
-         if (msg.price() != peer->offer.price || msg.amount() != peer->offer.amount) {
-            blockPeer("unexpected accepted price or amount", peer);
-            return;
-         }
-
-         // TODO: Send details to PB
-         *peer = Peer(peer->peerId);
-         emit peerUpdated(peer->peerId);
-         break;
-      }
-
       case State::Idle:
+         peer->offer.ourSide = otc::Side::Buy;
+         peer->offer.amount = msg.offer().amount();
+         peer->offer.price = msg.offer().price();
+         changePeerState(peer, State::OfferRecv);
+         break;
+
+      case State::OfferSent:
+         if (peer->offer.ourSide != otc::Side::Buy) {
+            blockPeer("unexpected side in counter-offer", peer);
+            return;
+         }
+         if (peer->offer.amount != msg.offer().amount()) {
+            blockPeer("invalid amount in counter-offer", peer);
+            return;
+         }
+
+         peer->offer.price = msg.offer().price();
+         changePeerState(peer, State::OfferRecv);
+         break;
+
       case State::OfferRecv:
-         blockPeer("unexpected accept", peer);
+      case State::WaitPayinInfo:
+      case State::SentPayinInfo:
+         blockPeer("unexpected offer", peer);
          break;
 
       case State::Blacklisted:
@@ -566,16 +411,115 @@ void OtcClient::processAccept(Peer *peer, const Message_Accept &msg)
    }
 }
 
+void OtcClient::processBuyerAccepts(Peer *peer, const Message_BuyerAccepts &msg)
+{
+   if (peer->state != State::OfferSent || peer->offer.ourSide != otc::Side::Sell) {
+      blockPeer("unexpected BuyerAccepts message, should be in OfferSent state and be seller", peer);
+      return;
+   }
+
+   if (msg.offer().price() != peer->offer.price || msg.offer().amount() != peer->offer.amount) {
+      blockPeer("wrong accepted price or amount in BuyerAccepts message", peer);
+      return;
+   }
+
+   if (msg.auth_address_buyer().size() != PubKeySize) {
+      blockPeer("invalid auth_address in BuyerAccepts message", peer);
+      return;
+   }
+   peer->authPubKey = msg.auth_address_buyer();
+
+   sendSellerAccepts(peer);
+}
+
+void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &msg)
+{
+   if (msg.offer().price() != peer->offer.price || msg.offer().amount() != peer->offer.amount) {
+      blockPeer("wrong accepted price or amount in SellerAccepts message", peer);
+      return;
+   }
+
+   if (msg.settlement_id().size() != SettlementIdSize) {
+      blockPeer("invalid settlement_id in SellerAccepts message", peer);
+      return;
+   }
+   auto settlementId = BinaryData(msg.settlement_id());
+
+   if (msg.auth_address_seller().size() != PubKeySize) {
+      blockPeer("invalid auth_address_seller in SellerAccepts message", peer);
+      return;
+   }
+   peer->authPubKey = msg.auth_address_seller();
+
+   if (msg.payin_tx_id().size() != TxHashSize) {
+      blockPeer("invalid payin_tx_id in SellerAccepts message", peer);
+      return;
+   }
+   peer->payinTxIdFromSeller = BinaryData(msg.payin_tx_id());
+
+   createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId]
+      (SignRequestPtr payin, SignRequestPtr payoutFallback, SignRequestPtr payout)
+   {
+      if (!payout) {
+         SPDLOG_LOGGER_ERROR(logger_, "creating pay-out sign request fails");
+         return;
+      }
+
+      auto peer = findPeer(peerId);
+      if (!peer) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+         return;
+      }
+
+      if ((peer->state != State::WaitPayinInfo && peer->state != State::OfferSent) || peer->offer.ourSide != otc::Side::Buy) {
+         blockPeer("unexpected SellerAccepts message, should be in WaitPayinInfo or OfferSent state and be buyer", peer);
+         return;
+      }
+
+      if (offer != peer->offer) {
+         SPDLOG_LOGGER_ERROR(logger_, "offer details have changed unexpectedly");
+         return;
+      }
+
+      Message msg;
+      msg.mutable_buyer_acks();
+      send(peer, msg);
+
+      changePeerState(peer, State::Idle);
+
+      // TODO: Send buyer details to PB
+      SPDLOG_LOGGER_INFO(logger_, "#### success ####");
+      *peer = Peer(peer->peerId);
+      emit peerUpdated(peer->peerId);
+   });
+}
+
+void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
+{
+   if (peer->state != State::SentPayinInfo || peer->offer.ourSide != otc::Side::Sell) {
+      blockPeer("unexpected BuyerAcks message, should be in SentPayinInfo state and be seller", peer);
+      return;
+   }
+
+   // TODO: Send seller details to PB
+
+   SPDLOG_LOGGER_INFO(logger_, "#### success ####");
+   *peer = Peer(peer->peerId);
+   emit peerUpdated(peer->peerId);
+}
+
 void OtcClient::processClose(Peer *peer, const Message_Close &msg)
 {
    switch (peer->state) {
       case State::OfferSent:
       case State::OfferRecv:
          *peer = Peer(peer->peerId);
+         emit peerUpdated(peer->peerId);
          break;
 
-      case State::WaitAcceptAck:
       case State::Idle:
+      case State::WaitPayinInfo:
+      case State::SentPayinInfo:
          blockPeer("unexpected close", peer);
          break;
 
@@ -602,6 +546,155 @@ void OtcClient::send(Peer *peer, const Message &msg)
 {
    assert(!peer->peerId.empty());
    emit sendMessage(peer->peerId, msg.SerializeAsString());
+}
+
+void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer, const SignRequestsCb &cb)
+{
+   assert(peer.authPubKey.getSize() == PubKeySize);
+   assert(settlementId.getSize() == SettlementIdSize);
+
+   if (peer.offer.ourSide == bs::network::otc::Side::Buy) {
+      assert(peer.payinTxIdFromSeller.getSize() == TxHashSize);
+   }
+
+   auto leaf = ourSettlementLeaf();
+   if (!leaf) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf");
+      cb(nullptr, nullptr, nullptr);
+      return;
+   }
+
+
+   leaf->setSettlementID(settlementId, [this, settlementId, peer, cb](bool result) {
+      if (!result) {
+         SPDLOG_LOGGER_ERROR(logger_, "setSettlementID failed");
+         cb(nullptr, nullptr, nullptr);
+         return;
+      }
+
+      auto cbFee = [this, cb, peer, settlementId](float feePerByte) {
+         if (feePerByte < 1) {
+            SPDLOG_LOGGER_ERROR(logger_, "invalid fees detected");
+            cb(nullptr, nullptr, nullptr);
+            return;
+         }
+
+         auto hdWallet = walletsMgr_->getPrimaryWallet();
+         if (!hdWallet) {
+            SPDLOG_LOGGER_ERROR(logger_, "can't find primary wallet");
+            cb(nullptr, nullptr, nullptr);
+            return;
+         }
+
+         auto cbSettlAddr = [this, cb, peer, feePerByte, settlementId](const bs::Address &settlAddr) {
+            if (settlAddr.isNull()) {
+               SPDLOG_LOGGER_ERROR(logger_, "invalid settl addr");
+               cb(nullptr, nullptr, nullptr);
+               return;
+            }
+
+            auto wallet = ourBtcWallet();
+            if (!wallet) {
+               SPDLOG_LOGGER_ERROR(logger_, "can't find BTC wallet");
+               cb(nullptr, nullptr, nullptr);
+               return;
+            }
+
+            const auto changedCallback = nullptr;
+            const bool isSegWitInputsOnly = true;
+            const bool confirmedOnly = true;
+            auto transaction = std::make_shared<TransactionData>(changedCallback, logger_, isSegWitInputsOnly, confirmedOnly);
+
+            auto resetInputsCb = [this, cb, peer, transaction, settlAddr, feePerByte, settlementId]() {
+               // resetInputsCb will be destroyed when returns, create one more callback to hold variables
+               QMetaObject::invokeMethod(this, [this, cb, peer, transaction, settlAddr, feePerByte, settlementId] {
+                  const double amount = peer.offer.amount / BTCNumericTypes::BalanceDivider;
+
+                  if (peer.offer.ourSide == bs::network::otc::Side::Sell) {
+                     // Seller
+                     auto index = transaction->RegisterNewRecipient();
+                     assert(index == 0);
+                     transaction->UpdateRecipient(0, amount, settlAddr);
+
+                     if (!transaction->IsTransactionValid()) {
+                        SPDLOG_LOGGER_ERROR(logger_, "invalid pay-in transaction");
+                        cb(nullptr, nullptr, nullptr);
+                        return;
+                     }
+
+                     auto payinTx = std::make_unique<bs::core::wallet::TXSignRequest>(transaction->createTXRequest());
+                     auto payinTxId = payinTx->txId();
+                     auto fallbackAddr = transaction->GetFallbackRecvAddress();
+                     auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, payinTxId, amount);
+                     auto payoutTxFallback = std::make_unique<bs::core::wallet::TXSignRequest>(bs::SettlementMonitor::createPayoutTXRequest(
+                        payinUTXO, fallbackAddr, feePerByte, armory_->topBlock()));
+
+                     cb(std::move(payinTx), std::move(payoutTxFallback), nullptr);
+                     return;
+                  }
+
+                  // Buyer
+                  auto outputAddr = transaction->GetFallbackRecvAddress();
+                  auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer.payinTxIdFromSeller, amount);
+                  auto payoutTx = std::make_unique<bs::core::wallet::TXSignRequest>(bs::SettlementMonitor::createPayoutTXRequest(
+                     payinUTXO, outputAddr, feePerByte, armory_->topBlock()));
+
+                  cb(nullptr, nullptr, std::move(payoutTx));
+               }, Qt::QueuedConnection);
+            };
+
+            transaction->setFeePerByte(feePerByte);
+            transaction->setWallet(wallet, armory_->topBlock(), false, resetInputsCb);
+         };
+
+         const bool myKeyFirst = (peer.offer.ourSide == bs::network::otc::Side::Buy);
+         hdWallet->getSettlementPayinAddress(settlementId, peer.authPubKey, cbSettlAddr, myKeyFirst);
+      };
+      walletsMgr_->estimatedFeePerByte(2, cbFee, this);
+   });
+}
+
+void OtcClient::sendSellerAccepts(Peer *peer)
+{
+   assert(ourPubKey_.getSize() == PubKeySize);
+   auto settlementId = CryptoPRNG::generateRandom(SettlementIdSize);
+
+   createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId]
+      (SignRequestPtr payin, SignRequestPtr payoutFallback, SignRequestPtr payout)
+   {
+      if (!payin || !payoutFallback) {
+         SPDLOG_LOGGER_ERROR(logger_, "creating pay-in sign request fails");
+         return;
+      }
+
+      auto peer = findPeer(peerId);
+      if (!peer) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+         return;
+      }
+
+      if (offer.ourSide != otc::Side::Sell) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't send pay-in info, wrong side");
+         return;
+      }
+
+      if (offer != peer->offer) {
+         SPDLOG_LOGGER_ERROR(logger_, "offer details have changed unexpectedly");
+         return;
+      }
+
+      auto payinTxId = payin->txId();
+
+      Message msg;
+      auto d = msg.mutable_seller_accepts();
+      copyOffer(peer->offer, d->mutable_offer());
+      d->set_settlement_id(settlementId.toBinStr());
+      d->set_auth_address_seller(ourPubKey_.toBinStr());
+      d->set_payin_tx_id(payinTxId.toBinStr());
+      send(peer, msg);
+
+      changePeerState(peer, State::SentPayinInfo);
+   });
 }
 
 std::shared_ptr<bs::sync::hd::SettlementLeaf> OtcClient::ourSettlementLeaf()
@@ -658,4 +751,12 @@ std::shared_ptr<bs::sync::Wallet> OtcClient::ourBtcWallet()
    }
 
    return leaves.front();
+}
+
+void OtcClient::changePeerState(Peer *peer, bs::network::otc::State state)
+{
+   SPDLOG_LOGGER_DEBUG(logger_, "changing peer '{}' state from {} to {}"
+      , peer->peerId, toString(peer->state), toString(state));
+   peer->state = state;
+   emit peerUpdated(peer->peerId);
 }
