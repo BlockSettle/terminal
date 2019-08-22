@@ -23,6 +23,7 @@ namespace Chat
    ClientDBLogic::ClientDBLogic(QObject* parent /* = nullptr */) : DatabaseExecutor(parent)
    {
       qRegisterMetaType<Chat::ClientDBLogicError>();
+      qRegisterMetaType<Chat::MessagePtr>();
 
       connect(this, &ClientDBLogic::error, this, &ClientDBLogic::handleLocalErrors);
    }

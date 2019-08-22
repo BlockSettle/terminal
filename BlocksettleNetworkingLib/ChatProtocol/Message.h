@@ -1,6 +1,8 @@
 #ifndef Message_h__
 #define Message_h__
 
+#include <QMetaType>
+
 #include <memory>
 #include <string>
 
@@ -42,5 +44,7 @@ namespace Chat
 
    using MessagePtr = std::shared_ptr<Message>;
 }
+
+Q_DECLARE_METATYPE(Chat::MessagePtr)
 
 #endif // Message_h__
