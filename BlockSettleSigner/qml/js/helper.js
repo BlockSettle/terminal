@@ -518,6 +518,12 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
                    "passwordDialogData": passwordDialogData
                   })
         }
+        else if (passwordDialogData.value("DialogType") === "RequestPasswordForSettlementLeaf") {
+            dlg = Qt.createComponent("../BsControls/BSPasswordInputSettlementLeaf.qml").createObject(mainWindow
+                , {"walletInfo": walletInfo,
+                   "passwordDialogData": passwordDialogData
+                  })
+        }
         else if (passwordDialogData.value("DialogType") === "RequestPasswordForPromoteHDWallet") {
             dlg = Qt.createComponent("../BsControls/BSPasswordInputPromoteWallet.qml").createObject(mainWindow
                 , {"walletInfo": walletInfo,

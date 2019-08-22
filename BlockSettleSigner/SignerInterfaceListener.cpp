@@ -240,6 +240,10 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       dialogData->setValue("Title", tr("Create Leaf"));
       requestPasswordForToken(dialogData, walletInfo);
       break;
+   case signer::CreateSettlementLeaf:
+      dialogData->setValue("Title", tr("Create Settlement Leaf"));
+      requestPasswordForToken(dialogData, walletInfo);
+      break;
    case signer::PromoteHDWallet:
       requestPasswordForPromoteHDWallet(dialogData, walletInfo);
       break;
@@ -655,6 +659,11 @@ void SignerInterfaceListener::requestPasswordForAuthLeaf(bs::sync::PasswordDialo
 void SignerInterfaceListener::requestPasswordForToken(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo)
 {
    requestPasswordForDialogType(QLatin1String("RequestPasswordForToken"), dialogData, walletInfo);
+}
+
+void SignerInterfaceListener::requestPasswordForSettlementLeaf(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo)
+{
+   requestPasswordForDialogType(QLatin1String("RequestPasswordForSettlementLeaf"), dialogData, walletInfo);
 }
 
 void SignerInterfaceListener::requestPasswordForPromoteHDWallet(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo)
