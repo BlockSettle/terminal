@@ -35,7 +35,7 @@ message Request
 
     message BroadcastXBT
     {
-        string settlement_id = 1;
+        bytes settlement_id = 1;
         bytes signed_payin = 2;
         bytes signed_payout = 3;
     }

@@ -19,13 +19,17 @@ class ZmqContext;
 class ZmqBIP15XDataConnection;
 template<typename T> class FutureValue;
 
-namespace Blocksettle { namespace Communication { namespace Proxy {
-class Request;
-class Response_StartLogin;
-class Response_GetLoginResult;
-class Response_Celer;
-class Response;
-} } }
+namespace Blocksettle {
+   namespace Communication {
+      namespace Proxy {
+         class Request;
+         class Response_StartLogin;
+         class Response_GetLoginResult;
+         class Response_Celer;
+         class Response;
+      }
+   }
+}
 
 struct BsClientParams
 {
@@ -74,6 +78,13 @@ public:
       std::string srcCcToken;
    };
 
+   struct BroadcastXbt
+   {
+      BinaryData settlementId;
+      BinaryData signedPayin;
+      BinaryData signedPayout;
+   };
+
    BsClient(const std::shared_ptr<spdlog::logger>& logger, const BsClientParams &params
       , QObject *parent = nullptr);
    ~BsClient() override;
@@ -81,6 +92,9 @@ public:
    const BsClientParams &params() const { return params_; }
 
    void startLogin(const std::string &email);
+
+   void sendPbMessage(std::string data);
+   void sendPbBroadcastXbt(const BroadcastXbt &data);
 
    // Cancel login. Please note that this will close channel.
    void cancelLogin();
