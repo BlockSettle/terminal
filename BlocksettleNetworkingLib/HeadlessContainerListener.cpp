@@ -1198,6 +1198,7 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
 
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
    dialogData.insert("WalletId", priWallet->walletId());
+   dialogData.insert("AuthAddress", request.auth_address());
 
    return RequestPasswordIfNeeded(clientId, priWallet->walletId(), {}, headless::CreateSettlWalletType
       , dialogData, onPassword);
