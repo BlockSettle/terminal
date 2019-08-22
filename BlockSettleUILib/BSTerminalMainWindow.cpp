@@ -334,9 +334,11 @@ void BSTerminalMainWindow::LoadWallets()
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
       walletsSynched_ = true;
-      updateControlEnabledState();
-      CompleteDBConnection();
-      act_->onRefresh({}, true);
+      QMetaObject::invokeMethod(this, [this] {
+         updateControlEnabledState();
+         CompleteDBConnection();
+         act_->onRefresh({}, true);
+      });
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);

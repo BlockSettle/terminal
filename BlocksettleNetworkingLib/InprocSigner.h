@@ -70,6 +70,7 @@ public:
    bs::signer::RequestId GetInfo(const std::string &) override;
 
    bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType, const QVariantMap&) override { return 0; }
+   bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) override { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;

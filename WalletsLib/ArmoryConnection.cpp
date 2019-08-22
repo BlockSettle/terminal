@@ -530,7 +530,36 @@ bool ArmoryConnection::getSpendableZCoutputs(const std::vector<std::string> &wal
          }
       }
    };
+
    bdv_->getCombinedSpendableZcOutputs(walletIds, cbWrap);
+   return true;
+}
+
+bool ArmoryConnection::getNodeStatus(const std::function<void(const std::shared_ptr<::ClientClasses::NodeStatusStruct>)>& userCB)
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[ArmoryConnection::getNodeStatus] invalid state: {}", (int)state_.load());
+      return false;
+   }
+
+   if (!userCB) {
+      logger_->error("[ArmoryConnection::getNodeStatus] invalid callback");
+      return false;
+   }
+
+   const auto cbWrap = [this, userCB](ReturnMessage<std::shared_ptr<::ClientClasses::NodeStatusStruct>> reply)
+   {
+      try {
+         const auto nodeStatus = reply.get();
+         userCB(nodeStatus);
+      } catch (const std::exception &e) {
+         logger_->error("[ArmoryConnection::getNodeStatus] failed: {}", e.what());
+         userCB({});
+      }
+   };
+
+   bdv_->getNodeStatus(cbWrap);
+
    return true;
 }
 
