@@ -73,6 +73,19 @@ bool HeadlessContainerListener::sendData(const std::string &data, const std::str
    return sentOk;
 }
 
+bool HeadlessContainerListener::sendData(const std::string &data
+   , const std::vector<std::string> &clientIds)
+{
+   if (clientIds.empty()) {
+      return false;
+   }
+   bool result = true;
+   for (const auto &clientId : clientIds) {
+      result &= sendData(data, clientId);
+   }
+   return result;
+}
+
 void HeadlessContainerListener::SetLimits(const bs::signer::Limits &limits)
 {
    limits_ = limits;
@@ -1138,17 +1151,30 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       sendData(packet.SerializeAsString(), clientId);
       return false;
    }
-   const auto &onPassword = [this, priWallet, request, clientId, id=packet.id()]
+   auto &reqsForAddress = settlLeafReqs_[request.auth_address()];
+   reqsForAddress.push_back(clientId);
+   if (reqsForAddress.size() > 1) {
+      return true;
+   }
+   const auto &onPassword = [this, priWallet, clientId, request, id=packet.id()]
       (bs::error::ErrorCode result, const SecureBinaryData &password) {
       headless::CreateSettlWalletResponse response;
       headless::RequestPacket packet;
       packet.set_id(id);
       packet.set_type(headless::CreateSettlWalletType);
 
+      const auto &itReqs = settlLeafReqs_.find(request.auth_address());
+      if (itReqs == settlLeafReqs_.end()) {
+         logger_->warn("[HeadlessContainerListener] failed to find list of requests");
+         packet.set_data(response.SerializeAsString());
+         sendData(packet.SerializeAsString(), clientId);
+         return;
+      }
+
       if (result != bs::error::ErrorCode::NoError) {
          logger_->warn("[HeadlessContainerListener] password request failed");
          packet.set_data(response.SerializeAsString());
-         sendData(packet.SerializeAsString(), clientId);
+         sendData(packet.SerializeAsString(), itReqs->second);
          return;
       }
 
@@ -1156,16 +1182,18 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
          auto lock = priWallet->lockForEncryption(password);
          const auto leaf = priWallet->createSettlementLeaf(request.auth_address());
          if (!leaf) {
-            logger_->error("[{}] failed to create settlement leaf", __func__);
+            logger_->error("[HeadlessContainerListener] failed to create settlement leaf for {}"
+               , request.auth_address());
             packet.set_data(response.SerializeAsString());
-            sendData(packet.SerializeAsString(), clientId);
+            sendData(packet.SerializeAsString(), itReqs->second);
             return;
          }
          response.set_wallet_id(leaf->walletId());
          response.set_public_key(getPubKey(leaf).toBinStr());
       }
       packet.set_data(response.SerializeAsString());
-      sendData(packet.SerializeAsString(), clientId);
+      sendData(packet.SerializeAsString(), itReqs->second);
+      settlLeafReqs_.erase(itReqs);
    };
 
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();

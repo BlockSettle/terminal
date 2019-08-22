@@ -104,6 +104,7 @@ private:
       , bs::error::ErrorCode result, const SecureBinaryData &password);
 
    bool sendData(const std::string &data, const std::string &clientId = {});
+   bool sendData(const std::string &data, const std::vector<std::string> &clientIds);
    bool onRequestPacket(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
 
    bool onSignTxRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet
@@ -190,6 +191,8 @@ private:
    const bool backupEnabled_ = true;
 
    HeadlessContainerCallbacks *callbacks_{};
+
+   std::map<bs::Address, std::vector<std::string>>    settlLeafReqs_;
 };
 
 #endif // __HEADLESS_CONTAINER_LISTENER_H__

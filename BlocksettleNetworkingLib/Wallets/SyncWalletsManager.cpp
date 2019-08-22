@@ -904,8 +904,9 @@ void WalletsManager::createSettlementLeaf(const bs::Address &authAddr
    if (!signContainer_) {
       logger_->error("[WalletsManager::{}] - signer is not set - aborting"
          , __func__);
-      if (cb)
+      if (cb) {
          cb({});
+      }
       return;
    }
    signContainer_->createSettlementWallet(authAddr, cb);
