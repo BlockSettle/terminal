@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QQmlEngine>
+#include <QQuickWindow>
 
 #include "ApplicationSettings.h"
 #include "QWalletInfo.h"
@@ -98,6 +99,7 @@ public:
    Q_INVOKABLE QRect frameSize(QObject *window) const;
    Q_INVOKABLE int titleBarHeight();
    Q_INVOKABLE void installEventFilterToObj(QObject *object);
+   Q_INVOKABLE void applyWindowFix(QQuickWindow *mw);
    bool eventFilter(QObject *object, QEvent *event) override;
 
 signals:

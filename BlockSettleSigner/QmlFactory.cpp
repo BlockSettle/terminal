@@ -145,6 +145,13 @@ void QmlFactory::installEventFilterToObj(QObject *object)
    object->installEventFilter(this);
 }
 
+void QmlFactory::applyWindowFix(QQuickWindow *mw)
+{
+#ifdef Q_OS_WIN
+   SetClassLongPtr(HWND(mw->winId()), GCLP_HBRBACKGROUND, LONG_PTR(GetStockObject(NULL_BRUSH)));
+#endif
+}
+
 bool QmlFactory::eventFilter(QObject *object, QEvent *event)
 {
    // Do not return true to allow propagate close event (it's needed for tx dialog close signal detection)
