@@ -108,7 +108,8 @@ namespace Chat
             QString(QLatin1String("FOREIGN KEY (%1)")).arg(foreignKey.columnKey),
             QString(QLatin1String("REFERENCES %1(%2)"))
                   .arg(foreignKey.foreignTable)
-                  .arg(foreignKey.foreignColumn)
+                  .arg(foreignKey.foreignColumn),
+            QString(QLatin1String("%1")).arg(foreignKey.foreignReferentialAction)
          };
 
          queryParts << parts.join(QLatin1Char(' '));

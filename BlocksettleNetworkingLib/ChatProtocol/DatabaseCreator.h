@@ -22,6 +22,7 @@ namespace Chat
       QString columnKey;
       QString foreignTable;
       QString foreignColumn;
+      QString foreignReferentialAction;
    };
 
    struct TableUniqueCondition {
