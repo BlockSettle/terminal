@@ -29,7 +29,7 @@ namespace Chat
          {
             { //Table columns
                {party::PARTY_TABLE_ID, QLatin1String("INTEGER PRIMARY KEY AUTOINCREMENT")},
-               {party::PARTY_ID, QLatin1String("CHAR(32) NOT NULL")}
+               {party::PARTY_ID, QLatin1String("TEXT NOT NULL")}
             }
          }
       },
