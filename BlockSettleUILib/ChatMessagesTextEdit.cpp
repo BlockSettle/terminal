@@ -451,8 +451,11 @@ void ChatMessagesTextEdit::onSingleMessageUpdate(const std::shared_ptr<Chat::Dat
    emit rowsInserted();
 }
 
-void ChatMessagesTextEdit::onSingleMessageUpdate2(const std::string& partyId, const std::string& messageId, const std::string& message, const qint64 timestamp, const int party_message_state)
+void ChatMessagesTextEdit::onSingleMessageUpdate2(const Chat::MessagePtr& messagePtr)
 {
+   // can we use here only messagePtr?
+   // Chat::Data are old structure
+/*
    std::shared_ptr<Chat::Data> msg{ new Chat::Data };
    auto* messageData = msg->mutable_message();
 
@@ -464,7 +467,9 @@ void ChatMessagesTextEdit::onSingleMessageUpdate2(const std::string& partyId, co
    messageData->set_message(message);
 
    insertMessage(msg);
+
    emit rowsInserted();
+*/
 }
 
 void ChatMessagesTextEdit::onMessageIdUpdate(const std::string& oldId, const std::string& newId, const std::string& chatId)

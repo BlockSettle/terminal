@@ -8,6 +8,7 @@
 #include "ChatProtocol/ClientDBLogic.h"
 #include "ChatProtocol/ChatUser.h"
 #include "ChatProtocol/CryptManager.h"
+#include "ChatProtocol/Message.h"
 
 #include <google/protobuf/message.h>
 
@@ -37,8 +38,7 @@ namespace Chat
 
       ////////// RETURN SIGNALS //////////
       void initDone();
-      void messageArrived(const std::string& partyId, const std::string& messageId, const std::string& message,
-         const qint64 timestamp, const int party_message_state);
+      void messageArrived(const MessagePtr& messagePtr);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
       void messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
          const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);

@@ -145,6 +145,7 @@ message PartyMessagePacket
     EncryptionType encryption = 5;
     bytes nonce = 6;
     PartyMessageState party_message_state = 7;
+    string sender = 8;
 }
 
 message PartyMessageStateUpdate

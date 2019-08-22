@@ -6,6 +6,7 @@
 
 #include "ChatProtocol/ClientDBLogic.h"
 #include "ChatProtocol/CryptManager.h"
+#include "ChatProtocol/Message.h"
 #include "ApplicationSettings.h"
 #include "ProtobufUtils.h"
 
@@ -98,8 +99,8 @@ namespace Chat
                return;
             }
 
-            const QString cmd = QLatin1String("INSERT INTO party_message (party_table_id, message_id, timestamp, message_state, encryption_type, nonce, message_text) "
-               "VALUES (:party_table_id, :message_id, :timestamp, :message_state, :encryption_type, :nonce, :message_text)");
+            const QString cmd = QLatin1String("INSERT INTO party_message (party_table_id, message_id, timestamp, message_state, encryption_type, nonce, message_text, sender) "
+               "VALUES (:party_table_id, :message_id, :timestamp, :message_state, :encryption_type, :nonce, :message_text, :sender)");
 
             QSqlQuery query(getDb());
             query.prepare(cmd);
@@ -110,6 +111,7 @@ namespace Chat
             query.bindValue(QLatin1String(":encryption_type"), partyMessagePacket.encryption());
             query.bindValue(QLatin1String(":nonce"), QByteArray::fromStdString(partyMessagePacket.nonce()));
             query.bindValue(QLatin1String(":message_text"), QString::fromStdString(encryptedMessage));
+            query.bindValue(QLatin1String(":sender"), QString::fromStdString(partyMessagePacket.sender()));
 
             if (!checkExecute(query))
             {
@@ -118,8 +120,11 @@ namespace Chat
             }
 
             // ! signaled by ClientPartyModel in gui
-            emit messageArrived(partyMessagePacket.party_id(), partyMessagePacket.message_id(), partyMessagePacket.message(),
-               partyMessagePacket.timestamp_ms(), partyMessagePacket.party_message_state());
+            MessagePtr messagePtr = std::make_shared<Message>(partyMessagePacket.party_id(), partyMessagePacket.message_id(),
+               partyMessagePacket.timestamp_ms(), partyMessagePacket.party_message_state(), partyMessagePacket.message(),
+               partyMessagePacket.sender());
+
+            emit messageArrived(messagePtr);
          });
 
       QFuture<std::string> future = cryptManagerPtr_->encryptMessageIES(partyMessagePacket.message(), currentChatUserPtr_->publicKey());

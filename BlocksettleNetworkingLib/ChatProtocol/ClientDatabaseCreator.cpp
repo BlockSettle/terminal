@@ -20,6 +20,7 @@ namespace Chat
          const QString ENCRYPTION_TYPE = QLatin1String("encryption_type");
          const QString NONCE = QLatin1String("nonce");
          const QString MESSAGE_TEXT = QLatin1String("message_text");
+         const QString SENDER = QLatin1String("sender");
       }
    }
 
@@ -42,7 +43,8 @@ namespace Chat
                {partyMessage::MESSAGE_STATE, QLatin1String("INTEGER NOT NULL")},
                {partyMessage::ENCRYPTION_TYPE, QLatin1String("INTEGER NOT NULL")},
                {partyMessage::NONCE, QLatin1String("BLOB")},
-               {partyMessage::MESSAGE_TEXT, QLatin1String("TEXT")}
+               {partyMessage::MESSAGE_TEXT, QLatin1String("TEXT")},
+               {partyMessage::SENDER, QLatin1String("TEXT")}
             },
             { //Foreign keys
                {partyMessage::PARTY_TABLE_ID, party::TABLE_NAME, party::PARTY_TABLE_ID}

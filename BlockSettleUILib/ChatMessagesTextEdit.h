@@ -3,6 +3,7 @@
 
 #include "ChatClient.h"
 #include "ChatClientUserView.h"
+#include "ChatProtocol/Message.h"
 
 #include <QDateTime>
 #include <QImage>
@@ -98,8 +99,7 @@ public slots:
    void onMessageStatusChanged(const std::string& messageId, const std::string &chatId, int newStatus);
    void urlActivated(const QUrl &link);
 
-   void onSingleMessageUpdate2(const std::string& partyId, const std::string& messageId, const std::string& message,
-      const qint64 timestamp, const int party_message_state);
+   void onSingleMessageUpdate2(const Chat::MessagePtr& messagePtr);
    
 private slots:
    void copyActionTriggered();

@@ -8,6 +8,7 @@
 
 #include "ChatProtocol/PartyModel.h"
 #include "ChatProtocol/ClientParty.h"
+#include "ChatProtocol/Message.h"
 
 namespace spdlog
 {
@@ -38,8 +39,7 @@ namespace Chat
    signals:
       void error(const ClientPartyModelError& errorCode, const std::string& what = "");
       void clientPartyStatusChanged(const ClientPartyPtr& clientPartyPtr);
-      void messageArrived(const std::string& partyId, const std::string& messageId, const std::string& message,
-         const qint64 timestamp, const int party_message_state);
+      void messageArrived(const MessagePtr& messagePtr);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
       void partyStateChanged(const std::string& partyId, const Chat::PartyState& partyState);
 

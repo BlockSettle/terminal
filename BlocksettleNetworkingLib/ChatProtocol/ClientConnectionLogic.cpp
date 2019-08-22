@@ -192,6 +192,7 @@ namespace Chat
       partyMessagePacket.set_encryption(encryptionType);
       partyMessagePacket.set_nonce("");
       partyMessagePacket.set_party_message_state(partyMessageState);
+      partyMessagePacket.set_sender(currentUserPtr()->userName());
 
       clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
 
@@ -468,6 +469,7 @@ namespace Chat
       partyMessagePacket.set_encryption(encryptionType);
       partyMessagePacket.set_nonce("");
       partyMessagePacket.set_party_message_state(partyMessageState);
+      partyMessagePacket.set_sender(currentUserPtr()->userName());
 
       // save in db
       clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
