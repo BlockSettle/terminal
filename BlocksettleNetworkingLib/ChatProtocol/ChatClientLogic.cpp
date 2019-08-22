@@ -242,7 +242,7 @@ namespace Chat
    // TODO: remove
    void ChatClientLogic::testProperlyConnected()
    {
-      //SendPartyMessage("Global", "test");
+      SendPartyMessage("Global", "test");
       //RequestPrivateParty("ds7n8iy8fdsy");
    }
 

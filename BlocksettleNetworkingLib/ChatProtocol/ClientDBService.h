@@ -38,7 +38,7 @@ namespace Chat
 
       ////////// RETURN SIGNALS //////////
       void initDone();
-      void messageArrived(const MessagePtr& messagePtr);
+      void messageArrived(const Chat::MessagePtr& messagePtr);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
       void messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
          const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);
