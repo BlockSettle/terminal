@@ -10,6 +10,7 @@
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "bs_proxy_pb.pb.h"
 #include "otc.pb.h"
 
 using namespace Blocksettle::Communication::Otc;
@@ -517,9 +518,9 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
 
       changePeerState(peer, State::Idle);
 
-      PbRequest request;
-      auto d = request.mutable_start();
-      d->set_sender_side(SIDE_BUY);
+      ProxyPb::Request request;
+      auto d = request.mutable_start_otc();
+      d->set_is_seller(false);
       d->set_price(peer->offer.price);
       d->set_amount(peer->offer.amount);
       d->set_settlement_id(settlementId.toBinStr());
@@ -552,9 +553,9 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
    const auto &deal = it->second;
    assert(deal->success);
 
-   PbRequest request;
-   auto d = request.mutable_start();
-   d->set_sender_side(SIDE_SELL);
+   ProxyPb::Request request;
+   auto d = request.mutable_start_otc();
+   d->set_is_seller(true);
    d->set_price(peer->offer.price);
    d->set_amount(peer->offer.amount);
    d->set_settlement_id(deal->settlementId.toBinStr());

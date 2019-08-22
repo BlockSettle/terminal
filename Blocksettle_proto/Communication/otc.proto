@@ -2,14 +2,6 @@ syntax = "proto3";
 
 package Blocksettle.Communication.Otc;
 
-// Keep in sync with bs::network::ChatOTCSide::Type
-enum Side
-{
-    SIDE_UNDEFINED = 0;
-    SIDE_BUY = 1;
-    SIDE_SELL = 2;
-};
-
 // Keep in sync with bs::network::OTCRangeID::Type
 enum Range
 {
@@ -78,48 +70,5 @@ message Message
         SellerAccepts seller_accepts = 4;
         BuyerAcks buyer_acks = 5;
         Close close = 6;
-    }
-}
-
-message PbRequest
-{
-    message Start
-    {
-        Side sender_side = 1;
-
-        int64 amount = 2;
-        int64 price = 3;
-
-        bytes settlement_id = 4;
-
-        bytes auth_address_seller = 5;
-        bytes auth_address_buyer = 6;
-
-        // Used to check fees and other details (UTXO for payin, settlement address etc)
-        bytes unsigned_payin = 7;
-        bytes unsigned_payout = 8;
-        bytes unsigned_payout_fallback = 9;
-
-        string chat_id_seller = 10;
-        string chat_id_buyer = 11;
-    }
-
-    oneof data
-    {
-        Start start = 1;
-    }
-}
-
-message PbResponse
-{
-    message Start
-    {
-        bool success = 1;
-        string error_msg = 2;
-    }
-
-    oneof data
-    {
-        Start start = 1;
     }
 }
