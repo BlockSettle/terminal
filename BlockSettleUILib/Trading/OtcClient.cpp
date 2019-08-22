@@ -20,9 +20,9 @@ using namespace bs::network::otc;
 
 namespace {
 
-   const int SettlementIdSize = 32;
-   const int TxHashSize = 32;
-   const int PubKeySize = 33;
+   const int kSettlementIdSize = 32;
+   const int kTxHashSize = 32;
+   const int kPubKeySize = 33;
 
    bs::sync::PasswordDialogData toPasswordDialogData()
    {
@@ -208,7 +208,7 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
    assert(offer.ourSide != otc::Side::Unknown);
    assert(offer.amount > 0);
    assert(offer.price > 0);
-   assert(ourPubKey_.getSize() == PubKeySize);
+   assert(ourPubKey_.getSize() == kPubKeySize);
 
    auto peer = findPeer(peerId);
    if (!peer) {
@@ -363,7 +363,7 @@ void OtcClient::processBuyerOffers(Peer *peer, const Message_BuyerOffers &msg)
       return;
    }
 
-   if (msg.auth_address_buyer().size() != PubKeySize) {
+   if (msg.auth_address_buyer().size() != kPubKeySize) {
       blockPeer("invalid auth_address_buyer in buyer offer", peer);
       return;
    }
@@ -456,7 +456,7 @@ void OtcClient::processBuyerAccepts(Peer *peer, const Message_BuyerAccepts &msg)
       return;
    }
 
-   if (msg.auth_address_buyer().size() != PubKeySize) {
+   if (msg.auth_address_buyer().size() != kPubKeySize) {
       blockPeer("invalid auth_address in BuyerAccepts message", peer);
       return;
    }
@@ -472,19 +472,19 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
       return;
    }
 
-   if (msg.settlement_id().size() != SettlementIdSize) {
+   if (msg.settlement_id().size() != kSettlementIdSize) {
       blockPeer("invalid settlement_id in SellerAccepts message", peer);
       return;
    }
-   auto settlementId = BinaryData(msg.settlement_id());
+   const BinaryData settlementId(BinaryData(msg.settlement_id()));
 
-   if (msg.auth_address_seller().size() != PubKeySize) {
+   if (msg.auth_address_seller().size() != kPubKeySize) {
       blockPeer("invalid auth_address_seller in SellerAccepts message", peer);
       return;
    }
    peer->authPubKey = msg.auth_address_seller();
 
-   if (msg.payin_tx_id().size() != TxHashSize) {
+   if (msg.payin_tx_id().size() != kTxHashSize) {
       blockPeer("invalid payin_tx_id in SellerAccepts message", peer);
       return;
    }
@@ -613,11 +613,11 @@ void OtcClient::send(Peer *peer, const Message &msg)
 
 void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer, const OtcClientDealCb &cb)
 {
-   assert(peer.authPubKey.getSize() == PubKeySize);
-   assert(settlementId.getSize() == SettlementIdSize);
+   assert(peer.authPubKey.getSize() == kPubKeySize);
+   assert(settlementId.getSize() == kSettlementIdSize);
 
    if (peer.offer.ourSide == bs::network::otc::Side::Buy) {
-      assert(peer.payinTxIdFromSeller.getSize() == TxHashSize);
+      assert(peer.payinTxIdFromSeller.getSize() == kTxHashSize);
    }
 
    auto leaf = ourSettlementLeaf();
@@ -716,8 +716,8 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
 
 void OtcClient::sendSellerAccepts(Peer *peer)
 {
-   assert(ourPubKey_.getSize() == PubKeySize);
-   auto settlementId = CryptoPRNG::generateRandom(SettlementIdSize);
+   assert(ourPubKey_.getSize() == kPubKeySize);
+   auto settlementId = CryptoPRNG::generateRandom(kSettlementIdSize);
 
    createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId](OtcClientDeal &&deal) {
       if (!deal.success) {
