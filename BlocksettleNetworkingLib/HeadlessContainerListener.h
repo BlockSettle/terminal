@@ -158,6 +158,9 @@ private:
       , const PasswordReceivedCb &cb);
    void RunDeferredPwDialog();
 
+   bool createAuthLeaf(const std::shared_ptr<bs::core::hd::Wallet> &, const BinaryData &salt
+      , const SecureBinaryData &password);
+
    bool CheckSpendLimit(uint64_t value, const std::string &walletId);
 
 private:

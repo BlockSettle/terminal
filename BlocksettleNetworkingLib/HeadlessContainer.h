@@ -78,7 +78,7 @@ public:
    bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData>& = {}, bs::sync::PasswordDialogData dialogData = {}, const CreateHDLeafCb &cb = nullptr) override;
 
-   bool promoteHDWallet(const std::string& rootWalletId
+   bool promoteHDWallet(const std::string& rootWalletId, const BinaryData &userId
       , bs::sync::PasswordDialogData dialogData = {}, const PromoteHDWalletCb& cb = nullptr) override;
 
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;

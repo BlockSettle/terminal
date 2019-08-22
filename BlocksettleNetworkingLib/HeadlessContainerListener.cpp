@@ -298,7 +298,6 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       if (utxo.isInitialized()) {
          txSignReq.inputs.push_back(utxo);
          inputVal += utxo.getValue();
-         logger_->debug("[{}] UTXO {}, addr {}", __func__, utxo.getTxHash().toHexStr(true), bs::Address::fromUTXO(utxo).display());
       }
    }
 
@@ -953,6 +952,66 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
    return true;
 }
 
+bool HeadlessContainerListener::createAuthLeaf(const std::shared_ptr<bs::core::hd::Wallet> &wallet
+   , const BinaryData &salt, const SecureBinaryData &password)
+{
+   if (salt.isNull()) {
+      logger_->error("[{}] can't create auth leaf with empty salt", __func__);
+      return false;
+   }
+   const auto group = wallet->getGroup(bs::hd::BlockSettle_Auth);
+   if (!group) {
+      logger_->error("[{}] primary wallet misses Auth group", __func__);
+      return false;
+   }
+   const auto authGroup = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
+   if (!authGroup) {
+      logger_->error("[{}] Auth group has wrong type", __func__);
+      return false;
+   }
+
+   const auto prevSalt = authGroup->getSalt();
+   if (prevSalt.isNull()) {
+      try {
+         authGroup->setSalt(salt);
+      } catch (const std::exception &e) {
+         logger_->error("[{}] error setting auth salt: {}", __func__, e.what());
+         return false;
+      }
+   } else {
+      if (prevSalt != salt) {
+         logger_->error("[{}] salts don't match - aborting", __func__);
+         return false;
+      }
+   }
+
+   const bs::hd::Path authPath({ bs::hd::Purpose::Native, bs::hd::BlockSettle_Auth, 0 });
+   auto leaf = authGroup->getLeafByPath(authPath);
+   if (leaf) {
+      const auto authLeaf = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leaf);
+      if (authLeaf && (authLeaf->getSalt() == salt)) {
+         logger_->debug("[{}] auth leaf for {} aready exists", __func__, salt.toHexStr());
+         return true;
+      } else {
+         logger_->error("[{}] auth leaf salts mismatch", __func__);
+         return false;
+      }
+   }
+
+   try {
+      auto lock = wallet->lockForEncryption(password);
+      auto leaf = group->createLeaf(AddressEntryType_Default, 0 + bs::hd::hardFlag, 5);
+      if (leaf) {
+         return true;
+      } else {
+         logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf");
+      }
+   } catch (const std::exception &e) {
+      logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf: {}", e.what());
+   }
+   return false;
+}
+
 bool HeadlessContainerListener::onPromoteHDWallet(const std::string& clientId, headless::RequestPacket& packet)
 {
    headless::PromoteHDWalletRequest request;
@@ -969,7 +1028,9 @@ bool HeadlessContainerListener::onPromoteHDWallet(const std::string& clientId, h
       return false;
    }
 
-   const auto onPassword = [this, hdWallet, walletId, clientId, id = packet.id()](bs::error::ErrorCode result, const SecureBinaryData &pass) {
+   const auto onPassword = [this, hdWallet, walletId, clientId, id = packet.id(), userId=request.user_id()]
+      (bs::error::ErrorCode result, const SecureBinaryData &pass)
+   {
       std::shared_ptr<bs::core::hd::Node> leafNode;
       if (result != ErrorCode::NoError) {
          logger_->error("[HeadlessContainerListener] no password for encrypted wallet");
@@ -981,10 +1042,33 @@ bool HeadlessContainerListener::onPromoteHDWallet(const std::string& clientId, h
       if (!group) {
          group = hdWallet->createGroup(bs::hd::BlockSettle_Auth);
       }
+      if (!createAuthLeaf(hdWallet, userId, pass)) {
+         logger_->error("[HeadlessContainerListener::onPromoteHDWallet] failed to create auth leaf");
+      }
+
+      if (!walletsMgr_->ccLeaves().empty()) {
+         logger_->debug("[HeadlessContainerListener::onPromoteHDWallet] creating {} CC leaves"
+            , walletsMgr_->ccLeaves().size());
+         group = hdWallet->createGroup(bs::hd::BlockSettle_CC);
+         if (group) {
+            auto lock = hdWallet->lockForEncryption(pass);
+            for (const auto &cc : walletsMgr_->ccLeaves()) {
+               try {
+                  group->createLeaf(AddressEntryType_P2WPKH, cc);
+               }  // existing leaf creation failure is ignored
+               catch (...) {}
+            }
+         }
+         else {
+            logger_->error("[HeadlessContainerListener::onPromoteHDWallet] failed to create CC group");
+         }
+      }
       CreatePromoteHDWalletResponse(clientId, id, ErrorCode::NoError, walletId);
+      walletsListUpdated();
    };
 
-   RequestPasswordIfNeeded(clientId, request.rootwalletid(), {}, headless::PromoteHDWalletRequestType, request.passworddialogdata(), onPassword);
+   RequestPasswordIfNeeded(clientId, request.rootwalletid(), {}, headless::PromoteHDWalletRequestType
+      , request.passworddialogdata(), onPassword);
    return true;
 }
 

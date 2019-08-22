@@ -592,9 +592,9 @@ bs::signer::RequestId HeadlessContainer::syncCCNames(const std::vector<std::stri
    return Send(packet);
 }
 
-bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path,
-                                     const std::vector<bs::wallet::PasswordData>&,
-                                     bs::sync::PasswordDialogData dialogData, const CreateHDLeafCb &cb)
+bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
+   , const std::vector<bs::wallet::PasswordData>&, bs::sync::PasswordDialogData dialogData
+   , const CreateHDLeafCb &cb)
 {
    if (rootWalletId.empty() || (path.length() != 3)) {
       logger_->error("[HeadlessContainer::createHDLeaf] Invalid input data for HD wallet creation");
@@ -624,16 +624,16 @@ bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::
       logger_->warn("[HeadlessContainer::createHDLeaf] cb not set for leaf creation {}"
                      , path.toString());
    }
-
    return true;
 }
 
 bool HeadlessContainer::promoteHDWallet(const std::string& rootWalletId
-                                   , bs::sync::PasswordDialogData dialogData,
-                                   const WalletSignerContainer::PromoteHDWalletCb& cb)
+   , const BinaryData &userId, bs::sync::PasswordDialogData dialogData
+   , const WalletSignerContainer::PromoteHDWalletCb& cb)
 {
    headless::PromoteHDWalletRequest request;
    request.set_rootwalletid(rootWalletId);
+   request.set_user_id(userId.toBinStr());
 
    dialogData.setValue(QLatin1String("WalletId"), QString::fromStdString(rootWalletId));
 

@@ -63,12 +63,14 @@ public:
    bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}
       , bs::sync::PasswordDialogData dialogData = {}, const CreateHDLeafCb &cb = nullptr) override;
-   bool promoteHDWallet(const std::string&, bs::sync::PasswordDialogData = {}, const PromoteHDWalletCb& = nullptr) override;
+   bool promoteHDWallet(const std::string &, const BinaryData &, bs::sync::PasswordDialogData = {}
+      , const PromoteHDWalletCb& = nullptr) override;
    bs::signer::RequestId DeleteHDRoot(const std::string &) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override;
    bs::signer::RequestId GetInfo(const std::string &) override;
 
    bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType, const QVariantMap&) override { return 0; }
+   bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) override { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;

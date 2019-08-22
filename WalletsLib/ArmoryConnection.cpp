@@ -530,7 +530,36 @@ bool ArmoryConnection::getSpendableZCoutputs(const std::vector<std::string> &wal
          }
       }
    };
+
    bdv_->getCombinedSpendableZcOutputs(walletIds, cbWrap);
+   return true;
+}
+
+bool ArmoryConnection::getNodeStatus(const std::function<void(const std::shared_ptr<::ClientClasses::NodeStatusStruct>)>& userCB)
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[ArmoryConnection::getNodeStatus] invalid state: {}", (int)state_.load());
+      return false;
+   }
+
+   if (!userCB) {
+      logger_->error("[ArmoryConnection::getNodeStatus] invalid callback");
+      return false;
+   }
+
+   const auto cbWrap = [this, userCB](ReturnMessage<std::shared_ptr<::ClientClasses::NodeStatusStruct>> reply)
+   {
+      try {
+         const auto nodeStatus = reply.get();
+         userCB(nodeStatus);
+      } catch (const std::exception &e) {
+         logger_->error("[ArmoryConnection::getNodeStatus] failed: {}", e.what());
+         userCB({});
+      }
+   };
+
+   bdv_->getNodeStatus(cbWrap);
+
    return true;
 }
 
@@ -1154,8 +1183,9 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
       break;
 
    case BDMAction_NodeStatus: {
-      logger_->debug("[ArmoryCallback::run] BDMAction_NodeStatus");
       const auto nodeStatus = *reinterpret_cast<ClientClasses::NodeStatusStruct *>(ptr);
+      logger_->debug("[ArmoryCallback::run] BDMAction_NodeStatus: status={}, RPC status={}"
+         , (int)nodeStatus.status(), (int)nodeStatus.rpcStatus());
       connection_->addToMaintQueue([nodeStatus](ArmoryCallbackTarget *tgt) {
          tgt->onNodeStatus(nodeStatus.status(), nodeStatus.isSegWitEnabled(), nodeStatus.rpcStatus());
       });

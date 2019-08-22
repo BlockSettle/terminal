@@ -182,6 +182,8 @@ void ReqCCSettlementContainer::activate()
    if (!createCCUnsignedTXdata()) {
       userKeyOk_ = false;
       emit error(tr("Failed to create unsigned CC transaction"));
+   } else {
+      emit sendOrder();
    }
 }
 
@@ -276,8 +278,6 @@ bool ReqCCSettlementContainer::startSigning()
 
          // notify RFQ dialog that signed half could be saved
          emit settlementAccepted();
-         // and quote could be accepted
-         emit sendOrder();
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
          emit settlementCancelled();
