@@ -5,6 +5,7 @@
 
 #include "BtcUtils.h"
 #include "EncryptionUtils.h"
+#include "SettlementMonitor.h"
 #include "TransactionData.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"

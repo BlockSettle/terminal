@@ -754,13 +754,6 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
             }
          }
          break;
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
-            auto contact = element->getDataObject();
-            if (contact && contact->has_contact_record() && currentChat_ == contact->contact_record().contact_id()) {
-               OTCSwitchToContact(contact);
-            }
-         }
-         break;
          case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
             auto contact = element->getDataObject();
             if (contact && contact->has_contact_record()) {
