@@ -92,7 +92,7 @@ namespace Chat
          cipher->setPublicKey(remotePublicKey);
          cipher->setNonce(Botan::SecureVector<uint8_t>(nonce.getPtr(), nonce.getPtr() + nonce.getSize()));
          cipher->setData(message);
-         loggerPtr_->info("[ChatUtils::{}] jsonAssociatedData: {}", __func__, associatedData);
+         loggerPtr_->info("[CryptManager::encryptMessageAEAD] jsonAssociatedData: {}", associatedData);
          cipher->setAssociatedData(associatedData);
 
          Botan::SecureVector<uint8_t> output;

@@ -99,7 +99,7 @@ namespace Chat
    void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb)
    {
       if (connectionPtr_) {
-         loggerPtr_->error("[ChatClientLogic::{}] connecting with not purged connection", __func__);
+         loggerPtr_->error("[ChatClientLogic::LoginToServer] connecting with not purged connection");
 
          emit chatClientError(ChatClientLogicError::ConnectionAlreadyUsed);
       }
@@ -109,7 +109,7 @@ namespace Chat
 
       if (!connectionPtr_->openConnection(this->getChatServerHost(), this->getChatServerPort(), this))
       {
-         loggerPtr_->error("[ChatClientLogic::{}] failed to open ZMQ data connection", __func__);
+         loggerPtr_->error("[ChatClientLogic::LoginToServer] failed to open ZMQ data connection");
          connectionPtr_.reset();
 
          emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed);
@@ -160,7 +160,7 @@ namespace Chat
 
       if (!connectionPtr_->isActive())
       {
-         loggerPtr_->error("[ChatClientLogic::{}] Connection is not alive!", __func__);
+         loggerPtr_->error("[ChatClientLogic::sendPacket] Connection is not alive!");
          return;
       }
 
@@ -168,7 +168,7 @@ namespace Chat
 
       if (!connectionPtr_->send(packetString))
       {
-         loggerPtr_->error("[ChatClientLogic::{}] Failed to send packet!", __func__);
+         loggerPtr_->error("[ChatClientLogic::sendPacket] Failed to send packet!");
          return;
       }
 
