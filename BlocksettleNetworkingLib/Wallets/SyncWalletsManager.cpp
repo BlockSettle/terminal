@@ -357,9 +357,7 @@ void WalletsManager::setUserId(const BinaryData &userId)
       hdWallet.second->setUserId(userId);
    }
    auto primaryWallet = getPrimaryWallet();
-   if (primaryWallet) {
-      signContainer_->setUserId(userId, primaryWallet->walletId());
-   }
+   signContainer_->setUserId(userId, primaryWallet ? primaryWallet->walletId() : "");
 }
 
 const WalletsManager::HDWalletPtr WalletsManager::getHDWallet(unsigned id) const
