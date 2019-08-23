@@ -182,8 +182,6 @@ void ReqCCSettlementContainer::activate()
    if (!createCCUnsignedTXdata()) {
       userKeyOk_ = false;
       emit error(tr("Failed to create unsigned CC transaction"));
-   } else {
-      emit sendOrder();
    }
 }
 
@@ -265,6 +263,8 @@ bool ReqCCSettlementContainer::startSigning()
          return false;
       }
    }
+
+   emit sendOrder();
 
    QPointer<ReqCCSettlementContainer> context(this);
    const auto &cbTx = [this, context, logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {

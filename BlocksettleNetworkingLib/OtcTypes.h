@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <string>
 
+#include "BinaryData.h"
+
+
 namespace bs {
    namespace network {
       namespace otc {
@@ -19,9 +22,13 @@ namespace bs {
             // We recv offer
             OfferRecv,
 
-            // We have accepted recv offer and wait for ack.
-            // This should happen without user's intervention.
-            WaitAcceptAck,
+            // Buy offer was accepted, wait for pay-in details
+            WaitPayinInfo,
+
+            // Sell offer was accepted and required details have been sent.
+            // Wait for confirmation from peer now.
+            // Payin TX will be signed after confirmation from PB.
+            SentPayinInfo,
 
             // Peer does not comply to protocol, block it
             Blacklisted,
@@ -79,12 +86,20 @@ namespace bs {
             std::string peerId;
             bs::network::otc::Offer offer;
             bs::network::otc::State state{bs::network::otc::State::Idle};
+            BinaryData authPubKey;
+            BinaryData payinTxIdFromSeller;
 
             Peer(const std::string &peerId)
                : peerId(peerId)
             {
             }
          };
+
+         double satToBtc(int64_t value);
+         int64_t btcToSat(double value);
+
+         double fromCents(int64_t value);
+         int64_t toCents(double value);
       }
    }
 }

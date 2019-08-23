@@ -54,6 +54,12 @@ message Request
     {
     }
 
+    // Serialized Blocksettle.Communication.ProxyPb.Request
+    message ProxyPb
+    {
+        bytes data = 1;
+    }
+
     // Set for requests and server will copy them back in response
     int64 request_id = 1;
 
@@ -70,6 +76,7 @@ message Request
         Logout logout = 31;
         Celer celer = 32;
         CancelSign cancel_sign = 33;
+        ProxyPb proxy_pb = 34;
     }
 }
 
@@ -109,6 +116,12 @@ message Response
         bytes ocsp_response = 7;
     }
 
+    // Serialized Blocksettle.Communication.ProxyPb.Response
+    message ProxyPb
+    {
+        bytes data = 1;
+    }
+
     int64 request_id = 1;
 
     oneof data
@@ -121,5 +134,6 @@ message Response
 
         // Messages
         Celer celer = 30;
+        ProxyPb proxy_pb = 31;
     }
 }
