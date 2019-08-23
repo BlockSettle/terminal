@@ -1102,6 +1102,9 @@ void BSTerminalMainWindow::onLogin()
    mdProvider_->SubscribeToMD();
 
    LoadCCDefinitionsFromPuB();
+
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::processOtcPbMessage);
+   connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
 }
 
 void BSTerminalMainWindow::onLogout()

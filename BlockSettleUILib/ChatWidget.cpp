@@ -292,6 +292,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::contactConnected, otcClient_, &OtcClient::peerConnected);
    connect(client_.get(), &ChatClient::contactDisconnected, otcClient_, &OtcClient::peerDisconnected);
    connect(client_.get(), &ChatClient::otcMessageReceived, otcClient_, &OtcClient::processMessage);
+   connect(otcClient_, &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
 
    connect(otcClient_, &OtcClient::sendMessage, client_.get(), &ChatClient::sendOtcMessage);
 
@@ -438,6 +439,11 @@ void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &userId)
 {
    ui_->treeViewUsers->setCurrentUserChat(userId.toStdString());
    ui_->input_textEdit->setFocus(Qt::FocusReason::MouseFocusReason);
+}
+
+void ChatWidget::processOtcPbMessage(const std::string &data)
+{
+   otcClient_->processPbMessage(data);
 }
 
 void ChatWidget::onConnectedToServer()
