@@ -79,6 +79,7 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
       bs::sync::PasswordDialogData dlgData = toPasswordDialogData();
       dlgData.setValue("SettlementId", QString::fromStdString(settlementId_.toHexStr()));
       dlgData.setValue("Title", tr("Pay-Out Transaction"));
+      dlgData.setValue("Duration", 30000);
 
       logger_->debug("[{}] pay-out fee={}, qty={} ({}), payin hash={}", __func__
          , txReq.fee, qty, qty * BTCNumericTypes::BalanceDivider, payinHash.toHexStr(true));
