@@ -249,7 +249,7 @@ namespace Chat
       {
          SessionKeyDataPtr sessionKeyDataPtr = sessionKeyHolderPtr_->sessionKeyDataForUser(clientPartyPtr->displayName());
 
-         BinaryData nonce = sessionKeyDataPtr->nonce();
+         BinaryData nonce = partyMessagePacket.nonce();
          std::string associatedData = cryptManagerPtr_->jsonAssociatedData(clientPartyPtr->id(), nonce);
 
          QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
@@ -546,7 +546,7 @@ namespace Chat
       ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyId);
 
-      PartyRecipientsPtrList recipients = clientPartyPtr->recipients();
+      PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr()->userName());
       for (const PartyRecipientPtr& recipient : recipients)
       {
          // we need to be sure here that sessionKeyDataPtr is properly initialized
@@ -575,6 +575,7 @@ namespace Chat
                   partyMessagePacket.set_message_id(messageId);
                   partyMessagePacket.set_timestamp_ms(timestamp);
                   partyMessagePacket.set_encryption(EncryptionType::AEAD);
+                  partyMessagePacket.set_message(encryptedMessage);
                   partyMessagePacket.set_nonce(nonce.toBinStr());
                   partyMessagePacket.set_party_message_state(PartyMessageState::SENT);
 
