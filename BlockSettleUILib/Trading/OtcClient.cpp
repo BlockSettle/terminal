@@ -4,10 +4,12 @@
 #include <spdlog/spdlog.h>
 
 #include "BtcUtils.h"
+#include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "SettlementMonitor.h"
 #include "StringUtils.h"
 #include "TransactionData.h"
+#include "UiUtils.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -27,42 +29,45 @@ namespace {
 
    const auto kStartOtcTimeout = std::chrono::seconds(10);
 
-   bs::sync::PasswordDialogData toPasswordDialogData()
+   bs::sync::PasswordDialogData toPasswordDialogData(bs::network::Side::Type side, int64_t amountSat, int64_t feeSat, int64_t priceCents)
    {
+      double amount = satToBtc(amountSat);
+      double fee = satToBtc(feeSat);
+      double price = fromCents(priceCents);
+
+      QString qtyProd = UiUtils::XbtCurrency;
+      QString fxProd = QString::fromStdString("EUR");
+
       bs::sync::PasswordDialogData dialogData;
 
-//      dialogData.setValue("ProductGroup", tr(bs::network::Asset::toString(assetType())));
-//      dialogData.setValue("Security", QString::fromStdString(security()));
-//      dialogData.setValue("Product", QString::fromStdString(product()));
-//      dialogData.setValue("Side", tr(bs::network::Side::toString(side())));
-
-//      // rfq details
-//      QString qtyProd = UiUtils::XbtCurrency;
-//      QString fxProd = QString::fromStdString(fxProduct());
+      dialogData.setValue("ProductGroup", QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)));
+      dialogData.setValue("Security", QString::fromStdString("XBT/EUR"));
+      dialogData.setValue("Product", QString::fromStdString("XBT"));
+      dialogData.setValue("Side", QObject::tr(bs::network::Side::toString(side)));
 
       dialogData.setValue("Title", QObject::tr("Settlement Transaction"));
 
-//      dialogData.setValue("Price", UiUtils::displayPriceXBT(price()));
-//      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
+      dialogData.setValue("Price", UiUtils::displayPriceXBT(price));
+      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount, UiUtils::XbtCurrency));
 
-//      dialogData.setValue("Quantity", tr("%1 %2")
-//                          .arg(UiUtils::displayAmountForProduct(amount(), qtyProd, bs::network::Asset::Type::SpotXBT))
-//                          .arg(qtyProd));
-//      dialogData.setValue("TotalValue", tr("%1 %2")
-//                    .arg(UiUtils::displayAmountForProduct(amount() * price(), fxProd, bs::network::Asset::Type::SpotXBT))
-//                    .arg(fxProd));
+      dialogData.setValue("Quantity", QObject::tr("%1 %2")
+                          .arg(UiUtils::displayAmountForProduct(amount, qtyProd, bs::network::Asset::Type::SpotXBT))
+                          .arg(qtyProd));
+      dialogData.setValue("TotalValue", QObject::tr("%1 %2")
+                    .arg(UiUtils::displayAmountForProduct(amount * price, fxProd, bs::network::Asset::Type::SpotXBT))
+                    .arg(fxProd));
 
 
-//      // tx details
-//      if (weSell()) {
-//         dialogData.setValue("TotalSpent", UiUtils::displayQuantity(amount() + UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
-//      }
-//      else {
-//         dialogData.setValue("TotalReceived", UiUtils::displayQuantity(amount() - UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
-//      }
+      // tx details
+      if (side == bs::network::Side::Type::Sell) {
+         dialogData.setValue("TotalSpent", UiUtils::displayQuantity(amount + fee, UiUtils::XbtCurrency));
+      }
+      else {
+         dialogData.setValue("TotalReceived", UiUtils::displayQuantity(amount - fee, UiUtils::XbtCurrency));
+      }
 
-//      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
-//      dialogData.setValue("NetworkFee", UiUtils::displayQuantity(UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
+      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount, UiUtils::XbtCurrency));
+      dialogData.setValue("NetworkFee", UiUtils::displayQuantity(fee, UiUtils::XbtCurrency));
 
       return dialogData;
    }
@@ -84,6 +89,8 @@ struct OtcClientDeal
 {
    bs::network::otc::Side side{};
 
+   BinaryData settlementId;
+
    bs::core::wallet::TXSignRequest payin;
    bs::core::wallet::TXSignRequest payoutFallback;
    bs::core::wallet::TXSignRequest payout;
@@ -92,7 +99,15 @@ struct OtcClientDeal
    bs::signer::RequestId payoutFallbackReqId{};
    bs::signer::RequestId payoutReqId{};
 
+   BinaryData payinSigned;
+   BinaryData payoutFallbackSigned;
+   BinaryData payoutSigned;
+
    BinaryData cpPubKey;
+
+   int64_t amount{};
+   int64_t fee{};
+   int64_t price{};
 
    bool success{false};
    std::string errorMsg;
@@ -408,15 +423,21 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
    OtcClientDeal *deal = dealIt->second.get();
 
    if (deal->payoutFallbackReqId == reqId) {
-      SPDLOG_LOGGER_INFO(logger_, "#### success (payoutFallback) ####");
+      SPDLOG_LOGGER_DEBUG(logger_, "fallback pay-out was succesfully signed, settlementId: {}", bs::toHex(deal->settlementId.toBinStr()));
+      deal->payoutFallbackSigned = signedTX;
+      trySendSignedTxs(deal);
    }
 
    if (deal->payinReqId == reqId) {
-      SPDLOG_LOGGER_INFO(logger_, "#### success (payin) ####");
+      SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed, settlementId: {}", bs::toHex(deal->settlementId.toBinStr()));
+      deal->payinSigned = signedTX;
+      trySendSignedTxs(deal);
    }
 
    if (deal->payoutReqId == reqId) {
-      SPDLOG_LOGGER_INFO(logger_, "#### success (payout) ####");
+      SPDLOG_LOGGER_DEBUG(logger_, "pay-out was succesfully signed, settlementId: {}", bs::toHex(deal->settlementId.toBinStr()));
+      deal->payoutSigned = signedTX;
+      trySendSignedTxs(deal);
    }
 }
 
@@ -720,7 +741,7 @@ void OtcClient::processPbVerifyOtc(const ProxyPb::Response_VerifyOtc &response)
    auto deal = it->second.get();
 
    switch (deal->side) {
-      case Side::Buy: {
+      case otc::Side::Buy: {
          assert(deal->payout.isValid());
 
          bs::core::wallet::SettlementData settlData;
@@ -728,14 +749,14 @@ void OtcClient::processPbVerifyOtc(const ProxyPb::Response_VerifyOtc &response)
          settlData.cpPublicKey = deal->cpPubKey;
          settlData.ownKeyFirst = true;
 
-         auto payoutInfo = toPasswordDialogData();
+         auto payoutInfo = toPasswordDialogData(bs::network::Side::Type::Buy, deal->amount, deal->fee, deal->price);
          auto reqId = signContainer_->signSettlementPayoutTXRequest(deal->payout, settlData, payoutInfo);
          signRequestIds_[reqId] = settlementId;
          deal->payoutReqId = reqId;
 
          break;
       }
-      case Side::Sell: {
+      case otc::Side::Sell: {
          assert(deal->payin.isValid());
          assert(deal->payoutFallback.isValid());
 
@@ -743,12 +764,12 @@ void OtcClient::processPbVerifyOtc(const ProxyPb::Response_VerifyOtc &response)
          settlData.settlementId = settlementId;
          settlData.cpPublicKey = deal->cpPubKey;
          settlData.ownKeyFirst = false;
-         auto payoutFallbackInfo = toPasswordDialogData();
+         auto payoutFallbackInfo = toPasswordDialogData(bs::network::Side::Type::Sell, deal->amount, deal->fee, deal->price);
          auto reqId = signContainer_->signSettlementPayoutTXRequest(deal->payoutFallback, settlData, payoutFallbackInfo);
          signRequestIds_[reqId] = settlementId;
          deal->payoutFallbackReqId = reqId;
 
-         auto payinInfo = toPasswordDialogData();
+         auto payinInfo = toPasswordDialogData(bs::network::Side::Type::Sell, deal->amount, deal->fee, deal->price);
          reqId = signContainer_->signSettlementTXRequest(deal->payin, payinInfo);
          signRequestIds_[reqId] = settlementId;
          deal->payinReqId = reqId;
@@ -836,6 +857,12 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
                QMetaObject::invokeMethod(this, [this, cb, peer, transaction, settlAddr, feePerByte, settlementId] {
                   const double amount = peer.offer.amount / BTCNumericTypes::BalanceDivider;
 
+                  OtcClientDeal result;
+                  result.settlementId = settlementId;
+                  result.cpPubKey = peer.authPubKey;
+                  result.amount = peer.offer.amount;
+                  result.price = peer.offer.price;
+
                   if (peer.offer.ourSide == bs::network::otc::Side::Sell) {
                      // Seller
                      auto index = transaction->RegisterNewRecipient();
@@ -847,29 +874,27 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
                         return;
                      }
 
-                     OtcClientDeal result;
                      result.success = true;
-                     result.side = Side::Sell;
-                     result.cpPubKey = peer.authPubKey;
+                     result.side = otc::Side::Sell;
                      result.payin = transaction->createTXRequest();
                      auto payinTxId = result.payin.txId();
                      auto fallbackAddr = transaction->GetFallbackRecvAddress();
                      auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, payinTxId, amount);
                      result.payoutFallback = bs::SettlementMonitor::createPayoutTXRequest(
                         payinUTXO, fallbackAddr, feePerByte, armory_->topBlock());
+                     result.fee = int64_t(result.payin.fee);
                      cb(std::move(result));
                      return;
                   }
 
                   // Buyer
-                  OtcClientDeal result;
                   result.success = true;
-                  result.side = Side::Buy;
-                  result.cpPubKey = peer.authPubKey;
+                  result.side = otc::Side::Buy;
                   auto outputAddr = transaction->GetFallbackRecvAddress();
                   auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer.payinTxIdFromSeller, amount);
                   result.payout = bs::SettlementMonitor::createPayoutTXRequest(
                      payinUTXO, outputAddr, feePerByte, armory_->topBlock());
+                  result.fee = int64_t(result.payout.fee);
                   cb(std::move(result));
                }, Qt::QueuedConnection);
             };
@@ -968,4 +993,32 @@ void OtcClient::changePeerState(Peer *peer, bs::network::otc::State state)
       , peer->peerId, toString(peer->state), toString(state));
    peer->state = state;
    emit peerUpdated(peer->peerId);
+}
+
+void OtcClient::trySendSignedTxs(OtcClientDeal *deal)
+{
+   ProxyPb::Request request;
+   auto d = request.mutable_broadcast_xbt();
+
+   switch (deal->side) {
+      case otc::Side::Buy:
+         if (deal->payoutSigned.isNull()) {
+            return;
+         }
+         d->set_signed_payout(deal->payoutSigned.toBinStr());
+         break;
+      case otc::Side::Sell:
+         if (deal->payoutFallbackSigned.isNull() || deal->payinSigned.isNull()) {
+            // Need to wait when both TX are signed
+            return;
+         }
+         d->set_signed_payin(deal->payinSigned.toBinStr());
+         d->set_signed_payout_fallback(deal->payoutFallbackSigned.toBinStr());
+         break;
+      default:
+         assert(false);
+   }
+
+   d->set_settlement_id(deal->settlementId.toBinStr());
+   emit sendPbMessage(request.SerializeAsString());
 }

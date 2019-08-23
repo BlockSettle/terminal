@@ -122,6 +122,8 @@ private:
 
    int genLocalUniqueId() { return ++latestUniqueId_; }
 
+   void trySendSignedTxs(OtcClientDeal *deal);
+
    std::shared_ptr<spdlog::logger> logger_;
    std::unordered_map<std::string, bs::network::otc::Peer> peers_;
 
