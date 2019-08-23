@@ -130,7 +130,7 @@ private:
 
    std::string currentUserId_;
 
-   std::map<std::string, std::unique_ptr<OtcClientDeal>> deals_;
+   std::map<BinaryData, std::unique_ptr<OtcClientDeal>> deals_;
 
    int latestUniqueId_{};
    std::map<int, bs::network::otc::Peer> waitSettlementIds_;

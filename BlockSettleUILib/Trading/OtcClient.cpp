@@ -6,6 +6,7 @@
 #include "BtcUtils.h"
 #include "EncryptionUtils.h"
 #include "SettlementMonitor.h"
+#include "StringUtils.h"
 #include "TransactionData.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
@@ -39,7 +40,7 @@ namespace {
 //      QString qtyProd = UiUtils::XbtCurrency;
 //      QString fxProd = QString::fromStdString(fxProduct());
 
-//      dialogData.setValue("Title", tr("Settlement Transaction"));
+      dialogData.setValue("Title", QObject::tr("Settlement Transaction"));
 
 //      dialogData.setValue("Price", UiUtils::displayPriceXBT(price()));
 //      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
@@ -81,11 +82,11 @@ namespace {
 
 struct OtcClientDeal
 {
-   BinaryData settlementId;
-
    bs::core::wallet::TXSignRequest payin;
    bs::core::wallet::TXSignRequest payoutFallback;
    bs::core::wallet::TXSignRequest payout;
+
+   BinaryData cpPubKey;
 
    bool success{false};
    std::string errorMsg;
@@ -513,7 +514,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
 
    createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId](OtcClientDeal &&deal) {
       if (!deal.success) {
-         SPDLOG_LOGGER_ERROR(logger_, "creating pay-out sign request fails");
+         SPDLOG_LOGGER_ERROR(logger_, "creating pay-out sign request fails: {}", deal.errorMsg);
          return;
       }
 
@@ -533,8 +534,11 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
          return;
       }
 
+      auto unsignedPayout = deal.payout.serializeState();
+      deals_.emplace(settlementId, std::make_unique<OtcClientDeal>(std::move(deal)));
+
       Message msg;
-      msg.mutable_buyer_acks();
+      msg.mutable_buyer_acks()->set_settlement_id(settlementId.toBinStr());
       send(peer, msg);
 
       changePeerState(peer, State::Idle);
@@ -547,7 +551,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
       d->set_settlement_id(settlementId.toBinStr());
       d->set_auth_address_buyer(ourPubKey_.toBinStr());
       d->set_auth_address_seller(peer->authPubKey.toBinStr());
-      d->set_unsigned_payout(deal.payout.serializeState().toBinStr());
+      d->set_unsigned_payout(unsignedPayout.toBinStr());
       d->set_chat_id_buyer(currentUserId_);
       d->set_chat_id_seller(peer->peerId);
       emit sendPbMessage(request.SerializeAsString());
@@ -566,9 +570,11 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
       return;
    }
 
-   const auto it = deals_.find(peer->peerId);
+   const auto settlementId = BinaryData(msg.settlement_id());
+
+   const auto it = deals_.find(settlementId);
    if (it == deals_.end()) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find active deal");
+      SPDLOG_LOGGER_ERROR(logger_, "unknown settlementId from BuyerAcks: {}", bs::toHex(settlementId.toBinStr()));
       return;
    }
    const auto &deal = it->second;
@@ -579,7 +585,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
    d->set_is_seller(true);
    d->set_price(peer->offer.price);
    d->set_amount(peer->offer.amount);
-   d->set_settlement_id(deal->settlementId.toBinStr());
+   d->set_settlement_id(settlementId.toBinStr());
    d->set_auth_address_buyer(ourPubKey_.toBinStr());
    d->set_auth_address_seller(peer->authPubKey.toBinStr());
    d->set_unsigned_payout(deal->payout.serializeState().toBinStr());
@@ -659,13 +665,46 @@ void OtcClient::processPbStartOtc(const ProxyPb::Response_StartOtc &response)
 
       changePeerState(peer, State::SentPayinInfo);
 
-      deals_.emplace(peer->peerId, std::make_unique<OtcClientDeal>(deal));
+      deals_.emplace(settlementId, std::make_unique<OtcClientDeal>(deal));
    });
 }
 
 void OtcClient::processPbVerifyOtc(const ProxyPb::Response_VerifyOtc &response)
 {
+   const auto settlementId = BinaryData(response.settlement_id());
 
+   auto it = deals_.find(response.settlement_id());
+   if (it == deals_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "unknown settlementId in VerifyOtc message");
+      return;
+   }
+   auto deal = it->second.get();
+
+//   if (deal->payoutFallback.isValid()) {
+//      bs::core::wallet::SettlementData settlData;
+//      settlData.settlementId = settlementId;
+//      settlData.cpPublicKey = deal->cpPubKey;
+//      settlData.ownKeyFirst = true;
+
+//      auto signerInfo = toPasswordDialogData();
+//      auto reqId = signContainer_->signSettlementPayoutTXRequest(deal->payoutFallback, settlData, signerInfo);
+//   }
+
+   if (deal->payin.isValid()) {
+      auto signerInfo = toPasswordDialogData();
+
+      auto reqId = signContainer_->signSettlementTXRequest(deal->payin, signerInfo);
+   }
+
+   if (deal->payout.isValid()) {
+      bs::core::wallet::SettlementData settlData;
+      settlData.settlementId = settlementId;
+      settlData.cpPublicKey = deal->cpPubKey;
+      settlData.ownKeyFirst = true;
+
+      auto signerInfo = toPasswordDialogData();
+      auto reqId = signContainer_->signSettlementPayoutTXRequest(deal->payout, settlData, signerInfo);
+   }
 }
 
 void OtcClient::blockPeer(const std::string &reason, Peer *peer)
@@ -756,7 +795,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
 
                      OtcClientDeal result;
                      result.success = true;
-                     result.settlementId = settlementId;
+                     result.cpPubKey = peer.authPubKey;
                      result.payin = transaction->createTXRequest();
                      auto payinTxId = result.payin.txId();
                      auto fallbackAddr = transaction->GetFallbackRecvAddress();
@@ -770,7 +809,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
                   // Buyer
                   OtcClientDeal result;
                   result.success = true;
-                  result.settlementId = settlementId;
+                  result.cpPubKey = peer.authPubKey;
                   auto outputAddr = transaction->GetFallbackRecvAddress();
                   auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer.payinTxIdFromSeller, amount);
                   result.payout = bs::SettlementMonitor::createPayoutTXRequest(
