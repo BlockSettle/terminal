@@ -329,26 +329,28 @@ void OtcClient::processMessage(const std::string &peerId, const BinaryData &data
    switch (message.data_case()) {
       case Message::kBuyerOffers:
          processBuyerOffers(peer, message.buyer_offers());
-         break;
+         return;
       case Message::kSellerOffers:
          processSellerOffers(peer, message.seller_offers());
-         break;
+         return;
       case Message::kBuyerAccepts:
          processBuyerAccepts(peer, message.buyer_accepts());
-         break;
+         return;
       case Message::kSellerAccepts:
          processSellerAccepts(peer, message.seller_accepts());
-         break;
+         return;
       case Message::kBuyerAcks:
          processBuyerAcks(peer, message.buyer_acks());
-         break;
+         return;
       case Message::kClose:
          processClose(peer, message.close());
-         break;
+         return;
       case Message::DATA_NOT_SET:
          blockPeer("unknown or empty OTC message", peer);
-         break;
+         return;
    }
+
+   SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
 }
 
 void OtcClient::processPbMessage(const std::string &data)
@@ -363,14 +365,16 @@ void OtcClient::processPbMessage(const std::string &data)
    switch (response.data_case()) {
       case ProxyPb::Response::kStartOtc:
          processPbStartOtc(response.start_otc());
-         break;
+         return;
       case ProxyPb::Response::kVerifyOtc:
          processPbVerifyOtc(response.verify_otc());
-         break;
+         return;
       case ProxyPb::Response::DATA_NOT_SET:
          SPDLOG_LOGGER_ERROR(logger_, "response from PB is invalid");
-         break;
+         return;
    }
+
+   SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
 }
 
 void OtcClient::processBuyerOffers(Peer *peer, const Message_BuyerOffers &msg)

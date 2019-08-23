@@ -23,10 +23,11 @@ namespace Blocksettle {
    namespace Communication {
       namespace Proxy {
          class Request;
+         class Response;
          class Response_StartLogin;
          class Response_GetLoginResult;
          class Response_Celer;
-         class Response;
+         class Response_ProxyPb;
       }
    }
 }
@@ -149,6 +150,7 @@ private:
    void processStartLogin(const Blocksettle::Communication::Proxy::Response_StartLogin &response);
    void processGetLoginResult(const Blocksettle::Communication::Proxy::Response_GetLoginResult &response);
    void processCeler(const Blocksettle::Communication::Proxy::Response_Celer &response);
+   void processProxyPb(const Blocksettle::Communication::Proxy::Response_ProxyPb &response);
 
    void requestSignResult(std::chrono::seconds timeout
       , const BsClient::SignedCb &signedCb, const BsClient::SignFailedCb &failedCb);
