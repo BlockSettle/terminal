@@ -107,6 +107,7 @@ message PartyPacket
 	PartySubType party_subtype = 4;
     PartyState party_state = 5;
     repeated PartyRecipientPacket recipient = 6;
+    string sender_id = 7;
 }
 
 message WelcomeRequest
