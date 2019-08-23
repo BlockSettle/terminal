@@ -363,10 +363,24 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
       return false;
    }
 
-   Tx tx(rawTx);
-   if (!tx.isInitialized() || tx.getThisHash().isNull()) {
-      logger_->error("[ArmoryConnection::broadcastZC] invalid TX data (size {}) - aborting broadcast"
-                     , rawTx.getSize());
+   if (rawTx.isNull()) {
+      SPDLOG_LOGGER_ERROR(logger_, "broadcast failed: empty rawTx");
+      return false;
+   }
+
+   try
+   {
+      Tx tx(rawTx);
+      if (!tx.isInitialized() || tx.getThisHash().isNull()) {
+         logger_->error("[ArmoryConnection::broadcastZC] invalid TX data (size {}) - aborting broadcast"
+                        , rawTx.getSize());
+         return false;
+      }
+   } catch (const BlockDeserializingException &e) {
+      SPDLOG_LOGGER_ERROR(logger_, "broadcast failed: BlockDeserializingException, details: '{}'", e.what());
+      return false;
+   } catch (const std::exception &e) {
+      SPDLOG_LOGGER_ERROR(logger_, "broadcast failed: {}", e.what());
       return false;
    }
 
