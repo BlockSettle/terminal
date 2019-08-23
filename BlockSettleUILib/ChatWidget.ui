@@ -461,7 +461,13 @@
                   <property name="autoFillBackground">
                    <bool>true</bool>
                   </property>
+                  <property name="autoFormatting">
+                   <set>QTextEdit::AutoAll</set>
+                  </property>
                   <property name="readOnly">
+                   <bool>true</bool>
+                  </property>
+                  <property name="openExternalLinks">
                    <bool>true</bool>
                   </property>
                   <property name="darkFrame" stdset="0">

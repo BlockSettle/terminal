@@ -70,7 +70,6 @@ public:
    void updateChat(const bool &isChatTab);
 
    // ViewItemWatcher interface
-   void onElementSelected(const PartyTreeItem* chatUserListElement);
    void onElementSelected(CategoryElement *element) override {};
    void onMessageChanged(std::shared_ptr<Chat::Data> message) override;
    void onElementUpdated(CategoryElement* element) override;
@@ -128,9 +127,6 @@ private slots:
    void onOtcResponseReject();
 
    void onOtcUpdated(const std::string& contactId);
-
-
-   void onUserClicked(const QModelIndex& index);
 
 private:
    void SetOTCLoggedInState();
@@ -201,5 +197,13 @@ private:
    std::vector<QVariantList> oldMessages_;
 
    OtcClient *otcClient_{};
+
+
+   // new interface
+public:
+   void onElementSelected(const PartyTreeItem* chatUserListElement);
+
+private slots:
+   void onUserClicked(const QModelIndex& index);
 };
 #endif // CHAT_WIDGET_H

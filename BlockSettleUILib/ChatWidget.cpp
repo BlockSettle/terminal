@@ -40,6 +40,7 @@ using namespace bs::network;
 using namespace bs::network::otc;
 
 
+// #old_logic : delete this all widget and use class RFQShieldPage(maybe need redone it but based class should be the same)
 enum class OTCPages : int
 {
    OTCLoginRequiredShieldPage = 0,
@@ -55,26 +56,29 @@ enum class OTCPages : int
    OTCSupportRoomShieldPage
 };
 
+// #old_logic : delete those
 namespace {
    const int maxMessageLength = 20;
+
+   bool IsOTCChatRoom(const std::string& chatRoom)
+   {
+      return chatRoom == ChatUtils::OtcRoomKey;
+   }
+
+   bool IsGlobalChatRoom(const std::string& chatRoom)
+   {
+      return chatRoom == ChatUtils::GlobalRoomKey;
+   }
+
+   bool IsSupportChatRoom(const std::string& chatRoom)
+   {
+      return chatRoom == ChatUtils::SupportRoomKey;
+   }
 }
 
-bool IsOTCChatRoom(const std::string& chatRoom)
-{
-   return chatRoom == ChatUtils::OtcRoomKey;
-}
-
-bool IsGlobalChatRoom(const std::string& chatRoom)
-{
-   return chatRoom == ChatUtils::GlobalRoomKey;
-}
-
-bool IsSupportChatRoom(const std::string& chatRoom)
-{
-   return chatRoom == ChatUtils::SupportRoomKey;
-}
 
 
+// #new_logic : need to be redone from old_logic
 class ChatWidgetState {
 public:
     virtual void onStateEnter() {} //Do something special on state appears, by default nothing
@@ -126,7 +130,7 @@ public:
       , const ZmqBipNewKeyCb &cb) override {
       chat_->logger_->debug("Set user name {}", email);
       const auto userId = chat_->client_->LoginToServer(email, jwt, cb);
-      chat_->ui_->textEditMessages->setOwnUserId(userId);
+      //chat_->ui_->textEditMessages->setOwnUserId(userId);
       return userId;
    }
 
@@ -209,6 +213,10 @@ public:
    {}
 };
 
+
+
+// #old_logic : do we need all this variables?
+// #new_logic : redo this fro old one
 ChatWidget::ChatWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::ChatWidget)
@@ -250,6 +258,7 @@ ChatWidget::ChatWidget(QWidget *parent)
 
 ChatWidget::~ChatWidget() = default;
 
+// #new_logic : redoing
 void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager,
    const std::shared_ptr<ApplicationSettings> &appSettings,
    const Chat::ChatClientServicePtr& chatClientServicePtr,
@@ -257,10 +266,13 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 {
    logger_ = logger;
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
+
+#ifndef USE_NEW_TREE_MODEL
+  
    auto model = client_->getDataModel();
    model->setNewMessageMonitor(this);
    auto proxyModel = client_->getProxyModel();
-#ifndef USE_NEW_TREE_MODEL
+
    static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setModel(proxyModel.get());
    static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setSortingEnabled(true);
    static_cast<ChatClientUserView*>(ui_->treeViewUsers)->sortByColumn(0, Qt::AscendingOrder);
@@ -272,33 +284,34 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setHandler(this);
    static_cast<ChatClientUserView*>(ui_->treeViewUsers)->setActiveChatLabel(ui_->labelActiveChat);
 #else
+   // #new_logic
    chatClientServicePtr_ = chatClientServicePtr;
-   ChatPartiesTreeModel* chatTreeModel = new ChatPartiesTreeModel(chatClientServicePtr_, this);
-   ChatPartiesSortProxyModel* charTreeSortModel = new ChatPartiesSortProxyModel(chatTreeModel);
-   charTreeSortModel->setSourceModel(chatTreeModel);
+
+   ChatPartiesTreeModelPtr chatTreeModel = std::make_shared<ChatPartiesTreeModel>(chatClientServicePtr_);
+   ChatPartiesSortProxyModel* charTreeSortModel = new ChatPartiesSortProxyModel(chatTreeModel, this);
    ui_->treeViewUsers->setModel(charTreeSortModel);
    ui_->treeViewUsers->sortByColumn(0, Qt::AscendingOrder);
    ui_->treeViewUsers->setSortingEnabled(true);
    ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(charTreeSortModel, this));
+   
+   // connections
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserClicked);
-#endif
-   ui_->textEditMessages->setHandler(this);
-   ui_->textEditMessages->setMessageReadHandler(client_);
-   ui_->textEditMessages->setClient(client_);
-   ui_->input_textEdit->setAcceptRichText(false);
-
-   //ui_->chatSearchLineEdit->setActionsHandler(client_);
-
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::LoginToServer, this, &ChatWidget::onConnectedToServer);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLoggedOut);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::LogoutFromServer, this, &ChatWidget::onLoggedOut);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
 
-   auto chatModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
-   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageArrived, ui_->textEditMessages, &ChatMessagesTextEdit::onSingleMessageUpdate2);
+   Chat::ClientPartyModelPtr chatModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
+   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageArrived, ui_->textEditMessages, &ChatMessagesTextEdit::onSingleMessageUpdate);
+#endif
+   ui_->textEditMessages->setHandler(this);
+   ui_->textEditMessages->setMessageReadHandler(client_);
+   ui_->textEditMessages->setClientPartyModel(chatModelPtr);
+   ui_->input_textEdit->setAcceptRichText(false);
 
+   //ui_->chatSearchLineEdit->setActionsHandler(client_);
 
-
+   // #old_logic
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
    connect(client_.get(), &ChatClient::ConfirmContactsNewData, this, &ChatWidget::onContactListConfirmationRequested);
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
@@ -465,7 +478,8 @@ void ChatWidget::updateChat(const bool &isChatTab)
 {
    isChatTab_ = isChatTab;
 
-   ui_->textEditMessages->setIsChatTab(isChatTab_);
+   // #old_logic
+   //ui_->textEditMessages->setIsChatTab(isChatTab_);
 
    if (isChatTab_) {
 #ifndef USE_NEW_TREE_MODEL
