@@ -800,6 +800,7 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
       }
       else {
          logger_->error("[{}] salts don't match - aborting for now", __func__);
+         setUserIdResponse(clientId, packet.id(), headless::AWR_WrongSalt);
          return false;
       }
    }
@@ -809,7 +810,6 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
    if (leaf) {
       const auto authLeaf = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leaf);
       if (authLeaf && (authLeaf->getSalt() == salt)) {
-         logger_->debug("[{}] found existing auth wallet", __func__);
          setUserIdResponse(clientId, packet.id(), headless::AWR_NoError, authLeaf->walletId());
          return true;
       }
@@ -818,40 +818,8 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
          return false;
       }
    }
-
-   if (!request.userid().empty()) {
-      const auto &onPassword = [this, wallet, group, clientId, id=packet.id()]
-      (bs::error::ErrorCode result, const SecureBinaryData &password) {
-         if (result != bs::error::ErrorCode::NoError) {
-            setUserIdResponse(clientId, id, headless::AWR_NotDecrypted);
-            return;
-         }
-         try {
-            auto lock = wallet->lockForEncryption(password);
-            auto leaf = group->createLeaf(AddressEntryType_Default, 0 + bs::hd::hardFlag, 5);
-            if (leaf) {
-               setUserIdResponse(clientId, id, headless::AWR_NoError, leaf->walletId());
-               return;
-            }
-            else {
-               logger_->warn("[HeadlessContainerListener::onSetUserId] failed to create auth leaf");
-            }
-         }
-         catch (const std::exception &e) {
-            logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf: {}", e.what());
-         }
-         setUserIdResponse(clientId, id, headless::AWR_SaltSetFailed);
-         return;
-      };
-      bs::core::wallet::TXSignRequest txReq;
-      txReq.walletId = wallet->walletId();
-
-      return RequestPasswordIfNeeded(clientId, wallet->walletId(), txReq, headless::SetUserIdType, request.passworddialogdata(), onPassword);
-   }
-   else {
-      // FIXME: implement reset user id
-      return true;
-   }
+   setUserIdResponse(clientId, packet.id(), headless::AWR_NoPrimary);
+   return true;
 }
 
 bool HeadlessContainerListener::onSyncCCNames(headless::RequestPacket &packet)
@@ -907,13 +875,15 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
       return false;
    }
    const auto path = bs::hd::Path::fromString(request.path());
-   if ((path.length() != 3) && !path.isAbsolute()) {
+   if ((path.length() < 3) && !path.isAbsolute()) {
       logger_->error("[HeadlessContainerListener] invalid path {} at HD wallet creation", request.path());
       CreateHDLeafResponse(clientId, packet.id(), ErrorCode::InternalError);
       return false;
    }
 
-   const auto onPassword = [this, hdWallet, path, clientId, id = packet.id()](bs::error::ErrorCode result, const SecureBinaryData &pass) {
+   const auto onPassword = [this, hdWallet, path, clientId, id = packet.id(), salt=request.salt()]
+      (bs::error::ErrorCode result, const SecureBinaryData &pass)
+   {
       std::shared_ptr<bs::core::hd::Node> leafNode;
       if (result != ErrorCode::NoError) {
          logger_->error("[HeadlessContainerListener] no password for encrypted wallet");
@@ -928,6 +898,21 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
       }
 
       try {
+         if (!salt.empty()) {
+            const auto authGroup = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
+            if (authGroup) {
+               const auto prevSalt = authGroup->getSalt();
+               if (prevSalt.isNull()) {
+                  authGroup->setSalt(salt);
+               }
+               else if (prevSalt != salt) {
+                  logger_->error("[HeadlessContainerListener] auth salts mismatch");
+                  CreateHDLeafResponse(clientId, id, ErrorCode::MissingAuthKeys);
+                  return;
+               }
+            }
+         }
+
          auto leaf = group->getLeafByPath(path);
 
          if (leaf == nullptr) {

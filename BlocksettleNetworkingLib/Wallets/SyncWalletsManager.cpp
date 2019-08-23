@@ -1589,7 +1589,7 @@ void WalletsManager::ProcessPromoteHDWallet(bs::error::ErrorCode result, const s
    }
 }
 
-bool WalletsManager::CreateAuthLeaf()
+bool WalletsManager::createAuthLeaf(const std::function<void()> &cb)
 {
    if (getAuthWallet() != nullptr) {
       logger_->error("[WalletsManager::CreateAuthLeaf] auth leaf already exists");
@@ -1607,5 +1607,48 @@ bool WalletsManager::CreateAuthLeaf()
       return false;
    }
 
-   return signContainer_->setUserId(userId_, primaryWallet->walletId()) > 0;
+   const bs::hd::Path authPath({ bs::hd::Purpose::Native, bs::hd::CoinType::BlockSettle_Auth, 0 });
+   bs::wallet::PasswordData pwdData;
+   pwdData.salt = userId_;
+   bs::sync::PasswordDialogData dialogData;
+   dialogData.setValue("Title", tr("Create Auth Leaf"));
+   dialogData.setValue("Product", QString::fromStdString(userId_.toHexStr()));
+
+   const auto &createAuthLeafCb = [this, cb, primaryWallet, authPath]
+      (bs::error::ErrorCode result, const std::string &walletId)
+   {
+      if (result != bs::error::ErrorCode::NoError) {
+         logger_->error("[WalletsManager::createAuthLeaf] auth leaf creation failure: {}"
+            , (int)result);
+         emit AuthLeafNotCreated();
+         return;
+      }
+      const auto group = primaryWallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
+      const auto authGroup = std::dynamic_pointer_cast<bs::sync::hd::AuthGroup>(group);
+      if (!authGroup) {
+         logger_->error("[WalletsManager::createAuthLeaf] no auth group exists");
+         emit AuthLeafNotCreated();
+         return;
+      }
+      authGroup->setUserId(userId_);
+      const auto leaf = authGroup->createLeaf(authPath, walletId);
+      if (!leaf) {
+         logger_->error("[WalletsManager::createAuthLeaf] failed to create auth leaf");
+         emit AuthLeafNotCreated();
+         return;
+      }
+      leaf->synchronize([this, cb, leaf] {
+         leaf->registerWallet(armoryPtr_);
+         authAddressWallet_ = leaf;
+         addWallet(leaf, true);
+         emit AuthLeafCreated();
+         emit authWalletChanged();
+         emit walletChanged(leaf->walletId());
+         if (cb) {
+            cb();
+         }
+      });
+   };
+   return signContainer_->createHDLeaf(primaryWallet->walletId(), authPath, { pwdData }
+      , dialogData, createAuthLeafCb);
 }

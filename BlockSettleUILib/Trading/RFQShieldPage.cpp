@@ -105,7 +105,7 @@ bool RFQShieldPage::checkWalletSettings(RFQShieldPage::ProductType productType, 
       if (!walletsManager_->getAuthWallet()) {
          showShielddGenerateAuthAddress();
          setShieldButtonAction([this]() {
-            walletsManager_->CreateAuthLeaf();
+            walletsManager_->createAuthLeaf(nullptr);
          });
          return true;
       }
