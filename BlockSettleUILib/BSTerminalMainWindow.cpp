@@ -371,7 +371,6 @@ void BSTerminalMainWindow::InitAuthManager()
    connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, [](const QString &addr, const QString &state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
-   connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, &BSTerminalMainWindow::onAuthMgrConnComplete);
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &) {
       if (authAddrDlg_) {
          openAuthManagerDialog();
@@ -1027,12 +1026,17 @@ void BSTerminalMainWindow::openAuthManagerDialog()
 
 void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 {
-   if (authManager_->HaveAuthWallet()) {
+   const auto showAuthDlg = [this, addrToVerify] {
       authAddrDlg_->show();
       QApplication::processEvents();
       authAddrDlg_->setAddressToVerify(addrToVerify);
+   };
+   if (authManager_->HaveAuthWallet()) {
+      showAuthDlg();
    } else {
-      createAuthWallet();
+      createAuthWallet([this, showAuthDlg] {
+         QMetaObject::invokeMethod(this, showAuthDlg);
+      });
    }
 }
 
@@ -1188,10 +1192,10 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    }
 }
 
-void BSTerminalMainWindow::createAuthWallet()
+void BSTerminalMainWindow::createAuthWallet(const std::function<void()> &cb)
 {
    if (celerConnection_->tradingAllowed()) {
-      const auto &deferredDialog = [this]{
+      const auto &deferredDialog = [this, cb]{
          if (!walletsMgr_->hasPrimaryWallet() && !createWallet(true)) {
             return;
          }
@@ -1202,25 +1206,12 @@ void BSTerminalMainWindow::createAuthWallet()
                , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
                , this);
             if (createAuthReq.exec() == QDialog::Accepted) {
-               authManager_->CreateAuthWallet();
+               authManager_->createAuthWallet(cb);
             }
          }
       };
 
       addDeferredDialog(deferredDialog);
-   }
-}
-
-void BSTerminalMainWindow::onAuthMgrConnComplete()
-{
-   if (celerConnection_->tradingAllowed()) {
-      if (!walletsMgr_->hasPrimaryWallet()) {
-         return;
-      }
-      createAuthWallet();
-   }
-   else {
-      logMgr_->logger("ui")->debug("Trading not allowed");
    }
 }
 

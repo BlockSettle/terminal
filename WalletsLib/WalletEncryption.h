@@ -23,6 +23,7 @@ namespace bs {
          SecureBinaryData  password;
          EncryptionType    encType;
          SecureBinaryData  encKey;
+         BinaryData        salt;
       };
    }  // wallet
 }  //namespace bs

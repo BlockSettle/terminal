@@ -72,7 +72,7 @@ namespace bs {
 
          bool PromoteHDWallet(const std::string& walletId, const std::function<void(bs::error::ErrorCode result)>& cb = nullptr);
          bool CreateCCLeaf(const std::string &cc, const std::function<void(bs::error::ErrorCode result)> &cb = nullptr);
-         bool CreateAuthLeaf();
+         bool createAuthLeaf(const std::function<void()> &);
 
          WalletPtr getCCWallet(const std::string &cc);
 

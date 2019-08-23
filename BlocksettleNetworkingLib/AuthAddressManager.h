@@ -77,7 +77,7 @@ public:
    virtual bool HaveAuthWallet() const;
    virtual bool HasAuthAddr() const;
 
-   void CreateAuthWallet();
+   void createAuthWallet(const std::function<void()> &);
    virtual bool CreateNewAuthAddress();
 
    virtual bool SubmitForVerification(const bs::Address &address);
