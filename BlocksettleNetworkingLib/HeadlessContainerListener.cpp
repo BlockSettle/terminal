@@ -760,9 +760,8 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
 
    const auto wallet = walletsMgr_->getPrimaryWallet();
    if (!wallet) {
-      logger_->info("[{}] no primary wallet", __func__);
-      setUserIdResponse(clientId, packet.id(), headless::AWR_NoPrimary);
-      return false;
+      logger_->info("[{}] no primary wallet - aborting", __func__);
+      return true;
    }
    const auto group = wallet->getGroup(bs::hd::BlockSettle_Auth);
    if (!group) {
