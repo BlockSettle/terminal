@@ -14,6 +14,11 @@ message Request
 {
     message StartOtc
     {
+        int32 request_id = 1;
+    }
+
+    message VerifyOtc
+    {
         bool is_seller = 1;
 
         int64 amount = 2;
@@ -38,15 +43,17 @@ message Request
         bytes settlement_id = 1;
         bytes signed_payin = 2;
         bytes signed_payout = 3;
+        bytes signed_payout_fallback = 4;
     }
 
     oneof data
     {
         // Requests
         StartOtc start_otc = 1;
+        VerifyOtc verify_otc = 2;
 
         // Messages
-        BroadcastXBT broadcast_xbt = 2;
+        BroadcastXBT broadcast_xbt = 30;
     }
 }
 
@@ -54,12 +61,21 @@ message Response
 {
     message StartOtc
     {
+        int32 request_id = 1;
+        bytes settlement_id = 2;
+    }
+
+    message VerifyOtc
+    {
         bool success = 1;
         string error_msg = 2;
+        bytes settlement_id = 3;
     }
 
     oneof data
     {
+        // Requests
         StartOtc start_otc = 1;
+        VerifyOtc verify_otc = 2;
     }
 }

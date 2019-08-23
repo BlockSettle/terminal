@@ -226,6 +226,9 @@ void BsClient::OnDataReceived(const std::string &data)
          case Response::kCeler:
             processCeler(response->celer());
             return;
+         case Response::kProxyPb:
+            processProxyPb(response->proxy_pb());
+            return;
          case Response::kStartSignAddress:
          case Response::kGetSignResult:
             // Will be handled from processCb
@@ -311,6 +314,11 @@ void BsClient::processCeler(const Response_Celer &response)
    }
 
    emit celerRecv(messageType, response.data());
+}
+
+void BsClient::processProxyPb(const Response_ProxyPb &response)
+{
+   emit processPbMessage(response.data());
 }
 
 void BsClient::requestSignResult(std::chrono::seconds timeout

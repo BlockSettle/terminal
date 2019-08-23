@@ -79,6 +79,8 @@ public slots:
    void onLoggedOut();
    void onNewChatMessageTrayNotificationClicked(const QString &userId);
 
+   void processOtcPbMessage(const std::string &data);
+
 private slots:
    void onSendButtonClicked();
    void onMessagesUpdated();
@@ -116,6 +118,8 @@ private slots:
 signals:
    void LoginFailed();
    void LogOut();
+
+   void sendOtcPbMessage(const std::string &data);
 
 private:
    void SetOTCLoggedInState();
