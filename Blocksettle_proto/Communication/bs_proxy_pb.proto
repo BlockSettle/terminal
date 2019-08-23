@@ -68,6 +68,7 @@ message Response
     {
         bool success = 1;
         string error_msg = 2;
+        bytes settlement_id = 3;
     }
 
     oneof data
