@@ -8,12 +8,13 @@
 
 namespace Chat
 {
+   enum PartyMessageState : int;
 
    class Message
    {
    public:
       Message(const std::string& partyId, const std::string& messageId, const long long timestamp,
-         const int partyMessageState, const std::string& messageText, const std::string& sender);
+         const PartyMessageState partyMessageState, const std::string& messageText, const std::string& sender);
 
       Message(const Message& m2);
 
@@ -28,8 +29,8 @@ namespace Chat
       long long timestamp() const { return timestamp_; }
       void setTimestamp(long long val) { timestamp_ = val; }
 
-      int partyMessageState() const { return partyMessageState_; }
-      void setPartyMessageState(int val) { partyMessageState_ = val; }
+      PartyMessageState partyMessageState() const { return partyMessageState_; }
+      void setPartyMessageState(PartyMessageState val) { partyMessageState_ = val; }
 
       std::string messageText() const { return messageText_; }
       void setMessageText(std::string val) { messageText_ = val; }
@@ -41,7 +42,7 @@ namespace Chat
       std::string partyId_;
       std::string messageId_;
       long long timestamp_;
-      int partyMessageState_;
+      PartyMessageState partyMessageState_;
       std::string messageText_;
       std::string sender_;
    };
