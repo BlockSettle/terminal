@@ -39,7 +39,7 @@ namespace Chat
             continue;
          }
 
-         if (userName == clientPartyPtr->displayName())
+         if (clientPartyPtr->isUserBelongsToParty(userName))
          {
             return clientPartyPtr;
          }
@@ -112,13 +112,13 @@ namespace Chat
       return clientPartyPtr;
    }
 
-   ClientPartyPtr ClientPartyModel::getClientPartyById(const std::string& id)
+   ClientPartyPtr ClientPartyModel::getClientPartyById(const std::string& party_id)
    {
-      PartyPtr partyPtr = getPartyById(id);
+      PartyPtr partyPtr = getPartyById(party_id);
 
       if (nullptr == partyPtr)
       {
-         emit error(ClientPartyModelError::PartyNotFound, id);
+         emit error(ClientPartyModelError::PartyNotFound, party_id);
          return nullptr;
       }
 

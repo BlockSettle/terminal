@@ -22,7 +22,8 @@ namespace Chat
    {
       NonexistentClientStatusChanged,
       PartyNotExist,
-      DynamicPointerCast
+      DynamicPointerCast,
+      QObjectCast
    };
 
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
@@ -42,7 +43,7 @@ namespace Chat
       void createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const google::protobuf::Message& msg);
 
    signals:
-      void error(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
+      void error(const Chat::ClientPartyLogicError& errorCode, const std::string& what = "");
       void partyModelChanged();
       void sendPartyMessagePacket(const google::protobuf::Message& message);
       void privatePartyCreated(const std::string& partyId);
@@ -50,10 +51,12 @@ namespace Chat
 
    public slots:
       void onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
+      void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
 
    private slots:
       void handleLocalErrors(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
       void handlePartyInserted(const Chat::PartyPtr& partyPtr);
+      void clientPartyDisplayNameChanged();
 
    private:
       LoggerPtr loggerPtr_;

@@ -24,13 +24,14 @@ namespace Chat
       );
 
       std::string displayName() const { return displayName_; }
-      void setDisplayName(std::string val) { displayName_ = val; }
+      void setDisplayName(std::string val);
 
       ClientStatus clientStatus() const { return clientStatus_; }
       void setClientStatus(ClientStatus val);
 
    signals:
       void clientStatusChanged(const ClientStatus& clientStatus);
+      void displayNameChanged();
 
    private:
       std::string displayName_;

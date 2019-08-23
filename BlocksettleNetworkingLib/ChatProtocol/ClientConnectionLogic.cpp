@@ -245,9 +245,11 @@ namespace Chat
       ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
 
+      PartyRecipientPtr recipientPtr = clientPartyPtr->getSecondRecipient(currentUserPtr()->userName());
+
       if (partyMessagePacket.encryption() == EncryptionType::AEAD)
       {
-         SessionKeyDataPtr sessionKeyDataPtr = sessionKeyHolderPtr_->sessionKeyDataForUser(clientPartyPtr->displayName());
+         SessionKeyDataPtr sessionKeyDataPtr = sessionKeyHolderPtr_->sessionKeyDataForUser(recipientPtr->userName());
 
          BinaryData nonce = partyMessagePacket.nonce();
          std::string associatedData = cryptManagerPtr_->jsonAssociatedData(clientPartyPtr->id(), nonce);

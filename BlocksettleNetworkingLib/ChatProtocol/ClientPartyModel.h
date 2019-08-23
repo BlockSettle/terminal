@@ -26,6 +26,8 @@ namespace Chat
    };
    
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
+// TODO
+//   using UniqueUserNameList = std::vector<std::string>;
 
    class ClientPartyModel : public PartyModel
    {
@@ -34,7 +36,10 @@ namespace Chat
       ClientPartyModel(const LoggerPtr& loggerPtr, QObject* parent = nullptr);
       IdPartyList getIdPartyList() const;
       ClientPartyPtr getPartyByUserName(const std::string& userName);
-      ClientPartyPtr getClientPartyById(const std::string& id);
+      ClientPartyPtr getClientPartyById(const std::string& party_id);
+
+      std::string ownUserName() const { return ownUserName_; }
+      void setOwnUserName(std::string val) { ownUserName_ = val; }
 
    signals:
       void error(const ClientPartyModelError& errorCode, const std::string& what = "");
@@ -42,6 +47,9 @@ namespace Chat
       void messageArrived(const Chat::MessagePtr& messagePtr);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
       void partyStateChanged(const std::string& partyId, const Chat::PartyState& partyState);
+
+      // internal
+      void clientPartyDisplayNameChanged();
 
    private slots:
       void handleLocalErrors(const ClientPartyModelError& errorCode, const std::string& what);
@@ -51,6 +59,7 @@ namespace Chat
 
    private:
       ClientPartyPtr castToClientPartyPtr(const PartyPtr& partyPtr);
+      std::string ownUserName_;
    };
 
    using ClientPartyModelPtr = std::shared_ptr<ClientPartyModel>;

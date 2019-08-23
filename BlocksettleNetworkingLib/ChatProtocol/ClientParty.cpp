@@ -17,4 +17,10 @@ namespace Chat
       emit clientStatusChanged(clientStatus_);
    }
 
+   void ClientParty::setDisplayName(std::string val)
+   { 
+      displayName_ = val; 
+      emit displayNameChanged();
+   }
+
 }

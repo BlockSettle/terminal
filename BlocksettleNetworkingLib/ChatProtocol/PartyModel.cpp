@@ -48,27 +48,27 @@ namespace Chat
       emit error(PartyModelError::RemovingNonexistingParty, partyPtr->id());
    }
 
-   PartyPtr PartyModel::getPartyById(const std::string& id)
+   PartyPtr PartyModel::getPartyById(const std::string& party_id)
    {
-      const auto it = partyMap_.find(id);
+      const auto it = partyMap_.find(party_id);
 
       if (it != partyMap_.end())
       {
          return it->second;
       }
 
-      emit error(PartyModelError::CouldNotFindParty, id);
+      emit error(PartyModelError::CouldNotFindParty, party_id);
 
       return nullptr;
    }
 
-   PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& id)
+   PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& party_id)
    {
-      PartyPtr partyPtr = getPartyById(id);
+      PartyPtr partyPtr = getPartyById(party_id);
 
       if (!partyPtr)
       {
-         emit error(PartyModelError::CouldNotFindParty, id);
+         emit error(PartyModelError::CouldNotFindParty, party_id);
          return nullptr;
       }
 
@@ -77,16 +77,16 @@ namespace Chat
       if (nullptr == privateDMPartyPtr)
       {
          // this should not happen
-         emit error(PartyModelError::PrivatePartyCasting, id);
+         emit error(PartyModelError::PrivatePartyCasting, party_id);
          return nullptr;
       }
 
       return privateDMPartyPtr;
    }
 
-   void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& id)
+   void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what)
    {
-      loggerPtr_->debug("[PartyModel::handleLocalErrors] Error: {}, what: {}", (int)errorCode, id);
+      loggerPtr_->debug("[PartyModel::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
    }
 
    void PartyModel::clearModel()

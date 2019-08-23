@@ -136,11 +136,13 @@ namespace Chat
 
    bool ClientDBLogic::insertPartyId(const std::string& partyId, std::string& partyTableId)
    {
-      const QString cmd = QLatin1String("INSERT INTO party (party_id) VALUES (:party_id);");
+      const QString cmd = QLatin1String("INSERT INTO party (party_id, party_display_name) VALUES (:party_id, :party_display_name);");
 
       QSqlQuery query(getDb());
       query.prepare(cmd);
       query.bindValue(QLatin1String(":party_id"), QString::fromStdString(partyId));
+      // at beginning we using this same partyId as display name
+      query.bindValue(QLatin1String(":party_display_name"), QString::fromStdString(partyId));
 
       if (!checkExecute(query))
       {
@@ -280,6 +282,48 @@ namespace Chat
       }
 
       return;
+   }
+
+   void ClientDBLogic::updateDisplayNameForParty(const std::string& partyId, const std::string& displayName)
+   {
+      const QString cmd = QLatin1String("UPDATE party SET party_display_name=:displayName WHERE party_id=:partyId");
+      
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QLatin1String(":displayName"), QString::fromStdString(displayName));
+      query.bindValue(QLatin1String(":partyId"), QString::fromStdString(partyId));
+
+      if (!checkExecute(query))
+      {
+         emit error(ClientDBLogicError::UpdatePartyDisplayName, partyId);
+         return;
+      }
+
+      return;
+   }
+
+   void ClientDBLogic::loadPartyDisplayName(const std::string& partyId)
+   {
+      const QString cmd = QLatin1String("SELECT party_display_name FROM party WHERE party_id = :partyId;");
+
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QLatin1String(":partyId"), QString::fromStdString(partyId));
+
+      if (checkExecute(query))
+      {
+         if (query.first())
+         {
+            std::string displayName = query.value(0).toString().toStdString();
+
+            if (displayName == partyId)
+            {
+               return;
+            }
+
+            emit partyDisplayNameLoaded(partyId, displayName);
+         }
+      }
    }
 
 }

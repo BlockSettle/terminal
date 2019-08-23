@@ -118,8 +118,7 @@ namespace Chat
       }
 
       currentUserPtr_->setUserName(userHasherPtr_->deriveKey(email));
-
-//    currentJwt_ = jwt;
+      clientPartyModelPtr()->setOwnUserName(currentUserPtr_->userName());
    }
 
    std::string ChatClientLogic::getChatServerHost() const

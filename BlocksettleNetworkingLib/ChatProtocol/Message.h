@@ -20,22 +20,22 @@ namespace Chat
 
       Message& operator=(const Message& rhs);
 
-      std::string partyId() const { return partyId_; }
+      const std::string& partyId() const { return partyId_; }
       void setPartyId(std::string val) { partyId_ = val; }
 
-      std::string messageId() const { return messageId_; }
+      const std::string& messageId() const { return messageId_; }
       void setMessageId(std::string val) { messageId_ = val; }
 
-      long long timestamp() const { return timestamp_; }
+      const long long& timestamp() const { return timestamp_; }
       void setTimestamp(long long val) { timestamp_ = val; }
 
-      PartyMessageState partyMessageState() const { return partyMessageState_; }
+      const PartyMessageState& partyMessageState() const { return partyMessageState_; }
       void setPartyMessageState(PartyMessageState val) { partyMessageState_ = val; }
 
-      std::string messageText() const { return messageText_; }
+      const std::string& messageText() const { return messageText_; }
       void setMessageText(std::string val) { messageText_ = val; }
 
-      std::string sender() const { return sender_; }
+      const std::string& sender() const { return sender_; }
       void setSender(std::string val) { sender_ = val; }
 
    private:
