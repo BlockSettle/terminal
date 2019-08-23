@@ -33,6 +33,9 @@ namespace Chat
       virtual Chat::PartyState partyState() const { return partyState_; }
       virtual void setPartyState(Chat::PartyState val) { partyState_ = val; }
 
+      virtual bool isGlobalStandard() const { return (Chat::PartyType::GLOBAL == partyType() && Chat::PartySubType::STANDARD == partySubType()); }
+      virtual bool isPrivateStandard() const { return (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == partyType() && Chat::PartySubType::STANDARD == partySubType()); }
+
    private:
       std::string id_;
       PartyType partyType_;

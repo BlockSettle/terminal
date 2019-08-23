@@ -8,6 +8,7 @@ namespace Chat
          const QString TABLE_NAME = QLatin1String("party");
          const QString PARTY_TABLE_ID = QLatin1String("id");
          const QString PARTY_ID = QLatin1String("party_id");
+         const QString PARTY_DISPLAY_NAME = QLatin1String("party_display_name");
       }
 
       namespace partyMessage {
@@ -29,7 +30,8 @@ namespace Chat
          {
             { //Table columns
                {party::PARTY_TABLE_ID, QLatin1String("INTEGER PRIMARY KEY AUTOINCREMENT")},
-               {party::PARTY_ID, QLatin1String("TEXT NOT NULL")}
+               {party::PARTY_ID, QLatin1String("TEXT NOT NULL")},
+               {party::PARTY_DISPLAY_NAME, QLatin1String("TEXT NOT NULL")}
             }
          }
       },

@@ -37,19 +37,19 @@ namespace Chat
 
       void insertParty(const PartyPtr& partyPtr);
       void removeParty(const PartyPtr& partyPtr);
-      PartyPtr getPartyById(const std::string& id);
-      PrivateDirectMessagePartyPtr getPrivatePartyById(const std::string& id);
+      PartyPtr getPartyById(const std::string& party_id);
+      PrivateDirectMessagePartyPtr getPrivatePartyById(const std::string& party_id);
       void clearModel();
       void insertOrUpdateParty(const PartyPtr& partyPtr);
 
    signals:
       void partyInserted(const Chat::PartyPtr& partyPtr);
       void partyRemoved(const Chat::PartyPtr& partyPtr);
-      void error(const Chat::PartyModelError& errorCode, const std::string& id = "");
+      void error(const Chat::PartyModelError& errorCode, const std::string& what = "");
       void partyModelChanged();
 
    private slots:
-      void handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& id = "");
+      void handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what = "");
 
    protected:
       PartyMap partyMap_;

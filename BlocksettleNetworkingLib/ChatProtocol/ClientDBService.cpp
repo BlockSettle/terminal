@@ -15,11 +15,14 @@ namespace Chat
       connect(this, &ClientDBService::updateMessageState, worker(), &ClientDBLogic::updateMessageState);
       connect(this, &ClientDBService::createNewParty, worker(), &ClientDBLogic::createNewParty);
       connect(this, &ClientDBService::readUnsentMessages, worker(), &ClientDBLogic::readUnsentMessages);
+      connect(this, &ClientDBService::updateDisplayNameForParty, worker(), &ClientDBLogic::updateDisplayNameForParty);
+      connect(this, &ClientDBService::loadPartyDisplayName, worker(), &ClientDBLogic::loadPartyDisplayName);
 
       ////////// RETURN SIGNALS //////////
       connect(worker(), &ClientDBLogic::initDone, this, &ClientDBService::initDone);
       connect(worker(), &ClientDBLogic::messageArrived, this, &ClientDBService::messageArrived);
       connect(worker(), &ClientDBLogic::messageStateChanged, this, &ClientDBService::messageStateChanged);
       connect(worker(), &ClientDBLogic::messageLoaded, this, &ClientDBService::messageLoaded);
+      connect(worker(), &ClientDBLogic::partyDisplayNameLoaded, this, &ClientDBService::partyDisplayNameLoaded);
    }
 }

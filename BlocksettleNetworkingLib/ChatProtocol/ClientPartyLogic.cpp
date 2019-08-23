@@ -16,10 +16,13 @@ namespace Chat
 
       clientDBServicePtr_ = clientDBServicePtr;
       clientPartyModelPtr_ = std::make_shared<ClientPartyModel>(loggerPtr, this);
+      connect(clientPartyModelPtr_.get(), &ClientPartyModel::clientPartyDisplayNameChanged, this, &ClientPartyLogic::clientPartyDisplayNameChanged);
+      connect(clientDBServicePtr.get(), &ClientDBService::partyDisplayNameLoaded, this, &ClientPartyLogic::partyDisplayNameLoaded);
+
       connect(this, &ClientPartyLogic::error, this, &ClientPartyLogic::handleLocalErrors);
       connect(clientDBServicePtr.get(), &ClientDBService::messageArrived, clientPartyModelPtr_.get(), &ClientPartyModel::messageArrived);
       connect(clientDBServicePtr.get(), &ClientDBService::messageStateChanged, clientPartyModelPtr_.get(), &ClientPartyModel::messageStateChanged);
-
+      
       connect(clientPartyModelPtr_.get(), &ClientPartyModel::partyInserted, this, &ClientPartyLogic::handlePartyInserted);
    }
 
@@ -56,6 +59,13 @@ namespace Chat
       }
 
       emit partyModelChanged();
+
+      // parties loaded, check is party display name should be updated
+      IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
+      for (const auto& partyId : idPartyList)
+      {
+         clientDBServicePtr_->loadPartyDisplayName(partyId);
+      }
    }
 
    void ClientPartyLogic::onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus)
@@ -170,6 +180,39 @@ namespace Chat
       clientDBServicePtr_->createNewParty(newClientPrivatePartyPtr->id());
 
       // ! Do NOT emit here privatePartyCreated, it's connected with party request
+   }
+
+   void ClientPartyLogic::clientPartyDisplayNameChanged()
+   {
+      ClientParty* clientParty = qobject_cast<ClientParty*>(sender());
+
+      if (!clientParty)
+      {
+         emit error(ClientPartyLogicError::QObjectCast);
+         return;
+      }
+
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(clientParty->id());
+
+      if (!clientPartyPtr)
+      {
+         return;
+      }
+   }
+
+   void ClientPartyLogic::partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName)
+   {
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(partyId);
+
+      if (clientPartyPtr == nullptr)
+      {
+         emit error(ClientPartyLogicError::PartyNotExist, partyId);
+         return;
+      }
+
+      clientPartyPtr->setDisplayName(displayName);
+
+      emit partyModelChanged();
    }
 
 }

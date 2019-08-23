@@ -35,6 +35,8 @@ namespace Chat
       void updateMessageState(const std::string& message_id, const int party_message_state);
       void createNewParty(const std::string& partyId);
       void readUnsentMessages(const std::string& partyId);
+      void updateDisplayNameForParty(const std::string& partyId, const std::string& displayName);
+      void loadPartyDisplayName(const std::string& partyId);
 
       ////////// RETURN SIGNALS //////////
       void initDone();
@@ -42,6 +44,7 @@ namespace Chat
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
       void messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
          const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);
+      void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
    };
 
    using ClientDBServicePtr = std::shared_ptr<ClientDBService>;
