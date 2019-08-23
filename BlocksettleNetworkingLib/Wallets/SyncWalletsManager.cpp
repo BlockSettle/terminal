@@ -904,8 +904,9 @@ void WalletsManager::createSettlementLeaf(const bs::Address &authAddr
    if (!signContainer_) {
       logger_->error("[WalletsManager::{}] - signer is not set - aborting"
          , __func__);
-      if (cb)
+      if (cb) {
          cb({});
+      }
       return;
    }
    signContainer_->createSettlementWallet(authAddr, cb);
@@ -948,6 +949,47 @@ void WalletsManager::onWalletsListUpdated()
                QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletAdded(hdWallet->walletId()); });
             });
             newWallets_.insert(hdWallet.first);
+         }
+         else {
+            const auto wallet = hdWallets_[hdWallet.first];
+            const auto &cbSyncHD = [this, wallet](bs::sync::HDWalletData hdData) {
+               bool walletUpdated = false;
+               if (hdData.groups.size() != wallet->getGroups().size()) {
+                  walletUpdated = true;
+               }
+               else {
+                  for (const auto &group : hdData.groups) {
+                     const auto hdGroup = wallet->getGroup(group.type);
+                     if (hdGroup->getLeaves().size() != group.leaves.size()) {
+                        walletUpdated = true;
+                        break;
+                     }
+                  }
+               }
+               if (!walletUpdated) {
+                  return;
+               }
+               logger_->debug("[WalletsManager::onWalletsListUpdated] wallet {} has changed - resyncing"
+                  , wallet->walletId());
+               wallet->synchronize([this, wallet] {
+                  wallet->registerWallet(armoryPtr_);
+                  for (const auto &leaf : wallet->getLeaves()) {
+                     if (!getWalletById(leaf->walletId())) {
+                        logger_->debug("[WalletsManager::onWalletsListUpdated] adding new leaf {}"
+                           , leaf->walletId());
+                        addWallet(leaf, true);
+                     }
+                  }
+                  wallet->scan([this, wallet](bs::sync::SyncState state) {
+                     if (state == bs::sync::SyncState::Success) {
+                        QMetaObject::invokeMethod(this, [this, wallet] {
+                           emit walletChanged(wallet->walletId());
+                        });
+                     }
+                  });
+               });
+            };
+            signContainer_->syncHDWallet(wallet->walletId(), cbSyncHD);
          }
       }
       const auto hdWalledsId = hdWalletsId_;
