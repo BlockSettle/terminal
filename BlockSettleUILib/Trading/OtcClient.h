@@ -27,6 +27,16 @@ namespace Blocksettle {
    }
 }
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyPb {
+         class Response;
+         class Response_StartOtc;
+         class Response_VerifyOtc;
+      }
+   }
+}
+
 namespace bs {
    namespace core {
       namespace wallet {
@@ -70,11 +80,11 @@ public slots:
    void peerConnected(const std::string &peerId);
    void peerDisconnected(const std::string &peerId);
    void processMessage(const std::string &peerId, const BinaryData &data);
-   void processPbMessage(const BinaryData &data);
+   void processPbMessage(const std::string &data);
 
 signals:
    void sendMessage(const std::string &peerId, const BinaryData &data);
-   void sendPbMessage(const BinaryData &data);
+   void sendPbMessage(const std::string &data);
 
    void peerUpdated(const std::string &peerId);
 
@@ -87,6 +97,9 @@ private:
    void processSellerAccepts(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_SellerAccepts &msg);
    void processBuyerAcks(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_BuyerAcks &msg);
    void processClose(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_Close &msg);
+
+   void processPbStartOtc(const Blocksettle::Communication::ProxyPb::Response_StartOtc &response);
+   void processPbVerifyOtc(const Blocksettle::Communication::ProxyPb::Response_VerifyOtc &response);
 
    void blockPeer(const std::string &reason, bs::network::otc::Peer *peer);
 
@@ -103,6 +116,8 @@ private:
 
    void changePeerState(bs::network::otc::Peer *peer, bs::network::otc::State state);
 
+   int genLocalUniqueId() { return ++latestUniqueId_; }
+
    std::shared_ptr<spdlog::logger> logger_;
    std::unordered_map<std::string, bs::network::otc::Peer> peers_;
 
@@ -116,6 +131,9 @@ private:
    std::string currentUserId_;
 
    std::map<std::string, std::unique_ptr<OtcClientDeal>> deals_;
+
+   int latestUniqueId_{};
+   std::map<int, bs::network::otc::Peer> waitSettlementIds_;
 };
 
 #endif

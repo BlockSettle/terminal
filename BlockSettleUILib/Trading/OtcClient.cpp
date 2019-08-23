@@ -24,6 +24,8 @@ namespace {
    const int kTxHashSize = 32;
    const int kPubKeySize = 33;
 
+   const auto kStartOtcTimeout = std::chrono::seconds(10);
+
    bs::sync::PasswordDialogData toPasswordDialogData()
    {
       bs::sync::PasswordDialogData dialogData;
@@ -347,13 +349,28 @@ void OtcClient::processMessage(const std::string &peerId, const BinaryData &data
          blockPeer("unknown or empty OTC message", peer);
          break;
    }
-
-   emit peerUpdated(peerId);
 }
 
-void OtcClient::processPbMessage(const BinaryData &data)
+void OtcClient::processPbMessage(const std::string &data)
 {
+   ProxyPb::Response response;
+   bool result = response.ParseFromString(data);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't parse message from PB");
+      return;
+   }
 
+   switch (response.data_case()) {
+      case ProxyPb::Response::kStartOtc:
+         processPbStartOtc(response.start_otc());
+         break;
+      case ProxyPb::Response::kVerifyOtc:
+         processPbVerifyOtc(response.verify_otc());
+         break;
+      case ProxyPb::Response::DATA_NOT_SET:
+         SPDLOG_LOGGER_ERROR(logger_, "response from PB is invalid");
+         break;
+   }
 }
 
 void OtcClient::processBuyerOffers(Peer *peer, const Message_BuyerOffers &msg)
@@ -519,7 +536,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
       changePeerState(peer, State::Idle);
 
       ProxyPb::Request request;
-      auto d = request.mutable_start_otc();
+      auto d = request.mutable_verify_otc();
       d->set_is_seller(false);
       d->set_price(peer->offer.price);
       d->set_amount(peer->offer.amount);
@@ -529,7 +546,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
       d->set_unsigned_payout(deal.payout.serializeState().toBinStr());
       d->set_chat_id_buyer(currentUserId_);
       d->set_chat_id_seller(peer->peerId);
-      sendPbMessage(request.SerializeAsString());
+      emit sendPbMessage(request.SerializeAsString());
 
       *peer = Peer(peer->peerId);
       emit peerUpdated(peer->peerId);
@@ -554,7 +571,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
    assert(deal->success);
 
    ProxyPb::Request request;
-   auto d = request.mutable_start_otc();
+   auto d = request.mutable_verify_otc();
    d->set_is_seller(true);
    d->set_price(peer->offer.price);
    d->set_amount(peer->offer.amount);
@@ -590,6 +607,61 @@ void OtcClient::processClose(Peer *peer, const Message_Close &msg)
          assert(false);
          break;
    }
+}
+
+void OtcClient::processPbStartOtc(const ProxyPb::Response_StartOtc &response)
+{
+   auto it = waitSettlementIds_.find(response.request_id());
+   if (it == waitSettlementIds_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected StartOtc response: can't find request");
+      return;
+   }
+   Peer peer = std::move(it->second);
+   waitSettlementIds_.erase(it);
+
+   const auto settlementId = BinaryData(response.settlement_id());
+
+   createRequests(settlementId, peer, [this, settlementId, offer = peer.offer, peerId = peer.peerId](OtcClientDeal &&deal) {
+      if (!deal.success) {
+         SPDLOG_LOGGER_ERROR(logger_, "creating pay-in sign request fails: {}", deal.errorMsg);
+         return;
+      }
+
+      auto peer = findPeer(peerId);
+      if (!peer) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+         return;
+      }
+
+      if (offer.ourSide != otc::Side::Sell) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't send pay-in info, wrong side");
+         return;
+      }
+
+      if (offer != peer->offer) {
+         SPDLOG_LOGGER_ERROR(logger_, "offer details have changed unexpectedly");
+         return;
+      }
+
+      auto payinTxId = deal.payin.txId();
+
+      Message msg;
+      auto d = msg.mutable_seller_accepts();
+      copyOffer(peer->offer, d->mutable_offer());
+      d->set_settlement_id(settlementId.toBinStr());
+      d->set_auth_address_seller(ourPubKey_.toBinStr());
+      d->set_payin_tx_id(payinTxId.toBinStr());
+      send(peer, msg);
+
+      changePeerState(peer, State::SentPayinInfo);
+
+      deals_.emplace(peer->peerId, std::make_unique<OtcClientDeal>(deal));
+   });
+}
+
+void OtcClient::processPbVerifyOtc(const ProxyPb::Response_VerifyOtc &response)
+{
+
 }
 
 void OtcClient::blockPeer(const std::string &reason, Peer *peer)
@@ -716,44 +788,22 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
 
 void OtcClient::sendSellerAccepts(Peer *peer)
 {
-   assert(ourPubKey_.getSize() == kPubKeySize);
-   auto settlementId = CryptoPRNG::generateRandom(kSettlementIdSize);
+   int requestId = genLocalUniqueId();
+   waitSettlementIds_.emplace(requestId, *peer);
 
-   createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId](OtcClientDeal &&deal) {
-      if (!deal.success) {
-         SPDLOG_LOGGER_ERROR(logger_, "creating pay-in sign request fails: {}", deal.errorMsg);
-         return;
+   ProxyPb::Request request;
+   auto d = request.mutable_start_otc();
+   d->set_request_id(requestId);
+   emit sendPbMessage(request.SerializeAsString());
+
+   QTimer::singleShot(kStartOtcTimeout, this, [this, requestId] {
+      auto it = waitSettlementIds_.find(requestId);
+      if (it != waitSettlementIds_.end()) {
+         waitSettlementIds_.erase(it);
+         SPDLOG_LOGGER_ERROR(logger_, "can't get settlementId from PB: timeout");
+
+         // TODO: Report error that PB is not accessible to peer and cancel deal
       }
-
-      auto peer = findPeer(peerId);
-      if (!peer) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
-         return;
-      }
-
-      if (offer.ourSide != otc::Side::Sell) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't send pay-in info, wrong side");
-         return;
-      }
-
-      if (offer != peer->offer) {
-         SPDLOG_LOGGER_ERROR(logger_, "offer details have changed unexpectedly");
-         return;
-      }
-
-      auto payinTxId = deal.payin.txId();
-
-      Message msg;
-      auto d = msg.mutable_seller_accepts();
-      copyOffer(peer->offer, d->mutable_offer());
-      d->set_settlement_id(settlementId.toBinStr());
-      d->set_auth_address_seller(ourPubKey_.toBinStr());
-      d->set_payin_tx_id(payinTxId.toBinStr());
-      send(peer, msg);
-
-      changePeerState(peer, State::SentPayinInfo);
-
-      deals_.emplace(peer->peerId, std::make_unique<OtcClientDeal>(deal));
    });
 }
 
