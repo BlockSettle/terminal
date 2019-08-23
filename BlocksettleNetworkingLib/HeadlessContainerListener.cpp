@@ -751,6 +751,13 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
       return false;
    }
 
+   if (request.userid().empty()) {
+      logger_->info("[{}] empty user id - do nothing", __func__);
+      return true;
+   }
+
+   walletsMgr_->setUserId(request.userid());
+
    const auto wallet = walletsMgr_->getPrimaryWallet();
    if (!wallet) {
       logger_->info("[{}] no primary wallet", __func__);
