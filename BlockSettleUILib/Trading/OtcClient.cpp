@@ -82,9 +82,15 @@ namespace {
 
 struct OtcClientDeal
 {
+   bs::network::otc::Side side{};
+
    bs::core::wallet::TXSignRequest payin;
    bs::core::wallet::TXSignRequest payoutFallback;
    bs::core::wallet::TXSignRequest payout;
+
+   bs::signer::RequestId payinReqId{};
+   bs::signer::RequestId payoutFallbackReqId{};
+   bs::signer::RequestId payoutReqId{};
 
    BinaryData cpPubKey;
 
@@ -126,6 +132,8 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
          ourPubKey_ = ourPubKey;
       });
    });
+
+   connect(signContainer.get(), &SignContainer::TXSigned, this, &OtcClient::onTxSigned);
 }
 
 OtcClient::~OtcClient() = default;
@@ -378,6 +386,40 @@ void OtcClient::processPbMessage(const std::string &data)
    SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
 }
 
+void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason)
+{
+   auto it = signRequestIds_.find(reqId);
+   if (it == signRequestIds_.end()) {
+      return;
+   }
+   const auto settlementId = std::move(it->second);
+   signRequestIds_.erase(it);
+
+   if (result != bs::error::ErrorCode::NoError) {
+      // TODO: Cancel deal
+      return;
+   }
+
+   auto dealIt = deals_.find(settlementId);
+   if (dealIt == deals_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "unknown sign request");
+      return;
+   }
+   OtcClientDeal *deal = dealIt->second.get();
+
+   if (deal->payoutFallbackReqId == reqId) {
+      SPDLOG_LOGGER_INFO(logger_, "#### success (payoutFallback) ####");
+   }
+
+   if (deal->payinReqId == reqId) {
+      SPDLOG_LOGGER_INFO(logger_, "#### success (payin) ####");
+   }
+
+   if (deal->payoutReqId == reqId) {
+      SPDLOG_LOGGER_INFO(logger_, "#### success (payout) ####");
+   }
+}
+
 void OtcClient::processBuyerOffers(Peer *peer, const Message_BuyerOffers &msg)
 {
    if (!isValidOffer(msg.offer())) {
@@ -558,8 +600,6 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
 
       *peer = Peer(peer->peerId);
       emit peerUpdated(peer->peerId);
-
-      SPDLOG_LOGGER_INFO(logger_, "#### success ####");
    });
 }
 
@@ -593,7 +633,6 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
    d->set_chat_id_seller(peer->peerId);
    emit sendPbMessage(request.SerializeAsString());
 
-   SPDLOG_LOGGER_INFO(logger_, "#### success ####");
    *peer = Peer(peer->peerId);
    emit peerUpdated(peer->peerId);
 }
@@ -680,30 +719,45 @@ void OtcClient::processPbVerifyOtc(const ProxyPb::Response_VerifyOtc &response)
    }
    auto deal = it->second.get();
 
-//   if (deal->payoutFallback.isValid()) {
-//      bs::core::wallet::SettlementData settlData;
-//      settlData.settlementId = settlementId;
-//      settlData.cpPublicKey = deal->cpPubKey;
-//      settlData.ownKeyFirst = true;
+   switch (deal->side) {
+      case Side::Buy: {
+         assert(deal->payout.isValid());
 
-//      auto signerInfo = toPasswordDialogData();
-//      auto reqId = signContainer_->signSettlementPayoutTXRequest(deal->payoutFallback, settlData, signerInfo);
-//   }
+         bs::core::wallet::SettlementData settlData;
+         settlData.settlementId = settlementId;
+         settlData.cpPublicKey = deal->cpPubKey;
+         settlData.ownKeyFirst = true;
 
-   if (deal->payin.isValid()) {
-      auto signerInfo = toPasswordDialogData();
+         auto payoutInfo = toPasswordDialogData();
+         auto reqId = signContainer_->signSettlementPayoutTXRequest(deal->payout, settlData, payoutInfo);
+         signRequestIds_[reqId] = settlementId;
+         deal->payoutReqId = reqId;
 
-      auto reqId = signContainer_->signSettlementTXRequest(deal->payin, signerInfo);
-   }
+         break;
+      }
+      case Side::Sell: {
+         assert(deal->payin.isValid());
+         assert(deal->payoutFallback.isValid());
 
-   if (deal->payout.isValid()) {
-      bs::core::wallet::SettlementData settlData;
-      settlData.settlementId = settlementId;
-      settlData.cpPublicKey = deal->cpPubKey;
-      settlData.ownKeyFirst = true;
+         bs::core::wallet::SettlementData settlData;
+         settlData.settlementId = settlementId;
+         settlData.cpPublicKey = deal->cpPubKey;
+         settlData.ownKeyFirst = false;
+         auto payoutFallbackInfo = toPasswordDialogData();
+         auto reqId = signContainer_->signSettlementPayoutTXRequest(deal->payoutFallback, settlData, payoutFallbackInfo);
+         signRequestIds_[reqId] = settlementId;
+         deal->payoutFallbackReqId = reqId;
 
-      auto signerInfo = toPasswordDialogData();
-      auto reqId = signContainer_->signSettlementPayoutTXRequest(deal->payout, settlData, signerInfo);
+         auto payinInfo = toPasswordDialogData();
+         reqId = signContainer_->signSettlementTXRequest(deal->payin, payinInfo);
+         signRequestIds_[reqId] = settlementId;
+         deal->payinReqId = reqId;
+
+         break;
+      }
+      default:
+         assert(false);
+         break;
    }
 }
 
@@ -795,6 +849,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
 
                      OtcClientDeal result;
                      result.success = true;
+                     result.side = Side::Sell;
                      result.cpPubKey = peer.authPubKey;
                      result.payin = transaction->createTXRequest();
                      auto payinTxId = result.payin.txId();
@@ -809,6 +864,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
                   // Buyer
                   OtcClientDeal result;
                   result.success = true;
+                  result.side = Side::Buy;
                   result.cpPubKey = peer.authPubKey;
                   auto outputAddr = transaction->GetFallbackRecvAddress();
                   auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer.payinTxIdFromSeller, amount);

@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <QObject>
 
+#include "BSErrorCode.h"
 #include "BinaryData.h"
 #include "OtcTypes.h"
 
@@ -88,6 +89,9 @@ signals:
 
    void peerUpdated(const std::string &peerId);
 
+private slots:
+   void onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason);
+
 private:
    using OtcClientDealCb = std::function<void(OtcClientDeal &&deal)>;
 
@@ -134,6 +138,9 @@ private:
 
    int latestUniqueId_{};
    std::map<int, bs::network::otc::Peer> waitSettlementIds_;
+
+   // Maps sign requests to settlementId
+   std::map<unsigned, BinaryData> signRequestIds_;
 };
 
 #endif
