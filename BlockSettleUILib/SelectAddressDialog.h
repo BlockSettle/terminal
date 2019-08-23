@@ -6,6 +6,8 @@
 
 #include "Address.h"
 #include "AddressListModel.h"
+#include "Wallets/SyncHDGroup.h"
+
 
 namespace Ui {
     class SelectAddressDialog;
@@ -26,6 +28,8 @@ public:
    SelectAddressDialog(const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::sync::Wallet> &, QWidget* parent = nullptr
       , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
+   SelectAddressDialog(const std::shared_ptr<bs::sync::hd::Group> &, QWidget* parent = nullptr
+      , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
    ~SelectAddressDialog() override;
 
    bs::Address getSelectedAddress() const;
@@ -35,12 +39,15 @@ public slots:
    void onDoubleClicked(const QModelIndex& index);
 
 private:
+   void init();
    bs::Address getAddress(const QModelIndex& index) const;
 
 private:
    std::unique_ptr<Ui::SelectAddressDialog>  ui_;
-   std::shared_ptr<bs::sync::Wallet>         wallet_;
-   AddressListModel*             model_;
+   std::vector<std::shared_ptr<bs::sync::Wallet>>  wallets_;
+   std::shared_ptr<bs::sync::WalletsManager>       walletsMgr_;
+   const AddressListModel::AddressType             addrType_;
+   std::unique_ptr<AddressListModel>               model_;
    bs::Address                   selectedAddr_;
 };
 
