@@ -1,7 +1,31 @@
 {
-   "latest_version": "0.20.5",
-   "release_date": "21 Aug 2019",
+   "latest_version": "0.20.6",
+   "release_date": "23 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.6",
+         "previous_version": "0.20.5",
+         "release_date": "23 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix for pay-out tx dialog",
+            "Fix for wrong password at wallet export ( BST-2146 )",
+            "Signer pw dialog updates",
+            "Avoid double password prompt for settlement leaf creation ( BST-2161 )",
+            "Update sync wallets after promotion ( BST-2160 )",
+            "Implement OTC p2p side",
+            "Fix for wallet password change ( BST-2153 )",
+            "Fix for crash on start",
+            "Signer pw dialog updates"
+         ],
+         "bug_fixes": [
+            "Sell XBT fixed",
+            "CC BUY fixed",
+            "Fix progress bar for quotes on dealing tab"
+         ],
+         "revision": "590b33ec",
+         "common_revision": "cce3d18f"
+      },
       {
          "version_string": "0.20.5",
          "previous_version": "0.20.4",
