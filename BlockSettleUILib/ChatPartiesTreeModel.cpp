@@ -11,7 +11,6 @@ ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& cha
    chatClientServicePtr_(chatClientServicePtr)
 {
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatPartiesTreeModel::partyModelChanged);
-   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatPartiesTreeModel::resetAll);
 
    rootItem_ = new PartyTreeItem({}, UI::ElementType::Root);
 }
@@ -65,7 +64,7 @@ void ChatPartiesTreeModel::partyModelChanged()
    endResetModel();
 }
 
-void ChatPartiesTreeModel::resetAll()
+void ChatPartiesTreeModel::resetModel()
 {
    beginResetModel();
    rootItem_->removeAll();

@@ -121,9 +121,11 @@ public:
    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
    const std::string& currentUser() const;
 
+public slots:
+   void resetModel();
+
 private slots:
    void partyModelChanged();
-   void resetAll();
 
 private:
    PartyTreeItem* getItem(const QModelIndex& index) const;

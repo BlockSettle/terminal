@@ -40,7 +40,7 @@ using namespace bs::network;
 using namespace bs::network::otc;
 
 
-// #old_logic : delete this all widget and use class RFQShieldPage(maybe need redone it but based class should be the same)
+// #old_logic : delete this all widget and use class RFQShieldPage(maybe need redo it but based class should be the same)
 enum class OTCPages : int
 {
    OTCLoginRequiredShieldPage = 0,
@@ -56,167 +56,212 @@ enum class OTCPages : int
    OTCSupportRoomShieldPage
 };
 
-// #old_logic : delete those
-namespace {
-   const int maxMessageLength = 20;
-
-   bool IsOTCChatRoom(const std::string& chatRoom)
-   {
-      return chatRoom == ChatUtils::OtcRoomKey;
-   }
-
-   bool IsGlobalChatRoom(const std::string& chatRoom)
-   {
-      return chatRoom == ChatUtils::GlobalRoomKey;
-   }
-
-   bool IsSupportChatRoom(const std::string& chatRoom)
-   {
-      return chatRoom == ChatUtils::SupportRoomKey;
-   }
-}
-
-
-
-// #new_logic : need to be redone from old_logic
-class ChatWidgetState {
+// #new_logic
+class AbstractChatWidgetState {
 public:
-    virtual void onStateEnter() {} //Do something special on state appears, by default nothing
-    virtual void onStateExit() {} //Do something special on state about to gone, by default nothing
-
-public:
-
-   explicit ChatWidgetState(ChatWidget* chat, ChatWidget::State type) : chat_(chat), type_(type) {}
-   virtual ~ChatWidgetState() = default;
-
-   virtual std::string login(const std::string& email, const std::string& jwt
-      , const ZmqBipNewKeyCb &) = 0;
-   virtual void logout() = 0;
-   virtual void onLoggedOut() { }
-   virtual void onSendButtonClicked() = 0;
-   virtual void onMessagesUpdated() = 0;
-   virtual void onLoginFailed() = 0;
-   virtual void onUsersDeleted(const std::vector<std::string> &) = 0;
-
-   ChatWidget::State type() { return type_; }
-
-protected:
-   ChatWidget * chat_;
-private:
-   ChatWidget::State type_;
-};
-
-class ChatWidgetStateLoggedOut : public ChatWidgetState {
-public:
-   ChatWidgetStateLoggedOut(ChatWidget* parent) : ChatWidgetState(parent, ChatWidget::LoggedOut) {}
-
-   virtual void onStateEnter() override {
-      chat_->logger_->debug("Set user name {}", "<empty>");
-      chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
-      chat_->ui_->input_textEdit->setVisible(false);
-      chat_->ui_->input_textEdit->setEnabled(false);
-      chat_->ui_->searchWidget->clearLineEdit();
-      chat_->ui_->searchWidget->setLineEditEnabled(false);
-      chat_->ui_->labelUserName->setText(QLatin1String("offline"));
-      chat_->ui_->textEditMessages->clear();
-
-      chat_->SetLoggedOutOTCState();
-      chat_->ui_->frameContactActions->setVisible(false);
-
-      NotificationCenter::notify(bs::ui::NotifyType::LogOut, {});
+   explicit AbstractChatWidgetState(ChatWidget* chat) : chat_(chat) { }
+   void enterState() {
+      applyUserFrameChange();
+      applyChatFrameChange();
+      applyRoomsFrameChange();
    }
+   void sendMessage() {
+      if (!canSendMessage()) {
+         Q_ASSERT(false, "It should be not possible to send message in this case");
+         return;
+      }
 
-   std::string login(const std::string& email, const std::string& jwt
-      , const ZmqBipNewKeyCb &cb) override {
-      chat_->logger_->debug("Set user name {}", email);
-      const auto userId = chat_->client_->LoginToServer(email, jwt, cb);
-      //chat_->ui_->textEditMessages->setOwnUserId(userId);
-      return userId;
-   }
-
-   void logout() override {
-      chat_->logger_->info("Already logged out!");
-   }
-
-   void onSendButtonClicked()  override {
-      qDebug("Send action when logged out");
-   }
-
-   void onMessagesUpdated()  override {}
-   void onLoginFailed()  override {
-      chat_->changeState(ChatWidget::LoggedOut);
-   }
-   void onUsersDeleted(const std::vector<std::string> &) override {}
-};
-
-class ChatWidgetStateLoggedIn : public ChatWidgetState {
-public:
-   ChatWidgetStateLoggedIn(ChatWidget* parent) : ChatWidgetState(parent, ChatWidget::LoggedIn) {}
-
-   void onStateEnter() override {
-      chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
-      chat_->ui_->input_textEdit->setVisible(true);
-      chat_->ui_->input_textEdit->setEnabled(true);
-      chat_->ui_->searchWidget->setLineEditEnabled(true);
-      chat_->ui_->treeViewUsers->expandAll();
-
-      const auto chatModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();
-      chat_->ui_->labelUserName->setText(QString::fromStdString(chatModelPtr->ownUserName()));
-      chat_->ui_->textEditMessages->setOwnUserId(chatModelPtr->ownUserName());
-
-      chat_->SetOTCLoggedInState();
-   }
-
-   void onStateExit() override {
-      chat_->ui_->frameContactActions->setVisible(false);
-   }
-
-   std::string login(const std::string& /*email*/, const std::string& /*jwt*/
-      , const ZmqBipNewKeyCb &) override {
-      chat_->logger_->info("Already logged in! You should first logout!");
-      return std::string();
-   }
-
-   void logout() override {
-      chat_->client_->LogoutFromServer();
-   }
-
-   void onLoggedOut() override {
-      chat_->changeState(ChatWidget::LoggedOut);
-   }
-
-   void onSendButtonClicked()  override {
       std::string messageText = chat_->ui_->input_textEdit->toPlainText().toStdString();
-
-      //if (!messageText.empty() && !chat_->currentChat_.empty()) {
-      //   if (chat_->isContactRequest()) {
-      //      chat_->onContactRequestAcceptSendClicked();
-      //   } else if (!chat_->isRoom()) {
-      //      auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
-      //   } else {
-      //      auto msg = chat_->client_->sendRoomOwnMessage(messageText, chat_->currentChat_);
-      //   }
-      //   chat_->ui_->input_textEdit->clear();
-      //}
-
       chat_->chatClientServicePtr_->SendPartyMessage(chat_->currentChat_, messageText);
       chat_->ui_->input_textEdit->clear();
    }
+protected:
+   virtual void applyUserFrameChange() = 0;
+   virtual void applyChatFrameChange() = 0;
+   virtual void applyRoomsFrameChange() = 0;
 
-   void onMessagesUpdated() override {
-      QScrollBar *bar = chat_->ui_->textEditMessages->verticalScrollBar();
-      bar->setValue(bar->maximum());
-   }
+   virtual bool canSendMessage() const = 0;
 
-   void onLoginFailed() override {
-      chat_->changeState(ChatWidget::LoggedOut);
-   }
-
-   void onUsersDeleted(const std::vector<std::string> &/*users*/) override
-   {}
+   ChatWidget *chat_;
 };
 
+class ChatLogOutState : public AbstractChatWidgetState {
+public:
+   explicit ChatLogOutState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~ChatLogOutState() = default;
+protected:
+   virtual void applyUserFrameChange() override {
+      auto* searchWidget = chat_->ui_->searchWidget;
+      searchWidget->clearLineEdit();
+      searchWidget->setLineEditEnabled(false);
 
+      auto* proxyModel = static_cast<ChatPartiesSortProxyModel*>(chat_->ui_->treeViewUsers->model());
+      if (!proxyModel) {
+         return;
+      }
+      auto* sourseModel = static_cast<ChatPartiesTreeModel*>(proxyModel->sourceModel());
+      sourseModel->resetModel();
+
+      chat_->ui_->labelUserName->setText(QObject::tr("offline"));
+   }
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->resetChatView();
+
+      chat_->ui_->frameContactActions->setVisible(false);
+
+      chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
+      chat_->ui_->input_textEdit->setVisible(false);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
+   }
+
+   virtual bool canSendMessage() const override { return false; }
+};
+
+class IdleState : public AbstractChatWidgetState {
+public:
+   explicit IdleState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~IdleState() = default;
+protected:
+   virtual void applyUserFrameChange() override {
+      chat_->ui_->searchWidget->setLineEditEnabled(true);
+
+      chat_->ui_->treeViewUsers->expandAll();
+
+      const auto chatModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();      
+      chat_->ui_->labelUserName->setText(QString::fromStdString(chatModelPtr->ownUserName()));
+   }
+   virtual void applyChatFrameChange() override {
+      const auto chatModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+      chat_->ui_->textEditMessages->setOwnUserId(chatModelPtr->ownUserName());
+      chat_->ui_->textEditMessages->resetChatView();
+
+      chat_->ui_->frameContactActions->setVisible(false);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+   }
+   virtual bool canSendMessage() const override { return false; }
+};
+
+class PrivatePartyInitState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyInitState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyInitState() = default;
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentChat_);
+
+      chat_->ui_->frameContactActions->setVisible(false);
+
+      // #new_logic : draft ??
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(true);
+   }
+   virtual void applyRoomsFrameChange() override {
+   // #new_logic : OTC shield
+   }
+   virtual bool canSendMessage() const override { return true; }
+};
+
+class PrivatePartyUninitState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyUninitState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyUninitState() = default;
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentChat_);
+
+      chat_->ui_->pushButton_AcceptSend->setText(QObject::tr("SEND"));
+      chat_->ui_->pushButton_RejectCancel->setText(QObject::tr("CANCEL"));
+      chat_->ui_->frameContactActions->setVisible(true);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      // #new_logic : OTCShield? 
+      // chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+   }
+   virtual bool canSendMessage() const override { return false; }
+};
+
+class PrivatePartyRequestedOutgoingState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyRequestedOutgoingState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyRequestedOutgoingState() = default;
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->resetChatView();
+
+      chat_->ui_->frameContactActions->setVisible(false);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      // #new_logic : OTCShield? 
+      // chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+   }
+   virtual bool canSendMessage() const override { return false; }
+};
+
+class PrivatePartyRequestedIncomingState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyRequestedIncomingState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyRequestedIncomingState() = default;
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->resetChatView();
+
+      chat_->ui_->pushButton_AcceptSend->setText(QObject::tr("ACCEPT"));
+      chat_->ui_->pushButton_RejectCancel->setText(QObject::tr("REJECT"));
+      chat_->ui_->frameContactActions->setVisible(true);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      // #new_logic : OTCShield? 
+      // chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+   }
+   virtual bool canSendMessage() const override { return false; }
+};
+
+class PrivatePartyRejectedState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyRejectedState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyRejectedState() = default;
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->resetChatView();
+
+      chat_->ui_->frameContactActions->setVisible(false);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      // #new_logic : OTC shield?
+   }
+   virtual bool canSendMessage() const override { return false; }
+};
 
 // #old_logic : do we need all this variables?
 // #new_logic : redo this fro old one
@@ -301,14 +346,20 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(charTreeSortModel, this));
    
    // connections
-   connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserClicked);
+   // User actions
+   connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserListClicked);
+   connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
+
+   // Backend changes
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::LoginToServer, this, &ChatWidget::onConnectedToServer);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLoggedOut);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::LogoutFromServer, this, &ChatWidget::onLoggedOut);
-   connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
+   
 
    Chat::ClientPartyModelPtr chatModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
    connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageArrived, ui_->textEditMessages, &ChatMessagesTextEdit::onSingleMessageUpdate);
+
+   changeState<ChatLogOutState>(); //Initial state is LoggedOut
 #endif
    ui_->textEditMessages->setHandler(this);
    ui_->textEditMessages->setMessageReadHandler(client_);
@@ -344,7 +395,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->treeViewOTCRequests->selectionModel(), &QItemSelectionModel::selectionChanged
       , this, &ChatWidget::OnOTCSelectionChanged);
 
-   changeState(State::LoggedOut); //Initial state is LoggedOut
+   
    initSearchWidget();
 
    installEventFilter(this);
@@ -378,7 +429,7 @@ void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::Data> >&
 
 void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 {
-   stateCurrent_->onUsersDeleted(users);
+   //stateCurrent_->onUsersDeleted(users);
 }
 
 void ChatWidget::onContactRequestApproved(const std::string &userId)
@@ -389,31 +440,31 @@ void ChatWidget::onContactRequestApproved(const std::string &userId)
 #endif
 }
 
-void ChatWidget::changeState(ChatWidget::State state)
-{
-
-   //Do not add any functionality here, except  states swapping
-
-   if (!stateCurrent_) { //In case if we use change state in first time
-      stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
-      stateCurrent_->onStateEnter();
-   } else if (stateCurrent_->type() != state) {
-      stateCurrent_->onStateExit();
-      switch (state) {
-      case State::LoggedIn:
-         {
-            stateCurrent_ = std::make_shared<ChatWidgetStateLoggedIn>(this);
-         }
-         break;
-      case State::LoggedOut:
-         {
-            stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
-         }
-         break;
-      }
-      stateCurrent_->onStateEnter();
-   }
-}
+//void ChatWidget::changeState(ChatWidget::State state)
+//{
+//
+//   //Do not add any functionality here, except  states swapping
+//
+//   if (!stateCurrent_) { //In case if we use change state in first time
+//      stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
+//      stateCurrent_->onStateEnter();
+//   } else if (stateCurrent_->type() != state) {
+//      stateCurrent_->onStateExit();
+//      switch (state) {
+//      case State::LoggedIn:
+//         {
+//            stateCurrent_ = std::make_shared<ChatWidgetStateLoggedIn>(this);
+//         }
+//         break;
+//      case State::LoggedOut:
+//         {
+//            stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
+//         }
+//         break;
+//      }
+//      stateCurrent_->onStateEnter();
+//   }
+//}
 
 void ChatWidget::initSearchWidget()
 {
@@ -430,26 +481,28 @@ bool ChatWidget::isLoggedIn() const
    if (!stateCurrent_) {
       return false;
    }
-   return stateCurrent_->type() == State::LoggedIn;
+   //return stateCurrent_->type() == State::LoggedIn;
+   return false;
 }
 
 void ChatWidget::onSendButtonClicked()
 {
-   return stateCurrent_->onSendButtonClicked();
+   return stateCurrent_->sendMessage();
 }
 
 void ChatWidget::onMessagesUpdated()
 {
-   return stateCurrent_->onMessagesUpdated();
+   //return stateCurrent_->onMessagesUpdated();
 }
 
 std::string ChatWidget::login(const std::string& email, const std::string& jwt
    , const ZmqBipNewKeyCb &cb)
 {
    try {
-      const auto userId = stateCurrent_->login(email, jwt, cb);
+      //const auto userId = stateCurrent_->login(email, jwt, cb);
       needsToStartFirstRoom_ = true;
-      return userId;
+      //return userId;
+      return "";
    }
    catch (std::exception& e) {
       logger_->error("Caught an exception: {}" , e.what());
@@ -462,13 +515,13 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt
 
 void ChatWidget::onLoginFailed()
 {
-   stateCurrent_->onLoginFailed();
+   //stateCurrent_->onLoginFailed();
    emit LoginFailed();
 }
 
 void ChatWidget::logout()
 {
-   return stateCurrent_->logout();
+   //return stateCurrent_->logout();
 }
 
 bool ChatWidget::hasUnreadMessages()
@@ -499,7 +552,7 @@ void ChatWidget::updateChat(const bool &isChatTab)
 
 void ChatWidget::onLoggedOut()
 {
-   stateCurrent_->onLoggedOut();
+   //stateCurrent_->onLoggedOut();
    //emit LogOut();
 }
 
@@ -520,7 +573,7 @@ void ChatWidget::onConnectedToServer()
 {
    const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    chatLoggedInTimestampUtcInMillis_ =  timestamp.count();
-   changeState(State::LoggedIn);
+   changeState<IdleState>();
 
    otcClient_->setCurrentUserId(client_->currentUserId());
 }
@@ -724,119 +777,6 @@ void ChatWidget::setIsRoom(bool isRoom)
    isRoom_ = isRoom;
 }
 
-void ChatWidget::onElementSelected(const PartyTreeItem* chatUserListElement)
-{
-   ui_->frameContactActions->setVisible(false);
-   ui_->input_textEdit->setReadOnly(false);
-   setIsContactRequest(false);
-
-   // Save draft message
-   const std::string previousChat = currentChat_;
-
-   if (chatUserListElement->modelType() != UI::ElementType::Party) {
-      return;
-   }
-   Chat::ClientPartyPtr clientParty = chatUserListElement->data().value<Chat::ClientPartyPtr>();
-   if (!clientParty)
-      return;
-
-   setIsRoom(true);
-   currentChat_ = clientParty->id();
-   ui_->input_textEdit->setReadOnly(false);
-   ui_->textEditMessages->switchToChat(currentChat_, false);
-
-   //if (element) {
-   //   switch (element->getType()) {
-   //      case ChatUIDefinitions::ChatTreeNodeType::RoomsElement: {
-   //         //TODO: Change cast
-   //         auto room = element->getDataObject();
-   //         if (room && room->has_room()) {
-   //            setIsRoom(true);
-   //            currentChat_ = room->room().id();
-   //            OTCSwitchToRoom(room);
-   //         }
-   //      }
-   //      break;
-   //      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
-   //         //TODO: Change cast
-   //         auto contact = element->getDataObject();
-   //         if (contact && contact->has_contact_record()) {
-   //            setIsRoom(false);
-   //            currentChat_ = contact->contact_record().contact_id();
-   //            OTCSwitchToContact(contact);
-   //         }
-   //      }
-   //      break;
-   //      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
-   //         auto contact = element->getDataObject();
-   //         if (contact && contact->has_contact_record()) {
-   //            setIsRoom(false);
-   //            currentChat_ = contact->contact_record().contact_id();
-   //            ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
-
-   //            if (cElement->getContactData()->status() ==
-   //                Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING) {
-   //               ui_->pushButton_AcceptSend->setText(QObject::tr("SEND"));
-   //               ui_->pushButton_RejectCancel->setText(QObject::tr("CANCEL"));
-   //            } else if (cElement->getContactData()->status() ==
-   //                       Chat::ContactStatus::CONTACT_STATUS_INCOMING) {
-   //               ui_->pushButton_AcceptSend->setText(QObject::tr("ACCEPT"));
-   //               ui_->pushButton_RejectCancel->setText(QObject::tr("REJECT"));
-   //               ui_->input_textEdit->setReadOnly(true);
-   //            }
-
-   //            setIsContactRequest(true);
-   //            ui_->frameContactActions->setVisible(true);
-   //         }
-   //      }
-   //      break;
-   //      // XXXOTC
-   //      // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement: {
-   //      //    ui_->stackedWidgetMessages->setCurrentIndex(0);
-   //      //    auto response = element->getDataObject();
-   //      //    if (response) {
-   //      //       setIsRoom(false);
-   //      //       currentChat_ = QString::fromStdString(response->serverResponseId());
-   //      //    }
-   //      // }
-   //      // break;
-   //      // case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement: {
-   //      //    ui_->stackedWidgetMessages->setCurrentIndex(0);
-   //      //    auto response = element->getDataObject();
-   //      //    if (response) {
-   //      //       setIsRoom(false);
-   //      //       currentChat_ = QString::fromStdString(response->serverResponseId());
-   //      //       OTCSwitchToResponse(response);
-   //      //    }
-   //      // }
-   //      // break;
-   //      default:
-   //         break;
-
-   //   }
-   //}
-
-   if (previousChat != currentChat_) {
-      // Save draft message if any
-      if (!ui_->input_textEdit->toPlainText().isEmpty()) {
-          draftMessages_[previousChat] = ui_->input_textEdit->toPlainText().toStdString();
-      } else {
-         draftMessages_.remove(previousChat);
-      }
-
-      // Return back draft message
-      const auto iDraft = draftMessages_.find(currentChat_);
-      if (iDraft != draftMessages_.cend()) {
-         ui_->input_textEdit->setText(QString::fromStdString(iDraft.value()));
-         auto cursor = ui_->input_textEdit->textCursor();
-         cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::MoveAnchor);
-         ui_->input_textEdit->setTextCursor(cursor);
-      } else {
-         ui_->input_textEdit->clear();
-      }
-   }
-}
-
 void ChatWidget::onMessageChanged(std::shared_ptr<Chat::Data> message)
 {
 }
@@ -956,18 +896,19 @@ void ChatWidget::OTCSwitchToRoom(std::shared_ptr<Chat::Data>& room)
 {
    assert(room->has_room());
 
-   if (room->room().is_trading_available()) {
-      ui_->stackedWidgetMessages->setCurrentIndex(1);
-      OTCSwitchToCommonRoom();
-   } else {
-      ui_->stackedWidgetMessages->setCurrentIndex(0);
-      ui_->input_textEdit->setFocus();
-      if (IsGlobalChatRoom(room->room().id())) {
-         OTCSwitchToGlobalRoom();
-      } else if (IsSupportChatRoom(room->room().id())) {
-         OTCSwitchToSupportRoom();
-      }
-   }
+   // #old_logic
+   //if (room->room().is_trading_available()) {
+   //   ui_->stackedWidgetMessages->setCurrentIndex(1);
+   //   OTCSwitchToCommonRoom();
+   //} else {
+   //   ui_->stackedWidgetMessages->setCurrentIndex(0);
+   //   ui_->input_textEdit->setFocus();
+   //   if (IsGlobalChatRoom(room->room().id())) {
+   //      OTCSwitchToGlobalRoom();
+   //   } else if (IsSupportChatRoom(room->room().id())) {
+   //      OTCSwitchToSupportRoom();
+   //   }
+   //}
 }
 
 void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::Data>& contact)
@@ -1078,11 +1019,67 @@ void ChatWidget::onOtcUpdated(const std::string &contactId)
    }
 }
 
-void ChatWidget::onUserClicked(const QModelIndex& index)
+void ChatWidget::onUserListClicked(const QModelIndex& index)
 {
+   // #new_logic : save draft
+
    ChatPartiesSortProxyModel *chartProxyModel = static_cast<ChatPartiesSortProxyModel *>(ui_->treeViewUsers->model());
-   PartyTreeItem* chatUserListElement = chartProxyModel->getInternalData(index);
-   onElementSelected(chatUserListElement);
+   PartyTreeItem* partyTreeItem = chartProxyModel->getInternalData(index);
+
+   if (partyTreeItem->modelType() == UI::ElementType::Container) {
+      currentChat_.clear();
+      changeState<IdleState>();
+      return;
+   }
+
+   const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
+
+   currentChat_ = clientPartyPtr->id();
+   switch (clientPartyPtr->partyState())
+   {
+   case Chat::PartyState::UNINITIALIZED:
+      changeState<PrivatePartyUninitState>();
+      break;
+   case Chat::PartyState::REQUESTED:
+      if (clientPartyPtr->id() == chatClientServicePtr_->getClientPartyModelPtr()->ownUserName()) {
+         changeState<PrivatePartyRequestedOutgoingState>();
+      }
+      else {
+         changeState<PrivatePartyRequestedIncomingState>();
+      }
+      break;
+   case Chat::PartyState::REJECTED:
+      changeState<PrivatePartyRejectedState>();
+      break;
+   case Chat::PartyState::INITIALIZED:
+      changeState<PrivatePartyInitState>();
+      break;
+   default:
+      break;
+   }
+
+   // #new_logic : drafts
+   //if (previousChat != currentChat_) {
+   //   // Save draft message if any
+   //   if (!ui_->input_textEdit->toPlainText().isEmpty()) {
+   //      draftMessages_[previousChat] = ui_->input_textEdit->toPlainText().toStdString();
+   //   }
+   //   else {
+   //      draftMessages_.remove(previousChat);
+   //   }
+
+   //   // Return back draft message
+   //   const auto iDraft = draftMessages_.find(currentChat_);
+   //   if (iDraft != draftMessages_.cend()) {
+   //      ui_->input_textEdit->setText(QString::fromStdString(iDraft.value()));
+   //      auto cursor = ui_->input_textEdit->textCursor();
+   //      cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::MoveAnchor);
+   //      ui_->input_textEdit->setTextCursor(cursor);
+   //   }
+   //   else {
+   //      ui_->input_textEdit->clear();
+   //   }
+   //}
 }
 
 void ChatWidget::DisplayCreateOTCWidget()
@@ -1131,7 +1128,8 @@ bool ChatWidget::IsOTCRequestAccepted() const
 
 bool ChatWidget::IsOTCChatSelected() const
 {
-   return IsOTCChatRoom(currentChat_);
+   // #old_logic
+   return false;
 }
 
 void ChatWidget::onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat::Data>> newMessages)
@@ -1147,6 +1145,8 @@ void ChatWidget::onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat
          auto messageText = (message->message().encryption() == Chat::Data_Message_Encryption_UNENCRYPTED)
                ? message->message().message() : "";
 
+         // #old_logic : do we need it in global?
+         int maxMessageLength = 20;
          if (messageText.length() > maxMessageLength) {
             messageText = messageText.substr(0, maxMessageLength) + "...";
          }

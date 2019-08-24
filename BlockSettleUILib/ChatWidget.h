@@ -48,6 +48,7 @@ namespace bs {
 
 class PartyTreeItem;
 class SignContainer;
+class AbstractChatWidgetState;
 
 namespace bs { namespace sync {
    class WalletsManager;
@@ -61,14 +62,6 @@ class ChatWidget : public QWidget
    Q_OBJECT
 
 public:
-   enum State {
-      LoggedIn,
-      LoggedOut
-   };
-   //friend class ChatWidgetState;
-   friend class ChatWidgetStateLoggedOut;
-   friend class ChatWidgetStateLoggedIn;
-
    explicit ChatWidget(QWidget *parent = nullptr);
    ~ChatWidget() override;
 
@@ -191,7 +184,7 @@ private:
    bool isContactRequest();
    void setIsContactRequest(bool);
    void setIsRoom(bool);
-   void changeState(ChatWidget::State state);
+   //void changeState(ChatWidget::State state);
    void initSearchWidget();
    bool isLoggedIn() const;
 
@@ -211,7 +204,7 @@ private:
    QSpacerItem *chatUsersVerticalSpacer_;
    bool isChatTab_;
 
-   std::shared_ptr<ChatWidgetState> stateCurrent_;
+   
    QMap<std::string, std::string> draftMessages_;
    bool needsToStartFirstRoom_;
 
@@ -222,11 +215,32 @@ private:
    OtcClient *otcClient_{};
 
 
+
+   
    // #new_logic
+
+private:
+   friend class AbstractChatWidgetState;
+   friend class ChatLogOutState;
+   friend class IdleState;
+   friend class PrivatePartyInitState;
+   friend class PrivatePartyUninitState;
+   friend class PrivatePartyRequestedOutgoingState;
+   friend class PrivatePartyRequestedIncomingState;
+   friend class PrivatePartyRejectedState;
+
+   template <typename stateType
+      , typename = std::enable_if<std::is_base_of<AbstractChatWidgetState, stateType>::value>::type>
+   void changeState() {
+      stateCurrent_.reset(new stateType(this));
+   }
+protected:
+   std::unique_ptr<AbstractChatWidgetState> stateCurrent_;
 public:
-   void onElementSelected(const PartyTreeItem* chatUserListElement);
+   //void onElementSelected(const PartyTreeItem* chatUserListElement);
 
 private slots:
-   void onUserClicked(const QModelIndex& index);
+   void onUserListClicked(const QModelIndex& index);
 };
+
 #endif // CHAT_WIDGET_H

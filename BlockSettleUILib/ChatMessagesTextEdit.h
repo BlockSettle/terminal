@@ -65,7 +65,6 @@ public:
 public:
    // #old_logic
    
-   void switchToChat(const std::string& chatId, bool isGroupRoom = false);
    void setHandler(ChatItemActionsHandler* handler);
    void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
    
@@ -75,6 +74,8 @@ public:
    void setColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
    void setOwnUserId(const std::string &userId) { ownUserId_ = userId; }
    void setClientPartyModel(Chat::ClientPartyModelPtr partyModel);
+   void switchToChat(const std::string& chatId);
+   void resetChatView();
 
 signals:
    void MessageRead(const std::shared_ptr<Chat::Data> &) const;

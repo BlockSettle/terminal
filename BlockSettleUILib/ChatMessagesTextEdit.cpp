@@ -262,10 +262,15 @@ void ChatMessagesTextEdit::onUserUrlOpened(const QUrl &url)
    }
 }
 
-void ChatMessagesTextEdit::switchToChat(const std::string& chatId, bool isGroupRoom)
+void ChatMessagesTextEdit::switchToChat(const std::string& chatId)
 {
    currentChatId_ = chatId;
    forceMessagesUpdate();
+}
+
+void ChatMessagesTextEdit::resetChatView()
+{
+   switchToChat({});
 }
 
 void ChatMessagesTextEdit::setHandler(ChatItemActionsHandler* handler)
@@ -625,6 +630,11 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text)
 void ChatMessagesTextEdit::forceMessagesUpdate()
 {
    clear();
+
+   // Nothing to do
+   if (currentChatId_.empty()) {
+      return;
+   }
 
    const auto iMessages = messages_.find(currentChatId_);
    if (iMessages == messages_.end()) {
