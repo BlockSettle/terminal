@@ -36,7 +36,7 @@ namespace Chat
       virtual bool isGlobalStandard() const { return (Chat::PartyType::GLOBAL == partyType() && Chat::PartySubType::STANDARD == partySubType()); }
       virtual bool isPrivateStandard() const { return (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == partyType() && Chat::PartySubType::STANDARD == partySubType()); }
 
-      std::string sender() const { return sender_; }
+      const std::string& senderId() const { return sender_; }
       void setSender(std::string val) { sender_ = val; }
 
    private:

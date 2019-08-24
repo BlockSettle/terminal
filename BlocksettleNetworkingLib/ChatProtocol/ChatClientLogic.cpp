@@ -107,18 +107,19 @@ namespace Chat
       connectionPtr_ = connectionManagerPtr_->CreateZMQBIP15XDataConnection();
       connectionPtr_->setCBs(cb);
 
+      currentUserPtr_->setUserName(userHasherPtr_->deriveKey(email));
+      clientPartyModelPtr()->setOwnUserName(currentUserPtr_->userName());
+
       if (!connectionPtr_->openConnection(this->getChatServerHost(), this->getChatServerPort(), this))
       {
          loggerPtr_->error("[ChatClientLogic::LoginToServer] failed to open ZMQ data connection");
          connectionPtr_.reset();
+         clientPartyModelPtr()->setOwnUserName({});
 
          emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed);
          emit clientLoggedOutFromServer();
          return;
       }
-
-      currentUserPtr_->setUserName(userHasherPtr_->deriveKey(email));
-      clientPartyModelPtr()->setOwnUserName(currentUserPtr_->userName());
    }
 
    std::string ChatClientLogic::getChatServerHost() const

@@ -156,6 +156,12 @@ int ChatPartiesTreeModel::columnCount(const QModelIndex& parent) const
    return rootItem_->columnCount();
 }
 
+const std::string& ChatPartiesTreeModel::currentUser() const
+{
+   const auto chatModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
+   return chatModelPtr->ownUserName();
+}
+
 ChatPartiesSortProxyModel::ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr&& sourceModel, QObject *parent /*= nullptr*/)
    : QSortFilterProxyModel(parent)
    , sourceModel_(std::move(sourceModel))
@@ -172,6 +178,11 @@ PartyTreeItem* ChatPartiesSortProxyModel::getInternalData(const QModelIndex& ind
 
    const auto& sourceIndex = mapToSource(index);
    return static_cast<PartyTreeItem*>(sourceIndex.internalPointer());
+}
+
+const std::string& ChatPartiesSortProxyModel::currentUser() const
+{
+   return sourceModel_->currentUser();
 }
 
 bool ChatPartiesSortProxyModel::filterAcceptsRow(int row, const QModelIndex& parent) const

@@ -119,6 +119,7 @@ public:
    QModelIndex parent(const QModelIndex& index) const override;
    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+   const std::string& currentUser() const;
 
 private slots:
    void partyModelChanged();
@@ -142,6 +143,7 @@ public:
    explicit ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr&& sourceModel, QObject *parent = nullptr);
 
    PartyTreeItem* getInternalData(const QModelIndex& index) const;
+   const std::string& currentUser() const;
 
 protected:
 

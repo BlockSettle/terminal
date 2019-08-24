@@ -159,7 +159,10 @@ public:
       chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->searchWidget->setLineEditEnabled(true);
       chat_->ui_->treeViewUsers->expandAll();
-      chat_->ui_->labelUserName->setText(QString::fromStdString(chat_->client_->getUserId()));
+
+      const auto chatModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+      chat_->ui_->labelUserName->setText(QString::fromStdString(chatModelPtr->ownUserName()));
+      chat_->ui_->textEditMessages->setOwnUserId(chatModelPtr->ownUserName());
 
       chat_->SetOTCLoggedInState();
    }
