@@ -1,5 +1,11 @@
 #include "ChatPartiesTreeModel.h"
 
+namespace {
+   const QString ContainerTabGlobal = QObject::tr("Global");
+   const QString ContainerTabPrivate = QObject::tr("Private");
+   const QString ContainerTabContactRequest = QObject::tr("Contact request");
+}
+
 ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& chatClientServicePtr, QObject* parent)
    : QAbstractItemModel(parent),
    chatClientServicePtr_(chatClientServicePtr)
@@ -22,8 +28,9 @@ void ChatPartiesTreeModel::partyModelChanged()
 
    rootItem_->removeAll();
 
-   PartyTreeItem* globalSection = new PartyTreeItem(QString(QLatin1String("Global")), UI::ElementType::Container, rootItem_);
-   PartyTreeItem* privateSection = new PartyTreeItem(QString(QLatin1String("Private")), UI::ElementType::Container, rootItem_);
+   PartyTreeItem* globalSection = new PartyTreeItem(ContainerTabGlobal, UI::ElementType::Container, rootItem_);
+   PartyTreeItem* privateSection = new PartyTreeItem(ContainerTabPrivate, UI::ElementType::Container, rootItem_);
+   PartyTreeItem* requestSection = new PartyTreeItem(ContainerTabContactRequest, UI::ElementType::Container, rootItem_);
 
    Chat::IdPartyList idPartyList = clientPartyModelPtr->getIdPartyList();
 
@@ -43,13 +50,17 @@ void ChatPartiesTreeModel::partyModelChanged()
       {
          QVariant stored;
          stored.setValue(clientPartyPtr);
-         PartyTreeItem* privateItem = new PartyTreeItem(stored, UI::ElementType::Party, privateSection);
-         privateSection->insertChildren(privateItem);
+
+         PartyTreeItem* parentSection = clientPartyPtr->partyState() == Chat::PartyState::INITIALIZED ? privateSection : requestSection;
+
+         PartyTreeItem* privateItem = new PartyTreeItem(stored, UI::ElementType::Party, parentSection);
+         parentSection->insertChildren(privateItem);
       }
    }
 
    rootItem_->insertChildren(globalSection);
    rootItem_->insertChildren(privateSection);
+   rootItem_->insertChildren(requestSection);
 
    endResetModel();
 }
@@ -145,9 +156,9 @@ int ChatPartiesTreeModel::columnCount(const QModelIndex& parent) const
    return rootItem_->columnCount();
 }
 
-ChatPartiesSortProxyModel::ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr sourceModel, QObject *parent /*= nullptr*/)
+ChatPartiesSortProxyModel::ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr&& sourceModel, QObject *parent /*= nullptr*/)
    : QSortFilterProxyModel(parent)
-   , sourceModel_(sourceModel)
+   , sourceModel_(std::move(sourceModel))
 {
    setDynamicSortFilter(true);
    setSourceModel(sourceModel_.get());

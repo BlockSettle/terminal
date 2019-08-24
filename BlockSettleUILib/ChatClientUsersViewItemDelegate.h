@@ -3,14 +3,14 @@
 
 #include <QStyledItemDelegate>
 #include "ChatUsersViewItemStyle.h"
-#include "QPointer"
 
-class QSortFilterProxyModel;
+#include "ChatPartiesTreeModel.h"
+
 class ChatClientUsersViewItemDelegate : public QStyledItemDelegate
 {
    Q_OBJECT
 public:
-   explicit ChatClientUsersViewItemDelegate(QPointer<QSortFilterProxyModel> proxyModel, QObject *parent = nullptr);
+   explicit ChatClientUsersViewItemDelegate(ChatPartiesSortProxyModelPtr proxyModel, QObject *parent = nullptr);
 
 signals:
 
@@ -21,12 +21,16 @@ public:
    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 protected:
 
+   // #new_logic
    void paintPartyContainer(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
    void paintParty(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
 
+   void paintInitParty(Chat::ClientPartyPtr clientPartyPtr, QPainter* painter,
+      QStyleOptionViewItem& itemOption) const;
+   void paintRequestParty(Chat::ClientPartyPtr clientPartyPtr, QPainter* painter,
+      QStyleOptionViewItem& itemOption) const;
 
-   template <typename AbstractPartySubClass>
-   AbstractPartySubClass *checkAndGetInternalPointer(const QModelIndex &index) const;
+   // #old_logic
    void paintCategoryNode(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
    void paintRoomsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const ;
    void paintContactsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
@@ -38,6 +42,6 @@ private:
    // QAbstractItemDelegate interface
 public:
    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
-   QPointer<QSortFilterProxyModel> proxyModel_;
+   ChatPartiesSortProxyModelPtr proxyModel_;
 };
 #endif // CHATCLIENTUSERSVIEWITEMDELEGATE_H

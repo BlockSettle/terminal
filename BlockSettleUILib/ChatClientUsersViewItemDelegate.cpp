@@ -4,25 +4,24 @@
 #include <QLineEdit>
 #include "ChatProtocol/ChatUtils.h"
 
-#include "ChatPartiesTreeModel.h"
-
 namespace {
    const int kDotSize = 8;
    const QString kDotPathname = QLatin1String{ ":/ICON_DOT" };
    const QString unknown = QLatin1String{ "<unknown>" };
 
-   // Delete below
+   // Delete below #old_logic
    using Role = ChatClientDataModel::Role;
    using OnlineStatus = ChatContactElement::OnlineStatus;
    using ContactStatus = Chat::ContactStatus;
 }
 
-ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(QPointer<QSortFilterProxyModel> proxyModel, QObject *parent)
+ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(ChatPartiesSortProxyModelPtr proxyModel, QObject *parent)
    : QStyledItemDelegate (parent)
    , proxyModel_(proxyModel)
 {
 }
 
+// #old_logic
 // Previous code need to be deleted after done with styling
 //void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 //{
@@ -66,6 +65,7 @@ void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptio
 }
 
 // paintCategoryNode == paintPartyContainer
+// #old_logic
 void ChatClientUsersViewItemDelegate::paintCategoryNode(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
@@ -83,6 +83,7 @@ void ChatClientUsersViewItemDelegate::paintCategoryNode(QPainter *painter, const
    QStyledItemDelegate::paint(painter, itemOption, index);
 }
 
+// #new_logic
 void ChatClientUsersViewItemDelegate::paintPartyContainer(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
@@ -115,43 +116,76 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
    PartyTreeItem* party = static_cast<PartyTreeItem*>(index.internalPointer());
    Chat::ClientPartyPtr clientPartyPtr = party->data().value<Chat::ClientPartyPtr>();
 
+   itemOption.text = QString::fromStdString(clientPartyPtr->displayName());
    if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyType())
    {
-      switch (clientPartyPtr->clientStatus())
-      {
-         case Chat::ClientStatus::ONLINE:
-         {
-            itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOnline());
-         }
-         break;
-
-         case Chat::ClientStatus::OFFLINE:
-         {
-            itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOffline());
-            if (option.state & QStyle::State_Selected)
-            {
-               painter->save();
-               painter->fillRect(itemOption.rect, itemStyle_.colorContactOffline());
-               painter->restore();
-            }
-         }
-         break;
-
-         default: 
-         {
-            // You should specify rules for new ClientStatus explicitly
-            Q_ASSERT(false);
-         }
-         break;
+      if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState()) {
+         paintInitParty(clientPartyPtr, painter, itemOption);
+      }
+      else {
+         paintRequestParty(clientPartyPtr, painter, itemOption);
       }
    }
 
    QStyledItemDelegate::paint(painter, itemOption, index);
 
-   // draw dot
+   // #new_logic: draw dot
    // Need new message indicator OTC and private messages
 }
 
+
+void ChatClientUsersViewItemDelegate::paintInitParty(Chat::ClientPartyPtr clientPartyPtr, QPainter* painter,
+   QStyleOptionViewItem& itemOption) const
+{
+   switch (clientPartyPtr->clientStatus())
+   {
+      case Chat::ClientStatus::ONLINE:
+      {
+         itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOnline());
+      }
+      break;
+
+      case Chat::ClientStatus::OFFLINE:
+      {
+         itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOffline());
+         if (itemOption.state & QStyle::State_Selected)
+         {
+            painter->save();
+            painter->fillRect(itemOption.rect, itemStyle_.colorContactOffline());
+            painter->restore();
+         }
+      }
+      break;
+
+      default: 
+      {
+         // You should specify rules for new ClientStatus explicitly
+         Q_ASSERT(false);
+      }
+      break;
+   }
+}
+
+void ChatClientUsersViewItemDelegate::paintRequestParty(Chat::ClientPartyPtr clientPartyPtr, QPainter* painter,
+   QStyleOptionViewItem& itemOption) const
+{
+   // #new_logic : do not forget to add color for outgoing and incoming requests
+   switch (clientPartyPtr->partyState()) {
+   case Chat::PartyState::UNINITIALIZED:
+      itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOutgoing());
+      break;
+   case Chat::PartyState::REQUESTED:
+      itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactIncoming());
+      break;
+   case Chat::PartyState::REJECTED:
+      itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactRejected());
+      break;
+   default:
+      break;
+   }
+}
+
+// #old_logic
 void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
@@ -295,14 +329,4 @@ QWidget *ChatClientUsersViewItemDelegate::createEditor(QWidget *parent, const QS
    QWidget * editor = QStyledItemDelegate::createEditor(parent, option, index);
    editor->setProperty("contact_editor", true);
    return editor;
-}
-
-template<typename AbstractPartySubClass>
-AbstractPartySubClass* ChatClientUsersViewItemDelegate::checkAndGetInternalPointer(const QModelIndex &index) const
-{
-   AbstractPartySubClass* internalData = static_cast<AbstractPartySubClass*>(index.internalPointer());
-#ifndef QT_NO_DEBUG
-   Q_ASSERT(internalData);
-#endif
-   return internalData;
 }

@@ -38,6 +38,14 @@ class OTCRequestViewModel;
 class OtcClient;
 class QTextEdit;
 
+class SignContainer;
+
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
+
 class PartyTreeItem;
 class SignContainer;
 
@@ -214,7 +222,7 @@ private:
    OtcClient *otcClient_{};
 
 
-   // new interface
+   // #new_logic
 public:
    void onElementSelected(const PartyTreeItem* chatUserListElement);
 

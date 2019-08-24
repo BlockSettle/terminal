@@ -131,15 +131,15 @@ private:
    PartyTreeItem* rootItem_;
 };
 
-using ChatPartiesTreeModelPtr = std::shared_ptr<ChatPartiesTreeModel>;
+using ChatPartiesTreeModelPtr = std::unique_ptr<ChatPartiesTreeModel>;
 
-// #TODO_chat: Move this code in different file
+// #new_logic: Move this code in different file
 #include <QSortFilterProxyModel>
 class ChatPartiesSortProxyModel : public QSortFilterProxyModel
 {
    Q_OBJECT
 public:
-   explicit ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr sourceModel, QObject *parent = nullptr);
+   explicit ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr&& sourceModel, QObject *parent = nullptr);
 
    PartyTreeItem* getInternalData(const QModelIndex& index) const;
 
@@ -152,5 +152,6 @@ private:
    ChatPartiesTreeModelPtr sourceModel_;
 };
 
+using ChatPartiesSortProxyModelPtr = std::shared_ptr<ChatPartiesSortProxyModel>;
 
 #endif // CHATPARTYLISTMODEL_H

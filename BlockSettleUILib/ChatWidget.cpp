@@ -290,9 +290,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    // #new_logic
    chatClientServicePtr_ = chatClientServicePtr;
 
-   ChatPartiesTreeModelPtr chatTreeModel = std::make_shared<ChatPartiesTreeModel>(chatClientServicePtr_);
-   ChatPartiesSortProxyModel* charTreeSortModel = new ChatPartiesSortProxyModel(chatTreeModel, this);
-   ui_->treeViewUsers->setModel(charTreeSortModel);
+   ChatPartiesTreeModelPtr chatTreeModel = std::make_unique<ChatPartiesTreeModel>(chatClientServicePtr_);
+   ChatPartiesSortProxyModelPtr charTreeSortModel = std::make_shared<ChatPartiesSortProxyModel>(std::move(chatTreeModel));
+   ui_->treeViewUsers->setModel(charTreeSortModel.get());
    ui_->treeViewUsers->sortByColumn(0, Qt::AscendingOrder);
    ui_->treeViewUsers->setSortingEnabled(true);
    ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(charTreeSortModel, this));
