@@ -363,10 +363,24 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
       return false;
    }
 
-   Tx tx(rawTx);
-   if (!tx.isInitialized() || tx.getThisHash().isNull()) {
-      logger_->error("[ArmoryConnection::broadcastZC] invalid TX data (size {}) - aborting broadcast"
-                     , rawTx.getSize());
+   if (rawTx.isNull()) {
+      SPDLOG_LOGGER_ERROR(logger_, "broadcast failed: empty rawTx");
+      return false;
+   }
+
+   try
+   {
+      Tx tx(rawTx);
+      if (!tx.isInitialized() || tx.getThisHash().isNull()) {
+         logger_->error("[ArmoryConnection::broadcastZC] invalid TX data (size {}) - aborting broadcast"
+                        , rawTx.getSize());
+         return false;
+      }
+   } catch (const BlockDeserializingException &e) {
+      SPDLOG_LOGGER_ERROR(logger_, "broadcast failed: BlockDeserializingException, details: '{}'", e.what());
+      return false;
+   } catch (const std::exception &e) {
+      SPDLOG_LOGGER_ERROR(logger_, "broadcast failed: {}", e.what());
       return false;
    }
 
@@ -530,7 +544,36 @@ bool ArmoryConnection::getSpendableZCoutputs(const std::vector<std::string> &wal
          }
       }
    };
+
    bdv_->getCombinedSpendableZcOutputs(walletIds, cbWrap);
+   return true;
+}
+
+bool ArmoryConnection::getNodeStatus(const std::function<void(const std::shared_ptr<::ClientClasses::NodeStatusStruct>)>& userCB)
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[ArmoryConnection::getNodeStatus] invalid state: {}", (int)state_.load());
+      return false;
+   }
+
+   if (!userCB) {
+      logger_->error("[ArmoryConnection::getNodeStatus] invalid callback");
+      return false;
+   }
+
+   const auto cbWrap = [this, userCB](ReturnMessage<std::shared_ptr<::ClientClasses::NodeStatusStruct>> reply)
+   {
+      try {
+         const auto nodeStatus = reply.get();
+         userCB(nodeStatus);
+      } catch (const std::exception &e) {
+         logger_->error("[ArmoryConnection::getNodeStatus] failed: {}", e.what());
+         userCB({});
+      }
+   };
+
+   bdv_->getNodeStatus(cbWrap);
+
    return true;
 }
 

@@ -357,9 +357,7 @@ void WalletsManager::setUserId(const BinaryData &userId)
       hdWallet.second->setUserId(userId);
    }
    auto primaryWallet = getPrimaryWallet();
-   if (primaryWallet) {
-      signContainer_->setUserId(userId, primaryWallet->walletId());
-   }
+   signContainer_->setUserId(userId, primaryWallet ? primaryWallet->walletId() : "");
 }
 
 const WalletsManager::HDWalletPtr WalletsManager::getHDWallet(unsigned id) const
@@ -904,8 +902,9 @@ void WalletsManager::createSettlementLeaf(const bs::Address &authAddr
    if (!signContainer_) {
       logger_->error("[WalletsManager::{}] - signer is not set - aborting"
          , __func__);
-      if (cb)
+      if (cb) {
          cb({});
+      }
       return;
    }
    signContainer_->createSettlementWallet(authAddr, cb);
@@ -948,6 +947,47 @@ void WalletsManager::onWalletsListUpdated()
                QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletAdded(hdWallet->walletId()); });
             });
             newWallets_.insert(hdWallet.first);
+         }
+         else {
+            const auto wallet = hdWallets_[hdWallet.first];
+            const auto &cbSyncHD = [this, wallet](bs::sync::HDWalletData hdData) {
+               bool walletUpdated = false;
+               if (hdData.groups.size() != wallet->getGroups().size()) {
+                  walletUpdated = true;
+               }
+               else {
+                  for (const auto &group : hdData.groups) {
+                     const auto hdGroup = wallet->getGroup(group.type);
+                     if (hdGroup->getLeaves().size() != group.leaves.size()) {
+                        walletUpdated = true;
+                        break;
+                     }
+                  }
+               }
+               if (!walletUpdated) {
+                  return;
+               }
+               logger_->debug("[WalletsManager::onWalletsListUpdated] wallet {} has changed - resyncing"
+                  , wallet->walletId());
+               wallet->synchronize([this, wallet] {
+                  wallet->registerWallet(armoryPtr_);
+                  for (const auto &leaf : wallet->getLeaves()) {
+                     if (!getWalletById(leaf->walletId())) {
+                        logger_->debug("[WalletsManager::onWalletsListUpdated] adding new leaf {}"
+                           , leaf->walletId());
+                        addWallet(leaf, true);
+                     }
+                  }
+                  wallet->scan([this, wallet](bs::sync::SyncState state) {
+                     if (state == bs::sync::SyncState::Success) {
+                        QMetaObject::invokeMethod(this, [this, wallet] {
+                           emit walletChanged(wallet->walletId());
+                        });
+                     }
+                  });
+               });
+            };
+            signContainer_->syncHDWallet(wallet->walletId(), cbSyncHD);
          }
       }
       const auto hdWalledsId = hdWalletsId_;
@@ -1549,7 +1589,7 @@ void WalletsManager::ProcessPromoteHDWallet(bs::error::ErrorCode result, const s
    }
 }
 
-bool WalletsManager::CreateAuthLeaf()
+bool WalletsManager::createAuthLeaf(const std::function<void()> &cb)
 {
    if (getAuthWallet() != nullptr) {
       logger_->error("[WalletsManager::CreateAuthLeaf] auth leaf already exists");
@@ -1567,5 +1607,48 @@ bool WalletsManager::CreateAuthLeaf()
       return false;
    }
 
-   return signContainer_->setUserId(userId_, primaryWallet->walletId()) > 0;
+   const bs::hd::Path authPath({ bs::hd::Purpose::Native, bs::hd::CoinType::BlockSettle_Auth, 0 });
+   bs::wallet::PasswordData pwdData;
+   pwdData.salt = userId_;
+   bs::sync::PasswordDialogData dialogData;
+   dialogData.setValue("Title", tr("Create Auth Leaf"));
+   dialogData.setValue("Product", QString::fromStdString(userId_.toHexStr()));
+
+   const auto &createAuthLeafCb = [this, cb, primaryWallet, authPath]
+      (bs::error::ErrorCode result, const std::string &walletId)
+   {
+      if (result != bs::error::ErrorCode::NoError) {
+         logger_->error("[WalletsManager::createAuthLeaf] auth leaf creation failure: {}"
+            , (int)result);
+         emit AuthLeafNotCreated();
+         return;
+      }
+      const auto group = primaryWallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
+      const auto authGroup = std::dynamic_pointer_cast<bs::sync::hd::AuthGroup>(group);
+      if (!authGroup) {
+         logger_->error("[WalletsManager::createAuthLeaf] no auth group exists");
+         emit AuthLeafNotCreated();
+         return;
+      }
+      authGroup->setUserId(userId_);
+      const auto leaf = authGroup->createLeaf(authPath, walletId);
+      if (!leaf) {
+         logger_->error("[WalletsManager::createAuthLeaf] failed to create auth leaf");
+         emit AuthLeafNotCreated();
+         return;
+      }
+      leaf->synchronize([this, cb, leaf] {
+         leaf->registerWallet(armoryPtr_);
+         authAddressWallet_ = leaf;
+         addWallet(leaf, true);
+         emit AuthLeafCreated();
+         emit authWalletChanged();
+         emit walletChanged(leaf->walletId());
+         if (cb) {
+            cb();
+         }
+      });
+   };
+   return signContainer_->createHDLeaf(primaryWallet->walletId(), authPath, { pwdData }
+      , dialogData, createAuthLeafCb);
 }

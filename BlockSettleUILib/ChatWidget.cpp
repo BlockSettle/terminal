@@ -259,10 +259,13 @@ ChatWidget::ChatWidget(QWidget *parent)
 ChatWidget::~ChatWidget() = default;
 
 // #new_logic : redoing
-void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager,
-   const std::shared_ptr<ApplicationSettings> &appSettings,
-   const Chat::ChatClientServicePtr& chatClientServicePtr,
-   const std::shared_ptr<spdlog::logger>& logger)
+void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager
+                 , const std::shared_ptr<ApplicationSettings> &appSettings
+                 , const Chat::ChatClientServicePtr& chatClientServicePtr
+                 , const std::shared_ptr<spdlog::logger>& logger
+                 , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+                 , const std::shared_ptr<ArmoryConnection> &armory
+                 , const std::shared_ptr<SignContainer> &signContainer)
 {
    logger_ = logger;
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
@@ -343,10 +346,11 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    installEventFilter(this);
 
-   otcClient_ = new OtcClient(logger_, this);
+   otcClient_ = new OtcClient(logger_, walletsMgr, armory, signContainer, this);
    connect(client_.get(), &ChatClient::contactConnected, otcClient_, &OtcClient::peerConnected);
    connect(client_.get(), &ChatClient::contactDisconnected, otcClient_, &OtcClient::peerDisconnected);
    connect(client_.get(), &ChatClient::otcMessageReceived, otcClient_, &OtcClient::processMessage);
+   connect(otcClient_, &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
 
    connect(otcClient_, &OtcClient::sendMessage, client_.get(), &ChatClient::sendOtcMessage);
 
@@ -504,11 +508,18 @@ void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &userId)
    ui_->input_textEdit->setFocus(Qt::FocusReason::MouseFocusReason);
 }
 
+void ChatWidget::processOtcPbMessage(const std::string &data)
+{
+   otcClient_->processPbMessage(data);
+}
+
 void ChatWidget::onConnectedToServer()
 {
    const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    chatLoggedInTimestampUtcInMillis_ =  timestamp.count();
    changeState(State::LoggedIn);
+
+   otcClient_->setCurrentUserId(client_->currentUserId());
 }
 
 void ChatWidget::onContactRequestAccepted(const std::string &userId)
@@ -839,13 +850,6 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
             }
          }
          break;
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
-            auto contact = element->getDataObject();
-            if (contact && contact->has_contact_record() && currentChat_ == contact->contact_record().contact_id()) {
-               OTCSwitchToContact(contact);
-            }
-         }
-         break;
          case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
             auto contact = element->getDataObject();
             if (contact && contact->has_contact_record()) {
@@ -908,7 +912,8 @@ void ChatWidget::updateOtc(const std::string &contactId)
          ui_->widgetNegotiateResponse->setOffer(peer->offer);
          ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
          break;
-      case otc::State::WaitAcceptAck:
+      case otc::State::SentPayinInfo:
+      case otc::State::WaitPayinInfo:
          ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
          break;
       case otc::State::Blacklisted:

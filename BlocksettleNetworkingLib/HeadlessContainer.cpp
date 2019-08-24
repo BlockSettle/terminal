@@ -593,7 +593,7 @@ bs::signer::RequestId HeadlessContainer::syncCCNames(const std::vector<std::stri
 }
 
 bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
-   , const std::vector<bs::wallet::PasswordData>&, bs::sync::PasswordDialogData dialogData
+   , const std::vector<bs::wallet::PasswordData> &pwData, bs::sync::PasswordDialogData dialogData
    , const CreateHDLeafCb &cb)
 {
    if (rootWalletId.empty() || (path.length() != 3)) {
@@ -604,6 +604,11 @@ bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::
    request.set_rootwalletid(rootWalletId);
    request.set_path(path.toString());
 
+   if (!pwData.empty()) {
+      if (!pwData[0].salt.isNull()) {
+         request.set_salt(pwData[0].salt.toBinStr());
+      }
+   }
    dialogData.setValue(QLatin1String("WalletId"), QString::fromStdString(rootWalletId));
 
    auto requestDialogData = request.mutable_passworddialogdata();

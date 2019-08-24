@@ -116,6 +116,8 @@ public:
 
    ArmoryState state() const { return state_; }
 
+   bool getNodeStatus(const std::function<void(const std::shared_ptr<::ClientClasses::NodeStatusStruct>)>& userCB);
+
    bool goOnline();
 
    bool broadcastZC(const BinaryData& rawTx);

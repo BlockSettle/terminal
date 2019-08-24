@@ -25,24 +25,39 @@ enum CLIRequestType
 
 enum ArmoryConnectionState
 {
-   ArmoryConnectionOffline = 1;
-   ArmoryConnectionScanning = 2;
-   ArmoryConnectionConnected = 3;
-   ArmoryConnectionReady = 4;
+   ArmoryConnectionOffline    = 1;
+   ArmoryConnectionScanning   = 2;
+   ArmoryConnectionConnected  = 3;
+   ArmoryConnectionReady      = 4;
 }
 
 enum AuthAddressVerificationState
 {
-   VerificationFailedState = 1;
-   InProgressState = 2;
-   NotSubmittedState = 3;
-   SubmittedState = 4;
-   PendingVerificationState = 5;
+   VerificationFailedState    = 1;
+   InProgressState            = 2;
+   NotSubmittedState          = 3;
+   SubmittedState             = 4;
+   PendingVerificationState   = 5;
    VerificationSubmittedState = 6;
-   VerifiedState = 7;
-   RevokedState = 8;
-   RevokedByBSState = 9;
+   VerifiedState              = 7;
+   RevokedState               = 8;
+   RevokedByBSState           = 9;
 }
+
+enum ArmoryNodeStatus
+{
+   NodeStatus_Offline   = 1;
+   NodeStatus_Online    = 2;
+   NodeStatus_OffSync   = 3;
+}
+
+enum ArmoryNodeRpcStatus
+{
+   RpcStatus_Disabled   = 1;
+   RpcStatus_BadAuth    = 2;
+   RpcStatus_Online     = 3;
+   RpcStatus_Error_28   = 4;
+};
 
 message CLIRequestPacket
 {
@@ -71,12 +86,16 @@ message PBStatusResponse
    optional string UnifyVersion           = 9;
    optional string LandfallVersion        = 10;
 
-   required ArmoryConnectionState armoryConnectionState = 12;
+   required ArmoryConnectionState   armoryConnectionState   = 12;
+   required int32                   currentBlock            = 13;
+   required ArmoryNodeStatus        nodeStatus              = 14;
+   required bool                    segwitEnabled           = 15;
+   required ArmoryNodeRpcStatus     armoryRpcStatus         = 16;
 
-   required string uptime           = 13;
-   required uint64 uptime_seconds   = 14;
+   required string uptime           = 17;
+   required uint64 uptime_seconds   = 18;
 
-   required bool ConnectedToMD      = 15;
+   required bool ConnectedToMD      = 19;
 }
 
 message ErrorMessage

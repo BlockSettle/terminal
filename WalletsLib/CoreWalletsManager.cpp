@@ -301,11 +301,24 @@ WalletsManager::HDWalletPtr WalletsManager::createWallet(
       auto lock = newWallet->lockForEncryption(passphrase);
       newWallet->createStructure();
       if (primary) {
-         newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
-         newWallet->createGroup(bs::hd::CoinType::BlockSettle_Settlement);
-         auto group = newWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
-         for (const auto &cc : ccLeaves_) {
-            group->createLeaf(AddressEntryType_Default, cc);
+         auto group = newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+         if (!userId_.isNull()) {
+            newWallet->createGroup(bs::hd::CoinType::BlockSettle_Settlement);
+            const auto authGroup = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
+            if (authGroup) {
+               authGroup->setSalt(userId_);
+               authGroup->createLeaf(AddressEntryType_Default, 0, 5);
+            }
+            else {
+               logger_->error("[{}] invalid auth group", __func__);
+            }
+         }
+
+         if (!ccLeaves_.empty()) {
+            group = newWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
+            for (const auto &cc : ccLeaves_) {
+               group->createLeaf(AddressEntryType_Default, cc);
+            }
          }
       }
    }

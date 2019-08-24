@@ -324,7 +324,6 @@ void hd::Wallet::scan(const std::function<void(bs::sync::SyncState)> &cb)
 void hd::Wallet::startRescan()
 {
    const auto &cbScanned = [this](bs::sync::SyncState state) {
-//      synchronize([]{});
       if (wct_) {
          wct_->scanComplete(walletId());
       }

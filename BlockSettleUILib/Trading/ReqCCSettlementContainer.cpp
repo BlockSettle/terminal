@@ -264,6 +264,8 @@ bool ReqCCSettlementContainer::startSigning()
       }
    }
 
+   emit sendOrder();
+
    QPointer<ReqCCSettlementContainer> context(this);
    const auto &cbTx = [this, context, logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
       if (!context) {
@@ -276,8 +278,6 @@ bool ReqCCSettlementContainer::startSigning()
 
          // notify RFQ dialog that signed half could be saved
          emit settlementAccepted();
-         // and quote could be accepted
-         emit sendOrder();
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
          emit settlementCancelled();

@@ -259,6 +259,7 @@ message CreateHDLeafRequest
    string   rootWalletId = 1;
    string   path = 2;
    Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData = 3;
+   bytes    salt = 4;
 }
 
 message PromoteHDWalletRequest

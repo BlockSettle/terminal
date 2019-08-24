@@ -91,6 +91,8 @@ public:
    std::string getUserId() const;
    void uploadNewPublicKeyToServer(const bool& /*confirmed*/);
 
+   const std::string &currentUserId() const { return currentUserId_; }
+
 signals:
    void ConfirmContactsNewData(const ChatDataVectorPtr& /*remoteConfirmed*/, const ChatDataVectorPtr& /*remoteKeysUpdate*/, const ChatDataVectorPtr& /*remoteAbsolutelyNew*/);
    void ConfirmUploadNewPublicKey(const std::string&/*oldKey*/, const std::string&/*newKey*/);

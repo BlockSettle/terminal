@@ -992,7 +992,7 @@ template <typename TVal> TVal AuthAddressManager::lookup(const bs::Address &key,
    return it->second;
 }
 
-void AuthAddressManager::CreateAuthWallet()
+void AuthAddressManager::createAuthWallet(const std::function<void()> &cb)
 {
    if (!signingContainer_ || !walletsManager_) {
       emit Error(tr("Unable to create auth wallet"));
@@ -1004,7 +1004,7 @@ void AuthAddressManager::CreateAuthWallet()
       return;
    }
 
-   if (!walletsManager_->CreateAuthLeaf()) {
+   if (!walletsManager_->createAuthLeaf(cb)) {
       emit Error(tr("Failed to initate auth wallet creation"));
       return;
    }

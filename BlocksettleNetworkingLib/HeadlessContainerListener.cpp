@@ -708,6 +708,8 @@ bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const
             break;
 
          case headless::CreateHDLeafRequestType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateSettlementLeaf, dialogData);
+            break;
          case headless::CreateSettlWalletType:
             callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dialogData);
             break;
@@ -749,11 +751,17 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
       return false;
    }
 
+   if (request.userid().empty()) {
+      logger_->info("[{}] empty user id - do nothing", __func__);
+      return true;
+   }
+
+   walletsMgr_->setUserId(request.userid());
+
    const auto wallet = walletsMgr_->getPrimaryWallet();
    if (!wallet) {
-      logger_->info("[{}] no primary wallet", __func__);
-      setUserIdResponse(clientId, packet.id(), headless::AWR_NoPrimary);
-      return false;
+      logger_->info("[{}] no primary wallet - aborting", __func__);
+      return true;
    }
    const auto group = wallet->getGroup(bs::hd::BlockSettle_Auth);
    if (!group) {
@@ -792,6 +800,7 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
       }
       else {
          logger_->error("[{}] salts don't match - aborting for now", __func__);
+         setUserIdResponse(clientId, packet.id(), headless::AWR_WrongSalt);
          return false;
       }
    }
@@ -801,7 +810,6 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
    if (leaf) {
       const auto authLeaf = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leaf);
       if (authLeaf && (authLeaf->getSalt() == salt)) {
-         logger_->debug("[{}] found existing auth wallet", __func__);
          setUserIdResponse(clientId, packet.id(), headless::AWR_NoError, authLeaf->walletId());
          return true;
       }
@@ -810,40 +818,8 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
          return false;
       }
    }
-
-   if (!request.userid().empty()) {
-      const auto &onPassword = [this, wallet, group, clientId, id=packet.id()]
-      (bs::error::ErrorCode result, const SecureBinaryData &password) {
-         if (result != bs::error::ErrorCode::NoError) {
-            setUserIdResponse(clientId, id, headless::AWR_NotDecrypted);
-            return;
-         }
-         try {
-            auto lock = wallet->lockForEncryption(password);
-            auto leaf = group->createLeaf(AddressEntryType_Default, 0 + bs::hd::hardFlag, 5);
-            if (leaf) {
-               setUserIdResponse(clientId, id, headless::AWR_NoError, leaf->walletId());
-               return;
-            }
-            else {
-               logger_->warn("[HeadlessContainerListener::onSetUserId] failed to create auth leaf");
-            }
-         }
-         catch (const std::exception &e) {
-            logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf: {}", e.what());
-         }
-         setUserIdResponse(clientId, id, headless::AWR_SaltSetFailed);
-         return;
-      };
-      bs::core::wallet::TXSignRequest txReq;
-      txReq.walletId = wallet->walletId();
-
-      return RequestPasswordIfNeeded(clientId, wallet->walletId(), txReq, headless::SetUserIdType, request.passworddialogdata(), onPassword);
-   }
-   else {
-      // FIXME: implement reset user id
-      return true;
-   }
+   setUserIdResponse(clientId, packet.id(), headless::AWR_NoPrimary);
+   return true;
 }
 
 bool HeadlessContainerListener::onSyncCCNames(headless::RequestPacket &packet)
@@ -899,13 +875,15 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
       return false;
    }
    const auto path = bs::hd::Path::fromString(request.path());
-   if ((path.length() != 3) && !path.isAbsolute()) {
+   if ((path.length() < 3) && !path.isAbsolute()) {
       logger_->error("[HeadlessContainerListener] invalid path {} at HD wallet creation", request.path());
       CreateHDLeafResponse(clientId, packet.id(), ErrorCode::InternalError);
       return false;
    }
 
-   const auto onPassword = [this, hdWallet, path, clientId, id = packet.id()](bs::error::ErrorCode result, const SecureBinaryData &pass) {
+   const auto onPassword = [this, hdWallet, path, clientId, id = packet.id(), salt=request.salt()]
+      (bs::error::ErrorCode result, const SecureBinaryData &pass)
+   {
       std::shared_ptr<bs::core::hd::Node> leafNode;
       if (result != ErrorCode::NoError) {
          logger_->error("[HeadlessContainerListener] no password for encrypted wallet");
@@ -920,6 +898,21 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
       }
 
       try {
+         if (!salt.empty()) {
+            const auto authGroup = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
+            if (authGroup) {
+               const auto prevSalt = authGroup->getSalt();
+               if (prevSalt.isNull()) {
+                  authGroup->setSalt(salt);
+               }
+               else if (prevSalt != salt) {
+                  logger_->error("[HeadlessContainerListener] auth salts mismatch");
+                  CreateHDLeafResponse(clientId, id, ErrorCode::MissingAuthKeys);
+                  return;
+               }
+            }
+         }
+
          auto leaf = group->getLeafByPath(path);
 
          if (leaf == nullptr) {
@@ -1138,17 +1131,44 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       sendData(packet.SerializeAsString(), clientId);
       return false;
    }
-   const auto &onPassword = [this, priWallet, request, clientId, id=packet.id()]
+   auto &reqsForAddress = settlLeafReqs_[{clientId, request.auth_address() }];
+   reqsForAddress.push_back(packet.id());
+   if (reqsForAddress.size() > 1) {
+      return true;
+   }
+   const auto &onPassword = [this, priWallet, clientId, request, id=packet.id()]
       (bs::error::ErrorCode result, const SecureBinaryData &password) {
       headless::CreateSettlWalletResponse response;
       headless::RequestPacket packet;
       packet.set_id(id);
       packet.set_type(headless::CreateSettlWalletType);
 
-      if (result != bs::error::ErrorCode::NoError) {
-         logger_->warn("[HeadlessContainerListener] password request failed");
+      const auto &itReqs = settlLeafReqs_.find({ clientId, request.auth_address() });
+      if (itReqs == settlLeafReqs_.end()) {
+         logger_->warn("[HeadlessContainerListener] failed to find list of requests");
          packet.set_data(response.SerializeAsString());
          sendData(packet.SerializeAsString(), clientId);
+         return;
+      }
+
+      const auto &sendAllIds = [this, clientId](const std::string &response
+         , const std::vector<uint32_t> &ids)
+      {
+         if (ids.empty()) {
+            return;
+         }
+         headless::RequestPacket packet;
+         packet.set_data(response);
+         packet.set_type(headless::CreateSettlWalletType);
+         for (const auto &id : ids) {
+            packet.set_id(id);
+            sendData(packet.SerializeAsString(), clientId);
+         }
+      };
+
+      if (result != bs::error::ErrorCode::NoError) {
+         logger_->warn("[HeadlessContainerListener] password request failed");
+         sendAllIds(response.SerializeAsString(), itReqs->second);
          return;
       }
 
@@ -1156,20 +1176,21 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
          auto lock = priWallet->lockForEncryption(password);
          const auto leaf = priWallet->createSettlementLeaf(request.auth_address());
          if (!leaf) {
-            logger_->error("[{}] failed to create settlement leaf", __func__);
-            packet.set_data(response.SerializeAsString());
-            sendData(packet.SerializeAsString(), clientId);
+            logger_->error("[HeadlessContainerListener] failed to create settlement leaf for {}"
+               , request.auth_address());
+            sendAllIds(response.SerializeAsString(), itReqs->second);
             return;
          }
          response.set_wallet_id(leaf->walletId());
          response.set_public_key(getPubKey(leaf).toBinStr());
       }
-      packet.set_data(response.SerializeAsString());
-      sendData(packet.SerializeAsString(), clientId);
+      sendAllIds(response.SerializeAsString(), itReqs->second);
+      settlLeafReqs_.erase(itReqs);
    };
 
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
    dialogData.insert("WalletId", priWallet->walletId());
+   dialogData.insert("AuthAddress", request.auth_address());
 
    return RequestPasswordIfNeeded(clientId, priWallet->walletId(), {}, headless::CreateSettlWalletType
       , dialogData, onPassword);

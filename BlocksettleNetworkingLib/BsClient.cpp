@@ -6,7 +6,9 @@
 #include "ProtobufUtils.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "bs_proxy.pb.h"
+#include "bs_proxy_pb.pb.h"
 
+using namespace Blocksettle::Communication;
 using namespace Blocksettle::Communication::Proxy;
 
 BsClient::BsClient(const std::shared_ptr<spdlog::logger> &logger
@@ -49,6 +51,24 @@ void BsClient::startLogin(const std::string &email)
    sendRequest(&request, std::chrono::seconds(10), [this] {
       emit startLoginDone(AutheIDClient::NetworkError);
    });
+}
+
+void BsClient::sendPbMessage(std::string data)
+{
+   Request request;
+   auto d = request.mutable_proxy_pb();
+   d->set_data(std::move(data));
+   sendMessage(&request);
+}
+
+void BsClient::sendPbBroadcastXbt(const BsClient::BroadcastXbt &data)
+{
+   ProxyPb::Request request;
+   auto d = request.mutable_broadcast_xbt();
+   d->set_settlement_id(data.settlementId.toBinStr());
+   d->set_signed_payin(data.signedPayin.toBinStr());
+   d->set_signed_payout(data.signedPayout.toBinStr());
+   sendPbMessage(request.SerializeAsString());
 }
 
 void BsClient::cancelLogin()
@@ -206,6 +226,9 @@ void BsClient::OnDataReceived(const std::string &data)
          case Response::kCeler:
             processCeler(response->celer());
             return;
+         case Response::kProxyPb:
+            processProxyPb(response->proxy_pb());
+            return;
          case Response::kStartSignAddress:
          case Response::kGetSignResult:
             // Will be handled from processCb
@@ -291,6 +314,11 @@ void BsClient::processCeler(const Response_Celer &response)
    }
 
    emit celerRecv(messageType, response.data());
+}
+
+void BsClient::processProxyPb(const Response_ProxyPb &response)
+{
+   emit processPbMessage(response.data());
 }
 
 void BsClient::requestSignResult(std::chrono::seconds timeout

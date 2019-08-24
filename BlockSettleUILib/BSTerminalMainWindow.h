@@ -76,7 +76,7 @@ private:
    void setupWalletsView();
    void setupTransactionsView();
 
-   void InitConnections();
+   void initConnections();
    void initArmory();
    void connectArmory();
    void connectSigner();
@@ -190,7 +190,6 @@ private slots:
    void onCelerDisconnected();
    void onCelerConnectionError(int errorCode);
    void showRunInBackgroundMessage();
-   void onAuthMgrConnComplete();
    void onCCInfoMissing();
 
    void onMDConnectionDetailsRequired();
@@ -210,7 +209,7 @@ private:
    void setupShortcuts();
 
    void createAdvancedTxDialog(const std::string &selectedWalletId);
-   void createAuthWallet();
+   void createAuthWallet(const std::function<void()> &);
 
    bool isUserLoggedIn() const;
    bool isArmoryConnected() const;

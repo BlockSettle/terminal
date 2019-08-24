@@ -107,7 +107,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    cbApproveChat_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Chat
       , this, applicationSettings_);
 
-   InitConnections();
+   initConnections();
    initArmory();
 
    walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
@@ -119,6 +119,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitAssets();
    InitSigningContainer();
    InitAuthManager();
+   InitChatView();
 
    statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
       , signContainer_, ui_->statusbar);
@@ -311,6 +312,20 @@ void BSTerminalMainWindow::setupIcon()
    connect(qApp, SIGNAL(lastWindowClosed()), sysTrayIcon_.get(), SLOT(hide()));
 }
 
+void BSTerminalMainWindow::initConnections()
+{
+   connectionManager_ = std::make_shared<ConnectionManager>(logMgr_->logger("message"));
+
+   celerConnection_ = std::make_shared<CelerClientProxy>(logMgr_->logger());
+   connect(celerConnection_.get(), &BaseCelerClient::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
+   connect(celerConnection_.get(), &BaseCelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
+   connect(celerConnection_.get(), &BaseCelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
+
+   mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_, logMgr_->logger("message"));
+   connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
+   connect(mdProvider_.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &BSTerminalMainWindow::onMDConnectionDetailsRequired);
+}
+
 void BSTerminalMainWindow::LoadWallets()
 {
    logMgr_->logger()->debug("Loading wallets");
@@ -357,7 +372,6 @@ void BSTerminalMainWindow::InitAuthManager()
    connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, [](const QString &addr, const QString &state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
-   connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, &BSTerminalMainWindow::onAuthMgrConnComplete);
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &) {
       if (authAddrDlg_) {
          openAuthManagerDialog();
@@ -506,22 +520,6 @@ void BSTerminalMainWindow::SignerReady()
    lastSignerError_ = SignContainer::NoError;
 }
 
-void BSTerminalMainWindow::InitConnections()
-{
-   connectionManager_ = std::make_shared<ConnectionManager>(logMgr_->logger("message"));
-   celerConnection_ = std::make_shared<CelerClientProxy>(logMgr_->logger());
-   connect(celerConnection_.get(), &BaseCelerClient::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
-   connect(celerConnection_.get(), &BaseCelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
-   connect(celerConnection_.get(), &BaseCelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
-
-   mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_, logMgr_->logger("message"));
-
-   connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
-   connect(mdProvider_.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &BSTerminalMainWindow::onMDConnectionDetailsRequired);
-
-   InitChatView();
-}
-
 void BSTerminalMainWindow::acceptMDAgreement()
 {
    const auto &deferredDailog = [this]{
@@ -629,7 +627,8 @@ void BSTerminalMainWindow::InitChatView()
    chatClientServicePtr_ = std::make_shared<Chat::ChatClientService>();
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, [this]() {
-      ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_, logMgr_->logger("chat"));
+      ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_, logMgr_->logger("chat"),
+         walletsMgr_, armory_, signContainer_);
    });
 
    chatClientServicePtr_->Init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
@@ -1036,12 +1035,17 @@ void BSTerminalMainWindow::openAuthManagerDialog()
 
 void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 {
-   if (authManager_->HaveAuthWallet()) {
+   const auto showAuthDlg = [this, addrToVerify] {
       authAddrDlg_->show();
       QApplication::processEvents();
       authAddrDlg_->setAddressToVerify(addrToVerify);
+   };
+   if (authManager_->HaveAuthWallet()) {
+      showAuthDlg();
    } else {
-      createAuthWallet();
+      createAuthWallet([this, showAuthDlg] {
+         QMetaObject::invokeMethod(this, showAuthDlg);
+      });
    }
 }
 
@@ -1110,6 +1114,9 @@ void BSTerminalMainWindow::onLogin()
    mdProvider_->SubscribeToMD();
 
    LoadCCDefinitionsFromPuB();
+
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::processOtcPbMessage);
+   connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -1201,10 +1208,10 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    }
 }
 
-void BSTerminalMainWindow::createAuthWallet()
+void BSTerminalMainWindow::createAuthWallet(const std::function<void()> &cb)
 {
    if (celerConnection_->tradingAllowed()) {
-      const auto &deferredDialog = [this]{
+      const auto &deferredDialog = [this, cb]{
          if (!walletsMgr_->hasPrimaryWallet() && !createWallet(true)) {
             return;
          }
@@ -1215,25 +1222,12 @@ void BSTerminalMainWindow::createAuthWallet()
                , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
                , this);
             if (createAuthReq.exec() == QDialog::Accepted) {
-               authManager_->CreateAuthWallet();
+               authManager_->createAuthWallet(cb);
             }
          }
       };
 
       addDeferredDialog(deferredDialog);
-   }
-}
-
-void BSTerminalMainWindow::onAuthMgrConnComplete()
-{
-   if (celerConnection_->tradingAllowed()) {
-      if (!walletsMgr_->hasPrimaryWallet()) {
-         return;
-      }
-      createAuthWallet();
-   }
-   else {
-      logMgr_->logger("ui")->debug("Trading not allowed");
    }
 }
 

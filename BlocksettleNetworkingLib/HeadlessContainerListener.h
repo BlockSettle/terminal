@@ -190,6 +190,8 @@ private:
    const bool backupEnabled_ = true;
 
    HeadlessContainerCallbacks *callbacks_{};
+
+   std::map<std::pair<std::string, bs::Address>, std::vector<uint32_t>> settlLeafReqs_;
 };
 
 #endif // __HEADLESS_CONTAINER_LISTENER_H__

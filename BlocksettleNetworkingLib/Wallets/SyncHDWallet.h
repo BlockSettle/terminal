@@ -64,6 +64,7 @@ namespace bs {
 
             void setArmory(const std::shared_ptr<ArmoryConnection> &);
             void startRescan();
+            void scan(const std::function<void(bs::sync::SyncState)> &);
             bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }
 
@@ -97,7 +98,6 @@ namespace bs {
             void metadataChanged(const std::string &) override { wct_->metadataChanged(walletId()); }
             void walletCreated(const std::string &walletId) override;
             void walletDestroyed(const std::string &walletId) override;
-            void scan(const std::function<void(bs::sync::SyncState)> &);
 
          protected:
             WalletCallbackTarget *wct_{};
