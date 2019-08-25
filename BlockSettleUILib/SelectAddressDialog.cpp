@@ -9,15 +9,34 @@
 SelectAddressDialog::SelectAddressDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , const std::shared_ptr<bs::sync::Wallet>& wallet
    , QWidget* parent, AddressListModel::AddressType addrType)
- : QDialog(parent)
- , ui_(new Ui::SelectAddressDialog)
- , wallet_(wallet)
+   : QDialog(parent)
+   , ui_(new Ui::SelectAddressDialog)
+   , wallets_({ wallet })
+   , walletsMgr_(walletsManager)
+   , addrType_(addrType)
+{
+   init();
+}
+
+SelectAddressDialog::SelectAddressDialog(const std::shared_ptr<bs::sync::hd::Group> &group
+   , QWidget* parent, AddressListModel::AddressType addrType)
+   : QDialog(parent)
+   , ui_(new Ui::SelectAddressDialog)
+   , wallets_(group->getAllLeaves())
+   , addrType_(addrType)
+{
+   init();
+}
+
+SelectAddressDialog::~SelectAddressDialog() = default;
+
+void SelectAddressDialog::init()
 {
    ui_->setupUi(this);
 
-   model_ = new AddressListModel(walletsManager, ui_->treeView, addrType);
-   model_->setWallets({wallet_}, false, false);
-   ui_->treeView->setModel(model_);
+   model_ = std::make_unique<AddressListModel>(walletsMgr_, ui_->treeView, addrType_);
+   model_->setWallets(wallets_, false, false);
+   ui_->treeView->setModel(model_.get());
 
    ui_->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
@@ -29,8 +48,6 @@ SelectAddressDialog::SelectAddressDialog(const std::shared_ptr<bs::sync::Wallets
 
    onSelectionChanged();
 }
-
-SelectAddressDialog::~SelectAddressDialog() = default;
 
 bs::Address SelectAddressDialog::getAddress(const QModelIndex& index) const
 {

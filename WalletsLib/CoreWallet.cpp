@@ -494,16 +494,17 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request,
    }
 
    if (request.change.value && !request.populateUTXOs) {
-      
+      std::shared_ptr<ScriptRecipient> changeRecip;
       //check change address belongs to wallet
-      auto changeAddress = request.change.address;
-      if (!containsAddress(changeAddress))
-         throw WalletException("invalid change address");
-
-      setAddressComment(changeAddress, wallet::Comment::toString(wallet::Comment::ChangeAddress));
-      const auto addr = getAddressEntryForAddr(changeAddress);
-      const auto changeRecip = (addr != nullptr) ? addr->getRecipient(request.change.value)
-         : changeAddress.getRecipient(request.change.value);
+      if (containsAddress(request.change.address)) {
+         setAddressComment(request.change.address, wallet::Comment::toString(wallet::Comment::ChangeAddress));
+         const auto addr = getAddressEntryForAddr(request.change.address);
+         changeRecip = (addr != nullptr) ? addr->getRecipient(request.change.value)
+            : request.change.address.getRecipient(request.change.value);
+      }
+      else {
+         changeRecip = request.change.address.getRecipient(request.change.value);
+      }
       if (changeRecip == nullptr) {
          throw std::logic_error("invalid change recipient");
       }
