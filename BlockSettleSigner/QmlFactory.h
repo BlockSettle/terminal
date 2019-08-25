@@ -12,6 +12,8 @@
 #include "AuthProxy.h"
 #include "ConnectionManager.h"
 
+#include "BSErrorCode.h"
+
 class SignerAdapter;
 namespace bs {
    namespace sync {
@@ -101,6 +103,9 @@ public:
    Q_INVOKABLE void installEventFilterToObj(QObject *object);
    Q_INVOKABLE void applyWindowFix(QQuickWindow *mw);
    bool eventFilter(QObject *object, QEvent *event) override;
+
+   Q_INVOKABLE int errorCodeNoError()    {return static_cast<int>(bs::error::ErrorCode::NoError); }
+   Q_INVOKABLE int errorCodeTxCanceled() {return static_cast<int>(bs::error::ErrorCode::TxCanceled); }
 
 signals:
    void closeEventReceived();
