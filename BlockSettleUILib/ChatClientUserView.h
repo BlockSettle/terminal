@@ -12,6 +12,8 @@ namespace Chat {
 
 class ChatUsersContextMenu;
 class ChatUsersViewItemStyle;
+class PartyTreeItem;
+
 class ChatClientUserView : public QTreeView
 {
    Q_OBJECT
@@ -30,6 +32,7 @@ private slots:
    void onDoubleClicked(const QModelIndex &);
 private:
    void updateDependUI(CategoryElement * element);
+   void updateDependUi(const QModelIndex& index);
    void notifyCurrentChanged(CategoryElement *element);
    void notifyMessageChanged(std::shared_ptr<Chat::Data> message);
    void notifyElementUpdated(CategoryElement *element);

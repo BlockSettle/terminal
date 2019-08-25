@@ -1,3 +1,4 @@
+/*
 #include "ChatWidget.h"
 #include "ui_ChatWidget.h"
 
@@ -28,7 +29,6 @@
 #include "ChatProtocol/ClientPartyModel.h"
 
 Q_DECLARE_METATYPE(std::vector<std::string>)
-
 
 #define USE_NEW_TREE_MODEL
 #ifdef USE_NEW_TREE_MODEL
@@ -1345,6 +1345,8 @@ void ChatWidget::onMessageRead(const std::string& partyId, const std::string& me
 
 void ChatWidget::onLogin()
 {
+   currentChat_ = "Global";
+   ui_->textEditMessages->switchToChat(currentChat_);
    changeState<IdleState>();
 }
 
@@ -1371,4 +1373,515 @@ void ChatWidget::onPartyModelChanged()
 void ChatWidget::onMessageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state)
 {
    stateCurrent_->changeMessageState(partyId, message_id, party_message_state);
+}
+*/
+
+#include <QTreeView>
+#include <QFrame>
+#include <QAbstractScrollArea>
+#include <QUrl>
+#include <QTextDocument>
+#include <QTextOption>
+#include <QPen>
+#include <QTextFormat>
+#include <QTextCursor>
+#include <QTextEdit>
+
+#include "ChatClientUsersViewItemDelegate.h"
+//#include "OTCRequestViewModel.h"
+#include "BSChatInput.h"
+
+#include "ChatWidget.h"
+#include "ui_ChatWidget.h"
+
+// #old_logic : delete this all widget and use class RFQShieldPage(maybe need redo it but based class should be the same)
+enum class OTCPages : int
+{
+   OTCLoginRequiredShieldPage = 0,
+   OTCGeneralRoomShieldPage,
+   OTCCreateRequestPage,
+   OTCPullOwnOTCRequestPage,
+   OTCCreateResponsePage,
+   OTCNegotiateRequestPage,
+   OTCNegotiateResponsePage,
+   OTCParticipantShieldPage,
+   OTCContactShieldPage,
+   OTCContactNetStatusShieldPage,
+   OTCSupportRoomShieldPage
+};
+
+// #new_logic : make this class QObject in different file
+class AbstractChatWidgetState {
+public:
+   explicit AbstractChatWidgetState(ChatWidget* chat) : chat_(chat) { }
+   virtual ~AbstractChatWidgetState() = default;
+
+   void enterState() {
+      applyUserFrameChange();
+      applyChatFrameChange();
+      applyRoomsFrameChange();
+   }
+
+   // slots
+public:
+   void sendMessage() {
+      if (!canSendMessage()) {
+         Q_ASSERT(false); // "It should not be possible to send message in this state."
+         return;
+      }
+
+      std::string messageText = chat_->ui_->input_textEdit->toPlainText().toStdString();
+      chat_->chatClientServicePtr_->SendPartyMessage(chat_->currentChat_, messageText);
+      chat_->ui_->input_textEdit->clear();
+   }
+   void messageArrived(const Chat::MessagePtrList& messagePtr) {
+      if (!canReceiveMessage()) {
+         Q_ASSERT(false); // "It should not be possible to send message in this state."
+         return;
+      }
+
+      chat_->ui_->textEditMessages->onSingleMessageUpdate(messagePtr);
+   }
+   void changePartyStatus(const Chat::ClientPartyPtr& clientPartyPtr) {
+      if (!canChangePartyStatus()) {
+         return;
+      }
+
+      chat_->chatPartiesTreeModel_->partyStatusChanged(clientPartyPtr);
+   }
+   void resetPartyModel() {
+      if (!canResetPartyModel()) {
+         return;
+      }
+
+      chat_->chatPartiesTreeModel_->partyModelChanged();
+   }
+   void messageRead(const std::string& partyId, const std::string& messageId) {
+      if (!canResetReadMessage()) {
+         return;
+      }
+
+      chat_->chatClientServicePtr_->SetMessageSeen(partyId, messageId);
+   }
+   void changeMessageState(const std::string& partyId, const std::string& message_id, const int party_message_state) {
+      if (!canChangeMessageState()) {
+         return;
+      }
+
+      chat_->ui_->textEditMessages->onMessageStatusChanged(partyId, message_id, party_message_state);
+   }
+
+protected:
+   virtual void applyUserFrameChange() = 0;
+   virtual void applyChatFrameChange() = 0;
+   virtual void applyRoomsFrameChange() = 0;
+
+   virtual bool canSendMessage() const { return false; }
+   virtual bool canReceiveMessage() const { return true; }
+   virtual bool canChangePartyStatus() const { return true; }
+   virtual bool canResetPartyModel() const { return true; }
+   virtual bool canResetReadMessage() const { return true; }
+   virtual bool canChangeMessageState() const { return true; }
+
+   void saveDraftMessage()
+   {
+      const auto draft = chat_->ui_->input_textEdit->toPlainText();
+
+      if (draft.isEmpty()) 
+      {
+         chat_->draftMessages_.remove(chat_->currentChat_);
+      }
+      else
+      {
+         chat_->draftMessages_.insert(chat_->currentChat_, draft);
+      }
+   }
+
+   void restoreDraftMessage() {
+      const auto iDraft = chat_->draftMessages_.find(chat_->currentChat_);
+      if (iDraft != chat_->draftMessages_.cend()) {
+         chat_->ui_->input_textEdit->setText(iDraft.value());
+         auto cursor = chat_->ui_->input_textEdit->textCursor();
+         cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::MoveAnchor);
+         chat_->ui_->input_textEdit->setTextCursor(cursor);
+      }
+   }
+
+   ChatWidget* chat_;
+};
+
+class ChatLogOutState : public AbstractChatWidgetState {
+public:
+   explicit ChatLogOutState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~ChatLogOutState() = default;
+protected:
+   virtual void applyUserFrameChange() override {
+      auto* searchWidget = chat_->ui_->searchWidget;
+      searchWidget->clearLineEdit();
+      searchWidget->setLineEditEnabled(false);
+
+      chat_->chatPartiesTreeModel_->cleanModel();
+
+      chat_->ui_->labelUserName->setText(QObject::tr("offline"));
+   }
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->logout();
+
+      chat_->ui_->frameContactActions->setVisible(false);
+
+      chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
+      chat_->ui_->input_textEdit->setVisible(false);
+      chat_->ui_->input_textEdit->setEnabled(false);
+
+      chat_->draftMessages_.clear();
+   }
+   virtual void applyRoomsFrameChange() override {
+      chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
+   }
+
+   virtual bool canReceiveMessage() const override { return false; }
+   virtual bool canChangePartyStatus() const override { return false; }
+   virtual bool canResetReadMessage() const override { return false; }
+   virtual bool canChangeMessageState() const override { return false; }
+};
+
+class IdleState : public AbstractChatWidgetState {
+public:
+   explicit IdleState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~IdleState() override = default;
+protected:
+   virtual void applyUserFrameChange() override {
+      chat_->ui_->searchWidget->setLineEditEnabled(true);
+
+      chat_->ui_->treeViewUsers->expandAll();
+
+      const auto chatModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+      chat_->ui_->labelUserName->setText(QString::fromStdString(chatModelPtr->ownUserName()));
+   }
+   virtual void applyChatFrameChange() override {
+      const auto chatModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+      chat_->ui_->textEditMessages->setOwnUserId(chatModelPtr->ownUserName());
+      chat_->ui_->textEditMessages->resetChatView();
+
+      chat_->ui_->frameContactActions->setVisible(false);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+   }
+};
+
+class PrivatePartyInitState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyInitState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyInitState() override {
+      saveDraftMessage();
+   };
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentChat_);
+
+      chat_->ui_->frameContactActions->setVisible(false);
+
+      // #new_logic : draft ??
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(true);
+
+      restoreDraftMessage();
+   }
+   virtual void applyRoomsFrameChange() override {
+      // #new_logic : OTC shield
+   }
+   virtual bool canSendMessage() const override { return true; }
+};
+
+class PrivatePartyUninitState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyUninitState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyUninitState() override = default;
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentChat_);
+
+      chat_->ui_->pushButton_AcceptSend->setText(QObject::tr("SEND"));
+      chat_->ui_->pushButton_RejectCancel->setText(QObject::tr("CANCEL"));
+      chat_->ui_->frameContactActions->setVisible(true);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      // #new_logic : OTCShield? 
+      // chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+   }
+};
+
+class PrivatePartyRequestedOutgoingState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyRequestedOutgoingState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyRequestedOutgoingState() override = default;
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->resetChatView();
+
+      chat_->ui_->frameContactActions->setVisible(false);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      // #new_logic : OTCShield? 
+      // chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+   }
+};
+
+class PrivatePartyRequestedIncomingState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyRequestedIncomingState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyRequestedIncomingState() override = default;
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->resetChatView();
+
+      chat_->ui_->pushButton_AcceptSend->setText(QObject::tr("ACCEPT"));
+      chat_->ui_->pushButton_RejectCancel->setText(QObject::tr("REJECT"));
+      chat_->ui_->frameContactActions->setVisible(true);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      // #new_logic : OTCShield? 
+      // chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+   }
+};
+
+class PrivatePartyRejectedState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyRejectedState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyRejectedState() override = default;
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->resetChatView();
+
+      chat_->ui_->frameContactActions->setVisible(false);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      // #new_logic : OTC shield?
+   }
+};
+
+
+ChatWidget::ChatWidget(QWidget* parent)
+   : QWidget(parent), ui_(new Ui::ChatWidget)
+{
+   ui_->setupUi(this);
+
+#ifndef Q_OS_WIN
+   ui_->timeLabel->setMinimumSize(ui_->timeLabel->property("minimumSizeLinux").toSize());
+#endif
+
+   ui_->textEditMessages->setColumnsWidth(ui_->timeLabel->minimumWidth(),
+      ui_->iconLabel->minimumWidth(),
+      ui_->userLabel->minimumWidth(),
+      ui_->messageLabel->minimumWidth());
+
+   //Init UI and other stuff
+   ui_->frameContactActions->setVisible(false);
+   ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
+
+   //otcRequestViewModel_ = new OTCRequestViewModel(this);
+   //ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
+
+   qRegisterMetaType<std::vector<std::string>>();
+
+   connect(ui_->pushButton_AcceptSend, &QPushButton::clicked, this, &ChatWidget::onContactRequestAcceptSendClicked);
+   connect(ui_->pushButton_RejectCancel, &QPushButton::clicked, this, &ChatWidget::onContactRequestRejectCancelClicked);
+}
+
+void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager,
+   const std::shared_ptr<ApplicationSettings>& appSettings,
+   const Chat::ChatClientServicePtr& chatClientServicePtr,
+   const std::shared_ptr<spdlog::logger>& loggerPtr)
+{
+   loggerPtr_ = loggerPtr;
+
+   chatClientServicePtr_ = chatClientServicePtr;
+
+   installEventFilter(this);
+
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout);
+
+   chatPartiesTreeModel_ = std::make_shared<ChatPartiesTreeModel>(chatClientServicePtr_);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatWidget::onPartyModelChanged);
+
+   ChatPartiesSortProxyModelPtr charTreeSortModel = std::make_shared<ChatPartiesSortProxyModel>(chatPartiesTreeModel_);
+   ui_->treeViewUsers->setModel(charTreeSortModel.get());
+   ui_->treeViewUsers->sortByColumn(0, Qt::AscendingOrder);
+   ui_->treeViewUsers->setSortingEnabled(true);
+   ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(charTreeSortModel, this));
+   ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
+
+   ui_->treeViewUsers->expandAll();
+
+   // TODO: fix search widget
+   ui_->searchWidget->init();
+   ui_->searchWidget->clearLineEdit();
+   ui_->searchWidget->setLineEditEnabled(false);
+   ui_->searchWidget->setListVisible(false);
+
+   ui_->textEditMessages->switchToChat("Global");
+
+   changeState<ChatLogOutState>(); //Initial state is LoggedOut
+
+   // connections
+   // User actions
+   connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserListClicked);
+   connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::messageRead, this, &ChatWidget::onMessageRead);
+
+/* TODO
+
+   // Back end changes
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedInToServer, this, &ChatWidget::onLogin);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatWidget::onPartyModelChanged);
+
+   Chat::ClientPartyModelPtr chatModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
+   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onSendArrived);
+   connect(chatModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onClientPartyStatusChanged);
+   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onMessageStateChanged);
+
+   ui_->textEditMessages->setClientPartyModel(chatModelPtr);
+   ui_->input_textEdit->setAcceptRichText(false);
+
+   connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
+
+   connect(ui_->textEditMessages, &QTextEdit::selectionChanged, this, &ChatWidget::onChatMessagesSelectionChanged);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::addContactRequired, this, &ChatWidget::onSendFriendRequest);
+*/
+
+
+/* OTC
+   connect(ui_->treeViewOTCRequests->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ChatWidget::OnOTCSelectionChanged);
+
+   otcClient_ = new OtcClient(logger_, walletsMgr, armory, signContainer, this);
+   connect(client_.get(), &ChatClient::contactConnected, otcClient_, &OtcClient::peerConnected);
+   connect(client_.get(), &ChatClient::contactDisconnected, otcClient_, &OtcClient::peerDisconnected);
+   connect(client_.get(), &ChatClient::otcMessageReceived, otcClient_, &OtcClient::processMessage);
+   connect(otcClient_, &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
+
+   connect(otcClient_, &OtcClient::sendMessage, client_.get(), &ChatClient::sendOtcMessage);
+
+   connect(otcClient_, &OtcClient::peerUpdated, this, &ChatWidget::onOtcUpdated);
+
+   connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::requestCreated, this, &ChatWidget::onOtcRequestSubmit);
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::requestPulled, this, &ChatWidget::onOtcRequestPull);
+   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseAccepted, this, &ChatWidget::onOtcResponseAccept);
+   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseUpdated, this, &ChatWidget::onOtcResponseUpdate);
+   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseRejected, this, &ChatWidget::onOtcResponseReject);
+*/
+}
+
+void ChatWidget::onContactRequestAcceptSendClicked()
+{
+}
+
+void ChatWidget::onContactRequestRejectCancelClicked()
+{
+}
+
+void ChatWidget::onPartyModelChanged()
+{
+   chatPartiesTreeModel_->partyModelChanged();
+   ui_->treeViewUsers->expandAll();
+}
+
+void ChatWidget::onLogin()
+{
+   changeState<IdleState>();
+}
+
+void ChatWidget::onLogout()
+{
+   changeState<ChatLogOutState>();
+}
+
+void ChatWidget::processOtcPbMessage(const std::string& data)
+{
+}
+
+void ChatWidget::onSendButtonClicked()
+{
+   return stateCurrent_->sendMessage();
+}
+
+void ChatWidget::onSendMessage()
+{
+   stateCurrent_->sendMessage();
+}
+
+void ChatWidget::onMessageRead(const std::string& partyId, const std::string& messageId)
+{
+   stateCurrent_->messageRead(partyId, messageId);
+}
+
+void ChatWidget::onUserListClicked(const QModelIndex& index)
+{
+   //save draft
+
+   ChatPartiesSortProxyModel* chartProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
+   PartyTreeItem* partyTreeItem = chartProxyModel->getInternalData(index);
+
+   if (partyTreeItem->modelType() == UI::ElementType::Container) {
+      currentChat_.clear();
+      changeState<IdleState>();
+      return;
+   }
+
+   const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
+
+   auto transitionChange = [this, clientPartyPtr]() 
+   {
+      currentChat_ = clientPartyPtr->id();
+   };
+
+   switch (clientPartyPtr->partyState())
+   {
+   case Chat::PartyState::UNINITIALIZED:
+      changeState<PrivatePartyUninitState>(transitionChange);
+      break;
+   case Chat::PartyState::REQUESTED:
+      if (clientPartyPtr->displayName() == chatClientServicePtr_->getClientPartyModelPtr()->ownUserName()) {
+         changeState<PrivatePartyRequestedOutgoingState>(transitionChange);
+      }
+      else {
+         changeState<PrivatePartyRequestedIncomingState>(transitionChange);
+      }
+      break;
+   case Chat::PartyState::REJECTED:
+      changeState<PrivatePartyRejectedState>(transitionChange);
+      break;
+   case Chat::PartyState::INITIALIZED:
+      changeState<PrivatePartyInitState>(transitionChange);
+      break;
+   default:
+      break;
+   }
 }

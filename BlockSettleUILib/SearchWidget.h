@@ -59,7 +59,7 @@ public:
 
    bool eventFilter(QObject *watched, QEvent *event) override;
 
-   void init(std::shared_ptr<ChatClient> handler);
+   void init(/*std::shared_ptr<ChatClient> handler*/);
 
 public slots:
    void clearLineEdit();

@@ -13,16 +13,6 @@
 
 #include <set>
 
-namespace {
-   bool isGlobal(Chat::ClientPartyPtr clientPartyPtr) {
-      return clientPartyPtr->partyType() == Chat::PartyType::GLOBAL;
-   }
-
-   bool isPrivate(Chat::ClientPartyPtr clientPartyPtr) {
-      return clientPartyPtr->partyType() == Chat::PartyType::GLOBAL;
-   }
-}
-
 ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    : QTextBrowser(parent), handler_(nullptr), internalStyle_(this)
 {
@@ -61,31 +51,14 @@ QString ChatMessagesTextEdit::dataMessage(int row, const ChatMessagesTextEdit::C
 
       case Column::User:
       {
-         const auto senderId = message->sender();
+         const auto senderId = message->senderId();
          static const auto ownSender = tr("you");
 
          if (senderId == ownUserId_) {
             return ownSender;
          }
 
-         Chat::ClientPartyPtr clientPartyPtr = partyModel_->getClientPartyById(senderId);
-         if (!clientPartyPtr) {
-            return QString::fromStdString(senderId);
-         }
-
-         QString partyName;
-         if (clientPartyPtr->displayName().empty()) {
-            partyName = QString::fromStdString(senderId);
-         }
-         else {
-            partyName = QString::fromStdString(clientPartyPtr->displayName());
-         }
-
-         if (isGlobal(clientPartyPtr)) {
-            partyName = toHtmlUsername(partyName);
-         }
-
-         return QString::fromStdString(clientPartyPtr->displayName());
+         return toHtmlUsername(QString::fromStdString(senderId));
       }
       case Column::Status:{
          //message->partyMessageState();
@@ -141,17 +114,25 @@ QImage ChatMessagesTextEdit::statusImage(int row)
       return statusImageConnecting_;
    }
 
-   auto senderId = message->sender();
-   if (message->sender() != ownUserId_) {
+   auto senderId = message->senderId();
+   if (message->senderId() != ownUserId_) {
       return QImage();
    }
 
    QImage statusImage = statusImageOffline_;
 
    if (message->partyMessageState() == Chat::PartyMessageState::SENT) {
-      Chat::ClientPartyPtr clientPartyPtr = partyModel_->getClientPartyById(senderId);
+      Chat::ClientPartyPtr clientPartyPtr = partyModel_->getClientPartyById(message->partyId());
 
-      if (isGlobal(clientPartyPtr)) {
+      Q_CHECK_PTR(clientPartyPtr);
+      // wrong party pointer
+      if (!clientPartyPtr)
+      {
+         statusImage == statusImageConnecting_;
+         return statusImage;
+      }
+
+      if (clientPartyPtr->isGlobalStandard()) {
          statusImage = statusImageRead_;
       } else {
          statusImage = statusImageConnecting_;
@@ -270,7 +251,7 @@ void ChatMessagesTextEdit::switchToChat(const std::string& chatId)
 
 void ChatMessagesTextEdit::resetChatView()
 {
-   switchToChat({});
+   switchToChat(currentChatId_);
 }
 
 void ChatMessagesTextEdit::logout()
@@ -650,8 +631,7 @@ void ChatMessagesTextEdit::forceMessagesUpdate()
    const auto& currentMessages = iMessages.value();
    for (int index = 0; index < currentMessages.size(); ++index) {
       const auto message = currentMessages[index];
-      message->partyMessageState();
-      if (message->partyMessageState() == Chat::PartyMessageState::RECEIVED && message->sender() != ownUserId_) {
+      if (message->partyMessageState() == Chat::PartyMessageState::RECEIVED && message->senderId() != ownUserId_) {
          emit messageRead(message->partyId(), message->messageId());
       }
       showMessage(index);

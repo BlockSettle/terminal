@@ -283,6 +283,68 @@ void ChatClientUserView::onDoubleClicked(const QModelIndex &index)
    }
 }
 
+void ChatClientUserView::updateDependUi(const QModelIndex& index)
+{
+   auto proxyModel = qobject_cast<const QAbstractProxyModel*>(index.model());
+   QModelIndex currentIndex = proxyModel ? proxyModel->mapToSource(index) : index;
+   PartyTreeItem* item = static_cast<PartyTreeItem*>(currentIndex.internalPointer());
+   auto chatPartiesTreeModel = qobject_cast<const ChatPartiesTreeModel*>(currentIndex.model());
+
+   const Chat::ClientPartyPtr clientPartyPtr = item->data().value<Chat::ClientPartyPtr>();
+
+   if (!chatPartiesTreeModel)
+   {
+      return;
+   }
+
+   if (!clientPartyPtr)
+   {
+      return;
+   }
+
+   if (!label_)
+   {
+      return;
+   }
+
+   if (clientPartyPtr->isGlobal())
+   {
+      label_->setText(QObject::tr("CHAT #") + QString::fromStdString(clientPartyPtr->displayName()));
+   }
+
+   if (clientPartyPtr->isPrivateStandard())
+   {
+      QString labelPattern = QObject::tr("Contact request  #%1%2").arg(QString::fromStdString(clientPartyPtr->displayName()));
+      QString stringStatus = QLatin1String("");
+
+      if ((Chat::PartyState::UNINITIALIZED == clientPartyPtr->partyState())
+         || (Chat::PartyState::REQUESTED == clientPartyPtr->partyState()))
+      {
+         if (clientPartyPtr->senderId() == chatPartiesTreeModel->currentUser())
+         {
+            stringStatus = QLatin1String("-OUTGOING PENDING");
+         }
+         else
+         {
+            stringStatus = QLatin1String("-INCOMING");
+         }
+         label_->setText(labelPattern.arg(stringStatus));
+      }
+
+      if (Chat::PartyState::REJECTED == clientPartyPtr->partyState())
+      {
+         stringStatus = QLatin1String("-REJECTED");
+         label_->setText(labelPattern.arg(stringStatus));
+      }
+
+      if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState())
+      {
+         label_->setText(QObject::tr("CHAT #") + QString::fromStdString(clientPartyPtr->displayName()));
+      }
+   }
+
+}
+
 void ChatClientUserView::updateDependUI(CategoryElement *element)
 {
    auto data = static_cast<CategoryElement*>(element)->getDataObject();
@@ -383,6 +445,22 @@ void ChatClientUserView::currentChanged(const QModelIndex &current, const QModel
    QTreeView::currentChanged(current, previous);
    auto proxyModel = qobject_cast<const QAbstractProxyModel*>(current.model());
    QModelIndex index = proxyModel ? proxyModel->mapToSource(current) : current;
+   PartyTreeItem* item = static_cast<PartyTreeItem*>(index.internalPointer());
+
+   if (!item)
+   {
+      return;
+   }
+
+   if (item->modelType() == UI::ElementType::Party)
+   {
+      updateDependUi(current);
+   }
+
+/*
+   QTreeView::currentChanged(current, previous);
+   auto proxyModel = qobject_cast<const QAbstractProxyModel*>(current.model());
+   QModelIndex index = proxyModel ? proxyModel->mapToSource(current) : current;
    TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
    if (!watchers_.empty() && item) {
       switch (item->getType()) {
@@ -400,6 +478,7 @@ void ChatClientUserView::currentChanged(const QModelIndex &current, const QModel
 
       }
    }
+*/
 }
 
 void ChatClientUserView::dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles)

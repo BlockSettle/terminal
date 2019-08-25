@@ -147,7 +147,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QTreeView" name="treeViewUsers">
+           <widget class="ChatClientUserView" name="treeViewUsers">
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
             </property>
@@ -673,12 +673,12 @@
   <customwidget>
    <class>BSChatInput</class>
    <extends>QTextEdit</extends>
-   <header location="global">BSChatInput.h</header>
+   <header>BSChatInput.h</header>
   </customwidget>
   <customwidget>
    <class>ChatMessagesTextEdit</class>
    <extends>QTextBrowser</extends>
-   <header location="global">ChatMessagesTextEdit.h</header>
+   <header>ChatMessagesTextEdit.h</header>
   </customwidget>
   <customwidget>
    <class>TreeViewWithEnterKey</class>
@@ -755,6 +755,11 @@
    <extends>QWidget</extends>
    <header>OTCSupportRoomShield.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ChatClientUserView</class>
+   <extends>QTreeView</extends>
+   <header location="global">chatclientuserview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

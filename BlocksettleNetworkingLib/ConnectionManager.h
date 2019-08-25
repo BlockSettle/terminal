@@ -4,13 +4,11 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <spdlog/logger.h>
+
 #include "ZMQ_BIP15X_Helpers.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
-namespace spdlog {
-   class logger;
-};
-
-struct ZmqBIP15XDataConnectionParams;
 class ArmoryServersProvider;
 class DataConnection;
 class PublisherConnection;

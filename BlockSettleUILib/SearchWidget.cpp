@@ -71,15 +71,14 @@ bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
    return QWidget::eventFilter(watched, event);
 }
 
-void SearchWidget::init(std::shared_ptr<ChatClient> chatClient)
+void SearchWidget::init(/*std::shared_ptr<ChatClient> chatClient*/)
 {
-   chatClient_ = chatClient;
-   ui_->chatSearchLineEdit->setActionsHandler(chatClient);
+   //chatClient_ = chatClient;
+   //ui_->chatSearchLineEdit->setActionsHandler(chatClient);
    userSearchModel_->setItemStyle(std::make_shared<ChatSearchListViewItemStyle>());
    ui_->searchResultTreeView->setModel(userSearchModel_.get());
 
-   connect(chatClient_.get(), &ChatClient::SearchUserListReceived,
-           this, &SearchWidget::onSearchUserListReceived);
+   //connect(chatClient_.get(), &ChatClient::SearchUserListReceived, this, &SearchWidget::onSearchUserListReceived);
 
    connect(userSearchModel_.get(), &QAbstractItemModel::rowsInserted,
            this, &SearchWidget::resetTreeView);
@@ -133,7 +132,7 @@ void SearchWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Ch
    std::vector<UserSearchModel::UserInfo> userInfoList;
    const QString search = searchText();
    bool isEmail = kRxEmail.match(search).hasMatch();
-   std::string hash = chatClient_->deriveKey(search.toStdString());
+   std::string hash = "";// chatClient_->deriveKey(search.toStdString());
    for (const auto &user : users) {
       if (user && user->has_user()) {
          const std::string &userId = user->user().user_id();
@@ -141,6 +140,7 @@ void SearchWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Ch
             continue;
          }
          auto status = UserSearchModel::UserStatus::ContactUnknown;
+/*
          auto contact = chatClient_->getContact(userId);
          if (!contact.user_id().empty()) {
             auto contactStatus = contact.status();
@@ -163,6 +163,7 @@ void SearchWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Ch
                break;
             }
          }
+*/
          userInfoList.emplace_back(QString::fromStdString(userId), status);
       }
    }
@@ -301,5 +302,5 @@ void SearchWidget::onSearchUserTextEdited()
       return;
    }
 
-   chatClient_->onActionSearchUsers(userToAdd);
+   //chatClient_->onActionSearchUsers(userToAdd);
 }

@@ -8,6 +8,7 @@
 #include "Encryption/ContactPublicKey.h"
 #include "SecureBinaryData.h"
 #include "ChatDB.h"
+#include "ChatProtocol/ResponseHandler.h"
 
 #include <botan/secmem.h>
 #include <spdlog/spdlog.h>

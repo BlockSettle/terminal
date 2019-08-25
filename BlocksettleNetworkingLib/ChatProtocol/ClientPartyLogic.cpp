@@ -125,7 +125,7 @@ namespace Chat
             continue;
          }
 
-         if (PartyType::PRIVATE_DIRECT_MESSAGE != clientPartyPtr->partyType() || PartySubType::STANDARD != clientPartyPtr->partySubType())
+         if (clientPartyPtr->isPrivateStandard())
          {
             continue;
          }
@@ -243,7 +243,7 @@ namespace Chat
             continue;
          }
 
-         if (PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
+         if (clientPartyPtr->isPrivateStandard())
          {
             clientPartyPtr->setClientStatus(ClientStatus::OFFLINE);
          }

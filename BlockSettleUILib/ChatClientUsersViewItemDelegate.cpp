@@ -117,7 +117,7 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
    Chat::ClientPartyPtr clientPartyPtr = party->data().value<Chat::ClientPartyPtr>();
 
    itemOption.text = QString::fromStdString(clientPartyPtr->displayName());
-   if (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyType())
+   if (clientPartyPtr->isPrivateStandard())
    {
       if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState()) {
          paintInitParty(clientPartyPtr, painter, itemOption);

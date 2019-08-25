@@ -1,6 +1,6 @@
 #ifndef CHAT_WIDGET_H
 #define CHAT_WIDGET_H
-
+/*
 #include <QItemSelection>
 #include <QLayoutItem>
 #include <QScopedPointer>
@@ -14,9 +14,6 @@
 #include "ZMQ_BIP15X_Helpers.h"
 #include <memory>
 
-namespace Ui {
-   class ChatWidget;
-}
 namespace spdlog {
    class logger;
 }
@@ -29,28 +26,17 @@ namespace Chat {
 }
 
 class ApplicationSettings;
-class ArmoryConnection;
 class BaseCelerClient;
 class ChatClient;
 class ChatTreeModelWrapper;
 class ChatWidgetState;
 class ConnectionManager;
-class OTCRequestViewModel;
 class OtcClient;
 class QTextEdit;
-
-class SignContainer;
-
-namespace bs {
-   namespace sync {
-      class WalletsManager;
-   }
-}
 
 class PartyTreeItem;
 class SignContainer;
 class AbstractChatWidgetState;
-class ChatPartiesTreeModel;
 
 namespace bs { namespace sync {
    class WalletsManager;
@@ -258,5 +244,99 @@ private slots:
    void onPartyModelChanged();
    void onMessageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
 };
+*/
+
+#include <memory>
+
+#include <QWidget>
+
+#include "ChatProtocol/ChatClientService.h"
+#include "ChatProtocol/ClientParty.h"
+
+class ArmoryConnection;
+class SignContainer;
+class ChatPartiesTreeModel;
+class OTCRequestViewModel;
+
+namespace Ui {
+   class ChatWidget;
+}
+
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
+
+class ChatWidget : public QWidget
+{
+   Q_OBJECT
+
+public:
+   explicit ChatWidget(QWidget* parent = nullptr);
+
+   void init(const std::shared_ptr<ConnectionManager>& connectionManager,
+      const std::shared_ptr<ApplicationSettings>& appSettings,
+      const Chat::ChatClientServicePtr& chatClientServicePtr,
+      const std::shared_ptr<spdlog::logger>& loggerPtr);
+
+   std::string login(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb&);
+//   void logout();
+
+public slots:
+   // OTC
+   void processOtcPbMessage(const std::string& data);
+
+private slots:
+   void onContactRequestAcceptSendClicked();
+   void onContactRequestRejectCancelClicked();
+   void onPartyModelChanged();
+   void onLogin();
+   void onLogout();
+   void onSendButtonClicked();
+   void onSendMessage();
+   void onMessageRead(const std::string& partyId, const std::string& messageId);
+   void onUserListClicked(const QModelIndex& index);
+
+signals:
+   // OTC
+   void sendOtcPbMessage(const std::string& data);
+
+   // #new_logic
+private:
+   friend class AbstractChatWidgetState;
+   friend class ChatLogOutState;
+   friend class IdleState;
+   friend class PrivatePartyInitState;
+   friend class PrivatePartyUninitState;
+   friend class PrivatePartyRequestedOutgoingState;
+   friend class PrivatePartyRequestedIncomingState;
+   friend class PrivatePartyRejectedState;
+
+   template <typename stateType, typename = std::enable_if<std::is_base_of<AbstractChatWidgetState, stateType>::value>::type>
+      void changeState(std::function<void(void)>&& transitionChanges = []() {})
+      {
+         // Exit previous state
+         stateCurrent_.reset();
+
+         // Enter new state
+         transitionChanges();
+         stateCurrent_ = std::make_unique<stateType>(this);
+      }
+protected:
+   std::unique_ptr<AbstractChatWidgetState> stateCurrent_;
+
+private:
+   QScopedPointer<Ui::ChatWidget> ui_;
+   Chat::ChatClientServicePtr    chatClientServicePtr_;
+   OTCRequestViewModel* otcRequestViewModel_ = nullptr;
+   std::shared_ptr<spdlog::logger>  loggerPtr_;
+   std::shared_ptr<ChatPartiesTreeModel> chatPartiesTreeModel_;
+
+   std::string  currentChat_;
+   QMap<std::string, QString> draftMessages_;
+};
+
+Q_DECLARE_METATYPE(std::vector<std::string>)
 
 #endif // CHAT_WIDGET_H

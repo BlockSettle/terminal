@@ -103,7 +103,7 @@ namespace Chat
    void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
    {
       // private party
-      if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPtr->partyType() && PartySubType::STANDARD == partyPtr->partySubType())
+      if (partyPtr->isPrivateStandard())
       {
          PrivateDirectMessagePartyPtr privatePartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
 

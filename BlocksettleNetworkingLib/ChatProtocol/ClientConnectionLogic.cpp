@@ -161,13 +161,13 @@ namespace Chat
 
    void ClientConnectionLogic::prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
    {
-      if (PartyType::GLOBAL == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
+      if (clientPartyPtr->isGlobalStandard())
       {
          prepareAndSendPublicMessage(clientPartyPtr, data);
          return;
       }
 
-      if (PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
+      if (clientPartyPtr->isPrivateStandard())
       {
          prepareAndSendPrivateMessage(clientPartyPtr, data);
          return;
@@ -214,13 +214,13 @@ namespace Chat
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
 
       // TODO: handle here state changes of the rest of message types
-      if (PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
+      if (clientPartyPtr->isPrivateStandard())
       {
          incomingPrivatePartyMessage(msg);
          return;
       }
 
-      if (PartyType::GLOBAL == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
+      if (clientPartyPtr->isGlobalStandard())
       {
          incomingGlobalPartyMessage(msg);
          return;
@@ -309,14 +309,14 @@ namespace Chat
          return;
       }
 
-      if (PartyType::GLOBAL == partyPtr->partyType() && PartySubType::STANDARD == partyPtr->partySubType())
+      if (partyPtr->isGlobalStandard())
       {
          // for global we only updating state in local db
          clientDBServicePtr_->updateMessageState(partyMessagePacket.message_id(), partyMessageState);
          return;
       }
 
-      if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPtr->partyType() && PartySubType::STANDARD == partyPtr->partySubType())
+      if (partyPtr->isPrivateStandard())
       {
          // for private we need to reply message state as RECEIVED
          // and then save in local db
@@ -345,7 +345,7 @@ namespace Chat
 
    void ClientConnectionLogic::setMessageSeen(const ClientPartyPtr& clientPartyPtr, const std::string& messageId)
    {
-      if (!(Chat::PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyState() && Chat::PartySubType::STANDARD == clientPartyPtr->partySubType()))
+      if (!(clientPartyPtr->isPrivateStandard()))
       {
          emit error(ClientConnectionLogicError::MessageSeenForWrongTypeOfParty, clientPartyPtr->id());
          return;

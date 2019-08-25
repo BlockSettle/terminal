@@ -35,7 +35,7 @@ void ChatPartiesTreeModel::partyModelChanged()
    {
       Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(id);
 
-      if (clientPartyPtr->partyType() == Chat::PartyType::GLOBAL)
+      if (clientPartyPtr->isGlobal())
       {
          QVariant stored;
          stored.setValue(clientPartyPtr);
@@ -43,7 +43,7 @@ void ChatPartiesTreeModel::partyModelChanged()
          globalSection->insertChildren(globalItem);
       }
 
-      if (clientPartyPtr->partyType() == Chat::PartyType::PRIVATE_DIRECT_MESSAGE)
+      if (clientPartyPtr->isPrivateStandard())
       {
          QVariant stored;
          stored.setValue(clientPartyPtr);
