@@ -12,6 +12,7 @@
 #include "TransactionOutputsModel.h"
 #include "UiUtils.h"
 #include "UsedInputsModel.h"
+#include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
 
@@ -883,14 +884,31 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
          return selectedChangeAddress_;
       }
       else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
+         const auto hdWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
+         std::shared_ptr<bs::sync::hd::Group> group;
+         std::shared_ptr<bs::sync::Wallet> wallet;
+         if (hdWallet) {
+            group = hdWallet->getGroup(hdWallet->getXBTGroupType());
+         }
+         if (group) {
+            const auto purpose = ui_->radioButtonNewAddrNative->isChecked()
+               ? bs::hd::Purpose::Native : bs::hd::Purpose::Nested;
+            wallet = group->getLeaf(bs::hd::Path({ purpose, hdWallet->getXBTGroupType(), 0 }));
+         }
+         if (!wallet) {
+            wallet = transactionData_->getWallet();
+         }
+
          auto promAddr = std::make_shared<std::promise<bs::Address>>();
          auto futAddr = promAddr->get_future();
-         const auto &cbAddr = [this, promAddr](const bs::Address &addr) {
-            transactionData_->getWallet()->setAddressComment(addr
+         const auto &cbAddr = [this, promAddr, wallet](const bs::Address &addr) {
+            logger_->debug("[CreateTransactionDialogAdvanced::getChangeAddress] new change address: {}"
+               , addr.display());
+            wallet->setAddressComment(addr
                , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::ChangeAddress));
             promAddr->set_value(addr);
          };
-         transactionData_->getWallet()->getNewChangeAddress(cbAddr);
+         wallet->getNewChangeAddress(cbAddr);
          const auto changeAddr = futAddr.get();
          transactionData_->getWallet()->syncAddresses();
          return changeAddr;
@@ -1108,11 +1126,23 @@ void CreateTransactionDialogAdvanced::onNewAddressSelectedForChange()
 
 void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
 {
-   SelectAddressDialog selectAddressDialog(walletsManager_, transactionData_->getWallet(), this
-      , AddressListModel::AddressType::Internal);
+   const auto hdWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
+   std::shared_ptr<bs::sync::hd::Group> group;
+   if (hdWallet) {
+      group = hdWallet->getGroup(hdWallet->getXBTGroupType());
+   }
 
-   if (selectAddressDialog.exec() == QDialog::Accepted) {
-      selectedChangeAddress_ = selectAddressDialog.getSelectedAddress();
+   SelectAddressDialog *selectAddressDialog = nullptr;
+   if (group) {
+      selectAddressDialog = new SelectAddressDialog(group, this, AddressListModel::AddressType::Internal);
+   }
+   else {
+      selectAddressDialog = new SelectAddressDialog(walletsManager_, transactionData_->getWallet()
+         , this, AddressListModel::AddressType::Internal);
+   }
+
+   if (selectAddressDialog->exec() == QDialog::Accepted) {
+      selectedChangeAddress_ = selectAddressDialog->getSelectedAddress();
       showExistingChangeAddress(true);
    } else {
       if (!selectedChangeAddress_.isValid()) {

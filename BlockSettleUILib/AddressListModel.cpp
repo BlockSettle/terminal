@@ -34,14 +34,16 @@ AddressListModel::AddressListModel(const std::shared_ptr<bs::sync::WalletsManage
    , addrType_(addrType)
    , processing_(false)
 {
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this
-           , &AddressListModel::updateWallets);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
-      , &AddressListModel::updateData);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::blockchainEvent, this
-           , &AddressListModel::updateWallets);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated
-      , this, &AddressListModel::updateData);
+   if (walletsMgr_) {
+      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this
+         , &AddressListModel::updateWallets);
+      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
+         , &AddressListModel::updateData);
+      connect(walletsMgr_.get(), &bs::sync::WalletsManager::blockchainEvent, this
+         , &AddressListModel::updateWallets);
+      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated
+         , this, &AddressListModel::updateData);
+   }
 }
 
 bool AddressListModel::setWallets(const Wallets &wallets, bool force, bool filterBtcOnly)
