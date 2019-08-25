@@ -1,15 +1,18 @@
 #include "SignerAdapterListener.h"
+
 #include <spdlog/spdlog.h>
+
+#include "BSErrorCode.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
-#include "HeadlessSettings.h"
 #include "HeadlessContainerListener.h"
 #include "HeadlessSettings.h"
+#include "HeadlessSettings.h"
 #include "ServerConnection.h"
+#include "StringUtils.h"
 #include "SystemFileUtils.h"
-#include "BSErrorCode.h"
 
 using namespace Blocksettle::Communication;
 
@@ -133,11 +136,6 @@ public:
    SignerAdapterListener *owner_{};
 };
 
-static std::string toHex(const std::string &binData)
-{
-   return BinaryData(binData).toHexStr();
-}
-
 SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
    , ZmqBIP15XServerConnection *connection
    , const std::shared_ptr<spdlog::logger> &logger
@@ -166,19 +164,19 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
 
 void SignerAdapterListener::OnClientConnected(const std::string &clientId)
 {
-   logger_->debug("[SignerAdapterListener] client {} connected", toHex(clientId));
+   logger_->debug("[SignerAdapterListener] client {} connected", bs::toHex(clientId));
 }
 
 void SignerAdapterListener::OnClientDisconnected(const std::string &clientId)
 {
-   logger_->debug("[SignerAdapterListener] client {} disconnected", toHex(clientId));
+   logger_->debug("[SignerAdapterListener] client {} disconnected", bs::toHex(clientId));
 
    shutdownIfNeeded();
 }
 
 void SignerAdapterListener::onClientError(const std::string &clientId, const std::string &error)
 {
-   logger_->debug("[SignerAdapterListener] client {} error: {}", toHex(clientId), error);
+   logger_->debug("[SignerAdapterListener] client {} error: {}", bs::toHex(clientId), error);
 
    shutdownIfNeeded();
 }
