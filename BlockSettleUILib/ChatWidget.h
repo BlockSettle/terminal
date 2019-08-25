@@ -8,6 +8,7 @@
 #include <QWidget>
 
 #include "ChatProtocol/ChatClientService.h"
+#include "ChatProtocol/ClientParty.h"
 #include "ChatHandleInterfaces.h"
 #include "CommonTypes.h"
 #include "ZMQ_BIP15X_Helpers.h"
@@ -49,6 +50,7 @@ namespace bs {
 class PartyTreeItem;
 class SignContainer;
 class AbstractChatWidgetState;
+class ChatPartiesTreeModel;
 
 namespace bs { namespace sync {
    class WalletsManager;
@@ -117,7 +119,6 @@ private slots:
    void onConnectedToServer();
    void selectGlobalRoom();
    void onContactRequestAccepted(const std::string& userId);
-   void onChangeChatRoom(const QString& userId);
    void onConfirmUploadNewPublicKey(const std::string& oldKey, const std::string& newKey);
    void onContactChanged();
    void onBSChatInputSelectionChanged();
@@ -214,11 +215,7 @@ private:
 
    OtcClient *otcClient_{};
 
-
-
-   
    // #new_logic
-
 private:
    friend class AbstractChatWidgetState;
    friend class ChatLogOutState;
@@ -236,11 +233,21 @@ private:
    }
 protected:
    std::unique_ptr<AbstractChatWidgetState> stateCurrent_;
+   std::shared_ptr<ChatPartiesTreeModel> chatPartiesTreeModel_;
 public:
    //void onElementSelected(const PartyTreeItem* chatUserListElement);
 
 private slots:
+   // Users actions point
    void onUserListClicked(const QModelIndex& index);
+   void onSendMessage();
+
+   // Back end actions point
+   void onLogin();
+   void onLogout();
+   void onSendArrived(const Chat::MessagePtrList& messagePtr);
+   void onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
+   void onPartyModelChanged();
 };
 
 #endif // CHAT_WIDGET_H

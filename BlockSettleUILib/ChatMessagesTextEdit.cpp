@@ -273,6 +273,12 @@ void ChatMessagesTextEdit::resetChatView()
    switchToChat({});
 }
 
+void ChatMessagesTextEdit::logout()
+{
+   resetChatView();
+   messages_.clear();
+}
+
 void ChatMessagesTextEdit::setHandler(ChatItemActionsHandler* handler)
 {
    handler_ = handler;

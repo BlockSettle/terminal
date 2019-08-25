@@ -76,6 +76,7 @@ public:
    void setClientPartyModel(Chat::ClientPartyModelPtr partyModel);
    void switchToChat(const std::string& chatId);
    void resetChatView();
+   void logout();
 
 signals:
    void MessageRead(const std::shared_ptr<Chat::Data> &) const;

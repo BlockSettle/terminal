@@ -122,10 +122,12 @@ public:
    const std::string& currentUser() const;
 
 public slots:
-   void resetModel();
-
-private slots:
    void partyModelChanged();
+   void cleanModel();
+   void partyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
+
+protected:
+   QModelIndex getPartyIndexById(const std::string& partyId) const;
 
 private:
    PartyTreeItem* getItem(const QModelIndex& index) const;
@@ -134,7 +136,7 @@ private:
    PartyTreeItem* rootItem_;
 };
 
-using ChatPartiesTreeModelPtr = std::unique_ptr<ChatPartiesTreeModel>;
+using ChatPartiesTreeModelPtr = std::shared_ptr<ChatPartiesTreeModel>;
 
 // #new_logic: Move this code in different file
 #include <QSortFilterProxyModel>
@@ -142,7 +144,7 @@ class ChatPartiesSortProxyModel : public QSortFilterProxyModel
 {
    Q_OBJECT
 public:
-   explicit ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr&& sourceModel, QObject *parent = nullptr);
+   explicit ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr sourceModel, QObject *parent = nullptr);
 
    PartyTreeItem* getInternalData(const QModelIndex& index) const;
    const std::string& currentUser() const;
