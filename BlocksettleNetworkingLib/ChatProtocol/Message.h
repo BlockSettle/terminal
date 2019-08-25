@@ -35,8 +35,8 @@ namespace Chat
       const std::string& messageText() const { return messageText_; }
       void setMessageText(std::string val) { messageText_ = val; }
 
-      const std::string& sender() const { return sender_; }
-      void setSender(std::string val) { sender_ = val; }
+      const std::string& senderId() const { return senderId_; }
+      void setSenderId(std::string val) { senderId_ = val; }
 
    private:
       std::string partyId_;
@@ -44,7 +44,7 @@ namespace Chat
       long long timestamp_;
       PartyMessageState partyMessageState_;
       std::string messageText_;
-      std::string sender_;
+      std::string senderId_;
    };
 
    using MessagePtr = std::shared_ptr<Message>;
