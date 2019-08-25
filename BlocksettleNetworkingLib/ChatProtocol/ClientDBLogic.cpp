@@ -3,6 +3,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QFutureWatcher>
+#include <QDateTime>
 
 #include "ChatProtocol/ClientDBLogic.h"
 #include "ChatProtocol/CryptManager.h"
@@ -119,7 +120,7 @@ namespace Chat
 
       // ! signaled by ClientPartyModel in gui
       MessagePtr messagePtr = std::make_shared<Message>(partyMessagePacket.party_id(), partyMessagePacket.message_id(),
-         static_cast<long long>(partyMessagePacket.timestamp_ms()), partyMessagePacket.party_message_state(), partyMessagePacket.message(),
+         partyMessagePacket.timestamp_ms(), partyMessagePacket.party_message_state(), partyMessagePacket.message(),
          partyMessagePacket.sender());
 
       MessagePtrList messagePtrList;
@@ -250,7 +251,7 @@ namespace Chat
          PartyMessagePacket partyMessagePacket;
          partyMessagePacket.set_party_id(query.value(0).toString().toStdString());
          partyMessagePacket.set_message_id(query.value(1).toString().toStdString());
-         partyMessagePacket.set_timestamp_ms(query.value(2).toULongLong());
+         partyMessagePacket.set_timestamp_ms(query.value(2).toDateTime().toMSecsSinceEpoch());
          partyMessagePacket.set_party_message_state(static_cast<PartyMessageState>(query.value(3).toInt()));
          partyMessagePacket.set_encryption(static_cast<EncryptionType>(query.value(4).toInt()));
          partyMessagePacket.set_nonce(query.value(5).toString().toStdString());
@@ -354,9 +355,9 @@ namespace Chat
    {
       const QString cmd = 
          QString(QLatin1String(
-            "SELECT message_id, timestamp, message_state, message_text, sender FROM party "
-            "LEFT JOIN party_message ON party_message.party_table_id=party.id "
-            "WHERE party_id=:partyId ORDER BY timestamp DESC LIMIT %1 OFFSET %1;"
+            "SELECT message_id, timestamp, message_state, message_text, sender FROM party_message "
+            "LEFT JOIN party ON party.id=party_message.party_table_id "
+            "WHERE party_id='Global' ORDER BY timestamp DESC LIMIT %1 OFFSET %2;"
          )).arg(limit).arg(offset);
 
       QSqlQuery query(getDb());
@@ -374,13 +375,15 @@ namespace Chat
       while (query.next())
       {
          std::string messageId = query.value(0).toString().toStdString();
-         long long timestamp = query.value(1).toULongLong();
+         qint64 timestamp = query.value(1).toULongLong();
          PartyMessageState partyMessageState = static_cast<PartyMessageState>(query.value(2).toInt());
          std::string message = query.value(3).toString().toStdString();
          std::string senderId = query.value(4).toString().toStdString();
 
-         MessagePtr messagePtr = std::make_shared<Message>(partyId, messageId, static_cast<long long>(timestamp), 
-            partyMessageState, message, senderId);
+         QFuture<std::string> future = cryptManagerPtr_->decryptMessageIES(message, currentChatUserPtr_->privateKey());
+         std::string decryptedMessage = future.result();
+
+         MessagePtr messagePtr = std::make_shared<Message>(partyId, messageId, timestamp, partyMessageState, decryptedMessage, senderId);
 
          messagePtrList.push_back(messagePtr);
       }
