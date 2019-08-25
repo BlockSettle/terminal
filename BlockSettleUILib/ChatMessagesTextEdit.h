@@ -111,7 +111,7 @@ public slots:
    void urlActivated(const QUrl &link);
 
    // #new_logic
-   void onSingleMessageUpdate(const Chat::MessagePtr& messagePtr);
+   void onSingleMessageUpdate(const Chat::MessagePtrList& messagePtrList);
    void onCurrentElementAboutToBeRemoved();
    
 private slots:

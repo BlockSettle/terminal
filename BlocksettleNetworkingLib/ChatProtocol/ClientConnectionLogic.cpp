@@ -32,6 +32,7 @@ namespace Chat
       connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::sessionKeysForUserFailed, this, &ClientConnectionLogic::sessionKeysForUserFailed);
 
       connect(clientDBServicePtr_.get(), &ClientDBService::messageLoaded, this, &ClientConnectionLogic::messageLoaded);
+      connect(clientDBServicePtr_.get(), &ClientDBService::unsentMessagesFound, this, &ClientConnectionLogic::unsentMessagesFound);
    }
 
    void ClientConnectionLogic::onDataReceived(const std::string& data)
@@ -45,7 +46,7 @@ namespace Chat
       if (ProtobufUtils::pbStringToMessage<WelcomeResponse>(data, &welcomeResponse))
       {
          handleWelcomeResponse(welcomeResponse);
-         emit testProperlyConnected();
+         emit properlyConnected();
          return;
       }
 
@@ -618,6 +619,23 @@ namespace Chat
 
          watcher->setFuture(future);
       }
-
    }
+
+   void ClientConnectionLogic::unsentMessagesFound(const std::string& partyId)
+   {
+      ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyId);
+
+      if (!clientPartyPtr)
+      {
+         return;
+      }
+
+      PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr()->userName());
+      for (const auto recipient : recipients)
+      {
+         sessionKeyHolderPtr_->requestSessionKeysForUser(recipient->userName(), recipient->publicKey());
+      }
+   }
+
 }

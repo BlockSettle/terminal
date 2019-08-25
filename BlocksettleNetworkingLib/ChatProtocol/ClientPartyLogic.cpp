@@ -56,6 +56,12 @@ namespace Chat
          }
 
          clientPartyModelPtr_->insertParty(clientPartyPtr);
+
+         // Read and privide last 10 history messages for private parties
+         if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
+         {
+            clientDBServicePtr_->readHistoryMessages(partyPacket.party_id(), 10);
+         }
       }
 
       emit partyModelChanged();
@@ -85,6 +91,15 @@ namespace Chat
       }
 
       clientPartyPtr->setClientStatus(clientStatus);
+
+      if (ClientStatus::ONLINE != clientPartyPtr->clientStatus())
+      {
+         return;
+      }
+
+      // if client status is online check do we have any unsent messages for this user
+      clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
+
    }
 
    void ClientPartyLogic::handleLocalErrors(const ClientPartyLogicError& errorCode, const std::string& what)
@@ -213,6 +228,26 @@ namespace Chat
       clientPartyPtr->setDisplayName(displayName);
 
       emit partyModelChanged();
+   }
+
+   // if logged out set offline for all private parties
+   void ClientPartyLogic::loggedOutFromServer()
+   {
+      IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
+      for (const auto& partyId : idPartyList)
+      {
+         ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(partyId);
+
+         if (!clientPartyPtr)
+         {
+            continue;
+         }
+
+         if (PartyType::PRIVATE_DIRECT_MESSAGE == clientPartyPtr->partyType() && PartySubType::STANDARD == clientPartyPtr->partySubType())
+         {
+            clientPartyPtr->setClientStatus(ClientStatus::OFFLINE);
+         }
+      }
    }
 
 }

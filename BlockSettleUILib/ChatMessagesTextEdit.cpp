@@ -441,9 +441,12 @@ void ChatMessagesTextEdit::initUserContextMenu()
    });
 }
 
-void ChatMessagesTextEdit::onSingleMessageUpdate(const Chat::MessagePtr& messagePtr)
+void ChatMessagesTextEdit::onSingleMessageUpdate(const Chat::MessagePtrList& messagePtrList)
 {
-   insertMessage(messagePtr);
+   for (const auto& messagePtr : messagePtrList)
+   {
+      insertMessage(messagePtr);
+   }
 }
 
 void ChatMessagesTextEdit::onMessageIdUpdate(const std::string& oldId, const std::string& newId, const std::string& chatId)

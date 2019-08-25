@@ -41,6 +41,7 @@ namespace Chat
       connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::partyModelChanged, this, &ChatClientLogic::partyModelChanged);
       connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::privatePartyCreated, this, &ChatClientLogic::privatePartyCreated);
       connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::privatePartyAlreadyExist, this, &ChatClientLogic::privatePartyAlreadyExist);
+      connect(this, &ChatClientLogic::clientLoggedOutFromServer, clientPartyLogicPtr_.get(), &ClientPartyLogic::loggedOutFromServer);
 
       clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr_, applicationSettingsPtr_, clientDBServicePtr_, loggerPtr_, cryptManagerPtr_, this);
       clientConnectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
@@ -58,7 +59,7 @@ namespace Chat
       connect(this, &ChatClientLogic::disconnected, this, &ChatClientLogic::onCloseConnection);
 
       // TODO: remove
-      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::testProperlyConnected, this, &ChatClientLogic::testProperlyConnected);
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::properlyConnected, this, &ChatClientLogic::properlyConnected);
 
       emit initDone();
    }
@@ -237,13 +238,6 @@ namespace Chat
       }
 
       clientConnectionLogicPtr_->setMessageSeen(clientPartyPtr, messageId);
-   }
-
-   // TODO: remove
-   void ChatClientLogic::testProperlyConnected()
-   {
-      //SendPartyMessage("Global", "test");
-      //RequestPrivateParty("ds7n8iy8fdsy");
    }
 
    void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName)

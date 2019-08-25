@@ -37,14 +37,17 @@ namespace Chat
       void readUnsentMessages(const std::string& partyId);
       void updateDisplayNameForParty(const std::string& partyId, const std::string& displayName);
       void loadPartyDisplayName(const std::string& partyId);
+      void checkUnsentMessages(const std::string& partyId);
+      void readHistoryMessages(const std::string& partyId, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
 
       ////////// RETURN SIGNALS //////////
       void initDone();
-      void messageArrived(const Chat::MessagePtr& messagePtr);
+      void messageArrived(const Chat::MessagePtrList& messagePtr);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
       void messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
          const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);
       void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
+      void unsentMessagesFound(const std::string& partyId);
    };
 
    using ClientDBServicePtr = std::shared_ptr<ClientDBService>;

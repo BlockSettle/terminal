@@ -52,6 +52,7 @@ namespace Chat
    public slots:
       void onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
       void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
+      void loggedOutFromServer();
 
    private slots:
       void handleLocalErrors(const Chat::ClientPartyLogicError& errorCode, const std::string& what);

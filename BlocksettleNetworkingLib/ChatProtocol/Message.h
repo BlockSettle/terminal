@@ -48,8 +48,10 @@ namespace Chat
    };
 
    using MessagePtr = std::shared_ptr<Message>;
+   using MessagePtrList = std::vector<MessagePtr>;
 }
 
 Q_DECLARE_METATYPE(Chat::MessagePtr)
+Q_DECLARE_METATYPE(Chat::MessagePtrList);
 
 #endif // Message_h__

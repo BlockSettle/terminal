@@ -69,13 +69,13 @@ namespace Chat
       void userStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
       void error(const Chat::ClientConnectionLogicError& errorCode, const std::string& what);
 
-      // TODO: remove
-      void testProperlyConnected();
+      void properlyConnected();
 
    private slots:
       void handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "");
       void messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
          const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);
+      void unsentMessagesFound(const std::string& partyId);
 
    private:
       void prepareAndSendPublicMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data);

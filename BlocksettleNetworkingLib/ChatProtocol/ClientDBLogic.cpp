@@ -24,6 +24,7 @@ namespace Chat
    {
       qRegisterMetaType<Chat::ClientDBLogicError>();
       qRegisterMetaType<Chat::MessagePtr>();
+      qRegisterMetaType<Chat::MessagePtrList>();
 
       connect(this, &ClientDBLogic::error, this, &ClientDBLogic::handleLocalErrors);
    }
@@ -121,7 +122,10 @@ namespace Chat
          static_cast<long long>(partyMessagePacket.timestamp_ms()), partyMessagePacket.party_message_state(), partyMessagePacket.message(),
          partyMessagePacket.sender());
 
-      emit messageArrived(messagePtr);
+      MessagePtrList messagePtrList;
+      messagePtrList.push_back(messagePtr);
+
+      emit messageArrived(messagePtrList);
    }
 
    void ClientDBLogic::createNewParty(const std::string& partyId)
@@ -324,6 +328,69 @@ namespace Chat
             emit partyDisplayNameLoaded(partyId, displayName);
          }
       }
+   }
+
+   void ClientDBLogic::checkUnsentMessages(const std::string& partyId)
+   {
+      const QString cmd = QLatin1String("SELECT message_state FROM party_message WHERE party_table_id=(SELECT id FROM party WHERE party_id=:partyId) AND message_state=0;");
+
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QLatin1String(":partyId"), QString::fromStdString(partyId));
+
+      if (!checkExecute(query))
+      {
+         emit error(ClientDBLogicError::CheckUnsentMessages, partyId);
+         return;
+      }
+
+      if (query.first())
+      {
+         emit unsentMessagesFound(partyId);
+      }
+   }
+
+   void ClientDBLogic::readHistoryMessages(const std::string& partyId, const int limit, const int offset)
+   {
+      const QString cmd = 
+         QString(QLatin1String(
+            "SELECT message_id, timestamp, message_state, message_text, sender FROM party "
+            "LEFT JOIN party_message ON party_message.party_table_id=party.id "
+            "WHERE party_id=:partyId ORDER BY timestamp DESC LIMIT %1 OFFSET %1;"
+         )).arg(limit).arg(offset);
+
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QLatin1String(":partyId"), QString::fromStdString(partyId));
+
+      if (!checkExecute(query))
+      {
+         emit error(ClientDBLogicError::ReadHistoryMessages, partyId);
+         return;
+      }
+
+      MessagePtrList messagePtrList;
+
+      while (query.next())
+      {
+         std::string messageId = query.value(0).toString().toStdString();
+         long long timestamp = query.value(1).toULongLong();
+         PartyMessageState partyMessageState = static_cast<PartyMessageState>(query.value(2).toInt());
+         std::string message = query.value(3).toString().toStdString();
+         std::string senderId = query.value(4).toString().toStdString();
+
+         MessagePtr messagePtr = std::make_shared<Message>(partyId, messageId, static_cast<long long>(timestamp), 
+            partyMessageState, message, senderId);
+
+         messagePtrList.push_back(messagePtr);
+      }
+
+      if (messagePtrList.empty())
+      {
+         return;
+      }
+
+      emit messageArrived(messagePtrList);
    }
 
 }

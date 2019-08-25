@@ -65,9 +65,6 @@ namespace Chat
       void SetMessageSeen(const std::string& partyId, const std::string& messageId);
       void RequestPrivateParty(const std::string& userName);
 
-      // TODO: remove
-      void testProperlyConnected();
-
    signals:
       void dataReceived(const std::string&);
       void connected(void);
@@ -83,6 +80,8 @@ namespace Chat
       void clientLoggedOutFromServer();
       void partyModelChanged();
       void initDone();
+
+      void properlyConnected();
 
    private slots:
       void sendPacket(const google::protobuf::Message& message);
