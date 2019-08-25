@@ -206,7 +206,7 @@ private:
    bool isChatTab_;
 
    
-   QMap<std::string, std::string> draftMessages_;
+   
    bool needsToStartFirstRoom_;
 
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
@@ -228,12 +228,19 @@ private:
 
    template <typename stateType
       , typename = std::enable_if<std::is_base_of<AbstractChatWidgetState, stateType>::value>::type>
-   void changeState() {
-      stateCurrent_.reset(new stateType(this));
+   void changeState(std::function<void(void)>&& transitionChanges = [](){}) {
+      // Exit previous state
+      stateCurrent_.reset();
+
+      // Enter new state
+      transitionChanges();
+      stateCurrent_ = std::make_unique<stateType>(this);
    }
 protected:
    std::unique_ptr<AbstractChatWidgetState> stateCurrent_;
    std::shared_ptr<ChatPartiesTreeModel> chatPartiesTreeModel_;
+
+   QMap<std::string, QString> draftMessages_;
 public:
    //void onElementSelected(const PartyTreeItem* chatUserListElement);
 

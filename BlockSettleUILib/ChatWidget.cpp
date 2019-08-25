@@ -60,6 +60,7 @@ enum class OTCPages : int
 class AbstractChatWidgetState {
 public:
    explicit AbstractChatWidgetState(ChatWidget* chat) : chat_(chat) { }
+   virtual ~AbstractChatWidgetState() = default;
    void enterState() {
       applyUserFrameChange();
       applyChatFrameChange();
@@ -102,6 +103,25 @@ protected:
    virtual void applyChatFrameChange() = 0;
    virtual void applyRoomsFrameChange() = 0;
 
+   void saveDraftMessage() {
+      const auto draft = chat_->ui_->input_textEdit->toPlainText();
+      if (draft.isEmpty()) {
+         chat_->draftMessages_.remove(chat_->currentChat_);
+      }
+      else {
+         chat_->draftMessages_.insert(chat_->currentChat_, draft);
+      }
+   }
+   void restoreDraftMessage() {
+      const auto iDraft = chat_->draftMessages_.find(chat_->currentChat_);
+      if (iDraft != chat_->draftMessages_.cend()) {
+         chat_->ui_->input_textEdit->setText(iDraft.value());
+         auto cursor = chat_->ui_->input_textEdit->textCursor();
+         cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::MoveAnchor);
+         chat_->ui_->input_textEdit->setTextCursor(cursor);
+      }
+   }
+
    virtual bool canSendMessage() const { return false; }
    virtual bool canReceiveMessage() const { return true; }
    virtual bool canChangePartyStatus() const { return true; }
@@ -132,6 +152,8 @@ protected:
       chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
       chat_->ui_->input_textEdit->setVisible(false);
       chat_->ui_->input_textEdit->setEnabled(false);
+
+      chat_->draftMessages_.clear();
    }
    virtual void applyRoomsFrameChange() override {
       chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
@@ -145,7 +167,7 @@ protected:
 class IdleState : public AbstractChatWidgetState {
 public:
    explicit IdleState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
-   virtual ~IdleState() = default;
+   virtual ~IdleState() override = default;
 protected:
    virtual void applyUserFrameChange() override {
       chat_->ui_->searchWidget->setLineEditEnabled(true);
@@ -174,7 +196,9 @@ protected:
 class PrivatePartyInitState : public AbstractChatWidgetState {
 public:
    explicit PrivatePartyInitState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
-   virtual ~PrivatePartyInitState() = default;
+   virtual ~PrivatePartyInitState() override {
+      saveDraftMessage();
+   };
 protected:
    virtual void applyUserFrameChange() override {}
    virtual void applyChatFrameChange() override {
@@ -186,6 +210,8 @@ protected:
       chat_->ui_->input_textEdit->setText({});
       chat_->ui_->input_textEdit->setVisible(true);
       chat_->ui_->input_textEdit->setEnabled(true);
+
+      restoreDraftMessage();
    }
    virtual void applyRoomsFrameChange() override {
    // #new_logic : OTC shield
@@ -196,7 +222,7 @@ protected:
 class PrivatePartyUninitState : public AbstractChatWidgetState {
 public:
    explicit PrivatePartyUninitState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
-   virtual ~PrivatePartyUninitState() = default;
+   virtual ~PrivatePartyUninitState() override = default;
 protected:
    virtual void applyUserFrameChange() override {}
    virtual void applyChatFrameChange() override {
@@ -219,7 +245,7 @@ protected:
 class PrivatePartyRequestedOutgoingState : public AbstractChatWidgetState {
 public:
    explicit PrivatePartyRequestedOutgoingState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
-   virtual ~PrivatePartyRequestedOutgoingState() = default;
+   virtual ~PrivatePartyRequestedOutgoingState() override = default;
 protected:
    virtual void applyUserFrameChange() override {}
    virtual void applyChatFrameChange() override {
@@ -240,7 +266,7 @@ protected:
 class PrivatePartyRequestedIncomingState : public AbstractChatWidgetState {
 public:
    explicit PrivatePartyRequestedIncomingState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
-   virtual ~PrivatePartyRequestedIncomingState() = default;
+   virtual ~PrivatePartyRequestedIncomingState() override = default;
 protected:
    virtual void applyUserFrameChange() override {}
    virtual void applyChatFrameChange() override {
@@ -263,7 +289,7 @@ protected:
 class PrivatePartyRejectedState : public AbstractChatWidgetState {
 public:
    explicit PrivatePartyRejectedState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
-   virtual ~PrivatePartyRejectedState() = default;
+   virtual ~PrivatePartyRejectedState() override = default;
 protected:
    virtual void applyUserFrameChange() override {}
    virtual void applyChatFrameChange() override {
@@ -321,7 +347,10 @@ ChatWidget::ChatWidget(QWidget *parent)
    connect(ui_->pushButton_RejectCancel, &QPushButton::clicked, this, &ChatWidget::onContactRequestRejectCancelClicked);
 }
 
-ChatWidget::~ChatWidget() = default;
+ChatWidget::~ChatWidget() {
+   // Should be done explicitly, since destructor for state could make changes inside chatWidget
+   stateCurrent_.reset();
+};
 
 // #new_logic : redoing
 void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager
@@ -1252,52 +1281,31 @@ void ChatWidget::onUserListClicked(const QModelIndex& index)
 
    const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
 
-   currentChat_ = clientPartyPtr->id();
+   auto transitionChange = [this, newChat = clientPartyPtr->id()]() {
+      currentChat_ = newChat;
+   };
    switch (clientPartyPtr->partyState())
    {
    case Chat::PartyState::UNINITIALIZED:
-      changeState<PrivatePartyUninitState>();
+      changeState<PrivatePartyUninitState>(transitionChange);
       break;
    case Chat::PartyState::REQUESTED:
       if (clientPartyPtr->id() == chatClientServicePtr_->getClientPartyModelPtr()->ownUserName()) {
-         changeState<PrivatePartyRequestedOutgoingState>();
+         changeState<PrivatePartyRequestedOutgoingState>(transitionChange);
       }
       else {
-         changeState<PrivatePartyRequestedIncomingState>();
+         changeState<PrivatePartyRequestedIncomingState>(transitionChange);
       }
       break;
    case Chat::PartyState::REJECTED:
-      changeState<PrivatePartyRejectedState>();
+      changeState<PrivatePartyRejectedState>(transitionChange);
       break;
    case Chat::PartyState::INITIALIZED:
-      changeState<PrivatePartyInitState>();
+      changeState<PrivatePartyInitState>(transitionChange);
       break;
    default:
       break;
    }
-
-   // #new_logic : drafts
-   //if (previousChat != currentChat_) {
-   //   // Save draft message if any
-   //   if (!ui_->input_textEdit->toPlainText().isEmpty()) {
-   //      draftMessages_[previousChat] = ui_->input_textEdit->toPlainText().toStdString();
-   //   }
-   //   else {
-   //      draftMessages_.remove(previousChat);
-   //   }
-
-   //   // Return back draft message
-   //   const auto iDraft = draftMessages_.find(currentChat_);
-   //   if (iDraft != draftMessages_.cend()) {
-   //      ui_->input_textEdit->setText(QString::fromStdString(iDraft.value()));
-   //      auto cursor = ui_->input_textEdit->textCursor();
-   //      cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::MoveAnchor);
-   //      ui_->input_textEdit->setTextCursor(cursor);
-   //   }
-   //   else {
-   //      ui_->input_textEdit->clear();
-   //   }
-   //}
 }
 
 void ChatWidget::onSendMessage()
