@@ -279,6 +279,16 @@ void ChatMessagesTextEdit::logout()
    messages_.clear();
 }
 
+void ChatMessagesTextEdit::onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state)
+{
+   Chat::MessagePtr message = findMessage(partyId, message_id);
+
+   if (message) {
+      message->setPartyMessageState(static_cast<Chat::PartyMessageState>(party_message_state));
+      notifyMessageChanged(message);
+   }
+}
+
 void ChatMessagesTextEdit::setHandler(ChatItemActionsHandler* handler)
 {
    handler_ = handler;
@@ -458,80 +468,65 @@ void ChatMessagesTextEdit::onSingleMessageUpdate(const Chat::MessagePtrList& mes
 
 void ChatMessagesTextEdit::onMessageIdUpdate(const std::string& oldId, const std::string& newId, const std::string& chatId)
 {
-   std::shared_ptr<Chat::Data> message = findMessage(chatId, oldId);
-
-   if (message) {
-      message->mutable_message()->set_id(newId);
-      ChatUtils::messageFlagSet(message->mutable_message(), Chat::Data_Message_State_SENT);
-      notifyMessageChanged(message);
-   }
-}
-
-void ChatMessagesTextEdit::onMessageStatusChanged(const std::string& messageId, const std::string &chatId, int newStatus)
-{
-   std::shared_ptr<Chat::Data> message = findMessage(chatId, messageId);
-
-   if (message) {
-      message->mutable_message()->set_state(newStatus);
-      notifyMessageChanged(message);
-   }
-}
-
-std::shared_ptr<Chat::Data> ChatMessagesTextEdit::findMessage(const std::string& chatId, const std::string& messageId)
-{
    // #old_logic
-   //std::shared_ptr<Chat::Data> found = nullptr;
-   //if (messages_.contains(chatId)) {
-   //   auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [messageId](std::shared_ptr<Chat::Data> data) {
-   //      return data->has_message() && data->message().id() == messageId;
-   //   });
+   //std::shared_ptr<Chat::Data> message = findMessage(chatId, oldId);
 
-   //   if (it != messages_[chatId].end()) {
-   //      found = *it;
-   //   }
+   //if (message) {
+   //   message->mutable_message()->set_id(newId);
+   //   ChatUtils::messageFlagSet(message->mutable_message(), Chat::Data_Message_State_SENT);
+   //   notifyMessageChanged(message);
    //}
-   //return found;
+}
+
+Chat::MessagePtr ChatMessagesTextEdit::findMessage(const std::string& partyId, const std::string& messageId)
+{
+   if (messages_.contains(partyId)) {
+      auto it = std::find_if(messages_[partyId].begin(), messages_[partyId].end(), [messageId](Chat::MessagePtr message) {
+         return message->messageId() == messageId;
+      });
+
+      if (it != messages_[partyId].end()) {
+         return *it;
+      }
+   }
 
    return {};
 }
 
-void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::Data> message)
+void ChatMessagesTextEdit::notifyMessageChanged(Chat::MessagePtr message)
 {
    // #old_logic
-   //const std::string chatId = message->message().sender_id() == ownUserId_
-   //                       ? message->message().receiver_id()
-   //                       : message->message().sender_id();
+   const std::string& partyId = message->partyId();
+   if (messages_.contains(partyId)) {
+      const std::string& id = message->messageId();
+      auto it = std::find_if(messages_[partyId].begin(), messages_[partyId].end(), [id](Chat::MessagePtr message) {
+         return message->messageId() == id;
+      });
 
-   //if (messages_.contains(chatId)) {
-   //   const std::string &id = message->message().id();
-   //   auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [id](std::shared_ptr<Chat::Data> data) {
-   //      return data->has_message() && data->message().id() == id;
-   //   });
+      if (it != messages_[partyId].end()) {
+         int distance = static_cast<int>(std::distance(messages_[partyId].begin(), it));
 
-   //   if (it != messages_[chatId].end()) {
-   //      int distance = static_cast<int>(std::distance(messages_[chatId].begin(), it));
+         QTextCursor cursor(textCursor());
+         cursor.movePosition(QTextCursor::Start);
+         cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, distance * 2);
+         cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 2);
+         cursor.removeSelectedText();
 
-   //      QTextCursor cursor(textCursor());
-   //      cursor.movePosition(QTextCursor::Start);
-   //      cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, distance * 2 + (messagesToLoadMore_.size() > 0));
-   //      cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 2);
-   //      cursor.removeSelectedText();
+         auto* table = cursor.insertTable(1, 4, tableFormat_);
 
-   //      auto* table = cursor.insertTable(1, 4, tableFormat_);
+         QString time = data(distance, Column::Time);
+         table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
-   //      QString time = data(distance, Column::Time);
-   //      table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
+         QImage image = statusImage(distance);
+         table->cellAt(0, 1).firstCursorPosition().insertImage(image);
 
-   //      QImage image = statusImage(distance);
-   //      table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+         QString user = data(distance, Column::User);
+         table->cellAt(0, 2).firstCursorPosition().insertHtml(user);
 
-   //      QString user = data(distance, Column::User);
-   //      table->cellAt(0, 2).firstCursorPosition().insertHtml(user);
-
-   //      QString message = data(distance, Column::Message);
-   //      table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
-   //   }
-   //}
+         QString message = data(distance, Column::Message);
+         table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
+      }
+   }
 }
 
 QString ChatMessagesTextEdit::toHtmlUsername(const QString &username, const QString &userId)
@@ -654,8 +649,11 @@ void ChatMessagesTextEdit::forceMessagesUpdate()
 
    const auto& currentMessages = iMessages.value();
    for (int index = 0; index < currentMessages.size(); ++index) {
-      // #new_logic : update read
-      // currentMessages;
+      const auto message = currentMessages[index];
+      message->partyMessageState();
+      if (message->partyMessageState() == Chat::PartyMessageState::RECEIVED && message->sender() != ownUserId_) {
+         emit messageRead(message->partyId(), message->messageId());
+      }
       showMessage(index);
    }
 }

@@ -248,6 +248,7 @@ private slots:
    // Users actions point
    void onUserListClicked(const QModelIndex& index);
    void onSendMessage();
+   void onMessageRead(const std::string& partyId, const std::string& messageId);
 
    // Back end actions point
    void onLogin();
@@ -255,6 +256,7 @@ private slots:
    void onSendArrived(const Chat::MessagePtrList& messagePtr);
    void onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
    void onPartyModelChanged();
+   void onMessageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
 };
 
 #endif // CHAT_WIDGET_H

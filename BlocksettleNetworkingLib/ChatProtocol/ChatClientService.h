@@ -26,6 +26,7 @@ namespace Chat
       void LogoutFromServer();
       void SendPartyMessage(const std::string& partyId, const std::string& data);
       void RequestPrivateParty(const std::string& userName);
+      void SetMessageSeen(const std::string& partyId, const std::string& messageId);
 
       ////////// RETURN SIGNALS //////////
       void chatUserUserNameChanged(const std::string& chatUserDisplayName);

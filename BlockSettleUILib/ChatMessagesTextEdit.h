@@ -77,14 +77,14 @@ public:
    void switchToChat(const std::string& chatId);
    void resetChatView();
    void logout();
+   void onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
 
 signals:
-   void MessageRead(const std::shared_ptr<Chat::Data> &) const;
    void sendFriendRequest(const std::string &userID);
    void addContactRequired(const QString &userId);
 
    // #new_logic
-   void messageAdded();
+   void messageRead(const std::string& partyId, const std::string& messageId);
 
 protected:
    enum class Column {
@@ -108,7 +108,6 @@ protected:
 public slots:
    // #old_logic
    void onMessageIdUpdate(const std::string& oldId, const std::string& newId,const std::string& chatId);
-   void onMessageStatusChanged(const std::string& messageId, const std::string &chatId, int newStatus);
    void urlActivated(const QUrl &link);
 
    // #new_logic
@@ -151,8 +150,7 @@ private:
 
 private:
    // #old_logic : 
-   std::shared_ptr<Chat::Data> findMessage(const std::string& chatId, const std::string& messageId);
-   void notifyMessageChanged(std::shared_ptr<Chat::Data> message);
+
 
    void insertLoadMore();
    void loadMore();
@@ -166,6 +164,8 @@ private:
    void insertMessage(const Chat::MessagePtr& messagePtr);
    void showMessage(int messageIndex);
    void forceMessagesUpdate();
+   Chat::MessagePtr findMessage(const std::string& partyId, const std::string& messageId);
+   void notifyMessageChanged(Chat::MessagePtr message);
 
 private:
    QTextTableFormat tableFormat_;

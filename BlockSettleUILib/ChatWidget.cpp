@@ -56,16 +56,20 @@ enum class OTCPages : int
    OTCSupportRoomShieldPage
 };
 
-// #new_logic
-class AbstractChatWidgetState {
+// #new_logic : make this class QObject in different file
+class AbstractChatWidgetState{
 public:
    explicit AbstractChatWidgetState(ChatWidget* chat) : chat_(chat) { }
    virtual ~AbstractChatWidgetState() = default;
+
    void enterState() {
       applyUserFrameChange();
       applyChatFrameChange();
       applyRoomsFrameChange();
    }
+
+   // slots
+public:
    void sendMessage() {
       if (!canSendMessage()) {
          Q_ASSERT(false, "It should not be possible to send message in this state.");
@@ -98,10 +102,32 @@ public:
 
       chat_->chatPartiesTreeModel_->partyModelChanged();
    }
+   void messageRead(const std::string& partyId, const std::string& messageId) {
+      if (!canResetReadMessage()) {
+         return;
+      }
+
+      chat_->chatClientServicePtr_->SetMessageSeen(partyId, messageId);
+   }
+   void changeMessageState(const std::string& partyId, const std::string& message_id, const int party_message_state) {
+      if (!canChangeMessageState()) {
+         return;
+      }
+
+      chat_->ui_->textEditMessages->onMessageStatusChanged(partyId, message_id, party_message_state);
+   }
+
 protected:
    virtual void applyUserFrameChange() = 0;
    virtual void applyChatFrameChange() = 0;
    virtual void applyRoomsFrameChange() = 0;
+
+   virtual bool canSendMessage() const { return false; }
+   virtual bool canReceiveMessage() const { return true; }
+   virtual bool canChangePartyStatus() const { return true; }
+   virtual bool canResetPartyModel() const { return true; }
+   virtual bool canResetReadMessage() const { return true; }
+   virtual bool canChangeMessageState() const { return true; }
 
    void saveDraftMessage() {
       const auto draft = chat_->ui_->input_textEdit->toPlainText();
@@ -121,11 +147,6 @@ protected:
          chat_->ui_->input_textEdit->setTextCursor(cursor);
       }
    }
-
-   virtual bool canSendMessage() const { return false; }
-   virtual bool canReceiveMessage() const { return true; }
-   virtual bool canChangePartyStatus() const { return true; }
-   virtual bool canResetPartyModel() const { return true; }
 
    ChatWidget *chat_;
 };
@@ -161,7 +182,8 @@ protected:
 
    virtual bool canReceiveMessage() const override { return false; }
    virtual bool canChangePartyStatus() const override { return false; }
-   virtual bool canResetPartyModel() const { return false; }
+   virtual bool canResetReadMessage() const override { return false; }
+   virtual bool canChangeMessageState() const override { return false; }
 };
 
 class IdleState : public AbstractChatWidgetState {
@@ -386,7 +408,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    chatPartiesTreeModel_ = std::make_shared<ChatPartiesTreeModel>(chatClientServicePtr_);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged,
-      chatPartiesTreeModel_.get(), &ChatPartiesTreeModel::partyModelChanged);
+      this, &ChatWidget::onPartyModelChanged);
 
    ChatPartiesSortProxyModelPtr charTreeSortModel = std::make_shared<ChatPartiesSortProxyModel>(chatPartiesTreeModel_);
    ui_->treeViewUsers->setModel(charTreeSortModel.get());
@@ -398,14 +420,17 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    // User actions
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserListClicked);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::messageRead, this, &ChatWidget::onMessageRead, Qt::QueuedConnection);
 
    // Back end changes
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedInToServer, this, &ChatWidget::onLogin);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatWidget::onPartyModelChanged);
 
    Chat::ClientPartyModelPtr chatModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
    connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onSendArrived);
    connect(chatModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onClientPartyStatusChanged);
+   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onMessageStateChanged);
 
    changeState<ChatLogOutState>(); //Initial state is LoggedOut
 #endif
@@ -1313,6 +1338,11 @@ void ChatWidget::onSendMessage()
    stateCurrent_->sendMessage();
 }
 
+void ChatWidget::onMessageRead(const std::string& partyId, const std::string& messageId)
+{
+   stateCurrent_->messageRead(partyId, messageId);
+}
+
 void ChatWidget::onLogin()
 {
    changeState<IdleState>();
@@ -1336,4 +1366,9 @@ void ChatWidget::onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPa
 void ChatWidget::onPartyModelChanged()
 {
    stateCurrent_->resetPartyModel();
+}
+
+void ChatWidget::onMessageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state)
+{
+   stateCurrent_->changeMessageState(partyId, message_id, party_message_state);
 }
