@@ -10,8 +10,6 @@ ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& cha
    : QAbstractItemModel(parent),
    chatClientServicePtr_(chatClientServicePtr)
 {
-   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatPartiesTreeModel::partyModelChanged);
-
    rootItem_ = new PartyTreeItem({}, UI::ElementType::Root);
 }
 
@@ -64,11 +62,36 @@ void ChatPartiesTreeModel::partyModelChanged()
    endResetModel();
 }
 
-void ChatPartiesTreeModel::resetModel()
+void ChatPartiesTreeModel::cleanModel()
 {
    beginResetModel();
    rootItem_->removeAll();
    endResetModel();
+}
+
+void ChatPartiesTreeModel::partyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr)
+{
+   const QModelIndex partyIndex = getPartyIndexById(clientPartyPtr->id());
+
+   if (partyIndex.isValid()) {
+      emit dataChanged(partyIndex, partyIndex);
+   }
+}
+
+QModelIndex ChatPartiesTreeModel::getPartyIndexById(const std::string& partyId) const
+{
+   for (int iContainer = 0; iContainer > rootItem_->childCount(); ++iContainer) {
+      auto* container = rootItem_->child(iContainer);
+      for (int iParty = 0; iParty < container->childCount(); ++iParty) {
+         const auto* party = container->child(iParty);
+         const Chat::ClientPartyPtr clientPtr = container->data().value<Chat::ClientPartyPtr>();
+         if (clientPtr->id() == partyId) {
+            return index(iParty, 0, index(iContainer, 0));
+         }
+      }
+   }
+
+   return {};
 }
 
 PartyTreeItem* ChatPartiesTreeModel::getItem(const QModelIndex& index) const
@@ -161,7 +184,7 @@ const std::string& ChatPartiesTreeModel::currentUser() const
    return chatModelPtr->ownUserName();
 }
 
-ChatPartiesSortProxyModel::ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr&& sourceModel, QObject *parent /*= nullptr*/)
+ChatPartiesSortProxyModel::ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr sourceModel, QObject *parent /*= nullptr*/)
    : QSortFilterProxyModel(parent)
    , sourceModel_(std::move(sourceModel))
 {
