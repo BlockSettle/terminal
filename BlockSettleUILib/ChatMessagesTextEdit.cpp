@@ -349,10 +349,11 @@ void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
 
 void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
 {
-   const int messageIndex = messages_[currentChatId_].size();
-   messages_[currentChatId_].push_back(messagePtr);
-   showMessage(messageIndex);
-
+   const int messageIndex = messages_[messagePtr->partyId()].size();
+   messages_[messagePtr->partyId()].push_back(messagePtr);
+   if (messagePtr->partyId() == currentChatId_) {
+      showMessage(messageIndex);
+   }
 }
 
 void ChatMessagesTextEdit::showMessage(int messageIndex)
