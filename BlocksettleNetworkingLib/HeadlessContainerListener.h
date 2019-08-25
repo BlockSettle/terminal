@@ -57,6 +57,24 @@ public:
    virtual void ccNamesReceived(bool) = 0;
 };
 
+using VoidCb = std::function<void(void)>;
+using PasswordReceivedCb = std::function<void(bs::error::ErrorCode result, const SecureBinaryData &password)>;
+using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, SecureBinaryData> &)>;
+
+struct PasswordRequest
+{
+   VoidCb passwordRequest;
+   PasswordReceivedCb callback;
+   Blocksettle::Communication::Internal::PasswordDialogDataWrapper dialogData;
+   std::chrono::steady_clock::time_point dialogRequestedTime{std::chrono::steady_clock::now()};
+
+   // dialogs sorted by final time point in descending order
+   // last dialog in vector should be executed first
+   bool operator < (const PasswordRequest &other);
+
+   static constexpr std::chrono::seconds defaultDuration{60};
+};
+
 class HeadlessContainerListener : public ServerConnectionListener
 {
 public:
@@ -96,10 +114,6 @@ protected:
    void onClientError(const std::string &clientId, ServerConnectionListener::ClientError errorCode, int socket) override;
 
 private:
-   using VoidCb = std::function<void(void)>;
-   using PasswordReceivedCb = std::function<void(bs::error::ErrorCode result, const SecureBinaryData &password)>;
-   using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, SecureBinaryData> &)>;
-
    void passwordReceived(const std::string &clientId, const std::string &walletId
       , bs::error::ErrorCode result, const SecureBinaryData &password);
 
@@ -176,7 +190,8 @@ private:
 
    std::unordered_map<std::string, SecureBinaryData>                 passwords_;
    //std::unordered_set<std::string>  autoSignPwdReqs_;
-   std::queue<std::pair<VoidCb, PasswordReceivedCb>> deferredPasswordRequests_;
+
+   std::vector<PasswordRequest> deferredPasswordRequests_;
    bool deferredDialogRunning_ = false;
 
    struct TempPasswords {
