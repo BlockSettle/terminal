@@ -646,8 +646,8 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
    d->set_price(peer->offer.price);
    d->set_amount(peer->offer.amount);
    d->set_settlement_id(settlementId.toBinStr());
-   d->set_auth_address_buyer(ourPubKey_.toBinStr());
-   d->set_auth_address_seller(peer->authPubKey.toBinStr());
+   d->set_auth_address_buyer(peer->authPubKey.toBinStr());
+   d->set_auth_address_seller(ourPubKey_.toBinStr());
    d->set_unsigned_payout(deal->payout.serializeState().toBinStr());
    d->set_chat_id_buyer(currentUserId_);
    d->set_chat_id_seller(peer->peerId);
