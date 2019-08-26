@@ -463,12 +463,11 @@ function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, wall
               })
     prepareLiteModeDialog(dlg)
 
-    // FIXME: use bs error codes enum in qml
     dlg.bsAccepted.connect(function() {
-        jsCallback(0, walletInfo.rootId, dlg.passwordData)
+        jsCallback(qmlFactory.errorCodeNoError(), walletInfo.rootId, dlg.passwordData)
     })
     dlg.bsRejected.connect(function() {
-        jsCallback(10, walletInfo.rootId, dlg.passwordData)
+        jsCallback(qmlFactory.errorCodeTxCanceled(), walletInfo.rootId, dlg.passwordData)
     })
     dlg.open()
     dlg.init()
@@ -483,12 +482,11 @@ function createSettlementTransactionDialog(jsCallback, prompt, txInfo, passwordD
               })
     prepareLiteModeDialog(dlg)
 
-    // FIXME: use bs error codes enum in qml
     dlg.bsAccepted.connect(function() {
-        jsCallback(0, walletInfo.rootId, dlg.passwordData)
+        jsCallback(qmlFactory.errorCodeNoError(), walletInfo.rootId, dlg.passwordData)
     })
     dlg.bsRejected.connect(function() {
-        jsCallback(10, walletInfo.rootId, dlg.passwordData)
+        jsCallback(qmlFactory.errorCodeTxCanceled(), walletInfo.rootId, dlg.passwordData)
     })
     dlg.open()
     dlg.init()
@@ -496,13 +494,13 @@ function createSettlementTransactionDialog(jsCallback, prompt, txInfo, passwordD
 
 function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo) {
     if (walletInfo.walletId === "") {
-        jsCallback(10, walletInfo.walletId, {})
+        jsCallback(qmlFactory.errorCodeTxCanceled(), walletInfo.walletId, {})
     }
 
     let dlg = null;
     if (walletInfo.encType === QPasswordData.Auth) {
         dlg = requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
-            jsCallback(0, walletInfo.walletId, passwordData)
+            jsCallback(qmlFactory.errorCodeNoError(), walletInfo.walletId, passwordData)
         })
     }
     else if (walletInfo.encType === QPasswordData.Password){
@@ -538,7 +536,7 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
             passwordData.encKey = ""
             passwordData.textPassword = dlg.enteredPassword
 
-            jsCallback(0, walletInfo.walletId, passwordData)
+            jsCallback(qmlFactory.errorCodeNoError(), walletInfo.walletId, passwordData)
         })
     }
 
