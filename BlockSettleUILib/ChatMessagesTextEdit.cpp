@@ -441,8 +441,14 @@ void ChatMessagesTextEdit::initUserContextMenu()
 
 void ChatMessagesTextEdit::onSingleMessageUpdate(const Chat::MessagePtrList& messagePtrList)
 {
+#ifndef QT_NO_DEBUG
+   const std::string& partyId = !messagePtrList.empty() ? messagePtrList[0]->partyId() : "";
+#endif
    for (const auto& messagePtr : messagePtrList)
    {
+#ifndef QT_NO_DEBUG
+      Q_ASSERT(partyId == messagePtr->partyId());
+#endif
       insertMessage(messagePtr);
    }
 }
@@ -476,12 +482,16 @@ Chat::MessagePtr ChatMessagesTextEdit::findMessage(const std::string& partyId, c
 
 void ChatMessagesTextEdit::notifyMessageChanged(Chat::MessagePtr message)
 {
-   // #old_logic
    const std::string& partyId = message->partyId();
+   if (partyId != currentChatId_) {
+      // Do not need to update view
+      return;
+   }
+
    if (messages_.contains(partyId)) {
       const std::string& id = message->messageId();
-      auto it = std::find_if(messages_[partyId].begin(), messages_[partyId].end(), [id](Chat::MessagePtr message) {
-         return message->messageId() == id;
+      auto it = std::find_if(messages_[partyId].begin(), messages_[partyId].end(), [id](Chat::MessagePtr iteration) {
+         return iteration->messageId() == id;
       });
 
       if (it != messages_[partyId].end()) {
