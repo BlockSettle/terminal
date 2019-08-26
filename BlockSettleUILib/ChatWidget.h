@@ -296,6 +296,9 @@ private slots:
    void onSendButtonClicked();
    void onSendMessage();
    void onMessageRead(const std::string& partyId, const std::string& messageId);
+   void onSendArrived(const Chat::MessagePtrList& messagePtr);
+   void onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
+   void onMessageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
    void onUserListClicked(const QModelIndex& index);
 
 signals:

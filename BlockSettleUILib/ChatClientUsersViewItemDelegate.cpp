@@ -22,27 +22,7 @@ ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(ChatPartiesSort
 }
 
 // #old_logic
-// Previous code need to be deleted after done with styling
-//void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
-//{
-//   const ChatUIDefinitions::ChatTreeNodeType nodeType =
-//            qvariant_cast<ChatUIDefinitions::ChatTreeNodeType>(index.data(Role::ItemTypeRole));
 
-//   switch (nodeType) {
-//      case ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode:
-//         return paintCategoryNode(painter, option, index);
-//      case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-//         return paintRoomsElement(painter, option, index);
-//      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
-//      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
-//         return paintContactsElement(painter, option, index);
-//      case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
-//      case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
-//         return paintUserElement(painter, option, index);
-//      default:
-//         return QStyledItemDelegate::paint(painter, option, index);
-//   }
-//}
 
 void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
@@ -62,25 +42,6 @@ void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptio
    else if (internalData->modelType() == UI::ElementType::Party) {
       paintParty(painter, option, sourceIndex);
    }
-}
-
-// paintCategoryNode == paintPartyContainer
-// #old_logic
-void ChatClientUsersViewItemDelegate::paintCategoryNode(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
-{
-   QStyleOptionViewItem itemOption(option);
-
-   if (itemOption.state & QStyle::State_Selected) {
-      painter->save();
-      painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
-      painter->restore();
-   }
-
-   itemOption.palette.setColor(QPalette::Text, itemStyle_.colorCategoryItem());
-
-   itemOption.text = index.data(Role::CategoryGroupDisplayName).toString();
-
-   QStyledItemDelegate::paint(painter, itemOption, index);
 }
 
 // #new_logic
@@ -132,7 +93,6 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
    // #new_logic: draw dot
    // Need new message indicator OTC and private messages
 }
-
 
 void ChatClientUsersViewItemDelegate::paintInitParty(Chat::ClientPartyPtr clientPartyPtr, QPainter* painter,
    QStyleOptionViewItem& itemOption) const
@@ -192,6 +152,29 @@ void ChatClientUsersViewItemDelegate::paintRequestParty(Chat::ClientPartyPtr cli
 }
 
 // #old_logic
+/*
+// Previous code need to be deleted after done with styling
+void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+   const ChatUIDefinitions::ChatTreeNodeType nodeType =
+            qvariant_cast<ChatUIDefinitions::ChatTreeNodeType>(index.data(Role::ItemTypeRole));
+
+   switch (nodeType) {
+      case ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode:
+         return paintCategoryNode(painter, option, index);
+      case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
+         return paintRoomsElement(painter, option, index);
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
+         return paintContactsElement(painter, option, index);
+      case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
+      case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
+         return paintUserElement(painter, option, index);
+      default:
+         return QStyledItemDelegate::paint(painter, option, index);
+   }
+}
+
 void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
@@ -329,6 +312,7 @@ void ChatClientUsersViewItemDelegate::paintUserElement(QPainter *painter, const 
    itemOption.text = index.data(Role::UserIdRole).toString();
    QStyledItemDelegate::paint(painter, itemOption, index);
 }
+*/
 
 QWidget *ChatClientUsersViewItemDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
