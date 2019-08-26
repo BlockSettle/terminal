@@ -6,6 +6,7 @@
 #include "CoreWalletsManager.h"
 #include "DispatchQueue.h"
 #include "ServerConnection.h"
+#include "StringUtils.h"
 #include "WalletEncryption.h"
 #include "ZmqHelperFunctions.h"
 
@@ -79,14 +80,9 @@ void HeadlessContainerListener::SetLimits(const bs::signer::Limits &limits)
    limits_ = limits;
 }
 
-static std::string toHex(const std::string &binData)
-{
-   return BinaryData(binData).toHexStr();
-}
-
 void HeadlessContainerListener::OnClientConnected(const std::string &clientId)
 {
-   logger_->debug("[HeadlessContainerListener] client {} connected", toHex(clientId));
+   logger_->debug("[HeadlessContainerListener] client {} connected", bs::toHex(clientId));
 
    queue_->dispatch([this, clientId] {
       connectedClients_.insert(clientId);
@@ -95,7 +91,7 @@ void HeadlessContainerListener::OnClientConnected(const std::string &clientId)
 
 void HeadlessContainerListener::OnClientDisconnected(const std::string &clientId)
 {
-   logger_->debug("[HeadlessContainerListener] client {} disconnected", toHex(clientId));
+   logger_->debug("[HeadlessContainerListener] client {} disconnected", bs::toHex(clientId));
 
    queue_->dispatch([this, clientId] {
       connectedClients_.erase(clientId);

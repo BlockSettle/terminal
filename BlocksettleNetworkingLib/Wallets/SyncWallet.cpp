@@ -84,7 +84,7 @@ bool Wallet::setAddressComment(const bs::Address &address, const std::string &co
    if (sync && signContainer_) {
       signContainer_->syncAddressComment(walletId(), address, comment);
    }
-   if (wct_) {
+   if (wct_ && sync) {
       wct_->addressAdded(walletId());
    }
    return true;

@@ -5,7 +5,7 @@
 
 namespace bs {
 
-   std::string toHex(const std::string &str, bool uppercase = true);
+   std::string toHex(const std::string &str, bool uppercase = false);
 
    // Works for ASCII encoding only
    std::string toLower(std::string str);
