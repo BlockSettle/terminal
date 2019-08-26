@@ -11,7 +11,6 @@
 #include "InprocSigner.h"
 #include "TestEnv.h"
 #include "TransactionData.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 using std::make_unique;
