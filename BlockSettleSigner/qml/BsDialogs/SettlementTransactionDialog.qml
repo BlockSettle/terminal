@@ -181,26 +181,38 @@ CustomTitleDialogWindow {
 
             // SettlementAddress
             CustomLabel {
+                Layout.columnSpan: 2
                 visible: passwordDialogData.contains("SettlementAddress")
                 Layout.fillWidth: true
                 text: qsTr("Settlement Address")
             }
             CustomLabelValue {
+                Layout.columnSpan: 2
                 visible: passwordDialogData.contains("SettlementAddress")
                 text: passwordDialogData.value("SettlementAddress")
-                Layout.alignment: Qt.AlignRight
+                Layout.leftMargin: 5
+                //Layout.alignment: Qt.AlignRight
             }
 
             // SettlementId
             CustomLabel {
+                Layout.columnSpan: 2
                 visible: passwordDialogData.contains("SettlementId")
                 Layout.fillWidth: true
                 text: qsTr("Settlement Id")
             }
             CustomLabelValue {
+                Layout.columnSpan: 2
                 visible: passwordDialogData.contains("SettlementId")
                 text: passwordDialogData.value("SettlementId")
-                Layout.alignment: Qt.AlignRight
+                Layout.leftMargin: 5
+                //Layout.alignment: Qt.AlignRight
+            }
+
+            // separator
+            CustomLabel {
+                Layout.columnSpan: 2
+                Layout.preferredHeight: 10
             }
 
             // Requester Authentication Address
@@ -213,9 +225,10 @@ CustomTitleDialogWindow {
                 visible: passwordDialogData.contains("RequesterAuthAddress")
                 text: passwordDialogData.value("RequesterAuthAddress")
                 Layout.alignment: Qt.AlignRight
+                color: passwordDialogData.requesterAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
             }
 
-            // Responder Authentication Address
+            // Responder Authentication Address = dealer
             CustomLabel {
                 visible: passwordDialogData.contains("ResponderAuthAddress")
                 Layout.fillWidth: true
@@ -225,6 +238,7 @@ CustomTitleDialogWindow {
                 visible: passwordDialogData.contains("ResponderAuthAddress")
                 text: passwordDialogData.value("ResponderAuthAddress")
                 Layout.alignment: Qt.AlignRight
+                color: passwordDialogData.responderAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
             }
 
             // Payment UTXO(s)
