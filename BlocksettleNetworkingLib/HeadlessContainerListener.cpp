@@ -14,6 +14,7 @@
 
 using namespace Blocksettle::Communication;
 using namespace bs::error;
+using namespace std::chrono;
 
 HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
@@ -419,6 +420,20 @@ bool HeadlessContainerListener::onUpdateDialogData(const std::string &clientId, 
       return false;
    }
 
+   // try to find dialog in queued dialogs deferredPasswordRequests_
+   auto it = deferredPasswordRequests_.begin();
+   while (it != deferredPasswordRequests_.end()) {
+      Internal::PasswordDialogDataWrapper otherDialogData = request.passworddialogdata();
+      try {
+         const auto &id = otherDialogData.value<std::string>("SettlementId");
+         if (!id.empty() && it->dialogData.value<std::string>("SettlementId") == id) {
+            it->dialogData.MergeFrom(request.passworddialogdata());
+         }
+      } catch (...) {}
+
+      it++;
+   }
+
    if (callbacks_) {
       callbacks_->updateDialogData(request.passworddialogdata());
    }
@@ -562,14 +577,14 @@ void HeadlessContainerListener::passwordReceived(const std::string &clientId, co
       logger_->error("[HeadlessContainerListener::{}] failed to find password received callback {}", __func__);
       return;
    }
-   const PasswordReceivedCb &cb = std::move(deferredPasswordRequests_.front().second);
+   const PasswordReceivedCb &cb = std::move(deferredPasswordRequests_.front().callback);
    if (cb) {
       cb(result, password);
    }
 
    // at this point password workflow finished for deferredPasswordRequests_.front() dialog
-   // now we can remove dialog and it's callback
-   deferredPasswordRequests_.pop();
+   // now we can remove dialog
+   deferredPasswordRequests_.erase(deferredPasswordRequests_.begin());
    deferredDialogRunning_ = false;
 
    // execute next pw dialog
@@ -685,7 +700,11 @@ bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const
    // need to implement some timer which will control dialogs queue for case when proxyCallback not fired
    // and deferredDialogRunning_ flag not cleared
 
-   const VoidCb &deferredPwDialog = [this, reqType, dialogData, txReq](){
+   PasswordRequest dialog;
+
+   dialog.dialogData = dialogData;
+   dialog.callback = cb;
+   dialog.passwordRequest = [this, reqType, dialogData, txReq](){
       if (callbacks_) {
          switch (reqType) {
          case headless::SignTxRequestType:
@@ -721,7 +740,8 @@ bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const
          }
       }
    };
-   deferredPasswordRequests_.push({deferredPwDialog, cb});
+
+   deferredPasswordRequests_.push_back(dialog);
    RunDeferredPwDialog();
 
    return true;
@@ -735,7 +755,9 @@ void HeadlessContainerListener::RunDeferredPwDialog()
 
    if(!deferredDialogRunning_) {
       deferredDialogRunning_ = true;
-      deferredPasswordRequests_.front().first(); // run stored lambda
+
+      std::sort(deferredPasswordRequests_.begin(), deferredPasswordRequests_.end());
+      deferredPasswordRequests_.front().passwordRequest(); // run stored lambda
    }
 }
 
@@ -1830,4 +1852,22 @@ bool HeadlessContainerListener::onExecCustomDialog(const std::string &clientId, 
       callbacks_->customDialog(request.dialogname(), request.variantdata());
    }
    return true;
+}
+
+bool PasswordRequest::operator <(const PasswordRequest &other) {
+   seconds thisInterval, otherInterval;
+
+   try {
+      thisInterval = seconds(dialogData.value<int>("Duration"));
+   } catch (...) {
+      thisInterval = defaultDuration;
+   }
+
+   try {
+      otherInterval = seconds(other.dialogData.value<int>("Duration"));
+   } catch (...) {
+      otherInterval = defaultDuration;
+   }
+
+   return dialogRequestedTime + thisInterval < other.dialogRequestedTime + otherInterval;
 }

@@ -22,11 +22,19 @@ public:
    void insert(const std::string &key, double value);
    void insert(const std::string &key, const char *data, size_t size);
 
+   template<typename T> T value(const std::string &key) const;
+
 private:
    template<typename T>
    void insertImpl(const std::string &key, T value);
 };
 
+
+template<> bool PasswordDialogDataWrapper::value<bool>(const std::string &key) const;
+template<> std::string PasswordDialogDataWrapper::value<std::string>(const std::string &key) const;
+template<> int PasswordDialogDataWrapper::value<int>(const std::string &key) const;
+template<> double PasswordDialogDataWrapper::value<double>(const std::string &key) const;
+template<> const char * PasswordDialogDataWrapper::value<const char *>(const std::string &key) const;
 
 } // namespace Internal
 } // namespace Communication

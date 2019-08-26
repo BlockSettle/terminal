@@ -5,6 +5,8 @@
 using namespace google::protobuf;
 using namespace Blocksettle::Communication::Internal;
 
+const std::string kTypeErrorMsg = "PasswordDialogData value read error: wrong type";
+
 void PasswordDialogDataWrapper::insert(const std::string &key, bool value) { insertImpl<bool>(key, value); }
 
 void PasswordDialogDataWrapper::insert(const std::string &key, const std::string &value)
@@ -70,3 +72,64 @@ AnyMessage &PasswordDialogDataWrapper::setValueImpl(AnyMessage &anyMsg, T)
    assert(false);
    return anyMsg;
 }*/
+
+template<>
+bool PasswordDialogDataWrapper::value<bool>(const std::string &key) const
+{
+   const Any &msg = valuesmap().at(key);
+   AnyMessage anyMsg;
+   msg.UnpackTo(&anyMsg);
+   if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueBool) {
+      throw std::runtime_error(kTypeErrorMsg);
+   }
+   return anyMsg.value_bool();
+}
+
+template<>
+std::string PasswordDialogDataWrapper::value<std::string>(const std::string &key) const
+{
+   const Any &msg = valuesmap().at(key);
+   AnyMessage anyMsg;
+   msg.UnpackTo(&anyMsg);
+   if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueString) {
+      throw std::runtime_error(kTypeErrorMsg);
+   }
+   return anyMsg.value_string();
+}
+
+template<>
+int PasswordDialogDataWrapper::value<int>(const std::string &key) const
+{
+   const Any &msg = valuesmap().at(key);
+   AnyMessage anyMsg;
+   msg.UnpackTo(&anyMsg);
+   if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueInt32) {
+      throw std::runtime_error(kTypeErrorMsg);
+   }
+   return anyMsg.value_int32();
+}
+
+template<>
+double PasswordDialogDataWrapper::value<double>(const std::string &key) const
+{
+   const Any &msg = valuesmap().at(key);
+   AnyMessage anyMsg;
+   msg.UnpackTo(&anyMsg);
+   if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueBool) {
+      throw std::runtime_error(kTypeErrorMsg);
+   }
+   return anyMsg.value_double();
+}
+
+template<>
+const char * PasswordDialogDataWrapper::value<const char *>(const std::string &key) const
+{
+   const Any &msg = valuesmap().at(key);
+   AnyMessage anyMsg;
+   msg.UnpackTo(&anyMsg);
+   if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueBool) {
+      throw std::runtime_error(kTypeErrorMsg);
+   }
+   return anyMsg.value_bytes().data();
+}
+
