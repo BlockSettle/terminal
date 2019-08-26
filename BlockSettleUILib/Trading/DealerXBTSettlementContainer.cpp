@@ -107,54 +107,40 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue("TotalValue", UiUtils::displayCurrencyAmount(amount() * price()));
 
 
-   try {
-      bs::core::wallet::TXSignRequest txData = transactionData_->getSignTxRequest();
+   // tx details
+   if (side() == bs::network::Side::Buy) {
+      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayAmount(payOutTxRequest_.inputAmount())));
 
-      // tx details
-      if (side() == bs::network::Side::Buy) {
-         dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                    .arg(QString::fromStdString(product()))
+                    .arg(UiUtils::displayAmount(payOutTxRequest_.change.value)));
+   }
+   else {
+      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(payInTxRequest_.inputAmount())));
+
+      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                    .arg(UiUtils::XbtCurrency)
+                    .arg(UiUtils::displayAmount(payInTxRequest_.change.value)));
+   }
+
+   dialogData.setValue("NetworkFee", QStringLiteral("(%1)-%2")
                        .arg(UiUtils::XbtCurrency)
-                       .arg(UiUtils::displayAmount(txData.inputAmount())));
+                       .arg(UiUtils::displayAmount(fee())));
 
-         dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
-                       .arg(UiUtils::XbtCurrency)
-                       .arg(UiUtils::displayAmount(txData.change.value)));
+   // settlement details
+   dialogData.setValue("SettlementId", settlementId_.toHexStr());
+   dialogData.setValue("SettlementAddress", settlAddr_.display());
 
-         dialogData.setValue("PaymentAmount", QStringLiteral("(%1)-%2")
-                       .arg(UiUtils::XbtCurrency)
-                       .arg(UiUtils::displayAmount(txData.inputAmount() - txData.change.value)));
+   dialogData.setValue("RequesterAuthAddress", "Verifying");
+   dialogData.setValue("RequesterAuthAddressVerified", false);
 
-         dialogData.setValue("DeliveryReceived", QStringLiteral("(%1)+%2")
-                       .arg(QString::fromStdString(product()))
-                       .arg(UiUtils::displayCCAmount(txData.change.value)));
-      }
-      else {
-         dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
-                       .arg(QString::fromStdString(product()))
-                       .arg(UiUtils::displayCCAmount(txData.inputAmount())));
+   dialogData.setValue("ResponderAuthAddress", "Verifying");
+   dialogData.setValue("ResponderAuthAddressVerified", false);
 
-         dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
-                       .arg(QString::fromStdString(product()))
-                       .arg(UiUtils::displayCCAmount(txData.change.value)));
-
-         dialogData.setValue("DeliveryAmount", QStringLiteral("(%1)-%2")
-                       .arg(QString::fromStdString(product()))
-                       .arg(UiUtils::displayCCAmount(txData.inputAmount() - txData.change.value)));
-
-         dialogData.setValue("PaymentReceived", QStringLiteral("(%1)+%2")
-                       .arg(UiUtils::XbtCurrency)
-                       .arg(UiUtils::displayAmount(amount())));
-      }
-
-      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
-      dialogData.setValue("NetworkFee", UiUtils::displayQuantity(UiUtils::amountToBtc(fee()), UiUtils::XbtCurrency));
-
-      // settlement details
-      dialogData.setValue("InputAmount", UiUtils::displayAmount(txData.inputAmount()));
-      dialogData.setValue("ReturnAmount", UiUtils::displayAmount(txData.change.value));
-
-
-   } catch (...) {}
 
    return dialogData;
 }
@@ -162,8 +148,14 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
 bool DealerXBTSettlementContainer::startPayInSigning()
 {
    try {
-      const auto txReq = transactionData_->getSignTxRequest();
-      payinSignId_ = signingContainer_->signSettlementTXRequest(txReq, toPasswordDialogData(), SignContainer::TXSignMode::Full);
+      payInTxRequest_ = transactionData_->getSignTxRequest();
+      bs::sync::PasswordDialogData dlgData = toPasswordDialogData();
+      dlgData.setValue("SettlementPayIn", QStringLiteral("(%1)-%2")
+                       .arg(UiUtils::XbtCurrency)
+                       .arg(UiUtils::displayAmount(amount())));
+
+
+      payinSignId_ = signingContainer_->signSettlementTXRequest(payInTxRequest_, dlgData, SignContainer::TXSignMode::Full);
    }
    catch (const std::exception &e) {
       logger_->error("[DealerXBTSettlementContainer::onAccepted] Failed to sign pay-in: {}", e.what());
@@ -199,10 +191,17 @@ bool DealerXBTSettlementContainer::startPayOutSigning()
          return;
       }
       try {
-         const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(input
+         payOutTxRequest_ = bs::SettlementMonitor::createPayoutTXRequest(input
             , receivingAddress, transactionData_->feePerByte(), armory_->topBlock());
-         payoutSignId_ = signingContainer_->signSettlementPayoutTXRequest(txReq, { settlementId_
-            , reqAuthKey_, !weSell_ }, toPasswordDialogData());
+
+         bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(payOutTxRequest_);
+         dlgData.setValue("SettlementId", QString::fromStdString(settlementId_.toHexStr()));
+         dlgData.setValue("SettlementPayOut", QStringLiteral("(%1)+%2")
+                     .arg(UiUtils::XbtCurrency)
+                     .arg(UiUtils::displayAmount(payOutTxRequest_.amount())));
+
+         payoutSignId_ = signingContainer_->signSettlementPayoutTXRequest(payOutTxRequest_, { settlementId_
+            , reqAuthKey_, !weSell_ }, dlgData);
       } catch (const std::exception &e) {
          logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());
          emit error(tr("Failed to sign pay-out"));

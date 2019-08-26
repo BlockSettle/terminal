@@ -22,6 +22,25 @@ sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
    return info;
 }
 
+sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogData(core::wallet::TXSignRequest payOutReq) const
+{
+   bs::sync::PasswordDialogData dialogData = toPasswordDialogData();
+
+   dialogData.setValue("Title", tr("Pay-Out Transaction"));
+   dialogData.setValue("Duration", 30000);
+
+   // tx details
+   dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+                 .arg(UiUtils::XbtCurrency)
+                 .arg(UiUtils::displayAmount(payOutReq.inputAmount())));
+
+   dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+                 .arg(UiUtils::XbtCurrency)
+                 .arg(UiUtils::displayAmount(payOutReq.change.value)));
+
+   return dialogData;
+}
+
 void SettlementContainer::startTimer(const unsigned int durationSeconds)
 {
    timer_.stop();
