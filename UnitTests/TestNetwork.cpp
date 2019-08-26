@@ -527,6 +527,10 @@ public:
     void OnClientConnected(const std::string &clientId) override {
        lastConnectedClient_ = clientId;
        ++connected_;
+       if (server_) {
+          lastConnectedKey_ = server_->getClientKey(clientId);
+          ASSERT_TRUE(lastConnectedKey_);
+       }
        logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
     }
     void OnClientDisconnected(const std::string &clientId) override {
@@ -541,8 +545,9 @@ public:
     std::atomic<int> error_{};
     std::string lastConnectedClient_;
     std::string lastDisconnectedClient_;
+    std::unique_ptr<ZmqBIP15XPeer> lastConnectedKey_;
 
-private:
+    ZmqBIP15XServerConnection *server_{};
     std::shared_ptr<spdlog::logger>  logger_;
 };
 
@@ -1007,4 +1012,40 @@ TEST(TestNetwork, ZMQ_BIP15X_MalformedSndMore)
 
    ASSERT_EQ(zmq_close(badSocket), 0);
    ASSERT_EQ(zmq_ctx_term(badContext), 0);
+}
+
+TEST(TestNetwork, ZMQ_BIP15X_ClientKey)
+{
+   const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
+   const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
+
+   const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
+            StaticLogger::loggerPtr, getTestParams());
+   const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
+   auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
+            StaticLogger::loggerPtr, zmqContext, getEmptyPeersCallback());
+   const auto serverKey = serverConn->getOwnPubKey();
+
+   srvLsn->server_ = serverConn.get();
+
+   const std::string host = "127.0.0.1";
+   std::string port;
+   do {
+      port = std::to_string((rand() % 50000) + 10000);
+   } while (!serverConn->BindConnection(host, port, srvLsn.get()));
+
+   serverConn->addAuthPeer(getPeerKey("client", clientConn.get()));
+   clientConn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
+
+   ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
+   ASSERT_TRUE(await(clientLsn->connected_));
+
+   ASSERT_TRUE(clientConn->send("test"));
+   ASSERT_TRUE(await(srvLsn->dataRecv_));
+   ASSERT_TRUE(serverConn->SendDataToAllClients("test2"));
+   ASSERT_TRUE(await(clientLsn->dataRecv_));
+
+   ASSERT_TRUE(srvLsn->lastConnectedKey_);
+   ASSERT_TRUE(clientConn->getOwnPubKey().getSize() == 33);
+   EXPECT_TRUE(srvLsn->lastConnectedKey_->pubKey() == clientConn->getOwnPubKey());
 }

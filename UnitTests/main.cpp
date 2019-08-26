@@ -84,6 +84,8 @@ int main(int argc, char** argv)
 
    //::testing::AddGlobalTestEnvironment(new TestEnv(logger));
 
+   NetworkConfig::selectNetwork(NETWORK_MODE_TESTNET);
+
    QTimer::singleShot(0, [] {
       rc = RUN_ALL_TESTS();
       QApplication::quit();
