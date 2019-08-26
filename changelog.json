@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.20.6",
-   "release_date": "23 Aug 2019",
+   "latest_version": "0.20.7",
+   "release_date": "26 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.7",
+         "previous_version": "0.20.6",
+         "release_date": "26 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Log connected signer client id in HEX",
+            "OTC fixes",
+            "Allow change address from different leaf (BST-2144)",
+            "Fix auth leaf auto-creation (BST-2163)",
+            "Create auth leaf at initial primary wallet creation (BST-2162)"
+         ],
+         "bug_fixes": [],
+         "revision": "1d608e2e",
+         "common_revision": "5a8631d7"
+      },
       {
          "version_string": "0.20.6",
          "previous_version": "0.20.5",
