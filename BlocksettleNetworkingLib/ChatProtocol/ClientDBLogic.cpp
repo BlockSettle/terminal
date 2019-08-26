@@ -357,7 +357,7 @@ namespace Chat
          QString(QLatin1String(
             "SELECT message_id, timestamp, message_state, message_text, sender FROM party_message "
             "LEFT JOIN party ON party.id=party_message.party_table_id "
-            "WHERE party_id='Global' ORDER BY timestamp DESC LIMIT %1 OFFSET %2;"
+            "WHERE party_id=:partyId ORDER BY timestamp DESC LIMIT %1 OFFSET %2;"
          )).arg(limit).arg(offset);
 
       QSqlQuery query(getDb());
