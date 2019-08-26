@@ -48,7 +48,7 @@ namespace Chat
             {
                PartyRecipientPacket recipient = partyPacket.recipient(i);
                PartyRecipientPtr recipientPtr =
-                  std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key());
+                  std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key(), QDateTime::fromMSecsSinceEpoch(recipient.timestamp_ms()));
                recipients.push_back(recipientPtr);
             }
 

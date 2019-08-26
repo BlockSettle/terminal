@@ -401,6 +401,8 @@ namespace Chat
       {
          PartyRecipientPacket* partyRecipientPacket = partyPacket->add_recipient();
          partyRecipientPacket->set_user_name(recipient->userName());
+         partyRecipientPacket->set_public_key(recipient->publicKey().toBinStr());
+         partyRecipientPacket->set_timestamp_ms(recipient->publicKeyTime().toMSecsSinceEpoch());
       }
 
       emit sendPacket(privatePartyRequest);
