@@ -29,12 +29,16 @@ namespace Chat
       ClientStatus clientStatus() const { return clientStatus_; }
       void setClientStatus(ClientStatus val);
 
+      std::string userHash() const { return userHash_; }
+      void setUserHash(std::string val) { userHash_ = val; }
+
    signals:
       void clientStatusChanged(const ClientStatus& clientStatus);
       void displayNameChanged();
 
    private:
       std::string displayName_;
+      std::string userHash_;
       ClientStatus clientStatus_;
    };
 

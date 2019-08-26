@@ -1281,8 +1281,6 @@ protected:
    virtual void applyUserFrameChange() override {
       chat_->ui_->searchWidget->setLineEditEnabled(true);
 
-      chat_->ui_->treeViewUsers->expandAll();
-
       const auto chatModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();
       chat_->ui_->labelUserName->setText(QString::fromStdString(chatModelPtr->ownUserName()));
    }
@@ -1455,9 +1453,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    installEventFilter(this);
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatWidget::onPartyModelChanged);
 
    chatPartiesTreeModel_ = std::make_shared<ChatPartiesTreeModel>(chatClientServicePtr_);
-   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatWidget::onPartyModelChanged);
 
    ChatPartiesSortProxyModelPtr charTreeSortModel = std::make_shared<ChatPartiesSortProxyModel>(chatPartiesTreeModel_);
    ui_->treeViewUsers->setModel(charTreeSortModel.get());
@@ -1465,8 +1463,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->treeViewUsers->setSortingEnabled(true);
    ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(charTreeSortModel, this));
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
-
-   ui_->treeViewUsers->expandAll();
 
    // TODO: fix search widget
    ui_->searchWidget->init();
