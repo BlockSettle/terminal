@@ -70,9 +70,7 @@ struct PasswordRequest
 
    // dialogs sorted by final time point in ascending order
    // first dialog in vector should be executed firstly
-   bool operator < (const PasswordRequest &other);
-
-   static constexpr std::chrono::seconds defaultDuration{60};
+   bool operator < (const PasswordRequest &other) const;
 };
 
 class HeadlessContainerListener : public ServerConnectionListener
