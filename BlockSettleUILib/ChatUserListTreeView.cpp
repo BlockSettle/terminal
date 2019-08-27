@@ -158,6 +158,8 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
       return;
    }
 
+   auto chatPartiesTreeModel = internalChatPartiesTreeModel(index);
+
    if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState())
    {
       QAction* removeAction = new QAction(tr("Remove from contacts"), this);
@@ -181,15 +183,27 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
 
    if (Chat::PartyState::REQUESTED == clientPartyPtr->partyState())
    {
-      QAction* acceptAction = new QAction(tr("Accept friend request"), this);
-      acceptAction->setData(index);
-      connect(acceptAction, &QAction::triggered, this, &ChatUserListTreeView::onAcceptFriendRequest);
-      contextMenu_->addAction(acceptAction);
+      if (clientPartyPtr->partyCreatorHash() != chatPartiesTreeModel->currentUser())
+      {
+         // receiver of party
+         QAction* acceptAction = new QAction(tr("Accept friend request"), this);
+         acceptAction->setData(index);
+         connect(acceptAction, &QAction::triggered, this, &ChatUserListTreeView::onAcceptFriendRequest);
+         contextMenu_->addAction(acceptAction);
 
-      QAction* declineAction = new QAction(tr("Decline friend request"), this);
-      declineAction->setData(index);
-      connect(declineAction, &QAction::triggered, this, &ChatUserListTreeView::onDeclineFriendRequest);
-      contextMenu_->addAction(declineAction);
+         QAction* declineAction = new QAction(tr("Decline friend request"), this);
+         declineAction->setData(index);
+         connect(declineAction, &QAction::triggered, this, &ChatUserListTreeView::onDeclineFriendRequest);
+         contextMenu_->addAction(declineAction);
+      }
+      else
+      {
+         // creator of party
+         QAction* removeAction = new QAction(tr("Remove from contacts"), this);
+         removeAction->setData(index);
+         connect(removeAction, &QAction::triggered, this, &ChatUserListTreeView::onRemoveFromContacts);
+         contextMenu_->addAction(removeAction);
+      }
    }
 
    if (contextMenu_->isEmpty())

@@ -19,6 +19,8 @@ namespace Chat
       clientDBServicePtr_ = clientDBServicePtr;
       clientPartyModelPtr_ = std::make_shared<ClientPartyModel>(loggerPtr, this);
       connect(clientPartyModelPtr_.get(), &ClientPartyModel::clientPartyDisplayNameChanged, this, &ClientPartyLogic::clientPartyDisplayNameChanged);
+      connect(clientPartyModelPtr_.get(), &ClientPartyModel::partyModelChanged, this, &ClientPartyLogic::partyModelChanged);
+
       connect(clientDBServicePtr.get(), &ClientDBService::partyDisplayNameLoaded, this, &ClientPartyLogic::partyDisplayNameLoaded);
 
       connect(this, &ClientPartyLogic::error, this, &ClientPartyLogic::handleLocalErrors);

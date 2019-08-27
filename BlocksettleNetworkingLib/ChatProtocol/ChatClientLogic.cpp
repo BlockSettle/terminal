@@ -274,7 +274,7 @@ namespace Chat
       ClientPartyModelPtr clientPartModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
       PartyPtr partyPtr = clientPartModelPtr->getPartyById(partyId);
 
-      if (nullptr != partyPtr)
+      if (nullptr == partyPtr)
       {
          emit chatClientError(ChatClientLogicError::PartyNotExist, partyId);
          return;
