@@ -80,7 +80,6 @@ signals:
    void settlementCancelled();
    void settlementAccepted();
    void acceptQuote(std::string reqId, std::string hexPayoutTx);
-   void DealerVerificationStateChanged(AddressVerificationState);
    void retry();
    void stop();
    void authWalletInfoReceived();
@@ -108,6 +107,7 @@ private:
    std::shared_ptr<SignContainer>         signContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<TransactionData>       transactionData_;
+   bs::core::wallet::TXSignRequest        payInTxRequest_, payOutTxRequest_;
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
    bs::Address                settlAddr_;
@@ -145,6 +145,7 @@ private:
    unsigned int      infoReqIdAuth_ = 0;
 
    const bs::Address authAddr_;
+   std::shared_ptr<AuthAddress> dealerAuthAddress_;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__

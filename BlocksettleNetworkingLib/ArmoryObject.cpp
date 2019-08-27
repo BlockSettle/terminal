@@ -18,9 +18,9 @@
 
 namespace {
 
-const int DefaultArmoryDBStartTimeoutMsec = 500;
+   const int kDefaultArmoryDBStartTimeoutMsec = 500;
 
-} // namesapce
+} // namespace
 
 
 ArmoryObject::ArmoryObject(const std::shared_ptr<spdlog::logger> &logger
@@ -61,7 +61,7 @@ bool ArmoryObject::startLocalArmoryProcess(const ArmorySettings &settings)
       logger_->debug("[{}] running {} {}", __func__, settings.armoryExecutablePath.toStdString()
          , args.join(QLatin1Char(' ')).toStdString());
       armoryProcess_->start(settings.armoryExecutablePath, args);
-      if (armoryProcess_->waitForStarted(DefaultArmoryDBStartTimeoutMsec)) {
+      if (armoryProcess_->waitForStarted(kDefaultArmoryDBStartTimeoutMsec)) {
          return true;
       }
       armoryProcess_.reset();

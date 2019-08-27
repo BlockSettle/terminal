@@ -94,6 +94,7 @@ private:
    bool        payInDetected_ = false;
    bool        payInSent_ = false;
    uint64_t    fee_ = 0;
+   bs::core::wallet::TXSignRequest        payInTxRequest_, payOutTxRequest_;
 
    unsigned int   payinSignId_ = 0;
    unsigned int   payoutSignId_ = 0;

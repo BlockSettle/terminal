@@ -41,8 +41,8 @@ XBTSettlementTransactionWidget::XBTSettlementTransactionWidget(const std::shared
    connect(celerClient.get(), &BaseCelerClient::OnConnectionClosed,
       this, &XBTSettlementTransactionWidget::onCancel);
 
-   connect(settlContainer_.get(), &ReqXBTSettlementContainer::DealerVerificationStateChanged
-      , this, &XBTSettlementTransactionWidget::onDealerVerificationStateChanged, Qt::QueuedConnection);
+//   connect(settlContainer_.get(), &ReqXBTSettlementContainer::DealerVerificationStateChanged
+//      , this, &XBTSettlementTransactionWidget::onDealerVerificationStateChanged, Qt::QueuedConnection);
    connect(settlContainer_.get(), &ReqXBTSettlementContainer::error, this, &XBTSettlementTransactionWidget::onError);
    connect(settlContainer_.get(), &ReqXBTSettlementContainer::info, this, &XBTSettlementTransactionWidget::onInfo);
    connect(settlContainer_.get(), &ReqXBTSettlementContainer::timerTick, this, &XBTSettlementTransactionWidget::onTimerTick);

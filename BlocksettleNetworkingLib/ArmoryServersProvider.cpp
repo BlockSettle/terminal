@@ -4,11 +4,20 @@
 #include <QDir>
 #include <QStandardPaths>
 
+namespace {
+
+   // Change to true if local ArmoryDB auto-start should be reverted (not tested, see BST-2131)
+   const bool kEnableLocalAutostart = false;
+
+} // namespace
+
 const QList<ArmoryServer> ArmoryServersProvider::defaultServers_ = {
    ArmoryServer::fromTextSettings(QStringLiteral(ARMORY_BLOCKSETTLE_NAME":0:armory.blocksettle.com:80:")),
    ArmoryServer::fromTextSettings(QStringLiteral(ARMORY_BLOCKSETTLE_NAME":1:armory.blocksettle.com:81:")),
-   ArmoryServer::fromTextSettings(QStringLiteral("Local Auto-launch Node:0:127.0.0.1::")),
-   ArmoryServer::fromTextSettings(QStringLiteral("Local Auto-launch Node:1:127.0.0.1::"))
+   ArmoryServer::fromTextSettings(kEnableLocalAutostart ?
+      QStringLiteral("Local Auto-launch Node:0:127.0.0.1::") : QStringLiteral("Local Node:0:127.0.0.1::")),
+   ArmoryServer::fromTextSettings(kEnableLocalAutostart ?
+      QStringLiteral("Local Auto-launch Node:1:127.0.0.1::") : QStringLiteral("Local Node:1:127.0.0.1:81:"))
 };
 
 const int ArmoryServersProvider::kDefaultServersCount = ArmoryServersProvider::defaultServers_.size();
@@ -43,7 +52,7 @@ QList<ArmoryServer> ArmoryServersProvider::servers() const
    // #3 add localhost node MainNet
    ArmoryServer localMainNet = defaultServers_.at(2);
    localMainNet.armoryDBPort = appSettings_->GetDefaultArmoryLocalPort(NetworkType::MainNet);
-   localMainNet.runLocally = true;
+   localMainNet.runLocally = kEnableLocalAutostart;
    if (defaultServersKeys.size() >= 3) {
       localMainNet.armoryDBKey = defaultServersKeys.at(2);
    }
@@ -52,7 +61,7 @@ QList<ArmoryServer> ArmoryServersProvider::servers() const
    // #4 add localhost node TestNet
    ArmoryServer localTestNet = defaultServers_.at(3);
    localTestNet.armoryDBPort = appSettings_->GetDefaultArmoryLocalPort(NetworkType::TestNet);
-   localTestNet.runLocally = true;
+   localTestNet.runLocally = kEnableLocalAutostart;
    if (defaultServersKeys.size() >= 4) {
       localTestNet.armoryDBKey = defaultServersKeys.at(3);
    }

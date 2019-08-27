@@ -1382,77 +1382,28 @@ void BSTerminalMainWindow::setupShortcuts()
    transactionsTabShortcut->setContext(Qt::WindowShortcut);
    connect(transactionsTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(4);});
 
-   auto alt_1 = new QShortcut(QKeySequence(QStringLiteral("Alt+1")), this);
-   alt_1->setContext(Qt::WindowShortcut);
-   connect(alt_1, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Alt_1);
-      }
-   );
+   // TODO: Switch ChatWidget to TabWithShortcut if needed (it will ignore shortcuts right now)
 
-   auto alt_2 = new QShortcut(QKeySequence(QStringLiteral("Alt+2")), this);
-   alt_2->setContext(Qt::WindowShortcut);
-   connect(alt_2, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Alt_2);
-      }
-   );
+   auto addShotcut = [this](const char *keySequence, TabWithShortcut::ShortcutType type) {
+      auto shortcut = new QShortcut(QKeySequence(QLatin1String(keySequence)), this);
+      shortcut->setContext(Qt::WindowShortcut);
+      connect(shortcut, &QShortcut::activated, [this, type]() {
+         auto widget = dynamic_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget());
+         if (widget) {
+            widget->shortcutActivated(type);
+         }
+      });
+   };
 
-   auto alt_3 = new QShortcut(QKeySequence(QStringLiteral("Alt+3")), this);
-   alt_3->setContext(Qt::WindowShortcut);
-   connect(alt_3, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Alt_3);
-      }
-   );
-
-   auto ctrl_s = new QShortcut(QKeySequence(QStringLiteral("Ctrl+S")), this);
-   ctrl_s->setContext(Qt::WindowShortcut);
-   connect(ctrl_s, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Ctrl_S);
-      }
-   );
-
-   auto ctrl_p = new QShortcut(QKeySequence(QStringLiteral("Ctrl+P")), this);
-   ctrl_p->setContext(Qt::WindowShortcut);
-   connect(ctrl_p, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Ctrl_P);
-      }
-   );
-
-   auto ctrl_q = new QShortcut(QKeySequence(QStringLiteral("Ctrl+Q")), this);
-   ctrl_q->setContext(Qt::WindowShortcut);
-   connect(ctrl_q, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Ctrl_Q);
-      }
-   );
-
-   auto alt_s = new QShortcut(QKeySequence(QStringLiteral("Alt+S")), this);
-   alt_s->setContext(Qt::WindowShortcut);
-   connect(alt_s, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Alt_S);
-      }
-   );
-
-   auto alt_b = new QShortcut(QKeySequence(QStringLiteral("Alt+B")), this);
-   alt_b->setContext(Qt::WindowShortcut);
-   connect(alt_b, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Alt_B);
-      }
-   );
-
-   auto alt_p = new QShortcut(QKeySequence(QStringLiteral("Alt+P")), this);
-   alt_p->setContext(Qt::WindowShortcut);
-   connect(alt_p, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
-            TabWithShortcut::ShortcutType::Alt_P);
-      }
-   );
+   addShotcut("Alt+1", TabWithShortcut::ShortcutType::Alt_1);
+   addShotcut("Alt+2", TabWithShortcut::ShortcutType::Alt_2);
+   addShotcut("Alt+3", TabWithShortcut::ShortcutType::Alt_3);
+   addShotcut("Ctrl+S", TabWithShortcut::ShortcutType::Ctrl_S);
+   addShotcut("Ctrl+P", TabWithShortcut::ShortcutType::Ctrl_P);
+   addShotcut("Ctrl+Q", TabWithShortcut::ShortcutType::Ctrl_Q);
+   addShotcut("Alt+S", TabWithShortcut::ShortcutType::Alt_S);
+   addShotcut("Alt+B", TabWithShortcut::ShortcutType::Alt_B);
+   addShotcut("Alt+P", TabWithShortcut::ShortcutType::Alt_P);
 }
 
 void BSTerminalMainWindow::onButtonUserClicked() {

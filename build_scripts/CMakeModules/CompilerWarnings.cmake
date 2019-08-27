@@ -10,9 +10,7 @@ if(CMAKE_C_COMPILER_ID STREQUAL GNU OR CMAKE_C_COMPILER_ID STREQUAL Clang)
       add_compile_options(-w) # turn off all warnings
    endif()
 elseif(MSVC)
-   if(CMAKE_BUILD_TYPE STREQUAL Debug)
-      #add_compile_options(/Wall)
-   else()
-      add_compile_options(/w) # turn off all warnings
+   if(NOT CMAKE_BUILD_TYPE STREQUAL Debug)
+      add_compile_options(/W0) # turn off all warnings
    endif()
 endif()

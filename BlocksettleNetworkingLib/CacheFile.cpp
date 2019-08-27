@@ -103,7 +103,7 @@ void CacheFile::read()
 
 void CacheFile::write()
 {
-   QReadLocker lockMap(&rwLock_);
+   QWriteLocker lockMap(&rwLock_);
    LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
    QMutexLocker lockMapModif(&mtxModified_);
    for (const auto &entry : mapModified_) {

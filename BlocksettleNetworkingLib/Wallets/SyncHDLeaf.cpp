@@ -227,6 +227,7 @@ void hd::Leaf::init(bool force)
 void hd::Leaf::reset()
 {
    std::lock_guard<std::mutex> lock(regMutex_);
+   FastLock locker{addressPoolLock_};
 
    lastIntIdx_ = lastExtIdx_ = 0;
    usedAddresses_.clear();
@@ -301,7 +302,14 @@ bool hd::Leaf::containsAddress(const bs::Address &addr)
 
 bool hd::Leaf::containsHiddenAddress(const bs::Address &addr) const
 {
+   FastLock locker{addressPoolLock_};
    return (poolByAddr_.find(addr) != poolByAddr_.end());
+}
+
+size_t hd::Leaf::getAddressPoolSize() const
+{
+   FastLock locker{addressPoolLock_};
+   return addressPool_.size();
 }
 
 // Return an external-facing address.
@@ -656,6 +664,7 @@ hd::Leaf::AddrPoolKey hd::Leaf::addressIndex(const bs::Address &addr) const
 
 bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
 {
+   FastLock locker{addressPoolLock_};
    const auto index = addressIndex(addr);
    if (index.empty()) {
       const auto &itPool = poolByAddr_.find(addr);
