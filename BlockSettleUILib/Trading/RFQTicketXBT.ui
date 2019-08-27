@@ -775,7 +775,7 @@
          </size>
         </property>
         <property name="title">
-         <string>SETTLEMENT INPUTS</string>
+         <string>SETTLEMENT DETAILS</string>
         </property>
         <property name="wellGroupBoxWithButtonBar" stdset="0">
          <bool>true</bool>
@@ -823,7 +823,7 @@
             <item>
              <widget class="QLabel" name="labelCCWalletName">
               <property name="text">
-               <string>Private Markets Wallet</string>
+               <string>Delivery/Receiving Wallet</string>
               </property>
              </widget>
             </item>
@@ -871,9 +871,9 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLabel" name="labelWallet">
+             <widget class="QLabel" name="labelWalletName">
               <property name="text">
-               <string>XBT Wallet</string>
+               <string>Payment/Receiving Wallet</string>
               </property>
              </widget>
             </item>
