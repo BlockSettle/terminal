@@ -43,7 +43,7 @@ namespace Chat
             partyPacket.party_id(), partyPacket.party_type(), partyPacket.party_subtype(), partyPacket.party_state());
          clientPartyPtr->setDisplayName(partyPacket.display_name());
          clientPartyPtr->setUserHash(partyPacket.display_name());
-         clientPartyPtr->setSenderHash(partyPacket.sender_hash());
+         clientPartyPtr->setPartyCreatorHash(partyPacket.sender_hash());
 
          if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
          {
@@ -192,7 +192,7 @@ namespace Chat
          recipients.push_back(recipient);
       }
 
-      newClientPrivatePartyPtr->setSenderHash(partyPacket.sender_hash());
+      newClientPrivatePartyPtr->setPartyCreatorHash(partyPacket.sender_hash());
 
       // update model
       clientPartyModelPtr_->insertParty(newClientPrivatePartyPtr);

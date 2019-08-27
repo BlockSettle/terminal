@@ -301,7 +301,7 @@ void ChatUserListTreeView::updateDependUi(const QModelIndex& index)
       if ((Chat::PartyState::UNINITIALIZED == clientPartyPtr->partyState())
          || (Chat::PartyState::REQUESTED == clientPartyPtr->partyState()))
       {
-         if (clientPartyPtr->senderHash() == chatPartiesTreeModel->currentUser())
+         if (clientPartyPtr->partyCreatorHash() == chatPartiesTreeModel->currentUser())
          {
             stringStatus = QLatin1String("-OUTGOING PENDING");
          }

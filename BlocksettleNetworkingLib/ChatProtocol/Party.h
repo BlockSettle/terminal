@@ -39,15 +39,15 @@ namespace Chat
       virtual bool isPrivateStandard() const { return (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == partyType() && Chat::PartySubType::STANDARD == partySubType()); }
       virtual bool isPrivate() const { return Chat::PartyType::PRIVATE_DIRECT_MESSAGE == partyType(); }
 
-      const std::string& senderHash() const { return sender_; }
-      void setSenderHash(std::string val) { sender_ = val; }
+      const std::string& partyCreatorHash() const { return partyCreatorHash_; }
+      void setPartyCreatorHash(std::string val) { partyCreatorHash_ = val; }
 
    private:
       std::string id_;
       PartyType partyType_;
       PartySubType partySubType_;
       PartyState partyState_;
-      std::string sender_;
+      std::string partyCreatorHash_;
    };
 
    using PartyPtr = std::shared_ptr<Party>;
