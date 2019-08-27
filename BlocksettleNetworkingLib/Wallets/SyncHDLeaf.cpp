@@ -302,6 +302,7 @@ bool hd::Leaf::containsAddress(const bs::Address &addr)
 
 bool hd::Leaf::containsHiddenAddress(const bs::Address &addr) const
 {
+   FastLock locker{addressPoolLock_};
    return (poolByAddr_.find(addr) != poolByAddr_.end());
 }
 
