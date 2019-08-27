@@ -57,7 +57,7 @@ namespace Chat
 
          clientPartyModelPtr_->insertParty(clientPartyPtr);
 
-         // Read and privide last 10 history messages for private parties
+         // Read and provide last 10 history messages for private parties
          if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
          {
             clientDBServicePtr_->readHistoryMessages(partyPacket.party_id(), 10);
