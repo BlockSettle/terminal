@@ -76,7 +76,7 @@ public:
    void switchToChat(const std::string& chatId);
    void resetChatView();
    void logout();
-   void onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
+   const Chat::MessagePtr onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
 
 signals:
    void sendFriendRequest(const std::string &userID);

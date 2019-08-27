@@ -78,15 +78,46 @@ void ChatPartiesTreeModel::partyStatusChanged(const Chat::ClientPartyPtr& client
    }
 }
 
-QModelIndex ChatPartiesTreeModel::getPartyIndexById(const std::string& partyId) const
+void ChatPartiesTreeModel::increaseUnseenCounter(const std::string& partyId, int newMessageCount)
 {
-   for (int iContainer = 0; iContainer > rootItem_->childCount(); ++iContainer) {
+   const QModelIndex partyIndex = getPartyIndexById(partyId);
+   if (!partyIndex.isValid()) {
+      return;
+   }
+
+   PartyTreeItem* partyItem = static_cast<PartyTreeItem*>(partyIndex.internalPointer());
+   partyItem->increaseUnreadedCounter(newMessageCount);
+
+}
+
+void ChatPartiesTreeModel::decreaseUnseenCounter(const std::string& partyId, int seenMessageCount)
+{
+   const QModelIndex partyIndex = getPartyIndexById(partyId);
+   if (!partyIndex.isValid()) {
+      return;
+   }
+
+   PartyTreeItem* partyItem = static_cast<PartyTreeItem*>(partyIndex.internalPointer());
+   partyItem->decreaseUnreadedCounter(seenMessageCount);
+}
+
+const QModelIndex ChatPartiesTreeModel::getPartyIndexById(const std::string& partyId) const
+{
+   for (int iContainer = 0; iContainer < rootItem_->childCount(); ++iContainer) {
       auto* container = rootItem_->child(iContainer);
       for (int iParty = 0; iParty < container->childCount(); ++iParty) {
-         const auto* party = container->child(iParty);
-         const Chat::ClientPartyPtr clientPtr = container->data().value<Chat::ClientPartyPtr>();
-         if (clientPtr->id() == partyId) {
-            return index(iParty, 0, index(iContainer, 0));
+         const PartyTreeItem* party = container->child(iParty);
+
+         if (party->data().canConvert<Chat::ClientPartyPtr>()) {
+            const Chat::ClientPartyPtr clientPtr = party->data().value<Chat::ClientPartyPtr>();
+            if (clientPtr->id() == partyId) {
+               return index(iParty, 0, index(iContainer, 0));
+            }
+         }
+         else if (party->data().canConvert<QString>()) {
+            if (party->data().toString().toStdString() == partyId) {
+               return index(iParty, 0, index(iContainer, 0));
+            }
          }
       }
    }
@@ -205,6 +236,12 @@ PartyTreeItem* ChatPartiesSortProxyModel::getInternalData(const QModelIndex& ind
 const std::string& ChatPartiesSortProxyModel::currentUser() const
 {
    return sourceModel_->currentUser();
+}
+
+QModelIndex ChatPartiesSortProxyModel::getProxyIndexById(const std::string& partyId) const
+{
+   const QModelIndex sourceIndex = sourceModel_->getPartyIndexById(partyId);
+   return mapFromSource(sourceIndex);
 }
 
 bool ChatPartiesSortProxyModel::filterAcceptsRow(int row, const QModelIndex& parent) const

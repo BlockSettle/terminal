@@ -274,6 +274,7 @@ class ChatWidget : public QWidget
 
 public:
    explicit ChatWidget(QWidget* parent = nullptr);
+   ~ChatWidget() override;
 
    void init(const std::shared_ptr<ConnectionManager>& connectionManager,
       const std::shared_ptr<ApplicationSettings>& appSettings,
@@ -286,6 +287,7 @@ public:
 public slots:
    // OTC
    void processOtcPbMessage(const std::string& data);
+   void onNewChatMessageTrayNotificationClicked(const QString& userId);
 
 private slots:
    void onContactRequestAcceptSendClicked();
@@ -336,7 +338,8 @@ private:
    std::shared_ptr<spdlog::logger>  loggerPtr_;
    std::shared_ptr<ChatPartiesTreeModel> chatPartiesTreeModel_;
 
-   std::string  currentChat_;
+   std::string ownUserId_;
+   std::string  currentPartyId_;
    QMap<std::string, QString> draftMessages_;
 };
 
