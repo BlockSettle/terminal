@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.20.7",
-   "release_date": "26 Aug 2019",
+   "latest_version": "0.20.8",
+   "release_date": "27 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.8",
+         "previous_version": "0.20.7",
+         "release_date": "27 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+         ],
+         "bug_fixes": [
+            "Fix shortcuts crash when chat widget selected",
+            "XBT Settlement/password dialogs fixes",
+            "headless password dialogs queue fixes (#1296)"
+         ],
+         "revision": "145358cb",
+         "common_revision": "1e07ae92"
+      },
       {
          "version_string": "0.20.7",
          "previous_version": "0.20.6",
