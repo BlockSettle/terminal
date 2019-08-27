@@ -14,7 +14,7 @@ class OpenSslSettings(Configurator):
         self._patch_ver = '1b'
         self._version = self._major_ver + '_' + self._minor_ver + '_' + self._patch_ver
         self._package_name = 'openssl-OpenSSL_' + self._version
-        self._script_revision = '2'
+        self._script_revision = '3'
 
         self._package_url = 'https://github.com/openssl/openssl/archive/OpenSSL_' + self._version + '.tar.gz'
 
@@ -69,7 +69,12 @@ class OpenSslSettings(Configurator):
         if self._project_settings.on_windows():
             command.append(os.path.join(self._project_settings.get_common_build_dir(), 'Jom/bin/jom.exe'))
             command.append('/E')
-            command.append('CC=cl /MP /FS')
+
+            if self._project_settings.get_build_mode() == 'release':
+                command.append('CC=cl /FS')
+            else:
+                command.append('CC=cl /MP /FS')
+
         else:
             command.append('make')
             command.append('-j')
