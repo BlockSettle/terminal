@@ -51,14 +51,14 @@ QString ChatMessagesTextEdit::dataMessage(int row, const ChatMessagesTextEdit::C
 
       case Column::User:
       {
-         const auto senderId = message->senderId();
+         const auto senderHash = message->senderHash();
          static const auto ownSender = tr("you");
 
-         if (senderId == ownUserId_) {
+         if (senderHash == ownUserId_) {
             return ownSender;
          }
 
-         return toHtmlUsername(QString::fromStdString(senderId));
+         return toHtmlUsername(QString::fromStdString(senderHash));
       }
       case Column::Status:{
          //message->partyMessageState();
@@ -114,8 +114,8 @@ QImage ChatMessagesTextEdit::statusImage(int row)
       return statusImageConnecting_;
    }
 
-   auto senderId = message->senderId();
-   if (message->senderId() != ownUserId_) {
+   auto senderHash = message->senderHash();
+   if (message->senderHash() != ownUserId_) {
       return QImage();
    }
 
@@ -641,7 +641,7 @@ void ChatMessagesTextEdit::forceMessagesUpdate()
    const auto& currentMessages = iMessages.value();
    for (int index = 0; index < currentMessages.size(); ++index) {
       const auto message = currentMessages[index];
-      if (message->partyMessageState() == Chat::PartyMessageState::RECEIVED && message->senderId() != ownUserId_) {
+      if (message->partyMessageState() == Chat::PartyMessageState::RECEIVED && message->senderHash() != ownUserId_) {
          emit messageRead(message->partyId(), message->messageId());
       }
       showMessage(index);

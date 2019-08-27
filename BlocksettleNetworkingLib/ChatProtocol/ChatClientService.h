@@ -27,6 +27,9 @@ namespace Chat
       void SendPartyMessage(const std::string& partyId, const std::string& data);
       void RequestPrivateParty(const std::string& userName);
       void SetMessageSeen(const std::string& partyId, const std::string& messageId);
+      void RejectPrivateParty(const std::string& partyId);
+      void DeletePrivateParty(const std::string& partyId);
+      void AcceptPrivateParty(const std::string& partyId);
 
       ////////// RETURN SIGNALS //////////
       void chatUserUserNameChanged(const std::string& chatUserDisplayName);

@@ -50,6 +50,8 @@ namespace Chat
       void setMessageSeen(const ClientPartyPtr& clientPartyPtr, const std::string& messageId);
 
       void prepareRequestPrivateParty(const std::string& partyId);
+      void rejectPrivateParty(const std::string& partyId);
+      void acceptPrivateParty(const std::string& partyId);
 
    public slots:
       void onDataReceived(const std::string&);
@@ -92,6 +94,7 @@ namespace Chat
       void handlePrivatePartyRequest(const google::protobuf::Message& msg);
       void handleRequestSessionKeyExchange(const google::protobuf::Message& msg);
       void handleReplySessionKeyExchange(const google::protobuf::Message& msg);
+      void handlePrivatePartyStateChanged(const google::protobuf::Message& msg);
 
       void incomingGlobalPartyMessage(const google::protobuf::Message& msg);
       void incomingPrivatePartyMessage(const google::protobuf::Message& msg);

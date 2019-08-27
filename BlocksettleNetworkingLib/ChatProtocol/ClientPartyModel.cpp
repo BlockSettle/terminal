@@ -65,6 +65,7 @@ namespace Chat
       }
 
       connect(clientPartyPtr.get(), &ClientParty::clientStatusChanged, this, &ClientPartyModel::handlePartyStatusChanged);
+      connect(clientPartyPtr.get(), &ClientParty::partyStateChanged, this, &ClientPartyModel::handlePartyStateChanged);
    }
 
    void ClientPartyModel::handlePartyRemoved(const PartyPtr& partyPtr)
@@ -76,6 +77,7 @@ namespace Chat
          return;
       }
 
+      disconnect(clientPartyPtr.get(), &ClientParty::partyStateChanged, this, &ClientPartyModel::handlePartyStateChanged);
       disconnect(clientPartyPtr.get(), &ClientParty::clientStatusChanged, this, &ClientPartyModel::handlePartyStatusChanged);
    }
 
@@ -125,6 +127,12 @@ namespace Chat
       ClientPartyPtr clientPartyPtr = castToClientPartyPtr(partyPtr);
 
       return clientPartyPtr;
+   }
+
+   void ClientPartyModel::handlePartyStateChanged(const std::string& partyId)
+   {
+      emit partyStateChanged(partyId);
+      emit partyModelChanged();
    }
 
 }

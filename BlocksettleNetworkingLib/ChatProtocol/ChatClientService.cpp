@@ -18,6 +18,9 @@ namespace Chat
       connect(this, &ChatClientService::SendPartyMessage, worker(), &ChatClientLogic::SendPartyMessage);
       connect(this, &ChatClientService::RequestPrivateParty, worker(), &ChatClientLogic::RequestPrivateParty);
       connect(this, &ChatClientService::SetMessageSeen, worker(), &ChatClientLogic::SetMessageSeen);
+      connect(this, &ChatClientService::RejectPrivateParty, worker(), &ChatClientLogic::RejectPrivateParty);
+      connect(this, &ChatClientService::DeletePrivateParty, worker(), &ChatClientLogic::DeletePrivateParty);
+      connect(this, &ChatClientService::AcceptPrivateParty, worker(), &ChatClientLogic::AcceptPrivateParty);
 
       ////////// RETURN SIGNALS //////////
       connect(worker(), &ChatClientLogic::chatUserUserNameChanged, this, &ChatClientService::chatUserUserNameChanged);

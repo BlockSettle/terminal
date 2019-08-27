@@ -4,7 +4,7 @@
 #include <QTreeView>
 #include "ChatHandleInterfaces.h"
 #include "ChatUsersViewItemStyle.h"
-#include "ChatProtocol/ClientPartyModel.h"
+#include "ChatProtocol/ChatClientService.h"
 
 class QLabel;
 class QMenu;
@@ -25,7 +25,7 @@ public:
    void setHandler(ChatItemActionsHandler * handler);
    void setCurrentUserChat(const std::string &userId);
    void updateCurrentChat();
-   void setChatClientServicePtr(const Chat::ClientPartyModelPtr& clientPartyModelPtr);
+   void setChatClientServicePtr(const Chat::ChatClientServicePtr& chatClientServicePtr);
 
 public slots:
    void onCustomContextMenu(const QPoint &);
@@ -53,6 +53,7 @@ private:
    void notifyMessageChanged(std::shared_ptr<Chat::Data> message);
    void notifyElementUpdated(CategoryElement *element);
    void notifyCurrentAboutToBeRemoved();
+   const Chat::ClientPartyPtr clientPartyPtrFromAction(const QAction* action);
 
 private:
    friend ChatUsersContextMenu;
@@ -60,6 +61,6 @@ private:
    ChatItemActionsHandler * handler_;
    QLabel * label_;
    QMenu* contextMenu_;
-   Chat::ClientPartyModelPtr clientPartyModelPtr_;
+   Chat::ChatClientServicePtr chatClientServicePtr_;
 };
 #endif // CHATCLIENTUSERVIEW_H

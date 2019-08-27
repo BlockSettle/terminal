@@ -99,6 +99,13 @@ namespace Chat
          return;
       }
 
+      PrivatePartyStateChanged privatePartyStateChanged;
+      if (ProtobufUtils::pbStringToMessage<PrivatePartyStateChanged>(data, &privatePartyStateChanged))
+      {
+         handlePrivatePartyStateChanged(privatePartyStateChanged);
+         return;
+      }
+
       QString what = QString::fromLatin1("data: %1").arg(QString::fromStdString(data));
       emit error(ClientConnectionLogicError::UnhandledPacket, what.toStdString());
    }
@@ -193,7 +200,7 @@ namespace Chat
       partyMessagePacket.set_encryption(encryptionType);
       partyMessagePacket.set_nonce("");
       partyMessagePacket.set_party_message_state(partyMessageState);
-      partyMessagePacket.set_sender(currentUserPtr()->userName());
+      partyMessagePacket.set_sender_hash(currentUserPtr()->userName());
 
       clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
 
@@ -396,6 +403,7 @@ namespace Chat
       partyPacket->set_party_type(clientPartyPtr->partyType());
       partyPacket->set_party_subtype(clientPartyPtr->partySubType());
       partyPacket->set_party_state(clientPartyPtr->partyState());
+      partyPacket->set_sender_hash(currentUserPtr()->userName());
 
       for (const PartyRecipientPtr& recipient : clientPartyPtr->recipients())
       {
@@ -503,7 +511,7 @@ namespace Chat
       partyMessagePacket.set_encryption(encryptionType);
       partyMessagePacket.set_nonce("");
       partyMessagePacket.set_party_message_state(partyMessageState);
-      partyMessagePacket.set_sender(currentUserPtr()->userName());
+      partyMessagePacket.set_sender_hash(currentUserPtr()->userName());
 
       // save in db
       clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
@@ -638,6 +646,43 @@ namespace Chat
       {
          sessionKeyHolderPtr_->requestSessionKeysForUser(recipient->userName(), recipient->publicKey());
       }
+   }
+
+   void ClientConnectionLogic::rejectPrivateParty(const std::string& partyId)
+   {
+      RequestPrivatePartyStateChange requestPrivatePartyStateChange;
+
+      requestPrivatePartyStateChange.set_party_id(partyId);
+      requestPrivatePartyStateChange.set_party_state(PartyState::REJECTED);
+
+      sendPacket(requestPrivatePartyStateChange);
+   }
+
+   void ClientConnectionLogic::acceptPrivateParty(const std::string& partyId)
+   {
+      RequestPrivatePartyStateChange requestPrivatePartyStateChange;
+
+      requestPrivatePartyStateChange.set_party_id(partyId);
+      requestPrivatePartyStateChange.set_party_state(PartyState::INITIALIZED);
+
+      sendPacket(requestPrivatePartyStateChange);
+   }
+
+   void ClientConnectionLogic::handlePrivatePartyStateChanged(const google::protobuf::Message& msg)
+   {
+      PrivatePartyStateChanged privatePartyStateChanged;
+      privatePartyStateChanged.CopyFrom(msg);
+
+      ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(privatePartyStateChanged.party_id());
+
+      if (nullptr == clientPartyPtr)
+      {
+         emit error(ClientConnectionLogicError::CouldNotFindParty, privatePartyStateChanged.party_id());
+         return;
+      }
+
+      clientPartyPtr->setPartyState(privatePartyStateChanged.party_state());
    }
 
 }

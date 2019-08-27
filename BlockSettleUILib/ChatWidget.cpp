@@ -1463,6 +1463,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->treeViewUsers->setSortingEnabled(true);
    ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(charTreeSortModel, this));
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
+   ui_->treeViewUsers->setChatClientServicePtr(chatClientServicePtr);
 
    // TODO: fix search widget
    ui_->searchWidget->init();

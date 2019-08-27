@@ -39,8 +39,8 @@ namespace Chat
       virtual bool isPrivateStandard() const { return (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == partyType() && Chat::PartySubType::STANDARD == partySubType()); }
       virtual bool isPrivate() const { return Chat::PartyType::PRIVATE_DIRECT_MESSAGE == partyType(); }
 
-      const std::string& senderId() const { return sender_; }
-      void setSender(std::string val) { sender_ = val; }
+      const std::string& senderHash() const { return sender_; }
+      void setSenderHash(std::string val) { sender_ = val; }
 
    private:
       std::string id_;

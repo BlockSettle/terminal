@@ -255,4 +255,32 @@ namespace Chat
       clientConnectionLogicPtr_->prepareRequestPrivateParty(partyId);
    }
 
+   void ChatClientLogic::RejectPrivateParty(const std::string& partyId)
+   {
+      clientConnectionLogicPtr_->rejectPrivateParty(partyId);
+   }
+
+   void ChatClientLogic::AcceptPrivateParty(const std::string& partyId)
+   {
+      clientConnectionLogicPtr_->acceptPrivateParty(partyId);
+   }
+
+   void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
+   {
+      // set party state as rejected
+      clientConnectionLogicPtr_->rejectPrivateParty(partyId);
+
+      // then delete local
+      ClientPartyModelPtr clientPartModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+      PartyPtr partyPtr = clientPartModelPtr->getPartyById(partyId);
+
+      if (nullptr != partyPtr)
+      {
+         emit chatClientError(ChatClientLogicError::PartyNotExist, partyId);
+         return;
+      }
+
+      clientPartModelPtr->removeParty(partyPtr);
+   }
+
 }

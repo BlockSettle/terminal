@@ -32,9 +32,12 @@ namespace Chat
       std::string userHash() const { return userHash_; }
       void setUserHash(std::string val) { userHash_ = val; }
 
+      void setPartyState(Chat::PartyState val);
+
    signals:
       void clientStatusChanged(const ClientStatus& clientStatus);
       void displayNameChanged();
+      void partyStateChanged(const std::string& partyId);
 
    private:
       std::string displayName_;

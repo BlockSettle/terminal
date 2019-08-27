@@ -110,7 +110,7 @@ namespace Chat
       query.bindValue(QLatin1String(":encryption_type"), partyMessagePacket.encryption());
       query.bindValue(QLatin1String(":nonce"), QByteArray::fromStdString(partyMessagePacket.nonce()));
       query.bindValue(QLatin1String(":message_text"), QString::fromStdString(encryptedMessage));
-      query.bindValue(QLatin1String(":sender"), QString::fromStdString(partyMessagePacket.sender()));
+      query.bindValue(QLatin1String(":sender"), QString::fromStdString(partyMessagePacket.sender_hash()));
 
       if (!checkExecute(query))
       {
@@ -121,7 +121,7 @@ namespace Chat
       // ! signaled by ClientPartyModel in gui
       MessagePtr messagePtr = std::make_shared<Message>(partyMessagePacket.party_id(), partyMessagePacket.message_id(),
          partyMessagePacket.timestamp_ms(), partyMessagePacket.party_message_state(), partyMessagePacket.message(),
-         partyMessagePacket.sender());
+         partyMessagePacket.sender_hash());
 
       MessagePtrList messagePtrList;
       messagePtrList.push_back(messagePtr);

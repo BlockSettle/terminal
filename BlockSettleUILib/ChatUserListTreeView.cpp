@@ -161,16 +161,12 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
    if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState())
    {
       QAction* removeAction = new QAction(tr("Remove from contacts"), this);
+      removeAction->setData(index);
       connect(removeAction, &QAction::triggered, this, &ChatUserListTreeView::onRemoveFromContacts);
       contextMenu_->addAction(removeAction);
+
       QAction* editAction = new QAction(tr("Edit contact"), this);
-
-      QModelIndex index = indexAt(point);
-      if (index.isValid())
-      {
-         editAction->setData(index);
-      }
-
+      editAction->setData(index);
       connect(editAction, &QAction::triggered, this, &ChatUserListTreeView::onEditContact);
       contextMenu_->addAction(editAction);
    }
@@ -178,6 +174,7 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
    if (Chat::PartyState::REJECTED == clientPartyPtr->partyState())
    {
       QAction* removeAction = new QAction(tr("Remove this request"), this);
+      removeAction->setData(index);
       connect(removeAction, &QAction::triggered, this, &ChatUserListTreeView::onRemoveFromContacts);
       contextMenu_->addAction(removeAction);
    }
@@ -185,10 +182,14 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
    if (Chat::PartyState::REQUESTED == clientPartyPtr->partyState())
    {
       QAction* acceptAction = new QAction(tr("Accept friend request"), this);
+      acceptAction->setData(index);
       connect(acceptAction, &QAction::triggered, this, &ChatUserListTreeView::onAcceptFriendRequest);
       contextMenu_->addAction(acceptAction);
+
       QAction* declineAction = new QAction(tr("Decline friend request"), this);
+      declineAction->setData(index);
       connect(declineAction, &QAction::triggered, this, &ChatUserListTreeView::onDeclineFriendRequest);
+      contextMenu_->addAction(declineAction);
    }
 
    if (contextMenu_->isEmpty())
@@ -300,7 +301,7 @@ void ChatUserListTreeView::updateDependUi(const QModelIndex& index)
       if ((Chat::PartyState::UNINITIALIZED == clientPartyPtr->partyState())
          || (Chat::PartyState::REQUESTED == clientPartyPtr->partyState()))
       {
-         if (clientPartyPtr->senderId() == chatPartiesTreeModel->currentUser())
+         if (clientPartyPtr->senderHash() == chatPartiesTreeModel->currentUser())
          {
             stringStatus = QLatin1String("-OUTGOING PENDING");
          }
@@ -442,9 +443,9 @@ void ChatUserListTreeView::rowsAboutToBeRemoved(const QModelIndex &parent, int s
    }
 }
 
-void ChatUserListTreeView::setChatClientServicePtr(const Chat::ClientPartyModelPtr& clientPartyModelPtr)
+void ChatUserListTreeView::setChatClientServicePtr(const Chat::ChatClientServicePtr& chatClientServicePtr)
 {
-   clientPartyModelPtr_ = clientPartyModelPtr;
+   chatClientServicePtr_ = chatClientServicePtr;
 }
 
 void ChatUserListTreeView::onEditContact()
@@ -457,28 +458,76 @@ void ChatUserListTreeView::onEditContact()
    }
 
    QModelIndex index = action->data().toModelIndex();
+
    editContact(index);
+}
+
+const Chat::ClientPartyPtr ChatUserListTreeView::clientPartyPtrFromAction(const QAction* action)
+{
+   if (nullptr == action)
+   {
+      return nullptr;
+   }
+
+   QModelIndex index = action->data().toModelIndex();
+
+   PartyTreeItem* item = internalPartyTreeItem(index);
+   if (nullptr == item)
+   {
+      return nullptr;
+   }
+
+   return item->data().value<Chat::ClientPartyPtr>();
 }
 
 void ChatUserListTreeView::onRemoveFromContacts()
 {
-/*
-   BSMessageBox confirmRemoveContact(BSMessageBox::question, tr("Remove contact")
-      , tr("Remove %1 as a contact?").arg(QString::fromStdString(name))
-      , tr("Are you sure you wish to remove this contact?"), view_->parentWidget());
+   QAction* action = qobject_cast<QAction*>(sender());
+   const Chat::ClientPartyPtr clientPartyPtr = clientPartyPtrFromAction(action);
 
-   if (confirmRemoveContact.exec() != QDialog::Accepted) {
+   if (nullptr == clientPartyPtr)
+   {
       return;
    }
-*/
+
+   BSMessageBox confirmRemoveContact(
+      BSMessageBox::question, 
+      tr("Remove contact"),
+      tr("Remove %1 as a contact?").arg(QString::fromStdString(clientPartyPtr->displayName())),
+      tr("Are you sure you wish to remove this contact?"), parentWidget()
+   );
+
+   if (confirmRemoveContact.exec() != QDialog::Accepted)
+   {
+      return;
+   }
+
+   chatClientServicePtr_->DeletePrivateParty(clientPartyPtr->id());
 }
 
 void ChatUserListTreeView::onAcceptFriendRequest()
 {
+   QAction* action = qobject_cast<QAction*>(sender());
+   const Chat::ClientPartyPtr clientPartyPtr = clientPartyPtrFromAction(action);
 
+   if (nullptr == clientPartyPtr)
+   {
+      return;
+   }
+
+   chatClientServicePtr_->AcceptPrivateParty(clientPartyPtr->id());
 }
 
 void ChatUserListTreeView::onDeclineFriendRequest()
 {
+   QAction* action = qobject_cast<QAction*>(sender());
+   const Chat::ClientPartyPtr clientPartyPtr = clientPartyPtrFromAction(action);
+
+   if (nullptr == clientPartyPtr)
+   {
+      return;
+   }
+
+   chatClientServicePtr_->RejectPrivateParty(clientPartyPtr->id());
 
 }

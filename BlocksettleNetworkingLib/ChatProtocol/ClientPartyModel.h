@@ -46,7 +46,7 @@ namespace Chat
       void clientPartyStatusChanged(const ClientPartyPtr& clientPartyPtr);
       void messageArrived(const Chat::MessagePtrList& messagePtr);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
-      void partyStateChanged(const std::string& partyId, const Chat::PartyState& partyState);
+      void partyStateChanged(const std::string& partyId);
 
       // internal
       void clientPartyDisplayNameChanged();
@@ -56,6 +56,7 @@ namespace Chat
       void handlePartyInserted(const PartyPtr& partyPtr);
       void handlePartyRemoved(const PartyPtr& partyPtr);
       void handlePartyStatusChanged(const ClientStatus& clientStatus);
+      void handlePartyStateChanged(const std::string& partyId);
 
    private:
       ClientPartyPtr castToClientPartyPtr(const PartyPtr& partyPtr);

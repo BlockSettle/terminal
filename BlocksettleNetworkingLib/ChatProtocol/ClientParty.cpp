@@ -23,4 +23,10 @@ namespace Chat
       emit displayNameChanged();
    }
 
+   void ClientParty::setPartyState(Chat::PartyState val)
+   {
+      Party::setPartyState(val);
+      emit partyStateChanged(id());
+   }
+
 }

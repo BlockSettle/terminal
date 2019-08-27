@@ -108,7 +108,7 @@ message PartyPacket
 	PartySubType party_subtype = 4;
     PartyState party_state = 5;
     repeated PartyRecipientPacket recipient = 6;
-    string sender_id = 7;
+    string sender_hash = 7;
 }
 
 message WelcomeRequest
@@ -147,7 +147,7 @@ message PartyMessagePacket
     EncryptionType encryption = 5;
     bytes nonce = 6;
     PartyMessageState party_message_state = 7;
-    string sender = 8;
+    string sender_hash = 8;
 }
 
 message PartyMessageStateUpdate
