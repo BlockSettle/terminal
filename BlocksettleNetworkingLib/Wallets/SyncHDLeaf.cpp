@@ -227,6 +227,7 @@ void hd::Leaf::init(bool force)
 void hd::Leaf::reset()
 {
    std::lock_guard<std::mutex> lock(regMutex_);
+   FastLock locker{addressPoolLock_};
 
    lastIntIdx_ = lastExtIdx_ = 0;
    usedAddresses_.clear();
