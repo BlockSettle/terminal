@@ -98,9 +98,6 @@ ENDIF()
 SET( PROJECT_BINARY_DIR ${BLOCK_SETTLE_ROOT}/build_terminal/${CMAKE_BUILD_TYPE} )
 SET( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
 
-include(CompilerWarnings)
-include(CompilerColorDiagnostics)
-
 IF( WIN32 )
    # output libs to same path as binaries on windows just to make life easier
    IF(BSTERMINAL_SHARED_LIBS)
