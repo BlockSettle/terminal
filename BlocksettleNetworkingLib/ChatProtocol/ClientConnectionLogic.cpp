@@ -403,7 +403,7 @@ namespace Chat
       partyPacket->set_party_type(clientPartyPtr->partyType());
       partyPacket->set_party_subtype(clientPartyPtr->partySubType());
       partyPacket->set_party_state(clientPartyPtr->partyState());
-      partyPacket->set_sender_hash(currentUserPtr()->userName());
+      partyPacket->set_party_creator_hash(currentUserPtr()->userName());
 
       for (const PartyRecipientPtr& recipient : clientPartyPtr->recipients())
       {
