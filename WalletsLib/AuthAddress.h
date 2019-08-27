@@ -22,7 +22,7 @@ enum class AddressVerificationState
    VerificationSubmitted,
    // Verified - address is verified
    Verified,
-   // Revoked - address is revoked bu customer
+   // Revoked - address is revoked by customer
    Revoked,
    // evokedByBS - address is revoked by BS
    RevokedByBS

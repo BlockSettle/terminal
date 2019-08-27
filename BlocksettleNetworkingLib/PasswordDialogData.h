@@ -13,6 +13,9 @@ class PasswordDialogData : public QObject
    Q_OBJECT
    Q_PROPERTY(bool deliveryUTXOVerified READ deliveryUTXOVerified NOTIFY dataChanged)
 
+   Q_PROPERTY(bool requesterAuthAddressVerified READ requesterAuthAddressVerified NOTIFY dataChanged)
+   Q_PROPERTY(bool responderAuthAddressVerified READ responderAuthAddressVerified NOTIFY dataChanged)
+
 public:
    PasswordDialogData(QObject *parent = nullptr) : QObject(parent) {}
    PasswordDialogData(const Blocksettle::Communication::Internal::PasswordDialogData &info, QObject *parent = nullptr);
@@ -31,6 +34,8 @@ public:
    void setValue(const QString &key, const QVariant &value);
    void setValue(const char *key, const QVariant &value);
    void setValue(const char *key, const char *value);
+   void setValue(const char *key, const std::string &value);
+
    Q_INVOKABLE bool contains(const QString &key);
    bool contains(const char *key) { return contains(QString::fromLatin1(key)); }
    Q_INVOKABLE void merge(PasswordDialogData *other);
@@ -42,6 +47,9 @@ private:
    void setValues(const QVariantMap &values);
 
    bool deliveryUTXOVerified() { return value("DeliveryUTXOVerified").toBool(); }
+
+   bool requesterAuthAddressVerified() { return value("RequesterAuthAddressVerified").toBool(); }
+   bool responderAuthAddressVerified() { return value("ResponderAuthAddressVerified").toBool(); }
 
 private:
    QVariantMap values_;

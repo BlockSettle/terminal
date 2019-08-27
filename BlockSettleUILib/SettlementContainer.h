@@ -9,6 +9,7 @@
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "PasswordDialogData.h"
+#include "CoreWallet.h"
 
 namespace bs {
 
@@ -38,6 +39,7 @@ namespace bs {
       int timeLeftMs() const { return msTimeLeft_; }
 
       virtual bs::sync::PasswordDialogData toPasswordDialogData() const;
+      virtual bs::sync::PasswordDialogData toPayOutTxDetailsPasswordDialogData(bs::core::wallet::TXSignRequest payOutReq) const;
 
    signals:
       void error(QString);
