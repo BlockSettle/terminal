@@ -163,7 +163,9 @@ public:
    explicit ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr sourceModel, QObject *parent = nullptr);
 
    PartyTreeItem* getInternalData(const QModelIndex& index) const;
+
    const std::string& currentUser() const;
+
    QModelIndex getProxyIndexById(const std::string& partyId) const;
 
 protected:

@@ -1489,7 +1489,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
 
             promiseObj->set_value(true);
          }
-         else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
+         else if (server.armoryDBKey.toStdString() != srvPubKey.toHexStr()) {
             ImportKeyBox box(BSMessageBox::question
                , tr("Import ArmoryDB ID Key?")
                , this);

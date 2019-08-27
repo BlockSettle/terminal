@@ -40,6 +40,7 @@ namespace Chat
          ClientPartyPtr clientPartyPtr = std::make_shared<ClientParty>(
             partyPacket.party_id(), partyPacket.party_type(), partyPacket.party_subtype(), partyPacket.party_state());
          clientPartyPtr->setDisplayName(partyPacket.display_name());
+         clientPartyPtr->setUserHash(partyPacket.display_name());
 
          if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
          {
@@ -48,7 +49,7 @@ namespace Chat
             {
                PartyRecipientPacket recipient = partyPacket.recipient(i);
                PartyRecipientPtr recipientPtr =
-                  std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key());
+                  std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key(), QDateTime::fromMSecsSinceEpoch(recipient.timestamp_ms()));
                recipients.push_back(recipientPtr);
             }
 
@@ -57,7 +58,7 @@ namespace Chat
 
          clientPartyModelPtr_->insertParty(clientPartyPtr);
 
-         // Read and privide last 10 history messages for private parties
+         // Read and provide last 10 history messages for private parties
          if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
          {
             clientDBServicePtr_->readHistoryMessages(partyPacket.party_id(), 10);
@@ -147,6 +148,7 @@ namespace Chat
          std::make_shared<ClientParty>(QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString(), PartyType::PRIVATE_DIRECT_MESSAGE, PartySubType::STANDARD);
 
       newClientPrivatePartyPtr->setDisplayName(remoteUserName);
+      newClientPrivatePartyPtr->setUserHash(remoteUserName);
       // setup recipients for new private party
       PartyRecipientsPtrList recipients;
       recipients.push_back(std::make_shared<PartyRecipient>(currentUserPtr->userName()));

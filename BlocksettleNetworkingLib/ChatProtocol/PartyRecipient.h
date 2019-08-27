@@ -1,6 +1,8 @@
 #ifndef PartyRecipient_h__
 #define PartyRecipient_h__
 
+#include <QDateTime>
+
 #include <memory>
 #include <vector>
 
@@ -14,7 +16,7 @@ namespace Chat
    class PartyRecipient
    {
    public:
-      PartyRecipient(const std::string& userName, const BinaryData& publicKey = BinaryData());
+      PartyRecipient(const std::string& userName, const BinaryData& publicKey = BinaryData(), const QDateTime& publicKeyTime = QDateTime::currentDateTime());
 
       std::string userName() const { return userName_; }
       void setUserName(std::string val) { userName_ = val; }
@@ -22,9 +24,13 @@ namespace Chat
       BinaryData publicKey() const { return publicKey_; }
       void setPublicKey(BinaryData val) { publicKey_ = val; }
 
+      QDateTime publicKeyTime() const { return publicKeyTime_; }
+      void setPublicKeyTime(QDateTime val) { publicKeyTime_ = val; }
+
    private:
       std::string userName_;
       BinaryData publicKey_;
+      QDateTime publicKeyTime_;
    };
 
    using PartyRecipientPtr = std::shared_ptr<PartyRecipient>;
