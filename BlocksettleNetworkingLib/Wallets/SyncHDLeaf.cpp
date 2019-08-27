@@ -306,6 +306,12 @@ bool hd::Leaf::containsHiddenAddress(const bs::Address &addr) const
    return (poolByAddr_.find(addr) != poolByAddr_.end());
 }
 
+size_t hd::Leaf::getAddressPoolSize() const
+{
+   FastLock locker{addressPoolLock_};
+   return addressPool_.size();
+}
+
 // Return an external-facing address.
 void hd::Leaf::getNewExtAddress(const CbAddress &cb)
 {
@@ -658,6 +664,7 @@ hd::Leaf::AddrPoolKey hd::Leaf::addressIndex(const bs::Address &addr) const
 
 bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
 {
+   FastLock locker{addressPoolLock_};
    const auto index = addressIndex(addr);
    if (index.empty()) {
       const auto &itPool = poolByAddr_.find(addr);
