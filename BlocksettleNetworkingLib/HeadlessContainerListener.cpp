@@ -16,6 +16,8 @@ using namespace Blocksettle::Communication;
 using namespace bs::error;
 using namespace std::chrono;
 
+constexpr std::chrono::seconds kDefaultDuration{60};
+
 HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
    , const std::shared_ptr<DispatchQueue> &queue
@@ -1854,19 +1856,19 @@ bool HeadlessContainerListener::onExecCustomDialog(const std::string &clientId, 
    return true;
 }
 
-bool PasswordRequest::operator <(const PasswordRequest &other) {
+bool PasswordRequest::operator <(const PasswordRequest &other) const {
    seconds thisInterval, otherInterval;
 
    try {
       thisInterval = seconds(dialogData.value<int>("Duration"));
    } catch (...) {
-      thisInterval = defaultDuration;
+      thisInterval = kDefaultDuration;
    }
 
    try {
       otherInterval = seconds(other.dialogData.value<int>("Duration"));
    } catch (...) {
-      otherInterval = defaultDuration;
+      otherInterval = kDefaultDuration;
    }
 
    return dialogRequestedTime + thisInterval < other.dialogRequestedTime + otherInterval;
