@@ -100,11 +100,26 @@ public:
       return modelType_;
    }
 
+   void increaseUnreadedCounter(int newMessageCount) {
+      Q_ASSERT(newMessageCount > 0);
+      unreadedCounter_ += newMessageCount;
+   }
+
+   void decreaseUnreadedCounter(int seenMessageCount) {
+      unreadedCounter_ -= seenMessageCount;
+      unreadedCounter_ = std::max(unreadedCounter_, 0);
+   }
+
+   bool hasNewMessages() const {
+      return unreadedCounter_ > 0;
+   }
+
 private:
    QList<PartyTreeItem*> childItems_;
    QVariant itemData_;
    PartyTreeItem* parentItem_;
    UI::ElementType modelType_;
+   int unreadedCounter_ = 0;
 };
 
 class ChatPartiesTreeModel : public QAbstractItemModel
@@ -119,15 +134,16 @@ public:
    QModelIndex parent(const QModelIndex& index) const override;
    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
-   std::string currentUser() const;
+   const std::string& currentUser() const;
 
 public slots:
    void partyModelChanged();
    void cleanModel();
    void partyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
+   void increaseUnseenCounter(const std::string& partyId, int newMessageCount);
+   void decreaseUnseenCounter(const std::string& partyId, int seenMessageCount);
 
-protected:
-   QModelIndex getPartyIndexById(const std::string& partyId) const;
+   const QModelIndex getPartyIndexById(const std::string& partyId) const;
 
 private:
    PartyTreeItem* getItem(const QModelIndex& index) const;
@@ -147,7 +163,10 @@ public:
    explicit ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr sourceModel, QObject *parent = nullptr);
 
    PartyTreeItem* getInternalData(const QModelIndex& index) const;
-   std::string currentUser() const;
+
+   const std::string& currentUser() const;
+
+   QModelIndex getProxyIndexById(const std::string& partyId) const;
 
 protected:
 

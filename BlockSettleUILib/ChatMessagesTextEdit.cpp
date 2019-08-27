@@ -260,7 +260,7 @@ void ChatMessagesTextEdit::logout()
    messages_.clear();
 }
 
-void ChatMessagesTextEdit::onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state)
+const Chat::MessagePtr ChatMessagesTextEdit::onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state)
 {
    Chat::MessagePtr message = findMessage(partyId, message_id);
 
@@ -268,6 +268,8 @@ void ChatMessagesTextEdit::onMessageStatusChanged(const std::string& partyId, co
       message->setPartyMessageState(static_cast<Chat::PartyMessageState>(party_message_state));
       notifyMessageChanged(message);
    }
+
+   return message;
 }
 
 void ChatMessagesTextEdit::setHandler(ChatItemActionsHandler* handler)
@@ -444,7 +446,11 @@ void ChatMessagesTextEdit::onSingleMessageUpdate(const Chat::MessagePtrList& mes
 #ifndef QT_NO_DEBUG
    const std::string& partyId = !messagePtrList.empty() ? messagePtrList[0]->partyId() : "";
 #endif
-   for (const auto& messagePtr : messagePtrList)
+   Chat::MessagePtrList messagePtrListSorted = messagePtrList;
+   std::sort(messagePtrListSorted.begin(), messagePtrListSorted.end(), [](const auto left, const auto right) -> bool {
+      return left->timestamp() < right->timestamp();
+   });
+   for (const auto& messagePtr : messagePtrListSorted)
    {
 #ifndef QT_NO_DEBUG
       Q_ASSERT(partyId == messagePtr->partyId());
@@ -641,7 +647,8 @@ void ChatMessagesTextEdit::forceMessagesUpdate()
    const auto& currentMessages = iMessages.value();
    for (int index = 0; index < currentMessages.size(); ++index) {
       const auto message = currentMessages[index];
-      if (message->partyMessageState() == Chat::PartyMessageState::RECEIVED && message->senderHash() != ownUserId_) {
+
+      if (message->partyMessageState() != Chat::PartyMessageState::SEEN && message->senderHash() != ownUserId_) {
          emit messageRead(message->partyId(), message->messageId());
       }
       showMessage(index);

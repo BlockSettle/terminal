@@ -90,8 +90,17 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
 
    QStyledItemDelegate::paint(painter, itemOption, index);
 
-   // #new_logic: draw dot
-   // Need new message indicator OTC and private messages
+   if (party->hasNewMessages()) {
+      painter->save();
+      QFontMetrics fm(itemOption.font, painter->device());
+      auto textRect = fm.boundingRect(itemOption.rect, 0, itemOption.text);
+      const QPixmap pixmap(kDotPathname);
+      const QRect r(itemOption.rect.left() + textRect.width() + kDotSize,
+         itemOption.rect.top() + itemOption.rect.height() / 2 - kDotSize / 2 + 1,
+         kDotSize, kDotSize);
+      painter->drawPixmap(r, pixmap, pixmap.rect());
+      painter->restore();
+   }
 }
 
 void ChatClientUsersViewItemDelegate::paintInitParty(Chat::ClientPartyPtr clientPartyPtr, QPainter* painter,

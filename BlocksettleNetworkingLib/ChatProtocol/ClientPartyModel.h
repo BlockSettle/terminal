@@ -38,7 +38,7 @@ namespace Chat
       ClientPartyPtr getPartyByUserName(const std::string& userName);
       ClientPartyPtr getClientPartyById(const std::string& party_id);
 
-      std::string ownUserName() const { return ownUserName_; }
+      const std::string& ownUserName() const { return ownUserName_; }
       void setOwnUserName(std::string val) { ownUserName_ = val; }
 
    signals:
