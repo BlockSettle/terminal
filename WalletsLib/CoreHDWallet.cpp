@@ -586,6 +586,19 @@ SecureBinaryData hd::Wallet::getDecryptedRootXpriv(void) const
    return node.getBase58();
 }
 
+bs::hd::Path hd::Wallet::getPathForAddress(const bs::Address &addr)
+{
+   for (auto& groupPair : groups_) {
+      for (auto& leafPair : groupPair.second->leaves_) {
+         auto path = leafPair.second->getPathForAddress(addr);
+         if (path.length() != 0) {
+            return path;
+         }
+      }
+   }
+   return {};
+};
+
 std::shared_ptr<hd::Leaf> hd::Wallet::createSettlementLeaf(
    const bs::Address& addr)
 {  /*
@@ -603,21 +616,7 @@ std::shared_ptr<hd::Leaf> hd::Wallet::createSettlementLeaf(
       throw AccountException("unexpected settlement group type");
    }
 
-   //get hd path for addr
-   auto getPathForAddr = [this, &addr](void)->bs::hd::Path
-   {
-      for (auto& groupPair : groups_) {
-         for (auto& leafPair : groupPair.second->leaves_) {
-            auto path = leafPair.second->getPathForAddress(addr);
-            if (path.length() != 0) {
-               return path;
-            }
-         }
-      }
-      return {};
-   };
-
-   auto addrPath = getPathForAddr();
+   auto addrPath = getPathForAddress(addr);
    if (addrPath.length() == 0) {
       throw AssetException("failed to resolve path for settlement address");
    }
@@ -629,6 +628,34 @@ std::shared_ptr<hd::Leaf> hd::Wallet::createSettlementLeaf(
       return leaf;
    }
    return settlGroup->createLeaf(addr, settlLeafPath);
+}
+
+std::shared_ptr<hd::Leaf> hd::Wallet::getSettlementLeaf(const bs::Address &addr)
+{  /*
+   This method expects the wallet locked and passprhase lambda set
+   for a full wallet.
+   */
+
+   //does this wallet have a settlement group?
+   auto group = getGroup(bs::hd::BlockSettle_Settlement);
+   if (group) {
+      auto settlGroup = std::dynamic_pointer_cast<hd::SettlementGroup>(group);
+      if (!settlGroup) {
+         return nullptr;
+      }
+      auto addrPath = getPathForAddress(addr);
+      if (addrPath.length() == 0) {
+         return nullptr;
+      }
+
+      const bs::hd::Path settlLeafPath({ bs::hd::Purpose::Native
+         , bs::hd::BlockSettle_Settlement, addrPath.get(-1) });
+      const auto leaf = settlGroup->getLeafByPath(settlLeafPath);
+      if (leaf) {
+         return leaf;
+      }
+   }
+   return nullptr;
 }
 
 std::shared_ptr<AssetEntry> hd::Wallet::getAssetForAddress(

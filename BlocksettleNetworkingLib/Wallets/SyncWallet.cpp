@@ -194,6 +194,9 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
    The callback is only used to signify request completion, use the
    get methods to grab the individual balances
    ***/
+   if (!armory_) {
+      return false;
+   }
 
    size_t cbSize = 0;
    {
@@ -354,6 +357,9 @@ bool Wallet::getAddressTxnCounts(const std::function<void(void)> &cb)
    Use getAddressTxnCount to get a specific count for a given
    address from the cache.
    ***/
+   if (!armory_) {
+      return false;
+   }
    size_t cbSize = 0;
    {
       std::unique_lock<std::mutex> lock(*cbMutex_);

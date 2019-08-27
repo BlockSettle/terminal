@@ -946,6 +946,10 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
             }
          }
 
+         if ((path.get(1) | bs::hd::hardFlag) == bs::hd::CoinType::BlockSettle_Auth) {
+            createSettlementLeaves(hdWallet, leaf->getPooledAddressList());
+         }
+
          auto assetPtr = leaf->getRootAsset();
 
          auto rootPtr = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(assetPtr);
@@ -962,6 +966,32 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
    };
 
    RequestPasswordIfNeeded(clientId, request.rootwalletid(), {}, headless::CreateHDLeafRequestType, request.passworddialogdata(), onPassword);
+   return true;
+}
+
+bool HeadlessContainerListener::createSettlementLeaves(const std::shared_ptr<bs::core::hd::Wallet> &wallet
+   , const std::vector<bs::Address> &authAddresses)
+{
+   if (!wallet) {
+      return false;
+   }
+   logger_->debug("[{}] creating settlement leaves for {} auth address[es]", __func__
+      , authAddresses.size());
+   for (const auto &authAddr : authAddresses) {
+      try {
+         const auto leaf = wallet->createSettlementLeaf(authAddr);
+         if (!leaf) {
+            logger_->error("[{}] failed to create settlement leaf for {}"
+               , __func__, authAddr.display());
+            return false;
+         }
+      }
+      catch (const std::exception &e) {
+         logger_->error("[{}] failed to create settlement leaf for {}: {}", __func__
+            , authAddr.display(), e.what());
+         return false;
+      }
+   }
    return true;
 }
 
@@ -1015,7 +1045,7 @@ bool HeadlessContainerListener::createAuthLeaf(const std::shared_ptr<bs::core::h
       auto lock = wallet->lockForEncryption(password);
       auto leaf = group->createLeaf(AddressEntryType_Default, 0 + bs::hd::hardFlag, 5);
       if (leaf) {
-         return true;
+         return createSettlementLeaves(wallet, leaf->getPooledAddressList());
       } else {
          logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf");
       }
@@ -1151,6 +1181,16 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       sendData(packet.SerializeAsString(), clientId);
       return false;
    }
+   const auto settlLeaf = priWallet->getSettlementLeaf(request.auth_address());
+   if (settlLeaf) {
+      headless::CreateSettlWalletResponse response;
+      response.set_wallet_id(settlLeaf->walletId());
+      response.set_public_key(getPubKey(settlLeaf).toBinStr());
+      packet.set_data(response.SerializeAsString());
+      sendData(packet.SerializeAsString(), clientId);
+      return true;
+   }
+
    auto &reqsForAddress = settlLeafReqs_[{clientId, request.auth_address() }];
    reqsForAddress.push_back(packet.id());
    if (reqsForAddress.size() > 1) {
