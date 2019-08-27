@@ -68,8 +68,8 @@ struct PasswordRequest
    Blocksettle::Communication::Internal::PasswordDialogDataWrapper dialogData;
    std::chrono::steady_clock::time_point dialogRequestedTime{std::chrono::steady_clock::now()};
 
-   // dialogs sorted by final time point in descending order
-   // last dialog in vector should be executed first
+   // dialogs sorted by final time point in ascending order
+   // first dialog in vector should be executed firstly
    bool operator < (const PasswordRequest &other);
 
    static constexpr std::chrono::seconds defaultDuration{60};

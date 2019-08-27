@@ -577,14 +577,14 @@ void HeadlessContainerListener::passwordReceived(const std::string &clientId, co
       logger_->error("[HeadlessContainerListener::{}] failed to find password received callback {}", __func__);
       return;
    }
-   const PasswordReceivedCb &cb = std::move(deferredPasswordRequests_.back().callback);
+   const PasswordReceivedCb &cb = std::move(deferredPasswordRequests_.front().callback);
    if (cb) {
       cb(result, password);
    }
 
-   // at this point password workflow finished for deferredPasswordRequests_.back() dialog
+   // at this point password workflow finished for deferredPasswordRequests_.front() dialog
    // now we can remove dialog
-   deferredPasswordRequests_.pop_back();
+   deferredPasswordRequests_.erase(deferredPasswordRequests_.begin());
    deferredDialogRunning_ = false;
 
    // execute next pw dialog
@@ -757,7 +757,7 @@ void HeadlessContainerListener::RunDeferredPwDialog()
       deferredDialogRunning_ = true;
 
       std::sort(deferredPasswordRequests_.begin(), deferredPasswordRequests_.end());
-      deferredPasswordRequests_.back().passwordRequest(); // run stored lambda
+      deferredPasswordRequests_.front().passwordRequest(); // run stored lambda
    }
 }
 
@@ -1869,5 +1869,5 @@ bool PasswordRequest::operator <(const PasswordRequest &other) {
       otherInterval = defaultDuration;
    }
 
-   return dialogRequestedTime + thisInterval > other.dialogRequestedTime + otherInterval;
+   return dialogRequestedTime + thisInterval < other.dialogRequestedTime + otherInterval;
 }

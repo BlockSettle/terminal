@@ -5,7 +5,7 @@
 using namespace google::protobuf;
 using namespace Blocksettle::Communication::Internal;
 
-const std::string typeErrorMsg = "PasswordDialogData value read error: wrong type";
+const std::string kTypeErrorMsg = "PasswordDialogData value read error: wrong type";
 
 void PasswordDialogDataWrapper::insert(const std::string &key, bool value) { insertImpl<bool>(key, value); }
 
@@ -80,7 +80,7 @@ bool PasswordDialogDataWrapper::value<bool>(const std::string &key) const
    AnyMessage anyMsg;
    msg.UnpackTo(&anyMsg);
    if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueBool) {
-      throw std::exception(typeErrorMsg.c_str());
+      throw std::runtime_error(kTypeErrorMsg);
    }
    return anyMsg.value_bool();
 }
@@ -92,7 +92,7 @@ std::string PasswordDialogDataWrapper::value<std::string>(const std::string &key
    AnyMessage anyMsg;
    msg.UnpackTo(&anyMsg);
    if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueString) {
-      throw std::exception(typeErrorMsg.c_str());
+      throw std::runtime_error(kTypeErrorMsg);
    }
    return anyMsg.value_string();
 }
@@ -104,7 +104,7 @@ int PasswordDialogDataWrapper::value<int>(const std::string &key) const
    AnyMessage anyMsg;
    msg.UnpackTo(&anyMsg);
    if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueInt32) {
-      throw std::exception(typeErrorMsg.c_str());
+      throw std::runtime_error(kTypeErrorMsg);
    }
    return anyMsg.value_int32();
 }
@@ -116,7 +116,7 @@ double PasswordDialogDataWrapper::value<double>(const std::string &key) const
    AnyMessage anyMsg;
    msg.UnpackTo(&anyMsg);
    if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueBool) {
-      throw std::exception(typeErrorMsg.c_str());
+      throw std::runtime_error(kTypeErrorMsg);
    }
    return anyMsg.value_double();
 }
@@ -128,7 +128,7 @@ const char * PasswordDialogDataWrapper::value<const char *>(const std::string &k
    AnyMessage anyMsg;
    msg.UnpackTo(&anyMsg);
    if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueBool) {
-      throw std::exception(typeErrorMsg.c_str());
+      throw std::runtime_error(kTypeErrorMsg);
    }
    return anyMsg.value_bytes().data();
 }
