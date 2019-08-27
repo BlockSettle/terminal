@@ -176,6 +176,18 @@ message ReplySessionKeyExchange
     string receiver_user_name = 3;
 }
 
+message RequestPrivatePartyStateChange
+{
+    string party_id = 1;
+    PartyState party_state = 2;
+}
+
+message PrivatePartyStateChanged
+{
+    string party_id = 1;
+    PartyState party_state = 2;
+}
+
 message Data
 {
     enum Direction
