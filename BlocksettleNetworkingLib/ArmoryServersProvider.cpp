@@ -293,7 +293,7 @@ void ArmoryServersProvider::addKey(const std::string &srvIPPort, const BinaryDat
    if (ipPortList.size() == 2) {
       addKey(ipPortList.at(0)
              , ipPortList.at(1).toInt()
-             , QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()));
+             , QString::fromStdString(srvPubKey.toHexStr()));
    }
 }
 

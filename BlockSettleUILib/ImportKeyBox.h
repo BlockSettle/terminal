@@ -42,8 +42,8 @@ public:
    void setNewKey(const std::string &newKey) { setNewKey(QString::fromStdString(newKey)); }
    void setOldKey(const std::string &oldKey) { setOldKey(QString::fromStdString(oldKey)); }
 
-   void setNewKeyFromBinary(const BinaryData &binaryKey) { setNewKey(QString::fromLatin1(QByteArray::fromStdString(binaryKey.toBinStr()).toHex())); }
-   void setOldKeyFromBinary(const BinaryData &binaryKey) { setOldKey(QString::fromLatin1(QByteArray::fromStdString(binaryKey.toBinStr()).toHex())); }
+   void setNewKeyFromBinary(const BinaryData &binaryKey) { setNewKey(QString::fromStdString(binaryKey.toHexStr())); }
+   void setOldKeyFromBinary(const BinaryData &binaryKey) { setOldKey(QString::fromStdString(binaryKey.toHexStr())); }
 
 protected slots:
 

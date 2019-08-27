@@ -7,7 +7,6 @@
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "SettlementMonitor.h"
-#include "StringUtils.h"
 #include "TransactionData.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDLeaf.h"
@@ -423,19 +422,19 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
    OtcClientDeal *deal = dealIt->second.get();
 
    if (deal->payoutFallbackReqId == reqId) {
-      SPDLOG_LOGGER_DEBUG(logger_, "fallback pay-out was succesfully signed, settlementId: {}", bs::toHex(deal->settlementId.toBinStr()));
+      SPDLOG_LOGGER_DEBUG(logger_, "fallback pay-out was succesfully signed, settlementId: {}", deal->settlementId.toHexStr());
       deal->payoutFallbackSigned = signedTX;
       trySendSignedTxs(deal);
    }
 
    if (deal->payinReqId == reqId) {
-      SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed, settlementId: {}", bs::toHex(deal->settlementId.toBinStr()));
+      SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed, settlementId: {}", deal->settlementId.toHexStr());
       deal->payinSigned = signedTX;
       trySendSignedTxs(deal);
    }
 
    if (deal->payoutReqId == reqId) {
-      SPDLOG_LOGGER_DEBUG(logger_, "pay-out was succesfully signed, settlementId: {}", bs::toHex(deal->settlementId.toBinStr()));
+      SPDLOG_LOGGER_DEBUG(logger_, "pay-out was succesfully signed, settlementId: {}", deal->settlementId.toHexStr());
       deal->payoutSigned = signedTX;
       trySendSignedTxs(deal);
    }
@@ -635,7 +634,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
 
    const auto it = deals_.find(settlementId);
    if (it == deals_.end()) {
-      SPDLOG_LOGGER_ERROR(logger_, "unknown settlementId from BuyerAcks: {}", bs::toHex(settlementId.toBinStr()));
+      SPDLOG_LOGGER_ERROR(logger_, "unknown settlementId from BuyerAcks: {}", settlementId.toHexStr());
       return;
    }
    const auto &deal = it->second;
@@ -647,8 +646,8 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
    d->set_price(peer->offer.price);
    d->set_amount(peer->offer.amount);
    d->set_settlement_id(settlementId.toBinStr());
-   d->set_auth_address_buyer(ourPubKey_.toBinStr());
-   d->set_auth_address_seller(peer->authPubKey.toBinStr());
+   d->set_auth_address_buyer(peer->authPubKey.toBinStr());
+   d->set_auth_address_seller(ourPubKey_.toBinStr());
    d->set_unsigned_payout(deal->payout.serializeState().toBinStr());
    d->set_chat_id_buyer(currentUserId_);
    d->set_chat_id_seller(peer->peerId);
