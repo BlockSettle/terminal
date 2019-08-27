@@ -26,7 +26,7 @@ sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogDat
 {
    bs::sync::PasswordDialogData dialogData = toPasswordDialogData();
 
-   dialogData.setValue("Title", tr("Pay-Out Transaction"));
+   dialogData.setValue("Title", tr("Settlement Pay-Out"));
    dialogData.setValue("Duration", 30000);
 
    // tx details
