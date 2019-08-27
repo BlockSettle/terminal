@@ -64,7 +64,7 @@ namespace bs {
 
             size_t getExtAddressCount() const override { return extAddresses_.size(); }
             size_t getIntAddressCount() const override { return intAddresses_.size(); }
-            size_t getAddressPoolSize() const { return addressPool_.size(); }
+            size_t getAddressPoolSize() const;
 
             bool isExternalAddress(const Address &) const override;
             void getNewExtAddress(const CbAddress &) override;
