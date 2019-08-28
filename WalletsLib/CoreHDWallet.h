@@ -101,6 +101,7 @@ namespace bs {
 
             //settlement leaves methods
             std::shared_ptr<hd::Leaf> createSettlementLeaf(const bs::Address&);
+            std::shared_ptr<hd::Leaf> getSettlementLeaf(const bs::Address&);
 
             bs::Address getSettlementPayinAddress(const wallet::SettlementData &) const;
 
@@ -128,6 +129,8 @@ namespace bs {
             BinaryDataRef getDataRefForKey(LMDB* db, const BinaryData& key) const;
             BinaryDataRef getDataRefForKey(uint32_t key) const;
             void writeGroupsToDB(bool force = false);
+
+            bs::hd::Path getPathForAddress(const bs::Address &);
 
             void initializeDB();
             void readFromDB();

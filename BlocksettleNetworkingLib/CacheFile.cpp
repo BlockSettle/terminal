@@ -103,7 +103,7 @@ void CacheFile::read()
 
 void CacheFile::write()
 {
-   QReadLocker lockMap(&rwLock_);
+   QWriteLocker lockMap(&rwLock_);
    LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
    QMutexLocker lockMapModif(&mtxModified_);
    for (const auto &entry : mapModified_) {
@@ -128,22 +128,24 @@ void CacheFile::saver()
    while (!stopped_) {
       purge();
 
-      if (!stopped_) {
+      {
          QMutexLocker lock(&mtxModified_);
          wcModified_.wait(&mtxModified_);
-      }
 
-      if (stopped_ || mapModified_.empty()) {
-         continue;
-      }
-      auto curTime = std::chrono::system_clock::now();
-      std::chrono::duration<double> diff = curTime - start;
-      if ((diff < minSaveDuration) && (mapModified_.size() < nbElemsThreshold)) {
-         continue;
+         if (stopped_ || mapModified_.empty()) {
+            continue;
+         }
+
+         auto curTime = std::chrono::system_clock::now();
+         std::chrono::duration<double> diff = curTime - start;
+         if ((diff < minSaveDuration) && (mapModified_.size() < nbElemsThreshold)) {
+            continue;
+         }
+
+         start = curTime;
       }
 
       write();
-      start = curTime;
    }
    write();    // final flush
 }
