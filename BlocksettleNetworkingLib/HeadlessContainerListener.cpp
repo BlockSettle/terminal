@@ -947,7 +947,6 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
 
             if ((path.get(1) | bs::hd::hardFlag) == bs::hd::CoinType::BlockSettle_Auth) {
                createSettlementLeaves(hdWallet, leaf->getPooledAddressList());
-               walletsListUpdated();
             }
          }
 

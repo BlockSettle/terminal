@@ -199,15 +199,24 @@ void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
    }
    wallet->setUserId(userId_);
 
-   QMutexLocker lock(&mtxWallets_);
-   auto insertIter = walletsId_.insert(wallet->walletId());
-   if (!insertIter.second) {
-      auto wltIter = wallets_.find(wallet->walletId());
-      if (wltIter == wallets_.end()) {
-         throw std::runtime_error("have id but lack leaf ptr");
+   {
+      QMutexLocker lock(&mtxWallets_);
+      auto insertIter = walletsId_.insert(wallet->walletId());
+      if (!insertIter.second) {
+         auto wltIter = wallets_.find(wallet->walletId());
+         if (wltIter == wallets_.end()) {
+            throw std::runtime_error("have id but lack leaf ptr");
+         }
+      } else {
+         wallets_[wallet->walletId()] = wallet;
       }
-   } else {
-      wallets_[wallet->walletId()] = wallet;
+   }
+
+   if (isHDLeaf && (wallet->type() == bs::core::wallet::Type::Authentication)) {
+      authAddressWallet_ = wallet;
+      logger_->debug("[WalletsManager] auth leaf changed/created");
+      emit AuthLeafCreated();
+      emit authWalletChanged();
    }
 }
 
@@ -506,12 +515,6 @@ void WalletsManager::walletReady(const std::string &walletId)
             QMetaObject::invokeMethod(this, [this, rootWallet] {
                for (const auto &leaf : rootWallet->getLeaves()) {
                   addWallet(leaf, true);
-                  if (leaf->type() == bs::core::wallet::Type::Authentication) {
-                     authAddressWallet_ = leaf;
-                     logger_->debug("[WalletsManager] auth leaf changed/created");
-                     emit AuthLeafCreated();
-                     emit authWalletChanged();
-                  }
                }
                emit walletChanged(rootWallet->walletId());
                emit walletsReady();
@@ -1494,7 +1497,7 @@ bool WalletsManager::CreateCCLeaf(const std::string &ccName, const std::function
 
    const auto &createCCLeafCb = [this, ccName, cb](bs::error::ErrorCode result
       , const std::string &walletId) {
-      ProcessCreatedCCLeaf(ccName, result, walletId);
+      processCreatedCCLeaf(ccName, result, walletId);
       if (cb) {
          cb(result);
       }
@@ -1503,7 +1506,7 @@ bool WalletsManager::CreateCCLeaf(const std::string &ccName, const std::function
    return signContainer_->createHDLeaf(primaryWallet->walletId(), path, {}, dialogData, createCCLeafCb);
 }
 
-void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::ErrorCode result
+void WalletsManager::processCreatedCCLeaf(const std::string &ccName, bs::error::ErrorCode result
    , const std::string &walletId)
 {
    if (result == bs::error::ErrorCode::NoError) {
@@ -1542,7 +1545,8 @@ void WalletsManager::ProcessCreatedCCLeaf(const std::string &ccName, bs::error::
    }
 }
 
-bool WalletsManager::PromoteHDWallet(const std::string& walletId, const std::function<void(bs::error::ErrorCode result)>& cb)
+bool WalletsManager::PromoteHDWallet(const std::string& walletId
+   , const std::function<void(bs::error::ErrorCode result)> &cb)
 {
    const auto primaryWallet = getPrimaryWallet();
    if (primaryWallet != nullptr) {
@@ -1557,40 +1561,45 @@ bool WalletsManager::PromoteHDWallet(const std::string& walletId, const std::fun
 
    const auto& promoteHDWalletCb = [this, cb](bs::error::ErrorCode result
       , const std::string &walletId) {
-      ProcessPromoteHDWallet(result, walletId);
-      if (cb) {
-         cb(result);
+      const auto wallet = getHDWalletById(walletId);
+      if (!wallet) {
+         logger_->error("[WalletsManager::PromoteWallet] failed to find wallet {}", walletId);
+         if (cb) {
+            cb(bs::error::ErrorCode::WalletNotFound);
+         }
+         return;
       }
+      wallet->synchronize([this, cb, result, walletId] {
+         processPromoteHDWallet(result, walletId);
+         if (cb) {
+            cb(result);
+         }
+      });
    };
    return signContainer_->promoteHDWallet(walletId, userId_, dialogData, promoteHDWalletCb);
 }
 
-void WalletsManager::ProcessPromoteHDWallet(bs::error::ErrorCode result, const std::string& walletId)
+void WalletsManager::processPromoteHDWallet(bs::error::ErrorCode result, const std::string& walletId)
 {
    if (result == bs::error::ErrorCode::NoError) {
       auto const wallet = getHDWalletById(walletId);
       if (!wallet) {
-         logger_->error("[WalletsManager::ProcessPromoteWalletID] Wallet {} to promote is not exists",
-                        walletId);
+         logger_->error("[WalletsManager::ProcessPromoteWalletID] wallet {} to promote does not exist"
+            , walletId);
          return;
       }
 
-      auto const primaryWallet = getPrimaryWallet();
-      if (primaryWallet) {
-         if (primaryWallet->walletId() == walletId) {
-            // Wallet is already primary, nothing to do
-            return;
-         }
-
-         logger_->error("[WalletsManager::ProcessPromoteWalletID] Primary wallet already exists");
-         return;
-      }
-
-      logger_->debug("[WalletsManager::ProcessPromoteWalletID] Primary wallet is {}"
+      logger_->debug("[WalletsManager::ProcessPromoteWalletID] creating sync structure for wallet {}"
                      , walletId);
       wallet->createGroup(bs::hd::CoinType::BlockSettle_Auth, true);
+      wallet->createGroup(bs::hd::CoinType::BlockSettle_Settlement, true);
+
+      for (const auto &leaf : wallet->getLeaves()) {
+         addWallet(leaf, true);
+      }
 
       emit walletPromotedToPrimary(walletId);
+      emit walletChanged(walletId);
    } else {
       logger_->error("[WalletsManager::ProcessPromoteWalletID] Wallet {} promotion failed: {}"
                      , walletId, static_cast<int>(result));

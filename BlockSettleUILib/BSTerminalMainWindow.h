@@ -117,7 +117,7 @@ private slots:
    void CompleteUIOnlineView();
    void CompleteDBConnection();
 
-   bool createWallet(bool primary, bool reportSuccess = true);
+   void createWallet(bool primary, const std::function<void()> &, bool reportSuccess = true);
 
    void acceptMDAgreement();
    void updateControlEnabledState();
