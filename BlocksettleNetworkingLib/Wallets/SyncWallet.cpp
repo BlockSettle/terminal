@@ -722,6 +722,8 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
       for (auto &utxo : utxos) {
          const auto scrAddr = bs::Address(utxo.getRecipientScrAddr());
          utxo.txinRedeemSizeBytes_ = (unsigned int)scrAddr.getInputSize();
+         utxo.witnessDataSizeBytes_ = unsigned(scrAddr.getWitnessDataSize());
+         utxo.isInputSW_ = (scrAddr.getWitnessDataSize() != UINT32_MAX);
          inputAmount += utxo.getValue();
       }
 
