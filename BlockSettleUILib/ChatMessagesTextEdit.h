@@ -20,7 +20,6 @@ namespace Chat {
    class MessageData;
 }
 
-// #new_logic : left as it is
 class ChatMessagesTextEditStyle : public QWidget
 {
    Q_OBJECT
@@ -52,7 +51,6 @@ private:
    QColor colorWhite_;
 };
 
-// #new_logic : redoing
 class ChatMessagesTextEdit : public QTextBrowser
 {
    Q_OBJECT
@@ -62,29 +60,23 @@ public:
    ~ChatMessagesTextEdit() noexcept override = default;
 
 public:
-   // #old_logic
-   
-   void setHandler(ChatItemActionsHandler* handler);
-   void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
-   
    QString getFormattedTextFromSelection();
 
-   // #new_logic
+public slots:
    void setColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
    void setOwnUserId(const std::string &userId) { ownUserId_ = userId; }
    void setClientPartyModel(Chat::ClientPartyModelPtr partyModel);
-   void switchToChat(const std::string& chatId);
+   void switchToChat(const std::string& partyId);
    void resetChatView();
    void logout();
    const Chat::MessagePtr onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
+   void onMessageUpdate(const Chat::MessagePtrList& messagePtrList);
 
 signals:
-   void sendFriendRequest(const std::string &userID);
-   void addContactRequired(const QString &userId);
-
-   // #new_logic
    void messageRead(const std::string& partyId, const std::string& messageId);
 
+   void sendFriendRequest(const std::string &userID);
+   void addContactRequired(const QString &userId);
 protected:
    enum class Column {
       Time,
@@ -94,26 +86,14 @@ protected:
       last
    };
 
-   // #old_logic
-   QString data(int row, const Column &column);
-   QString dataMessage(int row, const Column &column);
-   
+   QString data(const std::string& partyId, int row, const Column &column);
+   QString dataMessage(const std::string& partyId, int row, const Column &column);
+   QImage statusImage(const std::string& partyId, int row);
 
    void contextMenuEvent(QContextMenuEvent *e) override;
 
-   // #new_logic
-   QImage statusImage(int row);
-
-public slots:
-   // #old_logic
-   void onMessageIdUpdate(const std::string& oldId, const std::string& newId,const std::string& chatId);
-   void urlActivated(const QUrl &link);
-
-   // #new_logic
-   void onSingleMessageUpdate(const Chat::MessagePtrList& messagePtrList);
-   void onCurrentElementAboutToBeRemoved();
-   
 private slots:
+   void urlActivated(const QUrl &link);
    void copyActionTriggered();
    void copyLinkLocationActionTriggered();
    void selectAllActionTriggered();
@@ -121,38 +101,6 @@ private slots:
    void onUserUrlOpened(const QUrl &url);
 
 private:
-   // #old_logic 
-   //using MessagesHistory = std::vector<std::shared_ptr<Chat::Data_Message>>;
-   
-   // MessagesHistory messagesToLoadMore_;
-   //std::string currentChatId_;
-   //std::string ownUserId_;
-   //std::string username_;
-   ChatItemActionsHandler * handler_;
-   std::shared_ptr<ChatMessageReadHandler> messageReadHandler_;
-   std::shared_ptr<ChatClient> client_;
-
-   // #new_logic : comment and move variables from previous section which is needed
-   Chat::ClientPartyModelPtr partyModel_;
-
-   std::string currentChatId_;
-   std::string ownUserId_;
-   std::string username_;
-
-   using ClientMessagesHistory = QVector<Chat::MessagePtr>;
-   QMap<std::string, ClientMessagesHistory> messages_;
-
-   QImage statusImageGreyUnsent_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_OFFLINE") }, "PNG");
-   QImage statusImageYellowSent_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_CONNECTING") }, "PNG");
-   QImage statusImageGreenReceived_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_ONLINE") }, "PNG");
-   QImage statusImageBlueSeen_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_READ") }, "PNG");
-
-private:
-   // #old_logic : 
-
-
-   void insertLoadMore();
-   void loadMore();
    void setupHighlightPalette();
    void initUserContextMenu(); // #old_logic : do we need it?
 
@@ -160,13 +108,30 @@ private:
    QString toHtmlUsername(const QString &username, const QString &userId = QString());
    QString toHtmlText(const QString &text);
    QString toHtmlInvalid(const QString &text);
+
    void insertMessage(const Chat::MessagePtr& messagePtr);
-   void showMessage(int messageIndex);
-   void forceMessagesUpdate();
+   void registerMessage(const std::string& partyId, int messageIndex);
    Chat::MessagePtr findMessage(const std::string& partyId, const std::string& messageId);
    void notifyMessageChanged(Chat::MessagePtr message);
 
+   QTextDocument* getTextDocumentFromPartyId(const std::string& partyId);
+
 private:
+   Chat::ClientPartyModelPtr partyModel_;
+
+   std::string currentPartyId_;
+   std::string ownUserId_;
+   std::string userName_;
+
+   using ClientMessagesHistory = QVector<Chat::MessagePtr>;
+   QMap<std::string, ClientMessagesHistory> messages_;
+   QMap<std::string, QTextDocument*> chatDocuments_;
+
+   QImage statusImageGreyUnsent_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_OFFLINE") }, "PNG");
+   QImage statusImageYellowSent_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_CONNECTING") }, "PNG");
+   QImage statusImageGreenReceived_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_ONLINE") }, "PNG");
+   QImage statusImageBlueSeen_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_READ") }, "PNG");
+
    QTextTableFormat tableFormat_;
    ChatMessagesTextEditStyle internalStyle_;
 
@@ -174,13 +139,6 @@ private:
    QAction *userAddContactAction_{};
    QAction *userRemoveContactAction_{};
 
-   // ViewItemWatcher interface
-public:
-   // #old_logic
-   //void onElementSelected(CategoryElement *element) override;
-   //void onMessageChanged(std::shared_ptr<Chat::Data> message) override;
-   //void onElementUpdated(CategoryElement *element) override;
-   //void onCurrentElementAboutToBeRemoved() override;
    QTextCursor textCursor_;
    QString anchor_;
 };

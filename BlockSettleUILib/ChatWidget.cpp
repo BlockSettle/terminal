@@ -1164,6 +1164,10 @@ public:
       }
 
       std::string messageText = chat_->ui_->input_textEdit->toPlainText().toStdString();
+      if (messageText.empty()) {
+         return;
+      }
+
       chat_->chatClientServicePtr_->SendPartyMessage(chat_->currentPartyId_, messageText);
       chat_->ui_->input_textEdit->clear();
    }
@@ -1209,7 +1213,7 @@ public:
          chat_->chatPartiesTreeModel_->increaseUnseenCounter(partyId, bNewMessagesCounter);
       }
 
-      chat_->ui_->textEditMessages->onSingleMessageUpdate(messagePtr);
+      chat_->ui_->textEditMessages->onMessageUpdate(messagePtr);
    }
    void changePartyStatus(const Chat::ClientPartyPtr& clientPartyPtr) {
       if (!canChangePartyStatus()) {
