@@ -270,6 +270,15 @@ namespace bs {
             void getRootPubkey(const std::function<void(const SecureBinaryData &)> &) const;
             void setSettlementID(const SecureBinaryData &, const std::function<void(bool)> &);
 
+            std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
+               , bool asNew = false) override
+            {
+               if (wct_) {
+                  wct_->walletReady(walletId());
+               }
+               return {};
+            }
+
          protected:
             void createAddress(const CbAddress &, const AddrPoolKey &) override;
             void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr) override;

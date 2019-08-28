@@ -241,19 +241,18 @@ void WalletsManager::walletReset(const std::string &walletId)
 
 void WalletsManager::saveWallet(const HDWalletPtr &wallet)
 {
-   if (!userId_.isNull())
+   if (!userId_.isNull()) {
       wallet->setUserId(userId_);
-
+   }
    auto insertIter = hdWalletsId_.insert(wallet->walletId());
 
    //integer id signifying the wallet's insertion order
-   if (!insertIter.second)
-   {
+   if (!insertIter.second) {
       //wallet already exist in container, merge content instead
       auto wltIter = hdWallets_.find(wallet->walletId());
-      if (wltIter == hdWallets_.end())
+      if (wltIter == hdWallets_.end()) {
          throw std::runtime_error("have wallet id but no ptr");
-
+      }
       wltIter->second->merge(*wallet);
    }
 
@@ -503,9 +502,20 @@ void WalletsManager::walletReady(const std::string &walletId)
          logger_->debug("[{}] found new wallet {} - starting rescan", __func__, rootWallet->walletId());
          rootWallet->startRescan();
          newWallets_.erase(itWallet);
-         rootWallet->synchronize([this, walletId] {
-            QMetaObject::invokeMethod(this, [this, walletId] {
-               emit walletChanged(walletId);
+         rootWallet->synchronize([this, rootWallet] {
+            QMetaObject::invokeMethod(this, [this, rootWallet] {
+               for (const auto &leaf : rootWallet->getLeaves()) {
+                  addWallet(leaf, true);
+                  if (leaf->type() == bs::core::wallet::Type::Authentication) {
+                     authAddressWallet_ = leaf;
+                     logger_->debug("[WalletsManager] auth leaf changed/created");
+                     emit AuthLeafCreated();
+                     emit authWalletChanged();
+                  }
+               }
+               emit walletChanged(rootWallet->walletId());
+               emit walletsReady();
+               logger_->debug("[WalletsManager] wallets are ready after rescan");
             });
          });
       }
@@ -515,7 +525,7 @@ void WalletsManager::walletReady(const std::string &walletId)
    auto nbWallets = wallets_.size();
    if (readyWallets_.size() >= nbWallets) {
       isReady_ = true;
-      logger_->debug("[WalletsManager::{}] - All wallets are ready", __func__);
+      logger_->debug("[WalletsManager::{}] All wallets are ready", __func__);
       emit walletsReady();
       readyWallets_.clear();
    }

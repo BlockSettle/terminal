@@ -172,6 +172,8 @@ private:
 
    bool createAuthLeaf(const std::shared_ptr<bs::core::hd::Wallet> &, const BinaryData &salt
       , const SecureBinaryData &password);
+   bool createSettlementLeaves(const std::shared_ptr<bs::core::hd::Wallet> &wallet
+      , const std::vector<bs::Address> &authAddresses);
 
    bool CheckSpendLimit(uint64_t value, const std::string &walletId);
 
