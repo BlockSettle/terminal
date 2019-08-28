@@ -142,10 +142,10 @@ private:
    using ClientMessagesHistory = QVector<Chat::MessagePtr>;
    QMap<std::string, ClientMessagesHistory> messages_;
 
-   QImage statusImageOffline_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_OFFLINE") }, "PNG");
-   QImage statusImageConnecting_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_CONNECTING") }, "PNG");
-   QImage statusImageOnline_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_ONLINE") }, "PNG");
-   QImage statusImageRead_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_READ") }, "PNG");
+   QImage statusImageGreyUnsent_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_OFFLINE") }, "PNG");
+   QImage statusImageYellowSent_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_CONNECTING") }, "PNG");
+   QImage statusImageGreenReceived_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_ONLINE") }, "PNG");
+   QImage statusImageBlueSeen_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_READ") }, "PNG");
 
 private:
    // #old_logic : 

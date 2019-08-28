@@ -111,37 +111,31 @@ QImage ChatMessagesTextEdit::statusImage(int row)
 {
    auto message = messages_[currentChatId_][row];
    if (!message) {
-      return statusImageConnecting_;
+      return statusImageGreyUnsent_;
    }
 
-   auto senderHash = message->senderHash();
    if (message->senderHash() != ownUserId_) {
       return QImage();
    }
 
-   QImage statusImage = statusImageOffline_;
+   QImage statusImage = statusImageGreyUnsent_;
 
-   if (message->partyMessageState() == Chat::PartyMessageState::SENT) {
-      Chat::ClientPartyPtr clientPartyPtr = partyModel_->getClientPartyById(message->partyId());
-
-      Q_CHECK_PTR(clientPartyPtr);
-      // wrong party pointer
-      if (!clientPartyPtr)
-      {
-         statusImage == statusImageConnecting_;
-         return statusImage;
+   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getClientPartyById(message->partyId());
+   if (clientPartyPtr->isGlobalStandard()) {
+      if ((message->partyMessageState() != Chat::PartyMessageState::UNSENT)) {
+         statusImage = statusImageBlueSeen_;
       }
-
-      if (clientPartyPtr->isGlobalStandard()) {
-         statusImage = statusImageRead_;
-      } else {
-         statusImage = statusImageConnecting_;
-      }
+      return statusImage;
    }
-   else if (message->partyMessageState() == Chat::PartyMessageState::UNSENT) {
-      statusImage = statusImageOnline_;
+
+   if (message->partyMessageState() == Chat::PartyMessageState::UNSENT) {
+      statusImage = statusImageGreyUnsent_;
+   } else if (message->partyMessageState() == Chat::PartyMessageState::SENT) {
+      statusImage = statusImageYellowSent_;
+   } else if (message->partyMessageState() == Chat::PartyMessageState::RECEIVED) {
+      statusImage = statusImageGreenReceived_;
    } else if (message->partyMessageState() == Chat::PartyMessageState::SEEN) {
-      statusImage = statusImageRead_;
+      statusImage = statusImageBlueSeen_;
    }
 
    return statusImage;

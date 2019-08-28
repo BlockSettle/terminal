@@ -1644,7 +1644,6 @@ void ChatWidget::onSendArrived(const Chat::MessagePtrList& messagePtr)
 
 void ChatWidget::onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr)
 {
-   qDebug() << "Received";
    stateCurrent_->changePartyStatus(clientPartyPtr);
 }
 
