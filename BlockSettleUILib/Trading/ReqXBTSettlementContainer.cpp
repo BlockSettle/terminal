@@ -78,7 +78,7 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
 
       bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(txReq);
       dlgData.setValue("SettlementId", QString::fromStdString(settlementId_.toHexStr()));
-      dlgData.setValue("SettlementPayOut", QStringLiteral("(%1)+%2")
+      dlgData.setValue("SettlementPayOut", QStringLiteral("+ %2 %1")
                   .arg(UiUtils::XbtCurrency)
                   .arg(UiUtils::displayAmount(txReq.amount())));
 
@@ -103,7 +103,7 @@ void ReqXBTSettlementContainer::acceptSpotXBT()
          payInTxRequest_ = transactionData_->createTXRequest(false, changeAddr);
 
          bs::sync::PasswordDialogData dlgData = toPasswordDialogData();
-         dlgData.setValue("SettlementPayIn", QStringLiteral("(%1)-%2")
+         dlgData.setValue("SettlementPayIn", QStringLiteral("- %2 %1")
                           .arg(UiUtils::XbtCurrency)
                           .arg(UiUtils::displayAmount(amount())));
 
@@ -289,25 +289,25 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() c
 
    // tx details
    if (side() == bs::network::Side::Buy) {
-      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+      dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayAmount(payOutTxRequest_.inputAmount())));
 
-      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+      dialogData.setValue("ReturnAmount", QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayAmount(payOutTxRequest_.change.value)));
    }
    else {
-      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+      dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(payInTxRequest_.inputAmount())));
 
-      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+      dialogData.setValue("ReturnAmount", QStringLiteral("+ %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(payInTxRequest_.change.value)));
    }
 
-   dialogData.setValue("NetworkFee", QStringLiteral("(%1)-%2")
+   dialogData.setValue("NetworkFee", QStringLiteral("- %2 %1")
                        .arg(UiUtils::XbtCurrency)
                        .arg(UiUtils::displayAmount(fee())));
 

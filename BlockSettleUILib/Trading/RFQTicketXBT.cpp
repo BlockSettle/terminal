@@ -1062,6 +1062,12 @@ void RFQTicketXBT::productSelectionChanged()
                }
             }
          } else {
+            if (ui_->pushButtonSell->isChecked()) {
+               ui_->labelWalletName->setText(tr("Payment Wallet"));
+            }
+            else {
+               ui_->labelWalletName->setText(tr("Receiving Wallet"));
+            }
             ui_->lineEditAmount->setValidator(fxAmountValidator_);
          }
       }
