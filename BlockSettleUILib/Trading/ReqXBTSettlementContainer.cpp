@@ -283,7 +283,7 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() c
    dialogData.setValue("RequesterAuthAddress", authAddr_.display());
    dialogData.setValue("RequesterAuthAddressVerified", true);
 
-   dialogData.setValue("ResponderAuthAddress", "Verifying");
+   dialogData.setValue("ResponderAuthAddress", bs::Address::fromPubKey(dealerAuthKey_).display());
    dialogData.setValue("ResponderAuthAddressVerified", false);
 
 

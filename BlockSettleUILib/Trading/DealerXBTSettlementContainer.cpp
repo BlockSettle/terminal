@@ -135,10 +135,10 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue("SettlementId", settlementId_.toHexStr());
    dialogData.setValue("SettlementAddress", settlAddr_.display());
 
-   dialogData.setValue("RequesterAuthAddress", "Verifying");
+   dialogData.setValue("RequesterAuthAddress", bs::Address::fromPubKey(reqAuthKey_).display());
    dialogData.setValue("RequesterAuthAddressVerified", false);
 
-   dialogData.setValue("ResponderAuthAddress", "Verifying");
+   dialogData.setValue("ResponderAuthAddress", bs::Address::fromPubKey(authKey_).display());
    dialogData.setValue("ResponderAuthAddressVerified", false);
 
 

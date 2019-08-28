@@ -941,10 +941,11 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
                CreateHDLeafResponse(clientId, id, ErrorCode::InternalError);
                return;
             }
-         }
 
-         if ((path.get(1) | bs::hd::hardFlag) == bs::hd::CoinType::BlockSettle_Auth) {
-            createSettlementLeaves(hdWallet, leaf->getPooledAddressList());
+            if ((path.get(1) | bs::hd::hardFlag) == bs::hd::CoinType::BlockSettle_Auth) {
+               createSettlementLeaves(hdWallet, leaf->getPooledAddressList());
+               walletsListUpdated();
+            }
          }
 
          auto assetPtr = leaf->getRootAsset();
