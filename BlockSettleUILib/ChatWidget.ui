@@ -759,7 +759,7 @@
   <customwidget>
    <class>ChatUserListTreeView</class>
    <extends>QTreeView</extends>
-   <header location="global">chatuserlisttreeview.h</header>
+   <header location="global">ChatUserListTreeView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
