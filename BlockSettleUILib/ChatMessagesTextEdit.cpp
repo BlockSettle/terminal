@@ -237,6 +237,13 @@ void ChatMessagesTextEdit::switchToChat(const std::string& partyId)
    if (!currentPartyId_.empty()) {
       setDocument(getTextDocumentFromPartyId(partyId));
       onTextChanged();
+      if (!messages_[partyId].isEmpty()) {
+         for (auto iLast = messages_[partyId].end() - 1;
+            iLast != messages_[partyId].begin() && (*iLast)->partyMessageState() != Chat::PartyMessageState::SEEN && (*iLast)->senderHash() != ownUserId_;
+            --iLast) {
+            emit messageRead((*iLast)->partyId(), (*iLast)->messageId());
+         }
+      }
    }
    else {
       setDocument(new QTextDocument(this));
@@ -331,7 +338,9 @@ void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
    const int messageIndex = messages_[messagePtr->partyId()].size();
    messages_[messagePtr->partyId()].push_back(messagePtr);
    registerMessage(messagePtr->partyId(), messageIndex);
-   if (messagePtr->partyMessageState() != Chat::PartyMessageState::SEEN && messagePtr->senderHash() != ownUserId_) {
+   if (messagePtr->partyMessageState() != Chat::PartyMessageState::SEEN
+         && messagePtr->senderHash() != ownUserId_
+         && messagePtr->partyId() == currentPartyId_) {
       emit messageRead(messagePtr->partyId(), messagePtr->messageId());
    }
 }
