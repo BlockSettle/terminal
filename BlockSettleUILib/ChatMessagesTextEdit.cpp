@@ -331,6 +331,9 @@ void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
    const int messageIndex = messages_[messagePtr->partyId()].size();
    messages_[messagePtr->partyId()].push_back(messagePtr);
    registerMessage(messagePtr->partyId(), messageIndex);
+   if (messagePtr->partyMessageState() != Chat::PartyMessageState::SEEN && messagePtr->senderHash() != ownUserId_) {
+      emit messageRead(messagePtr->partyId(), messagePtr->messageId());
+   }
 }
 
 void ChatMessagesTextEdit::registerMessage(const std::string& partyId, int messageIndex)

@@ -291,8 +291,11 @@ public slots:
    void onNewChatMessageTrayNotificationClicked(const QString& userId);
 
 private slots:
-   void onContactRequestAcceptSendClicked();
-   void onContactRequestRejectCancelClicked();
+   void onContactRequestAcceptClicked();
+   void onContactRequestRejectClicked();
+   void onContactRequestSendClicked();
+   void onContactRequestCancelClicked();
+
    void onPartyModelChanged();
    void onLogin();
    void onLogout();

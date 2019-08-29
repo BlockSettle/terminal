@@ -1141,6 +1141,12 @@ enum class OTCPages : int
 
 namespace {
    const int maxMessageNotifLength = 20;
+
+   // translation
+   const QString buttonSentPartyText = QObject::tr("SEND");
+   const QString buttonAcceptPartyText = QObject::tr("ACCEPT");
+   const QString buttonRejectPartyText = QObject::tr("REJECT");
+   const QString buttonCancelPartyText = QObject::tr("CANCEL");
 }
 
 // #new_logic : make this class QObject in different file
@@ -1384,8 +1390,14 @@ protected:
    virtual void applyChatFrameChange() override {
       chat_->ui_->textEditMessages->switchToChat(chat_->currentPartyId_);
 
-      chat_->ui_->pushButton_AcceptSend->setText(QObject::tr("SEND"));
-      chat_->ui_->pushButton_RejectCancel->setText(QObject::tr("CANCEL"));
+      chat_->ui_->pushButton_AcceptSend->setText(buttonSentPartyText);
+      chat_->ui_->pushButton_AcceptSend->disconnect();
+      QObject::connect(chat_->ui_->pushButton_AcceptSend, &QPushButton::clicked, chat_, &ChatWidget::onContactRequestSendClicked);
+
+      chat_->ui_->pushButton_RejectCancel->setText(buttonCancelPartyText);
+      chat_->ui_->pushButton_RejectCancel->disconnect();
+      QObject::connect(chat_->ui_->pushButton_RejectCancel, &QPushButton::clicked, chat_, &ChatWidget::onContactRequestCancelClicked);
+
       chat_->ui_->frameContactActions->setVisible(true);
 
       chat_->ui_->input_textEdit->setText({});
@@ -1428,8 +1440,14 @@ protected:
    virtual void applyChatFrameChange() override {
       chat_->ui_->textEditMessages->resetChatView();
 
-      chat_->ui_->pushButton_AcceptSend->setText(QObject::tr("ACCEPT"));
-      chat_->ui_->pushButton_RejectCancel->setText(QObject::tr("REJECT"));
+      chat_->ui_->pushButton_AcceptSend->setText(buttonAcceptPartyText);
+      chat_->ui_->pushButton_AcceptSend->disconnect();
+      QObject::connect(chat_->ui_->pushButton_AcceptSend, &QPushButton::clicked, chat_, &ChatWidget::onContactRequestAcceptClicked);
+
+      chat_->ui_->pushButton_RejectCancel->setText(buttonRejectPartyText);
+      chat_->ui_->pushButton_RejectCancel->disconnect();
+      QObject::connect(chat_->ui_->pushButton_RejectCancel, &QPushButton::clicked, chat_, &ChatWidget::onContactRequestRejectClicked);
+
       chat_->ui_->frameContactActions->setVisible(true);
 
       chat_->ui_->input_textEdit->setText({});
@@ -1485,9 +1503,6 @@ ChatWidget::ChatWidget(QWidget* parent)
    //ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
 
    qRegisterMetaType<std::vector<std::string>>();
-
-   connect(ui_->pushButton_AcceptSend, &QPushButton::clicked, this, &ChatWidget::onContactRequestAcceptSendClicked);
-   connect(ui_->pushButton_RejectCancel, &QPushButton::clicked, this, &ChatWidget::onContactRequestRejectCancelClicked);
 }
 
 ChatWidget::~ChatWidget()
@@ -1535,8 +1550,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserListClicked);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::messageRead, this, &ChatWidget::onMessageRead, Qt::QueuedConnection);
-   connect(ui_->pushButton_AcceptSend, &QPushButton::clicked, this, &ChatWidget::onContactRequestAcceptSendClicked);
-   connect(ui_->pushButton_RejectCancel, &QPushButton::clicked, this, &ChatWidget::onContactRequestRejectCancelClicked);
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedInToServer, this, &ChatWidget::onLogin, Qt::QueuedConnection);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout, Qt::QueuedConnection);
@@ -1584,12 +1597,24 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 */
 }
 
-void ChatWidget::onContactRequestAcceptSendClicked()
+void ChatWidget::onContactRequestAcceptClicked()
 {
+   chatClientServicePtr_->AcceptPrivateParty(currentPartyId_);
 }
 
-void ChatWidget::onContactRequestRejectCancelClicked()
+void ChatWidget::onContactRequestRejectClicked()
 {
+   chatClientServicePtr_->RejectPrivateParty(currentPartyId_);
+}
+
+void ChatWidget::onContactRequestSendClicked()
+{
+   chatClientServicePtr_->RequestPrivateParty(currentPartyId_);
+}
+
+void ChatWidget::onContactRequestCancelClicked()
+{
+   chatClientServicePtr_->DeletePrivateParty(currentPartyId_);
 }
 
 void ChatWidget::onPartyModelChanged()
