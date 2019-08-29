@@ -155,6 +155,12 @@ namespace Chat
       StatusChanged statusChanged;
       statusChanged.CopyFrom(msg);
 
+      // clear session keys for user
+      if (ClientStatus::OFFLINE == statusChanged.client_status())
+      {
+         sessionKeyHolderPtr_->clearSessionForUser(statusChanged.user_name());
+      }
+
       emit userStatusChanged(statusChanged.user_name(), statusChanged.client_status());
    }
 
