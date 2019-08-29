@@ -166,6 +166,10 @@ bool AuthAddressManager::HasAuthAddr() const
 
 bool AuthAddressManager::SubmitForVerification(const bs::Address &address)
 {
+   if (!hasSettlementLeaf(address)) {
+      logger_->error("[{}] can't submit without existing settlement leaf", __func__);
+      return false;
+   }
    const auto &state = GetState(address);
    switch (state) {
    case AddressVerificationState::Verified:
@@ -1021,4 +1025,38 @@ void AuthAddressManager::onWalletCreated()
    } else {
       logger_->error("[AuthAddressManager::onWalletCreated] we should be able to get auth wallet at this point");
    }
+}
+
+std::shared_ptr<bs::sync::hd::SettlementLeaf> AuthAddressManager::getSettlementLeaf(const bs::Address &addr) const
+{
+   const auto priWallet = walletsManager_->getPrimaryWallet();
+   if (!priWallet) {
+      logger_->warn("[{}] no primary wallet", __func__);
+      return nullptr;
+   }
+   const auto group = priWallet->getGroup(bs::hd::BlockSettle_Settlement);
+   std::shared_ptr<bs::sync::hd::SettlementLeaf> settlLeaf;
+   if (group) {
+      const auto settlGroup = std::dynamic_pointer_cast<bs::sync::hd::SettlementGroup>(group);
+      if (!settlGroup) {
+         logger_->error("[{}] wrong settlement group type", __func__);
+         return nullptr;
+      }
+      settlLeaf = settlGroup->getLeaf(addr);
+   }
+   return settlLeaf;
+}
+
+void AuthAddressManager::createSettlementLeaf(const bs::Address &addr
+   , const std::function<void()> &cb)
+{
+   const auto &cbPubKey = [this, cb](const SecureBinaryData &pubKey) {
+      if (pubKey.isNull()) {
+         return;
+      }
+      if (cb) {
+         cb();
+      }
+   };
+   walletsManager_->createSettlementLeaf(addr, cbPubKey);
 }
