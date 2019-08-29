@@ -26,6 +26,7 @@ namespace bs {
    namespace sync {
       namespace hd {
          class Leaf;
+         class SettlementLeaf;
       }
       class Wallet;
       class WalletsManager;
@@ -79,6 +80,10 @@ public:
 
    void createAuthWallet(const std::function<void()> &);
    virtual bool CreateNewAuthAddress();
+
+   std::shared_ptr<bs::sync::hd::SettlementLeaf> getSettlementLeaf(const bs::Address &) const;
+   bool hasSettlementLeaf(const bs::Address &addr) const { return (getSettlementLeaf(addr) != nullptr); }
+   void createSettlementLeaf(const bs::Address &, const std::function<void()> &);
 
    virtual bool SubmitForVerification(const bs::Address &address);
    virtual void ConfirmSubmitForVerification(BsClient *bsClient, const bs::Address &address);

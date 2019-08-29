@@ -915,14 +915,37 @@ void WalletsManager::createSettlementLeaf(const bs::Address &authAddr
    , const std::function<void(const SecureBinaryData &)> &cb)
 {
    if (!signContainer_) {
-      logger_->error("[WalletsManager::{}] - signer is not set - aborting"
-         , __func__);
+      logger_->error("[{}] signer is not set - aborting", __func__);
       if (cb) {
          cb({});
       }
       return;
    }
-   signContainer_->createSettlementWallet(authAddr, cb);
+   const auto cbWrap = [this, cb](const SecureBinaryData &pubKey) {
+      const auto priWallet = getPrimaryWallet();
+      if (!priWallet) {
+         logger_->error("[WalletsManager::createSettlementLeaf] no primary wallet");
+         return;
+      }
+      priWallet->synchronize([this, cb, pubKey, priWallet] {
+         const auto group = priWallet->getGroup(bs::hd::BlockSettle_Settlement);
+         if (!group) {
+            logger_->error("[WalletsManager::createSettlementLeaf] no settlement group");
+            return;
+         }
+         for (const auto &settlLeaf : group->getLeaves()) {
+            {
+               QMutexLocker lock(&mtxWallets_);
+               if (walletsId_.find(settlLeaf->walletId()) != walletsId_.end()) {
+                  continue;
+               }
+            }
+            addWallet(settlLeaf, true);
+            emit walletAdded(settlLeaf->walletId());
+         }
+      });
+   };
+   signContainer_->createSettlementWallet(authAddr, cbWrap);
 }
 
 void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet> newWallet)
