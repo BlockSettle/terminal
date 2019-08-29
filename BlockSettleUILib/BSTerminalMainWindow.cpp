@@ -692,7 +692,7 @@ void BSTerminalMainWindow::MainWinACT::onRefresh(const std::vector<BinaryData> &
       && (parent_->walletsMgr_->hdWalletsCount() == 0)) {
 
       const auto &deferredDialog = [this]{
-         parent_->createWallet(true);
+         parent_->createWallet(true, [] {});
       };
 
       parent_->addDeferredDialog(deferredDialog);
@@ -859,12 +859,16 @@ void BSTerminalMainWindow::connectSigner()
    }
 }
 
-bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
+void BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb
+   , bool reportSuccess)
 {
    if (primary && (walletsMgr_->hdWalletsCount() > 0)) {
       auto wallet = walletsMgr_->getHDWallet(0);
       if (wallet->isPrimary()) {
-         return true;
+         if (cb) {
+            cb();
+         }
+         return;
       }
       BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
          , tr("To trade through BlockSettle, you are required to have a wallet which"
@@ -872,28 +876,35 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
             " may only have one Primary Wallet. Do you wish to promote '%1'?")
          .arg(QString::fromStdString(wallet->name())), this);
       if (qry.exec() == QDialog::Accepted) {
-         walletsMgr_->PromoteHDWallet(wallet->walletId());
-         return true;
+         walletsMgr_->PromoteHDWallet(wallet->walletId(), [cb](bs::error::ErrorCode result) {
+            if ((result == bs::error::ErrorCode::NoError) && cb) {
+               cb();
+            }
+         });
       }
-      return false;
+      return;
    }
 
    if (!signContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(true, applicationSettings_, this);
       if (newWalletDialog.exec() != QDialog::Accepted) {
-         return false;
+         return;
       }
 
       if (newWalletDialog.isCreate()) {
-         return ui_->widgetWallets->CreateNewWallet(reportSuccess);
+         if (ui_->widgetWallets->CreateNewWallet(reportSuccess) && cb) {
+            cb();
+         }
       }
       else if (newWalletDialog.isImport()) {
-         return ui_->widgetWallets->ImportNewWallet(reportSuccess);
+         if (ui_->widgetWallets->ImportNewWallet(reportSuccess) && cb) {
+            cb();
+         }
       }
-
-      return false;
    } else {
-      return ui_->widgetWallets->ImportNewWallet(reportSuccess);
+      if (ui_->widgetWallets->ImportNewWallet(reportSuccess) && cb) {
+         cb();
+      }
    }
 }
 
@@ -1065,10 +1076,17 @@ void BSTerminalMainWindow::openAccountInfoDialog()
 
 void BSTerminalMainWindow::openCCTokenDialog()
 {
+   const auto lbdCCTokenDlg = [this] {
+      QMetaObject::invokeMethod(this, [this] {
+         CCTokenEntryDialog(walletsMgr_, ccFileManager_, this).exec();
+      });
+   };
    // Do not use deferredDialogs_ here as it will deadblock PuB public key processing
-   if (walletsMgr_->hasPrimaryWallet() || createWallet(true, false)) {
-      CCTokenEntryDialog dialog(walletsMgr_, ccFileManager_, this);
-      dialog.exec();
+   if (walletsMgr_->hasPrimaryWallet()) {
+      lbdCCTokenDlg();
+   }
+   else {
+      createWallet(true, lbdCCTokenDlg, false);
    }
 }
 
@@ -1209,21 +1227,31 @@ void BSTerminalMainWindow::createAuthWallet(const std::function<void()> &cb)
 {
    if (celerConnection_->tradingAllowed()) {
       const auto &deferredDialog = [this, cb]{
-         if (!walletsMgr_->hasPrimaryWallet() && !createWallet(true)) {
-            return;
+         const auto lbdCreateAuthWallet = [this, cb] {
+            QMetaObject::invokeMethod(this, [this, cb] {
+               if (walletsMgr_->getAuthWallet()) {
+                  if (cb) {
+                     cb();
+                  }
+               }
+               else {
+                  BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
+                     , tr("Create Authentication Wallet")
+                     , tr("You don't have a sub-wallet in which to hold Authentication Addresses."
+                        " Would you like to create one?"), this);
+                  if (createAuthReq.exec() == QDialog::Accepted) {
+                     authManager_->createAuthWallet(cb);
+                  }
+               }
+            });
+         };
+         if (walletsMgr_->hasPrimaryWallet()) {
+            lbdCreateAuthWallet();
          }
-
-         if (!walletsMgr_->getAuthWallet()) {
-            BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
-               , tr("Create Authentication Wallet")
-               , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
-               , this);
-            if (createAuthReq.exec() == QDialog::Accepted) {
-               authManager_->createAuthWallet(cb);
-            }
+         else {
+            createWallet(true, lbdCreateAuthWallet);
          }
       };
-
       addDeferredDialog(deferredDialog);
    }
 }
@@ -1523,10 +1551,12 @@ void BSTerminalMainWindow::InitWidgets()
                              , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_);
 
    auto primaryWalletCreationCb = [this]() {
-      if (createWallet(true)) {
-         ui_->widgetRFQ->forceCheckCondition();
-         ui_->widgetRFQReply->forceCheckCondition();
-      }
+      createWallet(true, [this] {
+         QMetaObject::invokeMethod(this, [this] {
+            ui_->widgetRFQ->forceCheckCondition();
+            ui_->widgetRFQReply->forceCheckCondition();
+         });
+      });
    };
 
    connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, primaryWalletCreationCb);

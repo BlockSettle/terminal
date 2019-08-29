@@ -10,6 +10,7 @@
 namespace Ui {
    class RFQShieldPage;
 }
+class AuthAddressManager;
 
 class RFQShieldPage : public QWidget
 {
@@ -29,9 +30,10 @@ public:
    void showShieldSelectTargetTrade();
    void showShieldSelectTargetDealing();
    void showShieldCreateLeaf(const QString& product);
-   void showShielddGenerateAuthAddress();
+   void showShieldGenerateAuthAddress();
 
-   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager);
+   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<AuthAddressManager> &);
    void setTabType(QString&& tabType);
 
    using ProductType = bs::network::Asset::Type;
@@ -48,6 +50,7 @@ protected:
 private:
    std::unique_ptr<Ui::RFQShieldPage> ui_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   std::shared_ptr<AuthAddressManager>       authMgr_;
    QString tabType_;
 };
 
