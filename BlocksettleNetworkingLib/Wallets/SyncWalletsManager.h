@@ -70,8 +70,10 @@ namespace bs {
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
          WalletPtr getDefaultWallet() const;
 
-         bool PromoteHDWallet(const std::string& walletId, const std::function<void(bs::error::ErrorCode result)>& cb = nullptr);
-         bool CreateCCLeaf(const std::string &cc, const std::function<void(bs::error::ErrorCode result)> &cb = nullptr);
+         bool PromoteHDWallet(const std::string& walletId
+            , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr);
+         bool CreateCCLeaf(const std::string &cc
+            , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr);
          bool createAuthLeaf(const std::function<void()> &);
 
          WalletPtr getCCWallet(const std::string &cc);
@@ -198,10 +200,10 @@ namespace bs {
          void addToMaintQueue(const MaintQueueCb &);
          void maintenanceThreadFunc();
 
-         void ProcessCreatedCCLeaf(const std::string &cc, bs::error::ErrorCode result
+         void processCreatedCCLeaf(const std::string &cc, bs::error::ErrorCode result
             , const std::string &walletId);
 
-         void ProcessPromoteHDWallet(bs::error::ErrorCode result, const std::string& walletId);
+         void processPromoteHDWallet(bs::error::ErrorCode result, const std::string& walletId);
 
       private:
          std::shared_ptr<WalletSignerContainer>         signContainer_;
