@@ -346,6 +346,25 @@ void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
    }
 }
 
+void ChatMessagesTextEdit::insertMessageInDoc(QTextCursor& cursor, const std::string& partyId, int index)
+{
+   auto* table = cursor.insertTable(1, 4, tableFormat_);
+
+   QString time = data(partyId, index, Column::Time);
+   table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
+
+   QImage image = statusImage(partyId, index);
+   if (!image.isNull()) {
+      table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+   }
+
+   QString user = data(partyId, index, Column::User);
+   table->cellAt(0, 2).firstCursorPosition().insertHtml(user);
+
+   QString message = data(partyId, index, Column::Message);
+   table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
+}
+
 void ChatMessagesTextEdit::registerMessage(const std::string& partyId, int messageIndex)
 {
    /* add text */
@@ -353,22 +372,8 @@ void ChatMessagesTextEdit::registerMessage(const std::string& partyId, int messa
 
    QTextCursor cursor(document);
    cursor.movePosition(QTextCursor::End);
-   auto* table = cursor.insertTable(1, 4, tableFormat_);
 
-   QString time = data(partyId, messageIndex, Column::Time);
-   table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
-
-   QImage image = statusImage(partyId, messageIndex);
-   if (!image.isNull()) {
-      table->cellAt(0, 1).firstCursorPosition().insertImage(image);
-   }
-
-   QString user = data(partyId, messageIndex, Column::User);
-   table->cellAt(0, 2).firstCursorPosition().insertHtml(user);
-
-   QString message = data(partyId, messageIndex, Column::Message);
-   table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
-
+   insertMessageInDoc(cursor, partyId, messageIndex);
    if (partyId == currentPartyId_) {
       setTextCursor(cursor);
    }
@@ -456,20 +461,8 @@ void ChatMessagesTextEdit::notifyMessageChanged(Chat::MessagePtr message)
          cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, distance * 2);
          cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 1);
          cursor.removeSelectedText();
-
-         auto* table = cursor.insertTable(1, 4, tableFormat_);
-
-         QString time = data(partyId, distance, Column::Time);
-         table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
-
-         QImage image = statusImage(partyId, distance);
-         table->cellAt(0, 1).firstCursorPosition().insertImage(image);
-
-         QString user = data(partyId, distance, Column::User);
-         table->cellAt(0, 2).firstCursorPosition().insertHtml(user);
-
-         QString message = data(partyId, distance, Column::Message);
-         table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
+         
+         insertMessageInDoc(cursor, partyId, distance);
 
          setTextCursor(cursor);
       }

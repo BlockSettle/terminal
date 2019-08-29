@@ -113,6 +113,7 @@ private:
    void registerMessage(const std::string& partyId, int messageIndex);
    Chat::MessagePtr findMessage(const std::string& partyId, const std::string& messageId);
    void notifyMessageChanged(Chat::MessagePtr message);
+   void insertMessageInDoc(QTextCursor& cursor, const std::string& partyId, int index);
 
    QTextDocument* getTextDocumentFromPartyId(const std::string& partyId);
 
