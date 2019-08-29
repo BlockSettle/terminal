@@ -1,6 +1,6 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
-import QtQuick.Controls 2.2
+import QtQuick.Controls 2.4
 
 import com.blocksettle.TXInfo 1.0
 import com.blocksettle.PasswordDialogData 1.0
@@ -181,38 +181,42 @@ CustomTitleDialogWindow {
 
             // SettlementAddress
             CustomLabel {
-                Layout.columnSpan: 2
                 visible: passwordDialogData.contains("SettlementAddress")
                 Layout.fillWidth: true
                 text: qsTr("Settlement Address")
             }
-            CustomLabelValue {
-                Layout.columnSpan: 2
+            CustomLabelCopyableValue {
+                id: settlementAddress
                 visible: passwordDialogData.contains("SettlementAddress")
                 text: passwordDialogData.value("SettlementAddress")
-                Layout.leftMargin: 5
-                //Layout.alignment: Qt.AlignRight
+                    .truncString(passwordDialogData.contains("RequesterAuthAddress") ? passwordDialogData.value("RequesterAuthAddress").length : 30)
+                Layout.alignment: Qt.AlignRight
+                textForCopy: passwordDialogData.value("SettlementAddress")
+
+                ToolTip.text: passwordDialogData.value("SettlementAddress")
+                ToolTip.delay: 150
+                ToolTip.timeout: 5000
+                ToolTip.visible: settlementAddress.mouseArea.containsMouse
             }
 
             // SettlementId
             CustomLabel {
-                Layout.columnSpan: 2
                 visible: passwordDialogData.contains("SettlementId")
                 Layout.fillWidth: true
                 text: qsTr("Settlement Id")
             }
-            CustomLabelValue {
-                Layout.columnSpan: 2
+            CustomLabelCopyableValue {
+                id: settlementId
                 visible: passwordDialogData.contains("SettlementId")
                 text: passwordDialogData.value("SettlementId")
-                Layout.leftMargin: 5
-                //Layout.alignment: Qt.AlignRight
-            }
+                    .truncString(passwordDialogData.contains("RequesterAuthAddress") ? passwordDialogData.value("RequesterAuthAddress").length : 30)
+                Layout.alignment: Qt.AlignRight
+                textForCopy: passwordDialogData.value("SettlementId")
 
-            // separator
-            CustomLabel {
-                Layout.columnSpan: 2
-                Layout.preferredHeight: 10
+                ToolTip.text: passwordDialogData.value("SettlementId")
+                ToolTip.delay: 150
+                ToolTip.timeout: 5000
+                ToolTip.visible: settlementId.mouseArea.containsMouse
             }
 
             // Requester Authentication Address
@@ -221,7 +225,7 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
                 text: qsTr("Requester Auth")
             }
-            CustomLabelValue {
+            CustomLabelCopyableValue {
                 visible: passwordDialogData.contains("RequesterAuthAddress")
                 text: passwordDialogData.value("RequesterAuthAddress")
                 Layout.alignment: Qt.AlignRight
@@ -234,7 +238,7 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
                 text: qsTr("Responder Auth")
             }
-            CustomLabelValue {
+            CustomLabelCopyableValue {
                 visible: passwordDialogData.contains("ResponderAuthAddress")
                 text: passwordDialogData.value("ResponderAuthAddress")
                 Layout.alignment: Qt.AlignRight

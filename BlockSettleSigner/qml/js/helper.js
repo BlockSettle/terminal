@@ -401,7 +401,9 @@ function tryActivateAutoSign(walletInfo, showResult) {
     }
 
     if (walletInfo.encType === QPasswordData.Password) {
-        var passwordDialog = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
+        var passwordDialog = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo});
+
         prepareLiteModeDialog(passwordDialog)
         passwordDialog.open()
         passwordDialog.bsAccepted.connect(function() {
@@ -553,4 +555,21 @@ function updateDialogData(jsCallback, passwordDialogData) {
 
 function isLiteMode(){
     return mainWindow.isLiteMode
+}
+
+function truncString(string, maxLength) {
+    if (!string) return string
+    if (maxLength < 1) return string
+    if (string.length <= maxLength) return string
+    if (maxLength === 1) return string.substring(0,1) + '...'
+
+    var midpoint = Math.ceil(string.length / 2)
+    var toremove = string.length - maxLength
+    var lstrip = Math.ceil(toremove/2)
+    var rstrip = toremove - lstrip
+    return string.substring(0, midpoint-lstrip) + '...'  + string.substring(midpoint+rstrip)
+}
+
+String.prototype.truncString = function(maxLength){
+   return truncString(this, maxLength)
 }

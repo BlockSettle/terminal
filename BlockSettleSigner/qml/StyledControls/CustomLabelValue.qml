@@ -9,4 +9,3 @@ Label {
     padding: 5
     onLinkActivated: Qt.openUrlExternally(link)
 }
-

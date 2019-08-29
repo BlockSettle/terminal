@@ -22,11 +22,11 @@ TextField {
         border.color: BSStyle.inputsBorderColor
     }
 
-
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.RightButton
+        cursorShape: Qt.IBeamCursor
         onClicked: {
             if (mouse.button === Qt.RightButton) {
                 selectStart = root.selectionStart
@@ -44,7 +44,8 @@ TextField {
                 curPos = root.cursorPosition
                 contextMenu.popup()
                 root.cursorPosition = curPos
-                root.select(selectStart,selectEnd)            }
+                root.select(selectStart,selectEnd)
+            }
         }
 
         Menu {
