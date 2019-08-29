@@ -285,6 +285,9 @@ public:
    std::string login(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb&);
 //   void logout();
 
+protected:
+   virtual void showEvent(QShowEvent* e);
+
 public slots:
    // OTC
    void processOtcPbMessage(const std::string& data);
@@ -306,6 +309,9 @@ private slots:
    void onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
    void onMessageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
    void onUserListClicked(const QModelIndex& index);
+
+   void onActivatePartyId(const QString& userId);
+   void onRegisterNewChangingRefresh();
 
 signals:
    // OTC
@@ -345,6 +351,8 @@ private:
    std::string ownUserId_;
    std::string  currentPartyId_;
    QMap<std::string, QString> draftMessages_;
+
+   bool bNeedRefresh_ = false;
 };
 
 Q_DECLARE_METATYPE(std::vector<std::string>)

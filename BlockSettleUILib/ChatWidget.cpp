@@ -1165,7 +1165,6 @@ public:
 public:
    void sendMessage() {
       if (!canSendMessage()) {
-         Q_ASSERT(false); // "It should not be possible to send message in this state."
          return;
       }
 
@@ -1179,7 +1178,6 @@ public:
    }
    void messageArrived(const Chat::MessagePtrList& messagePtr) {
       if (!canReceiveMessage()) {
-         Q_ASSERT(false); // "It should not be possible to send message in this state."
          return;
       }
 
@@ -1561,13 +1559,13 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onMessageStateChanged, Qt::QueuedConnection);
 
    ui_->textEditMessages->setClientPartyModel(chatModelPtr);
-   ui_->input_textEdit->setAcceptRichText(false);
+
+   // Connect all signal that influence on widget appearance 
+   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
+   connect(chatModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
+   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
 
 /* TODO
-
-   // Back end changes
-   ui_->textEditMessages->setClientPartyModel(chatModelPtr);
-   ui_->input_textEdit->setAcceptRichText(false);
 
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
 
@@ -1639,16 +1637,24 @@ void ChatWidget::onLogout()
    changeState<ChatLogOutState>();
 }
 
+void ChatWidget::showEvent(QShowEvent* e)
+{
+   // refreshView
+   if (bNeedRefresh_) {
+      bNeedRefresh_ = false;
+      onActivatePartyId(QString::fromStdString(currentPartyId_));
+   }
+   
+   //QWidget:showEvent(e);
+}
+
 void ChatWidget::processOtcPbMessage(const std::string& data)
 {
 }
 
 void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString& userId)
 {
-   ChatPartiesSortProxyModel* chartProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
-   const QModelIndex partyProxyIndex = chartProxyModel->getProxyIndexById(userId.toStdString());
-   ui_->treeViewUsers->setCurrentIndex(partyProxyIndex);
-   onUserListClicked(partyProxyIndex);
+   onActivatePartyId(userId);
 }
 
 void ChatWidget::onSendButtonClicked()
@@ -1720,5 +1726,31 @@ void ChatWidget::onUserListClicked(const QModelIndex& index)
       break;
    default:
       break;
+   }
+}
+
+void ChatWidget::onActivatePartyId(const QString& userId)
+{
+   ChatPartiesSortProxyModel* chartProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
+   const QModelIndex partyProxyIndex = chartProxyModel->getProxyIndexById(userId.toStdString());
+   if (!partyProxyIndex.isValid()) {
+      currentPartyId_.clear();
+      if (ownUserId_.empty()) {
+         changeState<ChatLogOutState>();
+      }
+      else {
+         changeState<IdleState>();
+      }
+      return;
+   }
+
+   ui_->treeViewUsers->setCurrentIndex(partyProxyIndex);
+   onUserListClicked(partyProxyIndex);
+}
+
+void ChatWidget::onRegisterNewChangingRefresh()
+{
+   if (!isVisible() || !isActiveWindow()) {
+      bNeedRefresh_ = true;
    }
 }

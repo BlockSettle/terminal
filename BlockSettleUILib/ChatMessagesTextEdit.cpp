@@ -340,7 +340,8 @@ void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
    registerMessage(messagePtr->partyId(), messageIndex);
    if (messagePtr->partyMessageState() != Chat::PartyMessageState::SEEN
          && messagePtr->senderHash() != ownUserId_
-         && messagePtr->partyId() == currentPartyId_) {
+         && messagePtr->partyId() == currentPartyId_
+         && isVisible()) {
       emit messageRead(messagePtr->partyId(), messagePtr->messageId());
    }
 }
@@ -453,7 +454,7 @@ void ChatMessagesTextEdit::notifyMessageChanged(Chat::MessagePtr message)
          QTextCursor cursor(currentDoc);
          cursor.movePosition(QTextCursor::Start);
          cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, distance * 2);
-         cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 2);
+         cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 1);
          cursor.removeSelectedText();
 
          auto* table = cursor.insertTable(1, 4, tableFormat_);
