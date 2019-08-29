@@ -26,6 +26,7 @@ TextField {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.RightButton
+        cursorShape: Qt.IBeamCursor
         onClicked: {
             if (mouse.button === Qt.RightButton) {
                 selectStart = root.selectionStart
