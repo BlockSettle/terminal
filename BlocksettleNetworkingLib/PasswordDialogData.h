@@ -36,6 +36,9 @@ public:
    void setValue(const char *key, const char *value);
    void setValue(const char *key, const std::string &value);
 
+   void remove(const QString &key);
+   void remove(const char *key);
+
    Q_INVOKABLE bool contains(const QString &key);
    bool contains(const char *key) { return contains(QString::fromLatin1(key)); }
    Q_INVOKABLE void merge(PasswordDialogData *other);

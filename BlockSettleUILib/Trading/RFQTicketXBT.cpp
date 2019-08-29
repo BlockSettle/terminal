@@ -1012,10 +1012,25 @@ void RFQTicketXBT::productSelectionChanged()
          return;
       }
 
-      if (isXBTProduct()) {
+      if (isXBTProduct()) {         
+         if (ui_->pushButtonSell->isChecked()) {
+            ui_->labelWalletName->setText(tr("Payment Wallet"));
+         }
+         else {
+            ui_->labelWalletName->setText(tr("Receiving Wallet"));
+         }
          ui_->lineEditAmount->setValidator(xbtAmountValidator_);
+
       } else {
          if (currentGroupType_ == ProductGroupType::CCGroupType) {
+            if (ui_->pushButtonSell->isChecked()) {
+               ui_->labelCCWalletName->setText(tr("Delivery Wallet"));
+               ui_->labelWalletName->setText(tr("Receiving Wallet"));
+            }
+            else {
+               ui_->labelCCWalletName->setText(tr("Receiving Wallet"));
+               ui_->labelWalletName->setText(tr("Payment Wallet"));
+            }
             ui_->lineEditAmount->setValidator(ccAmountValidator_);
 
             ui_->comboBoxCCWallets->clear();
@@ -1047,6 +1062,12 @@ void RFQTicketXBT::productSelectionChanged()
                }
             }
          } else {
+            if (ui_->pushButtonSell->isChecked()) {
+               ui_->labelWalletName->setText(tr("Payment Wallet"));
+            }
+            else {
+               ui_->labelWalletName->setText(tr("Receiving Wallet"));
+            }
             ui_->lineEditAmount->setValidator(fxAmountValidator_);
          }
       }

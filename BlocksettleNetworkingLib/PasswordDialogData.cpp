@@ -183,6 +183,17 @@ void bs::sync::PasswordDialogData::setValue(const char *key, const std::string &
    setValue(key, QString::fromStdString(value));
 }
 
+void bs::sync::PasswordDialogData::remove(const QString &key)
+{
+   values_.remove(key);
+   emit dataChanged();
+}
+
+void bs::sync::PasswordDialogData::remove(const char *key)
+{
+   remove(QString::fromLatin1(key));
+}
+
 bool bs::sync::PasswordDialogData::contains(const QString &key)
 {
    return values_.contains(key);

@@ -646,9 +646,6 @@ bool HeadlessContainerListener::RequestPasswordsIfNeeded(int reqId, const std::s
    , const bs::core::wallet::TXMultiSignRequest &txMultiReq, const bs::core::WalletMap &walletMap
    , const PasswordsReceivedCb &cb)
 {
-   // FIXME: signer ui can't display stacked password input dialogs
-   // Need to rewrite code to support multi password dialog in ui or async loop
-
    Internal::PasswordDialogDataWrapper dialogData;
 
    TempPasswords tempPasswords;
