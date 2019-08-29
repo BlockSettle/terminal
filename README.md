@@ -15,14 +15,14 @@
  1. Download and install the Community version of [Visual Studio 2017](https://visualstudio.microsoft.com/downloads/), which is the minimum supported compiler. When prompted during installation, you need to download the C and C++ build tools, the Windows 8.1 SDK (`mpir` requirement), and the Windows Universal CRT SDK (`mpir` requirement).
 
  2. Install the following binaries.
-- [Python](https://www.python.org/downloads/windows/). Download the latest 3.x version. (2.7 is still supported as of Mar. 2019 but support will be dropped eventually.)
+- [Python](https://www.python.org/downloads/windows/). Download the latest 3.x version. (2.7 is still supported as of Mar. 2019 but support will be dropped eventually.) Using the Python 3.x from Visual Studio will also work.
 - [cmake](https://cmake.org/download/). Select the win64-x64 installer.
 - [MySQL Connector](https://dev.mysql.com/downloads/windows/installer/). The smaller, web-based installer is acceptable but either installer is acceptable. In the installer, install both the "Connector/C" and "Connector/C++" options. No other options are required.
 - [YASM](https://yasm.tortall.net/Download.html). Download the Win64 VS2010 ZIP archive and unpack it to `C:\Program Files\yasm`.
-- [ActiveState Perl](https://www.activestate.com/products/activeperl/downloads/).
+- [Strawberry Perl](http://strawberryperl.com/). 64 bit version. Restart the command prompt for the changes to PATH to take effect.
 - [NASM](https://www.nasm.us/). Select the latest stable version, go into the `win64` directory, and download the installer.
 
- 3. Add `%PYTHON_HOME%` and `%PYTHON_HOME%\Scripts` (Python variables) and `C:\Program Files\NASM` (the NASM directory) to the Windows `PATH` environment variable. (See "Environment Variables" under the "Advanced" tab in System Properties.)
+ 3. Add `%PYTHON_HOME%` and `%PYTHON_HOME%\Scripts` (Python variables, if you are using the Visual Studio version this is unnecessary) and `C:\Program Files\NASM` (the NASM directory) to the Windows `PATH` environment variable. (See "Environment Variables" under the "Advanced" tab in System Properties.)
 
  4. Check your home directory for spaces, which aren't allowed. For example, `C:\Satoshi Nakamoto` won't work. (`C:\Satoshi` would be okay.) If your home directory has a space in it, add the `DEV_3RD_ROOT` environment variable to Windows, as seen in the ["Terminal prerequisites"](#terminal-prerequisites) section.
 
