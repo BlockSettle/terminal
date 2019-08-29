@@ -22,7 +22,6 @@ TextField {
         border.color: BSStyle.inputsBorderColor
     }
 
-
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
@@ -44,7 +43,8 @@ TextField {
                 curPos = root.cursorPosition
                 contextMenu.popup()
                 root.cursorPosition = curPos
-                root.select(selectStart,selectEnd)            }
+                root.select(selectStart,selectEnd)
+            }
         }
 
         Menu {
