@@ -3,7 +3,7 @@ Name "BlockSettle Terminal"
 # General Symbol Definitions
 !define COMPANY "BlockSettle AB"
 !define URL http://blocksettle.com/
-!define VERSION "0.20.9"
+!define VERSION "0.20.10"
 
 # MultiUser Symbol Definitions
 !define MULTIUSER_EXECUTIONLEVEL Highest

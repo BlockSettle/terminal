@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.20.9",
-   "release_date": "28 Aug 2019",
+   "latest_version": "0.20.10",
+   "release_date": "29 Aug 2019",
    "changes": [
+      {
+         "version_string": "0.20.10",
+         "previous_version": "0.20.9",
+         "release_date": "29 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Show auth address in settlement window"
+         ],
+         "bug_fixes": [
+            "Fix wallet promotion procedure (BST-2172)",
+            "fix for settlement leaves creation at auth leaf creation",
+            "Fix CC fees"
+         ],
+         "revision": "50115148",
+         "common_revision": "fcacebbc"
+      },
       {
          "version_string": "0.20.9",
          "previous_version": "0.20.8",
