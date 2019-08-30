@@ -514,17 +514,7 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
    if (authAddr.isNull()) {
       return;
    }
-   const auto priWallet = walletsManager_->getPrimaryWallet();
-   const auto group = priWallet->getGroup(bs::hd::BlockSettle_Settlement);
-   std::shared_ptr<bs::sync::hd::SettlementLeaf> settlLeaf;
-   if (group) {
-      const auto settlGroup = std::dynamic_pointer_cast<bs::sync::hd::SettlementGroup>(group);
-      if (!settlGroup) {
-         SPDLOG_ERROR("wrong settlement group type");
-         return;
-      }
-      settlLeaf = settlGroup->getLeaf(authAddr);
-   }
+   const auto settlLeaf = authAddressManager_->getSettlementLeaf(authAddr);
 
    const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
       authKey_ = pubKey.toHexStr();

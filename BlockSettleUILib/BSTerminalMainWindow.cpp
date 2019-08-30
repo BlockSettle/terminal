@@ -374,8 +374,8 @@ void BSTerminalMainWindow::InitAuthManager()
    connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, [](const QString &addr, const QString &state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
-   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &) {
-      if (authAddrDlg_) {
+   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &walletId) {
+      if (authAddrDlg_ && walletId.isEmpty()) {
          openAuthManagerDialog();
       }
    });
