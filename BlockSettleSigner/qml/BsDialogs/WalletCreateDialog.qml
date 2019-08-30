@@ -300,6 +300,7 @@ CustomTitleDialogWindow {
                     walletInfo.desc = tfDesc.text
                     walletInfo.walletId = seed.walletId
                     walletInfo.rootId = seed.walletId
+                    walletInfo.encType = QPasswordData.Password
 
                     var createCallback = function(success, errorMsg) {
                         if (success) {
@@ -313,7 +314,8 @@ CustomTitleDialogWindow {
 
                     if (rbPassword.checked) {
                         // auth password
-                        var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInputConfirm.qml").createObject(mainWindow);
+                        var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInputConfirm.qml").createObject(mainWindow,
+                           {"walletInfo": walletInfo})
                         checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
                         checkPasswordDialog.open()
                         checkPasswordDialog.bsAccepted.connect(function(){

@@ -5,8 +5,17 @@ import QtQuick.Layouts 1.11
 import "../StyledControls"
 import "../BsStyles"
 
+import com.blocksettle.PasswordDialogData 1.0
+import com.blocksettle.AutheIDClient 1.0
+import com.blocksettle.AuthSignWalletObject 1.0
+import com.blocksettle.WalletInfo 1.0
+import com.blocksettle.QPasswordData 1.0
+
 CustomTitleDialogWindow {
     id: root
+
+    property AuthSignWalletObject  authSign: AuthSignWalletObject{}
+    property QPasswordData passwordData: QPasswordData{}
 
     property alias enteredPassword : passwordInput.text
     default property alias details: detailsContainer.data
@@ -15,13 +24,11 @@ CustomTitleDialogWindow {
     property alias btnAccept : btnAccept
     property alias passwordInput : passwordInput
 
+    readonly property int duration: 30
+
     title: qsTr("Decrypt Wallet")
     width: 350
     rejectable: true
-
-//    Component.onCompleted: {
-//        details.parent = detailsContainer
-//    }
 
     cContentItem: ColumnLayout {
         id: contentItemData
@@ -61,6 +68,7 @@ CustomTitleDialogWindow {
                 Layout.bottomMargin: 5
 
                 CustomLabel {
+                    visible: walletInfo.encType === QPasswordData.Password
                     Layout.fillWidth: true
                     Layout.minimumWidth: 110
                     Layout.preferredWidth: 110
@@ -70,6 +78,7 @@ CustomTitleDialogWindow {
 
                 CustomTextInput {
                     id: passwordInput
+                    visible: walletInfo.encType === QPasswordData.Password
                     Layout.fillWidth: true
                     Layout.topMargin: 5
                     Layout.bottomMargin: 5
@@ -85,7 +94,55 @@ CustomTitleDialogWindow {
                         if (btnAccept.enabled) btnAccept.onClicked()
                     }
                 }
+
+                CustomLabel {
+                    id: labelAuth
+                    visible: walletInfo.encType === QPasswordData.Auth
+                    text: authSign.status
+                }
             }
+
+            ColumnLayout {
+                visible: walletInfo.encType === QPasswordData.Auth
+                spacing: 5
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                Timer {
+                    id: timer
+                    property real timeLeft: duration
+                    interval: 500
+                    running: true
+                    repeat: true
+                    onTriggered: {
+                        timeLeft -= 0.5
+                        if (timeLeft <= 0) {
+                            stop()
+                            rejectAnimated()
+                        }
+                    }
+                    signal expired()
+                }
+
+                CustomLabelValue {
+                    visible: walletInfo.encType === QPasswordData.Auth
+                    text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed(0))
+                    Layout.fillWidth: true
+                }
+
+                CustomProgressBar {
+                    visible: walletInfo.encType === QPasswordData.Auth
+                    Layout.minimumHeight: 6
+                    Layout.preferredHeight: 6
+                    Layout.maximumHeight: 6
+                    Layout.bottomMargin: 10
+                    Layout.fillWidth: true
+                    to: duration
+                    value: timer.timeLeft
+                }
+            }
+
         }
     }
 
