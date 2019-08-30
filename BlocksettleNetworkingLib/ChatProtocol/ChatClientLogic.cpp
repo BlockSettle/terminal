@@ -1,5 +1,3 @@
-#include <QtDebug>
-
 #include <google/protobuf/any.pb.h>
 
 #include "ChatProtocol/ChatClientLogic.h"
@@ -66,8 +64,6 @@ namespace Chat
 
    void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettingsPtr, const LoggerPtr& loggerPtr)
    {
-      qDebug() << "ChatClientLogic::Init Thread ID:" << this->thread()->currentThreadId();
-
       if (connectionManagerPtr_) {
          // already initialized
          emit chatClientError(ChatClientLogicError::ConnectionAlreadyInitialized);
@@ -155,9 +151,12 @@ namespace Chat
 
    void ChatClientLogic::sendPacket(const google::protobuf::Message& message)
    {
-      qDebug() << "ChatClientLogic::sendRequestPacket Thread ID:" << this->thread()->currentThreadId();
+      auto packetString = ProtobufUtils::pbMessageToString(message);
 
-      loggerPtr_->debug("send: {}", ProtobufUtils::toJsonCompact(message));
+      google::protobuf::Any any;
+      any.ParseFromString(packetString);
+
+      loggerPtr_->debug("[ChatClientLogic::sendPacket] send: {}", ProtobufUtils::toJsonReadable(any));
 
       if (!connectionPtr_->isActive())
       {
@@ -165,16 +164,11 @@ namespace Chat
          return;
       }
 
-      auto packetString = ProtobufUtils::pbMessageToString(message);
-
       if (!connectionPtr_->send(packetString))
       {
          loggerPtr_->error("[ChatClientLogic::sendPacket] Failed to send packet!");
          return;
       }
-
-      google::protobuf::Any any;
-      any.PackFrom(message);
 
       if (any.Is<PartyMessagePacket>())
       {

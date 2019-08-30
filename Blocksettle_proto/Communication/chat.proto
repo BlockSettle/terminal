@@ -114,7 +114,8 @@ message PartyPacket
 message WelcomeRequest
 {
     string user_name = 1;
-    bytes client_public_key = 2;
+    string user_email = 2;
+    bytes client_public_key = 3;
 }
 
 message WelcomeResponse

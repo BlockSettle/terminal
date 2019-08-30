@@ -1,4 +1,3 @@
-#include <QtDebug>
 #include <QThread>
 #include <QUuid>
 #include <QDateTime>
@@ -112,8 +111,6 @@ namespace Chat
 
    void ClientConnectionLogic::onConnected(void)
    {
-      qDebug() << "ClientConnectionLogic::onConnected Thread ID:" << this->thread()->currentThreadId();
-
       Chat::WelcomeRequest welcomeRequest;
       welcomeRequest.set_user_name(currentUserPtr()->userName());
       welcomeRequest.set_client_public_key(currentUserPtr()->publicKey().toBinStr());
