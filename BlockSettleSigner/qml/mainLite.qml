@@ -83,8 +83,8 @@ ApplicationWindow {
     }
 
     function moveMainWindowToScreenCenter() {
-        mainWindow.x = Screen.virtualX + (Screen.width - mainWindow.width) / 2
-        mainWindow.y = Screen.virtualY + (Screen.height - mainWindow.height) / 2
+//        mainWindow.x = Screen.virtualX + (Screen.width - mainWindow.width) / 2
+//        mainWindow.y = Screen.virtualY + (Screen.height - mainWindow.height) / 2
     }
 
     function resizeAnimated(w,h) {
@@ -96,12 +96,23 @@ ApplicationWindow {
         mwHeightAnimation.to = h
         mwHeightAnimation.start()
 
+       // mainWindow.x = 0
+       // mainWindow.y = 0
+
+//        mwXAnimation.from = mainWindow.x
+//        mwXAnimation.to = Screen.virtualX + (Screen.width - w) / 2
+//        mwXAnimation.start()
+
+//        mwYAnimation.from = mainWindow.y
+//        mwYAnimation.to = Screen.virtualY + (Screen.height - h) / 2
+//        mwYAnimation.start()
+
         mwXAnimation.from = mainWindow.x
-        mwXAnimation.to = Screen.virtualX + (Screen.width - w) / 2
+        mwXAnimation.to = 0
         mwXAnimation.start()
 
         mwYAnimation.from = mainWindow.y
-        mwYAnimation.to = Screen.virtualY + (Screen.height - h) / 2
+        mwYAnimation.to = 50
         mwYAnimation.start()
     }
 

@@ -52,6 +52,7 @@ public:
    void hideQmlWindow();
 
    Q_INVOKABLE QString getUrlPath(const QUrl &url);
+   Q_INVOKABLE void reparentToTerminal();
 
 signals:
    void cancelSignTx(const QString &txId);

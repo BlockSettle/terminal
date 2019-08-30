@@ -313,6 +313,7 @@ function prepareLiteModeDialog(dialog) {
         mainWindow.resizeAnimated(w, h)
     })
     raiseWindow(mainWindow)
+    qmlAppObj.reparentToTerminal()
 }
 
 

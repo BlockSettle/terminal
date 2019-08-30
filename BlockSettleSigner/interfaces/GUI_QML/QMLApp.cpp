@@ -29,6 +29,7 @@
 #include <QGuiApplication>
 #include <QSplashScreen>
 #include <QQuickWindow>
+#include <QWindow>
 
 #include <spdlog/spdlog.h>
 
@@ -37,6 +38,50 @@
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
 #endif // BS_USE_DBUS
+
+#ifdef Q_OS_WIN
+#include "WinUser.h"
+
+// Structure used to communicate data from and to enumeration procedure
+struct EnumData {
+    DWORD dwProcessId;
+    HWND hWnd;
+};
+
+// Application-defined callback for EnumWindows
+BOOL CALLBACK EnumProc(HWND hWnd, LPARAM lParam) {
+    // Retrieve storage location for communication data
+    EnumData& ed = *(EnumData*)lParam;
+    DWORD dwProcessId = 0x0;
+    // Query process ID for hWnd
+    GetWindowThreadProcessId(hWnd, &dwProcessId);
+    // Apply filter - if you want to implement additional restrictions,
+    // this is the place to do so.
+    if (ed.dwProcessId == dwProcessId) {
+        // Found a window matching the process ID
+        ed.hWnd = hWnd;
+        // Report success
+        SetLastError(ERROR_SUCCESS);
+        // Stop enumeration
+        return FALSE;
+    }
+    // Continue enumeration
+    return TRUE;
+}
+
+HWND FindWindowFromProcessId(DWORD dwProcessId) {
+    EnumData ed = {dwProcessId};
+    if (!EnumWindows(EnumProc, (LPARAM)&ed) && (GetLastError() == ERROR_SUCCESS)) {
+        return ed.hWnd;
+    }
+    return NULL;
+}
+
+HWND FindWindowFromProcess(HANDLE hProcess) {
+    return FindWindowFromProcessId(GetProcessId(hProcess));
+}
+
+#endif
 
 Q_DECLARE_METATYPE(bs::core::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(bs::wallet::TXInfo)
@@ -269,7 +314,77 @@ QString QMLAppObj::getUrlPath(const QUrl &url)
          path.remove(0, 1);
       }
 #endif
-   return path;
+      return path;
+}
+
+void QMLAppObj::reparentToTerminal()
+{
+#ifdef Q_OS_WIN
+   QWindow *window = qobject_cast<QWindow *>(rootObj_);
+   if (window) {
+      //window->setFlags(Qt::FramelessWindowHint);
+
+      HWND signerWid = (HWND)window->winId();
+      //HWND terminalWid = FindWindowFromProcessId((DWORD)settings_->terminalPid());
+      HWND terminalWid = (HWND)settings_->terminalPid();
+
+      QWindow *twindow = QWindow::fromWinId(settings_->terminalPid());
+
+
+//      window->setParent(twindow);
+
+
+//      connect(window, &QWindow::widthChanged, [twindow](int w){
+//         twindow->resize(w, twindow->height());
+//      });
+//      connect(window, &QWindow::heightChanged, [twindow](int h){
+//         twindow->resize(twindow->width(), h);
+//      });
+//      twindow->show();
+
+//      window->setFlags(Qt::Dialog);
+//      window->setModality(Qt::ApplicationModal);
+
+
+      SetParent(signerWid, terminalWid);
+      UpdateWindow(signerWid);
+
+
+      //First get the current Window Styles
+      LONG lStyle = GetWindowLong(signerWid, GWL_STYLE);
+
+      lStyle &= ~WS_CHILD;        //remove the CHILD style
+      lStyle &= ~WS_DISABLED;        //remove the DISABLED style
+      //lStyle &= ~WS_CAPTION;
+
+      lStyle |= WS_POPUPWINDOW;            //Add the POPUP style
+      lStyle |= WS_VISIBLE;        //Add the VISIBLE style
+      lStyle |= WS_DLGFRAME;        //Add the VISIBLE style
+
+      //Now set the Modified Window Style
+      SetWindowLong(signerWid, GWL_STYLE, lStyle);
+
+      LONG exStyle = GetWindowLong(terminalWid, GWL_EXSTYLE);
+      //exStyle &= ~WS_EX_OVERLAPPEDWINDOW;
+      //exStyle |= WS_EX_DLGMODALFRAME;
+      //exStyle |= WS_EX_NOPARENTNOTIFY;
+      //exStyle |= WS_EX_TOPMOST;
+      exStyle |= WS_EX_CONTROLPARENT;
+
+      SetWindowLong(terminalWid, GWL_EXSTYLE, exStyle);
+
+      UpdateWindow(terminalWid);
+
+//      ShowWindow(terminalWid, SW_SHOW);
+//      ShowWindow(signerWid, SW_SHOW);
+
+
+//      ::SetWindowPos(signerWid, HWND_TOP, 0, 0,
+//                     window->width(), window->height(), SWP_FRAMECHANGED);
+
+      //ShowWindow((HWND)wid, SW_SHOW);
+   }
+#endif
 }
 
 void QMLAppObj::onSysTrayMsgClicked()

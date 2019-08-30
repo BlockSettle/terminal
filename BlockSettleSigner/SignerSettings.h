@@ -98,6 +98,7 @@ public:
    static int intervalStrToSeconds(const QString &);
 
    int signerPort() { return signerPort_; }
+   long long terminalPid() const { return terminalPid_; }
 
 signals:
    void offlineChanged();
@@ -127,6 +128,7 @@ private:
    std::string srvIDKey_;
    int signerPort_{};
    bs::signer::ui::RunMode runMode_{};
+   long long terminalPid_;
    std::unique_ptr<Settings> d_;
 };
 

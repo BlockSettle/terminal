@@ -73,6 +73,8 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
          , cxxopts::value<double>(autoSignSpendLimit))
       ("g,guimode", "GUI run mode"
          , cxxopts::value<std::string>(guiMode)->default_value("fullgui"))
+      ("t,terminal_pid", "Terminal PID (only for full gui mode)"
+         , cxxopts::value<long long>(terminalPid_))
       ;
 
    try {

@@ -184,6 +184,7 @@ bool SignerSettings::loadSettings(const std::shared_ptr<HeadlessSettings> &mainS
       return false;
    }
    runMode_ = static_cast<bs::signer::ui::RunMode>(mainSettings->runMode());
+   terminalPid_ = mainSettings->terminalPid();
    srvIDKey_ = mainSettings->serverIdKey().toHexStr();
    signerPort_ = mainSettings->interfacePort();
    d_->set_test_net(mainSettings->testNet());
@@ -492,3 +493,4 @@ void SignerSettings::setStringSetting(const QString &val, std::string *oldValue,
       settingChanged(setting);
    }
 }
+

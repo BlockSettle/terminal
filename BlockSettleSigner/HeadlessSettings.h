@@ -40,6 +40,7 @@ public:
    bool offline() const;
 
    bs::signer::RunMode runMode() const { return runMode_; }
+   long long terminalPid() const { return terminalPid_; }
 
    BinaryData serverIdKey() const { return serverIdKey_; }
    void setServerIdKey(const BinaryData &key) { serverIdKey_ = key; }
@@ -58,6 +59,7 @@ private:
    std::string logFile_;
    std::string termIDKeyStr_;
    bs::signer::RunMode runMode_;
+   long long terminalPid_;
    std::string walletsDir_;
    std::unique_ptr<Settings> d_;
    BinaryData  serverIdKey_;
