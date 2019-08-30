@@ -196,7 +196,7 @@ message RequestSearchUser
 
 message ReplySearchUser
 {
-    string user_name = 1;
+    repeated string user_name = 1;
     string search_id = 2;
 }
 
