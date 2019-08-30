@@ -113,6 +113,7 @@ namespace Chat
    {
       Chat::WelcomeRequest welcomeRequest;
       welcomeRequest.set_user_name(currentUserPtr()->userName());
+      welcomeRequest.set_user_email(currentUserPtr()->userEmail());
       welcomeRequest.set_client_public_key(currentUserPtr()->publicKey().toBinStr());
 
       emit sendPacket(welcomeRequest);

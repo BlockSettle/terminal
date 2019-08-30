@@ -105,6 +105,7 @@ namespace Chat
       connectionPtr_->setCBs(cb);
 
       currentUserPtr_->setUserName(userHasherPtr_->deriveKey(email));
+      currentUserPtr_->setUserEmail(email);
       clientPartyModelPtr()->setOwnUserName(currentUserPtr_->userName());
 
       if (!connectionPtr_->openConnection(this->getChatServerHost(), this->getChatServerPort(), this))
