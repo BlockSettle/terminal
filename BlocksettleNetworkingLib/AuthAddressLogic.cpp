@@ -90,9 +90,7 @@ ValidationAddressManager::ValidationAddressManager(
    ready_.store(false, std::memory_order_relaxed);
 
    auto&& wltIdSbd = CryptoPRNG::generateRandom(12);
-   walletObj_ = std::make_shared<AsyncClient::BtcWallet>(
-      connPtr_->bdv()->instantiateWallet(
-         wltIdSbd.toHexStr()));
+   walletObj_ = connPtr_->instantiateWallet(wltIdSbd.toHexStr());
 }
 
 ////
@@ -357,8 +355,98 @@ bool ValidationAddressManager::isValid(const bs::Address& addr) const
    return true;
 }
 
+
+bool ValidationAddressManager::getOutpointBatch(const bs::Address &addr
+   , const std::function<void(const OutpointBatch &)> &cb) const
+{
+   if (!connPtr_ || !connPtr_->bdv()) {
+      return false;
+   }
+   //#1: check the user address has no history
+   std::vector<BinaryData> addrVec;
+   addrVec.push_back(addr.prefixed());
+
+   auto outpointCb = [cb](ReturnMessage<OutpointBatch> outputBatch)->void
+   {
+      try {
+         const auto batch = outputBatch.get();
+         if (cb) {
+            cb(batch);
+         }
+      }
+      catch (const std::exception &) {
+         if (cb) {
+            cb({});
+         }
+      }
+   };
+   connPtr_->bdv()->getOutpointsForAddresses(addrVec, 0, 0, outpointCb);
+   return true;
+}
+
+bool ValidationAddressManager::getSpendableTxOutList(const std::function<void(const std::vector<UTXO> &)> &cb) const
+{
+   if (!connPtr_ || (connPtr_->state() != ArmoryState::Ready)) {
+      return false;
+   }
+   auto spendableCb = [this, cb](
+      ReturnMessage<std::vector<UTXO>> utxoVec)->void
+   {
+      try {
+         const auto& utxos = utxoVec.get();
+         if (utxos.size() == 0) {
+            throw AuthLogicException("no utxos available");
+         }
+         if (cb) {
+            cb(utxos);
+         }
+      } catch (const std::exception &) {
+         if (cb) {
+            cb({});
+         }
+      }
+   };
+   walletObj_->getSpendableTxOutListForValue(UINT64_MAX, spendableCb);
+   return true;
+}
+
+UTXO ValidationAddressManager::getVettingUtxo(const bs::Address &validationAddr
+   , const std::vector<UTXO> &utxos) const
+{
+   for (const auto& utxo : utxos) {
+      //find the validation address for this utxo
+      auto scrAddr = utxo.getRecipientScrAddr();
+
+      //filter by desired validation address if one was provided
+      if (!validationAddr.isNull() && (scrAddr != validationAddr.prefixed())) {
+         continue;
+      }
+      auto maStructPtr = getValidationAddress(scrAddr);
+      if (maStructPtr == nullptr) {
+         continue;
+      }
+      //is validation address valid?
+      if (!isValid(scrAddr)) {
+         continue;
+      }
+      //The first utxo of a validation address isn't eligible to vet
+      //user addresses with. Filter that out.
+
+      if (maStructPtr->isFirstOutpoint(utxo.getTxHash(), utxo.getTxOutIndex())) {
+         continue;
+      }
+      //utxo should have enough value to cover vetting amount +
+      //vetting tx fee + return tx fee
+      if (utxo.getValue() < 3000) { //arbitrary place holder value
+         continue;
+      }
+      return utxo;
+   }
+   return {};
+}
+
 ////
-BinaryData ValidationAddressManager::vetUserAddress(
+BinaryData ValidationAddressManager::fundUserAddress(
    const bs::Address& addr,
    std::shared_ptr<ResolverFeed> feedPtr,
    const bs::Address& validationAddr) const
@@ -372,75 +460,53 @@ BinaryData ValidationAddressManager::vetUserAddress(
 
    auto promPtr = std::make_shared<std::promise<bool>>();
    auto fut = promPtr->get_future();
-   auto outpointCb = [promPtr](ReturnMessage<OutpointBatch> outputBatch)->void
+   auto outpointCb = [promPtr](const OutpointBatch &batch)->void
    {
-      auto batch = outputBatch.get();
-      if (batch.outpoints_.size() > 0)
+      if (batch.outpoints_.size() > 0) {
          promPtr->set_value(false);
-      else
+      }
+      else {
          promPtr->set_value(true);
+      }
    };
 
-   connPtr_->bdv()->getOutpointsForAddresses(
-      addrVec, 0, 0, outpointCb);
+   getOutpointBatch(addr, outpointCb);
    if (!fut.get()) {
       throw AuthLogicException("can only vet virgin user addresses");
    }
+
    std::unique_lock<std::mutex> lock(vettingMutex_);
 
    //#2: grab a utxo from a validation address
    auto promPtr2 = std::make_shared<std::promise<UTXO>>();
    auto fut2 = promPtr2->get_future();
    auto spendableCb = [this, promPtr2, &validationAddr](
-      ReturnMessage<std::vector<UTXO>> utxoVec)->void
+      const std::vector<UTXO> &utxos)->void
    {
-      try {
-         const auto& utxos = utxoVec.get();
-         if (utxos.size() == 0) {
-            throw AuthLogicException("no utxos available to vet with");
-         }
-         for (const auto& utxo : utxos) {
-            //find the validation address for this utxo
-            auto scrAddr = utxo.getRecipientScrAddr();
-
-            //filter by desired validation address if one was provided
-            if (validationAddr.getSize() != 0 && scrAddr != validationAddr.prefixed()) {
-               continue;
-            }
-            auto maStructPtr = getValidationAddress(scrAddr);
-            if (maStructPtr == nullptr) {
-               continue;
-            }
-            //is validation address valid?
-            if (!isValid(scrAddr)) {
-               continue;
-            }
-            //The first utxo of a validation address isn't eligible to vet
-            //user addresses with. Filter that out.
-
-            if (maStructPtr->isFirstOutpoint(utxo.getTxHash(), utxo.getTxOutIndex())) {
-               continue;
-            }
-            //utxo should have enough value to cover vetting amount +
-            //vetting tx fee + return tx fee
-            if (utxo.getValue() < 3000) { //arbitrary place holder value
-               continue;
-            }
-            promPtr2->set_value(utxo);
-            return;
-         }
-
-         throw AuthLogicException("could not select a utxo to vet with");
-      }
-      catch (std::exception&) {
+      if (utxos.empty()) {
          auto ePtr = std::current_exception();
          promPtr2->set_exception(ePtr);
+         return;
       }
+      const auto utxo = getVettingUtxo(validationAddr, utxos);
+      if (utxo.isInitialized()) {
+         promPtr2->set_value(utxo);
+         return;
+      }
+      throw AuthLogicException("could not select a utxo to vet with");
    };
+   getSpendableTxOutList(spendableCb);
 
-   walletObj_->getSpendableTxOutListForValue(UINT64_MAX, spendableCb);
-   auto&& vettingUtxo = fut2.get();
+   return fundUserAddress(addr, feedPtr, fut2.get());
+}
 
+// fundUserAddress was divided because actual signing will be performed
+// in OT which doesn't have access to ArmoryConnection
+BinaryData ValidationAddressManager::fundUserAddress(
+   const bs::Address& addr,
+   std::shared_ptr<ResolverFeed> feedPtr,
+   const UTXO &vettingUtxo) const
+{
    //#3: create vetting tx
    Signer signer;
    signer.setFeed(feedPtr);
@@ -452,19 +518,29 @@ BinaryData ValidationAddressManager::vetUserAddress(
    //vetting output
    signer.addRecipient(addr.getRecipient(AUTH_VALUE_THRESHOLD));
 
-   //change: vetting coin value + fee
-   uint64_t changeVal = vettingUtxo.getValue() - AUTH_VALUE_THRESHOLD - 1000;
-
-   auto scrAddr = vettingUtxo.getRecipientScrAddr();
-   auto addrIter = validationAddresses_.find(scrAddr);
+   const auto scrAddr = vettingUtxo.getRecipientScrAddr();
+   const auto addrIter = validationAddresses_.find(scrAddr);
    if (addrIter == validationAddresses_.end()) {
       throw AuthLogicException("input addr not found in validation addresses");
    }
-   signer.addRecipient(addrIter->first.getRecipient(changeVal));
+
+   //change: vetting coin value + fee
+   const uint64_t changeVal = vettingUtxo.getValue() - AUTH_VALUE_THRESHOLD - 1000;
+   if (changeVal > 0) {
+      signer.addRecipient(addrIter->first.getRecipient(changeVal));
+   }
 
    //sign & serialize tx
    signer.sign();
-   auto&& signedTx = signer.serialize();
+   return signer.serialize();
+}
+
+BinaryData ValidationAddressManager::vetUserAddress(
+   const bs::Address& addr,
+   std::shared_ptr<ResolverFeed> feedPtr,
+   const bs::Address& validationAddr) const
+{
+   const auto signedTx = fundUserAddress(addr, feedPtr, validationAddr);
 
    //broadcast the zc
    connPtr_->pushZC(signedTx);

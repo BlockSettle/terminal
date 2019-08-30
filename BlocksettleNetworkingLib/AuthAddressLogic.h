@@ -238,6 +238,9 @@ private:
    std::shared_ptr<ValidationAddressStruct>
       getValidationAddress(const bs::Address&);
 
+   UTXO getVettingUtxo(const bs::Address &validationAddr
+      , const std::vector<UTXO> &) const;
+
    const std::shared_ptr<ValidationAddressStruct>
       getValidationAddress(const bs::Address&) const;
 
@@ -273,10 +276,17 @@ public:
    bool hasSpendableOutputs(const bs::Address&) const;
    bool hasZCOutputs(const bs::Address&) const;
 
+   bool getOutpointBatch(const bs::Address &, const std::function<void(const OutpointBatch &)> &) const;
+   bool getSpendableTxOutList(const std::function<void(const std::vector<UTXO> &)> &) const;
+
    const bs::Address& findValidationAddressForUTXO(const UTXO&) const;
    const bs::Address& findValidationAddressForTxHash(const BinaryData&) const;
 
    //tx generating methods
+   BinaryData fundUserAddress(const bs::Address&, std::shared_ptr<ResolverFeed>,
+      const bs::Address& validationAddr = BinaryData()) const;
+   BinaryData fundUserAddress(const bs::Address&, std::shared_ptr<ResolverFeed>,
+      const UTXO &) const;
    BinaryData vetUserAddress(const bs::Address&, std::shared_ptr<ResolverFeed>,
       const bs::Address& validationAddr = BinaryData()) const;
    BinaryData revokeValidationAddress(
