@@ -2,7 +2,6 @@
 #define CHATCLIENTUSERVIEW_H
 
 #include <QTreeView>
-#include "ChatHandleInterfaces.h"
 #include "ChatUsersViewItemStyle.h"
 #include "ChatProtocol/ChatClientService.h"
 
@@ -20,11 +19,7 @@ class ChatUserListTreeView : public QTreeView
 
 public:
    ChatUserListTreeView(QWidget * parent = nullptr);
-   void addWatcher(ViewItemWatcher* watcher);
    void setActiveChatLabel(QLabel * label);
-   void setHandler(ChatItemActionsHandler * handler);
-   void setCurrentUserChat(const std::string &userId);
-   void updateCurrentChat();
    void setChatClientServicePtr(const Chat::ChatClientServicePtr& chatClientServicePtr);
 
 public slots:
@@ -32,9 +27,7 @@ public slots:
 
 protected slots:
    void currentChanged(const QModelIndex& current, const QModelIndex& previous) override;
-   void dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles) override;
    void rowsInserted(const QModelIndex& parent, int start, int end) override;
-   void rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end) override;
 
 private slots:
    void onClicked(const QModelIndex &);
@@ -49,18 +42,13 @@ private:
    PartyTreeItem* internalPartyTreeItem(const QModelIndex& index);
    const ChatPartiesTreeModel* internalChatPartiesTreeModel(const QModelIndex& index);
    void updateDependUi(const QModelIndex& index);
-   void notifyCurrentChanged(CategoryElement *element);
-   void notifyMessageChanged(std::shared_ptr<Chat::Data> message);
-   void notifyElementUpdated(CategoryElement *element);
-   void notifyCurrentAboutToBeRemoved();
    const Chat::ClientPartyPtr clientPartyPtrFromAction(const QAction* action);
 
 private:
    friend ChatUsersContextMenu;
-   std::list<ViewItemWatcher* > watchers_;
-   ChatItemActionsHandler * handler_;
    QLabel * label_;
    QMenu* contextMenu_;
    Chat::ChatClientServicePtr chatClientServicePtr_;
 };
+
 #endif // CHATCLIENTUSERVIEW_H

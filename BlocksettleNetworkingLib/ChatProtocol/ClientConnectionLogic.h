@@ -24,6 +24,7 @@ namespace Chat
 {
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
    using ApplicationSettingsPtr = std::shared_ptr<ApplicationSettings>;
+   using SearchUserReplyList = std::vector<std::string>;
 
    enum class ClientConnectionLogicError
    {
@@ -52,6 +53,7 @@ namespace Chat
       void prepareRequestPrivateParty(const std::string& partyId);
       void rejectPrivateParty(const std::string& partyId);
       void acceptPrivateParty(const std::string& partyId);
+      void searchUser(const std::string& userHash, const std::string& searchId);
 
    public slots:
       void onDataReceived(const std::string&);
@@ -60,7 +62,6 @@ namespace Chat
       void onError(DataConnectionListener::DataConnectionError);
 
       void messagePacketSent(const std::string& messageId);
-      void sendPrivatePartyState(const std::string& partyId, const Chat::PartyState& partyState);
 
       void sessionKeysForUser(const Chat::SessionKeyDataPtr& sessionKeyDataPtr);
       void sessionKeysForUserFailed(const std::string& userName);
@@ -70,8 +71,8 @@ namespace Chat
       void closeConnection();
       void userStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
       void error(const Chat::ClientConnectionLogicError& errorCode, const std::string& what);
-
       void properlyConnected();
+      void searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
 
    private slots:
       void handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "");
@@ -95,6 +96,7 @@ namespace Chat
       void handleRequestSessionKeyExchange(const google::protobuf::Message& msg);
       void handleReplySessionKeyExchange(const google::protobuf::Message& msg);
       void handlePrivatePartyStateChanged(const google::protobuf::Message& msg);
+      void handleReplySearchUser(const google::protobuf::Message& msg);
 
       void incomingGlobalPartyMessage(const google::protobuf::Message& msg);
       void incomingPrivatePartyMessage(const google::protobuf::Message& msg);
@@ -111,5 +113,7 @@ namespace Chat
 
    using ClientConnectionLogicPtr = std::shared_ptr<ClientConnectionLogic>;
 }
+
+Q_DECLARE_METATYPE(Chat::SearchUserReplyList)
 
 #endif // ConnectionLogic_h__

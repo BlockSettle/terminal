@@ -30,6 +30,7 @@ namespace Chat
       void RejectPrivateParty(const std::string& partyId);
       void DeletePrivateParty(const std::string& partyId);
       void AcceptPrivateParty(const std::string& partyId);
+      void SearchUser(const std::string& userHash, const std::string& searchId);
 
       ////////// RETURN SIGNALS //////////
       void chatUserUserNameChanged(const std::string& chatUserDisplayName);
@@ -38,6 +39,7 @@ namespace Chat
       void clientLoggedInToServer();
       void partyModelChanged();
       void initDone();
+      void searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
    };
 
    using ChatClientServicePtr = std::shared_ptr<ChatClientService>;

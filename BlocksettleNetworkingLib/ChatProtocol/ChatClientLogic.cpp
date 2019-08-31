@@ -1,3 +1,5 @@
+#include <QRegularExpression>
+#include <QRegularExpressionMatch>
 #include <google/protobuf/any.pb.h>
 
 #include "ChatProtocol/ChatClientLogic.h"
@@ -15,6 +17,8 @@
 
 namespace Chat
 {
+
+   const auto kEmailRegex = QStringLiteral(R"(^\S+@\S+\.\S+$)");
 
    ChatClientLogic::ChatClientLogic()
    {
@@ -49,9 +53,9 @@ namespace Chat
       connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error),
          clientConnectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
       connect(this, &ChatClientLogic::messagePacketSent, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::messagePacketSent);
-
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::sendPacket, this, &ChatClientLogic::sendPacket);
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::searchUserReply, this, &ChatClientLogic::searchUserReply);
 
       // close connection from callback
       connect(this, &ChatClientLogic::disconnected, this, &ChatClientLogic::onCloseConnection);
@@ -275,6 +279,28 @@ namespace Chat
       }
 
       clientPartModelPtr->removeParty(partyPtr);
+   }
+
+   void ChatClientLogic::SearchUser(const std::string& userHash, const std::string& searchId)
+   {
+      QRegularExpression re(kEmailRegex);
+      if (!re.isValid())
+      {
+         return;
+      }
+      QRegularExpressionMatch match = re.match(QString::fromStdString(userHash));
+
+      std::string stringToSearch;
+      if (match.hasMatch())
+      {
+         stringToSearch = userHasherPtr_->deriveKey(userHash);
+      }
+      else
+      {
+         stringToSearch = userHash;
+      }
+
+      clientConnectionLogicPtr_->searchUser(stringToSearch, searchId);
    }
 
 }

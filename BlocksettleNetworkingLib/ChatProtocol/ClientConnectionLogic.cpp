@@ -2,6 +2,7 @@
 #include <QUuid>
 #include <QDateTime>
 #include <QFutureWatcher>
+#include <QMetaType>
 
 #include <google/protobuf/any.pb.h>
 
@@ -21,6 +22,8 @@ namespace Chat
       const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, const Chat::CryptManagerPtr& cryptManagerPtr, QObject* parent /* = nullptr */)
       : QObject(parent), cryptManagerPtr_(cryptManagerPtr), loggerPtr_(loggerPtr), clientDBServicePtr_(clientDBServicePtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
    {
+      qRegisterMetaType<Chat::SearchUserReplyList>();
+
       connect(this, &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr_.get(), &ClientPartyLogic::onUserStatusChanged);
       connect(this, &ClientConnectionLogic::error, this, &ClientConnectionLogic::handleLocalErrors);
 
@@ -102,6 +105,13 @@ namespace Chat
       if (ProtobufUtils::pbStringToMessage<PrivatePartyStateChanged>(data, &privatePartyStateChanged))
       {
          handlePrivatePartyStateChanged(privatePartyStateChanged);
+         return;
+      }
+
+      ReplySearchUser replySearchUser;
+      if (ProtobufUtils::pbStringToMessage<ReplySearchUser>(data, &replySearchUser))
+      {
+         handleReplySearchUser(replySearchUser);
          return;
       }
 
@@ -435,11 +445,18 @@ namespace Chat
       // local party exist
       if (partyPtr)
       {
-         if (PartyState::INITIALIZED == partyPtr->partyState() || PartyState::REJECTED == partyPtr->partyState())
+         // party is in initialized or rejected state (already accepted)
+         // send this state to requester
+
+         if (PartyState::INITIALIZED == partyPtr->partyState())
          {
-            // party is in initialized or rejected state (already accepted)
-            // send this state to requester
-            sendPrivatePartyState(partyPtr->id(), partyPtr->partyState());
+            acceptPrivateParty(partyPtr->id());
+            return;
+         }
+
+         if (PartyState::REJECTED == partyPtr->partyState())
+         {
+            rejectPrivateParty(partyPtr->id());
             return;
          }
 
@@ -448,16 +465,6 @@ namespace Chat
 
       // local party not exist, create new one
       clientPartyLogicPtr_->createPrivatePartyFromPrivatePartyRequest(currentUserPtr(), privatePartyRequest);
-   }
-
-   void ClientConnectionLogic::sendPrivatePartyState(const std::string& partyId, const Chat::PartyState& partyState)
-   {
-      PrivatePartyRequest privatePartyRequest;
-      PartyPacket* partyPacket = privatePartyRequest.mutable_party_packet();
-      partyPacket->set_party_id(partyId);
-      partyPacket->set_party_state(partyState);
-
-      sendPacket(privatePartyRequest);
    }
 
    void ClientConnectionLogic::requestSessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey)
@@ -686,6 +693,30 @@ namespace Chat
       }
 
       clientPartyPtr->setPartyState(privatePartyStateChanged.party_state());
+   }
+
+   void ClientConnectionLogic::handleReplySearchUser(const google::protobuf::Message& msg)
+   {
+      ReplySearchUser replySearchUser;
+      replySearchUser.CopyFrom(msg);
+
+      SearchUserReplyList searchUserReplyList;
+
+      for (const auto& searchUser : replySearchUser.user_name())
+      {
+         searchUserReplyList.push_back(searchUser);
+      }
+
+      emit searchUserReply(searchUserReplyList, replySearchUser.search_id());
+   }
+
+   void ClientConnectionLogic::searchUser(const std::string& userHash, const std::string& searchId)
+   {
+      RequestSearchUser requestSearchUser;
+      requestSearchUser.set_search_id(searchId);
+      requestSearchUser.set_search_text(userHash);
+
+      emit sendPacket(requestSearchUser);
    }
 
 }

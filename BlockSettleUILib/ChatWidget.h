@@ -312,6 +312,8 @@ private slots:
 
    void onActivatePartyId(const QString& userId);
    void onRegisterNewChangingRefresh();
+   void onShowUserRoom(const QString& userHash);
+   void onContactFriendRequest(const QString& userHash);
 
 signals:
    // OTC
@@ -342,6 +344,7 @@ protected:
    std::unique_ptr<AbstractChatWidgetState> stateCurrent_;
 
 private:
+   void chatTransition(const Chat::ClientPartyPtr& clientPartyPtr);
    QScopedPointer<Ui::ChatWidget> ui_;
    Chat::ChatClientServicePtr    chatClientServicePtr_;
    OTCRequestViewModel* otcRequestViewModel_ = nullptr;
@@ -354,7 +357,5 @@ private:
 
    bool bNeedRefresh_ = false;
 };
-
-Q_DECLARE_METATYPE(std::vector<std::string>)
 
 #endif // CHAT_WIDGET_H

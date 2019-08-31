@@ -21,6 +21,7 @@ namespace Chat
       connect(this, &ChatClientService::RejectPrivateParty, worker(), &ChatClientLogic::RejectPrivateParty);
       connect(this, &ChatClientService::DeletePrivateParty, worker(), &ChatClientLogic::DeletePrivateParty);
       connect(this, &ChatClientService::AcceptPrivateParty, worker(), &ChatClientLogic::AcceptPrivateParty);
+      connect(this, &ChatClientService::SearchUser, worker(), &ChatClientLogic::SearchUser);
 
       ////////// RETURN SIGNALS //////////
       connect(worker(), &ChatClientLogic::chatUserUserNameChanged, this, &ChatClientService::chatUserUserNameChanged);
@@ -29,6 +30,7 @@ namespace Chat
       connect(worker(), &ChatClientLogic::properlyConnected, this, &ChatClientService::clientLoggedInToServer);
       connect(worker(), &ChatClientLogic::partyModelChanged, this, &ChatClientService::partyModelChanged);
       connect(worker(), &ChatClientLogic::initDone, this, &ChatClientService::initDone);
+      connect(worker(), &ChatClientLogic::searchUserReply, this, &ChatClientService::searchUserReply);
    }
 
    ClientPartyModelPtr ChatClientService::getClientPartyModelPtr()

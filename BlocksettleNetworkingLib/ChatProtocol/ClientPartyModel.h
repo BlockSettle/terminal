@@ -1,6 +1,7 @@
 #ifndef ClientPartyModel_h__
 #define ClientPartyModel_h__
 
+#include <QMetaType>
 #include <QObject>
 #include <memory>
 #include <unordered_map>
@@ -24,6 +25,16 @@ namespace Chat
       QObjectCast,
       PartyNotFound
    };
+
+   enum class PrivatePartyState
+   {
+      Unknown,
+      Uninitialized,
+      RequestedOutgoing,
+      RequestedIncoming,
+      Rejected,
+      Initialized
+   };
    
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
 // TODO
@@ -40,6 +51,7 @@ namespace Chat
 
       const std::string& ownUserName() const { return ownUserName_; }
       void setOwnUserName(std::string val) { ownUserName_ = val; }
+      PrivatePartyState deducePrivatePartyStateForUser(const std::string& userName);
 
    signals:
       void error(const ClientPartyModelError& errorCode, const std::string& what = "");
@@ -66,5 +78,7 @@ namespace Chat
    using ClientPartyModelPtr = std::shared_ptr<ClientPartyModel>;
 
 }
+
+Q_DECLARE_METATYPE(Chat::PrivatePartyState)
 
 #endif // ClientPartyModel_h__

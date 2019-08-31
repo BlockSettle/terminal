@@ -10,12 +10,8 @@
 #include "EditContactDialog.h"
 #include "ChatProtocol/ChatUtils.h"
 
-//using ItemType = ChatUserListTreeViewModel::ItemType;
-//using Role = ChatUserListTreeViewModel::Role;
-
 ChatUserListTreeView::ChatUserListTreeView(QWidget *parent)
    : QTreeView (parent),
-     handler_(nullptr),
      contextMenu_(nullptr)
 {
    setContextMenuPolicy(Qt::CustomContextMenu);
@@ -28,66 +24,9 @@ ChatUserListTreeView::ChatUserListTreeView(QWidget *parent)
    connect(this, &QTreeView::doubleClicked, this, &ChatUserListTreeView::onDoubleClicked);
 }
 
-// out?
-void ChatUserListTreeView::addWatcher(ViewItemWatcher * watcher)
-{
-   watchers_.push_back(watcher);
-}
-
 void ChatUserListTreeView::setActiveChatLabel(QLabel *label)
 {
    label_ = label;
-}
-
-// out?
-void ChatUserListTreeView::setCurrentUserChat(const std::string &userId)
-{
-   // find all indexes
-   QModelIndexList indexes = model()->match(model()->index(0,0),
-                                            Qt::DisplayRole,
-                                            QLatin1String("*"),
-                                            -1,
-                                            Qt::MatchWildcard|Qt::MatchRecursive);
-
-   // set required chat
-   for (auto index : indexes) {
-      auto type = index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
-      if (userId == " " && type == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
-         if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == QString::fromLatin1(ChatUtils::GlobalRoomKey)) {
-            setCurrentIndex(index);
-            break;
-         }
-      }
-      if (type == ChatUIDefinitions::ChatTreeNodeType::ContactsElement
-          || type == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement) {
-         if (index.data(ChatClientDataModel::Role::ContactIdRole).toString().toStdString() == userId) {
-            setCurrentIndex(index);
-            break;
-         }
-      }
-   }
-}
-
-// out?
-void ChatUserListTreeView::updateCurrentChat()
-{
-   auto proxyModel = qobject_cast<const QAbstractProxyModel*>(currentIndex().model());
-   QModelIndex index = proxyModel ? proxyModel->mapToSource(currentIndex()) : currentIndex();
-   TreeItem *item = static_cast<TreeItem*>(index.internalPointer());
-   if (!watchers_.empty() && item) {
-      switch (item->getType()) {
-         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
-      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
-            auto element = static_cast<CategoryElement*>(item);
-            //updateDependUI(element);
-            notifyCurrentChanged(element);
-         }
-         break;
-         default:
-            break;
-      }
-   }
 }
 
 void ChatUserListTreeView::editContact(const QModelIndex& index)
@@ -339,45 +278,6 @@ void ChatUserListTreeView::updateDependUi(const QModelIndex& index)
    }
 }
 
-// out?
-void ChatUserListTreeView::notifyCurrentChanged(CategoryElement *element)
-{
-   for (auto watcher : watchers_) {
-      watcher->onElementSelected(element);
-   }
-
-}
-
-// out?
-void ChatUserListTreeView::notifyMessageChanged(std::shared_ptr<Chat::Data> message)
-{
-   for (auto watcher : watchers_) {
-      watcher->onMessageChanged(message);
-   }
-}
-
-// out?
-void ChatUserListTreeView::notifyElementUpdated(CategoryElement *element)
-{
-   for (auto watcher : watchers_) {
-      watcher->onElementUpdated(element);
-   }
-}
-
-// out?
-void ChatUserListTreeView::notifyCurrentAboutToBeRemoved()
-{
-   for (auto watcher : watchers_) {
-      watcher->onCurrentElementAboutToBeRemoved();
-   }
-}
-
-// out?
-void ChatUserListTreeView::setHandler(ChatItemActionsHandler * handler)
-{
-   handler_ = handler;
-}
-
 void ChatUserListTreeView::currentChanged(const QModelIndex &current, const QModelIndex &previous)
 {
    QTreeView::currentChanged(current, previous);
@@ -396,65 +296,9 @@ void ChatUserListTreeView::currentChanged(const QModelIndex &current, const QMod
    }
 }
 
-void ChatUserListTreeView::dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles)
-{
-   QTreeView::dataChanged(topLeft, bottomRight, roles);
-   if (topLeft == bottomRight) {
-      auto proxyModel = qobject_cast<const QAbstractProxyModel*>(topLeft.model());
-      QModelIndex index = proxyModel ? proxyModel->mapToSource(topLeft) : topLeft;
-      TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
-      switch (item->getType()) {
-         case ChatUIDefinitions::ChatTreeNodeType::MessageDataNode: {
-            auto mnode = static_cast<TreeMessageNode*>(item);
-            notifyMessageChanged(mnode->getMessage());
-            break;
-         }
-         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
-         {
-            auto node = static_cast<CategoryElement*>(item);
-            //updateDependUI(node);
-            notifyElementUpdated(node);
-            break;
-         }
-         default:
-            break;
-      }
-   }
-}
-
 void ChatUserListTreeView::rowsInserted(const QModelIndex &parent, int start, int end)
 {
-   // ChatUIDefinitions::ChatTreeNodeType type = parent.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
-   // ChatUIDefinitions::ChatTreeNodeType supportType = parent.data(ChatClientDataModel::Role::ItemAcceptTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
-
-   // if (type == ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode)
-   //    if (supportType == ChatUIDefinitions::ChatTreeNodeType::SearchElement) {
-   //       if (!isExpanded(parent)) {
-   //          expand(parent);
-   //       }
-   // }
-
    QTreeView::rowsInserted(parent, start, end);
-}
-
-void ChatUserListTreeView::rowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
-{
-   bool callDefaultSelection = false;
-
-   for (int i = start; i <= end; i++) {
-      if (model()->index(i, 0, parent) == currentIndex()) {
-         callDefaultSelection = true;
-         break;
-      }
-   }
-
-   //I'm using callDefaultSelection flag in case if
-   //default element that will be selected will be in start to end range
-   if (callDefaultSelection && handler_) {
-      notifyCurrentAboutToBeRemoved();
-   }
 }
 
 void ChatUserListTreeView::setChatClientServicePtr(const Chat::ChatClientServicePtr& chatClientServicePtr)
