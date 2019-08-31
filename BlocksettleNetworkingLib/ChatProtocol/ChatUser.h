@@ -28,15 +28,11 @@ namespace Chat
       SecureBinaryData privateKey() const { return privateKey_; }
       void setPrivateKey(SecureBinaryData val) { privateKey_ = val; }
 
-      std::string userEmail() const { return userEmail_; }
-      void setUserEmail(std::string val) { userEmail_ = val; }
-
    signals:
       void userNameChanged(const std::string& displayName);
 
    private:
       std::string userName_;
-      std::string userEmail_;
       BinaryData publicKey_;
       SecureBinaryData privateKey_;
    };
