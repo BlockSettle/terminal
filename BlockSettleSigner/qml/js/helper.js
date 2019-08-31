@@ -400,26 +400,19 @@ function tryActivateAutoSign(walletInfo, showResult) {
         }
     }
 
-    if (walletInfo.encType === QPasswordData.Password) {
-        var passwordDialog = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
-            , {"walletInfo": walletInfo});
+    var passwordDialog = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
+        , {"walletInfo": walletInfo});
 
-        prepareLiteModeDialog(passwordDialog)
-        passwordDialog.open()
-        passwordDialog.bsAccepted.connect(function() {
-            var passwordData = qmlFactory.createPasswordData()
-            passwordData.encType = QPasswordData.Password
-            passwordData.encKey = ""
-            passwordData.textPassword = passwordDialog.enteredPassword
+    prepareLiteModeDialog(passwordDialog)
+    passwordDialog.open()
+    passwordDialog.bsAccepted.connect(function() {
+        var passwordData = qmlFactory.createPasswordData()
+        passwordData.encType = QPasswordData.Password
+        passwordData.encKey = ""
+        passwordData.textPassword = passwordDialog.enteredPassword
 
-            signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
-        })
-    }
-    else if (walletInfo.encType === QPasswordData.Auth) {
-        JsHelper.requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
-            signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
-        })
-    }
+        signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
+    })
 }
 
 function tryDeactivateAutoSign(walletInfo, showResult) {
