@@ -234,8 +234,9 @@ void ChatMessagesTextEdit::onUserUrlOpened(const QUrl &url)
 void ChatMessagesTextEdit::switchToChat(const std::string& partyId)
 {
    currentPartyId_ = partyId;
+   clear();
    if (!currentPartyId_.empty()) {
-      setDocument(getTextDocumentFromPartyId(partyId));
+      showMessages(partyId);
       onTextChanged();
       if (!messages_[partyId].isEmpty()) {
          for (auto iLast = messages_[partyId].end() - 1;
@@ -244,9 +245,6 @@ void ChatMessagesTextEdit::switchToChat(const std::string& partyId)
             emit messageRead((*iLast)->partyId(), (*iLast)->messageId());
          }
       }
-   }
-   else {
-      setDocument(new QTextDocument(this));
    }
 }
 
@@ -259,7 +257,6 @@ void ChatMessagesTextEdit::logout()
 {
    resetChatView();
    messages_.clear();
-   chatDocuments_.clear();
 }
 
 const Chat::MessagePtr ChatMessagesTextEdit::onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state)
@@ -337,7 +334,11 @@ void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
 {
    const int messageIndex = messages_[messagePtr->partyId()].size();
    messages_[messagePtr->partyId()].push_back(messagePtr);
-   registerMessage(messagePtr->partyId(), messageIndex);
+
+   if (messagePtr->partyId() == currentPartyId_) {
+      showMessage(messagePtr->partyId(), messageIndex);
+   }
+
    if (messagePtr->partyMessageState() != Chat::PartyMessageState::SEEN
          && messagePtr->senderHash() != ownUserId_
          && messagePtr->partyId() == currentPartyId_
@@ -348,6 +349,7 @@ void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
 
 void ChatMessagesTextEdit::insertMessageInDoc(QTextCursor& cursor, const std::string& partyId, int index)
 {
+   cursor.beginEditBlock();
    auto* table = cursor.insertTable(1, 4, tableFormat_);
 
    QString time = data(partyId, index, Column::Time);
@@ -363,19 +365,22 @@ void ChatMessagesTextEdit::insertMessageInDoc(QTextCursor& cursor, const std::st
 
    QString message = data(partyId, index, Column::Message);
    table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
+   cursor.endEditBlock();
 }
 
-void ChatMessagesTextEdit::registerMessage(const std::string& partyId, int messageIndex)
+void ChatMessagesTextEdit::showMessage(const std::string& partyId, int messageIndex)
 {
    /* add text */
-   auto *document = getTextDocumentFromPartyId(partyId);
-
-   QTextCursor cursor(document);
+   QTextCursor cursor = textCursor();
    cursor.movePosition(QTextCursor::End);
 
    insertMessageInDoc(cursor, partyId, messageIndex);
-   if (partyId == currentPartyId_) {
-      setTextCursor(cursor);
+}
+
+void ChatMessagesTextEdit::showMessages(const std::string &partyId)
+{
+   for (int iMessage = 0; iMessage < messages_[partyId].size(); ++iMessage) {
+      showMessage(partyId, iMessage);
    }
 }
 
@@ -455,27 +460,15 @@ void ChatMessagesTextEdit::notifyMessageChanged(Chat::MessagePtr message)
       if (it != messages_[partyId].end()) {
          int distance = static_cast<int>(std::distance(messages_[partyId].begin(), it));
 
-         QTextDocument *currentDoc = getTextDocumentFromPartyId(partyId);
-         QTextCursor cursor(currentDoc);
+         QTextCursor cursor = textCursor();
          cursor.movePosition(QTextCursor::Start);
          cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, distance * 2);
          cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 1);
          cursor.removeSelectedText();
          
          insertMessageInDoc(cursor, partyId, distance);
-
-         setTextCursor(cursor);
       }
    }
-}
-
-QTextDocument* ChatMessagesTextEdit::getTextDocumentFromPartyId(const std::string& partyId)
-{
-   auto iDoc = chatDocuments_.find(partyId);
-   if (iDoc == chatDocuments_.end()) {
-      iDoc = chatDocuments_.insert(partyId, new QTextDocument(this));
-   }
-   return iDoc.value();
 }
 
 QString ChatMessagesTextEdit::toHtmlUsername(const QString &username, const QString &userId)

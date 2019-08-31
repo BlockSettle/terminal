@@ -110,12 +110,11 @@ private:
    QString toHtmlInvalid(const QString &text);
 
    void insertMessage(const Chat::MessagePtr& messagePtr);
-   void registerMessage(const std::string& partyId, int messageIndex);
+   void showMessage(const std::string& partyId, int messageIndex);
+   void showMessages(const std::string& partyId);
    Chat::MessagePtr findMessage(const std::string& partyId, const std::string& messageId);
    void notifyMessageChanged(Chat::MessagePtr message);
    void insertMessageInDoc(QTextCursor& cursor, const std::string& partyId, int index);
-
-   QTextDocument* getTextDocumentFromPartyId(const std::string& partyId);
 
 private:
    Chat::ClientPartyModelPtr partyModel_;
@@ -126,7 +125,6 @@ private:
 
    using ClientMessagesHistory = QVector<Chat::MessagePtr>;
    QMap<std::string, ClientMessagesHistory> messages_;
-   QMap<std::string, QTextDocument*> chatDocuments_;
 
    QImage statusImageGreyUnsent_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_OFFLINE") }, "PNG");
    QImage statusImageYellowSent_ = QImage({ QLatin1Literal(":/ICON_MSG_STATUS_CONNECTING") }, "PNG");
