@@ -14,9 +14,15 @@
 #include <set>
 
 namespace {
+   // Translation
+   const QString ownSenderUserName = QObject::tr("you");
    const QString contextMenuCopy = QObject::tr("Copy");
    const QString contextMenuCopyLink = QObject::tr("Copy Link Location");
    const QString contextMenuSelectAll= QObject::tr("Select All");
+   const QString contextMenuAddUserMenu = QObject::tr("Add to contacts");
+   const QString contextMenuAddUserMenuStatusTip = QObject::tr("Click to add user to contact list");
+   const QString contextMenuRemoveUserMenu = QObject::tr("Remove from contacts");
+   const QString contextMenuRemoveUserMenuStatusTip = QObject::tr("Click to remove user from contact list");
 }
 
 ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
@@ -31,8 +37,6 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
 
    connect(this, &QTextBrowser::anchorClicked, this, &ChatMessagesTextEdit::urlActivated);
    connect(this, &QTextBrowser::textChanged, this, &ChatMessagesTextEdit::onTextChanged);
-
-   initUserContextMenu();
 }
 
 void ChatMessagesTextEdit::setupHighlightPalette()
@@ -66,11 +70,10 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
 
       case Column::User:
       {
-         const auto senderHash = message->senderHash();
-         static const auto ownSender = tr("you");
+         const auto& senderHash = message->senderHash();
 
          if (senderHash == ownUserId_) {
-            return ownSender;
+            return ownSenderUserName;
          }
 
          return toHtmlUsername(QString::fromStdString(senderHash));
@@ -144,29 +147,17 @@ void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
    }
 
    setTextCursor(textCursor_);
-   std::string text = textCursor_.block().text().toStdString();
+   QString text = textCursor_.block().text();
 
-   // #old_logic
-   // show contact context menu when username is right clicked in User column
-   //if ((textCursor_.block().blockNumber() - 1) % 5 == static_cast<int>(Column::User) ) {
-   //   if (!anchorAt(e->pos()).isEmpty()) {
-   //      userName_ = text;
-
-   //      if (handler_) {
-   //         for (auto action : userMenu_->actions()) {
-   //            userMenu_->removeAction(action);
-   //         }
-   //         if (handler_->onActionIsFriend(userName_)) {
-   //            userMenu_->addAction(userRemoveContactAction_);
-   //         }
-   //         else {
-   //            emit addContactRequired(QString::fromStdString(username_));
-   //         }
-   //         userMenu_->exec(QCursor::pos());
-   //      }
-   //      return;
-   //   }
-   //}
+   //show contact context menu when username is right clicked in User column
+   if ((textCursor_.block().blockNumber() - 1) % 5 == static_cast<int>(Column::User)) {
+      if (!anchorAt(e->pos()).isEmpty() && text != ownSenderUserName) {
+         QMenu* userMenu = initUserContextMenu(text);
+         userMenu->exec(QCursor::pos());
+         userMenu->deleteLater();
+         return;
+      }
+   }
 
    // show default text context menu
    if (text.length() > 0 || textCursor_.hasSelection()) {
@@ -392,22 +383,27 @@ void ChatMessagesTextEdit::showMessages(const std::string &partyId)
 //   cursor.insertHtml(QString(QLatin1Literal("<a href=\"load_more\" style=\"color:%1\">Load More...</a>")).arg(internalStyle_.colorHyperlink().name()));
 //}
 
-void ChatMessagesTextEdit::initUserContextMenu()
+QMenu* ChatMessagesTextEdit::initUserContextMenu(const QString& userName)
 {
-   userMenu_ = new QMenu(this);
+   QMenu* userMenu = new QMenu(this);
 
-   userAddContactAction_ = new QAction(tr("Add to contacts"));
-   userAddContactAction_->setStatusTip(tr("Click to add user to contact list"));
-   connect(userAddContactAction_, &QAction::triggered, [this](bool) {
-      //handler_->onActionCreatePendingOutgoing(username_);
-   });
+   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getPartyByUserName(userName.toStdString());
+   if (!clientPartyPtr) {
+      QAction* addAction = userMenu->addAction(contextMenuAddUserMenu);
+      addAction->setStatusTip(contextMenuAddUserMenuStatusTip);
+      connect(addAction, &QAction::triggered, this, [this, userName_ = userName]() {
+         emit newPartyRequest(userName_.toStdString());
+      });
+   }
+   else {
+      QAction* removeAction = userMenu->addAction(contextMenuRemoveUserMenu);
+      removeAction->setStatusTip(contextMenuRemoveUserMenuStatusTip);
+      connect(removeAction, &QAction::triggered, this, [this, clientPartyPtr]() {
+         emit removePartyRequest(clientPartyPtr->id());
+      });
+   }
 
-   userRemoveContactAction_ = new QAction(tr("Remove from contacts"));
-   userRemoveContactAction_->setStatusTip(tr("Click to remove user from contact list"));
-   connect(userRemoveContactAction_, &QAction::triggered, [this](bool) {
-      // TODO:
-      //handler_->onActionRemoveFromContacts(username_);
-   });
+   return userMenu;
 }
 
 void ChatMessagesTextEdit::onMessageUpdate(const Chat::MessagePtrList& messagePtrList)

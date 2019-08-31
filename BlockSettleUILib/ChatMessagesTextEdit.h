@@ -74,9 +74,9 @@ public slots:
 
 signals:
    void messageRead(const std::string& partyId, const std::string& messageId);
+   void newPartyRequest(const std::string& userName);
+   void removePartyRequest(const std::string& partyId);
 
-   void sendFriendRequest(const std::string &userID);
-   void addContactRequired(const QString &userId);
 protected:
    enum class Column {
       Time,
@@ -102,7 +102,7 @@ private slots:
 
 private:
    void setupHighlightPalette();
-   void initUserContextMenu(); // #old_logic : do we need it?
+   QMenu* initUserContextMenu(const QString& userName);
 
    // #new_logic
    QString toHtmlUsername(const QString &username, const QString &userId = QString());
@@ -133,10 +133,6 @@ private:
 
    QTextTableFormat tableFormat_;
    ChatMessagesTextEditStyle internalStyle_;
-
-   QMenu *userMenu_{};
-   QAction *userAddContactAction_{};
-   QAction *userRemoveContactAction_{};
 
    QTextCursor textCursor_;
    QString anchor_;

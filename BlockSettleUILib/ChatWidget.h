@@ -294,25 +294,26 @@ public slots:
    void onNewChatMessageTrayNotificationClicked(const QString& userId);
 
 private slots:
-   void onContactRequestAcceptClicked();
-   void onContactRequestRejectClicked();
-   void onContactRequestSendClicked();
-   void onContactRequestCancelClicked();
-
    void onPartyModelChanged();
    void onLogin();
    void onLogout();
-   void onSendButtonClicked();
    void onSendMessage();
    void onMessageRead(const std::string& partyId, const std::string& messageId);
    void onSendArrived(const Chat::MessagePtrList& messagePtr);
    void onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
    void onMessageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
    void onUserListClicked(const QModelIndex& index);
-
    void onActivatePartyId(const QString& userId);
    void onRegisterNewChangingRefresh();
 
+
+   void onContactRequestAcceptClicked();
+   void onContactRequestRejectClicked();
+   void onContactRequestSendClicked();
+   void onContactRequestCancelClicked();
+
+   void onNewPartyRequest(const std::string& userName);
+   void onRemovePartyRequest(const std::string& partyId);
 signals:
    // OTC
    void sendOtcPbMessage(const std::string& data);

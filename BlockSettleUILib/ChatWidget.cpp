@@ -1546,8 +1546,10 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    // connections
    // User actions
    connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserListClicked);
-   connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
+   connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendMessage);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::messageRead, this, &ChatWidget::onMessageRead, Qt::QueuedConnection);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::newPartyRequest, this, &ChatWidget::onNewPartyRequest, Qt::QueuedConnection);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::removePartyRequest, this, &ChatWidget::onRemovePartyRequest, Qt::QueuedConnection);
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedInToServer, this, &ChatWidget::onLogin, Qt::QueuedConnection);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout, Qt::QueuedConnection);
@@ -1615,6 +1617,16 @@ void ChatWidget::onContactRequestCancelClicked()
    chatClientServicePtr_->DeletePrivateParty(currentPartyId_);
 }
 
+void ChatWidget::onNewPartyRequest(const std::string& userName)
+{
+   chatClientServicePtr_->RequestPrivateParty(userName);
+}
+
+void ChatWidget::onRemovePartyRequest(const std::string& partyId)
+{
+   chatClientServicePtr_->DeletePrivateParty(partyId);
+}
+
 void ChatWidget::onPartyModelChanged()
 {
    chatPartiesTreeModel_->partyModelChanged();
@@ -1644,8 +1656,6 @@ void ChatWidget::showEvent(QShowEvent* e)
       bNeedRefresh_ = false;
       onActivatePartyId(QString::fromStdString(currentPartyId_));
    }
-   
-   //QWidget:showEvent(e);
 }
 
 void ChatWidget::processOtcPbMessage(const std::string& data)
@@ -1655,11 +1665,6 @@ void ChatWidget::processOtcPbMessage(const std::string& data)
 void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString& userId)
 {
    onActivatePartyId(userId);
-}
-
-void ChatWidget::onSendButtonClicked()
-{
-   return stateCurrent_->sendMessage();
 }
 
 void ChatWidget::onSendMessage()
