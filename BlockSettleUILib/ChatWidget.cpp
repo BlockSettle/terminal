@@ -1232,6 +1232,7 @@ public:
       }
 
       chat_->chatPartiesTreeModel_->partyModelChanged();
+      chat_->onActivatePartyId(QString::fromStdString(chat_->currentPartyId_));
    }
    void messageRead(const std::string& partyId, const std::string& messageId) {
       if (!canResetReadMessage()) {
@@ -1253,6 +1254,41 @@ public:
          chat_->chatPartiesTreeModel_->decreaseUnseenCounter(partyId, 1);
       }
    }
+   void acceptPartyRequest(const std::string& partyId) {
+      if (!canAcceptPartyRequest()) {
+         return;
+      }
+
+      chat_->chatClientServicePtr_->AcceptPrivateParty(partyId);
+   }
+   void rejectPartyRequest(const std::string& partyId) {
+      if (!canRejectPartyRequest()) {
+         return;
+      }
+
+      chat_->chatClientServicePtr_->RejectPrivateParty(partyId);
+   }
+   void sendPartyRequest(const std::string& partyId) {
+      if (!canSendPartyRequest()) {
+         return;
+      }
+
+      chat_->chatClientServicePtr_->RequestPrivateParty(partyId);
+   }
+   void removePartyRequest(const std::string& partyId) {
+      if (!canRemovePartyRequest()) {
+         return;
+      }
+
+      chat_->chatClientServicePtr_->DeletePrivateParty(partyId);
+   }
+   void newPartyRequest(const std::string& partyName) {
+      if (!canSendPartyRequest()) {
+         return;
+      }
+
+      chat_->chatClientServicePtr_->RequestPrivateParty(partyName);
+   }
 
 protected:
    virtual void applyUserFrameChange() = 0;
@@ -1265,6 +1301,10 @@ protected:
    virtual bool canResetPartyModel() const { return true; }
    virtual bool canResetReadMessage() const { return true; }
    virtual bool canChangeMessageState() const { return true; }
+   virtual bool canAcceptPartyRequest() const { return true; }
+   virtual bool canRejectPartyRequest() const { return true; }
+   virtual bool canSendPartyRequest() const { return true; }
+   virtual bool canRemovePartyRequest() const { return true; }
 
    void saveDraftMessage()
    {
@@ -1324,7 +1364,12 @@ protected:
    virtual bool canReceiveMessage() const override { return false; }
    virtual bool canChangePartyStatus() const override { return false; }
    virtual bool canResetReadMessage() const override { return false; }
+   virtual bool canResetPartyModel() const override { return false; }
    virtual bool canChangeMessageState() const override { return false; }
+   virtual bool canAcceptPartyRequest() const override { return false; }
+   virtual bool canRejectPartyRequest() const override { return false; }
+   virtual bool canSendPartyRequest() const override { return false; }
+   virtual bool canRemovePartyRequest() const override { return false; }
 };
 
 class IdleState : public AbstractChatWidgetState {
@@ -1340,7 +1385,7 @@ protected:
    }
    virtual void applyChatFrameChange() override {
       chat_->ui_->textEditMessages->setOwnUserId(chat_->ownUserId_);
-      chat_->ui_->textEditMessages->resetChatView();
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentPartyId_);
 
       chat_->ui_->frameContactActions->setVisible(false);
 
@@ -1390,11 +1435,15 @@ protected:
 
       chat_->ui_->pushButton_AcceptSend->setText(buttonSentPartyText);
       chat_->ui_->pushButton_AcceptSend->disconnect();
-      QObject::connect(chat_->ui_->pushButton_AcceptSend, &QPushButton::clicked, chat_, &ChatWidget::onContactRequestSendClicked);
+      QObject::connect(chat_->ui_->pushButton_AcceptSend, &QPushButton::clicked, chat_, [this]() {
+         chat_->onContactRequestSendClicked(chat_->currentPartyId_);
+      });
 
       chat_->ui_->pushButton_RejectCancel->setText(buttonCancelPartyText);
       chat_->ui_->pushButton_RejectCancel->disconnect();
-      QObject::connect(chat_->ui_->pushButton_RejectCancel, &QPushButton::clicked, chat_, &ChatWidget::onContactRequestCancelClicked);
+      QObject::connect(chat_->ui_->pushButton_RejectCancel, &QPushButton::clicked, chat_, [this]() {
+         chat_->onContactRequestCancelClicked(chat_->currentPartyId_);
+      });
 
       chat_->ui_->frameContactActions->setVisible(true);
 
@@ -1415,7 +1464,7 @@ public:
 protected:
    virtual void applyUserFrameChange() override {}
    virtual void applyChatFrameChange() override {
-      chat_->ui_->textEditMessages->resetChatView();
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentPartyId_);
 
       chat_->ui_->frameContactActions->setVisible(false);
 
@@ -1436,15 +1485,19 @@ public:
 protected:
    virtual void applyUserFrameChange() override {}
    virtual void applyChatFrameChange() override {
-      chat_->ui_->textEditMessages->resetChatView();
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentPartyId_);
 
       chat_->ui_->pushButton_AcceptSend->setText(buttonAcceptPartyText);
       chat_->ui_->pushButton_AcceptSend->disconnect();
-      QObject::connect(chat_->ui_->pushButton_AcceptSend, &QPushButton::clicked, chat_, &ChatWidget::onContactRequestAcceptClicked);
+      QObject::connect(chat_->ui_->pushButton_AcceptSend, &QPushButton::clicked, chat_, [this]() {
+         chat_->onContactRequestAcceptClicked(chat_->currentPartyId_);
+      });
 
       chat_->ui_->pushButton_RejectCancel->setText(buttonRejectPartyText);
       chat_->ui_->pushButton_RejectCancel->disconnect();
-      QObject::connect(chat_->ui_->pushButton_RejectCancel, &QPushButton::clicked, chat_, &ChatWidget::onContactRequestRejectClicked);
+      QObject::connect(chat_->ui_->pushButton_RejectCancel, &QPushButton::clicked, chat_, [this]() {
+         chat_->onContactRequestRejectClicked(chat_->currentPartyId_);
+      });
 
       chat_->ui_->frameContactActions->setVisible(true);
 
@@ -1465,7 +1518,7 @@ public:
 protected:
    virtual void applyUserFrameChange() override {}
    virtual void applyChatFrameChange() override {
-      chat_->ui_->textEditMessages->resetChatView();
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentPartyId_);
 
       chat_->ui_->frameContactActions->setVisible(false);
 
@@ -1520,9 +1573,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    installEventFilter(this);
 
-   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout, Qt::QueuedConnection);
-   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatWidget::onPartyModelChanged, Qt::QueuedConnection);
-
    chatPartiesTreeModel_ = std::make_shared<ChatPartiesTreeModel>(chatClientServicePtr_);
 
    ChatPartiesSortProxyModelPtr charTreeSortModel = std::make_shared<ChatPartiesSortProxyModel>(chatPartiesTreeModel_);
@@ -1531,7 +1581,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->treeViewUsers->setSortingEnabled(true);
    ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(charTreeSortModel, this));
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
-   ui_->treeViewUsers->setChatClientServicePtr(chatClientServicePtr);
 
    // TODO: fix search widget
    ui_->searchWidget->init();
@@ -1545,7 +1594,11 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    // connections
    // User actions
-   connect(ui_->treeViewUsers, &QTreeView::clicked, this, &ChatWidget::onUserListClicked);
+   connect(ui_->treeViewUsers, &ChatUserListTreeView::partyClicked, this, &ChatWidget::onUserListClicked);
+   connect(ui_->treeViewUsers, &ChatUserListTreeView::removeFromContacts, this, &ChatWidget::onRemovePartyRequest);
+   connect(ui_->treeViewUsers, &ChatUserListTreeView::acceptFriendRequest, this, &ChatWidget::onContactRequestAcceptClicked);
+   connect(ui_->treeViewUsers, &ChatUserListTreeView::declineFriendRequest, this, &ChatWidget::onContactRequestRejectClicked);
+
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendMessage);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::messageRead, this, &ChatWidget::onMessageRead, Qt::QueuedConnection);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::newPartyRequest, this, &ChatWidget::onNewPartyRequest, Qt::QueuedConnection);
@@ -1597,39 +1650,45 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 */
 }
 
-void ChatWidget::onContactRequestAcceptClicked()
+void acceptPartyRequest(const std::string& partyId) {}
+void rejectPartyRequest(const std::string& partyId) {}
+void sendPartyRequest(const std::string& partyId) {}
+void removePartyRequest(const std::string& partyId) {}
+
+void ChatWidget::onContactRequestAcceptClicked(const std::string& partyId)
 {
-   chatClientServicePtr_->AcceptPrivateParty(currentPartyId_);
+   stateCurrent_->acceptPartyRequest(partyId);
 }
 
-void ChatWidget::onContactRequestRejectClicked()
+void ChatWidget::onContactRequestRejectClicked(const std::string& partyId)
 {
-   chatClientServicePtr_->RejectPrivateParty(currentPartyId_);
+   stateCurrent_->rejectPartyRequest(partyId);
 }
 
-void ChatWidget::onContactRequestSendClicked()
+void ChatWidget::onContactRequestSendClicked(const std::string& partyId)
 {
-   chatClientServicePtr_->RequestPrivateParty(currentPartyId_);
+   stateCurrent_->sendPartyRequest(partyId);
 }
 
-void ChatWidget::onContactRequestCancelClicked()
+void ChatWidget::onContactRequestCancelClicked(const std::string& partyId)
 {
-   chatClientServicePtr_->DeletePrivateParty(currentPartyId_);
+   stateCurrent_->removePartyRequest(partyId);
 }
 
 void ChatWidget::onNewPartyRequest(const std::string& userName)
 {
-   chatClientServicePtr_->RequestPrivateParty(userName);
+   stateCurrent_->newPartyRequest(userName);
 }
 
 void ChatWidget::onRemovePartyRequest(const std::string& partyId)
 {
-   chatClientServicePtr_->DeletePrivateParty(partyId);
+   stateCurrent_->removePartyRequest(partyId);
 }
 
 void ChatWidget::onPartyModelChanged()
 {
-   chatPartiesTreeModel_->partyModelChanged();
+   stateCurrent_->resetPartyModel();
+   // #new_logic : save expanding state
    ui_->treeViewUsers->expandAll();
 }
 
@@ -1639,6 +1698,7 @@ void ChatWidget::onLogin()
    ownUserId_ = chatModelPtr->ownUserName();
 
    changeState<IdleState>();
+   stateCurrent_->resetPartyModel();
    ui_->treeViewUsers->expandAll();
 }
 
@@ -1694,6 +1754,10 @@ void ChatWidget::onMessageStateChanged(const std::string& partyId, const std::st
 
 void ChatWidget::onUserListClicked(const QModelIndex& index)
 {
+   if (!index.isValid()) {
+      return;
+   }
+
    ChatPartiesSortProxyModel* chartProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
    PartyTreeItem* partyTreeItem = chartProxyModel->getInternalData(index);
 
@@ -1716,7 +1780,7 @@ void ChatWidget::onUserListClicked(const QModelIndex& index)
       changeState<PrivatePartyUninitState>(transitionChange);
       break;
    case Chat::PartyState::REQUESTED:
-      if (clientPartyPtr->displayName() == ownUserId_) {
+      if (clientPartyPtr->partyCreatorHash() == ownUserId_) {
          changeState<PrivatePartyRequestedOutgoingState>(transitionChange);
       }
       else {

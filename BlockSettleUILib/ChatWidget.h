@@ -307,10 +307,10 @@ private slots:
    void onRegisterNewChangingRefresh();
 
 
-   void onContactRequestAcceptClicked();
-   void onContactRequestRejectClicked();
-   void onContactRequestSendClicked();
-   void onContactRequestCancelClicked();
+   void onContactRequestAcceptClicked(const std::string& partyId);
+   void onContactRequestRejectClicked(const std::string& partyId);
+   void onContactRequestSendClicked(const std::string& partyId);
+   void onContactRequestCancelClicked(const std::string& partyId);
 
    void onNewPartyRequest(const std::string& userName);
    void onRemovePartyRequest(const std::string& partyId);

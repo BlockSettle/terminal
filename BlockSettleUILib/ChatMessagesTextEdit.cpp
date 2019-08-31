@@ -239,14 +239,9 @@ void ChatMessagesTextEdit::switchToChat(const std::string& partyId)
    }
 }
 
-void ChatMessagesTextEdit::resetChatView()
-{
-   switchToChat(currentPartyId_);
-}
-
 void ChatMessagesTextEdit::logout()
 {
-   resetChatView();
+   switchToChat({});
    messages_.clear();
 }
 

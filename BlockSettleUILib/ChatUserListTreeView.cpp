@@ -1,5 +1,4 @@
 #include <QMenu>
-#include <QAbstractProxyModel>
 #include <QLabel>
 
 #include "ChatUserListTreeView.h"
@@ -10,13 +9,21 @@
 #include "EditContactDialog.h"
 #include "ChatProtocol/ChatUtils.h"
 
-//using ItemType = ChatUserListTreeViewModel::ItemType;
-//using Role = ChatUserListTreeViewModel::Role;
+namespace {
+   // Translation
+   const QString contextMenuRemoveUser = QObject::tr("Remove from contacts");
+   const QString contextMenuEditUser = QObject::tr("Edit contact");
+   const QString contextMenuRemoveRequest = QObject::tr("Remove this request");
+   const QString contextMenuAcceptRequest = QObject::tr("Accept friend request");
+   const QString contextMenuDeclineRequest = QObject::tr("Decline friend request");
+
+   const QString dialogRemoveContact = QObject::tr("Remove contact");
+   const QString dialogRemoveCCAsContact = QObject::tr("Remove %1 as a contact?");
+   const QString dialogRemoveContactAreYouSure = QObject::tr("Are you sure you wish to remove this contact?");
+}
 
 ChatUserListTreeView::ChatUserListTreeView(QWidget *parent)
-   : QTreeView (parent),
-     handler_(nullptr),
-     contextMenu_(nullptr)
+   : QTreeView (parent)
 {
    setContextMenuPolicy(Qt::CustomContextMenu);
    connect(this, &QAbstractItemView::customContextMenuRequested, this, &ChatUserListTreeView::onCustomContextMenu);
@@ -28,66 +35,9 @@ ChatUserListTreeView::ChatUserListTreeView(QWidget *parent)
    connect(this, &QTreeView::doubleClicked, this, &ChatUserListTreeView::onDoubleClicked);
 }
 
-// out?
-void ChatUserListTreeView::addWatcher(ViewItemWatcher * watcher)
-{
-   watchers_.push_back(watcher);
-}
-
 void ChatUserListTreeView::setActiveChatLabel(QLabel *label)
 {
    label_ = label;
-}
-
-// out?
-void ChatUserListTreeView::setCurrentUserChat(const std::string &userId)
-{
-   // find all indexes
-   QModelIndexList indexes = model()->match(model()->index(0,0),
-                                            Qt::DisplayRole,
-                                            QLatin1String("*"),
-                                            -1,
-                                            Qt::MatchWildcard|Qt::MatchRecursive);
-
-   // set required chat
-   for (auto index : indexes) {
-      auto type = index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
-      if (userId == " " && type == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
-         if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == QString::fromLatin1(ChatUtils::GlobalRoomKey)) {
-            setCurrentIndex(index);
-            break;
-         }
-      }
-      if (type == ChatUIDefinitions::ChatTreeNodeType::ContactsElement
-          || type == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement) {
-         if (index.data(ChatClientDataModel::Role::ContactIdRole).toString().toStdString() == userId) {
-            setCurrentIndex(index);
-            break;
-         }
-      }
-   }
-}
-
-// out?
-void ChatUserListTreeView::updateCurrentChat()
-{
-   auto proxyModel = qobject_cast<const QAbstractProxyModel*>(currentIndex().model());
-   QModelIndex index = proxyModel ? proxyModel->mapToSource(currentIndex()) : currentIndex();
-   TreeItem *item = static_cast<TreeItem*>(index.internalPointer());
-   if (!watchers_.empty() && item) {
-      switch (item->getType()) {
-         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
-      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
-            auto element = static_cast<CategoryElement*>(item);
-            //updateDependUI(element);
-            notifyCurrentChanged(element);
-         }
-         break;
-         default:
-            break;
-      }
-   }
 }
 
 void ChatUserListTreeView::editContact(const QModelIndex& index)
@@ -104,15 +54,9 @@ void ChatUserListTreeView::editContact(const QModelIndex& index)
       return;
    }
 
-   auto chatPartiesTreeModel = internalChatPartiesTreeModel(index);
-   if (nullptr == chatPartiesTreeModel)
-   {
-      return;
-   }
-
    if (clientPartyPtr->isPrivateStandard())
    {
-      Chat::PartyRecipientPtr recipient = clientPartyPtr->getSecondRecipient(chatPartiesTreeModel->currentUser());
+      Chat::PartyRecipientPtr recipient = clientPartyPtr->getSecondRecipient(currentUser());
       EditContactDialog dialog(
          QString::fromStdString(clientPartyPtr->userHash()), 
          QString::fromStdString(clientPartyPtr->displayName()), 
@@ -128,14 +72,8 @@ void ChatUserListTreeView::editContact(const QModelIndex& index)
 
 void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
 {
-   if (nullptr == contextMenu_)
-   {
-      contextMenu_ = new QMenu(this);
-   }
-
-   contextMenu_->clear();
-
    QModelIndex index = indexAt(point);
+   emit partyClicked(index);
    if (!index.isValid())
    {
       return;
@@ -158,113 +96,109 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
       return;
    }
 
-   auto chatPartiesTreeModel = internalChatPartiesTreeModel(index);
-
+   QMenu contextMenu;
    if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState())
    {
-      QAction* removeAction = new QAction(tr("Remove from contacts"), this);
+      QAction* removeAction = new QAction(contextMenuRemoveUser, this);
       removeAction->setData(index);
       connect(removeAction, &QAction::triggered, this, &ChatUserListTreeView::onRemoveFromContacts);
-      contextMenu_->addAction(removeAction);
+      contextMenu.addAction(removeAction);
 
-      QAction* editAction = new QAction(tr("Edit contact"), this);
+      QAction* editAction = new QAction(contextMenuEditUser, this);
       editAction->setData(index);
       connect(editAction, &QAction::triggered, this, &ChatUserListTreeView::onEditContact);
-      contextMenu_->addAction(editAction);
+      contextMenu.addAction(editAction);
    }
 
    if (Chat::PartyState::REJECTED == clientPartyPtr->partyState())
    {
-      QAction* removeAction = new QAction(tr("Remove this request"), this);
+      QAction* removeAction = new QAction(contextMenuRemoveRequest, this);
       removeAction->setData(index);
       connect(removeAction, &QAction::triggered, this, &ChatUserListTreeView::onRemoveFromContacts);
-      contextMenu_->addAction(removeAction);
+      contextMenu.addAction(removeAction);
    }
 
    if (Chat::PartyState::REQUESTED == clientPartyPtr->partyState())
    {
-      if (clientPartyPtr->partyCreatorHash() != chatPartiesTreeModel->currentUser())
+      if (clientPartyPtr->partyCreatorHash() != currentUser())
       {
          // receiver of party
-         QAction* acceptAction = new QAction(tr("Accept friend request"), this);
+         QAction* acceptAction = new QAction(contextMenuAcceptRequest, this);
          acceptAction->setData(index);
          connect(acceptAction, &QAction::triggered, this, &ChatUserListTreeView::onAcceptFriendRequest);
-         contextMenu_->addAction(acceptAction);
+         contextMenu.addAction(acceptAction);
 
-         QAction* declineAction = new QAction(tr("Decline friend request"), this);
+         QAction* declineAction = new QAction(contextMenuDeclineRequest, this);
          declineAction->setData(index);
          connect(declineAction, &QAction::triggered, this, &ChatUserListTreeView::onDeclineFriendRequest);
-         contextMenu_->addAction(declineAction);
+         contextMenu.addAction(declineAction);
       }
       else
       {
          // creator of party
-         QAction* removeAction = new QAction(tr("Remove from contacts"), this);
+         QAction* removeAction = new QAction(contextMenuRemoveUser, this);
          removeAction->setData(index);
          connect(removeAction, &QAction::triggered, this, &ChatUserListTreeView::onRemoveFromContacts);
-         contextMenu_->addAction(removeAction);
+         contextMenu.addAction(removeAction);
       }
    }
 
-   if (contextMenu_->isEmpty())
+   if (contextMenu.isEmpty())
    {
       return;
    }
 
-   contextMenu_->exec(viewport()->mapToGlobal(point));
-   selectionModel()->clearSelection();
-}
-
-const ChatPartiesTreeModel* ChatUserListTreeView::internalChatPartiesTreeModel(const QModelIndex& index)
-{
-   auto proxyModel = qobject_cast<const QAbstractProxyModel*>(index.model());
-   QModelIndex currentIndex = proxyModel ? proxyModel->mapToSource(index) : index;
-   const ChatPartiesTreeModel* chatPartiesTreeModel = qobject_cast<const ChatPartiesTreeModel*>(currentIndex.model());
-
-   return chatPartiesTreeModel;
+   contextMenu.exec(viewport()->mapToGlobal(point));
+   //selectionModel()->clearSelection();
 }
 
 PartyTreeItem* ChatUserListTreeView::internalPartyTreeItem(const QModelIndex& index)
 {
-   if (index.isValid())
+   if (!index.isValid())
    {
-      auto proxyModel = qobject_cast<const QAbstractProxyModel*>(index.model());
-      QModelIndex currentIndex = proxyModel ? proxyModel->mapToSource(index) : index;
-      PartyTreeItem* item = static_cast<PartyTreeItem*>(currentIndex.internalPointer());
-
-      return item;
+      return nullptr;
    }
 
-   return nullptr;
+   auto *proxyModel = static_cast<ChatPartiesSortProxyModel*>(model());
+   if (!proxyModel)
+   {
+      nullptr;
+   }
+
+   return proxyModel->getInternalData(index);
 }
 
 void ChatUserListTreeView::onClicked(const QModelIndex &index)
 {
-   if (index.isValid())
+   emit partyClicked(index);
+   if (!index.isValid())
    {
-      PartyTreeItem* item = internalPartyTreeItem(index);
+      return;
+   }
 
-      if (nullptr == item)
+   PartyTreeItem* item = internalPartyTreeItem(index);
+
+   if (nullptr == item)
+   {
+      return;
+   }
+
+   if (UI::ElementType::Container == item->modelType())
+   {
+      if (isExpanded(index))
       {
-         return;
+         collapse(index);
       }
-
-      if (UI::ElementType::Container == item->modelType())
+      else
       {
-         if (isExpanded(index))
-         {
-            collapse(index);
-         }
-         else
-         {
-            expand(index);
-         }
+         expand(index);
       }
    }
 }
 
 void ChatUserListTreeView::onDoubleClicked(const QModelIndex &index)
 {
+   emit partyClicked(index);
    PartyTreeItem* item = internalPartyTreeItem(index);
 
    if (nullptr == item)
@@ -339,51 +273,10 @@ void ChatUserListTreeView::updateDependUi(const QModelIndex& index)
    }
 }
 
-// out?
-void ChatUserListTreeView::notifyCurrentChanged(CategoryElement *element)
-{
-   for (auto watcher : watchers_) {
-      watcher->onElementSelected(element);
-   }
-
-}
-
-// out?
-void ChatUserListTreeView::notifyMessageChanged(std::shared_ptr<Chat::Data> message)
-{
-   for (auto watcher : watchers_) {
-      watcher->onMessageChanged(message);
-   }
-}
-
-// out?
-void ChatUserListTreeView::notifyElementUpdated(CategoryElement *element)
-{
-   for (auto watcher : watchers_) {
-      watcher->onElementUpdated(element);
-   }
-}
-
-// out?
-void ChatUserListTreeView::notifyCurrentAboutToBeRemoved()
-{
-   for (auto watcher : watchers_) {
-      watcher->onCurrentElementAboutToBeRemoved();
-   }
-}
-
-// out?
-void ChatUserListTreeView::setHandler(ChatItemActionsHandler * handler)
-{
-   handler_ = handler;
-}
-
 void ChatUserListTreeView::currentChanged(const QModelIndex &current, const QModelIndex &previous)
 {
    QTreeView::currentChanged(current, previous);
-   auto proxyModel = qobject_cast<const QAbstractProxyModel*>(current.model());
-   QModelIndex index = proxyModel ? proxyModel->mapToSource(current) : current;
-   PartyTreeItem* item = static_cast<PartyTreeItem*>(index.internalPointer());
+   PartyTreeItem* item = internalPartyTreeItem(current);
 
    if (!item)
    {
@@ -394,72 +287,6 @@ void ChatUserListTreeView::currentChanged(const QModelIndex &current, const QMod
    {
       updateDependUi(current);
    }
-}
-
-void ChatUserListTreeView::dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles)
-{
-   QTreeView::dataChanged(topLeft, bottomRight, roles);
-   if (topLeft == bottomRight) {
-      auto proxyModel = qobject_cast<const QAbstractProxyModel*>(topLeft.model());
-      QModelIndex index = proxyModel ? proxyModel->mapToSource(topLeft) : topLeft;
-      TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
-      switch (item->getType()) {
-         case ChatUIDefinitions::ChatTreeNodeType::MessageDataNode: {
-            auto mnode = static_cast<TreeMessageNode*>(item);
-            notifyMessageChanged(mnode->getMessage());
-            break;
-         }
-         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
-         {
-            auto node = static_cast<CategoryElement*>(item);
-            //updateDependUI(node);
-            notifyElementUpdated(node);
-            break;
-         }
-         default:
-            break;
-      }
-   }
-}
-
-void ChatUserListTreeView::rowsInserted(const QModelIndex &parent, int start, int end)
-{
-   // ChatUIDefinitions::ChatTreeNodeType type = parent.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
-   // ChatUIDefinitions::ChatTreeNodeType supportType = parent.data(ChatClientDataModel::Role::ItemAcceptTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
-
-   // if (type == ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode)
-   //    if (supportType == ChatUIDefinitions::ChatTreeNodeType::SearchElement) {
-   //       if (!isExpanded(parent)) {
-   //          expand(parent);
-   //       }
-   // }
-
-   QTreeView::rowsInserted(parent, start, end);
-}
-
-void ChatUserListTreeView::rowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
-{
-   bool callDefaultSelection = false;
-
-   for (int i = start; i <= end; i++) {
-      if (model()->index(i, 0, parent) == currentIndex()) {
-         callDefaultSelection = true;
-         break;
-      }
-   }
-
-   //I'm using callDefaultSelection flag in case if
-   //default element that will be selected will be in start to end range
-   if (callDefaultSelection && handler_) {
-      notifyCurrentAboutToBeRemoved();
-   }
-}
-
-void ChatUserListTreeView::setChatClientServicePtr(const Chat::ChatClientServicePtr& chatClientServicePtr)
-{
-   chatClientServicePtr_ = chatClientServicePtr;
 }
 
 void ChatUserListTreeView::onEditContact()
@@ -494,6 +321,11 @@ const Chat::ClientPartyPtr ChatUserListTreeView::clientPartyPtrFromAction(const 
    return item->data().value<Chat::ClientPartyPtr>();
 }
 
+const std::string& ChatUserListTreeView::currentUser() const
+{
+   return static_cast<ChatPartiesSortProxyModel*>(model())->currentUser();
+}
+
 void ChatUserListTreeView::onRemoveFromContacts()
 {
    QAction* action = qobject_cast<QAction*>(sender());
@@ -504,11 +336,15 @@ void ChatUserListTreeView::onRemoveFromContacts()
       return;
    }
 
+   const QString dialogRemoveContact = tr("Remove contact");
+   const QString dialogRemoveCCAsContact = tr("Remove %1 as a contact?");
+   const QString dialogRemoveContactAreYouSure = tr("Are you sure you wish to remove this contact?");
+
    BSMessageBox confirmRemoveContact(
       BSMessageBox::question, 
-      tr("Remove contact"),
-      tr("Remove %1 as a contact?").arg(QString::fromStdString(clientPartyPtr->displayName())),
-      tr("Are you sure you wish to remove this contact?"), parentWidget()
+      dialogRemoveContact,
+      dialogRemoveCCAsContact.arg(QString::fromStdString(clientPartyPtr->displayName())),
+      dialogRemoveContactAreYouSure, parentWidget()
    );
 
    if (confirmRemoveContact.exec() != QDialog::Accepted)
@@ -516,7 +352,7 @@ void ChatUserListTreeView::onRemoveFromContacts()
       return;
    }
 
-   chatClientServicePtr_->DeletePrivateParty(clientPartyPtr->id());
+   emit removeFromContacts(clientPartyPtr->id());
 }
 
 void ChatUserListTreeView::onAcceptFriendRequest()
@@ -529,7 +365,7 @@ void ChatUserListTreeView::onAcceptFriendRequest()
       return;
    }
 
-   chatClientServicePtr_->AcceptPrivateParty(clientPartyPtr->id());
+   emit acceptFriendRequest(clientPartyPtr->id());
 }
 
 void ChatUserListTreeView::onDeclineFriendRequest()
@@ -542,6 +378,5 @@ void ChatUserListTreeView::onDeclineFriendRequest()
       return;
    }
 
-   chatClientServicePtr_->RejectPrivateParty(clientPartyPtr->id());
-
+   emit declineFriendRequest(clientPartyPtr->id());
 }

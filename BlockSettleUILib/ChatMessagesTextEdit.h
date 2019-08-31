@@ -67,7 +67,6 @@ public slots:
    void setOwnUserId(const std::string &userId) { ownUserId_ = userId; }
    void setClientPartyModel(Chat::ClientPartyModelPtr partyModel);
    void switchToChat(const std::string& partyId);
-   void resetChatView();
    void logout();
    const Chat::MessagePtr onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
    void onMessageUpdate(const Chat::MessagePtrList& messagePtrList);

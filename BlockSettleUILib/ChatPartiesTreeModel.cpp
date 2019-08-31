@@ -105,19 +105,20 @@ const QModelIndex ChatPartiesTreeModel::getPartyIndexById(const std::string& par
 {
    for (int iContainer = 0; iContainer < rootItem_->childCount(); ++iContainer) {
       auto* container = rootItem_->child(iContainer);
+
       for (int iParty = 0; iParty < container->childCount(); ++iParty) {
          const PartyTreeItem* party = container->child(iParty);
-
          if (party->data().canConvert<Chat::ClientPartyPtr>()) {
             const Chat::ClientPartyPtr clientPtr = party->data().value<Chat::ClientPartyPtr>();
             if (clientPtr->id() == partyId) {
                return index(iParty, 0, index(iContainer, 0));
             }
          }
-         else if (party->data().canConvert<QString>()) {
-            if (party->data().toString().toStdString() == partyId) {
-               return index(iParty, 0, index(iContainer, 0));
-            }
+      }
+
+      if (container->data().canConvert<QString>()) {
+         if (container->data().toString().toStdString() == partyId) {
+            return index(iContainer, 0);
          }
       }
    }
