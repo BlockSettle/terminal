@@ -548,8 +548,20 @@
                        <height>84</height>
                       </size>
                      </property>
+                     <property name="readOnly">
+                      <bool>false</bool>
+                     </property>
+                     <property name="acceptRichText">
+                      <bool>true</bool>
+                     </property>
                      <property name="placeholderText">
                       <string>TYPE MESSAGE AND SEND</string>
+                     </property>
+                     <property name="openExternalLinks">
+                      <bool>true</bool>
+                     </property>
+                     <property name="openLinks">
+                      <bool>false</bool>
                      </property>
                      <property name="darkFrame" stdset="0">
                       <bool>true</bool>
@@ -677,11 +689,6 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>BSChatInput</class>
-   <extends>QTextEdit</extends>
-   <header>BSChatInput.h</header>
-  </customwidget>
-  <customwidget>
    <class>ChatMessagesTextEdit</class>
    <extends>QTextBrowser</extends>
    <header>ChatMessagesTextEdit.h</header>
@@ -766,6 +773,11 @@
    <class>ChatUserListTreeView</class>
    <extends>QTreeView</extends>
    <header location="global">ChatUserListTreeView.h</header>
+  </customwidget>
+  <customwidget>
+   <class>BSChatInput</class>
+   <extends>QTextBrowser</extends>
+   <header>BSChatInput.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

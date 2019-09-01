@@ -1,9 +1,9 @@
 #ifndef __CHAT_INPUT_H__
 #define __CHAT_INPUT_H__
 
-#include <QTextEdit>
+#include <QTextBrowser>
 
-class BSChatInput : public QTextEdit {
+class BSChatInput : public QTextBrowser {
    Q_OBJECT
 public:
    BSChatInput(QWidget *parent = nullptr);

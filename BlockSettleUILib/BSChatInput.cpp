@@ -3,14 +3,14 @@
 #include <QKeyEvent>
 
 BSChatInput::BSChatInput(QWidget *parent)
-   : QTextEdit(parent)
+   : QTextBrowser(parent)
 {
 
 }
 BSChatInput::BSChatInput(const QString &text, QWidget *parent)
-   : QTextEdit(text, parent)
+   : QTextBrowser(parent)
 {
-
+   setText(text);
 }
 
 BSChatInput::~BSChatInput() = default;
@@ -27,14 +27,14 @@ void BSChatInput::keyPressEvent(QKeyEvent * e)
          emit sendMessage();
       }
       return e->ignore();
-   } else if(e->key() == Qt::Key_C && e->modifiers().testFlag(Qt::ControlModifier)) {
-      // If there no selection than could be that we going to copy text from other element
-      // which cannot have focus.
-      if (!textCursor().hasSelection()) {
-         e->setAccepted(false);
-         return;
-      }
+   }
+   else if (e->key() == Qt::Key_V && e->modifiers().testFlag(Qt::ControlModifier)) {
+      QTextBrowser::keyPressEvent(e);
+      auto cursor = textCursor();
+      cursor.setCharFormat({});
+      setTextCursor(cursor);
+      return;
    }
 
-   return QTextEdit::keyPressEvent(e);
+   return QTextBrowser::keyPressEvent(e);
 }
