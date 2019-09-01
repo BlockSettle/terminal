@@ -473,6 +473,9 @@
                   <property name="openExternalLinks">
                    <bool>true</bool>
                   </property>
+                  <property name="openLinks">
+                   <bool>false</bool>
+                  </property>
                   <property name="darkFrame" stdset="0">
                    <bool>true</bool>
                   </property>

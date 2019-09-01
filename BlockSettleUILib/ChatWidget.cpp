@@ -1627,6 +1627,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::messageRead, this, &ChatWidget::onMessageRead, Qt::QueuedConnection);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::newPartyRequest, this, &ChatWidget::onNewPartyRequest, Qt::QueuedConnection);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::removePartyRequest, this, &ChatWidget::onRemovePartyRequest, Qt::QueuedConnection);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::switchPartyRequest, this, &ChatWidget::onActivatePartyId);
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedInToServer, this, &ChatWidget::onLogin, Qt::QueuedConnection);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout, Qt::QueuedConnection);
@@ -1746,9 +1747,9 @@ void ChatWidget::processOtcPbMessage(const std::string& data)
 {
 }
 
-void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString& userId)
+void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString& partyId)
 {
-   onActivatePartyId(userId);
+   onActivatePartyId(partyId);
 }
 
 void ChatWidget::onSendMessage()

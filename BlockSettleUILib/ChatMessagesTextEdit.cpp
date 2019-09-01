@@ -84,16 +84,16 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
          }
 
          if (!previousClientPartyPtr->isGlobal()) {
-            return toHtmlUsername(QString::fromStdString(previousClientPartyPtr->displayName()));
+            return toHtmlUsername(previousClientPartyPtr->displayName(), previousClientPartyPtr->userHash());
          }
          else {
             Chat::ClientPartyPtr userParty = partyModel_->getPartyByUserName(senderHash);
 
             if (userParty) {
-               return toHtmlUsername(QString::fromStdString(userParty->displayName()));
+               return toHtmlUsername(userParty->displayName(), userParty->userHash());
             }
 
-            return toHtmlUsername(QString::fromStdString(senderHash));
+            return toHtmlUsername(senderHash, senderHash);
          }         
       }
       case Column::Status:{
@@ -233,11 +233,25 @@ void ChatMessagesTextEdit::onTextChanged()
 
 void ChatMessagesTextEdit::onUserUrlOpened(const QUrl &url)
 {
-   // #old_logic
-   userName_ = url.path().toStdString();
-   //if (!handler_->onActionIsFriend(username_)) {
-   //   emit addContactRequired(QString::fromStdString(username_));
-   //}
+   std::string userId = url.path().toStdString();
+   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getPartyByUserName(userId);
+
+   if (!clientPartyPtr) {
+      emit newPartyRequest(userId);
+      return;
+   }
+
+   if (Chat::PartyState::REJECTED == clientPartyPtr->partyState()) {
+      emit removePartyRequest(clientPartyPtr->id());
+      emit newPartyRequest(clientPartyPtr->userHash());
+      return;
+   }
+
+   if (clientPartyPtr->id() == currentPartyId_) {
+      return;
+   }
+
+   emit switchPartyRequest(QString::fromStdString(clientPartyPtr->id()));
 }
 
 void ChatMessagesTextEdit::switchToChat(const std::string& partyId)
@@ -327,11 +341,12 @@ void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
    //if (link.toString() == QLatin1Literal("load_more")) {
    //   loadMore();
    //}
-   //if (link.scheme() != QLatin1Literal("user")) {
-   //   QDesktopServices::openUrl(link);
-   //} else {
-   //   onUserUrlOpened(link);
-   //}
+   if (link.scheme() != QLatin1Literal("user")) {
+      QDesktopServices::openUrl(link);
+   }
+   else {
+      onUserUrlOpened(link);
+   }
 }
 
 void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
@@ -496,15 +511,12 @@ void ChatMessagesTextEdit::notifyMessageChanged(Chat::MessagePtr message)
    }
 }
 
-QString ChatMessagesTextEdit::toHtmlUsername(const QString &username, const QString &userId)
+QString ChatMessagesTextEdit::toHtmlUsername(const std::string& username, const std::string& userId)
 {
-   QString changedUsername = QString(QLatin1Literal("<a href=\"user:%1\" style=\"color:%2\">%1</a>")).arg(username).arg(internalStyle_.colorHyperlink().name());
-
-   if (userId.length() > 0) {
-      changedUsername = QString(QLatin1Literal("<a href=\"user:%1\" style=\"color:%2\">%3</a>")).arg(userId).arg(internalStyle_.colorHyperlink().name()).arg(username);
-   }
-
-   return changedUsername;
+   return QString(QLatin1Literal("<a href=\"user:%1\" style=\"color:%2\">%3</a>"))
+      .arg(QString::fromStdString(userId))
+      .arg(internalStyle_.colorHyperlink().name())
+      .arg(QString::fromStdString(username));
 }
 
 QString ChatMessagesTextEdit::toHtmlInvalid(const QString &text)

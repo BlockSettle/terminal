@@ -76,6 +76,7 @@ signals:
    void messageRead(const std::string& partyId, const std::string& messageId);
    void newPartyRequest(const std::string& userName);
    void removePartyRequest(const std::string& partyId);
+   void switchPartyRequest(const QString& partyId);
 
 protected:
    enum class Column {
@@ -105,7 +106,7 @@ private:
    QMenu* initUserContextMenu(const QString& userName);
 
    // #new_logic
-   QString toHtmlUsername(const QString &username, const QString &userId = QString());
+   QString toHtmlUsername(const std::string& username, const std::string& userId);
    QString toHtmlText(const QString &text);
    QString toHtmlInvalid(const QString &text);
 
@@ -122,7 +123,6 @@ private:
 
    std::string currentPartyId_;
    std::string ownUserId_;
-   std::string userName_;
 
    using ClientMessagesHistory = QVector<Chat::MessagePtr>;
    QMap<std::string, ClientMessagesHistory> messages_;

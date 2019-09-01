@@ -291,7 +291,7 @@ protected:
 public slots:
    // OTC
    void processOtcPbMessage(const std::string& data);
-   void onNewChatMessageTrayNotificationClicked(const QString& userId);
+   void onNewChatMessageTrayNotificationClicked(const QString& partyId);
 
 private slots:
    void onPartyModelChanged();
