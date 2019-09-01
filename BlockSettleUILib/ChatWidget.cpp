@@ -1114,6 +1114,8 @@ void ChatWidget::onMessageStateChanged(const std::string& partyId, const std::st
 #include <QTextFormat>
 #include <QTextCursor>
 #include <QTextEdit>
+#include <QApplication>
+#include <QClipboard>
 
 #include "ChatClientUsersViewItemDelegate.h"
 //#include "OTCRequestViewModel.h"
@@ -1570,6 +1572,9 @@ ChatWidget::ChatWidget(QWidget* parent)
 
    //otcRequestViewModel_ = new OTCRequestViewModel(this);
    //ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
+   ui_->textEditMessages->viewport()->installEventFilter(this);
+   ui_->input_textEdit->viewport()->installEventFilter(this);
+   ui_->treeViewUsers->viewport()->installEventFilter(this);
 
    qRegisterMetaType<std::vector<std::string>>();
 }
@@ -1741,6 +1746,42 @@ void ChatWidget::showEvent(QShowEvent* e)
       bNeedRefresh_ = false;
       onActivatePartyId(QString::fromStdString(currentPartyId_));
    }
+}
+
+bool ChatWidget::eventFilter(QObject* sender, QEvent* event)
+{
+   auto fClearSelection = [](QTextEdit* widget, bool bForce = false) {
+      if (!widget->underMouse() || bForce) {
+         QTextCursor textCursor = widget->textCursor();
+         textCursor.clearSelection();
+         widget->setTextCursor(textCursor);
+      }
+   };
+
+   if ( QEvent::MouseButtonPress == event->type()) {
+      fClearSelection(ui_->textEditMessages);
+      fClearSelection(ui_->input_textEdit);
+   }
+
+   if (QEvent::KeyPress == event->type()) {
+      QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+
+      // handle ctrl+c (cmd+c on macOS)
+      if (keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
+         if (Qt::Key_C == keyEvent->key()) {
+            if (ui_->textEditMessages->textCursor().hasSelection()) {
+               QApplication::clipboard()->setText(ui_->textEditMessages->getFormattedTextFromSelection());
+               fClearSelection(ui_->textEditMessages, true);
+               return true;
+            }
+         }
+      }
+      if (keyEvent->matches(QKeySequence::SelectAll)) {
+         fClearSelection(ui_->textEditMessages);
+      }
+   }
+
+   return QWidget::eventFilter(sender, event);
 }
 
 void ChatWidget::processOtcPbMessage(const std::string& data)

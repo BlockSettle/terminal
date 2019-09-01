@@ -286,7 +286,8 @@ public:
 //   void logout();
 
 protected:
-   virtual void showEvent(QShowEvent* e);
+   virtual void showEvent(QShowEvent* e) override;
+   bool eventFilter(QObject* sender, QEvent* event) override;
 
 public slots:
    // OTC
