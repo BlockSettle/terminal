@@ -65,7 +65,7 @@ void ChatUserListTreeView::editContact(const QModelIndex& index)
          parentWidget()->window());
       if (dialog.exec() == QDialog::Accepted)
       {
-         clientPartyPtr->setDisplayName(dialog.displayName().toStdString());
+         emit setDisplayName(clientPartyPtr->id(), dialog.displayName().toStdString());
       }
    }
 }

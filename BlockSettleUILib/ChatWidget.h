@@ -303,11 +303,11 @@ private slots:
    void onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
    void onMessageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
    void onUserListClicked(const QModelIndex& index);
-   void onActivatePartyId(const QString& userId);
+   void onActivatePartyId(const QString& partyId);
    void onRegisterNewChangingRefresh();
    void onShowUserRoom(const QString& userHash);
    void onContactFriendRequest(const QString& userHash);
-
+   void onSetDisplayName(const std::string& partyId, const std::string& contactName);
 
    void onContactRequestAcceptClicked(const std::string& partyId);
    void onContactRequestRejectClicked(const std::string& partyId);

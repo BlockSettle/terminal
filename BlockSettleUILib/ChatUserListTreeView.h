@@ -29,6 +29,7 @@ signals:
    void removeFromContacts(const std::string& partyId);
    void acceptFriendRequest(const std::string& partyId);
    void declineFriendRequest(const std::string& partyId);
+   void setDisplayName(const std::string& partyId, const std::string& contactName);
 
 protected slots:
    void currentChanged(const QModelIndex& current, const QModelIndex& previous) override;

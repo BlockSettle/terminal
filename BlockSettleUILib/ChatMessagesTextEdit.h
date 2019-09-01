@@ -70,6 +70,7 @@ public slots:
    void logout();
    const Chat::MessagePtr onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
    void onMessageUpdate(const Chat::MessagePtrList& messagePtrList);
+   void onUpdatePartyName(const std::string& partyId);
 
 signals:
    void messageRead(const std::string& partyId, const std::string& messageId);
@@ -114,6 +115,7 @@ private:
    Chat::MessagePtr findMessage(const std::string& partyId, const std::string& messageId);
    void notifyMessageChanged(Chat::MessagePtr message);
    void insertMessageInDoc(QTextCursor& cursor, const std::string& partyId, int index);
+   void updateMessage(const std::string& partyId, int index);
 
 private:
    Chat::ClientPartyModelPtr partyModel_;

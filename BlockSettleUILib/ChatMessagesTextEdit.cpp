@@ -61,6 +61,9 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
 {
    const Chat::MessagePtr message = messages_[partyId][row];
 
+   // To avoid lookup every time for the same party_id
+   static Chat::ClientPartyPtr previousClientPartyPtr = nullptr;
+
    switch (column) {
       case Column::Time:
       {
@@ -76,7 +79,22 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
             return ownSenderUserName;
          }
 
-         return toHtmlUsername(QString::fromStdString(senderHash));
+         if (!previousClientPartyPtr || previousClientPartyPtr->id() != partyId) {
+            previousClientPartyPtr = partyModel_->getClientPartyById(message->partyId());
+         }
+
+         if (!previousClientPartyPtr->isGlobal()) {
+            return toHtmlUsername(QString::fromStdString(previousClientPartyPtr->displayName()));
+         }
+         else {
+            Chat::ClientPartyPtr userParty = partyModel_->getPartyByUserName(senderHash);
+
+            if (userParty) {
+               return toHtmlUsername(QString::fromStdString(userParty->displayName()));
+            }
+
+            return toHtmlUsername(QString::fromStdString(senderHash));
+         }         
       }
       case Column::Status:{
          return QString();
@@ -354,6 +372,17 @@ void ChatMessagesTextEdit::insertMessageInDoc(QTextCursor& cursor, const std::st
    cursor.endEditBlock();
 }
 
+void ChatMessagesTextEdit::updateMessage(const std::string& partyId, int index)
+{
+   QTextCursor cursor = textCursor();
+   cursor.movePosition(QTextCursor::Start);
+   cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, index * 2);
+   cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 1);
+   cursor.removeSelectedText();
+
+   insertMessageInDoc(cursor, partyId, index);
+}
+
 void ChatMessagesTextEdit::showMessage(const std::string& partyId, int messageIndex)
 {
    /* add text */
@@ -419,6 +448,17 @@ void ChatMessagesTextEdit::onMessageUpdate(const Chat::MessagePtrList& messagePt
    }
 }
 
+void ChatMessagesTextEdit::onUpdatePartyName(const std::string& partyId)
+{
+   for (int iMessage = 0; iMessage < messages_[currentPartyId_].size(); ++iMessage) {
+      if (messages_[currentPartyId_][iMessage]->partyId() != partyId) {
+         continue;
+      }
+      updateMessage(partyId, iMessage);
+   }
+
+}
+
 Chat::MessagePtr ChatMessagesTextEdit::findMessage(const std::string& partyId, const std::string& messageId)
 {
    if (messages_.contains(partyId)) {
@@ -450,14 +490,8 @@ void ChatMessagesTextEdit::notifyMessageChanged(Chat::MessagePtr message)
 
       if (it != messages_[partyId].end()) {
          int distance = static_cast<int>(std::distance(messages_[partyId].begin(), it));
-
-         QTextCursor cursor = textCursor();
-         cursor.movePosition(QTextCursor::Start);
-         cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, distance * 2);
-         cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 1);
-         cursor.removeSelectedText();
-         
-         insertMessageInDoc(cursor, partyId, distance);
+        
+         updateMessage(partyId, distance);
       }
    }
 }

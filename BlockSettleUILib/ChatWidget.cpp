@@ -1189,6 +1189,9 @@ public:
       int bNewMessagesCounter = 0;
       const std::string& partyId = messagePtr[0]->partyId();
 
+      Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+      Chat::ClientPartyPtr clientPartyPtr = partyModel->getClientPartyById(partyId);
+
       // Tab notifier
       for (int iMessage = 0; iMessage < messagePtr.size(); ++iMessage) {
          Chat::MessagePtr message = messagePtr[iMessage];
@@ -1196,7 +1199,7 @@ public:
             chat_->ownUserId_ != message->senderHash()) {
             ++bNewMessagesCounter;
 
-            auto messageTitle = message->senderHash();
+            auto messageTitle = clientPartyPtr->displayName();
             auto messageText = message->messageText();
            
             if (messageText.length() > maxMessageNotifLength) {
@@ -1289,6 +1292,19 @@ public:
 
       chat_->chatClientServicePtr_->RequestPrivateParty(partyName);
    }
+   void updateDisplayName(const std::string& partyId, const std::string& contactName) {
+      if (!canUpdatePartyName()) {
+         return;
+      }
+
+      Chat::ClientPartyModelPtr clientPartyModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+      Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyId);
+      clientPartyPtr->setDisplayName(contactName);
+      
+      if (clientPartyPtr->isGlobalStandard() || (clientPartyPtr->isPrivateStandard() && chat_->currentPartyId_ == partyId)) {
+         chat_->ui_->textEditMessages->onUpdatePartyName(partyId);
+      }
+   }
 
 protected:
    virtual void applyUserFrameChange() = 0;
@@ -1305,6 +1321,7 @@ protected:
    virtual bool canRejectPartyRequest() const { return true; }
    virtual bool canSendPartyRequest() const { return true; }
    virtual bool canRemovePartyRequest() const { return true; }
+   virtual bool canUpdatePartyName() const { return true; }
 
    void saveDraftMessage()
    {
@@ -1370,6 +1387,7 @@ protected:
    virtual bool canRejectPartyRequest() const override { return false; }
    virtual bool canSendPartyRequest() const override { return false; }
    virtual bool canRemovePartyRequest() const override { return false; }
+   virtual bool canUpdatePartyName() const override { return false; }
 };
 
 class IdleState : public AbstractChatWidgetState {
@@ -1603,6 +1621,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->treeViewUsers, &ChatUserListTreeView::removeFromContacts, this, &ChatWidget::onRemovePartyRequest);
    connect(ui_->treeViewUsers, &ChatUserListTreeView::acceptFriendRequest, this, &ChatWidget::onContactRequestAcceptClicked);
    connect(ui_->treeViewUsers, &ChatUserListTreeView::declineFriendRequest, this, &ChatWidget::onContactRequestRejectClicked);
+   connect(ui_->treeViewUsers, &ChatUserListTreeView::setDisplayName, this, &ChatWidget::onSetDisplayName);
 
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendMessage);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::messageRead, this, &ChatWidget::onMessageRead, Qt::QueuedConnection);
@@ -1807,10 +1826,10 @@ void ChatWidget::chatTransition(const Chat::ClientPartyPtr& clientPartyPtr)
    }
 }
 
-void ChatWidget::onActivatePartyId(const QString& userId)
+void ChatWidget::onActivatePartyId(const QString& partyId)
 {
    ChatPartiesSortProxyModel* chartProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
-   const QModelIndex partyProxyIndex = chartProxyModel->getProxyIndexById(userId.toStdString());
+   const QModelIndex partyProxyIndex = chartProxyModel->getProxyIndexById(partyId.toStdString());
    if (!partyProxyIndex.isValid()) {
       currentPartyId_.clear();
       if (ownUserId_.empty()) {
@@ -1849,4 +1868,9 @@ void ChatWidget::onShowUserRoom(const QString& userHash)
 void ChatWidget::onContactFriendRequest(const QString& userHash)
 {
    chatClientServicePtr_->RequestPrivateParty(userHash.toStdString());
+}
+
+void ChatWidget::onSetDisplayName(const std::string& partyId, const std::string& contactName)
+{
+   stateCurrent_->updateDisplayName(partyId, contactName);
 }
