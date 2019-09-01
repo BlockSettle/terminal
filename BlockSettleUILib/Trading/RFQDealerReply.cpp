@@ -502,17 +502,7 @@ void RFQDealerReply::onAuthAddrChanged(int index)
    if (authAddr_.isNull()) {
       return;
    }
-   const auto priWallet = walletsManager_->getPrimaryWallet();
-   const auto group = priWallet->getGroup(bs::hd::BlockSettle_Settlement);
-   std::shared_ptr<bs::sync::hd::SettlementLeaf> settlLeaf;
-   if (group) {
-      const auto settlGroup = std::dynamic_pointer_cast<bs::sync::hd::SettlementGroup>(group);
-      if (!settlGroup) {
-         logger_->error("[{}] wrong settlement group type", __func__);
-         return;
-      }
-      settlLeaf = settlGroup->getLeaf(authAddr_);
-   }
+   const auto settlLeaf = authAddressManager_->getSettlementLeaf(authAddr_);
 
    const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
       authKey_ = pubKey.toHexStr();

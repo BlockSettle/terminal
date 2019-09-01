@@ -1,5 +1,5 @@
-#include <QtDebug>
-
+#include <QRegularExpression>
+#include <QRegularExpressionMatch>
 #include <google/protobuf/any.pb.h>
 
 #include "ChatProtocol/ChatClientLogic.h"
@@ -17,6 +17,8 @@
 
 namespace Chat
 {
+
+   const auto kEmailRegex = QStringLiteral(R"(^\S+@\S+\.\S+$)");
 
    ChatClientLogic::ChatClientLogic()
    {
@@ -51,9 +53,9 @@ namespace Chat
       connect(this, qOverload<DataConnectionListener::DataConnectionError>(&ChatClientLogic::error),
          clientConnectionLogicPtr_.get(), qOverload<DataConnectionListener::DataConnectionError>(&ClientConnectionLogic::onError));
       connect(this, &ChatClientLogic::messagePacketSent, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::messagePacketSent);
-
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::sendPacket, this, &ChatClientLogic::sendPacket);
       connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
+      connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::searchUserReply, this, &ChatClientLogic::searchUserReply);
 
       // close connection from callback
       connect(this, &ChatClientLogic::disconnected, this, &ChatClientLogic::onCloseConnection);
@@ -66,8 +68,6 @@ namespace Chat
 
    void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, const ApplicationSettingsPtr& appSettingsPtr, const LoggerPtr& loggerPtr)
    {
-      qDebug() << "ChatClientLogic::Init Thread ID:" << this->thread()->currentThreadId();
-
       if (connectionManagerPtr_) {
          // already initialized
          emit chatClientError(ChatClientLogicError::ConnectionAlreadyInitialized);
@@ -155,9 +155,12 @@ namespace Chat
 
    void ChatClientLogic::sendPacket(const google::protobuf::Message& message)
    {
-      qDebug() << "ChatClientLogic::sendRequestPacket Thread ID:" << this->thread()->currentThreadId();
+      auto packetString = ProtobufUtils::pbMessageToString(message);
 
-      loggerPtr_->debug("send: {}", ProtobufUtils::toJsonCompact(message));
+      google::protobuf::Any any;
+      any.ParseFromString(packetString);
+
+      loggerPtr_->debug("[ChatClientLogic::sendPacket] send: {}", ProtobufUtils::toJsonReadable(any));
 
       if (!connectionPtr_->isActive())
       {
@@ -165,16 +168,11 @@ namespace Chat
          return;
       }
 
-      auto packetString = ProtobufUtils::pbMessageToString(message);
-
       if (!connectionPtr_->send(packetString))
       {
          loggerPtr_->error("[ChatClientLogic::sendPacket] Failed to send packet!");
          return;
       }
-
-      google::protobuf::Any any;
-      any.PackFrom(message);
 
       if (any.Is<PartyMessagePacket>())
       {
@@ -281,6 +279,28 @@ namespace Chat
       }
 
       clientPartModelPtr->removeParty(partyPtr);
+   }
+
+   void ChatClientLogic::SearchUser(const std::string& userHash, const std::string& searchId)
+   {
+      QRegularExpression re(kEmailRegex);
+      if (!re.isValid())
+      {
+         return;
+      }
+      QRegularExpressionMatch match = re.match(QString::fromStdString(userHash));
+
+      std::string stringToSearch;
+      if (match.hasMatch())
+      {
+         stringToSearch = userHasherPtr_->deriveKey(userHash);
+      }
+      else
+      {
+         stringToSearch = userHash;
+      }
+
+      clientConnectionLogicPtr_->searchUser(stringToSearch, searchId);
    }
 
 }

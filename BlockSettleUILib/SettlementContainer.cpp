@@ -30,11 +30,11 @@ sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogDat
    dialogData.setValue("Duration", 30000);
 
    // tx details
-   dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+   dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
                  .arg(UiUtils::XbtCurrency)
                  .arg(UiUtils::displayAmount(payOutReq.inputAmount())));
 
-   dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+   dialogData.setValue("ReturnAmount", QStringLiteral("- %2 %1")
                  .arg(UiUtils::XbtCurrency)
                  .arg(UiUtils::displayAmount(payOutReq.change.value)));
 

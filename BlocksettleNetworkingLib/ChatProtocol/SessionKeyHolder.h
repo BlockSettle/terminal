@@ -34,6 +34,7 @@ namespace Chat
       void onIncomingRequestSessionKeyExchange(const std::string& userName, const BinaryData& incomingEncodedPublicKey, const SecureBinaryData& ownPrivateKey);
       void onIncomingReplySessionKeyExchange(const std::string& userName, const BinaryData& incomingEncodedPublicKey);
       SessionKeyDataPtr sessionKeyDataForUser(const std::string& userName);
+      void clearSessionForUser(const std::string& userName);
 
    signals:
       void sessionKeysForUser(const Chat::SessionKeyDataPtr& sessionKeyDataPtr);

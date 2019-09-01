@@ -182,5 +182,9 @@ namespace Chat
       emit sessionKeysForUser(sessionKeyDataPtr);
    }
 
+   void SessionKeyHolder::clearSessionForUser(const std::string& userName)
+   {
+      sessionKeyDataList_.erase(userName);
+   }
 
 }

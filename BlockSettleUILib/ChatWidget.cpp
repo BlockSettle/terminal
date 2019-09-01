@@ -1378,7 +1378,7 @@ public:
    virtual ~IdleState() override = default;
 protected:
    virtual void applyUserFrameChange() override {
-      chat_->ui_->searchWidget->setLineEditEnabled(false);
+      chat_->ui_->searchWidget->setLineEditEnabled(true);
       chat_->ui_->textEditMessages->switchToChat({});
 
       chat_->ui_->labelUserName->setText(QString::fromStdString(chat_->ownUserId_));
@@ -1573,6 +1573,12 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    installEventFilter(this);
 
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout, Qt::QueuedConnection);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatWidget::onPartyModelChanged, Qt::QueuedConnection);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::searchUserReply, ui_->searchWidget, &SearchWidget::searchUserReply);
+   connect(ui_->searchWidget, &SearchWidget::showUserRoom, this, &ChatWidget::onShowUserRoom);
+   connect(ui_->searchWidget, &SearchWidget::contactFriendRequest, this, &ChatWidget::onContactFriendRequest);
+
    chatPartiesTreeModel_ = std::make_shared<ChatPartiesTreeModel>(chatClientServicePtr_);
 
    ChatPartiesSortProxyModelPtr charTreeSortModel = std::make_shared<ChatPartiesSortProxyModel>(chatPartiesTreeModel_);
@@ -1582,8 +1588,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->treeViewUsers->setItemDelegate(new ChatClientUsersViewItemDelegate(charTreeSortModel, this));
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
 
-   // TODO: fix search widget
-   ui_->searchWidget->init();
+   ui_->searchWidget->init(chatClientServicePtr);
    ui_->searchWidget->clearLineEdit();
    ui_->searchWidget->setLineEditEnabled(false);
    ui_->searchWidget->setListVisible(false);
@@ -1608,17 +1613,17 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout, Qt::QueuedConnection);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatWidget::onPartyModelChanged, Qt::QueuedConnection);
 
-   Chat::ClientPartyModelPtr chatModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
-   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onSendArrived, Qt::QueuedConnection);
-   connect(chatModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onClientPartyStatusChanged, Qt::QueuedConnection);
-   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onMessageStateChanged, Qt::QueuedConnection);
-
-   ui_->textEditMessages->setClientPartyModel(chatModelPtr);
+   Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onSendArrived, Qt::QueuedConnection);
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onClientPartyStatusChanged, Qt::QueuedConnection);
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onMessageStateChanged, Qt::QueuedConnection);
 
    // Connect all signal that influence on widget appearance 
-   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
-   connect(chatModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
-   connect(chatModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
+
+   ui_->textEditMessages->setClientPartyModel(clientPartyModelPtr);
 
 /* TODO
 
@@ -1694,8 +1699,8 @@ void ChatWidget::onPartyModelChanged()
 
 void ChatWidget::onLogin()
 {
-   const auto chatModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
-   ownUserId_ = chatModelPtr->ownUserName();
+   const auto clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
+   ownUserId_ = clientPartyModelPtr->ownUserName();
 
    changeState<IdleState>();
    stateCurrent_->resetPartyModel();
@@ -1768,8 +1773,12 @@ void ChatWidget::onUserListClicked(const QModelIndex& index)
    }
 
    const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
+   chatTransition(clientPartyPtr);
+}
 
-   auto transitionChange = [this, clientPartyPtr]() 
+void ChatWidget::chatTransition(const Chat::ClientPartyPtr& clientPartyPtr)
+{
+   auto transitionChange = [this, clientPartyPtr]()
    {
       currentPartyId_ = clientPartyPtr->id();
    };
@@ -1822,4 +1831,22 @@ void ChatWidget::onRegisterNewChangingRefresh()
    if (!isVisible() || !isActiveWindow()) {
       bNeedRefresh_ = true;
    }
+}
+
+void ChatWidget::onShowUserRoom(const QString& userHash)
+{
+   const auto clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
+   Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getPartyByUserName(userHash.toStdString());
+
+   if (!clientPartyPtr)
+   {
+      return;
+   }
+
+   chatTransition(clientPartyPtr);
+}
+
+void ChatWidget::onContactFriendRequest(const QString& userHash)
+{
+   chatClientServicePtr_->RequestPrivateParty(userHash.toStdString());
 }

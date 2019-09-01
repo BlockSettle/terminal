@@ -154,6 +154,7 @@ namespace Chat
 
       newClientPrivatePartyPtr->setDisplayName(remoteUserName);
       newClientPrivatePartyPtr->setUserHash(remoteUserName);
+      newClientPrivatePartyPtr->setPartyCreatorHash(currentUserPtr->userName());
       // setup recipients for new private party
       PartyRecipientsPtrList recipients;
       recipients.push_back(std::make_shared<PartyRecipient>(currentUserPtr->userName()));

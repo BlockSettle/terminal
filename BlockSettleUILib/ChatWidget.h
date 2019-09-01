@@ -305,6 +305,8 @@ private slots:
    void onUserListClicked(const QModelIndex& index);
    void onActivatePartyId(const QString& userId);
    void onRegisterNewChangingRefresh();
+   void onShowUserRoom(const QString& userHash);
+   void onContactFriendRequest(const QString& userHash);
 
 
    void onContactRequestAcceptClicked(const std::string& partyId);
@@ -343,6 +345,7 @@ protected:
    std::unique_ptr<AbstractChatWidgetState> stateCurrent_;
 
 private:
+   void chatTransition(const Chat::ClientPartyPtr& clientPartyPtr);
    QScopedPointer<Ui::ChatWidget> ui_;
    Chat::ChatClientServicePtr    chatClientServicePtr_;
    OTCRequestViewModel* otcRequestViewModel_ = nullptr;
@@ -355,7 +358,5 @@ private:
 
    bool bNeedRefresh_ = false;
 };
-
-Q_DECLARE_METATYPE(std::vector<std::string>)
 
 #endif // CHAT_WIDGET_H

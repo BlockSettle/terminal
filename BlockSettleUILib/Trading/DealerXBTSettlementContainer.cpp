@@ -109,25 +109,25 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
 
    // tx details
    if (side() == bs::network::Side::Buy) {
-      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+      dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayAmount(payOutTxRequest_.inputAmount())));
 
-      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+      dialogData.setValue("ReturnAmount", QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayAmount(payOutTxRequest_.change.value)));
    }
    else {
-      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+      dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(payInTxRequest_.inputAmount())));
 
-      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+      dialogData.setValue("ReturnAmount", QStringLiteral("+ %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(payInTxRequest_.change.value)));
    }
 
-   dialogData.setValue("NetworkFee", QStringLiteral("(%1)-%2")
+   dialogData.setValue("NetworkFee", QStringLiteral("- %2 %1")
                        .arg(UiUtils::XbtCurrency)
                        .arg(UiUtils::displayAmount(fee())));
 
@@ -135,10 +135,10 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue("SettlementId", settlementId_.toHexStr());
    dialogData.setValue("SettlementAddress", settlAddr_.display());
 
-   dialogData.setValue("RequesterAuthAddress", "Verifying");
+   dialogData.setValue("RequesterAuthAddress", bs::Address::fromPubKey(reqAuthKey_).display());
    dialogData.setValue("RequesterAuthAddressVerified", false);
 
-   dialogData.setValue("ResponderAuthAddress", "Verifying");
+   dialogData.setValue("ResponderAuthAddress", bs::Address::fromPubKey(authKey_).display());
    dialogData.setValue("ResponderAuthAddressVerified", false);
 
 
@@ -150,7 +150,7 @@ bool DealerXBTSettlementContainer::startPayInSigning()
    try {
       payInTxRequest_ = transactionData_->getSignTxRequest();
       bs::sync::PasswordDialogData dlgData = toPasswordDialogData();
-      dlgData.setValue("SettlementPayIn", QStringLiteral("(%1)-%2")
+      dlgData.setValue("SettlementPayIn", QStringLiteral("- %2 %1")
                        .arg(UiUtils::XbtCurrency)
                        .arg(UiUtils::displayAmount(amount())));
 
@@ -196,7 +196,7 @@ bool DealerXBTSettlementContainer::startPayOutSigning()
 
          bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(payOutTxRequest_);
          dlgData.setValue("SettlementId", QString::fromStdString(settlementId_.toHexStr()));
-         dlgData.setValue("SettlementPayOut", QStringLiteral("(%1)+%2")
+         dlgData.setValue("SettlementPayOut", QStringLiteral("+ %2 %1")
                      .arg(UiUtils::XbtCurrency)
                      .arg(UiUtils::displayAmount(payOutTxRequest_.amount())));
 

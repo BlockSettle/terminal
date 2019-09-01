@@ -1,9 +1,11 @@
 #ifndef SEARCHWIDGET_H
 #define SEARCHWIDGET_H
 
+#include <memory>
+
 #include <QWidget>
 
-#include <memory>
+#include "ChatProtocol/ChatClientService.h"
 
 class QAbstractItemModel;
 class ChatSearchActionsHandler;
@@ -59,12 +61,12 @@ public:
 
    bool eventFilter(QObject *watched, QEvent *event) override;
 
-   void init(/*std::shared_ptr<ChatClient> handler*/);
+   void init(const Chat::ChatClientServicePtr chatClientServicePtr);
 
 public slots:
    void clearLineEdit();
    void startListAutoHide();
-   void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::Data>>& users, bool emailEntered);
+   void searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
 
 private slots:
    void resetTreeView();
@@ -78,15 +80,15 @@ private slots:
    void onSearchUserTextEdited();
 
 signals:
-   void addFriendRequied(const QString &userID);
+   void contactFriendRequest(const QString &userID);
    void showUserRoom(const QString &userID);
 
 private:
    QScopedPointer<Ui::SearchWidget> ui_;
    QScopedPointer<QTimer>           listVisibleTimer_;
-
    QScopedPointer<UserSearchModel>  userSearchModel_;
-   std::shared_ptr<ChatClient>      chatClient_ = nullptr;
+   Chat::ChatClientServicePtr       chatClientServicePtr_;
+   std::string                      lastSearchId_;
 };
 
 #endif // SEARCHWIDGET_H

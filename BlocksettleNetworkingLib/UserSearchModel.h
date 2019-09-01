@@ -1,13 +1,10 @@
 #ifndef USERSEARCHMODEL_H
 #define USERSEARCHMODEL_H
 
-#include <QAbstractListModel>
-
 #include <memory>
 
-namespace Chat {
-   class UserData;
-}
+#include <QAbstractListModel>
+#include "ChatProtocol/ClientPartyModel.h"
 
 class ChatSearchListViewItemStyle;
 
@@ -15,10 +12,13 @@ class UserSearchModel : public QAbstractListModel
 {
    Q_OBJECT
 public:
-   enum CustomRoles {
+   enum CustomRoles 
+   {
       UserStatusRole = Qt::UserRole + 1
    };
-   enum class UserStatus {
+
+   enum class UserStatus
+   {
       ContactUnknown,
       ContactAccepted,
       ContactPendingIncoming,
@@ -27,9 +27,8 @@ public:
    };
    Q_ENUM(UserStatus)
 
-   typedef std::pair<QString,UserStatus> UserInfo;
+   typedef std::pair<QString, UserStatus> UserInfo;
    explicit UserSearchModel(QObject *parent = nullptr);
-   ~UserSearchModel() override;
 
    void setUsers(const std::vector<UserInfo> &users);
    void setItemStyle(std::shared_ptr<QObject> itemStyle);

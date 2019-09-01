@@ -10,6 +10,8 @@ namespace Chat
    ClientPartyModel::ClientPartyModel(const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
       : PartyModel(loggerPtr, parent)
    {
+      qRegisterMetaType<Chat::PrivatePartyState>();
+
       connect(this, &ClientPartyModel::error, this, &ClientPartyModel::handleLocalErrors);
       connect(this, &ClientPartyModel::partyInserted, this, &ClientPartyModel::handlePartyInserted);
       connect(this, &ClientPartyModel::partyRemoved, this, &ClientPartyModel::handlePartyRemoved);
@@ -133,6 +135,42 @@ namespace Chat
    {
       emit partyStateChanged(partyId);
       emit partyModelChanged();
+   }
+
+   PrivatePartyState ClientPartyModel::deducePrivatePartyStateForUser(const std::string& userName)
+   {
+      ClientPartyPtr clientPartyPtr = getPartyByUserName(userName);
+
+      if (!clientPartyPtr)
+      {
+         return PrivatePartyState::Unknown;
+      }
+
+      PartyState partyState = clientPartyPtr->partyState();
+
+      if (PartyState::UNINITIALIZED == partyState)
+      {
+         return PrivatePartyState::Uninitialized;
+      }
+
+      if (PartyState::REQUESTED == partyState)
+      {
+         if (userName == ownUserName_)
+         {
+            return PrivatePartyState::RequestedOutgoing;
+         }
+         else
+         {
+            return PrivatePartyState::RequestedIncoming;
+         }
+      }
+
+      if (PartyState::REJECTED == partyState || ownUserName_ == userName)
+      {
+         return PrivatePartyState::Rejected;
+      }
+
+      return PrivatePartyState::Initialized;
    }
 
 }

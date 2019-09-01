@@ -60,6 +60,8 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
 
+   dialogData.remove("SettlementId");
+
    if (side() == bs::network::Side::Sell) {
       dialogData.setValue("Title", tr("Settlement Delivery"));
    }
@@ -77,36 +79,36 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
 
    // tx details
    if (side() == bs::network::Side::Buy) {
-      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+      dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(ccTxData_.inputAmount())));
 
-      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+      dialogData.setValue("ReturnAmount", QStringLiteral("+ %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(ccTxData_.change.value)));
 
-      dialogData.setValue("PaymentAmount", QStringLiteral("(%1)-%2")
+      dialogData.setValue("PaymentAmount", QStringLiteral("- %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(ccTxData_.inputAmount() - ccTxData_.change.value)));
 
-      dialogData.setValue("DeliveryReceived", QStringLiteral("(%1)+%2")
+      dialogData.setValue("DeliveryReceived", QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayCCAmount(ccTxData_.change.value)));
    }
    else {
-      dialogData.setValue("InputAmount", QStringLiteral("(%1)-%2")
+      dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount())));
 
-      dialogData.setValue("ReturnAmount", QStringLiteral("(%1)+%2")
+      dialogData.setValue("ReturnAmount", QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayCCAmount(ccTxData_.change.value)));
 
-      dialogData.setValue("DeliveryAmount", QStringLiteral("(%1)-%2")
+      dialogData.setValue("DeliveryAmount", QStringLiteral("- %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount() - ccTxData_.change.value)));
 
-      dialogData.setValue("PaymentReceived", QStringLiteral("(%1)+%2")
+      dialogData.setValue("PaymentReceived", QStringLiteral("+ %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(amount())));
    }

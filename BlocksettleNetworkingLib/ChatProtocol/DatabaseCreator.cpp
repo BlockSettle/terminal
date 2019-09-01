@@ -5,7 +5,6 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QVariant>
-#include <QtDebug>
 #include <QThread>
 
 #include <disable_warnings.h>
@@ -24,8 +23,6 @@ namespace Chat
 
    void DatabaseCreator::rebuildDatabase()
    {
-      qDebug() << "[DatabaseCreator::rebuildDatabase] thread ID:" << this->thread()->currentThreadId();
-
       if (createMissingTables())
       {
          emit rebuildDone();
@@ -58,29 +55,29 @@ namespace Chat
          {
             if (!tablesMap_.contains(reqTable))
             {
-               loggerPtr_->debug("[DatabaseCreator] Required table '{}' not found in tables description", reqTable.toStdString());
+               loggerPtr_->debug("[DatabaseCreator::createMissingTables] Required table '{}' not found in tables description", reqTable.toStdString());
                result = false;
                break;
             }
 
             QString createCmd = buildCreateCmd(reqTable, tablesMap_.value(reqTable));
-            loggerPtr_->debug("[DatabaseCreator] Build create cmd : {}\n", createCmd.toStdString());
+            loggerPtr_->debug("[DatabaseCreator::createMissingTables] Build create cmd : {}\n", createCmd.toStdString());
 
-            loggerPtr_->debug("[DatabaseCreator] creating table {}", reqTable.toStdString());
+            loggerPtr_->debug("[DatabaseCreator::createMissingTables] creating table {}", reqTable.toStdString());
 
             QSqlQuery createQuery;
             const bool rc = ExecuteQuery(createCmd, createQuery);
 
             if (!rc)
             {
-               loggerPtr_->warn("[DatabaseCreator] failed to create table {}", reqTable.toStdString());
+               loggerPtr_->warn("[DatabaseCreator::createMissingTables] failed to create table {}", reqTable.toStdString());
             }
 
             result &= rc;
          }
          else
          {
-            loggerPtr_->debug("[DatabaseCreator] table '{}' exists. Checking...", reqTable.toStdString());
+            loggerPtr_->debug("[DatabaseCreator::createMissingTables] table '{}' exists. Checking...", reqTable.toStdString());
             if (!checkColumns(reqTable))
             {
                return false;
@@ -161,17 +158,13 @@ namespace Chat
 
       for (const TableColumnDescription& columnItem : tableStruct.tableColumns)
       {
-         loggerPtr_->debug("[DatabaseCreator] Check column: {}", columnItem.columnName.toStdString());
-         qDebug() << "Check column: " << columnItem.columnName;
+         loggerPtr_->debug("[DatabaseCreator::checkColumns] Check column: {}", columnItem.columnName.toStdString());
 
          if (!tableColumns.contains(columnItem.columnName))
          {
-            loggerPtr_->debug("[DatabaseCreator] Column: {} not exists... Creating with type : {}",
+            loggerPtr_->debug("[DatabaseCreator::checkColumns] Column: {} not exists... Creating with type : {}",
                columnItem.columnName.toStdString(),
                columnItem.columnType.toStdString());
-
-            qDebug() << "Column: " << columnItem.columnName
-               << " not exists... Creating with type: " << columnItem.columnType;
 
             QString alterCmd = QString(QLatin1String("ALTER TABLE `%1` ADD COLUMN "
                " `%2` %3;"))
@@ -182,15 +175,14 @@ namespace Chat
             QSqlQuery alterQuery;
             if (!ExecuteQuery(alterCmd, alterQuery))
             {
-               qDebug() << "Can't alter table (table: " << columnItem.columnName << ")";
+               loggerPtr_->debug("[DatabaseCreator::checkColumns] Can't alter table (table: {})", columnItem.columnName.toStdString());
                throw std::runtime_error("Can't alter table (table: " + tableName.toStdString() + ")");
                return false;
             }
          }
          else 
          {
-            loggerPtr_->debug("[DatabaseCreator] Column: {}  already exists!", columnItem.columnName.toStdString());
-            qDebug() << "Column: " << columnItem.columnName << " already exists!";
+            loggerPtr_->debug("[DatabaseCreator::checkColumns] Column: {}  already exists!", columnItem.columnName.toStdString());
          }
       }
 

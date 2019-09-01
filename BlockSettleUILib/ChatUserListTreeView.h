@@ -2,7 +2,6 @@
 #define CHATCLIENTUSERVIEW_H
 
 #include <QTreeView>
-#include "ChatHandleInterfaces.h"
 #include "ChatUsersViewItemStyle.h"
 #include "ChatProtocol/ChatClientService.h"
 
@@ -56,4 +55,5 @@ private:
    // #new_logic : this should leave in chat widget
    QLabel * label_;
 };
+
 #endif // CHATCLIENTUSERVIEW_H

@@ -82,7 +82,13 @@ bool AuthAddressDialog::unsubmittedExist() const
 void AuthAddressDialog::updateUnsubmittedState()
 {
    for (size_t i = 0; i < authAddressManager_->GetAddressCount(); i++) {
-      switch (authAddressManager_->GetState(authAddressManager_->GetAddress(i))) {
+      const auto authAddr = authAddressManager_->GetAddress(i);
+      if (!authAddressManager_->hasSettlementLeaf(authAddr)) {
+         authAddressManager_->createSettlementLeaf(authAddr, [] {});
+         unconfirmedExists_ = true;
+         return;
+      }
+      switch (authAddressManager_->GetState(authAddr)) {
       case AddressVerificationState::NotSubmitted:
          ui_->labelHint->setText(tr("There are unsubmitted addresses - adding new ones is temporarily suspended"));
          [[clang::fallthrough]];
@@ -328,14 +334,24 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
 
 void AuthAddressDialog::submitSelectedAddress()
 {
-   lastSubmittedAddress_ = GetSelectedAddress();
+   ui_->pushButtonSubmit->setEnabled(false);
+   ui_->labelHint->clear();
 
+   lastSubmittedAddress_ = GetSelectedAddress();
    if (lastSubmittedAddress_.isNull()) {
       return;
    }
 
-   authAddressManager_->SubmitForVerification(lastSubmittedAddress_);
-   ui_->labelHint->clear();
+   if (authAddressManager_->hasSettlementLeaf(lastSubmittedAddress_)) {
+      authAddressManager_->SubmitForVerification(lastSubmittedAddress_);
+   }
+   else {
+      authAddressManager_->createSettlementLeaf(lastSubmittedAddress_, [this] {
+         QMetaObject::invokeMethod(this, [this] {  // prevent crash if dialog was destroyed
+            authAddressManager_->SubmitForVerification(lastSubmittedAddress_);
+         });
+      });
+   }
 }
 
 void AuthAddressDialog::verifySelectedAddress()
