@@ -7,7 +7,7 @@
 #include "ui_SearchWidget.h"
 #include "UserSearchModel.h"
 #include "ChatUI/ChatSearchListViewItemStyle.h"
-#include "ChatClient.h"
+
 #include "chat.pb.h"
 
 namespace  {

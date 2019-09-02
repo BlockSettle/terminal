@@ -7,10 +7,6 @@ FILE(GLOB SOURCES
    *.cpp
    Wallets/*.cpp
    ChatProtocol/*.cpp
-   ChatProtocol/DataObjects/*.cpp
-   ChatProtocol/RequestObjects/*.cpp
-   ChatProtocol/ResponseObjects/*.cpp
-   ChatClientTree/*.cpp
    Encryption/*.cpp
 )
 

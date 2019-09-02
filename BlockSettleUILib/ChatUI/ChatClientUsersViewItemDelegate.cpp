@@ -1,8 +1,6 @@
 #include "ChatClientUsersViewItemDelegate.h"
-#include "ChatClientDataModel.h"
 #include <QPainter>
 #include <QLineEdit>
-#include "ChatProtocol/ChatUtils.h"
 
 namespace {
    const int kDotSize = 8;

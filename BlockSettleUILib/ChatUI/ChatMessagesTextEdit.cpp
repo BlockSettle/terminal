@@ -1,8 +1,5 @@
 #include "ChatMessagesTextEdit.h"
 
-#include "ChatClientDataModel.h"
-#include "ChatClientTree/TreeObjects.h"
-#include "ChatProtocol/ChatUtils.h"
 #include "ProtobufUtils.h"
 
 #include <QApplication>

@@ -1,7 +1,6 @@
 #ifndef __CHAT_MESSAGES_VIEW_MODEL_H__
 #define __CHAT_MESSAGES_VIEW_MODEL_H__
 
-#include "ChatClient.h"
 #include "ChatProtocol/Message.h"
 #include "ChatProtocol/ClientPartyModel.h"
 

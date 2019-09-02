@@ -2,12 +2,9 @@
 #include <QLabel>
 
 #include "ChatUserListTreeView.h"
-#include "ChatClientTree/TreeObjects.h"
 #include "ChatClientUsersViewItemDelegate.h"
-#include "ChatClientDataModel.h"
 #include "BSMessageBox.h"
 #include "EditContactDialog.h"
-#include "ChatProtocol/ChatUtils.h"
 
 namespace {
    // Translation
