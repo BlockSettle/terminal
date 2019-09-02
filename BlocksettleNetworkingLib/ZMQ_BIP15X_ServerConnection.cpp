@@ -981,11 +981,10 @@ void ZmqBIP15XServerConnection::checkHeartbeats()
 {
    auto now = std::chrono::steady_clock::now();
    auto idlePeriod = now - lastHeartbeatsCheck_;
-   lastHeartbeatsCheck_ = now;
-
    if (idlePeriod < heartbeatInterval_ / kHeartbeatsCheckCount) {
       return;
    }
+   lastHeartbeatsCheck_ = now;
 
    if (idlePeriod > heartbeatInterval_ * 2) {
       logger_->debug("[ZmqBIP15XServerConnection:{}] hibernation detected, reset client's last timestamps", __func__);
