@@ -83,6 +83,8 @@ public:
    bool hasWallet(const BinaryData& ID) const;
 
    Tx                getTxByHash(BinaryData const & txHash) const;
+   std::pair<uint32_t, uint32_t> getHeightAndIdForTxHash(const BinaryDataRef&) const;
+
    TxOut             getPrevTxOut(TxIn & txin) const;
    Tx                getPrevTx(TxIn & txin) const;
 

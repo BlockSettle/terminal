@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.ProxyTerminalPb;
+
+// Messages sent from terminal to PB and back.
+// `Request` is sent from terminal (PB is a server here).
+
+message Request
+{
+    message StartOtc
+    {
+        int32 request_id = 1;
+    }
+
+    message VerifyOtc
+    {
+        bool is_seller = 1;
+
+        int64 amount = 2;
+        int64 price = 3;
+
+        bytes settlement_id = 4;
+
+        bytes auth_address_seller = 5;
+        bytes auth_address_buyer = 6;
+
+        // Used to check fees and other details (UTXO for payin, settlement address etc)
+        bytes unsigned_payin = 7;
+        bytes unsigned_payout = 8;
+        bytes unsigned_payout_fallback = 9;
+
+        string chat_id_seller = 10;
+        string chat_id_buyer = 11;
+    }
+
+    message BroadcastXBT
+    {
+        bytes settlement_id = 1;
+        bytes signed_payin = 2;
+        bytes signed_payout = 3;
+        bytes signed_payout_fallback = 4;
+    }
+
+    oneof data
+    {
+        // Requests
+        StartOtc start_otc = 1;
+        VerifyOtc verify_otc = 2;
+
+        // Messages
+        BroadcastXBT broadcast_xbt = 30;
+    }
+}
+
+message Response
+{
+    message StartOtc
+    {
+        int32 request_id = 1;
+        bytes settlement_id = 2;
+    }
+
+    message VerifyOtc
+    {
+        bool success = 1;
+        string error_msg = 2;
+        bytes settlement_id = 3;
+    }
+
+    oneof data
+    {
+        // Requests
+        StartOtc start_otc = 1;
+        VerifyOtc verify_otc = 2;
+    }
+}

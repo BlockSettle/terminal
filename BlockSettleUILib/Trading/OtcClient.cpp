@@ -12,7 +12,7 @@
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "bs_proxy_pb.pb.h"
+#include "bs_proxy_terminal_pb.pb.h"
 #include "otc.pb.h"
 
 using namespace Blocksettle::Communication::Otc;
@@ -378,7 +378,7 @@ void OtcClient::processMessage(const std::string &peerId, const BinaryData &data
 
 void OtcClient::processPbMessage(const std::string &data)
 {
-   ProxyPb::Response response;
+   ProxyTerminalPb::Response response;
    bool result = response.ParseFromString(data);
    if (!result) {
       SPDLOG_LOGGER_ERROR(logger_, "can't parse message from PB");
@@ -386,13 +386,13 @@ void OtcClient::processPbMessage(const std::string &data)
    }
 
    switch (response.data_case()) {
-      case ProxyPb::Response::kStartOtc:
+      case ProxyTerminalPb::Response::kStartOtc:
          processPbStartOtc(response.start_otc());
          return;
-      case ProxyPb::Response::kVerifyOtc:
+      case ProxyTerminalPb::Response::kVerifyOtc:
          processPbVerifyOtc(response.verify_otc());
          return;
-      case ProxyPb::Response::DATA_NOT_SET:
+      case ProxyTerminalPb::Response::DATA_NOT_SET:
          SPDLOG_LOGGER_ERROR(logger_, "response from PB is invalid");
          return;
    }
@@ -605,7 +605,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
 
       changePeerState(peer, State::Idle);
 
-      ProxyPb::Request request;
+      ProxyTerminalPb::Request request;
       auto d = request.mutable_verify_otc();
       d->set_is_seller(false);
       d->set_price(peer->offer.price);
@@ -640,7 +640,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
    const auto &deal = it->second;
    assert(deal->success);
 
-   ProxyPb::Request request;
+   ProxyTerminalPb::Request request;
    auto d = request.mutable_verify_otc();
    d->set_is_seller(true);
    d->set_price(peer->offer.price);
@@ -678,7 +678,7 @@ void OtcClient::processClose(Peer *peer, const Message_Close &msg)
    }
 }
 
-void OtcClient::processPbStartOtc(const ProxyPb::Response_StartOtc &response)
+void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &response)
 {
    auto it = waitSettlementIds_.find(response.request_id());
    if (it == waitSettlementIds_.end()) {
@@ -728,7 +728,7 @@ void OtcClient::processPbStartOtc(const ProxyPb::Response_StartOtc &response)
    });
 }
 
-void OtcClient::processPbVerifyOtc(const ProxyPb::Response_VerifyOtc &response)
+void OtcClient::processPbVerifyOtc(const ProxyTerminalPb::Response_VerifyOtc &response)
 {
    const auto settlementId = BinaryData(response.settlement_id());
 
@@ -914,7 +914,7 @@ void OtcClient::sendSellerAccepts(Peer *peer)
    int requestId = genLocalUniqueId();
    waitSettlementIds_.emplace(requestId, *peer);
 
-   ProxyPb::Request request;
+   ProxyTerminalPb::Request request;
    auto d = request.mutable_start_otc();
    d->set_request_id(requestId);
    emit sendPbMessage(request.SerializeAsString());
@@ -996,7 +996,7 @@ void OtcClient::changePeerState(Peer *peer, bs::network::otc::State state)
 
 void OtcClient::trySendSignedTxs(OtcClientDeal *deal)
 {
-   ProxyPb::Request request;
+   ProxyTerminalPb::Request request;
    auto d = request.mutable_broadcast_xbt();
 
    switch (deal->side) {

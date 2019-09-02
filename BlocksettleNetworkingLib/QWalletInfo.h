@@ -32,7 +32,7 @@ class WalletInfo : public QObject
    Q_PROPERTY(QStringList encKeys READ encKeys WRITE setEncKeys NOTIFY walletChanged)
 
    // currently we using only single encription type for whole wallet
-   Q_PROPERTY(int encType READ encType NOTIFY walletChanged)
+   Q_PROPERTY(int encType READ encType WRITE setEncType NOTIFY walletChanged)
 
 public:
    WalletInfo(QObject *parent = nullptr) : QObject(parent) {}
@@ -89,6 +89,7 @@ public:
    // currently we supports only single enc type for whole wallet: either Password or eID Auth
    // this function returns encType based on first passwordDataList_ value
    Q_INVOKABLE bs::wallet::EncryptionType encType();
+   void setEncType(int encType);
 
    // currently we supports only single account for whole wallet, thus email stored in encKeys_.at(0)
    Q_INVOKABLE QString email() const;

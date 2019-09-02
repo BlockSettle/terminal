@@ -313,6 +313,12 @@ public:
       isChainedZc_ = isTrue;
    }
 
+   uint32_t getTxHeight(void) const { return txHeight_; }
+   void setTxHeight(uint32_t height) const { txHeight_ = height; }
+
+   uint32_t getTxIndex(void) const { return txIndex_; }
+   void setTxIndex(uint32_t index) const { txIndex_ = index; }
+
    /////////////////////////////////////////////////////////////////////////////
    void pprint(std::ostream & os = std::cout, int nIndent = 0, bool pBigendian = true);
    void pprintAlot(std::ostream & os = std::cout);
@@ -351,6 +357,20 @@ private:
 
    bool isRBF_ = false;
    bool isChainedZc_ = false;
+   mutable uint32_t txHeight_ = UINT32_MAX;
+   mutable uint32_t txIndex_ = UINT32_MAX;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct TxComparator
+{
+   bool operator() (const Tx& lhs, const Tx& rhs) const
+   {
+      if (lhs.getTxHeight() == rhs.getTxHeight())
+         return lhs.getTxIndex() < rhs.getTxIndex();
+
+      return lhs.getTxHeight() < rhs.getTxHeight();
+   }
 };
 
 ////////////////////////////////////////////////////////////////////////////////

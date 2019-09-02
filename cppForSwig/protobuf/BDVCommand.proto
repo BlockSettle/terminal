@@ -61,8 +61,10 @@ enum Methods
 	broadcastThroughRPC = 71;
 
 	getTxByHash = 80;
-	getOutpointsForAddresses = 81;
-	getUTXOsForAddress = 82;
+	getTxBatchByHash = 81;
+	getOutpointsForAddresses = 82;
+	getUTXOsForAddress = 83;
+	getSpentnessForOutputs = 84;
 
 	getNodeStatus = 90;
 	estimateFee = 91;

@@ -533,6 +533,9 @@ public:
 
 		while (waiting_.load(std::memory_order_relaxed) > 0)
 			condVar_.notify_all();
+
+      std::unique_lock<std::mutex> lock(condVarMutex_);
+      flag_ = 0;
    }
 
    int waiting(void) const

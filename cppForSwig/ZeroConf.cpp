@@ -1915,7 +1915,7 @@ shared_ptr<ParsedTx> ZeroConfContainer::getTxByKey(const BinaryData& key) const
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-BinaryDataRef ZeroConfContainer::getKeyForHash(const BinaryData& hash) const
+BinaryDataRef ZeroConfContainer::getKeyForHash(const BinaryDataRef& hash) const
 {
    auto ss = getSnapshot();
    auto iter = ss->txHashToDBKey_.find(hash);
@@ -1926,7 +1926,7 @@ BinaryDataRef ZeroConfContainer::getKeyForHash(const BinaryData& hash) const
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-BinaryDataRef ZeroConfContainer::getHashForKey(const BinaryData& key) const
+BinaryDataRef ZeroConfContainer::getHashForKey(const BinaryDataRef& key) const
 {
    auto ss = getSnapshot();
    auto iter = ss->txMap_.find(key);

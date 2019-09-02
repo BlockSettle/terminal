@@ -323,7 +323,10 @@ FeeEstimateResult NodeRPC::getFeeByte(
    if (iterStrat == estimateCachePtr->end())
       throw RpcError();
 
-   auto targetIter = iterStrat->second.lower_bound(confTarget);
+   if (iterStrat->second.empty())
+      throw RpcError();
+
+   auto targetIter = iterStrat->second.upper_bound(confTarget);
    if (targetIter != iterStrat->second.begin())
       --targetIter;
 

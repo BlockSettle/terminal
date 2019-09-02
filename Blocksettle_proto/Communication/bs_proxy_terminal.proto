@@ -1,6 +1,9 @@
 syntax = "proto3";
 
-package Blocksettle.Communication.Proxy;
+package Blocksettle.Communication.ProxyTerminal;
+
+// Messages sent from terminal to proxy and back.
+// `Request` is sent from terminal (proxy is a server here).
 
 message AuthEidError
 {
@@ -65,7 +68,7 @@ message Request
 
     oneof data
     {
-        // Requests (there are must be some response after some time)
+        // Requests (there must be some response after some time)
         StartLogin start_login = 10;
         GetLoginResult get_login_result = 11;
         StartSignAddress start_sign_address = 12;
