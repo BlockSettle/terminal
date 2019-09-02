@@ -4,7 +4,7 @@
 #include <QStyledItemDelegate>
 #include "ChatUsersViewItemStyle.h"
 
-#include "ChatPartiesTreeModel.h"
+#include "ChatPartiesSortProxyModel.h"
 
 class ChatClientUsersViewItemDelegate : public QStyledItemDelegate
 {
@@ -17,7 +17,6 @@ public:
    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 
 protected:
-   // #new_logic
    void paintPartyContainer(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
    void paintParty(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
 
@@ -29,6 +28,5 @@ protected:
 private:
    ChatUsersViewItemStyle itemStyle_;
    ChatPartiesSortProxyModelPtr proxyModel_;
-
 };
 #endif // CHATCLIENTUSERSVIEWITEMDELEGATE_H

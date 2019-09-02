@@ -337,10 +337,6 @@ QString ChatMessagesTextEdit::getFormattedTextFromSelection()
 }
 
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
-   // #old_logic
-   //if (link.toString() == QLatin1Literal("load_more")) {
-   //   loadMore();
-   //}
    if (link.scheme() != QLatin1Literal("user")) {
       QDesktopServices::openUrl(link);
    }

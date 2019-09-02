@@ -161,12 +161,12 @@
   <customwidget>
    <class>ChatSearchLineEdit</class>
    <extends>QLineEdit</extends>
-   <header location="global">ChatSearchLineEdit.h</header>
+   <header>ChatUI/ChatSearchLineEdit.h</header>
   </customwidget>
   <customwidget>
    <class>ChatSearchListVew</class>
    <extends>QTreeView</extends>
-   <header location="global">ChatSearchListVew.h</header>
+   <header>ChatUI/ChatSearchListVew.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

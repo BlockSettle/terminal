@@ -28,12 +28,22 @@ void BSChatInput::keyPressEvent(QKeyEvent * e)
       }
       return e->ignore();
    }
-   else if (e->key() == Qt::Key_V && e->modifiers().testFlag(Qt::ControlModifier)) {
-      QTextBrowser::keyPressEvent(e);
-      auto cursor = textCursor();
-      cursor.setCharFormat({});
-      setTextCursor(cursor);
-      return;
+   else if (e->modifiers().testFlag(Qt::ControlModifier)) {
+      if (Qt::Key_C == e->key()) {
+         // If there no selection than could be that we going to copy text from other element
+         // which cannot have focus.
+         if (!textCursor().hasSelection()) {
+            e->setAccepted(false);
+            return;
+         }
+      }
+      else if (Qt::Key_V == e->key()) {
+         QTextBrowser::keyPressEvent(e);
+         auto cursor = textCursor();
+         cursor.setCharFormat({});
+         setTextCursor(cursor);
+         return;
+      }
    }
 
    return QTextBrowser::keyPressEvent(e);

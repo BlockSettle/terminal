@@ -1,0 +1,41 @@
+#include "AbstractChatWidgetState.h"
+
+namespace {
+   // translation
+   const QString buttonAcceptPartyText = QObject::tr("ACCEPT");
+   const QString buttonRejectPartyText = QObject::tr("REJECT");
+}
+
+
+class PrivatePartyRequestedIncomingState : public AbstractChatWidgetState {
+public:
+   explicit PrivatePartyRequestedIncomingState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   virtual ~PrivatePartyRequestedIncomingState() override = default;
+protected:
+   virtual void applyUserFrameChange() override {}
+   virtual void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentPartyId_);
+
+      chat_->ui_->pushButton_AcceptSend->setText(buttonAcceptPartyText);
+      chat_->ui_->pushButton_AcceptSend->disconnect();
+      QObject::connect(chat_->ui_->pushButton_AcceptSend, &QPushButton::clicked, chat_, [this]() {
+         chat_->onContactRequestAcceptClicked(chat_->currentPartyId_);
+      });
+
+      chat_->ui_->pushButton_RejectCancel->setText(buttonRejectPartyText);
+      chat_->ui_->pushButton_RejectCancel->disconnect();
+      QObject::connect(chat_->ui_->pushButton_RejectCancel, &QPushButton::clicked, chat_, [this]() {
+         chat_->onContactRequestRejectClicked(chat_->currentPartyId_);
+      });
+
+      chat_->ui_->frameContactActions->setVisible(true);
+
+      chat_->ui_->input_textEdit->setText({});
+      chat_->ui_->input_textEdit->setVisible(true);
+      chat_->ui_->input_textEdit->setEnabled(false);
+   }
+   virtual void applyRoomsFrameChange() override {
+      // #new_logic : OTCShield? 
+      // chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+   }
+};

@@ -9,18 +9,24 @@ FILE(GLOB SOURCES
    ManageEncryption/*.cpp
    Settings/*.cpp
    Trading/*.cpp
+   ChatUI/*.cpp
+	ChatUI/ChatWidgetStates/*.cpp
 )
 FILE(GLOB HEADERS
    *.h
    ManageEncryption/*.h
    Settings/*.h
    Trading/*.h
+   ChatUI/*.h
+	ChatUI/ChatWidgetStates/*.h
+	ChatUI/ChatWidgetStates/*.hpp
 )
 FILE(GLOB UI_FILES
    *.ui
    ManageEncryption/*.ui
    Settings/*.ui
    Trading/*.ui
+   ChatUI/*.ui
 )
 
 FILE(GLOB RESOURCE_FILES *.qrc)

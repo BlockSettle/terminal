@@ -27,7 +27,6 @@
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
 #include "CelerAccountInfoDialog.h"
-#include "ChatWidget.h"
 #include "ConnectionManager.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"

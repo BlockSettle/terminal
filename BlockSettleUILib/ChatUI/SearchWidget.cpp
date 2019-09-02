@@ -6,7 +6,7 @@
 #include "SearchWidget.h"
 #include "ui_SearchWidget.h"
 #include "UserSearchModel.h"
-#include "ChatSearchListViewItemStyle.h"
+#include "ChatUI/ChatSearchListViewItemStyle.h"
 #include "ChatClient.h"
 #include "chat.pb.h"
 

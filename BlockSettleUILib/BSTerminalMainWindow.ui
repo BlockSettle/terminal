@@ -133,7 +133,7 @@
        <enum>Qt::NoFocus</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <property name="movable">
        <bool>false</bool>
@@ -610,7 +610,7 @@
   <customwidget>
    <class>ChatWidget</class>
    <extends>QWidget</extends>
-   <header>ChatWidget.h</header>
+   <header>ChatUI/ChatWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
