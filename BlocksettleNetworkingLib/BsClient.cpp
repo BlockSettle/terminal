@@ -5,11 +5,11 @@
 #include "Address.h"
 #include "ProtobufUtils.h"
 #include "ZMQ_BIP15X_DataConnection.h"
-#include "bs_proxy.pb.h"
-#include "bs_proxy_pb.pb.h"
+#include "bs_proxy_terminal.pb.h"
+#include "bs_proxy_terminal_pb.pb.h"
 
 using namespace Blocksettle::Communication;
-using namespace Blocksettle::Communication::Proxy;
+using namespace Blocksettle::Communication::ProxyTerminal;
 
 BsClient::BsClient(const std::shared_ptr<spdlog::logger> &logger
    , const BsClientParams &params, QObject *parent)
@@ -63,7 +63,7 @@ void BsClient::sendPbMessage(std::string data)
 
 void BsClient::sendPbBroadcastXbt(const BsClient::BroadcastXbt &data)
 {
-   ProxyPb::Request request;
+   ProxyTerminalPb::Request request;
    auto d = request.mutable_broadcast_xbt();
    d->set_settlement_id(data.settlementId.toBinStr());
    d->set_signed_payin(data.signedPayin.toBinStr());

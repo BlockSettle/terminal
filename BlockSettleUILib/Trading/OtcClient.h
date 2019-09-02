@@ -30,7 +30,7 @@ namespace Blocksettle {
 
 namespace Blocksettle {
    namespace Communication {
-      namespace ProxyPb {
+      namespace ProxyTerminalPb {
          class Response;
          class Response_StartOtc;
          class Response_VerifyOtc;
@@ -102,8 +102,8 @@ private:
    void processBuyerAcks(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_BuyerAcks &msg);
    void processClose(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message_Close &msg);
 
-   void processPbStartOtc(const Blocksettle::Communication::ProxyPb::Response_StartOtc &response);
-   void processPbVerifyOtc(const Blocksettle::Communication::ProxyPb::Response_VerifyOtc &response);
+   void processPbStartOtc(const Blocksettle::Communication::ProxyTerminalPb::Response_StartOtc &response);
+   void processPbVerifyOtc(const Blocksettle::Communication::ProxyTerminalPb::Response_VerifyOtc &response);
 
    void blockPeer(const std::string &reason, bs::network::otc::Peer *peer);
 

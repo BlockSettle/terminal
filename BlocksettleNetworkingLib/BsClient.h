@@ -21,7 +21,7 @@ template<typename T> class FutureValue;
 
 namespace Blocksettle {
    namespace Communication {
-      namespace Proxy {
+      namespace ProxyTerminal {
          class Request;
          class Response;
          class Response_StartLogin;
@@ -128,7 +128,7 @@ signals:
    void disconnected();
    void connectionFailed();
 private:
-   using ProcessCb = std::function<void(const Blocksettle::Communication::Proxy::Response &response)>;
+   using ProcessCb = std::function<void(const Blocksettle::Communication::ProxyTerminal::Response &response)>;
    using TimeoutCb = std::function<void()>;
 
    struct ActiveRequest
@@ -143,14 +143,14 @@ private:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   void sendRequest(Blocksettle::Communication::Proxy::Request *request
+   void sendRequest(Blocksettle::Communication::ProxyTerminal::Request *request
       , std::chrono::milliseconds timeout, TimeoutCb timeoutCb, ProcessCb processCb = nullptr);
-   void sendMessage(Blocksettle::Communication::Proxy::Request *request);
+   void sendMessage(Blocksettle::Communication::ProxyTerminal::Request *request);
 
-   void processStartLogin(const Blocksettle::Communication::Proxy::Response_StartLogin &response);
-   void processGetLoginResult(const Blocksettle::Communication::Proxy::Response_GetLoginResult &response);
-   void processCeler(const Blocksettle::Communication::Proxy::Response_Celer &response);
-   void processProxyPb(const Blocksettle::Communication::Proxy::Response_ProxyPb &response);
+   void processStartLogin(const Blocksettle::Communication::ProxyTerminal::Response_StartLogin &response);
+   void processGetLoginResult(const Blocksettle::Communication::ProxyTerminal::Response_GetLoginResult &response);
+   void processCeler(const Blocksettle::Communication::ProxyTerminal::Response_Celer &response);
+   void processProxyPb(const Blocksettle::Communication::ProxyTerminal::Response_ProxyPb &response);
 
    void requestSignResult(std::chrono::seconds timeout
       , const BsClient::SignedCb &signedCb, const BsClient::SignFailedCb &failedCb);
