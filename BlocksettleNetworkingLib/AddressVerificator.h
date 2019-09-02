@@ -43,7 +43,6 @@ public:
 
    AddressVerificator(const AddressVerificator&) = delete;
    AddressVerificator& operator = (const AddressVerificator&) = delete;
-
    AddressVerificator(AddressVerificator&&) = delete;
    AddressVerificator& operator = (AddressVerificator&&) = delete;
 
@@ -53,11 +52,23 @@ public:
    bool addAddress(const bs::Address &address);
    bool startAddressVerification();
 
+protected:
+   void onNewBlock(unsigned int) override
+   {
+      refreshUserAddresses();
+   }
+
+   void onZCReceived(const std::vector<bs::TXEntry> &) override
+   {
+      refreshUserAddresses();
+   }
+
 private:
    bool startCommandQueue();
    bool stopCommandQueue();
-
    void commandQueueThreadFunction();
+
+   void refreshUserAddresses();
 
    void AddCommandToQueue(ExecutionCommand&& command);
    void AddCommandToWaitingUpdateQueue(const std::string &key, ExecutionCommand&& command);
@@ -87,12 +98,7 @@ private:
    mutable std::mutex            dataMutex_;
    std::atomic_bool              stopExecution_;
 
-//   std::map<BinaryData, unsigned int> addressRetries_;
-
-   std::mutex  cbMutex_;
-//   std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbBSaddrs_;
-//   std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbValidate_;
-//   std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbBSstate_;
+   std::set<bs::Address>   userAddresses_;
 };
 
 #endif // __AUTH_ADDRESS_VERIFICATOR_H__

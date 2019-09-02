@@ -116,16 +116,34 @@ bool AddressVerificator::addAddress(const bs::Address &address)
       }
       return false;
    }
+   userAddresses_.emplace(address);
+   return true;
 }
 
 bool AddressVerificator::startAddressVerification()
 {
+   if (bsAddressList_.empty()) {
+      logger_->error("[{}] no BS address[es] set - cannot start validation", __func__);
+      return false;
+   }
    try {
-      return (validationMgr_->goOnline() > 0);
+      if (validationMgr_->goOnline() == 0) {
+         return false;
+      }
+      refreshUserAddresses();
    }
    catch (const std::exception &e) {
       logger_->error("[{}] failure: {}", __func__, e.what());
       return false;
+   }
+   return true;
+}
+
+void AddressVerificator::refreshUserAddresses()
+{
+   logger_->debug("[{}] updating {} user address[es]", __func__, userAddresses_.size());
+   for (const auto &addr : userAddresses_) {
+      AddCommandToQueue(CreateAddressValidationCommand(addr));
    }
 }
 
@@ -177,8 +195,14 @@ void AddressVerificator::validateAddress(const std::shared_ptr<AddressVerificati
    }
 
    validationMgr_->update();
-   state->currentState = AuthAddressLogic::isValid(*validationMgr_.get(), state->address) ?
-      AddressVerificationState::Verified : AddressVerificationState::NotSubmitted;
+   try {
+      state->currentState = AuthAddressLogic::getAuthAddrState(*validationMgr_, state->address);
+   }
+   catch (const std::exception &e) {
+      logger_->error("[{}] failed to validate state for {}: {}", __func__
+         , state->address.display(), e.what());
+      state->currentState = AddressVerificationState::VerificationFailed;
+   }
    ReturnValidationResult(state);
 }
 

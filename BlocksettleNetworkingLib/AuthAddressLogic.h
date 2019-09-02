@@ -6,6 +6,7 @@
 #include <set>
 
 #include "Address.h"
+#include "AuthAddress.h"
 #include "Wallets/SyncWallet.h"
 
 
@@ -298,7 +299,11 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 struct AuthAddressLogic
 {
-   static bool isValid(const ValidationAddressManager&, const bs::Address&);
+   static AddressVerificationState getAuthAddrState(const ValidationAddressManager &
+      , const bs::Address &);
+   static bool isValid(const ValidationAddressManager &vam, const bs::Address &addr) {
+      return (getAuthAddrState(vam, addr) == AddressVerificationState::Verified);
+   }
    static std::vector<OutpointData> getValidPaths(
       const ValidationAddressManager&, const bs::Address&);
    static BinaryData revoke(const ValidationAddressManager&, const bs::Address&,

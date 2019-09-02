@@ -82,8 +82,7 @@ bool AuthAddressManager::setup()
       }
       if (GetState(address) != state) {
          logger_->info("Address verification {} for {}", to_string(state), address.display());
-         //FIXME: temp disabled for simulating address verification
-         //SetState(address, state);
+         SetState(address, state);
          emit AddressListUpdated();
          if (state == AddressVerificationState::Verified) {
             emit VerifiedAddressListUpdated();
@@ -614,36 +613,22 @@ void AuthAddressManager::ClearAddressList()
 
 void AuthAddressManager::onWalletChanged(const std::string &walletId)
 {
-   logger_->debug("[AuthAddressManager::onWalletChanged]");
-
    bool listUpdated = false;
    if ((authWallet_ != nullptr) && (walletId == authWallet_->walletId())) {
       const auto &newAddresses = authWallet_->getUsedAddressList();
       const auto count = newAddresses.size();
       listUpdated = (count > addresses_.size());
 
-      //FIXME: temporary code to simulate address verification
-      listUpdated = true;
-      addresses_ = newAddresses;
-      for (const auto &addr : newAddresses) {
-         QTimer::singleShot(std::chrono::milliseconds(5000), this, [this, addr] {
-            SetState(addr, AddressVerificationState::Verified);
-            emit VerifiedAddressListUpdated();
-         });
-      }
-
-      // FIXME: address verification is disabled temporarily
-/*      for (size_t i = addresses_.size(); i < count; i++) {
+      for (size_t i = addresses_.size(); i < count; i++) {
          const auto &addr = newAddresses[i];
          AddAddress(addr);
-         const auto authAddr = std::make_shared<AuthAddress>(addr);
-         addressVerificator_->StartAddressVerification(authAddr);
-      }*/
+         addressVerificator_->addAddress(addr);
+      }
    }
 
    if (listUpdated) {
+      addressVerificator_->startAddressVerification();
       emit AddressListUpdated();
-//      addressVerificator_->RegisterAddresses();  //FIXME: re-enable later
    }
 }
 

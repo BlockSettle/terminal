@@ -827,10 +827,9 @@ std::vector<OutpointData> AuthAddressLogic::getValidPaths(
 }
 
 ////
-bool AuthAddressLogic::isValid(
+AddressVerificationState AuthAddressLogic::getAuthAddrState(
    const ValidationAddressManager& vam, const bs::Address& addr)
-{
-   /***
+{  /***
    Validity is unique. This means there should be only one output chain
    defining validity. Any concurent path, whether partial or full,
    invalidates the user address.
@@ -845,8 +844,11 @@ bool AuthAddressLogic::isValid(
       auto&& validPaths = getValidPaths(vam, addr);
 
       //is there only 1 valid path?
-      if (validPaths.size() != 1) {
-         return false;
+      if (validPaths.empty()) {
+         return AddressVerificationState::NotSubmitted;
+      }
+      else if (validPaths.size() > 1) {
+         return AddressVerificationState::Revoked;
       }
       auto& outpoint = validPaths[0];
 
@@ -854,12 +856,13 @@ bool AuthAddressLogic::isValid(
       auto opHeight = outpoint.txHeight_;
       if (currentTop >= opHeight &&
          (1 + currentTop - opHeight) >= VALIDATION_CONF_COUNT) {
-         return true;
+         return AddressVerificationState::Verified;
       }
+      return AddressVerificationState::PendingVerification;
    }
    catch (AuthLogicException&) { }
 
-   return false;
+   return AddressVerificationState::VerificationFailed;
 }
 
 ////
