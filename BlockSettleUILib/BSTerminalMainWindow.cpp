@@ -1095,6 +1095,7 @@ void BSTerminalMainWindow::onLogin()
 
    bsClient_ = loginDialog.getClient();
    ccFileManager_->setBsClient(bsClient_.get());
+   authAddrDlg_->setBsClient(bsClient_.get());
 
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 
