@@ -2,6 +2,7 @@
 
 #include "FastLock.h"
 #include "MessageHolder.h"
+#include "StringUtils.h"
 #include "SystemFileUtils.h"
 #include "ZMQ_BIP15X_Msg.h"
 
@@ -781,8 +782,7 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
       case ZMQ_MSGTYPE_DISCONNECT:
          logger_->debug("[processHandshake] disconnect request received from {}"
             , BinaryData(clientID).toHexStr());
-         resetBIP151Connection(clientID);
-         notifyListenerOnDisconnectedClient(clientID);
+         closeClient(clientID);
          break;
 
       default:
@@ -802,45 +802,6 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
       logger_->error("[{}] BIP 150/151 handshake process failed.", __func__);
    }
    return retVal;
-}
-
-// Function used to reset the BIP 150/151 handshake data. Called when a
-// connection is shut down.
-//
-// INPUT:  The client ID. (const string&)
-// OUTPUT: None
-// RETURN: None
-void ZmqBIP15XServerConnection::resetBIP151Connection(const string& clientID)
-{
-   BinaryData hexID{clientID};
-
-   bool connectionErased = false;
-
-   auto it = socketConnMap_.find(clientID);
-   if (it != socketConnMap_.end()) {
-      socketConnMap_.erase(it);
-      connectionErased = true;
-   } else {
-      connectionErased = false;
-   }
-
-   if (connectionErased) {
-      auto it = lastHeartbeats_.find(clientID);
-      if (it != lastHeartbeats_.end()) {
-         lastHeartbeats_.erase(it);
-      } else {
-         logger_->error("[ZmqBIP15XServerConnection::resetBIP151Connection] there are no heartbeat timer for connection {} to be erased"
-            , hexID.toHexStr());
-      }
-   }
-
-   if (connectionErased) {
-      logger_->debug("[ZmqBIP15XServerConnection::resetBIP151Connection] Connection ID {} erased"
-            , hexID.toHexStr());
-   } else {
-      logger_->error("[ZmqBIP15XServerConnection::resetBIP151Connection] Connection ID {} not found"
-            , hexID.toHexStr());
-   }
 }
 
 // Function used to set the BIP 150/151 handshake data. Called when a connection
@@ -1001,11 +962,30 @@ void ZmqBIP15XServerConnection::checkHeartbeats()
       }
    }
 
-   for (const auto &client : timedOutClients) {
+   for (const auto &clientId : timedOutClients) {
       logger_->debug("[ZmqBIP15XServerConnection] client {} timed out"
-         , BinaryData(client).toHexStr());
-      resetBIP151Connection(client);
-      notifyListenerOnDisconnectedClient(client);
+         , BinaryData(clientId).toHexStr());
+      closeClient(clientId);
+   }
+}
+
+void ZmqBIP15XServerConnection::closeClient(const string &clientId)
+{
+   lastHeartbeats_.erase(clientId);
+
+   auto it = socketConnMap_.find(clientId);
+   if (it == socketConnMap_.end()) {
+      SPDLOG_LOGGER_WARN(logger_, "connection {} not found", bs::toHex(clientId));
+      return;
+   }
+
+   const bool wasConnected = it->second->bip150HandshakeCompleted_ && it->second->bip151HandshakeCompleted_;
+   socketConnMap_.erase(it);
+
+   SPDLOG_LOGGER_DEBUG(logger_, "connection {} erased, wasConnected: {}", bs::toHex(clientId), wasConnected);
+
+   if (wasConnected) {
+      notifyListenerOnDisconnectedClient(clientId);
    }
 }
 
@@ -1016,8 +996,7 @@ void ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp(const std::string
    auto it = lastHeartbeats_.find(clientId);
    if (it == lastHeartbeats_.end()) {
       lastHeartbeats_.emplace(clientId, currentTime);
-      logger_->debug("[ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp] added {} HT: {}"
-         , BinaryData(clientId).toHexStr()
+      SPDLOG_LOGGER_DEBUG(logger_, "added heartbeat timestamp, clientId: {}, timestamp: {}", bs::toHex(clientId)
          , std::chrono::duration_cast<std::chrono::milliseconds>(currentTime.time_since_epoch()).count());
    } else {
       it->second = currentTime;
