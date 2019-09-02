@@ -202,8 +202,8 @@ void ReqXBTSettlementContainer::activate()
 
    infoReqId_ = signContainer_->GetInfo(walletInfo_.rootId().toStdString());
 
-   addrVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, quote_.settlementId
-      , [this](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
+   addrVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_
+      , [this](const bs::Address &address, AddressVerificationState state)
    {
       dealerAuthAddress_ = address;
       dealerVerifStateChanged(state);
@@ -319,7 +319,7 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
    dealerVerifState_ = state;
 
    bs::sync::PasswordDialogData pd;
-   pd.setValue("ResponderAuthAddress", dealerAuthAddress_->GetChainedAddress().display());
+   pd.setValue("ResponderAuthAddress", dealerAuthAddress_.display());
    pd.setValue("ResponderAuthAddressVerified", state == AddressVerificationState::Verified);
    pd.setValue("SigningAllowed", state == AddressVerificationState::Verified);
    signContainer_->updateDialogData(pd);
@@ -346,9 +346,8 @@ void ReqXBTSettlementContainer::activateProceed()
       transactionData_->UpdateRecipientAddress(recipient, settlAddr_);
 
       const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
-      addrVerificator_->StartAddressVerification(std::make_shared<AuthAddress>(dealerAddrSW));
-      addrVerificator_->RegisterBSAuthAddresses();
-      addrVerificator_->RegisterAddresses();
+      addrVerificator_->addAddress(dealerAddrSW);
+      addrVerificator_->startAddressVerification();
 
       const auto list = authAddrMgr_->GetVerifiedAddressList();
       const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);

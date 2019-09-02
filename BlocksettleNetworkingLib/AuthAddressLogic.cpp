@@ -165,8 +165,7 @@ void ValidationAddressManager::addValidationAddress(const bs::Address &addr)
 
 ////
 unsigned ValidationAddressManager::goOnline()
-{
-   /*
+{  /*
    For the sake of simplicity, this assumes the BDV is already online.
    This process is therefor equivalent to registering the validation addresses,
    waiting for the notification and grabbing all txouts for each address.
@@ -185,10 +184,11 @@ unsigned ValidationAddressManager::goOnline()
    //use default ACT is none is set
    if (actPtr_ == nullptr) {
       actPtr_ = std::make_shared<ValidationAddressACT>(connPtr_.get());
+
+      //set the act manager ptr to process notifications
+      actPtr_->setAddressMgr(this);
+      actPtr_->start();
    }
-   //set the act manager ptr to process notifications
-   actPtr_->setAddressMgr(this);
-   actPtr_->start();
 
    //register validation addresses
    std::vector<BinaryData> addrVec;
@@ -217,10 +217,8 @@ unsigned ValidationAddressManager::goOnline()
       }
 
       if (aopPtr == nullptr || aopPtr->isZc()) {
-         std::stringstream ss;
-         ss << "validation address " <<
-            maPair.first.display() << " has no valid first outpoint";
-         throw std::runtime_error(ss.str());
+         throw std::runtime_error("validation address " +
+            maPair.first.display() + " has no valid first outpoint");
       }
 
       maPair.second->firstOutpointHash_ = txHash;

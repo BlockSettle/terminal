@@ -50,14 +50,12 @@ void AddressDetailsWidget::setBSAuthAddrs(const std::unordered_set<std::string> 
    }
    bsAuthAddrs_ = bsAuthAddrs;
 
-   const auto authWalletId = CryptoPRNG::generateRandom(8).toHexStr();
-   addrVerify_ = std::make_shared<AddressVerificator>(logger_, armory_, authWalletId
-      , [this](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state) {
-      authAddrStates_[address->GetChainedAddress()] = state;
+   addrVerify_ = std::make_shared<AddressVerificator>(logger_, armory_
+      , [this](const bs::Address &address, AddressVerificationState state) {
+      authAddrStates_[address] = state;
       QMetaObject::invokeMethod(this, &AddressDetailsWidget::updateFields);
    });
    addrVerify_->SetBSAddressList(bsAuthAddrs);
-   addrVerify_->RegisterBSAuthAddresses();
 }
 
 // Set the address to be queried and perform initial setup.
@@ -158,15 +156,8 @@ void AddressDetailsWidget::searchForAuth()
       return;
    }
 
-   std::shared_ptr<AuthAddress> currAddr;
-   {
-      std::lock_guard<std::mutex> lock(mutex_);
-      currAddr = std::make_shared<AuthAddress>(currentAddr_);
-   }
-
-   if (addrVerify_->StartAddressVerification(currAddr)) {
-      addrVerify_->RegisterAddresses();
-   }
+   addrVerify_->addAddress(currentAddr_);
+   addrVerify_->startAddressVerification();
 }
 
 // The function that gathers all the data to place in the UI.

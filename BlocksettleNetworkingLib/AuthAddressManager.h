@@ -156,15 +156,8 @@ private:
    void AddAddress(const bs::Address &addr);
 
    template <typename TVal> TVal lookup(const bs::Address &key, const std::map<bs::Address, TVal> &container) const;
-   BinaryData GetInitialTxHash(const bs::Address &addr) const { return lookup<BinaryData>(addr, initTxHash_); }
-   void SetInitialTxHash(const bs::Address &addr, BinaryData hash) { initTxHash_[addr] = hash; }
-   BinaryData GetVerifChangeTxHash(const bs::Address &addr) const { return lookup<BinaryData>(addr, verifChangeTxHash_); }
-   void SetVerifChangeTxHash(const bs::Address &addr, BinaryData hash) { verifChangeTxHash_[addr] = hash; }
-   bs::Address GetBSFundingAddress(const bs::Address &addr) const { return lookup<bs::Address>(addr, bsFundingAddresses_); }
-   void SetBSFundingAddress(const bs::Address &addr, const bs::Address &fundingAddr) { bsFundingAddresses_[addr] = fundingAddr; }
 
    void SubmitToCeler(const bs::Address &);
-   bool SendVerifyTransaction(const UTXO &, uint64_t amount, const bs::Address &, uint64_t remainder = 0);
    bool BroadcastTransaction(const BinaryData& transactionData);
    void SetBSAddressList(const std::unordered_set<std::string>& bsAddressList);
 
@@ -185,8 +178,6 @@ protected:
    std::vector<bs::Address>                  addresses_;
    std::map<BinaryData, AddressVerificationState>   states_;
    using HashMap = std::map<bs::Address, BinaryData>;
-   HashMap     initTxHash_, verifChangeTxHash_;
-   std::map<bs::Address, bs::Address> bsFundingAddresses_;
    bs::Address                               defaultAddr_;
 
    std::unordered_set<std::string>           bsAddressList_;

@@ -145,7 +145,7 @@ private:
    unsigned int      infoReqIdAuth_ = 0;
 
    const bs::Address authAddr_;
-   std::shared_ptr<AuthAddress> dealerAuthAddress_;
+   bs::Address       dealerAuthAddress_;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__

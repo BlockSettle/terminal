@@ -96,7 +96,12 @@ bool AddressVerificator::SetBSAddressList(const std::unordered_set<std::string>&
 {
    for (const auto &addr : addressList) {
       const bs::Address bsAddr(addr);
-      logger_->debug("BS address: {}", bsAddr.display());
+      if (bsAddressList_.find(bsAddr) != bsAddressList_.end()) {
+         logger_->warn("[{}] BS address {} already exists in the list"
+            , __func__, bsAddr.display());
+         continue;
+      }
+      logger_->debug("[{}] BS address: {}", __func__, bsAddr.display());
       bsAddressList_.emplace(bsAddr.prefixed());
       validationMgr_->addValidationAddress(bsAddr);
    }
@@ -115,7 +120,13 @@ bool AddressVerificator::addAddress(const bs::Address &address)
 
 bool AddressVerificator::startAddressVerification()
 {
-   validationMgr_->goOnline();
+   try {
+      return (validationMgr_->goOnline() > 0);
+   }
+   catch (const std::exception &e) {
+      logger_->error("[{}] failure: {}", __func__, e.what());
+      return false;
+   }
 }
 
 void AddressVerificator::AddCommandToQueue(ExecutionCommand&& command)

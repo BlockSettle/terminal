@@ -70,25 +70,20 @@ bool AuthAddressManager::setup()
       return false;
    }
    if (addressVerificator_) {
-      logger_->debug("[AuthAddressManager::setup] addressVerificator_ already exist");
       return true;
    }
 
-   addressVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, CryptoPRNG::generateRandom(8).toHexStr()
-      , [this](const std::shared_ptr<AuthAddress> addr, AddressVerificationState state)
+   addressVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_
+      , [this](const bs::Address &address, AddressVerificationState state)
    {
       if (!addressVerificator_) {
          logger_->error("[AuthAddressManager::setup] Failed to create AddressVerificator object");
          return;
       }
-      const auto address = addr->GetChainedAddress();
       if (GetState(address) != state) {
          logger_->info("Address verification {} for {}", to_string(state), address.display());
          //FIXME: temp disabled for simulating address verification
          //SetState(address, state);
-         SetInitialTxHash(address, addr->GetInitialTransactionTxHash());
-         SetVerifChangeTxHash(address, addr->GetVerificationChangeTxHash());
-         SetBSFundingAddress(address, addr->GetBSFundingAddress());
          emit AddressListUpdated();
          if (state == AddressVerificationState::Verified) {
             emit VerifiedAddressListUpdated();
@@ -223,31 +218,6 @@ void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, bs::er
          , bs::error::ErrorCodeToString(result).toStdString(), errorReason);
       emit Error(tr("Transaction sign error: %1").arg(bs::error::ErrorCodeToString(result)));
    }
-}
-
-bool AuthAddressManager::SendVerifyTransaction(const UTXO &input, uint64_t amount, const bs::Address &address
-   , uint64_t remainder)
-{
-   auto bsFundAddr = GetBSFundingAddress(address);
-   if (bsFundAddr.isNull()) {
-      bsFundAddr = address;
-   }
-
-   if ((amount + remainder) >= input.getValue()) {
-      logger_->error("[AuthAddressManager::SendTransaction] spend amount ({}) exceeds UTXO value ({})", amount
-         , input.getValue());
-      emit Error(tr("invalid TX amount"));
-      return false;
-   }
-
-   const auto txReq = authWallet_->createTXRequest({ input }, { bsFundAddr.getRecipient(amount) }
-      , input.getValue() - amount - remainder, false, address);
-   const auto id = signingContainer_->signTXRequest(txReq);
-   if (id) {
-      signIdsVerify_.insert(id);
-      return true;
-   }
-   return false;
 }
 
 bool AuthAddressManager::Verify(const bs::Address &address)

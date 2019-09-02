@@ -33,13 +33,13 @@ public:
    AddressVerificationPool(AddressVerificationPool&&) = delete;
    AddressVerificationPool& operator = (AddressVerificationPool&&) = delete;
 
-   bool SubmitForVerification(const std::shared_ptr<AuthAddress>& address
+   bool submitForVerification(const bs::Address &address
       , const verificationCompletedCallback& onCompleted);
 
    bool SetBSAddressList(const std::unordered_set<std::string>& addressList);
 
 private:
-   void completeVerification(const std::shared_ptr<AuthAddress>& address, AddressVerificationState state);
+   void completeVerification(const bs::Address &address, AddressVerificationState state);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
