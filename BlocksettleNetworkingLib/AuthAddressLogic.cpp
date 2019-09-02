@@ -382,23 +382,29 @@ bool ValidationAddressManager::getOutpointBatch(const bs::Address &addr
    return true;
 }
 
-bool ValidationAddressManager::getSpendableTxOutList(const std::function<void(const std::vector<UTXO> &)> &cb) const
+bool ValidationAddressManager::getSpendableTxOutFor(const bs::Address &validationAddr
+   , const std::function<void(const UTXO &)> &cb) const
 {
    if (!connPtr_ || (connPtr_->state() != ArmoryState::Ready)) {
       return false;
    }
-   auto spendableCb = [this, cb](
+   auto spendableCb = [this, validationAddr, cb](
       ReturnMessage<std::vector<UTXO>> utxoVec)->void
    {
       try {
          const auto& utxos = utxoVec.get();
-         if (utxos.size() == 0) {
+         if (utxos.empty() == 0) {
             throw AuthLogicException("no utxos available");
          }
-         if (cb) {
-            cb(utxos);
+         const auto utxo = getVettingUtxo(validationAddr, utxos);
+         if (!utxo.isInitialized()) {
+            throw AuthLogicException("vetting UTXO is uninited");
          }
-      } catch (const std::exception &) {
+
+         if (cb) {
+            cb(utxo);
+         }
+      } catch (const std::exception &e) {
          if (cb) {
             cb({});
          }
@@ -478,22 +484,16 @@ BinaryData ValidationAddressManager::fundUserAddress(
    //#2: grab a utxo from a validation address
    auto promPtr2 = std::make_shared<std::promise<UTXO>>();
    auto fut2 = promPtr2->get_future();
-   auto spendableCb = [this, promPtr2, &validationAddr](
-      const std::vector<UTXO> &utxos)->void
+   auto spendableCb = [this, promPtr2, &validationAddr](const UTXO &utxo)
    {
-      if (utxos.empty()) {
+      if (!utxo.isInitialized()) {
          auto ePtr = std::current_exception();
          promPtr2->set_exception(ePtr);
-         return;
+         throw AuthLogicException("could not select a utxo to vet with");
       }
-      const auto utxo = getVettingUtxo(validationAddr, utxos);
-      if (utxo.isInitialized()) {
-         promPtr2->set_value(utxo);
-         return;
-      }
-      throw AuthLogicException("could not select a utxo to vet with");
+      promPtr2->set_value(utxo);
    };
-   getSpendableTxOutList(spendableCb);
+   getSpendableTxOutFor(validationAddr, spendableCb);
 
    return fundUserAddress(addr, feedPtr, fut2.get());
 }

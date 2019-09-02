@@ -280,7 +280,7 @@ public:
    bool hasZCOutputs(const bs::Address&) const;
 
    bool getOutpointBatch(const bs::Address &, const std::function<void(const OutpointBatch &)> &) const;
-   bool getSpendableTxOutList(const std::function<void(const std::vector<UTXO> &)> &) const;
+   bool getSpendableTxOutFor(const bs::Address &, const std::function<void(const UTXO &)> &) const;
 
    const bs::Address& findValidationAddressForUTXO(const UTXO&) const;
    const bs::Address& findValidationAddressForTxHash(const BinaryData&) const;
