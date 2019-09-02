@@ -269,23 +269,113 @@ void BlockDataViewer::getTxByHash(const BinaryData& txHash,
       }
    }
 
+   bool heightOnly = false;
    try
    {
       auto& tx = cache_->getTx(bdRef);
+      if (tx.getTxHeight() == UINT32_MAX)
+      {
+         //Throw out of this scope if the tx is cached but lacks a valid height.
+         //Flag to only fetch the height as well.
+         heightOnly = true;
+         throw NoMatch();
+      }
+
+      /*
+      We have this tx in cache, bypass the db and trigger the callback directly.
+      
+      This is an async interface, the expectation is that the callback will be 
+      summoned from a different thread than the original call.
+
+      Moreover, this framework always triggers return value callbacks in their own
+      dedicated thread, as it does not expect users to treat the callback as a
+      short-lived notification to return quickly from.
+
+      Therefor, it is always acceptable to create a new thread to fire the 
+      callback from.
+      */
       ReturnMessage<Tx> rm(tx);
-      callback(move(rm));
+
+      thread thr(callback, move(rm));
+      if (thr.joinable())
+         thr.detach();
+
       return;
    }
    catch(NoMatch&)
-   { }
+   {}
 
    auto payload = make_payload(Methods::getTxByHash, bdvID_);
    auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
    command->set_hash(bdRef.getPtr(), bdRef.getSize());
+   command->set_flag(heightOnly);
 
    auto read_payload = make_shared<Socket_ReadPayload>();
    read_payload->callbackReturn_ =
       make_unique<CallbackReturn_Tx>(cache_, txHash, callback);
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void BlockDataViewer::getTxBatchByHash(const set<BinaryData>& hashes,
+   function<void(ReturnMessage<vector<Tx>>)> callback)
+{
+   //only accepts hashes in binary format
+   auto payload = make_payload(Methods::getTxBatchByHash, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   std::map<BinaryData, bool> hashesToFetch;
+   std::vector<Tx> cachedTx;
+   for (auto& hash : hashes)
+   {
+      try
+      {
+         auto& tx = cache_->getTx(hash.getRef());
+
+         //flag to grab only the txheight if it's unset
+         if(tx.getTxHeight() == UINT32_MAX)
+            hashesToFetch.insert(make_pair(hash, true));
+         else
+            cachedTx.push_back(tx);
+
+         continue;
+      }
+      catch (NoMatch&)
+      {}
+
+      hashesToFetch.insert(make_pair(hash, false));
+   }
+      
+   if (hashesToFetch.size() == 0)
+   {
+      //all tx in cache, fire the callback
+      ReturnMessage<vector<Tx>> rm(move(cachedTx));
+      thread thr(callback, move(rm));
+      if (thr.joinable())
+         thr.detach();
+
+      return;
+   }
+   
+   for (auto& hash : hashesToFetch)
+   {
+      if (!hash.second)
+      {
+         command->add_bindata(hash.first.getPtr(), hash.first.getSize());
+      }
+      else
+      {
+         BinaryWriter bw(33);
+         bw.put_BinaryDataRef(hash.first);
+         bw.put_uint8_t(1);
+         command->add_bindata(bw.getDataRef().getPtr(), 33);
+      }
+   }
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ =
+      make_unique<CallbackReturn_TxBatch>(
+         cache_, cachedTx, hashesToFetch, callback);
    sock_->pushPayload(move(payload), read_payload);
 }
 
@@ -472,6 +562,33 @@ void BlockDataViewer::getUtxosForAddrVec(const vector<BinaryData>& addrVec,
    auto read_payload = make_shared<Socket_ReadPayload>();
    read_payload->callbackReturn_ =
       make_unique<CallbackReturn_VectorUTXO>(callback);
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void BlockDataViewer::getSpentnessForOutputs(
+   const map<BinaryData, set<unsigned>>& outputs,
+   std::function<void(ReturnMessage<
+      std::map<BinaryData, std::map<unsigned, BinaryData>>>)> callback)
+{
+   auto payload = make_payload(Methods::getSpentnessForOutputs, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& hashPair : outputs)
+   {
+      BinaryWriter bw;
+      bw.put_BinaryData(hashPair.first);
+      bw.put_var_int(hashPair.second.size());
+      
+      for (auto& id : hashPair.second)
+         bw.put_var_int(id);
+
+      command->add_bindata(bw.getDataRef().getPtr(), bw.getSize());
+   }
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ =
+      make_unique<CallbackReturn_SpentnessData>(outputs, callback);
    sock_->pushPayload(move(payload), read_payload);
 }
 
@@ -1106,16 +1223,29 @@ void CallbackReturn_Tx::callback(
       ::Codec_CommonTypes::TxWithMetaData msg;
       AsyncClient::deserialize(&msg, partialMsg);
 
-      auto& rawtx = msg.rawtx();
-      BinaryDataRef ref;
-      ref.setRef(rawtx);
+      Tx tx;
+      if (msg.has_rawtx())
+      {
+         auto& rawtx = msg.rawtx();
+         BinaryDataRef ref;
+         ref.setRef(rawtx);
 
-      Tx tx(ref);
-      tx.setChainedZC(msg.ischainedzc());
-      tx.setRBF(msg.isrbf());
-      cache_->insertTx(txHash_, tx);
+         tx.unserialize(ref);
+         tx.setChainedZC(msg.ischainedzc());
+         tx.setRBF(msg.isrbf());
+         tx.setTxHeight(msg.height());
+         tx.setTxIndex(msg.txindex());
+         cache_->insertTx(txHash_, tx);
+      }
+      else
+      {
+         auto& cachedTx = cache_->getTx(txHash_.getRef());
+         cachedTx.setTxHeight(msg.height());
+         cachedTx.setTxIndex(msg.txindex());
+         tx = cachedTx;
+      }
       
-      ReturnMessage<Tx> rm(tx);
+      ReturnMessage<Tx> rm(move(tx));
 
       if (runInCaller())
       {
@@ -1131,6 +1261,70 @@ void CallbackReturn_Tx::callback(
    catch (ClientMessageError& e)
    {
       ReturnMessage<Tx> rm(e);
+      userCallbackLambda_(move(rm));
+   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void CallbackReturn_TxBatch::callback(
+   const WebSocketMessagePartial& partialMsg)
+{
+   try
+   {
+      ::Codec_CommonTypes::ManyTxWithMetaData msg;
+      AsyncClient::deserialize(&msg, partialMsg);
+
+      auto iter = callMap_.begin();
+      for (unsigned i = 0; i < msg.tx_size(); i++)
+      {
+         Tx tx;
+         auto& txHash = iter->first;
+         auto& txObj = msg.tx(i);
+
+         if (txObj.has_rawtx() && !iter->second)
+         {
+            BinaryDataRef ref;
+            ref.setRef(txObj.rawtx());
+
+            tx.unserialize(ref);
+            tx.setChainedZC(txObj.ischainedzc());
+            tx.setRBF(txObj.isrbf());
+            tx.setTxHeight(txObj.height());
+            tx.setTxIndex(txObj.txindex());
+            
+            cache_->insertTx(txHash, tx);
+         }
+         else
+         {
+            auto& txFromCache = cache_->getTx(txHash);
+            txFromCache.setTxHeight(txObj.height());
+            txFromCache.setTxIndex(txObj.txindex());
+            tx = txFromCache;
+         }
+
+         cachedTx_.emplace_back(tx);
+         ++iter;
+      }
+
+      //order the tx vector before returning it
+      std::sort(cachedTx_.begin(), cachedTx_.end(), TxComparator());
+
+      ReturnMessage<vector<Tx>> rm(move(cachedTx_));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
+   }
+   catch (ClientMessageError& e)
+   {
+      ReturnMessage<vector<Tx>> rm(e);
       userCallbackLambda_(move(rm));
    }
 }
@@ -1826,11 +2020,57 @@ void CallbackReturn_AddrOutpoints::callback(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void CallbackReturn_SpentnessData::callback(
+   const WebSocketMessagePartial& partialMsg)
+{
+   try
+   {
+      unsigned i = 0;
+
+      ::Codec_CommonTypes::ManyBinaryData msg;
+      AsyncClient::deserialize(&msg, partialMsg);
+
+      map<BinaryData, map<unsigned, BinaryData>> result;
+      for (auto& hashPair : outputs_)
+      {
+         auto iter = result.insert(
+            make_pair(hashPair.first, map<unsigned, BinaryData>())).first;
+
+         for (auto& id : hashPair.second)
+         {
+            auto& val = msg.value(i++);
+            BinaryDataRef hashRef; hashRef.setRef(val.data());
+
+            iter->second.insert(make_pair(id, hashRef));
+         }
+      }
+
+      ReturnMessage<map<BinaryData, map<unsigned, BinaryData>>> rm(result);
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
+   }
+   catch (ClientMessageError& e)
+   {
+      ReturnMessage<map<BinaryData, map<unsigned, BinaryData>>> rm(e);
+      userCallbackLambda_(move(rm));
+   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //
 // ClientCache
 //
 ///////////////////////////////////////////////////////////////////////////////
-void ClientCache::insertTx(BinaryData& hash, Tx& tx)
+void ClientCache::insertTx(const BinaryData& hash, const Tx& tx)
 {
    ReentrantLock(this);
    txMap_.insert(make_pair(hash, tx));

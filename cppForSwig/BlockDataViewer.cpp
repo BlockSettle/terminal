@@ -242,6 +242,58 @@ Tx BlockDataViewer::getTxByHash(BinaryData const & txhash) const
       return zeroConfCont_->getTxByHash(txhash);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+std::pair<uint32_t, uint32_t> BlockDataViewer::getHeightAndIdForTxHash(
+   const BinaryDataRef& txHash) const
+{
+   pair<uint32_t, uint32_t> heightAndId = { UINT32_MAX, UINT32_MAX };
+
+   auto dbKey = db_->getDBKeyForHash(txHash);
+   switch (dbKey.getSize())
+   {
+   case 6:
+   {
+      BinaryRefReader brr(dbKey.getRef());
+      brr.advance(4);
+      heightAndId.second = brr.get_uint16_t(BE);
+
+      auto hgtx = dbKey.getSliceRef(0, 4);
+      if (db_->getDbType() == ARMORY_DB_SUPER)
+      {
+         if (DBUtils::hgtxToDupID(hgtx) == 0x7F)
+         {
+            auto block_id = DBUtils::hgtxToHeight(hgtx);
+            auto header = bc_->getHeaderById(block_id);
+
+            heightAndId.first = header->getBlockHeight();
+            return heightAndId;
+         }
+      }
+
+      heightAndId.first = DBUtils::hgtxToHeight(hgtx);
+      break;
+   }
+   case 0:
+   {
+      //possibly zc
+      auto keyRef = zeroConfCont_->getKeyForHash(txHash);
+      if (keyRef.getSize() == 0)
+         break;
+
+      BinaryRefReader brr(keyRef);
+      brr.advance(2);
+      heightAndId.second = brr.get_uint32_t(BE);
+      break;
+   }
+
+   default:
+      throw runtime_error("unexpected db key size");
+   }
+
+   return heightAndId;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 TxOut BlockDataViewer::getPrevTxOut(TxIn & txin) const
 {
@@ -700,182 +752,210 @@ BlockDataViewer::getAddressOutpoints(
    auto topHeight = getTopBlockHeader()->getBlockHeight();
    map<BinaryData, map<BinaryData, map<unsigned, OpData>>> outpointMap;
 
-   for (auto& scrAddr : scrAddrSet)
+   //confirmed outputs, skip is heightCutoff is UINT32_MAX
+   if (heightCutoff != UINT32_MAX)
    {
-      StoredScriptHistory ssh;
-      if (!db_->getStoredScriptHistory(ssh, scrAddr, heightCutoff))
-         continue;
-
-      auto firstPairIter = outpointMap.insert(
-         make_pair(scrAddr, map<BinaryData, map<unsigned, OpData>>()));
-
-      auto& opMap = firstPairIter.first->second;
-      for (auto& subssh : ssh.subHistMap_)
+      for (auto& scrAddr : scrAddrSet)
       {
-         for (auto& txioPair : subssh.second.txioMap_)
-         {
-            StoredTxOut stxo;
-            if (!db_->getStoredTxOut(stxo, txioPair.second.getDBKeyOfOutput()))
-               throw runtime_error("failed to grab txout");
+         StoredScriptHistory ssh;
+         if (!db_->getStoredScriptHistory(ssh, scrAddr, heightCutoff))
+            continue;
 
-            auto&& txHash = txioPair.second.getTxHashOfOutput(db_);
-            auto secondPairIter = opMap.find(txHash);
-            if (secondPairIter == opMap.end())
+         if (ssh.subHistMap_.size() == 0)
+            continue;
+
+         auto firstPairIter = outpointMap.insert(
+            make_pair(scrAddr, map<BinaryData, map<unsigned, OpData>>()));
+
+         auto& opMap = firstPairIter.first->second;
+
+         /*
+         Run decrementally to process spent txios first and ignore the
+         younger, unspent counterparts.
+         */
+
+         set<BinaryData> processedKeys;
+         auto rIter = ssh.subHistMap_.rbegin();
+         while (rIter != ssh.subHistMap_.rend())
+         {
+            auto& subssh = rIter->second;
+            for (auto& txioPair : subssh.txioMap_)
             {
-               secondPairIter = opMap.insert(
-                  make_pair(txHash, map<unsigned, OpData>())).first;
+               //keep track of processed txios by their output key, 
+               //skip if already in set
+               auto&& txOutKey = txioPair.second.getDBKeyOfOutput();
+               auto insertIter = processedKeys.emplace(txOutKey);
+               if (!insertIter.second)
+                  continue;
+
+               StoredTxOut stxo;
+               if (!db_->getStoredTxOut(stxo, txioPair.second.getDBKeyOfOutput()))
+                  throw runtime_error("failed to grab txout");
+
+               auto&& txHash = txioPair.second.getTxHashOfOutput(db_);
+               auto secondPairIter = opMap.find(txHash);
+               if (secondPairIter == opMap.end())
+               {
+                  secondPairIter = opMap.insert(
+                     make_pair(txHash, map<unsigned, OpData>())).first;
+               }
+
+               auto& idMap = secondPairIter->second;
+
+               OpData opdata;
+               opdata.height_ = stxo.getHeight();
+               opdata.txindex_ = stxo.txIndex_;
+               opdata.value_ = stxo.getValue();
+               opdata.isspent_ = stxo.isSpent();
+
+               //if the output is spent, set the spender hash
+               if (stxo.isSpent())
+                  opdata.spenderHash_ = txioPair.second.getTxHashOfInput(db_);
+
+               idMap.insert(make_pair((unsigned)stxo.txOutIndex_, move(opdata)));
             }
 
-            auto& idMap = secondPairIter->second;
-
-            OpData opdata;
-            opdata.height_ = stxo.getHeight();
-            opdata.txindex_ = stxo.txIndex_;
-            opdata.value_ = stxo.getValue();
-            opdata.isspent_ = stxo.isSpent();
-
-            //if the output is spent, set the spender hash
-            if(stxo.isSpent())
-               opdata.spenderHash_ = txioPair.second.getTxHashOfInput(db_);
-
-            idMap.insert(make_pair((unsigned)stxo.txOutIndex_, move(opdata)));
+            ++rIter;
          }
       }
+
+      //update height cutoff
+      heightCutoff = topHeight;
    }
 
-   //grab zc outpoints
-   auto zcSnapshot = zc_->getSnapshot();
-   for (auto& scrAddr : scrAddrSet)
+   //zc outpoints, skip is zcCutoff is UINT32_MAX
+   if (zcCutoff != UINT32_MAX)
    {
-      auto addrIter = zcSnapshot->txioMap_.find(scrAddr);
-      if (addrIter == zcSnapshot->txioMap_.end())
-         continue;
-
-
-      for (auto& txiopair : *addrIter->second)
+      auto zcSnapshot = zc_->getSnapshot();
+      for (auto& scrAddr : scrAddrSet)
       {
-         //grab txoutref, useful in all but 1 case
-         auto&& txOutRef = txiopair.second->getTxRefOfOutput();
+         auto addrIter = zcSnapshot->txioMap_.find(scrAddr);
+         if (addrIter == zcSnapshot->txioMap_.end())
+            continue;
 
-         //does this txio have a zc txin, txout or both?
-         bool txOutZc = txiopair.second->hasTxOutZC();
-         bool txInZc = txiopair.second->hasTxInZC();
-         BinaryDataRef spenderHash;
 
-         if (txInZc)
+         for (auto& txiopair : *addrIter->second)
          {
-            //has zc txin, check cutoff
-            auto txInRef = txiopair.second->getTxRefOfInput();
-            BinaryRefReader brr(txInRef.getDBKeyRef());
-            brr.advance(2);
+            //grab txoutref, useful in all but 1 case
+            auto&& txOutRef = txiopair.second->getTxRefOfOutput();
 
-            auto zcID = brr.get_uint32_t(BE);
-            if (zcID <= zcCutoff)
-               continue;
+            //does this txio have a zc txin, txout or both?
+            bool txOutZc = txiopair.second->hasTxOutZC();
+            bool txInZc = txiopair.second->hasTxInZC();
+            BinaryDataRef spenderHash;
 
-            //spent zc, grab the spender tx hash
-            auto spenderIter = 
-               zcSnapshot->txMap_.find(txInRef.getDBKeyRef());
-
-            if (spenderIter == zcSnapshot->txMap_.end())
-               throw runtime_error("missing spender zc");
-
-            spenderHash = spenderIter->second->getTxHash().getRef();
-         }
-         else if (txOutZc)
-         {
-            //has zc txout only (unspent), check cutoff
-            BinaryRefReader brr(txOutRef.getDBKeyRef());
-            brr.advance(2);
-
-            auto zcID = brr.get_uint32_t(BE);
-            if (zcID <= zcCutoff)
-               continue;
-         }
-
-         //if we got this far, add this outpoint
-         auto firstPairIter = outpointMap.find(scrAddr);
-         if (firstPairIter == outpointMap.end())
-         {
-            firstPairIter = outpointMap.insert(
-               make_pair(scrAddr, map<BinaryData, map<unsigned, OpData>>())).first;
-         }
-
-         if (!txOutZc)
-         {
-            auto&& txHash = txiopair.second->getTxHashOfOutput(db_);
-            auto secondPairIter = firstPairIter->second.find(txHash);
-            if (secondPairIter == firstPairIter->second.end())
+            if (txInZc)
             {
-               secondPairIter = firstPairIter->second.insert(
-                  make_pair(txHash, map<unsigned, OpData>())).first;
+               //has zc txin, check cutoff
+               auto txInRef = txiopair.second->getTxRefOfInput();
+               BinaryRefReader brr(txInRef.getDBKeyRef());
+               brr.advance(2);
+
+               auto zcID = brr.get_uint32_t(BE);
+               if (zcID <= zcCutoff)
+                  continue;
+
+               //spent zc, grab the spender tx hash
+               auto spenderIter =
+                  zcSnapshot->txMap_.find(txInRef.getDBKeyRef());
+
+               if (spenderIter == zcSnapshot->txMap_.end())
+                  throw runtime_error("missing spender zc");
+
+               spenderHash = spenderIter->second->getTxHash().getRef();
+            }
+            else if (txOutZc)
+            {
+               //has zc txout only (unspent), check cutoff
+               BinaryRefReader brr(txOutRef.getDBKeyRef());
+               brr.advance(2);
+
+               auto zcID = brr.get_uint32_t(BE);
+               if (zcID <= zcCutoff)
+                  continue;
             }
 
-            //mined txout, have to grab it from db
-            StoredTxOut stxo;
-            if (!db_->getStoredTxOut(stxo, txiopair.second->getDBKeyOfOutput()))
-               throw runtime_error("failed to grab txout");
-
-            auto& idMap = secondPairIter->second;
-
-            OpData opdata;
-            opdata.height_ = stxo.getHeight();
-            opdata.txindex_ = stxo.txIndex_;
-            opdata.value_ = stxo.getValue();
-
-            //this is a mined txout, therefor the only way it is ZC is
-            //through the txin, therefor it is spent
-            opdata.isspent_ = true;
-            opdata.spenderHash_ = spenderHash;
-
-            idMap[stxo.txOutIndex_] = move(opdata);
-         }
-         else
-         {
-            //zc txout, grab from snapshot
-            auto txIter = zcSnapshot->txMap_.find(txOutRef.getDBKey());
-            if (txIter == zcSnapshot->txMap_.end())
-               throw runtime_error("can't find zc tx by txiopair output key");
-
-            auto& txHash = txIter->second->getTxHash();
-            auto secondPairIter = firstPairIter->second.find(txHash);
-            if (secondPairIter == firstPairIter->second.end())
+            //if we got this far, add this outpoint
+            auto firstPairIter = outpointMap.find(scrAddr);
+            if (firstPairIter == outpointMap.end())
             {
-               secondPairIter = firstPairIter->second.insert(
-                  make_pair(txHash, map<unsigned, OpData>())).first;
+               firstPairIter = outpointMap.insert(
+                  make_pair(scrAddr, map<BinaryData, map<unsigned, OpData>>())).first;
             }
 
-            auto outputIndex = txiopair.second->getIndexOfOutput();
-            auto& parsedTxOut =
-               txIter->second->outputs_[outputIndex];
+            if (!txOutZc)
+            {
+               auto&& txHash = txiopair.second->getTxHashOfOutput(db_);
+               auto secondPairIter = firstPairIter->second.find(txHash);
+               if (secondPairIter == firstPairIter->second.end())
+               {
+                  secondPairIter = firstPairIter->second.insert(
+                     make_pair(txHash, map<unsigned, OpData>())).first;
+               }
 
-            OpData opdata;
-            opdata.height_ = UINT32_MAX;
-            opdata.txindex_ = UINT32_MAX;
-            opdata.value_ = parsedTxOut.value_;
-            opdata.isspent_ = txiopair.second->hasTxIn();
+               //mined txout, have to grab it from db
+               StoredTxOut stxo;
+               if (!db_->getStoredTxOut(stxo, txiopair.second->getDBKeyOfOutput()))
+                  throw runtime_error("failed to grab txout");
 
-            if (opdata.isspent_)
+               auto& idMap = secondPairIter->second;
+
+               OpData opdata;
+               opdata.height_ = stxo.getHeight();
+               opdata.txindex_ = stxo.txIndex_;
+               opdata.value_ = stxo.getValue();
+               opdata.isspent_ = txiopair.second->hasTxIn();
+
+               //this is a mined txout, therefor the only way it is ZC is
+               //through the txin
                opdata.spenderHash_ = spenderHash;
 
-            //zc outpoints override mined ones
-            auto& idMap = secondPairIter->second;
-            idMap[outputIndex] = move(opdata);
+               idMap[stxo.txOutIndex_] = move(opdata);
+            }
+            else
+            {
+               //zc txout, grab from snapshot
+               auto txIter = zcSnapshot->txMap_.find(txOutRef.getDBKey());
+               if (txIter == zcSnapshot->txMap_.end())
+                  throw runtime_error("can't find zc tx by txiopair output key");
+
+               auto& txHash = txIter->second->getTxHash();
+               auto secondPairIter = firstPairIter->second.find(txHash);
+               if (secondPairIter == firstPairIter->second.end())
+               {
+                  secondPairIter = firstPairIter->second.insert(
+                     make_pair(txHash, map<unsigned, OpData>())).first;
+               }
+
+               auto outputIndex = txiopair.second->getIndexOfOutput();
+               auto& parsedTxOut =
+                  txIter->second->outputs_[outputIndex];
+
+               OpData opdata;
+               opdata.height_ = UINT32_MAX;
+               opdata.txindex_ = UINT32_MAX;
+               opdata.value_ = parsedTxOut.value_;
+               opdata.isspent_ = txiopair.second->hasTxIn();
+
+               if (opdata.isspent_)
+                  opdata.spenderHash_ = spenderHash;
+
+               //zc outpoints override mined ones
+               auto& idMap = secondPairIter->second;
+               idMap[outputIndex] = move(opdata);
+            }
          }
       }
-   }
 
-   //update zc id cutoff
-   auto rIter = zcSnapshot->txMap_.rbegin();
-   if (rIter != zcSnapshot->txMap_.rend())
-   {
-      BinaryRefReader brr(rIter->first);
-      brr.advance(2);
-      zcCutoff = brr.get_uint32_t(BE);
+      //update zc id cutoff
+      auto rIter = zcSnapshot->txMap_.rbegin();
+      if (rIter != zcSnapshot->txMap_.rend())
+      {
+         BinaryRefReader brr(rIter->first);
+         brr.advance(2);
+         zcCutoff = brr.get_uint32_t(BE);
+      }
    }
-
-   //update height cutoff
-   heightCutoff = topHeight + 1;
 
    return outpointMap;
 }

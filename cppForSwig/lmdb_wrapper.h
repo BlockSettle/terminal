@@ -1003,6 +1003,8 @@ public:
    bool getStoredTxOut(
       StoredTxOut & stxo, const BinaryData& txHash, uint16_t txoutid) const;
 
+   void getSpentness(StoredTxOut& stxo);
+
    void getUTXOflags(std::map<BinaryData, StoredSubHistory>&) const;
    void getUTXOflags(StoredSubHistory&) const;
    void getUTXOflags_Super(StoredSubHistory&) const;
