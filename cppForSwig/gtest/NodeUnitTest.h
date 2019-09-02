@@ -28,11 +28,12 @@ class NodeUnitTest : public BitcoinP2P
       BinaryData rawTx_;
       BinaryData hash_;
       unsigned order_;
+      unsigned blocksUntilMined_ = 0;
 
       bool operator<(const MempoolObject& rhs) const { return order_ < rhs.order_; }
    };
 
-   std::map<BinaryDataRef, MempoolObject> mempool_;
+   std::map<BinaryDataRef, std::shared_ptr<MempoolObject>> mempool_;
    std::atomic<unsigned> counter_;
    
    std::shared_ptr<Blockchain> blockchain_ = nullptr;
@@ -54,8 +55,10 @@ public:
    void notifyNewBlock(void);
    void mineNewBlock(unsigned count, const BinaryData& h160);
    std::map<unsigned, BinaryData> mineNewBlock(unsigned, ScriptRecipient*);
-   void pushZC(const std::vector<BinaryData>& txVec);
    std::shared_ptr<Payload> getTx(const InvEntry& ie, uint32_t timeout);
+ 
+   //<raw tx, blocks to wait until mining>
+   void pushZC(const std::vector<std::pair<BinaryData, unsigned>>&);
 
    //set
    void setBlockchain(std::shared_ptr<Blockchain>);

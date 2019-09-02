@@ -65,6 +65,13 @@ int WebSocketServer::callback(
    struct per_session_data__bdv *session_data =
       (struct per_session_data__bdv *)user;
 
+   /***
+   TODO: AEAD handshake takes place after WS handshake. Therefor, clients can 
+   connect and idle, holding a socket, without ever handshaking.
+
+   Need to curate inactive sockets.
+   ***/
+
    switch (reason)
    {
 

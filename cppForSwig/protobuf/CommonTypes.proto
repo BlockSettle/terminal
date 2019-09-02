@@ -29,7 +29,16 @@ message Strings
 
 message TxWithMetaData
 {
-	required bytes rawTx = 1;
-	optional bool isRBF = 2;
-	optional bool isChainedZC = 3;
+	required uint32 height = 1;
+	required uint32 txindex = 2;
+	
+	optional bytes rawTx = 10;
+
+	optional bool isRBF = 20;
+	optional bool isChainedZC = 21;
+}
+
+message ManyTxWithMetaData
+{
+	repeated TxWithMetaData tx = 1;
 }
