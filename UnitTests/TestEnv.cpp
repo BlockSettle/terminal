@@ -243,9 +243,9 @@ std::map<unsigned, BinaryData> ArmoryInstance::mineNewBlock(
    return nodePtr_->mineNewBlock(count, rec);
 }
 
-void ArmoryInstance::pushZC(const BinaryData& zc)
+void ArmoryInstance::pushZC(const BinaryData& zc, unsigned int blocksUntilMined)
 {
-   std::vector<BinaryData> zcVec;
-   zcVec.push_back(zc);
+   std::vector<std::pair<BinaryData, unsigned int>> zcVec;
+   zcVec.push_back({ zc, blocksUntilMined });
    nodePtr_->pushZC(zcVec);
 }

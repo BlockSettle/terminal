@@ -243,7 +243,7 @@ struct ArmoryInstance
    ~ArmoryInstance(void);
 
    std::map<unsigned, BinaryData> mineNewBlock(ScriptRecipient*, unsigned);
-   void pushZC(const BinaryData&);
+   void pushZC(const BinaryData &, unsigned int blocksUntilMined = 0);
 };
 
 class TestArmoryConnection : public ArmoryObject
