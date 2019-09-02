@@ -268,6 +268,8 @@ public:
    unsigned goOnline(void);
    unsigned update(void);
 
+   bool isReady() const { return ready_; }
+
    //utility methods
    std::shared_ptr<ArmoryConnection> connPtr(void) const { return connPtr_; }
    void pushRefreshID(std::vector<BinaryData>&);
