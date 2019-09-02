@@ -1,18 +1,19 @@
 #include "ChatSearchLineEdit.h"
-#include "ChatHandleInterfaces.h"
+
 #include <QKeyEvent>
 ChatSearchLineEdit::ChatSearchLineEdit(QWidget *parent)
    : QLineEdit(parent)
-   , handler_(nullptr)
    , resetOnNextInput_(false)
 {
    connect(this, &QLineEdit::textChanged, this, &ChatSearchLineEdit::onTextChanged);
 }
 
+/*
 void ChatSearchLineEdit::setActionsHandler(std::shared_ptr<ChatSearchActionsHandler> handler)
 {
    handler_ = handler;
 }
+*/
 
 void ChatSearchLineEdit::setResetOnNextInput(bool value)
 {
@@ -21,9 +22,11 @@ void ChatSearchLineEdit::setResetOnNextInput(bool value)
 
 void ChatSearchLineEdit::onTextChanged(const QString &text)
 {
+/*
    if (text.isEmpty() && handler_) {
       handler_->onActionResetSearch();
    }
+*/
 }
 
 
