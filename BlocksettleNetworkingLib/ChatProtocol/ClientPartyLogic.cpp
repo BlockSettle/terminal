@@ -185,6 +185,11 @@ namespace Chat
             partyPacket.party_subtype()
          );
 
+      newClientPrivatePartyPtr->setPartyState(partyPacket.party_state());
+      newClientPrivatePartyPtr->setPartyCreatorHash(partyPacket.party_creator_hash());
+      newClientPrivatePartyPtr->setDisplayName(partyPacket.display_name());
+      newClientPrivatePartyPtr->setUserHash(partyPacket.party_creator_hash());
+
       PartyRecipientsPtrList recipients;
       for (int i = 0; i < partyPacket.recipient_size(); i++)
       {
@@ -194,8 +199,6 @@ namespace Chat
 
          recipients.push_back(recipient);
       }
-
-      newClientPrivatePartyPtr->setPartyCreatorHash(partyPacket.party_creator_hash());
 
       // update model
       clientPartyModelPtr_->insertParty(newClientPrivatePartyPtr);
