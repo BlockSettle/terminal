@@ -18,7 +18,7 @@ namespace Chat
 
    SessionKeyHolder::SessionKeyHolder(const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */) : loggerPtr_(loggerPtr), QObject(parent)
    {
-
+      connect(this, &SessionKeyHolder::error, this, &SessionKeyHolder::handleLocalErrors);
    }
 
    void SessionKeyHolder::requestSessionKeysForUser(const std::string& userName, const BinaryData& remotePublicKey)

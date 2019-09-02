@@ -367,7 +367,6 @@ namespace Chat
    {
       if (!(clientPartyPtr->isPrivateStandard()))
       {
-         emit error(ClientConnectionLogicError::MessageSeenForWrongTypeOfParty, clientPartyPtr->id());
          return;
       }
 
@@ -445,6 +444,31 @@ namespace Chat
       // local party exist
       if (partyPtr)
       {
+         // if party request was created by me
+         // update recipient data
+         PartyPacket partyPacket = privatePartyRequest.party_packet();
+         if (currentUserPtr()->userName() == partyPacket.party_creator_hash())
+         {
+            ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyPacket.party_id());
+
+            if (nullptr == clientPartyPtr)
+            {
+               return;
+            }
+
+            PartyRecipientsPtrList updatedRecipients;
+            for (int i = 0; i < partyPacket.recipient_size(); i++)
+            {
+               PartyRecipientPacket recipient = partyPacket.recipient(i);
+               PartyRecipientPtr newRecipient = std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key(), QDateTime::fromMSecsSinceEpoch(recipient.timestamp_ms()));
+               updatedRecipients.push_back(newRecipient);
+            }
+
+            clientPartyPtr->setRecipients(updatedRecipients);
+
+            return;
+         }
+
          // party is in initialized or rejected state (already accepted)
          // send this state to requester
 

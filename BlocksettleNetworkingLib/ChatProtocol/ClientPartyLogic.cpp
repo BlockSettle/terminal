@@ -12,7 +12,8 @@
 namespace Chat
 {
 
-   ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBServicePtr& clientDBServicePtr, QObject* parent) : QObject(parent)
+   ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBServicePtr& clientDBServicePtr, QObject* parent) 
+      : loggerPtr_(loggerPtr), QObject(parent)
    {
       qRegisterMetaType<Chat::ClientPartyLogicError>();
 
@@ -199,6 +200,8 @@ namespace Chat
 
          recipients.push_back(recipient);
       }
+
+      newClientPrivatePartyPtr->setRecipients(recipients);
 
       // update model
       clientPartyModelPtr_->insertParty(newClientPrivatePartyPtr);

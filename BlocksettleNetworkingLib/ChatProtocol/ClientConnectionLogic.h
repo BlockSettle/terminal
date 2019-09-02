@@ -30,7 +30,6 @@ namespace Chat
    {
       SendingDataToUnhandledParty,
       UnhandledPacket,
-      MessageSeenForWrongTypeOfParty,
       CouldNotFindParty,
       DynamicPointerCast
    };
