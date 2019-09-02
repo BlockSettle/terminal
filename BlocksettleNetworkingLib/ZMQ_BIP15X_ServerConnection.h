@@ -113,7 +113,6 @@ protected:
 
    void onPeriodicCheck() override;
 
-   void resetBIP151Connection(const std::string& clientID);
    std::shared_ptr<ZmqBIP15XPerConnData> setBIP151Connection(const std::string& clientID);
 
    bool handshakeCompleted(const ZmqBIP15XPerConnData& checkConn) const {
@@ -148,6 +147,9 @@ private:
    bool sendToDataSocket(const std::string &clientId, const BinaryData &data);
 
    void checkHeartbeats();
+
+   void closeClient(const std::string &clientId);
+
 private:
    std::unique_ptr<AuthorizedPeers> authPeers_;
    mutable std::mutex authPeersMutex_;
