@@ -1150,6 +1150,8 @@ void BSTerminalMainWindow::onLogout()
    setLoginButtonText(loginButtonText_);
 
    setWidgetsAuthorized(false);
+
+   bsClient_.reset();
 }
 
 void BSTerminalMainWindow::onUserLoggedIn()

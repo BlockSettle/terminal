@@ -577,28 +577,110 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
    case Methods::getTxByHash:
    {
       /*
-      in: hash
+      in: 
+         txhash as hash
+         flag: true to return only the tx height
       out: tx as Codec_CommonTypes::TxWithMetaData
       */
 
       if (!command->has_hash())
          throw runtime_error("invalid command for getTxByHash");
 
+      bool heightOnly = false;
+      if (command->has_flag())
+         heightOnly =  command->flag();
+
+      Tx retval;
       auto& txHash = command->hash();
       BinaryDataRef txHashRef; txHashRef.setRef(txHash);
-      auto&& retval = this->getTxByHash(txHashRef);
-      
-      //sanity check
-      if (retval.getSize() == 0)
+
+      if (!heightOnly)
       {
-         LOGWARN << "empty raw tx!";
-         throw runtime_error("could not find tx");
+         retval = move(this->getTxByHash(txHashRef));
+      }
+      else
+      {
+         auto&& heightAndId = getHeightAndIdForTxHash(txHashRef);
+         retval.setTxHeight(heightAndId.first);
+         retval.setTxIndex(heightAndId.second);
+      }
+      
+      auto response = make_shared<::Codec_CommonTypes::TxWithMetaData>();
+      if (retval.isInitialized())
+      {
+         response->set_rawtx(retval.getPtr(), retval.getSize());
+         response->set_isrbf(retval.isRBF());
+         response->set_ischainedzc(retval.isChained());
       }
 
-      auto response = make_shared<::Codec_CommonTypes::TxWithMetaData>();
-      response->set_rawtx(retval.getPtr(), retval.getSize());
-      response->set_isrbf(retval.isRBF());
-      response->set_ischainedzc(retval.isChained());
+      response->set_height(retval.getTxHeight());
+      response->set_txindex(retval.getTxIndex());
+      return response;
+   }
+
+   case Methods::getTxBatchByHash:
+   {
+      /*
+      in: 
+         Set of tx identifier as bindata[]
+         An identifier is a txhash concatenated with an optional binary flag:
+            tx hash (32) | flag (1)
+         The flag defaults to false. If present and set to a non zero value,
+         only the tx height is returned, without the tx body, for this one entry.
+
+      out: a set of transaction as Codec_CommonTypes::ManyTxWithMetaData
+      */
+
+      if (command->bindata_size() == 0)
+         throw runtime_error("invalid command for getTxBatchByHash");
+
+      vector<Tx> result;
+      for (unsigned i = 0; i < command->bindata_size(); i++)
+      {
+         Tx tx;
+         auto& txHash = command->bindata(i);
+         if (txHash.size() < 32)
+         {
+            result.emplace_back(tx);
+            continue;
+         }
+
+         BinaryDataRef txHashRef;
+         txHashRef.setRef((const uint8_t*)txHash.c_str(), 32);
+
+         bool heightOnly = false;
+         if (txHash.size() == 33)
+            heightOnly = (bool)txHash.c_str()[32];
+
+         if (!heightOnly)
+         {
+            tx = move(this->getTxByHash(txHashRef));
+         }
+         else
+         {
+            auto&& heightAndId = getHeightAndIdForTxHash(txHashRef);
+            tx.setTxHeight(heightAndId.first);
+            tx.setTxIndex(heightAndId.second);
+         }
+
+         result.emplace_back(tx);
+      }
+
+      auto response = make_shared<::Codec_CommonTypes::ManyTxWithMetaData>();
+      for (auto& tx : result)
+      {
+         auto txPtr = response->add_tx();
+         if (tx.isInitialized())
+         {
+            txPtr->set_rawtx(tx.getPtr(), tx.getSize());
+            txPtr->set_isrbf(tx.isRBF());
+            txPtr->set_ischainedzc(tx.isChained());
+         }
+
+         txPtr->set_height(tx.getTxHeight());
+         txPtr->set_txindex(tx.getTxIndex());
+      }
+
       return response;
    }
 
@@ -1196,6 +1278,11 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
 
    case Methods::getOutpointsForAddresses:
    {
+      /*
+      in: set of scrAddr as bindata[]
+      out: outpoints for each address as Codec_Utxo::AddressOutpointsData
+      */
+
       set<BinaryDataRef> scrAddrSet;
       for (int i = 0; i < command->bindata_size(); i++)
       {
@@ -1261,6 +1348,11 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
 
    case Methods::getUTXOsForAddress:
    {
+      /*
+      in: scrAddr as scraddr
+      out: utxos as Codec_Utxo::ManyUtxo
+      */
+
       auto& addr = command->scraddr();
       if (addr.size() == 0)
          throw runtime_error("expected address for getUTXOsForAddress");
@@ -1286,8 +1378,118 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       return response;
    }
 
+   case Methods::getSpentnessForOutputs:
+   {
+      /*
+      in: 
+         output hash & id concatenated as: 
+         txhash (32) | txout count (varint) | txout index #1 (varint) | txout index #2 ...
+         
+      out:
+         vector of spender hashes as Codec_CommonTypes::ManyBinaryData
+         
+         The hashes are order as the outputs appear in the argument map:
+            hash #0
+               id #0 -> spender hash #0
+               id #1 -> spender hash #1
+            hash #1
+               id #0 -> spender hash #2
+            hash #3
+               id #0 -> spender hash #3
+               id #1 -> spender hash #4
+
+         outputs that aren't spent have are passed an empty spender hash.
+      */
+
+      if(command->bindata_size() == 0)
+         throw runtime_error("expected bindata for getSpentnessForOutputs");
+
+      vector<BinaryData> spenderKeys;
+
+      {
+         //grab all spentness data for these outputs
+         auto&& spentness_tx = db_->beginTransaction(SPENTNESS, LMDB::ReadOnly);
+
+         for (unsigned i = 0; i < command->bindata_size(); i++)
+         {
+            auto& rawOutputs = command->bindata(i);
+            if (rawOutputs.size() < 33)
+               throw runtime_error("malformed output data");
+
+            BinaryRefReader brr((const uint8_t*)rawOutputs.c_str(), rawOutputs.size());
+            auto txHashref = brr.get_BinaryDataRef(32);
+
+            //get dbkey for this txhash
+            auto&& dbkey = db_->getDBKeyForHash(txHashref);
+
+            //convert id to block height and setup stxo
+            StoredTxOut stxo;
+
+            BinaryRefReader keyReader(dbkey);
+            uint32_t blockid; uint8_t dup;
+            DBUtils::readBlkDataKeyNoPrefix(keyReader,
+               blockid, dup, stxo.txIndex_);
+
+            auto headerPtr = blockchain().getHeaderById(blockid);
+            stxo.blockHeight_ = headerPtr->getBlockHeight();
+            stxo.duplicateID_ = headerPtr->getDuplicateID();
+            
+            //run through txout indices
+            auto outputCount = brr.get_var_int();
+            for (unsigned y = 0; y < outputCount; y++)
+            {
+               //set txout index
+               stxo.txOutIndex_ = brr.get_var_int();
+
+               //get spentness for index
+               db_->getSpentness(stxo);
+
+               //add to the result vector
+               if (stxo.isSpent())
+                  spenderKeys.push_back(stxo.spentByTxInKey_);
+               else
+                  spenderKeys.push_back(BinaryData());
+            }
+         }
+      }
+
+      //resolve spender dbkeys to tx hashes
+      vector<BinaryData> hashes;
+      map<BinaryData, BinaryData> cache;
+      for (auto& key : spenderKeys)
+      {
+         if (key.getSize() == 0)
+         {
+            hashes.emplace_back(BinaryData());
+            continue;
+         }
+
+         auto keyShort = key.getSliceRef(0, 6);
+         auto cacheIter = cache.find(keyShort);
+         if (cacheIter != cache.end())
+         {
+            hashes.push_back(cacheIter->second);
+            continue;
+         }
+
+         auto&& hash = db_->getHashForDBKey(keyShort);
+         cache.insert(make_pair(keyShort, hash));
+         hashes.emplace_back(hash);
+      }
+
+      //create response object
+      auto response = make_shared<::Codec_CommonTypes::ManyBinaryData>();
+      for (auto& hash : hashes)
+      {
+         auto val = response->add_value();
+         val->set_data(hash.getPtr(), hash.getSize());
+      }
+
+      return response;
+   }
+
    default:
-      LOGWARN << "unkonwn command";
+      LOGWARN << "unknown command";
       throw runtime_error("unknown command");
    }
 

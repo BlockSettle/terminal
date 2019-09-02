@@ -1226,6 +1226,8 @@ Tx StoredTx::getTxCopy(void) const
    
    Tx returnTx(getSerializedTx());
    returnTx.setRBF(isRBF_);
+   returnTx.setTxHeight(blockHeight_);
+   returnTx.setTxIndex(txIndex_);
    return returnTx;
 }
 

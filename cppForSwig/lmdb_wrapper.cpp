@@ -768,6 +768,7 @@ BinaryData LMDBBlockDatabase::getHashForDBKey(uint32_t hgt,
    }
    else if(txo==UINT16_MAX)
    {
+      //this is slow, needs some help
       StoredTx stx;
       getStoredTx(stx, hgt, dup, txi, false);
       return stx.thisHash_;
@@ -2447,6 +2448,26 @@ bool LMDBBlockDatabase::getStoredTxOut(
       LOGERR << "Headers DB has no block at height: " << blockHeight; 
 
    return getStoredTxOut(stxo, blockHeight, dupID, txIndex, txOutIndex);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void LMDBBlockDatabase::getSpentness(StoredTxOut& stxo)
+{
+   if (getDbType() != ARMORY_DB_SUPER)
+      throw runtime_error("need to implement this for full node");
+
+   //get spentness
+   auto&& spentness_tx = beginTransaction(SPENTNESS, LMDB::ReadOnly);
+   auto spentnessVal = getValueNoCopy(SPENTNESS, stxo.getSpentnessKey());
+   if (spentnessVal.getSize() != 0)
+   {
+      stxo.spentByTxInKey_ = spentnessVal;
+      stxo.spentness_ = TXOUT_SPENT;
+   }
+   else
+   {
+      stxo.spentness_ = TXOUT_UNSPENT;
+   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

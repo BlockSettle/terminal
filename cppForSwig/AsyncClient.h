@@ -103,7 +103,7 @@ private:
    std::map<BinaryData, unsigned> txHashToHeightMap_;
 
 public:
-   void insertTx(BinaryData&, Tx&);
+   void insertTx(const BinaryData&, const Tx&);
    void insertRawHeader(unsigned&, BinaryDataRef);
    void insertHeightForTxHash(BinaryData&, unsigned&);
 
@@ -379,19 +379,41 @@ namespace AsyncClient
    public:
       ~BlockDataViewer(void);
 
-      bool connectToRemote(void);
-      void addPublicKey(const SecureBinaryData&);
+      //utility
+      static std::unique_ptr<WritePayload_Protobuf> make_payload(
+         ::Codec_BDVCommand::Methods, const std::string&);
+      static std::unique_ptr<WritePayload_Protobuf> make_payload(
+         ::Codec_BDVCommand::StaticMethods);
+      
       BtcWallet instantiateWallet(const std::string& id);
       Lockbox instantiateLockbox(const std::string& id);
 
-      const std::string& getID(void) const { return bdvID_; }
-      std::shared_ptr<SocketPrototype> getSocketObject(void) const { return sock_; }
+      //BIP15x
+      std::pair<unsigned, unsigned> getRekeyCount(void) const;
+      void setCheckServerKeyPromptLambda(
+         std::function<bool(const BinaryData&, const std::string&)>);
+      void addPublicKey(const SecureBinaryData&);
 
+      //connectivity
+      bool connectToRemote(void);
+      std::shared_ptr<SocketPrototype> getSocketObject(void) const { return sock_; }
+      void goOnline(void);
+      bool hasRemoteDB(void);
+
+      //setup
+      const std::string& getID(void) const { return bdvID_; }
       static std::shared_ptr<BlockDataViewer> getNewBDV(
          const std::string& addr, const std::string& port,
          const std::string& datadir, const bool& ephemeralPeers,
          std::shared_ptr<RemoteCallback> callbackPtr);
 
+      void registerWithDB(BinaryData magic_word);
+      void unregisterFromDB(void);
+      void shutdown(const std::string&);
+      void shutdownNode(const std::string&);
+
+
+      //ledgers
       void getLedgerDelegateForWallets(
          std::function<void(ReturnMessage<LedgerDelegate>)>);
       void getLedgerDelegateForLockboxes(
@@ -399,17 +421,16 @@ namespace AsyncClient
       void getLedgerDelegateForScrAddr(
          const std::string&, const BinaryData&,
          std::function<void(ReturnMessage<LedgerDelegate>)>);
+
+      void getHistoryForWalletSelection(
+         const std::vector<std::string>&, const std::string& orderingStr,
+         std::function<void(ReturnMessage<std::vector<::ClientClasses::LedgerEntry>>)>);
+
+      void updateWalletsLedgerFilter(const std::vector<BinaryData>& wltIdVec);
+
+      //header data
       Blockchain blockchain(void);
 
-      void goOnline(void);
-      void registerWithDB(BinaryData magic_word);
-      void unregisterFromDB(void);
-      void shutdown(const std::string&);
-      void shutdownNode(const std::string&);
-
-      void broadcastZC(const BinaryData& rawTx);
-      void getTxByHash(const BinaryData& txHash, 
-         std::function<void(ReturnMessage<Tx>)>);
       void getRawHeaderForTxHash(
          const BinaryData& txHash, 
          std::function<void(ReturnMessage<BinaryData>)>);
@@ -417,34 +438,13 @@ namespace AsyncClient
          unsigned height, 
          std::function<void(ReturnMessage<BinaryData>)>);
 
-      void updateWalletsLedgerFilter(const std::vector<BinaryData>& wltIdVec);
-      bool hasRemoteDB(void);
-
+      //node & fee
       void getNodeStatus(
          std::function<void(ReturnMessage<std::shared_ptr<::ClientClasses::NodeStatusStruct>>)>);
       void estimateFee(unsigned, const std::string&,
          std::function<void(ReturnMessage<ClientClasses::FeeEstimateStruct>)>);
       void getFeeSchedule(const std::string&, std::function<void(ReturnMessage<
             std::map<unsigned, ClientClasses::FeeEstimateStruct>>)>);
-
-      void getHistoryForWalletSelection(
-         const std::vector<std::string>&, const std::string& orderingStr,
-         std::function<void(ReturnMessage<std::vector<::ClientClasses::LedgerEntry>>)>);
-
-      void broadcastThroughRPC(const BinaryData& rawTx, 
-         std::function<void(ReturnMessage<std::string>)>);
-
-      void getUtxosForAddrVec(const std::vector<BinaryData>&,
-         std::function<void(ReturnMessage<std::vector<UTXO>>)>);
-
-      static std::unique_ptr<WritePayload_Protobuf> make_payload(
-         ::Codec_BDVCommand::Methods, const std::string&);
-      static std::unique_ptr<WritePayload_Protobuf> make_payload(
-         ::Codec_BDVCommand::StaticMethods);
-
-      std::pair<unsigned, unsigned> getRekeyCount(void) const;
-      void setCheckServerKeyPromptLambda(
-         std::function<bool(const BinaryData&, const std::string&)>);
 
       //combined methods
       void getCombinedBalances(
@@ -467,13 +467,30 @@ namespace AsyncClient
       void getCombinedRBFTxOuts(const std::vector<std::string>&, 
          std::function<void(ReturnMessage<std::vector<UTXO>>)>);
 
-      //outpoints
+      //outputs
       void getOutpointsForAddresses(const std::vector<BinaryData>&, 
          unsigned startHeight, unsigned zcIndexCutoff,
          std::function<void(ReturnMessage<OutpointBatch>)>);
 
       void getUTXOsForAddress(const BinaryData&, bool,
          std::function<void(ReturnMessage<std::vector<UTXO>>)>);
+
+      void getUtxosForAddrVec(const std::vector<BinaryData>&,
+         std::function<void(ReturnMessage<std::vector<UTXO>>)>);
+
+      void getSpentnessForOutputs(const std::map<BinaryData, std::set<unsigned>>&,
+         std::function<void(
+            ReturnMessage<std::map<BinaryData, std::map<unsigned, BinaryData>>>)>);
+
+      //tx
+      void broadcastZC(const BinaryData& rawTx);
+      void broadcastThroughRPC(const BinaryData& rawTx,
+         std::function<void(ReturnMessage<std::string>)>);
+
+      void getTxByHash(const BinaryData& txHash,
+         std::function<void(ReturnMessage<Tx>)>);
+      void getTxBatchByHash(const std::set<BinaryData>&,
+         std::function<void(ReturnMessage<std::vector<Tx>>)>);
    };
 
    ////////////////////////////////////////////////////////////////////////////
@@ -539,14 +556,37 @@ public:
 struct CallbackReturn_Tx : public CallbackReturn_WebSocket
 {
 private:
-   std::function<void(ReturnMessage<Tx>)> userCallbackLambda_;
    std::shared_ptr<ClientCache> cache_;
    BinaryData txHash_;
+   std::function<void(ReturnMessage<Tx>)> userCallbackLambda_;
 
 public:
    CallbackReturn_Tx(std::shared_ptr<ClientCache> cache,
       const BinaryData& txHash, std::function<void(ReturnMessage<Tx>)> lbd) :
-      userCallbackLambda_(lbd), cache_(cache), txHash_(txHash)
+      cache_(cache), txHash_(txHash), userCallbackLambda_(lbd)
+   {}
+
+   //virtual
+   void callback(const WebSocketMessagePartial&);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct CallbackReturn_TxBatch : public CallbackReturn_WebSocket
+{
+private:
+   std::shared_ptr<ClientCache> cache_;
+   std::vector<Tx> cachedTx_;
+   std::map<BinaryData, bool> callMap_;
+   std::function<void(ReturnMessage<std::vector<Tx>>)> userCallbackLambda_;
+
+public:
+   CallbackReturn_TxBatch(
+      std::shared_ptr<ClientCache> cache, std::vector<Tx>& cachedTx, 
+      std::map<BinaryData, bool>& callMap,
+      std::function<void(ReturnMessage<std::vector<Tx>>)> lbd) :
+      cache_(cache), cachedTx_(std::move(cachedTx)),
+      callMap_(std::move(callMap)),
+      userCallbackLambda_(lbd)
    {}
 
    //virtual
@@ -854,6 +894,28 @@ public:
       std::function<void(
          ReturnMessage<OutpointBatch>)> lbd) :
       userCallbackLambda_(lbd)
+   {}
+
+   //virtual
+   void callback(const WebSocketMessagePartial&);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct CallbackReturn_SpentnessData : public CallbackReturn_WebSocket
+{
+private:
+   const std::map<BinaryData, std::set<unsigned>>& outputs_;
+
+   std::function<void(
+   ReturnMessage<std::map<BinaryData, std::map<unsigned, BinaryData>>>)>
+      userCallbackLambda_;
+
+public:
+   CallbackReturn_SpentnessData(
+      const std::map<BinaryData, std::set<unsigned>>& outputs,
+      std::function<void(ReturnMessage<
+         std::map<BinaryData, std::map<unsigned, BinaryData>>>)> lbd) :
+      outputs_(outputs), userCallbackLambda_(lbd)
    {}
 
    //virtual
