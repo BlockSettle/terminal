@@ -1,6 +1,6 @@
 #include "AuthAddressLogic.h"
 
-constexpr uint64_t AUTH_VALUE_THRESHOLD = 1000;
+constexpr uint64_t kAuthValueThreshold = 1000;
 
 ///////////////////////////////////////////////////////////////////////////////
 void ValidationAddressACT::onRefresh(const std::vector<BinaryData>& ids, bool online)
@@ -514,7 +514,7 @@ BinaryData ValidationAddressManager::fundUserAddress(
    signer.addSpender(spenderPtr);
 
    //vetting output
-   signer.addRecipient(addr.getRecipient(AUTH_VALUE_THRESHOLD));
+   signer.addRecipient(addr.getRecipient(kAuthValueThreshold));
 
    const auto scrAddr = vettingUtxo.getRecipientScrAddr();
    const auto addrIter = validationAddresses_.find(scrAddr);
@@ -523,7 +523,7 @@ BinaryData ValidationAddressManager::fundUserAddress(
    }
 
    //change: vetting coin value + fee
-   const uint64_t changeVal = vettingUtxo.getValue() - AUTH_VALUE_THRESHOLD - 1000;
+   const uint64_t changeVal = vettingUtxo.getValue() - kAuthValueThreshold - 1000;
    if (changeVal > 0) {
       signer.addRecipient(addrIter->first.getRecipient(changeVal));
    }
@@ -654,7 +654,7 @@ BinaryData ValidationAddressManager::revokeUserAddress(
                utxo.getTxHash(), utxo.getTxOutIndex())) {
                continue;
             }
-            if (utxo.getValue() < AUTH_VALUE_THRESHOLD + 1000ULL) {
+            if (utxo.getValue() < kAuthValueThreshold + 1000ULL) {
                continue;
             }
             promPtr->set_value(utxo);
@@ -681,11 +681,11 @@ BinaryData ValidationAddressManager::revokeUserAddress(
    signer.addSpender(spenderPtr);
 
    //revocation output
-   signer.addRecipient(addr.getRecipient(AUTH_VALUE_THRESHOLD));
+   signer.addRecipient(addr.getRecipient(kAuthValueThreshold));
 
    //change
    signer.addRecipient(validationAddr.getRecipient(
-      utxo.getValue() - AUTH_VALUE_THRESHOLD - 1000));
+      utxo.getValue() - kAuthValueThreshold - 1000));
 
    //sign & serialize tx
    signer.sign();
