@@ -295,10 +295,6 @@ void ChatUserListTreeView::onRemoveFromContacts()
       return;
    }
 
-   const QString dialogRemoveContact = tr("Remove contact");
-   const QString dialogRemoveCCAsContact = tr("Remove %1 as a contact?");
-   const QString dialogRemoveContactAreYouSure = tr("Are you sure you wish to remove this contact?");
-
    BSMessageBox confirmRemoveContact(
       BSMessageBox::question, 
       dialogRemoveContact,
