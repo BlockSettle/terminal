@@ -61,7 +61,7 @@ public:
 
    bool eventFilter(QObject *watched, QEvent *event) override;
 
-   void init(const Chat::ChatClientServicePtr chatClientServicePtr);
+   void init(const Chat::ChatClientServicePtr& chatClientServicePtr);
 
 public slots:
    void clearLineEdit();

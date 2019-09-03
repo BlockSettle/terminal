@@ -64,7 +64,7 @@ public:
 public slots:
    void setColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
    void setOwnUserId(const std::string &userId) { ownUserId_ = userId; }
-   void setClientPartyModel(Chat::ClientPartyModelPtr partyModel);
+   void setClientPartyModel(const Chat::ClientPartyModelPtr& partyModel);
    void switchToChat(const std::string& partyId);
    void logout();
    const Chat::MessagePtr onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);

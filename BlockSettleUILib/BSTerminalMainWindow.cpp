@@ -1,5 +1,3 @@
-#include <QtDebug>
-
 #include "BSTerminalMainWindow.h"
 
 #include <QApplication>
@@ -1329,8 +1327,7 @@ void BSTerminalMainWindow::closeEvent(QCloseEvent* event)
       hide();
       event->ignore();
    }
-   else
-   {
+   else {
       connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, [this, event]() {
          QMainWindow::closeEvent(event);
          QApplication::exit();

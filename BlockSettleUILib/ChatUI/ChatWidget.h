@@ -74,7 +74,6 @@ signals:
    // OTC
    void sendOtcPbMessage(const std::string& data);
 
-   // #new_logic
 private:
    friend class AbstractChatWidgetState;
    friend class ChatLogOutState;

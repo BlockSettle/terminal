@@ -296,7 +296,7 @@ void ChatMessagesTextEdit::setColumnsWidth(const int &time, const int &icon, con
    tableFormat_.setColumnWidthConstraints(col_widths);
 }
 
-void ChatMessagesTextEdit::setClientPartyModel(Chat::ClientPartyModelPtr partyModel)
+void ChatMessagesTextEdit::setClientPartyModel(const Chat::ClientPartyModelPtr& partyModel)
 {
    partyModel_ = partyModel;
 }

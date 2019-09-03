@@ -5,7 +5,6 @@
 namespace {
    const int kDotSize = 8;
    const QString kDotPathname = QLatin1String{ ":/ICON_DOT" };
-   const QString unknown = QLatin1String{ "<unknown>" };
 }
 
 ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(ChatPartiesSortProxyModelPtr proxyModel, QObject *parent)
@@ -92,7 +91,7 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
    }
 }
 
-void ChatClientUsersViewItemDelegate::paintInitParty(Chat::ClientPartyPtr clientPartyPtr, QPainter* painter,
+void ChatClientUsersViewItemDelegate::paintInitParty(Chat::ClientPartyPtr& clientPartyPtr, QPainter* painter,
    QStyleOptionViewItem& itemOption) const
 {
    switch (clientPartyPtr->clientStatus())
@@ -124,7 +123,7 @@ void ChatClientUsersViewItemDelegate::paintInitParty(Chat::ClientPartyPtr client
    }
 }
 
-void ChatClientUsersViewItemDelegate::paintRequestParty(Chat::ClientPartyPtr clientPartyPtr, QPainter* painter,
+void ChatClientUsersViewItemDelegate::paintRequestParty(Chat::ClientPartyPtr& clientPartyPtr, QPainter* painter,
    QStyleOptionViewItem& itemOption) const
 {
    // #new_logic : do not forget to add color for outgoing and incoming requests

@@ -74,7 +74,7 @@ bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
    return QWidget::eventFilter(watched, event);
 }
 
-void SearchWidget::init(const Chat::ChatClientServicePtr chatClientServicePtr)
+void SearchWidget::init(const Chat::ChatClientServicePtr& chatClientServicePtr)
 {
    chatClientServicePtr_ = chatClientServicePtr;
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::searchUserReply, this, &SearchWidget::searchUserReply);
