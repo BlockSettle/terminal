@@ -32,7 +32,7 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
 
    setupHighlightPalette();
 
-   connect(this, &QTextBrowser::anchorClicked, this, &ChatMessagesTextEdit::urlActivated);
+   connect(this, &QTextBrowser::anchorClicked, this, &ChatMessagesTextEdit::onUrlActivated);
    connect(this, &QTextBrowser::textChanged, this, &ChatMessagesTextEdit::onTextChanged);
 }
 
@@ -182,9 +182,9 @@ void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
       QAction copyLinkLocationAction(contextMenuCopyLink, this);
       QAction selectAllAction(contextMenuSelectAll, this);
 
-      connect(&copyAction, &QAction::triggered, this, &ChatMessagesTextEdit::copyActionTriggered);
-      connect(&copyLinkLocationAction, &QAction::triggered, this, &ChatMessagesTextEdit::copyLinkLocationActionTriggered);
-      connect(&selectAllAction, &QAction::triggered, this, &ChatMessagesTextEdit::selectAllActionTriggered);
+      connect(&copyAction, &QAction::triggered, this, &ChatMessagesTextEdit::onCopyActionTriggered);
+      connect(&copyLinkLocationAction, &QAction::triggered, this, &ChatMessagesTextEdit::onCopyLinkLocationActionTriggered);
+      connect(&selectAllAction, &QAction::triggered, this, &ChatMessagesTextEdit::onSelectAllActionTriggered);
 
       contextMenu.addAction(&copyAction);
 
@@ -201,7 +201,7 @@ void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
    }
 }
 
-void ChatMessagesTextEdit::copyActionTriggered()
+void ChatMessagesTextEdit::onCopyActionTriggered()
 {
    if (textCursor_.hasSelection()) {
       QApplication::clipboard()->setText(getFormattedTextFromSelection());
@@ -213,12 +213,12 @@ void ChatMessagesTextEdit::copyActionTriggered()
    }
 }
 
-void ChatMessagesTextEdit::copyLinkLocationActionTriggered()
+void ChatMessagesTextEdit::onCopyLinkLocationActionTriggered()
 {
    QApplication::clipboard()->setText(anchor_);
 }
 
-void ChatMessagesTextEdit::selectAllActionTriggered()
+void ChatMessagesTextEdit::onSelectAllActionTriggered()
 {
    this->selectAll();
 }
@@ -251,7 +251,7 @@ void ChatMessagesTextEdit::onUserUrlOpened(const QUrl &url)
    emit switchPartyRequest(QString::fromStdString(clientPartyPtr->id()));
 }
 
-void ChatMessagesTextEdit::switchToChat(const std::string& partyId)
+void ChatMessagesTextEdit::onSwitchToChat(const std::string& partyId)
 {
    currentPartyId_ = partyId;
    clear();
@@ -268,9 +268,9 @@ void ChatMessagesTextEdit::switchToChat(const std::string& partyId)
    }
 }
 
-void ChatMessagesTextEdit::logout()
+void ChatMessagesTextEdit::onLogout()
 {
-   switchToChat({});
+   onSwitchToChat({});
    messages_.clear();
 }
 
@@ -286,7 +286,7 @@ const Chat::MessagePtr ChatMessagesTextEdit::onMessageStatusChanged(const std::s
    return message;
 }
 
-void ChatMessagesTextEdit::setColumnsWidth(const int &time, const int &icon, const int &user, const int &message)
+void ChatMessagesTextEdit::onSetColumnsWidth(const int &time, const int &icon, const int &user, const int &message)
 {
    QVector <QTextLength> col_widths;
    col_widths << QTextLength(QTextLength::FixedLength, time);
@@ -296,7 +296,7 @@ void ChatMessagesTextEdit::setColumnsWidth(const int &time, const int &icon, con
    tableFormat_.setColumnWidthConstraints(col_widths);
 }
 
-void ChatMessagesTextEdit::setClientPartyModel(const Chat::ClientPartyModelPtr& partyModel)
+void ChatMessagesTextEdit::onSetClientPartyModel(const Chat::ClientPartyModelPtr& partyModel)
 {
    partyModel_ = partyModel;
 }
@@ -333,7 +333,7 @@ QString ChatMessagesTextEdit::getFormattedTextFromSelection()
    return text;
 }
 
-void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
+void  ChatMessagesTextEdit::onUrlActivated(const QUrl &link) {
    if (link.scheme() != QLatin1Literal("user")) {
       QDesktopServices::openUrl(link);
    }
@@ -447,8 +447,7 @@ void ChatMessagesTextEdit::onMessageUpdate(const Chat::MessagePtrList& messagePt
    std::sort(messagePtrListSorted.begin(), messagePtrListSorted.end(), [](const auto left, const auto right) -> bool {
       return left->timestamp() < right->timestamp();
    });
-   for (const auto& messagePtr : messagePtrListSorted)
-   {
+   for (const auto& messagePtr : messagePtrListSorted) {
 #ifndef QT_NO_DEBUG
       Q_ASSERT(partyId == messagePtr->partyId());
 #endif

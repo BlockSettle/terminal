@@ -37,22 +37,22 @@ SearchWidget::SearchWidget(QWidget *parent)
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textChanged,
            this, &SearchWidget::onInputTextChanged);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyDownPressed,
-           this, &SearchWidget::focusResults);
+           this, &SearchWidget::onFocusResults);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyEnterPressed,
-           this, &SearchWidget::focusResults);
+           this, &SearchWidget::onFocusResults);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyEscapePressed,
-           this, &SearchWidget::closeResult);
+           this, &SearchWidget::onCloseResult);
 
    connect(ui_->searchResultTreeView, &ChatSearchListVew::customContextMenuRequested,
-           this, &SearchWidget::showContextMenu);
+           this, &SearchWidget::onShowContextMenu);
    connect(ui_->searchResultTreeView, &ChatSearchListVew::activated,
            this, &SearchWidget::onItemClicked);
    connect(ui_->searchResultTreeView, &ChatSearchListVew::clicked,
            this, &SearchWidget::onItemClicked);
    connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveRequired,
-           this, &SearchWidget::leaveSearchResults);
+           this, &SearchWidget::onLeaveSearchResults);
    connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveWithCloseRequired,
-           this, &SearchWidget::leaveAndCloseSearchResults);
+           this, &SearchWidget::onLeaveAndCloseSearchResults);
 }
 
 SearchWidget::~SearchWidget()
@@ -65,7 +65,7 @@ bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
       QPoint pos = ui_->searchResultTreeView->mapFromGlobal(QCursor::pos());
 
       if (!ui_->searchResultTreeView->rect().contains(pos)) {
-         setListVisible(false);
+         onSetListVisible(false);
       }
    }
 
@@ -75,7 +75,7 @@ bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
 void SearchWidget::init(const Chat::ChatClientServicePtr& chatClientServicePtr)
 {
    chatClientServicePtr_ = chatClientServicePtr;
-   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::searchUserReply, this, &SearchWidget::searchUserReply);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::searchUserReply, this, &SearchWidget::onSearchUserReply);
 
    //chatClient_ = chatClient;
    //ui_->chatSearchLineEdit->setActionsHandler(chatClient);
@@ -85,11 +85,11 @@ void SearchWidget::init(const Chat::ChatClientServicePtr& chatClientServicePtr)
    //connect(chatClient_.get(), &ChatClient::SearchUserListReceived, this, &SearchWidget::onSearchUserListReceived);
 
    connect(userSearchModel_.get(), &QAbstractItemModel::rowsInserted,
-           this, &SearchWidget::resetTreeView);
+           this, &SearchWidget::onResetTreeView);
    connect(userSearchModel_.get(), &QAbstractItemModel::rowsRemoved,
-           this, &SearchWidget::resetTreeView);
+           this, &SearchWidget::onResetTreeView);
    connect(userSearchModel_.get(), &QAbstractItemModel::modelReset,
-           this, &SearchWidget::resetTreeView);
+           this, &SearchWidget::onResetTreeView);
 
    setMaximumHeight(kBottomSpace + kRowHeigth * kMaxVisibleRows +
                     ui_->chatSearchLineEdit->height() + kUserListPaddings + kFullHeightMargins);
@@ -102,7 +102,7 @@ void SearchWidget::init(const Chat::ChatClientServicePtr& chatClientServicePtr)
 
    listVisibleTimer_->setSingleShot(true);
    connect(listVisibleTimer_.get(), &QTimer::timeout, [this] {
-      setListVisible(false);
+      onSetListVisible(false);
    });
 }
 
@@ -121,22 +121,22 @@ QString SearchWidget::searchText() const
    return ui_->chatSearchLineEdit->text();
 }
 
-void SearchWidget::clearLineEdit()
+void SearchWidget::onClearLineEdit()
 {
    ui_->chatSearchLineEdit->clear();
 }
 
-void SearchWidget::startListAutoHide()
+void SearchWidget::onStartListAutoHide()
 {
    listVisibleTimer_->start(kShowEmptyFoundUserListTimeoutMs);
 }
 
-void SearchWidget::setLineEditEnabled(bool value)
+void SearchWidget::onSetLineEditEnabled(bool value)
 {
    ui_->chatSearchLineEdit->setEnabled(value);
 }
 
-void SearchWidget::setListVisible(bool value)
+void SearchWidget::onSetListVisible(bool value)
 {
    bool hasUsers = ui_->searchResultTreeView->model()->rowCount() > 0;
    ui_->searchResultTreeView->setVisible(value && hasUsers);
@@ -148,23 +148,23 @@ void SearchWidget::setListVisible(bool value)
 
    // hide popup after a few sec
    if (value && !hasUsers) {
-      startListAutoHide();
+      onStartListAutoHide();
    }
 }
 
-void SearchWidget::setSearchText(QString value)
+void SearchWidget::onSetSearchText(QString value)
 {
    ui_->chatSearchLineEdit->setText(value);
 }
 
-void SearchWidget::resetTreeView()
+void SearchWidget::onResetTreeView()
 {
    int rowCount = ui_->searchResultTreeView->model()->rowCount();
    int visibleRows = rowCount >= kMaxVisibleRows ? kMaxVisibleRows : rowCount;
    ui_->searchResultTreeView->setFixedHeight(kRowHeigth * visibleRows + kUserListPaddings);
 }
 
-void SearchWidget::showContextMenu(const QPoint &pos)
+void SearchWidget::onShowContextMenu(const QPoint &pos)
 {
    QScopedPointer<QMenu, QScopedPointerDeleteLater> menu(new QMenu());
    auto index = ui_->searchResultTreeView->indexAt(pos);
@@ -175,7 +175,7 @@ void SearchWidget::showContextMenu(const QPoint &pos)
    onItemClicked(index);
 }
 
-void SearchWidget::focusResults()
+void SearchWidget::onFocusResults()
 {
    if (ui_->searchResultTreeView->isVisible()) {
       ui_->searchResultTreeView->setFocus();
@@ -184,12 +184,12 @@ void SearchWidget::focusResults()
       return;
    }
 
-   setListVisible(true);
+   onSetListVisible(true);
 }
 
-void SearchWidget::closeResult()
+void SearchWidget::onCloseResult()
 {
-   setListVisible(false);
+   onSetListVisible(false);
 }
 
 void SearchWidget::onItemClicked(const QModelIndex &index)
@@ -218,11 +218,11 @@ void SearchWidget::onItemClicked(const QModelIndex &index)
       return;
    }
 
-   setListVisible(false);
-   setSearchText({});
+   onSetListVisible(false);
+   onSetSearchText({});
 }
 
-void SearchWidget::leaveSearchResults()
+void SearchWidget::onLeaveSearchResults()
 {
    ui_->chatSearchLineEdit->setFocus();
    ui_->searchResultTreeView->clearSelection();
@@ -230,26 +230,26 @@ void SearchWidget::leaveSearchResults()
    ui_->searchResultTreeView->selectionModel()->setCurrentIndex(currentIndex, QItemSelectionModel::Deselect);
 }
 
-void SearchWidget::leaveAndCloseSearchResults()
+void SearchWidget::onLeaveAndCloseSearchResults()
 {
    ui_->chatSearchLineEdit->setFocus();
-   setListVisible(false);
+   onSetListVisible(false);
 }
 
 void SearchWidget::onInputTextChanged(const QString &text)
 {
    if (text.isEmpty()) {
-      setListVisible(false);
+      onSetListVisible(false);
    }
 }
 
 void SearchWidget::onSearchUserTextEdited()
 {
-   setListVisible(false);
+   onSetListVisible(false);
    std::string userToAdd = searchText().toStdString();
 
    if (userToAdd.empty() || userToAdd.length() < 3) {
-      setListVisible(false);
+      onSetListVisible(false);
       userSearchModel_->setUsers({});
       return;
    }
@@ -260,7 +260,7 @@ void SearchWidget::onSearchUserTextEdited()
    chatClientServicePtr_->SearchUser(userToAdd, lastSearchId_);
 }
 
-void SearchWidget::searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId)
+void SearchWidget::onSearchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId)
 {
    if (searchId != lastSearchId_) {
       return;
@@ -269,8 +269,7 @@ void SearchWidget::searchUserReply(const Chat::SearchUserReplyList& userHashList
    Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
    std::vector<UserSearchModel::UserInfo> userInfoList;
 
-   for (const auto& userHash : userHashList)
-   {
+   for (const auto& userHash : userHashList) {
       Chat::PrivatePartyState privatePartyState = clientPartyModelPtr->deducePrivatePartyStateForUser(userHash);
 
       auto status = UserSearchModel::UserStatus::ContactUnknown;
@@ -298,10 +297,10 @@ void SearchWidget::searchUserReply(const Chat::SearchUserReplyList& userHashList
    userSearchModel_->setUsers(userInfoList);
 
    bool visible = !userInfoList.empty();
-   setListVisible(visible);
+   onSetListVisible(visible);
 
    // hide popup after a few sec
    if (visible && userInfoList.empty()) {
-      startListAutoHide();
+      onStartListAutoHide();
    }
 }

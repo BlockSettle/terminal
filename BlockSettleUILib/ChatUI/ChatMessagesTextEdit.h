@@ -62,11 +62,11 @@ public:
    QString getFormattedTextFromSelection();
 
 public slots:
-   void setColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
-   void setOwnUserId(const std::string &userId) { ownUserId_ = userId; }
-   void setClientPartyModel(const Chat::ClientPartyModelPtr& partyModel);
-   void switchToChat(const std::string& partyId);
-   void logout();
+   void onSetColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
+   void onSetOwnUserId(const std::string &userId) { ownUserId_ = userId; }
+   void onSetClientPartyModel(const Chat::ClientPartyModelPtr& partyModel);
+   void onSwitchToChat(const std::string& partyId);
+   void onLogout();
    const Chat::MessagePtr onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
    void onMessageUpdate(const Chat::MessagePtrList& messagePtrList);
    void onUpdatePartyName(const std::string& partyId);
@@ -93,10 +93,10 @@ protected:
    void contextMenuEvent(QContextMenuEvent* e) override;
 
 private slots:
-   void urlActivated(const QUrl &link);
-   void copyActionTriggered();
-   void copyLinkLocationActionTriggered();
-   void selectAllActionTriggered();
+   void onUrlActivated(const QUrl &link);
+   void onCopyActionTriggered();
+   void onCopyLinkLocationActionTriggered();
+   void onSelectAllActionTriggered();
    void onTextChanged();
    void onUserUrlOpened(const QUrl &url);
 

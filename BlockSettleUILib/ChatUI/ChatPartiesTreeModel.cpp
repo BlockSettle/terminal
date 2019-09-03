@@ -17,7 +17,7 @@ ChatPartiesTreeModel::~ChatPartiesTreeModel()
 {
 }
 
-void ChatPartiesTreeModel::partyModelChanged()
+void ChatPartiesTreeModel::onPartyModelChanged()
 {
    Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
 
@@ -31,8 +31,7 @@ void ChatPartiesTreeModel::partyModelChanged()
 
    Chat::IdPartyList idPartyList = clientPartyModelPtr->getIdPartyList();
 
-   for (const auto& id : idPartyList)
-   {
+   for (const auto& id : idPartyList) {
       Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(id);
 
       if (clientPartyPtr->isGlobal()) {
@@ -60,14 +59,14 @@ void ChatPartiesTreeModel::partyModelChanged()
    endResetModel();
 }
 
-void ChatPartiesTreeModel::cleanModel()
+void ChatPartiesTreeModel::onCleanModel()
 {
    beginResetModel();
    rootItem_->removeAll();
    endResetModel();
 }
 
-void ChatPartiesTreeModel::partyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr)
+void ChatPartiesTreeModel::onPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr)
 {
    const QModelIndex partyIndex = getPartyIndexById(clientPartyPtr->id());
 
@@ -76,7 +75,7 @@ void ChatPartiesTreeModel::partyStatusChanged(const Chat::ClientPartyPtr& client
    }
 }
 
-void ChatPartiesTreeModel::increaseUnseenCounter(const std::string& partyId, int newMessageCount)
+void ChatPartiesTreeModel::onIncreaseUnseenCounter(const std::string& partyId, int newMessageCount)
 {
    const QModelIndex partyIndex = getPartyIndexById(partyId);
    if (!partyIndex.isValid()) {
@@ -88,7 +87,7 @@ void ChatPartiesTreeModel::increaseUnseenCounter(const std::string& partyId, int
 
 }
 
-void ChatPartiesTreeModel::decreaseUnseenCounter(const std::string& partyId, int seenMessageCount)
+void ChatPartiesTreeModel::onDecreaseUnseenCounter(const std::string& partyId, int seenMessageCount)
 {
    const QModelIndex partyIndex = getPartyIndexById(partyId);
    if (!partyIndex.isValid()) {

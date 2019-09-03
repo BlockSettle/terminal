@@ -40,18 +40,18 @@ protected:
 
    // slots
 public:
-   void sendMessage();
-   void processMessageArrived(const Chat::MessagePtrList& messagePtr);
-   void changePartyStatus(const Chat::ClientPartyPtr& clientPartyPtr);
-   void resetPartyModel();
-   void messageRead(const std::string& partyId, const std::string& messageId);
-   void changeMessageState(const std::string& partyId, const std::string& message_id, const int party_message_state);
-   void acceptPartyRequest(const std::string& partyId);
-   void rejectPartyRequest(const std::string& partyId);
-   void sendPartyRequest(const std::string& partyId);
-   void removePartyRequest(const std::string& partyId);
-   void newPartyRequest(const std::string& partyName);
-   void updateDisplayName(const std::string& partyId, const std::string& contactName);
+   void onSendMessage();
+   void onProcessMessageArrived(const Chat::MessagePtrList& messagePtr);
+   void onChangePartyStatus(const Chat::ClientPartyPtr& clientPartyPtr);
+   void onResetPartyModel();
+   void onMessageRead(const std::string& partyId, const std::string& messageId);
+   void onChangeMessageState(const std::string& partyId, const std::string& message_id, const int party_message_state);
+   void onAcceptPartyRequest(const std::string& partyId);
+   void onRejectPartyRequest(const std::string& partyId);
+   void onSendPartyRequest(const std::string& partyId);
+   void onRemovePartyRequest(const std::string& partyId);
+   void onNewPartyRequest(const std::string& partyName);
+   void onUpdateDisplayName(const std::string& partyId, const std::string& contactName);
 
 protected:
 

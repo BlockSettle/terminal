@@ -7,15 +7,15 @@ public:
 protected:
    void applyUserFrameChange() override {
       auto* searchWidget = chat_->ui_->searchWidget;
-      searchWidget->clearLineEdit();
-      searchWidget->setLineEditEnabled(false);
+      searchWidget->onClearLineEdit();
+      searchWidget->onSetLineEditEnabled(false);
 
-      chat_->chatPartiesTreeModel_->cleanModel();
+      chat_->chatPartiesTreeModel_->onCleanModel();
 
       chat_->ui_->labelUserName->setText(QObject::tr("offline"));
    }
    void applyChatFrameChange() override {
-      chat_->ui_->textEditMessages->logout();
+      chat_->ui_->textEditMessages->onLogout();
 
       chat_->ui_->frameContactActions->setVisible(false);
 

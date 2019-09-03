@@ -28,15 +28,15 @@ class SearchWidget : public QWidget
 /* Properties Section Begin */
    Q_PROPERTY(bool lineEditEnabled
               READ isLineEditEnabled
-              WRITE setLineEditEnabled
+              WRITE onSetLineEditEnabled
               STORED false)
    Q_PROPERTY(bool listVisible
               READ isListVisible
-              WRITE setListVisible
+              WRITE onSetListVisible
               STORED false)
    Q_PROPERTY(QString searchText
               READ searchText
-              WRITE setSearchText
+              WRITE onSetSearchText
               NOTIFY searchTextChanged
               USER true
               STORED false)
@@ -47,9 +47,9 @@ public:
    QString searchText() const;
 
 public slots:
-   void setLineEditEnabled(bool value);
-   void setListVisible(bool value);
-   void setSearchText(QString value);
+   void onSetLineEditEnabled(bool value);
+   void onSetListVisible(bool value);
+   void onSetSearchText(QString value);
 
 signals:
    void searchTextChanged(QString searchText);
@@ -64,18 +64,18 @@ public:
    void init(const Chat::ChatClientServicePtr& chatClientServicePtr);
 
 public slots:
-   void clearLineEdit();
-   void startListAutoHide();
-   void searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
+   void onClearLineEdit();
+   void onStartListAutoHide();
+   void onSearchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
 
 private slots:
-   void resetTreeView();
-   void showContextMenu(const QPoint &pos);
-   void focusResults();
-   void closeResult();
+   void onResetTreeView();
+   void onShowContextMenu(const QPoint &pos);
+   void onFocusResults();
+   void onCloseResult();
    void onItemClicked(const QModelIndex &index);
-   void leaveSearchResults();
-   void leaveAndCloseSearchResults();
+   void onLeaveSearchResults();
+   void onLeaveAndCloseSearchResults();
    void onInputTextChanged(const QString &text);
    void onSearchUserTextEdited();
 
