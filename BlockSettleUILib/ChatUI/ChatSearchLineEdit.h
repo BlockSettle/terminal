@@ -29,6 +29,4 @@ signals:
    void keyEscapePressed();
 };
 
-
-
 #endif //CHAT_SEARCH_LINE_EDIT_H
