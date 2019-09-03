@@ -64,7 +64,7 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
    switch (column) {
       case Column::Time:
       {
-         const auto dateTime = QDateTime::fromMSecsSinceEpoch(message->timestamp()).toLocalTime();
+         const auto dateTime = message->timestamp().toLocalTime();
          return toHtmlText(dateTime.toString(QString::fromUtf8("MM/dd/yy hh:mm:ss")));
       }
 

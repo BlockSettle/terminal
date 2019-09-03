@@ -1,7 +1,6 @@
 #include <QThread>
 #include <QUuid>
 #include <QDateTime>
-#include <QFutureWatcher>
 #include <QMetaType>
 
 #include <google/protobuf/any.pb.h>
@@ -272,40 +271,23 @@ namespace Chat
          BinaryData nonce = partyMessagePacket.nonce();
          std::string associatedData = cryptManagerPtr_->jsonAssociatedData(clientPartyPtr->id(), nonce);
 
-         QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
-         connect(watcher, &QFutureWatcher<std::string>::finished,
-            [this, watcher, partyMessagePacket, nonce]() mutable
-            {
-               std::string decryptedMessage = watcher->result();
-               watcher->deleteLater();
-
-               partyMessagePacket.set_message(decryptedMessage);
-
-               saveIncomingPartyMessageAndUpdateState(partyMessagePacket, PartyMessageState::RECEIVED);
-            });
-
          QFuture<std::string> future = cryptManagerPtr_->decryptMessageAEAD(partyMessagePacket.message(), associatedData,
             sessionKeyDataPtr->localSessionPrivateKey(), nonce, sessionKeyDataPtr->remoteSessionPublicKey());
+         std::string decryptedMessage = future.result();
 
-         watcher->setFuture(future);
+         partyMessagePacket.set_message(decryptedMessage);
+
+         saveIncomingPartyMessageAndUpdateState(partyMessagePacket, PartyMessageState::RECEIVED);
       }
 
       if (partyMessagePacket.encryption() == EncryptionType::IES)
       {
-         QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
-         connect(watcher, &QFutureWatcher<std::string>::finished,
-            [this, watcher, partyMessagePacket]() mutable
-            {
-               std::string decryptedMessage = watcher->result();
-               watcher->deleteLater();
-
-               partyMessagePacket.set_message(decryptedMessage);
-
-               saveIncomingPartyMessageAndUpdateState(partyMessagePacket, PartyMessageState::RECEIVED);
-            });
-
          QFuture<std::string> future = cryptManagerPtr_->decryptMessageIES(partyMessagePacket.message(), currentUserPtr()->privateKey());
-         watcher->setFuture(future);
+         std::string decryptedMessage = future.result();
+
+         partyMessagePacket.set_message(decryptedMessage);
+
+         saveIncomingPartyMessageAndUpdateState(partyMessagePacket, PartyMessageState::RECEIVED);
       }
    }
 
@@ -607,58 +589,39 @@ namespace Chat
             BinaryData nonce = sessionKeyDataPtr->nonce();
             std::string associatedData = cryptManagerPtr_->jsonAssociatedData(partyId, nonce);
 
-            QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
-            connect(watcher, &QFutureWatcher<std::string>::finished,
-               [this, watcher, clientPartyPtr, messageId, timestamp, sessionKeyDataPtr, nonce]()
-               {
-                  std::string encryptedMessage = watcher->result();
-                  watcher->deleteLater();
-
-                  PartyMessagePacket partyMessagePacket;
-                  partyMessagePacket.set_party_id(clientPartyPtr->id());
-                  partyMessagePacket.set_message_id(messageId);
-                  partyMessagePacket.set_timestamp_ms(timestamp);
-                  partyMessagePacket.set_encryption(EncryptionType::AEAD);
-                  partyMessagePacket.set_message(encryptedMessage);
-                  partyMessagePacket.set_nonce(nonce.toBinStr());
-                  partyMessagePacket.set_party_message_state(PartyMessageState::SENT);
-
-                  sendPacket(partyMessagePacket);
-
-                  clientDBServicePtr_->updateMessageState(messageId, PartyMessageState::SENT);
-               });
-
             QFuture<std::string> future = cryptManagerPtr_->encryptMessageAEAD(
                message, associatedData, sessionKeyDataPtr->localSessionPrivateKey(), nonce, sessionKeyDataPtr->remoteSessionPublicKey());
+            std::string encryptedMessage = future.result();
 
-            watcher->setFuture(future);
+            PartyMessagePacket partyMessagePacket;
+            partyMessagePacket.set_party_id(clientPartyPtr->id());
+            partyMessagePacket.set_message_id(messageId);
+            partyMessagePacket.set_timestamp_ms(timestamp);
+            partyMessagePacket.set_encryption(EncryptionType::AEAD);
+            partyMessagePacket.set_message(encryptedMessage);
+            partyMessagePacket.set_nonce(nonce.toBinStr());
+            partyMessagePacket.set_party_message_state(PartyMessageState::SENT);
 
+            sendPacket(partyMessagePacket);
+
+            clientDBServicePtr_->updateMessageState(messageId, PartyMessageState::SENT);
             continue;
          }
 
          // in other case use IES encryption
-         QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
-         connect(watcher, &QFutureWatcher<std::string>::finished,
-            [this, watcher, clientPartyPtr, messageId, timestamp, sessionKeyDataPtr, nonce]()
-            {
-               std::string encryptedMessage = watcher->result();
-               watcher->deleteLater();
-
-               PartyMessagePacket partyMessagePacket;
-               partyMessagePacket.set_party_id(clientPartyPtr->id());
-               partyMessagePacket.set_message_id(messageId);
-               partyMessagePacket.set_timestamp_ms(timestamp);
-               partyMessagePacket.set_encryption(EncryptionType::IES);
-               partyMessagePacket.set_party_message_state(PartyMessageState::SENT);
-
-               sendPacket(partyMessagePacket);
-
-               clientDBServicePtr_->updateMessageState(messageId, PartyMessageState::SENT);
-            });
-
          QFuture<std::string> future = cryptManagerPtr_->encryptMessageIES(message, recipient->publicKey());
+         std::string encryptedMessage = future.result();
 
-         watcher->setFuture(future);
+         PartyMessagePacket partyMessagePacket;
+         partyMessagePacket.set_party_id(clientPartyPtr->id());
+         partyMessagePacket.set_message_id(messageId);
+         partyMessagePacket.set_timestamp_ms(timestamp);
+         partyMessagePacket.set_encryption(EncryptionType::IES);
+         partyMessagePacket.set_party_message_state(PartyMessageState::SENT);
+
+         sendPacket(partyMessagePacket);
+
+         clientDBServicePtr_->updateMessageState(messageId, PartyMessageState::SENT);
       }
    }
 
