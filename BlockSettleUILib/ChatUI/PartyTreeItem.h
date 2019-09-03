@@ -29,9 +29,8 @@ public:
 
    QVariant data() const;
 
-   bool insertChildren(PartyTreeItem* item);
+   bool insertChildren(std::unique_ptr<PartyTreeItem>&& item);
    PartyTreeItem* parent();
-   bool removeChildren(int position, int count);
    void removeAll();
    int childNumber() const;
    bool setData(const QVariant& value);
@@ -43,7 +42,7 @@ public:
    bool hasNewMessages() const;
 
 private:
-   QList<PartyTreeItem*> childItems_;
+   std::vector<std::unique_ptr<PartyTreeItem>> childItems_;
    QVariant itemData_;
    PartyTreeItem* parentItem_;
    UI::ElementType modelType_;
