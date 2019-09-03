@@ -87,19 +87,19 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
 
    QMenu contextMenu;
    if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState()) {
-      QAction* removeAction = new QAction(contextMenuRemoveUser, this);
+      QAction* removeAction = contextMenu.addAction(contextMenuRemoveUser);
       removeAction->setData(index);
       connect(removeAction, &QAction::triggered, this, &ChatUserListTreeView::onRemoveFromContacts);
       contextMenu.addAction(removeAction);
 
-      QAction* editAction = new QAction(contextMenuEditUser, this);
+      QAction* editAction = contextMenu.addAction(contextMenuEditUser);
       editAction->setData(index);
       connect(editAction, &QAction::triggered, this, &ChatUserListTreeView::onEditContact);
       contextMenu.addAction(editAction);
    }
 
    if (Chat::PartyState::REJECTED == clientPartyPtr->partyState()) {
-      QAction* removeAction = new QAction(contextMenuRemoveRequest, this);
+      QAction* removeAction = contextMenu.addAction(contextMenuRemoveRequest);
       removeAction->setData(index);
       connect(removeAction, &QAction::triggered, this, &ChatUserListTreeView::onRemoveFromContacts);
       contextMenu.addAction(removeAction);
@@ -108,19 +108,19 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
    if (Chat::PartyState::REQUESTED == clientPartyPtr->partyState()) {
       if (clientPartyPtr->partyCreatorHash() != currentUser()) {
          // receiver of party
-         QAction* acceptAction = new QAction(contextMenuAcceptRequest, this);
+         QAction* acceptAction = contextMenu.addAction(contextMenuAcceptRequest);
          acceptAction->setData(index);
          connect(acceptAction, &QAction::triggered, this, &ChatUserListTreeView::onAcceptFriendRequest);
          contextMenu.addAction(acceptAction);
 
-         QAction* declineAction = new QAction(contextMenuDeclineRequest, this);
+         QAction* declineAction = contextMenu.addAction(contextMenuDeclineRequest);
          declineAction->setData(index);
          connect(declineAction, &QAction::triggered, this, &ChatUserListTreeView::onDeclineFriendRequest);
          contextMenu.addAction(declineAction);
       }
       else {
          // creator of party
-         QAction* removeAction = new QAction(contextMenuRemoveUser, this);
+         QAction* removeAction = contextMenu.addAction(contextMenuRemoveUser);
          removeAction->setData(index);
          connect(removeAction, &QAction::triggered, this, &ChatUserListTreeView::onRemoveFromContacts);
          contextMenu.addAction(removeAction);
