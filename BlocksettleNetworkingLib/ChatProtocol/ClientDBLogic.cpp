@@ -120,7 +120,7 @@ namespace Chat
 
       // ! signaled by ClientPartyModel in gui
       MessagePtr messagePtr = std::make_shared<Message>(partyMessagePacket.party_id(), partyMessagePacket.message_id(),
-         partyMessagePacket.timestamp_ms(), partyMessagePacket.party_message_state(), partyMessagePacket.message(),
+         QDateTime::fromMSecsSinceEpoch(partyMessagePacket.timestamp_ms()), partyMessagePacket.party_message_state(), partyMessagePacket.message(),
          partyMessagePacket.sender_hash());
 
       MessagePtrList messagePtrList;
@@ -383,7 +383,7 @@ namespace Chat
          QFuture<std::string> future = cryptManagerPtr_->decryptMessageIES(message, currentChatUserPtr_->privateKey());
          std::string decryptedMessage = future.result();
 
-         MessagePtr messagePtr = std::make_shared<Message>(partyId, messageId, timestamp, partyMessageState, decryptedMessage, senderId);
+         MessagePtr messagePtr = std::make_shared<Message>(partyId, messageId, QDateTime::fromMSecsSinceEpoch(timestamp), partyMessageState, decryptedMessage, senderId);
 
          messagePtrList.push_back(messagePtr);
       }
