@@ -35,16 +35,14 @@ void ChatPartiesTreeModel::partyModelChanged()
    {
       Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(id);
 
-      if (clientPartyPtr->isGlobal())
-      {
+      if (clientPartyPtr->isGlobal()) {
          QVariant stored;
          stored.setValue(clientPartyPtr);
          PartyTreeItem* globalItem = new PartyTreeItem(stored, UI::ElementType::Party, globalSection);
          globalSection->insertChildren(globalItem);
       }
 
-      if (clientPartyPtr->isPrivateStandard())
-      {
+      if (clientPartyPtr->isPrivateStandard()) {
          QVariant stored;
          stored.setValue(clientPartyPtr);
 
@@ -130,8 +128,7 @@ PartyTreeItem* ChatPartiesTreeModel::getItem(const QModelIndex& index) const
 {
    if (index.isValid()) {
       PartyTreeItem* item = static_cast<PartyTreeItem*>(index.internalPointer());
-      if (item)
-      {
+      if (item) {
          return item;
       }
    }
@@ -185,8 +182,9 @@ QModelIndex ChatPartiesTreeModel::index(int row, int column, const QModelIndex& 
 
 QModelIndex ChatPartiesTreeModel::parent(const QModelIndex& index) const
 {
-   if (!index.isValid())
+   if (!index.isValid()) {
       return QModelIndex();
+   }
 
    PartyTreeItem* childItem = getItem(index);
    PartyTreeItem* parentItem = childItem->parent();

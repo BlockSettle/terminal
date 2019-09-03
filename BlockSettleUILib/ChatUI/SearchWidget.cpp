@@ -61,12 +61,10 @@ SearchWidget::~SearchWidget()
 
 bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
 {
-   if (ui_->searchResultTreeView->isVisible() && event->type() == QEvent::MouseButtonRelease) 
-   {
+   if (ui_->searchResultTreeView->isVisible() && event->type() == QEvent::MouseButtonRelease) {
       QPoint pos = ui_->searchResultTreeView->mapFromGlobal(QCursor::pos());
 
-      if (!ui_->searchResultTreeView->rect().contains(pos)) 
-      {
+      if (!ui_->searchResultTreeView->rect().contains(pos)) {
          setListVisible(false);
       }
    }
@@ -149,8 +147,7 @@ void SearchWidget::setListVisible(bool value)
    listVisibleTimer_->stop();
 
    // hide popup after a few sec
-   if (value && !hasUsers) 
-   {
+   if (value && !hasUsers) {
       startListAutoHide();
    }
 }
@@ -171,8 +168,7 @@ void SearchWidget::showContextMenu(const QPoint &pos)
 {
    QScopedPointer<QMenu, QScopedPointerDeleteLater> menu(new QMenu());
    auto index = ui_->searchResultTreeView->indexAt(pos);
-   if (!index.isValid())
-   {
+   if (!index.isValid()) {
       return;
    }
 
@@ -181,8 +177,7 @@ void SearchWidget::showContextMenu(const QPoint &pos)
 
 void SearchWidget::focusResults()
 {
-   if (ui_->searchResultTreeView->isVisible())
-   {
+   if (ui_->searchResultTreeView->isVisible()) {
       ui_->searchResultTreeView->setFocus();
       auto index = ui_->searchResultTreeView->model()->index(0, 0);
       ui_->searchResultTreeView->setCurrentIndex(index);
@@ -199,8 +194,7 @@ void SearchWidget::closeResult()
 
 void SearchWidget::onItemClicked(const QModelIndex &index)
 {
-   if (!index.isValid()) 
-   {
+   if (!index.isValid()) {
       return;
    }
 
@@ -244,8 +238,7 @@ void SearchWidget::leaveAndCloseSearchResults()
 
 void SearchWidget::onInputTextChanged(const QString &text)
 {
-   if (text.isEmpty())
-   {
+   if (text.isEmpty()) {
       setListVisible(false);
    }
 }
@@ -255,8 +248,7 @@ void SearchWidget::onSearchUserTextEdited()
    setListVisible(false);
    std::string userToAdd = searchText().toStdString();
 
-   if (userToAdd.empty() || userToAdd.length() < 3)
-   {
+   if (userToAdd.empty() || userToAdd.length() < 3) {
       setListVisible(false);
       userSearchModel_->setUsers({});
       return;
@@ -270,8 +262,7 @@ void SearchWidget::onSearchUserTextEdited()
 
 void SearchWidget::searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId)
 {
-   if (searchId != lastSearchId_)
-   {
+   if (searchId != lastSearchId_) {
       return;
    }
 
@@ -310,8 +301,7 @@ void SearchWidget::searchUserReply(const Chat::SearchUserReplyList& userHashList
    setListVisible(visible);
 
    // hide popup after a few sec
-   if (visible && userInfoList.empty()) 
-   {
+   if (visible && userInfoList.empty()) {
       startListAutoHide();
    }
 }

@@ -1475,8 +1475,7 @@ void ChatWidget::onShowUserRoom(const QString& userHash)
    const auto clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
    Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getPartyByUserName(userHash.toStdString());
 
-   if (!clientPartyPtr)
-   {
+   if (!clientPartyPtr) {
       return;
    }
 

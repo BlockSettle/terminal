@@ -54,8 +54,7 @@ void ChatClientUsersViewItemDelegate::paintPartyContainer(QPainter *painter, con
 void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
-   if (itemOption.state & QStyle::State_Selected)
-   {
+   if (itemOption.state & QStyle::State_Selected) {
       painter->save();
       painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
       painter->restore();
@@ -66,8 +65,7 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
    Chat::ClientPartyPtr clientPartyPtr = party->data().value<Chat::ClientPartyPtr>();
 
    itemOption.text = QString::fromStdString(clientPartyPtr->displayName());
-   if (clientPartyPtr->isPrivateStandard())
-   {
+   if (clientPartyPtr->isPrivateStandard()) {
       if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState()) {
          paintInitParty(clientPartyPtr, painter, itemOption);
       }
@@ -105,8 +103,7 @@ void ChatClientUsersViewItemDelegate::paintInitParty(Chat::ClientPartyPtr& clien
       case Chat::ClientStatus::OFFLINE:
       {
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOffline());
-         if (itemOption.state & QStyle::State_Selected)
-         {
+         if (itemOption.state & QStyle::State_Selected) {
             painter->save();
             painter->fillRect(itemOption.rect, itemStyle_.colorContactOffline());
             painter->restore();
