@@ -41,7 +41,7 @@ protected:
    // slots
 public:
    void sendMessage();
-   void messageArrived(const Chat::MessagePtrList& messagePtr);
+   void processMessageArrived(const Chat::MessagePtrList& messagePtr);
    void changePartyStatus(const Chat::ClientPartyPtr& clientPartyPtr);
    void resetPartyModel();
    void messageRead(const std::string& partyId, const std::string& messageId);

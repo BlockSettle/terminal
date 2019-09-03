@@ -3,9 +3,9 @@
 class ChatLogOutState : public AbstractChatWidgetState {
 public:
    explicit ChatLogOutState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
-   virtual ~ChatLogOutState() = default;
+   ~ChatLogOutState() override = default;
 protected:
-   virtual void applyUserFrameChange() override {
+   void applyUserFrameChange() override {
       auto* searchWidget = chat_->ui_->searchWidget;
       searchWidget->clearLineEdit();
       searchWidget->setLineEditEnabled(false);
@@ -14,7 +14,7 @@ protected:
 
       chat_->ui_->labelUserName->setText(QObject::tr("offline"));
    }
-   virtual void applyChatFrameChange() override {
+   void applyChatFrameChange() override {
       chat_->ui_->textEditMessages->logout();
 
       chat_->ui_->frameContactActions->setVisible(false);
@@ -25,18 +25,18 @@ protected:
 
       chat_->draftMessages_.clear();
    }
-   virtual void applyRoomsFrameChange() override {
+   void applyRoomsFrameChange() override {
       chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
    }
 
-   virtual bool canReceiveMessage() const override { return false; }
-   virtual bool canChangePartyStatus() const override { return false; }
-   virtual bool canResetReadMessage() const override { return false; }
-   virtual bool canResetPartyModel() const override { return false; }
-   virtual bool canChangeMessageState() const override { return false; }
-   virtual bool canAcceptPartyRequest() const override { return false; }
-   virtual bool canRejectPartyRequest() const override { return false; }
-   virtual bool canSendPartyRequest() const override { return false; }
-   virtual bool canRemovePartyRequest() const override { return false; }
-   virtual bool canUpdatePartyName() const override { return false; }
+   bool canReceiveMessage() const override { return false; }
+   bool canChangePartyStatus() const override { return false; }
+   bool canResetReadMessage() const override { return false; }
+   bool canResetPartyModel() const override { return false; }
+   bool canChangeMessageState() const override { return false; }
+   bool canAcceptPartyRequest() const override { return false; }
+   bool canRejectPartyRequest() const override { return false; }
+   bool canSendPartyRequest() const override { return false; }
+   bool canRemovePartyRequest() const override { return false; }
+   bool canUpdatePartyName() const override { return false; }
 };

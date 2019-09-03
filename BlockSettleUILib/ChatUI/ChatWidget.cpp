@@ -1381,7 +1381,7 @@ void ChatWidget::onMessageRead(const std::string& partyId, const std::string& me
 
 void ChatWidget::onSendArrived(const Chat::MessagePtrList& messagePtr)
 {
-   stateCurrent_->messageArrived(messagePtr);
+   stateCurrent_->processMessageArrived(messagePtr);
 }
 
 void ChatWidget::onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr)

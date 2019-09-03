@@ -90,7 +90,7 @@ protected:
    QString dataMessage(const std::string& partyId, int row, const Column &column);
    QImage statusImage(const std::string& partyId, int row);
 
-   virtual void contextMenuEvent(QContextMenuEvent* e) override;
+   void contextMenuEvent(QContextMenuEvent* e) override;
 
 private slots:
    void urlActivated(const QUrl &link);

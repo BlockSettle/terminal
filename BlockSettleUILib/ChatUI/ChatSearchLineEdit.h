@@ -10,7 +10,7 @@ class ChatSearchLineEdit :
    Q_OBJECT
 public:
    ChatSearchLineEdit(QWidget *parent = nullptr);
-   virtual ~ChatSearchLineEdit() override;
+   ~ChatSearchLineEdit() override;
    //void setActionsHandler(std::shared_ptr<ChatSearchActionsHandler> handler);
    void setResetOnNextInput(bool value);
 private:

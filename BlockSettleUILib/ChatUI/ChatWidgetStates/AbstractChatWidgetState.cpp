@@ -26,7 +26,7 @@ void AbstractChatWidgetState::sendMessage()
    chat_->ui_->input_textEdit->clear();
 }
 
-void AbstractChatWidgetState::messageArrived(const Chat::MessagePtrList& messagePtr)
+void AbstractChatWidgetState::processMessageArrived(const Chat::MessagePtrList& messagePtr)
 {
    if (!canReceiveMessage()) {
       return;
@@ -185,8 +185,7 @@ void AbstractChatWidgetState::saveDraftMessage()
    {
       chat_->draftMessages_.remove(chat_->currentPartyId_);
    }
-   else
-   {
+   else {
       chat_->draftMessages_.insert(chat_->currentPartyId_, draft);
    }
 }

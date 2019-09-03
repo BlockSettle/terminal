@@ -39,7 +39,7 @@ public:
 //   void logout();
 
 protected:
-   virtual void showEvent(QShowEvent* e) override;
+   void showEvent(QShowEvent* e) override;
    bool eventFilter(QObject* sender, QEvent* event) override;
 
 public slots:
