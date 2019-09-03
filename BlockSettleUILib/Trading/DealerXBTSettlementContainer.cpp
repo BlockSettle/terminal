@@ -92,6 +92,7 @@ DealerXBTSettlementContainer::~DealerXBTSettlementContainer() = default;
 bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+   dialogData.setValue("AutoSignCategory", static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
 
    // rfq details
    QString qtyProd = UiUtils::XbtCurrency;
@@ -199,6 +200,7 @@ bool DealerXBTSettlementContainer::startPayOutSigning()
          dlgData.setValue("SettlementPayOut", QStringLiteral("+ %2 %1")
                      .arg(UiUtils::XbtCurrency)
                      .arg(UiUtils::displayAmount(payOutTxRequest_.amount())));
+         dlgData.setValue("AutoSignCategory", static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
 
          payoutSignId_ = signingContainer_->signSettlementPayoutTXRequest(payOutTxRequest_, { settlementId_
             , reqAuthKey_, !weSell_ }, dlgData);

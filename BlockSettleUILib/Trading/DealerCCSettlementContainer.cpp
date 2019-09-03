@@ -7,6 +7,7 @@
 #include "SignContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWallet.h"
+#include "SignerDefs.h"
 
 #include <QPointer>
 
@@ -14,14 +15,13 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
       , const bs::network::Order &order, const std::string &quoteReqId, uint64_t lotSize
       , const bs::Address &genAddr, const std::string &ownRecvAddr
       , const std::shared_ptr<bs::sync::Wallet> &wallet, const std::shared_ptr<SignContainer> &container
-      , const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
+      , const std::shared_ptr<ArmoryConnection> &armory)
    : bs::SettlementContainer()
    , logger_(logger)
    , order_(order)
    , quoteReqId_(quoteReqId)
    , lotSize_(lotSize)
    , genesisAddr_(genAddr)
-   , autoSign_(autoSign)
    , delivery_(order.side == bs::network::Side::Sell)
    , wallet_(wallet)
    , signingContainer_(container)
@@ -47,6 +47,7 @@ DealerCCSettlementContainer::~DealerCCSettlementContainer()
 bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+   dialogData.setValue("AutoSignCategory", static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
 
    dialogData.remove("SettlementId");
 

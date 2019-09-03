@@ -111,7 +111,7 @@ void RFQReplyWidget::shortcutActivated(ShortcutType s)
    }
 }
 
-void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
+void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<BaseCelerClient>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<QuoteProvider>& quoteProvider
@@ -121,7 +121,9 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<DialogManager> &dialogManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<ConnectionManager> &connectionManager)
+   , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const std::shared_ptr<bs::DealerUtxoResAdapter> &dealerUtxoAdapter
+   , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider)
 {
    logger_ = logger;
    celerClient_ = celerClient;
@@ -133,6 +135,8 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    armory_ = armory;
    appSettings_ = appSettings;
    connectionManager_ = connectionManager;
+   dealerUtxoAdapter_ = dealerUtxoAdapter;
+   autoSignQuoteProvider_ = autoSignQuoteProvider;
 
    statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings, ApplicationSettings::Filter_MD_QN_cnt);
    connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, statsCollector_.get(), &bs::SecurityStatsCollector::onQuoteSubmitted);
@@ -140,8 +144,9 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_,
                                   appSettings, celerClient_);
    ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_,
-                           appSettings, connectionManager, signingContainer_, armory_, mdProvider);
+                           appSettings, connectionManager, signingContainer_, armory_, dealerUtxoAdapter_, autoSignQuoteProvider_);
 
+   ui_->widgetAutoSignQuote->init(autoSignQuoteProvider_);
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, this, &RFQReplyWidget::onSelected);
 
@@ -219,7 +224,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          try {
             const auto settlContainer = std::make_shared<DealerCCSettlementContainer>(logger_, order, quoteReqId
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
-               , sr.recipientAddress, sr.txData->getWallet(), signingContainer_, armory_, ui_->pageRFQReply->autoSign());
+               , sr.recipientAddress, sr.txData->getWallet(), signingContainer_, armory_);
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
             connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
@@ -452,3 +457,4 @@ void RFQReplyWidget::showEditableRFQPage()
    ui_->pageRFQReply->setEnabled(true);
    ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::DealingPage));
 }
+
