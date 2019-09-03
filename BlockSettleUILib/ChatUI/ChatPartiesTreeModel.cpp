@@ -84,7 +84,7 @@ void ChatPartiesTreeModel::increaseUnseenCounter(const std::string& partyId, int
    }
 
    PartyTreeItem* partyItem = static_cast<PartyTreeItem*>(partyIndex.internalPointer());
-   partyItem->increaseUnreadedCounter(newMessageCount);
+   partyItem->increaseUnseenCounter(newMessageCount);
 
 }
 
@@ -96,7 +96,7 @@ void ChatPartiesTreeModel::decreaseUnseenCounter(const std::string& partyId, int
    }
 
    PartyTreeItem* partyItem = static_cast<PartyTreeItem*>(partyIndex.internalPointer());
-   partyItem->decreaseUnreadedCounter(seenMessageCount);
+   partyItem->decreaseUnseenCounter(seenMessageCount);
 }
 
 const QModelIndex ChatPartiesTreeModel::getPartyIndexById(const std::string& partyId) const

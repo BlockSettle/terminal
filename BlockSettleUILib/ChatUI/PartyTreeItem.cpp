@@ -83,19 +83,19 @@ UI::ElementType PartyTreeItem::modelType() const
    return modelType_;
 }
 
-void PartyTreeItem::increaseUnreadedCounter(int newMessageCount)
+void PartyTreeItem::increaseUnseenCounter(int newMessageCount)
 {
    Q_ASSERT(newMessageCount > 0);
-   unreadedCounter_ += newMessageCount;
+   unseenCounter_ += newMessageCount;
 }
 
-void PartyTreeItem::decreaseUnreadedCounter(int seenMessageCount)
+void PartyTreeItem::decreaseUnseenCounter(int seenMessageCount)
 {
-   unreadedCounter_ -= seenMessageCount;
-   unreadedCounter_ = std::max(unreadedCounter_, 0);
+   unseenCounter_ -= seenMessageCount;
+   unseenCounter_ = std::max(unseenCounter_, 0);
 }
 
 bool PartyTreeItem::hasNewMessages() const
 {
-   return unreadedCounter_ > 0;
+   return unseenCounter_ > 0;
 }

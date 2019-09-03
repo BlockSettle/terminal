@@ -38,8 +38,8 @@ public:
 
    UI::ElementType modelType() const;
 
-   void increaseUnreadedCounter(int newMessageCount);
-   void decreaseUnreadedCounter(int seenMessageCount);
+   void increaseUnseenCounter(int newMessageCount);
+   void decreaseUnseenCounter(int seenMessageCount);
    bool hasNewMessages() const;
 
 private:
@@ -47,6 +47,6 @@ private:
    QVariant itemData_;
    PartyTreeItem* parentItem_;
    UI::ElementType modelType_;
-   int unreadedCounter_ = 0;
+   int unseenCounter_ = 0;
 };
 #endif // PARTYTREEITEM_H
