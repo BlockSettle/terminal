@@ -2,7 +2,6 @@
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
-#include <QFutureWatcher>
 #include <QDateTime>
 
 #include "ChatProtocol/ClientDBLogic.h"
@@ -257,18 +256,11 @@ namespace Chat
          partyMessagePacket.set_nonce(query.value(5).toString().toStdString());
          partyMessagePacket.set_message(query.value(6).toString().toStdString());
 
-         QFutureWatcher<std::string>* watcher = new QFutureWatcher<std::string>(this);
-         connect(watcher, &QFutureWatcher<std::string>::finished, [this, watcher, partyMessagePacket]() {
-            std::string decryptedMessage = watcher->result();
-            watcher->deleteLater();
-
-            emit messageLoaded(partyMessagePacket.party_id(), partyMessagePacket.message_id(), partyMessagePacket.timestamp_ms(), 
-               decryptedMessage, EncryptionType::UNENCRYPTED, partyMessagePacket.nonce(), partyMessagePacket.party_message_state());
-         });
-
          QFuture<std::string> future = cryptManagerPtr_->decryptMessageIES(partyMessagePacket.message(), currentChatUserPtr_->privateKey());
+         std::string decryptedMessage = future.result();
 
-         watcher->setFuture(future);
+         emit messageLoaded(partyMessagePacket.party_id(), partyMessagePacket.message_id(), partyMessagePacket.timestamp_ms(),
+            decryptedMessage, EncryptionType::UNENCRYPTED, partyMessagePacket.nonce(), partyMessagePacket.party_message_state());
       }
    }
 
