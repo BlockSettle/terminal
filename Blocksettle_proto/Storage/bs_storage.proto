@@ -78,6 +78,8 @@ message AuthAddressReservationInfo
    required string address = 1;
    required string user_name = 2;
    required string request_id = 3;
+   required bytes  fund_utxo = 4;
+   optional string validation_address = 5;
 }
 
 message AuthAddressVerificationTransaction {
