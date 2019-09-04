@@ -150,7 +150,10 @@ namespace Chat
 
    void ChatClientLogic::OnError(DataConnectionListener::DataConnectionError dataConnectionError)
    {
+      QString errorString = QStringLiteral("DataConnectionError: %1").arg(dataConnectionError);
+      emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed, errorString.toStdString());
       emit error(dataConnectionError);
+      OnDisconnected();
    }
 
    void ChatClientLogic::sendPacket(const google::protobuf::Message& message)

@@ -213,22 +213,16 @@ namespace Chat
       // ! Do NOT emit here privatePartyCreated, it's connected with party request
    }
 
-   void ClientPartyLogic::clientPartyDisplayNameChanged()
+   void ClientPartyLogic::clientPartyDisplayNameChanged(const std::string& partyId)
    {
-      ClientParty* clientParty = qobject_cast<ClientParty*>(sender());
-
-      if (!clientParty)
-      {
-         emit error(ClientPartyLogicError::QObjectCast);
-         return;
-      }
-
-      ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(clientParty->id());
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(partyId);
 
       if (!clientPartyPtr)
       {
          return;
       }
+
+      clientDBServicePtr_->updateDisplayNameForParty(partyId, clientPartyPtr->displayName());
    }
 
    void ClientPartyLogic::partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName)

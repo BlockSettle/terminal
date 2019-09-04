@@ -68,6 +68,7 @@ namespace Chat
 
       connect(clientPartyPtr.get(), &ClientParty::clientStatusChanged, this, &ClientPartyModel::handlePartyStatusChanged);
       connect(clientPartyPtr.get(), &ClientParty::partyStateChanged, this, &ClientPartyModel::handlePartyStateChanged);
+      connect(clientPartyPtr.get(), &ClientParty::displayNameChanged, this, &ClientPartyModel::handleDisplayNameChanged);
    }
 
    void ClientPartyModel::handlePartyRemoved(const PartyPtr& partyPtr)
@@ -79,6 +80,7 @@ namespace Chat
          return;
       }
 
+      disconnect(clientPartyPtr.get(), &ClientParty::displayNameChanged, this, &ClientPartyModel::handleDisplayNameChanged);
       disconnect(clientPartyPtr.get(), &ClientParty::partyStateChanged, this, &ClientPartyModel::handlePartyStateChanged);
       disconnect(clientPartyPtr.get(), &ClientParty::clientStatusChanged, this, &ClientPartyModel::handlePartyStatusChanged);
    }
@@ -171,6 +173,19 @@ namespace Chat
       }
 
       return PrivatePartyState::Initialized;
+   }
+
+   void ClientPartyModel::handleDisplayNameChanged()
+   {
+      ClientParty* clientParty = qobject_cast<ClientParty*>(sender());
+
+      if (!clientParty)
+      {
+         emit error(ClientPartyModelError::QObjectCast);
+         return;
+      }
+
+      emit clientPartyDisplayNameChanged(clientParty->id());
    }
 
 }

@@ -33,12 +33,11 @@ namespace Chat
       RequestedOutgoing,
       RequestedIncoming,
       Rejected,
-      Initialized
+      Initialized,
+      QObjectCast
    };
    
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
-// TODO
-//   using UniqueUserNameList = std::vector<std::string>;
 
    class ClientPartyModel : public PartyModel
    {
@@ -59,9 +58,7 @@ namespace Chat
       void messageArrived(const Chat::MessagePtrList& messagePtr);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
       void partyStateChanged(const std::string& partyId);
-
-      // internal
-      void clientPartyDisplayNameChanged();
+      void clientPartyDisplayNameChanged(const std::string& partyId);
 
    private slots:
       void handleLocalErrors(const ClientPartyModelError& errorCode, const std::string& what);
@@ -69,7 +66,8 @@ namespace Chat
       void handlePartyRemoved(const PartyPtr& partyPtr);
       void handlePartyStatusChanged(const ClientStatus& clientStatus);
       void handlePartyStateChanged(const std::string& partyId);
-
+      void handleDisplayNameChanged();
+      
    private:
       ClientPartyPtr castToClientPartyPtr(const PartyPtr& partyPtr);
       std::string ownUserName_;
