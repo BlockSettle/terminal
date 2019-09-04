@@ -264,6 +264,12 @@ namespace Chat
 
       PartyRecipientPtr recipientPtr = clientPartyPtr->getSecondRecipient(currentUserPtr()->userName());
 
+      if (nullptr == recipientPtr)
+      {
+         emit error(ClientConnectionLogicError::WrongPartyRecipient, partyMessagePacket.party_id());
+         return;
+      }
+
       if (partyMessagePacket.encryption() == EncryptionType::AEAD)
       {
          SessionKeyDataPtr sessionKeyDataPtr = sessionKeyHolderPtr_->sessionKeyDataForUser(recipientPtr->userName());
@@ -387,10 +393,19 @@ namespace Chat
       // update party state
       clientPartyPtr->setPartyState(PartyState::REQUESTED);
 
+      PartyRecipientPtr secondRecipientPtr = clientPartyPtr->getSecondRecipient(currentUserPtr()->userName());
+      // wrong recipient, delete party and show error
+      if (nullptr == secondRecipientPtr)
+      {
+         clientPartyLogicPtr_->clientPartyModelPtr()->removeParty(clientPartyPtr);
+         emit error(ClientConnectionLogicError::WrongPartyRecipient, partyId);
+         return;
+      }
+
       PrivatePartyRequest privatePartyRequest;
       PartyPacket *partyPacket = privatePartyRequest.mutable_party_packet();
       partyPacket->set_party_id(partyId);
-      partyPacket->set_display_name(clientPartyPtr->getSecondRecipient(currentUserPtr()->userName())->userName());
+      partyPacket->set_display_name(secondRecipientPtr->userName());
       partyPacket->set_party_type(clientPartyPtr->partyType());
       partyPacket->set_party_subtype(clientPartyPtr->partySubType());
       partyPacket->set_party_state(clientPartyPtr->partyState());

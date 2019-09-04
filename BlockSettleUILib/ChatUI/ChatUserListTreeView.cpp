@@ -50,12 +50,18 @@ void ChatUserListTreeView::editContact(const QModelIndex& index)
    }
 
    if (clientPartyPtr->isPrivateStandard()) {
-      Chat::PartyRecipientPtr recipient = clientPartyPtr->getSecondRecipient(currentUser());
+      Chat::PartyRecipientPtr recipientPtr = clientPartyPtr->getSecondRecipient(currentUser());
+
+      if (nullptr == recipientPtr)
+      {
+         return;
+      }
+
       EditContactDialog dialog(
          QString::fromStdString(clientPartyPtr->userHash()), 
          QString::fromStdString(clientPartyPtr->displayName()), 
-         recipient->publicKeyTime(), 
-         QString::fromStdString(recipient->publicKey().toHexStr()),
+         recipientPtr->publicKeyTime(),
+         QString::fromStdString(recipientPtr->publicKey().toHexStr()),
          parentWidget()->window());
       if (dialog.exec() == QDialog::Accepted) {
          emit setDisplayName(clientPartyPtr->id(), dialog.displayName().toStdString());

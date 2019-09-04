@@ -53,7 +53,7 @@ namespace Chat
       if (!QSqlDatabase::contains(connectionName))
       {
          auto db = QSqlDatabase::addDatabase(QLatin1String("QSQLITE"), connectionName);
-         //appSettings->get<QString>(ApplicationSettings::chatDbFile)
+
          db.setDatabaseName(applicationSettingsPtr_->get<QString>(ApplicationSettings::chatDbFile));
 
          if (!db.open()) {
