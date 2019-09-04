@@ -240,7 +240,7 @@ private:
       getValidationAddress(const bs::Address&);
 
    UTXO getVettingUtxo(const bs::Address &validationAddr
-      , const std::vector<UTXO> &) const;
+      , const std::vector<UTXO> &, size_t nbOutputs = 1) const;
 
    const std::shared_ptr<ValidationAddressStruct>
       getValidationAddress(const bs::Address&) const;
@@ -280,7 +280,7 @@ public:
    bool hasZCOutputs(const bs::Address&) const;
 
    bool getOutpointBatch(const bs::Address &, const std::function<void(const OutpointBatch &)> &) const;
-   bool getSpendableTxOutFor(const bs::Address &, const std::function<void(const UTXO &)> &) const;
+   bool getSpendableTxOutFor(const bs::Address &, const std::function<void(const UTXO &)> &, size_t nbOutputs = 1) const;
 
    const bs::Address& findValidationAddressForUTXO(const UTXO&) const;
    const bs::Address& findValidationAddressForTxHash(const BinaryData&) const;

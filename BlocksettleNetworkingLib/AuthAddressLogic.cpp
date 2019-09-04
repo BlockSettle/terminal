@@ -383,12 +383,12 @@ bool ValidationAddressManager::getOutpointBatch(const bs::Address &addr
 }
 
 bool ValidationAddressManager::getSpendableTxOutFor(const bs::Address &validationAddr
-   , const std::function<void(const UTXO &)> &cb) const
+   , const std::function<void(const UTXO &)> &cb, size_t nbOutputs) const
 {
    if (!connPtr_ || (connPtr_->state() != ArmoryState::Ready)) {
       return false;
    }
-   auto spendableCb = [this, validationAddr, cb](
+   auto spendableCb = [this, validationAddr, cb, nbOutputs](
       ReturnMessage<std::vector<UTXO>> utxoVec)->void
    {
       try {
@@ -396,7 +396,7 @@ bool ValidationAddressManager::getSpendableTxOutFor(const bs::Address &validatio
          if (utxos.empty() == 0) {
             throw AuthLogicException("no utxos available");
          }
-         const auto utxo = getVettingUtxo(validationAddr, utxos);
+         const auto utxo = getVettingUtxo(validationAddr, utxos, nbOutputs);
          if (!utxo.isInitialized()) {
             throw AuthLogicException("vetting UTXO is uninited");
          }
@@ -415,8 +415,9 @@ bool ValidationAddressManager::getSpendableTxOutFor(const bs::Address &validatio
 }
 
 UTXO ValidationAddressManager::getVettingUtxo(const bs::Address &validationAddr
-   , const std::vector<UTXO> &utxos) const
+   , const std::vector<UTXO> &utxos, size_t nbOutputs) const
 {
+   const uint64_t amountThreshold = nbOutputs * kAuthValueThreshold + 1000;
    for (const auto& utxo : utxos) {
       //find the validation address for this utxo
       auto scrAddr = utxo.getRecipientScrAddr();
@@ -441,7 +442,7 @@ UTXO ValidationAddressManager::getVettingUtxo(const bs::Address &validationAddr
       }
       //utxo should have enough value to cover vetting amount +
       //vetting tx fee + return tx fee
-      if (utxo.getValue() < 3000) { //arbitrary place holder value
+      if (utxo.getValue() < amountThreshold) {
          continue;
       }
       return utxo;
