@@ -1328,12 +1328,10 @@ void BSTerminalMainWindow::closeEvent(QCloseEvent* event)
       event->ignore();
    }
    else {
-      connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, [this, event]() {
-         QMainWindow::closeEvent(event);
-         QApplication::exit();
-      });
-
       chatClientServicePtr_->LogoutFromServer();
+
+      QMainWindow::closeEvent(event);
+      QApplication::exit();
    }
 }
 
