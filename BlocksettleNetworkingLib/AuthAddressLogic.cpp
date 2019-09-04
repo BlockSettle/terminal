@@ -430,7 +430,7 @@ bool ValidationAddressManager::getVettingUTXOsFor(const bs::Address &validationA
    {
       try {
          const auto& utxos = utxoVec.get();
-         if (utxos.empty() == 0) {
+         if (utxos.empty()) {
             throw AuthLogicException("no utxos available");
          }
          const auto vettingUtxos = filterVettingUtxos(validationAddr, utxos);
