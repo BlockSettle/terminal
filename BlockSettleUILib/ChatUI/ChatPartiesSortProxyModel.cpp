@@ -23,6 +23,24 @@ const std::string& ChatPartiesSortProxyModel::currentUser() const
    return sourceModel_->currentUser();
 }
 
+Qt::ItemFlags ChatPartiesSortProxyModel::flags(const QModelIndex& index) const
+{
+   if (!index.isValid()) {
+      return Qt::NoItemFlags;
+   }
+
+   PartyTreeItem* treeItem = getInternalData(index);
+   if (!treeItem) {
+      return Qt::NoItemFlags;
+   }
+
+   if (UI::ElementType::Container != treeItem->modelType()) {
+      return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+   }
+
+   return Qt::NoItemFlags;
+}
+
 QModelIndex ChatPartiesSortProxyModel::getProxyIndexById(const std::string& partyId) const
 {
    const QModelIndex sourceIndex = sourceModel_->getPartyIndexById(partyId);
@@ -73,9 +91,7 @@ bool ChatPartiesSortProxyModel::lessThan(const QModelIndex &left, const QModelIn
          return leftParty->displayName() < rightParty->displayName();
       }
       else if (itemLeft->modelType() == UI::ElementType::Container) {
-         QString leftContainerName = itemLeft->data().toString();
-         QString rightContainerName = itemRight->data().toString();
-         return leftContainerName < rightContainerName;
+         return itemLeft->childNumber() < itemRight->childNumber();
       }
    }
 

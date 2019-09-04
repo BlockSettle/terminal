@@ -1,11 +1,5 @@
 #include "ChatPartiesTreeModel.h"
 
-namespace {
-   const QString ContainerTabGlobal = QObject::tr("Global");
-   const QString ContainerTabPrivate = QObject::tr("Private");
-   const QString ContainerTabContactRequest = QObject::tr("Contact request");
-}
-
 ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& chatClientServicePtr, QObject* parent)
    : QAbstractItemModel(parent),
    chatClientServicePtr_(chatClientServicePtr)
@@ -25,9 +19,9 @@ void ChatPartiesTreeModel::onPartyModelChanged()
 
    rootItem_->removeAll();
 
-   std::unique_ptr<PartyTreeItem> globalSection = std::make_unique<PartyTreeItem>(ContainerTabGlobal, UI::ElementType::Container, rootItem_);
-   std::unique_ptr<PartyTreeItem> privateSection = std::make_unique<PartyTreeItem>(ContainerTabPrivate, UI::ElementType::Container, rootItem_);
-   std::unique_ptr<PartyTreeItem> requestSection = std::make_unique<PartyTreeItem>(ContainerTabContactRequest, UI::ElementType::Container, rootItem_);
+   std::unique_ptr<PartyTreeItem> globalSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabGlobal, UI::ElementType::Container, rootItem_);
+   std::unique_ptr<PartyTreeItem> privateSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabPrivate, UI::ElementType::Container, rootItem_);
+   std::unique_ptr<PartyTreeItem> requestSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabContactRequest, UI::ElementType::Container, rootItem_);
 
    Chat::IdPartyList idPartyList = clientPartyModelPtr->getIdPartyList();
 
