@@ -414,6 +414,38 @@ bool ValidationAddressManager::getSpendableTxOutFor(const bs::Address &validatio
    return true;
 }
 
+bool ValidationAddressManager::getVettingUTXOsFor(const bs::Address &validationAddr
+   , const std::function<void(const std::vector<UTXO> &)> &cb) const
+{
+   if (!connPtr_ || (connPtr_->state() != ArmoryState::Ready)) {
+      return false;
+   }
+   auto spendableCb = [this, validationAddr, cb](
+      ReturnMessage<std::vector<UTXO>> utxoVec)->void
+   {
+      try {
+         const auto& utxos = utxoVec.get();
+         if (utxos.empty() == 0) {
+            throw AuthLogicException("no utxos available");
+         }
+         const auto vettingUtxos = filterVettingUtxos(validationAddr, utxos);
+         if (vettingUtxos.empty()) {
+            throw AuthLogicException("no vetting UTXOs found");
+         }
+
+         if (cb) {
+            cb(vettingUtxos);
+         }
+      } catch (const std::exception &) {
+         if (cb) {
+            cb({});
+         }
+      }
+   };
+   walletObj_->getSpendableTxOutListForValue(UINT64_MAX, spendableCb);
+   return true;
+}
+
 UTXO ValidationAddressManager::getVettingUtxo(const bs::Address &validationAddr
    , const std::vector<UTXO> &utxos, size_t nbOutputs) const
 {
@@ -448,6 +480,43 @@ UTXO ValidationAddressManager::getVettingUtxo(const bs::Address &validationAddr
       return utxo;
    }
    return {};
+}
+
+std::vector<UTXO> ValidationAddressManager::filterVettingUtxos(
+   const bs::Address &validationAddr, const std::vector<UTXO> &utxos) const
+{
+   std::vector<UTXO> result;
+   const uint64_t amountThreshold = kAuthValueThreshold + 1000;
+   for (const auto& utxo : utxos) {
+      //find the validation address for this utxo
+      auto scrAddr = utxo.getRecipientScrAddr();
+
+      //filter by desired validation address if one was provided
+      if (!validationAddr.isNull() && (scrAddr != validationAddr.prefixed())) {
+         continue;
+      }
+      auto maStructPtr = getValidationAddress(scrAddr);
+      if (maStructPtr == nullptr) {
+         continue;
+      }
+      //is validation address valid?
+      if (!isValid(scrAddr)) {
+         continue;
+      }
+      //The first utxo of a validation address isn't eligible to vet
+      //user addresses with. Filter that out.
+
+      if (maStructPtr->isFirstOutpoint(utxo.getTxHash(), utxo.getTxOutIndex())) {
+         continue;
+      }
+      //utxo should have enough value to cover vetting amount +
+      //vetting tx fee + return tx fee
+      if (utxo.getValue() < amountThreshold) {
+         continue;
+      }
+      result.push_back(utxo);
+   }
+   return result;
 }
 
 ////
