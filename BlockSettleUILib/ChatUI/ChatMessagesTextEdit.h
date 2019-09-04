@@ -108,7 +108,7 @@ private slots:
 
 private:
    void setupHighlightPalette();
-   QMenu* initUserContextMenu(const QString& userName);
+   std::unique_ptr<QMenu> initUserContextMenu(const QString& userName);
 
    // #new_logic
    QString toHtmlUsername(const std::string& username, const std::string& userId);

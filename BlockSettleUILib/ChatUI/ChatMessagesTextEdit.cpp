@@ -166,9 +166,8 @@ void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
    //show contact context menu when username is right clicked in User column
    if ((textCursor_.block().blockNumber() - 1) % 5 == static_cast<int>(Column::User)) {
       if (!anchorAt(e->pos()).isEmpty() && text != ownSenderUserName) {
-         QMenu* userMenu = initUserContextMenu(text);
-         userMenu->exec(QCursor::pos());
-         userMenu->deleteLater();
+         std::unique_ptr<QMenu> userMenuPtr = initUserContextMenu(text);
+         userMenuPtr->exec(QCursor::pos());
          return;
       }
    }
@@ -431,27 +430,27 @@ void ChatMessagesTextEdit::showMessages(const std::string &partyId)
 //   cursor.insertHtml(QString(QLatin1Literal("<a href=\"load_more\" style=\"color:%1\">Load More...</a>")).arg(internalStyle_.colorHyperlink().name()));
 //}
 
-QMenu* ChatMessagesTextEdit::initUserContextMenu(const QString& userName)
+std::unique_ptr<QMenu> ChatMessagesTextEdit::initUserContextMenu(const QString& userName)
 {
-   QMenu* userMenu = new QMenu(this);
+   std::unique_ptr<QMenu> userMenuPtr = std::make_unique<QMenu>(this);
 
    Chat::ClientPartyPtr clientPartyPtr = partyModel_->getPartyByUserName(userName.toStdString());
    if (!clientPartyPtr) {
-      QAction* addAction = userMenu->addAction(contextMenuAddUserMenu);
+      QAction* addAction = userMenuPtr->addAction(contextMenuAddUserMenu);
       addAction->setStatusTip(contextMenuAddUserMenuStatusTip);
       connect(addAction, &QAction::triggered, this, [this, userName_ = userName]() {
          emit newPartyRequest(userName_.toStdString());
       });
    }
    else {
-      QAction* removeAction = userMenu->addAction(contextMenuRemoveUserMenu);
+      QAction* removeAction = userMenuPtr->addAction(contextMenuRemoveUserMenu);
       removeAction->setStatusTip(contextMenuRemoveUserMenuStatusTip);
       connect(removeAction, &QAction::triggered, this, [this, clientPartyPtr]() {
          emit removePartyRequest(clientPartyPtr->id());
       });
    }
 
-   return userMenu;
+   return userMenuPtr;
 }
 
 void ChatMessagesTextEdit::onMessageUpdate(const Chat::MessagePtrList& messagePtrList)
