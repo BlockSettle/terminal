@@ -37,4 +37,11 @@ private:
 
 using ChatPartiesTreeModelPtr = std::shared_ptr<ChatPartiesTreeModel>;
 
+namespace ChatModelNames {
+   const QString ContainerTabGlobal = QObject::tr("Public");
+   const QString ContainerTabPrivate = QObject::tr("Private");
+   const QString ContainerTabContactRequest = QObject::tr("Contact request");
+   const QString PrivateTabGlobal = QObject::tr("Global");
+}
+
 #endif // CHATPARTYLISTMODEL_H

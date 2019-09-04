@@ -173,7 +173,7 @@
              <bool>false</bool>
             </property>
             <property name="itemsExpandable">
-             <bool>true</bool>
+             <bool>false</bool>
             </property>
             <property name="animated">
              <bool>true</bool>
@@ -182,7 +182,7 @@
              <bool>true</bool>
             </property>
             <property name="expandsOnDoubleClick">
-             <bool>true</bool>
+             <bool>false</bool>
             </property>
            </widget>
           </item>
@@ -772,7 +772,7 @@
   <customwidget>
    <class>ChatUserListTreeView</class>
    <extends>QTreeView</extends>
-   <header location="global">ChatUI/ChatUserListTreeView.h</header>
+   <header>ChatUI/ChatUserListTreeView.h</header>
   </customwidget>
   <customwidget>
    <class>BSChatInput</class>

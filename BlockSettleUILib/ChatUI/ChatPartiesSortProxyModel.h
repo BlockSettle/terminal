@@ -13,6 +13,7 @@ public:
    PartyTreeItem* getInternalData(const QModelIndex& index) const;
 
    const std::string& currentUser() const;
+   Qt::ItemFlags flags(const QModelIndex& index) const override;
 
    QModelIndex getProxyIndexById(const std::string& partyId) const;
 

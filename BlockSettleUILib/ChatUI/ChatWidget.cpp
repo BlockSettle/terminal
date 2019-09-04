@@ -1304,8 +1304,7 @@ void ChatWidget::onLogin()
    stateCurrent_->onResetPartyModel();
    ui_->treeViewUsers->expandAll();
 
-   QString global = QLatin1String("Global");
-   onActivatePartyId(global);
+   onActivatePartyId(ChatModelNames::PrivateTabGlobal);
 }
 
 void ChatWidget::onLogout()
@@ -1404,8 +1403,6 @@ void ChatWidget::onUserListClicked(const QModelIndex& index)
    PartyTreeItem* partyTreeItem = chartProxyModel->getInternalData(index);
 
    if (partyTreeItem->modelType() == UI::ElementType::Container) {
-      currentPartyId_.clear();
-      changeState<IdleState>();
       return;
    }
 
@@ -1449,12 +1446,13 @@ void ChatWidget::onActivatePartyId(const QString& partyId)
    ChatPartiesSortProxyModel* chartProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
    const QModelIndex partyProxyIndex = chartProxyModel->getProxyIndexById(partyId.toStdString());
    if (!partyProxyIndex.isValid()) {
-      currentPartyId_.clear();
       if (ownUserId_.empty()) {
+         currentPartyId_.clear();
          changeState<ChatLogOutState>();
       }
       else {
-         changeState<IdleState>();
+         Q_ASSERT(partyId != ChatModelNames::PrivateTabGlobal);
+         onActivatePartyId(ChatModelNames::PrivateTabGlobal);
       }
       return;
    }

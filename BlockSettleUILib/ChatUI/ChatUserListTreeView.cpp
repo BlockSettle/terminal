@@ -26,10 +26,12 @@ ChatUserListTreeView::ChatUserListTreeView(QWidget *parent)
    connect(this, &QAbstractItemView::customContextMenuRequested, this, &ChatUserListTreeView::onCustomContextMenu);
    setItemDelegate(new ChatClientUsersViewItemDelegate({}, this));
 
-   // expand/collapse categories only on single click
-   setExpandsOnDoubleClick(false);
    connect(this, &QTreeView::clicked, this, &ChatUserListTreeView::onClicked);
    connect(this, &QTreeView::doubleClicked, this, &ChatUserListTreeView::onDoubleClicked);
+   connect(this, &QTreeView::activated, this, [this]() {
+      int x = 0;
+      ++x;
+   });
 }
 
 void ChatUserListTreeView::setActiveChatLabel(QLabel *label)
@@ -164,17 +166,19 @@ void ChatUserListTreeView::onClicked(const QModelIndex &index)
 
    PartyTreeItem* item = internalPartyTreeItem(index);
 
-   if (nullptr == item) {
+   if (nullptr == item || UI::ElementType::Container != item->modelType()) {
       return;
    }
 
-   if (UI::ElementType::Container == item->modelType()) {
-      if (isExpanded(index)) {
-         collapse(index);
-      }
-      else {
-         expand(index);
-      }
+   if (item->data().canConvert<QString>() && item->data().toString() == ChatModelNames::ContainerTabGlobal) {
+      return;
+   }
+
+   if (isExpanded(index)) {
+      collapse(index);
+   }
+   else {
+      expand(index);
    }
 }
 
