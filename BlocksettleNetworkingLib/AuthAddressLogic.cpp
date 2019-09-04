@@ -88,9 +88,10 @@ ValidationAddressManager::ValidationAddressManager(
    connPtr_(conn)
 {
    ready_.store(false, std::memory_order_relaxed);
-
-   auto&& wltIdSbd = CryptoPRNG::generateRandom(12);
-   walletObj_ = connPtr_->instantiateWallet(wltIdSbd.toHexStr());
+   if (connPtr_) {
+      auto&& wltIdSbd = CryptoPRNG::generateRandom(12);
+      walletObj_ = connPtr_->instantiateWallet(wltIdSbd.toHexStr());
+   }
 }
 
 ////
@@ -176,6 +177,10 @@ unsigned ValidationAddressManager::goOnline()
    You cannot change the validation address list post setup. You need to 
    destroy this object and create a new one with the updated list.
    */
+
+   if (!connPtr_) {
+      return 0;
+   }
 
    //pthread_once behavior
    if (ready_.load(std::memory_order_relaxed)) {
