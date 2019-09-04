@@ -257,12 +257,29 @@ void ChatMessagesTextEdit::onSwitchToChat(const std::string& partyId)
    if (!currentPartyId_.empty()) {
       showMessages(partyId);
       onTextChanged();
-      if (!messages_[partyId].isEmpty()) {
-         for (auto iLast = messages_[partyId].end() - 1;
-            iLast != messages_[partyId].begin() && (*iLast)->partyMessageState() != Chat::PartyMessageState::SEEN && (*iLast)->senderHash() != ownUserId_;
-            --iLast) {
-            emit messageRead((*iLast)->partyId(), (*iLast)->messageId());
+      ClientMessagesHistory clientMessagesHistory = messages_[partyId];
+
+      if (clientMessagesHistory.empty())
+      {
+         return;
+      }
+
+      ClientMessagesHistory::reverse_iterator riter = clientMessagesHistory.rbegin();
+      for (; riter != clientMessagesHistory.rend(); ++riter)
+      {
+         Chat::MessagePtr messagePtr = (*riter);
+         
+         if (messagePtr->partyMessageState() == Chat::PartyMessageState::SEEN)
+         {
+            continue;
          }
+
+         if (messagePtr->senderHash() == ownUserId_)
+         {
+            continue;
+         }
+
+         emit messageRead(messagePtr->partyId(), messagePtr->messageId());
       }
    }
 }
