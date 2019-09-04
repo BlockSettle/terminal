@@ -608,6 +608,48 @@ BinaryData ValidationAddressManager::fundUserAddress(
    return signer.serialize();
 }
 
+BinaryData ValidationAddressManager::fundUserAddresses(
+   const std::vector<bs::Address> &addrs
+   , const bs::Address &validationAddress
+   , std::shared_ptr<ResolverFeed> feedPtr
+   , const std::vector<UTXO> &vettingUtxos) const
+{
+   Signer signer;
+   signer.setFeed(feedPtr);
+
+   //vetting outputs
+   for (const auto &addr : addrs) {
+      signer.addRecipient(addr.getRecipient(kAuthValueThreshold));
+   }
+
+   int64_t changeVal = 0;
+   //spenders
+   for (const auto &vettingUtxo : vettingUtxos) {
+      auto spenderPtr = std::make_shared<ScriptSpender>(vettingUtxo);
+      signer.addSpender(spenderPtr);
+
+      const auto scrAddr = vettingUtxo.getRecipientScrAddr();
+      const auto addrIter = validationAddresses_.find(scrAddr);
+      if (addrIter == validationAddresses_.end()) {
+         throw AuthLogicException("input addr not found in validation addresses");
+      }
+      changeVal += vettingUtxo.getValue();
+   }
+   changeVal -= addrs.size() * kAuthValueThreshold;
+   changeVal -= 1000;
+
+   if (changeVal < 0) {
+      throw AuthLogicException("attempting to spend more than allowed");
+   }
+   else if (changeVal > 0) {
+      signer.addRecipient(validationAddress.getRecipient((uint64_t)changeVal));
+   }
+
+   //sign & serialize tx
+   signer.sign();
+   return signer.serialize();
+}
+
 BinaryData ValidationAddressManager::vetUserAddress(
    const bs::Address& addr,
    std::shared_ptr<ResolverFeed> feedPtr,
