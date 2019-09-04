@@ -26,7 +26,7 @@ signals:
    void removeFriendRequest(const QString &userID);
 
 private slots:
-   void showMenu(const QPoint &pos);
+   void onShowMenu(const QPoint &pos);
 
 private:
    Ui::ChatSearchPopup *ui_;

@@ -37,7 +37,6 @@ protected slots:
 private slots:
    void onClicked(const QModelIndex &);
    void onDoubleClicked(const QModelIndex &);
-   void editContact(const QModelIndex& index);
    void onEditContact();
    void onRemoveFromContacts();
    void onAcceptFriendRequest();
@@ -47,6 +46,7 @@ private:
    PartyTreeItem* internalPartyTreeItem(const QModelIndex& index);
    const Chat::ClientPartyPtr clientPartyPtrFromAction(const QAction* action);
    const std::string& currentUser() const;
+   void editContact(const QModelIndex& index);
 
    // #new_logic : this should leave in chat widget
    void updateDependUi(const QModelIndex& index);

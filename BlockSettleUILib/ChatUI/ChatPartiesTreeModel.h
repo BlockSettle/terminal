@@ -20,11 +20,11 @@ public:
    const std::string& currentUser() const;
 
 public slots:
-   void partyModelChanged();
-   void cleanModel();
-   void partyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
-   void increaseUnseenCounter(const std::string& partyId, int newMessageCount);
-   void decreaseUnseenCounter(const std::string& partyId, int seenMessageCount);
+   void onPartyModelChanged();
+   void onCleanModel();
+   void onPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
+   void onIncreaseUnseenCounter(const std::string& partyId, int newMessageCount);
+   void onDecreaseUnseenCounter(const std::string& partyId, int seenMessageCount);
 
    const QModelIndex getPartyIndexById(const std::string& partyId) const;
 

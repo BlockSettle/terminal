@@ -3,13 +3,13 @@
 class PrivatePartyInitState : public AbstractChatWidgetState {
 public:
    explicit PrivatePartyInitState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
-   virtual ~PrivatePartyInitState() override {
+   ~PrivatePartyInitState() override {
       saveDraftMessage();
    };
 protected:
-   virtual void applyUserFrameChange() override {}
-   virtual void applyChatFrameChange() override {
-      chat_->ui_->textEditMessages->switchToChat(chat_->currentPartyId_);
+   void applyUserFrameChange() override {}
+   void applyChatFrameChange() override {
+      chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentPartyId_);
 
       chat_->ui_->frameContactActions->setVisible(false);
 
@@ -20,7 +20,7 @@ protected:
 
       restoreDraftMessage();
    }
-   virtual void applyRoomsFrameChange() override {
+   void applyRoomsFrameChange() override {
       // #new_logic : OTC shield
    }
    virtual bool canSendMessage() const override { return true; }

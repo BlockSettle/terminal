@@ -1134,7 +1134,7 @@ ChatWidget::ChatWidget(QWidget* parent)
    ui_->timeLabel->setMinimumSize(ui_->timeLabel->property("minimumSizeLinux").toSize());
 #endif
 
-   ui_->textEditMessages->setColumnsWidth(ui_->timeLabel->minimumWidth(),
+   ui_->textEditMessages->onSetColumnsWidth(ui_->timeLabel->minimumWidth(),
       ui_->iconLabel->minimumWidth(),
       ui_->userLabel->minimumWidth(),
       ui_->messageLabel->minimumWidth());
@@ -1171,7 +1171,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedOutFromServer, this, &ChatWidget::onLogout, Qt::QueuedConnection);
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::partyModelChanged, this, &ChatWidget::onPartyModelChanged, Qt::QueuedConnection);
-   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::searchUserReply, ui_->searchWidget, &SearchWidget::searchUserReply);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::searchUserReply, ui_->searchWidget, &SearchWidget::onSearchUserReply);
    connect(ui_->searchWidget, &SearchWidget::showUserRoom, this, &ChatWidget::onShowUserRoom);
    connect(ui_->searchWidget, &SearchWidget::contactFriendRequest, this, &ChatWidget::onContactFriendRequest);
 
@@ -1185,11 +1185,11 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
 
    ui_->searchWidget->init(chatClientServicePtr);
-   ui_->searchWidget->clearLineEdit();
-   ui_->searchWidget->setLineEditEnabled(false);
-   ui_->searchWidget->setListVisible(false);
+   ui_->searchWidget->onClearLineEdit();
+   ui_->searchWidget->onSetLineEditEnabled(false);
+   ui_->searchWidget->onSetListVisible(false);
 
-   ui_->textEditMessages->switchToChat("Global");
+   ui_->textEditMessages->onSwitchToChat("Global");
 
    changeState<ChatLogOutState>(); //Initial state is LoggedOut
 
@@ -1221,7 +1221,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
 
-   ui_->textEditMessages->setClientPartyModel(clientPartyModelPtr);
+   ui_->textEditMessages->onSetClientPartyModel(clientPartyModelPtr);
 
 /* TODO
 
@@ -1260,37 +1260,37 @@ void removePartyRequest(const std::string& partyId) {}
 
 void ChatWidget::onContactRequestAcceptClicked(const std::string& partyId)
 {
-   stateCurrent_->acceptPartyRequest(partyId);
+   stateCurrent_->onAcceptPartyRequest(partyId);
 }
 
 void ChatWidget::onContactRequestRejectClicked(const std::string& partyId)
 {
-   stateCurrent_->rejectPartyRequest(partyId);
+   stateCurrent_->onRejectPartyRequest(partyId);
 }
 
 void ChatWidget::onContactRequestSendClicked(const std::string& partyId)
 {
-   stateCurrent_->sendPartyRequest(partyId);
+   stateCurrent_->onSendPartyRequest(partyId);
 }
 
 void ChatWidget::onContactRequestCancelClicked(const std::string& partyId)
 {
-   stateCurrent_->removePartyRequest(partyId);
+   stateCurrent_->onRemovePartyRequest(partyId);
 }
 
 void ChatWidget::onNewPartyRequest(const std::string& userName)
 {
-   stateCurrent_->newPartyRequest(userName);
+   stateCurrent_->onNewPartyRequest(userName);
 }
 
 void ChatWidget::onRemovePartyRequest(const std::string& partyId)
 {
-   stateCurrent_->removePartyRequest(partyId);
+   stateCurrent_->onRemovePartyRequest(partyId);
 }
 
 void ChatWidget::onPartyModelChanged()
 {
-   stateCurrent_->resetPartyModel();
+   stateCurrent_->onResetPartyModel();
    // #new_logic : save expanding state
    ui_->treeViewUsers->expandAll();
 }
@@ -1301,7 +1301,7 @@ void ChatWidget::onLogin()
    ownUserId_ = clientPartyModelPtr->ownUserName();
 
    changeState<IdleState>();
-   stateCurrent_->resetPartyModel();
+   stateCurrent_->onResetPartyModel();
    ui_->treeViewUsers->expandAll();
 
    QString global = QLatin1String("Global");
@@ -1371,27 +1371,27 @@ void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString& partyId)
 
 void ChatWidget::onSendMessage()
 {
-   stateCurrent_->sendMessage();
+   stateCurrent_->onSendMessage();
 }
 
 void ChatWidget::onMessageRead(const std::string& partyId, const std::string& messageId)
 {
-   stateCurrent_->messageRead(partyId, messageId);
+   stateCurrent_->onMessageRead(partyId, messageId);
 }
 
 void ChatWidget::onSendArrived(const Chat::MessagePtrList& messagePtr)
 {
-   stateCurrent_->processMessageArrived(messagePtr);
+   stateCurrent_->onProcessMessageArrived(messagePtr);
 }
 
 void ChatWidget::onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr)
 {
-   stateCurrent_->changePartyStatus(clientPartyPtr);
+   stateCurrent_->onChangePartyStatus(clientPartyPtr);
 }
 
 void ChatWidget::onMessageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state)
 {
-   stateCurrent_->changeMessageState(partyId, message_id, party_message_state);
+   stateCurrent_->onChangeMessageState(partyId, message_id, party_message_state);
 }
 
 void ChatWidget::onUserListClicked(const QModelIndex& index)
@@ -1489,5 +1489,5 @@ void ChatWidget::onContactFriendRequest(const QString& userHash)
 
 void ChatWidget::onSetDisplayName(const std::string& partyId, const std::string& contactName)
 {
-   stateCurrent_->updateDisplayName(partyId, contactName);
+   stateCurrent_->onUpdateDisplayName(partyId, contactName);
 }

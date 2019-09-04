@@ -3,7 +3,7 @@
 #include "ChatUI/ChatPartiesTreeModel.h"
 
 namespace {
-   const int maxMessageNotifLength = 20;
+   const int kMaxMessageNotifLength = 20;
 }
 
 AbstractChatWidgetState::AbstractChatWidgetState(ChatWidget* chat)
@@ -11,7 +11,7 @@ AbstractChatWidgetState::AbstractChatWidgetState(ChatWidget* chat)
 {
 }
 
-void AbstractChatWidgetState::sendMessage()
+void AbstractChatWidgetState::onSendMessage()
 {
    if (!canSendMessage()) {
       return;
@@ -26,7 +26,7 @@ void AbstractChatWidgetState::sendMessage()
    chat_->ui_->input_textEdit->clear();
 }
 
-void AbstractChatWidgetState::processMessageArrived(const Chat::MessagePtrList& messagePtr)
+void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList& messagePtr)
 {
    if (!canReceiveMessage()) {
       return;
@@ -53,8 +53,8 @@ void AbstractChatWidgetState::processMessageArrived(const Chat::MessagePtrList& 
          auto messageTitle = clientPartyPtr->displayName();
          auto messageText = message->messageText();
 
-         if (messageText.length() > maxMessageNotifLength) {
-            messageText = messageText.substr(0, maxMessageNotifLength) + "...";
+         if (messageText.length() > kMaxMessageNotifLength) {
+            messageText = messageText.substr(0, kMaxMessageNotifLength) + "...";
          }
 
          bs::ui::NotifyMessage notifyMsg;
@@ -68,32 +68,32 @@ void AbstractChatWidgetState::processMessageArrived(const Chat::MessagePtrList& 
 
    // Update tree
    if (bNewMessagesCounter > 0 && partyId != chat_->currentPartyId_) {
-      chat_->chatPartiesTreeModel_->increaseUnseenCounter(partyId, bNewMessagesCounter);
+      chat_->chatPartiesTreeModel_->onIncreaseUnseenCounter(partyId, bNewMessagesCounter);
    }
 
    chat_->ui_->textEditMessages->onMessageUpdate(messagePtr);
 }
 
-void AbstractChatWidgetState::changePartyStatus(const Chat::ClientPartyPtr& clientPartyPtr)
+void AbstractChatWidgetState::onChangePartyStatus(const Chat::ClientPartyPtr& clientPartyPtr)
 {
    if (!canChangePartyStatus()) {
       return;
    }
 
-   chat_->chatPartiesTreeModel_->partyStatusChanged(clientPartyPtr);
+   chat_->chatPartiesTreeModel_->onPartyStatusChanged(clientPartyPtr);
 }
 
-void AbstractChatWidgetState::resetPartyModel()
+void AbstractChatWidgetState::onResetPartyModel()
 {
    if (!canResetPartyModel()) {
       return;
    }
 
-   chat_->chatPartiesTreeModel_->partyModelChanged();
+   chat_->chatPartiesTreeModel_->onPartyModelChanged();
    chat_->onActivatePartyId(QString::fromStdString(chat_->currentPartyId_));
 }
 
-void AbstractChatWidgetState::messageRead(const std::string& partyId, const std::string& messageId)
+void AbstractChatWidgetState::onMessageRead(const std::string& partyId, const std::string& messageId)
 {
    if (!canResetReadMessage()) {
       return;
@@ -102,7 +102,7 @@ void AbstractChatWidgetState::messageRead(const std::string& partyId, const std:
    chat_->chatClientServicePtr_->SetMessageSeen(partyId, messageId);
 }
 
-void AbstractChatWidgetState::changeMessageState(const std::string& partyId, const std::string& message_id, const int party_message_state)
+void AbstractChatWidgetState::onChangeMessageState(const std::string& partyId, const std::string& message_id, const int party_message_state)
 {
    if (!canChangeMessageState()) {
       return;
@@ -113,11 +113,11 @@ void AbstractChatWidgetState::changeMessageState(const std::string& partyId, con
    // Update tree view if needed
    if (static_cast<Chat::PartyMessageState>(party_message_state) == Chat::PartyMessageState::SEEN
       && message->senderHash() != chat_->ownUserId_) {
-      chat_->chatPartiesTreeModel_->decreaseUnseenCounter(partyId, 1);
+      chat_->chatPartiesTreeModel_->onDecreaseUnseenCounter(partyId, 1);
    }
 }
 
-void AbstractChatWidgetState::acceptPartyRequest(const std::string& partyId)
+void AbstractChatWidgetState::onAcceptPartyRequest(const std::string& partyId)
 {
    if (!canAcceptPartyRequest()) {
       return;
@@ -126,7 +126,7 @@ void AbstractChatWidgetState::acceptPartyRequest(const std::string& partyId)
    chat_->chatClientServicePtr_->AcceptPrivateParty(partyId);
 }
 
-void AbstractChatWidgetState::rejectPartyRequest(const std::string& partyId)
+void AbstractChatWidgetState::onRejectPartyRequest(const std::string& partyId)
 {
    if (!canRejectPartyRequest()) {
       return;
@@ -135,7 +135,7 @@ void AbstractChatWidgetState::rejectPartyRequest(const std::string& partyId)
    chat_->chatClientServicePtr_->RejectPrivateParty(partyId);
 }
 
-void AbstractChatWidgetState::sendPartyRequest(const std::string& partyId)
+void AbstractChatWidgetState::onSendPartyRequest(const std::string& partyId)
 {
    if (!canSendPartyRequest()) {
       return;
@@ -144,7 +144,7 @@ void AbstractChatWidgetState::sendPartyRequest(const std::string& partyId)
    chat_->chatClientServicePtr_->RequestPrivateParty(partyId);
 }
 
-void AbstractChatWidgetState::removePartyRequest(const std::string& partyId)
+void AbstractChatWidgetState::onRemovePartyRequest(const std::string& partyId)
 {
    if (!canRemovePartyRequest()) {
       return;
@@ -153,7 +153,7 @@ void AbstractChatWidgetState::removePartyRequest(const std::string& partyId)
    chat_->chatClientServicePtr_->DeletePrivateParty(partyId);
 }
 
-void AbstractChatWidgetState::newPartyRequest(const std::string& partyName)
+void AbstractChatWidgetState::onNewPartyRequest(const std::string& partyName)
 {
    if (!canSendPartyRequest()) {
       return;
@@ -162,7 +162,7 @@ void AbstractChatWidgetState::newPartyRequest(const std::string& partyName)
    chat_->chatClientServicePtr_->RequestPrivateParty(partyName);
 }
 
-void AbstractChatWidgetState::updateDisplayName(const std::string& partyId, const std::string& contactName)
+void AbstractChatWidgetState::onUpdateDisplayName(const std::string& partyId, const std::string& contactName)
 {
    if (!canUpdatePartyName()) {
       return;

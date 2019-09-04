@@ -14,7 +14,7 @@ public:
 protected:
    void applyUserFrameChange() override {}
    void applyChatFrameChange() override {
-      chat_->ui_->textEditMessages->switchToChat(chat_->currentPartyId_);
+      chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentPartyId_);
 
       chat_->ui_->pushButton_AcceptSend->setText(buttonSentPartyText);
       chat_->ui_->pushButton_AcceptSend->disconnect();

@@ -9,18 +9,17 @@ PartyTreeItem::PartyTreeItem(const QVariant& data, UI::ElementType modelType, Pa
 
 PartyTreeItem::~PartyTreeItem()
 {
-   qDeleteAll(childItems_);
 }
 
 PartyTreeItem* PartyTreeItem::child(int number)
 {
    Q_ASSERT(number >= 0 && number < childItems_.size());
-   return childItems_.value(number);
+   return childItems_[number].get();
 }
 
 int PartyTreeItem::childCount() const
 {
-   return childItems_.count();
+   return childItems_.size();
 }
 
 int PartyTreeItem::columnCount() const
@@ -33,9 +32,9 @@ QVariant PartyTreeItem::data() const
    return itemData_;
 }
 
-bool PartyTreeItem::insertChildren(PartyTreeItem* item)
+bool PartyTreeItem::insertChildren(std::unique_ptr<PartyTreeItem>&& item)
 {
-   childItems_.push_back(item);
+   childItems_.push_back(std::move(item));
    return true;
 }
 
@@ -44,28 +43,21 @@ PartyTreeItem* PartyTreeItem::parent()
    return parentItem_;
 }
 
-bool PartyTreeItem::removeChildren(int position, int count)
-{
-   if (position < 0 || position + count > childItems_.size()) {
-      return false;
-   }
-
-   for (int row = 0; row < count; ++row)
-      delete childItems_.takeAt(position);
-
-   return true;
-}
-
 void PartyTreeItem::removeAll()
 {
-   qDeleteAll(childItems_);
    childItems_.clear();
 }
 
 int PartyTreeItem::childNumber() const
 {
    if (parentItem_) {
-      return parentItem_->childItems_.indexOf(const_cast<PartyTreeItem*>(this));
+      for (int iChild = 0; iChild < parentItem_->childCount(); ++iChild) {
+         if (parentItem_->childItems_[iChild].get() != this) {
+            continue;
+         }
+
+         return iChild;
+      }
    }
 
    Q_ASSERT(false);

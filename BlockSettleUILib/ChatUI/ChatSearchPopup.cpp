@@ -13,7 +13,7 @@ ChatSearchPopup::ChatSearchPopup(QWidget *parent) :
    ui_->setupUi(this);
 
    ui_->chatSearchPopupLabel->setContextMenuPolicy(Qt::CustomContextMenu);
-   connect(ui_->chatSearchPopupLabel, &QLabel::customContextMenuRequested, this, &ChatSearchPopup::showMenu);
+   connect(ui_->chatSearchPopupLabel, &QLabel::customContextMenuRequested, this, &ChatSearchPopup::onShowMenu);
 
    searchPopupMenu_ = new QMenu(this);   
    userContactAction_ = searchPopupMenu_->addAction(QString());
@@ -42,7 +42,7 @@ void ChatSearchPopup::setUserIsInContacts(const bool &isInContacts)
    isInContacts_ = isInContacts;
 }
 
-void ChatSearchPopup::showMenu(const QPoint &pos)
+void ChatSearchPopup::onShowMenu(const QPoint &pos)
 {
    if (!userID_.isEmpty()) {
 

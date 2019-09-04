@@ -17,7 +17,7 @@ ChatPartiesTreeModel::~ChatPartiesTreeModel()
 {
 }
 
-void ChatPartiesTreeModel::partyModelChanged()
+void ChatPartiesTreeModel::onPartyModelChanged()
 {
    Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
 
@@ -25,49 +25,48 @@ void ChatPartiesTreeModel::partyModelChanged()
 
    rootItem_->removeAll();
 
-   PartyTreeItem* globalSection = new PartyTreeItem(ContainerTabGlobal, UI::ElementType::Container, rootItem_);
-   PartyTreeItem* privateSection = new PartyTreeItem(ContainerTabPrivate, UI::ElementType::Container, rootItem_);
-   PartyTreeItem* requestSection = new PartyTreeItem(ContainerTabContactRequest, UI::ElementType::Container, rootItem_);
+   std::unique_ptr<PartyTreeItem> globalSection = std::make_unique<PartyTreeItem>(ContainerTabGlobal, UI::ElementType::Container, rootItem_);
+   std::unique_ptr<PartyTreeItem> privateSection = std::make_unique<PartyTreeItem>(ContainerTabPrivate, UI::ElementType::Container, rootItem_);
+   std::unique_ptr<PartyTreeItem> requestSection = std::make_unique<PartyTreeItem>(ContainerTabContactRequest, UI::ElementType::Container, rootItem_);
 
    Chat::IdPartyList idPartyList = clientPartyModelPtr->getIdPartyList();
 
-   for (const auto& id : idPartyList)
-   {
+   for (const auto& id : idPartyList) {
       Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(id);
 
       if (clientPartyPtr->isGlobal()) {
          QVariant stored;
          stored.setValue(clientPartyPtr);
-         PartyTreeItem* globalItem = new PartyTreeItem(stored, UI::ElementType::Party, globalSection);
-         globalSection->insertChildren(globalItem);
+         std::unique_ptr<PartyTreeItem> globalItem = std::make_unique<PartyTreeItem>(stored, UI::ElementType::Party, globalSection.get());
+         globalSection->insertChildren(std::move(globalItem));
       }
 
       if (clientPartyPtr->isPrivateStandard()) {
          QVariant stored;
          stored.setValue(clientPartyPtr);
 
-         PartyTreeItem* parentSection = clientPartyPtr->partyState() == Chat::PartyState::INITIALIZED ? privateSection : requestSection;
+         PartyTreeItem* parentSection = clientPartyPtr->partyState() == Chat::PartyState::INITIALIZED ? privateSection.get() : requestSection.get();
 
-         PartyTreeItem* privateItem = new PartyTreeItem(stored, UI::ElementType::Party, parentSection);
-         parentSection->insertChildren(privateItem);
+         std::unique_ptr<PartyTreeItem> privateItem = std::make_unique<PartyTreeItem>(stored, UI::ElementType::Party, parentSection);
+         parentSection->insertChildren(std::move(privateItem));
       }
    }
 
-   rootItem_->insertChildren(globalSection);
-   rootItem_->insertChildren(privateSection);
-   rootItem_->insertChildren(requestSection);
+   rootItem_->insertChildren(std::move(globalSection));
+   rootItem_->insertChildren(std::move(privateSection));
+   rootItem_->insertChildren(std::move(requestSection));
 
    endResetModel();
 }
 
-void ChatPartiesTreeModel::cleanModel()
+void ChatPartiesTreeModel::onCleanModel()
 {
    beginResetModel();
    rootItem_->removeAll();
    endResetModel();
 }
 
-void ChatPartiesTreeModel::partyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr)
+void ChatPartiesTreeModel::onPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr)
 {
    const QModelIndex partyIndex = getPartyIndexById(clientPartyPtr->id());
 
@@ -76,7 +75,7 @@ void ChatPartiesTreeModel::partyStatusChanged(const Chat::ClientPartyPtr& client
    }
 }
 
-void ChatPartiesTreeModel::increaseUnseenCounter(const std::string& partyId, int newMessageCount)
+void ChatPartiesTreeModel::onIncreaseUnseenCounter(const std::string& partyId, int newMessageCount)
 {
    const QModelIndex partyIndex = getPartyIndexById(partyId);
    if (!partyIndex.isValid()) {
@@ -88,7 +87,7 @@ void ChatPartiesTreeModel::increaseUnseenCounter(const std::string& partyId, int
 
 }
 
-void ChatPartiesTreeModel::decreaseUnseenCounter(const std::string& partyId, int seenMessageCount)
+void ChatPartiesTreeModel::onDecreaseUnseenCounter(const std::string& partyId, int seenMessageCount)
 {
    const QModelIndex partyIndex = getPartyIndexById(partyId);
    if (!partyIndex.isValid()) {
