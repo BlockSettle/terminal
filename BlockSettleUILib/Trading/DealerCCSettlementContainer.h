@@ -27,7 +27,7 @@ public:
    DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
       , const std::string &quoteReqId, uint64_t lotSize, const bs::Address &genAddr, const std::string &ownRecvAddr
       , const std::shared_ptr<bs::sync::Wallet> &, const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ArmoryConnection> &, bool autoSign);
+      , const std::shared_ptr<ArmoryConnection> &);
    ~DealerCCSettlementContainer() override;
 
    bool startSigning();
@@ -70,7 +70,6 @@ private:
    const std::string          quoteReqId_;
    const uint64_t             lotSize_;
    const bs::Address          genesisAddr_;
-   const bool                 autoSign_;
    const bool                 delivery_;
    std::shared_ptr<bs::sync::Wallet>   wallet_;
    std::shared_ptr<SignContainer>      signingContainer_;

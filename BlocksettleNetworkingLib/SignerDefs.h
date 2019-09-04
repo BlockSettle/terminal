@@ -38,6 +38,16 @@ namespace signer {
       Failed = 2,
    };
 
+   enum class AutoSignCategory
+   {
+      NotDefined = 0,
+      RegularTx = 1,
+      SettlementDealer = 2,
+      SettlementRequestor = 3,
+      SettlementOTC = 4,
+      CreateLeaf = 5,
+   };
+
 } // signer
 
 namespace sync {

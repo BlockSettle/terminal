@@ -624,20 +624,28 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
       }
       needPassword = !hdWallet->encryptionTypes().empty();
    }
-   SecureBinaryData password;
-   if (needPassword) {
-      const auto passwordIt = passwords_.find(rootId);
-      if (passwordIt != passwords_.end()) {
-         needPassword = false;
-         password = passwordIt->second;
+
+   try {
+      auto auotSignCategory = static_cast<bs::signer::AutoSignCategory>(dialogData.value<int>("AutoSignCategory"));
+      // currently only dealer can use autosign
+      bool autoSignAllowed = (auotSignCategory == bs::signer::AutoSignCategory::SettlementDealer);
+
+      SecureBinaryData password;
+      if (autoSignAllowed && needPassword) {
+         const auto passwordIt = passwords_.find(rootId);
+         if (passwordIt != passwords_.end()) {
+            needPassword = false;
+            password = passwordIt->second;
+         }
       }
-   }
-   if (!needPassword) {
-      if (cb) {
-         cb(ErrorCode::NoError, password);
+
+      if (!needPassword) {
+         if (cb) {
+            cb(ErrorCode::NoError, password);
+         }
+         return true;
       }
-      return true;
-   }
+   } catch (...) {}
 
    return RequestPassword(rootId, txReq, reqType, dialogData, cb);
 }
