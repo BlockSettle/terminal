@@ -28,10 +28,6 @@ ChatUserListTreeView::ChatUserListTreeView(QWidget *parent)
 
    connect(this, &QTreeView::clicked, this, &ChatUserListTreeView::onClicked);
    connect(this, &QTreeView::doubleClicked, this, &ChatUserListTreeView::onDoubleClicked);
-   connect(this, &QTreeView::activated, this, [this]() {
-      int x = 0;
-      ++x;
-   });
 }
 
 void ChatUserListTreeView::setActiveChatLabel(QLabel *label)
