@@ -459,7 +459,7 @@ void ChatMessagesTextEdit::onMessageUpdate(const Chat::MessagePtrList& messagePt
    const std::string& partyId = !messagePtrList.empty() ? messagePtrList[0]->partyId() : "";
 #endif
    Chat::MessagePtrList messagePtrListSorted = messagePtrList;
-   std::sort(messagePtrListSorted.begin(), messagePtrListSorted.end(), [](const auto left, const auto right) -> bool {
+   std::sort(messagePtrListSorted.begin(), messagePtrListSorted.end(), [](const auto& left, const auto& right) -> bool {
       return left->timestamp() < right->timestamp();
    });
    for (const auto& messagePtr : messagePtrListSorted) {
