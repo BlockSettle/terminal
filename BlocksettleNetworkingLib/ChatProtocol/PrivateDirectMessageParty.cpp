@@ -28,37 +28,26 @@ namespace Chat
       return false;
    }
 
-   // TODO: In case of performance problems in chat server 
-   //    consider better solution to find and return all recipients different than given user
    PartyRecipientPtr PrivateDirectMessageParty::getSecondRecipient(const std::string& firstRecipientUserName)
    {
-      PartyRecipientPtr found;
+      PartyRecipientsPtrList recipients = getRecipientsExceptMe(firstRecipientUserName);
 
-      for (const auto& recipient : recipients_)
+      if (recipients.empty())
       {
-         if (recipient->userName() == firstRecipientUserName)
-         {
-            continue;
-         }
-
-         found = recipient;
+         return nullptr;
       }
 
-      return found;
+      return recipients_.back();
    }
 
    PartyRecipientsPtrList PrivateDirectMessageParty::getRecipientsExceptMe(const std::string& me)
    {
       PartyRecipientsPtrList recipients;
-      for (const auto& recipient : recipients_)
-      {
-         if (recipient->userName() == me)
-         {
-            continue;
-         }
 
-         recipients.push_back(recipient);
-      }
+      std::copy_if(recipients_.begin(), recipients_.end(), std::back_inserter(recipients),
+         [me](const PartyRecipientPtr& existing) {
+            return existing->userName() != me; 
+         });
 
       return recipients;
    }
