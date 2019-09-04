@@ -27,10 +27,12 @@ class ChatMessagesTextEditStyle : public QWidget
               WRITE setColorHyperlink)
    Q_PROPERTY(QColor color_white READ colorWhite
               WRITE setColorWhite)
+   Q_PROPERTY(QColor color_white READ colorRed
+              WRITE setColorRed)
 
 public:
    inline explicit ChatMessagesTextEditStyle(QWidget *parent)
-      : QWidget(parent), colorHyperlink_(Qt::blue), colorWhite_(Qt::white)
+      : QWidget(parent), colorHyperlink_(Qt::blue), colorWhite_(Qt::white), colorRed_(Qt::red)
    {
       setVisible(false);
    }
@@ -45,9 +47,13 @@ public:
       colorWhite_ = colorWhite;
    }
 
+   QColor colorRed() const { return colorRed_; }
+   void setColorRed(QColor val) { colorRed_ = val; }
+
 private:
    QColor colorHyperlink_;
    QColor colorWhite_;
+   QColor colorRed_;
 };
 
 class ChatMessagesTextEdit : public QTextBrowser

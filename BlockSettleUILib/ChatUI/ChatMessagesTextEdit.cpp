@@ -512,7 +512,7 @@ QString ChatMessagesTextEdit::toHtmlUsername(const std::string& username, const 
 
 QString ChatMessagesTextEdit::toHtmlInvalid(const QString &text)
 {
-   QString changedText = QString(QLatin1Literal("<font color=\"%1\">%2</font>")).arg(QLatin1String("red")).arg(text);
+   QString changedText = QString(QLatin1Literal("<font color=\"%1\">%2</font>")).arg(internalStyle_.colorRed().name()).arg(text);
    return changedText;
 }
 
