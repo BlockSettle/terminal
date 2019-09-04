@@ -95,7 +95,6 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
       }
       case Column::Status:{
          return QString();
-         break;
       }
       case Column::Message: {
          //QString text = QLatin1String("[%1] %2");
