@@ -18,8 +18,8 @@ FILE(GLOB HEADERS
    Settings/*.h
    Trading/*.h
    ChatUI/*.h
-	ChatUI/ChatWidgetStates/*.h
-	ChatUI/ChatWidgetStates/*.hpp
+   ChatUI/ChatWidgetStates/*.h
+   ChatUI/ChatWidgetStates/*.hpp
 )
 FILE(GLOB UI_FILES
    *.ui
