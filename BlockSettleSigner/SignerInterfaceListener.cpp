@@ -242,7 +242,7 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       break;
    case signer::CreateSettlementLeaf:
       dialogData->setValue("Title", tr("Create Settlement Leaf"));
-      requestPasswordForToken(dialogData, walletInfo);
+      requestPasswordForSettlementLeaf(dialogData, walletInfo);
       break;
    case signer::PromoteHDWallet:
       requestPasswordForPromoteHDWallet(dialogData, walletInfo);
