@@ -102,11 +102,11 @@ namespace Chat
       for (const TableForeignKey& foreignKey : structure.foreignKeys)
       {
          QStringList parts {
-            QString(QLatin1String("FOREIGN KEY (%1)")).arg(foreignKey.columnKey),
-            QString(QLatin1String("REFERENCES %1(%2)"))
+            QStringLiteral("FOREIGN KEY (%1)").arg(foreignKey.columnKey),
+            QStringLiteral("REFERENCES %1(%2)")
                   .arg(foreignKey.foreignTable)
                   .arg(foreignKey.foreignColumn),
-            QString(QLatin1String("%1")).arg(foreignKey.foreignReferentialAction)
+            QStringLiteral("%1").arg(foreignKey.foreignReferentialAction)
          };
 
          queryParts << parts.join(QLatin1Char(' '));
@@ -114,7 +114,7 @@ namespace Chat
 
       for (const TableUniqueCondition& uniqueCondition : structure.uniqueConditions)
       {
-         queryParts << QString(QLatin1String("UNIQUE (%1, %2)"))
+         queryParts << QStringLiteral("UNIQUE (%1, %2)")
             .arg(uniqueCondition.firstColumn)
             .arg(uniqueCondition.secondColumn);
       }
@@ -126,7 +126,7 @@ namespace Chat
 
    bool DatabaseCreator::checkColumns(const QString& tableName)
    {
-      QString cmd = QString(QLatin1String("DESCRIBE `%1`")).arg(tableName);
+      QString cmd = QStringLiteral("DESCRIBE `%1`").arg(tableName);
 
       QStringList tableColumns;
       QSqlQuery infoQuery;
@@ -140,7 +140,7 @@ namespace Chat
       else
       {
          // describe failed, check if you can list columns from sqlite
-         cmd = QString(QLatin1String("PRAGMA table_info(%1)")).arg(tableName);
+         cmd = QStringLiteral("PRAGMA table_info(%1)").arg(tableName);
 
          if (!ExecuteQuery(cmd, infoQuery))
          {
@@ -166,8 +166,7 @@ namespace Chat
                columnItem.columnName.toStdString(),
                columnItem.columnType.toStdString());
 
-            QString alterCmd = QString(QLatin1String("ALTER TABLE `%1` ADD COLUMN "
-               " `%2` %3;"))
+            QString alterCmd = QStringLiteral("ALTER TABLE `%1` ADD COLUMN `%2` %3;")
                .arg(tableName)
                .arg(columnItem.columnName)
                .arg(columnItem.columnType);

@@ -23,7 +23,7 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
       if (defaultValueHelp.isEmpty()) {
          defaultValueHelp = QLatin1String("<empty>");
       }
-      QString desc = QString(QLatin1String("%1. Default: %2")).arg(param->desc()).arg(defaultValueHelp);
+      QString desc = QStringLiteral("%1. Default: %2").arg(param->desc()).arg(defaultValueHelp);
 
       parser.addOption({ param->name(), desc, param->name() });
    }

@@ -156,7 +156,7 @@ namespace Chat
 
       auto id = query.lastInsertId().toULongLong();
 
-      partyTableId = QString(QLatin1String("%1")).arg(id).toStdString();
+      partyTableId = QStringLiteral("%1").arg(id).toStdString();
       return true;
    }
 
@@ -174,7 +174,7 @@ namespace Chat
          {
             int id = query.value(0).toULongLong();
 
-            partyTableId = QString(QLatin1String("%1")).arg(id).toStdString();
+            partyTableId = QStringLiteral("%1").arg(id).toStdString();
             return true;
          }
       }
@@ -346,11 +346,11 @@ namespace Chat
    void ClientDBLogic::readHistoryMessages(const std::string& partyId, const int limit, const int offset)
    {
       const QString cmd = 
-         QString(QLatin1String(
+         QStringLiteral(
             "SELECT message_id, timestamp, message_state, message_text, sender FROM party_message "
             "LEFT JOIN party ON party.id=party_message.party_table_id "
             "WHERE party_id=:partyId ORDER BY timestamp DESC LIMIT %1 OFFSET %2;"
-         )).arg(limit).arg(offset);
+         ).arg(limit).arg(offset);
 
       QSqlQuery query(getDb());
       query.prepare(cmd);

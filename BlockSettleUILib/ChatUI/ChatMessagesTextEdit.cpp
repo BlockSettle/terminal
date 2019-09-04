@@ -520,7 +520,7 @@ void ChatMessagesTextEdit::notifyMessageChanged(Chat::MessagePtr message)
 
 QString ChatMessagesTextEdit::toHtmlUsername(const std::string& username, const std::string& userId)
 {
-   return QString(QLatin1Literal("<a href=\"user:%1\" style=\"color:%2\">%3</a>"))
+   return QStringLiteral("<a href=\"user:%1\" style=\"color:%2\">%3</a>")
       .arg(QString::fromStdString(userId))
       .arg(internalStyle_.colorHyperlink().name())
       .arg(QString::fromStdString(username));
@@ -528,7 +528,7 @@ QString ChatMessagesTextEdit::toHtmlUsername(const std::string& username, const 
 
 QString ChatMessagesTextEdit::toHtmlInvalid(const QString &text)
 {
-   QString changedText = QString(QLatin1Literal("<font color=\"%1\">%2</font>")).arg(internalStyle_.colorRed().name()).arg(text);
+   QString changedText = QStringLiteral("<font color=\"%1\">%2</font>").arg(internalStyle_.colorRed().name()).arg(text);
    return changedText;
 }
 
