@@ -83,20 +83,20 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData()
 
       dialogData.setValue("DeliveryReceived", QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(txReq_.change.value)));
+                    .arg(UiUtils::displayCCAmount(txReq_.change.value / lotSize_)));
    }
    else {
       dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
                     .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(txReq_.inputAmount())));
+                    .arg(UiUtils::displayCCAmount(txReq_.inputAmount() / lotSize_)));
 
       dialogData.setValue("ReturnAmount", QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(txReq_.change.value)));
+                    .arg(UiUtils::displayCCAmount(txReq_.change.value / lotSize_)));
 
       dialogData.setValue("DeliveryAmount", QStringLiteral("- %2 %1")
                     .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(txReq_.inputAmount() - txReq_.change.value)));
+                    .arg(UiUtils::displayCCAmount((txReq_.inputAmount() - txReq_.change.value) / lotSize_)));
 
       dialogData.setValue("PaymentReceived", QStringLiteral("+ %2 %1")
                     .arg(UiUtils::XbtCurrency)

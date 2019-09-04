@@ -27,6 +27,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , genAddress_(assetMgr_->getCCGenesisAddr(product()))
    , dealerAddress_(quote_.dealerAuthPublicKey)
    , signer_(armory)
+   , lotSize_(assetMgr_->getCCLotSize(product()))
 {
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
@@ -44,8 +45,6 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    else {
       throw std::runtime_error("missing signing wallet");
    }
-
-   lotSize_ = assetMgr_->getCCLotSize(product());
 
    dealerTx_ = BinaryData::CreateFromHex(quote_.dealerTransaction);
    requesterTx_ = BinaryData::CreateFromHex(rfq_.coinTxInput);
@@ -93,20 +92,20 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
 
       dialogData.setValue("DeliveryReceived", QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(ccTxData_.change.value)));
+                    .arg(UiUtils::displayCCAmount(ccTxData_.change.value / lotSize_)));
    }
    else {
       dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
                     .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount())));
+                    .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount() / lotSize_)));
 
       dialogData.setValue("ReturnAmount", QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(ccTxData_.change.value)));
+                    .arg(UiUtils::displayCCAmount((ccTxData_.change.value / lotSize_))));
 
       dialogData.setValue("DeliveryAmount", QStringLiteral("- %2 %1")
                     .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount() - ccTxData_.change.value)));
+                    .arg(UiUtils::displayCCAmount((ccTxData_.inputAmount() - ccTxData_.change.value) / lotSize_)));
 
       dialogData.setValue("PaymentReceived", QStringLiteral("+ %2 %1")
                     .arg(UiUtils::XbtCurrency)
