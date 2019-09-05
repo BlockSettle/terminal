@@ -169,11 +169,8 @@ namespace Chat
       emit privatePartyCreated(newClientPrivatePartyPtr->id());
    }
 
-   void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const google::protobuf::Message& msg)
+   void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const PrivatePartyRequest& privatePartyRequest)
    {
-      PrivatePartyRequest privatePartyRequest;
-      privatePartyRequest.CopyFrom(msg);
-
       PartyPacket partyPacket = privatePartyRequest.party_packet();
 
       ClientPartyPtr newClientPrivatePartyPtr =

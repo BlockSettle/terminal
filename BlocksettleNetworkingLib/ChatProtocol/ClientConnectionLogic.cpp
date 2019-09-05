@@ -185,12 +185,12 @@ namespace Chat
 
    void ClientConnectionLogic::prepareAndSendPublicMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
    {
-      auto partyId = clientPartyPtr->id();
-      auto messageId = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
-      auto timestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
-      auto message = data;
-      auto encryptionType = Chat::EncryptionType::UNENCRYPTED;
-      auto partyMessageState = Chat::PartyMessageState::UNSENT;
+      const auto& partyId = clientPartyPtr->id();
+      const auto& messageId = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
+      const auto& timestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+      const auto& message = data;
+      const auto& encryptionType = Chat::EncryptionType::UNENCRYPTED;
+      const auto& partyMessageState = Chat::PartyMessageState::UNSENT;
 
       PartyMessagePacket partyMessagePacket;
       partyMessagePacket.set_party_id(partyId);

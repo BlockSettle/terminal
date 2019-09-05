@@ -42,7 +42,7 @@ namespace Chat
       void handlePartiesFromWelcomePacket(const WelcomeResponse& msg);
 
       void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName);
-      void createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const google::protobuf::Message& msg);
+      void createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const PrivatePartyRequest& privatePartyRequest);
 
    signals:
       void error(const Chat::ClientPartyLogicError& errorCode, const std::string& what = "");
