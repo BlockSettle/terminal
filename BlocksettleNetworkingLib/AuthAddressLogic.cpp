@@ -125,6 +125,8 @@ void ValidationAddressManager::setCustomACT(const
       throw std::runtime_error("ValidationAddressManager is already online");
    }
    actPtr_ = actPtr;
+   actPtr_->setAddressMgr(this);
+   actPtr_->start();
 }
 
 ////
@@ -377,7 +379,7 @@ bool ValidationAddressManager::getSpendableTxOutFor(const bs::Address &validatio
    {
       try {
          const auto& utxos = utxoVec.get();
-         if (utxos.empty() == 0) {
+         if (utxos.empty()) {
             throw AuthLogicException("no utxos available");
          }
          const auto utxo = getVettingUtxo(validationAddr, utxos, nbOutputs);
@@ -512,10 +514,6 @@ BinaryData ValidationAddressManager::fundUserAddress(
    To vet a user address, send it coins from a validation address.
    */
 
-   //#1: check the user address has no history
-   std::vector<BinaryData> addrVec;
-   addrVec.push_back(addr.prefixed());
-
    auto promPtr = std::make_shared<std::promise<bool>>();
    auto fut = promPtr->get_future();
    auto outpointCb = [promPtr](const OutpointBatch &batch)->void
@@ -538,18 +536,17 @@ BinaryData ValidationAddressManager::fundUserAddress(
    //#2: grab a utxo from a validation address
    auto promPtr2 = std::make_shared<std::promise<UTXO>>();
    auto fut2 = promPtr2->get_future();
-   auto spendableCb = [this, promPtr2, &validationAddr](const UTXO &utxo)
+   auto spendableCb = [this, promPtr2](const UTXO &utxo)
    {
-      if (!utxo.isInitialized()) {
-         auto ePtr = std::current_exception();
-         promPtr2->set_exception(ePtr);
-         throw AuthLogicException("could not select a utxo to vet with");
-      }
       promPtr2->set_value(utxo);
    };
    getSpendableTxOutFor(validationAddr, spendableCb);
 
-   return fundUserAddress(addr, feedPtr, fut2.get());
+   const auto utxo = fut2.get();
+   if (!utxo.isInitialized()) {
+      throw AuthLogicException("could not select a utxo to vet with");
+   }
+   return fundUserAddress(addr, feedPtr, utxo);
 }
 
 // fundUserAddress was divided because actual signing will be performed
@@ -577,9 +574,12 @@ BinaryData ValidationAddressManager::fundUserAddress(
    }
 
    //change: vetting coin value + fee
-   const uint64_t changeVal = vettingUtxo.getValue() - kAuthValueThreshold - 1000;
-   if (changeVal > 0) {
-      signer.addRecipient(addrIter->first.getRecipient(changeVal));
+   const int64_t changeVal = vettingUtxo.getValue() - kAuthValueThreshold - 1000;
+   if (changeVal < 0) {
+      throw AuthLogicException("insufficient spend volume");
+   }
+   else if (changeVal > 0) {
+      signer.addRecipient(addrIter->first.getRecipient((uint64_t)changeVal));
    }
 
    //sign & serialize tx
@@ -865,7 +865,9 @@ std::vector<OutpointData> AuthAddressLogic::getValidPaths(
    {
       promPtr->set_value(outpointBatch.outpoints_);
    };
-   vam.connPtr()->getOutpointsFor({ addr }, opLbd);
+   if (!vam.connPtr()->getOutpointsFor({ addr }, opLbd)) {
+      promPtr->set_value({});
+   }
 
    //sanity check on the address history
    auto&& opMap = futPtr.get();
