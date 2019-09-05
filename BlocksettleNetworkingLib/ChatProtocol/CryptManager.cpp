@@ -24,8 +24,8 @@ namespace Chat
 
    std::string CryptManager::validateUtf8(const Botan::SecureVector<uint8_t>& data)
    {
-      std::string result = QString::fromUtf8(reinterpret_cast<const char*>(data.data()), data.size()).toStdString();
-      if (result.size() != data.size() && !std::equal(data.begin(), data.end(), result.begin())) {
+      std::string result = QString::fromUtf8(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size())).toStdString();
+      if (result.size() != data.size() || !std::equal(data.begin(), data.end(), result.begin())) {
          throw std::runtime_error("invalid utf text detected");
       }
       return result;
@@ -41,7 +41,14 @@ namespace Chat
          cipher->setData(message);
 
          Botan::SecureVector<uint8_t> output;
-         cipher->finish(output);
+         try
+         {
+            cipher->finish(output);
+         }
+         catch (const std::exception& e)
+         {
+            loggerPtr_->error("Can't encrypt message: {}", e.what());
+         }
 
          std::string encryptedMessage = Botan::base64_encode(output);
 
@@ -62,9 +69,17 @@ namespace Chat
          decipher->setData(std::string(data.begin(), data.end()));
 
          Botan::SecureVector<uint8_t> output;
-         decipher->finish(output);
+         std::string decryptedMessage;
 
-         std::string decryptedMessage = validateUtf8(output);
+         try
+         {
+            decipher->finish(output);
+            decryptedMessage = validateUtf8(output);
+         }
+         catch (const std::exception& e)
+         {
+            loggerPtr_->error("Can't decrypt message: {}", e.what());
+         }
 
          return decryptedMessage;
       };
@@ -96,7 +111,15 @@ namespace Chat
          cipher->setAssociatedData(associatedData);
 
          Botan::SecureVector<uint8_t> output;
-         cipher->finish(output);
+
+         try
+         {
+            cipher->finish(output);
+         }
+         catch (const std::exception& e)
+         {
+            loggerPtr_->error("Can't encrypt message: {}", e.what());
+         }
 
          std::string encryptedMessage = Botan::base64_encode(output);
 
@@ -125,9 +148,17 @@ namespace Chat
          decipher->setAssociatedData(associatedData);
 
          Botan::SecureVector<uint8_t> output;
-         decipher->finish(output);
+         std::string decryptedMessage;
 
-         std::string decryptedMessage = validateUtf8(output);
+         try
+         {
+            decipher->finish(output);
+            decryptedMessage = validateUtf8(output);
+         }
+         catch (const std::exception& e)
+         {
+            loggerPtr_->error("Can't decrypt message: {}", e.what());
+         }
 
          return decryptedMessage;
       };

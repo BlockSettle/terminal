@@ -27,7 +27,8 @@ namespace Chat
       DeleteMessage,
       UpdatePartyDisplayName,
       CheckUnsentMessages,
-      ReadHistoryMessages
+      ReadHistoryMessages,
+      CannotOpenDatabase
    };
 
    class ClientDBLogic : public DatabaseExecutor
