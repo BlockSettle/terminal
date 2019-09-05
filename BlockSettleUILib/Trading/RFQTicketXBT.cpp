@@ -57,19 +57,21 @@ RFQTicketXBT::RFQTicketXBT(QWidget* parent)
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &RFQTicketXBT::onBuySelected);
 
    connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &RFQTicketXBT::submitButtonClicked);
-   connect(ui_->toolButtonXBTInputs, &QPushButton::clicked, this, &RFQTicketXBT::showCoinControl);
+   connect(ui_->toolButtonXBTInputsSend, &QPushButton::clicked, this, &RFQTicketXBT::showCoinControl);
    connect(ui_->toolButtonMax, &QPushButton::clicked, this, &RFQTicketXBT::onMaxClicked);
-   connect(ui_->comboBoxXBTWallets, SIGNAL(currentIndexChanged(int)), this, SLOT(walletSelected(int)));
+   connect(ui_->comboBoxXBTWalletsRecv, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQTicketXBT::walletSelectedRecv);
+   connect(ui_->comboBoxXBTWalletsSend, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQTicketXBT::walletSelectedSend);
 
    connect(ui_->pushButtonCreateWallet, &QPushButton::clicked, this, &RFQTicketXBT::onCreateWalletClicked);
 
    connect(ui_->lineEditAmount, &QLineEdit::textEdited, this, &RFQTicketXBT::onAmountEdited);
 
-   connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(onAuthAddrChanged(int)));
+   connect(ui_->authenticationAddressComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQTicketXBT::onAuthAddrChanged);
    connect(this, &RFQTicketXBT::update, this, &RFQTicketXBT::onTransactinDataChanged);
 
    ui_->comboBoxCCWallets->setEnabled(false);
-   ui_->comboBoxXBTWallets->setEnabled(false);
+   ui_->comboBoxXBTWalletsRecv->setEnabled(false);
+   ui_->comboBoxXBTWalletsSend->setEnabled(false);
 
    disablePanel();
 }
@@ -207,9 +209,10 @@ void RFQTicketXBT::updatePanel()
    ui_->toolButtonMax->setVisible(selectedSide == bs::network::Side::Sell);
 
    if (currentGroupType_ != ProductGroupType::FXGroupType) {
-      bool buyXBT = isXBTProduct() ^ (selectedSide == bs::network::Side::Sell);
-      ui_->toolButtonXBTInputs->setVisible(!buyXBT);
+      const bool buyXBT = isXBTProduct() != (selectedSide == bs::network::Side::Sell);
       ui_->recAddressLayout->setVisible(buyXBT);
+      ui_->XBTWalletLayoutRecv->setVisible(buyXBT);
+      ui_->XBTWalletLayoutSend->setVisible(!buyXBT);
    }
 
    updateIndicativePrice();
@@ -351,20 +354,30 @@ void RFQTicketXBT::walletsLoaded()
    if (!signingContainer_ || !walletsManager_ || !walletsManager_->hdWalletsCount()) {
       return;
    }
-   ui_->comboBoxXBTWallets->clear();
+
+   ui_->comboBoxXBTWalletsRecv->clear();
+   ui_->comboBoxXBTWalletsSend->clear();
+
    if (signingContainer_->isOffline()) {
-      ui_->comboBoxXBTWallets->setEnabled(false);
+      ui_->comboBoxXBTWalletsRecv->setEnabled(false);
+      ui_->comboBoxXBTWalletsSend->setEnabled(false);
    }
    else {
-      ui_->comboBoxXBTWallets->setEnabled(true);
-      walletSelected(UiUtils::fillWalletsComboBox(ui_->comboBoxXBTWallets, walletsManager_, signingContainer_));
+      ui_->comboBoxXBTWalletsRecv->setEnabled(true);
+      ui_->comboBoxXBTWalletsSend->setEnabled(true);
+
+      // Only full wallets could be used to send, recv could be also done with WO
+      int walletIndex = UiUtils::fillWalletsComboBox(ui_->comboBoxXBTWalletsRecv, walletsManager_, false);
+      UiUtils::fillWalletsComboBox(ui_->comboBoxXBTWalletsSend, walletsManager_, true);
+      walletSelectedRecv(walletIndex);
    }
 }
 
 void RFQTicketXBT::onSignerReady()
 {
    updateSubmitButton();
-   ui_->receivingWalletWidget->setEnabled(!signingContainer_->isOffline());
+   ui_->receivingWalletWidgetRecv->setEnabled(!signingContainer_->isOffline());
+   ui_->receivingWalletWidgetSend->setEnabled(!signingContainer_->isOffline());
 }
 
 void RFQTicketXBT::fillRecvAddresses()
@@ -396,14 +409,25 @@ void RFQTicketXBT::setCurrentWallet(const std::shared_ptr<bs::sync::Wallet> &new
    setTransactionData();
 }
 
-void RFQTicketXBT::walletSelected(int index)
+void RFQTicketXBT::walletSelectedRecv(int index)
 {
    if (index == -1) {
       return;
    }
 
    if (walletsManager_) {
-      setCurrentWallet(walletsManager_->getWalletById(ui_->comboBoxXBTWallets->currentData(UiUtils::WalletIdRole).toString().toStdString()));
+      setCurrentWallet(walletsManager_->getWalletById(ui_->comboBoxXBTWalletsRecv->currentData(UiUtils::WalletIdRole).toString().toStdString()));
+   }
+}
+
+void RFQTicketXBT::walletSelectedSend(int index)
+{
+   if (index == -1) {
+      return;
+   }
+
+   if (walletsManager_) {
+      setCurrentWallet(walletsManager_->getWalletById(ui_->comboBoxXBTWalletsSend->currentData(UiUtils::WalletIdRole).toString().toStdString()));
    }
 }
 
@@ -983,7 +1007,7 @@ void RFQTicketXBT::productSelectionChanged()
    ui_->lineEditAmount->clear();
 
    ui_->toolButtonMax->setEnabled(true);
-   ui_->toolButtonXBTInputs->setEnabled(true);
+   ui_->toolButtonXBTInputsSend->setEnabled(true);
 
    if (currentGroupType_ == ProductGroupType::FXGroupType) {
       ui_->lineEditAmount->setValidator(fxAmountValidator_);
@@ -995,7 +1019,7 @@ void RFQTicketXBT::productSelectionChanged()
 
       ui_->lineEditAmount->setEnabled(canTradeXBT);
       ui_->toolButtonMax->setEnabled(canTradeXBT);
-      ui_->toolButtonXBTInputs->setEnabled(canTradeXBT);
+      ui_->toolButtonXBTInputsSend->setEnabled(canTradeXBT);
 
       if (!canTradeXBT) {
          ui_->labelBalanceValue->setText(tr("---"));
@@ -1003,23 +1027,14 @@ void RFQTicketXBT::productSelectionChanged()
       }
 
       if (isXBTProduct()) {         
-         if (ui_->pushButtonSell->isChecked()) {
-            ui_->labelWalletName->setText(tr("Payment Wallet"));
-         }
-         else {
-            ui_->labelWalletName->setText(tr("Receiving Wallet"));
-         }
          ui_->lineEditAmount->setValidator(xbtAmountValidator_);
-
       } else {
          if (currentGroupType_ == ProductGroupType::CCGroupType) {
             if (ui_->pushButtonSell->isChecked()) {
                ui_->labelCCWalletName->setText(tr("Delivery Wallet"));
-               ui_->labelWalletName->setText(tr("Receiving Wallet"));
             }
             else {
                ui_->labelCCWalletName->setText(tr("Receiving Wallet"));
-               ui_->labelWalletName->setText(tr("Payment Wallet"));
             }
             ui_->lineEditAmount->setValidator(ccAmountValidator_);
 
@@ -1052,12 +1067,6 @@ void RFQTicketXBT::productSelectionChanged()
                }
             }
          } else {
-            if (ui_->pushButtonSell->isChecked()) {
-               ui_->labelWalletName->setText(tr("Payment Wallet"));
-            }
-            else {
-               ui_->labelWalletName->setText(tr("Receiving Wallet"));
-            }
             ui_->lineEditAmount->setValidator(fxAmountValidator_);
          }
       }

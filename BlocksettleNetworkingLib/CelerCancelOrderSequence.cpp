@@ -3,8 +3,6 @@
 #include "NettyCommunication.pb.h"
 #include "UpstreamOrderProto.pb.h"
 
-#include <QDate>
-
 #include <spdlog/spdlog.h>
 
 using namespace com::celertech::baseserver::communication::protobuf;

@@ -384,6 +384,8 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
       return false;
    }
 
+   SPDLOG_LOGGER_DEBUG(logger_, "broadcast new TX: {}", rawTx.toHexStr());
+
    bdv_->broadcastZC(rawTx);
    return true;
 }

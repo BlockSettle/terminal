@@ -94,7 +94,8 @@ private slots:
    void onBuySelected();
 
    void showCoinControl();
-   void walletSelected(int index);
+   void walletSelectedRecv(int index);
+   void walletSelectedSend(int index);
 
    void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
 
