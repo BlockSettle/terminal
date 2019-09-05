@@ -89,7 +89,7 @@ private:
    const std::string          dealerAddress_;
    bs::CheckRecipSigner       signer_;
 
-   uint64_t       lotSize_;
+   const uint64_t lotSize_;
    unsigned int   ccSignId_ = 0;
    unsigned int   infoReqId_ = 0;
    bool           userKeyOk_ = false;
