@@ -277,7 +277,7 @@ TEST_F(TestAuth, ValidationAddressManager)
       }
 
       //validation address should still be valid
-      EXPECT_EQ(maw.update(), 2);
+      EXPECT_GE(maw.update(), 2);
       EXPECT_TRUE(maw.isValid(validationAddr_));
 
       //validation address should have no eligible outpoints for vetting at this point
@@ -289,7 +289,7 @@ TEST_F(TestAuth, ValidationAddressManager)
       mineBlocks(1);
 
       //validation address should still be valid
-      EXPECT_EQ(maw.update(), 2);
+      EXPECT_GE(maw.update(), 2);
       EXPECT_TRUE(maw.isValid(validationAddr_));
 
       //validation address should have an eligible outpoint and no zc
@@ -299,7 +299,7 @@ TEST_F(TestAuth, ValidationAddressManager)
 
    //add a few blocks, check validation address is still valid
    mineBlocks(3);
-   EXPECT_EQ(maw.update(), 0);
+   EXPECT_EQ(maw.update(), 2);
    EXPECT_TRUE(maw.isValid(validationAddr_));
 
    //revoke validation address
@@ -312,7 +312,6 @@ TEST_F(TestAuth, ValidationAddressManager)
    {
       ASSERT_FALSE(true);
    }
-
 
    //should still be valid prior to update
    EXPECT_TRUE(maw.isValid(validationAddr_));
@@ -829,7 +828,7 @@ TEST_F(TestAuth, Revoke)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-TEST_F(TestAuth, ConcurrencyTest)
+TEST_F(TestAuth, Concurrency)
 {
    ASSERT_FALSE(validationAddr_.isNull());
 
@@ -851,7 +850,7 @@ TEST_F(TestAuth, ConcurrencyTest)
       privKey2, privKey3, validationPrivKey_
    };
    auto resolverMam = std::make_shared<ResolverManyAddresses>(authPrivKeys);
-   
+
    {
       //first UTXO, should remain untouched until validation address 
       //is revoked
@@ -881,10 +880,10 @@ TEST_F(TestAuth, ConcurrencyTest)
 
    ASSERT_NE(authWallet_, nullptr);
 
-   ValidationAddressManager vam(envPtr_->armoryConnection());
-   vam.addValidationAddress(validationAddr_);
-   vam.addValidationAddress(validationAddr2);
-   vam.addValidationAddress(validationAddr3);
+   auto vam = std::make_shared< ValidationAddressManager>(envPtr_->armoryConnection());
+   vam->addValidationAddress(validationAddr_);
+   vam->addValidationAddress(validationAddr2);
+   vam->addValidationAddress(validationAddr3);
 
    /*validation leg*/
 
@@ -902,73 +901,71 @@ TEST_F(TestAuth, ConcurrencyTest)
    };
 
    std::vector<bs::Address> authAddresses;
-   for(unsigned i=0; i<6; i++)
+   for (unsigned i = 0; i < 6; i++) {
       authAddresses.push_back(getNewAuthAddress());
-
+   }
    //go online
-   ASSERT_EQ(vam.goOnline(), 6);
+   ASSERT_EQ(vam->goOnline(), 6);
 
    //start verifications in side threads, they should return
    //once the addr is valid
-   auto checkAddressValid = [&vam](const bs::Address& addr)->void
+   auto checkAddressValid = [vam](const bs::Address& addr)->void
    {
-      while (true)
-      {
-         if (AuthAddressLogic::isValid(vam, addr))
-            return;
+      while (!AuthAddressLogic::isValid(*vam, addr)) {
+         std::this_thread::sleep_for(std::chrono::milliseconds(23));
       }
+      std::cout << addr.display() << " valid\n";
    };
-
    std::vector<std::thread> threads;
-   for (auto& authAddr : authAddresses)
+   for (auto& authAddr : authAddresses) {
       threads.push_back(std::thread(checkAddressValid, authAddr));
+   }
 
    //make sure addresses are invalid
-   for (auto& addr : authAddresses)
-      EXPECT_FALSE(AuthAddressLogic::isValid(vam, addr));
+   for (auto& addr : authAddresses) {
+      EXPECT_FALSE(AuthAddressLogic::isValid(*vam, addr));
+   }
 
    //vet all user auth addresses
-   try
-   {
-      actPtr_->waitOnZC(vam.vetUserAddress(
+   try {
+      actPtr_->waitOnZC(vam->vetUserAddress(
          authAddresses[0], resolverMam, validationAddr_));
       actPtr_->waitOnZC(
-         vam.vetUserAddress(authAddresses[1], resolverMam, validationAddr2));
-      actPtr_->waitOnZC(vam.vetUserAddress(
+         vam->vetUserAddress(authAddresses[1], resolverMam, validationAddr2));
+      actPtr_->waitOnZC(vam->vetUserAddress(
          authAddresses[2], resolverMam, validationAddr3));
    }
-   catch (AuthLogicException&)
-   {
+   catch (const AuthLogicException&) {
       ASSERT_TRUE(false);
    }
 
    mineBlocks(1);
+   vam->update();
    
-   try
-   {
-      actPtr_->waitOnZC(vam.vetUserAddress(
+   try {
+      actPtr_->waitOnZC(vam->vetUserAddress(
          authAddresses[3], resolverMam, validationAddr_));
-      actPtr_->waitOnZC(vam.vetUserAddress(
+      actPtr_->waitOnZC(vam->vetUserAddress(
          authAddresses[4], resolverMam, validationAddr2));
-      actPtr_->waitOnZC(vam.vetUserAddress(
+      actPtr_->waitOnZC(vam->vetUserAddress(
          authAddresses[5], resolverMam, validationAddr3));
    }
-   catch (AuthLogicException&)
-   {
+   catch (const AuthLogicException &) {
       ASSERT_TRUE(false);
    }
 
    mineBlocks(VALIDATION_CONF_COUNT);
+   vam->update();
 
    //wait on all verification threads and check addresses are valid
-   for (auto& thr : threads)
-   {
+   for (auto& thr : threads) {
       if (thr.joinable())
          thr.join();
    }
 
-   for (auto& addr : authAddresses)
-      EXPECT_TRUE(AuthAddressLogic::isValid(vam, addr));
+   for (const auto &addr : authAddresses) {
+      EXPECT_TRUE(AuthAddressLogic::isValid(*vam, addr));
+   }
 
    /*revocation leg*/
 
@@ -977,10 +974,8 @@ TEST_F(TestAuth, ConcurrencyTest)
    counterPtr->store(0);
    auto checkAddressRevoked = [&vam, counterPtr](const bs::Address& addr)->void
    {
-      while (true)
-      {
-         if (!AuthAddressLogic::isValid(vam, addr))
-         {
+      while (true) {
+         if (!AuthAddressLogic::isValid(*vam, addr)) {
             counterPtr->fetch_add(1);
             return;
          }
@@ -998,48 +993,47 @@ TEST_F(TestAuth, ConcurrencyTest)
    mineBlocks(1);
    mineBlocks(2);
    mineBlocks(1);
+   vam->update();
 
    ASSERT_EQ(counterPtr->load(), 0);
 
    //revoke some addresses
-   try
-   {
+   try {
       auto lock = authSignWallet_->lockForEncryption(passphrase_);
-      AuthAddressLogic::revoke(vam, authAddresses[0], authSignWallet_->getResolver());
+      AuthAddressLogic::revoke(*vam, authAddresses[0], authSignWallet_->getResolver());
    }
-   catch (std::exception&)
-   {
+   catch (const std::exception &) {
       ASSERT_FALSE(true);
    }
-   vam.revokeUserAddress(authAddresses[4], resolverMam);
-   vam.revokeValidationAddress(validationAddr3, resolverMam);
+   vam->revokeUserAddress(authAddresses[4], resolverMam);
+   vam->revokeValidationAddress(validationAddr3, resolverMam);
 
    //watcher threads should have returned by now
-   for (auto& thr : threads)
-   {
+   for (auto& thr : threads) {
       if (thr.joinable())
          thr.join();
    }
 
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, authAddresses[0]));
-   EXPECT_TRUE(AuthAddressLogic::isValid(vam, authAddresses[1]));
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, authAddresses[2]));
-   EXPECT_TRUE(AuthAddressLogic::isValid(vam, authAddresses[3]));
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, authAddresses[4]));
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, authAddresses[5]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[0]));
+   EXPECT_TRUE(AuthAddressLogic::isValid(*vam, authAddresses[1]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[2]));
+   EXPECT_TRUE(AuthAddressLogic::isValid(*vam, authAddresses[3]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[4]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[5]));
    ASSERT_EQ(counterPtr->load(), 4);
 
    //Mine a block, check nothing changed. Wait 2 sec to make sure 
    //manager has processed the new block notification.
    mineBlocks(1);
+   vam->update();
    std::this_thread::sleep_for(std::chrono::seconds(2));
 
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, authAddresses[0]));
-   EXPECT_TRUE(AuthAddressLogic::isValid(vam, authAddresses[1]));
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, authAddresses[2]));
-   EXPECT_TRUE(AuthAddressLogic::isValid(vam, authAddresses[3]));
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, authAddresses[4]));
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, authAddresses[5]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[0]));
+   EXPECT_TRUE(AuthAddressLogic::isValid(*vam, authAddresses[1]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[2]));
+   EXPECT_TRUE(AuthAddressLogic::isValid(*vam, authAddresses[3]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[4]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[5]));
 }
 
 //reorg & zc replacement test
