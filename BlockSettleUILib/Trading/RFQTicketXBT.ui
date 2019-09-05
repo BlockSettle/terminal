@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>460</width>
-    <height>703</height>
+    <height>757</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -15,6 +15,12 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
   </property>
   <property name="maximumSize">
    <size>
@@ -780,22 +786,7 @@
         <property name="wellGroupBoxWithButtonBar" stdset="0">
          <bool>true</bool>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_15">
-         <property name="spacing">
-          <number>5</number>
-         </property>
-         <property name="leftMargin">
-          <number>5</number>
-         </property>
-         <property name="topMargin">
-          <number>10</number>
-         </property>
-         <property name="rightMargin">
-          <number>5</number>
-         </property>
-         <property name="bottomMargin">
-          <number>10</number>
-         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_5">
          <item>
           <widget class="QWidget" name="CCWalletLayout" native="true">
            <property name="minimumSize">
@@ -847,7 +838,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="XBTWalletLayout" native="true">
+          <widget class="QWidget" name="XBTWalletLayoutSend" native="true">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -871,14 +862,14 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLabel" name="labelWalletName">
+             <widget class="QLabel" name="labelWalletNameSend">
               <property name="text">
-               <string>Payment/Receiving Wallet</string>
+               <string>Payment Wallet</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QWidget" name="receivingWalletWidget" native="true">
+             <widget class="QWidget" name="receivingWalletWidgetSend" native="true">
               <layout class="QHBoxLayout" name="horizontalLayout_7">
                <property name="spacing">
                 <number>5</number>
@@ -896,7 +887,7 @@
                 <number>0</number>
                </property>
                <item>
-                <widget class="QComboBox" name="comboBoxXBTWallets">
+                <widget class="QComboBox" name="comboBoxXBTWalletsSend">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
@@ -918,7 +909,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="toolButtonXBTInputs">
+                <widget class="QPushButton" name="toolButtonXBTInputsSend">
                  <property name="minimumSize">
                   <size>
                    <width>100</width>
@@ -933,6 +924,83 @@
                  </property>
                  <property name="text">
                   <string>&amp;Inputs</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="XBTWalletLayoutRecv" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_15">
+            <property name="spacing">
+             <number>3</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="labelWalletNameRecv">
+              <property name="text">
+               <string>Receiving Wallet</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="receivingWalletWidgetRecv" native="true">
+              <layout class="QHBoxLayout" name="horizontalLayout_12">
+               <property name="spacing">
+                <number>5</number>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QComboBox" name="comboBoxXBTWalletsRecv">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>21</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>21</height>
+                  </size>
                  </property>
                 </widget>
                </item>

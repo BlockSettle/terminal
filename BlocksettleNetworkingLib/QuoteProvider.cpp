@@ -539,7 +539,6 @@ static bs::network::Order::Status mapBtcOrderStatus(OrderStatus status)
       case NEW:      return Order::New;
       default:       return Order::Pending;
    }
-   return Order::Pending;
 }
 
 static bs::network::Order::Status mapFxOrderStatus(OrderStatus status)
@@ -551,7 +550,6 @@ static bs::network::Order::Status mapFxOrderStatus(OrderStatus status)
       case NEW:      return Order::New;
       default:       return Order::Pending;
    }
-   return Order::Pending;
 }
 
 bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
@@ -567,7 +565,7 @@ bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
    }
 
    auto orderDate = QDateTime::fromMSecsSinceEpoch(response.createdtimestamputcinmillis());
-   auto ageSeconds = orderDate.secsTo(QDateTime::currentDateTime());
+   //auto ageSeconds = orderDate.secsTo(QDateTime::currentDateTime());
 
    Order order;
    order.exchOrderId = QString::number(response.orderid());

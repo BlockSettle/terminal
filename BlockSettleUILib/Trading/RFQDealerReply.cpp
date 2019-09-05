@@ -50,8 +50,8 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    connect(ui_->pushButtonPull, &QPushButton::clicked, this, &RFQDealerReply::pullButtonClicked);
    connect(ui_->pushButtonAdvanced, &QPushButton::clicked, this, &RFQDealerReply::showCoinControl);
 
-   connect(ui_->comboBoxWallet, SIGNAL(currentIndexChanged(int)), this, SLOT(walletSelected(int)));
-   connect(ui_->authenticationAddressComboBox, SIGNAL(currentIndexChanged(int)), SLOT(onAuthAddrChanged(int)));
+   connect(ui_->comboBoxWallet, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::walletSelected);
+   connect(ui_->authenticationAddressComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::onAuthAddrChanged);
 
    ui_->responseTitle->hide();
 }
@@ -401,21 +401,15 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
                   , this);
                errorMessage.exec();
             }
-         } else if (ccWallet != curWallet_) {
-            ui_->comboBoxWallet->clear();
-            ui_->comboBoxWallet->addItem(QString::fromStdString(ccWallet->name()));
-            ui_->comboBoxWallet->setItemData(0, QString::fromStdString(ccWallet->walletId()), UiUtils::WalletIdRole);
-            setCurrentWallet(ccWallet);
          }
       }
-      else {
-         if (!curWallet_ || (ccWallet_ && (ccWallet_ == curWallet_))) {
-            walletSelected(UiUtils::fillWalletsComboBox(ui_->comboBoxWallet, walletsManager_, signingContainer_));
-         }
-      }
+
+      const bool skipWatchingOnly = (qrn.side == bs::network::Side::Sell);
+      walletSelected(UiUtils::fillWalletsComboBox(ui_->comboBoxWallet, walletsManager_, skipWatchingOnly));
    }
    else if (qrn.assetType == bs::network::Asset::SpotXBT) {
-      walletSelected(UiUtils::fillWalletsComboBox(ui_->comboBoxWallet, walletsManager_, signingContainer_));
+      const bool skipWatchingOnly = (currentQRN_.side != bs::network::Side::Sell);
+      walletSelected(UiUtils::fillWalletsComboBox(ui_->comboBoxWallet, walletsManager_, skipWatchingOnly));
    }
 }
 
@@ -502,7 +496,7 @@ bool RFQDealerReply::checkBalance() const
       return false;
    }
 
-   if ((currentQRN_.side == bs::network::Side::Buy) ^ (product_ == baseProduct_)) {
+   if ((currentQRN_.side == bs::network::Side::Buy) != (product_ == baseProduct_)) {
       const auto amount = getAmount();
       if ((currentQRN_.assetType == bs::network::Asset::SpotXBT) && transactionData_) {
          return (amount <= (transactionData_->GetTransactionSummary().availableBalance
