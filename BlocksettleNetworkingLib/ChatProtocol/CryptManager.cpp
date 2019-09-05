@@ -64,9 +64,18 @@ namespace Chat
       {
          auto decipher = Encryption::IES_Decryption::create(loggerPtr_);
 
-         decipher->setPrivateKey(ownPrivateKey);
-         auto data = Botan::base64_decode(message);
+         Botan::secure_vector<uint8_t> data;
+         try
+         {
+            data = Botan::base64_decode(message);
+         }
+         catch (const std::exception& e)
+         {
+            loggerPtr_->error("Can't decode message {}", e.what());
+         }
+
          decipher->setData(std::string(data.begin(), data.end()));
+         decipher->setPrivateKey(ownPrivateKey);
 
          Botan::SecureVector<uint8_t> output;
          std::string decryptedMessage;
@@ -136,7 +145,16 @@ namespace Chat
       {
          auto decipher = Encryption::AEAD_Decryption::create(loggerPtr_);
 
-         auto data = Botan::base64_decode(message);
+         Botan::secure_vector<uint8_t> data;
+         try
+         {
+            data = Botan::base64_decode(message);
+         }
+         catch (const std::exception& e)
+         {
+            loggerPtr_->error("Can't decode message {}", e.what());
+         }
+
          decipher->setData(std::string(data.begin(), data.end()));
          decipher->setPrivateKey(localPrivateKey);
          decipher->setPublicKey(remotePublicKey);
