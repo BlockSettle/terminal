@@ -190,23 +190,15 @@ bool AuthAddressManager::CreateNewAuthAddress()
 
 void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason)
 {
-   const auto &itVerify = signIdsVerify_.find(id);
    const auto &itRevoke = signIdsRevoke_.find(id);
-   if ((itVerify == signIdsVerify_.end()) && (itRevoke == signIdsRevoke_.end())) {
+   if (itRevoke == signIdsRevoke_.end()) {
       return;
    }
-   const bool isVerify = (itVerify != signIdsVerify_.end());
-   signIdsVerify_.erase(id);
    signIdsRevoke_.erase(id);
 
    if (result == bs::error::ErrorCode::NoError) {
       if (BroadcastTransaction(signedTX)) {
-         if (isVerify) {
-            emit AuthVerifyTxSent();
-         }
-         else {
-            emit AuthRevokeTxSent();
-         }
+         emit AuthRevokeTxSent();
       }
       else {
          emit Error(tr("Failed to broadcast transaction"));
@@ -233,7 +225,21 @@ bool AuthAddressManager::RevokeAddress(const bs::Address &address)
       return false;
    }
 
-   //TODO
+   const auto revokeData = addressVerificator_->getRevokeData(address);
+   if (revokeData.first.isNull() || !revokeData.second.isInitialized()) {
+      logger_->error("[AuthAddressManager::RevokeAddress] failed to obtain revocation data");
+      emit Error(tr("Missing revocation input"));
+      return false;
+   }
+
+   const auto reqId = signingContainer_->signAuthRevocation(authWallet_->walletId(), address
+      , revokeData.second, revokeData.first);
+   if (!reqId) {
+      logger_->error("[AuthAddressManager::RevokeAddress] failed to send revocation data");
+      emit Error(tr("Failed to send revoke"));
+      return false;
+   }
+   signIdsRevoke_.insert(reqId);
    return true;
 }
 

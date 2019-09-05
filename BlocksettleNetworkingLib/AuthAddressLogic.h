@@ -315,6 +315,8 @@ struct AuthAddressLogic
       const ValidationAddressManager&, const bs::Address&);
    static BinaryData revoke(const ValidationAddressManager&, const bs::Address&,
       std::shared_ptr<ResolverFeed>);
+   static std::pair<bs::Address, UTXO> getRevokeData(const ValidationAddressManager &
+      , const bs::Address &authAddr);
    static BinaryData revoke(const bs::Address &, const std::shared_ptr<ResolverFeed> &
       , const bs::Address &validationAddr, const UTXO &);
 };

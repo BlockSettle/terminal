@@ -38,7 +38,6 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(authAddressManager_.get(), &AuthAddressManager::AddrStateChanged, this, &AuthAddressDialog::onAddressStateChanged, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Error, this, &AuthAddressDialog::onAuthMgrError, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Info, this, &AuthAddressDialog::onAuthMgrInfo, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthVerifyTxSent, this, &AuthAddressDialog::onAuthVerifyTxSent, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthAddressConfirmationRequired, this, &AuthAddressDialog::onAuthAddressConfirmationRequired, Qt::QueuedConnection);
 
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &AuthAddressDialog::createAddress);

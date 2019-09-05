@@ -217,3 +217,8 @@ bool AddressVerificator::HaveBSAddressList() const
 {
    return !bsAddressList_.empty();
 }
+
+std::pair<bs::Address, UTXO> AddressVerificator::getRevokeData(const bs::Address &authAddr)
+{
+   return AuthAddressLogic::getRevokeData(*validationMgr_, authAddr);
+}

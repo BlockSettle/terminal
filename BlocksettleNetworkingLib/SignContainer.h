@@ -75,6 +75,8 @@ public:
    virtual bool Connect() { return true; }
    virtual bool Disconnect() { return true; }
 
+   using SignTxCb = std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)>;
+
    virtual bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) = 0;
 
@@ -86,13 +88,16 @@ public:
 
    virtual bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &
       , const bs::sync::PasswordDialogData &dialogData
-      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
+      , const SignTxCb &cb = nullptr) = 0;
 
    virtual bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &
       , const bs::core::wallet::SettlementData &, const bs::sync::PasswordDialogData &dialogData
-      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) = 0;
+      , const SignTxCb &cb = nullptr) = 0;
 
    virtual bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) = 0;
+
+   virtual bs::signer::RequestId signAuthRevocation(const std::string &walletId, const bs::Address &authAddr
+      , const UTXO &, const bs::Address &bsAddr, const SignTxCb &cb = nullptr) = 0;
 
    virtual bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) = 0;
 

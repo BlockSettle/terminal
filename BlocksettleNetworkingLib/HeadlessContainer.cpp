@@ -423,7 +423,7 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
 bs::signer::RequestId HeadlessContainer::signSettlementTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , const bs::sync::PasswordDialogData &dialogData, SignContainer::TXSignMode mode
    , bool keepDuplicatedRecipients
-   , const std::function<void (bs::error::ErrorCode result, const BinaryData &signedTX)> &cb)
+   , const SignTxCb &cb)
 {
    if (!txSignReq.isValid()) {
       logger_->error("[HeadlessContainer::signSettlementTXRequest] Invalid TXSignRequest");
@@ -447,7 +447,7 @@ bs::signer::RequestId HeadlessContainer::signSettlementTXRequest(const bs::core:
 
 bs::signer::RequestId HeadlessContainer::signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , const bs::sync::PasswordDialogData &dialogData
-   , const std::function<void (bs::error::ErrorCode, const BinaryData &)> &cb)
+   , const SignTxCb &cb)
 {
    if (!txSignReq.isValid()) {
       logger_->error("[HeadlessContainer::signSettlementPartialTXRequest] Invalid TXSignRequest");
@@ -478,7 +478,7 @@ static void fillSettlementData(headless::SettlementData *settlData, const bs::co
 
 bs::signer::RequestId HeadlessContainer::signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , const bs::core::wallet::SettlementData &sd, const bs::sync::PasswordDialogData &dialogData
-   , const std::function<void (bs::error::ErrorCode, const BinaryData &)> &cb)
+   , const SignTxCb &cb)
 {
    if ((txSignReq.inputs.size() != 1) || (txSignReq.recipients.size() != 1) || sd.settlementId.isNull()) {
       logger_->error("[HeadlessContainer::signSettlementPayoutTXRequest] Invalid PayoutTXSignRequest");
@@ -528,6 +528,24 @@ bs::signer::RequestId HeadlessContainer::signMultiTXRequest(const bs::core::wall
    const auto id = Send(packet);
    signRequests_.insert(id);
    return id;
+}
+
+bs::signer::RequestId HeadlessContainer::signAuthRevocation(const std::string &walletId, const bs::Address &authAddr
+   , const UTXO &utxo, const bs::Address &bsAddr, const SignTxCb &cb)
+{
+   headless::SignAuthAddrRevokeRequest request;
+   request.set_wallet_id(walletId);
+   request.set_auth_address(authAddr.display());
+   request.set_utxo(utxo.serialize().toBinStr());
+   request.set_validation_address(bsAddr.toBinStr());
+
+   headless::RequestPacket packet;
+   packet.set_type(headless::SignAuthAddrRevokeType);
+   packet.set_data(request.SerializeAsString());
+   const auto reqId = Send(packet);
+   cbSettlementSignTxMap_[reqId] = cb;
+   signRequests_.insert(reqId);
+   return reqId;
 }
 
 bs::signer::RequestId HeadlessContainer::updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId)
@@ -1436,6 +1454,7 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
    case headless::SignPartialTXRequestType:
    case headless::SignSettlementPayoutTxType:
    case headless::SignTXMultiRequestType:
+   case headless::SignAuthAddrRevokeType:
       ProcessSignTXResponse(packet.id(), packet.data());
       break;
 

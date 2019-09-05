@@ -122,7 +122,6 @@ signals:
    void AuthConfirmSubmitError(const QString &address, const QString &error);
    void AuthAddrSubmitSuccess(const QString &address);
    void AuthAddressSubmitCancelled(const QString &address);
-   void AuthVerifyTxSent();
    void AuthRevokeTxSent();
 
    void AuthAddressConfirmationRequired(float validationAmount);
@@ -182,7 +181,6 @@ protected:
    std::shared_ptr<bs::sync::Wallet>         authWallet_;
 
    std::shared_ptr<SignContainer>      signingContainer_;
-   std::unordered_set<unsigned int>    signIdsVerify_;
    std::unordered_set<unsigned int>    signIdsRevoke_;
 };
 

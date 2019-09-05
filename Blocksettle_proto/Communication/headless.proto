@@ -9,6 +9,7 @@ enum RequestType
    AuthenticationRequestType   = 1;
    SignTxRequestType           = 2;
    SignPartialTXRequestType    = 3;
+   SignAuthAddrRevokeType      = 4;
    SetSettlementIdType         = 5;
    SetUserIdType               = 6;
    CreateSettlWalletType       = 7;
@@ -135,6 +136,14 @@ message SignPayoutTXRequest
    SettlementData settlement_data = 4;
 }
 
+
+message SignAuthAddrRevokeRequest
+{
+   string   wallet_id = 1;
+   string   auth_address = 2;
+   bytes    utxo = 3;
+   string   validation_address = 4;
+}
 
 message CreateSettlWalletRequest
 {

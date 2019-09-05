@@ -956,8 +956,8 @@ AddressVerificationState AuthAddressLogic::getAuthAddrState(
 }
 
 ////
-BinaryData AuthAddressLogic::revoke(const ValidationAddressManager& vam,
-   const bs::Address& addr, std::shared_ptr<ResolverFeed> feedPtr)
+std::pair<bs::Address, UTXO> AuthAddressLogic::getRevokeData(
+   const ValidationAddressManager &vam, const bs::Address &addr)
 {
    //get valid paths for address
    auto&& validPaths = getValidPaths(vam, addr);
@@ -977,7 +977,7 @@ BinaryData AuthAddressLogic::revoke(const ValidationAddressManager& vam,
    auto promPtr = std::make_shared<std::promise<UTXO>>();
    auto fut = promPtr->get_future();
    auto utxosLbd = [&outpoint, promPtr]
-      (const std::vector<UTXO> utxos)->void
+   (const std::vector<UTXO> utxos)->void
    {
       try {
          if (utxos.empty()) {
@@ -1007,8 +1007,14 @@ BinaryData AuthAddressLogic::revoke(const ValidationAddressManager& vam,
 
    //we're sending the coins back to the relevant validation address
    auto& validationAddr = vam.findValidationAddressForUTXO(revokeUtxo);
+   return { validationAddr, revokeUtxo };
+}
 
-   const auto signedTx = revoke(addr, feedPtr, validationAddr, revokeUtxo);
+BinaryData AuthAddressLogic::revoke(const ValidationAddressManager& vam,
+   const bs::Address& addr, std::shared_ptr<ResolverFeed> feedPtr)
+{
+   const auto revokeData = getRevokeData(vam, addr);
+   const auto signedTx = revoke(addr, feedPtr, revokeData.first, revokeData.second);
 
    //sign and broadcast, return the txHash
    Tx txObj(signedTx);
