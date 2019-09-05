@@ -89,7 +89,6 @@ public:
    virtual void ConfirmSubmitForVerification(BsClient *bsClient, const bs::Address &address);
    virtual bool CancelSubmitForVerification(const bs::Address &address);
 
-   virtual bool Verify(const bs::Address &address);
    virtual bool RevokeAddress(const bs::Address &address);
 
    virtual bool IsReady() const;
@@ -113,7 +112,6 @@ private slots:
 signals:
    void AddressListUpdated();
    void VerifiedAddressListUpdated();
-   void NeedVerify(const QString &addr);
    void AddrStateChanged(const QString &addr, const QString &state);
    void AuthWalletChanged();
    void AuthWalletCreated(const QString &walletId);

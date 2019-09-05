@@ -979,7 +979,7 @@ AddressVerificationState AuthAddressLogic::getAuthAddrState(
    }
    catch (AuthLogicException&) { }
 
-   return AddressVerificationState::VerificationFailed;
+   return AddressVerificationState::NotSubmitted;
 }
 
 ////

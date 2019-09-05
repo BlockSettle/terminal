@@ -186,31 +186,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButtonVerify">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>110</width>
-          <height>35</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Verify</string>
-        </property>
-        <property name="autoDefault">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QPushButton" name="pushButtonSubmit">
         <property name="enabled">
          <bool>false</bool>

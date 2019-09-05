@@ -219,30 +219,6 @@ void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, bs::er
    }
 }
 
-bool AuthAddressManager::Verify(const bs::Address &address)
-{
-   const auto state = GetState(address);
-   if (state != AddressVerificationState::PendingVerification) {
-      logger_->warn("[AuthAddressManager::Verify] attempting to verify from incorrect state {}", (int)state);
-      emit Error(tr("Incorrect state"));
-      return false;
-   }
-   if (!signingContainer_) {
-      logger_->error("[AuthAddressManager::Verify] can't verify without signing container");
-      emit Error(tr("Missing signing container"));
-      return false;
-   }
-
-   if (!armory_ || (armory_->state() != ArmoryState::Ready)) {
-      logger_->error("[AuthAddressManager::Verify] can't verify without Armory connection");
-      emit Error(tr("Missing Armory connection"));
-      return false;
-   }
-
-   //TODO
-   return true;
-}
-
 bool AuthAddressManager::RevokeAddress(const bs::Address &address)
 {
    const auto state = GetState(address);
@@ -753,10 +729,7 @@ void AuthAddressManager::SetState(const bs::Address &addr, AddressVerificationSt
    }
    states_[addr.prefixed()] = state;
 
-   if (state == AddressVerificationState::PendingVerification) {
-      emit NeedVerify(QString::fromStdString(addr.display()));
-   }
-   else if ((state == AddressVerificationState::Verified) && (prevState == AddressVerificationState::VerificationSubmitted)) {
+   if ((state == AddressVerificationState::Verified) && (prevState == AddressVerificationState::PendingVerification)) {
       emit AddrStateChanged(QString::fromStdString(addr.display()), tr("Verified"));
    }
    else if (((state == AddressVerificationState::Revoked) || (state == AddressVerificationState::RevokedByBS))

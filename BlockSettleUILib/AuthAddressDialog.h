@@ -45,7 +45,6 @@ private slots:
    void createAddress();
    void revokeSelectedAddress();
    void submitSelectedAddress();
-   void verifySelectedAddress();
    void setDefaultAddress();
 
    void onModelReset();
