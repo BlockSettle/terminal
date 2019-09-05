@@ -81,7 +81,7 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
          }
 
          if (!previousClientPartyPtr->isGlobal()) {
-            return toHtmlUsername(previousClientPartyPtr->displayName(), previousClientPartyPtr->userHash());
+            return QString::fromStdString(previousClientPartyPtr->displayName());
          }
          else {
             Chat::ClientPartyPtr userParty = partyModel_->getPartyByUserName(senderHash);
@@ -165,7 +165,11 @@ void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
 
    //show contact context menu when username is right clicked in User column
    if ((textCursor_.block().blockNumber() - 1) % 5 == static_cast<int>(Column::User)) {
-      if (!anchorAt(e->pos()).isEmpty() && text != ownSenderUserName) {
+      if (text != ownSenderUserName) {
+         QUrl link = anchorAt(e->pos());
+         if (!link.isEmpty()) {
+            text = link.path();
+         }
          std::unique_ptr<QMenu> userMenuPtr = initUserContextMenu(text);
          userMenuPtr->exec(QCursor::pos());
          return;
@@ -258,8 +262,7 @@ void ChatMessagesTextEdit::onSwitchToChat(const std::string& partyId)
       onTextChanged();
       ClientMessagesHistory clientMessagesHistory = messages_[partyId];
 
-      if (clientMessagesHistory.empty())
-      {
+      if (clientMessagesHistory.empty()) {
          return;
       }
 
@@ -268,13 +271,11 @@ void ChatMessagesTextEdit::onSwitchToChat(const std::string& partyId)
       {
          Chat::MessagePtr messagePtr = (*riter);
          
-         if (messagePtr->partyMessageState() == Chat::PartyMessageState::SEEN)
-         {
+         if (messagePtr->partyMessageState() == Chat::PartyMessageState::SEEN) {
             continue;
          }
 
-         if (messagePtr->senderHash() == ownUserId_)
-         {
+         if (messagePtr->senderHash() == ownUserId_) {
             continue;
          }
 
