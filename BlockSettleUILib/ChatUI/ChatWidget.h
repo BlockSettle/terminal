@@ -36,7 +36,7 @@ public:
       const std::shared_ptr<spdlog::logger>& loggerPtr);
 
    std::string login(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb&);
-//   void logout();
+   void onConnectedToServer();
 
 protected:
    void showEvent(QShowEvent* e) override;
