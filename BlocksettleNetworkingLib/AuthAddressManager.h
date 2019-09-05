@@ -174,7 +174,7 @@ protected:
 
    mutable std::atomic_flag                  lockList_ = ATOMIC_FLAG_INIT;
    std::vector<bs::Address>                  addresses_;
-   std::map<BinaryData, AddressVerificationState>   states_;
+   std::map<bs::Address, AddressVerificationState> states_;
    using HashMap = std::map<bs::Address, BinaryData>;
    bs::Address                               defaultAddr_;
 

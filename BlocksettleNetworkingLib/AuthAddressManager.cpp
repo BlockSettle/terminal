@@ -714,9 +714,9 @@ void AuthAddressManager::ProcessBSAddressListResponse(const std::string& respons
 
 AddressVerificationState AuthAddressManager::GetState(const bs::Address &addr) const
 {
-   const auto itState = states_.find(addr.prefixed());
+   const auto itState = states_.find(addr);
    if (itState == states_.end()) {
-      return AddressVerificationState::VerificationFailed;
+      return AddressVerificationState::InProgress;
    }
    return itState->second;
 }
@@ -727,7 +727,7 @@ void AuthAddressManager::SetState(const bs::Address &addr, AddressVerificationSt
    if ((prevState == AddressVerificationState::Submitted) && (state == AddressVerificationState::NotSubmitted)) {
       return;
    }
-   states_[addr.prefixed()] = state;
+   states_[addr] = state;
 
    if ((state == AddressVerificationState::Verified) && (prevState == AddressVerificationState::PendingVerification)) {
       emit AddrStateChanged(QString::fromStdString(addr.display()), tr("Verified"));
