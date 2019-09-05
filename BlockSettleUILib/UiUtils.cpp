@@ -156,12 +156,22 @@ int UiUtils::fillWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::
    for (size_t i = 0; i < walletsManager->hdWalletsCount(); i++) {
       const auto &hdWallet = walletsManager->getHDWallet(i);
       const auto &groups = hdWallet->getGroups();
-      if (groups.empty()) {
+
+      // filter groups
+      // don't display Settlement
+      std::vector<std::shared_ptr<bs::sync::hd::Group>> filteredGroups;
+
+      std::copy_if(groups.begin(), groups.end(), std::back_inserter(filteredGroups),
+         [](const std::shared_ptr<bs::sync::hd::Group>& item)
+         { return item->type() != bs::core::wallet::Type::Settlement; }
+      );
+
+      if (filteredGroups.empty()) {
          selected = qMax(selected, addLeaves(comboBox, index, QString::fromStdString(hdWallet->name()) + QLatin1String("/")
             , defaultWalletId, hdWallet->getLeaves(), container));
       }
       else {
-         for (const auto &group : groups) {
+         for (const auto &group : filteredGroups) {
             const auto prefix = QString::fromStdString(hdWallet->name())
                + QLatin1String("/") + QString::fromStdString(group->name()) + QLatin1String("/");
             selected = qMax(selected, addLeaves(comboBox, index, prefix, defaultWalletId, group->getAllLeaves()

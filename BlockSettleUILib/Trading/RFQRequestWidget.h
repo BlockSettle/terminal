@@ -1,4 +1,4 @@
-﻿#ifndef __RFQ_REQUEST_WIDGET_H__
+#ifndef __RFQ_REQUEST_WIDGET_H__
 #define __RFQ_REQUEST_WIDGET_H__
 
 #include <QWidget>
@@ -68,14 +68,14 @@ private:
    void showEditableRFQPage();
    void popShield();
 
-   bool checkConditions(const MarkeSelectedInfo& productGroup);
-   bool checkWalletSettings(bs::network::Asset::Type productType, const MarkeSelectedInfo& productGroup);
+   bool checkConditions(const MarketSelectedInfo& productGroup);
+   bool checkWalletSettings(bs::network::Asset::Type productType, const MarketSelectedInfo& productGroup);
 
 public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);
-   void onCurrencySelected(const MarkeSelectedInfo& selectedInfo);
-   void onBuyClicked(const MarkeSelectedInfo& selectedInfo);
-   void onSellClicked(const MarkeSelectedInfo& selectedInfo);
+   void onCurrencySelected(const MarketSelectedInfo& selectedInfo);
+   void onBidClicked(const MarketSelectedInfo& selectedInfo);
+   void onAskClicked(const MarketSelectedInfo& selectedInfo);
    void onDisableSelectedInfo();
 
 private slots:

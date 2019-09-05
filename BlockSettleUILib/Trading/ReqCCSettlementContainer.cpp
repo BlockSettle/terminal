@@ -92,7 +92,7 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
 
       dialogData.setValue("DeliveryReceived", QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(ccTxData_.change.value / lotSize_)));
+                    .arg(UiUtils::displayCCAmount(quantity())));
    }
    else {
       dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
