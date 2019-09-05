@@ -135,7 +135,7 @@ namespace Chat
          }
 
          PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
-         for (const auto recipient : recipients)
+         for (const auto& recipient : recipients)
          {
             if (recipient->userName() == remoteUserName)
             {
