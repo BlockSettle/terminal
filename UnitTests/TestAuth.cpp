@@ -167,8 +167,7 @@ void TestAuth::SetUp()
    //instantiate wallet to register validation address with. we need this to 
    //catch zc events for the validation address setup prior to setting up the 
    //validation address manager
-   auto walletObj = std::make_shared<AsyncClient::BtcWallet>(
-      envPtr_->armoryConnection()->bdv()->instantiateWallet("testWallet"));
+   auto walletObj = envPtr_->armoryConnection()->instantiateWallet("testWallet");
    
    auto&& regIDs = walletObj->registerAddresses({ validationAddr_.prefixed() }, false);
    actPtr_->waitOnRefresh({ regIDs });

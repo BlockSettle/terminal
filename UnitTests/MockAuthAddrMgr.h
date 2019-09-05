@@ -26,7 +26,6 @@ public:
 
    bool CreateNewAuthAddress() override { return false; }
    bool SubmitForVerification(const bs::Address &) override { return true; }
-   bool Verify(const bs::Address &address) override { return true; }
    bool RevokeAddress(const bs::Address &address) override { return true; }
 
    std::vector<bs::Address> GetVerifiedAddressList() const override { return addresses_; }
