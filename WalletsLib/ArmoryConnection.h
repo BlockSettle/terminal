@@ -148,6 +148,8 @@ public:
    bool getSpendableZCoutputs(const std::vector<std::string> &walletIds, const UTXOsCb &);
    bool getRBFoutputs(const std::vector<std::string> &walletIds, const UTXOsCb &);
    bool getUTXOsForAddress(const bs::Address &, const UTXOsCb &, bool withZC = false);
+   bool getOutpointsFor(const std::vector<bs::Address> &, const std::function<void(const OutpointBatch &)> &
+      , unsigned int height = 0, unsigned int zcIndex = 0);
 
    using TxCb = std::function<void(const Tx&)>;
    using TXsCb = std::function<void(const std::vector<Tx>&)>;
@@ -183,9 +185,6 @@ public:
    using BIP151Cb = std::function<bool(const BinaryData&, const std::string&)>;
 
    std::shared_ptr<AsyncClient::BtcWallet> instantiateWallet(const std::string &walletId);
-
-   std::shared_ptr<AsyncClient::BlockDataViewer> bdv(void) const { return bdv_; }
-
 
 protected:
    void setupConnection(NetworkType, const std::string &host, const std::string &port
