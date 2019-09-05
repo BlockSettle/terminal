@@ -22,8 +22,7 @@ void UserSearchModel::setUsers(const std::vector<UserInfo> &users)
    users_.clear();
    users_.reserve(users.size());
 
-   for (const auto &user : users)
-   {
+   for (const auto &user : users) {
       users_.push_back(user);
    }
 
@@ -35,22 +34,18 @@ void UserSearchModel::setItemStyle(std::shared_ptr<QObject> itemStyle)
    itemStyle_ = itemStyle;
 }
 
-int UserSearchModel::rowCount(const QModelIndex &parent) const
+int UserSearchModel::rowCount(const QModelIndex &) const
 {
-   Q_UNUSED(parent)
-
    return static_cast<int>(users_.size());
 }
 
 QVariant UserSearchModel::data(const QModelIndex &index, int role) const
 {
-   if (!index.isValid()) 
-   {
+   if (!index.isValid()) {
       return QVariant();
    }
 
-   if (index.row() < 0 || index.row() >= static_cast<int>(users_.size())) 
-   {
+   if (index.row() < 0 || index.row() >= static_cast<int>(users_.size())) {
       return QVariant();
    }
    
@@ -67,8 +62,7 @@ QVariant UserSearchModel::data(const QModelIndex &index, int role) const
 
    case Qt::ForegroundRole:
    {
-      if (!itemStyle_)
-      {
+      if (!itemStyle_) {
          return QVariant();
       }
 
@@ -93,9 +87,7 @@ QVariant UserSearchModel::data(const QModelIndex &index, int role) const
    }
 }
 
-Qt::ItemFlags UserSearchModel::flags(const QModelIndex &index) const
+Qt::ItemFlags UserSearchModel::flags(const QModelIndex &) const
 {
-   Q_UNUSED(index)
-
    return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
 }
