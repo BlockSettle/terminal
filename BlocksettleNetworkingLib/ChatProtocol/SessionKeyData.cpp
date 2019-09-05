@@ -7,10 +7,7 @@
 #include <enable_warnings.h>
 
 namespace {
-   size_t defaultNonceSize()
-   {
-      return 24;
-   }
+   const size_t kDefaultNonceSize = 24;
 }
 
 namespace Chat
@@ -34,7 +31,7 @@ namespace Chat
       {
          // generate new nonce
          Botan::AutoSeeded_RNG rng;
-         nonce_ = rng.random_vec(defaultNonceSize());
+         nonce_ = rng.random_vec(kDefaultNonceSize);
          return BinaryData(nonce_.data(), nonce_.size());
       }
 
