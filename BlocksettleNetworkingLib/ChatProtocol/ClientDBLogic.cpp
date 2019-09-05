@@ -3,6 +3,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QDateTime>
+#include <QMetaObject>
 
 #include "ChatProtocol/ClientDBLogic.h"
 #include "ChatProtocol/CryptManager.h"
@@ -46,7 +47,7 @@ namespace Chat
       databaseCreatorPtr_->rebuildDatabase();
    }
 
-   QSqlDatabase ClientDBLogic::getDb() const
+   QSqlDatabase ClientDBLogic::getDb()
    {
       auto connectionName = QLatin1String("bs_chat_db_connection_") + QString::number(reinterpret_cast<quint64>(QThread::currentThread()), 16);
 
@@ -56,9 +57,17 @@ namespace Chat
 
          db.setDatabaseName(applicationSettingsPtr_->get<QString>(ApplicationSettings::chatDbFile));
 
-         if (!db.open()) {
-            throw std::runtime_error("failed to open " + db.connectionName().toStdString()
-               + " DB: " + db.lastError().text().toStdString());
+         try
+         {
+            if (!db.open())
+            {
+               throw std::runtime_error("failed to open " + db.connectionName().toStdString()
+                  + " DB: " + db.lastError().text().toStdString());
+            }
+         }
+         catch (const std::exception& e)
+         {
+            emit error(ClientDBLogicError::CannotOpenDatabase, e.what());
          }
 
          return db;

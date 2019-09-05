@@ -68,7 +68,7 @@ namespace Chat
       bool getPartyIdByMessageId(const std::string& messageId, std::string& partyId);
       bool getPartyIdFromDB(const std::string& partyId, std::string& partyTableId);
       bool insertPartyId(const std::string& partyId, std::string& partyTableId);
-      QSqlDatabase getDb() const;
+      QSqlDatabase getDb();
 
       ApplicationSettingsPtr     applicationSettingsPtr_;
       ClientDatabaseCreatorPtr   databaseCreatorPtr_;
