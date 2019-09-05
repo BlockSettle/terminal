@@ -14,7 +14,7 @@ BSPasswordInput {
     property WalletInfo walletInfo: WalletInfo{}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
 
-    title: passwordDialogData.value("Title")
+    title: qsTr("CREATE SUB-WALLET")
 
     CustomHeader {
         text: qsTr("Wallet Details")
@@ -66,7 +66,7 @@ BSPasswordInput {
     }
 
     CustomHeader {
-        text: qsTr("Token Leaf")
+        text: qsTr("PRIVATE MARKET PRODUCT")
         Layout.fillWidth: true
         Layout.preferredHeight: 25
         Layout.topMargin: 5
@@ -85,7 +85,7 @@ BSPasswordInput {
             Layout.preferredWidth: 110
             Layout.maximumWidth: 110
             Layout.fillWidth: true
-            text: qsTr("Product")
+            text: qsTr("Ticker")
         }
         CustomLabel {
             Layout.fillWidth: true
