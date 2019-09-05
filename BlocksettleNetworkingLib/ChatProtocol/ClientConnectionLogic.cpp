@@ -44,7 +44,7 @@ namespace Chat
       loggerPtr_->debug("[ClientConnectionLogic::onDataReceived] Data: {}", ProtobufUtils::toJsonReadable(any));
 
       WelcomeResponse welcomeResponse;
-      if (ProtobufUtils::pbStringToMessage<WelcomeResponse>(data, &welcomeResponse))
+      if (ProtobufUtils::pbAnyToMessage<WelcomeResponse>(any, &welcomeResponse))
       {
          handleWelcomeResponse(welcomeResponse);
          emit properlyConnected();
@@ -52,63 +52,63 @@ namespace Chat
       }
 
       LogoutResponse logoutResponse;
-      if (ProtobufUtils::pbStringToMessage<LogoutResponse>(data, &logoutResponse))
+      if (ProtobufUtils::pbAnyToMessage<LogoutResponse>(any, &logoutResponse))
       {
          handleLogoutResponse(logoutResponse);
          return;
       }
 
       StatusChanged statusChanged;
-      if (ProtobufUtils::pbStringToMessage<StatusChanged>(data, &statusChanged))
+      if (ProtobufUtils::pbAnyToMessage<StatusChanged>(any, &statusChanged))
       {
          handleStatusChanged(statusChanged);
          return;
       }
 
       PartyMessageStateUpdate partyMessageStateUpdate;
-      if (ProtobufUtils::pbStringToMessage<PartyMessageStateUpdate>(data, &partyMessageStateUpdate))
+      if (ProtobufUtils::pbAnyToMessage<PartyMessageStateUpdate>(any, &partyMessageStateUpdate))
       {
          handlePartyMessageStateUpdate(partyMessageStateUpdate);
          return;
       }
 
       PartyMessagePacket partyMessagePacket;
-      if (ProtobufUtils::pbStringToMessage<PartyMessagePacket>(data, &partyMessagePacket))
+      if (ProtobufUtils::pbAnyToMessage<PartyMessagePacket>(any, &partyMessagePacket))
       {
          handlePartyMessagePacket(partyMessagePacket);
          return;
       }
 
       PrivatePartyRequest privatePartyRequest;
-      if (ProtobufUtils::pbStringToMessage<PrivatePartyRequest>(data, &privatePartyRequest))
+      if (ProtobufUtils::pbAnyToMessage<PrivatePartyRequest>(any, &privatePartyRequest))
       {
          handlePrivatePartyRequest(privatePartyRequest);
          return;
       }
 
       RequestSessionKeyExchange requestSessionKey;
-      if (ProtobufUtils::pbStringToMessage<RequestSessionKeyExchange>(data, &requestSessionKey))
+      if (ProtobufUtils::pbAnyToMessage<RequestSessionKeyExchange>(any, &requestSessionKey))
       {
          handleRequestSessionKeyExchange(requestSessionKey);
          return;
       }
 
       ReplySessionKeyExchange replyKeyExchange;
-      if (ProtobufUtils::pbStringToMessage<ReplySessionKeyExchange>(data, &replyKeyExchange))
+      if (ProtobufUtils::pbAnyToMessage<ReplySessionKeyExchange>(any, &replyKeyExchange))
       {
          handleReplySessionKeyExchange(replyKeyExchange);
          return;
       }
 
       PrivatePartyStateChanged privatePartyStateChanged;
-      if (ProtobufUtils::pbStringToMessage<PrivatePartyStateChanged>(data, &privatePartyStateChanged))
+      if (ProtobufUtils::pbAnyToMessage<PrivatePartyStateChanged>(any, &privatePartyStateChanged))
       {
          handlePrivatePartyStateChanged(privatePartyStateChanged);
          return;
       }
 
       ReplySearchUser replySearchUser;
-      if (ProtobufUtils::pbStringToMessage<ReplySearchUser>(data, &replySearchUser))
+      if (ProtobufUtils::pbAnyToMessage<ReplySearchUser>(any, &replySearchUser))
       {
          handleReplySearchUser(replySearchUser);
          return;
@@ -137,41 +137,32 @@ namespace Chat
 
    }
 
-   void ClientConnectionLogic::handleWelcomeResponse(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::handleWelcomeResponse(const WelcomeResponse& welcomeResponse)
    {
-      WelcomeResponse welcomeResponse;
-      welcomeResponse.CopyFrom(msg);
-
       if (!welcomeResponse.success())
       {
          emit closeConnection();
          return;
       }
 
-      clientPartyLogicPtr_->handlePartiesFromWelcomePacket(msg);
+      clientPartyLogicPtr_->handlePartiesFromWelcomePacket(welcomeResponse);
    }
 
-   void ClientConnectionLogic::handleLogoutResponse(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::handleLogoutResponse(const LogoutResponse&)
    {
       emit closeConnection();
    }
 
-   void ClientConnectionLogic::handleStatusChanged(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::handleStatusChanged(const StatusChanged& statusChanged)
    {
-      StatusChanged statusChanged;
-      statusChanged.CopyFrom(msg);
-
       // clear session keys for user
       sessionKeyHolderPtr_->clearSessionForUser(statusChanged.user_name());
 
       emit userStatusChanged(statusChanged.user_name(), statusChanged.client_status());
    }
 
-   void ClientConnectionLogic::handlePartyMessageStateUpdate(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::handlePartyMessageStateUpdate(const PartyMessageStateUpdate& partyMessageStateUpdate)
    {
-      PartyMessageStateUpdate partyMessageStateUpdate;
-      partyMessageStateUpdate.CopyFrom(msg);
-
       clientDBServicePtr_->updateMessageState(partyMessageStateUpdate.message_id(), partyMessageStateUpdate.party_message_state());
    }
 
@@ -221,44 +212,35 @@ namespace Chat
       loggerPtr_->debug("[ClientConnectionLogic::handleLocalErrors] Error: {}, what: {}", static_cast<int>(errorCode), what);
    }
 
-   void ClientConnectionLogic::handlePartyMessagePacket(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::handlePartyMessagePacket(PartyMessagePacket& partyMessagePacket)
    {
-      PartyMessagePacket partyMessagePacket;
-      partyMessagePacket.CopyFrom(msg);
-
       ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
 
       // TODO: handle here state changes of the rest of message types
       if (clientPartyPtr->isPrivateStandard())
       {
-         incomingPrivatePartyMessage(msg);
+         incomingPrivatePartyMessage(partyMessagePacket);
          return;
       }
 
       if (clientPartyPtr->isGlobalStandard())
       {
-         incomingGlobalPartyMessage(msg);
+         incomingGlobalPartyMessage(partyMessagePacket);
          return;
       }
    }
 
-   void ClientConnectionLogic::incomingGlobalPartyMessage(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::incomingGlobalPartyMessage(PartyMessagePacket& partyMessagePacket)
    {
-      PartyMessagePacket partyMessagePacket;
-      partyMessagePacket.CopyFrom(msg);
-
       ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
 
       saveIncomingPartyMessageAndUpdateState(partyMessagePacket, PartyMessageState::RECEIVED);
    }
 
-   void ClientConnectionLogic::incomingPrivatePartyMessage(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::incomingPrivatePartyMessage(PartyMessagePacket& partyMessagePacket)
    {
-      PartyMessagePacket partyMessagePacket;
-      partyMessagePacket.CopyFrom(msg);
-
       ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
 
@@ -297,11 +279,8 @@ namespace Chat
       }
    }
 
-   void ClientConnectionLogic::saveIncomingPartyMessageAndUpdateState(const google::protobuf::Message& msg, const PartyMessageState& partyMessageState)
+   void ClientConnectionLogic::saveIncomingPartyMessageAndUpdateState(PartyMessagePacket& partyMessagePacket, const PartyMessageState& partyMessageState)
    {
-      PartyMessagePacket partyMessagePacket;
-      partyMessagePacket.CopyFrom(msg);
-
       //save message
       clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
 
@@ -422,11 +401,8 @@ namespace Chat
       emit sendPacket(privatePartyRequest);
    }
 
-   void ClientConnectionLogic::handlePrivatePartyRequest(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::handlePrivatePartyRequest(const PrivatePartyRequest& privatePartyRequest)
    {
-      PrivatePartyRequest privatePartyRequest;
-      privatePartyRequest.CopyFrom(msg);
-
       // 1. check if model have this same party id
       // 2. if have and local party state is initialized then reply initialized state
       // 3. if not create new private party
@@ -505,19 +481,13 @@ namespace Chat
       sendPacket(replyKeyExchange);
    }
 
-   void ClientConnectionLogic::handleRequestSessionKeyExchange(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::handleRequestSessionKeyExchange(const RequestSessionKeyExchange& requestKeyExchange)
    {
-      RequestSessionKeyExchange requestKeyExchange;
-      requestKeyExchange.CopyFrom(msg);
-
       sessionKeyHolderPtr_->onIncomingRequestSessionKeyExchange(requestKeyExchange.sender_user_name(), requestKeyExchange.encoded_public_key(), currentUserPtr()->privateKey());
    }
 
-   void ClientConnectionLogic::handleReplySessionKeyExchange(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::handleReplySessionKeyExchange(const ReplySessionKeyExchange& replyKeyExchange)
    {
-      ReplySessionKeyExchange replyKeyExchange;
-      replyKeyExchange.CopyFrom(msg);
-
       sessionKeyHolderPtr_->onIncomingReplySessionKeyExchange(replyKeyExchange.sender_user_name(), replyKeyExchange.encoded_public_key());
    }
 
@@ -677,11 +647,8 @@ namespace Chat
       sendPacket(requestPrivatePartyStateChange);
    }
 
-   void ClientConnectionLogic::handlePrivatePartyStateChanged(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::handlePrivatePartyStateChanged(const PrivatePartyStateChanged& privatePartyStateChanged)
    {
-      PrivatePartyStateChanged privatePartyStateChanged;
-      privatePartyStateChanged.CopyFrom(msg);
-
       ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(privatePartyStateChanged.party_id());
 
@@ -694,11 +661,8 @@ namespace Chat
       clientPartyPtr->setPartyState(privatePartyStateChanged.party_state());
    }
 
-   void ClientConnectionLogic::handleReplySearchUser(const google::protobuf::Message& msg)
+   void ClientConnectionLogic::handleReplySearchUser(const ReplySearchUser& replySearchUser)
    {
-      ReplySearchUser replySearchUser;
-      replySearchUser.CopyFrom(msg);
-
       SearchUserReplyList searchUserReplyList;
 
       for (const auto& searchUser : replySearchUser.user_name())

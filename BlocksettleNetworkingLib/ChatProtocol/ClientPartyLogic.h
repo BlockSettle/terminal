@@ -26,6 +26,8 @@ namespace Chat
       QObjectCast
    };
 
+   class WelcomeResponse;
+
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
 
    class ClientPartyLogic : public QObject
@@ -37,7 +39,7 @@ namespace Chat
       Chat::ClientPartyModelPtr clientPartyModelPtr() const { return clientPartyModelPtr_; }
       void setClientPartyModelPtr(Chat::ClientPartyModelPtr val) { clientPartyModelPtr_ = val; }
 
-      void handlePartiesFromWelcomePacket(const google::protobuf::Message& msg);
+      void handlePartiesFromWelcomePacket(const WelcomeResponse& msg);
 
       void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName);
       void createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const google::protobuf::Message& msg);

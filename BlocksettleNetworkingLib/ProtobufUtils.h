@@ -16,8 +16,26 @@ public:
    static std::string toJsonCompact(const google::protobuf::Message &msg);
    static std::string pbMessageToString(const google::protobuf::Message& msg);
    template<typename T>
+   static bool pbAnyToMessage(const google::protobuf::Any& any, google::protobuf::Message* msg);
+   template<typename T>
    static bool pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg);
 };
+
+template<typename T>
+bool ProtobufUtils::pbAnyToMessage(const google::protobuf::Any& any, google::protobuf::Message* msg)
+{
+   if (any.Is<T>())
+   {
+      if (!any.UnpackTo(msg))
+      {
+         return false;
+      }
+
+      return true;
+   }
+
+   return false;
+}
 
 template<typename T>
 bool ProtobufUtils::pbStringToMessage(const std::string& packetString, google::protobuf::Message* msg)

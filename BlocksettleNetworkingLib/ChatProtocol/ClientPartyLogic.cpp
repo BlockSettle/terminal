@@ -31,12 +31,9 @@ namespace Chat
       connect(clientPartyModelPtr_.get(), &ClientPartyModel::partyInserted, this, &ClientPartyLogic::handlePartyInserted);
    }
 
-   void ClientPartyLogic::handlePartiesFromWelcomePacket(const google::protobuf::Message& msg)
+   void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& welcomeResponse)
    {
       clientPartyModelPtr_->clearModel();
-
-      WelcomeResponse welcomeResponse;
-      welcomeResponse.CopyFrom(msg);
 
       for (int i = 0; i < welcomeResponse.party_size(); i++)
       {

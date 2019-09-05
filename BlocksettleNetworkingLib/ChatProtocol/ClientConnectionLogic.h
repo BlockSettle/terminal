@@ -13,8 +13,6 @@
 #include "ChatProtocol/SessionKeyHolder.h"
 #include "ChatProtocol/CryptManager.h"
 
-#include "chat.pb.h"
-
 namespace spdlog
 {
    class logger;
@@ -22,6 +20,17 @@ namespace spdlog
 
 namespace Chat
 {
+   class WelcomeResponse;
+   class LogoutResponse;
+   class StatusChanged;
+   class PartyMessageStateUpdate;
+   class PartyMessagePacket;
+   class PrivatePartyRequest;
+   class RequestSessionKeyExchange;
+   class ReplySessionKeyExchange;
+   class PrivatePartyStateChanged;
+   class ReplySearchUser;
+
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
    using ApplicationSettingsPtr = std::shared_ptr<ApplicationSettings>;
    using SearchUserReplyList = std::vector<std::string>;
@@ -87,20 +96,20 @@ namespace Chat
       void requestSessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey);
       void replySessionKeyExchange(const std::string& receieverUserName, const BinaryData& encodedLocalSessionPublicKey);
 
-      void handleWelcomeResponse(const google::protobuf::Message& msg);
-      void handleLogoutResponse(const google::protobuf::Message& msg);
-      void handleStatusChanged(const google::protobuf::Message& msg);
-      void handlePartyMessageStateUpdate(const google::protobuf::Message& msg);
-      void handlePartyMessagePacket(const google::protobuf::Message& msg);
-      void handlePrivatePartyRequest(const google::protobuf::Message& msg);
-      void handleRequestSessionKeyExchange(const google::protobuf::Message& msg);
-      void handleReplySessionKeyExchange(const google::protobuf::Message& msg);
-      void handlePrivatePartyStateChanged(const google::protobuf::Message& msg);
-      void handleReplySearchUser(const google::protobuf::Message& msg);
+      void handleWelcomeResponse(const WelcomeResponse& welcomeResponse);
+      void handleLogoutResponse(const LogoutResponse& logoutResponse);
+      void handleStatusChanged(const StatusChanged& statusChanged);
+      void handlePartyMessageStateUpdate(const PartyMessageStateUpdate& partyMessageStateUpdate);
+      void handlePartyMessagePacket(PartyMessagePacket& partyMessagePacket);
+      void handlePrivatePartyRequest(const PrivatePartyRequest& privatePartyRequest);
+      void handleRequestSessionKeyExchange(const RequestSessionKeyExchange& requestKeyExchange);
+      void handleReplySessionKeyExchange(const ReplySessionKeyExchange& replyKeyExchange);
+      void handlePrivatePartyStateChanged(const PrivatePartyStateChanged& privatePartyStateChanged);
+      void handleReplySearchUser(const ReplySearchUser& replySearchUser);
 
-      void incomingGlobalPartyMessage(const google::protobuf::Message& msg);
-      void incomingPrivatePartyMessage(const google::protobuf::Message& msg);
-      void saveIncomingPartyMessageAndUpdateState(const google::protobuf::Message& msg, const PartyMessageState& partyMessageState);
+      void incomingGlobalPartyMessage(PartyMessagePacket& msg);
+      void incomingPrivatePartyMessage(PartyMessagePacket& partyMessagePacket);
+      void saveIncomingPartyMessageAndUpdateState(PartyMessagePacket& msg, const PartyMessageState& partyMessageState);
 
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;
