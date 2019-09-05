@@ -4,74 +4,74 @@ package Chat;
 
 enum ClientStatus
 {
-	OFFLINE = 0;
-	ONLINE = 1;
+   OFFLINE = 0;
+   ONLINE = 1;
 }
 
 enum PartyType
 {
-	GLOBAL = 0;
-	PRIVATE_DIRECT_MESSAGE = 1;
+   GLOBAL = 0;
+   PRIVATE_DIRECT_MESSAGE = 1;
 }
 
 enum PartySubType
 {
-	STANDARD = 0;
-	OTC = 1;
+   STANDARD = 0;
+   OTC = 1;
 }
 
 enum PartyState
 {
-    UNINITIALIZED = 0;
-    REQUESTED = 1;
-    REJECTED = 2;
-    INITIALIZED = 3;
+   UNINITIALIZED = 0;
+   REQUESTED = 1;
+   REJECTED = 2;
+   INITIALIZED = 3;
 }
 
 enum EncryptionType
 {
-    UNENCRYPTED = 0;
-    IES = 1;
-    AEAD = 2;
+   UNENCRYPTED = 0;
+   IES = 1;
+   AEAD = 2;
 }
 
 enum PartyMessageState
 {
-    UNSENT = 0;
-    SENT = 1;
-    RECEIVED = 2;
-    SEEN = 3;
+   UNSENT = 0;
+   SENT = 1;
+   RECEIVED = 2;
+   SEEN = 3;
 }
 
 message PartyRecipientPacket
 {
-    string user_name = 1;
-    bytes public_key = 2;
-    int64 timestamp_ms = 3;
+   string user_name = 1;
+   bytes public_key = 2;
+   int64 timestamp_ms = 3;
 }
 
 message PartyPacket
 {
-	string party_id = 1;
-	string display_name = 2;
-	PartyType party_type = 3;
-	PartySubType party_subtype = 4;
-    PartyState party_state = 5;
-    repeated PartyRecipientPacket recipient = 6;
-    string party_creator_hash = 7;
+   string party_id = 1;
+   string display_name = 2;
+   PartyType party_type = 3;
+   PartySubType party_subtype = 4;
+   PartyState party_state = 5;
+   repeated PartyRecipientPacket recipient = 6;
+   string party_creator_hash = 7;
 }
 
 message WelcomeRequest
 {
-    string user_name = 1;
-    bytes client_public_key = 2;
+   string user_name = 1;
+   bytes client_public_key = 2;
 }
 
 message WelcomeResponse
 {
-    bool success = 1;
-    bytes server_public_key = 2;
-	repeated PartyPacket party = 3;
+   bool success = 1;
+   bytes server_public_key = 2;
+   repeated PartyPacket party = 3;
 }
 
 message LogoutRequest
@@ -84,64 +84,64 @@ message LogoutResponse
 
 message StatusChanged
 {
-	string user_name = 1;
-	ClientStatus client_status = 2;
+   string user_name = 1;
+   ClientStatus client_status = 2;
 }
 
 message PartyMessagePacket
 {
-    string party_id = 1;
-    string message_id = 2;
-    int64 timestamp_ms = 3;
-    string message = 4;
-    EncryptionType encryption = 5;
-    bytes nonce = 6;
-    PartyMessageState party_message_state = 7;
-    string sender_hash = 8;
+   string party_id = 1;
+   string message_id = 2;
+   int64 timestamp_ms = 3;
+   string message = 4;
+   EncryptionType encryption = 5;
+   bytes nonce = 6;
+   PartyMessageState party_message_state = 7;
+   string sender_hash = 8;
 }
 
 message PartyMessageStateUpdate
 {
-    string party_id = 1;
-    string message_id = 2;
-    PartyMessageState party_message_state = 3;
+   string party_id = 1;
+   string message_id = 2;
+   PartyMessageState party_message_state = 3;
 }
 
 message PrivatePartyRequest
 {
-    PartyPacket party_packet = 1;
+   PartyPacket party_packet = 1;
 }
 
 message RequestSessionKeyExchange
 {
-    string sender_user_name = 1;
-    bytes encoded_public_key = 2;
-    string receiver_user_name = 3;
+   string sender_user_name = 1;
+   bytes encoded_public_key = 2;
+   string receiver_user_name = 3;
 }
 
 message ReplySessionKeyExchange
 {
-    string sender_user_name = 1;
-    bytes encoded_public_key = 2;
-    string receiver_user_name = 3;
+   string sender_user_name = 1;
+   bytes encoded_public_key = 2;
+   string receiver_user_name = 3;
 }
 
 message RequestPrivatePartyStateChange
 {
-    string party_id = 1;
-    PartyState party_state = 2;
+   string party_id = 1;
+   PartyState party_state = 2;
 }
 
 message PrivatePartyStateChanged
 {
-    string party_id = 1;
-    PartyState party_state = 2;
+   string party_id = 1;
+   PartyState party_state = 2;
 }
 
 message RequestSearchUser
 {
-    string search_text = 1;
-    string search_id = 2;
+   string search_text = 1;
+   string search_id = 2;
 }
 
 message ReplySearchUser
