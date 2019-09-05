@@ -193,10 +193,10 @@ void RFQRequestWidget::onConnectedToCeler()
 {
    marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected,
                                           this, &RFQRequestWidget::onCurrencySelected));
-   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked,
-                                          this, &RFQRequestWidget::onBuyClicked));
-   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked,
-                                          this, &RFQRequestWidget::onSellClicked));
+   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::BidClicked,
+                                          this, &RFQRequestWidget::onBidClicked));
+   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::AskClicked,
+                                          this, &RFQRequestWidget::onAskClicked));
    marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::MDHeaderClicked,
                                           this, &RFQRequestWidget::onDisableSelectedInfo));
 
@@ -227,9 +227,13 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
    dialog->show();
 
    ui_->pageRFQTicket->resetTicket();
+
+   const auto& currentInfo = ui_->widgetMarketData->getCurrentlySelectedInfo();
+   ui_->pageRFQTicket->SetProductAndSide(currentInfo.productGroup_, currentInfo.currencyPair_,
+                                         currentInfo.bidPrice_, currentInfo.offerPrice_, bs::network::Side::Undefined);
 }
 
-bool RFQRequestWidget::checkConditions(const MarkeSelectedInfo& selectedInfo)
+bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
 {
    ui_->stackedWidgetRFQ->setEnabled(true);
    using UserType = CelerClient::CelerUserType;
@@ -269,7 +273,7 @@ bool RFQRequestWidget::checkConditions(const MarkeSelectedInfo& selectedInfo)
    return true;
 }
 
-bool RFQRequestWidget::checkWalletSettings(bs::network::Asset::Type productType, const MarkeSelectedInfo& selectedInfo)
+bool RFQRequestWidget::checkWalletSettings(bs::network::Asset::Type productType, const MarketSelectedInfo& selectedInfo)
 {
    const CurrencyPair cp(selectedInfo.currencyPair_.toStdString());
    const QString currentProduct = QString::fromStdString(cp.NumCurrency());
@@ -292,11 +296,9 @@ void RFQRequestWidget::forceCheckCondition()
    if (!currentInfo.isValid()) {
       return;
    }
-
-   onSellClicked(currentInfo);
 }
 
-void RFQRequestWidget::onCurrencySelected(const MarkeSelectedInfo& selectedInfo)
+void RFQRequestWidget::onCurrencySelected(const MarketSelectedInfo& selectedInfo)
 {
    if (!checkConditions(selectedInfo)) {
       return;
@@ -306,7 +308,7 @@ void RFQRequestWidget::onCurrencySelected(const MarkeSelectedInfo& selectedInfo)
                                      selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
-void RFQRequestWidget::onBuyClicked(const MarkeSelectedInfo& selectedInfo)
+void RFQRequestWidget::onBidClicked(const MarketSelectedInfo& selectedInfo)
 {
    if (!checkConditions(selectedInfo)) {
       return;
@@ -316,7 +318,7 @@ void RFQRequestWidget::onBuyClicked(const MarkeSelectedInfo& selectedInfo)
                                        selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
-void RFQRequestWidget::onSellClicked(const MarkeSelectedInfo& selectedInfo)
+void RFQRequestWidget::onAskClicked(const MarketSelectedInfo& selectedInfo)
 {
    if (!checkConditions(selectedInfo)) {
       return;

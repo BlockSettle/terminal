@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>616</width>
-    <height>367</height>
+    <width>754</width>
+    <height>601</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -288,17 +288,14 @@
       <bool>true</bool>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_5">
-      <property name="spacing">
-       <number>0</number>
-      </property>
       <property name="leftMargin">
-       <number>5</number>
+       <number>0</number>
       </property>
       <property name="topMargin">
        <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>5</number>
+       <number>0</number>
       </property>
       <property name="bottomMargin">
        <number>0</number>
@@ -308,7 +305,14 @@
         <property name="currentIndex">
          <number>0</number>
         </property>
-        <widget class="RFQShieldPage" name="shieldPage"/>
+        <widget class="RFQShieldPage" name="shieldPage">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+        </widget>
         <widget class="QWidget" name="RFQWidget">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -416,6 +420,16 @@
         </widget>
        </widget>
       </item>
+      <item>
+       <widget class="AutoSignQuoteWidget" name="widgetAutoSignQuote" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>100</height>
+         </size>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -442,6 +456,12 @@
    <class>RFQShieldPage</class>
    <extends>QWidget</extends>
    <header>RFQShieldPage.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>AutoSignQuoteWidget</class>
+   <extends>QWidget</extends>
+   <header>AutoSignQuoteWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

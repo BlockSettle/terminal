@@ -35,6 +35,7 @@ class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
+class AutoSignQuoteProvider;
 class QuoteProvider;
 class SelectedTransactionInputs;
 class SignContainer;
@@ -47,8 +48,6 @@ QT_BEGIN_NAMESPACE
 class QDoubleSpinBox;
 class QPushButton;
 QT_END_NAMESPACE
-
-class UserScriptRunner;
 
 namespace bs {
    namespace network {
@@ -72,11 +71,12 @@ namespace bs {
             , const std::shared_ptr<ConnectionManager> &connectionManager
             , const std::shared_ptr<SignContainer> &
             , const std::shared_ptr<ArmoryConnection> &
-            , std::shared_ptr<MarketDataProvider> mdProvider);
+            , const std::shared_ptr<bs::DealerUtxoResAdapter> &dealerUtxoAdapter
+            , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider);
+
          void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
          std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
-         bool autoSign() const;
 
          CustomDoubleSpinBox* bidSpinBox() const;
          CustomDoubleSpinBox* offerSpinBox() const;
@@ -93,7 +93,6 @@ namespace bs {
          void quoteReqNotifStatusChanged(const network::QuoteReqNotification &);
          void onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
          void onBestQuotePrice(const QString reqId, double price, bool own);
-         void onAutoSignStateChanged(const std::string &walletId, bool active);
          void onCelerConnected();
          void onCelerDisconnected();
 
@@ -104,25 +103,17 @@ namespace bs {
          void submitButtonClicked();
          void pullButtonClicked();
          void showCoinControl();
-         void aqFillHistory();
-         void aqScriptChanged(int curIndex);
-         void onAqScriptLoaded(const QString &filename);
-         void onAqScriptFailed(const QString &filename, const QString &error);
          void walletSelected(int index);
          void onTransactionDataChanged();
-         void checkBoxAQClicked();
          void onAQReply(const bs::network::QuoteReqNotification &qrn, double price);
          void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
          void onOrderUpdated(const bs::network::Order &);
          void onHDLeafCreated(const std::string& ccName);
          void onCreateHDWalletError(const std::string& ccName, bs::error::ErrorCode result);
-         void onSignerStateUpdated();
-         void onAutoSignActivated();
          void onAuthAddrChanged(int);
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
-         QString askForAQScript();
 
       private:
          std::unique_ptr<Ui::RFQDealerReply> ui_;
@@ -135,7 +126,8 @@ namespace bs {
          std::shared_ptr<ConnectionManager>     connectionManager_;
          std::shared_ptr<SignContainer>         signingContainer_;
          std::shared_ptr<ArmoryConnection>      armory_;
-         std::shared_ptr<MarketDataProvider>    mdProvider_;
+         std::shared_ptr<AutoSignQuoteProvider> autoSignQuoteProvider_;
+         std::shared_ptr<DealerUtxoResAdapter>  dealerUtxoAdapter_;
 
          std::shared_ptr<bs::sync::Wallet>   curWallet_;
          std::shared_ptr<bs::sync::Wallet>   prevWallet_;
@@ -160,11 +152,7 @@ namespace bs {
          std::string product_;
          std::string baseProduct_;
 
-         UserScriptRunner *aq_{};
-
-         bool           aqLoaded_{false};
          bool           celerConnected_{false};
-         bool           newLoaded_{false};
 
          std::unordered_map<std::string, double>   bestQPrices_;
 
@@ -174,10 +162,6 @@ namespace bs {
             double   lastPrice{};
          };
          std::unordered_map<std::string, MDInfo>  mdInfo_;
-
-         std::shared_ptr<DealerUtxoResAdapter>  utxoAdapter_;
-
-         bool autoSignState_{false};
 
       private:
          void reset();
@@ -192,8 +176,6 @@ namespace bs {
          std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc);
          std::shared_ptr<bs::sync::Wallet> getXbtWallet();
          bs::Address getRecvAddress() const;
-         void initAQ(const QString &filename);
-         void deinitAQ();
          void setBalanceOk(bool ok);
          void updateRecvAddresses();
          bool checkBalance() const;
@@ -202,8 +184,6 @@ namespace bs {
          void submitReply(const std::shared_ptr<TransactionData> transData
             , const network::QuoteReqNotification &qrn, double price
             , std::function<void(bs::network::QuoteNotification)>);
-         void tryEnableAutoSign();
-         void disableAutoSign();
       };
 
    }  //namespace ui

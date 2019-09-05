@@ -7,7 +7,7 @@
 
 constexpr int EMPTY_COLUMN_WIDTH = 0;
 
-bool MarkeSelectedInfo::isValid() const
+bool MarketSelectedInfo::isValid() const
 {
    return !productGroup_.isEmpty() &&
       !currencyPair_.isEmpty() &&
@@ -130,7 +130,7 @@ void MarketDataWidget::ChangeMDSubscriptionState()
    }
 }
 
-MarkeSelectedInfo MarketDataWidget::getRowInfo(const QModelIndex& index) const
+MarketSelectedInfo MarketDataWidget::getRowInfo(const QModelIndex& index) const
 {
    if (!index.isValid() || !index.parent().isValid()) {
       return {};
@@ -140,7 +140,7 @@ MarkeSelectedInfo MarketDataWidget::getRowInfo(const QModelIndex& index) const
    auto bidIndex = mdSortFilterModel_->index(index.row(), static_cast<int>(MarketDataModel::MarketDataColumns::BidPrice), index.parent());
    auto offerIndex = mdSortFilterModel_->index(index.row(), static_cast<int>(MarketDataModel::MarketDataColumns::OfferPrice), index.parent());
 
-   MarkeSelectedInfo selectedInfo;
+   MarketSelectedInfo selectedInfo;
    selectedInfo.productGroup_ = mdSortFilterModel_->data(index.parent()).toString();
    selectedInfo.currencyPair_ = mdSortFilterModel_->data(pairIndex).toString();
    selectedInfo.bidPrice_ = mdSortFilterModel_->data(bidIndex).toString();
@@ -160,7 +160,7 @@ void MarketDataWidget::setAuthorized(bool authorized)
    authorized_ = authorized;
 }
 
-MarkeSelectedInfo MarketDataWidget::getCurrentlySelectedInfo() const
+MarketSelectedInfo MarketDataWidget::getCurrentlySelectedInfo() const
 {
    if (!ui_->treeViewMarketData) {
       return {};
@@ -191,16 +191,16 @@ void MarketDataWidget::onRowClicked(const QModelIndex& index)
       return;
    }
 
-   MarkeSelectedInfo selectedInfo = getRowInfo(index);
+   MarketSelectedInfo selectedInfo = getRowInfo(index);
 
    switch (static_cast<MarketDataModel::MarketDataColumns>(index.column()))
    {
    case MarketDataModel::MarketDataColumns::BidPrice: {
-      emit BuyClicked(selectedInfo);
+      emit BidClicked(selectedInfo);
       break;
    }
    case MarketDataModel::MarketDataColumns::OfferPrice: {
-      emit SellClicked(selectedInfo);
+      emit AskClicked(selectedInfo);
       break;
    }
    default: {

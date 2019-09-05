@@ -98,8 +98,10 @@ namespace UiUtils
       WalletBalanceRole
    };
 
+   // Returns default wallet index (or -1 if empty).
+   // Only bitcoin wallets would be used.
    int fillWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
-      , const std::shared_ptr<SignContainer> &container = nullptr, const std::string& selectedWalletId = std::string());
+      , bool skipWatchingOnly);
    int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager);
    void fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
 

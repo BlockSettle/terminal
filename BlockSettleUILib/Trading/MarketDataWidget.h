@@ -17,7 +17,7 @@ class ApplicationSettings;
 class MDHeader;
 class TreeViewWithEnterKey;
 
-struct MarkeSelectedInfo {
+struct MarketSelectedInfo {
    QString productGroup_;
    QString currencyPair_;
    QString bidPrice_;
@@ -26,7 +26,7 @@ struct MarkeSelectedInfo {
    bool isValid() const;
 };
 
-Q_DECLARE_METATYPE(MarkeSelectedInfo);
+Q_DECLARE_METATYPE(MarketSelectedInfo);
 
 class MarketDataWidget : public QWidget
 {
@@ -42,12 +42,12 @@ public:
    TreeViewWithEnterKey* view() const;
 
    void setAuthorized(bool authorized);
-   MarkeSelectedInfo getCurrentlySelectedInfo() const;
+   MarketSelectedInfo getCurrentlySelectedInfo() const;
 
 signals:
-   void CurrencySelected(const MarkeSelectedInfo& selectedInfo);
-   void SellClicked(const MarkeSelectedInfo& selectedInfo);
-   void BuyClicked(const MarkeSelectedInfo& selectedInfo);
+   void CurrencySelected(const MarketSelectedInfo& selectedInfo);
+   void AskClicked(const MarketSelectedInfo& selectedInfo);
+   void BidClicked(const MarketSelectedInfo& selectedInfo);
    void MDHeaderClicked();
 
 private slots:
@@ -67,7 +67,7 @@ private slots:
    void ChangeMDSubscriptionState();
 
 protected:
-   MarkeSelectedInfo getRowInfo(const QModelIndex& index) const;
+   MarketSelectedInfo getRowInfo(const QModelIndex& index) const;
 
 private:
    std::unique_ptr<Ui::MarketDataWidget> ui_;

@@ -182,8 +182,9 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId)
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   auto selectedWalletIndex = UiUtils::fillWalletsComboBox(comboBoxWallets(), walletsManager_);
-   selectedWalletChanged(selectedWalletIndex);
+   const bool skipWatchingOnly = false;
+   int index = UiUtils::fillWalletsComboBox(comboBoxWallets(), walletsManager_, skipWatchingOnly);
+   selectedWalletChanged(index);
 }
 
 void CreateTransactionDialog::populateFeeList()

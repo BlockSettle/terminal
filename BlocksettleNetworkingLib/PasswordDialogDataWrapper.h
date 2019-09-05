@@ -22,6 +22,7 @@ public:
    void insert(const std::string &key, double value);
    void insert(const std::string &key, const char *data, size_t size);
 
+   // May cause exception when parsing protobuf Any
    template<typename T> T value(const std::string &key) const;
 
 private:
