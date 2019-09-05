@@ -17,6 +17,7 @@ SelectWalletDialog::SelectWalletDialog(const std::shared_ptr<bs::sync::WalletsMa
    ui_->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Select"));
 
    walletsModel_ = new WalletsViewModel(walletsManager, selWalletId, nullptr, ui_->treeViewWallets, true);
+   walletsModel_->setBitcoinLeafSelectionMode();
    ui_->treeViewWallets->setModel(walletsModel_);
    ui_->treeViewWallets->setItemsExpandable(true);
    ui_->treeViewWallets->setRootIsDecorated(true);
@@ -32,6 +33,7 @@ SelectWalletDialog::SelectWalletDialog(const std::shared_ptr<bs::sync::WalletsMa
    connect(ui_->buttonBox, &QDialogButtonBox::rejected, this, &SelectWalletDialog::reject);
 
    onSelectionChanged();
+   ui_->treeViewWallets->expandAll();
 }
 
 SelectWalletDialog::~SelectWalletDialog() = default;

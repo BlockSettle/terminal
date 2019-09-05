@@ -433,6 +433,20 @@ bool WalletsViewModel::hasChildren(const QModelIndex& parent) const
    return node->hasChildren();
 }
 
+Qt::ItemFlags WalletsViewModel::flags(const QModelIndex &index) const
+{
+   Qt::ItemFlags flags = QAbstractItemModel::flags(index);
+
+   if (bitcoinLeafSelectionMode_) {
+      WalletNode::Type nodeType = getNode(index)->type();
+
+      if (nodeType != WalletNode::Type::Leaf) {
+         return flags & ~Qt::ItemIsSelectable;
+      }
+   }
+   return flags;
+}
+
 std::shared_ptr<bs::sync::Wallet> WalletsViewModel::getAuthWallet() const
 {
    return walletsManager_->getAuthWallet();
@@ -536,7 +550,18 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
          , getHDWalletType(hdWallet, walletsManager_), rootNode_->nbChildren(), rootNode_.get());
       hdNode->setHdWallet(hdWallet);
       rootNode_->add(hdNode);
-      hdNode->addGroups(hdWallet->getGroups());
+
+      // filter groups
+      // don't display Settlement
+      auto groups = hdWallet->getGroups();
+      std::vector<std::shared_ptr<bs::sync::hd::Group>> filteredGroups;
+
+      std::copy_if(groups.begin(), groups.end(), std::back_inserter(filteredGroups),
+         [](const std::shared_ptr<bs::sync::hd::Group>& item)
+         { return item->type() != bs::core::wallet::Type::Settlement; }
+      );
+
+      hdNode->addGroups(filteredGroups);
       if (signContainer_) {
          if (signContainer_->isOffline() || signContainer_->isWalletOffline(hdWallet->walletId())) {
             hdNode->setState(WalletNode::State::Offline);
