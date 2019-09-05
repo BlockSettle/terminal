@@ -181,8 +181,7 @@ void AbstractChatWidgetState::saveDraftMessage()
 {
    const auto draft = chat_->ui_->input_textEdit->toPlainText();
 
-   if (draft.isEmpty())
-   {
+   if (draft.isEmpty()) {
       chat_->draftMessages_.remove(chat_->currentPartyId_);
    }
    else {
