@@ -170,7 +170,7 @@ TEST_F(TestWallet, BIP44_primary)
    EXPECT_EQ(syncXbtLeaf->name(), "primary/XBT [TESTNET]/0'");
 
    QComboBox cbox;
-   UiUtils::fillWalletsComboBox(&cbox, syncMgr);
+   UiUtils::fillWalletsComboBox(&cbox, syncMgr, false);
    EXPECT_EQ(cbox.count(), 2);
 //   EXPECT_EQ(cbox.currentText().toStdString(), syncXbtLeaf->name());
 
