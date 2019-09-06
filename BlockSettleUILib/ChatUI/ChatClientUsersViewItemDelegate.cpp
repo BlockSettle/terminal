@@ -131,12 +131,11 @@ void ChatClientUsersViewItemDelegate::paintRequestParty(Chat::ClientPartyPtr& cl
    case Chat::PartyState::REQUESTED:
       if (clientPartyPtr->partyCreatorHash() == proxyModel_->currentUser()) {
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOutgoing());
-         break;
       }
       else {
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactIncoming());
-         break;
       }
+      break;
    case Chat::PartyState::REJECTED:
       itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactRejected());
       break;
