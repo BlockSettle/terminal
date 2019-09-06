@@ -1,5 +1,5 @@
-#ifndef PartyModel_h__
-#define PartyModel_h__
+#ifndef PARTYMODEL_H
+#define PARTYMODEL_H
 
 #include <QObject>
 #include <memory.h>
@@ -60,4 +60,4 @@ namespace Chat
 
 }
 
-#endif // PartyModel_h__
+#endif // PARTYMODEL_H

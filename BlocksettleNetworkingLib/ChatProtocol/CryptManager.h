@@ -1,5 +1,5 @@
-#ifndef CryptManager_h__
-#define CryptManager_h__
+#ifndef CRYPTMANAGER_H
+#define CRYPTMANAGER_H
 
 #include <QObject>
 #include <QFuture>
@@ -45,4 +45,4 @@ namespace Chat
 
 Q_DECLARE_METATYPE(Chat::CryptManagerPtr)
 
-#endif // CryptManager_h__
+#endif // CRYPTMANAGER_H

@@ -1,5 +1,5 @@
-#ifndef DatabaseCreator_h__
-#define DatabaseCreator_h__
+#ifndef DATABASECREATOR_H
+#define DATABASECREATOR_H
 
 #include <memory>
 #include <QObject>
@@ -68,4 +68,4 @@ namespace Chat
    using DatabaseCreatorPtr = std::shared_ptr<DatabaseCreator>;
 }
 
-#endif // DatabaseCreator_h__
+#endif // DATABASECREATOR_H

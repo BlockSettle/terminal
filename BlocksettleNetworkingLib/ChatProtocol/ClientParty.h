@@ -1,5 +1,5 @@
-#ifndef ClientParty_h__
-#define ClientParty_h__
+#ifndef CLIENTPARTY_H
+#define CLIENTPARTY_H
 
 #include <QObject>
 #include <memory>
@@ -51,4 +51,4 @@ namespace Chat
 
 Q_DECLARE_METATYPE(Chat::ClientPartyPtr)
 
-#endif // ClientParty_h__
+#endif // CLIENTPARTY_H

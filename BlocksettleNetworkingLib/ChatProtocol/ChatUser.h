@@ -1,5 +1,5 @@
-#ifndef ChatUser_h__
-#define ChatUser_h__
+#ifndef CHATUSER_H
+#define CHATUSER_H
 
 #include <string>
 #include <memory>
@@ -40,4 +40,4 @@ namespace Chat
    using ChatUserPtr = std::shared_ptr<ChatUser>;
 }
 
-#endif // ChatUser_h__
+#endif // CHATUSER_H

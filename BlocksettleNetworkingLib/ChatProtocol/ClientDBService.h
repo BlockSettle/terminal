@@ -1,5 +1,5 @@
-#ifndef ClientDBService_h__
-#define ClientDBService_h__
+#ifndef CLIENTDBSERVICE_H
+#define CLIENTDBSERVICE_H
 
 #include <QObject>
 #include <memory>
@@ -55,4 +55,4 @@ namespace Chat
 
 Q_DECLARE_METATYPE(Chat::ApplicationSettingsPtr);
 
-#endif // ClientDBService_h__
+#endif // CLIENTDBSERVICE_H

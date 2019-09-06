@@ -1,5 +1,5 @@
-#ifndef SessionKeyHolder_h__
-#define SessionKeyHolder_h__
+#ifndef SESSIONKEYHOLDER_H
+#define SESSIONKEYHOLDER_H
 
 #include <QObject>
 #include <unordered_map>
@@ -58,4 +58,4 @@ namespace Chat
    using SessionKeyHolderPtr = std::shared_ptr<SessionKeyHolder>;
 }
 
-#endif // SessionKeyHolder_h__
+#endif // SESSIONKEYHOLDER_H

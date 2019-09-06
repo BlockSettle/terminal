@@ -1,5 +1,5 @@
-#ifndef PrivateDirectMessageParty_h__
-#define PrivateDirectMessageParty_h__
+#ifndef PRIVATEDIRECTMESSAGEPARTY_H
+#define PRIVATEDIRECTMESSAGEPARTY_H
 
 #include <QMetaType>
 
@@ -48,4 +48,4 @@ namespace Chat
 Q_DECLARE_METATYPE(Chat::PrivateDirectMessagePartyPtr)
 Q_DECLARE_METATYPE(Chat::PartyRecipientsPtrList)
 
-#endif // PrivateDirectMessageParty_h__
+#endif // PRIVATEDIRECTMESSAGEPARTY_H

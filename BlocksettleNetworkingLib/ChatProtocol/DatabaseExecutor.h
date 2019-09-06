@@ -1,5 +1,5 @@
-#ifndef DatabaseExecutor_h__
-#define DatabaseExecutor_h__
+#ifndef DATABASEEXECUTOR_H
+#define DATABASEEXECUTOR_H
 
 #include <memory>
 #include <QObject>
@@ -33,4 +33,4 @@ namespace Chat
    };
 }
 
-#endif // DatabaseExecutor_h__
+#endif // DATABASEEXECUTOR_H

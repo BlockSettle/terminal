@@ -1,5 +1,5 @@
-#ifndef ClientPartyLogic_h__
-#define ClientPartyLogic_h__
+#ifndef CLIENTPARTYLOGIC_H
+#define CLIENTPARTYLOGIC_H
 
 #include <QObject>
 #include <memory>
@@ -72,4 +72,4 @@ namespace Chat
 
 Q_DECLARE_METATYPE(Chat::ClientPartyLogicError)
 
-#endif // ClientPartyLogic_h__
+#endif // CLIENTPARTYLOGIC_H

@@ -1,5 +1,5 @@
-#ifndef SessionKeyData_h__
-#define SessionKeyData_h__
+#ifndef SESSIONKEYDATA_H
+#define SESSIONKEYDATA_H
 
 #include <memory>
 #include <string>
@@ -57,4 +57,4 @@ namespace Chat
 
 Q_DECLARE_METATYPE(Chat::SessionKeyDataPtr)
 
-#endif // SessionKeyData_h__
+#endif // SESSIONKEYDATA_H

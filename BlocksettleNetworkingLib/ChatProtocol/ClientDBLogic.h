@@ -1,5 +1,5 @@
-#ifndef ClientDBLogic_h__
-#define ClientDBLogic_h__
+#ifndef CLIENTDBLOGIC_H
+#define CLIENTDBLOGIC_H
 
 #include <memory>
 
@@ -81,6 +81,6 @@ namespace Chat
 
 }
 
-Q_DECLARE_METATYPE(Chat::ClientDBLogicError);
+Q_DECLARE_METATYPE(Chat::ClientDBLogicError)
 
-#endif // ClientDBLogic_h__
+#endif // CLIENTDBLOGIC_H

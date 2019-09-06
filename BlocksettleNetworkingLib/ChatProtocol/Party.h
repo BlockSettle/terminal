@@ -1,5 +1,5 @@
-#ifndef Party_h__
-#define Party_h__
+#ifndef PARTY_H
+#define PARTY_H
 
 #include <QMetaType>
 
@@ -56,4 +56,4 @@ namespace Chat
 
 Q_DECLARE_METATYPE(Chat::PartyPtrList)
 
-#endif // Party_h__
+#endif // PARTY_H

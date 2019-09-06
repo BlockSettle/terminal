@@ -1,5 +1,5 @@
-#ifndef PartyRecipient_h__
-#define PartyRecipient_h__
+#ifndef PARTYRECIPIENT_H
+#define PARTYRECIPIENT_H
 
 #include <QDateTime>
 
@@ -38,4 +38,4 @@ namespace Chat
 
 }
 
-#endif // PartyRecipient_h__
+#endif // PARTYRECIPIENT_H

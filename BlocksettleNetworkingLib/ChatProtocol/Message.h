@@ -1,5 +1,5 @@
-#ifndef Message_h__
-#define Message_h__
+#ifndef MESSAGE_H
+#define MESSAGE_H
 
 #include <QMetaType>
 #include <QDateTime>
@@ -55,4 +55,4 @@ namespace Chat
 Q_DECLARE_METATYPE(Chat::MessagePtr)
 Q_DECLARE_METATYPE(Chat::MessagePtrList);
 
-#endif // Message_h__
+#endif // MESSAGE_H

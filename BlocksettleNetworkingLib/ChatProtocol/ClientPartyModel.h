@@ -1,5 +1,5 @@
-#ifndef ClientPartyModel_h__
-#define ClientPartyModel_h__
+#ifndef CLIENTPARTYMODEL_H
+#define CLIENTPARTYMODEL_H
 
 #include <QMetaType>
 #include <QObject>
@@ -80,4 +80,4 @@ namespace Chat
 Q_DECLARE_METATYPE(Chat::PrivatePartyState)
 Q_DECLARE_METATYPE(Chat::ClientPartyModelError)
 
-#endif // ClientPartyModel_h__
+#endif // CLIENTPARTYMODEL_H

@@ -1,5 +1,5 @@
-#ifndef ClientDatabaseCreator_h__
-#define ClientDatabaseCreator_h__
+#ifndef CLIENTDATABASECREATOR_H
+#define CLIENTDATABASECREATOR_H
 
 #include <memory>
 
@@ -20,4 +20,4 @@ namespace Chat
    using ClientDatabaseCreatorPtr = std::shared_ptr<ClientDatabaseCreator>;
 }
 
-#endif // ClientDatabaseCreator_h__
+#endif // CLIENTDATABASECREATOR_H

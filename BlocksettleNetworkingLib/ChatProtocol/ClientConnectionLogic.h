@@ -1,5 +1,5 @@
-#ifndef ConnectionLogic_h__
-#define ConnectionLogic_h__
+#ifndef CLIENTCONNECTIONLOGIC_H
+#define CLIENTCONNECTIONLOGIC_H
 
 #include <memory>
 #include <QObject>
@@ -126,4 +126,4 @@ namespace Chat
 
 Q_DECLARE_METATYPE(Chat::SearchUserReplyList)
 
-#endif // ConnectionLogic_h__
+#endif // CLIENTCONNECTIONLOGIC_H

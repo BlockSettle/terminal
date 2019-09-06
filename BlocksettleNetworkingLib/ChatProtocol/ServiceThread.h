@@ -1,5 +1,5 @@
-#ifndef ServiceThread_h__
-#define ServiceThread_h__
+#ifndef SERVICETHREAD_H
+#define SERVICETHREAD_H
 
 #include <QThread>
 
@@ -40,4 +40,5 @@ namespace Chat
    };
 
 }
-#endif // ServiceThread_h__
+
+#endif // SERVICETHREAD_H

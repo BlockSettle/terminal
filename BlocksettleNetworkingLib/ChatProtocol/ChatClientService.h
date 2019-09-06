@@ -1,5 +1,5 @@
-#ifndef ChatClientService_h__
-#define ChatClientService_h__
+#ifndef CHATCLIENTSERVICE_H
+#define CHATCLIENTSERVICE_H
 
 #include <memory>
 
@@ -50,4 +50,4 @@ Q_DECLARE_METATYPE(Chat::ConnectionManagerPtr)
 Q_DECLARE_METATYPE(Chat::LoggerPtr)
 Q_DECLARE_METATYPE(ZmqBipNewKeyCb)
 
-#endif // ChatClientService_h__
+#endif // CHATCLIENTSERVICE_H
