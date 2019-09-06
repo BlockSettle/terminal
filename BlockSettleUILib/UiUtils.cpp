@@ -112,66 +112,51 @@ namespace UiUtils {
    }
 }
 
-static int addLeaves(QComboBox *comboBox, int &index, const QString &prefix, const std::string &defWalletId
-   , const std::vector<std::shared_ptr<bs::sync::Wallet>> &leaves, const std::shared_ptr<SignContainer> &container)
-{
-   int selected = 0;
-   for (const auto &leaf : leaves) {
-      if ((leaf->type() == bs::core::wallet::Type::Authentication) || (leaf->type() == bs::core::wallet::Type::ColorCoin)) {
-         continue;
-      }
-      if (container && !container->isOffline() && container->isWalletOffline(leaf->walletId())) {
-         continue;
-      }
-      comboBox->addItem(prefix + QString::fromStdString(leaf->shortName()));
-      comboBox->setItemData(index, QString::fromStdString(leaf->walletId()), UiUtils::WalletIdRole);
-      comboBox->setItemData(index, leaf->getSpendableBalance(), UiUtils::WalletBalanceRole);
-      if (defWalletId == leaf->walletId()) {
-         selected = index;
-      }
-      index++;
-   }
-   return selected;
-}
-
 int UiUtils::fillWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::shared_ptr<SignContainer> &container, const std::string& selectedWalletId)
+   , bool skipWatchingOnly)
 {
-   if ((walletsManager == nullptr) || (walletsManager->hdWalletsCount() == 0)) {
-      return -1;
-   }
-   std::string defaultWalletId = selectedWalletId;
-   if (defaultWalletId.empty()) {
-      const auto &defWallet = walletsManager->getDefaultWallet();
-      if (defWallet) {
-         defaultWalletId = defWallet->walletId();
+   auto addHdWallet = [comboBox, skipWatchingOnly](const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet) {
+      if (skipWatchingOnly && hdWallet->isOffline()) {
+         return;
       }
-   }
 
-   int selected = 0;
-   int index = 0;
+      for (const auto &group : hdWallet->getGroups()) {
+         if (group->type() != bs::core::wallet::Type::Bitcoin) {
+            continue;
+         }
+
+         const auto prefix = QString::fromStdString(hdWallet->name())
+            + QLatin1String("/") + QString::fromStdString(group->name()) + QLatin1String("/");
+
+         for (const auto &leaf : group->getLeaves()) {
+            const int index = comboBox->count();
+            comboBox->addItem(prefix + QString::fromStdString(leaf->shortName()));
+            comboBox->setItemData(index, QString::fromStdString(leaf->walletId()), UiUtils::WalletIdRole);
+            comboBox->setItemData(index, leaf->getSpendableBalance(), UiUtils::WalletBalanceRole);
+         }
+      }
+   };
 
    auto b = comboBox->blockSignals(true);
    comboBox->clear();
-   for (size_t i = 0; i < walletsManager->hdWalletsCount(); i++) {
-      const auto &hdWallet = walletsManager->getHDWallet(i);
-      const auto &groups = hdWallet->getGroups();
-      if (groups.empty()) {
-         selected = qMax(selected, addLeaves(comboBox, index, QString::fromStdString(hdWallet->name()) + QLatin1String("/")
-            , defaultWalletId, hdWallet->getLeaves(), container));
-      }
-      else {
-         for (const auto &group : groups) {
-            const auto prefix = QString::fromStdString(hdWallet->name())
-               + QLatin1String("/") + QString::fromStdString(group->name()) + QLatin1String("/");
-            selected = qMax(selected, addLeaves(comboBox, index, prefix, defaultWalletId, group->getAllLeaves()
-               , container));
-         }
+   auto primaryWallet = walletsManager->getPrimaryWallet();
+   if (primaryWallet) {
+      // Let's add primary HD wallet first if exists
+      addHdWallet(primaryWallet);
+   }
+   for (int i = 0; i < int(walletsManager->hdWalletsCount()); ++i) {
+      const auto &hdWallet = walletsManager->getHDWallet(unsigned(i));
+      if (hdWallet != primaryWallet) {
+         addHdWallet(hdWallet);
       }
    }
    comboBox->blockSignals(b);
-   QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, selected));
-   return selected;
+
+   if (comboBox->count() == 0) {
+      return -1;
+   }
+   comboBox->setCurrentIndex(0);
+   return 0;
 }
 
 int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId)

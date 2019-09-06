@@ -91,10 +91,6 @@ public:
 
    virtual void CloseConnection();
 
-public slots:
-   void onSendHbTimeout();
-   void onRecvHbTimeout();
-
 signals:
    void OnConnectedToServer();
    void OnConnectionClosed();
@@ -113,6 +109,10 @@ protected:
    bool SendLogin(const std::string& login, const std::string& email, const std::string& password);
 
    std::shared_ptr<spdlog::logger> logger_;
+
+private slots:
+   void onSendHbTimeout();
+   void onRecvHbTimeout();
 
 private:
    void OnDataReceived(CelerAPI::CelerMessageType messageType, const std::string& data);

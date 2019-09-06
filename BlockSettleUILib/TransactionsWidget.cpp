@@ -296,6 +296,7 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
    });
 
    ui_->treeViewTransactions->setSortingEnabled(true);
+   ui_->treeViewTransactions->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Status), Qt::AscendingOrder);
    ui_->treeViewTransactions->setModel(sortFilterModel_);
    ui_->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::TxHash));
 //   ui_->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::MissedBlocks));

@@ -101,6 +101,8 @@ public:
 
    void LoadWallets(bool keepSelection = false);
 
+   void setBitcoinLeafSelectionMode(bool flag = true) { bitcoinLeafSelectionMode_ = flag; }
+
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -110,7 +112,7 @@ public:
    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
    QModelIndex parent(const QModelIndex &child) const override;
    bool hasChildren(const QModelIndex& parent = QModelIndex()) const override;
-
+   Qt::ItemFlags flags(const QModelIndex &index) const override;
 signals:
    void updateAddresses();
 
@@ -154,6 +156,7 @@ private:
    bool              showRegularWallets_;
    std::unordered_map<int, std::string>   hdInfoReqIds_;
    std::unordered_map<std::string, WalletNode::State> signerStates_;
+   bool bitcoinLeafSelectionMode_ = false;
 };
 
 

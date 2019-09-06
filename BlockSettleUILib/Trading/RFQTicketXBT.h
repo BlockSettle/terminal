@@ -70,6 +70,8 @@ public:
    bs::Address selectedAuthAddress() const;
 
 public slots:
+   void SetProductAndSide(const QString& productGroup, const QString& currencyPair
+      , const QString& bidPrice, const QString& offerPrice, bs::network::Side::Type side);
    void setSecurityId(const QString& productGroup, const QString& currencyPair
       , const QString& bidPrice, const QString& offerPrice);
    void setSecurityBuy(const QString& productGroup, const QString& currencyPair
@@ -92,7 +94,8 @@ private slots:
    void onBuySelected();
 
    void showCoinControl();
-   void walletSelected(int index);
+   void walletSelectedRecv(int index);
+   void walletSelectedSend(int index);
 
    void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
 
@@ -161,8 +164,6 @@ private:
    double estimatedFee() const;
    void onTransactinDataChanged();
 
-   void SetProductAndSide(const QString& productGroup, const QString& currencyPair
-      , const QString& bidPrice, const QString& offerPrice, bs::network::Side::Type side);
    void SetProductGroup(const QString& productGroup);
    void SetCurrencyPair(const QString& currencyPair);
 
