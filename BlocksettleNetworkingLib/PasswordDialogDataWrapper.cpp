@@ -66,70 +66,51 @@ inline void PasswordDialogDataWrapper::insertImpl(const std::string &key, T valu
    mutable_valuesmap()->insert(p);
 }
 
-/*template<typename T>
-AnyMessage &PasswordDialogDataWrapper::setValueImpl(AnyMessage &anyMsg, T)
-{
-   assert(false);
-   return anyMsg;
-}*/
+///
 
 template<>
-bool PasswordDialogDataWrapper::value<bool>(const std::string &key) const
+bool PasswordDialogDataWrapper::valueImpl<bool>(const AnyMessage &anyMsg) const
 {
-   const Any &msg = valuesmap().at(key);
-   AnyMessage anyMsg;
-   msg.UnpackTo(&anyMsg);
    if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueBool) {
-      throw std::runtime_error(kTypeErrorMsg);
+      return false;
    }
    return anyMsg.value_bool();
 }
 
 template<>
-std::string PasswordDialogDataWrapper::value<std::string>(const std::string &key) const
+std::string PasswordDialogDataWrapper::valueImpl<std::string>(const AnyMessage &anyMsg) const
 {
-   const Any &msg = valuesmap().at(key);
-   AnyMessage anyMsg;
-   msg.UnpackTo(&anyMsg);
    if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueString) {
-      throw std::runtime_error(kTypeErrorMsg);
+      return std::string();
    }
    return anyMsg.value_string();
 }
 
 template<>
-int PasswordDialogDataWrapper::value<int>(const std::string &key) const
+int PasswordDialogDataWrapper::valueImpl<int>(const AnyMessage &anyMsg) const
 {
-   const Any &msg = valuesmap().at(key);
-   AnyMessage anyMsg;
-   msg.UnpackTo(&anyMsg);
    if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueInt32) {
-      throw std::runtime_error(kTypeErrorMsg);
+      return 0;
    }
    return anyMsg.value_int32();
 }
 
 template<>
-double PasswordDialogDataWrapper::value<double>(const std::string &key) const
+double PasswordDialogDataWrapper::valueImpl<double>(const AnyMessage &anyMsg) const
 {
-   const Any &msg = valuesmap().at(key);
-   AnyMessage anyMsg;
-   msg.UnpackTo(&anyMsg);
-   if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueBool) {
-      throw std::runtime_error(kTypeErrorMsg);
+   if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueDouble) {
+      return 0;
    }
    return anyMsg.value_double();
 }
 
 template<>
-const char * PasswordDialogDataWrapper::value<const char *>(const std::string &key) const
+const char * PasswordDialogDataWrapper::valueImpl<const char *>(const AnyMessage &anyMsg) const
 {
-   const Any &msg = valuesmap().at(key);
-   AnyMessage anyMsg;
-   msg.UnpackTo(&anyMsg);
-   if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueBool) {
-      throw std::runtime_error(kTypeErrorMsg);
+   if (anyMsg.value_case() != Blocksettle::Communication::Internal::AnyMessage::ValueCase::kValueBytes) {
+      return nullptr;
    }
    return anyMsg.value_bytes().data();
 }
+
 

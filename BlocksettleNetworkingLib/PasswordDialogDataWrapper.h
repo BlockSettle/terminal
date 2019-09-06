@@ -22,20 +22,38 @@ public:
    void insert(const std::string &key, double value);
    void insert(const std::string &key, const char *data, size_t size);
 
-   // May cause exception when parsing protobuf Any
-   template<typename T> T value(const std::string &key) const;
+   template<typename T>
+   T value(const std::string &key) const noexcept
+   {
+      try {
+         if (!valuesmap().contains(key)) {
+            return T();
+         }
+
+         const google::protobuf::Any &msg = valuesmap().at(key);
+         Blocksettle::Communication::Internal::AnyMessage anyMsg;
+         msg.UnpackTo(&anyMsg);
+
+         return valueImpl<T>(anyMsg);
+      } catch (...) {
+         return  T();
+      }
+   }
 
 private:
    template<typename T>
    void insertImpl(const std::string &key, T value);
+
+   template<typename T>
+   T valueImpl(const AnyMessage &anyMsg) const;
 };
 
 
-template<> bool PasswordDialogDataWrapper::value<bool>(const std::string &key) const;
-template<> std::string PasswordDialogDataWrapper::value<std::string>(const std::string &key) const;
-template<> int PasswordDialogDataWrapper::value<int>(const std::string &key) const;
-template<> double PasswordDialogDataWrapper::value<double>(const std::string &key) const;
-template<> const char * PasswordDialogDataWrapper::value<const char *>(const std::string &key) const;
+template<> bool PasswordDialogDataWrapper::valueImpl<bool>(const AnyMessage &anyMsg) const;
+template<> std::string PasswordDialogDataWrapper::valueImpl<std::string>(const AnyMessage &anyMsg) const;
+template<> int PasswordDialogDataWrapper::valueImpl<int>(const AnyMessage &anyMsg) const;
+template<> double PasswordDialogDataWrapper::valueImpl<double>(const AnyMessage &anyMsg) const;
+template<> const char * PasswordDialogDataWrapper::valueImpl<const char *>(const AnyMessage &anyMsg) const;
 
 } // namespace Internal
 } // namespace Communication

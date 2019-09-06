@@ -64,6 +64,8 @@ public:
    bool autoSignQuoteAvailable();
    void setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> &);
 
+   QString getAutoSignWalletName();
+
    UserScriptRunner *autoQuoter() const;
 
 signals:

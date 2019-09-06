@@ -214,6 +214,19 @@ void AutoSignQuoteProvider::setWalletsManager(std::shared_ptr<bs::sync::WalletsM
    emit autoSignQuoteAvailabilityChanged();
 }
 
+QString AutoSignQuoteProvider::getAutoSignWalletName()
+{
+   if (!walletsManager_ || !signingContainer_) {
+      return QString();
+   }
+
+   const auto wallet = walletsManager_->getPrimaryWallet();
+   if (!wallet) {
+      return QString();
+   }
+   return QString::fromStdString(wallet->name());
+}
+
 QString AutoSignQuoteProvider::getDefaultScriptsDir()
 {
 #if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
