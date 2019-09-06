@@ -7,7 +7,7 @@
 #include <enable_warnings.h>
 
 namespace {
-   const size_t kDefaultNonceSize = 24;
+   constexpr size_t kDefaultNonceSize = 24;
 }
 
 using namespace Chat;
