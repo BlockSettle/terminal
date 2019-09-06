@@ -6,6 +6,7 @@
 #include <set>
 
 #include "Address.h"
+#include "AuthAddress.h"
 #include "Wallets/SyncWallet.h"
 
 
@@ -239,6 +240,8 @@ private:
       getValidationAddress(const bs::Address&);
 
    UTXO getVettingUtxo(const bs::Address &validationAddr
+      , const std::vector<UTXO> &, size_t nbOutputs = 1) const;
+   std::vector<UTXO> filterVettingUtxos(const bs::Address &validationAddr
       , const std::vector<UTXO> &) const;
 
    const std::shared_ptr<ValidationAddressStruct>
@@ -267,6 +270,8 @@ public:
    unsigned goOnline(void);
    unsigned update(void);
 
+   bool isReady() const { return ready_; }
+
    //utility methods
    std::shared_ptr<ArmoryConnection> connPtr(void) const { return connPtr_; }
    void pushRefreshID(std::vector<BinaryData>&);
@@ -277,7 +282,8 @@ public:
    bool hasZCOutputs(const bs::Address&) const;
 
    bool getOutpointBatch(const bs::Address &, const std::function<void(const OutpointBatch &)> &) const;
-   bool getSpendableTxOutList(const std::function<void(const std::vector<UTXO> &)> &) const;
+   bool getSpendableTxOutFor(const bs::Address &, const std::function<void(const UTXO &)> &, size_t nbOutputs = 1) const;
+   bool getVettingUTXOsFor(const bs::Address &, const std::function<void(const std::vector<UTXO> &)> &) const;
 
    const bs::Address& findValidationAddressForUTXO(const UTXO&) const;
    const bs::Address& findValidationAddressForTxHash(const BinaryData&) const;
@@ -287,6 +293,8 @@ public:
       const bs::Address& validationAddr = BinaryData()) const;
    BinaryData fundUserAddress(const bs::Address&, std::shared_ptr<ResolverFeed>,
       const UTXO &) const;
+   BinaryData fundUserAddresses(const std::vector<bs::Address> &, const bs::Address &validationAddress
+      , std::shared_ptr<ResolverFeed>, const std::vector<UTXO> &) const;
    BinaryData vetUserAddress(const bs::Address&, std::shared_ptr<ResolverFeed>,
       const bs::Address& validationAddr = BinaryData()) const;
    BinaryData revokeValidationAddress(
@@ -298,11 +306,19 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 struct AuthAddressLogic
 {
-   static bool isValid(const ValidationAddressManager&, const bs::Address&);
+   static AddressVerificationState getAuthAddrState(const ValidationAddressManager &
+      , const bs::Address &);
+   static bool isValid(const ValidationAddressManager &vam, const bs::Address &addr) {
+      return (getAuthAddrState(vam, addr) == AddressVerificationState::Verified);
+   }
    static std::vector<OutpointData> getValidPaths(
       const ValidationAddressManager&, const bs::Address&);
    static BinaryData revoke(const ValidationAddressManager&, const bs::Address&,
       std::shared_ptr<ResolverFeed>);
+   static std::pair<bs::Address, UTXO> getRevokeData(const ValidationAddressManager &
+      , const bs::Address &authAddr);
+   static BinaryData revoke(const bs::Address &, const std::shared_ptr<ResolverFeed> &
+      , const bs::Address &validationAddr, const UTXO &);
 };
 
 #endif

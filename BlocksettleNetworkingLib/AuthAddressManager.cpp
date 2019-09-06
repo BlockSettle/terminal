@@ -70,25 +70,19 @@ bool AuthAddressManager::setup()
       return false;
    }
    if (addressVerificator_) {
-      logger_->debug("[AuthAddressManager::setup] addressVerificator_ already exist");
       return true;
    }
 
-   addressVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, CryptoPRNG::generateRandom(8).toHexStr()
-      , [this](const std::shared_ptr<AuthAddress> addr, AddressVerificationState state)
+   addressVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_
+      , [this](const bs::Address &address, AddressVerificationState state)
    {
       if (!addressVerificator_) {
          logger_->error("[AuthAddressManager::setup] Failed to create AddressVerificator object");
          return;
       }
-      const auto address = addr->GetChainedAddress();
       if (GetState(address) != state) {
          logger_->info("Address verification {} for {}", to_string(state), address.display());
-         //FIXME: temp disabled for simulating address verification
-         //SetState(address, state);
-         SetInitialTxHash(address, addr->GetInitialTransactionTxHash());
-         SetVerifChangeTxHash(address, addr->GetVerificationChangeTxHash());
-         SetBSFundingAddress(address, addr->GetBSFundingAddress());
+         SetState(address, state);
          emit AddressListUpdated();
          if (state == AddressVerificationState::Verified) {
             emit VerifiedAddressListUpdated();
@@ -196,23 +190,15 @@ bool AuthAddressManager::CreateNewAuthAddress()
 
 void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason)
 {
-   const auto &itVerify = signIdsVerify_.find(id);
    const auto &itRevoke = signIdsRevoke_.find(id);
-   if ((itVerify == signIdsVerify_.end()) && (itRevoke == signIdsRevoke_.end())) {
+   if (itRevoke == signIdsRevoke_.end()) {
       return;
    }
-   const bool isVerify = (itVerify != signIdsVerify_.end());
-   signIdsVerify_.erase(id);
    signIdsRevoke_.erase(id);
 
    if (result == bs::error::ErrorCode::NoError) {
       if (BroadcastTransaction(signedTX)) {
-         if (isVerify) {
-            emit AuthVerifyTxSent();
-         }
-         else {
-            emit AuthRevokeTxSent();
-         }
+         emit AuthRevokeTxSent();
       }
       else {
          emit Error(tr("Failed to broadcast transaction"));
@@ -223,90 +209,6 @@ void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, bs::er
          , bs::error::ErrorCodeToString(result).toStdString(), errorReason);
       emit Error(tr("Transaction sign error: %1").arg(bs::error::ErrorCodeToString(result)));
    }
-}
-
-bool AuthAddressManager::SendVerifyTransaction(const UTXO &input, uint64_t amount, const bs::Address &address
-   , uint64_t remainder)
-{
-   auto bsFundAddr = GetBSFundingAddress(address);
-   if (bsFundAddr.isNull()) {
-      bsFundAddr = address;
-   }
-
-   if ((amount + remainder) >= input.getValue()) {
-      logger_->error("[AuthAddressManager::SendTransaction] spend amount ({}) exceeds UTXO value ({})", amount
-         , input.getValue());
-      emit Error(tr("invalid TX amount"));
-      return false;
-   }
-
-   const auto txReq = authWallet_->createTXRequest({ input }, { bsFundAddr.getRecipient(amount) }
-      , input.getValue() - amount - remainder, false, address);
-   const auto id = signingContainer_->signTXRequest(txReq);
-   if (id) {
-      signIdsVerify_.insert(id);
-      return true;
-   }
-   return false;
-}
-
-bool AuthAddressManager::Verify(const bs::Address &address)
-{
-   const auto state = GetState(address);
-   if (state != AddressVerificationState::PendingVerification) {
-      logger_->warn("[AuthAddressManager::Verify] attempting to verify from incorrect state {}", (int)state);
-      emit Error(tr("Incorrect state"));
-      return false;
-   }
-   if (!signingContainer_) {
-      logger_->error("[AuthAddressManager::Verify] can't verify without signing container");
-      emit Error(tr("Missing signing container"));
-      return false;
-   }
-
-   if (!armory_ || (armory_->state() != ArmoryState::Ready)) {
-      logger_->error("[AuthAddressManager::Verify] can't verify without Armory connection");
-      emit Error(tr("Missing Armory connection"));
-      return false;
-   }
-
-   const auto &cbInputs = [this, address](const std::vector<UTXO> &inputs) {
-      std::set<BinaryData> txHashSet;
-      std::vector<UTXO> utxos;
-      const auto &initialTxHash = GetInitialTxHash(address);
-      for (const auto &utxo : inputs) {
-         if (utxo.getTxHash() == initialTxHash) {
-            txHashSet.insert(utxo.getTxHash());
-            utxos.emplace_back(std::move(utxo));
-         }
-      }
-      const auto &cbTXs = [this, address, utxos](const std::vector<Tx> &txs) {
-         for (const auto &tx : txs) {
-            const bs::TxChecker txChecker(tx);
-            for (const auto &utxo : utxos) {
-               if (txChecker.receiverIndex(address) == utxo.getTxOutIndex()) {
-                     const auto &cbSpender = [this, address, utxo](bool present) {
-                     if (!present) {
-                        return;
-                     }
-                     SendVerifyTransaction(utxo, addressVerificator_->GetAuthAmount()
-                        , address, addressVerificator_->GetAuthAmount());
-                  };
-                  txChecker.hasSpender(GetBSFundingAddress(address), armory_, cbSpender);
-               }
-            }
-         }
-      };
-      if (txHashSet.empty()) {
-         emit Error(tr("Invalid initial TX"));
-      }
-      else {
-         armory_->getTXsByHash(txHashSet, cbTXs);
-      }
-   };
-   addressVerificator_->GetVerificationInputs(cbInputs);
-
-   return true;
 }
 
 bool AuthAddressManager::RevokeAddress(const bs::Address &address)
@@ -323,76 +225,21 @@ bool AuthAddressManager::RevokeAddress(const bs::Address &address)
       return false;
    }
 
-   const auto &cbInputs = [this, address](std::vector<UTXO> inputs) {
-      UTXO verificationChangeInput;
-      for (const auto &tx : inputs) {
-         if ((tx.getTxHash() == GetVerifChangeTxHash(address))) {
-            verificationChangeInput = tx;
-            break;
-         }
-      }
-      if (!verificationChangeInput.isInitialized()) {
-         emit Error(tr("no appropriate input found"));
-         logger_->error("[AuthAddressManager::RevokeAddress] did not get verify change tx as spendable");
-         return;
-      }
+   const auto revokeData = addressVerificator_->getRevokeData(address);
+   if (revokeData.first.isNull() || !revokeData.second.isInitialized()) {
+      logger_->error("[AuthAddressManager::RevokeAddress] failed to obtain revocation data");
+      emit Error(tr("Missing revocation input"));
+      return false;
+   }
 
-      const auto &cbFee = [this, verificationChangeInput](float feePerByte) {
-         const auto priWallet = walletsManager_->getPrimaryWallet();
-         const auto group = priWallet->getGroup(priWallet->getXBTGroupType());
-         const bs::hd::Path authLeafPath({ bs::hd::Purpose::Native
-            , bs::hd::CoinType::BlockSettle_Auth, 0 });
-         const auto wallet = group ? group->getLeaf(authLeafPath) : nullptr;
-         if (!wallet) {
-            emit Error(tr("no XBT wallet found"));
-            logger_->error("[AuthAddressManager::RevokeAddress] XBT/0 wallet missing");
-            return;
-         }
-
-         const uint64_t fee = feePerByte * 135;  // magic formula for 2 inputs & 1 output, all native SW
-
-         auto txMultiReq = new bs::core::wallet::TXMultiSignRequest;
-         txMultiReq->addInput(verificationChangeInput, authWallet_->walletId());
-
-         const auto &cbFeeUTXOs = [this, fee, txMultiReq, wallet](std::vector<UTXO> utxos) {
-            if (utxos.empty()) {
-               logger_->error("[AuthAddressManager::RevokeAddress] failed to find enough UTXOs to fund {}", fee);
-               emit Error(tr("Failed to find UTXOs to fund the fee"));
-               return;
-            }
-            uint64_t changeVal = 0;
-            for (const auto &utxo : utxos) {
-               txMultiReq->addInput(utxo, wallet->walletId());
-               changeVal += utxo.getValue();
-            }
-            changeVal -= fee;
-
-            const auto &cbRecipAddr = [this, txMultiReq, changeVal, utxos](const bs::Address &recipAddress) {
-               const auto &recip = recipAddress.getRecipient(txMultiReq->inputs.cbegin()->first.getValue() + changeVal);
-               if (!recip) {
-                  logger_->error("[AuthAddressManager::RevokeAddress] failed to create recipient");
-                  emit Error(tr("Failed to construct revoke transaction"));
-                  return;
-               }
-               txMultiReq->recipients.push_back(recip);
-
-               if (utxos.size() > 1) {
-                  logger_->warn("[AuthAddressManager::RevokeAddress] TX size is greater than expected ({} more inputs)", utxos.size() - 1);
-                  emit Info(tr("Revoke transaction size is greater than expected"));
-               }
-
-               const auto id = signingContainer_->signMultiTXRequest(*txMultiReq);
-               if (id) {
-                  signIdsRevoke_.insert(id);
-               }
-            };
-            wallet->getNewChangeAddress(cbRecipAddr);
-         };
-         wallet->getSpendableTxOutList(cbFeeUTXOs, fee);
-      };
-      walletsManager_->estimatedFeePerByte(3, cbFee, this);
-   };
-   addressVerificator_->GetRevokeInputs(cbInputs);
+   const auto reqId = signingContainer_->signAuthRevocation(authWallet_->walletId(), address
+      , revokeData.second, revokeData.first);
+   if (!reqId) {
+      logger_->error("[AuthAddressManager::RevokeAddress] failed to send revocation data");
+      emit Error(tr("Failed to send revoke"));
+      return false;
+   }
+   signIdsRevoke_.insert(reqId);
    return true;
 }
 
@@ -714,10 +561,9 @@ void AuthAddressManager::VerifyWalletAddressesFunction()
    }
 
    for (auto &addr : listCopy) {
-      addressVerificator_->StartAddressVerification(std::make_shared<AuthAddress>(addr));
+      addressVerificator_->addAddress(addr);
    }
-   addressVerificator_->RegisterBSAuthAddresses();
-   addressVerificator_->RegisterAddresses();
+   addressVerificator_->startAddressVerification();
 
    if (updated) {
       emit VerifiedAddressListUpdated();
@@ -749,36 +595,22 @@ void AuthAddressManager::ClearAddressList()
 
 void AuthAddressManager::onWalletChanged(const std::string &walletId)
 {
-   logger_->debug("[AuthAddressManager::onWalletChanged]");
-
    bool listUpdated = false;
    if ((authWallet_ != nullptr) && (walletId == authWallet_->walletId())) {
       const auto &newAddresses = authWallet_->getUsedAddressList();
       const auto count = newAddresses.size();
       listUpdated = (count > addresses_.size());
 
-      //FIXME: temporary code to simulate address verification
-      listUpdated = true;
-      addresses_ = newAddresses;
-      for (const auto &addr : newAddresses) {
-         QTimer::singleShot(std::chrono::milliseconds(5000), this, [this, addr] {
-            SetState(addr, AddressVerificationState::Verified);
-            emit VerifiedAddressListUpdated();
-         });
-      }
-
-      // FIXME: address verification is disabled temporarily
-/*      for (size_t i = addresses_.size(); i < count; i++) {
+      for (size_t i = addresses_.size(); i < count; i++) {
          const auto &addr = newAddresses[i];
          AddAddress(addr);
-         const auto authAddr = std::make_shared<AuthAddress>(addr);
-         addressVerificator_->StartAddressVerification(authAddr);
-      }*/
+         addressVerificator_->addAddress(addr);
+      }
    }
 
    if (listUpdated) {
+      addressVerificator_->startAddressVerification();
       emit AddressListUpdated();
-//      addressVerificator_->RegisterAddresses();  //FIXME: re-enable later
    }
 }
 
@@ -888,9 +720,9 @@ void AuthAddressManager::ProcessBSAddressListResponse(const std::string& respons
 
 AddressVerificationState AuthAddressManager::GetState(const bs::Address &addr) const
 {
-   const auto itState = states_.find(addr.prefixed());
+   const auto itState = states_.find(addr);
    if (itState == states_.end()) {
-      return AddressVerificationState::VerificationFailed;
+      return AddressVerificationState::InProgress;
    }
    return itState->second;
 }
@@ -901,12 +733,9 @@ void AuthAddressManager::SetState(const bs::Address &addr, AddressVerificationSt
    if ((prevState == AddressVerificationState::Submitted) && (state == AddressVerificationState::NotSubmitted)) {
       return;
    }
-   states_[addr.prefixed()] = state;
+   states_[addr] = state;
 
-   if (state == AddressVerificationState::PendingVerification) {
-      emit NeedVerify(QString::fromStdString(addr.display()));
-   }
-   else if ((state == AddressVerificationState::Verified) && (prevState == AddressVerificationState::VerificationSubmitted)) {
+   if ((state == AddressVerificationState::Verified) && (prevState == AddressVerificationState::PendingVerification)) {
       emit AddrStateChanged(QString::fromStdString(addr.display()), tr("Verified"));
    }
    else if (((state == AddressVerificationState::Revoked) || (state == AddressVerificationState::RevokedByBS))

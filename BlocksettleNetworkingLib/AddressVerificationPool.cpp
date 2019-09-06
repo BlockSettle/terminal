@@ -12,27 +12,26 @@ AddressVerificationPool::AddressVerificationPool(const std::shared_ptr<spdlog::l
    : logger_(logger)
    , poolId_(poolId)
 {
-   verificator_ = std::make_shared<AddressVerificator>(logger_, armory, poolId_
-   , [this](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
+   verificator_ = std::make_shared<AddressVerificator>(logger_, armory
+   , [this](const bs::Address &address, AddressVerificationState state)
       {
          completeVerification(address, state);
       });
 }
 
-bool AddressVerificationPool::SubmitForVerification(const std::shared_ptr<AuthAddress>& address
+bool AddressVerificationPool::submitForVerification(const bs::Address &address
       , const verificationCompletedCallback& onCompleted)
 {
-   auto addressString = address->GetChainedAddress().display();
-
+   const auto addressStr = address.display();
    unsigned int pendingVerifications = 0;
 
    {
       FastLock locker(pendingLockerFlag_);
-      auto it = pendingResults_.find(addressString);
+      auto it = pendingResults_.find(addressStr);
       if (it == pendingResults_.end()) {
          std::queue<verificationCompletedCallback> q;
          q.emplace(onCompleted);
-         pendingResults_.emplace(addressString, std::move(q));
+         pendingResults_.emplace(addressStr, std::move(q));
          pendingVerifications = 1;
       } else {
          it->second.emplace(onCompleted);
@@ -41,17 +40,17 @@ bool AddressVerificationPool::SubmitForVerification(const std::shared_ptr<AuthAd
    }
 
    logger_->debug("[AddressVerificationPool::SubmitForVerification] {}: submitting {}. Pending verification for address: {}"
-      , poolId_, addressString, pendingVerifications);
+      , poolId_, addressStr, pendingVerifications);
 
-   verificator_->StartAddressVerification(address);
-   verificator_->RegisterAddresses();
+   verificator_->addAddress(address);
+   verificator_->startAddressVerification();
 
    return true;
 }
 
-void AddressVerificationPool::completeVerification(const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
+void AddressVerificationPool::completeVerification(const bs::Address &address, AddressVerificationState state)
 {
-   auto addressString = address->GetChainedAddress().display();
+   auto addressString = address.display();
    std::queue<verificationCompletedCallback> callbackQueue;
 
    size_t pendingCount = 0;
@@ -84,6 +83,5 @@ void AddressVerificationPool::completeVerification(const std::shared_ptr<AuthAdd
 bool AddressVerificationPool::SetBSAddressList(const std::unordered_set<std::string>& addressList)
 {
    const bool rc = verificator_->SetBSAddressList(addressList);
-   verificator_->RegisterBSAuthAddresses();
    return rc;
 }

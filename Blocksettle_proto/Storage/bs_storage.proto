@@ -65,10 +65,12 @@ message CCTokenEntry {
    required string   request_id = 5;
 }
 
-message AuthAddressSubmitMixIn {
-   required float    fee = 1;
-   required uint64   txValue = 2;
-   required string   auth_address = 3;
+message AuthAddressSubmitMixIn
+{
+   required uint64   tx_value = 1;
+   required string   auth_address = 2;
+   required bytes    fund_utxo = 3;
+   required string   validation_address = 4;
 }
 
 message AuthAddressReservationInfo
@@ -76,6 +78,8 @@ message AuthAddressReservationInfo
    required string address = 1;
    required string user_name = 2;
    required string request_id = 3;
+   required bytes  fund_utxo = 4;
+   optional string validation_address = 5;
 }
 
 message AuthAddressVerificationTransaction {

@@ -89,7 +89,6 @@ public:
    virtual void ConfirmSubmitForVerification(BsClient *bsClient, const bs::Address &address);
    virtual bool CancelSubmitForVerification(const bs::Address &address);
 
-   virtual bool Verify(const bs::Address &address);
    virtual bool RevokeAddress(const bs::Address &address);
 
    virtual bool IsReady() const;
@@ -113,7 +112,6 @@ private slots:
 signals:
    void AddressListUpdated();
    void VerifiedAddressListUpdated();
-   void NeedVerify(const QString &addr);
    void AddrStateChanged(const QString &addr, const QString &state);
    void AuthWalletChanged();
    void AuthWalletCreated(const QString &walletId);
@@ -124,7 +122,6 @@ signals:
    void AuthConfirmSubmitError(const QString &address, const QString &error);
    void AuthAddrSubmitSuccess(const QString &address);
    void AuthAddressSubmitCancelled(const QString &address);
-   void AuthVerifyTxSent();
    void AuthRevokeTxSent();
 
    void AuthAddressConfirmationRequired(float validationAmount);
@@ -156,15 +153,8 @@ private:
    void AddAddress(const bs::Address &addr);
 
    template <typename TVal> TVal lookup(const bs::Address &key, const std::map<bs::Address, TVal> &container) const;
-   BinaryData GetInitialTxHash(const bs::Address &addr) const { return lookup<BinaryData>(addr, initTxHash_); }
-   void SetInitialTxHash(const bs::Address &addr, BinaryData hash) { initTxHash_[addr] = hash; }
-   BinaryData GetVerifChangeTxHash(const bs::Address &addr) const { return lookup<BinaryData>(addr, verifChangeTxHash_); }
-   void SetVerifChangeTxHash(const bs::Address &addr, BinaryData hash) { verifChangeTxHash_[addr] = hash; }
-   bs::Address GetBSFundingAddress(const bs::Address &addr) const { return lookup<bs::Address>(addr, bsFundingAddresses_); }
-   void SetBSFundingAddress(const bs::Address &addr, const bs::Address &fundingAddr) { bsFundingAddresses_[addr] = fundingAddr; }
 
    void SubmitToCeler(const bs::Address &);
-   bool SendVerifyTransaction(const UTXO &, uint64_t amount, const bs::Address &, uint64_t remainder = 0);
    bool BroadcastTransaction(const BinaryData& transactionData);
    void SetBSAddressList(const std::unordered_set<std::string>& bsAddressList);
 
@@ -183,17 +173,14 @@ protected:
 
    mutable std::atomic_flag                  lockList_ = ATOMIC_FLAG_INIT;
    std::vector<bs::Address>                  addresses_;
-   std::map<BinaryData, AddressVerificationState>   states_;
+   std::map<bs::Address, AddressVerificationState> states_;
    using HashMap = std::map<bs::Address, BinaryData>;
-   HashMap     initTxHash_, verifChangeTxHash_;
-   std::map<bs::Address, bs::Address> bsFundingAddresses_;
    bs::Address                               defaultAddr_;
 
    std::unordered_set<std::string>           bsAddressList_;
    std::shared_ptr<bs::sync::Wallet>         authWallet_;
 
    std::shared_ptr<SignContainer>      signingContainer_;
-   std::unordered_set<unsigned int>    signIdsVerify_;
    std::unordered_set<unsigned int>    signIdsRevoke_;
 };
 

@@ -123,6 +123,7 @@ private:
    bool onSignMultiTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSignSettlementPayoutTxRequest(const std::string &clientId
       , const Blocksettle::Communication::headless::RequestPacket &packet);
+   bool onSignAuthAddrRevokeRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &);
    bool onCreateHDLeaf(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onPromoteHDWallet(const std::string& clientId, Blocksettle::Communication::headless::RequestPacket& packet);
    bool onSetUserId(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);

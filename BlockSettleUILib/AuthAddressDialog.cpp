@@ -38,13 +38,11 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(authAddressManager_.get(), &AuthAddressManager::AddrStateChanged, this, &AuthAddressDialog::onAddressStateChanged, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Error, this, &AuthAddressDialog::onAuthMgrError, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Info, this, &AuthAddressDialog::onAuthMgrInfo, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthVerifyTxSent, this, &AuthAddressDialog::onAuthVerifyTxSent, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthAddressConfirmationRequired, this, &AuthAddressDialog::onAuthAddressConfirmationRequired, Qt::QueuedConnection);
 
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &AuthAddressDialog::createAddress);
    connect(ui_->pushButtonRevoke, &QPushButton::clicked, this, &AuthAddressDialog::revokeSelectedAddress);
    connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &AuthAddressDialog::submitSelectedAddress);
-   connect(ui_->pushButtonVerify, &QPushButton::clicked, this, &AuthAddressDialog::verifySelectedAddress);
    connect(ui_->pushButtonDefault, &QPushButton::clicked, this, &AuthAddressDialog::setDefaultAddress);
 }
 
@@ -192,38 +190,35 @@ void AuthAddressDialog::resizeTreeViewColumns()
 void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QItemSelection &deselected)
 {
    ui_->pushButtonCreate->setFlat(true);
-   ui_->pushButtonVerify->setFlat(false);
    Q_UNUSED(deselected);
    if (!selected.indexes().isEmpty()) {
       const auto address = model_->getAddress(selected.indexes()[0]);
 
       switch (authAddressManager_->GetState(address)) {
          case AddressVerificationState::NotSubmitted:
-            ui_->pushButtonVerify->setEnabled(false);
+         case AddressVerificationState::VerificationFailed: // FIXME: temporarily
+         case AddressVerificationState::InProgress:         // FIXME: temporarily
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.isNull());
             ui_->pushButtonDefault->setEnabled(false);
-            break;
-         case AddressVerificationState::VerificationFailed:
+            break;    //TODO: temporarily enable the Submit button
+/*         case AddressVerificationState::VerificationFailed:
          case AddressVerificationState::Submitted:
          case AddressVerificationState::Revoked:
          case AddressVerificationState::InProgress:
-            ui_->pushButtonVerify->setEnabled(false);
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(false);
-            break;
+            break;*/
+         case AddressVerificationState::Submitted:
+         case AddressVerificationState::Revoked:
          case AddressVerificationState::PendingVerification:
             ui_->pushButtonCreate->setFlat(false);
-            ui_->pushButtonVerify->setFlat(true);
-            ui_->pushButtonVerify->setEnabled(true);
             ui_->pushButtonRevoke->setEnabled(authAddressManager_->IsReady());
-            ui_->pushButtonVerify->setEnabled(authAddressManager_->IsReady());
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(false);
             break;
          case AddressVerificationState::Verified:
-            ui_->pushButtonVerify->setEnabled(false);
             ui_->pushButtonRevoke->setEnabled(authAddressManager_->IsReady());
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
@@ -233,7 +228,6 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
       }
    }
    else {
-      ui_->pushButtonVerify->setEnabled(false);
       ui_->pushButtonRevoke->setEnabled(false);
       ui_->pushButtonSubmit->setEnabled(false);
       ui_->pushButtonDefault->setEnabled(false);
@@ -354,16 +348,6 @@ void AuthAddressDialog::submitSelectedAddress()
    }
 }
 
-void AuthAddressDialog::verifySelectedAddress()
-{
-   auto selectedAddress = GetSelectedAddress();
-   if (!selectedAddress.isNull()) {
-      authAddressManager_->Verify(selectedAddress);
-      ui_->labelHint->clear();
-   }
-   setAddressToVerify(QString());
-}
-
 void AuthAddressDialog::setDefaultAddress()
 {
    auto selectedAddress = GetSelectedAddress();
@@ -380,7 +364,6 @@ void AuthAddressDialog::setDefaultAddress()
 
 void AuthAddressDialog::onModelReset()
 {
-   ui_->pushButtonVerify->setEnabled(false);
    ui_->pushButtonRevoke->setEnabled(false);
    ui_->pushButtonSubmit->setEnabled(false);
    ui_->pushButtonDefault->setEnabled(false);

@@ -370,7 +370,6 @@ void BSTerminalMainWindow::InitAuthManager()
    authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_, cbApprovePuB_);
    authManager_->init(applicationSettings_, walletsMgr_, signContainer_);
 
-   connect(authManager_.get(), &AuthAddressManager::NeedVerify, this, &BSTerminalMainWindow::openAuthDlgVerify);
    connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, [](const QString &addr, const QString &state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
@@ -1098,6 +1097,7 @@ void BSTerminalMainWindow::onLogin()
 
    bsClient_ = loginDialog.getClient();
    ccFileManager_->setBsClient(bsClient_.get());
+   authAddrDlg_->setBsClient(bsClient_.get());
 
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 

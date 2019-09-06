@@ -56,17 +56,20 @@ public:
    bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
       , const bs::sync::PasswordDialogData &dialogData
       , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false
-      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) override;
+      , const SignTxCb &cb = nullptr) override;
 
    bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
       , const bs::sync::PasswordDialogData &dialogData
-      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) override;
+      , const SignTxCb &cb = nullptr) override;
 
    bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
       , const bs::core::wallet::SettlementData &, const bs::sync::PasswordDialogData &dialogData
-      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) override;
+      , const SignTxCb &cb = nullptr) override;
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
+
+   bs::signer::RequestId signAuthRevocation(const std::string &walletId, const bs::Address &authAddr
+      , const UTXO &, const bs::Address &bsAddr, const SignTxCb &cb = nullptr) override;
 
    bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) override;
 
@@ -146,7 +149,7 @@ protected:
    std::map<bs::signer::RequestId, std::function<void(bs::sync::SyncState)>>     cbSyncAddrsMap_;
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbExtAddrsMap_;
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
-   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)>>  cbSettlementSignTxMap_;
+   std::map<bs::signer::RequestId, SignTxCb> cbSettlementSignTxMap_;
    std::map<bs::signer::RequestId, std::function<void(const SecureBinaryData &)>>   cbSettlWalletMap_;
    std::map<bs::signer::RequestId, std::function<void(bool)>>                       cbSettlIdMap_;
    std::map<bs::signer::RequestId, std::function<void(bool, bs::Address)>>          cbPayinAddrMap_;

@@ -53,11 +53,11 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    }
    settlementId_ = BinaryData::CreateFromHex(qn.settlementId);
 
-   addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory, settlementId_.toHexStr()
-      , [this, logger](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
+   addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory
+      , [this, logger](const bs::Address &address, AddressVerificationState state)
    {
       logger->info("Counterparty's address verification {} for {}"
-         , to_string(state), address->GetChainedAddress().display());
+         , to_string(state), address.display());
       cptyAddressState_ = state;
       emit cptyAddressStateChanged(state);
       if (state == AddressVerificationState::Verified) {
@@ -232,9 +232,8 @@ void DealerXBTSettlementContainer::activate()
    startTimer(30);
 
    const auto reqAuthAddrSW = bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH);
-   addrVerificator_->StartAddressVerification(std::make_shared<AuthAddress>(reqAuthAddrSW));
-   addrVerificator_->RegisterBSAuthAddresses();
-   addrVerificator_->RegisterAddresses();
+   addrVerificator_->addAddress(reqAuthAddrSW);
+   addrVerificator_->startAddressVerification();
 
    settlMonitor_->start([this](int confNo, const BinaryData &txHash) { onPayInDetected(confNo, txHash); }
       , [this](int, bs::PayoutSigner::Type signedBy) { onPayOutDetected(signedBy); }

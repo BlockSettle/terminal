@@ -1,5 +1,6 @@
 #include "HeadlessContainerListener.h"
 
+#include "AuthAddressLogic.h"
 #include "CheckRecipSigner.h"
 #include "ConnectionManager.h"
 #include "CoreHDWallet.h"
@@ -549,6 +550,69 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
    return RequestPasswordIfNeeded(clientId, txSignReq.walletId, txSignReq, reqType, dialogData, onPassword);
 }
 
+bool HeadlessContainerListener::onSignAuthAddrRevokeRequest(const std::string &clientId
+   , const headless::RequestPacket &packet)
+{
+   headless::SignAuthAddrRevokeRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      SignTXResponse(clientId, packet.id(), packet.type(), ErrorCode::FailedToParse);
+      return false;
+   }
+
+   const auto wallet = walletsMgr_->getWalletById(request.wallet_id());
+   if (!wallet) {
+      logger_->error("[{}] failed to find auth wallet {}", __func__, request.wallet_id());
+      SignTXResponse(clientId, packet.id(), packet.type(), ErrorCode::WalletNotFound);
+      return false;
+   }
+
+   Internal::PasswordDialogDataWrapper dialogData;
+   dialogData.insert("WalletId", request.wallet_id());
+   dialogData.insert("AuthAddress", request.auth_address());
+
+   bs::core::wallet::TXSignRequest txSignReq;
+   txSignReq.walletId = wallet->walletId();
+
+   UTXO utxo;
+   utxo.unserialize(request.utxo());
+   if (utxo.isInitialized()) {
+      txSignReq.inputs.push_back(utxo);
+   }
+   else {
+      logger_->error("[{}] failed to parse UTXO", __func__);
+      SignTXResponse(clientId, packet.id(), packet.type(), ErrorCode::TxInvalidRequest);
+      return false;
+   }
+
+   const auto onPassword = [this, wallet, utxo, request, clientId, id = packet.id(), reqType = packet.type()]
+   (bs::error::ErrorCode result, const SecureBinaryData &pass) {
+      if (result != ErrorCode::NoError) {
+         logger_->error("[HeadlessContainerListener] auth revoke failed, result from ui: {}", static_cast<int>(result));
+         SignTXResponse(clientId, id, reqType, result);
+         return;
+      }
+
+      ValidationAddressManager validationMgr(nullptr);
+      validationMgr.addValidationAddress(request.validation_address());
+
+      try {
+         {
+            auto passLock = wallet->lockForEncryption(pass);
+            const auto tx = AuthAddressLogic::revoke(request.auth_address(), wallet->getResolver()
+               , request.validation_address(), utxo);
+            SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
+         }
+      } catch (const std::exception &e) {
+         logger_->error("[HeadlessContainerListener] failed to sign payout TX request: {}", e.what());
+         SignTXResponse(clientId, id, reqType, ErrorCode::InternalError);
+      }
+   };
+
+   return RequestPasswordIfNeeded(clientId, txSignReq.walletId, txSignReq, packet.type()
+      , dialogData, onPassword);
+}
+
 void HeadlessContainerListener::SignTXResponse(const std::string &clientId, unsigned int id, headless::RequestType reqType
    , bs::error::ErrorCode errorCode, const BinaryData &tx)
 {
@@ -736,6 +800,7 @@ bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const
             callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dialogData);
             break;
          case headless::SetUserIdType:
+         case headless::SignAuthAddrRevokeType:
             callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dialogData);
             break;
          case headless::PromoteHDWalletRequestType:

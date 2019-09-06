@@ -624,8 +624,42 @@ bool ArmoryConnection::getUTXOsForAddress(const bs::Address &addr, const UTXOsCb
       }
    };
    bdv_->getUTXOsForAddress(addr.id(), withZC, cbWrap);
+   return true;
 }
 
+bool ArmoryConnection::getOutpointsFor(const std::vector<bs::Address> &addresses
+   , const std::function<void(const OutpointBatch &)> &cb
+   , unsigned int height, unsigned int zcIndex)
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
+      return false;
+   }
+
+   std::vector<BinaryData> addrVec;
+   addrVec.reserve(addresses.size());
+   for (const auto &addr : addresses) {
+      addrVec.push_back(addr.prefixed());
+   }
+
+   const auto cbWrap = [this, cb, addresses](ReturnMessage<OutpointBatch> opBatch)
+   {
+      try {
+         const auto batch = opBatch.get();
+         if (cb) {
+            cb(batch);
+         }
+      } catch (const std::exception &e) {
+         logger_->error("[ArmoryConnection::getOutpointsFor] {} address[es] failed: {}"
+            , addresses.size(), e.what());
+         if (cb) {
+            cb({});
+         }
+      }
+   };
+   bdv_->getOutpointsForAddresses(addrVec, height, zcIndex, cbWrap);
+   return true;
+}
 
 bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walletIDs
    , const std::function<void(const std::map<std::string, CombinedBalances> &)> &cb)
