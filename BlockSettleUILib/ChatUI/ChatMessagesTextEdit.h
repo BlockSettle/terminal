@@ -27,7 +27,7 @@ class ChatMessagesTextEditStyle : public QWidget
               WRITE setColorHyperlink)
    Q_PROPERTY(QColor color_white READ colorWhite
               WRITE setColorWhite)
-   Q_PROPERTY(QColor color_white READ colorRed
+   Q_PROPERTY(QColor color_red READ colorRed
               WRITE setColorRed)
 
 public:
