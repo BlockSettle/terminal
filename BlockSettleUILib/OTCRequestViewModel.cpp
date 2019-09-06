@@ -1,7 +1,5 @@
 #include "OTCRequestViewModel.h"
 
-#include "ChatProtocol/ChatUtils.h"
-
 OTCRequestViewModel::OTCRequestViewModel(QObject* parent)
    : QAbstractTableModel(parent)
 {

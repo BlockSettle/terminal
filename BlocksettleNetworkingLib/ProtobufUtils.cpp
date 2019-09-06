@@ -1,6 +1,7 @@
 #include "ProtobufUtils.h"
 
 #include <google/protobuf/util/json_util.h>
+#include <google/protobuf/any.h>
 
 std::string ProtobufUtils::toJson(const google::protobuf::Message &msg, bool addWhitespace)
 {
@@ -21,3 +22,11 @@ std::string ProtobufUtils::toJsonCompact(const google::protobuf::Message &msg)
 {
    return toJson(msg, false);
 }
+
+std::string ProtobufUtils::pbMessageToString(const google::protobuf::Message& msg)
+{
+   google::protobuf::Any any;
+   any.PackFrom(msg);
+   return any.SerializeAsString();
+}
+

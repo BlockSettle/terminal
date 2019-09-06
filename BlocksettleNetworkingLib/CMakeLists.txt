@@ -7,10 +7,6 @@ FILE(GLOB SOURCES
    *.cpp
    Wallets/*.cpp
    ChatProtocol/*.cpp
-   ChatProtocol/DataObjects/*.cpp
-   ChatProtocol/RequestObjects/*.cpp
-   ChatProtocol/ResponseObjects/*.cpp
-   ChatClientTree/*.cpp
    Encryption/*.cpp
 )
 
@@ -18,7 +14,7 @@ IF (DISABLE_CELER)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/AssetManager.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/AuthAddressManager.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/BaseCelerClient.cpp)
-   list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/BsProxy.cpp)
+   list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/BsClient.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/BSMarketDataProvider.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/CCFileManager.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/CCPubConnection.cpp)
@@ -26,6 +22,7 @@ IF (DISABLE_CELER)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/CelerCancelQuoteNotifSequence.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/CelerCancelRFQSequence.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/CelerClient.cpp)
+   list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/CelerClientProxy.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/CelerCreateFxOrderSequence.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/CelerCreateOrderSequence.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/CelerFindSubledgersForAccountSequence.cpp)
@@ -64,6 +61,8 @@ FILE(GLOB HEADERS
 IF (DISABLE_CELER)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/AssetManager.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/AuthAddressManager.h)
+   list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/BaseCelerClient.h)
+   list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/BsClient.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/BSMarketDataProvider.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/CCFileManager.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/CCPubConnection.h)
@@ -71,6 +70,7 @@ IF (DISABLE_CELER)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/CelerCancelQuoteNotifSequence.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/CelerCancelRFQSequence.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/CelerClient.h)
+   list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/CelerClientProxy.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/CelerCreateFxOrderSequence.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/CelerCreateOrderSequence.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/CelerFindSubledgersForAccountSequence.h)

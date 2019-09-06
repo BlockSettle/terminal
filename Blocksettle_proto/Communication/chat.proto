@@ -2,420 +2,158 @@ syntax = "proto3";
 
 package Chat;
 
-enum Command
+enum ClientStatus
 {
-    COMMAND_UNSPECIFIED = 0;
-    COMMAND_REPLACE = 1;
-    COMMAND_ADD = 2;
-    COMMAND_DELETE = 3;
+   OFFLINE = 0;
+   ONLINE = 1;
 }
 
-enum ContactsAction
+enum PartyType
 {
-    CONTACTS_ACTION_UNSPECIFIED = 0;
-    CONTACTS_ACTION_ACCEPT = 1;
-    CONTACTS_ACTION_REJECT = 2;
-    CONTACTS_ACTION_REQUEST = 3;
-    CONTACTS_ACTION_REMOVE = 4;
+   GLOBAL = 0;
+   PRIVATE_DIRECT_MESSAGE = 1;
 }
 
-enum ContactsActionServer
+enum PartySubType
 {
-    CONTACTS_ACTION_SERVER_UNSPECIFIED = 0;
-    CONTACTS_ACTION_SERVER_ADD = 1;
-    CONTACTS_ACTION_SERVER_REMOVE = 2;
-    CONTACTS_ACTION_SERVER_UPDATE = 3;
-};
-
-enum ContactStatus
-{
-    CONTACT_STATUS_UNSPECIFIED = 0;
-    CONTACT_STATUS_ACCEPTED = 1;
-    CONTACT_STATUS_INCOMING = 2;
-    CONTACT_STATUS_OUTGOING = 3;
-    CONTACT_STATUS_REJECTED = 4;
-    CONTACT_STATUS_OUTGOING_PENDING = 5;
+   STANDARD = 0;
+   OTC = 1;
 }
 
-enum UserStatus
+enum PartyState
 {
-    USER_STATUS_UNSPECIFIED = 0;
-    USER_STATUS_ONLINE = 1;
-    USER_STATUS_OFFLINE = 2;
+   UNINITIALIZED = 0;
+   REQUESTED = 1;
+   REJECTED = 2;
+   INITIALIZED = 3;
 }
 
-enum SessionKeyError
+enum EncryptionType
 {
-    SESSION_NO_ERROR = 0;
-    SESSION_UNABLE_DECODE_KEY = 1;
-    SESSION_USER_KEY_NOT_FOUND = 2;
-    SESSION_ENCRYPTION_FAILED = 3;
-};
+   UNENCRYPTED = 0;
+   IES = 1;
+   AEAD = 2;
+}
 
+enum PartyMessageState
+{
+   UNSENT = 0;
+   SENT = 1;
+   RECEIVED = 2;
+   SEEN = 3;
+}
+
+message PartyRecipientPacket
+{
+   string user_name = 1;
+   bytes public_key = 2;
+   int64 timestamp_ms = 3;
+}
+
+message PartyPacket
+{
+   string party_id = 1;
+   string display_name = 2;
+   PartyType party_type = 3;
+   PartySubType party_subtype = 4;
+   PartyState party_state = 5;
+   repeated PartyRecipientPacket recipient = 6;
+   string party_creator_hash = 7;
+}
+
+message WelcomeRequest
+{
+   string user_name = 1;
+   bytes client_public_key = 2;
+}
+
+message WelcomeResponse
+{
+   bool success = 1;
+   bytes server_public_key = 2;
+   repeated PartyPacket party = 3;
+}
+
+message LogoutRequest
+{
+}
+
+message LogoutResponse
+{
+}
+
+message StatusChanged
+{
+   string user_name = 1;
+   ClientStatus client_status = 2;
+}
+
+message PartyMessagePacket
+{
+   string party_id = 1;
+   string message_id = 2;
+   int64 timestamp_ms = 3;
+   string message = 4;
+   EncryptionType encryption = 5;
+   bytes nonce = 6;
+   PartyMessageState party_message_state = 7;
+   string sender_hash = 8;
+}
+
+message PartyMessageStateUpdate
+{
+   string party_id = 1;
+   string message_id = 2;
+   PartyMessageState party_message_state = 3;
+}
+
+message PrivatePartyRequest
+{
+   PartyPacket party_packet = 1;
+}
+
+message RequestSessionKeyExchange
+{
+   string sender_user_name = 1;
+   bytes encoded_public_key = 2;
+   string receiver_user_name = 3;
+}
+
+message ReplySessionKeyExchange
+{
+   string sender_user_name = 1;
+   bytes encoded_public_key = 2;
+   string receiver_user_name = 3;
+}
+
+message RequestPrivatePartyStateChange
+{
+   string party_id = 1;
+   PartyState party_state = 2;
+}
+
+message PrivatePartyStateChanged
+{
+   string party_id = 1;
+   PartyState party_state = 2;
+}
+
+message RequestSearchUser
+{
+   string search_text = 1;
+   string search_id = 2;
+}
+
+message ReplySearchUser
+{
+    repeated string user_name = 1;
+    string search_id = 2;
+}
+
+/*
+ * Placeholder for correct compilation of OTC files
+ * TODO: Remove when OTC will moved to new chat logic
+ */
 message Data
 {
-    enum Direction
-    {
-        NOT_SET = 0;
-        SENT = 1;
-        RECEIVED = 2;
-    };
-
-    message Room
-    {
-        string id = 1;
-        string owner_id = 2;
-        string title = 3;
-        string key = 4;
-        bool is_private = 5;
-        bool send_user_updates = 6;
-        bool display_user_list = 7;
-        bool display_tray_notification = 8;
-        bool is_trading_available = 9;
-    }
-
-    message ContactRecord
-    {
-        string user_id = 1;
-        string display_name = 2;
-        string contact_id = 3;
-        ContactStatus status = 4;
-        bytes public_key = 5;
-        int64 public_key_timestamp = 6;
-    }
-
-    message User
-    {
-        string user_id = 1;
-        UserStatus status = 2;
-    }
-
-    message Message
-    {
-        enum State
-        {
-            UNDEFINED                 = 0x0000;
-            INVALID                   = 0x0001;
-            ACKNOWLEDGED              = 0x0002;
-            READ                      = 0x0004;
-            SENT                      = 0x0008;
-        };
-
-        enum Encryption
-        {
-            UNENCRYPTED = 0;
-            IES = 1;
-            AEAD = 2;
-        };
-
-        string id = 1;
-        int64 timestamp_ms = 2;
-        string sender_id = 3;
-        string receiver_id = 4;
-        uint32 state = 5;
-        Encryption encryption = 6;
-        bytes nonce = 7;
-
-        // Plaintext or base64 encoded encrypted data
-        string message = 8;
-
-        // FIXME: remove this internal field, should not be in the proto file
-        bool loaded_from_history = 15;
-    }
-
-    oneof data
-    {
-        Room room = 1;
-        ContactRecord contact_record = 2;
-        User user = 3;
-        Message message = 4;
-    }
-
-    Direction direction = 20;
-}
-
-
-message Request
-{
-    message Login
-    {
-        string auth_id = 1;
-        string jwt = 2;
-        bytes public_key = 3;
-    }
-
-    message Logout
-    {
-        string auth_id = 1;
-    }
-
-    message SendMessage
-    {
-        Data message = 1;
-    }
-
-    message Messages
-    {
-        string sender_id = 1;
-        string receiver_id = 2;
-    }
-
-    message OnlineUsers
-    {
-        string auth_id = 1;
-    }
-
-    message AskForPublicKey
-    {
-        string asking_node_id = 1;
-        string peer_id = 2;
-    }
-
-    message SendOwnPublicKey
-    {
-        string receiving_node_id = 1;
-        string sending_node_id = 2;
-        bytes sending_node_public_key = 3;
-        int64 sending_node_public_key_timestamp = 4;
-    }
-
-    message MessageChangeStatus
-    {
-        string message_id = 1;
-        uint32 state = 2;
-    }
-
-    message ModifyContactsDirect
-    {
-        string sender_id = 1;
-        string receiver_id = 2;
-        ContactsAction action = 3;
-        bytes sender_pub_key = 4;
-        Data message = 5;
-    }
-
-    message ModifyContactsServer
-    {
-        string sender_id = 1;
-        string contact_id = 2;
-        ContactsActionServer action = 3;
-        ContactStatus status = 4;
-    }
-
-    message ChatroomsList
-    {
-        string sender_id = 1;
-    }
-
-    message SendRoomMessage
-    {
-        string room_id = 1;
-        Data message = 2;
-    }
-
-    message ContactsList
-    {
-        // FIXME: not secure
-        string auth_id = 1;
-    }
-
-    message SearchUsers
-    {
-        string sender_id = 1;
-        string search_id_pattern = 2;
-    }
-
-    message SessionPublicKey
-    {
-        string sender_id = 1;
-        string receiver_id = 2;
-        bytes sender_session_public_key = 3;
-    }
-
-    message ReplySessionPublicKey
-    {
-        string sender_id = 1;
-        string receiver_id = 2;
-        bytes sender_session_public_key = 3;
-        SessionKeyError session_key_error = 4;
-    }
-
-    message UploadNewPublicKey
-    {
-        enum Confirmation
-        {
-            UNDECIDED = 0;
-            CONFIRMED = 1;
-            DECLINED = 2;
-        };
-
-        string auth_id = 1;
-        Confirmation confirmation = 2;
-        bytes public_key_to_replace = 3;
-    }
-
-    oneof data
-    {
-        Login login                                             = 10;
-        Logout logout                                           = 11;
-        SendMessage send_message                                = 12;
-        Messages messages                                       = 13;
-        OnlineUsers online_users                                = 14;
-        AskForPublicKey ask_for_public_key                      = 15;
-        SendOwnPublicKey send_own_public_key                    = 16;
-        MessageChangeStatus message_change_status               = 17;
-        ModifyContactsDirect modify_contacts_direct             = 18;
-        ModifyContactsServer modify_contacts_server             = 19;
-        ChatroomsList chatrooms_list                            = 20;
-        SendRoomMessage send_room_message                       = 21;
-        ContactsList contacts_list                              = 22;
-        SearchUsers search_users                                = 23;
-        SessionPublicKey session_public_key                     = 24;
-        ReplySessionPublicKey reply_session_public_key          = 25;
-        UploadNewPublicKey upload_new_public_key                = 26;
-    }
-}
-
-message Response
-{
-    message Login
-    {
-        string auth_id = 1;
-        bool success = 2;
-    }
-
-    message Messages
-    {
-        repeated Data messages = 1;
-    }
-
-    message UsersList
-    {
-        Command command = 1;
-        repeated string users = 2;
-    }
-
-    message AskForPublicKey
-    {
-        string asking_node_id = 1;
-        string peer_id = 2;
-    }
-
-    message SendOwnPublicKey
-    {
-        string receiving_node_id = 1;
-        string sending_node_id = 2;
-        bytes sending_node_public_key = 3;
-        int64 sending_node_public_key_timestamp = 4;
-    }
-
-    message PendingMessage
-    {
-        string message_id = 1;
-    }
-
-    message SendMessage
-    {
-        string client_message_id = 1;
-        string server_message_id = 2;
-        string receiver_id = 3;
-        bool accepted = 4;
-    }
-
-    message MessageChangeStatus
-    {
-        string message_id = 1;
-        string sender_id = 2;
-        string receiver_id = 3;
-        uint32 status = 4;
-    }
-
-    message ModifyContactsDirect
-    {
-        string sender_id = 1;
-        string receiver_id = 2;
-        ContactsAction action = 3;
-        bytes sender_public_key = 4;
-        int64 sender_public_key_timestamp = 5;
-        Data message = 6;
-    }
-
-    message ModifyContactsServer
-    {
-        string user_id = 1;
-        string contact_id = 2;
-        string message = 3;
-        ContactsActionServer requested_action = 4;
-        bool success = 5;
-    }
-
-    message ChatroomsList
-    {
-        repeated Data rooms = 1;
-    }
-
-    message RoomMessages
-    {
-        repeated Data messages = 1;
-    }
-
-    message ContactsList
-    {
-        repeated Data contacts = 1;
-    }
-
-    message SearchUsers
-    {
-        repeated Data users = 1;
-    }
-
-    message Logout
-    {
-    }
-
-    message SessionPublicKey
-    {
-        string sender_id = 1;
-        string receiver_id = 2;
-        bytes sender_session_public_key = 3;
-    }
-
-    message ReplySessionPublicKey
-    {
-        string sender_id = 1;
-        string receiver_id = 2;
-        bytes sender_session_public_key = 3;
-        SessionKeyError session_key_error = 4;
-    }
-
-    message ConfirmReplacePublicKey
-    {
-        bytes original_public_key = 1;
-        bytes public_key_to_replace = 2;
-    }
-
-    // Used only with pending responses
-    string id = 30;
-
-    oneof data
-    {
-        Login login                                             = 1;
-        Messages messages                                       = 2;
-        UsersList users_list                                    = 3;
-        AskForPublicKey ask_for_public_key                      = 4;
-        SendOwnPublicKey send_own_public_key                    = 5;
-        PendingMessage pending_message                          = 6;
-        SendMessage send_message                                = 7;
-        MessageChangeStatus message_change_status               = 8;
-        ModifyContactsDirect modify_contacts_direct             = 9;
-        ModifyContactsServer modify_contacts_server             = 10;
-        ChatroomsList chatrooms_list                            = 11;
-        RoomMessages room_messages                              = 12;
-        ContactsList contacts_list                              = 13;
-        SearchUsers search_users                                = 14;
-        Logout logout                                           = 15;
-        SessionPublicKey session_public_key                     = 16;
-        ReplySessionPublicKey reply_session_public_key          = 17;
-        ConfirmReplacePublicKey confirm_replace_public_key      = 18;
-    }
 }

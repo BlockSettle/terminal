@@ -610,7 +610,7 @@
   <customwidget>
    <class>ChatWidget</class>
    <extends>QWidget</extends>
-   <header>ChatWidget.h</header>
+   <header>ChatUI/ChatWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -171,4 +171,7 @@ private:
 
    ZmqBIP15XPeers forcedTrustedClients_;
 };
+
+using ZmqBIP15XServerConnectionPtr = std::shared_ptr<ZmqBIP15XServerConnection>;
+
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__

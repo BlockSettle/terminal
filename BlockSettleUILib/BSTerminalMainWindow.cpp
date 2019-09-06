@@ -1,5 +1,4 @@
 #include "BSTerminalMainWindow.h"
-#include "ui_BSTerminalMainWindow.h"
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -26,7 +25,6 @@
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
 #include "CelerAccountInfoDialog.h"
-#include "ChatWidget.h"
 #include "ConnectionManager.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -53,11 +51,13 @@
 #include "TabWithShortcut.h"
 #include "TerminalEncryptionDialog.h"
 #include "TransactionsViewModel.h"
+#include "TransactionsWidget.h"
 #include "UiUtils.h"
 #include "UtxoReserveAdapters.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+#include "ui_BSTerminalMainWindow.h"
 
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QWidget* parent)
@@ -625,16 +625,21 @@ void BSTerminalMainWindow::InitWalletsView()
 
 void BSTerminalMainWindow::InitChatView()
 {
-   ui_->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"), walletsMgr_, armory_, signContainer_);
-   ui_->widgetChat->setCelerClient(celerConnection_);
+   chatClientServicePtr_ = std::make_shared<Chat::ChatClientService>();
 
-   //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
-   connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, [this]() {
+      //ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_, logMgr_->logger("chat"), walletsMgr_, armory_, signContainer_);
+      ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_, logMgr_->logger("chat"));
+   });
+
+   chatClientServicePtr_->Init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
+
+   //ui_->widgetChat->setCelerClient(celerConnection_);
+
    connect(ui_->tabWidget, &QTabWidget::currentChanged, this, &BSTerminalMainWindow::onTabWidgetCurrentChanged);
 
    if (NotificationCenter::instance() != nullptr) {
-      connect(NotificationCenter::instance(), &NotificationCenter::newChatMessageClick,
-              ui_->widgetChat, &ChatWidget::onNewChatMessageTrayNotificationClicked);
+      connect(NotificationCenter::instance(), &NotificationCenter::newChatMessageClick, ui_->widgetChat, &ChatWidget::onNewChatMessageTrayNotificationClicked);
    }
 }
 
@@ -1107,7 +1112,9 @@ void BSTerminalMainWindow::onLogin()
 
    currentUserLogin_ = loginDialog.email();
    std::string jwt;
-   auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+   //auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+   chatClientServicePtr_->LoginToServer(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
+
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
 
@@ -1131,7 +1138,7 @@ void BSTerminalMainWindow::onLogin()
 void BSTerminalMainWindow::onLogout()
 {
    ui_->widgetWallets->setUsername(QString());
-   ui_->widgetChat->logout();
+   chatClientServicePtr_->LogoutFromServer();
    ui_->widgetChart->disconnect();
 
    if (celerConnection_->IsConnected()) {
@@ -1324,7 +1331,8 @@ void BSTerminalMainWindow::closeEvent(QCloseEvent* event)
       event->ignore();
    }
    else {
-      ui_->widgetChat->logout();
+      chatClientServicePtr_->LogoutFromServer();
+
       QMainWindow::closeEvent(event);
       QApplication::exit();
    }
@@ -1518,7 +1526,7 @@ void BSTerminalMainWindow::onTabWidgetCurrentChanged(const int &index)
 {   
    const int chatIndex = ui_->tabWidget->indexOf(ui_->widgetChat);
    const bool isChatTab = index == chatIndex;
-   ui_->widgetChat->updateChat(isChatTab);
+   //ui_->widgetChat->updateChat(isChatTab);
 }
 
 void BSTerminalMainWindow::InitWidgets()

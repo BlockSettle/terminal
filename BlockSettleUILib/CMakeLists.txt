@@ -9,18 +9,24 @@ FILE(GLOB SOURCES
    ManageEncryption/*.cpp
    Settings/*.cpp
    Trading/*.cpp
+   ChatUI/*.cpp
+   ChatUI/ChatWidgetStates/*.cpp
 )
 FILE(GLOB HEADERS
    *.h
    ManageEncryption/*.h
    Settings/*.h
    Trading/*.h
+   ChatUI/*.h
+   ChatUI/ChatWidgetStates/*.h
+   ChatUI/ChatWidgetStates/*.hpp
 )
 FILE(GLOB UI_FILES
    *.ui
    ManageEncryption/*.ui
    Settings/*.ui
    Trading/*.ui
+   ChatUI/*.ui
 )
 
 FILE(GLOB RESOURCE_FILES *.qrc)
@@ -43,6 +49,7 @@ INCLUDE_DIRECTORIES( ${Qt5Network_INCLUDE_DIRS} )
 INCLUDE_DIRECTORIES( ${Qt5Qml_INCLUDE_DIRS} )
 INCLUDE_DIRECTORIES( ${Qt5DBus_INCLUDE_DIRS} )
 INCLUDE_DIRECTORIES( ${Qt5Charts_INCLUDE_DIRS} )
+INCLUDE_DIRECTORIES( ${Qt5Sql_INCLUDE_DIRS} )
 
 INCLUDE_DIRECTORIES( ${BOTAN_INCLUDE_DIR} )
 

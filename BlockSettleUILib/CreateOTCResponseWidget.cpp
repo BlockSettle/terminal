@@ -1,6 +1,5 @@
 #include "CreateOTCResponseWidget.h"
 
-#include "ChatProtocol/ChatUtils.h"
 #include "ui_CreateOTCResponseWidget.h"
 
 CreateOTCResponseWidget::CreateOTCResponseWidget(QWidget* parent)

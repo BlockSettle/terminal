@@ -8,7 +8,7 @@
 #include <QVariant>
 
 namespace spdlog {
-class logger;
+   class logger;
 }
 
 // Base class for command line arguments parsing.
@@ -53,7 +53,7 @@ public:
          return true;
       }
 
-      T value_;
+      T value_{};
    };
 
    using SettingsParam = TemplSettingsParam<QString>;
@@ -88,7 +88,7 @@ protected:
       addParamVariant(param, name, QVariant::fromValue(defValue), descr);
    }
 
-   void addParam(SettingsParam &param, const char* name, const char *defValue, const char* descr)
+   void addParam(SettingsParam& param, const char* name, const char* defValue, const char* descr)
    {
       addParamVariant(param, name, QLatin1String(defValue), descr);
    }
