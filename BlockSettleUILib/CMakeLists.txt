@@ -10,7 +10,7 @@ FILE(GLOB SOURCES
    Settings/*.cpp
    Trading/*.cpp
    ChatUI/*.cpp
-	ChatUI/ChatWidgetStates/*.cpp
+   ChatUI/ChatWidgetStates/*.cpp
 )
 FILE(GLOB HEADERS
    *.h

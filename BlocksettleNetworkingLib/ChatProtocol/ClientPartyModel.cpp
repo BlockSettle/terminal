@@ -11,6 +11,7 @@ namespace Chat
       : PartyModel(loggerPtr, parent)
    {
       qRegisterMetaType<Chat::PrivatePartyState>();
+      qRegisterMetaType<Chat::ClientPartyModelError>();
 
       connect(this, &ClientPartyModel::error, this, &ClientPartyModel::handleLocalErrors);
       connect(this, &ClientPartyModel::partyInserted, this, &ClientPartyModel::handlePartyInserted);

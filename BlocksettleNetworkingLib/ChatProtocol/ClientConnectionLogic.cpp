@@ -39,7 +39,11 @@ namespace Chat
    void ClientConnectionLogic::onDataReceived(const std::string& data)
    {
       google::protobuf::Any any;
-      any.ParseFromString(data);
+      if (!any.ParseFromString(data))
+      {
+         emit error(ClientConnectionLogicError::ParsingPacketData, data);
+         return;
+      }
 
       loggerPtr_->debug("[ClientConnectionLogic::onDataReceived] Data: {}", ProtobufUtils::toJsonReadable(any));
 

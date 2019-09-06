@@ -78,5 +78,6 @@ namespace Chat
 }
 
 Q_DECLARE_METATYPE(Chat::PrivatePartyState)
+Q_DECLARE_METATYPE(Chat::ClientPartyModelError)
 
 #endif // ClientPartyModel_h__

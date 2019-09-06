@@ -41,7 +41,8 @@ namespace Chat
       UnhandledPacket,
       CouldNotFindParty,
       DynamicPointerCast,
-      WrongPartyRecipient
+      WrongPartyRecipient,
+      ParsingPacketData
    };
 
    class ClientConnectionLogic : public QObject
