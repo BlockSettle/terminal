@@ -473,13 +473,16 @@ void ChatMessagesTextEdit::onMessageUpdate(const Chat::MessagePtrList& messagePt
 
 void ChatMessagesTextEdit::onUpdatePartyName(const std::string& partyId)
 {
-   for (int iMessage = 0; iMessage < messages_[currentPartyId_].size(); ++iMessage) {
-      if (messages_[currentPartyId_][iMessage]->partyId() != partyId) {
+   ClientMessagesHistory messageHistory = messages_[currentPartyId_];
+   
+   for (int index = 0; index < messageHistory.size(); ++index) {
+      Chat::MessagePtr messagePtr = messageHistory.at(index);
+      if (messagePtr->partyId() != partyId) {
          continue;
       }
-      updateMessage(partyId, iMessage);
-   }
 
+      updateMessage(partyId, index);
+   }
 }
 
 Chat::MessagePtr ChatMessagesTextEdit::findMessage(const std::string& partyId, const std::string& messageId)
