@@ -6,138 +6,137 @@
 
 #include "ChatProtocol/PrivateDirectMessageParty.h"
 
-namespace Chat
+using namespace Chat;
+
+PartyModel::PartyModel(const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
+   : QObject(parent), loggerPtr_(loggerPtr)
 {
+   connect(this, &PartyModel::error, this, &PartyModel::handleLocalErrors);
+}
 
-   PartyModel::PartyModel(const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
-      : QObject(parent), loggerPtr_(loggerPtr)
+void PartyModel::insertParty(const PartyPtr& partyPtr)
+{
+   if (partyMap_.find(partyPtr->id()) != partyMap_.end())
    {
-      connect(this, &PartyModel::error, this, &PartyModel::handleLocalErrors);
-   }
+      PartyPtr oldPartyPtr = partyMap_[partyPtr->id()];
+      partyMap_.erase(partyPtr->id());
 
-   void PartyModel::insertParty(const PartyPtr& partyPtr)
-   {
-      if (partyMap_.find(partyPtr->id()) != partyMap_.end())
-      {
-         PartyPtr oldPartyPtr = partyMap_[partyPtr->id()];
-         partyMap_.erase(partyPtr->id());
-
-         emit partyRemoved(oldPartyPtr);
-         emit partyModelChanged();
-         emit error(PartyModelError::InsertExistingParty, partyPtr->id());
-      }
-
-      partyMap_[partyPtr->id()] = partyPtr;
-
-      emit partyInserted(partyPtr);
+      emit partyRemoved(oldPartyPtr);
       emit partyModelChanged();
+      emit error(PartyModelError::InsertExistingParty, partyPtr->id());
    }
 
-   void PartyModel::removeParty(const PartyPtr& partyPtr)
+   partyMap_[partyPtr->id()] = partyPtr;
+
+   emit partyInserted(partyPtr);
+   emit partyModelChanged();
+}
+
+void PartyModel::removeParty(const PartyPtr& partyPtr)
+{
+   if (partyMap_.find(partyPtr->id()) != partyMap_.end())
    {
-      if (partyMap_.find(partyPtr->id()) != partyMap_.end())
-      {
-         PartyPtr oldPartyPtr = partyMap_[partyPtr->id()];
-         partyMap_.erase(partyPtr->id());
+      PartyPtr oldPartyPtr = partyMap_[partyPtr->id()];
+      partyMap_.erase(partyPtr->id());
 
-         emit partyRemoved(oldPartyPtr);
-         emit partyModelChanged();
-         return;
-      }
-
-      emit error(PartyModelError::RemovingNonexistingParty, partyPtr->id());
+      emit partyRemoved(oldPartyPtr);
+      emit partyModelChanged();
+      return;
    }
 
-   PartyPtr PartyModel::getPartyById(const std::string& party_id)
+   emit error(PartyModelError::RemovingNonexistingParty, partyPtr->id());
+}
+
+PartyPtr PartyModel::getPartyById(const std::string& party_id)
+{
+   const auto it = partyMap_.find(party_id);
+
+   if (it != partyMap_.end())
    {
-      const auto it = partyMap_.find(party_id);
+      return it->second;
+   }
 
-      if (it != partyMap_.end())
-      {
-         return it->second;
-      }
+   emit error(PartyModelError::CouldNotFindParty, party_id);
 
+   return nullptr;
+}
+
+PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& party_id)
+{
+   PartyPtr partyPtr = getPartyById(party_id);
+
+   if (!partyPtr)
+   {
       emit error(PartyModelError::CouldNotFindParty, party_id);
-
       return nullptr;
    }
 
-   PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& party_id)
+   PrivateDirectMessagePartyPtr privateDMPartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
+
+   if (nullptr == privateDMPartyPtr)
    {
-      PartyPtr partyPtr = getPartyById(party_id);
-
-      if (!partyPtr)
-      {
-         emit error(PartyModelError::CouldNotFindParty, party_id);
-         return nullptr;
-      }
-
-      PrivateDirectMessagePartyPtr privateDMPartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
-
-      if (nullptr == privateDMPartyPtr)
-      {
-         // this should not happen
-         emit error(PartyModelError::PrivatePartyCasting, party_id);
-         return nullptr;
-      }
-
-      return privateDMPartyPtr;
+      // this should not happen
+      emit error(PartyModelError::PrivatePartyCasting, party_id);
+      return nullptr;
    }
 
-   void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what)
+   return privateDMPartyPtr;
+}
+
+void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what)
+{
+   loggerPtr_->debug("[PartyModel::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
+}
+
+void PartyModel::clearModel()
+{
+   for (const auto& element : partyMap_)
    {
-      loggerPtr_->debug("[PartyModel::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
+      emit partyRemoved(element.second);
    }
 
-   void PartyModel::clearModel()
+   partyMap_.clear();
+   emit partyModelChanged();
+}
+
+void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
+{
+   // private party
+   if (partyPtr->isPrivateStandard())
    {
-      for (const auto& element : partyMap_)
+      PrivateDirectMessagePartyPtr privatePartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
+
+      if (nullptr == privatePartyPtr)
       {
-         emit partyRemoved(element.second);
-      }
-
-      partyMap_.clear();
-      emit partyModelChanged();
-   }
-
-   void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
-   {
-      // private party
-      if (partyPtr->isPrivateStandard())
-      {
-         PrivateDirectMessagePartyPtr privatePartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
-
-         if (nullptr == privatePartyPtr)
-         {
-            emit error(PartyModelError::DynamicPointerCast, partyPtr->id());
-            return;
-         }
-
-         PrivateDirectMessagePartyPtr existingPartyPtr = getPrivatePartyById(partyPtr->id());
-
-         // party not exist, insert
-         if (nullptr == existingPartyPtr)
-         {
-            insertParty(privatePartyPtr);
-            return;
-         }
-
-         // party exist, update
-         for (const auto recipientPtr : privatePartyPtr->recipients())
-         {
-            existingPartyPtr->insertOrUpdateRecipient(recipientPtr);
-         }
+         emit error(PartyModelError::DynamicPointerCast, partyPtr->id());
          return;
       }
 
-      // other party types
-      PartyPtr existingPartyPtr = getPrivatePartyById(partyPtr->id());
+      PrivateDirectMessagePartyPtr existingPartyPtr = getPrivatePartyById(partyPtr->id());
 
-      // if not exist, insert new, otherwise do nothing
+      // party not exist, insert
       if (nullptr == existingPartyPtr)
       {
-         insertParty(partyPtr);
+         insertParty(privatePartyPtr);
          return;
       }
+
+      // party exist, update
+      for (const auto recipientPtr : privatePartyPtr->recipients())
+      {
+         existingPartyPtr->insertOrUpdateRecipient(recipientPtr);
+      }
+      return;
+   }
+
+   // other party types
+   PartyPtr existingPartyPtr = getPrivatePartyById(partyPtr->id());
+
+   // if not exist, insert new, otherwise do nothing
+   if (nullptr == existingPartyPtr)
+   {
+      insertParty(partyPtr);
+      return;
    }
 }
+
