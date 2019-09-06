@@ -1,5 +1,5 @@
-#ifndef __CHAT_INPUT_H__
-#define __CHAT_INPUT_H__
+#ifndef BSCHATINPUT_H
+#define BSCHATINPUT_H
 
 #include <QTextBrowser>
 
@@ -17,4 +17,4 @@ public:
    void keyPressEvent(QKeyEvent * e) override;
 };
 
-#endif // __CHAT_INPUT_H__
+#endif // BSCHATINPUT_H

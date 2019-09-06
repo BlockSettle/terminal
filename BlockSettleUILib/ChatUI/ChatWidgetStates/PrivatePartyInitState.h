@@ -1,3 +1,6 @@
+#ifndef PRIVATEPARTYINITSTATE_H
+#define PRIVATEPARTYINITSTATE_H
+
 #include "AbstractChatWidgetState.h"
 
 class PrivatePartyInitState : public AbstractChatWidgetState {
@@ -25,3 +28,5 @@ protected:
    }
    virtual bool canSendMessage() const override { return true; }
 };
+
+#endif // PRIVATEPARTYINITSTATE_H

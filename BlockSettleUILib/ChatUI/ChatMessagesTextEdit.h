@@ -1,5 +1,5 @@
-#ifndef __CHAT_MESSAGES_VIEW_MODEL_H__
-#define __CHAT_MESSAGES_VIEW_MODEL_H__
+#ifndef CHATMESSAGESTEXTEDIT_H
+#define CHATMESSAGESTEXTEDIT_H
 
 #include "ChatProtocol/Message.h"
 #include "ChatProtocol/ClientPartyModel.h"
@@ -143,4 +143,5 @@ private:
    QTextCursor textCursor_;
    QString anchor_;
 };
-#endif
+
+#endif // CHATMESSAGESTEXTEDIT_H

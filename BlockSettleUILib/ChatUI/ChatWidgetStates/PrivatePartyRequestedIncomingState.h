@@ -1,3 +1,6 @@
+#ifndef PRIVATEPARTYREQUESTEDINCOMINGSTATE_H
+#define PRIVATEPARTYREQUESTEDINCOMINGSTATE_H
+
 #include "AbstractChatWidgetState.h"
 
 namespace {
@@ -39,3 +42,5 @@ protected:
       // chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
    }
 };
+
+#endif // PRIVATEPARTYREQUESTEDINCOMINGSTATE_H

@@ -1,3 +1,6 @@
+#ifndef CHATLOGOUTSTATE_H
+#define CHATLOGOUTSTATE_H
+
 #include "AbstractChatWidgetState.h"
 
 class ChatLogOutState : public AbstractChatWidgetState {
@@ -40,3 +43,5 @@ protected:
    bool canRemovePartyRequest() const override { return false; }
    bool canUpdatePartyName() const override { return false; }
 };
+
+#endif // CHATLOGOUTSTATE_H

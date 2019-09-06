@@ -1,3 +1,6 @@
+#ifndef PRIVATEPARTYREJECTEDSTATE_H
+#define PRIVATEPARTYREJECTEDSTATE_H
+
 #include "AbstractChatWidgetState.h"
 
 class PrivatePartyRejectedState : public AbstractChatWidgetState {
@@ -19,3 +22,5 @@ protected:
       // #new_logic : OTC shield?
    }
 };
+
+#endif // PRIVATEPARTYREJECTEDSTATE_H

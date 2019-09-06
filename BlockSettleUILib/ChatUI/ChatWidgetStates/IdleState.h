@@ -1,3 +1,6 @@
+#ifndef IDLESTATE_H
+#define IDLESTATE_H
+
 #include "AbstractChatWidgetState.h"
 
 class IdleState : public AbstractChatWidgetState {
@@ -25,3 +28,5 @@ protected:
       chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
    }
 };
+
+#endif // IDLESTATE_H

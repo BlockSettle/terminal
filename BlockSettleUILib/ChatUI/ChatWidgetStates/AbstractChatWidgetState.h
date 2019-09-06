@@ -1,5 +1,5 @@
-#ifndef AbstractChatWidgetState_H
-#define AbstractChatWidgetState_H
+#ifndef ABSTRACTCHATWIDGETSTATE_H
+#define ABSTRACTCHATWIDGETSTATE_H
 
 #include "ChatUI/ChatWidget.h"
 #include "ChatProtocol/Message.h"
@@ -73,4 +73,4 @@ protected:
    ChatWidget* chat_;
 };
 
-#endif // AbstractChatWidgetState_H
+#endif // ABSTRACTCHATWIDGETSTATE_H

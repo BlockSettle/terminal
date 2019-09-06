@@ -1,3 +1,6 @@
+#ifndef PRIVATEPARTYREQUESTEDOUTGOINGSTATE_H
+#define PRIVATEPARTYREQUESTEDOUTGOINGSTATE_H
+
 #include "AbstractChatWidgetState.h"
 
 class PrivatePartyRequestedOutgoingState : public AbstractChatWidgetState {
@@ -20,3 +23,5 @@ protected:
       // chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
    }
 };
+
+#endif // PRIVATEPARTYREQUESTEDOUTGOINGSTATE_H
