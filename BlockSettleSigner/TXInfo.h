@@ -51,7 +51,7 @@ public:
    double inputAmount() const;
    QString txId() const { return txId_; }
    void setTxId(const QString &);
-   QString walletId() const { return QString::fromStdString(txReq_.walletId); }
+   QString walletId() const { return QString::fromStdString(txReq_.walletIds.front()); }
 
 signals:
    void dataChanged();

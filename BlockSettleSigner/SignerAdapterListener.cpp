@@ -55,7 +55,7 @@ public:
    signer::SignTxRequest createSignTxRequest(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt)
    {
       signer::SignTxRequest request;
-      request.set_wallet_id(txReq.walletId);
+      request.set_wallet_id(txReq.walletIds.front());
       request.set_prompt(prompt);
 
       for (const auto &input : txReq.inputs) {
@@ -312,7 +312,7 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
       return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);;
    }
    bs::core::wallet::TXSignRequest txReq;
-   txReq.walletId = request.tx_request().wallet_id();
+   txReq.walletIds = { request.tx_request().wallet_id() };
    for (int i = 0; i < request.tx_request().inputs_size(); ++i) {
       UTXO utxo;
       utxo.unserialize(request.tx_request().inputs(i));
