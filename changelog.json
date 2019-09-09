@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.20.10",
-   "release_date": "29 Aug 2019",
+   "latest_version": "0.21.0",
+   "release_date": "09 Sep 2019",
    "changes": [
+      {
+         "version_string": "0.21.0",
+         "previous_version": "0.20.10",
+         "release_date": "09 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Auth Address Validation",
+            "Wallets selection updates (#1328)",
+            "Require settlement leaf existence before auth address submission (BST-2176)"
+         ],
+         "bug_fixes": [
+            "Small fix for WalletInfo class (#1316)"
+         ],
+         "revision": "b1eb573f",
+         "common_revision": "eae06ec5"
+      },
       {
          "version_string": "0.20.10",
          "previous_version": "0.20.9",
