@@ -36,6 +36,8 @@ void AutoSignQuoteWidget::init(const std::shared_ptr<AutoSignQuoteProvider> &aut
    connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::aqScriptLoaded, this, &AutoSignQuoteWidget::onAqScriptLoaded);
    connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::aqScriptUnLoaded, this, &AutoSignQuoteWidget::onAqScriptUnloaded);
    connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::aqHistoryChanged, this, &AutoSignQuoteWidget::aqFillHistory);
+
+   ui_->labelAutoSignWalletName->setText(autoSignQuoteProvider_->getAutoSignWalletName());
 }
 
 AutoSignQuoteWidget::~AutoSignQuoteWidget() = default;
@@ -72,6 +74,7 @@ void AutoSignQuoteWidget::onAutoQuoteToggled()
 void AutoSignQuoteWidget::onAutoSignStateChanged(const std::string &walletId, bool active)
 {
    ui_->checkBoxAutoSign->setChecked(active);
+   ui_->labelAutoSignWalletName->setText(autoSignQuoteProvider_->getAutoSignWalletName());
 }
 
 void AutoSignQuoteWidget::onAutoSignQuoteAvailChanged()
@@ -81,6 +84,8 @@ void AutoSignQuoteWidget::onAutoSignQuoteAvailChanged()
 
    ui_->checkBoxAutoSign->setChecked(false);
    ui_->checkBoxAQ->setChecked(false);
+
+   ui_->labelAutoSignWalletName->setText(autoSignQuoteProvider_->getAutoSignWalletName());
 }
 
 void AutoSignQuoteWidget::onAqScriptLoaded()
