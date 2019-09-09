@@ -124,9 +124,6 @@ public:
 
 private slots:
    void ticker();
-   void onSettlementExpired();
-   void onSettlementCompleted();
-   void onSettlementFailed();
    void clearModel();
    void onDeferredUpdate(const QPersistentModelIndex &index);
    void onPriceUpdateTimer();
@@ -339,7 +336,7 @@ private:
    void forEachSecurity(const QString &, const cbItem &);
    void setStatus(const std::string &reqId, bs::network::QuoteReqNotification::Status, const QString &details = {});
    void updateSettlementCounters();
-   void deleteSettlement(bs::SettlementContainer *);
+   void deleteSettlement(const std::string &id);
    static QString quoteReqStatusDesc(bs::network::QuoteReqNotification::Status status);
    static QBrush bgColorForStatus(bs::network::QuoteReqNotification::Status status);
    static QBrush colorForQuotedPrice(double quotedPx, double bestQuotedPx, bool own = false);

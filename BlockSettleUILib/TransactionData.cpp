@@ -93,6 +93,7 @@ bool TransactionData::setGroup(const std::shared_ptr<bs::sync::hd::Group> &group
       return false;
    }
    if (group != group_) {
+      wallet_ = nullptr;
       group_ = group;
       const auto leaves = group->getAllLeaves();
       if (!leaves.empty()) {

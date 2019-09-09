@@ -121,6 +121,7 @@ void SelectedTransactionInputs::ResetInputs(const std::function<void()> &cb)
 {
    inputs_.clear();
    cpfpInputs_.clear();
+   resetSelection();
 
    resetCallbacks_.push_back(cb);
    if (resetCallbacks_.size() > 1) {
@@ -220,6 +221,7 @@ uint64_t SelectedTransactionInputs::GetBalance() const
 
 const UTXO& SelectedTransactionInputs::GetTransaction(size_t i) const
 {
+   assert(i < inputs_.size() + cpfpInputs_.size());
    if (i < inputs_.size()) {
       return inputs_[i];
    }

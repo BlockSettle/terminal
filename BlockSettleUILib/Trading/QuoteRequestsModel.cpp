@@ -1,5 +1,6 @@
-#include <chrono>
 #include "QuoteRequestsModel.h"
+
+#include <chrono>
 #include "AssetManager.h"
 #include "CelerSubmitQuoteNotifSequence.h"
 #include "CurrencyPair.h"
@@ -871,13 +872,21 @@ void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNoti
 
 void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &container)
 {
-   settlContainers_[container->id()] = container;
-   connect(container.get(), &bs::SettlementContainer::failed,
-      this, &QuoteRequestsModel::onSettlementFailed);
-   connect(container.get(), &bs::SettlementContainer::completed,
-      this, &QuoteRequestsModel::onSettlementCompleted);
-   connect(container.get(), &bs::SettlementContainer::timerExpired,
-      this, &QuoteRequestsModel::onSettlementExpired);
+   const auto &id = container->id();
+   settlContainers_[id] = container;
+
+   // Use queued connections to not destroy SettlementContainer inside callbacks
+   connect(container.get(), &bs::SettlementContainer::failed, this, [this, id] {
+      ++settlFailed_;
+      deleteSettlement(id);
+   }, Qt::QueuedConnection);
+   connect(container.get(), &bs::SettlementContainer::completed, this, [this, id] {
+      ++settlCompleted_;
+      deleteSettlement(id);
+   }, Qt::QueuedConnection);
+   connect(container.get(), &bs::SettlementContainer::timerExpired, this, [this, id] {
+      deleteSettlement(id);
+   }, Qt::QueuedConnection);
 
    auto *market = findMarket(groupNameSettlements_);
 
@@ -920,7 +929,7 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
    market->settl_.rfqs_.back()->idx_.parent_ = &market->idx_;
 
    connect(container.get(), &bs::SettlementContainer::timerStarted,
-      [s = market->settl_.rfqs_.back().get(), &market, this,
+      [s = market->settl_.rfqs_.back().get(), this,
        row = static_cast<int>(market->groups_.size() + market->settl_.rfqs_.size() - 1)](int msDuration) {
          s->status_.timeout_ = msDuration;
          const QModelIndex idx = createIndex(row, 0, &s->idx_);
@@ -930,19 +939,6 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
    );
 
    endInsertRows();
-}
-
-
-void QuoteRequestsModel::onSettlementCompleted()
-{
-   ++settlCompleted_;
-   deleteSettlement(qobject_cast<bs::SettlementContainer *>(sender()));
-}
-
-void QuoteRequestsModel::onSettlementFailed()
-{
-   ++settlFailed_;
-   deleteSettlement(qobject_cast<bs::SettlementContainer *>(sender()));
 }
 
 void QuoteRequestsModel::clearModel()
@@ -1016,18 +1012,15 @@ void QuoteRequestsModel::onPriceUpdateTimer()
    }
 }
 
-void QuoteRequestsModel::onSettlementExpired()
-{
-   deleteSettlement(qobject_cast<bs::SettlementContainer *>(sender()));
-}
-
-void QuoteRequestsModel::deleteSettlement(bs::SettlementContainer *container)
+void QuoteRequestsModel::deleteSettlement(const std::string &id)
 {
    updateSettlementCounters();
-   if (container) {
-      pendingDeleteIds_.insert(container->id());
-      container->deactivate();
-      settlContainers_.erase(container->id());
+
+   auto it = settlContainers_.find(id);
+   if (it != settlContainers_.end()) {
+      pendingDeleteIds_.insert(id);
+      it->second->deactivate();
+      settlContainers_.erase(it);
    }
 }
 

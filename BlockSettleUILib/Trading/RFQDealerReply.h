@@ -129,11 +129,6 @@ namespace bs {
          std::shared_ptr<ArmoryConnection>      armory_;
          std::shared_ptr<AutoSignQuoteProvider> autoSignQuoteProvider_;
          std::shared_ptr<DealerUtxoResAdapter>  dealerUtxoAdapter_;
-
-         std::shared_ptr<bs::sync::Wallet>   curWallet_;
-         std::shared_ptr<bs::sync::Wallet>   prevWallet_;
-         std::shared_ptr<bs::sync::Wallet>   ccWallet_;
-         std::shared_ptr<bs::sync::Wallet>   xbtWallet_;
          std::string authKey_;
          bs::Address authAddr_;
 
@@ -173,18 +168,22 @@ namespace bs {
          double getPrice() const;
          double getValue() const;
          double getAmount() const;
-         std::shared_ptr<bs::sync::Wallet> getCurrentWallet() const { return curWallet_; }
-         void setCurrentWallet(const std::shared_ptr<bs::sync::Wallet> &);
-         std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc);
-         std::shared_ptr<bs::sync::Wallet> getXbtWallet();
-         bs::Address getRecvAddress() const;
+         std::shared_ptr<bs::sync::Wallet> getSelectedXbtWallet() const;
+         std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
+         std::shared_ptr<bs::sync::Wallet> getCCWallet(const bs::network::QuoteReqNotification &qrn) const;
+         std::shared_ptr<bs::sync::Wallet> getRecvWallet(const bs::network::QuoteReqNotification &qrn
+            , const std::shared_ptr<bs::sync::Wallet> &xbtWallet) const;
+         bs::Address getRecvAddress(const std::shared_ptr<sync::Wallet> &wallet) const;
          void setBalanceOk(bool ok);
          bool checkBalance() const;
          QDoubleSpinBox *getActivePriceWidget() const;
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
+         // xbtWallet - what XBT wallet to use for XBT/CC trades (selected from UI for manual trades, default wallet for AQ trades), empty for FX trades
          void submitReply(const std::shared_ptr<TransactionData> transData
             , const network::QuoteReqNotification &qrn, double price
-            , std::function<void(bs::network::QuoteNotification)>);
+            , std::function<void(bs::network::QuoteNotification)>
+            , const std::shared_ptr<bs::sync::Wallet> &xbtWallet);
+         void updateWalletsList(bool skipWatchingOnly);
       };
 
    }  //namespace ui
