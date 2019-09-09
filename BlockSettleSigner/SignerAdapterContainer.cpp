@@ -23,7 +23,7 @@ bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet
    request.set_password(password.toBinStr());
    auto evt = request.mutable_tx_request();
 
-   evt->set_wallet_id(txReq.walletId);
+   evt->set_wallet_id(txReq.walletIds.front());
    for (const auto &input : txReq.inputs) {
       evt->add_inputs(input.serialize().toBinStr());
    }

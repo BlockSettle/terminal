@@ -18,7 +18,7 @@ void TXInfo::setTxId(const QString &txId)
 bs::core::wallet::TXSignRequest TXInfo::getCoreSignTxRequest(const signer::SignTxRequest &req)
 {
    bs::core::wallet::TXSignRequest txReq;
-   txReq.walletId = req.wallet_id();
+   txReq.walletIds = { req.wallet_id() };
    for (int i = 0; i < req.inputs_size(); ++i) {
       UTXO utxo;
       utxo.unserialize(req.inputs(i));

@@ -475,13 +475,18 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
          invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Transaction already signed"));
          return;
       }
-      const auto &wallet = walletsMgr->getWalletById(req.walletId);
-      if (!wallet) {
-         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to find wallet with ID %1").arg(QString::fromStdString(req.walletId)));
+      if (req.walletIds.empty()) {
+         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Missing wallet ID[s] in request"));
+         return;
+      }
+      const auto rootWallet = walletsMgr->getHDRootForLeaf(req.walletIds.front());
+      if (!rootWallet) {
+         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to find root wallet for ID %1")
+            .arg(QString::fromStdString(req.walletIds.front())));
          return;
       }
 
-      parsedReqsForWallets->operator[](req.walletId).push_back(req);
+      parsedReqsForWallets->operator[](rootWallet->walletId()).push_back(req);
    }
 
    // sign reqs by wallets
