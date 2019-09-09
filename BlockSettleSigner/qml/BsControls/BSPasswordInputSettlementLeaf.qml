@@ -85,7 +85,7 @@ BSPasswordInput {
             Layout.preferredWidth: 110
             Layout.maximumWidth: 110
             Layout.fillWidth: true
-            text: qsTr("AuthAddress")
+            text: qsTr("Authentication Address")
         }
         CustomLabel {
             Layout.fillWidth: true

@@ -90,22 +90,20 @@ ApplicationWindow {
     function resizeAnimated(w,h) {
         mwWidthAnimation.from = mainWindow.width
         mwWidthAnimation.to = w
-        mwWidthAnimation.start()
+        mwWidthAnimation.restart()
 
         mwHeightAnimation.from = mainWindow.height
         mwHeightAnimation.to = h
-        mwHeightAnimation.start()
+        mwHeightAnimation.restart()
 
         mwXAnimation.from = mainWindow.x
         mwXAnimation.to = Screen.virtualX + (Screen.width - w) / 2
-        mwXAnimation.start()
+        mwXAnimation.restart()
 
         mwYAnimation.from = mainWindow.y
         mwYAnimation.to = Screen.virtualY + (Screen.height - h) / 2
-        mwYAnimation.start()
+        mwYAnimation.restart()
     }
-
-
 
     NumberAnimation {
         id: mwWidthAnimation
