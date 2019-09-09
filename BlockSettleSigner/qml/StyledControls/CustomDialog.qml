@@ -72,19 +72,24 @@ CustomDialogWindow {
     signal sizeChanged(int w, int h)
 
     onWidthChanged: {
+        //console.log("CustomDialog.qml onWidthChanged " + root + " " + root.width + " " + root.height)
+
         if (root.width > Screen.desktopAvailableWidth) {
+            //console.log("CustomDialog.qml Screen width fix")
             root.width = Screen.desktopAvailableWidth - 16
         }
         sizeChanged(root.width, root.height)
     }
     onHeightChanged: {
+        //console.log("CustomDialog.qml onHeightChanged " + root + " " + root.width + " " + root.height)
+
         if (root.height > Screen.desktopAvailableHeight) {
+            //console.log("CustomDialog.qml Screen height fix")
             let h = qmlFactory.titleBarHeight() + 16 // + extra window margins
             root.height = Screen.desktopAvailableHeight - h
         }
         sizeChanged(root.width, root.height)
     }
-
 
     ////////////////////////////
     /// Dialogs chain management

@@ -9,7 +9,8 @@ CustomDialog {
     id: root
    // property bool qmlTitleVisible: true    //: !mainWindow.isLiteMode
     property alias headerPanel: headerPanel
-    height: cHeaderHeight + cContentHeight + cFooterHeight
+    property bool fixedHeight: false
+    height: fixedHeight ? undefined: cHeaderHeight + cContentHeight + cFooterHeight
 
     function isApplicationWindow(item) {
         return item instanceof ApplicationWindow

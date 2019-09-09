@@ -20,10 +20,10 @@ class QmlPdfBackup : public QQuickPaintedItem
    Q_OBJECT
 
    Q_PROPERTY(bs::wallet::QSeed* seed READ seed WRITE setSeed NOTIFY seedChanged)
-   Q_PROPERTY(qreal preferedHeight READ preferedHeight NOTIFY preferedHeightChanged)
+   Q_PROPERTY(qreal preferredHeightForWidth READ preferredHeightForWidth NOTIFY preferredHeightForWidthChanged)
 
 signals:
-   void preferedHeightChanged();
+   void preferredHeightForWidthChanged();
 
 public:
    QmlPdfBackup(QQuickItem *parent = nullptr);
@@ -32,7 +32,7 @@ public:
    void paint(QPainter *painter) override;
    void componentComplete() override;
 
-   qreal preferedHeight() const;
+   qreal preferredHeightForWidth() const;
 
    bs::wallet::QSeed *seed() const;
    void setSeed(bs::wallet::QSeed *seed);
