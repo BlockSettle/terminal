@@ -92,16 +92,15 @@ message Change
 
 message SignTxRequest
 {
-   string         walletId = 1;
-   repeated bytes inputs = 2;
-   repeated bytes recipients = 3;
-   uint64         fee = 4;
-   bool           RBF = 5;
-   bytes          unsignedState = 6;
-   Change         change = 7;
-   bool           populateUTXOs = 8;
-   bytes          password = 10;
-   bool           keepDuplicatedRecipients = 11;
+   repeated string walletId = 1;
+   repeated bytes  inputs = 2;
+   repeated bytes  recipients = 3;
+   uint64          fee = 4;
+   bool            RBF = 5;
+   bytes           unsignedState = 6;
+   Change          change = 7;
+   bool            populateUTXOs = 8;
+   bool            keepDuplicatedRecipients = 11;
 }
 
 message SignTxReply

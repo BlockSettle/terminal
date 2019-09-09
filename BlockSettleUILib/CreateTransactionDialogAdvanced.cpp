@@ -884,16 +884,13 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
          return selectedChangeAddress_;
       }
       else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
-         const auto hdWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
-         std::shared_ptr<bs::sync::hd::Group> group;
+         const auto group = transactionData_->getGroup();
          std::shared_ptr<bs::sync::Wallet> wallet;
-         if (hdWallet) {
-            group = hdWallet->getGroup(hdWallet->getXBTGroupType());
-         }
          if (group) {
             const auto purpose = ui_->radioButtonNewAddrNative->isChecked()
                ? bs::hd::Purpose::Native : bs::hd::Purpose::Nested;
-            wallet = group->getLeaf(bs::hd::Path({ purpose, hdWallet->getXBTGroupType(), 0 }));
+            wallet = group->getLeaf(bs::hd::Path({ purpose
+               , walletsManager_->getPrimaryWallet()->getXBTGroupType(), 0 }));
          }
          if (!wallet) {
             wallet = transactionData_->getWallet();
@@ -1076,7 +1073,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
             }
          }
       };
-      SetFixedWallet(tx.walletId, cbInputsReceived);
+      SetFixedWallet(tx.walletIds.front(), cbInputsReceived);
 
       if (tx.change.value) {
          SetFixedChangeAddress(QString::fromStdString(tx.change.address.display()));

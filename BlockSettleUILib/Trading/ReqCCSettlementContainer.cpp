@@ -203,7 +203,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
    if (side() == bs::network::Side::Sell) {
       const uint64_t spendVal = quantity() * assetMgr_->getCCLotSize(product());
       logger_->debug("[CCSettlementTransactionWidget::createCCUnsignedTXdata] sell amount={}, spend value = {}", quantity(), spendVal);
-      ccTxData_.walletId = wallet->walletId();
+      ccTxData_.walletIds = { wallet->walletId() };
       ccTxData_.prevStates = { dealerTx_ };
       const auto recipient = bs::Address(dealerAddress_).getRecipient(spendVal);
       if (recipient) {
@@ -235,7 +235,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                ccTxData_ = transactionData_->createPartialTXRequest(spendVal, feePerByte, { recipient }
                , dealerTx_, utxos);
                logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
-               utxoAdapter_->reserve(ccTxData_.walletId, id(), ccTxData_.inputs);
+               utxoAdapter_->reserve(ccTxData_.walletIds.front(), id(), ccTxData_.inputs);
 
                startSigning();
             }

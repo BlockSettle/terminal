@@ -161,7 +161,7 @@ int UiUtils::fillWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::
 
 int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId)
 {
-   int walletIndex = 0;
+   int walletIndex = -1;
    if (comboBox->count() == 0) {
       return -1;
    }

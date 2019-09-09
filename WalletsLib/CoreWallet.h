@@ -167,8 +167,8 @@ namespace bs {
 
          struct TXSignRequest
          {
-            std::string       walletId;
-            std::vector<UTXO> inputs;
+            std::vector<std::string>   walletIds;
+            std::vector<UTXO>          inputs;
             std::vector<std::shared_ptr<ScriptRecipient>>   recipients;
             struct {
                bs::Address address;
@@ -201,6 +201,7 @@ namespace bs {
             std::map<UTXO, std::string>     inputs;     // per-wallet UTXOs
             std::vector<std::shared_ptr<ScriptRecipient>>   recipients;
             BinaryData  prevState;
+            bool RBF;
 
             bool isValid() const noexcept;
             void addInput(const UTXO &utxo, const std::string &walletId) { inputs[utxo] = walletId; }
@@ -341,9 +342,8 @@ namespace bs {
          size_t            addrCount_ = 0;
       };
 
-      using KeyMap = std::unordered_map<std::string, SecureBinaryData>; // key is wallet id
       using WalletMap = std::unordered_map<std::string, std::shared_ptr<Wallet>>;   // key is wallet id
-      BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &, const KeyMap &, const WalletMap &);
+      BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &, const WalletMap &);
 
       struct WalletEncryptionLock
       {

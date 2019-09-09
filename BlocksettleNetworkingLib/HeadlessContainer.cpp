@@ -358,7 +358,9 @@ headless::SignTxRequest HeadlessContainer::createSignTxRequest(const bs::core::w
    , bool keepDuplicatedRecipients)
 {
    headless::SignTxRequest request;
-   request.set_walletid(txSignReq.walletId);
+   for (const auto &walletId : txSignReq.walletIds) {
+      request.add_walletid(walletId);
+   }
    request.set_keepduplicatedrecipients(keepDuplicatedRecipients);
 
    if (txSignReq.populateUTXOs) {
@@ -1537,7 +1539,7 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 bs::signer::RequestId RemoteSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , SignContainer::TXSignMode mode, bool keepDuplicatedRecipients)
 {
-   if (isWalletOffline(txSignReq.walletId)) {
+   if (isWalletOffline(txSignReq.walletIds.front())) {
       return signOffline(txSignReq);
    }
    return HeadlessContainer::signTXRequest(txSignReq, mode, keepDuplicatedRecipients);
@@ -1551,7 +1553,9 @@ bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRe
    }
 
    Blocksettle::Storage::Signer::TXRequest request;
-   request.set_walletid(txSignReq.walletId);
+   for (const auto &walletId : txSignReq.walletIds) {
+      request.add_walletid(walletId);
+   }
 
    for (const auto &utxo : txSignReq.inputs) {
       auto input = request.add_inputs();
