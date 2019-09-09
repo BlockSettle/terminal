@@ -55,6 +55,9 @@ CustomTitleDialogWindow {
         // Bindings not working here for some reason
         // don't try to use property with width here
 
+        // On some resolutions (Windows + 1366x768) slot CustomDialog.qml::onWidthChanged()
+        // is not triggered when dialog size changed by width and height bindings
+        // workaround - exlicitly change dialog size
         root.width = calcWidth(curPage)
         root.height = calcHeight(curPage)
 
