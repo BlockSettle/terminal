@@ -321,7 +321,7 @@ std::shared_ptr<bs::sync::Wallet> RFQDealerReply::getCCWallet(const bs::network:
    return getCCWallet(qrn.product);
 }
 
-bs::Address RFQDealerReply::getRecvAddress(const std::shared_ptr<sync::Wallet> &wallet) const
+bs::Address RFQDealerReply::getRecvAddress(const std::shared_ptr<bs::sync::Wallet> &wallet) const
 {
    if (!wallet) {
       return {};

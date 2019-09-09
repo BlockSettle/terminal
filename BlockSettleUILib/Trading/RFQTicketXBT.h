@@ -161,7 +161,7 @@ private:
 
    static std::string mkRFQkey(const bs::network::RFQ &);
 
-   double estimatedFee() const;
+   double estimatedXbtPayinFee() const;
    void onTransactinDataChanged();
 
    void SetProductGroup(const QString& productGroup);

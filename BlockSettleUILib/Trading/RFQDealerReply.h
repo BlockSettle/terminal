@@ -173,7 +173,7 @@ namespace bs {
          std::shared_ptr<bs::sync::Wallet> getCCWallet(const bs::network::QuoteReqNotification &qrn) const;
          std::shared_ptr<bs::sync::Wallet> getRecvWallet(const bs::network::QuoteReqNotification &qrn
             , const std::shared_ptr<bs::sync::Wallet> &xbtWallet) const;
-         bs::Address getRecvAddress(const std::shared_ptr<sync::Wallet> &wallet) const;
+         bs::Address getRecvAddress(const std::shared_ptr<bs::sync::Wallet> &wallet) const;
          void setBalanceOk(bool ok);
          bool checkBalance() const;
          QDoubleSpinBox *getActivePriceWidget() const;

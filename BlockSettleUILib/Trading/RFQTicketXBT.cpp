@@ -587,7 +587,7 @@ bool RFQTicketXBT::checkBalance(double qty) const
    const auto balance = getBalanceInfo();
    switch (balance.productType) {
    case ProductGroupType::XBTGroupType:
-      return ((qty + estimatedFee()) <= balance.amount);
+      return ((qty + estimatedXbtPayinFee()) <= balance.amount);
    case ProductGroupType::CCGroupType:
    case ProductGroupType::FXGroupType:
       return (qty <= balance.amount);
@@ -809,7 +809,7 @@ bs::Address RFQTicketXBT::selectedAuthAddress() const
    return authAddressManager_->GetAddress(ui_->authenticationAddressComboBox->currentIndex());
 }
 
-double RFQTicketXBT::estimatedFee() const
+double RFQTicketXBT::estimatedXbtPayinFee() const
 {
    const auto wallet = getCurrentWallet();
    if (!wallet || !transactionData_) {
@@ -818,7 +818,7 @@ double RFQTicketXBT::estimatedFee() const
 
    const auto balance = transactionData_->GetTransactionSummary().availableBalance;
    const auto maxVal = transactionData_->CalculateMaxAmount(
-      bs::Address(CryptoPRNG::generateRandom(20), AddressEntryType_P2WPKH));
+      bs::Address(CryptoPRNG::generateRandom(32), AddressEntryType_P2WSH));
    if (maxVal <= 0) {
       return 0;
    }
@@ -904,7 +904,7 @@ void RFQTicketXBT::onMaxClicked()
    switch(balanceInfo.productType) {
    case ProductGroupType::XBTGroupType:
    {
-      const auto intBalance = std::floor(qMax<double>(balanceInfo.amount - estimatedFee(), 0) * BTCNumericTypes::BalanceDivider);
+      const auto intBalance = std::floor(qMax<double>(balanceInfo.amount - estimatedXbtPayinFee(), 0) * BTCNumericTypes::BalanceDivider);
       ui_->lineEditAmount->setText(UiUtils::displayAmount(intBalance / BTCNumericTypes::BalanceDivider));
    }
       break;
