@@ -20,7 +20,7 @@ void bs::OrderUtxoResAdapter::unreserved(const std::string &walletId, const std:
 
 void bs::OrderUtxoResAdapter::reserve(const bs::core::wallet::TXSignRequest &txReq, const std::string &reserveId)
 {
-   bs::UtxoReservation::Adapter::reserve(txReq.walletId, reserveId, txReq.inputs);
+   bs::UtxoReservation::Adapter::reserve(txReq.walletIds.front(), reserveId, txReq.inputs);
 }
 
 void OrderUtxoResAdapter::onOrder(const bs::network::Order &order)

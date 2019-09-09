@@ -19,7 +19,9 @@ std::vector<bs::core::wallet::TXSignRequest> ParseOfflineTXFile(const std::strin
          if (!tx.ParseFromString(container.data())) {
             continue;
          }
-         txReq.walletId = tx.walletid();
+         for (int i = 0; i < tx.walletid_size(); ++i) {
+            txReq.walletIds.push_back(tx.walletid(i));
+         }
          txReq.fee = tx.fee();
          txReq.RBF = tx.rbf();
          txReq.comment = tx.comment();

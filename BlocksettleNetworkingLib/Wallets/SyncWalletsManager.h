@@ -32,6 +32,7 @@ namespace bs {
    }
    namespace sync {
       namespace hd {
+         class Group;
          class Wallet;
          class DummyWallet;
       }
@@ -44,6 +45,7 @@ namespace bs {
          using CbProgress = std::function<void(int, int)>;
          using WalletPtr = std::shared_ptr<Wallet>;     // Generic wallet interface
          using HDWalletPtr = std::shared_ptr<hd::Wallet>;
+         using GroupPtr = std::shared_ptr<hd::Group>;
 
          WalletsManager(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings>& appSettings
             , const std::shared_ptr<ArmoryConnection> &);
@@ -69,6 +71,7 @@ namespace bs {
          WalletPtr getWalletById(const std::string& walletId) const;
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
          WalletPtr getDefaultWallet() const;
+         GroupPtr getGroupByWalletId(const std::string &walletId) const;
 
          bool PromoteHDWallet(const std::string& walletId
             , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr);
@@ -226,6 +229,7 @@ namespace bs {
          WalletPtr                           authAddressWallet_;
          BinaryData                          userId_;
          std::set<std::string>               newWallets_;
+         mutable std::unordered_map<std::string, GroupPtr>  groupsByWalletId_;
 
          class CCResolver : public CCDataResolver
          {

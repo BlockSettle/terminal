@@ -36,10 +36,13 @@ WalletNode *WalletNode::findByWalletId(const std::string &walletId)
 class WalletRootNode : public WalletNode
 {
 public:
-   WalletRootNode(WalletsViewModel *vm, const std::string &name, const std::string &desc, WalletNode::Type type, int row, WalletNode *parent
-      , BTCNumericTypes::balance_type balTotal = 0, BTCNumericTypes::balance_type balUnconf = 0
-      , BTCNumericTypes::balance_type balSpend = 0, size_t nbAddr = 0)
-      : WalletNode(vm, type, row, parent), desc_(desc)
+   WalletRootNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::hd::Wallet> &wallet
+      , const std::string &name, const std::string &desc, WalletNode::Type type, int row
+      , WalletNode *parent, BTCNumericTypes::balance_type balTotal = 0
+      , BTCNumericTypes::balance_type balUnconf = 0, BTCNumericTypes::balance_type balSpend = 0
+      , size_t nbAddr = 0)
+      : WalletNode(vm, type, row, parent)
+      , hdWallet_(wallet), desc_(desc)
       , balTotal_(balTotal), balUnconf_(balUnconf), balSpend_(balSpend), nbAddr_(nbAddr)
    {
       name_ = name;
@@ -117,10 +120,6 @@ public:
    size_t getNbUsedAddresses() const { return nbAddr_; }
    std::shared_ptr<bs::sync::hd::Wallet> hdWallet() const override { return hdWallet_; }
 
-   void setHdWallet(const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet) {
-      hdWallet_ = hdWallet;
-   }
-
 protected:
    std::string desc_;
    BTCNumericTypes::balance_type balTotal_, balUnconf_, balSpend_;
@@ -192,8 +191,9 @@ protected:
 class WalletLeafNode : public WalletRootNode
 {
 public:
-   WalletLeafNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet, int row, WalletNode *parent)
-      : WalletRootNode(vm, wallet->shortName(), wallet->description(), Type::Leaf, row, parent
+   WalletLeafNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet
+      , const std::shared_ptr<bs::sync::hd::Wallet> &rootWallet, int row, WalletNode *parent)
+      : WalletRootNode(vm, rootWallet, wallet->shortName(), wallet->description(), Type::Leaf, row, parent
          , wallet->getTotalBalance(), wallet->getUnconfirmedBalance(), wallet->getSpendableBalance()
          , wallet->getUsedAddressCount())
       , wallet_(wallet)
@@ -223,9 +223,10 @@ private:
 class WalletGroupNode : public WalletRootNode
 {
 public:
-   WalletGroupNode(WalletsViewModel *vm, const std::string &name, const std::string &desc, WalletNode::Type type
+   WalletGroupNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet
+      , const std::string &name, const std::string &desc, WalletNode::Type type
       , int row, WalletNode *parent)
-      : WalletRootNode(vm, name, desc, type, row, parent) {}
+      : WalletRootNode(vm, hdWallet, name, desc, type, row, parent) {}
 
    void setState(State state) override {
       for (auto child : children_) {
@@ -240,7 +241,7 @@ public:
          if (viewModel_->showRegularWallets() && (leaf->type() != bs::core::wallet::Type::Bitcoin)) {
             continue;
          }
-         const auto leafNode = new WalletLeafNode(viewModel_, leaf, nbChildren(), this);
+         const auto leafNode = new WalletLeafNode(viewModel_, leaf, hdWallet_, nbChildren(), this);
          add(leafNode);
          updateCounters(leafNode);
          wallets_.push_back(leaf);
@@ -254,7 +255,7 @@ void WalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::sync::hd::G
       if (viewModel_->showRegularWallets() && (group->type() != bs::core::wallet::Type::Bitcoin)) {
          continue;
       }
-      const auto groupNode = new WalletGroupNode(viewModel_, group->name(), group->description()
+      const auto groupNode = new WalletGroupNode(viewModel_, hdWallet_, group->name(), group->description()
          , getNodeType(group->type()), nbChildren(), this);
       add(groupNode);
       groupNode->addLeaves(group->getAllLeaves());
@@ -546,9 +547,8 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
       if (!hdWallet) {
          continue;
       }
-      const auto hdNode = new WalletRootNode(this, hdWallet->name(), hdWallet->description()
+      const auto hdNode = new WalletRootNode(this, hdWallet, hdWallet->name(), hdWallet->description()
          , getHDWalletType(hdWallet, walletsManager_), rootNode_->nbChildren(), rootNode_.get());
-      hdNode->setHdWallet(hdWallet);
       rootNode_->add(hdNode);
 
       // filter groups

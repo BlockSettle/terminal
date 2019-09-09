@@ -177,13 +177,19 @@ void CreateTransactionDialog::closeEvent(QCloseEvent *e)
 
 int CreateTransactionDialog::SelectWallet(const std::string& walletId)
 {
-   return UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId);
+   auto index = UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId);
+   if (index < 0) {
+      const auto rootWallet = walletsManager_->getHDRootForLeaf(walletId);
+      if (rootWallet) {
+         index = UiUtils::selectWalletInCombobox(comboBoxWallets(), rootWallet->walletId());
+      }
+   }
+   return index;
 }
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   const bool skipWatchingOnly = false;
-   int index = UiUtils::fillWalletsComboBox(comboBoxWallets(), walletsManager_, skipWatchingOnly);
+   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_);
    selectedWalletChanged(index);
 }
 
@@ -262,16 +268,22 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
       pushButtonCreate()->setText(tr("No wallets"));
       return;
    }
-   const auto currentWallet = walletsManager_->getWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
-   const auto rootWallet = walletsManager_->getHDRootForLeaf(currentWallet->walletId());
-   if (signContainer_->isWalletOffline(currentWallet->walletId())
+   const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
+   const auto rootWallet = walletsManager_->getHDWalletById(walletId);
+   logger_->debug("walletId={}", walletId);
+   if (!rootWallet) {
+      logger_->error("[{}] wallet with id {} not found", __func__, walletId);
+      return;
+   }
+   if (signContainer_->isWalletOffline(rootWallet->walletId())
       || !rootWallet || signContainer_->isWalletOffline(rootWallet->walletId())) {
       pushButtonCreate()->setText(tr("Export"));
    } else {
       pushButtonCreate()->setText(tr("Broadcast"));
    }
-   if ((transactionData_->getWallet() != currentWallet) || resetInputs) {
-      transactionData_->setWallet(currentWallet, armory_->topBlock()
+   const auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
+   if ((transactionData_->getGroup() != group) || resetInputs) {
+      transactionData_->setGroup(group, armory_->topBlock()
          , resetInputs, cbInputsReset);
    }
 }
@@ -440,15 +452,13 @@ bool CreateTransactionDialog::CreateTransaction()
    }
 
    std::string offlineFilePath;
-   const auto currentWallet = walletsManager_->getWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
-   const auto walletId = currentWallet->walletId();
+   const auto hdWallet = walletsManager_->getHDWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
+   const auto walletId = hdWallet->walletId();
 
    if (signContainer_->isWalletOffline(walletId)) {
       QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 
       const qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();
-      auto rootWallet = walletsManager_->getHDRootForLeaf(walletId);
-      const std::string &walletId = rootWallet ? rootWallet->walletId() : walletId;
       const std::string fileName = fmt::format("{}_{}.bin", walletId, timestamp);
 
       QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));

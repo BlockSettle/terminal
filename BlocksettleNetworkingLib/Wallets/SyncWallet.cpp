@@ -617,7 +617,7 @@ bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walle
    , const uint64_t fee, bool isRBF, const uint64_t &origFee)
 {
    bs::core::wallet::TXSignRequest request;
-   request.walletId = walletId;
+   request.walletIds = { walletId };
 
    uint64_t inputAmount = 0;
    uint64_t spendAmount = 0;
@@ -762,7 +762,7 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
    }
 
    bs::core::wallet::TXSignRequest request;
-   request.walletId = walletId();
+   request.walletIds = { walletId() };
 //   request.wallet = this;
    request.populateUTXOs = true;
    Signer signer;

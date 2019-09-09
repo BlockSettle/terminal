@@ -45,9 +45,17 @@ bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSign
       logger_->error("[{}] Invalid TXSignRequest", __func__);
       return 0;
    }
-   const auto wallet = walletsMgr_->getWalletById(txSignReq.walletId);
-   if (!wallet) {
-      logger_->error("[{}] failed to find wallet with id {}", __func__, txSignReq.walletId);
+   std::vector<std::shared_ptr<bs::core::Wallet>> wallets;
+   for (const auto &walletId : txSignReq.walletIds) {
+      const auto wallet = walletsMgr_->getWalletById(walletId);
+      if (!wallet) {
+         logger_->error("[{}] failed to find wallet with id {}", __func__, walletId);
+         return 0;
+      }
+      wallets.emplace_back(std::move(wallet));
+   }
+   if (wallets.empty()) {
+      logger_->error("[{}] empty wallets list", __func__);
       return 0;
    }
 
@@ -55,9 +63,41 @@ bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSign
    try {
       BinaryData signedTx;
       if (mode == TXSignMode::Full) {
-         signedTx = wallet->signTXRequest(txSignReq);
+         if (wallets.size() == 1) {
+            signedTx = wallets.front()->signTXRequest(txSignReq);
+         }
+         else {
+            bs::core::wallet::TXMultiSignRequest multiReq;
+            multiReq.recipients = txSignReq.recipients;
+            if (txSignReq.change.value) {
+               multiReq.recipients.push_back(txSignReq.change.address.getRecipient(txSignReq.change.value));
+            }
+            if (!txSignReq.prevStates.empty()) {
+               multiReq.prevState = txSignReq.prevStates.front();
+            }
+
+            bs::core::WalletMap wallets;
+            for (const auto &input : txSignReq.inputs) {
+               const auto addr = bs::Address::fromUTXO(input);
+               const auto wallet = walletsMgr_->getWalletByAddress(addr);
+               if (!wallet) {
+                  logger_->error("[{}] failed to find wallet for input address {}"
+                     , __func__, addr.display());
+                  return 0;
+               }
+               multiReq.addInput(input, wallet->walletId());
+               wallets[wallet->walletId()] = wallet;
+            }
+            multiReq.RBF = txSignReq.RBF;
+
+            signedTx = bs::core::SignMultiInputTX(multiReq, wallets);
+         }
       } else {
-         signedTx = wallet->signPartialTXRequest(txSignReq);
+         if (wallets.size() != 1) {
+            logger_->error("[{}] can't sign partial request for more than 1 wallet", __func__);
+            return 0;
+         }
+         signedTx = wallets.front()->signPartialTXRequest(txSignReq);
       }
       QTimer::singleShot(1, [this, reqId, signedTx] {
          emit TXSigned(reqId, signedTx, bs::error::ErrorCode::NoError);

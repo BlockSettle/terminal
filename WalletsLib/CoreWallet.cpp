@@ -537,22 +537,50 @@ BinaryData Wallet::signPartialTXRequest(const wallet::TXSignRequest &request)
 }
 
 
-BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest &txMultiReq, const KeyMap &keys
+BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest &txMultiReq
    , const WalletMap &wallets)
 {
    Signer signer;
    if (!txMultiReq.prevState.isNull()) {
       signer.deserializeState(txMultiReq.prevState);
-   }
-   signer.setFlags(SCRIPT_VERIFY_SEGWIT);
 
-   for (const auto &wallet : wallets) {
-      if (wallet.second->isWatchingOnly()) {
-         throw std::logic_error("Won't sign with watching-only wallet");
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+
+      for (const auto &wallet : wallets) {
+         if (wallet.second->isWatchingOnly()) {
+            throw std::logic_error("Won't sign with watching-only wallet");
+         }
+         signer.setFeed(wallet.second->getResolver());
+         signer.sign();
+         signer.resetFeeds();
       }
-      signer.setFeed(wallet.second->getResolver());
+   }
+   else {
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+
+      for (const auto &input : txMultiReq.inputs) {
+         const auto itWallet = wallets.find(input.second);
+         if (itWallet == wallets.end()) {
+            throw std::runtime_error("missing wallet for id " + input.second);
+         }
+         auto spender = std::make_shared<ScriptSpender>(input.first, itWallet->second->getResolver());
+         if (txMultiReq.RBF) {
+            spender->setSequence(UINT32_MAX - 2);
+         }
+         signer.addSpender(spender);
+      }
+
+      for (const auto &recipient : txMultiReq.recipients) {
+         signer.addRecipient(recipient);
+      }
+
+      for (const auto &wallet : wallets) {
+         if (wallet.second->isWatchingOnly()) {
+            throw std::logic_error("Won't sign with watching-only wallet");
+         }
+         signer.setFeed(wallet.second->getResolver());
+      }
       signer.sign();
-      signer.resetFeeds();
    }
 
    if (!signer.verify()) {

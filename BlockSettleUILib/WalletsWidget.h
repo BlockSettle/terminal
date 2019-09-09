@@ -61,6 +61,7 @@ public:
    WalletNode *getSelectedNode() const;
    std::vector<std::shared_ptr<bs::sync::Wallet>> getSelectedWallets() const;
    std::vector<std::shared_ptr<bs::sync::Wallet>> getFirstWallets() const;
+   std::shared_ptr<bs::sync::hd::Wallet> getSelectedHdWallet() const;
 
    bool CreateNewWallet(bool report = true);
    bool ImportNewWallet(bool report = true);

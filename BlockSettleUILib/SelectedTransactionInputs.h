@@ -10,6 +10,9 @@
 
 namespace bs {
    namespace sync {
+      namespace hd {
+         class Group;
+      }
       class Wallet;
    }
 }
@@ -21,7 +24,11 @@ public:
    using CbSelectionChanged = std::function<void()>;
 
 public:
-   SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
+   SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &
+      , bool isSegWitInputsOnly, bool confirmedOnly = false
+      , const CbSelectionChanged &selectionChanged = nullptr
+      , const std::function<void()> &cbInputsReset = nullptr);
+   SelectedTransactionInputs(const std::shared_ptr<bs::sync::hd::Group> &
       , bool isSegWitInputsOnly, bool confirmedOnly = false
       , const CbSelectionChanged &selectionChanged = nullptr
       , const std::function<void()> &cbInputsReset = nullptr);
@@ -58,7 +65,12 @@ public:
    std::vector<UTXO> GetSelectedTransactions() const;
    std::vector<UTXO> GetAllTransactions() const;
 
-   std::shared_ptr<bs::sync::Wallet> GetWallet() const { return wallet_; }
+   std::shared_ptr<bs::sync::Wallet> GetWallet() const 
+   {
+      return wallets_.empty() ? nullptr : wallets_.front();
+   }
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const { return wallets_; }
+
    void Reload(const std::vector<UTXO> &);
 
    void ResetInputs(const std::function<void()> &);
@@ -69,11 +81,11 @@ private:
    void resetSelection();
 
 private slots:
-   void onCPFPReceived(std::vector<UTXO>);
-   void onUTXOsReceived(std::vector<UTXO>);
+   void onCPFPReceived(const std::shared_ptr<bs::sync::Wallet> &, std::vector<UTXO>);
+   void onUTXOsReceived(const std::shared_ptr<bs::sync::Wallet> &, std::vector<UTXO>);
 
 private:
-   std::shared_ptr<bs::sync::Wallet>   wallet_;
+   std::vector<std::shared_ptr<bs::sync::Wallet>>  wallets_;
    const bool                    isSegWitInputsOnly_;
    const bool                    confirmedOnly_;
    std::vector<UTXO>             inputs_;
@@ -81,6 +93,8 @@ private:
    std::vector<bool>             selection_;
    const CbSelectionChanged      selectionChanged_;
    std::vector<std::function<void()>>  resetCallbacks_;
+   std::map<std::string, std::vector<UTXO>>  accInputs_;
+   std::map<std::string, std::vector<UTXO>>  accCpfpInputs_;
 
    size_t   totalSelected_ = 0;
    uint64_t selectedBalance_ = 0;

@@ -8,6 +8,7 @@
 #include "ScriptRecipient.h"
 #include "RecipientContainer.h"
 #include "UiUtils.h"
+#include "Wallets/SyncHDGroup.h"
 #include "Wallets/SyncWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -62,7 +63,7 @@ bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet
          InvalidateTransactionData();
       }, cbInputsReset);
 
-      coinSelection_ = std::make_shared<CoinSelection>([this, wallet](uint64_t) {
+      coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
          return selectedInputs_->GetSelectedTransactions();
       }
          , std::vector<AddressBookEntry>{}
@@ -76,6 +77,53 @@ bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet
       }
       else {
          selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
+            , isSegWitInputsOnly_, confirmedInputs_
+            , [this] { InvalidateTransactionData(); }
+         , cbInputsReset);
+      }
+      InvalidateTransactionData();
+   }
+   return true;
+}
+
+bool TransactionData::setGroup(const std::shared_ptr<bs::sync::hd::Group> &group
+   , uint32_t topBlock, bool resetInputs, const std::function<void()> &cbInputsReset)
+{
+   if (!group) {
+      return false;
+   }
+   if (group != group_) {
+      group_ = group;
+      const auto leaves = group->getAllLeaves();
+      if (!leaves.empty()) {
+         wallet_ = leaves.front();
+      }
+      inputsLoaded_ = false;
+
+      BTCNumericTypes::balance_type spendableBalance = 0;
+      for (const auto &leaf : leaves) {
+         spendableBalance += leaf->getSpendableBalance();
+      }
+
+      selectedInputs_ = std::make_shared<SelectedTransactionInputs>(group_
+         , isSegWitInputsOnly_, confirmedInputs_
+         , [this]() {
+         inputsLoaded_ = true;
+         InvalidateTransactionData();
+      }, cbInputsReset);
+
+      coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
+         return selectedInputs_->GetSelectedTransactions();
+      }
+         , std::vector<AddressBookEntry>{}
+         , static_cast<uint64_t>(spendableBalance * BTCNumericTypes::BalanceDivider)
+         , topBlock);
+      InvalidateTransactionData();
+   } else if (resetInputs) {
+      if (selectedInputs_) {
+         selectedInputs_->ResetInputs(cbInputsReset);
+      } else {
+         selectedInputs_ = std::make_shared<SelectedTransactionInputs>(group_
             , isSegWitInputsOnly_, confirmedInputs_
             , [this] { InvalidateTransactionData(); }
          , cbInputsReset);
@@ -146,7 +194,7 @@ void TransactionData::enableTransactionUpdate()
 
 bool TransactionData::UpdateTransactionData()
 {
-   if (!selectedInputs_ || !wallet_) {
+   if (!selectedInputs_) {
       return false;
    }
    uint64_t availableBalance = 0;
@@ -770,11 +818,32 @@ bs::core::wallet::TXSignRequest TransactionData::getSignTxRequest() const
 bs::core::wallet::TXSignRequest TransactionData::createTXRequest(bool isRBF
    , const bs::Address &changeAddr, const uint64_t& origFee) const
 {
-   if (!wallet_) {
+   if (!wallet_ && !group_) {
       return {};
    }
-   return wallet_->createTXRequest(inputs(), GetRecipientList()
+   auto txReq = wallet_->createTXRequest(inputs(), GetRecipientList()
       , summary_.totalFee, isRBF, changeAddr, origFee);
+   if (group_) {
+      txReq.walletIds.clear();
+      std::set<std::string> walletIds;
+      const auto &leaves = group_->getAllLeaves();
+      for (const auto &input : inputs()) {
+         std::string inputLeafId;
+         for (const auto &leaf : leaves) {
+            if (leaf->containsAddress(bs::Address::fromUTXO(input))) {
+               inputLeafId = leaf->walletId();
+               break;
+            }
+         }
+         if (inputLeafId.empty()) {
+            throw std::runtime_error("orphaned input " + input.getTxHash().toHexStr(true)
+               + " without wallet");
+         }
+         walletIds.insert(inputLeafId);
+      }
+      txReq.walletIds.insert(txReq.walletIds.end(), walletIds.cbegin(), walletIds.cend());
+   }
+   return txReq;
 }
 
 bs::core::wallet::TXSignRequest TransactionData::createPartialTXRequest(uint64_t spendVal, float feePerByte

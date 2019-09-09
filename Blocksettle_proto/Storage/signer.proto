@@ -41,13 +41,13 @@ message Change
 
 message TXRequest
 {
-   string		walletId = 1;
-   repeated Input	inputs = 2;
-   repeated bytes	recipients = 3;
-   uint64		fee = 4;
-   bool	   		RBF = 5;
-   Change		change = 6;
-   string		comment = 7;
+   repeated string walletId = 1;
+   repeated Input  inputs = 2;
+   repeated bytes  recipients = 3;
+   uint64	   fee = 4;
+   bool            RBF = 5;
+   Change	   change = 6;
+   string	   comment = 7;
 }
 
 

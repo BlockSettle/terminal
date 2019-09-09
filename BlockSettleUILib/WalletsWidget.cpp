@@ -265,17 +265,23 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
 
 WalletNode *WalletsWidget::getSelectedNode() const
 {
-   auto indexes = ui_->treeViewWallets->selectionModel()->selectedIndexes();
-   if (!indexes.isEmpty()) {
-      return walletsModel_->getNode(indexes.first());
+   auto indices = ui_->treeViewWallets->selectionModel()->selectedIndexes();
+   if (!indices.isEmpty()) {
+      return walletsModel_->getNode(indices.first());
    }
    return nullptr;
 }
 
 std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getSelectedWallets() const
 {
-   auto node = getSelectedNode();
+   const auto node = getSelectedNode();
    return node ? node->wallets() : std::vector<std::shared_ptr<bs::sync::Wallet>>();
+}
+
+std::shared_ptr<bs::sync::hd::Wallet> WalletsWidget::getSelectedHdWallet() const
+{
+   const auto node = getSelectedNode();
+   return node ? node->hdWallet() : nullptr;
 }
 
 std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getFirstWallets() const

@@ -980,9 +980,12 @@ void BSTerminalMainWindow::onSend()
    std::string selectedWalletId;
 
    if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
-      const auto &wallets = ui_->widgetWallets->getSelectedWallets();
-      if (wallets.size() == 1) {
-         selectedWalletId = wallets[0]->walletId();
+      auto wallet = ui_->widgetWallets->getSelectedHdWallet();
+      if (!wallet) {
+         wallet = walletsMgr_->getPrimaryWallet();
+      }
+      if (wallet) {
+         selectedWalletId = wallet->walletId();
       }
    }
 

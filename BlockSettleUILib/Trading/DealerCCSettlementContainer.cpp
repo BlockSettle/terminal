@@ -143,7 +143,7 @@ bool DealerCCSettlementContainer::startSigning()
       }
    };
 
-   txReq_.walletId = wallet_->walletId();
+   txReq_.walletIds = { wallet_->walletId() };
    txReq_.prevStates = { txReqData_ };
    txReq_.populateUTXOs = true;
    txReq_.inputs = utxoAdapter_->get(id());

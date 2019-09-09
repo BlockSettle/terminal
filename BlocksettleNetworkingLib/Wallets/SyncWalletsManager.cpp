@@ -428,6 +428,27 @@ WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &
    return nullptr;
 }
 
+WalletsManager::GroupPtr WalletsManager::getGroupByWalletId(const std::string& walletId) const
+{
+   const auto itGroup = groupsByWalletId_.find(walletId);
+   if (itGroup == groupsByWalletId_.end()) {
+      const auto hdWallet = getHDRootForLeaf(walletId);
+      if (hdWallet) {
+         for (const auto &group : hdWallet->getGroups()) {
+            for (const auto &leaf : group->getLeaves()) {
+               if (leaf->walletId() == walletId) {
+                  groupsByWalletId_[walletId] = group;
+                  return group;
+               }
+            }
+         }
+      }
+      groupsByWalletId_[walletId] = nullptr;
+      return nullptr;
+   }
+   return itGroup->second;
+}
+
 bool WalletsManager::walletNameExists(const std::string &walletName) const
 {
    const auto &it = walletNames_.find(walletName);
@@ -674,18 +695,18 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
    , const std::function<void(Transaction::Direction, std::vector<bs::Address>)> &cb)
 {
    if (!tx.isInitialized()) {
-      logger_->error("[WalletsManager::{}] - TX not initialized", __func__);
+      logger_->error("[WalletsManager::{}] TX not initialized", __func__);
       return false;
    }
 
    if (!armory_) {
-      logger_->error("[WalletsManager::{}] - armory not set", __func__);
+      logger_->error("[WalletsManager::{}] armory not set", __func__);
       return false;
    }
 
    const auto wallet = getWalletById(walletId);
    if (!wallet) {
-      logger_->error("[WalletsManager::{}] - failed to get wallet for id {}"
+      logger_->error("[WalletsManager::{}] failed to get wallet for id {}"
          , __func__, walletId);
       return false;
    }
@@ -697,6 +718,11 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
    else if (wallet->type() == bs::core::wallet::Type::ColorCoin) {
       cb(Transaction::Delivery, {});
       return true;
+   }
+
+   const auto group = getGroupByWalletId(walletId);
+   if (!group) {
+      logger_->warn("[{}] group for {} not found", __func__, walletId);
    }
 
    const std::string txKey = tx.getThisHash().toBinStr() + walletId;
@@ -726,7 +752,9 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
       txOutIndices[op.getTxHash()].push_back(op.getTxOutIndex());
    }
 
-   const auto &cbProcess = [this, wallet, tx, txKey, txOutIndices, cb](const std::vector<Tx> &txs) {
+   const auto &cbProcess = [this, wallet, group, tx, txKey, txOutIndices, cb]
+      (const std::vector<Tx> &txs)
+   {
       bool ourOuts = false;
       bool otherOuts = false;
       bool ourIns = false;
@@ -746,8 +774,9 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
          for (const auto idx : itIdx->second) {
             TxOut prevOut = prevTx.getTxOutCopy((int)idx);
             const auto addr = bs::Address::fromTxOut(prevOut);
-            const auto &addrWallet = getWalletByAddress(addr);
-            ((addrWallet == wallet) ? ourIns : otherIns) = true;
+            const auto addrWallet = getWalletByAddress(addr);
+            const auto addrGroup = addrWallet ? getGroupByWalletId(addrWallet->walletId()) : nullptr;
+            (((addrWallet == wallet) || (group && (group == addrGroup))) ? ourIns : otherIns) = true;
             if (addrWallet && (addrWallet->type() == bs::core::wallet::Type::ColorCoin)) {
                ccTx = true;
             }
@@ -759,10 +788,17 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
       for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
          TxOut out = tx.getTxOutCopy((int)i);
          const auto addrWallet = getWalletByAddress(out.getScrAddressStr());
-         ((addrWallet == wallet) ? ourOuts : otherOuts) = true;
+         const auto addrGroup = addrWallet ? getGroupByWalletId(addrWallet->walletId()) : nullptr;
+         (((addrWallet == wallet) || (group && (group == addrGroup))) ? ourOuts : otherOuts) = true;
          if (addrWallet && (addrWallet->type() == bs::core::wallet::Type::ColorCoin)) {
             ccTx = true;
             break;
+         }
+         else if (!ourOuts) {
+            if ((group && addrGroup) && (group == addrGroup)) {
+               ourOuts = true;
+               otherOuts = false;
+            }
          }
       }
 

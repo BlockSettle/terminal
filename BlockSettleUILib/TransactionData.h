@@ -6,9 +6,20 @@
 #include <string>
 #include <unordered_map>
 #include "Address.h"
+#include "CoreWallet.h"
 #include "UtxoReservation.h"
-#include "Wallets/SyncWallet.h"
 
+namespace spdlog {
+   class logger;
+}
+namespace bs {
+   namespace sync {
+      namespace hd {
+         class Group;
+      }
+      class Wallet;
+   }
+}
 class CoinSelection;
 class RecipientContainer;
 class ScriptRecipient;
@@ -16,9 +27,6 @@ class SelectedTransactionInputs;
 struct UtxoSelection;
 struct PaymentStruct;
 
-namespace spdlog {
-   class logger;
-}
 
 class TransactionData
 {
@@ -67,10 +75,13 @@ public:
 
    bool setWallet(const std::shared_ptr<bs::sync::Wallet> &, uint32_t topBlock
       , bool resetInputs = false, const std::function<void()> &cbInputsReset = nullptr);
+   bool setGroup(const std::shared_ptr<bs::sync::hd::Group> &, uint32_t topBlock
+      , bool resetInputs = false, const std::function<void()> &cbInputsReset = nullptr);
    bool setWalletAndInputs(const std::shared_ptr<bs::sync::Wallet> &
       , const std::vector<UTXO> &, uint32_t topBlock);
    void setSigningWallet(const std::shared_ptr<bs::sync::Wallet>& wallet) { signWallet_ = wallet; }
    std::shared_ptr<bs::sync::Wallet> getWallet() const { return wallet_; }
+   std::shared_ptr<bs::sync::hd::Group> getGroup() const { return group_; }
    std::shared_ptr<bs::sync::Wallet> getSigningWallet() const { return signWallet_; }
    void setFeePerByte(float feePerByte);
    void setTotalFee(uint64_t fee, bool overrideFeePerByte = true);
@@ -148,6 +159,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
 
    std::shared_ptr<bs::sync::Wallet>            wallet_;
+   std::shared_ptr<bs::sync::hd::Group>         group_;
    std::shared_ptr<bs::sync::Wallet>            signWallet_;
    std::shared_ptr<SelectedTransactionInputs>   selectedInputs_;
 

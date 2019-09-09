@@ -291,7 +291,9 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
 
    uint64_t inputVal = 0;
    bs::core::wallet::TXSignRequest txSignReq;
-   txSignReq.walletId = request.walletid();
+   for (int i = 0; i < request.walletid_size(); ++i) {
+      txSignReq.walletIds.push_back(request.walletid(i));
+   }
    for (int i = 0; i < request.inputs_size(); i++) {
       UTXO utxo;
       utxo.unserialize(request.inputs(i));
@@ -339,46 +341,99 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
 
    txSignReq.populateUTXOs = request.populateutxos();
 
-   const auto wallet = walletsMgr_->getWalletById(txSignReq.walletId);
-   if (!wallet) {
-      logger_->error("[HeadlessContainerListener] failed to find wallet {}", txSignReq.walletId);
+   std::vector<std::shared_ptr<bs::core::hd::Leaf>> wallets;
+   std::string rootWalletId;
+   for (const auto &walletId : txSignReq.walletIds) {
+      const auto wallet = walletsMgr_->getWalletById(walletId);
+      if (!wallet) {
+         logger_->error("[HeadlessContainerListener] failed to find wallet {}", walletId);
+         SignTXResponse(clientId, packet.id(), reqType, ErrorCode::WalletNotFound);
+         return false;
+      }
+      wallets.push_back(wallet);
+      const auto curRootWalletId = walletsMgr_->getHDRootForLeaf(walletId)->walletId();
+      if (!rootWalletId.empty() && (rootWalletId != curRootWalletId)) {
+         logger_->error("[HeadlessContainerListener] can't sign leaves from many roots");
+         SignTXResponse(clientId, packet.id(), reqType, ErrorCode::WalletNotFound);
+         return false;
+      }
+      rootWalletId = curRootWalletId;
+
+      if ((wallet->type() == bs::core::wallet::Type::Bitcoin)
+         && !CheckSpendLimit(value, rootWalletId)) {
+         SignTXResponse(clientId, packet.id(), reqType, ErrorCode::TxSpendLimitExceed);
+         return false;
+      }
+   }
+
+   if (wallets.empty()) {
+      logger_->error("[HeadlessContainerListener] failed to find any wallets");
       SignTXResponse(clientId, packet.id(), reqType, ErrorCode::WalletNotFound);
       return false;
    }
-   const auto rootWalletId = walletsMgr_->getHDRootForLeaf(txSignReq.walletId)->walletId();
 
-   if ((wallet->type() == bs::core::wallet::Type::Bitcoin)
-      && !CheckSpendLimit(value, rootWalletId)) {
-      SignTXResponse(clientId, packet.id(), reqType, ErrorCode::TxSpendLimitExceed);
-      return false;
-   }
-
-   const auto onPassword = [this, wallet, txSignReq, rootWalletId, clientId, id = packet.id(), partial
+   const auto onPassword = [this, wallets, txSignReq, rootWalletId, clientId, id = packet.id(), partial
       , reqType, value
-      , keepDuplicatedRecipients = request.keepduplicatedrecipients()] (bs::error::ErrorCode result, const SecureBinaryData &pass) {
+      , keepDuplicatedRecipients = request.keepduplicatedrecipients()]
+      (bs::error::ErrorCode result, const SecureBinaryData &pass)
+   {
       if (result == ErrorCode::TxCanceled) {
-         logger_->error("[HeadlessContainerListener] transaction cancelled for wallet {}", wallet->name());
-         SignTXResponse(clientId, id, reqType, ErrorCode::TxCanceled);
+         logger_->error("[HeadlessContainerListener] transaction cancelled for wallet {}", wallets.front()->name());
+         SignTXResponse(clientId, id, reqType, result);
          return;
       }
 
       // check spend limits one more time after password received
-      if ((wallet->type() == bs::core::wallet::Type::Bitcoin)
+      if ((wallets.front()->type() == bs::core::wallet::Type::Bitcoin)
          && !CheckSpendLimit(value, rootWalletId)) {
          SignTXResponse(clientId, id, reqType, ErrorCode::TxSpendLimitExceed);
          return;
       }
 
       try {
-         if (!wallet->encryptionTypes().empty() && pass.isNull()) {
-            logger_->error("[HeadlessContainerListener] empty password for wallet {}", wallet->name());
+         if (!wallets.front()->encryptionTypes().empty() && pass.isNull()) {
+            logger_->error("[HeadlessContainerListener] empty password for wallet {}", wallets.front()->name());
             SignTXResponse(clientId, id, reqType, ErrorCode::MissingPassword);
             return;
          }
-         {
+         if (wallets.size() == 1) {
+            const auto wallet = wallets.front();
             auto passLock = wallet->lockForEncryption(pass);
             const auto tx = partial ? wallet->signPartialTXRequest(txSignReq)
                : wallet->signTXRequest(txSignReq, keepDuplicatedRecipients);
+            SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
+         }
+         else {
+            bs::core::wallet::TXMultiSignRequest multiReq;
+            multiReq.recipients = txSignReq.recipients;
+            if (txSignReq.change.value) {
+               multiReq.recipients.push_back(txSignReq.change.address.getRecipient(txSignReq.change.value));
+            }
+            if (!txSignReq.prevStates.empty()) {
+               multiReq.prevState = txSignReq.prevStates.front();
+            }
+            multiReq.RBF = txSignReq.RBF;
+
+            bs::core::WalletMap wallets;
+            for (const auto &input : txSignReq.inputs) {
+               const auto addr = bs::Address::fromUTXO(input);
+               const auto wallet = walletsMgr_->getWalletByAddress(addr);
+               if (!wallet) {
+                  logger_->error("[{}] failed to find wallet for input address {}"
+                     , __func__, addr.display());
+                  SignTXResponse(clientId, id, reqType, ErrorCode::WalletNotFound);
+                  return;
+               }
+               multiReq.addInput(input, wallet->walletId());
+               wallets[wallet->walletId()] = wallet;
+            }
+
+            const auto hdWallet = walletsMgr_->getHDWalletById(rootWalletId);
+            BinaryData tx;
+            {
+               auto lock = hdWallet->lockForEncryption(pass);
+               tx = bs::core::SignMultiInputTX(multiReq, wallets);
+            }
             SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
          }
 
@@ -390,11 +445,11 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       catch (const std::exception &e) {
          logger_->error("[HeadlessContainerListener] failed to sign {} TX request: {}", partial ? "partial" : "full", e.what());
          SignTXResponse(clientId, id, reqType, ErrorCode::InternalError);
-         passwords_.erase(wallet->walletId());
          passwords_.erase(rootWalletId);
       }
    };
 
+   logger_->debug("[{}] rootWalletId={}", __func__, rootWalletId);
    dialogData.insert("WalletId", rootWalletId);
    return RequestPasswordIfNeeded(clientId, rootWalletId, txSignReq, reqType, dialogData, onPassword);
 }
@@ -469,7 +524,9 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
    const auto cbOnAllPasswords = [this, txMultiReq, walletMap, clientId, reqType, id=packet.id()]
                                  (const std::unordered_map<std::string, SecureBinaryData> &walletPasswords) {
       try {
-         const auto tx = bs::core::SignMultiInputTX(txMultiReq, walletPasswords, walletMap);
+         const auto wallet = walletsMgr_->getWalletById(walletPasswords.begin()->first);
+         auto lock = wallet->lockForEncryption(walletPasswords.begin()->second);
+         const auto tx = bs::core::SignMultiInputTX(txMultiReq, walletMap);
          SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
       }
       catch (const std::exception &e) {
@@ -495,7 +552,7 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
 
    bs::core::wallet::TXSignRequest txSignReq;
-   txSignReq.walletId = walletsMgr_->getPrimaryWallet()->walletId();
+   txSignReq.walletIds = { walletsMgr_->getPrimaryWallet()->walletId() };
 
    UTXO utxo;
    utxo.unserialize(request.signpayouttxrequest().input());
@@ -545,7 +602,8 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
       }
    };
 
-   return RequestPasswordIfNeeded(clientId, txSignReq.walletId, txSignReq, reqType, dialogData, onPassword);
+   return RequestPasswordIfNeeded(clientId, txSignReq.walletIds.front(), txSignReq, reqType
+      , dialogData, onPassword);
 }
 
 bool HeadlessContainerListener::onSignAuthAddrRevokeRequest(const std::string &clientId
@@ -570,7 +628,7 @@ bool HeadlessContainerListener::onSignAuthAddrRevokeRequest(const std::string &c
    dialogData.insert("AuthAddress", request.auth_address());
 
    bs::core::wallet::TXSignRequest txSignReq;
-   txSignReq.walletId = wallet->walletId();
+   txSignReq.walletIds = { wallet->walletId() };
 
    UTXO utxo;
    utxo.unserialize(request.utxo());
@@ -607,8 +665,8 @@ bool HeadlessContainerListener::onSignAuthAddrRevokeRequest(const std::string &c
       }
    };
 
-   return RequestPasswordIfNeeded(clientId, txSignReq.walletId, txSignReq, packet.type()
-      , dialogData, onPassword);
+   return RequestPasswordIfNeeded(clientId, txSignReq.walletIds.front(), txSignReq
+      , packet.type(), dialogData, onPassword);
 }
 
 void HeadlessContainerListener::SignTXResponse(const std::string &clientId, unsigned int id, headless::RequestType reqType
@@ -742,7 +800,7 @@ bool HeadlessContainerListener::RequestPasswordsIfNeeded(int reqId, const std::s
          };
 
          bs::core::wallet::TXSignRequest txReq;
-         txReq.walletId = rootWallet->walletId();
+         txReq.walletIds = { rootWallet->walletId() };
          RequestPassword(clientId, txReq, headless::RequestType::SignTxRequestType, dialogData, cbWalletPass);
       }
       else {
