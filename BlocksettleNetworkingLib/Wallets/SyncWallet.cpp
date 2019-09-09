@@ -247,13 +247,18 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
             *unconfirmedBalance = unconfirmed;
             *addrCnt = addrCount;
 
-            std::unique_lock<std::mutex> lock(*cbMutex);
-            for (const auto &cb : *cbBalances) {
+            std::vector<std::function<void(void)>> cbCopy;
+            {
+               std::unique_lock<std::mutex> lock(*cbMutex);
+
+               cbCopy.swap(*cbBalances);
+            }
+
+            for (const auto &cb : cbCopy) {
                if (cb) {
                   cb();
                }
             }
-            cbBalances->clear();
          }
       };
       return armory_->getCombinedBalances(walletIDs, onCombinedBalances);
