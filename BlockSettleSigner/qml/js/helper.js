@@ -308,7 +308,7 @@ function prepareLiteModeDialog(dialog) {
     })
 
     dialog.sizeChanged.connect(function(w, h){
-        console.log("dialog.sizeChanged " + w + " " + h)
+        // console.log("helper.js dialog.sizeChanged " + w + " " + h)
         mainWindow.moveMainWindowToScreenCenter()
         mainWindow.resizeAnimated(w, h)
     })
