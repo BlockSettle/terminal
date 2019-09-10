@@ -80,7 +80,6 @@ void AutoSignQuoteWidget::onAutoSignStateChanged(const std::string &walletId, bo
 void AutoSignQuoteWidget::onAutoSignQuoteAvailChanged()
 {
    ui_->groupBoxAutoSign->setEnabled(autoSignQuoteProvider_->autoSignQuoteAvailable());
-   ui_->groupBoxAutoQuote->setEnabled(autoSignQuoteProvider_->autoSignQuoteAvailable());
 
    ui_->checkBoxAutoSign->setChecked(false);
    ui_->checkBoxAQ->setChecked(false);
