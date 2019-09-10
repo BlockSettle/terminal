@@ -258,7 +258,7 @@ void ClientDBLogic::readUnsentMessages(const std::string& partyId)
       PartyMessagePacket partyMessagePacket;
       partyMessagePacket.set_party_id(query.value(0).toString().toStdString());
       partyMessagePacket.set_message_id(query.value(1).toString().toStdString());
-      partyMessagePacket.set_timestamp_ms(query.value(2).toDateTime().toMSecsSinceEpoch());
+      partyMessagePacket.set_timestamp_ms(query.value(2).toLongLong());
       partyMessagePacket.set_party_message_state(static_cast<PartyMessageState>(query.value(3).toInt()));
       partyMessagePacket.set_encryption(static_cast<EncryptionType>(query.value(4).toInt()));
       partyMessagePacket.set_nonce(query.value(5).toString().toStdString());
