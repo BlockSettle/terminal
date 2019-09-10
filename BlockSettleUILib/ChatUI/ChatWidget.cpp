@@ -197,6 +197,8 @@ void ChatWidget::onLogin()
    ui_->treeViewUsers->expandAll();
 
    onActivatePartyId(ChatModelNames::PrivateTabGlobal);
+
+   otcClient_->setCurrentUserId(ownUserId_);
 }
 
 void ChatWidget::onLogout()
@@ -204,6 +206,11 @@ void ChatWidget::onLogout()
    ownUserId_.clear();
 
    changeState<ChatLogOutState>();
+
+   for (const auto &partyId : connectedPeers_) {
+      otcClient_->peerDisconnected(partyId);
+   }
+   connectedPeers_.clear();
 }
 
 void ChatWidget::showEvent(QShowEvent* e)

@@ -19,7 +19,7 @@ BinaryData OtcUtils::deserializeMessage(const std::string &data)
       return {};
    }
    try {
-      return BinaryData::CreateFromHex(data.substr(pos));
+      return BinaryData::CreateFromHex(data.substr(kSerializePrefix.size()));
    } catch(...) {
       return {};
    }
