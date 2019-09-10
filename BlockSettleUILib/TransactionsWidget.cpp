@@ -278,6 +278,8 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
 
    sortFilterModel_ = new TransactionsSortFilterModel(appSettings_, this);
    sortFilterModel_->setSourceModel(model.get());
+   sortFilterModel_->setDynamicSortFilter(true);
+
 
    connect(sortFilterModel_, &TransactionsSortFilterModel::rowsInserted, this, &TransactionsWidget::updateResultCount);
    connect(sortFilterModel_, &TransactionsSortFilterModel::rowsRemoved, this, &TransactionsWidget::updateResultCount);
@@ -296,9 +298,12 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
    });
 
    ui_->treeViewTransactions->setSortingEnabled(true);
-   ui_->treeViewTransactions->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Status), Qt::AscendingOrder);
    ui_->treeViewTransactions->setModel(sortFilterModel_);
    ui_->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::TxHash));
+
+   ui_->treeViewTransactions->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
+   ui_->treeViewTransactions->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Status), Qt::AscendingOrder);
+
 //   ui_->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::MissedBlocks));
 }
 

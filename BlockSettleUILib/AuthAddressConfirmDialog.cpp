@@ -18,8 +18,8 @@ AuthAddressConfirmDialog::AuthAddressConfirmDialog(BsClient *bsClient, const bs:
 {
    ui_->setupUi(this);
 
-   setWindowTitle(tr("Sign Confirm Request"));
-   ui_->labelDescription->setText(tr("Please sign auth request in mobile app."));
+   setWindowTitle(tr("Auth eID Signing Request"));
+   ui_->labelDescription->setText(QString::fromStdString(address.display()));
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &AuthAddressConfirmDialog::onCancelPressed);
 
