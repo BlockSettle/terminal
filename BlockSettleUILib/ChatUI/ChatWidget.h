@@ -2,15 +2,18 @@
 #define CHAT_WIDGET_H
 
 #include <memory>
+#include <QPointer>
 #include <QWidget>
 #include "ChatProtocol/ChatClientService.h"
 #include "ChatProtocol/ClientParty.h"
 
+class AbstractChatWidgetState;
 class ArmoryConnection;
-class SignContainer;
 class ChatPartiesTreeModel;
 class OTCRequestViewModel;
-class AbstractChatWidgetState;
+class OtcClient;
+class SignContainer;
+class WalletsM;
 
 namespace Ui {
    class ChatWidget;
@@ -30,10 +33,13 @@ public:
    explicit ChatWidget(QWidget* parent = nullptr);
    ~ChatWidget() override;
 
-   void init(const std::shared_ptr<ConnectionManager>& connectionManager,
-      const std::shared_ptr<ApplicationSettings>& appSettings,
-      const Chat::ChatClientServicePtr& chatClientServicePtr,
-      const std::shared_ptr<spdlog::logger>& loggerPtr);
+   void init(const std::shared_ptr<ConnectionManager>& connectionManager
+      , const std::shared_ptr<ApplicationSettings>& appSettings
+      , const Chat::ChatClientServicePtr& chatClientServicePtr
+      , const std::shared_ptr<spdlog::logger>& loggerPtr
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+      , const std::shared_ptr<ArmoryConnection> &armory
+      , const std::shared_ptr<SignContainer> &signContainer);
 
    std::string login(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb&);
    void onConnectedToServer();
@@ -43,8 +49,8 @@ protected:
    bool eventFilter(QObject* sender, QEvent* event) override;
 
 public slots:
-   // OTC
    void processOtcPbMessage(const std::string& data);
+
    void onNewChatMessageTrayNotificationClicked(const QString& partyId);
 
 private slots:
@@ -70,6 +76,15 @@ private slots:
 
    void onNewPartyRequest(const std::string& userName);
    void onRemovePartyRequest(const std::string& partyId);
+
+   void onOtcUpdated(const std::string &partyId);
+
+   void onOtcRequestSubmit();
+   void onOtcRequestPull();
+   void onOtcResponseAccept();
+   void onOtcResponseUpdate();
+   void onOtcResponseReject();
+
 signals:
    // OTC
    void sendOtcPbMessage(const std::string& data);
@@ -94,11 +109,14 @@ private:
          transitionChanges();
          stateCurrent_ = std::make_unique<stateType>(this);
       }
+
 protected:
    std::unique_ptr<AbstractChatWidgetState> stateCurrent_;
 
 private:
    void chatTransition(const Chat::ClientPartyPtr& clientPartyPtr);
+   void updateOtc();
+
    QScopedPointer<Ui::ChatWidget> ui_;
    Chat::ChatClientServicePtr    chatClientServicePtr_;
    OTCRequestViewModel* otcRequestViewModel_ = nullptr;
@@ -110,6 +128,9 @@ private:
    QMap<std::string, QString> draftMessages_;
 
    bool bNeedRefresh_ = false;
+
+   OtcClient *otcClient_{};
+   std::set<std::string> connectedPeers_;
 };
 
 #endif // CHAT_WIDGET_H
