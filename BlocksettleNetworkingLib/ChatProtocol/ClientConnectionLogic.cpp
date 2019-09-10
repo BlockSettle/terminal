@@ -11,7 +11,7 @@
 #include "ProtobufUtils.h"
 
 #include <disable_warnings.h>
-#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
 #include <enable_warnings.h>
 
 using namespace Chat;
@@ -219,6 +219,10 @@ void ClientConnectionLogic::handlePartyMessagePacket(PartyMessagePacket& partyMe
 {
    ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
    ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyMessagePacket.party_id());
+   if (!clientPartyPtr) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "can't find party with id: {}", partyMessagePacket.party_id());
+      return;
+   }
 
    // TODO: handle here state changes of the rest of message types
    if (clientPartyPtr->isPrivateStandard())
