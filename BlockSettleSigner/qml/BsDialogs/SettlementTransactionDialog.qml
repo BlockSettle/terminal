@@ -28,6 +28,7 @@ CustomTitleDialogWindow {
 
     readonly property int duration: passwordDialogData.value("Duration") / 1000.0 - 1 > 0 ? passwordDialogData.value("Duration") / 1000.0 - 1 : 60
 
+    property string inputProduct: " " + passwordDialogData.value("TxInputProduct")
     id: root
     title: passwordDialogData.value("Title")
     rejectable: true
@@ -254,7 +255,7 @@ CustomTitleDialogWindow {
             RowLayout {
                 Layout.columnSpan: 2
                 Layout.fillWidth: true
-                visible: passwordDialogData.contains("InputsList")
+                visible: passwordDialogData.contains("InputsListVisible")
 
                 CustomLabel {
                     text: qsTr("Payment UTXO(s)")
@@ -296,7 +297,7 @@ CustomTitleDialogWindow {
             RowLayout {
                 Layout.columnSpan: 2
                 Layout.fillWidth: true
-                visible: passwordDialogData.contains("RecipientsList")
+                visible: passwordDialogData.contains("RecipientsListVisible")
 
                 CustomLabel {
                     text: qsTr("Delivery UTXO(s)")
@@ -354,64 +355,65 @@ CustomTitleDialogWindow {
 
             // Input Amount
             CustomLabel {
-                visible: passwordDialogData.contains("InputAmount")
+                visible: passwordDialogData.value("InputAmountVisible")
                 Layout.fillWidth: true
                 text: qsTr("Input Amount")
             }
             CustomLabelValue {
-                visible: passwordDialogData.contains("InputAmount")
-                text: passwordDialogData.value("InputAmount")
+                visible: passwordDialogData.value("InputAmountVisible")
+                text: "- " + txInfo.inputAmount.toFixed(8) + inputProduct
                 Layout.alignment: Qt.AlignRight
             }
 
             // Return Amount
             CustomLabel {
-                visible: passwordDialogData.contains("ReturnAmount")
+                visible: passwordDialogData.value("ReturnAmountVisible")
                 Layout.fillWidth: true
                 text: qsTr("Return Amount")
             }
             CustomLabelValue {
-                visible: passwordDialogData.contains("ReturnAmount")
-                text: passwordDialogData.value("ReturnAmount")
+                visible: passwordDialogData.value("ReturnAmountVisible")
+                text: "+ " + txInfo.changeAmount.toFixed(8) + inputProduct
                 Layout.alignment: Qt.AlignRight
             }
 
             // Network Fee
             CustomLabel {
-                visible: passwordDialogData.contains("NetworkFee")
+                visible: passwordDialogData.value("NetworkFeeVisible")
                 Layout.fillWidth: true
                 text: qsTr("Network Fee")
             }
             CustomLabelValue {
-                visible: passwordDialogData.contains("NetworkFee")
-                text: passwordDialogData.value("NetworkFee")
+                visible: passwordDialogData.value("NetworkFeeVisible")
+                text: "- " + txInfo.fee.toFixed(8) + inputProduct
                 Layout.alignment: Qt.AlignRight
             }
 
             // Settlement Pay-In
             CustomLabel {
-                visible: passwordDialogData.contains("SettlementPayIn")
+                visible: passwordDialogData.value("SettlementPayInVisible")
                 Layout.fillWidth: true
                 text: qsTr("Settlement Pay-In")
             }
             CustomLabelValue {
-                visible: passwordDialogData.contains("SettlementPayIn")
-                text: passwordDialogData.value("SettlementPayIn")
+                visible: passwordDialogData.value("SettlementPayInVisible")
+                text: "- " + txInfo.amount.toFixed(8) + inputProduct
                 Layout.alignment: Qt.AlignRight
             }
 
             // Settlement Pay-Out
             CustomLabel {
-                visible: passwordDialogData.contains("SettlementPayOut")
+                visible: passwordDialogData.value("SettlementPayOutVisible")
                 Layout.fillWidth: true
                 text: qsTr("Settlement Pay-Out")
             }
             CustomLabelValue {
-                visible: passwordDialogData.contains("SettlementPayOut")
-                text: passwordDialogData.value("SettlementPayOut")
+                visible: passwordDialogData.value("SettlementPayOutVisible")
+                text: "+ " + txInfo.amount.toFixed(8) + inputProduct
                 Layout.alignment: Qt.AlignRight
             }
 
+            /// CC fields
             // Delivery Amount
             CustomLabel {
                 visible: passwordDialogData.contains("DeliveryAmount")
