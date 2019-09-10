@@ -305,16 +305,14 @@ void ChatWidget::onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPa
       const std::string &partyId = clientPartyPtr->id();
       bool wasConnected = connectedPeers_.find(clientPartyPtr->id()) != connectedPeers_.end();
 
-      if (clientPartyPtr->userHash() != ownUserId_) {
-         if (clientPartyPtr->clientStatus() == Chat::ONLINE && !wasConnected) {
-            otcClient_->peerConnected(partyId);
-            connectedPeers_.insert(partyId);
-         }
+      if (clientPartyPtr->clientStatus() == Chat::ONLINE && !wasConnected) {
+         otcClient_->peerConnected(partyId);
+         connectedPeers_.insert(partyId);
+      }
 
-         if (clientPartyPtr->clientStatus() == Chat::OFFLINE && wasConnected) {
-            otcClient_->peerDisconnected(clientPartyPtr->id());
-            connectedPeers_.erase(partyId);
-         }
+      if (clientPartyPtr->clientStatus() == Chat::OFFLINE && wasConnected) {
+         otcClient_->peerDisconnected(partyId);
+         connectedPeers_.erase(partyId);
       }
    }
 }
