@@ -157,6 +157,7 @@ bool QmlFactory::eventFilter(QObject *object, QEvent *event)
    // Do not return true to allow propagate close event (it's needed for tx dialog close signal detection)
    if (event->type() == QEvent::Close) {
       emit closeEventReceived();
+      return true;
    }
 
    return false;
