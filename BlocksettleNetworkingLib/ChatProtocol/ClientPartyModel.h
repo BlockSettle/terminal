@@ -53,7 +53,7 @@ namespace Chat
       PrivatePartyState deducePrivatePartyStateForUser(const std::string& userName);
 
    signals:
-      void error(const ClientPartyModelError& errorCode, const std::string& what = "");
+      void error(const Chat::ClientPartyModelError& errorCode, const std::string& what = "");
       void clientPartyStatusChanged(const ClientPartyPtr& clientPartyPtr);
       void messageArrived(const Chat::MessagePtrList& messagePtr);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
@@ -61,7 +61,7 @@ namespace Chat
       void clientPartyDisplayNameChanged(const std::string& partyId);
 
    private slots:
-      void handleLocalErrors(const ClientPartyModelError& errorCode, const std::string& what);
+      void handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what);
       void handlePartyInserted(const PartyPtr& partyPtr);
       void handlePartyRemoved(const PartyPtr& partyPtr);
       void handlePartyStatusChanged(const ClientStatus& clientStatus);

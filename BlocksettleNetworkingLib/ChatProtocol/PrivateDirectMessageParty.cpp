@@ -36,7 +36,7 @@ PartyRecipientPtr PrivateDirectMessageParty::getSecondRecipient(const std::strin
       return nullptr;
    }
 
-   return recipients_.back();
+   return recipients.back();
 }
 
 PartyRecipientsPtrList PrivateDirectMessageParty::getRecipientsExceptMe(const std::string& me)

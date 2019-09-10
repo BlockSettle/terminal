@@ -18,7 +18,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    : bs::SettlementContainer(), armory_(armory), walletsMgr_(walletsMgr), order_(order)
    , weSell_((order.side == bs::network::Side::Buy) ^ (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)
-   , logger_(logger), transactionData_(txData), signingContainer_(container)
+   , logger_(logger), transactionData_(txData), signContainer_(container)
 {
    qRegisterMetaType<AddressVerificationState>();
 
@@ -61,6 +61,12 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       cptyAddressState_ = state;
       emit cptyAddressStateChanged(state);
       if (state == AddressVerificationState::Verified) {
+         // we verify only requester's auth address
+         bs::sync::PasswordDialogData dialogData;
+         dialogData.setValue("RequesterAuthAddressVerified", true);
+         dialogData.setValue("SettlementId", QString::fromStdString(id()));
+         signContainer_->updateDialogData(dialogData);
+
          onCptyVerified();
       }
    });
@@ -84,7 +90,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    }
    priWallet->getSettlementPayinAddress(settlementId_, reqAuthKey_, cbSettlAddr, !weSell_);
 
-   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
+   connect(signContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }
 
 DealerXBTSettlementContainer::~DealerXBTSettlementContainer() = default;
@@ -140,8 +146,7 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue("RequesterAuthAddressVerified", false);
 
    dialogData.setValue("ResponderAuthAddress", bs::Address::fromPubKey(authKey_).display());
-   dialogData.setValue("ResponderAuthAddressVerified", false);
-
+   dialogData.setValue("ResponderAuthAddressVerified", true);
 
    return dialogData;
 }
@@ -156,7 +161,7 @@ bool DealerXBTSettlementContainer::startPayInSigning()
                        .arg(UiUtils::displayAmount(amount())));
 
 
-      payinSignId_ = signingContainer_->signSettlementTXRequest(payInTxRequest_, dlgData, SignContainer::TXSignMode::Full);
+      payinSignId_ = signContainer_->signSettlementTXRequest(payInTxRequest_, dlgData, SignContainer::TXSignMode::Full);
    }
    catch (const std::exception &e) {
       logger_->error("[DealerXBTSettlementContainer::onAccepted] Failed to sign pay-in: {}", e.what());
@@ -202,7 +207,7 @@ bool DealerXBTSettlementContainer::startPayOutSigning()
                      .arg(UiUtils::displayAmount(payOutTxRequest_.amount())));
          dlgData.setValue("AutoSignCategory", static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
 
-         payoutSignId_ = signingContainer_->signSettlementPayoutTXRequest(payOutTxRequest_, { settlementId_
+         payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(payOutTxRequest_, { settlementId_
             , reqAuthKey_, !weSell_ }, dlgData);
       } catch (const std::exception &e) {
          logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());
@@ -362,7 +367,6 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       emit info(tr("Pay-out broadcasted. Waiting to appear on chain"));
    }
    else if (payinSignId_ && (payinSignId_ == id)) {
-      payinSignId_ = 0;
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          logger_->error("[DealerXBTSettlementContainer::onTXSigned] Failed to sign pay-in: {} ({})", (int)errCode, errMsg);
          emit error(tr("Failed to sign pay-in"));
