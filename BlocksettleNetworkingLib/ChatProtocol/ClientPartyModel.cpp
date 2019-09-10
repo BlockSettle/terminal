@@ -52,7 +52,7 @@ ClientPartyPtr ClientPartyModel::getPartyByUserName(const std::string& userName)
    return nullptr;
 }
 
-void ClientPartyModel::handleLocalErrors(const ClientPartyModelError& errorCode, const std::string& what)
+void ClientPartyModel::handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what)
 {
    loggerPtr_->debug("[ClientPartyModel::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
 }
