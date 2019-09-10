@@ -287,7 +287,6 @@ void ChatMessagesTextEdit::onSwitchToChat(const std::string& partyId)
 void ChatMessagesTextEdit::onLogout()
 {
    onSwitchToChat({});
-   messages_.clear();
 }
 
 const Chat::MessagePtr ChatMessagesTextEdit::onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state)
@@ -361,7 +360,19 @@ void  ChatMessagesTextEdit::onUrlActivated(const QUrl &link) {
 void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
 {
    const int messageIndex = messages_[messagePtr->partyId()].size();
-   messages_[messagePtr->partyId()].push_back(messagePtr);
+
+   // push new message if it doesn't exist in current chat
+   auto& messagesList = messages_[messagePtr->partyId()];
+   QVector<Chat::MessagePtr>::const_iterator messageIt = 
+   std::find_if(messagesList.begin(), messagesList.end(), [messagePtr](const Chat::MessagePtr& m)->bool
+   {
+      return m->messageId() == messagePtr->messageId();
+   });
+
+   if (messageIt == messagesList.cend())
+   {
+      messagesList.push_back(messagePtr);
+   }
 
    if (messagePtr->partyId() == currentPartyId_) {
       showMessage(messagePtr->partyId(), messageIndex);
