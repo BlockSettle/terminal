@@ -102,6 +102,8 @@ void ChatClientLogic::LoginToServer(const std::string& email, const std::string&
       loggerPtr_->error("[ChatClientLogic::LoginToServer] connecting with not purged connection");
 
       emit chatClientError(ChatClientLogicError::ConnectionAlreadyUsed);
+      connectionPtr_->closeConnection();
+      connectionPtr_.reset();
    }
 
    connectionPtr_ = connectionManagerPtr_->CreateZMQBIP15XDataConnection();
