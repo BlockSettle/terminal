@@ -560,11 +560,11 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
          bs::sync::PasswordDialogData *dialogData = new bs::sync::PasswordDialogData();
          QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
+         dialogData->setValue("Title", tr("Sign Offline TX"));
 
          bs::hd::WalletInfo *walletInfo = adapter_->qmlFactory()->createWalletInfo(walletId);
 
          adapter_->qmlBridge()->invokeQmlMethod("createTxSignDialog", cb
-                                                , tr("Sign Offline TX")
                                                 , QVariant::fromValue(txInfo)
                                                 , QVariant::fromValue(dialogData)
                                                 , QVariant::fromValue(walletInfo));

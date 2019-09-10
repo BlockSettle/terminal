@@ -15,7 +15,6 @@ import "../BsControls"
 import "../js/helper.js" as JsHelper
 
 CustomTitleDialogWindow {
-    property string prompt
     property WalletInfo walletInfo: WalletInfo{}
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
@@ -218,16 +217,6 @@ CustomTitleDialogWindow {
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
-
-//            CustomLabel {
-//                visible: prompt.length
-//                Layout.minimumWidth: 110
-//                Layout.preferredWidth: 110
-//                Layout.maximumWidth: 110
-//                Layout.fillWidth: true
-//                text: prompt
-//                elide: Label.ElideRight
-//            }
 
             CustomLabel {
                 visible: walletInfo.encType === QPasswordData.Password

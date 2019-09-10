@@ -16,7 +16,6 @@ import "../BsStyles"
 import "../js/helper.js" as JsHelper
 
 CustomTitleDialogWindow {
-    property string prompt
     property WalletInfo walletInfo: WalletInfo{}
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
@@ -574,7 +573,7 @@ CustomTitleDialogWindow {
                 text: walletInfo.encType === QPasswordData.Password ? qsTr("CONFIRM") : qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                enabled: tfPassword.text.length || acceptable
+                enabled: (tfPassword.text.length || acceptable) && passwordDialogData.value("SigningAllowed") === true
                 onClicked: {
                     if (walletInfo.encType === QPasswordData.Password) {
                         passwordData.textPassword = tfPassword.text

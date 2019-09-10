@@ -16,6 +16,17 @@
 
 #include <memory>
 
+namespace  {
+   // these strings are function names in helper.js which can be evaluated by name
+   const QList<std::string> knownMethods =
+   {
+      "createTxSignDialog",
+      "createSettlementTransactionDialog",
+      "updateDialogData",
+      "createPasswordDialogForType"
+   };
+}
+
 using namespace bs::signer;
 
 class QmlBridge : public QObject
@@ -42,6 +53,11 @@ public:
                         QVariant val6 = QVariant(),
                         QVariant val7 = QVariant()) const
    {
+      if (!knownMethods.contains(method)) {
+         logger_->error("[{}] trying to call qml function which is not allowed: {}", __func__, method);
+         return;
+      }
+
       QVariantList argList;
       if (val0.isValid()) argList.append(val0);
       if (val1.isValid()) argList.append(val1);
