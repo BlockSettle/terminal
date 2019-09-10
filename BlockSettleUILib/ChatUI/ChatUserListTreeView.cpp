@@ -62,7 +62,17 @@ void ChatUserListTreeView::editContact(const QModelIndex& index)
          QString::fromStdString(recipientPtr->publicKey().toHexStr()),
          parentWidget()->window());
       if (dialog.exec() == QDialog::Accepted) {
-         emit setDisplayName(clientPartyPtr->id(), dialog.displayName().toStdString());
+
+         // do not allow display name to contains only whitespaces
+         std::string newDisplayName = dialog.displayName().toStdString();
+         std::string::iterator it_first_nonspace = std::find_if(newDisplayName.begin(), newDisplayName.end(), [l = std::locale{}](auto ch) {
+            return !std::isspace(ch, l);
+         });
+
+         if (it_first_nonspace != newDisplayName.end())
+         {
+            emit setDisplayName(clientPartyPtr->id(), newDisplayName);
+         }
       }
    }
 }
