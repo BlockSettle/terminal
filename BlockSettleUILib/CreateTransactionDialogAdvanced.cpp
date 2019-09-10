@@ -54,7 +54,6 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const Tx &tx
-      , const std::shared_ptr<bs::sync::Wallet>& wallet
       , QWidget* parent)
 {
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
@@ -66,7 +65,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
    dlg->ui_->checkBoxRBF->setEnabled(false);
    dlg->ui_->pushButtonImport->setEnabled(false);
 
-   dlg->setRBFinputs(tx, wallet);
+   dlg->setRBFinputs(tx);
    return dlg;
 }
 
@@ -102,7 +101,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
    }
    allowAutoSelInputs_ = false;
 
-   const auto &cbTXs = [this, tx, wallet, txOutIndices](const std::vector<Tx> &txs) {
+   const auto &cbTXs = [this, tx, txOutIndices](const std::vector<Tx> &txs) {
       auto selInputs = transactionData_->getSelectedInputs();
       selInputs->SetUseAutoSel(false);
       int64_t origFee = 0;
@@ -124,7 +123,8 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
       for (size_t i = 0; i < tx.getNumTxOut(); i++) {
          auto out = tx.getTxOutCopy(i);
          const auto addr = bs::Address::fromTxOut(out);
-         if (wallet->containsAddress(addr)) {
+         const auto wallet = walletsManager_->getWalletByAddress(addr);
+         if (wallet) {
             if (selInputs->SetUTXOSelection(tx.getThisHash(),
                out.getIndex())) {
                cntOutputs++;
@@ -173,21 +173,24 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
    });
 }
 
-void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shared_ptr<bs::sync::Wallet> &wallet)
+void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
 {
    isRBF_ = true;
 
    std::set<BinaryData> txHashSet;
    std::map<BinaryData, std::set<uint32_t>> txOutIndices;
    for (size_t i = 0; i < tx.getNumTxIn(); i++) {
-      const auto txin = tx.getTxInCopy(i);
-      const auto outpoint = txin.getOutPoint();
+      const TxIn txin = tx.getTxInCopy(i);
+      const OutPoint outpoint = txin.getOutPoint();
       txHashSet.insert(outpoint.getTxHash());
       txOutIndices[outpoint.getTxHash()].insert(outpoint.getTxOutIndex());
    }
 
-   const auto &cbTXs = [this, tx, wallet, txOutIndices](const std::vector<Tx> &txs) {
+   const auto &cbTXs = [this, tx, txOutIndices](const std::vector<Tx> &txs) {
       int64_t totalVal = 0;
+      std::shared_ptr<bs::sync::hd::Group> inputsGroup;
+      std::set<std::shared_ptr<bs::sync::Wallet>> inputWallets;
+      std::vector<std::pair<BinaryData, unsigned int>> utxoSelected;
       for (const auto &prevTx : txs) {
          const auto &txHash = prevTx.getThisHash();
          const auto &itTxOut = txOutIndices.find(txHash);
@@ -196,120 +199,161 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
          }
          for (const auto &txOutIdx : itTxOut->second) {
             if (prevTx.isInitialized()) {
-               TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
+               const TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
                totalVal += prevOut.getValue();
-            }
-            if (!transactionData_->getSelectedInputs()->SetUTXOSelection(txHash, txOutIdx)) {
-               if (logger_ != nullptr) {
-                  logger_->error("[{}] No input(s) found for TX {}."
-                                 , __func__, txHash.toHexStr(true));
+
+               const auto addr = bs::Address::fromTxOut(prevOut);
+               const auto wallet = walletsManager_->getWalletByAddress(addr);
+               if (wallet) {
+                  const auto group = walletsManager_->getGroupByWalletId(wallet->walletId());
+                  if (!inputsGroup) {
+                     inputsGroup = group;
+                  }
+                  else {
+                     if (inputsGroup != group) {
+                        if (logger_) {
+                           logger_->debug("[setRBFinputs] inputs group mismatch for {}", addr.display());
+                        }
+                        continue;
+                     }
+                  }
+                  inputWallets.insert(wallet);
+                  utxoSelected.push_back({ txHash, txOutIdx });
                }
-               continue;
             }
          }
       }
 
-      QString  changeAddress;
-      double   changeAmount = 0;
-      std::vector<std::pair<bs::Address, double>> ownOutputs;
-
-      // set outputs
-      for (size_t i = 0; i < tx.getNumTxOut(); i++) {
-         TxOut out = tx.getTxOutCopy(i);
-         const auto addr = bs::Address::fromTxOut(out);
-         const auto amount = UiUtils::amountToBtc(out.getValue());
-
-         if (wallet->containsAddress(addr)) {
-            ownOutputs.push_back({addr, amount});
-         }
-         totalVal -= out.getValue();
+      auto rbfUtxos = std::make_shared<std::vector<UTXO>>();
+      auto walletsToWait = std::make_shared<std::set<std::string>>();
+      for (const auto &wallet : inputWallets) {
+         walletsToWait->insert(wallet->walletId());
       }
+      for (const auto &wallet : inputWallets) {
+         const auto cbRBFUtxos = [this, rbfUtxos, walletId = wallet->walletId(), walletsToWait
+            , inputsGroup, utxoSelected, tx, totalVal]
+            (const std::vector<UTXO> &utxos) mutable
+         {
+            rbfUtxos->insert(rbfUtxos->end(), utxos.cbegin(), utxos.cend());
 
-      // Assume change address is the last internal address in the
-      // list of outputs belonging to the wallet
-      for (const auto &output : ownOutputs) {
-         const auto path = bs::hd::Path::fromString(wallet->getAddressIndex(output.first));
-         if (path.length() == 2) {
-            if (path.get(-2) == 1) {   // internal HD address
-               changeAddress = QString::fromStdString(output.first.display());
-               changeAmount = output.second;
-            }
-         }
-         else  {   // not an HD wallet/address
-            changeAddress = QString::fromStdString(output.first.display());
-            changeAmount = output.second;
-         }
-      }
+            walletsToWait->erase(walletId);
+            if (walletsToWait->empty()) {
 
-      // Error check.
-      if (totalVal < 0) {
-         if (logger_ != nullptr) {
-            logger_->error("[{}] Negative TX balance ({}) for TX {}."
+               const auto lbdSetInputs = [this, inputsGroup, rbfUtxos, utxoSelected, tx
+                  , totalVal]() mutable {
+                  setFixedGroupInputs(inputsGroup, *rbfUtxos);
+
+                  for (const auto &sel : utxoSelected) {
+                     if (!transactionData_->getSelectedInputs()->SetUTXOSelection(sel.first, sel.second)) {
+                        if (logger_ != nullptr) {
+                           logger_->warn("[setRBFinputs] no input(s) found for TX {}/{}"
+                              , sel.first.toHexStr(true), sel.second);
+                        }
+                     }
+                  }
+
+                  const auto inputs = transactionData_->getSelectedInputs()->GetSelectedTransactions();
+                  usedInputsModel_->updateInputs(inputs);
+
+                  QString  changeAddress;
+                  double   changeAmount = 0;
+
+                  struct OwnOutput {
+                     bs::Address    address;
+                     double         amount;
+                     bs::hd::Path   path;
+                  };
+                  std::vector<OwnOutput> ownOutputs;
+
+                  // set outputs
+                  for (size_t i = 0; i < tx.getNumTxOut(); i++) {
+                     TxOut out = tx.getTxOutCopy(i);
+                     const auto addr = bs::Address::fromTxOut(out);
+                     const auto amount = UiUtils::amountToBtc(out.getValue());
+
+                     const auto wallet = walletsManager_->getWalletByAddress(addr);
+                     if (wallet) {
+                        ownOutputs.push_back({ addr, amount
+                           , bs::hd::Path::fromString(wallet->getAddressIndex(addr)) });
+                     }
+                     totalVal -= out.getValue();
+                  }
+
+                  // Assume change address is the last internal address in the
+                  // list of outputs belonging to the wallet
+                  for (const auto &output : ownOutputs) {
+                     const auto path = output.path;
+                     if (path.length() == 2) {
+                        if (path.get(-2) == 1) {   // internal HD address
+                           changeAddress = QString::fromStdString(output.address.display());
+                           changeAmount = output.amount;
+                        }
+                     } else {   // not an HD wallet/address
+                        changeAddress = QString::fromStdString(output.address.display());
+                        changeAmount = output.amount;
+                     }
+                  }
+
+                  // Error check.
+                  if (totalVal < 0) {
+                     if (logger_ != nullptr) {
+                        logger_->error("[{}] Negative TX balance ({}) for TX {}."
                            , __func__, totalVal
                            , tx.getThisHash().toHexStr(true));
-         }
-         return;
-      }
+                     }
+                     return;
+                  }
 
-      // If we did find a change address, set it in place in this TX.
-      else if (!changeAddress.isEmpty()) {
-         // If the original TX didn't use up the original inputs, force the
-         // original change address to be used. It may be desirable to change
-         // this eventually.
-         SetFixedChangeAddress(changeAddress);
-      }
+                  // If we did find a change address, set it in place in this TX.
+                  else if (!changeAddress.isEmpty()) {
+                     // If the original TX didn't use up the original inputs, force the
+                     // original change address to be used. It may be desirable to change
+                     // this eventually.
+                     SetFixedChangeAddress(changeAddress);
+                  }
 
-      // RBF minimum amounts are a little tricky. The rules/policies are:
-      //
-      // - RULE: Calculate based not on the absolute TX size, but on the virtual
-      //   size, which is ceil(TX weight / 4) (e.g., 32.2 -> 33). For reference,
-      //   TX weight = Total_TX_Size + (3 * Base_TX_Size).
-      //   (Base_TX_Size = TX size w/o witness data)
-      // - RULE: The new fee/KB must meet or exceed the old one. (If replacing
-      //   multiple TXs, Core seems to calculate based on the sum of fees and
-      //   TX sizes for the old TXs.)
-      // - RULE: The new fee must be at least 1 satoshi higher than the sum of
-      //   the fees of the replaced TXs.
-      // - POLICY: The new fee must be bumped by, at a minimum, the incremental
-      //   relay fee (IRL) * the new TX's virtual size. The fee can be adjusted
-      //   in Core by the incrementalrelayfee config option. By default, the fee
-      //   is 1000 sat/KB (1 sat/B), which is what we will assume is being used.
-      //   (This may need to be a terminal config option later.) So, if the virt
-      //   size is 146, and the original fee is 1 sat/b (146 satoshis), the next
-      //   fee must be at least 2 sat/b (292 satoshis), then 3 sat/b, etc. This
-      //   assumes we don't change the TX in any way. Bumping to a virt size of
-      //   300 would require the 1st RBF to be 446 satoshis, then 746, 1046, etc.
-      //
-      // It's impossible to calculate the minimum required fee, as the user can
-      // do many different things. We'll just start by setting the minimum fee
-      // to the amount required by the RBF/IRL policy, and keep the minimum
-      // fee/byte where it is.
-      originalFee_ = totalVal;
-      const float feePerByte = (float)totalVal / (float)tx.getTxWeight();
-      originalFeePerByte_ = feePerByte;
-      const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
-      SetMinimumFee(newMinFee, originalFeePerByte_ + 1.0);
-      advisedFeePerByte_ = originalFeePerByte_ + 1.0;
-      populateFeeList();
-      SetInputs(transactionData_->getSelectedInputs()->GetSelectedTransactions());
-   };
-
-   const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](std::vector<UTXO> inUTXOs) {
-      try {
-         QMetaObject::invokeMethod(this, [this, wallet, txHashSet, inUTXOs, cbTXs] {
-            setFixedWalletAndInputs(wallet, inUTXOs);
-
-            armory_->getTXsByHash(txHashSet, cbTXs);
-         });
-      }
-      catch (const std::exception &e) {
-         if (logger_ != nullptr) {
-            logger_->error("[CreateTransactionDialogAdvanced::setRBFinputs] " \
-               "Return data error - {}", e.what());
-         }
+                  // RBF minimum amounts are a little tricky. The rules/policies are:
+                  //
+                  // - RULE: Calculate based not on the absolute TX size, but on the virtual
+                  //   size, which is ceil(TX weight / 4) (e.g., 32.2 -> 33). For reference,
+                  //   TX weight = Total_TX_Size + (3 * Base_TX_Size).
+                  //   (Base_TX_Size = TX size w/o witness data)
+                  // - RULE: The new fee/KB must meet or exceed the old one. (If replacing
+                  //   multiple TXs, Core seems to calculate based on the sum of fees and
+                  //   TX sizes for the old TXs.)
+                  // - RULE: The new fee must be at least 1 satoshi higher than the sum of
+                  //   the fees of the replaced TXs.
+                  // - POLICY: The new fee must be bumped by, at a minimum, the incremental
+                  //   relay fee (IRL) * the new TX's virtual size. The fee can be adjusted
+                  //   in Core by the incrementalrelayfee config option. By default, the fee
+                  //   is 1000 sat/KB (1 sat/B), which is what we will assume is being used.
+                  //   (This may need to be a terminal config option later.) So, if the virt
+                  //   size is 146, and the original fee is 1 sat/b (146 satoshis), the next
+                  //   fee must be at least 2 sat/b (292 satoshis), then 3 sat/b, etc. This
+                  //   assumes we don't change the TX in any way. Bumping to a virt size of
+                  //   300 would require the 1st RBF to be 446 satoshis, then 746, 1046, etc.
+                  //
+                  // It's impossible to calculate the minimum required fee, as the user can
+                  // do many different things. We'll just start by setting the minimum fee
+                  // to the amount required by the RBF/IRL policy, and keep the minimum
+                  // fee/byte where it is.
+                  originalFee_ = totalVal;
+                  const float feePerByte = (float)totalVal / (float)tx.getTxWeight();
+                  originalFeePerByte_ = feePerByte;
+                  const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
+                  SetMinimumFee(newMinFee, originalFeePerByte_ + 1.0);
+                  advisedFeePerByte_ = originalFeePerByte_ + 1.0;
+                  populateFeeList();
+                  SetInputs(transactionData_->getSelectedInputs()->GetSelectedTransactions());
+               };
+               QMetaObject::invokeMethod(this, lbdSetInputs);
+            }
+         };
+         wallet->getRBFTxOutList(cbRBFUtxos);
       }
    };
-   wallet->getRBFTxOutList(cbRBFInputs);
+
+   armory_->getTXsByHash(txHashSet, cbTXs);
 }
 
 void CreateTransactionDialogAdvanced::initUI()
@@ -563,7 +607,8 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
    // desirable to change this one day. RBF TXs can change inputs but only if
    // all other inputs are RBF-enabled. Properly refactored, the user could
    // select only RBF-enabled inputs that are waiting for a conf.
-   if (!isRBF_ && transactionData_->getSelectedInputs()->UseAutoSel()) {
+   if (!isRBF_ && transactionData_->getSelectedInputs()
+      && transactionData_->getSelectedInputs()->UseAutoSel()) {
       usedInputsModel_->updateInputs(transactionData_->inputs());
    }
 
@@ -1155,13 +1200,17 @@ void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId
    ui_->comboBoxWallets->setEnabled(false);
 }
 
-void CreateTransactionDialogAdvanced::setFixedWalletAndInputs(const std::shared_ptr<bs::sync::Wallet> &wallet, const std::vector<UTXO> &inputs)
+void CreateTransactionDialogAdvanced::setFixedGroupInputs(const std::shared_ptr<bs::sync::hd::Group> &group
+   , const std::vector<UTXO> &inputs)
 {
-   SelectWallet(wallet->walletId());
+   const auto leaves = group->getAllLeaves();
+   if (leaves.empty()) {
+      return;
+   }
+   SelectWallet(leaves.front()->walletId());
    ui_->comboBoxWallets->setEnabled(false);
    disableInputSelection();
-   usedInputsModel_->updateInputs(inputs);
-   transactionData_->setWalletAndInputs(wallet, inputs, armory_->topBlock());
+   transactionData_->setGroupAndInputs(group, inputs, armory_->topBlock());
 }
 
 void CreateTransactionDialogAdvanced::disableOutputsEditing()

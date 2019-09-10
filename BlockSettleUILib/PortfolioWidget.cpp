@@ -182,7 +182,7 @@ void PortfolioWidget::onCreateRBFDialog()
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
             , walletsManager_, signContainer_, logger_, appSettings_, txItem->tx
-            , txItem->wallet, this);
+            , this);
          dlg->exec();
       }
       catch (const std::exception &e) {

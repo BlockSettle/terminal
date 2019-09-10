@@ -133,6 +133,20 @@ bool TransactionData::setGroup(const std::shared_ptr<bs::sync::hd::Group> &group
    }
    return true;
 }
+bool TransactionData::setGroupAndInputs(const std::shared_ptr<bs::sync::hd::Group> &group
+   , const std::vector<UTXO> &utxos, uint32_t topBlock)
+{
+   wallet_.reset();
+   if (!group) {
+      return false;
+   }
+   const auto leaves = group->getAllLeaves();
+   if (leaves.empty()) {
+      return false;
+   }
+   group_ = group;
+   return setWalletAndInputs(leaves.front(), utxos, topBlock);
+}
 
 bool TransactionData::setWalletAndInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
    , const std::vector<UTXO> &utxos, uint32_t topBlock)
@@ -143,9 +157,9 @@ bool TransactionData::setWalletAndInputs(const std::shared_ptr<bs::sync::Wallet>
    wallet_ = wallet;
 
    selectedInputs_ = std::make_shared<SelectedTransactionInputs>(
-      wallet, utxos, [this] { InvalidateTransactionData(); });
+      utxos, [this] { InvalidateTransactionData(); });
 
-   coinSelection_ = std::make_shared<CoinSelection>([this, wallet](uint64_t) {
+   coinSelection_ = std::make_shared<CoinSelection>([this](uint64_t) {
       return selectedInputs_->GetSelectedTransactions();
    }
       , std::vector<AddressBookEntry>{}

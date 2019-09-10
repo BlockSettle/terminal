@@ -9,6 +9,9 @@ namespace Ui {
 }
 namespace bs {
    namespace sync {
+      namespace hd {
+         class Group;
+      }
       class Wallet;
       class WalletsManager;
    }
@@ -27,7 +30,6 @@ public:
       , const std::shared_ptr<spdlog::logger>&
       , const std::shared_ptr<ApplicationSettings> &
       , const Tx &
-      , const std::shared_ptr<bs::sync::Wallet>&
       , QWidget* parent = nullptr);
 
    static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForCPFP(
@@ -111,7 +113,7 @@ private:
    void clear() override;
    void initUI();
 
-   void setRBFinputs(const Tx &, const std::shared_ptr<bs::sync::Wallet> &);
+   void setRBFinputs(const Tx &);
    void setCPFPinputs(const Tx &, const std::shared_ptr<bs::sync::Wallet> &);
 
    bool isCurrentAmountValid() const;
@@ -129,7 +131,7 @@ private:
    void SetMinimumFee(float totalFee, float feePerByte = 0);
 
    void SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset = nullptr);
-   void setFixedWalletAndInputs(const std::shared_ptr<bs::sync::Wallet> &, const std::vector<UTXO> &);
+   void setFixedGroupInputs(const std::shared_ptr<bs::sync::hd::Group> &, const std::vector<UTXO> &);
    void SetInputs(const std::vector<UTXO> &);
    void disableOutputsEditing();
    void disableInputSelection();

@@ -32,8 +32,8 @@ public:
       , bool isSegWitInputsOnly, bool confirmedOnly = false
       , const CbSelectionChanged &selectionChanged = nullptr
       , const std::function<void()> &cbInputsReset = nullptr);
-   SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &
-      , const std::vector<UTXO> &, const CbSelectionChanged &selectionChanged = nullptr);
+   SelectedTransactionInputs(const std::vector<UTXO> &
+      , const CbSelectionChanged &selectionChanged = nullptr);
    ~SelectedTransactionInputs() noexcept = default;
 
    SelectedTransactionInputs(const SelectedTransactionInputs&) = delete;

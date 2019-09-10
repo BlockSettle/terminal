@@ -28,10 +28,9 @@ SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::s
    ResetInputs(cbInputsReset);
 }
 
-SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
-   , const std::vector<UTXO> &utxos
+SelectedTransactionInputs::SelectedTransactionInputs(const std::vector<UTXO> &utxos
    , const CbSelectionChanged &selectionChanged)
-   : QObject(nullptr), wallets_({ wallet })
+   : QObject(nullptr), wallets_({})
    , isSegWitInputsOnly_(false)
    , confirmedOnly_(false)
    , selectionChanged_(selectionChanged)
@@ -107,14 +106,15 @@ void SelectedTransactionInputs::onUTXOsReceived(const std::shared_ptr<bs::sync::
             , accInputs.second.cend());
       }
       accInputs_.clear();
-   }
-   resetSelection();
-   for (const auto &cb : resetCallbacks_) {
-      if (cb) {
-         cb();
+
+      resetSelection();
+      for (const auto &cb : resetCallbacks_) {
+         if (cb) {
+            cb();
+         }
       }
+      resetCallbacks_.clear();
    }
-   resetCallbacks_.clear();
 }
 
 void SelectedTransactionInputs::ResetInputs(const std::function<void()> &cb)

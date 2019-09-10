@@ -270,7 +270,6 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
    }
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
    const auto rootWallet = walletsManager_->getHDWalletById(walletId);
-   logger_->debug("walletId={}", walletId);
    if (!rootWallet) {
       logger_->error("[{}] wallet with id {} not found", __func__, walletId);
       return;
