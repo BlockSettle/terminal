@@ -53,6 +53,12 @@ function raiseWindow(w) {
 }
 
 function hideWindow(w) {
+    if ( w.hasOwnProperty("currentDialog") &&
+            (typeof w.currentDialog.canceledUser === "function")) {
+        w.currentDialog.canceledUser();
+        return;
+    }
+
     w.hide()
 }
 

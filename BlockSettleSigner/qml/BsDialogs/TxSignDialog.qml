@@ -73,6 +73,12 @@ CustomTitleDialogWindow {
         }
     }
 
+    onBsRejected: {
+        if (authSign) {
+           authSign.cancel();
+        }
+    }
+
     cContentItem: ColumnLayout {
         spacing: 10
         Layout.alignment: Qt.AlignTop
@@ -307,9 +313,6 @@ CustomTitleDialogWindow {
                 onClicked: {
                     cancelledByUser = true
                     rejectAnimated()
-                    if (authSign) {
-                        authSign.cancel()
-                    }
                 }
             }
 
@@ -335,4 +338,5 @@ CustomTitleDialogWindow {
             }
         }
     }
+
 }
