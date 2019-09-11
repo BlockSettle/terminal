@@ -26,7 +26,8 @@ protected:
    void applyRoomsFrameChange() override {
       // #new_logic : OTC shield
    }
-   virtual bool canSendMessage() const override { return true; }
+   bool canSendMessage() const override { return true; }
+   bool canPerformOTCOperations() const override { return true; }
 };
 
 #endif // PRIVATEPARTYINITSTATE_H

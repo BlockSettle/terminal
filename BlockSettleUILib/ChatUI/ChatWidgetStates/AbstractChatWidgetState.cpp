@@ -1,6 +1,7 @@
 #include "AbstractChatWidgetState.h"
 #include "NotificationCenter.h"
 #include "ChatUI/ChatPartiesTreeModel.h"
+#include "ChatUI/ChatOTCHelper.h"
 
 namespace {
    const int kMaxMessageNotifLength = 20;
@@ -72,6 +73,12 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
    }
 
    chat_->ui_->textEditMessages->onMessageUpdate(messagePtr);
+
+   if (!canPerformOTCOperations()) {
+      return;
+   }
+
+   chat_->otcHelper_->onMessageArrived(messagePtr);
 }
 
 void AbstractChatWidgetState::onChangePartyStatus(const Chat::ClientPartyPtr& clientPartyPtr)
@@ -81,6 +88,8 @@ void AbstractChatWidgetState::onChangePartyStatus(const Chat::ClientPartyPtr& cl
    }
 
    chat_->chatPartiesTreeModel_->onPartyStatusChanged(clientPartyPtr);
+
+
 }
 
 void AbstractChatWidgetState::onResetPartyModel()
@@ -177,6 +186,82 @@ void AbstractChatWidgetState::onUpdateDisplayName(const std::string& partyId, co
    }
 }
 
+void AbstractChatWidgetState::onSendOtcMessage(const std::string &partyId, const std::string& data)
+{
+   if (!canPerformOTCOperations()) {
+      return;
+   }
+
+   chat_->chatClientServicePtr_->SendPartyMessage(partyId, data);
+}
+
+void AbstractChatWidgetState::onProcessOtcPbMessage(const std::string& data)
+{
+   if (!canPerformOTCOperations()) {
+      return;
+   }
+
+   chat_->otcHelper_->onProcessOtcPbMessage(data);
+}
+
+void AbstractChatWidgetState::onOtcUpdated(const std::string &partyId)
+{
+   if (!canPerformOTCOperations()) {
+      return;
+   }
+
+   if (chat_->currentPartyId_ != partyId) {
+      return;
+   }
+
+   updateOtc();
+}
+
+void AbstractChatWidgetState::onOtcRequestSubmit()
+{
+   if (!canPerformOTCOperations()) {
+      return;
+   }
+
+   chat_->otcHelper_->onOtcRequestSubmit(chat_->currentPartyId_, chat_->ui_->widgetNegotiateResponse->offer());
+}
+
+void AbstractChatWidgetState::onOtcRequestPull()
+{
+   if (!canPerformOTCOperations()) {
+      return;
+   }
+
+   chat_->otcHelper_->onOtcRequestPull(chat_->currentPartyId_);
+}
+
+void AbstractChatWidgetState::onOtcResponseAccept()
+{
+   if (!canPerformOTCOperations()) {
+      return;
+   }
+
+   chat_->otcHelper_->onOtcResponseAccept(chat_->currentPartyId_, chat_->ui_->widgetNegotiateResponse->offer());
+}
+
+void AbstractChatWidgetState::onOtcResponseUpdate()
+{
+   if (!canPerformOTCOperations()) {
+      return;
+   }
+
+   chat_->otcHelper_->onOtcResponseUpdate(chat_->currentPartyId_, chat_->ui_->widgetNegotiateResponse->offer());
+}
+
+void AbstractChatWidgetState::onOtcResponseReject()
+{
+   if (!canPerformOTCOperations()) {
+      return;
+   }
+
+   chat_->otcHelper_->onOtcResponseReject(chat_->currentPartyId_);
+}
+
 void AbstractChatWidgetState::saveDraftMessage()
 {
    const auto draft = chat_->ui_->input_textEdit->toPlainText();
@@ -198,4 +283,43 @@ void AbstractChatWidgetState::restoreDraftMessage()
       cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::MoveAnchor);
       chat_->ui_->input_textEdit->setTextCursor(cursor);
    }
+}
+
+void AbstractChatWidgetState::updateOtc()
+{
+   if (!canPerformOTCOperations()) {
+      chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
+      return;
+   }
+
+   auto peer = chat_->otcHelper_->getPeer(chat_->currentPartyId_);
+   if (!peer) {
+      chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
+      return;
+   }
+
+   using bs::network::otc::State;
+   OTCPages pageNumber = OTCPages::OTCLoginRequiredShieldPage;
+   switch (peer->state) {
+   case State::Idle:
+      pageNumber = OTCPages::OTCNegotiateRequestPage;
+      break;
+   case State::OfferSent:
+      chat_->ui_->widgetPullOwnOTCRequest->setOffer(peer->offer);
+      pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
+      break;
+   case State::OfferRecv:
+      chat_->ui_->widgetNegotiateResponse->setOffer(peer->offer);
+      pageNumber = OTCPages::OTCNegotiateResponsePage;
+      break;
+   case State::SentPayinInfo:
+   case State::WaitPayinInfo:
+      pageNumber = OTCPages::OTCContactNetStatusShieldPage;
+      break;
+   case State::Blacklisted:
+      pageNumber = OTCPages::OTCContactNetStatusShieldPage;
+      break;
+   }
+
+   chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(pageNumber));
 }
