@@ -312,7 +312,7 @@ struct AuthAddressLogic
       return (getAuthAddrState(vam, addr) == AddressVerificationState::Verified);
    }
    static std::vector<OutpointData> getValidPaths(
-      const ValidationAddressManager&, const bs::Address&);
+      const ValidationAddressManager&, const bs::Address&, size_t &nbPaths);
    static BinaryData revoke(const ValidationAddressManager&, const bs::Address&,
       std::shared_ptr<ResolverFeed>);
    static std::pair<bs::Address, UTXO> getRevokeData(const ValidationAddressManager &

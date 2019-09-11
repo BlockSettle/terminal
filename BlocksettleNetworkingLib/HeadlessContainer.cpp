@@ -539,7 +539,7 @@ bs::signer::RequestId HeadlessContainer::signAuthRevocation(const std::string &w
    request.set_wallet_id(walletId);
    request.set_auth_address(authAddr.display());
    request.set_utxo(utxo.serialize().toBinStr());
-   request.set_validation_address(bsAddr.toBinStr());
+   request.set_validation_address(bsAddr.display());
 
    headless::RequestPacket packet;
    packet.set_type(headless::SignAuthAddrRevokeType);
