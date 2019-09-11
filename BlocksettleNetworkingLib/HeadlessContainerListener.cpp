@@ -187,6 +187,9 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
    case headless::SignTXMultiRequestType:
       return onSignMultiTXRequest(clientId, packet);
 
+   case headless::SignAuthAddrRevokeType:
+      return onSignAuthAddrRevokeRequest(clientId, packet);
+
    case headless::CreateHDLeafRequestType:
       return onCreateHDLeaf(clientId, packet);
 
@@ -855,7 +858,7 @@ bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const
             break;
          case headless::SetUserIdType:
          case headless::SignAuthAddrRevokeType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dialogData);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dialogData, txReq);
             break;
          case headless::PromoteHDWalletRequestType:
             callbacks_->decryptWalletRequest(signer::PasswordDialogType::PromoteHDWallet, dialogData);
