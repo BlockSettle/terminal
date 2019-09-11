@@ -591,7 +591,7 @@ BinaryData ValidationAddressManager::fundUserAddresses(
    const std::vector<bs::Address> &addrs
    , const bs::Address &validationAddress
    , std::shared_ptr<ResolverFeed> feedPtr
-   , const std::vector<UTXO> &vettingUtxos) const
+   , const std::vector<UTXO> &vettingUtxos, int64_t totalFee) const
 {
    Signer signer;
    signer.setFeed(feedPtr);
@@ -615,7 +615,7 @@ BinaryData ValidationAddressManager::fundUserAddresses(
       changeVal += vettingUtxo.getValue();
    }
    changeVal -= addrs.size() * kAuthValueThreshold;
-   changeVal -= 1000;
+   changeVal -= totalFee;
 
    if (changeVal < 0) {
       throw AuthLogicException("attempting to spend more than allowed");

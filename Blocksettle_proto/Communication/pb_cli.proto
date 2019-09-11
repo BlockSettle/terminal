@@ -108,6 +108,8 @@ message LoadUTXOResponse
 {
    repeated Transactions serializedUTXO = 1;
 
+   optional float feePerByte = 2;
+
    message Transactions {
       required string wallet = 1;
       repeated bytes  transactions = 2;
