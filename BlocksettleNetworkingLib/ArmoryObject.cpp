@@ -254,7 +254,7 @@ bool ArmoryObject::getHeaderByHeight(const unsigned int inHeight, const BinaryDa
    return ArmoryConnection::getHeaderByHeight(inHeight, cbWrap);
 }
 
-// Frontend for Armory's estimateFee() call. Used to get the "conservative" fee
+// Frontend for Armory's estimateFee() call. Used to get the "economical" fee
 // that Bitcoin Core estimates for successful insertion into a block within a
 // given number (2-1008) of blocks.
 bool ArmoryObject::estimateFee(unsigned int nbBlocks, const FloatCb &cb)
