@@ -261,6 +261,23 @@ size_t bs::Address::getPayoutWitnessDataSize()
    return 148;
 }
 
+void bs::Address::decorateUTXOs(std::vector<UTXO> &utxos)
+{
+   for (auto &utxo : utxos) {  // some kind of decoration code to replace the code above
+      const bs::Address recipAddr(utxo.getRecipientScrAddr());
+      utxo.txinRedeemSizeBytes_ = unsigned(recipAddr.getInputSize());
+      utxo.witnessDataSizeBytes_ = unsigned(recipAddr.getWitnessDataSize());
+      utxo.isInputSW_ = (recipAddr.getWitnessDataSize() != UINT32_MAX);
+   }
+}
+
+std::vector<UTXO> bs::Address::decorateUTXOsCopy(const std::vector<UTXO> &utxos)
+{
+   auto result = utxos;
+   decorateUTXOs(result);
+   return result;
+}
+
 std::string bs::Address::display(Format format) const
 {
    if (!isProperHash()) {

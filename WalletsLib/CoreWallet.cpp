@@ -211,23 +211,6 @@ Signer wallet::TXSignRequest::getSigner() const
    return signer;
 }
 
-static std::vector<UTXO> decorateUTXOs(const std::vector<UTXO> &inUTXOs)
-{
-   std::vector<UTXO> inputUTXOs;
-   if (inUTXOs.empty()) {
-      return inputUTXOs;
-   }
-   inputUTXOs = inUTXOs;
-
-   for (auto &utxo : inputUTXOs) {  // some kind of decoration code to replace the code above
-      const bs::Address recipAddr(utxo.getRecipientScrAddr());
-      utxo.txinRedeemSizeBytes_ = recipAddr.getInputSize();
-      utxo.witnessDataSizeBytes_ = recipAddr.getWitnessDataSize();
-      utxo.isInputSW_ = (recipAddr.getWitnessDataSize() != UINT32_MAX);
-   }
-   return inputUTXOs;
-}
-
 static UtxoSelection computeSizeAndFee(const std::vector<UTXO> &inUTXOs, const PaymentStruct &inPS)
 {
    auto usedUTXOCopy{ inUTXOs };
@@ -248,7 +231,7 @@ static size_t getVirtSize(const UtxoSelection &inUTXOSel)
 
 size_t wallet::TXSignRequest::estimateTxVirtSize() const
 {   // another implementation based on Armory and TransactionData code
-   auto transactions = decorateUTXOs(inputs);
+   auto transactions = bs::Address::decorateUTXOsCopy(inputs);
    std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipientsMap;
    for (unsigned int i = 0; i < recipients.size(); ++i) {
       recipientsMap[i] = recipients[i];

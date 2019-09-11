@@ -63,6 +63,11 @@ namespace bs {
 
       static size_t getPayoutWitnessDataSize();
 
+      // Try to initialize txinRedeemSizeBytes_, witnessDataSizeBytes_ and isInputSW_.
+      // Usually used to calculate TX vsize.
+      static void decorateUTXOs(std::vector<UTXO> &utxos);
+      static std::vector<UTXO> decorateUTXOsCopy(const std::vector<UTXO> &utxos);
+
    private:
       Format               format_ = Format::Binary;
       AddressEntryType     aet_;
