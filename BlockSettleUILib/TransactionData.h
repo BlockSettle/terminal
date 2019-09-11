@@ -79,6 +79,8 @@ public:
       , bool resetInputs = false, const std::function<void()> &cbInputsReset = nullptr);
    bool setWalletAndInputs(const std::shared_ptr<bs::sync::Wallet> &
       , const std::vector<UTXO> &, uint32_t topBlock);
+   bool setGroupAndInputs(const std::shared_ptr<bs::sync::hd::Group> &
+      , const std::vector<UTXO> &, uint32_t topBlock);
    void setSigningWallet(const std::shared_ptr<bs::sync::Wallet>& wallet) { signWallet_ = wallet; }
    std::shared_ptr<bs::sync::Wallet> getWallet() const { return wallet_; }
    std::shared_ptr<bs::sync::hd::Group> getGroup() const { return group_; }
