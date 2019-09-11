@@ -19,6 +19,7 @@
 #include "ChatOTCHelper.h"
 #include "OtcUtils.h"
 #include "OtcClient.h"
+#include "OTCRequestViewModel.h"
 #include "ui_ChatWidget.h"
 
 using namespace bs::network;
@@ -41,8 +42,8 @@ ChatWidget::ChatWidget(QWidget* parent)
    ui_->frameContactActions->setVisible(false);
    ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
-   //otcRequestViewModel_ = new OTCRequestViewModel(this);
-   //ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
+   otcRequestViewModel_ = new OTCRequestViewModel(this);
+   ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
    ui_->textEditMessages->viewport()->installEventFilter(this);
    ui_->input_textEdit->viewport()->installEventFilter(this);
    ui_->treeViewUsers->viewport()->installEventFilter(this);

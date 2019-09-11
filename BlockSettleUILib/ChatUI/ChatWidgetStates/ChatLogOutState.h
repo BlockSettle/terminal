@@ -33,7 +33,6 @@ protected:
       if (chat_->otcHelper_) {
          chat_->otcHelper_->onLogout();
       }
-      chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
    }
 
    bool canReceiveMessage() const override { return false; }

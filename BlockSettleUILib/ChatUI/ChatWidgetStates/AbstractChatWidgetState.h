@@ -85,6 +85,8 @@ protected:
 
    void updateOtc();
 
+   Chat::ClientPartyPtr getParty(const std::string& partyId) const;
+
    ChatWidget* chat_;
 };
 

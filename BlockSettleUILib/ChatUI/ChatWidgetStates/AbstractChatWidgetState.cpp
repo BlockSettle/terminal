@@ -42,8 +42,7 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
    int bNewMessagesCounter = 0;
    const std::string& partyId = messagePtr[0]->partyId();
 
-   Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
-   Chat::ClientPartyPtr clientPartyPtr = partyModel->getClientPartyById(partyId);
+   Chat::ClientPartyPtr clientPartyPtr = getParty(partyId);
 
    // Tab notifier
    for (int iMessage = 0; iMessage < messagePtr.size(); ++iMessage) {
@@ -322,4 +321,10 @@ void AbstractChatWidgetState::updateOtc()
    }
 
    chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(pageNumber));
+}
+
+Chat::ClientPartyPtr AbstractChatWidgetState::getParty(const std::string& partyId) const
+{
+   Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+   return partyModel->getClientPartyById(partyId);
 }

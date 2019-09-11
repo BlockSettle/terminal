@@ -118,8 +118,7 @@ private:
 
    QScopedPointer<Ui::ChatWidget> ui_;
    Chat::ChatClientServicePtr    chatClientServicePtr_;
-   // #new_logic : replace this with correct otc public table
-   //OTCRequestViewModel* otcRequestViewModel_ = nullptr;
+   OTCRequestViewModel* otcRequestViewModel_ = nullptr;
    QPointer<ChatOTCHelper> otcHelper_{};
    std::shared_ptr<spdlog::logger>  loggerPtr_;
    std::shared_ptr<ChatPartiesTreeModel> chatPartiesTreeModel_;
