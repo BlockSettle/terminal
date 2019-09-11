@@ -1051,7 +1051,8 @@ BinaryData AuthAddressLogic::revoke(const bs::Address &addr
    */
    signer.addSpender(std::make_shared<ScriptSpender>(revokeUtxo));
 
-   signer.addRecipient(validationAddr.getRecipient(revokeUtxo.getValue() / 2));
+   const std::string opReturnMsg = "BlockSettle Terminal revoke";
+   signer.addRecipient(std::make_shared<Recipient_OPRETURN>(opReturnMsg));
 
    signer.sign();
    return signer.serialize();
