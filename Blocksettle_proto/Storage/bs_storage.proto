@@ -27,6 +27,8 @@ message UTXOFile
 {
    repeated Transactions txByWallet = 1;
 
+   optional float feePerByte = 2;
+
    message Transactions {
       required string wallet = 1;
       repeated bytes  transactions = 2;

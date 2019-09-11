@@ -294,7 +294,7 @@ public:
    BinaryData fundUserAddress(const bs::Address&, std::shared_ptr<ResolverFeed>,
       const UTXO &) const;
    BinaryData fundUserAddresses(const std::vector<bs::Address> &, const bs::Address &validationAddress
-      , std::shared_ptr<ResolverFeed>, const std::vector<UTXO> &) const;
+      , std::shared_ptr<ResolverFeed>, const std::vector<UTXO> &, int64_t totalFee) const;
    BinaryData vetUserAddress(const bs::Address&, std::shared_ptr<ResolverFeed>,
       const bs::Address& validationAddr = BinaryData()) const;
    BinaryData revokeValidationAddress(
