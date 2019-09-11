@@ -55,7 +55,9 @@ public:
    signer::SignTxRequest createSignTxRequest(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt)
    {
       signer::SignTxRequest request;
-      request.set_wallet_id(txReq.walletIds.front());
+      if (!txReq.walletIds.empty()) {
+         request.set_wallet_id(txReq.walletIds.front());
+      }
       request.set_prompt(prompt);
 
       for (const auto &input : txReq.inputs) {
