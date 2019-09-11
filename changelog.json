@@ -1,7 +1,27 @@
 {
-   "latest_version": "0.21.0",
-   "release_date": "09 Sep 2019",
+   "latest_version": "0.21.1",
+   "release_date": "11 Sep 2019",
    "changes": [
+      {
+         "version_string": "0.21.1",
+         "previous_version": "0.21.0",
+         "release_date": "11 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "WalletNewSeedDialog.qml rework (#382)",
+            "Keep private messages after relogin (#1341)",
+            "Perform actual counterparty's auth address validation (BST-2223)"
+         ],
+         "bug_fixes": [
+            "Various fixes if RBF or CPFP inputs go from different leaves (BST-2235)",
+            "Don't allow chat display name to contains only whitespaces (#1342)",
+            "Fix max payin fees estimation (#1334)",
+            "Dealer reply fixes (#1331)",
+            "Fix reject sign awaiting in terminal when closing signer dialog"
+         ],
+         "revision": "4d9351b2",
+         "common_revision": "ff899991"
+      },
       {
          "version_string": "0.21.0",
          "previous_version": "0.20.10",
