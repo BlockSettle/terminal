@@ -10,6 +10,8 @@
 
 namespace Chat
 {
+   class ChatClientLogic;
+
    class ChatClientService : public ServiceThread<ChatClientLogic>
    {
       Q_OBJECT
