@@ -37,7 +37,6 @@ protected:
    }
 
    bool canReceiveMessage() const override { return false; }
-   bool canChangePartyStatus() const override { return false; }
    bool canResetReadMessage() const override { return false; }
    bool canResetPartyModel() const override { return false; }
    bool canChangeMessageState() const override { return false; }
