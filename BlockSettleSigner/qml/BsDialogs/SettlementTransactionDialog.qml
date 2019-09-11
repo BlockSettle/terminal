@@ -163,7 +163,7 @@ CustomTitleDialogWindow {
             // Total Value
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("Total Value (XBT)")
+                text: qsTr("Total Value")
             }
             CustomLabelValue {
                 text: passwordDialogData.value("TotalValue")
@@ -355,61 +355,73 @@ CustomTitleDialogWindow {
 
             // Input Amount
             CustomLabel {
-                visible: passwordDialogData.value("InputAmountVisible")
+                visible: passwordDialogData.value("InputAmountVisible") === true
                 Layout.fillWidth: true
                 text: qsTr("Input Amount")
             }
             CustomLabelValue {
-                visible: passwordDialogData.value("InputAmountVisible")
+                visible: passwordDialogData.value("InputAmountVisible") === true
                 text: "- " + txInfo.inputAmount.toFixed(8) + inputProduct
                 Layout.alignment: Qt.AlignRight
             }
 
             // Return Amount
             CustomLabel {
-                visible: passwordDialogData.value("ReturnAmountVisible")
+                visible: passwordDialogData.value("ReturnAmountVisible") === true
                 Layout.fillWidth: true
                 text: qsTr("Return Amount")
             }
             CustomLabelValue {
-                visible: passwordDialogData.value("ReturnAmountVisible")
+                visible: passwordDialogData.value("ReturnAmountVisible") === true
                 text: "+ " + txInfo.changeAmount.toFixed(8) + inputProduct
                 Layout.alignment: Qt.AlignRight
             }
 
             // Network Fee
             CustomLabel {
-                visible: passwordDialogData.value("NetworkFeeVisible")
+                visible: passwordDialogData.value("NetworkFeeVisible") === true
                 Layout.fillWidth: true
                 text: qsTr("Network Fee")
             }
             CustomLabelValue {
-                visible: passwordDialogData.value("NetworkFeeVisible")
+                visible: passwordDialogData.value("NetworkFeeVisible") === true
                 text: "- " + txInfo.fee.toFixed(8) + inputProduct
                 Layout.alignment: Qt.AlignRight
             }
 
             // Settlement Pay-In
             CustomLabel {
-                visible: passwordDialogData.value("SettlementPayInVisible")
+                visible: passwordDialogData.value("SettlementPayInVisible") === true
                 Layout.fillWidth: true
                 text: qsTr("Settlement Pay-In")
             }
             CustomLabelValue {
-                visible: passwordDialogData.value("SettlementPayInVisible")
+                visible: passwordDialogData.value("SettlementPayInVisible") === true
                 text: "- " + txInfo.amount.toFixed(8) + inputProduct
                 Layout.alignment: Qt.AlignRight
             }
 
             // Settlement Pay-Out
             CustomLabel {
-                visible: passwordDialogData.value("SettlementPayOutVisible")
+                visible: passwordDialogData.value("SettlementPayOutVisible") === true
                 Layout.fillWidth: true
                 text: qsTr("Settlement Pay-Out")
             }
             CustomLabelValue {
-                visible: passwordDialogData.value("SettlementPayOutVisible")
+                visible: passwordDialogData.value("SettlementPayOutVisible") === true
                 text: "+ " + txInfo.amount.toFixed(8) + inputProduct
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // Total value
+            CustomLabel {
+                visible: passwordDialogData.value("TxTotalAmountVisible") === true
+                Layout.fillWidth: true
+                text: qsTr("Total TX Amount")
+            }
+            CustomLabelValue {
+                visible: passwordDialogData.value("TxTotalAmountVisible") === true
+                text: ((passwordDialogData.value("SettlementPayInVisible") === true) ? "- " : "+ ") + txInfo.total.toFixed(8) + inputProduct
                 Layout.alignment: Qt.AlignRight
             }
 
