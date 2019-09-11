@@ -50,7 +50,7 @@ void ChatOTCHelper::onProcessOtcPbMessage(const std::string& data)
    otcClient_->processPbMessage(data);
 }
 
-void ChatOTCHelper::onOtcRequestSubmit(const std::string& partyId, bs::network::otc::Offer& offer)
+void ChatOTCHelper::onOtcRequestSubmit(const std::string& partyId, const bs::network::otc::Offer& offer)
 {
    bool result = otcClient_->sendOffer(offer, partyId);
    if (!result) {
@@ -68,7 +68,7 @@ void ChatOTCHelper::onOtcRequestPull(const std::string& partyId)
    }
 }
 
-void ChatOTCHelper::onOtcResponseAccept(const std::string& partyId, bs::network::otc::Offer& offer)
+void ChatOTCHelper::onOtcResponseAccept(const std::string& partyId, const bs::network::otc::Offer& offer)
 {
    bool result = otcClient_->acceptOffer(offer, partyId);
    if (!result) {
@@ -77,7 +77,7 @@ void ChatOTCHelper::onOtcResponseAccept(const std::string& partyId, bs::network:
    }
 }
 
-void ChatOTCHelper::onOtcResponseUpdate(const std::string& partyId, bs::network::otc::Offer& offer)
+void ChatOTCHelper::onOtcResponseUpdate(const std::string& partyId, const bs::network::otc::Offer& offer)
 {
    bool result = otcClient_->updateOffer(offer, partyId);
    if (!result) {
