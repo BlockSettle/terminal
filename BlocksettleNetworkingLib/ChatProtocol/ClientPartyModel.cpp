@@ -192,24 +192,37 @@ void ClientPartyModel::handleDisplayNameChanged()
 
 ClientPartyPtr ClientPartyModel::getClientPartyByCreatorHash(const std::string& creatorHash)
 {
-   const IdPartyList idPartyList = getIdPartyList();
+   const std::function<bool(const ClientPartyPtr&)> compareCb = [creatorHash](const ClientPartyPtr& cp) {
+      return cp->partyCreatorHash() == creatorHash; 
+   };
 
-   for (const auto& partyId : idPartyList)
+   const ClientPartyPtr clientPartyPtr = getClientPartyByHash(compareCb);
+
+   if (nullptr == clientPartyPtr)
    {
-      const ClientPartyPtr clientPartyPtr = getClientPartyById(partyId);
-
-      if (clientPartyPtr && clientPartyPtr->partyCreatorHash() == creatorHash)
-      {
-         return clientPartyPtr;
-      }
+      emit error(ClientPartyModelError::PartyCreatorHashNotFound, creatorHash);
    }
 
-   emit error(ClientPartyModelError::PartyCreatorHashNotFound, creatorHash);
-
-   return nullptr;
+   return clientPartyPtr;
 }
 
 ClientPartyPtr ClientPartyModel::getClientPartyByUserHash(const std::string& userHash)
+{
+   const std::function<bool(const ClientPartyPtr&)> compareCb = [userHash](const ClientPartyPtr& cp) {
+      return cp->userHash() == userHash; 
+   };
+
+   const ClientPartyPtr clientPartyPtr = getClientPartyByHash(compareCb);
+
+   if (nullptr == clientPartyPtr)
+   {
+      emit error(ClientPartyModelError::UserHashNotFound, userHash);
+   }
+
+   return clientPartyPtr;
+}
+
+ClientPartyPtr ClientPartyModel::getClientPartyByHash(const std::function<bool(const ClientPartyPtr&)>& compareCb)
 {
    const IdPartyList idPartyList = getIdPartyList();
 
@@ -217,13 +230,11 @@ ClientPartyPtr ClientPartyModel::getClientPartyByUserHash(const std::string& use
    {
       const ClientPartyPtr clientPartyPtr = getClientPartyById(partyId);
 
-      if (clientPartyPtr && clientPartyPtr->userHash() == userHash)
+      if (clientPartyPtr && compareCb(clientPartyPtr))
       {
          return clientPartyPtr;
       }
    }
-
-   emit error(ClientPartyModelError::UserHashNotFound, userHash);
 
    return nullptr;
 }

@@ -74,6 +74,7 @@ namespace Chat
       
    private:
       ClientPartyPtr castToClientPartyPtr(const PartyPtr& partyPtr);
+      ClientPartyPtr getClientPartyByHash(const std::function<bool(const ClientPartyPtr&)>& compareCb);
       std::string ownUserName_;
    };
 
