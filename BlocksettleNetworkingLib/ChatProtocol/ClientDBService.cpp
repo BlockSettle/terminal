@@ -7,6 +7,7 @@ ClientDBService::ClientDBService(QObject* parent /* = nullptr */)
 {
    qRegisterMetaType<Chat::ApplicationSettingsPtr>();
    qRegisterMetaType<Chat::CryptManagerPtr>();
+   qRegisterMetaType<Chat::PartyRecipientsPtrList>();
 
    ////////// PROXY SIGNALS //////////
    connect(this, &ClientDBService::Init, worker(), &ClientDBLogic::Init);
@@ -18,6 +19,8 @@ ClientDBService::ClientDBService(QObject* parent /* = nullptr */)
    connect(this, &ClientDBService::loadPartyDisplayName, worker(), &ClientDBLogic::loadPartyDisplayName);
    connect(this, &ClientDBService::checkUnsentMessages, worker(), &ClientDBLogic::checkUnsentMessages);
    connect(this, &ClientDBService::readHistoryMessages, worker(), &ClientDBLogic::readHistoryMessages);
+   connect(this, &ClientDBService::saveRecipientsKeys, worker(), &ClientDBLogic::saveRecipientsKeys);
+   connect(this, &ClientDBService::deleteRecipientsKeys, worker(), &ClientDBLogic::deleteRecipientsKeys);
 
    ////////// RETURN SIGNALS //////////
    connect(worker(), &ClientDBLogic::initDone, this, &ClientDBService::initDone);

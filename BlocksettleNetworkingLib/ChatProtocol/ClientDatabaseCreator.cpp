@@ -64,7 +64,7 @@ const static QMap <QString, TableStructure> clientTablesMap{
       {
          { //Table columns
             {user::kUserTableId, QStringLiteral("INTEGER PRIMARY KEY AUTOINCREMENT")},
-            {user::kUserHash, QStringLiteral("TEXT NOT NULL")},
+            {user::kUserHash, QStringLiteral("TEXT NOT NULL UNIQUE")},
             {user::kPublicKey, QStringLiteral("TEXT NOT NULL")},
             {user::kPublicKeyTimestamp, QStringLiteral("INTEGER NOT NULL")}
          }

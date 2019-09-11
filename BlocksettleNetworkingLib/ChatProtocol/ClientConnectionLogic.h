@@ -111,6 +111,7 @@ namespace Chat
       void incomingGlobalPartyMessage(PartyMessagePacket& msg);
       void incomingPrivatePartyMessage(PartyMessagePacket& partyMessagePacket);
       void saveIncomingPartyMessageAndUpdateState(PartyMessagePacket& msg, const PartyMessageState& partyMessageState);
+      void saveRecipientsKeys(const ClientPartyPtr& clientPartyPtr);
 
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;

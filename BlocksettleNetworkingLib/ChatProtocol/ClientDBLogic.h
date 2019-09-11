@@ -8,6 +8,7 @@
 #include "ChatProtocol/CryptManager.h"
 #include "ChatProtocol/ChatUser.h"
 #include "ChatProtocol/Message.h"
+#include "ChatProtocol/PartyRecipient.h"
 
 class QSqlDatabase;
 class ApplicationSettings;
@@ -28,7 +29,9 @@ namespace Chat
       UpdatePartyDisplayName,
       CheckUnsentMessages,
       ReadHistoryMessages,
-      CannotOpenDatabase
+      CannotOpenDatabase,
+      InsertRecipientKey,
+      DeleteRecipientKey
    };
 
    class ClientDBLogic : public DatabaseExecutor
@@ -50,6 +53,8 @@ namespace Chat
       void loadPartyDisplayName(const std::string& partyId);
       void checkUnsentMessages(const std::string& partyId);
       void readHistoryMessages(const std::string& partyId, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
+      void saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
+      void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
 
    signals:
       void initDone();

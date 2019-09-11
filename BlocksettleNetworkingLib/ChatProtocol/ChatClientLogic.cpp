@@ -283,6 +283,16 @@ void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
       return;
    }
 
+   // TODO: remove party and all messages
+
+   // if party in rejected state then remove recipients public keys, we don't need them anymore
+   ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyId);
+   if (clientPartyPtr && clientPartyPtr->isPrivateStandard())
+   {
+      PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr_->userName());
+      clientDBServicePtr_->deleteRecipientsKeys(recipients);
+   }
+
    clientPartyModelPtr->removeParty(partyPtr);
 }
 

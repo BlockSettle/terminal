@@ -10,8 +10,6 @@
 #include "ChatProtocol/CryptManager.h"
 #include "ChatProtocol/Message.h"
 
-#include <google/protobuf/message.h>
-
 namespace spdlog
 {
    class logger;
@@ -39,6 +37,8 @@ namespace Chat
       void loadPartyDisplayName(const std::string& partyId);
       void checkUnsentMessages(const std::string& partyId);
       void readHistoryMessages(const std::string& partyId, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
+      void saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
+      void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
 
       ////////// RETURN SIGNALS //////////
       void initDone();
@@ -53,6 +53,7 @@ namespace Chat
    using ClientDBServicePtr = std::shared_ptr<ClientDBService>;
 }
 
-Q_DECLARE_METATYPE(Chat::ApplicationSettingsPtr);
+Q_DECLARE_METATYPE(Chat::ApplicationSettingsPtr)
+Q_DECLARE_METATYPE(Chat::PartyRecipientsPtrList)
 
 #endif // CLIENTDBSERVICE_H

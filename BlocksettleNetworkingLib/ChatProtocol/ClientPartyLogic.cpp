@@ -204,11 +204,20 @@ void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserP
       if (PartyState::REJECTED == oldClientPartyPtr->partyState() && oldClientPartyPtr->isPrivateStandard())
       {
          emit deletePrivateParty(oldClientPartyPtr->id());
+
+         // delete old recipients keys
+         PartyRecipientsPtrList oldRecipients = oldClientPartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
+         clientDBServicePtr_->deleteRecipientsKeys(oldRecipients);
       }
    }
 
    // update model
    clientPartyModelPtr_->insertParty(newClientPrivatePartyPtr);
+
+   // update recipients keys
+   PartyRecipientsPtrList remoteRecipients = newClientPrivatePartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
+   clientDBServicePtr_->saveRecipientsKeys(remoteRecipients);
+
    emit partyModelChanged();
 
    // save party in db
@@ -263,3 +272,4 @@ void ClientPartyLogic::loggedOutFromServer()
       }
    }
 }
+

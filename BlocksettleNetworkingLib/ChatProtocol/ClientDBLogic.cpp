@@ -395,3 +395,40 @@ void ClientDBLogic::readHistoryMessages(const std::string& partyId, const int li
 
    emit messageArrived(messagePtrList);
 }
+
+void ClientDBLogic::saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients)
+{
+   const QString cmd = QStringLiteral("INSERT INTO user (user_hash, public_key, public_key_timestamp) "
+      "VALUES (:user_hash, :public_key, :public_key_timestamp);");
+
+   for (const auto& recipient : recipients)
+   {
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userName()));
+      query.bindValue(QStringLiteral(":public_key"), QString::fromStdString(recipient->publicKey().toHexStr()));
+      query.bindValue(QStringLiteral(":public_key_timestamp"), qint64(recipient->publicKeyTime().toMSecsSinceEpoch()));
+
+      if (!checkExecute(query))
+      {
+         emit error(ClientDBLogicError::InsertRecipientKey, recipient->userName());
+      }
+   }
+}
+
+void ClientDBLogic::deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients)
+{
+   const QString cmd = QStringLiteral("DELETE FROM user WHERE user_hash=:user_hash;");
+
+   for (const auto& recipient : recipients)
+   {
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userName()));
+
+      if (!checkExecute(query))
+      {
+         emit error(ClientDBLogicError::DeleteRecipientKey, recipient->userName());
+      }
+   }
+}

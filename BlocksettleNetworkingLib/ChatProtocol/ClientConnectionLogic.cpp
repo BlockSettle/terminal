@@ -415,7 +415,8 @@ void ClientConnectionLogic::handlePrivatePartyRequest(const PrivatePartyRequest&
    // 1. check if model have this same party id
    // 2. if have and local party state is initialized then reply initialized state
    // 3. if not create new private party
-   // 4. save party id in db
+   // 4. save updated recipients keys in db
+   // 5. save party id in db
 
    ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
    PartyPtr partyPtr = clientPartyModelPtr->getClientPartyById(privatePartyRequest.party_packet().party_id());
@@ -444,6 +445,9 @@ void ClientConnectionLogic::handlePrivatePartyRequest(const PrivatePartyRequest&
          }
 
          clientPartyPtr->setRecipients(updatedRecipients);
+
+         // Save recipient keys in db
+         saveRecipientsKeys(clientPartyPtr);
 
          return;
       }
@@ -689,4 +693,11 @@ void ClientConnectionLogic::searchUser(const std::string& userHash, const std::s
    requestSearchUser.set_search_text(userHash);
 
    emit sendPacket(requestSearchUser);
+}
+
+void ClientConnectionLogic::saveRecipientsKeys(const ClientPartyPtr& clientPartyPtr)
+{
+   const PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr()->userName());
+
+   clientDBServicePtr_->saveRecipientsKeys(recipients);
 }
