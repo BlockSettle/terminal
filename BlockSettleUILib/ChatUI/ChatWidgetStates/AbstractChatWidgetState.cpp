@@ -2,6 +2,7 @@
 #include "NotificationCenter.h"
 #include "ChatUI/ChatPartiesTreeModel.h"
 #include "ChatUI/ChatOTCHelper.h"
+#include "OtcClient.h"
 
 namespace {
    const int kMaxMessageNotifLength = 20;
@@ -292,7 +293,7 @@ void AbstractChatWidgetState::updateOtc()
       return;
    }
 
-   auto peer = chat_->otcHelper_->getPeer(chat_->currentPartyId_);
+   const bs::network::otc::Peer* peer = chat_->otcHelper_->getPeer(chat_->currentPartyId_);
    if (!peer) {
       chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
       return;
