@@ -44,7 +44,7 @@ void PartyModel::removeParty(const PartyPtr& partyPtr)
       return;
    }
 
-   emit error(PartyModelError::RemovingNonexistingParty, partyPtr->id());
+   emit error(PartyModelError::RemovingNonexistingParty, partyPtr->id(), true);
 }
 
 PartyPtr PartyModel::getPartyById(const std::string& party_id)
@@ -83,9 +83,11 @@ PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& 
    return privateDMPartyPtr;
 }
 
-void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what)
+void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what, bool displayAsWarning)
 {
-   loggerPtr_->debug("[PartyModel::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
+   const std::string displayAs = displayAsWarning ? WarningDescription : ErrorDescription;
+
+   loggerPtr_->debug("[PartyModel::handleLocalErrors] {}: {}, what: {}", displayAs, (int)errorCode, what);
 }
 
 void PartyModel::clearModel()

@@ -210,9 +210,11 @@ void ClientConnectionLogic::prepareAndSendPublicMessage(const ClientPartyPtr& cl
    emit sendPacket(partyMessagePacket);
 }
 
-void ClientConnectionLogic::handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what)
+void ClientConnectionLogic::handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what, bool displayAsWarning)
 {
-   loggerPtr_->debug("[ClientConnectionLogic::handleLocalErrors] Error: {}, what: {}", static_cast<int>(errorCode), what);
+   const std::string displayAs = displayAsWarning ? WarningDescription : ErrorDescription;
+
+   loggerPtr_->debug("[ClientConnectionLogic::handleLocalErrors] {}: {}, what: {}", displayAs, static_cast<int>(errorCode), what);
 }
 
 void ClientConnectionLogic::handlePartyMessagePacket(PartyMessagePacket& partyMessagePacket)
@@ -296,7 +298,7 @@ void ClientConnectionLogic::saveIncomingPartyMessageAndUpdateState(PartyMessageP
 
    if (nullptr == partyPtr)
    {
-      emit error(ClientConnectionLogicError::CouldNotFindParty, partyMessagePacket.party_id());
+      emit error(ClientConnectionLogicError::CouldNotFindParty, partyMessagePacket.party_id(), true);
       return;
    }
 
@@ -661,7 +663,7 @@ void ClientConnectionLogic::handlePrivatePartyStateChanged(const PrivatePartySta
 
    if (nullptr == clientPartyPtr)
    {
-      emit error(ClientConnectionLogicError::CouldNotFindParty, privatePartyStateChanged.party_id());
+      emit error(ClientConnectionLogicError::CouldNotFindParty, privatePartyStateChanged.party_id(), true);
       return;
    }
 

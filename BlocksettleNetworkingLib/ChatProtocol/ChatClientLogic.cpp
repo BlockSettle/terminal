@@ -42,6 +42,7 @@ void ChatClientLogic::initDbDone()
    connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::partyModelChanged, this, &ChatClientLogic::partyModelChanged);
    connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::privatePartyCreated, this, &ChatClientLogic::privatePartyCreated);
    connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::privatePartyAlreadyExist, this, &ChatClientLogic::privatePartyAlreadyExist);
+   connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::deletePrivateParty, this, &ChatClientLogic::DeletePrivateParty);
    connect(this, &ChatClientLogic::clientLoggedOutFromServer, clientPartyLogicPtr_.get(), &ClientPartyLogic::loggedOutFromServer);
 
    clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr_, applicationSettingsPtr_, clientDBServicePtr_, loggerPtr_, cryptManagerPtr_, this);
@@ -273,8 +274,8 @@ void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
    clientConnectionLogicPtr_->rejectPrivateParty(partyId);
 
    // then delete local
-   ClientPartyModelPtr clientPartModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
-   PartyPtr partyPtr = clientPartModelPtr->getPartyById(partyId);
+   ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+   PartyPtr partyPtr = clientPartyModelPtr->getPartyById(partyId);
 
    if (nullptr == partyPtr)
    {
@@ -282,7 +283,7 @@ void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
       return;
    }
 
-   clientPartModelPtr->removeParty(partyPtr);
+   clientPartyModelPtr->removeParty(partyPtr);
 }
 
 void ChatClientLogic::SearchUser(const std::string& userHash, const std::string& searchId)

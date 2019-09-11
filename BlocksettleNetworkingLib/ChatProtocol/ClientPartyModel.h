@@ -22,6 +22,8 @@ namespace Chat
    {
       DynamicPointerCast,
       UserNameNotFound,
+      UserHashNotFound,
+      PartyCreatorHashNotFound,
       QObjectCast,
       PartyNotFound
    };
@@ -47,13 +49,15 @@ namespace Chat
       IdPartyList getIdPartyList() const;
       ClientPartyPtr getPartyByUserName(const std::string& userName);
       ClientPartyPtr getClientPartyById(const std::string& party_id);
+      ClientPartyPtr getClientPartyByCreatorHash(const std::string& creatorHash);
+      ClientPartyPtr getClientPartyByUserHash(const std::string& userHash);
 
       const std::string& ownUserName() const { return ownUserName_; }
       void setOwnUserName(std::string val) { ownUserName_ = val; }
       PrivatePartyState deducePrivatePartyStateForUser(const std::string& userName);
 
    signals:
-      void error(const Chat::ClientPartyModelError& errorCode, const std::string& what = "");
+      void error(const Chat::ClientPartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false);
       void clientPartyStatusChanged(const ClientPartyPtr& clientPartyPtr);
       void messageArrived(const Chat::MessagePtrList& messagePtr);
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
@@ -61,7 +65,7 @@ namespace Chat
       void clientPartyDisplayNameChanged(const std::string& partyId);
 
    private slots:
-      void handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what);
+      void handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false);
       void handlePartyInserted(const PartyPtr& partyPtr);
       void handlePartyRemoved(const PartyPtr& partyPtr);
       void handlePartyStatusChanged(const ClientStatus& clientStatus);

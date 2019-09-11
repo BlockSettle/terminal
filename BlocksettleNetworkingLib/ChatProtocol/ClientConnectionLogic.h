@@ -80,12 +80,12 @@ namespace Chat
       void sendPacket(const google::protobuf::Message& message);
       void closeConnection();
       void userStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
-      void error(const Chat::ClientConnectionLogicError& errorCode, const std::string& what);
+      void error(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "", bool displayAsWarning = false);
       void properlyConnected();
       void searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
 
    private slots:
-      void handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "");
+      void handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "", bool displayAsWarning = false);
       void messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
          const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);
       void unsentMessagesFound(const std::string& partyId);

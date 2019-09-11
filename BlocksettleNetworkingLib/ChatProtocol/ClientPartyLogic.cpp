@@ -196,6 +196,17 @@ void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserP
 
    newClientPrivatePartyPtr->setRecipients(recipients);
 
+   // check if already exist party in rejected state with this same user
+   ClientPartyPtr oldClientPartyPtr = clientPartyModelPtr_->getClientPartyByUserHash(newClientPrivatePartyPtr->partyCreatorHash());
+   if (nullptr != oldClientPartyPtr)
+   {
+      // exist one, checking party state
+      if (PartyState::REJECTED == oldClientPartyPtr->partyState() && oldClientPartyPtr->isPrivateStandard())
+      {
+         emit deletePrivateParty(oldClientPartyPtr->id());
+      }
+   }
+
    // update model
    clientPartyModelPtr_->insertParty(newClientPrivatePartyPtr);
    emit partyModelChanged();

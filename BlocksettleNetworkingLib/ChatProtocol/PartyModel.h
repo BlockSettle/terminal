@@ -14,6 +14,11 @@ namespace spdlog
    class logger;
 }
 
+namespace {
+   static const std::string ErrorDescription = "Error";
+   static const std::string WarningDescription = "Warning";
+}
+
 namespace Chat
 {
    using PartyMap = std::unordered_map<std::string, PartyPtr>;
@@ -45,11 +50,11 @@ namespace Chat
    signals:
       void partyInserted(const Chat::PartyPtr& partyPtr);
       void partyRemoved(const Chat::PartyPtr& partyPtr);
-      void error(const Chat::PartyModelError& errorCode, const std::string& what = "");
+      void error(const Chat::PartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false);
       void partyModelChanged();
 
    private slots:
-      void handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what = "");
+      void handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false);
 
    protected:
       PartyMap partyMap_;

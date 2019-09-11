@@ -50,6 +50,7 @@ namespace Chat
       void sendPartyMessagePacket(const google::protobuf::Message& message);
       void privatePartyCreated(const std::string& partyId);
       void privatePartyAlreadyExist(const std::string& partyId);
+      void deletePrivateParty(const std::string& partyId);
 
    public slots:
       void onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
