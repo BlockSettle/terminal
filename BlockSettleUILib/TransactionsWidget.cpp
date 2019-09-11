@@ -122,6 +122,26 @@ public:
       return true;   // strange, but it works properly only this way
    }
 
+   bool lessThan(const QModelIndex &left, const QModelIndex &right) const override
+   {
+      if (left.column() == static_cast<int>(TransactionsViewModel::Columns::Status)) {
+         QVariant leftData = sourceModel()->data(left, TransactionsViewModel::SortRole);
+         QVariant rightData = sourceModel()->data(right, TransactionsViewModel::SortRole);
+
+         if (leftData == rightData) {
+            // if sorting by confirmations, and values are equal, perform sorting by date in descending order
+            const QModelIndex leftDateIdx = sourceModel()->index(left.row(), static_cast<int>(TransactionsViewModel::Columns::Date));
+            const QModelIndex rightDateIdx = sourceModel()->index(right.row(), static_cast<int>(TransactionsViewModel::Columns::Date));
+            const auto lDate = sourceModel()->data(leftDateIdx, TransactionsViewModel::SortRole);
+            const auto rDate = sourceModel()->data(rightDateIdx, TransactionsViewModel::SortRole);
+
+            return lDate > rDate;
+         }
+      }
+
+      return QSortFilterProxyModel::lessThan(left, right);
+   }
+
    void updateFilters(const QStringList &walletIds, const QString &searchString, bs::sync::Transaction::Direction direction)
    {
       this->walletIds = walletIds;
