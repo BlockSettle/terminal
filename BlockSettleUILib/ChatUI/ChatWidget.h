@@ -11,9 +11,9 @@ class AbstractChatWidgetState;
 class ArmoryConnection;
 class ChatPartiesTreeModel;
 class OTCRequestViewModel;
-class OtcClient;
 class SignContainer;
 class WalletsM;
+class ChatOTCHelper;
 
 namespace Ui {
    class ChatWidget;
@@ -42,14 +42,14 @@ public:
       , const std::shared_ptr<SignContainer> &signContainer);
 
    std::string login(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb&);
-   void onConnectedToServer();
 
 protected:
    void showEvent(QShowEvent* e) override;
    bool eventFilter(QObject* sender, QEvent* event) override;
 
 public slots:
-   void processOtcPbMessage(const std::string& data);
+   void onProcessOtcPbMessage(const std::string& data);
+   void onSendOtcMessage(const std::string& partyId, const BinaryData& data);
 
    void onNewChatMessageTrayNotificationClicked(const QString& partyId);
 
@@ -77,7 +77,7 @@ private slots:
    void onNewPartyRequest(const std::string& userName);
    void onRemovePartyRequest(const std::string& partyId);
 
-   void onOtcUpdated(const std::string &partyId);
+   void onOtcUpdated(const std::string& partyId);
 
    void onOtcRequestSubmit();
    void onOtcRequestPull();
@@ -115,22 +115,18 @@ protected:
 
 private:
    void chatTransition(const Chat::ClientPartyPtr& clientPartyPtr);
-   void updateOtc();
 
    QScopedPointer<Ui::ChatWidget> ui_;
    Chat::ChatClientServicePtr    chatClientServicePtr_;
    OTCRequestViewModel* otcRequestViewModel_ = nullptr;
+   QPointer<ChatOTCHelper> otcHelper_{};
    std::shared_ptr<spdlog::logger>  loggerPtr_;
    std::shared_ptr<ChatPartiesTreeModel> chatPartiesTreeModel_;
 
    std::string ownUserId_;
    std::string  currentPartyId_;
    QMap<std::string, QString> draftMessages_;
-
    bool bNeedRefresh_ = false;
-
-   OtcClient *otcClient_{};
-   std::set<std::string> connectedPeers_;
 };
 
 #endif // CHAT_WIDGET_H

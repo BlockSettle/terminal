@@ -721,7 +721,8 @@ BinaryData ValidationAddressManager::revokeUserAddress(
    */
 
    //1: find validation address vetting this address
-   auto paths = AuthAddressLogic::getValidPaths(*this, addr);
+   size_t foo;
+   auto paths = AuthAddressLogic::getValidPaths(*this, addr, foo);
    if (paths.size() != 1) {
       throw AuthLogicException("invalid user auth address");
    }
@@ -853,9 +854,10 @@ const bs::Address& ValidationAddressManager::findValidationAddressForTxHash(
 
 ///////////////////////////////////////////////////////////////////////////////
 std::vector<OutpointData> AuthAddressLogic::getValidPaths(
-   const ValidationAddressManager& vam, const bs::Address& addr)
+   const ValidationAddressManager& vam, const bs::Address& addr, size_t &nbPaths)
 {
    std::vector<OutpointData> validPaths;
+   nbPaths = 0;
 
    //get txout history for address
    auto promPtr = std::make_shared<std::promise<
@@ -877,6 +879,7 @@ std::vector<OutpointData> AuthAddressLogic::getValidPaths(
    }
 
    auto& opVec = opMap.begin()->second;
+   nbPaths = opVec.size();
 
    //check all spent outputs vs ValidationAddressManager
    for (auto& outpoint : opVec) {
@@ -931,11 +934,13 @@ AddressVerificationState AuthAddressLogic::getAuthAddrState(
    }
 
    try {
-      auto&& validPaths = getValidPaths(vam, addr);
+      size_t nbPaths = 0;
+      auto&& validPaths = getValidPaths(vam, addr, nbPaths);
 
       //is there only 1 valid path?
       if (validPaths.empty()) {
-         return AddressVerificationState::NotSubmitted;
+         return (nbPaths > 0) ? AddressVerificationState::Revoked
+            : AddressVerificationState::NotSubmitted;
       }
       else if (validPaths.size() > 1) {
          return AddressVerificationState::Revoked;
@@ -950,7 +955,7 @@ AddressVerificationState AuthAddressLogic::getAuthAddrState(
       }
       return AddressVerificationState::PendingVerification;
    }
-   catch (AuthLogicException&) { }
+   catch (const AuthLogicException &) { }
 
    return AddressVerificationState::NotSubmitted;
 }
@@ -960,7 +965,8 @@ std::pair<bs::Address, UTXO> AuthAddressLogic::getRevokeData(
    const ValidationAddressManager &vam, const bs::Address &addr)
 {
    //get valid paths for address
-   auto&& validPaths = getValidPaths(vam, addr);
+   size_t foo;
+   auto&& validPaths = getValidPaths(vam, addr, foo);
 
    //is there only 1 valid path?
    if (validPaths.size() != 1) {
@@ -1045,7 +1051,8 @@ BinaryData AuthAddressLogic::revoke(const bs::Address &addr
    */
    signer.addSpender(std::make_shared<ScriptSpender>(revokeUtxo));
 
-   signer.addRecipient(validationAddr.getRecipient(revokeUtxo.getValue() / 2));
+   const std::string opReturnMsg = "BlockSettle Terminal revoke";
+   signer.addRecipient(std::make_shared<Recipient_OPRETURN>(opReturnMsg));
 
    signer.sign();
    return signer.serialize();

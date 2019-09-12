@@ -31,6 +31,7 @@ public:
       applyUserFrameChange();
       applyChatFrameChange();
       applyRoomsFrameChange();
+      updateOtc();
    }
 
 protected:
@@ -53,6 +54,17 @@ public:
    void onNewPartyRequest(const std::string& partyName);
    void onUpdateDisplayName(const std::string& partyId, const std::string& contactName);
 
+
+   // OTC
+   void onSendOtcMessage(const std::string &partyId, const std::string& data);
+   void onProcessOtcPbMessage(const std::string& data);
+   void onOtcUpdated(const std::string &partyId);
+   void onOtcRequestSubmit();
+   void onOtcRequestPull();
+   void onOtcResponseAccept();
+   void onOtcResponseUpdate();
+   void onOtcResponseReject();
+
 protected:
 
    virtual bool canSendMessage() const { return false; }
@@ -66,9 +78,14 @@ protected:
    virtual bool canSendPartyRequest() const { return true; }
    virtual bool canRemovePartyRequest() const { return true; }
    virtual bool canUpdatePartyName() const { return true; }
+   virtual bool canPerformOTCOperations() const { return false; }
 
    void saveDraftMessage();
    void restoreDraftMessage();
+
+   void updateOtc();
+
+   Chat::ClientPartyPtr getParty(const std::string& partyId) const;
 
    ChatWidget* chat_;
 };

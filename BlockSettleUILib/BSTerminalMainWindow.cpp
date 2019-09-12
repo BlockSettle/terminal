@@ -1134,7 +1134,7 @@ void BSTerminalMainWindow::onLogin()
 
    LoadCCDefinitionsFromPuB();
 
-   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::processOtcPbMessage);
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
    connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
 }
 

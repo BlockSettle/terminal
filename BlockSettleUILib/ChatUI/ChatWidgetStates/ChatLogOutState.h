@@ -2,6 +2,7 @@
 #define CHATLOGOUTSTATE_H
 
 #include "AbstractChatWidgetState.h"
+#include "ChatUI/ChatOTCHelper.h"
 
 class ChatLogOutState : public AbstractChatWidgetState {
 public:
@@ -29,11 +30,12 @@ protected:
       chat_->draftMessages_.clear();
    }
    void applyRoomsFrameChange() override {
-      chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
+      if (chat_->otcHelper_) {
+         chat_->otcHelper_->onLogout();
+      }
    }
 
    bool canReceiveMessage() const override { return false; }
-   bool canChangePartyStatus() const override { return false; }
    bool canResetReadMessage() const override { return false; }
    bool canResetPartyModel() const override { return false; }
    bool canChangeMessageState() const override { return false; }
