@@ -19,6 +19,7 @@ using namespace Blocksettle::Communication::Otc;
 using namespace Blocksettle::Communication;
 using namespace bs::network;
 using namespace bs::network::otc;
+using namespace bs::sync::dialog;
 
 namespace {
 
@@ -39,34 +40,34 @@ namespace {
 
       bs::sync::PasswordDialogData dialogData;
 
-      dialogData.setValue("ProductGroup", QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)));
-      dialogData.setValue("Security", QString::fromStdString("XBT/EUR"));
-      dialogData.setValue("Product", QString::fromStdString("XBT"));
-      dialogData.setValue("Side", QObject::tr(bs::network::Side::toString(side)));
+      dialogData.setValue(keys::ProductGroup, QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)));
+      dialogData.setValue(keys::Security, QString::fromStdString("XBT/EUR"));
+      dialogData.setValue(keys::Product, QString::fromStdString("XBT"));
+      dialogData.setValue(keys::Side, QObject::tr(bs::network::Side::toString(side)));
 
-      dialogData.setValue("Title", QObject::tr("Settlement Transaction"));
+      dialogData.setValue(keys::Title, QObject::tr("Settlement Transaction"));
 
-      dialogData.setValue("Price", UiUtils::displayPriceXBT(price));
-      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount, UiUtils::XbtCurrency));
+      dialogData.setValue(keys::Price, UiUtils::displayPriceXBT(price));
+      dialogData.setValue(keys::TransactionAmount, UiUtils::displayQuantity(amount, UiUtils::XbtCurrency));
 
-      dialogData.setValue("Quantity", QObject::tr("%1 %2")
+      dialogData.setValue(keys::Quantity, QObject::tr("%1 %2")
                           .arg(UiUtils::displayAmountForProduct(amount, qtyProd, bs::network::Asset::Type::SpotXBT))
                           .arg(qtyProd));
-      dialogData.setValue("TotalValue", QObject::tr("%1 %2")
+      dialogData.setValue(keys::TotalValue, QObject::tr("%1 %2")
                     .arg(UiUtils::displayAmountForProduct(amount * price, fxProd, bs::network::Asset::Type::SpotXBT))
                     .arg(fxProd));
 
 
       // tx details
       if (side == bs::network::Side::Type::Sell) {
-         dialogData.setValue("TotalSpent", UiUtils::displayQuantity(amount + fee, UiUtils::XbtCurrency));
+         dialogData.setValue(keys::TotalSpent, UiUtils::displayQuantity(amount + fee, UiUtils::XbtCurrency));
       }
       else {
-         dialogData.setValue("TotalReceived", UiUtils::displayQuantity(amount - fee, UiUtils::XbtCurrency));
+         dialogData.setValue(keys::TotalReceived, UiUtils::displayQuantity(amount - fee, UiUtils::XbtCurrency));
       }
 
-      dialogData.setValue("TransactionAmount", UiUtils::displayQuantity(amount, UiUtils::XbtCurrency));
-      dialogData.setValue("NetworkFee", UiUtils::displayQuantity(fee, UiUtils::XbtCurrency));
+      dialogData.setValue(keys::TransactionAmount, UiUtils::displayQuantity(amount, UiUtils::XbtCurrency));
+      dialogData.setValue(keys::NetworkFee, UiUtils::displayQuantity(fee, UiUtils::XbtCurrency));
 
       return dialogData;
    }

@@ -30,6 +30,8 @@ namespace {
 } // namespace
 
 using namespace Blocksettle::Communication;
+using namespace bs::sync::dialog;
+
 Q_DECLARE_METATYPE(headless::RequestPacket)
 Q_DECLARE_METATYPE(std::shared_ptr<bs::sync::hd::Leaf>)
 
@@ -583,7 +585,7 @@ bs::signer::RequestId HeadlessContainer::setUserId(const BinaryData &userId, con
    }
 
    bs::sync::PasswordDialogData info;
-   info.setValue("WalletId", QString::fromStdString(walletId));
+   info.setValue(keys::WalletId, QString::fromStdString(walletId));
 
    headless::SetUserIdRequest request;
    auto dialogData = request.mutable_passworddialogdata();
@@ -629,7 +631,7 @@ bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::
          request.set_salt(pwData[0].salt.toBinStr());
       }
    }
-   dialogData.setValue(QLatin1String("WalletId"), QString::fromStdString(rootWalletId));
+   dialogData.setValue(keys::WalletId, QString::fromStdString(rootWalletId));
 
    auto requestDialogData = request.mutable_passworddialogdata();
    *requestDialogData = dialogData.toProtobufMessage();
@@ -660,7 +662,7 @@ bool HeadlessContainer::promoteHDWallet(const std::string& rootWalletId
    request.set_rootwalletid(rootWalletId);
    request.set_user_id(userId.toBinStr());
 
-   dialogData.setValue(QLatin1String("WalletId"), QString::fromStdString(rootWalletId));
+   dialogData.setValue(keys::WalletId, QString::fromStdString(rootWalletId));
 
    auto requestDialogData = request.mutable_passworddialogdata();
    *requestDialogData = dialogData.toProtobufMessage();

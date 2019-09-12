@@ -12,6 +12,8 @@
 
 static const unsigned int kWaitTimeoutInSec = 30;
 
+using namespace bs::sync::dialog;
+
 ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AssetManager> &assetMgr
@@ -59,66 +61,66 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
 
-   dialogData.remove("SettlementId");
+   dialogData.remove(keys::SettlementId);
 
    if (side() == bs::network::Side::Sell) {
-      dialogData.setValue("Title", tr("Settlement Delivery"));
+      dialogData.setValue(keys::Title, tr("Settlement Delivery"));
    }
    else {
-      dialogData.setValue("Title", tr("Settlement Payment"));
+      dialogData.setValue(keys::Title, tr("Settlement Payment"));
    }
 
    // rfq details
-   dialogData.setValue("Price", UiUtils::displayPriceCC(price()));
+   dialogData.setValue(keys::Price, UiUtils::displayPriceCC(price()));
 
-   dialogData.setValue("Quantity", tr("%1 %2")
+   dialogData.setValue(keys::Quantity, tr("%1 %2")
                  .arg(UiUtils::displayCCAmount(quantity()))
                  .arg(QString::fromStdString(product())));
-   dialogData.setValue("TotalValue", UiUtils::displayAmount(quantity() * price()));
+   dialogData.setValue(keys::TotalValue, UiUtils::displayAmount(quantity() * price()));
 
    // tx details
    if (side() == bs::network::Side::Buy) {
-      dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
+      dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(ccTxData_.inputAmount())));
 
-      dialogData.setValue("ReturnAmount", QStringLiteral("+ %2 %1")
+      dialogData.setValue(keys::ReturnAmount, QStringLiteral("+ %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(ccTxData_.change.value)));
 
-      dialogData.setValue("PaymentAmount", QStringLiteral("- %2 %1")
+      dialogData.setValue(keys::PaymentAmount, QStringLiteral("- %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(ccTxData_.inputAmount() - ccTxData_.change.value)));
 
-      dialogData.setValue("DeliveryReceived", QStringLiteral("+ %2 %1")
+      dialogData.setValue(keys::DeliveryReceived, QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayCCAmount(quantity())));
    }
    else {
-      dialogData.setValue("InputAmount", QStringLiteral("- %2 %1")
+      dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount() / lotSize_)));
 
-      dialogData.setValue("ReturnAmount", QStringLiteral("+ %2 %1")
+      dialogData.setValue(keys::ReturnAmount, QStringLiteral("+ %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayCCAmount((ccTxData_.change.value / lotSize_))));
 
-      dialogData.setValue("DeliveryAmount", QStringLiteral("- %2 %1")
+      dialogData.setValue(keys::DeliveryAmount, QStringLiteral("- %2 %1")
                     .arg(QString::fromStdString(product()))
                     .arg(UiUtils::displayCCAmount((ccTxData_.inputAmount() - ccTxData_.change.value) / lotSize_)));
 
-      dialogData.setValue("PaymentReceived", QStringLiteral("+ %2 %1")
+      dialogData.setValue(keys::PaymentReceived, QStringLiteral("+ %2 %1")
                     .arg(UiUtils::XbtCurrency)
                     .arg(UiUtils::displayAmount(amount())));
    }
 
 
    // settlement details
-   dialogData.setValue("DeliveryUTXOVerified", genAddrVerified_);
-   dialogData.setValue("SigningAllowed", genAddrVerified_);
+   dialogData.setValue(keys::DeliveryUTXOVerified, genAddrVerified_);
+   dialogData.setValue(keys::SigningAllowed, genAddrVerified_);
 
-   dialogData.setValue("RecipientsList", true);
-   dialogData.setValue("InputsList", true);
+   dialogData.setValue(keys::RecipientsList, true);
+   dialogData.setValue(keys::InputsList, true);
 
    return dialogData;
 }
@@ -313,8 +315,8 @@ void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const 
    genAddrVerified_ = addressVerified;
 
    bs::sync::PasswordDialogData pd;
-   pd.setValue("DeliveryUTXOVerified", addressVerified);
-   pd.setValue("SigningAllowed", addressVerified);
+   pd.setValue(keys::DeliveryUTXOVerified, addressVerified);
+   pd.setValue(keys::SigningAllowed, addressVerified);
    signingContainer_->updateDialogData(pd);
 }
 
