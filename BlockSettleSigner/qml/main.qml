@@ -104,7 +104,6 @@ ApplicationWindow {
         CustomTabButton {
             id: btnSettings
             text: qsTr("Settings")
-
         }
 
         CustomTabButton {

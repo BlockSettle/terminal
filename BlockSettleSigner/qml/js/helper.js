@@ -476,12 +476,23 @@ function createTxSignDialog(jsCallback, txInfo, passwordDialogData, walletInfo) 
     dlg.init()
 }
 
-function createSettlementTransactionDialog(jsCallback, txInfo, passwordDialogData, walletInfo) {
-    var dlg = Qt.createComponent("../BsDialogs/SettlementTransactionDialog.qml").createObject(mainWindow
-            , {"txInfo": txInfo,
-               "passwordDialogData": passwordDialogData,
+function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, walletInfo) {
+    var dlg = null
+    if (passwordDialogData.value("Market") === "XBT") {
+        dlg = Qt.createComponent("../BsDialogs/TxSignSettlementXBTMarketDialog.qml").createObject(mainWindow
+           , {"txInfo": txInfo,
+              "passwordDialogData": passwordDialogData,
                "walletInfo": walletInfo
-              })
+        })
+    }
+    else if (passwordDialogData.value("Market") === "CC") {
+        dlg = Qt.createComponent("../BsDialogs/TxSignSettlementCCMarketDialog.qml").createObject(mainWindow
+           , {"txInfo": txInfo,
+              "passwordDialogData": passwordDialogData,
+               "walletInfo": walletInfo
+        })
+    }
+
     prepareLiteModeDialog(dlg)
 
     dlg.bsAccepted.connect(function() {

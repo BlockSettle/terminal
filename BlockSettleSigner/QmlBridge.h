@@ -21,7 +21,7 @@ namespace  {
    const QList<std::string> knownMethods =
    {
       "createTxSignDialog",
-      "createSettlementTransactionDialog",
+      "createTxSignSettlementDialog",
       "updateDialogData",
       "createPasswordDialogForType"
    };
