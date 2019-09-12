@@ -222,7 +222,7 @@ void AbstractChatWidgetState::onOtcRequestSubmit()
       return;
    }
 
-   chat_->otcHelper_->onOtcRequestSubmit(chat_->currentPartyId_, chat_->ui_->widgetNegotiateResponse->offer());
+   chat_->otcHelper_->onOtcRequestSubmit(chat_->currentPartyId_, chat_->ui_->widgetNegotiateRequest->offer());
 }
 
 void AbstractChatWidgetState::onOtcRequestPull()
