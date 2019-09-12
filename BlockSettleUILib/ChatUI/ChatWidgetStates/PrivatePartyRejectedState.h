@@ -18,9 +18,7 @@ protected:
       chat_->ui_->input_textEdit->setVisible(true);
       chat_->ui_->input_textEdit->setEnabled(false);
    }
-   void applyRoomsFrameChange() override {
-      // #new_logic : OTC shield?
-   }
+   void applyRoomsFrameChange() override {}
 };
 
 #endif // PRIVATEPARTYREJECTEDSTATE_H
