@@ -161,7 +161,7 @@ void ClientConnectionLogic::handleStatusChanged(const StatusChanged& statusChang
    // clear session keys for user
    sessionKeyHolderPtr_->clearSessionForUser(statusChanged.user_name());
 
-   emit userStatusChanged(statusChanged.user_name(), statusChanged.client_status());
+   emit userStatusChanged(statusChanged);
 }
 
 void ClientConnectionLogic::handlePartyMessageStateUpdate(const PartyMessageStateUpdate& partyMessageStateUpdate)
@@ -548,7 +548,7 @@ void ClientConnectionLogic::sessionKeysForUser(const Chat::SessionKeyDataPtr& se
 void ClientConnectionLogic::sessionKeysForUserFailed(const std::string& userName)
 {
    // ! not implemented
-   // this function is called after sendmessage
+   // this function is called after send message
 }
 
 void ClientConnectionLogic::messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,

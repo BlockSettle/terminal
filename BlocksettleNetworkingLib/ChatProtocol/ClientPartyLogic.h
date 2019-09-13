@@ -51,9 +51,10 @@ namespace Chat
       void privatePartyCreated(const std::string& partyId);
       void privatePartyAlreadyExist(const std::string& partyId);
       void deletePrivateParty(const std::string& partyId);
+      void userPublicKeyChanged(const ClientPartyPtr& clientPartyPtr, const std::string& newPublicKeyHex, const QDateTime& newPublicKeyTime);
 
    public slots:
-      void onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
+      void onUserStatusChanged(const StatusChanged& statusChanged);
       void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
       void loggedOutFromServer();
 

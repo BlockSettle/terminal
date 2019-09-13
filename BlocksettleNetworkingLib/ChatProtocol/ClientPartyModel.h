@@ -64,6 +64,7 @@ namespace Chat
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
       void partyStateChanged(const std::string& partyId);
       void clientPartyDisplayNameChanged(const std::string& partyId);
+      void userPublicKeyChanged(const ClientPartyPtr& clientPartyPtr, const std::string& newPublicKeyHex, const QDateTime& newPublicKeyTime);
 
    private slots:
       void handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false);

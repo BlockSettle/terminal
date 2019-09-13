@@ -28,6 +28,7 @@ ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBSer
    connect(clientDBServicePtr.get(), &ClientDBService::messageStateChanged, clientPartyModelPtr_.get(), &ClientPartyModel::messageStateChanged);
 
    connect(clientPartyModelPtr_.get(), &ClientPartyModel::partyInserted, this, &ClientPartyLogic::handlePartyInserted);
+   connect(this, &ClientPartyLogic::userPublicKeyChanged, clientPartyModelPtr_.get(), &ClientPartyModel::userPublicKeyChanged, Qt::QueuedConnection);
 }
 
 void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& welcomeResponse)
@@ -77,13 +78,13 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
    }
 }
 
-void ClientPartyLogic::onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus)
+void ClientPartyLogic::onUserStatusChanged(const StatusChanged& statusChanged)
 {
-   ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getPartyByUserName(userName);
+   ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getPartyByUserName(statusChanged.user_name());
 
    if (clientPartyPtr == nullptr)
    {
-      emit error(ClientPartyLogicError::NonexistentClientStatusChanged, userName);
+      emit error(ClientPartyLogicError::NonexistentClientStatusChanged, statusChanged.user_name());
       return;
    }
 
@@ -93,16 +94,25 @@ void ClientPartyLogic::onUserStatusChanged(const std::string& userName, const Cl
       return;
    }
 
-   clientPartyPtr->setClientStatus(clientStatus);
+   clientPartyPtr->setClientStatus(statusChanged.client_status());
 
    if (ClientStatus::ONLINE != clientPartyPtr->clientStatus())
    {
       return;
    }
 
-   // if client status is online check do we have any unsent messages for this user
-   clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
-
+   // check if public key changed
+   if (statusChanged.has_public_key())
+   {
+      const BinaryData public_key(statusChanged.public_key().value());
+      const QDateTime dt = QDateTime::fromMSecsSinceEpoch(statusChanged.timestamp_ms().value());
+      emit userPublicKeyChanged(clientPartyPtr, public_key.toHexStr(), dt);
+   }
+   else
+   {
+      // if client status is online check do we have any unsent messages for this user
+      clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
+   }
 }
 
 void ClientPartyLogic::handleLocalErrors(const ClientPartyLogicError& errorCode, const std::string& what)
