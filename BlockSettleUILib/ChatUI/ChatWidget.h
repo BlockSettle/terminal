@@ -68,6 +68,7 @@ private slots:
    void onShowUserRoom(const QString& userHash);
    void onContactFriendRequest(const QString& userHash);
    void onSetDisplayName(const std::string& partyId, const std::string& contactName);
+   void onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
 
    void onContactRequestAcceptClicked(const std::string& partyId);
    void onContactRequestRejectClicked(const std::string& partyId);

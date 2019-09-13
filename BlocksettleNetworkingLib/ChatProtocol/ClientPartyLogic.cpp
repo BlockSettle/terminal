@@ -104,15 +104,29 @@ void ClientPartyLogic::onUserStatusChanged(const StatusChanged& statusChanged)
    // check if public key changed
    if (statusChanged.has_public_key())
    {
-      const BinaryData public_key(statusChanged.public_key().value());
-      const QDateTime dt = QDateTime::fromMSecsSinceEpoch(statusChanged.timestamp_ms().value());
-      emit userPublicKeyChanged(clientPartyPtr, public_key.toHexStr(), dt);
+      PartyRecipientPtr recipientPtr = clientPartyPtr->getRecipient(statusChanged.user_name());
+
+      if (recipientPtr)
+      {
+         const BinaryData public_key(statusChanged.public_key().value());
+         const QDateTime dt = QDateTime::fromMSecsSinceEpoch(statusChanged.timestamp_ms().value());
+         const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
+
+         userPkPtr->setOldPublicKeyHex(QString::fromStdString(recipientPtr->publicKey().toHexStr()));
+         userPkPtr->setOldPublicKeyTime(recipientPtr->publicKeyTime());
+         userPkPtr->setNewPublicKeyHex(QString::fromStdString(public_key.toHexStr()));
+         userPkPtr->setNewPublicKeyTime(dt);
+         UserPublicKeyInfoList userPkList;
+         userPkList.push_back(userPkPtr);
+
+         emit userPublicKeyChanged(userPkList);
+      }
+
+      return;
    }
-   else
-   {
-      // if client status is online check do we have any unsent messages for this user
-      clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
-   }
+
+   // if client status is online check do we have any unsent messages for this user
+   clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
 }
 
 void ClientPartyLogic::handleLocalErrors(const ClientPartyLogicError& errorCode, const std::string& what)
