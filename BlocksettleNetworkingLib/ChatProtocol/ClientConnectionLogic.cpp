@@ -17,15 +17,16 @@
 using namespace Chat;
 
 ClientConnectionLogic::ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings,
-   const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, const Chat::CryptManagerPtr& cryptManagerPtr, QObject* parent /* = nullptr */)
-   : QObject(parent), cryptManagerPtr_(cryptManagerPtr), loggerPtr_(loggerPtr), clientDBServicePtr_(clientDBServicePtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
+   const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, const Chat::CryptManagerPtr& cryptManagerPtr, 
+   const SessionKeyHolderPtr& sessionKeyHolderPtr, QObject* parent /* = nullptr */)
+   : QObject(parent), sessionKeyHolderPtr_(sessionKeyHolderPtr), cryptManagerPtr_(cryptManagerPtr), loggerPtr_(loggerPtr), 
+   clientDBServicePtr_(clientDBServicePtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
 {
    qRegisterMetaType<Chat::SearchUserReplyList>();
 
    connect(this, &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr_.get(), &ClientPartyLogic::onUserStatusChanged);
    connect(this, &ClientConnectionLogic::error, this, &ClientConnectionLogic::handleLocalErrors);
 
-   sessionKeyHolderPtr_ = std::make_shared<SessionKeyHolder>(loggerPtr_, this);
    connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::requestSessionKeyExchange, this, &ClientConnectionLogic::requestSessionKeyExchange);
    connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::replySessionKeyExchange, this, &ClientConnectionLogic::replySessionKeyExchange);
    connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::sessionKeysForUser, this, &ClientConnectionLogic::sessionKeysForUser);

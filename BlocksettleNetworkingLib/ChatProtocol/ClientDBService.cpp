@@ -21,6 +21,7 @@ ClientDBService::ClientDBService(QObject* parent /* = nullptr */)
    connect(this, &ClientDBService::readHistoryMessages, worker(), &ClientDBLogic::readHistoryMessages);
    connect(this, &ClientDBService::saveRecipientsKeys, worker(), &ClientDBLogic::saveRecipientsKeys);
    connect(this, &ClientDBService::deleteRecipientsKeys, worker(), &ClientDBLogic::deleteRecipientsKeys);
+   connect(this, &ClientDBService::updateRecipientKeys, worker(), &ClientDBLogic::updateRecipientKeys);
 
    ////////// RETURN SIGNALS //////////
    connect(worker(), &ClientDBLogic::initDone, this, &ClientDBService::initDone);

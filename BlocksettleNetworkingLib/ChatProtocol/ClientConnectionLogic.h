@@ -51,7 +51,7 @@ namespace Chat
    public:
       explicit ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings, 
          const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, const Chat::CryptManagerPtr& cryptManagerPtr,
-         QObject* parent = nullptr);
+         const SessionKeyHolderPtr& sessionKeyHolderPtr, QObject* parent = nullptr);
 
       Chat::ChatUserPtr currentUserPtr() const { return currentUserPtr_; }
       void setCurrentUserPtr(Chat::ChatUserPtr val) { currentUserPtr_ = val; }

@@ -432,3 +432,22 @@ void ClientDBLogic::deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& rec
       }
    }
 }
+
+void ClientDBLogic::updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients)
+{
+   const QString cmd = QStringLiteral("UPDATE user SET public_key=:public_key, public_key_timestamp=:public_key_timestamp WHERE user_hash=:user_hash;");
+
+   for (const auto& recipient : recipients)
+   {
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userName()));
+      query.bindValue(QStringLiteral(":public_key"), QString::fromStdString(recipient->publicKey().toHexStr()));
+      query.bindValue(QStringLiteral(":public_key_timestamp"), qint64(recipient->publicKeyTime().toMSecsSinceEpoch()));
+
+      if (!checkExecute(query))
+      {
+         emit error(ClientDBLogicError::UpdateRecipientKey, recipient->userName());
+      }
+   }
+}

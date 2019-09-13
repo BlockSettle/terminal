@@ -9,6 +9,7 @@
 #include "ChatProtocol/ChatUser.h"
 #include "ChatProtocol/Message.h"
 #include "ChatProtocol/PartyRecipient.h"
+#include "ChatProtocol/SessionKeyHolder.h"
 
 class QSqlDatabase;
 class ApplicationSettings;
@@ -31,7 +32,8 @@ namespace Chat
       ReadHistoryMessages,
       CannotOpenDatabase,
       InsertRecipientKey,
-      DeleteRecipientKey
+      DeleteRecipientKey,
+      UpdateRecipientKey
    };
 
    class ClientDBLogic : public DatabaseExecutor
@@ -55,6 +57,7 @@ namespace Chat
       void readHistoryMessages(const std::string& partyId, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
       void saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
+      void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);
 
    signals:
       void initDone();

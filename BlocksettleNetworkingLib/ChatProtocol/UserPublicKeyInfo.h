@@ -8,6 +8,10 @@
 #include <QString>
 #include <QDateTime>
 
+#include <disable_warnings.h>
+#include "BinaryData.h"
+#include <enable_warnings.h>
+
 namespace Chat
 {
    class UserPublicKeyInfo;
@@ -25,25 +29,25 @@ namespace Chat
       }
 
       QString user_hash() const { return user_hash_; }
-      void setUser_hash(QString val) { user_hash_ = val; }
+      void setUser_hash(const QString& val) { user_hash_ = val; }
 
-      QString oldPublicKeyHex() const { return oldPublicKeyHex_; }
-      void setOldPublicKeyHex(QString val) { oldPublicKeyHex_ = val; }
+      BinaryData oldPublicKey() const { return oldPublicKey_; }
+      void setOldPublicKeyHex(const BinaryData& val) { oldPublicKey_ = val; }
 
       QDateTime oldPublicKeyTime() const { return oldPublicKeyTime_; }
-      void setOldPublicKeyTime(QDateTime val) { oldPublicKeyTime_ = val; }
+      void setOldPublicKeyTime(const QDateTime& val) { oldPublicKeyTime_ = val; }
 
-      QString newPublicKeyHex() const { return newPublicKeyHex_; }
-      void setNewPublicKeyHex(QString val) { newPublicKeyHex_ = val; }
+      BinaryData newPublicKey() const { return newPublicKey_; }
+      void setNewPublicKeyHex(const BinaryData& val) { newPublicKey_ = val; }
 
       QDateTime newPublicKeyTime() const { return newPublicKeyTime_; }
-      void setNewPublicKeyTime(QDateTime val) { newPublicKeyTime_ = val; }
+      void setNewPublicKeyTime(const QDateTime& val) { newPublicKeyTime_ = val; }
 
    private:
       QString user_hash_;
-      QString oldPublicKeyHex_;
+      BinaryData oldPublicKey_;
       QDateTime oldPublicKeyTime_;
-      QString newPublicKeyHex_;
+      BinaryData newPublicKey_;
       QDateTime newPublicKeyTime_;
    };
 

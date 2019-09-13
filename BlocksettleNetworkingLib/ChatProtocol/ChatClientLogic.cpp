@@ -45,7 +45,15 @@ void ChatClientLogic::initDbDone()
    connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::deletePrivateParty, this, &ChatClientLogic::DeletePrivateParty);
    connect(this, &ChatClientLogic::clientLoggedOutFromServer, clientPartyLogicPtr_.get(), &ClientPartyLogic::loggedOutFromServer);
 
-   clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(clientPartyLogicPtr_, applicationSettingsPtr_, clientDBServicePtr_, loggerPtr_, cryptManagerPtr_, this);
+   sessionKeyHolderPtr_ = std::make_shared<SessionKeyHolder>(loggerPtr_, this);
+   clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(
+      clientPartyLogicPtr_, 
+      applicationSettingsPtr_, 
+      clientDBServicePtr_, 
+      loggerPtr_, 
+      cryptManagerPtr_, 
+      sessionKeyHolderPtr_,
+      this);
    clientConnectionLogicPtr_->setCurrentUserPtr(currentUserPtr_);
    connect(this, &ChatClientLogic::dataReceived, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onDataReceived);
    connect(this, &ChatClientLogic::connected, clientConnectionLogicPtr_.get(), &ClientConnectionLogic::onConnected);
@@ -316,4 +324,57 @@ void ChatClientLogic::SearchUser(const std::string& userHash, const std::string&
    }
 
    clientConnectionLogicPtr_->searchUser(stringToSearch, searchId);
+}
+
+void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
+{
+   PartyRecipientsPtrList recipientsToUpdate;
+   std::vector<std::string> partiesToCheckUnsentMessages;
+
+   for (const auto& userPkPtr : userPublicKeyInfoList)
+   {
+      // update loaded user key
+      const std::string userHash = userPkPtr->user_hash().toStdString();
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr()->getClientPartyByUserHash(userHash);
+      if (clientPartyPtr && clientPartyPtr->isPrivateStandard())
+      {
+         PartyRecipientPtr existingRecipient = clientPartyPtr->getRecipient(userHash);
+
+         if (existingRecipient)
+         {
+            existingRecipient->setPublicKey(userPkPtr->newPublicKey());
+            existingRecipient->setPublicKeyTime(userPkPtr->newPublicKeyTime());
+
+            recipientsToUpdate.push_back(existingRecipient);
+
+            // force clear session keys
+            sessionKeyHolderPtr_->clearSessionForUser(existingRecipient->userName());
+
+            // save party id for handling later
+            partiesToCheckUnsentMessages.push_back(clientPartyPtr->id());
+         }
+      }
+   }
+
+   clientDBServicePtr_->updateRecipientKeys(recipientsToUpdate);
+
+   // after updating the keys, check if we have unsent messages
+   for (const auto& partyId : partiesToCheckUnsentMessages)
+   {
+      clientDBServicePtr_->checkUnsentMessages(partyId);
+   }
+}
+
+void ChatClientLogic::DeclineNewPublicKeys(const UserPublicKeyInfoList& userPublicKeyInfoList)
+{
+   // remove all parties for declined user
+   for (const auto& userPkPtr : userPublicKeyInfoList)
+   {
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr()->getClientPartyByUserHash(userPkPtr->user_hash().toStdString());
+
+      if (clientPartyPtr && clientPartyPtr->isPrivateStandard())
+      {
+         DeletePrivateParty(clientPartyPtr->id());
+      }
+   }
 }

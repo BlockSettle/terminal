@@ -112,9 +112,9 @@ void ClientPartyLogic::onUserStatusChanged(const StatusChanged& statusChanged)
          const QDateTime dt = QDateTime::fromMSecsSinceEpoch(statusChanged.timestamp_ms().value());
          const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
 
-         userPkPtr->setOldPublicKeyHex(QString::fromStdString(recipientPtr->publicKey().toHexStr()));
+         userPkPtr->setOldPublicKeyHex(recipientPtr->publicKey().toBinStr());
          userPkPtr->setOldPublicKeyTime(recipientPtr->publicKeyTime());
-         userPkPtr->setNewPublicKeyHex(QString::fromStdString(public_key.toHexStr()));
+         userPkPtr->setNewPublicKeyHex(public_key.toBinStr());
          userPkPtr->setNewPublicKeyTime(dt);
          UserPublicKeyInfoList userPkList;
          userPkList.push_back(userPkPtr);
@@ -125,7 +125,7 @@ void ClientPartyLogic::onUserStatusChanged(const StatusChanged& statusChanged)
       return;
    }
 
-   // if client status is online check do we have any unsent messages for this user
+   // if client status is online check if we have any unsent messages for this user
    clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
 }
 

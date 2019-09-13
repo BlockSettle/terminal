@@ -39,6 +39,7 @@ namespace Chat
       void readHistoryMessages(const std::string& partyId, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
       void saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
+      void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);
 
       ////////// RETURN SIGNALS //////////
       void initDone();

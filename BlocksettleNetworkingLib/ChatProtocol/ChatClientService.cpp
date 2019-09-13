@@ -21,6 +21,8 @@ ChatClientService::ChatClientService(QObject* parent /*= nullptr*/)
    connect(this, &ChatClientService::DeletePrivateParty, worker(), &ChatClientLogic::DeletePrivateParty);
    connect(this, &ChatClientService::AcceptPrivateParty, worker(), &ChatClientLogic::AcceptPrivateParty);
    connect(this, &ChatClientService::SearchUser, worker(), &ChatClientLogic::SearchUser);
+   connect(this, &ChatClientService::AcceptNewPublicKeys, worker(), &ChatClientLogic::AcceptNewPublicKeys);
+   connect(this, &ChatClientService::DeclineNewPublicKeys, worker(), &ChatClientLogic::DeclineNewPublicKeys);
 
    ////////// RETURN SIGNALS //////////
    connect(worker(), &ChatClientLogic::chatUserUserNameChanged, this, &ChatClientService::chatUserUserNameChanged);
