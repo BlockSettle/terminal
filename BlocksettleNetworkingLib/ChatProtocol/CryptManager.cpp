@@ -25,9 +25,17 @@ CryptManager::CryptManager(const Chat::LoggerPtr& loggerPtr, QObject* parent /* 
 std::string CryptManager::validateUtf8(const Botan::SecureVector<uint8_t>& data)
 {
    std::string result = QString::fromUtf8(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size())).toStdString();
-   if (result.size() != data.size() || !std::equal(data.begin(), data.end(), result.begin())) {
-      throw std::runtime_error("invalid utf text detected");
+   if (result.size() != data.size()) {
+      throw std::runtime_error("invalid utf text detected - different size");
    }
+
+   const bool isEqual = std::equal(data.begin(), data.end(), result.begin(), [](uint8_t left, uint8_t right) -> bool {
+      return left == right;
+   });
+   if (!isEqual) {
+      throw std::runtime_error("invalid utf text detected - incorrect data");
+   }
+
    return result;
 }
 

@@ -589,7 +589,7 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
       auto qn = std::make_shared<bs::network::QuoteNotification>(qrn, authKey_, price, txData);
 
       if (qrn.assetType == bs::network::Asset::PrivateMarket) {
-         if (qn->side == bs::network::Side::Sell) {
+         if (qrn.side == bs::network::Side::Sell) {
             qn->receiptAddress = getRecvAddress(getCCWallet(qrn)).display();
          } else {
             qn->receiptAddress = getRecvAddress(xbtWallet).display();
