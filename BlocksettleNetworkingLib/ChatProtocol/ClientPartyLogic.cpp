@@ -35,6 +35,9 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
 {
    clientPartyModelPtr_->clearModel();
 
+   // all unique recipients
+   UniqieRecipientMap uniqueRecipients;
+
    for (int i = 0; i < welcomeResponse.party_size(); i++)
    {
       const PartyPacket& partyPacket = welcomeResponse.party(i);
@@ -54,6 +57,8 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
             PartyRecipientPtr recipientPtr =
                std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key(), QDateTime::fromMSecsSinceEpoch(recipient.timestamp_ms()));
             recipients.push_back(recipientPtr);
+
+            uniqueRecipients[recipientPtr->userName()] = recipientPtr;
          }
 
          clientPartyPtr->setRecipients(recipients);
@@ -68,14 +73,8 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
       }
    }
 
-   emit partyModelChanged();
-
-   // parties loaded, check is party display name should be updated
-   IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
-   for (const auto& partyId : idPartyList)
-   {
-      clientDBServicePtr_->loadPartyDisplayName(partyId);
-   }
+   // check if any of recipients has changed public key
+   clientDBServicePtr_->checkRecipientPublicKey(uniqueRecipients);
 }
 
 void ClientPartyLogic::onUserStatusChanged(const StatusChanged& statusChanged)
@@ -112,9 +111,10 @@ void ClientPartyLogic::onUserStatusChanged(const StatusChanged& statusChanged)
          const QDateTime dt = QDateTime::fromMSecsSinceEpoch(statusChanged.timestamp_ms().value());
          const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
 
-         userPkPtr->setOldPublicKeyHex(recipientPtr->publicKey().toBinStr());
+         userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userName()));
+         userPkPtr->setOldPublicKeyHex(recipientPtr->publicKey());
          userPkPtr->setOldPublicKeyTime(recipientPtr->publicKeyTime());
-         userPkPtr->setNewPublicKeyHex(public_key.toBinStr());
+         userPkPtr->setNewPublicKeyHex(public_key);
          userPkPtr->setNewPublicKeyTime(dt);
          UserPublicKeyInfoList userPkList;
          userPkList.push_back(userPkPtr);
@@ -297,3 +297,25 @@ void ClientPartyLogic::loggedOutFromServer()
    }
 }
 
+void ClientPartyLogic::onRecipientKeysHasChanged(const Chat::UserPublicKeyInfoList& userPkList)
+{
+   emit userPublicKeyChanged(userPkList);
+}
+
+void ClientPartyLogic::onRecipientKeysUnchanged()
+{
+   updateModelAndRefreshPartyDisplayNames();
+}
+
+void ClientPartyLogic::updateModelAndRefreshPartyDisplayNames()
+{
+   emit partyModelChanged();
+
+   // parties loaded, check is party display name should be updated
+   IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
+   for (const auto& partyId : idPartyList)
+   {
+      clientDBServicePtr_->loadPartyDisplayName(partyId);
+   }
+
+}

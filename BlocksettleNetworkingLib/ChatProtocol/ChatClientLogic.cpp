@@ -363,6 +363,8 @@ void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& use
    {
       clientDBServicePtr_->checkUnsentMessages(partyId);
    }
+
+   clientPartyLogicPtr_->updateModelAndRefreshPartyDisplayNames();
 }
 
 void ChatClientLogic::DeclineNewPublicKeys(const UserPublicKeyInfoList& userPublicKeyInfoList)
@@ -377,4 +379,6 @@ void ChatClientLogic::DeclineNewPublicKeys(const UserPublicKeyInfoList& userPubl
          DeletePrivateParty(clientPartyPtr->id());
       }
    }
+
+   clientPartyLogicPtr_->updateModelAndRefreshPartyDisplayNames();
 }

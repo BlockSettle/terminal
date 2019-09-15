@@ -451,3 +451,51 @@ void ClientDBLogic::updateRecipientKeys(const Chat::PartyRecipientsPtrList& reci
       }
    }
 }
+
+void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniqueRecipientMap)
+{
+   const QString cmd = QStringLiteral("SELECT public_key, public_key_timestamp FROM user WHERE user_hash=:user_hash;");
+   UserPublicKeyInfoList userPkList;
+
+   for (const auto& uniqueRecipient : uniqueRecipientMap)
+   {
+      PartyRecipientPtr recipientPtr = uniqueRecipient.second;
+
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipientPtr->userName()));
+
+      if (checkExecute(query))
+      {
+         if (query.first())
+         {
+            BinaryData oldPublicKey = BinaryData::CreateFromHex(query.value(0).toString().toStdString());
+            QDateTime oldPublicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(query.value(1).toULongLong());
+
+            if (recipientPtr->publicKey() != oldPublicKey || recipientPtr->publicKeyTime() != oldPublicKeyTimestamp)
+            {
+               const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
+               userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userName()));
+               userPkPtr->setOldPublicKeyHex(oldPublicKey);
+               userPkPtr->setOldPublicKeyTime(oldPublicKeyTimestamp);
+               userPkPtr->setNewPublicKeyHex(recipientPtr->publicKey());
+               userPkPtr->setNewPublicKeyTime(recipientPtr->publicKeyTime());
+               userPkList.push_back(userPkPtr);
+            }
+         }
+      }
+      else
+      {
+         emit error(ClientDBLogicError::CheckRecipientKey, recipientPtr->userName());
+      }
+   }
+
+   if (!userPkList.empty())
+   {
+      emit recipientKeysHasChanged(userPkList);
+   }
+   else
+   {
+      emit recipientKeysUnchanged();
+   }
+}

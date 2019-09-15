@@ -10,6 +10,7 @@
 #include "ChatProtocol/Message.h"
 #include "ChatProtocol/PartyRecipient.h"
 #include "ChatProtocol/SessionKeyHolder.h"
+#include "ChatProtocol/UserPublicKeyInfo.h"
 
 class QSqlDatabase;
 class ApplicationSettings;
@@ -33,7 +34,8 @@ namespace Chat
       CannotOpenDatabase,
       InsertRecipientKey,
       DeleteRecipientKey,
-      UpdateRecipientKey
+      UpdateRecipientKey,
+      CheckRecipientKey
    };
 
    class ClientDBLogic : public DatabaseExecutor
@@ -58,6 +60,7 @@ namespace Chat
       void saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);
+      void checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniqueRecipientMap);
 
    signals:
       void initDone();
@@ -68,6 +71,8 @@ namespace Chat
          const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);
       void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
       void unsentMessagesFound(const std::string& partyId);
+      void recipientKeysHasChanged(const Chat::UserPublicKeyInfoList& userPkList);
+      void recipientKeysUnchanged();
 
    private slots:
       void rebuildError();

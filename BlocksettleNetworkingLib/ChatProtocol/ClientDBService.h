@@ -40,6 +40,7 @@ namespace Chat
       void saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);
+      void checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniqueRecipientMap);
 
       ////////// RETURN SIGNALS //////////
       void initDone();
@@ -49,6 +50,8 @@ namespace Chat
          const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);
       void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
       void unsentMessagesFound(const std::string& partyId);
+      void recipientKeysHasChanged(const Chat::UserPublicKeyInfoList& userPkList);
+      void recipientKeysUnchanged();
    };
 
    using ClientDBServicePtr = std::shared_ptr<ClientDBService>;
@@ -56,5 +59,6 @@ namespace Chat
 
 Q_DECLARE_METATYPE(Chat::ApplicationSettingsPtr)
 Q_DECLARE_METATYPE(Chat::PartyRecipientsPtrList)
+Q_DECLARE_METATYPE(Chat::UniqieRecipientMap)
 
 #endif // CLIENTDBSERVICE_H
