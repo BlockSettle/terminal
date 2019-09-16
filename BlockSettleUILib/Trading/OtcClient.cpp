@@ -397,7 +397,7 @@ void OtcClient::processPbMessage(const std::string &data)
          return;
    }
 
-   SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
+   // if not processed - not OTC message. not error
 }
 
 void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason)

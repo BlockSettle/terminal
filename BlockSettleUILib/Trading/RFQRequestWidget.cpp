@@ -6,6 +6,7 @@
 #include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
 #include "CelerClient.h"
+#include "CurrencyPair.h"
 #include "DialogManager.h"
 #include "NotificationCenter.h"
 #include "OrderListModel.h"
@@ -14,9 +15,8 @@
 #include "RFQDialog.h"
 #include "SignContainer.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "CurrencyPair.h"
-#include "ui_RFQRequestWidget.h"
 
+#include "ui_RFQRequestWidget.h"
 
 namespace  {
    enum class RFQPages : int

@@ -4,9 +4,10 @@
 #include <QWidget>
 #include <QTimer>
 #include <memory>
+
 #include "CommonTypes.h"
-#include "TabWithShortcut.h"
 #include "MarketDataWidget.h"
+#include "TabWithShortcut.h"
 
 namespace Ui {
     class RFQRequestWidget;
@@ -19,6 +20,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+
 class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
@@ -58,8 +60,6 @@ public:
    void shortcutActivated(ShortcutType s) override;
 
    void setAuthorized(bool authorized);
-
-   
 
 signals:
    void requestPrimaryWalletCreation();

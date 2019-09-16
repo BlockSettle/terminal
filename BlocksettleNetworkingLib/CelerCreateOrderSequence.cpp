@@ -67,7 +67,7 @@ CelerMessage CelerCreateOrderSequence::createOrder()
       request.set_requestorcointransactioninput(payoutTx_);
    }
 
-   logger_->debug("[CreateBitcoinOrderRequest] {}", request.DebugString());
+   logger_->debug("[CelerCreateOrderSequence::createOrder] {}", request.DebugString());
 
    CelerMessage message;
    message.messageType = CelerAPI::CreateBitcoinOrderRequestType;
@@ -92,7 +92,7 @@ CelerMessage CelerFindAllOrdersSequence::create()
    FindAllOrderSnapshotsBySessionKey request;
    request.set_clientrequestid(GetSequenceId());
 
-   logger_->debug("[FindAllOrderSnapshots] {}", request.DebugString());
+   logger_->debug("[CelerFindAllOrdersSequence::create] {}", request.DebugString());
 
    CelerMessage message;
    message.messageType = CelerAPI::FindAllOrdersType;

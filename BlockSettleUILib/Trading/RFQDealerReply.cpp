@@ -709,7 +709,7 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                   } else {
                      unsignedTxReq = transData->createUnsignedTransaction();
                   }
-                  quoteProvider_->saveDealerPayin(qrn.settlementId, unsignedTxReq.serializeState());
+
                   dealerUtxoAdapter_->reserve(unsignedTxReq, qrn.settlementId);
 
                   const auto txData = unsignedTxReq.txId().toHexStr();

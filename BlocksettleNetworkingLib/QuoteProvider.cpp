@@ -293,9 +293,6 @@ bool QuoteProvider::onQuoteResponse(const std::string& data)
          }
 
          quote.dealerTransaction = response.dealertransaction();
-         if (quote.dealerTransaction.empty()) {
-            logger_->warn("[QuoteProvider::onQuoteResponse] empty dealerTransaction will not allow to send requestorTransaction");
-         }
       }
 
       if ((quote.side == bs::network::Side::Sell) ^ (itRFQ->second.product != cp.NumCurrency())) {
@@ -809,16 +806,6 @@ bool QuoteProvider::onQuoteNotifCancelled(const std::string& data)
       logger_->debug("[QuoteProvider::onQuoteNotifCancelled] {}", response.DebugString());
    }
    return true;
-}
-
-SecureBinaryData QuoteProvider::getDealerPayin(const std::string& settlementId) const
-{
-   return dealerPayins_.get(settlementId);
-}
-
-void QuoteProvider::saveDealerPayin(const std::string& settlementId, const SecureBinaryData& dealerPayin)
-{
-   dealerPayins_.save(settlementId, dealerPayin);
 }
 
 bs::network::QuoteNotification QuoteProvider::getSubmittedXBTQuoteNotification(const std::string& quoteRequestId)

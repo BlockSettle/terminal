@@ -201,7 +201,7 @@ void RFQDialog::onSettlementAccepted()
 
 void RFQDialog::onSettlementOrder()
 {
-   logger_->debug("onSettlementOrder");
+   logger_->debug("[RFQDialog::onSettlementOrder]");
    if (ccSettlContainer_) {
       quoteProvider_->AcceptQuote(QString::fromStdString(rfq_.requestId), quote_
          , ccSettlContainer_->txData());
@@ -213,7 +213,7 @@ void RFQDialog::onSignTxRequested(QString orderId, QString reqId)
    const auto itCCtx = ccTxMap_.find(reqId.toStdString());
    if (itCCtx == ccTxMap_.end()) {
       // KLUDGE
-      logger_->debug("[RFQDialog] signTX for reqId={} requested before signing", reqId.toStdString());
+      logger_->debug("[RFQDialog::onSignTxRequested] signTX for reqId={} requested before signing", reqId.toStdString());
       ccReqIdToOrder_[reqId] = orderId;
       return;
    }

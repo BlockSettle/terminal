@@ -61,9 +61,6 @@ public:
 
    void ConnectToCelerClient(const std::shared_ptr<BaseCelerClient>& celerClient);
 
-   void saveDealerPayin(const std::string& settlementId, const SecureBinaryData& dealerPayin);
-   SecureBinaryData getDealerPayin(const std::string& settlementId) const;
-
    bs::network::QuoteNotification getSubmittedXBTQuoteNotification(const std::string& settlementId);
 
    std::string getQuoteReqId(const std::string &quoteId) const;
@@ -131,7 +128,6 @@ private:
    std::shared_ptr<AssetManager>    assetManager_;
    std::shared_ptr<BaseCelerClient>     celerClient_;
    std::unordered_map<std::string, bs::network::RFQ>   submittedRFQs_;
-   bs::PayinsContainer              dealerPayins_;
 
    std::unordered_map<std::string, std::string> quoteIdMap_;
    std::unordered_map<std::string, std::vector<std::string>>   quoteIds_;
