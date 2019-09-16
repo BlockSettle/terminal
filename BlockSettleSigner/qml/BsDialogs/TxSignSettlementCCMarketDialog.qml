@@ -47,26 +47,6 @@ TxSignSettlementBaseDialog {
             Layout.preferredHeight: 25
         }
 
-        // SettlementAddress
-        CustomLabel {
-            visible: passwordDialogData.contains("SettlementAddress")
-            Layout.fillWidth: true
-            text: qsTr("Settlement Address")
-        }
-        CustomLabelCopyableValue {
-            id: settlementAddress
-            visible: passwordDialogData.contains("SettlementAddress")
-            text: passwordDialogData.value("SettlementAddress")
-                .truncString(passwordDialogData.contains("RequesterAuthAddress") ? passwordDialogData.value("RequesterAuthAddress").length : 30)
-            Layout.alignment: Qt.AlignRight
-            textForCopy: passwordDialogData.value("SettlementAddress")
-
-            ToolTip.text: passwordDialogData.value("SettlementAddress")
-            ToolTip.delay: 150
-            ToolTip.timeout: 5000
-            ToolTip.visible: settlementAddress.mouseArea.containsMouse
-        }
-
         // SettlementId
         CustomLabel {
             visible: passwordDialogData.contains("SettlementId")
@@ -85,32 +65,6 @@ TxSignSettlementBaseDialog {
             ToolTip.delay: 150
             ToolTip.timeout: 5000
             ToolTip.visible: settlementId.mouseArea.containsMouse
-        }
-
-        // Requester Authentication Address
-        CustomLabel {
-            visible: passwordDialogData.contains("RequesterAuthAddress")
-            Layout.fillWidth: true
-            text: qsTr("Requester Auth")
-        }
-        CustomLabelCopyableValue {
-            visible: passwordDialogData.contains("RequesterAuthAddress")
-            text: passwordDialogData.value("RequesterAuthAddress")
-            Layout.alignment: Qt.AlignRight
-            color: passwordDialogData.requesterAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
-        }
-
-        // Responder Authentication Address = dealer
-        CustomLabel {
-            visible: passwordDialogData.contains("ResponderAuthAddress")
-            Layout.fillWidth: true
-            text: qsTr("Responder Auth")
-        }
-        CustomLabelCopyableValue {
-            visible: passwordDialogData.contains("ResponderAuthAddress")
-            text: passwordDialogData.value("ResponderAuthAddress")
-            Layout.alignment: Qt.AlignRight
-            color: passwordDialogData.responderAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
 
         // Payment UTXO(s)
@@ -198,7 +152,6 @@ TxSignSettlementBaseDialog {
                 }
             }
         }
-
     }
 
     txDetailsItem: GridLayout {
@@ -264,7 +217,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_sell
-            text: "- " + txInfo.amount.toFixed(8) + inputProduct
+            text: "- " + displayAmount(txInfo.amount) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 

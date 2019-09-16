@@ -17,7 +17,7 @@ import "../js/helper.js" as JsHelper
 
 TxSignSettlementBaseDialog {
     id: root
-    property string inputProduct: " XBT"
+    readonly property string inputProduct: " XBT"
 
     settlementDetailsItem: GridLayout {
         id: gridSettlementDetails

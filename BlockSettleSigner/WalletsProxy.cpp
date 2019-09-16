@@ -469,7 +469,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
    // sort reqs by wallets
    const auto &parsedReqsForWallets = std::make_shared<std::unordered_map<std::string, std::vector<bs::core::wallet::TXSignRequest>>>(); // <wallet_id, reqList>
-   const auto walletsMgr = adapter_->getWalletsManager();
+   //const auto walletsMgr = adapter_->getWalletsManager();
    for (const auto &req : parsedReqs) {
       if (!req.prevStates.empty()) {
          invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Transaction already signed"));
@@ -479,7 +479,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
          invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Missing wallet ID[s] in request"));
          return;
       }
-      const auto rootWallet = walletsMgr->getHDRootForLeaf(req.walletIds.front());
+      const auto rootWallet = walletsMgr_->getHDRootForLeaf(req.walletIds.front());
       if (!rootWallet) {
          invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to find root wallet for ID %1")
             .arg(QString::fromStdString(req.walletIds.front())));
@@ -555,7 +555,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
 
          // TODO: send to qml list of txInfo
-         bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(reqs[0]);
+         bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(reqs[0], walletsMgr_, logger_);
          QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
          bs::sync::PasswordDialogData *dialogData = new bs::sync::PasswordDialogData();

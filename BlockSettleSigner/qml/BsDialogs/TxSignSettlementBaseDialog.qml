@@ -19,8 +19,10 @@ CustomTitleDialogWindow {
     property WalletInfo walletInfo: WalletInfo{}
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
-    property QPasswordData passwordData: QPasswordData{}
-    property AuthSignWalletObject  authSign: AuthSignWalletObject{}
+    property QPasswordData passwordData: QPasswordData {}
+    property AuthSignWalletObject  authSign: AuthSignWalletObject {}
+
+    property bool signingAllowed: passwordDialogData.value("SigningAllowed") === true
 
     property alias settlementDetailsItem: settlementDetailsContainer.data
     property alias txDetailsItem: txDetailsContainer.data
@@ -30,7 +32,7 @@ CustomTitleDialogWindow {
     readonly property int recipientsAddrHeight: txInfo.recipients.length < 4 ? txInfo.recipients.length * addressRowHeight : addressRowHeight * 3
 
     readonly property int duration: passwordDialogData.value("Duration") / 1000.0 - 1 > 0 ? passwordDialogData.value("Duration") / 1000.0 - 1 : 60
-    readonly property int balanceDivider : 100000000
+    readonly property real balanceDivider : qmlFactory.balanceDivider()
 
     readonly property bool is_sell: passwordDialogData.value("Side") === "SELL"
     readonly property bool is_buy: passwordDialogData.value("Side") === "BUY"
@@ -335,7 +337,7 @@ CustomTitleDialogWindow {
                 text: walletInfo.encType === QPasswordData.Password ? qsTr("CONFIRM") : qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                enabled: (tfPassword.text.length || acceptable) && passwordDialogData.value("SigningAllowed") === true
+                enabled: (tfPassword.text.length || acceptable)
                 onClicked: {
                     if (walletInfo.encType === QPasswordData.Password) {
                         passwordData.textPassword = tfPassword.text
