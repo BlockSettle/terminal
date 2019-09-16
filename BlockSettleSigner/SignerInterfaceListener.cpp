@@ -18,6 +18,7 @@
 #include "SignerAdapterContainer.h"
 #include <memory>
 
+using namespace bs::sync::dialog;
 
 SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<QmlBridge> &qmlBridge
@@ -222,7 +223,7 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
    switch (request.dialogtype()) {
    case signer::SignTx:
    case signer::SignPartialTx:
-      dialogData->setValue("Title", tr("Sign Transaction"));
+      dialogData->setValue(keys::Title, tr("Sign Transaction"));
       requestPasswordForTx(request.dialogtype(), dialogData, txInfo, walletInfo);
       break;
    case signer::SignSettlementTx:
@@ -230,15 +231,15 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       requestPasswordForSettlementTx(request.dialogtype(), dialogData, txInfo, walletInfo);
       break;
    case signer::CreateAuthLeaf:
-      dialogData->setValue("Title", tr("Create Auth Leaf"));
+      dialogData->setValue(keys::Title, tr("Create Auth Leaf"));
       requestPasswordForAuthLeaf(dialogData, walletInfo);
       break;
    case signer::CreateHDLeaf:
-      dialogData->setValue("Title", tr("Create Leaf"));
+      dialogData->setValue(keys::Title, tr("Create Leaf"));
       requestPasswordForToken(dialogData, walletInfo);
       break;
    case signer::CreateSettlementLeaf:
-      dialogData->setValue("Title", tr("Create Settlement Leaf"));
+      dialogData->setValue(keys::Title, tr("Create Settlement Leaf"));
       requestPasswordForSettlementLeaf(dialogData, walletInfo);
       break;
    case signer::PromoteHDWallet:
@@ -694,7 +695,7 @@ QmlCallbackBase *SignerInterfaceListener::createQmlPasswordCallback()
 
 void SignerInterfaceListener::requestPasswordForDialogType(const QString& dialogType, bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo)
 {
-   dialogData->setValue("DialogType", dialogType);
+   dialogData->setValue(keys::DialogType, dialogType);
    qmlBridge_->invokeQmlMethod("createPasswordDialogForType", createQmlPasswordCallback()
                                , QVariant::fromValue(dialogData), QVariant::fromValue(walletInfo));
 }
