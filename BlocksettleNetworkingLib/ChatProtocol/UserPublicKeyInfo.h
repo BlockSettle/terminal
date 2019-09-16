@@ -22,12 +22,6 @@ namespace Chat
    class UserPublicKeyInfo
    {
    public:
-      UserPublicKeyInfo()
-      {
-         qRegisterMetaType<Chat::UserPublicKeyInfoPtr>();
-         qRegisterMetaType<Chat::UserPublicKeyInfoList>();
-      }
-
       QString user_hash() const { return user_hash_; }
       void setUser_hash(const QString& val) { user_hash_ = val; }
 
