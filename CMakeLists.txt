@@ -540,6 +540,7 @@ ELSE(WIN32)
          "-framework SystemConfiguration"
          "-framework QuartzCore"
          "-framework Metal"
+         "-framework IOSurface"
          ${ZLIB_LIBRARIES}
          ${CUPS_LIBRARIES})
 
