@@ -37,8 +37,6 @@ public:
 
    bool cancel() override;
 
-   bool isAcceptable() const override;
-
    void activate() override;
    void deactivate() override;
 

@@ -21,7 +21,6 @@ namespace bs {
       ~SettlementContainer() override = default;
 
       virtual bool cancel() = 0;
-      virtual bool isAcceptable() const = 0;
 
       virtual void activate() = 0;
       virtual void deactivate() = 0;

@@ -4,13 +4,11 @@
 #include <spdlog/logger.h>
 
 #include "AssetManager.h"
-#include "CCSettlementTransactionWidget.h"
 #include "QuoteProvider.h"
 #include "ReqCCSettlementContainer.h"
 #include "ReqXBTSettlementContainer.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
-#include "XBTSettlementTransactionWidget.h"
 
 enum StackWidgetId
 {
@@ -125,12 +123,6 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::acceptQuote
       , this, &RFQDialog::onXBTQuoteAccept);
 
-//   const auto xbtSettlementWidget = new XBTSettlementTransactionWidget(logger_
-//      , celerClient_, appSettings_, xbtSettlContainer_, connectionManager_, this);
-
-//   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(xbtSettlementWidget);
-//   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
-
    return xbtSettlContainer_;
 }
 
@@ -145,12 +137,6 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
       , this, &RFQDialog::onSettlementOrder);
    connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementCancelled
       , this, &QDialog::close);
-
-//   const auto ccSettlementWidget = new CCSettlementTransactionWidget(logger_
-//      , celerClient_, appSettings_, ccSettlContainer_, connectionManager_, this);
-
-//   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(ccSettlementWidget);
-//   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
 
    return ccSettlContainer_;
 }

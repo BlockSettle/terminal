@@ -225,14 +225,6 @@ bool DealerXBTSettlementContainer::cancel()
    return true;
 }
 
-bool DealerXBTSettlementContainer::isAcceptable() const
-{
-   if (cptyAddressState_ != AddressVerificationState::Verified) {
-      return false;
-   }
-   return weSell_ ? !payInSent_ : payInDetected_;
-}
-
 void DealerXBTSettlementContainer::activate()
 {
    startTimer(30);

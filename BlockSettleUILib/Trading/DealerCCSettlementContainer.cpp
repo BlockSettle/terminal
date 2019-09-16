@@ -219,11 +219,6 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
    signingContainer_->updateDialogData(pd);
 }
 
-bool DealerCCSettlementContainer::isAcceptable() const
-{
-   return (foundRecipAddr_ && amountValid_ && genAddrVerified_ && wallet_);
-}
-
 bool DealerCCSettlementContainer::cancel()
 {
    utxoAdapter_->unreserve(id());

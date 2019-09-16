@@ -165,11 +165,6 @@ void ReqXBTSettlementContainer::onTimerExpired()
    cancel();
 }
 
-bool ReqXBTSettlementContainer::isAcceptable() const
-{
-   return (userKeyOk_ && (dealerVerifState_ == AddressVerificationState::Verified));
-}
-
 void ReqXBTSettlementContainer::activate()
 {
    startTimer(kWaitTimeoutInSec);

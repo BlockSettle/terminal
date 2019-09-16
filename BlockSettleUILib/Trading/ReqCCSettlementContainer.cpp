@@ -318,11 +318,6 @@ void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const 
    signingContainer_->updateDialogData(pd);
 }
 
-bool ReqCCSettlementContainer::isAcceptable() const
-{
-   return userKeyOk_;
-}
-
 bool ReqCCSettlementContainer::cancel()
 {
    deactivate();

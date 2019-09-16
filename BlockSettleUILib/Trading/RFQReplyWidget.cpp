@@ -8,21 +8,20 @@
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
+#include "BSMessageBox.h"
 #include "CelerClient.h"
 #include "CelerSubmitQuoteNotifSequence.h"
+#include "CustomDoubleSpinBox.h"
 #include "DealerCCSettlementContainer.h"
 #include "DealerXBTSettlementContainer.h"
-#include "DealerXBTSettlementDialog.h"
 #include "DialogManager.h"
 #include "MarketDataProvider.h"
-#include "BSMessageBox.h"
 #include "OrderListModel.h"
+#include "OrdersView.h"
 #include "QuoteProvider.h"
+#include "RFQBlotterTreeView.h"
 #include "RFQDialog.h"
 #include "SignContainer.h"
-#include "RFQBlotterTreeView.h"
-#include "CustomDoubleSpinBox.h"
-#include "OrdersView.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -229,11 +228,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
             ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
-
-//               auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
-//                  sr.requestorAuthAddress, walletsManager_, signingContainer_
-//                  , celerClient_, appSettings_, connectionManager_, this);
-//               showSettlementDialog(settlDlg);
             settlContainer->activate();
          } catch (const std::exception &e) {
             BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
@@ -255,10 +249,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
                ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
-
-//                  auto *dsd = new DealerXBTSettlementDialog(logger_, settlContainer, assetManager_,
-//                     walletsManager_, signingContainer_, celerClient_, appSettings_, connectionManager_, this);
-//                  showSettlementDialog(dsd);
             } catch (const std::exception &e) {
                logger_->error("[{}] settlement failed: {}", __func__, e.what());
                BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
