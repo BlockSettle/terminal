@@ -105,8 +105,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
    else {
       if (rfq_.assetType == bs::network::Asset::SpotXBT) {
          curContainer_ = newXBTcontainer();
-      }
-      else {
+      } else {
          curContainer_ = newCCcontainer();
       }
       curContainer_->activate();

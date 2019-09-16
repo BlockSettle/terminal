@@ -35,7 +35,7 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
 
    connect(ui_->pageRFQTicket, &RFQTicketXBT::submitRFQ, this, &RFQRequestWidget::onRFQSubmit);
    connect(ui_->shieldPage, &RFQShieldPage::requestPrimaryWalletCreation, this, &RFQRequestWidget::requestPrimaryWalletCreation);
-   
+
    ui_->shieldPage->showShieldLoginRequired();
    popShield();
 }
@@ -205,7 +205,7 @@ void RFQRequestWidget::onConnectedToCeler()
 }
 
 void RFQRequestWidget::onDisconnectedFromCeler()
-{  
+{
    for (QMetaObject::Connection &conn : marketDataConnection) {
       QObject::disconnect(conn);
    }

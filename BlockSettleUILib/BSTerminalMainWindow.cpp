@@ -1526,7 +1526,7 @@ void BSTerminalMainWindow::onArmoryNeedsReconnect()
 }
 
 void BSTerminalMainWindow::onTabWidgetCurrentChanged(const int &index)
-{   
+{
    const int chatIndex = ui_->tabWidget->indexOf(ui_->widgetChat);
    const bool isChatTab = index == chatIndex;
    //ui_->widgetChat->updateChat(isChatTab);

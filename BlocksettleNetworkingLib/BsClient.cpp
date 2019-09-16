@@ -71,6 +71,17 @@ void BsClient::sendPbBroadcastXbt(const BsClient::BroadcastXbt &data)
    sendPbMessage(request.SerializeAsString());
 }
 
+void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin)
+{
+   ProxyTerminalPb::Request request;
+
+   auto data = request.mutable_unsigned_payin();
+   data->set_settlement_id(settlementId);
+   data->set_unsigned_payin(unsignedPayin.toBinStr());
+
+   sendPbMessage(request.SerializeAsString());
+}
+
 void BsClient::sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin)
 {
    ProxyTerminalPb::Request request;

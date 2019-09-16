@@ -87,6 +87,7 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
 
       logger_->debug("[{}] pay-out fee={}, qty={} ({}), payin hash={}", __func__
          , txReq.fee, qty, qty * BTCNumericTypes::BalanceDivider, payinHash.toHexStr(true));
+
       return signContainer_->signSettlementPayoutTXRequest(txReq
          , {settlementId_, dealerAuthKey_, !clientSells_ }, dlgData);
    }
