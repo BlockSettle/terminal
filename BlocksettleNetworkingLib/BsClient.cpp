@@ -71,6 +71,28 @@ void BsClient::sendPbBroadcastXbt(const BsClient::BroadcastXbt &data)
    sendPbMessage(request.SerializeAsString());
 }
 
+void BsClient::sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin)
+{
+   ProxyTerminalPb::Request request;
+
+   auto data = request.mutable_signed_payin();
+   data->set_settlement_id(settlementId);
+   data->set_signed_payin(signedPayin.toBinStr());
+
+   sendPbMessage(request.SerializeAsString());
+}
+
+void BsClient::sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout)
+{
+   ProxyTerminalPb::Request request;
+
+   auto data = request.mutable_signed_payout();
+   data->set_settlement_id(settlementId);
+   data->set_signed_payout(signedPayout.toBinStr());
+
+   sendPbMessage(request.SerializeAsString());
+}
+
 void BsClient::cancelLogin()
 {
    Request request;

@@ -67,10 +67,24 @@ message Response
         bytes settlement_id = 3;
     }
 
+    message XBTSignedPayin
+    {
+        string  settlement_id   = 1;
+        bytes   signed_payin    = 2;
+    }
+
+    message XBTSignedPayout
+    {
+        string  settlement_id   = 1;
+        bytes   signed_payout   = 2;
+    }
+
     oneof data
     {
         // Requests
-        StartOtc start_otc = 1;
-        VerifyOtc verify_otc = 2;
+        StartOtc        start_otc       = 1;
+        VerifyOtc       verify_otc      = 2;
+        XBTSignedPayin  signed_payin    = 3;
+        XBTSignedPayout signed_payout   = 4;
     }
 }

@@ -97,6 +97,9 @@ public:
    void sendPbMessage(std::string data);
    void sendPbBroadcastXbt(const BroadcastXbt &data);
 
+   void sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout);
+
    // Cancel login. Please note that this will close channel.
    void cancelLogin();
    void getLoginResult();
