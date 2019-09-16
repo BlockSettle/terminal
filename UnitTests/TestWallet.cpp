@@ -1,11 +1,13 @@
 #include <gtest/gtest.h>
 #include <QComboBox>
-#include <QDebug>
-#include <QString>
 #include <QLocale>
+#include <QString>
+
 #include "ApplicationSettings.h"
+#include "BIP32_Node.h"
 #include "CoreHDLeaf.h"
 #include "CoreHDWallet.h"
+#include "CoreWallet.h"
 #include "CoreWalletsManager.h"
 #include "InprocSigner.h"
 #include "SystemFileUtils.h"
@@ -14,7 +16,6 @@
 #include "WalletEncryption.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "BIP32_Node.h"
 
 /***
 unit tests to add:
@@ -2877,3 +2878,39 @@ TEST(TestWallet, 1of2_SameKey)
    EXPECT_TRUE(wallet1.eraseFile());
 }
 #endif   //0
+
+TEST(TestWalletUtils, TxIdNativeSegwit)
+{
+   bs::core::wallet::TXSignRequest request;
+
+   UTXO input;
+   input.unserialize(BinaryData::CreateFromHex("cc16060000000000741618000300010020d5921cfa9b95c9fdafa9dca6d2765b5d7d2285914909b8f5f74f0b137259153b16001428d45f4ef82103691ea40c26b893a4566729b335ffffffff"));
+   request.inputs.push_back(input);
+
+   auto recipient = ScriptRecipient::deserialize(BinaryData::CreateFromHex("a086010000000000220020aa38b39ed9b524967159ad2bd488d14c1b9ccd70364655a7d9f35cb83e4dc6ed"));
+   request.recipients.push_back(recipient);
+
+   request.change.value = 298894;
+   request.fee = 158;
+   request.change.address = bs::Address("tb1q0yk8wytvdqhc4r3cm2kyjuj9l0l06dylncdlr0");
+
+   ASSERT_NO_THROW(request.txId());
+}
+
+TEST(TestWalletUtils, TxIdNestedSegwit)
+{
+   bs::core::wallet::TXSignRequest request;
+
+   UTXO input;
+   input.unserialize(BinaryData::CreateFromHex("80969800000000008b16180003000000202bc7112e419214b84de6e8afce84ada5c00e01774400da7880f71d3458718b4f17a914239efdcbd22beb7d4e609cee4ce98dc49a7cb07f87ffffffff"));
+   request.inputs.push_back(input);
+
+   auto recipient = ScriptRecipient::deserialize(BinaryData::CreateFromHex("a086010000000000220020d35c94ed03ae988841bd990124e176dae3928ba41f5a684074a857e788d768ba"));
+   request.recipients.push_back(recipient);
+
+   request.change.value = 19899729;
+   request.fee = 271;
+   request.change.address = bs::Address("2MykWqWBJGBeuyPGv73CisrokXKeGKNXU2C");
+
+   ASSERT_NO_THROW(request.txId());
+}
