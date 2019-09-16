@@ -743,26 +743,30 @@ void RFQTicketXBT::submitButtonClicked()
       if (rfq.side == bs::network::Side::Sell) {
          const auto wallet = transactionData_->getSigningWallet();
          const uint64_t spendVal = rfq.quantity * assetManager_->getCCLotSize(rfq.product);
-         try {
-            if (!ccCoinSel_) {
-               throw std::runtime_error("CC coin selection is missing");
-            }
-            const auto &inputs = ccCoinSel_->GetSelectedTransactions();
-            auto promAddr = std::make_shared<std::promise<bs::Address>>();
-            auto futAddr = promAddr->get_future();
-            const auto cbAddr = [&promAddr](const bs::Address &addr) {
-               promAddr->set_value(addr);
-            }; //TODO: refactor this
-            wallet->getNewExtAddress(cbAddr);
-            const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, futAddr.get());
-            rfq.coinTxInput = txReq.serializeState().toHexStr();
-            utxoAdapter_->reserve(txReq, rfq.requestId);
-         } catch (const std::exception &e) {
-            BSMessageBox dlg(BSMessageBox::critical, tr("RFQ not sent"), QString::fromLatin1(e.what()));
-            dlg.setWindowTitle(tr("RFQ Failure"));
-            dlg.exec();
+         if (!ccCoinSel_) {
+            BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
+               , tr("CC coin selection is missing")).exec();
             return;
          }
+         const auto cbAddr = [this, spendVal, rfq, wallet]
+            (const bs::Address &addr) mutable
+         {
+            try {
+               const auto inputs = ccCoinSel_->GetSelectedTransactions();
+               const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, addr);
+               rfq.coinTxInput = txReq.serializeState().toHexStr();
+               utxoAdapter_->reserve(txReq, rfq.requestId);
+               emit submitRFQ(rfq);
+            }
+            catch (const std::exception &e) {
+               auto dlg = new BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
+                  , QString::fromLatin1(e.what()), this);
+               dlg->setWindowTitle(tr("RFQ Failure"));
+               QMetaObject::invokeMethod(this, [dlg] { dlg->exec(); });
+            }
+         };
+         wallet->getNewExtAddress(cbAddr);
+         return;
       }
    }
 
