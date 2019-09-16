@@ -19,6 +19,10 @@ QT_END_NAMESPACE
 namespace bs {
    namespace sync {
       class WalletsManager;
+      class Wallet;
+      namespace hd {
+         class Wallet;
+      }
    }
 }
 class AuthAddressManager;
@@ -104,6 +108,8 @@ namespace UiUtils
       , bool skipWatchingOnly);
    int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager);
    void fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
+   void fillRecvAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::Wallet>& targetWallet);
+   void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox, const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet);
 
    int selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId);
    std::string getSelectedWalletId(QComboBox* comboBox);

@@ -14,7 +14,9 @@ protected:
       searchWidget->onClearLineEdit();
       searchWidget->onSetLineEditEnabled(false);
 
-      chat_->chatPartiesTreeModel_->onCleanModel();
+      if (chat_->chatPartiesTreeModel_) {
+         chat_->chatPartiesTreeModel_->onCleanModel();
+      }
 
       chat_->ui_->labelUserName->setText(QObject::tr("offline"));
    }

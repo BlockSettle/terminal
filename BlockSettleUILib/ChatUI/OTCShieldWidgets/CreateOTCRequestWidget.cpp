@@ -7,7 +7,7 @@
 #include <QPushButton>
 
 CreateOTCRequestWidget::CreateOTCRequestWidget(QWidget* parent)
-   : QWidget{parent}
+   : OTCWindowsAdapterBase{parent}
    , ui_{new Ui::CreateOTCRequestWidget{}}
 {
    ui_->setupUi(this);

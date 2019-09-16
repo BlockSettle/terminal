@@ -212,7 +212,46 @@ void UiUtils::fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_p
       }
       comboBox->blockSignals(b);
       QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, authAddressManager->getDefaultIndex()));
+      comboBox->setEnabled(true);
    }
+   else {
+      comboBox->setEnabled(false);
+   }
+}
+
+void UiUtils::fillRecvAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::Wallet>& targetWallet)
+{
+   comboBox->clear();
+   if (targetWallet) {
+      comboBox->addItem(QObject::tr("Auto Create"));
+      for (auto addr : targetWallet->getExtAddressList()) {
+         comboBox->addItem(QString::fromStdString(addr.display()));
+      }
+      comboBox->setEnabled(true);
+      comboBox->setCurrentIndex(0);
+   }
+   else {
+      comboBox->setEnabled(false);
+   }
+}
+
+void UiUtils::fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox, const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet)
+{
+   comboBox->clear();
+   if (!targetHDWallet) {
+      comboBox->setEnabled(false);
+      return;
+   }
+
+   comboBox->addItem(QObject::tr("Auto Create"));
+   for (const auto& wallet : targetHDWallet->getGroup(targetHDWallet->getXBTGroupType())->getAllLeaves()) {
+      for (auto addr : wallet->getExtAddressList()) {
+         comboBox->addItem(QString::fromStdString(addr.display()));
+      }
+   }
+
+   comboBox->setEnabled(true);
+   comboBox->setCurrentIndex(0);
 }
 
 QPixmap UiUtils::getQRCode(const QString& address, int size)
@@ -267,7 +306,7 @@ QString UiUtils::displayCCAmount(double amount)
 
 QString UiUtils::displayQuantity(double quantity, const QString& currency)
 {
-   return QObject::tr("%2 %1").arg(UiUtils::displayQty(quantity, currency)).arg(currency);
+   return QStringLiteral("%2 %1").arg(UiUtils::displayQty(quantity, currency)).arg(currency);
 }
 
 QString UiUtils::displayQty(double quantity, const QString &currency)

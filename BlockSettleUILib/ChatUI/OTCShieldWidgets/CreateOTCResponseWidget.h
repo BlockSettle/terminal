@@ -3,15 +3,15 @@
 
 #include <QWidget>
 #include <memory>
+#include "OTCWindowsAdapterBase.h"
 
 namespace Ui {
    class CreateOTCResponseWidget;
 };
 
-class CreateOTCResponseWidget : public QWidget
+class CreateOTCResponseWidget : public OTCWindowsAdapterBase
 {
-Q_OBJECT
-
+   Q_OBJECT
 public:
    CreateOTCResponseWidget(QWidget* parent = nullptr);
    ~CreateOTCResponseWidget() override;

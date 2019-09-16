@@ -452,13 +452,12 @@ bool CreateTransactionDialog::CreateTransaction()
 
    std::string offlineFilePath;
    const auto hdWallet = walletsManager_->getHDWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
-   const auto walletId = hdWallet->walletId();
 
-   if (signContainer_->isWalletOffline(walletId)) {
+   if (hdWallet->isOffline()) {
       QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 
       const qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();
-      const std::string fileName = fmt::format("{}_{}.bin", walletId, timestamp);
+      const std::string fileName = fmt::format("{}_{}.bin", hdWallet->walletId(), timestamp);
 
       QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));
       offlineFilePath = QFileDialog::getSaveFileName(this, tr("Save Offline TX as..."), defaultFilePath).toStdString();

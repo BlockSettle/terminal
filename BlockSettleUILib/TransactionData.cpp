@@ -38,7 +38,7 @@ TransactionData::~TransactionData() noexcept
 
 void TransactionData::SetCallback(onTransactionChanged changedCallback)
 {
-   changedCallback_ = changedCallback;
+   changedCallback_ = std::move(changedCallback);
 }
 
 bool TransactionData::InputsLoadedFromArmory() const
@@ -416,14 +416,13 @@ bool TransactionData::RecipientsReady() const
 // OUT: None
 // RET: A vector of fully initialized UTXO objects, one for each selected (and
 //      non-filtered) input.
-std::vector<UTXO> TransactionData::decorateUTXOs(const std::vector<UTXO> &inUTXOs) const
+std::vector<UTXO> TransactionData::decorateUTXOs() const
 {
-   std::vector<UTXO> inputUTXOs;
-   if (!selectedInputs_ && inUTXOs.empty()) {
-      return inputUTXOs;
+   if (!selectedInputs_) {
+      return {};
    }
 
-   inputUTXOs = inUTXOs.empty() ? selectedInputs_->GetSelectedTransactions() : inUTXOs;
+   auto inputUTXOs = selectedInputs_->GetSelectedTransactions();
 
    if (utxoAdapter_ && reservedUTXO_.empty()) {
       utxoAdapter_->filter(selectedInputs_->GetWallet()->walletId(), inputUTXOs);

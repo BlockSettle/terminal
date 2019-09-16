@@ -8,12 +8,14 @@
 #include "ChatProtocol/ClientParty.h"
 
 class AbstractChatWidgetState;
+class AuthAddressManager;
 class ArmoryConnection;
 class ChatPartiesTreeModel;
 class OTCRequestViewModel;
 class SignContainer;
 class WalletsM;
 class ChatOTCHelper;
+class OTCWindowsManager;
 
 namespace Ui {
    class ChatWidget;
@@ -38,6 +40,7 @@ public:
       , const Chat::ChatClientServicePtr& chatClientServicePtr
       , const std::shared_ptr<spdlog::logger>& loggerPtr
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+      , const std::shared_ptr<AuthAddressManager> &authManager
       , const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<SignContainer> &signContainer);
 
@@ -90,6 +93,7 @@ private slots:
 signals:
    // OTC
    void sendOtcPbMessage(const std::string& data);
+   void chatRoomChanged();
 
 private:
    friend class AbstractChatWidgetState;
@@ -124,6 +128,7 @@ private:
    QPointer<ChatOTCHelper> otcHelper_{};
    std::shared_ptr<spdlog::logger>  loggerPtr_;
    std::shared_ptr<ChatPartiesTreeModel> chatPartiesTreeModel_;
+   std::shared_ptr<OTCWindowsManager> otcWindowsManager_{};
 
    std::string ownUserId_;
    std::string  currentPartyId_;

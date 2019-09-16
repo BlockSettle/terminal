@@ -420,7 +420,7 @@ WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walle
 
 WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &address) const
 {
-   for (const auto wallet : wallets_) {
+   for (const auto &wallet : wallets_) {
       if (wallet.second && (wallet.second->containsAddress(address)
          || wallet.second->containsHiddenAddress(address))) {
          return wallet.second;

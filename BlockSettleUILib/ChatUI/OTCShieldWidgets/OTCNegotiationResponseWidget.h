@@ -5,12 +5,13 @@
 #include <QWidget>
 
 #include "OtcTypes.h"
+#include "OTCWindowsAdapterBase.h"
 
 namespace Ui {
    class OTCNegotiationCommonWidget;
 };
 
-class OTCNegotiationResponseWidget : public QWidget
+class OTCNegotiationResponseWidget : public OTCWindowsAdapterBase
 {
 Q_OBJECT
 Q_DISABLE_COPY(OTCNegotiationResponseWidget)
@@ -28,9 +29,14 @@ signals:
    void responseUpdated();
    void responseRejected();
 
+protected:
+   void syncInterface() override;
+
 private slots:
    void onChanged();
    void onAcceptOrUpdateClicked();
+
+   void onCurrentWalletChanged();
 
 private:
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;

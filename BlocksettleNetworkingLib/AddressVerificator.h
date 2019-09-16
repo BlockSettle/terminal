@@ -39,7 +39,7 @@ private:
 public:
    AddressVerificator(const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<ArmoryConnection> &
       , VerificationCallback callback);
-   ~AddressVerificator() noexcept;
+   ~AddressVerificator() noexcept override;
 
    AddressVerificator(const AddressVerificator&) = delete;
    AddressVerificator& operator = (const AddressVerificator&) = delete;

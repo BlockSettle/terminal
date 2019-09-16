@@ -108,7 +108,6 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue(keys::Title, tr("Settlement Transaction"));
 
    dialogData.setValue(keys::Price, UiUtils::displayPriceXBT(price()));
-   dialogData.setValue(keys::TransactionAmount, UiUtils::displayQuantity(amount(), UiUtils::XbtCurrency));
 
    dialogData.setValue(keys::Quantity, tr("%1 %2")
                        .arg(UiUtils::displayAmountForProduct(amount(), qtyProd, bs::network::Asset::Type::SpotXBT))

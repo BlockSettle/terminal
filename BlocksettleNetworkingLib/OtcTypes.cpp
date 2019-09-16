@@ -112,6 +112,11 @@ double bs::network::otc::satToBtc(int64_t value)
    return double(value) / BTCNumericTypes::BalanceDivider;
 }
 
+double bs::network::otc::satToBtc(uint64_t value)
+{
+   return double(value) / BTCNumericTypes::BalanceDivider;
+}
+
 int64_t bs::network::otc::btcToSat(double value)
 {
    return std::llround(value * BTCNumericTypes::BalanceDivider);

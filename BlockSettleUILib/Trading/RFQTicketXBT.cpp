@@ -382,17 +382,7 @@ void RFQTicketXBT::onSignerReady()
 
 void RFQTicketXBT::fillRecvAddresses()
 {
-   ui_->receivingAddressComboBox->clear();
-   if (recvWallet_) {
-      ui_->receivingAddressComboBox->addItem(tr("Auto Create"));
-      for (auto addr : recvWallet_->getExtAddressList()) {
-         ui_->receivingAddressComboBox->addItem(QString::fromStdString(addr.display()));
-      }
-      ui_->receivingAddressComboBox->setEnabled(true);
-      ui_->receivingAddressComboBox->setCurrentIndex(0);
-   } else {
-      ui_->receivingAddressComboBox->setEnabled(false);
-   }
+   UiUtils::fillRecvAddressesComboBox(ui_->receivingAddressComboBox, recvWallet_);
 }
 
 void RFQTicketXBT::showCoinControl()

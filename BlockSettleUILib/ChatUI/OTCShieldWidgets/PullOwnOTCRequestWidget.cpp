@@ -3,7 +3,7 @@
 #include "ui_PullOwnOTCRequestWidget.h"
 
 PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
-   : QWidget(parent)
+   : OTCWindowsAdapterBase(parent)
    , ui_{new Ui::PullOwnOTCRequestWidget()}
 {
    ui_->setupUi(this);

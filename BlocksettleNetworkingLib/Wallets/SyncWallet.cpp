@@ -308,8 +308,7 @@ bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t
    catch(std::exception&)
    {}
 
-   armory_->getSpendableTxOutListForValue(walletIDs, val, cbTxOutList);
-   return true;
+   return armory_->getSpendableTxOutListForValue(walletIDs, val, cbTxOutList);
 }
 
 bool Wallet::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const

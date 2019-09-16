@@ -1,5 +1,6 @@
 #include "ChatMessagesTextEdit.h"
 
+#include "OtcUtils.h"
 #include "ProtobufUtils.h"
 
 #include <QApplication>
@@ -50,7 +51,6 @@ QString ChatMessagesTextEdit::data(const std::string& partyId, int row, const Co
        return QString();
    }
 
-   // TODO: Filter OTC messages
    return dataMessage(partyId, row, column);
 }
 
@@ -549,6 +549,12 @@ QString ChatMessagesTextEdit::toHtmlInvalid(const QString &text)
 
 QString ChatMessagesTextEdit::toHtmlText(const QString &text)
 {
+   auto otcText = OtcUtils::toReadableString(text);
+   if (!otcText.isEmpty()) {
+      // No further processing is needed
+      return QStringLiteral("<font color=\"%1\">*** %2 ***</font>").arg(internalStyle_.colorOtc().name()).arg(otcText);
+   }
+
    QString changedText = text;
 
    // make linkable
@@ -567,7 +573,7 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text)
       }
 
       QString linkText = changedText.mid(startIndex, endIndex - startIndex);
-      QString hyperlinkText = QString(QLatin1Literal("<a href=\"%1\" style=\"color:%2\">%1</a>")).arg(linkText).arg(internalStyle_.colorHyperlink().name());
+      QString hyperlinkText = QStringLiteral("<a href=\"%1\" style=\"color:%2\">%1</a>").arg(linkText).arg(internalStyle_.colorHyperlink().name());
 
       changedText = changedText.replace(startIndex, endIndex - startIndex, hyperlinkText);
 
@@ -578,7 +584,7 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text)
    changedText.replace(QLatin1Literal("\n"), QLatin1Literal("<br>"));
 
    // set text color as white
-   changedText = QString(QLatin1Literal("<font color=\"%1\">%2</font>")).arg(internalStyle_.colorWhite().name()).arg(changedText);
+   changedText = QStringLiteral("<font color=\"%1\">%2</font>").arg(internalStyle_.colorWhite().name()).arg(changedText);
 
    return changedText;
 }

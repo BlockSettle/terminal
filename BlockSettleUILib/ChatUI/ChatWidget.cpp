@@ -22,6 +22,8 @@
 #include "OtcUtils.h"
 #include "OtcClient.h"
 #include "OTCRequestViewModel.h"
+#include "OTCShieldWidgets/OTCWindowsManager.h"
+#include "AuthAddressManager.h"
 #include "ui_ChatWidget.h"
 
 using namespace bs::network;
@@ -53,6 +55,19 @@ ChatWidget::ChatWidget(QWidget* parent)
    qRegisterMetaType<std::vector<std::string>>();
    qRegisterMetaType<Chat::UserPublicKeyInfoPtr>();
    qRegisterMetaType<Chat::UserPublicKeyInfoList>();
+
+
+   otcWindowsManager_ = std::make_shared<OTCWindowsManager>();
+   auto* sWidget = ui_->stackedWidgetOTC;
+   for (int index = 0; index < sWidget->count(); ++index) {
+      auto* widget = qobject_cast<OTCWindowsAdapterBase*>(sWidget->widget(index));
+      if (widget) {
+         widget->setChatOTCManager(otcWindowsManager_);
+         connect(this, &ChatWidget::chatRoomChanged, widget, &OTCWindowsAdapterBase::chatRoomChanged);
+      }
+   }
+
+   changeState<ChatLogOutState>(); //Initial state is LoggedOut
 }
 
 ChatWidget::~ChatWidget()
@@ -65,9 +80,10 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    , const std::shared_ptr<ApplicationSettings>& appSettings
    , const Chat::ChatClientServicePtr& chatClientServicePtr
    , const std::shared_ptr<spdlog::logger>& loggerPtr
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<SignContainer> &signContainer)
+   , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
+   , const std::shared_ptr<AuthAddressManager> &authManager
+   , const std::shared_ptr<ArmoryConnection>& armory
+   , const std::shared_ptr<SignContainer>& signContainer)
 {
    loggerPtr_ = loggerPtr;
 
@@ -96,8 +112,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->searchWidget->onSetListVisible(false);
 
    ui_->textEditMessages->onSwitchToChat("Global");
-
-   changeState<ChatLogOutState>(); //Initial state is LoggedOut
 
    // connections
    // User actions
@@ -132,7 +146,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    // OTC
    otcHelper_ = new ChatOTCHelper(this);
-   otcHelper_->init(loggerPtr_, walletsMgr, armory, signContainer);
+   otcHelper_->init(loggerPtr_, walletsMgr, armory, signContainer, authManager, appSettings);
+   otcWindowsManager_->init(walletsMgr, authManager);
    
    connect(otcHelper_->getClient(), &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
    connect(otcHelper_->getClient(), &OtcClient::sendMessage, this, &ChatWidget::onSendOtcMessage);
@@ -342,6 +357,8 @@ void ChatWidget::chatTransition(const Chat::ClientPartyPtr& clientPartyPtr)
    default:
       break;
    }
+
+   emit chatRoomChanged();
 }
 
 void ChatWidget::onActivatePartyId(const QString& partyId)

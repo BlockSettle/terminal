@@ -22,8 +22,10 @@ namespace bs {
    }
 }
 
-class OtcClient;
+class ApplicationSettings;
 class ArmoryConnection;
+class AuthAddressManager;
+class OtcClient;
 class SignContainer;
 
 class ChatOTCHelper : public QObject {
@@ -36,7 +38,8 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
       , const std::shared_ptr<ArmoryConnection>& armory
       , const std::shared_ptr<SignContainer>& signContainer
-   );
+      , const std::shared_ptr<AuthAddressManager> &authAddressManager
+      , const std::shared_ptr<ApplicationSettings> &applicationSettings);
 
    OtcClient* getClient() const;
    void setCurrentUserId(const std::string& ownUserId);

@@ -663,7 +663,7 @@
              <number>0</number>
             </property>
             <property name="currentIndex">
-             <number>3</number>
+             <number>0</number>
             </property>
             <widget class="OTCLoginRequiredShield" name="widgetLoginRequiredShield"/>
             <widget class="OTCGeneralRoomShield" name="widgetGeneralShield"/>
@@ -701,42 +701,42 @@
   <customwidget>
    <class>CreateOTCRequestWidget</class>
    <extends>QWidget</extends>
-   <header>CreateOTCRequestWidget.h</header>
+   <header>ChatUI/OTCShieldWidgets/CreateOTCRequestWidget.h</header>
   </customwidget>
   <customwidget>
    <class>CreateOTCResponseWidget</class>
    <extends>QWidget</extends>
-   <header>CreateOTCResponseWidget.h</header>
+   <header>ChatUI/OTCShieldWidgets/CreateOTCResponseWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>OTCNegotiationResponseWidget</class>
    <extends>QWidget</extends>
-   <header>OTCNegotiationResponseWidget.h</header>
+   <header>ChatUI/OTCShieldWidgets/OTCNegotiationResponseWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>OTCNegotiationRequestWidget</class>
    <extends>QWidget</extends>
-   <header>OTCNegotiationRequestWidget.h</header>
+   <header>ChatUI/OTCShieldWidgets/OTCNegotiationRequestWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>OTCLoginRequiredShield</class>
    <extends>QWidget</extends>
-   <header>OTCLoginRequiredShield.h</header>
+   <header>ChatUI/OTCShieldWidgets/OTCLoginRequiredShield.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>OTCGeneralRoomShield</class>
    <extends>QWidget</extends>
-   <header>OTCGeneralRoomShield.h</header>
+   <header>ChatUI/OTCShieldWidgets/OTCGeneralRoomShield.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>PullOwnOTCRequestWidget</class>
    <extends>QWidget</extends>
-   <header>PullOwnOTCRequestWidget.h</header>
+   <header>ChatUI/OTCShieldWidgets/PullOwnOTCRequestWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -748,25 +748,25 @@
   <customwidget>
    <class>OTCParticipantShield</class>
    <extends>QWidget</extends>
-   <header>OTCParticipantShield.h</header>
+   <header>ChatUI/OTCShieldWidgets/OTCParticipantShield.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>OTCContactShield</class>
    <extends>QWidget</extends>
-   <header>OTCContactShield.h</header>
+   <header>ChatUI/OTCShieldWidgets/OTCContactShield.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>OTCContactNetStatusShield</class>
    <extends>QWidget</extends>
-   <header>OTCContactNetStatusShield.h</header>
+   <header>ChatUI/OTCShieldWidgets/OTCContactNetStatusShield.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>OTCSupportRoomShield</class>
    <extends>QWidget</extends>
-   <header>OTCSupportRoomShield.h</header>
+   <header>ChatUI/OTCShieldWidgets/OTCSupportRoomShield.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

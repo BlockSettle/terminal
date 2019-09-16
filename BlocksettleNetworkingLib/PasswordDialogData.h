@@ -14,7 +14,7 @@ namespace keys {
    class Key
    {
    public:
-      explicit Key(const char *name)
+      explicit constexpr Key(const char *name)
          : name_(name) {}
       QString toString() const { return QString::fromLatin1(name_); }
    private:
@@ -50,10 +50,7 @@ namespace keys {
    extern Key Side;
    extern Key SigningAllowed;
    extern Key Title;
-   extern Key TotalReceived;
-   extern Key TotalSpent;
    extern Key TotalValue;
-   extern Key TransactionAmount;
    extern Key WalletId;
    extern Key XBT;
 

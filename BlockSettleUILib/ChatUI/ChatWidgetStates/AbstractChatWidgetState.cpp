@@ -120,7 +120,7 @@ void AbstractChatWidgetState::onChangeMessageState(const std::string& partyId, c
 
    // Update tree view if needed
    if (static_cast<Chat::PartyMessageState>(party_message_state) == Chat::PartyMessageState::SEEN
-      && message->senderHash() != chat_->ownUserId_) {
+      && message && message->senderHash() != chat_->ownUserId_) {
       chat_->chatPartiesTreeModel_->onDecreaseUnseenCounter(partyId, 1);
    }
 }
