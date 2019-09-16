@@ -151,6 +151,9 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::WalletsListUpdatedType:
       parent_->walletsListUpdated();
       break;
+   case signer::UpdateWalletType:
+      onUpdateWallet(packet.data(), packet.id());
+      break;
    case signer::UpdateStatusType:
       onUpdateStatus(packet.data());
       break;
@@ -593,6 +596,16 @@ void SignerInterfaceListener::onDeleteHDWallet(const std::string &data, bs::sign
    }
    itCb->second(response.success(), response.error());
    cbDeleteHDWalletReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onUpdateWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::UpdateWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   parent_->updateWallet(request.wallet_id());
 }
 
 void SignerInterfaceListener::onUpdateStatus(const std::string &data)
