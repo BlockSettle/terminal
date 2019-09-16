@@ -261,6 +261,16 @@ size_t bs::Address::getPayoutWitnessDataSize()
    return 148;
 }
 
+uint64_t bs::Address::getNativeSegwitDustAmount()
+{
+   return 294;
+}
+
+uint64_t bs::Address::getNestedSegwitDustAmount()
+{
+   return 546;
+}
+
 void bs::Address::decorateUTXOs(std::vector<UTXO> &utxos)
 {
    for (auto &utxo : utxos) {  // some kind of decoration code to replace the code above
