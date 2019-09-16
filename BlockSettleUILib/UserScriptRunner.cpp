@@ -253,7 +253,7 @@ void UserScriptHandler::onAQReply(const QString &reqId, double price)
 {
    const auto itQRN = aqQuoteReqs_.find(reqId.toStdString());
    if (itQRN == aqQuoteReqs_.end()) {
-      logger_->warn("[RFQDealerReply::onAQReply] QuoteReqNotification with id = {} not found", reqId.toStdString());
+      logger_->warn("[UserScriptHandler::onAQReply] QuoteReqNotification with id = {} not found", reqId.toStdString());
       return;
    }
 
@@ -264,7 +264,7 @@ void UserScriptHandler::onAQPull(const QString &reqId)
 {
    const auto itQRN = aqQuoteReqs_.find(reqId.toStdString());
    if (itQRN == aqQuoteReqs_.end()) {
-      logger_->warn("[RFQDealerReply::onAQPull] QuoteReqNotification with id = {} not found", reqId.toStdString());
+      logger_->warn("[UserScriptHandler::onAQPull] QuoteReqNotification with id = {} not found", reqId.toStdString());
       return;
    }
    emit pullQuoteNotif(QString::fromStdString(itQRN->second.quoteRequestId), QString::fromStdString(itQRN->second.sessionToken));
