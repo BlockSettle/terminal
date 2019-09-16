@@ -3,6 +3,7 @@
 
 #include <QDateTime>
 
+#include <unordered_map>
 #include <memory>
 #include <vector>
 
@@ -35,6 +36,7 @@ namespace Chat
 
    using PartyRecipientPtr = std::shared_ptr<PartyRecipient>;
    using PartyRecipientsPtrList = std::vector<PartyRecipientPtr>;
+   using UniqieRecipientMap = std::unordered_map<std::string, PartyRecipientPtr>;
 
 }
 

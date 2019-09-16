@@ -395,3 +395,107 @@ void ClientDBLogic::readHistoryMessages(const std::string& partyId, const int li
 
    emit messageArrived(messagePtrList);
 }
+
+void ClientDBLogic::saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients)
+{
+   const QString cmd = QStringLiteral("INSERT INTO user (user_hash, public_key, public_key_timestamp) "
+      "VALUES (:user_hash, :public_key, :public_key_timestamp);");
+
+   for (const auto& recipient : recipients)
+   {
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userName()));
+      query.bindValue(QStringLiteral(":public_key"), QString::fromStdString(recipient->publicKey().toHexStr()));
+      query.bindValue(QStringLiteral(":public_key_timestamp"), qint64(recipient->publicKeyTime().toMSecsSinceEpoch()));
+
+      if (!checkExecute(query))
+      {
+         emit error(ClientDBLogicError::InsertRecipientKey, recipient->userName());
+      }
+   }
+}
+
+void ClientDBLogic::deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients)
+{
+   const QString cmd = QStringLiteral("DELETE FROM user WHERE user_hash=:user_hash;");
+
+   for (const auto& recipient : recipients)
+   {
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userName()));
+
+      if (!checkExecute(query))
+      {
+         emit error(ClientDBLogicError::DeleteRecipientKey, recipient->userName());
+      }
+   }
+}
+
+void ClientDBLogic::updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients)
+{
+   const QString cmd = QStringLiteral("UPDATE user SET public_key=:public_key, public_key_timestamp=:public_key_timestamp WHERE user_hash=:user_hash;");
+
+   for (const auto& recipient : recipients)
+   {
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userName()));
+      query.bindValue(QStringLiteral(":public_key"), QString::fromStdString(recipient->publicKey().toHexStr()));
+      query.bindValue(QStringLiteral(":public_key_timestamp"), qint64(recipient->publicKeyTime().toMSecsSinceEpoch()));
+
+      if (!checkExecute(query))
+      {
+         emit error(ClientDBLogicError::UpdateRecipientKey, recipient->userName());
+      }
+   }
+}
+
+void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniqueRecipientMap)
+{
+   const QString cmd = QStringLiteral("SELECT public_key, public_key_timestamp FROM user WHERE user_hash=:user_hash;");
+   UserPublicKeyInfoList userPkList;
+
+   for (const auto& uniqueRecipient : uniqueRecipientMap)
+   {
+      PartyRecipientPtr recipientPtr = uniqueRecipient.second;
+
+      QSqlQuery query(getDb());
+      query.prepare(cmd);
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipientPtr->userName()));
+
+      if (checkExecute(query))
+      {
+         if (query.first())
+         {
+            BinaryData oldPublicKey = BinaryData::CreateFromHex(query.value(0).toString().toStdString());
+            QDateTime oldPublicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(query.value(1).toULongLong());
+
+            if (recipientPtr->publicKey() != oldPublicKey || recipientPtr->publicKeyTime() != oldPublicKeyTimestamp)
+            {
+               const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
+               userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userName()));
+               userPkPtr->setOldPublicKeyHex(oldPublicKey);
+               userPkPtr->setOldPublicKeyTime(oldPublicKeyTimestamp);
+               userPkPtr->setNewPublicKeyHex(recipientPtr->publicKey());
+               userPkPtr->setNewPublicKeyTime(recipientPtr->publicKeyTime());
+               userPkList.push_back(userPkPtr);
+            }
+         }
+      }
+      else
+      {
+         emit error(ClientDBLogicError::CheckRecipientKey, recipientPtr->userName());
+      }
+   }
+
+   if (!userPkList.empty())
+   {
+      emit recipientKeysHasChanged(userPkList);
+   }
+   else
+   {
+      emit recipientKeysUnchanged();
+   }
+}

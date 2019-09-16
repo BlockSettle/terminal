@@ -14,6 +14,8 @@
 #include <QClipboard>
 
 #include "BSChatInput.h"
+#include "BSMessageBox.h"
+#include "ImportKeyBox.h"
 #include "ChatClientUsersViewItemDelegate.h"
 #include "ChatWidgetStates/ChatWidgetStates.h"
 #include "ChatOTCHelper.h"
@@ -117,6 +119,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onSendArrived, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onClientPartyStatusChanged, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onMessageStateChanged, Qt::QueuedConnection);
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::userPublicKeyChanged, this, &ChatWidget::onUserPublicKeyChanged);
 
    // Connect all signal that influence on widget appearance 
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
@@ -411,4 +414,58 @@ void ChatWidget::onOtcResponseUpdate()
 void ChatWidget::onOtcResponseReject()
 {
    stateCurrent_->onOtcResponseReject();
+}
+
+void ChatWidget::onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
+{
+   QString detailsPattern = tr("Contacts Require key update: %1");
+
+   QString  detailsString = detailsPattern.arg(userPublicKeyInfoList.size());
+
+   BSMessageBox bsMessageBox(BSMessageBox::question, tr("Contacts Information Update"),
+      tr("Do you wish to import your full Contact list?"),
+      tr("Press OK to Import all Contact ID keys. Selecting Cancel will allow you to determine each contact individually."),
+      detailsString);
+   int ret = bsMessageBox.exec();
+
+   onConfirmContactNewKeyData(userPublicKeyInfoList, QDialog::Accepted == ret);
+}
+
+void ChatWidget::onConfirmContactNewKeyData(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList, bool bForceUpdateAllUsers)
+{
+   Chat::UserPublicKeyInfoList acceptList;
+   Chat::UserPublicKeyInfoList declineList;
+
+   for (const auto& userPkPtr : userPublicKeyInfoList)
+   {
+      if (bForceUpdateAllUsers)
+      {
+         acceptList.push_back(userPkPtr);
+         continue;
+      }
+
+      ImportKeyBox box(BSMessageBox::question, tr("Import Contact '%1' Public Key?").arg(userPkPtr->user_hash()), this);
+      box.setAddrPort(std::string());
+      box.setNewKeyFromBinary(userPkPtr->newPublicKey());
+      box.setOldKeyFromBinary(userPkPtr->oldPublicKey());
+      box.setCancelVisible(true);
+
+      if (box.exec() == QDialog::Accepted)
+      {
+         acceptList.push_back(userPkPtr);
+         continue;
+      }
+
+      declineList.push_back(userPkPtr);
+   }
+
+   if (!acceptList.empty())
+   {
+      chatClientServicePtr_->AcceptNewPublicKeys(acceptList);
+   }
+
+   if (!declineList.empty())
+   {
+      chatClientServicePtr_->DeclineNewPublicKeys(declineList);
+   }
 }

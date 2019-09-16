@@ -17,15 +17,16 @@
 using namespace Chat;
 
 ClientConnectionLogic::ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings,
-   const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, const Chat::CryptManagerPtr& cryptManagerPtr, QObject* parent /* = nullptr */)
-   : QObject(parent), cryptManagerPtr_(cryptManagerPtr), loggerPtr_(loggerPtr), clientDBServicePtr_(clientDBServicePtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
+   const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, const Chat::CryptManagerPtr& cryptManagerPtr, 
+   const SessionKeyHolderPtr& sessionKeyHolderPtr, QObject* parent /* = nullptr */)
+   : QObject(parent), sessionKeyHolderPtr_(sessionKeyHolderPtr), cryptManagerPtr_(cryptManagerPtr), loggerPtr_(loggerPtr), 
+   clientDBServicePtr_(clientDBServicePtr), appSettings_(appSettings), clientPartyLogicPtr_(clientPartyLogicPtr)
 {
    qRegisterMetaType<Chat::SearchUserReplyList>();
 
    connect(this, &ClientConnectionLogic::userStatusChanged, clientPartyLogicPtr_.get(), &ClientPartyLogic::onUserStatusChanged);
    connect(this, &ClientConnectionLogic::error, this, &ClientConnectionLogic::handleLocalErrors);
 
-   sessionKeyHolderPtr_ = std::make_shared<SessionKeyHolder>(loggerPtr_, this);
    connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::requestSessionKeyExchange, this, &ClientConnectionLogic::requestSessionKeyExchange);
    connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::replySessionKeyExchange, this, &ClientConnectionLogic::replySessionKeyExchange);
    connect(sessionKeyHolderPtr_.get(), &SessionKeyHolder::sessionKeysForUser, this, &ClientConnectionLogic::sessionKeysForUser);
@@ -161,7 +162,7 @@ void ClientConnectionLogic::handleStatusChanged(const StatusChanged& statusChang
    // clear session keys for user
    sessionKeyHolderPtr_->clearSessionForUser(statusChanged.user_name());
 
-   emit userStatusChanged(statusChanged.user_name(), statusChanged.client_status());
+   emit userStatusChanged(statusChanged);
 }
 
 void ClientConnectionLogic::handlePartyMessageStateUpdate(const PartyMessageStateUpdate& partyMessageStateUpdate)
@@ -415,7 +416,8 @@ void ClientConnectionLogic::handlePrivatePartyRequest(const PrivatePartyRequest&
    // 1. check if model have this same party id
    // 2. if have and local party state is initialized then reply initialized state
    // 3. if not create new private party
-   // 4. save party id in db
+   // 4. save updated recipients keys in db
+   // 5. save party id in db
 
    ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
    PartyPtr partyPtr = clientPartyModelPtr->getClientPartyById(privatePartyRequest.party_packet().party_id());
@@ -444,6 +446,9 @@ void ClientConnectionLogic::handlePrivatePartyRequest(const PrivatePartyRequest&
          }
 
          clientPartyPtr->setRecipients(updatedRecipients);
+
+         // Save recipient keys in db
+         saveRecipientsKeys(clientPartyPtr);
 
          return;
       }
@@ -544,7 +549,7 @@ void ClientConnectionLogic::sessionKeysForUser(const Chat::SessionKeyDataPtr& se
 void ClientConnectionLogic::sessionKeysForUserFailed(const std::string& userName)
 {
    // ! not implemented
-   // this function is called after sendmessage
+   // this function is called after send message
 }
 
 void ClientConnectionLogic::messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
@@ -689,4 +694,11 @@ void ClientConnectionLogic::searchUser(const std::string& userHash, const std::s
    requestSearchUser.set_search_text(userHash);
 
    emit sendPacket(requestSearchUser);
+}
+
+void ClientConnectionLogic::saveRecipientsKeys(const ClientPartyPtr& clientPartyPtr)
+{
+   const PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr()->userName());
+
+   clientDBServicePtr_->saveRecipientsKeys(recipients);
 }

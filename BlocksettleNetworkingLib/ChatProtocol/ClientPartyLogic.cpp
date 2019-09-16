@@ -28,11 +28,15 @@ ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBSer
    connect(clientDBServicePtr.get(), &ClientDBService::messageStateChanged, clientPartyModelPtr_.get(), &ClientPartyModel::messageStateChanged);
 
    connect(clientPartyModelPtr_.get(), &ClientPartyModel::partyInserted, this, &ClientPartyLogic::handlePartyInserted);
+   connect(this, &ClientPartyLogic::userPublicKeyChanged, clientPartyModelPtr_.get(), &ClientPartyModel::userPublicKeyChanged, Qt::QueuedConnection);
 }
 
 void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& welcomeResponse)
 {
    clientPartyModelPtr_->clearModel();
+
+   // all unique recipients
+   UniqieRecipientMap uniqueRecipients;
 
    for (int i = 0; i < welcomeResponse.party_size(); i++)
    {
@@ -53,6 +57,8 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
             PartyRecipientPtr recipientPtr =
                std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key(), QDateTime::fromMSecsSinceEpoch(recipient.timestamp_ms()));
             recipients.push_back(recipientPtr);
+
+            uniqueRecipients[recipientPtr->userName()] = recipientPtr;
          }
 
          clientPartyPtr->setRecipients(recipients);
@@ -67,23 +73,17 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
       }
    }
 
-   emit partyModelChanged();
-
-   // parties loaded, check is party display name should be updated
-   IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
-   for (const auto& partyId : idPartyList)
-   {
-      clientDBServicePtr_->loadPartyDisplayName(partyId);
-   }
+   // check if any of recipients has changed public key
+   clientDBServicePtr_->checkRecipientPublicKey(uniqueRecipients);
 }
 
-void ClientPartyLogic::onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus)
+void ClientPartyLogic::onUserStatusChanged(const StatusChanged& statusChanged)
 {
-   ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getPartyByUserName(userName);
+   ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getPartyByUserName(statusChanged.user_name());
 
    if (clientPartyPtr == nullptr)
    {
-      emit error(ClientPartyLogicError::NonexistentClientStatusChanged, userName);
+      emit error(ClientPartyLogicError::NonexistentClientStatusChanged, statusChanged.user_name());
       return;
    }
 
@@ -93,16 +93,40 @@ void ClientPartyLogic::onUserStatusChanged(const std::string& userName, const Cl
       return;
    }
 
-   clientPartyPtr->setClientStatus(clientStatus);
+   clientPartyPtr->setClientStatus(statusChanged.client_status());
 
    if (ClientStatus::ONLINE != clientPartyPtr->clientStatus())
    {
       return;
    }
 
-   // if client status is online check do we have any unsent messages for this user
-   clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
+   // check if public key changed
+   if (statusChanged.has_public_key())
+   {
+      PartyRecipientPtr recipientPtr = clientPartyPtr->getRecipient(statusChanged.user_name());
 
+      if (recipientPtr)
+      {
+         const BinaryData public_key(statusChanged.public_key().value());
+         const QDateTime dt = QDateTime::fromMSecsSinceEpoch(statusChanged.timestamp_ms().value());
+         const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
+
+         userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userName()));
+         userPkPtr->setOldPublicKeyHex(recipientPtr->publicKey());
+         userPkPtr->setOldPublicKeyTime(recipientPtr->publicKeyTime());
+         userPkPtr->setNewPublicKeyHex(public_key);
+         userPkPtr->setNewPublicKeyTime(dt);
+         UserPublicKeyInfoList userPkList;
+         userPkList.push_back(userPkPtr);
+
+         emit userPublicKeyChanged(userPkList);
+      }
+
+      return;
+   }
+
+   // if client status is online check if we have any unsent messages for this user
+   clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
 }
 
 void ClientPartyLogic::handleLocalErrors(const ClientPartyLogicError& errorCode, const std::string& what)
@@ -204,11 +228,20 @@ void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserP
       if (PartyState::REJECTED == oldClientPartyPtr->partyState() && oldClientPartyPtr->isPrivateStandard())
       {
          emit deletePrivateParty(oldClientPartyPtr->id());
+
+         // delete old recipients keys
+         PartyRecipientsPtrList oldRecipients = oldClientPartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
+         clientDBServicePtr_->deleteRecipientsKeys(oldRecipients);
       }
    }
 
    // update model
    clientPartyModelPtr_->insertParty(newClientPrivatePartyPtr);
+
+   // update recipients keys
+   PartyRecipientsPtrList remoteRecipients = newClientPrivatePartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
+   clientDBServicePtr_->saveRecipientsKeys(remoteRecipients);
+
    emit partyModelChanged();
 
    // save party in db
@@ -262,4 +295,27 @@ void ClientPartyLogic::loggedOutFromServer()
          clientPartyPtr->setClientStatus(ClientStatus::OFFLINE);
       }
    }
+}
+
+void ClientPartyLogic::onRecipientKeysHasChanged(const Chat::UserPublicKeyInfoList& userPkList)
+{
+   emit userPublicKeyChanged(userPkList);
+}
+
+void ClientPartyLogic::onRecipientKeysUnchanged()
+{
+   updateModelAndRefreshPartyDisplayNames();
+}
+
+void ClientPartyLogic::updateModelAndRefreshPartyDisplayNames()
+{
+   emit partyModelChanged();
+
+   // parties loaded, check is party display name should be updated
+   IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
+   for (const auto& partyId : idPartyList)
+   {
+      clientDBServicePtr_->loadPartyDisplayName(partyId);
+   }
+
 }

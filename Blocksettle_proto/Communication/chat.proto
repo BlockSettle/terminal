@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "google/protobuf/wrappers.proto";
 
 package Chat;
 
@@ -86,6 +87,8 @@ message StatusChanged
 {
    string user_name = 1;
    ClientStatus client_status = 2;
+   google.protobuf.BytesValue public_key = 3;
+   google.protobuf.Int64Value timestamp_ms = 4;   
 }
 
 message PartyMessagePacket
@@ -146,8 +149,8 @@ message RequestSearchUser
 
 message ReplySearchUser
 {
-    repeated string user_name = 1;
-    string search_id = 2;
+   repeated string user_name = 1;
+   string search_id = 2;
 }
 
 /*

@@ -8,6 +8,7 @@
 #include "ChatProtocol/ClientPartyModel.h"
 #include "ChatProtocol/ClientDBService.h"
 #include "ChatProtocol/ChatUser.h"
+#include "ChatProtocol/UserPublicKeyInfo.h"
 
 #include <google/protobuf/message.h>
 
@@ -51,16 +52,21 @@ namespace Chat
       void privatePartyCreated(const std::string& partyId);
       void privatePartyAlreadyExist(const std::string& partyId);
       void deletePrivateParty(const std::string& partyId);
+      void userPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
 
    public slots:
-      void onUserStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
+      void onUserStatusChanged(const StatusChanged& statusChanged);
       void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
       void loggedOutFromServer();
+      void updateModelAndRefreshPartyDisplayNames();
 
    private slots:
       void handleLocalErrors(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
       void handlePartyInserted(const Chat::PartyPtr& partyPtr);
       void clientPartyDisplayNameChanged(const std::string& partyId);
+
+      void onRecipientKeysHasChanged(const Chat::UserPublicKeyInfoList& userPkList);
+      void onRecipientKeysUnchanged();
 
    private:
       LoggerPtr loggerPtr_;
