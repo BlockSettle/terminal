@@ -63,6 +63,9 @@ namespace bs {
 
       static size_t getPayoutWitnessDataSize();
 
+      static uint64_t getNativeSegwitDustAmount();
+      static uint64_t getNestedSegwitDustAmount();
+
       // Try to initialize txinRedeemSizeBytes_, witnessDataSizeBytes_ and isInputSW_.
       // Usually used to calculate TX vsize.
       static void decorateUTXOs(std::vector<UTXO> &utxos);
