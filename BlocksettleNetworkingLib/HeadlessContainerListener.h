@@ -54,6 +54,8 @@ public:
    virtual void customDialog(const std::string &, const std::string &) = 0;
    virtual void terminalHandshakeFailed(const std::string &peerAddress) = 0;
 
+   virtual void walletChanged(const std::string &walletId) = 0;
+
    virtual void ccNamesReceived(bool) = 0;
 };
 
