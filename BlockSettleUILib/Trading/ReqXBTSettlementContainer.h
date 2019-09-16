@@ -6,7 +6,6 @@
 #include "AddressVerificator.h"
 #include "BSErrorCode.h"
 #include "SettlementContainer.h"
-#include "SettlementMonitor.h"
 #include "UtxoReservation.h"
 #include "TransactionData.h"
 #include "QWalletInfo.h"
@@ -88,13 +87,10 @@ private slots:
    void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo);
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string error);
    void onTimerExpired();
-   void onPayInZCDetected();
-   void onPayoutZCDetected(int confNum, bs::PayoutSigner::Type);
 
 private:
    unsigned int createPayoutTx(const BinaryData& payinHash, double qty, const bs::Address &recvAddr);
-   void payoutOnCancel();
-   void detectDealerTxs();
+
    void acceptSpotXBT();
    void dealerVerifStateChanged(AddressVerificationState);
    void activateProceed();
@@ -107,13 +103,14 @@ private:
    std::shared_ptr<SignContainer>         signContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<TransactionData>       transactionData_;
-   bs::core::wallet::TXSignRequest        payInTxRequest_, payOutTxRequest_;
+   bs::core::wallet::TXSignRequest        payInTxRequest_;
+   bs::core::wallet::TXSignRequest        payOutTxRequest_;
+
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
    bs::Address                settlAddr_;
 
    std::shared_ptr<AddressVerificator>       addrVerificator_;
-   std::shared_ptr<bs::SettlementMonitorCb>        monitor_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
    AddressVerificationState   dealerVerifState_ = AddressVerificationState::InProgress;
@@ -137,8 +134,6 @@ private:
    const bool        clientSells_;
    bool              userKeyOk_ = false;
    bool              sellFromPrimary_ = false;
-   std::atomic_bool  waitForPayout_;
-   std::atomic_bool  waitForPayin_;
    unsigned int      payinSignId_ = 0;
    unsigned int      payoutSignId_ = 0;
    unsigned int      infoReqId_ = 0;

@@ -2,19 +2,20 @@
 
 #include <QApplication>
 #include <QPointer>
+
 #include <spdlog/spdlog.h>
+
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
 #include "QuoteProvider.h"
+#include "SettlementMonitor.h"
 #include "SignContainer.h"
-#include "QuoteProvider.h"
 #include "TransactionData.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "UiUtils.h"
 
 static const unsigned int kWaitTimeoutInSec = 30;
 
@@ -153,9 +154,6 @@ bool ReqXBTSettlementContainer::cancel()
 {
    deactivate();
    if (clientSells_) {
-      if (!payoutData_.isNull()) {
-         payoutOnCancel();
-      }
       utxoAdapter_->unreserve(id());
    }
    emit settlementCancelled();
@@ -164,14 +162,6 @@ bool ReqXBTSettlementContainer::cancel()
 
 void ReqXBTSettlementContainer::onTimerExpired()
 {
-   if (!clientSells_ && (waitForPayin_ || waitForPayout_)) {
-      emit error(tr("Dealer didn't push transactions to blockchain within a given time interval"));
-   }
-   else {
-      if (clientSells_ && waitForPayout_) {
-         waitForPayout_ = false;
-      }
-   }
    cancel();
 }
 
@@ -259,9 +249,6 @@ void ReqXBTSettlementContainer::activate()
 void ReqXBTSettlementContainer::deactivate()
 {
    stopTimer();
-   if (monitor_) {
-      monitor_->stop();
-   }
 }
 
 bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() const
@@ -341,13 +328,6 @@ void ReqXBTSettlementContainer::activateProceed()
       const auto &buyAuthKey = clientSells_ ? dealerAuthKey_ : userKey_;
       const auto &sellAuthKey = clientSells_ ? userKey_ : dealerAuthKey_;
 
-      monitor_ = std::make_shared<bs::SettlementMonitorCb>(armory_, logger_
-         , settlAddr_, buyAuthKey, sellAuthKey, [this] {
-         monitor_->start([this](int, const BinaryData &) { onPayInZCDetected(); }
-         , [this](int confNum, bs::PayoutSigner::Type signedBy) { onPayoutZCDetected(confNum, signedBy); }
-         , [](bs::PayoutSigner::Type) {});
-      });
-
       recvAddr_ = transactionData_->GetFallbackRecvAddress();
 
       const auto recipient = transactionData_->RegisterNewRecipient();
@@ -419,69 +399,8 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
 
       emit info(tr("Waiting for Order verification"));
 
-      waitForPayout_ = waitForPayin_ = true;
       emit acceptQuote(rfq_.requestId, payoutData_.toHexStr());
       startTimer(kWaitTimeoutInSec);
-   }
-}
-
-void ReqXBTSettlementContainer::payoutOnCancel()
-{
-   utxoAdapter_->unreserve(id());
-
-   if (!armory_->broadcastZC(payoutData_)) {
-      logger_->error("[ReqXBTSettlementContainer::payoutOnCancel] failed to broadcast payout");
-      return;
-   }
-   const std::string revokeComment = "Revoke for " + comment_;
-   transactionData_->getWallet()->setTransactionComment(payoutData_, revokeComment);
-//   walletsMgr_->getSettlementWallet()->setTransactionComment(payoutData_, revokeComment);  //TODO: later
-}
-
-void ReqXBTSettlementContainer::detectDealerTxs()
-{
-   if (clientSells_)  return;
-   if (!waitForPayin_ && !waitForPayout_) {
-      emit info(tr("Both pay-in and pay-out transactions were detected!"));
-      logger_->debug("[ReqXBTSettlementContainer::detectDealerTxs] Both pay-in and pay-out transactions were detected on requester side");
-      deactivate();
-      emit settlementAccepted();
-   }
-}
-
-void ReqXBTSettlementContainer::onPayInZCDetected()
-{
-   if (waitForPayin_ && !settlementId_.isNull()) {
-      waitForPayin_ = false;
-
-      if (clientSells_) {
-         waitForPayout_ = true;
-         startTimer(kWaitTimeoutInSec);
-         emit info(tr("Waiting for dealer's pay-out in blockchain..."));
-      }
-      else {
-         detectDealerTxs();
-      }
-   }
-}
-
-void ReqXBTSettlementContainer::onPayoutZCDetected(int confNum, bs::PayoutSigner::Type signedBy)
-{
-   Q_UNUSED(confNum);
-   logger_->debug("[ReqXBTSettlementContainer::onPayoutZCDetected] signedBy={}"
-      , bs::PayoutSigner::toString(signedBy));
-   if (waitForPayout_) {
-      waitForPayout_ = false;
-   }
-
-   if (!settlementId_.isNull()) {
-      if (clientSells_) {
-         deactivate();
-         emit settlementAccepted();
-      }
-      else {
-         detectDealerTxs();
-      }
    }
 }
 
@@ -495,7 +414,6 @@ void ReqXBTSettlementContainer::OrderReceived()
          transactionData_->getWallet()->setTransactionComment(payinData_, comment_);
 //         walletsMgr_->getSettlementWallet()->setTransactionComment(payinData_, comment_);  //TODO: later
 
-         waitForPayin_ = true;
          logger_->debug("[XBTSettlementTransactionWidget::OrderReceived] Pay-In broadcasted");
          emit info(tr("Waiting for own pay-in in blockchain..."));
       }
