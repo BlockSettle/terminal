@@ -71,8 +71,6 @@ private:
 
    const std::function<bool(const bs::Address &)> containsAddressCb = [this](const bs::Address &address){
       const auto &wallet = walletsMgr_->getWalletById(txReq_.walletIds.front());
-      logger_->debug("[{}] WALLET ID: {}, ADDR: {}, CONTAINS: {}, HIDDEN: {}", __func__, wallet->walletId(), address.toHexStr()
-   , wallet->containsAddress(address) ? "TRUE" : "FALSE", wallet->containsHiddenAddress(address) ? "TRUE" : "FALSE");
       return wallet->containsAddress(address);
    };
 };
