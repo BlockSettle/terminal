@@ -474,6 +474,8 @@ void hd::Leaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
       topUpAddressPool(extInt, topUpCb);
    }
    else {
+      const std::set<BinaryData> addrSet = { result.id() };
+      signContainer_->syncAddressBatch(walletId(), addrSet, [](bs::sync::SyncState) {});
       cbAddAddr(result);
    }
 }
