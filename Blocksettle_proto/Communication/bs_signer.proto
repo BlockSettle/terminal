@@ -25,6 +25,7 @@ enum PacketType
    SetLimitsType = 14;
    PasswordReceivedType = 15;
    RequestCloseType = 16;
+   UpdateWalletType  = 17;
    ReloadWalletsType = 18;
 
    // Execute QML dialog by it's name
@@ -382,4 +383,9 @@ message TerminalEvent
    string peer_address = 1;
    bool   handshake_ok = 2;
    bool   cc_info_received = 3;
+}
+
+message UpdateWalletRequest
+{
+  string wallet_id = 1;
 }
