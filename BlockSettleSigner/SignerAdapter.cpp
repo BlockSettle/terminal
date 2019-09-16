@@ -108,6 +108,19 @@ void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function
    listener_->setReloadWalletsCb(reqId, cb);
 }
 
+void SignerAdapter::updateWallet(const std::string &walletId)
+{
+   const auto wallet = walletsMgr_->getWalletById(walletId);
+   if (!wallet) {
+      logger_->debug("[{}] looks like a new wallet was added - syncing all of them");
+      walletsListUpdated();
+      return;
+   }
+   wallet->synchronize([this, walletId] {
+      logger_->debug("[SignerAdapter::updateWallet] wallet {} was re-synchronized", walletId);
+   });
+}
+
 void SignerAdapter::setLimits(bs::signer::Limits limits)
 {
    signer::SetLimitsRequest request;
