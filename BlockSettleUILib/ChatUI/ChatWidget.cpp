@@ -51,6 +51,8 @@ ChatWidget::ChatWidget(QWidget* parent)
    ui_->treeViewUsers->viewport()->installEventFilter(this);
 
    qRegisterMetaType<std::vector<std::string>>();
+   qRegisterMetaType<Chat::UserPublicKeyInfoPtr>();
+   qRegisterMetaType<Chat::UserPublicKeyInfoList>();
 }
 
 ChatWidget::~ChatWidget()
