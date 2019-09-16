@@ -70,6 +70,8 @@ namespace Chat
       void DeletePrivateParty(const std::string& partyId);
       void AcceptPrivateParty(const std::string& partyId);
       void SearchUser(const std::string& userHash, const std::string& searchId);
+      void AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
+      void DeclineNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
 
    signals:
       void dataReceived(const std::string&);
@@ -112,6 +114,7 @@ namespace Chat
       ClientPartyLogicPtr        clientPartyLogicPtr_;
       ClientDBServicePtr         clientDBServicePtr_;
       CryptManagerPtr            cryptManagerPtr_;
+      SessionKeyHolderPtr        sessionKeyHolderPtr_;
    };
 
 }

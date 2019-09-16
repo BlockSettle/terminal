@@ -5,12 +5,13 @@
 #include <QWidget>
 
 #include "OtcTypes.h"
+#include "OTCWindowsAdapterBase.h"
 
 namespace Ui {
     class PullOwnOTCRequestWidget;
 };
 
-class PullOwnOTCRequestWidget : public QWidget
+class PullOwnOTCRequestWidget : public OTCWindowsAdapterBase
 {
 Q_OBJECT
 

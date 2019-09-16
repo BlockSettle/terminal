@@ -51,7 +51,7 @@ namespace Chat
    public:
       explicit ClientConnectionLogic(const ClientPartyLogicPtr& clientPartyLogicPtr, const ApplicationSettingsPtr& appSettings, 
          const ClientDBServicePtr& clientDBServicePtr, const LoggerPtr& loggerPtr, const Chat::CryptManagerPtr& cryptManagerPtr,
-         QObject* parent = nullptr);
+         const SessionKeyHolderPtr& sessionKeyHolderPtr, QObject* parent = nullptr);
 
       Chat::ChatUserPtr currentUserPtr() const { return currentUserPtr_; }
       void setCurrentUserPtr(Chat::ChatUserPtr val) { currentUserPtr_ = val; }
@@ -79,7 +79,7 @@ namespace Chat
    signals:
       void sendPacket(const google::protobuf::Message& message);
       void closeConnection();
-      void userStatusChanged(const std::string& userName, const ClientStatus& clientStatus);
+      void userStatusChanged(const StatusChanged& statusChanged);
       void error(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "", bool displayAsWarning = false);
       void properlyConnected();
       void searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
@@ -111,6 +111,7 @@ namespace Chat
       void incomingGlobalPartyMessage(PartyMessagePacket& msg);
       void incomingPrivatePartyMessage(PartyMessagePacket& partyMessagePacket);
       void saveIncomingPartyMessageAndUpdateState(PartyMessagePacket& msg, const PartyMessageState& partyMessageState);
+      void saveRecipientsKeys(const ClientPartyPtr& clientPartyPtr);
 
       LoggerPtr   loggerPtr_;
       ChatUserPtr currentUserPtr_;

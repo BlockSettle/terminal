@@ -332,7 +332,7 @@ QVariant CoinControlModel::data(const QModelIndex& index, int role) const
          return node->getUtxoCount();
       case ColumnBalance: {
          const auto amount = (node->getSelectedAmount() <= 0) ? node->getTotalAmount() : node->getSelectedAmount();
-         return (wallet_->type() == bs::core::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
+         return (wallet_ && wallet_->type() == bs::core::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
       }
       default:
          return QVariant{};
@@ -456,7 +456,7 @@ QString CoinControlModel::GetSelectedBalance() const
       return {};
    }
    const auto amount = qMax<BTCNumericTypes::balance_type>(root_->getSelectedAmount(), 0);
-   return (wallet_->type() == bs::core::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
+   return (wallet_ && wallet_->type() == bs::core::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
 }
 
 QString CoinControlModel::GetTotalBalance() const
@@ -465,7 +465,7 @@ QString CoinControlModel::GetTotalBalance() const
       return {};
    }
    const auto amount = qMax<BTCNumericTypes::balance_type>(root_->getTotalAmount(), 0);
-   return (wallet_->type() == bs::core::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
+   return (wallet_ && wallet_->type() == bs::core::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
 }
 
 CoinControlNode* CoinControlModel::getNodeByIndex(const QModelIndex& index) const
@@ -488,8 +488,10 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
       AddressNode *addressNode = nullptr;
 
       if (addressIt == addressNodes_.end()) {
+         auto wallet = selectedInputs->GetWallet();
+         auto comment = wallet ? wallet->getAddressComment(input.getRecipientScrAddr()) : "";
          addressNode = new AddressNode(CoinControlNode::detectType(address), QString::fromStdString(address.display())
-            , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(input.getRecipientScrAddr())), (int)addressNodes_.size(), root_.get());
+            , QString::fromStdString(comment), (int)addressNodes_.size(), root_.get());
          root_->appendChildrenNode(addressNode);
          addressNodes_.emplace(addrStr, addressNode);
       } else {

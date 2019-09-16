@@ -11,6 +11,7 @@
 #include "ChatProtocol/PartyModel.h"
 #include "ChatProtocol/ClientParty.h"
 #include "ChatProtocol/Message.h"
+#include "ChatProtocol/UserPublicKeyInfo.h"
 
 namespace spdlog
 {
@@ -64,6 +65,7 @@ namespace Chat
       void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
       void partyStateChanged(const std::string& partyId);
       void clientPartyDisplayNameChanged(const std::string& partyId);
+      void userPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
 
    private slots:
       void handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false);

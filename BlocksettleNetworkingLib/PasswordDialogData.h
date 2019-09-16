@@ -8,6 +8,55 @@
 namespace bs {
 namespace sync {
 
+namespace dialog {
+namespace keys {
+
+   class Key
+   {
+   public:
+      explicit constexpr Key(const char *name)
+         : name_(name) {}
+      QString toString() const { return QString::fromLatin1(name_); }
+   private:
+      const char *name_;
+   };
+
+   extern Key AutoSignCategory;
+   extern Key DeliveryAmount;
+   extern Key DeliveryReceived;
+   extern Key DeliveryUTXOVerified;
+   extern Key DialogType;
+   extern Key Duration;
+   extern Key InputAmount;
+   extern Key InputsList;
+   extern Key NetworkFee;
+   extern Key PaymentAmount;
+   extern Key PaymentReceived;
+   extern Key Price;
+   extern Key Product;
+   extern Key ProductGroup;
+   extern Key Quantity;
+   extern Key RecipientsList;
+   extern Key RequesterAuthAddress;
+   extern Key RequesterAuthAddressVerified;
+   extern Key ResponderAuthAddress;
+   extern Key ResponderAuthAddressVerified;
+   extern Key ReturnAmount;
+   extern Key Security;
+   extern Key SettlementAddress;
+   extern Key SettlementId;
+   extern Key SettlementPayIn;
+   extern Key SettlementPayOut;
+   extern Key Side;
+   extern Key SigningAllowed;
+   extern Key Title;
+   extern Key TotalValue;
+   extern Key WalletId;
+   extern Key XBT;
+
+} // namespace keys
+} // namespace dialog
+
 class PasswordDialogData : public QObject
 {
    Q_OBJECT
@@ -31,13 +80,11 @@ public:
    Q_INVOKABLE QVariant value(const QString &key) const;
    QVariant value(const char *key) const;
 
-   void setValue(const QString &key, const QVariant &value);
-   void setValue(const char *key, const QVariant &value);
-   void setValue(const char *key, const char *value);
-   void setValue(const char *key, const std::string &value);
+   void setValue(const bs::sync::dialog::keys::Key &key, const QVariant &value);
+   void setValue(const bs::sync::dialog::keys::Key &key, const char *value);
+   void setValue(const bs::sync::dialog::keys::Key &key, const std::string &value);
 
-   void remove(const QString &key);
-   void remove(const char *key);
+   void remove(const bs::sync::dialog::keys::Key &key);
 
    Q_INVOKABLE bool contains(const QString &key);
    bool contains(const char *key) { return contains(QString::fromLatin1(key)); }
@@ -47,6 +94,9 @@ signals:
    void dataChanged();
 
 private:
+   void remove(const QString &key);
+   void setValue(const QString &key, const QVariant &value);
+
    void setValues(const QVariantMap &values);
 
    bool deliveryUTXOVerified() { return value("DeliveryUTXOVerified").toBool(); }

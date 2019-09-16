@@ -39,6 +39,7 @@ namespace Blocksettle {
 }
 
 namespace bs {
+   class Address;
    namespace core {
       namespace wallet {
          struct TXSignRequest;
@@ -54,23 +55,42 @@ namespace bs {
 }
 
 class ArmoryConnection;
+class AuthAddressManager;
 class SignContainer;
 struct OtcClientDeal;
+
+struct OtcClientParams
+{
+   // Return path that will be used to save offline sign request.
+   // Must be set if offline wallet will be used for sell.
+   // If empty, deal would be canceled.
+   std::function<std::string(const std::string &walletId)> offlineSavePathCb;
+
+   // Return path that will be used to load signed offline request.
+   // Must be set if offline wallet will be used for sell.
+   // If empty, deal would be canceled.
+   std::function<std::string()> offlineLoadPathCb;
+};
 
 class OtcClient : public QObject
 {
    Q_OBJECT
 public:
+
+   // authAddressManager could be null. If not set peer's auth address won't be verified (and verification affects only signer UI for now).
    OtcClient(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<SignContainer> &signContainer
+      , const std::shared_ptr<AuthAddressManager> &authAddressManager
+      , OtcClientParams params
       , QObject *parent = nullptr);
    ~OtcClient() override;
 
    const bs::network::otc::Peer *peer(const std::string &peerId) const;
 
    void setCurrentUserId(const std::string &userId);
+   const std::string &getCurrentUser() const;
 
    bool sendOffer(const bs::network::otc::Offer &offer, const std::string &peerId);
    bool pullOrRejectOffer(const std::string &peerId);
@@ -105,34 +125,30 @@ private:
    void processPbStartOtc(const Blocksettle::Communication::ProxyTerminalPb::Response_StartOtc &response);
    void processPbVerifyOtc(const Blocksettle::Communication::ProxyTerminalPb::Response_VerifyOtc &response);
 
+   // Checks that hdWallet, auth address and recv address (is set) are valid
+   bool verifyOffer(const bs::network::otc::Offer &offer) const;
    void blockPeer(const std::string &reason, bs::network::otc::Peer *peer);
-
    bs::network::otc::Peer *findPeer(const std::string &peerId);
 
    void send(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::Message &msg);
 
    void createRequests(const BinaryData &settlementId, const bs::network::otc::Peer &peer, const OtcClientDealCb &cb);
-
    void sendSellerAccepts(bs::network::otc::Peer *peer);
 
-   std::shared_ptr<bs::sync::hd::SettlementLeaf> ourSettlementLeaf();
-   std::shared_ptr<bs::sync::Wallet> ourBtcWallet();
+   std::shared_ptr<bs::sync::hd::SettlementLeaf> findSettlementLeaf(const std::string &ourAuthAddress);
 
    void changePeerState(bs::network::otc::Peer *peer, bs::network::otc::State state);
-
    int genLocalUniqueId() { return ++latestUniqueId_; }
-
    void trySendSignedTxs(OtcClientDeal *deal);
+   void verifyAuthAddresses(OtcClientDeal *deal);
 
    std::shared_ptr<spdlog::logger> logger_;
    std::unordered_map<std::string, bs::network::otc::Peer> peers_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
-
    std::shared_ptr<ArmoryConnection> armory_;
    std::shared_ptr<SignContainer> signContainer_;
-
-   BinaryData ourPubKey_;
+   std::shared_ptr<AuthAddressManager> authAddressManager_;
 
    std::string currentUserId_;
 
@@ -143,6 +159,9 @@ private:
 
    // Maps sign requests to settlementId
    std::map<unsigned, BinaryData> signRequestIds_;
+
+   OtcClientParams params_;
+
 };
 
 #endif

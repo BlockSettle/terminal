@@ -46,6 +46,5 @@ namespace Chat
 }
 
 Q_DECLARE_METATYPE(Chat::PrivateDirectMessagePartyPtr)
-Q_DECLARE_METATYPE(Chat::PartyRecipientsPtrList)
 
 #endif // PRIVATEDIRECTMESSAGEPARTY_H

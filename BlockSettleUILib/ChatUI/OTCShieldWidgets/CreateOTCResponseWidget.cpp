@@ -3,7 +3,7 @@
 #include "ui_CreateOTCResponseWidget.h"
 
 CreateOTCResponseWidget::CreateOTCResponseWidget(QWidget* parent)
-   : QWidget{parent}
+   : OTCWindowsAdapterBase{parent}
    , ui_{new Ui::CreateOTCResponseWidget{}}
 {
    ui_->setupUi(this);

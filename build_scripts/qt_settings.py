@@ -14,7 +14,7 @@ class QtSettings(Configurator):
         self.jom = JomSettings(settings)
         self.openssl = OpenSslSettings(settings)
         self._release = '5.12'
-        self._version = self._release + '.2'
+        self._version = self._release + '.5'
         self._package_name = 'qt-everywhere-src-' + self._version
         self._script_revision = '7'
 

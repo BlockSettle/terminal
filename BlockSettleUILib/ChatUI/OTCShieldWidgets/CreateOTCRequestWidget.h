@@ -5,16 +5,15 @@
 #include <memory>
 
 #include "OtcTypes.h"
+#include "OTCWindowsAdapterBase.h"
 
 namespace Ui {
    class CreateOTCRequestWidget;
 };
 
-
-class CreateOTCRequestWidget : public QWidget
+class CreateOTCRequestWidget : public OTCWindowsAdapterBase
 {
-Q_OBJECT
-
+   Q_OBJECT
 public:
    CreateOTCRequestWidget(QWidget* parent = nullptr);
    ~CreateOTCRequestWidget() override;

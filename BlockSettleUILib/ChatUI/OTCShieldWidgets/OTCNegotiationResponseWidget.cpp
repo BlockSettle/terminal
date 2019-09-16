@@ -1,13 +1,16 @@
 #include "OTCNegotiationResponseWidget.h"
 
 #include "OtcTypes.h"
+#include "UiUtils.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "AuthAddressManager.h"
 #include "ui_OTCNegotiationCommonWidget.h"
 
 #include <QComboBox>
 #include <QPushButton>
 
 OTCNegotiationResponseWidget::OTCNegotiationResponseWidget(QWidget* parent)
-   : QWidget{parent}
+   : OTCWindowsAdapterBase{parent}
    , ui_{new Ui::OTCNegotiationCommonWidget{}}
 {
    ui_->setupUi(this);
@@ -21,6 +24,7 @@ OTCNegotiationResponseWidget::OTCNegotiationResponseWidget(QWidget* parent)
    connect(ui_->doubleSpinBoxQuantity, QOverload<double>::of(&QDoubleSpinBox::valueChanged)
       , this, &OTCNegotiationResponseWidget::onChanged);
 
+   connect(ui_->comboBoxXBTWallets, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &OTCNegotiationResponseWidget::onCurrentWalletChanged);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &OTCNegotiationResponseWidget::onAcceptOrUpdateClicked);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &OTCNegotiationResponseWidget::responseRejected);
 
@@ -29,6 +33,8 @@ OTCNegotiationResponseWidget::OTCNegotiationResponseWidget(QWidget* parent)
 
    onChanged();
 }
+
+OTCNegotiationResponseWidget::~OTCNegotiationResponseWidget() = default;
 
 void OTCNegotiationResponseWidget::setOffer(const bs::network::otc::Offer &offer)
 {
@@ -47,7 +53,22 @@ bs::network::otc::Offer OTCNegotiationResponseWidget::offer() const
    result.ourSide = receivedOffer_.ourSide;
    result.price = bs::network::otc::toCents(ui_->doubleSpinBoxOffer->value());
    result.amount = bs::network::otc::btcToSat(ui_->doubleSpinBoxQuantity->value());
+
+   result.hdWalletId = ui_->comboBoxXBTWallets->currentData(UiUtils::WalletIdRole).toString().toStdString();
+   result.authAddress = ui_->authenticationAddressComboBox->currentText().toStdString();
+   if (ui_->receivingAddressComboBox->currentIndex() != 0) {
+      result.recvAddress = ui_->receivingAddressComboBox->currentText().toStdString();
+   }
    return result;
+}
+
+void OTCNegotiationResponseWidget::syncInterface()
+{
+   int index = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWallets, getWalletManager());
+   ui_->comboBoxXBTWallets->setCurrentIndex(index);
+   onCurrentWalletChanged();
+
+   UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, getAuthManager());   
 }
 
 void OTCNegotiationResponseWidget::onChanged()
@@ -68,4 +89,8 @@ void OTCNegotiationResponseWidget::onAcceptOrUpdateClicked()
    }
 }
 
-OTCNegotiationResponseWidget::~OTCNegotiationResponseWidget() = default;
+void OTCNegotiationResponseWidget::onCurrentWalletChanged()
+{
+   const auto hdWalletId = ui_->comboBoxXBTWallets->currentData(UiUtils::WalletIdRole).toString().toStdString();
+   UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getWalletManager()->getHDWalletById(hdWalletId));
+}

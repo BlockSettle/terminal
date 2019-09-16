@@ -14,12 +14,16 @@
 #include <QClipboard>
 
 #include "BSChatInput.h"
+#include "BSMessageBox.h"
+#include "ImportKeyBox.h"
 #include "ChatClientUsersViewItemDelegate.h"
 #include "ChatWidgetStates/ChatWidgetStates.h"
 #include "ChatOTCHelper.h"
 #include "OtcUtils.h"
 #include "OtcClient.h"
 #include "OTCRequestViewModel.h"
+#include "OTCShieldWidgets/OTCWindowsManager.h"
+#include "AuthAddressManager.h"
 #include "ui_ChatWidget.h"
 
 using namespace bs::network;
@@ -49,6 +53,21 @@ ChatWidget::ChatWidget(QWidget* parent)
    ui_->treeViewUsers->viewport()->installEventFilter(this);
 
    qRegisterMetaType<std::vector<std::string>>();
+   qRegisterMetaType<Chat::UserPublicKeyInfoPtr>();
+   qRegisterMetaType<Chat::UserPublicKeyInfoList>();
+
+
+   otcWindowsManager_ = std::make_shared<OTCWindowsManager>();
+   auto* sWidget = ui_->stackedWidgetOTC;
+   for (int index = 0; index < sWidget->count(); ++index) {
+      auto* widget = qobject_cast<OTCWindowsAdapterBase*>(sWidget->widget(index));
+      if (widget) {
+         widget->setChatOTCManager(otcWindowsManager_);
+         connect(this, &ChatWidget::chatRoomChanged, widget, &OTCWindowsAdapterBase::chatRoomChanged);
+      }
+   }
+
+   changeState<ChatLogOutState>(); //Initial state is LoggedOut
 }
 
 ChatWidget::~ChatWidget()
@@ -61,9 +80,10 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    , const std::shared_ptr<ApplicationSettings>& appSettings
    , const Chat::ChatClientServicePtr& chatClientServicePtr
    , const std::shared_ptr<spdlog::logger>& loggerPtr
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<SignContainer> &signContainer)
+   , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
+   , const std::shared_ptr<AuthAddressManager> &authManager
+   , const std::shared_ptr<ArmoryConnection>& armory
+   , const std::shared_ptr<SignContainer>& signContainer)
 {
    loggerPtr_ = loggerPtr;
 
@@ -93,8 +113,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    ui_->textEditMessages->onSwitchToChat("Global");
 
-   changeState<ChatLogOutState>(); //Initial state is LoggedOut
-
    // connections
    // User actions
    connect(ui_->treeViewUsers, &ChatUserListTreeView::partyClicked, this, &ChatWidget::onUserListClicked);
@@ -117,6 +135,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onSendArrived, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onClientPartyStatusChanged, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onMessageStateChanged, Qt::QueuedConnection);
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::userPublicKeyChanged, this, &ChatWidget::onUserPublicKeyChanged);
 
    // Connect all signal that influence on widget appearance 
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
@@ -127,7 +146,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    // OTC
    otcHelper_ = new ChatOTCHelper(this);
-   otcHelper_->init(loggerPtr_, walletsMgr, armory, signContainer);
+   otcHelper_->init(loggerPtr_, walletsMgr, armory, signContainer, authManager, appSettings);
+   otcWindowsManager_->init(walletsMgr, authManager);
    
    connect(otcHelper_->getClient(), &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
    connect(otcHelper_->getClient(), &OtcClient::sendMessage, this, &ChatWidget::onSendOtcMessage);
@@ -337,6 +357,8 @@ void ChatWidget::chatTransition(const Chat::ClientPartyPtr& clientPartyPtr)
    default:
       break;
    }
+
+   emit chatRoomChanged();
 }
 
 void ChatWidget::onActivatePartyId(const QString& partyId)
@@ -411,4 +433,58 @@ void ChatWidget::onOtcResponseUpdate()
 void ChatWidget::onOtcResponseReject()
 {
    stateCurrent_->onOtcResponseReject();
+}
+
+void ChatWidget::onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
+{
+   QString detailsPattern = tr("Contacts Require key update: %1");
+
+   QString  detailsString = detailsPattern.arg(userPublicKeyInfoList.size());
+
+   BSMessageBox bsMessageBox(BSMessageBox::question, tr("Contacts Information Update"),
+      tr("Do you wish to import your full Contact list?"),
+      tr("Press OK to Import all Contact ID keys. Selecting Cancel will allow you to determine each contact individually."),
+      detailsString);
+   int ret = bsMessageBox.exec();
+
+   onConfirmContactNewKeyData(userPublicKeyInfoList, QDialog::Accepted == ret);
+}
+
+void ChatWidget::onConfirmContactNewKeyData(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList, bool bForceUpdateAllUsers)
+{
+   Chat::UserPublicKeyInfoList acceptList;
+   Chat::UserPublicKeyInfoList declineList;
+
+   for (const auto& userPkPtr : userPublicKeyInfoList)
+   {
+      if (bForceUpdateAllUsers)
+      {
+         acceptList.push_back(userPkPtr);
+         continue;
+      }
+
+      ImportKeyBox box(BSMessageBox::question, tr("Import Contact '%1' Public Key?").arg(userPkPtr->user_hash()), this);
+      box.setAddrPort(std::string());
+      box.setNewKeyFromBinary(userPkPtr->newPublicKey());
+      box.setOldKeyFromBinary(userPkPtr->oldPublicKey());
+      box.setCancelVisible(true);
+
+      if (box.exec() == QDialog::Accepted)
+      {
+         acceptList.push_back(userPkPtr);
+         continue;
+      }
+
+      declineList.push_back(userPkPtr);
+   }
+
+   if (!acceptList.empty())
+   {
+      chatClientServicePtr_->AcceptNewPublicKeys(acceptList);
+   }
+
+   if (!declineList.empty())
+   {
+      chatClientServicePtr_->DeclineNewPublicKeys(declineList);
+   }
 }

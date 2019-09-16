@@ -19,9 +19,11 @@ void PartyModel::insertParty(const PartyPtr& partyPtr)
    if (partyMap_.find(partyPtr->id()) != partyMap_.end())
    {
       PartyPtr oldPartyPtr = partyMap_[partyPtr->id()];
-      partyMap_.erase(partyPtr->id());
 
       emit partyRemoved(oldPartyPtr);
+
+      partyMap_.erase(partyPtr->id());
+
       emit partyModelChanged();
       emit error(PartyModelError::InsertExistingParty, partyPtr->id());
    }
@@ -37,9 +39,11 @@ void PartyModel::removeParty(const PartyPtr& partyPtr)
    if (partyMap_.find(partyPtr->id()) != partyMap_.end())
    {
       PartyPtr oldPartyPtr = partyMap_[partyPtr->id()];
-      partyMap_.erase(partyPtr->id());
 
       emit partyRemoved(oldPartyPtr);
+
+      partyMap_.erase(partyPtr->id());
+
       emit partyModelChanged();
       return;
    }

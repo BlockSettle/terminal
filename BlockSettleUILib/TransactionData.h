@@ -147,7 +147,7 @@ private:
    void InvalidateTransactionData();
    bool UpdateTransactionData();
    bool RecipientsReady() const;
-   std::vector<UTXO> decorateUTXOs(const std::vector<UTXO> &inUTXOs = {}) const;
+   std::vector<UTXO> decorateUTXOs() const;
    UtxoSelection computeSizeAndFee(const std::vector<UTXO>& inUTXOs
       , const PaymentStruct& inPS) const;
 

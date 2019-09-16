@@ -11,6 +11,7 @@ FILE(GLOB SOURCES
    Trading/*.cpp
    ChatUI/*.cpp
    ChatUI/ChatWidgetStates/*.cpp
+   ChatUI/OTCShieldWidgets/*.cpp
 )
 FILE(GLOB HEADERS
    *.h
@@ -19,7 +20,7 @@ FILE(GLOB HEADERS
    Trading/*.h
    ChatUI/*.h
    ChatUI/ChatWidgetStates/*.h
-   ChatUI/ChatWidgetStates/*.hpp
+   ChatUI/OTCShieldWidgets/*.h
 )
 FILE(GLOB UI_FILES
    *.ui
@@ -27,6 +28,7 @@ FILE(GLOB UI_FILES
    Settings/*.ui
    Trading/*.ui
    ChatUI/*.ui
+   ChatUI/OTCShieldWidgets/*.ui
 )
 
 FILE(GLOB RESOURCE_FILES *.qrc)

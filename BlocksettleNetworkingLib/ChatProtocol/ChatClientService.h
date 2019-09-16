@@ -10,6 +10,8 @@
 
 namespace Chat
 {
+   class ChatClientLogic;
+
    class ChatClientService : public ServiceThread<ChatClientLogic>
    {
       Q_OBJECT
@@ -31,6 +33,8 @@ namespace Chat
       void DeletePrivateParty(const std::string& partyId);
       void AcceptPrivateParty(const std::string& partyId);
       void SearchUser(const std::string& userHash, const std::string& searchId);
+      void AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
+      void DeclineNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
 
       ////////// RETURN SIGNALS //////////
       void chatUserUserNameChanged(const std::string& chatUserDisplayName);

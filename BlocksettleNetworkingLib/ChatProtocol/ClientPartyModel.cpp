@@ -20,7 +20,7 @@ ClientPartyModel::ClientPartyModel(const LoggerPtr& loggerPtr, QObject* parent /
 IdPartyList ClientPartyModel::getIdPartyList() const
 {
    IdPartyList idPartyList;
-   for (const std::pair<std::string, PartyPtr>& element : partyMap_)
+   for (const auto& element : partyMap_)
    {
       idPartyList.push_back(element.first);
    }

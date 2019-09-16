@@ -77,6 +77,7 @@ public:
 
    using SignTxCb = std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)>;
 
+   // If wallet is offline serialize request and write to file with path TXSignRequest::offlineFilePath
    virtual bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) = 0;
 
