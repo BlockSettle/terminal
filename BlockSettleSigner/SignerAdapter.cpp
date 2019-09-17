@@ -153,14 +153,14 @@ void SignerAdapter::createWallet(const std::string &name, const std::string &des
    headless::CreateHDWalletRequest request;
 
    if (!pwdData.empty()) {
-      request.set_rankm(keyRank.first);
-      request.set_rankn(keyRank.second);
+      request.set_rankm(keyRank.m);
+      request.set_rankn(keyRank.n);
    }
    for (const auto &pwd : pwdData) {
       auto reqPwd = request.add_password();
       reqPwd->set_password(pwd.password.toBinStr());
-      reqPwd->set_enctype(static_cast<uint32_t>(pwd.encType));
-      reqPwd->set_enckey(pwd.encKey.toBinStr());
+      reqPwd->set_enctype(static_cast<uint32_t>(pwd.metaData.encType));
+      reqPwd->set_enckey(pwd.metaData.encKey.toBinStr());
    }
    auto wallet = request.mutable_wallet();
    wallet->set_name(name);
@@ -223,11 +223,11 @@ void SignerAdapter::changePassword(const std::string &walletId, const std::vecto
    for (const auto &pwd : newPass) {
       auto reqNewPass = request.add_newpassword();
       reqNewPass->set_password(pwd.password.toBinStr());
-      reqNewPass->set_enctype(static_cast<uint32_t>(pwd.encType));
-      reqNewPass->set_enckey(pwd.encKey.toBinStr());
+      reqNewPass->set_enctype(static_cast<uint32_t>(pwd.metaData.encType));
+      reqNewPass->set_enckey(pwd.metaData.encKey.toBinStr());
    }
-   request.set_rankm(keyRank.first);
-   request.set_rankn(keyRank.second);
+   request.set_rankm(keyRank.m);
+   request.set_rankn(keyRank.n);
    request.set_addnew(addNew);
    request.set_removeold(removeOld);
    request.set_dryrun(dryRun);

@@ -137,7 +137,7 @@ void WalletsProxy::addEidDevice(const QString &walletId
 
    //bs::hd::Wallet;
    bs::wallet::KeyRank encryptionRank = wallet->encryptionRank();
-   encryptionRank.second++;
+   encryptionRank.n++;
 
    const auto &cbChangePwdResult = [this, walletId](bool result) {
       if (result) {
@@ -173,7 +173,7 @@ void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswor
       return;
    }
 
-   if (wallet->encryptionRank().second == 1) {
+   if (wallet->encryptionRank().n == 1) {
       emit walletError(walletId, tr("Failed to remove last device"));
       return;
    }
@@ -184,15 +184,14 @@ void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswor
    }
 
    bs::wallet::KeyRank encryptionRank = wallet->encryptionRank();
-   encryptionRank.second--;
+   encryptionRank.n--;
 
    // remove index from encKeys
    std::vector<bs::wallet::PasswordData> newPasswordData;
    for (int i = 0; i < wallet->encryptionKeys().size(); ++i) {
       if (removedIndex == i) continue;
       bs::wallet::QPasswordData pd;
-      pd.encType = bs::wallet::EncryptionType::Auth;
-      pd.encKey = wallet->encryptionKeys()[i];
+      pd.metaData = { bs::wallet::EncryptionType::Auth, wallet->encryptionKeys()[i] };
       newPasswordData.push_back(pd);
    }
 
