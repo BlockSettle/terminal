@@ -462,8 +462,8 @@ bool SignerAdapterListener::onSyncWallet(const std::string &data, bs::signer::Re
       for (const auto &encKey : wallet->encryptionKeys()) {
          response.add_encryption_keys(encKey.toBinStr());
       }
-      response.set_key_rank_m(wallet->encryptionRank().first);
-      response.set_key_rank_n(wallet->encryptionRank().second);
+      response.set_key_rank_m(wallet->encryptionRank().m);
+      response.set_key_rank_n(wallet->encryptionRank().n);
 
       response.set_net_type(static_cast<int>(wallet->networkType()));
       response.set_highest_ext_index(wallet->getExtAddressCount());
