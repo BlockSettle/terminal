@@ -88,6 +88,11 @@ message Response
         bytes   settlement_id   = 3;
     }
 
+    message UnsignedPayinRequest
+    {
+      string  settlement_id   = 1;
+    }
+
     message SignPayoutRequest
     {
         string  settlement_id   = 1;
@@ -103,9 +108,10 @@ message Response
     oneof data
     {
         // Requests
-        StartOtc            start_otc   = 1;
-        VerifyOtc           verify_otc  = 2;
-        SignPayoutRequest   sign_payout = 3;
-        SignPayinRequest    sign_payin  = 4;
+        StartOtc              start_otc            = 1;
+        VerifyOtc             verify_otc           = 2;
+        UnsignedPayinRequest  send_unsigned_payin  = 3;
+        SignPayoutRequest     sign_payout          = 4;
+        SignPayinRequest      sign_payin           = 5;
     }
 }
