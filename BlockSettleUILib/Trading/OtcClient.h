@@ -63,12 +63,10 @@ struct OtcClientParams
 {
    // Return path that will be used to save offline sign request.
    // Must be set if offline wallet will be used for sell.
-   // If empty, deal would be canceled.
    std::function<std::string(const std::string &walletId)> offlineSavePathCb;
 
    // Return path that will be used to load signed offline request.
    // Must be set if offline wallet will be used for sell.
-   // If empty, deal would be canceled.
    std::function<std::string()> offlineLoadPathCb;
 };
 
@@ -141,6 +139,7 @@ private:
    int genLocalUniqueId() { return ++latestUniqueId_; }
    void trySendSignedTxs(OtcClientDeal *deal);
    void verifyAuthAddresses(OtcClientDeal *deal);
+   void setComments(OtcClientDeal *deal);
 
    std::shared_ptr<spdlog::logger> logger_;
    std::unordered_map<std::string, bs::network::otc::Peer> peers_;
