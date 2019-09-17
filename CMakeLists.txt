@@ -36,17 +36,17 @@ SET(BS_VERSION_MINOR 9 )
 SET(BS_VERSION_PATCH 1 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
-include(GetGitRevisionDescription)
-get_git_head_revision(GIT_REFSPEC GIT_SHA1)
+#include(GetGitRevisionDescription)
+#get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 
-STRING(FIND ${GIT_REFSPEC} "refs/heads/" BRANCH_POSITION)
+#STRING(FIND ${GIT_REFSPEC} "refs/heads/" BRANCH_POSITION)
 
-IF( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
-  MESSAGE( FATAL_ERROR "This is not a Git repository, but it should be.")
-ELSE ( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
+#IF( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
+#  MESSAGE( FATAL_ERROR "This is not a Git repository, but it should be.")
+#ELSE ( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
    # we only take the 8 first characters
-  STRING(SUBSTRING ${GIT_SHA1} 0 8 BS_REVISIOIN_SHA1)
-ENDIF ( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
+#  STRING(SUBSTRING ${GIT_SHA1} 0 8 BS_REVISIOIN_SHA1)
+#ENDIF ( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
 
 # set DEV_3RD_ROOT env variable to your custom location of 3rd party components
 IF (DEFINED ENV{DEV_3RD_ROOT})
