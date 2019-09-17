@@ -1567,8 +1567,8 @@ void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clien
       for (const auto &encKey : wallet->encryptionKeys()) {
          response.add_enckeys(encKey.toBinStr());
       }
-      response.set_rankm(wallet->encryptionRank().first);
-      response.set_rankn(wallet->encryptionRank().second);
+      response.set_rankm(wallet->encryptionRank().m);
+      response.set_rankn(wallet->encryptionRank().n);
    }
    if (!walletId.empty()) {
       response.set_rootwalletid(walletId);

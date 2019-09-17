@@ -269,10 +269,10 @@ void WalletInfo::setPasswordData(const std::vector<PasswordData> &passwordData)
    bool isAuth = false;
    bool isPassword = false;
    for (const PasswordData &pw : passwordData) {
-      encKeys_.push_back(QString::fromStdString(pw.encKey.toBinStr()));
-      if (pw.encType == EncryptionType::Auth)
+      encKeys_.push_back(QString::fromStdString(pw.metaData.encKey.toBinStr()));
+      if (pw.metaData.encType == EncryptionType::Auth)
          isAuth = true;
-      if (pw.encType == EncryptionType::Password)
+      if (pw.metaData.encType == EncryptionType::Password)
          isPassword = true;
    }
 

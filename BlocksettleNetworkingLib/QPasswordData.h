@@ -38,13 +38,13 @@ public:
 
    QString                 textPassword() const             { return QString::fromStdString(password.toBinStr()); }
    SecureBinaryData        binaryPassword() const           { return password; }
-   QEncryptionType         getEncType() const               { return QEncryptionType(encType); }
-   QString                 getEncKey() const                { return QString::fromStdString(encKey.toBinStr()); }
+   QEncryptionType         getEncType() const               { return QEncryptionType(metaData.encType); }
+   QString                 getEncKey() const                { return QString::fromStdString(metaData.encKey.toBinStr()); }
 
    void setTextPassword    (const QString &pw)              { password =  SecureBinaryData(pw.toStdString()); emit passwordChanged(); }
    void setBinaryPassword  (const SecureBinaryData &data)   { password =  data; emit passwordChanged(); }
-   void setEncType         (QEncryptionType e)              { encType = EncryptionType(e); emit encTypeChanged(e); }
-   void setEncKey          (const QString &e)               { encKey =  SecureBinaryData(e.toStdString()); emit encKeyChanged(e); }
+   void setEncType         (QEncryptionType e)              { metaData.encType = EncryptionType(e); emit encTypeChanged(e); }
+   void setEncKey          (const QString &e)               { metaData.encKey =  SecureBinaryData(e.toStdString()); emit encKeyChanged(e); }
 
 signals:
    void passwordChanged();

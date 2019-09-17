@@ -120,16 +120,10 @@ void CCSettlementTransactionWidget::onGenAddrVerified(bool result, QString error
 
 void CCSettlementTransactionWidget::initSigning()
 {
-   if (settlContainer_->walletInfo().encTypes().empty() || !settlContainer_->walletInfo().keyRank().first
+   if (settlContainer_->walletInfo().encTypes().empty() || !settlContainer_->walletInfo().keyRank().m
       || !settlContainer_->isAcceptable()) {
       return;
    }
-
-//   ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfo()
-//      , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
-
-//   ui_->widgetSubmitKeys->setFocus();
-//   ui_->widgetSubmitKeys->resume();
 }
 
 void CCSettlementTransactionWidget::onPaymentVerified(bool result, QString error)

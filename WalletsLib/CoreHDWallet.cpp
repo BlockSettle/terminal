@@ -49,8 +49,8 @@ hd::Wallet::~Wallet()
    shutdown();
 }
 
-void hd::Wallet::initNew(const wallet::Seed &seed, 
-   const SecureBinaryData& passphrase, const std::string& folder)
+void hd::Wallet::initNew(const wallet::Seed &seed
+   , const SecureBinaryData &passphrase, const std::string &folder)
 {
    try
    {
@@ -180,7 +180,7 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
       break;
    }
    addGroup(result);
-   writeGroupsToDB();
+   writeToDB();
    return result;
 }
 
@@ -206,7 +206,7 @@ void hd::Wallet::createStructure(unsigned lookup)
    for (const auto &aet : groupXBT->getAddressTypeSet()) {
       groupXBT->createLeaf(aet, 0u, lookup);
    }
-   writeGroupsToDB();
+   writeToDB();
 }
 
 void hd::Wallet::shutdown()
@@ -371,7 +371,7 @@ void hd::Wallet::readFromDB()
    }
 }
 
-void hd::Wallet::writeGroupsToDB(bool force)
+void hd::Wallet::writeToDB(bool force)
 {
    for (const auto &group : groups_) {
       group.second->commit(force);
@@ -447,7 +447,7 @@ std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly() const
    }
 
    //commit to disk
-   woCopy->writeGroupsToDB();
+   woCopy->writeToDB();
 
    return woCopy;
 }

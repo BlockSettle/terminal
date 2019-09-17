@@ -358,7 +358,7 @@ namespace bs {
             : walletLock_(std::move(wallet->lockDecryptedContainer()))
             , walletPtr_(wallet)
          {  //std::function<SecureBinaryData(const BinaryData&)>
-            auto lbd = [passphrase, this](const BinaryData&)->SecureBinaryData
+            auto lbd = [passphrase, this](const std::set<BinaryData> &)->SecureBinaryData
             {
                if (++nbTries_ > maxTries_) {
                   return {};

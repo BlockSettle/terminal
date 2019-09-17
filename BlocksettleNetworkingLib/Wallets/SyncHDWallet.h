@@ -112,7 +112,7 @@ namespace bs {
             std::shared_ptr<spdlog::logger>     logger_;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
             std::vector<SecureBinaryData>          encryptionKeys_;
-            std::pair<unsigned int, unsigned int>  encryptionRank_{ 1, 1 };
+            bs::wallet::KeyRank  encryptionRank_{ 1, 1 };
             const bool isOffline_;
 
          private:

@@ -4,6 +4,7 @@
 #include <memory>
 #include "CoreHDGroup.h"
 #include "CoreHDLeaf.h"
+#include "WalletEncryption.h"
 
 
 namespace spdlog {
@@ -52,7 +53,7 @@ namespace bs {
             //stand in for the botched bs encryption code. too expensive to clean up after this mess
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return { bs::wallet::EncryptionType::Password }; }
             std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
-            std::pair<unsigned int, unsigned int> encryptionRank() const { return { 1, 1 }; }
+            bs::wallet::KeyRank encryptionRank() const { return { 1, 1 }; }
 
             ~Wallet(void);
 
@@ -128,7 +129,7 @@ namespace bs {
             void putDataToDB(const BinaryData& key, const BinaryData& data);
             BinaryDataRef getDataRefForKey(LMDB* db, const BinaryData& key) const;
             BinaryDataRef getDataRefForKey(uint32_t key) const;
-            void writeGroupsToDB(bool force = false);
+            void writeToDB(bool force = false);
 
             bs::hd::Path getPathForAddress(const bs::Address &);
 

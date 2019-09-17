@@ -167,14 +167,14 @@ void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, const bs::hd::W
    if (walletsManager_->isWatchingOnly(walletInfo_.rootId().toStdString())) {
       ui_->labelEncRank->setText(tr("Watching-Only"));
    } else {
-      if (walletInfo.keyRank().first == 1 && walletInfo.keyRank().second == 1) {
+      if (walletInfo.keyRank().m == 1 && walletInfo.keyRank().n == 1) {
          if (!walletInfo.encTypes().empty()) {
             ui_->labelEncRank->setText(encTypeToString(walletInfo.encTypes().front()));
          } else {
             ui_->labelEncRank->setText(tr("Unknown"));
          }
       } else {
-         ui_->labelEncRank->setText(tr("Auth eID %1 of %2").arg(walletInfo.keyRank().first).arg(walletInfo.keyRank().second));
+         ui_->labelEncRank->setText(tr("Auth eID %1 of %2").arg(walletInfo.keyRank().m).arg(walletInfo.keyRank().n));
       }
    }
 }
