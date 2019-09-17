@@ -97,10 +97,6 @@ public:
    void sendPbMessage(std::string data);
    void sendPbBroadcastXbt(const BroadcastXbt &data);
 
-   void sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin);
-   void sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin);
-   void sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout);
-
    // Cancel login. Please note that this will close channel.
    void cancelLogin();
    void getLoginResult();
@@ -121,6 +117,11 @@ public:
    // NOTE: CC address text details are not enforced on PB right now!
    static std::string requestTitleCcAddr();
    static std::string requestDescCcAddr(const bs::Address &address, const std::string &token);
+
+public slots:
+   void sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout);
 
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);

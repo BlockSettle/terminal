@@ -19,22 +19,6 @@ namespace bs {
    namespace network {
       struct QuoteNotification;
    }
-
-   class PayinsContainer
-   {
-   public:
-      PayinsContainer(const std::shared_ptr<spdlog::logger> &logger) : logger_(logger) {}
-
-      bool save(const std::string& settlementId, const SecureBinaryData& payin);
-      SecureBinaryData get(const std::string& settlementId) const;
-      bool erase(const std::string& settlementId);
-
-   private:
-      std::shared_ptr<spdlog::logger>  logger_;
-      // key - settlementId
-      std::unordered_map<std::string, SecureBinaryData>  payIns_;
-      mutable std::atomic_flag                           payInsLock_ = ATOMIC_FLAG_INIT;
-   };
 }
 
 class AssetManager;

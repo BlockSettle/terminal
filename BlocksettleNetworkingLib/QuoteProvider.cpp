@@ -35,90 +35,11 @@ bool QuoteProvider::isRepliableStatus(const bs::network::QuoteReqNotification::S
       || (status == bs::network::QuoteReqNotification::Replied));
 }
 
-SecureBinaryData bs::PayinsContainer::get(const std::string& settlementId) const
-{
-   SecureBinaryData payin;
-   {
-      FastLock locker(payInsLock_);
-
-      auto it = payIns_.find(settlementId);
-      if (it != payIns_.end()) {
-         payin = it->second;
-      }
-   }
-
-   if (payin.isNull()) {
-      logger_->error("[PayinsContainer::get] Could not find payin transaction for {}", settlementId);
-   }
-   return payin;
-}
-
-bool bs::PayinsContainer::save(const std::string& settlementId, const SecureBinaryData& payin)
-{
-   size_t count = 0;
-   bool inserted = false;
-
-   {
-      FastLock locker(payInsLock_);
-
-      auto it = payIns_.find(settlementId);
-      if (it == payIns_.end()) {
-         payIns_.emplace(settlementId, payin);
-         inserted = true;
-      }
-      else {
-         it->second = payin;
-      }
-
-      count = payIns_.size();
-   }
-
-   if (inserted) {
-      logger_->debug("[PayinsContainer::save] save payin transaction for {}. Current count {}"
-         , settlementId, count);
-   }
-   else {
-      logger_->debug("[PayinsContainer::save] payin transaction replaced for {}. Current count {}"
-         , settlementId, count);
-   }
-   return inserted;
-}
-
-bool bs::PayinsContainer::erase(const std::string& settlementId)
-{
-   size_t count = 0;
-   bool erased = false;
-
-   {
-      FastLock locker(payInsLock_);
-
-      auto it = payIns_.find(settlementId);
-      if (it != payIns_.end()) {
-         payIns_.erase(it);
-         erased = true;
-      }
-
-      count = payIns_.size();
-   }
-
-   if (erased) {
-      logger_->debug("[PayinsContainer::erase] erased payin transaction for {}. Current count {}"
-         , settlementId, count);
-   }
-   else {
-      logger_->debug("[PayinsContainer::erase] no payin transaction for {}. Current count {}"
-         , settlementId, count);
-   }
-   return erased;
-}
-
-
 QuoteProvider::QuoteProvider(const std::shared_ptr<AssetManager>& assetManager
       , const std::shared_ptr<spdlog::logger>& logger
       , bool debugTraffic)
  : logger_(logger)
  , assetManager_(assetManager)
- , dealerPayins_(logger)
  , celerLoggedInTimestampUtcInMillis_(0)
  , debugTraffic_(debugTraffic)
 {
@@ -882,7 +803,6 @@ void QuoteProvider::CleanupXBTOrder(const bs::network::Order& order)
 {
    logger_->debug("[QuoteProvider::CleanupXBTOrder] complete quote: {}", order.quoteId);
 
-   dealerPayins_.erase(order.settlementId);
    eraseSubmittedXBTQuoteNotification(order.settlementId);
 }
 
