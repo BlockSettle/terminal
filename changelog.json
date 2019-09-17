@@ -1,7 +1,20 @@
 {
-   "latest_version": "0.21.3",
-   "release_date": "12 Sep 2019",
+   "latest_version": "0.21.4",
+   "release_date": "17 Sep 2019",
    "changes": [
+      {
+         "version_string": "0.21.4",
+         "previous_version": "0.21.3",
+         "release_date": "17 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "P2P OTC updates (#1354)",
+            "Sync newly created address with signer immediately (BST-2244)"
+         ],
+         "bug_fixes": [],
+         "revision": "dd75eaee",
+         "common_revision": "67489ecf"
+      },
       {
          "version_string": "0.21.3",
          "previous_version": "0.21.1",
