@@ -18,6 +18,21 @@ import "../js/helper.js" as JsHelper
 TxSignSettlementBaseDialog {
     id: root
     readonly property string inputProduct: " XBT"
+    readonly property string fxProduct: passwordDialogData.value("FxProduct")
+
+    function getQuantity() {
+        if (is_sell) {
+            return txInfo.amount
+        } else {
+            return txInfo.amountCCReceived(product) * balanceDivider / lotSize
+        }
+    }
+
+    Component.onCompleted: {
+        quantity = getQuantity() + " " + product
+        totalValue = (getQuantity() * price).toFixed(8) + " XBT"
+        priceString = price + " XBT / 1 " + fxProduct
+    }
 
     settlementDetailsItem: GridLayout {
         id: gridSettlementDetails

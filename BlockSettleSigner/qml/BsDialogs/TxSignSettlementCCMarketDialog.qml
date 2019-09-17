@@ -19,12 +19,21 @@ TxSignSettlementBaseDialog {
     id: root
 
     readonly property string inputProduct: is_sell ? " " + passwordDialogData.value("TxInputProduct") : " XBT"
+    readonly property int lotSize: passwordDialogData.value("LotSize")
 
     function displayAmount(amount) {
         if (is_sell) {
-            return (amount * balanceDivider / passwordDialogData.value("LotSize")).toFixed(0)
+            return (amount * balanceDivider / lotSize).toFixed(0)
         } else {
             return amount.toFixed(8)
+        }
+    }
+
+    function getQuantity() {
+        if (is_sell) {
+            return txInfo.amountCCSent() * balanceDivider / lotSize
+        } else {
+            return txInfo.amountCCReceived(product) * balanceDivider / lotSize
         }
     }
 
@@ -32,6 +41,11 @@ TxSignSettlementBaseDialog {
     readonly property string changeAmount: "+ " + displayAmount(txInfo.changeAmount) + inputProduct
     readonly property string fee: "- " + displayAmount(txInfo.fee) + inputProduct
 
+    Component.onCompleted: {
+        quantity = getQuantity() + " " + product
+        totalValue = (getQuantity() * price).toFixed(8) + " XBT"
+        priceString = price + " XBT / 1 " + product
+    }
 
     settlementDetailsItem: GridLayout {
         id: gridSettlementDetails
@@ -174,7 +188,7 @@ TxSignSettlementBaseDialog {
             text: qsTr("Lot Size")
         }
         CustomLabelValue {
-            text: passwordDialogData.value("LotSize")
+            text: lotSize
             Layout.alignment: Qt.AlignRight
         }
 
@@ -229,7 +243,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_sell
-            text: passwordDialogData.value("PaymentReceived")
+            text: "+ " + txInfo.amountXBTReceived().toFixed(8) + " XBT"
             Layout.alignment: Qt.AlignRight
         }
 
@@ -254,7 +268,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_buy
-            text: passwordDialogData.value("DeliveryReceived")
+            text: "+ " + getQuantity() + " " + product
             Layout.alignment: Qt.AlignRight
         }
 

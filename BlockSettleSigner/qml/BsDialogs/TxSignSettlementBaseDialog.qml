@@ -24,6 +24,16 @@ CustomTitleDialogWindow {
 
     property bool signingAllowed: passwordDialogData.value("SigningAllowed") === true
 
+    // rfq details
+    readonly property string product: passwordDialogData.value("Product")
+    readonly property string productGroup: passwordDialogData.value("ProductGroup")
+    readonly property string security: passwordDialogData.value("Security")
+    readonly property string side: passwordDialogData.value("Side")
+    property string quantity
+    property string price: passwordDialogData.value("Price")
+    property string priceString
+    property string totalValue
+
     property alias settlementDetailsItem: settlementDetailsContainer.data
     property alias txDetailsItem: txDetailsContainer.data
 
@@ -34,8 +44,8 @@ CustomTitleDialogWindow {
     readonly property int duration: passwordDialogData.value("Duration") / 1000.0 - 1 > 0 ? passwordDialogData.value("Duration") / 1000.0 - 1 : 60
     readonly property real balanceDivider : qmlFactory.balanceDivider()
 
-    readonly property bool is_sell: passwordDialogData.value("Side") === "SELL"
-    readonly property bool is_buy: passwordDialogData.value("Side") === "BUY"
+    readonly property bool is_sell: side === "SELL"
+    readonly property bool is_buy: side === "BUY"
 
     id: root
     title: passwordDialogData.value("Title")
@@ -114,7 +124,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Product Group")
             }
             CustomLabelValue {
-                text: passwordDialogData.value("ProductGroup")
+                text: productGroup
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -124,7 +134,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Security ID")
             }
             CustomLabelValue {
-                text: passwordDialogData.value("Security")
+                text: security
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -134,7 +144,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Product")
             }
             CustomLabelValue {
-                text: passwordDialogData.value("Product")
+                text: product
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -144,7 +154,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Side")
             }
             CustomLabelValue {
-                text: passwordDialogData.value("Side")
+                text: side
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -154,7 +164,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Quantity")
             }
             CustomLabelValue {
-                text: passwordDialogData.value("Quantity")
+                text: quantity
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -164,7 +174,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Price")
             }
             CustomLabelValue {
-                text: passwordDialogData.value("Price")
+                text: priceString
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -174,7 +184,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Total Value")
             }
             CustomLabelValue {
-                text: passwordDialogData.value("TotalValue")
+                text: totalValue
                 Layout.alignment: Qt.AlignRight
             }
         }

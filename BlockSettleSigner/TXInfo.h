@@ -56,6 +56,11 @@ public:
    void setTxId(const QString &);
    QString walletId() const { return QString::fromStdString(txReq_.walletIds.front()); }
 
+   Q_INVOKABLE double amountCCReceived(const QString &cc) const;
+   Q_INVOKABLE double amountCCSent() const { return amount(); }
+
+   Q_INVOKABLE double amountXBTReceived() const;
+
 signals:
    void dataChanged();
 
