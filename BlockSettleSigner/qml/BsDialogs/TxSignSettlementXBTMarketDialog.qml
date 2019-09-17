@@ -19,12 +19,16 @@ TxSignSettlementBaseDialog {
     id: root
     readonly property string inputProduct: " XBT"
     readonly property string fxProduct: passwordDialogData.value("FxProduct")
+    readonly property bool is_payOut: passwordDialogData.value("PayOutType") === true
+    readonly property bool is_payIn: !is_payOut
 
-    function getQuantity() {
-        if (is_sell) {
-            return txInfo.amount
+    readonly property string onRevokeLabel: passwordDialogData.value("PayOutRevokeType") === true ? qsTr(" ON REVOKE") : ""
+
+    function getTotalValue() {
+        if (is_payOut) {
+            return txInfo.amountXBTReceived()
         } else {
-            return txInfo.amountCCReceived(product) * balanceDivider / lotSize
+            return txInfo.total
         }
     }
 
@@ -135,20 +139,24 @@ TxSignSettlementBaseDialog {
 
         // Input Amount
         CustomLabel {
+            visible: is_payIn
             Layout.fillWidth: true
             text: qsTr("Input Amount")
         }
         CustomLabelValue {
+            visible: is_payIn
             text: "- " + txInfo.inputAmount.toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 
         // Return Amount
         CustomLabel {
+            visible: is_payIn
             Layout.fillWidth: true
             text: qsTr("Return Amount")
         }
         CustomLabelValue {
+            visible: is_payIn
             text: "+ " + txInfo.changeAmount.toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
@@ -165,24 +173,36 @@ TxSignSettlementBaseDialog {
 
         // Settlement Pay-In
         CustomLabel {
-            visible: passwordDialogData.value("SettlementPayInVisible") === true
+            visible: is_payIn
             Layout.fillWidth: true
             text: qsTr("Settlement Pay-In")
         }
         CustomLabelValue {
-            visible: passwordDialogData.value("SettlementPayInVisible") === true
+            visible: is_payIn
             text: "- " + txInfo.amount.toFixed(8) + inputProduct
+            Layout.alignment: Qt.AlignRight
+        }
+
+        // Sent amount
+        CustomLabel {
+            visible: is_payOut
+            Layout.fillWidth: true
+            text: qsTr("Sent Amount")
+        }
+        CustomLabelValue {
+            visible: is_payOut
+            text: "+ " + (txInfo.amountXBTReceived() + txInfo.fee).toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 
         // Settlement Pay-Out
         CustomLabel {
-            visible: passwordDialogData.value("SettlementPayOutVisible") === true
+            visible: is_payOut
             Layout.fillWidth: true
             text: qsTr("Settlement Pay-Out")
         }
         CustomLabelValue {
-            visible: passwordDialogData.value("SettlementPayOutVisible") === true
+            visible: is_payOut
             text: "+ " + txInfo.amount.toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
@@ -191,11 +211,11 @@ TxSignSettlementBaseDialog {
         CustomLabel {
             visible: passwordDialogData.value("TotalSpentVisible") === true
             Layout.fillWidth: true
-            text: qsTr("Total Spent")
+            text: is_payIn ? qsTr("I WILL SPEND ") : qsTr("I WILL RECEIVE") + onRevokeLabel
         }
         CustomLabelValue {
             visible: passwordDialogData.value("TotalSpentVisible") === true
-            text: ((passwordDialogData.value("SettlementPayInVisible") === true) ? "- " : "+ ") + txInfo.total.toFixed(8) + inputProduct
+            text: (is_payIn ? "- " : "+ ") + getTotalValue().toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
      }

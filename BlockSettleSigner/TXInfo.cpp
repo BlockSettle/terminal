@@ -39,7 +39,7 @@ void TXInfo::setTxId(const QString &txId)
 
 double TXInfo::amountCCReceived(const QString &cc) const
 {
-   const std::function<bool(const bs::Address &)> containsCCAddressCb = [this, cc](const bs::Address &address){
+   const std::function<bool(const bs::Address &)> &containsCCAddressCb = [this, cc](const bs::Address &address){
       const auto &wallet = walletsMgr_->getCCWallet(cc.toStdString());
       return wallet->containsAddress(address);
    };
@@ -52,7 +52,7 @@ double TXInfo::amountXBTReceived() const
    // calculate received amount from counterparty outputs
    // check all wallets and addresses
 
-   const std::function<bool(const bs::Address &)> containsXbtAddressCb = [this](const bs::Address &address){
+   const std::function<bool(const bs::Address &)> &containsXbtAddressCb = [this](const bs::Address &address){
       for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
          const auto &wallet = walletsMgr_->getHDWallet(i);
          for (auto leaf : wallet->getLeaves()) {
@@ -84,3 +84,4 @@ QStringList TXInfo::recipients() const
    }
    return result;
 }
+

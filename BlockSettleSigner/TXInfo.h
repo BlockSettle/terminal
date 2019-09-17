@@ -4,6 +4,7 @@
 #include "CoreWallet.h"
 #include "ProtobufHeadlessUtils.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
 
 #include "bs_signer.pb.h"
 
@@ -75,8 +76,25 @@ private:
    std::shared_ptr<spdlog::logger>  logger_ = nullptr;
 
    const std::function<bool(const bs::Address &)> containsAddressCb = [this](const bs::Address &address){
-      const auto &wallet = walletsMgr_->getWalletById(txReq_.walletIds.front());
-      return wallet->containsAddress(address);
+      if (txReq_.walletIds.empty()) {
+         return false;
+      }
+
+      const auto &hdWallet = walletsMgr_->getHDWalletById(txReq_.walletIds.front());
+      if (hdWallet) {
+         for (auto leaf : hdWallet->getLeaves()) {
+            if (leaf->containsAddress(address)) {
+               return true;
+            }
+         }
+      }
+      else {
+         const auto &wallet = walletsMgr_->getWalletById(txReq_.walletIds.front());
+         if (wallet) {
+            return wallet->containsAddress(address);
+         }
+      }
+      return false;
    };
 };
 
