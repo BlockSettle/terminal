@@ -88,6 +88,7 @@ public:
    void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
 
    void closeConnection();
+
 private:
    void processData(const std::string &);
 
@@ -110,6 +111,7 @@ private:
    void onChangePassword(const std::string &data, bs::signer::RequestId);
    void onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    void onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
+   void onUpdateWallet(const std::string &data, bs::signer::RequestId);
    void onUpdateStatus(const std::string &data);
    void onTerminalEvent(const std::string &data);
 

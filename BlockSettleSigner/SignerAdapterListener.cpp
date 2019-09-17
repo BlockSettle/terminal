@@ -110,6 +110,13 @@ public:
       owner_->sendData(signer::DecryptWalletRequestType, request.SerializeAsString());
    }
 
+   void walletChanged(const std::string &walletId) override
+   {
+      signer::UpdateWalletRequest request;
+      request.set_wallet_id(walletId);
+      owner_->sendData(signer::UpdateWalletType, request.SerializeAsString());
+   }
+
    SignerAdapterListener *owner_{};
 };
 

@@ -51,6 +51,7 @@ public:
 
    std::shared_ptr<bs::sync::WalletsManager> getWalletsManager();
    void reloadWallets(const QString &, const std::function<void()> &);
+   void updateWallet(const std::string &walletId);
 
    void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
