@@ -688,7 +688,7 @@ bool hd::Leaf::getLedgerDelegateForAddress(const bs::Address &addr
       return false;
    }
    {
-      std::unique_lock<std::mutex> lock(*cbMutex_);
+      std::unique_lock<std::mutex> lock(balanceData_->cbMutex);
       const auto &itCb = cbLedgerByAddr_.find(addr);
       if (itCb != cbLedgerByAddr_.end()) {
          logger_->error("[sync::hd::Leaf::getLedgerDelegateForAddress] ledger callback for addr {} already exists", addr.display());
@@ -890,18 +890,13 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 
 void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 {
-   {
-      std::unique_lock<std::mutex> lock(*addrMapsMtx_);
-      addressBalanceMap_->clear();
-   }
-
    if (!ZConly) {
       const auto &cbRefresh = [this](std::vector<UTXO> utxos) {
          const auto &cbUpdateSpendableBalance = [this](const std::vector<UTXO> &spendableUTXOs) {
-            std::unique_lock<std::mutex> lock(*addrMapsMtx_);
+            std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
             for (const auto &utxo : spendableUTXOs) {
-               const auto &addr = utxo.getRecipientScrAddr();
-               auto &balanceVec = (*addressBalanceMap_)[addr];
+               const auto addr = utxo.getRecipientScrAddr();
+               auto &balanceVec = (balanceData_->addressBalanceMap)[addr];
                if (balanceVec.empty()) {
                   balanceVec = { 0, 0, 0 };
                }
@@ -916,9 +911,9 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 
    const auto &cbRefreshZC = [this](const std::vector<UTXO> &utxos) {
       const auto &cbUpdateZcBalance = [this](const std::vector<UTXO> &ZcUTXOs) {
-         std::unique_lock<std::mutex> lock(*addrMapsMtx_);
+         std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
          for (const auto &utxo : ZcUTXOs) {
-            auto &balanceVec = (*addressBalanceMap_)[utxo.getRecipientScrAddr()];
+            auto &balanceVec = balanceData_->addressBalanceMap[utxo.getRecipientScrAddr()];
             if (balanceVec.empty()) {
                balanceVec = { 0, 0, 0 };
             }
@@ -1142,7 +1137,7 @@ bool hd::CCLeaf::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const
 
 bool hd::CCLeaf::isBalanceAvailable() const
 {
-   return (validationEnded_ || !checker_) ? hd::Leaf::isBalanceAvailable() : false;
+   return validationEnded_ ? hd::Leaf::isBalanceAvailable() : false;
 }
 
 BTCNumericTypes::balance_type hd::CCLeaf::correctBalance(BTCNumericTypes::balance_type balance, bool apply) const
@@ -1171,13 +1166,12 @@ BTCNumericTypes::balance_type hd::CCLeaf::getTotalBalance() const
 
 std::vector<uint64_t> hd::CCLeaf::getAddrBalance(const bs::Address &addr) const
 {
-   if (!ccResolver_ || (ccResolver_->lotSizeFor(suffix_) == 0) || !validationEnded_
-      || !Wallet::isBalanceAvailable()) {
+   if (!ccResolver_ || (ccResolver_->lotSizeFor(suffix_) == 0)/* || !validationEnded_*/) {
       return {};
    }
 
    /*doesnt seem thread safe, yet addressBalanceMap_ can be changed by other threads*/
-   auto inner = [addr, lotSizeInSatoshis= ccResolver_->lotSizeFor(suffix_)]
+   auto inner = [addr, lotSizeInSatoshis= ccResolver_->lotSizeFor(suffix_), this]
       (std::vector<uint64_t>& xbtBalances)->void {
       for (auto &balance : xbtBalances) {
          balance /= lotSizeInSatoshis;

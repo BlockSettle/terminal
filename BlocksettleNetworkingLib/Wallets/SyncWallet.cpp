@@ -11,24 +11,20 @@ using namespace bs::sync;
 Wallet::Wallet(WalletSignerContainer *container, const std::shared_ptr<spdlog::logger> &logger)
    : signContainer_(container), logger_(logger)
 {
-   spendableBalance_ = std::make_shared<std::atomic<BTCNumericTypes::balance_type>>(0);
-   unconfirmedBalance_ = std::make_shared<std::atomic<BTCNumericTypes::balance_type>>(0);
-   totalBalance_ = std::make_shared<std::atomic<BTCNumericTypes::balance_type>>(0);
-   addrCount_ = std::make_shared<size_t>(0);
-   addrMapsMtx_ = std::make_shared<std::mutex>();
-   addressBalanceMap_ = std::make_shared<std::map<BinaryData, std::vector<uint64_t>>>();
-   addressTxNMap_ = std::make_shared<std::map<BinaryData, uint64_t>>();
-   cbMutex_ = std::make_shared<std::mutex>();
-   cbBalances_ = std::make_shared<std::vector<std::function<void(void)>>>();
-   cbTxNs_ = std::make_shared<std::vector<std::function<void(void)>>>();
+   balanceData_ = std::make_shared<BalanceData>();
 }
 
 Wallet::~Wallet()
 {
    {
-      std::unique_lock<std::mutex> lock(*cbMutex_);
-      cbBalances_->clear();
-      cbTxNs_->clear();
+      std::unique_lock<std::mutex> lock(balThrMutex_);
+      balThreadRunning_ = false;
+      balThrCV_.notify_one();
+   }
+   {
+      std::unique_lock<std::mutex> lock(balanceData_->cbMutex);
+      balanceData_->cbBalances.clear();
+      balanceData_->cbTxNs.clear();
    }
    UtxoReservation::delAdapter(utxoAdapter_);
 }
@@ -134,7 +130,7 @@ BTCNumericTypes::balance_type Wallet::getSpendableBalance() const
    if (!isBalanceAvailable()) {
       return std::numeric_limits<double>::infinity();
    }
-   return *spendableBalance_;
+   return balanceData_->spendableBalance;
 }
 
 BTCNumericTypes::balance_type Wallet::getUnconfirmedBalance() const
@@ -142,7 +138,7 @@ BTCNumericTypes::balance_type Wallet::getUnconfirmedBalance() const
    if (!isBalanceAvailable()) {
       return 0;
    }
-   return *unconfirmedBalance_;
+   return balanceData_->unconfirmedBalance;
 }
 
 BTCNumericTypes::balance_type Wallet::getTotalBalance() const
@@ -150,7 +146,7 @@ BTCNumericTypes::balance_type Wallet::getTotalBalance() const
    if (!isBalanceAvailable()) {
       return std::numeric_limits<double>::infinity();
    }
-   return *totalBalance_;
+   return balanceData_->totalBalance;
 }
 
 std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
@@ -158,10 +154,10 @@ std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
    if (!isBalanceAvailable()) {
       throw std::runtime_error("uninitialized db connection");
    }
-   std::unique_lock<std::mutex> lock(*addrMapsMtx_);
+   std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
 
-   auto iter = addressBalanceMap_->find(addr.prefixed());
-   if (iter == addressBalanceMap_->end()) {
+   auto iter = balanceData_->addressBalanceMap.find(addr.prefixed());
+   if (iter == balanceData_->addressBalanceMap.end()) {
       return {};
    }
 
@@ -173,10 +169,10 @@ uint64_t Wallet::getAddrTxN(const bs::Address &addr) const
    if (!isBalanceAvailable()) {
       throw std::runtime_error("uninitialized db connection");
    }
-   std::unique_lock<std::mutex> lock(*addrMapsMtx_);
+   std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
 
-   auto iter = addressTxNMap_->find(addr.prefixed());
-   if (iter == addressTxNMap_->end()) {
+   auto iter = balanceData_->addressTxNMap.find(addr.prefixed());
+   if (iter == balanceData_->addressTxNMap.end()) {
       return 0;
    }
 
@@ -200,9 +196,9 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
 
    size_t cbSize = 0;
    {
-      std::unique_lock<std::mutex> lock(*cbMutex_);
-      cbSize = cbBalances_->size();
-      cbBalances_->push_back(cb);
+      std::unique_lock<std::mutex> lock(balanceData_->cbMutex);
+      cbSize = balanceData_->cbBalances.size();
+      balanceData_->cbBalances.push_back(cb);
    }
    if (cbSize == 0) {
       std::vector<std::string> walletIDs;
@@ -211,10 +207,7 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
          walletIDs.push_back(walletIdInt());
       } catch (std::exception&) {}
 
-      const auto onCombinedBalances = [cbMutex=cbMutex_, cbBalances=cbBalances_
-         , addrBalanceMap=addressBalanceMap_, addrCnt=addrCount_, totalBalance=totalBalance_
-         , spendableBalance=spendableBalance_, unconfirmedBalance=unconfirmedBalance_
-         , addrMapsMtx = addrMapsMtx_]
+      const auto onCombinedBalances = [balanceData = balanceData_]
          (const std::map<std::string, CombinedBalances> &balanceMap)
       {
          bool ourUpdate = false;
@@ -234,26 +227,24 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
             addrCount += wltBal.second.walletBalanceAndCount_[3];
 
             { //address balances
-               std::unique_lock<std::mutex> lock(*addrMapsMtx);
+               std::unique_lock<std::mutex> lock(balanceData->addrMapsMtx);
                updateMap<std::map<BinaryData, std::vector<uint64_t>>>(
-                  wltBal.second.addressBalances_, *addrBalanceMap);
+                  wltBal.second.addressBalances_, balanceData->addressBalanceMap);
             }
          }
          spendable = total - unconfirmed;
 
          if (ourUpdate) {
-            *totalBalance = total;
-            *spendableBalance = spendable;
-            *unconfirmedBalance = unconfirmed;
-            *addrCnt = addrCount;
+            balanceData->totalBalance = total;
+            balanceData->spendableBalance = spendable;
+            balanceData->unconfirmedBalance = unconfirmed;
+            balanceData->addrCount = addrCount;
 
             std::vector<std::function<void(void)>> cbCopy;
             {
-               std::unique_lock<std::mutex> lock(*cbMutex);
-
-               cbCopy.swap(*cbBalances);
+               std::unique_lock<std::mutex> lock(balanceData->cbMutex);
+               cbCopy.swap(balanceData->cbBalances);
             }
-
             for (const auto &cb : cbCopy) {
                if (cb) {
                   cb();
@@ -366,9 +357,9 @@ bool Wallet::getAddressTxnCounts(const std::function<void(void)> &cb)
    }
    size_t cbSize = 0;
    {
-      std::unique_lock<std::mutex> lock(*cbMutex_);
-      cbSize = cbTxNs_->size();
-      cbTxNs_->push_back(cb);
+      std::unique_lock<std::mutex> lock(balanceData_->cbMutex);
+      cbSize = balanceData_->cbTxNs.size();
+      balanceData_->cbTxNs.push_back(cb);
    }
    if (cbSize == 0) {
       std::vector<std::string> walletIDs;
@@ -377,24 +368,21 @@ bool Wallet::getAddressTxnCounts(const std::function<void(void)> &cb)
          walletIDs.push_back(walletIdInt());
       } catch (std::exception&) {}
 
-      decltype(cbTxNs_) cbTxNsCopy = std::make_shared<std::vector<std::function<void(void)>>>();
-
-      {
-         std::unique_lock<std::mutex> lock(*cbMutex_);
-         cbTxNsCopy->swap(*cbTxNs_);
-      }
-
-      const auto &cbTxNs = [cbTxNsCollection=cbTxNsCopy, addrMapsMtx=addrMapsMtx_
-         , addrTxNMap=addressTxNMap_]
+      const auto &cbTxNs = [balanceData = balanceData_]
          (const std::map<std::string, CombinedCounts> &countMap)
       {
          for (const auto &count : countMap) {
-            std::unique_lock<std::mutex> lock(*addrMapsMtx);
+            std::unique_lock<std::mutex> lock(balanceData->addrMapsMtx);
             updateMap<std::map<BinaryData, uint64_t>>(
-               count.second.addressTxnCounts_, *addrTxNMap);
+               count.second.addressTxnCounts_, balanceData->addressTxNMap);
          }
 
-         for (const auto &cb : *cbTxNsCollection) {
+         auto cbTxNsCopy = std::make_shared<std::vector<std::function<void(void)>>>();
+         {
+            std::unique_lock<std::mutex> lock(balanceData->cbMutex);
+            cbTxNsCopy->swap(balanceData->cbTxNs);
+         }
+         for (const auto &cb : *cbTxNsCopy) {
             if (cb) {
                cb();
             }
@@ -494,12 +482,12 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 {
    init(true);
 
-   const auto &cbTX = [this](const Tx &tx) {
+   const auto &cbTX = [this, balanceData = balanceData_](const Tx &tx) {
       for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
          const TxIn in = tx.getTxInCopy(i);
          const OutPoint op = in.getOutPoint();
 
-         const auto &cbPrevTX = [this, idx=op.getTxOutIndex()](const Tx &prevTx) {
+         const auto &cbPrevTX = [this, balanceData, idx=op.getTxOutIndex()](const Tx &prevTx) {
             if (!prevTx.isInitialized()) {
                return;
             }
@@ -510,9 +498,9 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
             }
             bool updated = false;
             {
-               std::unique_lock<std::mutex> lock(*addrMapsMtx_);
-               const auto &itTxn = addressTxNMap_->find(addr.id());
-               if (itTxn != addressTxNMap_->end()) {
+               std::unique_lock<std::mutex> lock(balanceData->addrMapsMtx);
+               const auto &itTxn = balanceData->addressTxNMap.find(addr.id());
+               if (itTxn != balanceData->addressTxNMap.end()) {
                   itTxn->second++;
                   updated = true;
                }
@@ -545,6 +533,44 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 void Wallet::onNewBlock(unsigned int depth)
 {
    init(true);
+}
+
+void Wallet::onBalanceAvailable(const std::function<void()> &cb) const
+{
+   if (isBalanceAvailable()) {
+      if (cb) {
+         cb();
+      }
+      return;
+   }
+
+   const auto thrBalAvail = [this, cb] {
+      while (balThreadRunning_) {
+         std::unique_lock<std::mutex> lock(balThrMutex_);
+         balThrCV_.wait_for(lock, std::chrono::milliseconds{ 100 });
+         if (!balThreadRunning_) {
+            return;
+         }
+         if (isBalanceAvailable()) {
+            for (const auto &cb : cbBalThread_) {
+               if (cb) {
+                  cb();
+               }
+            }
+            cbBalThread_.clear();
+            balThreadRunning_ = false;
+            return;
+         }
+      }
+   };
+   {
+      std::unique_lock<std::mutex> lock(balThrMutex_);
+      cbBalThread_.emplace_back(std::move(cb));
+   }
+   if (!balThreadRunning_) {
+      balThreadRunning_ = true;
+      std::thread(thrBalAvail).detach();
+   }
 }
 
 void Wallet::onRefresh(const std::vector<BinaryData> &ids, bool online)
@@ -828,7 +854,7 @@ void WalletACT::onLedgerForAddress(const bs::Address &addr
 {
    std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> cb = nullptr;
    {
-      std::unique_lock<std::mutex> lock(*parent_->cbMutex_);
+      std::unique_lock<std::mutex> lock(parent_->balanceData_->cbMutex);
       const auto &itCb = parent_->cbLedgerByAddr_.find(addr);
       if (itCb == parent_->cbLedgerByAddr_.end()) {
          return;
@@ -848,7 +874,7 @@ bool Wallet::getLedgerDelegateForAddress(const bs::Address &addr
       return false;
    }
    {
-      std::unique_lock<std::mutex> lock(*cbMutex_);
+      std::unique_lock<std::mutex> lock(balanceData_->cbMutex);
       const auto &itCb = cbLedgerByAddr_.find(addr);
       if (itCb != cbLedgerByAddr_.end()) {
          logger_->error("[bs::sync::Wallet::getLedgerDelegateForAddress] ledger callback for addr {} already exists", addr.display());
@@ -915,12 +941,12 @@ void Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncState)>
    }
    //1) round up all addresses that have a tx count
    std::set<BinaryData> usedAddrSet;
-   for (auto& addrPair : *addressTxNMap_) {
+   for (auto& addrPair : balanceData_->addressTxNMap) {
       if (addrPair.second != 0) {
          usedAddrSet.insert(addrPair.first);
       }
    }
-   for (auto& addrPair : *addressBalanceMap_) {
+   for (auto& addrPair : balanceData_->addressBalanceMap) {
       if (usedAddrSet.find(addrPair.first) != usedAddrSet.end()) {
          continue;   // skip already added addresses
       }
@@ -945,14 +971,13 @@ void Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncState)>
 
 size_t Wallet::getActiveAddressCount()
 {
-   std::unique_lock<std::mutex> lock(*addrMapsMtx_);
+   std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
 
    size_t count = 0;
-   for (auto& addrBal : *addressBalanceMap_) {
+   for (auto& addrBal : balanceData_->addressBalanceMap) {
       if (addrBal.second[0] != 0) {
          ++count;
       }
    }
-
    return count;
 }
