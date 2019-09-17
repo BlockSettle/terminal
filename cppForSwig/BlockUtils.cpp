@@ -580,3 +580,28 @@ bool BlockDataManager::isReady() const
 
    return isready;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+void BlockDataManager::registerOneTimeHook(
+   std::shared_ptr<BDVNotificationHook> hook)
+{
+   oneTimeHooks_.push_back(move(hook));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void BlockDataManager::triggerOneTimeHooks(BDV_Notification* notifPtr)
+{
+   try
+   {
+      while (true)
+      {
+         auto&& hookPtr = oneTimeHooks_.pop_front();
+         if (hookPtr == nullptr)
+            continue;
+
+         hookPtr->lambda_(notifPtr);
+      }
+   }
+   catch(IsEmpty&)
+   {}
+}

@@ -171,4 +171,10 @@ struct BDV_Notification_Packet
    std::shared_ptr<BDV_Notification> notifPtr_;
 };
 
+///////////////////////////////////////////////////////////////////////////////
+struct BDVNotificationHook
+{
+   std::function<void(BDV_Notification*)> lambda_;
+};
+
 #endif

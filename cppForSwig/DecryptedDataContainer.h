@@ -88,14 +88,14 @@ protected:
 
 private:
    std::function<SecureBinaryData(
-      const BinaryData&)> getPassphraseLambda_;
+      const std::set<BinaryData>&)> getPassphraseLambda_;
 
 private:
    std::unique_ptr<DecryptedEncryptionKey> deriveEncryptionKey(
       std::unique_ptr<DecryptedEncryptionKey>, const BinaryData& kdfid) const;
 
    std::unique_ptr<DecryptedEncryptionKey> promptPassphrase(
-      const BinaryData&, const BinaryData&) const;
+      const std::map<BinaryData, BinaryData>&) const;
 
    void initAfterLock(void);
    void cleanUpBeforeUnlock(void);
@@ -126,8 +126,7 @@ public:
       Cipher* const cipher, const SecureBinaryData& data);
 
 
-   void populateEncryptionKey(
-      const BinaryData& keyid, const BinaryData& kdfid);
+   void populateEncryptionKey(const std::map<BinaryData, BinaryData>&);
 
    void addKdf(std::shared_ptr<KeyDerivationFunction> kdfPtr)
    {
@@ -150,14 +149,17 @@ public:
    void deleteKeyFromDisk(const BinaryData& key);
 
    void setPassphrasePromptLambda(
-      std::function<SecureBinaryData(const BinaryData&)> lambda)
+      std::function<SecureBinaryData(const std::set<BinaryData>&)> lambda)
    {
       getPassphraseLambda_ = lambda;
    }
 
    void resetPassphraseLambda(void) { getPassphraseLambda_ = nullptr; }
 
-   void encryptEncryptionKey(const BinaryData&, const SecureBinaryData&);
+   void encryptEncryptionKey(
+      const BinaryData& keyID, const BinaryData& kdfID, 
+      const SecureBinaryData& newPassphrase, bool replace = true);
+
    void lockOther(std::shared_ptr<DecryptedDataContainer> other);
 
    const SecureBinaryData& getDefaultKdfId(void) const { return defaultKdfId_; }
