@@ -50,10 +50,9 @@ namespace bs {
                , const std::string& folder = "./"
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
-            //stand in for the botched bs encryption code. too expensive to clean up after this mess
-            std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return { bs::wallet::EncryptionType::Password }; }
-            std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
-            bs::wallet::KeyRank encryptionRank() const { return { 1, 1 }; }
+            std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
+            std::vector<BinaryData> encryptionKeys() const;
+            bs::wallet::KeyRank encryptionRank() const { return {1, /*pwdMeta_.size()*/1 }; }
 
             ~Wallet(void);
 
@@ -112,7 +111,8 @@ namespace bs {
          protected:
             std::string    name_, desc_;
             NetworkType    netType_ = NetworkType::Invalid;
-            std::map<bs::hd::Path::Elem, std::shared_ptr<Group>> groups_;
+            std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>  groups_;
+            std::vector<bs::wallet::PasswordMetaData>             pwdMeta_;
             std::shared_ptr<spdlog::logger>     logger_;
             bool extOnlyFlag_ = false;
 

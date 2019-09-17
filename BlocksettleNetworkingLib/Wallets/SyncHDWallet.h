@@ -36,7 +36,7 @@ namespace bs {
             void synchronize(const std::function<void()> &cbDone);
 
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
-            std::vector<SecureBinaryData> encryptionKeys() const;
+            std::vector<BinaryData> encryptionKeys() const;
             bs::wallet::KeyRank encryptionRank() const;
             bool isPrimary() const;
             bool isOffline() const { return isOffline_; }
@@ -111,7 +111,7 @@ namespace bs {
             std::shared_ptr<ArmoryConnection>   armory_;
             std::shared_ptr<spdlog::logger>     logger_;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
-            std::vector<SecureBinaryData>          encryptionKeys_;
+            std::vector<BinaryData>                   encryptionKeys_;
             bs::wallet::KeyRank  encryptionRank_{ 1, 1 };
             const bool isOffline_;
 

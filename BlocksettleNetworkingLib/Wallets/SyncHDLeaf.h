@@ -46,8 +46,8 @@ namespace bs {
             std::string shortName() const override;
             bs::core::wallet::Type type() const override { return type_; }
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const override { return encryptionTypes_; }
-            std::vector<SecureBinaryData> encryptionKeys() const override { return encryptionKeys_; }
-            std::pair<unsigned int, unsigned int> encryptionRank() const override { return encryptionRank_; }
+            std::vector<BinaryData> encryptionKeys() const override { return encryptionKeys_; }
+            bs::wallet::KeyRank encryptionRank() const override { return encryptionRank_; }
             bool hasExtOnlyAddresses() const override { return isExtOnly_; }
             bool hasId(const std::string &) const override;
 
@@ -128,8 +128,8 @@ namespace bs {
             std::string suffix_;
             bool  isExtOnly_ = false;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
-            std::vector<SecureBinaryData>          encryptionKeys_;
-            std::pair<unsigned int, unsigned int>  encryptionRank_{0, 0};
+            std::vector<BinaryData> encryptionKeys_;
+            bs::wallet::KeyRank     encryptionRank_{1, 1};
 
             std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
             std::shared_ptr<AsyncClient::BtcWallet>   btcWalletInt_;

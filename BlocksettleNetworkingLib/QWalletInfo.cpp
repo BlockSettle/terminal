@@ -12,7 +12,7 @@ using namespace bs::wallet;
 using namespace Blocksettle::Communication;
 
 WalletInfo::WalletInfo(const QString &rootId, const std::vector<EncryptionType> &encTypes
-                       , const std::vector<SecureBinaryData> &encKeys, const KeyRank &keyRank)
+                       , const std::vector<BinaryData> &encKeys, const KeyRank &keyRank)
 {
    rootId_ = rootId;
    keyRank_ = keyRank;
@@ -243,7 +243,7 @@ bool WalletInfo::isPasswordOnly() const
    return true;
 }
 
-void WalletInfo::setEncKeys(const std::vector<SecureBinaryData> &encKeys)
+void WalletInfo::setEncKeys(const std::vector<BinaryData> &encKeys)
 {
    encKeys_.clear();
    for (const SecureBinaryData &encKey : encKeys) {

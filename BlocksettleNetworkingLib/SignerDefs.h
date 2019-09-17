@@ -102,8 +102,8 @@ namespace sync {
    struct WalletData
    {
       std::vector<bs::wallet::EncryptionType>   encryptionTypes;
-      std::vector<SecureBinaryData>          encryptionKeys;
-      std::pair<unsigned int, unsigned int>  encryptionRank{ 0,0 };
+      std::vector<BinaryData> encryptionKeys;
+      bs::wallet::KeyRank     encryptionRank{ 0,0 };
       NetworkType netType = NetworkType::Invalid;
 
       //flag value, signifies the higest index entries are unset if not changed from UINT32_MAX

@@ -149,6 +149,16 @@ std::shared_ptr<hd::Leaf> hd::Wallet::getLeaf(const std::string &id) const
    return nullptr;
 }
 
+std::vector<bs::wallet::EncryptionType> hd::Wallet::encryptionTypes() const
+{
+   return {};
+}
+
+std::vector<BinaryData> hd::Wallet::encryptionKeys() const
+{
+   return {};
+}
+
 std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
 {
    std::shared_ptr<Group> result;

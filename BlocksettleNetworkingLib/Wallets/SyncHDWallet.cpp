@@ -357,7 +357,7 @@ std::vector<bs::wallet::EncryptionType> hd::Wallet::encryptionTypes() const
    return encryptionTypes_;
 }
 
-std::vector<SecureBinaryData> hd::Wallet::encryptionKeys() const
+std::vector<BinaryData> hd::Wallet::encryptionKeys() const
 {
    return encryptionKeys_;
 }

@@ -39,7 +39,7 @@ public:
 
    // used in headless container
    WalletInfo(const QString &rootId, const std::vector<bs::wallet::EncryptionType> &encTypes
-              , const std::vector<SecureBinaryData> &encKeys, const bs::wallet::KeyRank &keyRank);
+              , const std::vector<BinaryData> &encKeys, const bs::wallet::KeyRank &keyRank);
 
    WalletInfo(const Blocksettle::Communication::headless::GetHDWalletInfoResponse &response);
 //   WalletInfo(const Blocksettle::Communication::headless::PasswordRequest &request);
@@ -77,7 +77,7 @@ public:
 
    QList<QString> encKeys() const { return encKeys_; }
    void setEncKeys(const QList<QString> &encKeys);
-   void setEncKeys(const std::vector<SecureBinaryData> &encKeys);
+   void setEncKeys(const std::vector<BinaryData> &encKeys);
 
    Q_INVOKABLE QList<bs::wallet::EncryptionType> encTypes() const { return encTypes_; }
    void setEncTypes(const QList<bs::wallet::EncryptionType> &encTypes);
