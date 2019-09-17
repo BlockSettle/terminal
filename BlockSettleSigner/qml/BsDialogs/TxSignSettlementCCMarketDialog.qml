@@ -214,10 +214,12 @@ TxSignSettlementBaseDialog {
 
         // Network Fee
         CustomLabel {
+            visible: is_buy
             Layout.fillWidth: true
             text: qsTr("Network Fee")
         }
         CustomLabelValue {
+            visible: is_buy
             text: fee
             Layout.alignment: Qt.AlignRight
         }

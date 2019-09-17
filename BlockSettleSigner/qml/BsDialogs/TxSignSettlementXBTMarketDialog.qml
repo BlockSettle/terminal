@@ -29,9 +29,13 @@ TxSignSettlementBaseDialog {
     }
 
     Component.onCompleted: {
-        quantity = getQuantity() + " " + product
-        totalValue = (getQuantity() * price).toFixed(8) + " XBT"
-        priceString = price + " XBT / 1 " + fxProduct
+        if (passwordDialogData.contains("Quantity")) {
+            quantity = passwordDialogData.value("Quantity")
+        }
+        if (passwordDialogData.contains("TotalValue")) {
+            totalValue = passwordDialogData.value("TotalValue")
+        }
+        priceString = price + " " + fxProduct + " / 1 XBT"
     }
 
     settlementDetailsItem: GridLayout {
