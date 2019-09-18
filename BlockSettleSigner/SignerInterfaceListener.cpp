@@ -235,18 +235,22 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       break;
    case signer::CreateAuthLeaf:
       dialogData->setValue(keys::Title, tr("Create Auth Leaf"));
-      requestPasswordForAuthLeaf(dialogData, walletInfo);
+      requestPasswordForDialogType(QLatin1String("RequestPasswordForAuthLeaf"), dialogData, walletInfo);
       break;
    case signer::CreateHDLeaf:
       dialogData->setValue(keys::Title, tr("Create Leaf"));
-      requestPasswordForToken(dialogData, walletInfo);
+      requestPasswordForDialogType(QLatin1String("RequestPasswordForToken"), dialogData, walletInfo);
       break;
    case signer::CreateSettlementLeaf:
       dialogData->setValue(keys::Title, tr("Create Settlement Leaf"));
-      requestPasswordForSettlementLeaf(dialogData, walletInfo);
+      requestPasswordForDialogType(QLatin1String("RequestPasswordForSettlementLeaf"), dialogData, walletInfo);
+      break;
+   case signer::RevokeAuthAddress:
+      dialogData->setValue(keys::Title, tr("Revoke Auth Address"));
+      requestPasswordForDialogType(QLatin1String("RequestPasswordForRevokeAuthAddress"), dialogData, walletInfo);
       break;
    case signer::PromoteHDWallet:
-      requestPasswordForPromoteHDWallet(dialogData, walletInfo);
+      requestPasswordForDialogType(QLatin1String("RequestPasswordForPromoteHDWallet"), dialogData, walletInfo);
       break;
    default:
       break;
@@ -657,27 +661,6 @@ void SignerInterfaceListener::requestPasswordForSettlementTx(signer::PasswordDia
       , QVariant::fromValue(txInfo)
       , QVariant::fromValue(dialogData)
       , QVariant::fromValue(walletInfo));
-}
-
-void SignerInterfaceListener::requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData
-   , bs::hd::WalletInfo *walletInfo)
-{
-   requestPasswordForDialogType(QLatin1String("RequestPasswordForAuthLeaf"), dialogData, walletInfo);
-}
-
-void SignerInterfaceListener::requestPasswordForToken(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo)
-{
-   requestPasswordForDialogType(QLatin1String("RequestPasswordForToken"), dialogData, walletInfo);
-}
-
-void SignerInterfaceListener::requestPasswordForSettlementLeaf(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo)
-{
-   requestPasswordForDialogType(QLatin1String("RequestPasswordForSettlementLeaf"), dialogData, walletInfo);
-}
-
-void SignerInterfaceListener::requestPasswordForPromoteHDWallet(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo)
-{
-   requestPasswordForDialogType(QLatin1String("RequestPasswordForPromoteHDWallet"), dialogData, walletInfo);
 }
 
 void SignerInterfaceListener::shutdown()

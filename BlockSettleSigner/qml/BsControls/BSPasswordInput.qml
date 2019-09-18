@@ -30,6 +30,12 @@ CustomTitleDialogWindow {
     width: 350
     rejectable: true
 
+    onBsRejected: {
+        if (authSign) {
+            authSign.cancel()
+        }
+    }
+
     cContentItem: ColumnLayout {
         id: contentItemData
         Layout.fillWidth: true
