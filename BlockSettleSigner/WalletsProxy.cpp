@@ -111,8 +111,8 @@ void WalletsProxy::changePassword(const QString &walletId
       }
    };
 
-   adapter_->changePassword(walletId.toStdString(), { *newPasswordData }, { 1, 1 }
-                          , oldPasswordData->password, false, false, false, cbChangePwdResult);
+   adapter_->changePassword(walletId.toStdString(), { *newPasswordData }
+      , *oldPasswordData, false, false, cbChangePwdResult);
 }
 
 void WalletsProxy::addEidDevice(const QString &walletId
@@ -135,10 +135,6 @@ void WalletsProxy::addEidDevice(const QString &walletId
       return;
    }
 
-   //bs::hd::Wallet;
-   bs::wallet::KeyRank encryptionRank = wallet->encryptionRank();
-   encryptionRank.n++;
-
    const auto &cbChangePwdResult = [this, walletId](bool result) {
       if (result) {
          emit walletsMgr_->walletChanged(walletId.toStdString());
@@ -148,7 +144,7 @@ void WalletsProxy::addEidDevice(const QString &walletId
       }
    };
    adapter_->changePassword(walletId.toStdString(), { *newPasswordData }
-      , encryptionRank, oldPasswordData->password, true, false, false, cbChangePwdResult);
+      , *oldPasswordData, true, false, cbChangePwdResult);
 }
 
 void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswordData *oldPasswordData, int removedIndex)
@@ -183,9 +179,6 @@ void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswor
       return;
    }
 
-   bs::wallet::KeyRank encryptionRank = wallet->encryptionRank();
-   encryptionRank.n--;
-
    // remove index from encKeys
    std::vector<bs::wallet::PasswordData> newPasswordData;
    for (int i = 0; i < wallet->encryptionKeys().size(); ++i) {
@@ -203,8 +196,8 @@ void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswor
       }
    };
 
-   adapter_->changePassword(walletId.toStdString(), newPasswordData, encryptionRank
-      , oldPasswordData->password, false, true, false, cbChangePwdResult);
+   adapter_->changePassword(walletId.toStdString(), newPasswordData
+      , *oldPasswordData, false, true, cbChangePwdResult);
 }
 
 QString WalletsProxy::getWoWalletFile(const QString &walletId) const
@@ -282,7 +275,7 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
 
          const bs::core::wallet::Seed seed(seedData, hdWallet->networkType());
          newWallet = std::make_shared<bs::core::hd::Wallet>(hdWallet->name(), hdWallet->description()
-            , seed, passwordData->password, tmpDir.path().toStdString());
+            , seed, *passwordData, tmpDir.path().toStdString());
 
          for (const auto &group : hdWallet->getGroups()) {
             auto newGroup = newWallet->createGroup(static_cast<bs::hd::CoinType>(group->index()));
@@ -630,7 +623,7 @@ void WalletsProxy::createWallet(bool isPrimary
    };
 
    adapter_->createWallet(walletInfo->name().toStdString(), walletInfo->desc().toStdString()
-      , *seed, isPrimary, { *passwordData }, { 1, 1 }, cb);
+      , *seed, isPrimary, *passwordData, cb);
 }
 
 void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallback)

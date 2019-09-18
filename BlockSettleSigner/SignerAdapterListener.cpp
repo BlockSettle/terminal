@@ -233,7 +233,7 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::AutoSignActType:
       rc = onAutoSignRequest(packet.data(), packet.id());
       break;
-   case signer::ChangePasswordRequestType:
+   case signer::ChangePasswordType:
       rc = onChangePassword(packet.data(), packet.id());
       break;
    case signer::CreateHDWalletType:
@@ -453,35 +453,40 @@ bool SignerAdapterListener::onSyncWallet(const std::string &data, bs::signer::Re
       return false;
    }
    const auto wallet = walletsMgr_->getWalletById(request.wallet_id());
-   if (wallet) {
-      signer::SyncWalletResponse response;
-      response.set_wallet_id(wallet->walletId());
-      for (const auto &encType : wallet->encryptionTypes()) {
-         response.add_encryption_types(static_cast<signer::EncryptionType>(encType));
-      }
-      for (const auto &encKey : wallet->encryptionKeys()) {
-         response.add_encryption_keys(encKey.toBinStr());
-      }
-      response.set_key_rank_m(wallet->encryptionRank().m);
-      response.set_key_rank_n(wallet->encryptionRank().n);
-
-      response.set_net_type(static_cast<int>(wallet->networkType()));
-      response.set_highest_ext_index(wallet->getExtAddressCount());
-      response.set_highest_int_index(wallet->getIntAddressCount());
-
-      for (const auto &addr : wallet->getUsedAddressList()) {
-         const auto index = wallet->getAddressIndex(addr);
-         auto address = response.add_addresses();
-         address->set_address(addr.display());
-         address->set_index(index);
-      }
-      return sendData(signer::SyncWalletType, response.SerializeAsString(), reqId);
-   }
-   else {
+   if (!wallet) {
       logger_->error("[SignerAdapterListener::{}] failed to find wallet with id {}"
          , __func__, request.wallet_id());
+      return false;
    }
-   return false;
+   const auto rootWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
+   if (!rootWallet) {
+      logger_->error("[SignerAdapterListener::{}] failed to find root wallet for leaf {}"
+         , __func__, request.wallet_id());
+      return false;
+   }
+
+   signer::SyncWalletResponse response;
+   response.set_wallet_id(wallet->walletId());
+   for (const auto &encType : rootWallet->encryptionTypes()) {
+      response.add_encryption_types(static_cast<signer::EncryptionType>(encType));
+   }
+   for (const auto &encKey : rootWallet->encryptionKeys()) {
+      response.add_encryption_keys(encKey.toBinStr());
+   }
+   response.set_key_rank_m(rootWallet->encryptionRank().m);
+   response.set_key_rank_n(rootWallet->encryptionRank().n);
+
+   response.set_net_type(static_cast<int>(wallet->networkType()));
+   response.set_highest_ext_index(wallet->getExtAddressCount());
+   response.set_highest_int_index(wallet->getIntAddressCount());
+
+   for (const auto &addr : wallet->getUsedAddressList()) {
+      const auto index = wallet->getAddressIndex(addr);
+      auto address = response.add_addresses();
+      address->set_address(addr.display());
+      address->set_index(index);
+   }
+   return sendData(signer::SyncWalletType, response.SerializeAsString(), reqId);
 }
 
 bool SignerAdapterListener::sendWoWallet(const std::shared_ptr<bs::core::hd::Wallet> &wallet
@@ -642,92 +647,111 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerContainerListener] failed to parse ChangePasswordRequest");
       response.set_success(false);
-      response.set_rootwalletid(std::string());
-      sendData(signer::ChangePasswordRequestType, response.SerializeAsString(), reqId);
+      response.set_root_wallet_id(std::string());
+      sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
       return false;
    }
-   const auto &wallet = walletsMgr_->getHDWalletById(request.rootwalletid());
+   const auto &wallet = walletsMgr_->getHDWalletById(request.root_wallet_id());
    if (!wallet) {
-      logger_->error("[SignerContainerListener] failed to find wallet for id {}", request.rootwalletid());
+      logger_->error("[SignerContainerListener] failed to find wallet for id {}", request.root_wallet_id());
       response.set_success(false);
-      response.set_rootwalletid(request.rootwalletid());
-      sendData(signer::ChangePasswordRequestType, response.SerializeAsString(), reqId);
+      response.set_root_wallet_id(request.root_wallet_id());
+      sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
       return false;
    }
    std::vector<bs::wallet::PasswordData> pwdData;
-   for (int i = 0; i < request.newpassword_size(); ++i) {
-      const auto &pwd = request.newpassword(i);
+   for (int i = 0; i < request.new_password_size(); ++i) {
+      const auto &pwd = request.new_password(i);
       pwdData.push_back({ SecureBinaryData(pwd.password())
-                          , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
+         , { static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()} } );
    }
-   bs::wallet::KeyRank keyRank = {request.rankm(), request.rankn()};
+
+   if (!request.remove_old() && pwdData.empty()) {
+      logger_->error("[SignerContainerListener] can't change/add empty password for {}", request.root_wallet_id());
+      response.set_success(false);
+      response.set_root_wallet_id(request.root_wallet_id());
+      sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
+      return false;
+   }
+   if (!request.add_new() && (pwdData.size() > 1)) {
+      logger_->error("[SignerContainerListener] can't remove/change more than 1 password at a time for {}"
+         , request.root_wallet_id());
+      response.set_success(false);
+      response.set_root_wallet_id(request.root_wallet_id());
+      sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
+      return false;
+   }
+
+   const bs::wallet::PasswordData oldPass = { SecureBinaryData(request.old_password().password())
+   ,  {static_cast<bs::wallet::EncryptionType>(request.old_password().enctype())
+      , request.old_password().enckey() } };
+
+   if (request.remove_old()) {
+      logger_->warn("[SignerContainerListener] password removal is not supported, yet");
+      response.set_success(false);
+      response.set_root_wallet_id(request.root_wallet_id());
+      sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
+      return false;
+   }
 
    bool result = false;
    {
-      auto lock = wallet->lockForEncryption(request.oldpassword());
-      result = wallet->changePassword(request.newpassword(0).password());
-      /*pwdData, keyRank, BinaryData::CreateFromHex(request.oldpassword())
-       , request.addnew(), request.removeold(), request.dryrun()*/
+      auto lock = wallet->lockForEncryption(oldPass.password);
+      if (request.add_new()) {
+         for (const auto &pwd : pwdData) {
+            result &= wallet->addPassword(pwd);
+         }
+      }
+      else {
+         result = wallet->changePassword(oldPass.metaData, pwdData.front());
+      }
    }
    if (result) {
       walletsListUpdated();
    }
 
    response.set_success(result);
-   response.set_rootwalletid(request.rootwalletid());
+   response.set_root_wallet_id(request.root_wallet_id());
    logger_->info("[SignerAdapterListener::{}] password changed for wallet {} with result {}"
-      , __func__, request.rootwalletid(), result);
-   return sendData(signer::ChangePasswordRequestType, response.SerializeAsString(), reqId);
-}
-
-static NetworkType mapNetworkType(Blocksettle::Communication::headless::NetworkType netType)
-{
-   switch (netType) {
-   case Blocksettle::Communication::headless::MainNetType:   return NetworkType::MainNet;
-   case Blocksettle::Communication::headless::TestNetType:   return NetworkType::TestNet;
-   default:                      return NetworkType::Invalid;
-   }
+      , __func__, request.root_wallet_id(), result);
+   return sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
 }
 
 bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer::RequestId reqId)
 {
-   headless::CreateHDWalletRequest request;
+   signer::CreateHDWalletRequest request;
    if (!request.ParseFromString(data)) {
+      logger_->error("[SignerContainerListener] failed to parse CreateHDWalletRequest");
       return false;
    }
 
-/*   std::vector<bs::wallet::PasswordData> pwdData;
-   for (int i = 0; i < request.password_size(); ++i) {
-      const auto pwd = request.password(i);
-      pwdData.push_back({ pwd.password()
-         , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
-   }
-   bs::wallet::KeyRank keyRank = { request.rankm(), request.rankn() }; */
+   const bs::wallet::PasswordData pwdData = { request.password().password()
+      , { static_cast<bs::wallet::EncryptionType>(request.password().enctype())
+         , request.password().enckey() } };
 
-   std::shared_ptr<bs::core::hd::Wallet> wallet;
+
    try {
       const auto &w = request.wallet();
-      const auto netType = mapNetworkType(w.nettype());
+      const auto netType = w.testnet() ? NetworkType::TestNet : NetworkType::MainNet;
       const auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
          : bs::core::wallet::Seed::fromXpriv(w.privatekey(), netType);
-      const SecureBinaryData pwd(request.password(0).password());
-      /*      auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
-         : bs::core::wallet::Seed(netType, w.privatekey(), w.chaincode());*/
-      wallet = walletsMgr_->createWallet(w.name(), w.description()
-         , seed, settings_->getWalletsDir(), pwd, w.primary()
-      /*, pwdData, keyRank*/);
+
+      const auto wallet = walletsMgr_->createWallet(w.name(), w.description(), seed
+         , settings_->getWalletsDir(), pwdData, w.primary());
 
       walletsListUpdated();
+
+      signer::CreateHDWalletResponse response;
+      response.set_wallet_id(wallet->walletId());
+      response.set_errorcode(static_cast<uint32_t>(bs::error::ErrorCode::NoError));
+      return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);
    }
    catch (const std::exception &e) {
       logger_->error("[{}] failed to create HD Wallet: {}", __func__, e.what());
-      headless::CreateHDWalletResponse response;
-      response.set_errorcode(static_cast<uint32_t>(bs::error::ErrorCode::InternalError));
-      return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);;
    }
-
-   headless::CreateHDWalletResponse response;
-   return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);
+   signer::CreateHDWalletResponse response;
+   response.set_errorcode(static_cast<uint32_t>(bs::error::ErrorCode::InternalError));
+   return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);;
 }
 
 bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer::RequestId reqId)

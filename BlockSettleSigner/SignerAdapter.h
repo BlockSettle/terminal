@@ -58,8 +58,8 @@ public:
 
    using ResultCb = std::function<void(bool, const std::string&)>;
    void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
-      , bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
-      , bs::wallet::KeyRank keyRank, const std::function<void(bs::error::ErrorCode)> &cb);
+      , bool primary, const bs::wallet::PasswordData &pwdData
+      , const std::function<void(bs::error::ErrorCode)> &cb);
 
    using CreateWoCb = std::function<void(const bs::sync::WatchingOnlyWallet &)>;
    void importWoWallet(const std::string &filename, const BinaryData &content, const CreateWoCb &cb);
@@ -72,8 +72,7 @@ public:
    void syncSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &);
 
    void changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
-      , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
-      , bool addNew, bool removeOld, bool dryRun
+      , const bs::wallet::PasswordData &oldPass, bool addNew, bool removeOld
       , const std::function<void(bool)> &);
 
    void signOfflineTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
