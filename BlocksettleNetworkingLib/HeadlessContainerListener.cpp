@@ -347,7 +347,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
    }
 
    // FIXME: review spend limits
-   if (!CheckSpendLimit(amount, rootWalletId)) {
+   if (!CheckSpendLimit(amount, rootWallet->walletId())) {
       SignTXResponse(clientId, packet.id(), reqType, ErrorCode::TxSpendLimitExceed);
       return false;
    }
