@@ -56,6 +56,16 @@ public:
 protected:
    void reject() override;
 
+signals:
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
+
+public slots:
+   void onUnsignedPayinRequested(const std::string& settlementId);
+   void onSignedPayoutRequested(const std::string& settlementId, const std::string& payinHash);
+   void onSignedPayinRequested(const std::string& settlementId);
+
 private slots:
    bool close();
 

@@ -123,6 +123,14 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::acceptQuote
       , this, &RFQDialog::onXBTQuoteAccept);
 
+   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendUnsignedPayinToPB
+      , this, &RFQDialog::sendUnsignedPayinToPB);
+   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayinToPB
+      , this, &RFQDialog::sendSignedPayinToPB);
+   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayoutToPB
+      , this, &RFQDialog::sendSignedPayoutToPB);
+
+
    return xbtSettlContainer_;
 }
 
@@ -234,4 +242,31 @@ void RFQDialog::onOrderUpdated(const bs::network::Order& order)
 void RFQDialog::onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx)
 {
    quoteProvider_->AcceptQuote(QString::fromStdString(reqId), quote_, hexPayoutTx);
+}
+
+void RFQDialog::onUnsignedPayinRequested(const std::string& settlementId)
+{
+   if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
+      return;
+   }
+
+   xbtSettlContainer_->onUnsignedPayinRequested(settlementId);
+}
+
+void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const std::string& payinHash)
+{
+   if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
+      return;
+   }
+
+   xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash);
+}
+
+void RFQDialog::onSignedPayinRequested(const std::string& settlementId)
+{
+   if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
+      return;
+   }
+
+   xbtSettlContainer_->onSignedPayinRequested(settlementId);
 }

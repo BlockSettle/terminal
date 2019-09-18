@@ -64,6 +64,14 @@ public:
 signals:
    void requestPrimaryWalletCreation();
 
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
+
+   void unsignedPayinRequested(const std::string& settlementId);
+   void signedPayoutRequested(const std::string& settlementId, const std::string& payinHash);
+   void signedPayinRequested(const std::string& settlementId);
+
 private:
    void showEditableRFQPage();
    void popShield();
@@ -77,6 +85,8 @@ public slots:
    void onBidClicked(const MarketSelectedInfo& selectedInfo);
    void onAskClicked(const MarketSelectedInfo& selectedInfo);
    void onDisableSelectedInfo();
+
+   void onMessageFromPB(std::string data);
 
 private slots:
    void onConnectedToCeler();

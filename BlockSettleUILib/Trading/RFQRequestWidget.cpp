@@ -16,6 +16,8 @@
 #include "SignContainer.h"
 #include "Wallets/SyncWalletsManager.h"
 
+#include "bs_proxy_terminal_pb.pb.h"
+
 #include "ui_RFQRequestWidget.h"
 
 namespace  {
@@ -221,6 +223,16 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
    RFQDialog* dialog = new RFQDialog(logger_, rfq, ui_->pageRFQTicket->GetTransactionData(), quoteProvider_,
       authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_, connectionManager_, authAddr, this);
 
+   // connect to requests from PB
+   // just re-emit signal
+   connect(dialog, &RFQDialog::sendUnsignedPayinToPB, this, &RFQRequestWidget::sendUnsignedPayinToPB);
+   connect(dialog, &RFQDialog::sendSignedPayinToPB, this, &RFQRequestWidget::sendSignedPayinToPB);
+   connect(dialog, &RFQDialog::sendSignedPayoutToPB, this, &RFQRequestWidget::sendSignedPayoutToPB);
+
+   connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
+   connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);
+   connect(this, &RFQRequestWidget::signedPayinRequested, dialog, &RFQDialog::onSignedPayinRequested);
+
    dialog->setAttribute(Qt::WA_DeleteOnClose);
 
    dialogManager_->adjustDialogPosition(dialog);
@@ -332,4 +344,41 @@ void RFQRequestWidget::onDisableSelectedInfo()
 {
    ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
+}
+
+void RFQRequestWidget::onMessageFromPB(std::string data)
+{
+   Blocksettle::Communication::ProxyTerminalPb::Response response;
+   bool result = response.ParseFromString(data);
+   if (!result) {
+      logger_->error("[RFQRequestWidget::onMessageFromPB] failed to parse message: {}"
+                     , data);
+      return;
+   }
+
+   switch (response.data_case()) {
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin:
+         {
+            auto command = response.send_unsigned_payin();
+
+            emit unsignedPayinRequested(command.settlement_id());
+         }
+         break;
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayout:
+         {
+            auto command = response.sign_payout();
+
+            emit signedPayoutRequested(command.settlement_id(), command.payin_data());
+         }
+         break;
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayin:
+         {
+            auto command = response.sign_payin();
+
+            emit signedPayinRequested(command.settlement_id());
+         }
+         break;
+   }
+
+   // if not processed - not RFQ releated message. not error
 }

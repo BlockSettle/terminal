@@ -440,3 +440,12 @@ void ReqXBTSettlementContainer::onWalletInfo(unsigned int reqId, const bs::hd::W
       emit authWalletInfoReceived();
    }
 }
+
+void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& settlementId)
+{}
+
+void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settlementId, const std::string& payinHash)
+{}
+
+void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId)
+{}

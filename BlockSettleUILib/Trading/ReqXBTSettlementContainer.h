@@ -73,6 +73,10 @@ public:
    bs::hd::WalletInfo walletInfo() const { return walletInfo_; }
    bs::hd::WalletInfo walletInfoAuth() const { return walletInfoAuth_; }
 
+   void onUnsignedPayinRequested(const std::string& settlementId);
+   void onSignedPayoutRequested(const std::string& settlementId, const std::string& payinHash);
+   void onSignedPayinRequested(const std::string& settlementId);
+
 signals:
    void settlementCancelled();
    void settlementAccepted();
@@ -80,6 +84,11 @@ signals:
    void retry();
    void stop();
    void authWalletInfoReceived();
+
+signals:
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
 private slots:
    void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo);
