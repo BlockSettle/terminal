@@ -5,7 +5,8 @@ import "../BsStyles"
 ProgressBar {
     id: control
     value: 0.5
-    padding: 1
+    topPadding: 1
+    bottomPadding: 1
 
     background: Rectangle {
         implicitWidth: 200

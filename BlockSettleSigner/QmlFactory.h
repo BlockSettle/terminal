@@ -99,6 +99,8 @@ public:
    QString headlessPubKey() const;
 
    // service functions
+   Q_INVOKABLE double balanceDivider() const { return BTCNumericTypes::BalanceDivider; }
+
    Q_INVOKABLE void setClipboard(const QString &text) const;
    Q_INVOKABLE QString getClipboard() const;
    Q_INVOKABLE QRect frameSize(QObject *window) const;

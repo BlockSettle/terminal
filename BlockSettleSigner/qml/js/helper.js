@@ -238,6 +238,8 @@ function customDialogRequest(dialogName, data) {
 }
 
 function evalWorker(method, cppCallback, argList) {
+    console.log("helper.js evalWorker call: " + method)
+
     let jsCallback = function(cbArg0, cbArg1, cbArg2, cbArg3, cbArg4, cbArg5, cbArg6, cbArg7){
         let cbArgList = new Array(7)
 
@@ -279,6 +281,7 @@ function evalWorker(method, cppCallback, argList) {
 
 function prepareLiteModeDialog(dialog) {
     if (!isLiteMode()) {
+        raiseWindow(mainWindow)
         return
     }
 
@@ -455,10 +458,9 @@ function tryChangeAutoSign(newState, walletId, showResult) {
     }
 }
 
-function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
+function createTxSignDialog(jsCallback, txInfo, passwordDialogData, walletInfo) {
     var dlg = Qt.createComponent("../BsDialogs/TxSignDialog.qml").createObject(mainWindow
-            , {"prompt": prompt,
-               "txInfo": txInfo,
+            , {"txInfo": txInfo,
                "passwordDialogData": passwordDialogData,
                "walletInfo": walletInfo
               })
@@ -474,13 +476,23 @@ function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, wall
     dlg.init()
 }
 
-function createSettlementTransactionDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
-    var dlg = Qt.createComponent("../BsDialogs/SettlementTransactionDialog.qml").createObject(mainWindow
-            , {"prompt": prompt,
-               "txInfo": txInfo,
-               "passwordDialogData": passwordDialogData,
+function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, walletInfo) {
+    var dlg = null
+    if (passwordDialogData.value("Market") === "XBT") {
+        dlg = Qt.createComponent("../BsDialogs/TxSignSettlementXBTMarketDialog.qml").createObject(mainWindow
+           , {"txInfo": txInfo,
+              "passwordDialogData": passwordDialogData,
                "walletInfo": walletInfo
-              })
+        })
+    }
+    else if (passwordDialogData.value("Market") === "CC") {
+        dlg = Qt.createComponent("../BsDialogs/TxSignSettlementCCMarketDialog.qml").createObject(mainWindow
+           , {"txInfo": txInfo,
+              "passwordDialogData": passwordDialogData,
+               "walletInfo": walletInfo
+        })
+    }
+
     prepareLiteModeDialog(dlg)
 
     dlg.bsAccepted.connect(function() {

@@ -196,19 +196,16 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       return;
    }
 
-   signer::SignTxRequest txRequest = request.signtxrequest();
+   headless::SignTxRequest txRequest = request.signtxrequest();
    bs::sync::PasswordDialogData *dialogData = new bs::sync::PasswordDialogData(request.passworddialogdata());
    QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
 
-   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest);
-   try {
-      const auto settlementId = BinaryData::CreateFromHex(
-         dialogData->value("SettlementId").toString().toStdString());
-      if (!settlementId.isNull()) {
-         txInfo->setTxId(QString::fromStdString(settlementId.toBinStr()));
-      }
+   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest, parent_->walletsMgr_, logger_);
+   const auto settlementId = BinaryData::CreateFromHex(
+      dialogData->value("SettlementId").toString().toStdString());
+   if (!settlementId.isNull()) {
+      txInfo->setTxId(QString::fromStdString(settlementId.toBinStr()));
    }
-   catch (...) {}
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
    // wallet id may be stored either in tx or in dialog data
@@ -645,7 +642,6 @@ void SignerInterfaceListener::requestPasswordForTx(signer::PasswordDialogType re
    QString prompt = (partial ? tr("Outgoing Partial Transaction") : tr("Outgoing Transaction"));
 
    qmlBridge_->invokeQmlMethod("createTxSignDialog", createQmlPasswordCallback()
-      , prompt
       , QVariant::fromValue(txInfo)
       , QVariant::fromValue(dialogData)
       , QVariant::fromValue(walletInfo));
@@ -657,8 +653,7 @@ void SignerInterfaceListener::requestPasswordForSettlementTx(signer::PasswordDia
    bool partial = (reqType == signer::SignSettlementPartialTx);
    QString prompt = (partial ? tr("Outgoing Partial Transaction") : tr("Outgoing Transaction"));
 
-   qmlBridge_->invokeQmlMethod("createSettlementTransactionDialog", createQmlPasswordCallback()
-      , prompt
+   qmlBridge_->invokeQmlMethod("createTxSignSettlementDialog", createQmlPasswordCallback()
       , QVariant::fromValue(txInfo)
       , QVariant::fromValue(dialogData)
       , QVariant::fromValue(walletInfo));

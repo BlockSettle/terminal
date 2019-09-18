@@ -7,6 +7,7 @@
 #include "DataConnection.h"
 #include "DataConnectionListener.h"
 #include "HeadlessApp.h"
+#include "ProtobufHeadlessUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_DataConnection.h"
@@ -21,23 +22,7 @@ bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet
 {
    signer::SignOfflineTxRequest request;
    request.set_password(password.toBinStr());
-   auto evt = request.mutable_tx_request();
-
-   evt->set_wallet_id(txReq.walletIds.front());
-   for (const auto &input : txReq.inputs) {
-      evt->add_inputs(input.serialize().toBinStr());
-   }
-   for (const auto &recip : txReq.recipients) {
-      evt->add_recipients(recip->getSerializedScript().toBinStr());
-   }
-   evt->set_fee(txReq.fee);
-   evt->set_rbf(txReq.RBF);
-   if (txReq.change.value) {
-      auto change = evt->mutable_change();
-      change->set_address(txReq.change.address.display());
-      change->set_index(txReq.change.index);
-      change->set_value(txReq.change.value);
-   }
+   *(request.mutable_tx_request()) = bs::signer::coreTxRequestToPb(txReq);
 
    return listener_->send(signer::SignOfflineTxRequestType, request.SerializeAsString());
 }

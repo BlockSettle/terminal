@@ -104,7 +104,6 @@ ApplicationWindow {
         CustomTabButton {
             id: btnSettings
             text: qsTr("Settings")
-
         }
 
         CustomTabButton {
@@ -149,7 +148,6 @@ ApplicationWindow {
     }
 
     function invokeQmlMethod(method, cppCallback, argList) {
-        raiseWindow()
         JsHelper.evalWorker(method, cppCallback, argList)
     }
 }

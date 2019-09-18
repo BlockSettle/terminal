@@ -10,6 +10,7 @@
 #include "HeadlessContainerListener.h"
 #include "HeadlessSettings.h"
 #include "HeadlessSettings.h"
+#include "ProtobufHeadlessUtils.h"
 #include "ServerConnection.h"
 #include "StringUtils.h"
 #include "SystemFileUtils.h"
@@ -49,33 +50,7 @@ public:
    {
       signer::TerminalEvent evt;
       evt.set_cc_info_received(result);
-      bool rc = owner_->sendData(signer::TerminalEventType, evt.SerializeAsString());
-   }
-
-   signer::SignTxRequest createSignTxRequest(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt)
-   {
-      signer::SignTxRequest request;
-      if (!txReq.walletIds.empty()) {
-         request.set_wallet_id(txReq.walletIds.front());
-      }
-      request.set_prompt(prompt);
-
-      for (const auto &input : txReq.inputs) {
-         request.add_inputs(input.serialize().toBinStr());
-      }
-      for (const auto &recip : txReq.recipients) {
-         request.add_recipients(recip->getSerializedScript().toBinStr());
-      }
-      request.set_fee(txReq.fee);
-      request.set_rbf(txReq.RBF);
-      if (txReq.change.value) {
-         auto change = request.mutable_change();
-         change->set_address(txReq.change.address.display());
-         change->set_index(txReq.change.index);
-         change->set_value(txReq.change.value);
-      }
-
-      return request;
+      owner_->sendData(signer::TerminalEventType, evt.SerializeAsString());
    }
 
    void txSigned(const BinaryData &tx) override
@@ -129,7 +104,7 @@ public:
    {
       signer::DecryptWalletRequest request;
       request.set_dialogtype(dialogType);
-      *(request.mutable_signtxrequest()) = createSignTxRequest(txReq, {});
+      *(request.mutable_signtxrequest()) = bs::signer::coreTxRequestToPb(txReq);
       *(request.mutable_passworddialogdata()) = dialogData;
 
       owner_->sendData(signer::DecryptWalletRequestType, request.SerializeAsString());
@@ -307,41 +282,32 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
       evt.set_errorcode((int)bs::error::ErrorCode::TxInvalidRequest);
       return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);;
    }
-   const auto wallet = walletsMgr_->getWalletById(request.tx_request().wallet_id());
+
+   bs::core::wallet::TXSignRequest txSignReq = bs::signer::pbTxRequestToCore(request.tx_request());
+
+   if (txSignReq.walletIds.empty()) {
+      logger_->error("[SignerAdapterListener::{}] wallet not specified", __func__);
+      evt.set_errorcode((int)bs::error::ErrorCode::WalletNotFound);
+      return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
+   }
+
+   const auto wallet = walletsMgr_->getWalletById(txSignReq.walletIds.front());
    if (!wallet) {
       logger_->error("[SignerAdapterListener::{}] failed to find wallet with id {}"
-         , __func__, request.tx_request().wallet_id());
+         , __func__, txSignReq.walletIds.front());
       evt.set_errorcode((int)bs::error::ErrorCode::WalletNotFound);
-      return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);;
+      return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
    }
    if (wallet->isWatchingOnly()) {
       logger_->error("[SignerAdapterListener::{}] can't sign with watching-only wallet {}"
-         , __func__, request.tx_request().wallet_id());
+         , __func__, txSignReq.walletIds.front());
       evt.set_errorcode((int)bs::error::ErrorCode::WalletNotFound);
       return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);;
-   }
-   bs::core::wallet::TXSignRequest txReq;
-   txReq.walletIds = { request.tx_request().wallet_id() };
-   for (int i = 0; i < request.tx_request().inputs_size(); ++i) {
-      UTXO utxo;
-      utxo.unserialize(request.tx_request().inputs(i));
-      txReq.inputs.emplace_back(std::move(utxo));
-   }
-   for (int i = 0; i < request.tx_request().recipients_size(); ++i) {
-      const BinaryData bd(request.tx_request().recipients(i));
-      txReq.recipients.push_back(ScriptRecipient::deserialize(bd));
-   }
-   txReq.fee = request.tx_request().fee();
-   txReq.RBF = request.tx_request().rbf();
-   if (request.tx_request().has_change()) {
-      txReq.change.address = request.tx_request().change().address();
-      txReq.change.index = request.tx_request().change().index();
-      txReq.change.value = request.tx_request().change().value();
    }
 
    std::set<BinaryData> usedAddrSet;
    std::map<BinaryData, bs::hd::Path> parsedMap;
-   for (const auto &utxo : txReq.inputs) {
+   for (const auto &utxo : txSignReq.inputs) {
       const auto addr = bs::Address::fromUTXO(utxo);
       usedAddrSet.insert(addr.id());
    }
@@ -375,7 +341,7 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
 
    try {
       auto lock = wallet->lockForEncryption(request.password());
-      const auto tx = wallet->signTXRequest(txReq);
+      const auto tx = wallet->signTXRequest(txSignReq);
       evt.set_signedtx(tx.toBinStr());
       evt.set_errorcode((int)bs::error::ErrorCode::NoError);
       return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);

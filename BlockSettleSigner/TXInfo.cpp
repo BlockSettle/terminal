@@ -1,8 +1,30 @@
 #include "TXInfo.h"
+
+#include "Wallets/SyncHDWallet.h"
 #include "QWalletInfo.h"
 
 using namespace bs::wallet;
 using namespace Blocksettle::Communication;
+
+TXInfo::TXInfo(const bs::core::wallet::TXSignRequest &txReq, const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const std::shared_ptr<spdlog::logger> &logger)
+   : QObject(), txReq_(txReq), walletsMgr_(walletsMgr), logger_(logger)
+{
+   init();
+}
+
+TXInfo::TXInfo(const headless::SignTxRequest &txRequest, const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const std::shared_ptr<spdlog::logger> &logger)
+   : QObject(), txReq_(bs::signer::pbTxRequestToCore(txRequest)), walletsMgr_(walletsMgr), logger_(logger)
+{
+   init();
+}
+
+TXInfo::TXInfo(const TXInfo &src)
+   : QObject(), txReq_(src.txReq_), walletsMgr_(src.walletsMgr_), logger_(src.logger_)
+{
+   init();
+}
 
 void TXInfo::init()
 {
@@ -15,27 +37,34 @@ void TXInfo::setTxId(const QString &txId)
    emit dataChanged();
 }
 
-bs::core::wallet::TXSignRequest TXInfo::getCoreSignTxRequest(const signer::SignTxRequest &req)
+double TXInfo::amountCCReceived(const QString &cc) const
 {
-   bs::core::wallet::TXSignRequest txReq;
-   txReq.walletIds = { req.wallet_id() };
-   for (int i = 0; i < req.inputs_size(); ++i) {
-      UTXO utxo;
-      utxo.unserialize(req.inputs(i));
-      txReq.inputs.emplace_back(std::move(utxo));
-   }
-   for (int i = 0; i < req.recipients_size(); ++i) {
-      const BinaryData bd(req.recipients(i));
-      txReq.recipients.push_back(ScriptRecipient::deserialize(bd));
-   }
-   txReq.fee = req.fee();
-   txReq.RBF = req.rbf();
-   if (req.has_change()) {
-      txReq.change.address = req.change().address();
-      txReq.change.index = req.change().index();
-      txReq.change.value = req.change().value();
-   }
-   return  txReq;
+   const std::function<bool(const bs::Address &)> &containsCCAddressCb = [this, cc](const bs::Address &address){
+      const auto &wallet = walletsMgr_->getCCWallet(cc.toStdString());
+      return wallet->containsAddress(address);
+   };
+
+   return txReq_.amountReceived(containsCCAddressCb) / BTCNumericTypes::BalanceDivider;
+}
+
+double TXInfo::amountXBTReceived() const
+{
+   // calculate received amount from counterparty outputs
+   // check all wallets and addresses
+
+   const std::function<bool(const bs::Address &)> &containsXbtAddressCb = [this](const bs::Address &address){
+      for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
+         const auto &wallet = walletsMgr_->getHDWallet(i);
+         for (auto leaf : wallet->getLeaves()) {
+            if (leaf->type() == core::wallet::Type::Bitcoin && leaf->containsAddress(address)) {
+               return true;
+            }
+         }
+      }
+      return false;
+   };
+
+   return txReq_.amountReceived(containsXbtAddressCb) / BTCNumericTypes::BalanceDivider;
 }
 
 QStringList TXInfo::inputs() const
@@ -56,20 +85,3 @@ QStringList TXInfo::recipients() const
    return result;
 }
 
-double TXInfo::amount() const
-{
-   uint64_t result = 0;
-   for (const auto &recip : txReq_.recipients) {
-      result += recip->getValue();
-   }
-   return result / BTCNumericTypes::BalanceDivider;
-}
-
-double TXInfo::inputAmount() const
-{
-   uint64_t result = 0;
-   for (const auto &utxo: txReq_.inputs) {
-      result += utxo.getValue();
-   }
-   return result / BTCNumericTypes::BalanceDivider;
-}

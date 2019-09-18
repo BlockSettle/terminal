@@ -63,7 +63,6 @@
         <file>qml/BsDialogs/TxSignDialog.qml</file>
         <file>qml/BsDialogs/TerminalKeysDialog.qml</file>
         <file>qml/mainLite.qml</file>
-        <file>qml/BsDialogs/SettlementTransactionDialog.qml</file>
         <file>qml/BsControls/BSPasswordInputConfirm.qml</file>
         <file>qml/BsControls/BSPasswordInputToken.qml</file>
         <file>qml/BsControls/BSPasswordInputAuthLeaf.qml</file>
@@ -71,5 +70,8 @@
         <file>qml/BsControls/BSPasswordInputSettlementLeaf.qml</file>
         <file>qml/StyledControls/CustomLabelCopyableValue.qml</file>
         <file>qml/BsControls/BSPasswordInputAutoSignDialog.qml</file>
+        <file>qml/BsDialogs/TxSignSettlementBaseDialog.qml</file>
+        <file>qml/BsDialogs/TxSignSettlementCCMarketDialog.qml</file>
+        <file>qml/BsDialogs/TxSignSettlementXBTMarketDialog.qml</file>
     </qresource>
 </RCC>

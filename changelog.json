@@ -1,7 +1,46 @@
 {
-   "latest_version": "0.21.4",
-   "release_date": "17 Sep 2019",
+   "latest_version": "0.21.7",
+   "release_date": "18 Sep 2019",
    "changes": [
+      {
+         "version_string": "0.21.7",
+         "previous_version": "0.21.6",
+         "release_date": "18 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+         ],
+         "bug_fixes": [
+            "Fix crash on start"
+         ],
+         "revision": "9b1aa8b4",
+         "common_revision": "87cac8e7"
+      },
+      {
+         "version_string": "0.21.6",
+         "previous_version": "0.21.5",
+         "release_date": "18 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Balance update fixes (BST-2209)",
+            "Settlement dialogs fixes (#1344)"
+         ],
+         "bug_fixes": [],
+         "revision": "f121ad84",
+         "common_revision": "9964ffaa"
+      },
+      {
+         "version_string": "0.21.5",
+         "previous_version": "0.21.4",
+         "release_date": "18 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix signer UI resizing",
+            "Otc fixes 2 (#1365)"
+         ],
+         "bug_fixes": [],
+         "revision": "6adb4737",
+         "common_revision": "2ec1671e"
+      },
       {
          "version_string": "0.21.4",
          "previous_version": "0.21.3",
