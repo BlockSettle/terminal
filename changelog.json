@@ -1,7 +1,20 @@
 {
-   "latest_version": "0.21.6",
+   "latest_version": "0.21.7",
    "release_date": "18 Sep 2019",
    "changes": [
+      {
+         "version_string": "0.21.7",
+         "previous_version": "0.21.6",
+         "release_date": "18 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+         ],
+         "bug_fixes": [
+            "Fix crash on start"
+         ],
+         "revision": "9b1aa8b4",
+         "common_revision": "87cac8e7"
+      },
       {
          "version_string": "0.21.6",
          "previous_version": "0.21.5",
