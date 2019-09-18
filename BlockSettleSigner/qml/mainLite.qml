@@ -37,6 +37,7 @@ ApplicationWindow {
         hide()
         qmlFactory.installEventFilterToObj(mainWindow)
         qmlFactory.applyWindowFix(mainWindow)
+        JsHelper.initJSDialogs()
     }
 
     color: BSStyle.backgroundColor

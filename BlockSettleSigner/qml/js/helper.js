@@ -584,3 +584,32 @@ function truncString(string, maxLength) {
 String.prototype.truncString = function(maxLength){
    return truncString(this, maxLength)
 }
+
+function initJSDialogs() {
+    let folderListObj = Qt.createQmlObject(
+        'import Qt.labs.folderlistmodel 2.12;FolderListModel { property bool isReady: status === FolderListModel.Ready; folder : "../BsDialogs/"; }'
+        , mainWindow);
+
+    folderListObj.statusChanged.connect(function() {
+        if (!folderListObj.isReady)
+            return
+        for (let i = 0; i < folderListObj.count; ++i) {
+            if (folderListObj.get(i, "fileSuffix") !== 'qml') {
+                continue;
+            }
+
+            let fileName = folderListObj.get(i, "fileName");
+            let childComp = Qt.createComponent("../BsDialogs/" + fileName);
+            let childObj = childComp.incubateObject(null);
+            if (childObj.status !== Component.Ready) {
+                childObj.onStatusChanged = function(status) {
+                    if (status === Component.Ready) {
+                        childObj.object.destroy();
+                    }
+                }
+            } else {
+                childObj.object.destroy();
+            }
+        }
+    })
+}
