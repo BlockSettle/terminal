@@ -88,10 +88,6 @@ namespace {
 
    bs::sync::PasswordDialogData toPasswordDialogData(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
    {
-      double inputAmount = satToBtc(signRequest.inputAmount());
-      double amount = satToBtc(signRequest.amount());
-      double fee = satToBtc(signRequest.fee);
-      double change = inputAmount - amount - fee;
       double price = fromCents(deal.price);
 
       QString qtyProd = UiUtils::XbtCurrency;
@@ -117,27 +113,13 @@ namespace {
       dialogData.setValue(keys::ResponderAuthAddress, deal.responderAuthAddress().display());
       dialogData.setValue(keys::ResponderAuthAddressVerified, !deal.isRequestor());
 
-      dialogData.setValue(keys::Quantity, QObject::tr("%1 %2")
-                          .arg(UiUtils::displayAmountForProduct(amount, qtyProd, bs::network::Asset::Type::SpotXBT))
-                          .arg(qtyProd));
-      dialogData.setValue(keys::TotalValue, QObject::tr("%1 %2")
-                    .arg(UiUtils::displayAmountForProduct(amount * price, fxProd, bs::network::Asset::Type::SpotXBT))
-                    .arg(fxProd));
-
-
-      // tx details
-      dialogData.setValue(keys::InputAmount, UiUtils::displayQuantity(inputAmount, UiUtils::XbtCurrency));
-      dialogData.setValue(keys::ReturnAmount, UiUtils::displayQuantity(change, UiUtils::XbtCurrency));
-      dialogData.setValue(keys::NetworkFee, UiUtils::displayQuantity(fee, UiUtils::XbtCurrency));
-
       return dialogData;
    }
 
    bs::sync::PasswordDialogData toPasswordDialogDataPayin(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
    {
       auto dialogData = toPasswordDialogData(deal, signRequest);
-      double amount = satToBtc(signRequest.amount());
-      dialogData.setValue(keys::SettlementPayIn, UiUtils::displayQuantity(amount, UiUtils::XbtCurrency));
+      dialogData.setValue(keys::SettlementPayInVisible, true);
       dialogData.setValue(keys::Title, QObject::tr("Settlement Pay-In"));
       return dialogData;
    }
@@ -145,8 +127,7 @@ namespace {
    bs::sync::PasswordDialogData toPasswordDialogDataPayout(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
    {
       auto dialogData = toPasswordDialogData(deal, signRequest);
-      double amount = satToBtc(signRequest.amount());
-      dialogData.setValue(keys::SettlementPayOut, UiUtils::displayQuantity(amount, UiUtils::XbtCurrency));
+      dialogData.setValue(keys::SettlementPayOutVisible, true);
       dialogData.setValue(keys::Title, QObject::tr("Settlement Pay-Out"));
       return dialogData;
    }

@@ -38,6 +38,7 @@ namespace bs {
    }
 
    namespace core {
+      class Wallet;
       namespace wallet {
          class AssetEntryMeta : public AssetEntry
          {
@@ -164,7 +165,6 @@ namespace bs {
             Settlement
          };
 
-
          struct TXSignRequest
          {
             std::vector<std::string>   walletIds;
@@ -189,8 +189,15 @@ namespace bs {
             BinaryData txId() const { return getSigner().getTxId(); }
             size_t estimateTxVirtSize() const;
 
-            uint64_t amount() const;
-            uint64_t inputAmount() const;
+            using ContainsAddressCb = std::function<bool(const bs::Address &address)>;
+            uint64_t amount(const ContainsAddressCb &containsAddressCb) const;
+            uint64_t inputAmount(const ContainsAddressCb &containsAddressCb) const;
+            uint64_t totalSpent(const ContainsAddressCb &containsAddressCb) const;
+            uint64_t changeAmount(const ContainsAddressCb &containsAddressCb) const;
+
+            uint64_t amountReceived(const ContainsAddressCb &containsAddressCb) const;
+            uint64_t amountSent(const ContainsAddressCb &containsAddressCb) const;
+
          private:
             Signer getSigner() const;
          };

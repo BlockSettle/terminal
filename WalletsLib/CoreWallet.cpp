@@ -245,22 +245,132 @@ size_t wallet::TXSignRequest::estimateTxVirtSize() const
    return 0;
 }
 
-uint64_t wallet::TXSignRequest::inputAmount() const
+uint64_t wallet::TXSignRequest::amount(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
 {
-   uint64_t result = 0;
-   for (const auto &utxo: inputs) {
-      result += utxo.getValue();
-   }
-   return result;
+   // synonym for amountSent
+   return amountSent(containsAddressCb);
 }
 
-uint64_t wallet::TXSignRequest::amount() const
+uint64_t wallet::TXSignRequest::inputAmount(const ContainsAddressCb &containsAddressCb) const
 {
-   uint64_t result = 0;
-   for (const auto &recip : recipients) {
-      result += recip->getValue();
+   // calculate total input amount based on inputs
+   // prevStates inputs parsed first
+   // duplicated inputs skipped
+
+   std::set<UTXO> utxoSet;
+   uint64_t inputAmount = 0;
+
+   if (!prevStates.empty() && containsAddressCb != nullptr) {
+      bs::CheckRecipSigner signer(prevStates.front());
+
+      for (auto spender : signer.spenders()) {
+         const auto addr = bs::Address::fromUTXO(spender->getUtxo());
+         if (utxoSet.find(spender->getUtxo()) == utxoSet.cend()) {
+            if (containsAddressCb(addr)) {
+               utxoSet.insert(spender->getUtxo());
+               inputAmount += spender->getValue();
+            }
+         }
+      }
    }
-   return result;
+
+   for (const auto &utxo: inputs) {     
+      const auto addr = bs::Address::fromUTXO(utxo);
+
+      if (utxoSet.find(utxo) == utxoSet.cend()) {
+         if (containsAddressCb(addr)) {
+            utxoSet.insert(utxo);
+            inputAmount += utxo.getValue();
+         }
+      }
+   }
+
+   return inputAmount;
+}
+
+uint64_t wallet::TXSignRequest::totalSpent(const ContainsAddressCb &containsAddressCb) const
+{
+   return inputAmount(containsAddressCb) - changeAmount(containsAddressCb);
+}
+
+uint64_t wallet::TXSignRequest::changeAmount(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
+{
+   // calculate change amount
+   // if change is not explicitly set, calculate change using prevStates for provided containsAddressCb
+
+   uint64_t changeVal = change.value;
+   if (changeVal == 0 && !prevStates.empty() && containsAddressCb != nullptr) {
+      bs::CheckRecipSigner signer(prevStates.front());
+
+      for (auto recip : signer.recipients()) {
+         const auto addr = bs::Address::fromRecipient(recip);
+         if (containsAddressCb(addr)) {
+            uint64_t change = recip->getValue();
+            changeVal += change;
+         }
+      }
+   }
+
+   return changeVal;
+}
+
+uint64_t wallet::TXSignRequest::amountReceived(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
+{
+   // calculate received amount based on recipients
+   // containsAddressCb should return true if address is our
+   // prevStates recipients parsed first
+   // duplicated recipients skipped
+
+   std::set<BinaryData> txSet;
+   uint64_t amount = 0;
+
+   if (!prevStates.empty() && containsAddressCb != nullptr) {
+      bs::CheckRecipSigner signer(prevStates.front());
+      for (auto recip : signer.recipients()) {
+         const auto addr = bs::Address::fromRecipient(recip);
+         const auto hash = recip->getSerializedScript();
+
+         if (txSet.find(hash) == txSet.cend()) {
+            if (containsAddressCb(addr)) {
+               txSet.insert(hash);
+               amount += recip->getValue();
+            }
+         }
+      }
+   }
+
+   for (const auto &recip: recipients) {
+      const auto addr = bs::Address::fromRecipient(recip);
+      const auto hash = recip->getSerializedScript();
+
+      if (txSet.find(hash) == txSet.cend()) {
+         if (containsAddressCb(addr)) {
+            txSet.insert(hash);
+            amount += recip->getValue();
+         }
+      }
+   }
+
+   return amount;
+}
+
+uint64_t wallet::TXSignRequest::amountSent(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
+{
+   // get sent amount directly from recipients
+   // or
+   // calculate sent amount based on inputs and change
+   // containsAddressCb should return true if change address is in our wallet
+
+   uint64_t amount = 0;
+   for (const auto &recip : recipients) {
+      amount += recip->getValue();
+   }
+
+   if (amount == 0 && !prevStates.empty() && containsAddressCb != nullptr) {
+      return totalSpent(containsAddressCb) - fee;
+   }
+
+   return amount;
 }
 
 bool wallet::TXMultiSignRequest::isValid() const noexcept

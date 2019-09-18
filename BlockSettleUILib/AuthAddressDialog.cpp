@@ -201,20 +201,12 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.isNull());
             ui_->pushButtonDefault->setEnabled(false);
-            break;    //TODO: temporarily enable the Submit button
-/*         case AddressVerificationState::VerificationFailed:
-         case AddressVerificationState::Submitted:
-         case AddressVerificationState::Revoked:
-         case AddressVerificationState::InProgress:
-            ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(false);
-            ui_->pushButtonDefault->setEnabled(false);
-            break;*/
+            break;
          case AddressVerificationState::Submitted:
          case AddressVerificationState::Revoked:
          case AddressVerificationState::PendingVerification:
             ui_->pushButtonCreate->setFlat(false);
-            ui_->pushButtonRevoke->setEnabled(authAddressManager_->IsReady());
+            ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(false);
             break;

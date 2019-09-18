@@ -160,7 +160,6 @@ private:
    std::map<unsigned, BinaryData> signRequestIds_;
 
    OtcClientParams params_;
-
 };
 
 #endif

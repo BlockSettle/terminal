@@ -49,7 +49,9 @@ DealerCCSettlementContainer::~DealerCCSettlementContainer()
 bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+   dialogData.setValue(keys::Market, "CC");
    dialogData.setValue(keys::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
+   dialogData.setValue(keys::LotSize, lotSize_);
 
    dialogData.remove(keys::SettlementId);
 
@@ -64,53 +66,21 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData()
    QString qtyProd = UiUtils::XbtCurrency;
 
    dialogData.setValue(keys::Price, UiUtils::displayPriceCC(price()));
-   dialogData.setValue(keys::Quantity, tr("%1 %2")
-                 .arg(UiUtils::displayCCAmount(quantity()))
-                 .arg(QString::fromStdString(product())));
-   dialogData.setValue(keys::TotalValue, UiUtils::displayAmount(quantity() * price()));
 
    // tx details
    if (side() == bs::network::Side::Buy) {
-      dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(txReq_.inputAmount())));
-
-      dialogData.setValue(keys::ReturnAmount, QStringLiteral("+ %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(txReq_.change.value)));
-
-      dialogData.setValue(keys::PaymentAmount, QStringLiteral("- %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(txReq_.inputAmount() - txReq_.change.value)));
-
-      dialogData.setValue(keys::DeliveryReceived, QStringLiteral("+ %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(txReq_.change.value / lotSize_)));
+      dialogData.setValue(keys::TxInputProduct, UiUtils::XbtCurrency);
    }
    else {
-      dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(txReq_.inputAmount() / lotSize_)));
-
-      dialogData.setValue(keys::ReturnAmount, QStringLiteral("+ %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(txReq_.change.value / lotSize_)));
-
-      dialogData.setValue(keys::DeliveryAmount, QStringLiteral("- %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount((txReq_.inputAmount() - txReq_.change.value) / lotSize_)));
-
-      dialogData.setValue(keys::PaymentReceived, QStringLiteral("+ %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(amount())));
+      dialogData.setValue(keys::TxInputProduct, product());
    }
 
    // settlement details
    dialogData.setValue(keys::DeliveryUTXOVerified, genAddrVerified_);
    dialogData.setValue(keys::SigningAllowed, genAddrVerified_);
 
-   dialogData.setValue(keys::RecipientsList, true);
-   dialogData.setValue(keys::InputsList, true);
+   dialogData.setValue(keys::RecipientsListVisible, true);
+   dialogData.setValue(keys::InputsListVisible, true);
 
    return dialogData;
 }
@@ -218,6 +188,7 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
    bs::sync::PasswordDialogData pd;
    pd.setValue(keys::DeliveryUTXOVerified, addressVerified);
    pd.setValue(keys::SigningAllowed, addressVerified);
+
    signingContainer_->updateDialogData(pd);
 }
 

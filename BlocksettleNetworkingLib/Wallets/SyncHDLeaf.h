@@ -91,7 +91,7 @@ namespace bs {
 
             std::vector<std::string> setUnconfirmedTarget(void);
 
-            virtual void OnLeafRegistrationCompleted() {};
+            virtual void OnLeafRegistrationCompleted() {}
 
          protected:
             struct AddrPoolKey {

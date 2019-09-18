@@ -1,12 +1,14 @@
 #include "DealerXBTSettlementContainer.h"
 #include <spdlog/spdlog.h>
 #include "CheckRecipSigner.h"
+#include "CurrencyPair.h"
 #include "SignContainer.h"
 #include "QuoteProvider.h"
 #include "TransactionData.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
+#include <QApplication>
 
 Q_DECLARE_METATYPE(AddressVerificationState)
 
@@ -23,6 +25,9 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , logger_(logger), transactionData_(txData), signContainer_(container)
 {
    qRegisterMetaType<AddressVerificationState>();
+
+   CurrencyPair cp(security());
+   fxProd_ = cp.ContraCurrency(bs::network::XbtCurrency);
 
    if (weSell_ && !transactionData_->GetRecipientsCount()) {
       throw std::runtime_error("no recipient[s]");
@@ -55,22 +60,31 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    }
    settlementId_ = BinaryData::CreateFromHex(qn.settlementId);
 
+   QPointer<DealerXBTSettlementContainer> thisPtr = this;
    addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory
-      , [this, logger](const bs::Address &address, AddressVerificationState state)
+      , [logger, thisPtr](const bs::Address &address, AddressVerificationState state)
    {
-      logger->info("Counterparty's address verification {} for {}"
-         , to_string(state), address.display());
-      cptyAddressState_ = state;
-      emit cptyAddressStateChanged(state);
-      if (state == AddressVerificationState::Verified) {
-         // we verify only requester's auth address
-         bs::sync::PasswordDialogData dialogData;
-         dialogData.setValue(keys::RequesterAuthAddressVerified, true);
-         dialogData.setValue(keys::SettlementId, QString::fromStdString(id()));
-         signContainer_->updateDialogData(dialogData);
+      QMetaObject::invokeMethod(qApp, [thisPtr, address, state] {
+         if (!thisPtr) {
+            return;
+         }
 
-         onCptyVerified();
-      }
+         thisPtr->logger_->info("Counterparty's address verification {} for {}"
+            , to_string(state), address.display());
+         thisPtr->cptyAddressState_ = state;
+         emit thisPtr->cptyAddressStateChanged(state);
+         if (state == AddressVerificationState::Verified) {
+            // we verify only requester's auth address
+            bs::sync::PasswordDialogData dialogData;
+            dialogData.setValue(keys::RequesterAuthAddressVerified, true);
+            dialogData.setValue(keys::SettlementId, QString::fromStdString(thisPtr->id()));
+            dialogData.setValue(keys::SigningAllowed, true);
+
+            thisPtr->signContainer_->updateDialogData(dialogData);
+
+            thisPtr->onCptyVerified();
+         }
+      });
    });
 
    const auto &cbSettlAddr = [this, bsAddresses](const bs::Address &addr) {
@@ -100,44 +114,34 @@ DealerXBTSettlementContainer::~DealerXBTSettlementContainer() = default;
 bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+   dialogData.setValue(keys::Market, "XBT");
    dialogData.setValue(keys::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
 
    // rfq details
    QString qtyProd = UiUtils::XbtCurrency;
 
-   dialogData.setValue(keys::Title, tr("Settlement Transaction"));
-
+   dialogData.setValue(keys::Title, tr("Settlement Pay-In"));
    dialogData.setValue(keys::Price, UiUtils::displayPriceXBT(price()));
+   dialogData.setValue(keys::FxProduct, fxProd_);
 
-   dialogData.setValue(keys::Quantity, tr("%1 %2")
-                       .arg(UiUtils::displayAmountForProduct(amount(), qtyProd, bs::network::Asset::Type::SpotXBT))
-                       .arg(qtyProd));
-   dialogData.setValue(keys::TotalValue, UiUtils::displayCurrencyAmount(amount() * price()));
+   bool isFxProd = (product() != bs::network::XbtCurrency);
 
+   if (isFxProd) {
+      dialogData.setValue(keys::Quantity, tr("%1 %2")
+                    .arg(UiUtils::displayAmountForProduct(quantity(), QString::fromStdString(fxProd_), bs::network::Asset::Type::SpotXBT))
+                    .arg(QString::fromStdString(fxProd_)));
 
-   // tx details
-   if (side() == bs::network::Side::Buy) {
-      dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayAmount(payOutTxRequest_.inputAmount())));
-
-      dialogData.setValue(keys::ReturnAmount, QStringLiteral("+ %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayAmount(payOutTxRequest_.change.value)));
+      dialogData.setValue(keys::TotalValue, tr("%1 XBT")
+                    .arg(UiUtils::displayAmount(quantity() / price())));
    }
    else {
-      dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(payInTxRequest_.inputAmount())));
+      dialogData.setValue(keys::Quantity, tr("%1 XBT")
+                    .arg(UiUtils::displayAmount(amount())));
 
-      dialogData.setValue(keys::ReturnAmount, QStringLiteral("+ %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(payInTxRequest_.change.value)));
+      dialogData.setValue(keys::TotalValue, tr("%1 %2")
+                    .arg(UiUtils::displayAmountForProduct(amount() * price(), QString::fromStdString(fxProd_), bs::network::Asset::Type::SpotXBT))
+                    .arg(QString::fromStdString(fxProd_)));
    }
-
-   dialogData.setValue(keys::NetworkFee, QStringLiteral("- %2 %1")
-                       .arg(UiUtils::XbtCurrency)
-                       .arg(UiUtils::displayAmount(fee())));
 
    // settlement details
    dialogData.setValue(keys::SettlementId, settlementId_.toHexStr());
@@ -149,6 +153,10 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue(keys::ResponderAuthAddress, bs::Address::fromPubKey(authKey_).display());
    dialogData.setValue(keys::ResponderAuthAddressVerified, true);
 
+   // tx details
+   dialogData.setValue(keys::TxInputProduct, UiUtils::XbtCurrency);
+   dialogData.setValue(keys::TotalSpentVisible, true);
+
    return dialogData;
 }
 
@@ -158,10 +166,7 @@ bool DealerXBTSettlementContainer::startPayInSigning()
       fee_ = transactionData_->totalFee();
       payInTxRequest_ = transactionData_->getSignTxRequest();
       bs::sync::PasswordDialogData dlgData = toPasswordDialogData();
-      dlgData.setValue(keys::SettlementPayIn, QStringLiteral("- %2 %1")
-                       .arg(UiUtils::XbtCurrency)
-                       .arg(UiUtils::displayAmount(amount())));
-
+      dlgData.setValue(keys::SettlementPayInVisible, true);
 
       payinSignId_ = signContainer_->signSettlementTXRequest(payInTxRequest_, dlgData, SignContainer::TXSignMode::Full);
    }
@@ -204,9 +209,6 @@ bool DealerXBTSettlementContainer::startPayOutSigning()
 
          bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(payOutTxRequest_);
          dlgData.setValue(keys::SettlementId, QString::fromStdString(settlementId_.toHexStr()));
-         dlgData.setValue(keys::SettlementPayOut, QStringLiteral("+ %2 %1")
-                     .arg(UiUtils::XbtCurrency)
-                     .arg(UiUtils::displayAmount(payOutTxRequest_.amount())));
          dlgData.setValue(keys::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
 
          payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(payOutTxRequest_, { settlementId_
