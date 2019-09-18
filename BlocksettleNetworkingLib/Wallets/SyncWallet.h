@@ -255,9 +255,9 @@ namespace bs {
          std::atomic_bool isRegistered_{false};
 
          struct BalanceData {
-            std::atomic<BTCNumericTypes::balance_type>   spendableBalance = 0;
-            std::atomic<BTCNumericTypes::balance_type>   unconfirmedBalance = 0;
-            std::atomic<BTCNumericTypes::balance_type>   totalBalance = 0;
+            std::atomic<BTCNumericTypes::balance_type>   spendableBalance{0};
+            std::atomic<BTCNumericTypes::balance_type>   unconfirmedBalance{0};
+            std::atomic<BTCNumericTypes::balance_type>   totalBalance{0};
 
             size_t   addrCount = 0;
             std::mutex  addrMapsMtx;
