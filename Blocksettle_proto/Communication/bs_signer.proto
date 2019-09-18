@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package Blocksettle.Communication.signer;
 import "Blocksettle_Communication_Internal.proto";
+import "headless.proto";
 
 enum PacketType
 {
@@ -139,23 +140,6 @@ message PeerEvent
    string ip_address = 1;
 }
 
-message SignTxRequest
-{
-   message Change {
-      bytes    address = 1;
-      string   index = 2;
-      uint64   value = 3;
-   }
-
-   string prompt = 2;
-   string wallet_id = 3;
-   repeated bytes inputs = 4;
-   repeated bytes recipients = 5;
-   uint64         fee = 6;
-   bool           RBF = 7;
-   Change         change = 8;
-}
-
 message SignTxEvent
 {
    uint32         errorCode = 1;
@@ -164,7 +148,7 @@ message SignTxEvent
 
 message SignSettlementTxRequest
 {
-   SignTxRequest signTXRequest                                                = 1;
+   Blocksettle.Communication.headless.SignTxRequest      signTXRequest        = 1;
    Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData   = 2;
 }
 
@@ -172,7 +156,7 @@ message DecryptWalletRequest
 {
    PasswordDialogType                                    dialogType           = 1;
    Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData   = 2;
-   SignTxRequest                                         signTXRequest        = 3;
+   Blocksettle.Communication.headless.SignTxRequest      signTXRequest        = 3;
 }
 
 message XbtSpentEvent
@@ -184,7 +168,7 @@ message XbtSpentEvent
 
 message SignOfflineTxRequest
 {
-   SignTxRequest tx_request = 1;
+   Blocksettle.Communication.headless.SignTxRequest tx_request = 1;
    bytes password = 2;
 }
 

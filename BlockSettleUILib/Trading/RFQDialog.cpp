@@ -4,13 +4,11 @@
 #include <spdlog/logger.h>
 
 #include "AssetManager.h"
-#include "CCSettlementTransactionWidget.h"
 #include "QuoteProvider.h"
 #include "ReqCCSettlementContainer.h"
 #include "ReqXBTSettlementContainer.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
-#include "XBTSettlementTransactionWidget.h"
 
 enum StackWidgetId
 {

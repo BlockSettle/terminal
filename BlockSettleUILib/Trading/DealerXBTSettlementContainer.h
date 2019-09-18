@@ -77,6 +77,7 @@ private:
 
 private:
    const bs::network::Order   order_;
+   std::string    fxProd_;
    const bool     weSell_;
    std::string    comment_;
    const double   amount_;

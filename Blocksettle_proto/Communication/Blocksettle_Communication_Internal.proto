@@ -9,11 +9,18 @@ message AnyMessage {
       google.protobuf.Any  value_any             = 1;
 
       // simple types
-      bool                 value_bool            = 2;
-      string               value_string          = 3;
+      // https://developers.google.com/protocol-buffers/docs/proto#scalar
+      double               value_double          = 2;
+      float                value_float           = 3;
+
       int32                value_int32           = 4;
-      double               value_double          = 5;
-      bytes                value_bytes           = 6;
+      int64                value_int64           = 5;
+      uint32               value_uint32          = 6;
+      uint64               value_uint64          = 7;
+
+      bool                 value_bool            = 8;
+      string               value_string          = 9;
+      bytes                value_bytes           = 10;
    }
 }
 

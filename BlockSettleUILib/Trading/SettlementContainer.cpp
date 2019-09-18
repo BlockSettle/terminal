@@ -29,15 +29,7 @@ sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogDat
 
    dialogData.setValue(keys::Title, tr("Settlement Pay-Out"));
    dialogData.setValue(keys::Duration, 30000);
-
-   // tx details
-   dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
-                 .arg(UiUtils::XbtCurrency)
-                 .arg(UiUtils::displayAmount(payOutReq.inputAmount())));
-
-   dialogData.setValue(keys::ReturnAmount, QStringLiteral("- %2 %1")
-                 .arg(UiUtils::XbtCurrency)
-                 .arg(UiUtils::displayAmount(payOutReq.change.value)));
+   dialogData.setValue(keys::SettlementPayOutVisible, true);
 
    return dialogData;
 }

@@ -12,7 +12,6 @@
 #include "CelerSubmitQuoteNotifSequence.h"
 #include "DealerCCSettlementContainer.h"
 #include "DealerXBTSettlementContainer.h"
-#include "DealerXBTSettlementDialog.h"
 #include "DialogManager.h"
 #include "MarketDataProvider.h"
 #include "BSMessageBox.h"

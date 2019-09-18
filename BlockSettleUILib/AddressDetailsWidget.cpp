@@ -387,7 +387,7 @@ void AddressDetailsWidget::refresh(const std::shared_ptr<bs::sync::PlainWallet> 
    logger_->debug("[{}] get refresh command for {}", __func__
                   , wallet->walletId());
    if (wallet->getUsedAddressCount() != 1) {
-      logger_->debug("[{}}] dummy wallet {} contains invalid amount of "
+      logger_->debug("[{}] dummy wallet {} contains invalid amount of "
                      "addresses ({})", __func__, wallet->walletId()
                      , wallet->getUsedAddressCount());
       return;

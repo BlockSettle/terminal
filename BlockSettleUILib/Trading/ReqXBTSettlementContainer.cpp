@@ -83,9 +83,16 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
 
       bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(txReq);
       dlgData.setValue(keys::SettlementId, QString::fromStdString(settlementId_.toHexStr()));
-      dlgData.setValue(keys::SettlementPayOut, QStringLiteral("+ %2 %1")
-                  .arg(UiUtils::XbtCurrency)
-                  .arg(UiUtils::displayAmount(txReq.amount())));
+      dlgData.setValue(keys::ResponderAuthAddressVerified, true);
+      dlgData.setValue(keys::SigningAllowed, true);
+
+      // mark revoke tx
+      if ((side() == bs::network::Side::Type::Sell && product() == bs::network::XbtCurrency)
+          || (side() == bs::network::Side::Type::Buy && product() != bs::network::XbtCurrency)) {
+         dlgData.setValue(keys::PayOutRevokeType, true);
+         dlgData.setValue(keys::Title, tr("Settlement Pay-Out (For Revoke)"));
+         dlgData.setValue(keys::Duration, 30000 - (QDateTime::currentMSecsSinceEpoch() - payinSignedTs_));
+      }
 
       logger_->debug("[{}] pay-out fee={}, qty={} ({}), payin hash={}", __func__
          , txReq.fee, qty, qty * BTCNumericTypes::BalanceDivider, payinHash.toHexStr(true));
@@ -108,10 +115,9 @@ void ReqXBTSettlementContainer::acceptSpotXBT()
          payInTxRequest_ = transactionData_->createTXRequest(false, changeAddr);
 
          bs::sync::PasswordDialogData dlgData = toPasswordDialogData();
-         dlgData.setValue(keys::SettlementPayIn, QStringLiteral("- %2 %1")
-                          .arg(UiUtils::XbtCurrency)
-                          .arg(UiUtils::displayAmount(amount())));
+         dlgData.setValue(keys::SettlementPayInVisible, true);
 
+         payinSignedTs_ = QDateTime::currentMSecsSinceEpoch();
          payinSignId_ = signContainer_->signSettlementTXRequest(payInTxRequest_, dlgData);
       };
       if (transactionData_->GetTransactionSummary().hasChange) {
@@ -268,22 +274,37 @@ void ReqXBTSettlementContainer::deactivate()
 bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+   dialogData.setValue(keys::Market, "XBT");
+   dialogData.setValue(keys::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
 
    // rfq details
    QString qtyProd = UiUtils::XbtCurrency;
    QString fxProd = QString::fromStdString(fxProduct());
 
    dialogData.setValue(keys::Title, tr("Settlement Pay-In"));
-
    dialogData.setValue(keys::Price, UiUtils::displayPriceXBT(price()));
+   dialogData.setValue(keys::FxProduct, fxProd);
 
-   dialogData.setValue(keys::Quantity, tr("%1 %2")
-                       .arg(UiUtils::displayAmountForProduct(amount(), qtyProd, bs::network::Asset::Type::SpotXBT))
-                       .arg(qtyProd));
-   dialogData.setValue(keys::TotalValue, tr("%1 %2")
-                 .arg(UiUtils::displayAmountForProduct(amount() * price(), fxProd, bs::network::Asset::Type::SpotXBT))
-                 .arg(fxProd));
 
+
+   bool isFxProd = (quote_.product != bs::network::XbtCurrency);
+
+   if (isFxProd) {
+      dialogData.setValue(keys::Quantity, tr("%1 %2")
+                    .arg(UiUtils::displayAmountForProduct(quantity(), fxProd, bs::network::Asset::Type::SpotXBT))
+                    .arg(fxProd));
+
+      dialogData.setValue(keys::TotalValue, tr("%1 XBT")
+                    .arg(UiUtils::displayAmount(quantity() / price())));
+   }
+   else {
+      dialogData.setValue(keys::Quantity, tr("%1 XBT")
+                    .arg(UiUtils::displayAmount(amount())));
+
+      dialogData.setValue(keys::TotalValue, tr("%1 %2")
+                    .arg(UiUtils::displayAmountForProduct(amount() * price(), fxProd, bs::network::Asset::Type::SpotXBT))
+                    .arg(fxProd));
+   }
 
    // settlement details
    dialogData.setValue(keys::SettlementId, settlementId_.toHexStr());
@@ -297,28 +318,8 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() c
 
 
    // tx details
-   if (side() == bs::network::Side::Buy) {
-      dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayAmount(payOutTxRequest_.inputAmount())));
-
-      dialogData.setValue(keys::ReturnAmount, QStringLiteral("+ %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayAmount(payOutTxRequest_.change.value)));
-   }
-   else {
-      dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(payInTxRequest_.inputAmount())));
-
-      dialogData.setValue(keys::ReturnAmount, QStringLiteral("+ %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(payInTxRequest_.change.value)));
-   }
-
-   dialogData.setValue(keys::NetworkFee, QStringLiteral("- %2 %1")
-                       .arg(UiUtils::XbtCurrency)
-                       .arg(UiUtils::displayAmount(fee())));
+   dialogData.setValue(keys::TxInputProduct, UiUtils::XbtCurrency);
+   dialogData.setValue(keys::TotalSpentVisible, true);
 
    return dialogData;
 }

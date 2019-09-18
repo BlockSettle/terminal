@@ -194,10 +194,19 @@ public:
    WalletLeafNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet
       , const std::shared_ptr<bs::sync::hd::Wallet> &rootWallet, int row, WalletNode *parent)
       : WalletRootNode(vm, rootWallet, wallet->shortName(), wallet->description(), Type::Leaf, row, parent
-         , wallet->getTotalBalance(), wallet->getUnconfirmedBalance(), wallet->getSpendableBalance()
-         , wallet->getUsedAddressCount())
+         , 0, 0, 0, wallet->getUsedAddressCount())
       , wallet_(wallet)
-   { }
+      , isValidFlag_(std::make_shared<bool>())
+   {
+      wallet->onBalanceAvailable([this, wallet, isValid = std::weak_ptr<void>(isValidFlag_)] {
+         if (!isValid.lock()) {
+            return;
+         }
+         balTotal_ = wallet->getTotalBalance();
+         balUnconf_ = wallet->getUnconfirmedBalance();
+         balSpend_ = wallet->getSpendableBalance();
+      });
+   }
 
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return {wallet_}; }
 
@@ -218,6 +227,7 @@ public:
 
 private:
    std::shared_ptr<bs::sync::Wallet>   wallet_;
+   std::shared_ptr<void> isValidFlag_;
 };
 
 class WalletGroupNode : public WalletRootNode
