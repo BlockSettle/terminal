@@ -329,17 +329,14 @@ void WalletsWidget::showAddressProperties(const QModelIndex& index)
       return;
    }
 
-   // Prevent crash in the AddressDetailDialog::AddressDetailDialog if armory is not ready
-   if (!wallet->isBalanceAvailable()) {
-      return;
-   }
-
    const auto &addresses = wallet->getUsedAddressList();
    const size_t addrIndex = addressModel_->data(sourceIndex, AddressListModel::AddrIndexRole).toUInt();
    const auto address = (addrIndex < addresses.size()) ? addresses[addrIndex] : bs::Address();
 
-   AddressDetailDialog dialog(address, wallet, walletsManager_, armory_, logger_, this);
-   dialog.exec();
+   wallet->onBalanceAvailable([this, address, wallet] {
+      auto dialog = new AddressDetailDialog(address, wallet, walletsManager_, armory_, logger_, this);
+      QMetaObject::invokeMethod(this, [dialog] { dialog->exec(); });
+   });
 }
 
 void WalletsWidget::onAddressContextMenu(const QPoint &p)
