@@ -834,14 +834,16 @@ bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const
             break;
 
          case headless::CreateHDLeafRequestType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateSettlementLeaf, dialogData);
-            break;
-         case headless::CreateSettlWalletType:
             callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dialogData);
             break;
+         case headless::CreateSettlWalletType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateSettlementLeaf, dialogData);
+            break;
          case headless::SetUserIdType:
-         case headless::SignAuthAddrRevokeType:
             callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dialogData, txReq);
+            break;
+         case headless::SignAuthAddrRevokeType:
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::RevokeAuthAddress, dialogData, txReq);
             break;
          case headless::PromoteHDWalletRequestType:
             callbacks_->decryptWalletRequest(signer::PasswordDialogType::PromoteHDWallet, dialogData);

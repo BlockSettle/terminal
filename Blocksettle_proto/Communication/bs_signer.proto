@@ -63,6 +63,7 @@ enum PasswordDialogType
    CreateHDLeaf                = 5;
    CreateSettlementLeaf        = 6;
    PromoteHDWallet	       = 7;
+   RevokeAuthAddress	       = 8;
 }
 
 message Packet
