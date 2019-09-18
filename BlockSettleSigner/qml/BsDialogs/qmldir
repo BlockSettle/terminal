@@ -9,4 +9,6 @@ WalletNewDialog                1.0 WalletNewDialog.qml
 WalletNewSeedDialog            1.0 WalletNewSeedDialog.qml
 TxSignDialog                   1.0 TxSignDialog.qml
 TerminalKeysDialog             1.0 TerminalKeysDialog.qml
-SettlementTransactionDialog    1.0 SettlementTransactionDialog.qml
+TxSignSettlementBaseDialog     1.0 TxSignSettlementBaseDialog.qml
+TxSignSettlementCCMarketDialog      1.0 TxSignSettlementCCMarketDialog.qml
+TxSignSettlementXBTMarketDialog     1.0 TxSignSettlementXBTMarketDialog.qml
