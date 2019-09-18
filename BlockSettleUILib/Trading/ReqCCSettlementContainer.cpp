@@ -60,6 +60,9 @@ ReqCCSettlementContainer::~ReqCCSettlementContainer()
 bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+   dialogData.setValue(keys::Market, "CC");
+   dialogData.setValue(keys::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
+   dialogData.setValue(keys::LotSize, lotSize_);
 
    dialogData.remove(keys::SettlementId);
 
@@ -73,45 +76,12 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
    // rfq details
    dialogData.setValue(keys::Price, UiUtils::displayPriceCC(price()));
 
-   dialogData.setValue(keys::Quantity, tr("%1 %2")
-                 .arg(UiUtils::displayCCAmount(quantity()))
-                 .arg(QString::fromStdString(product())));
-   dialogData.setValue(keys::TotalValue, UiUtils::displayAmount(quantity() * price()));
-
    // tx details
    if (side() == bs::network::Side::Buy) {
-      dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(ccTxData_.inputAmount())));
-
-      dialogData.setValue(keys::ReturnAmount, QStringLiteral("+ %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(ccTxData_.change.value)));
-
-      dialogData.setValue(keys::PaymentAmount, QStringLiteral("- %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(ccTxData_.inputAmount() - ccTxData_.change.value)));
-
-      dialogData.setValue(keys::DeliveryReceived, QStringLiteral("+ %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(quantity())));
+      dialogData.setValue(keys::TxInputProduct, UiUtils::XbtCurrency);
    }
    else {
-      dialogData.setValue(keys::InputAmount, QStringLiteral("- %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount(ccTxData_.inputAmount() / lotSize_)));
-
-      dialogData.setValue(keys::ReturnAmount, QStringLiteral("+ %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount((ccTxData_.change.value / lotSize_))));
-
-      dialogData.setValue(keys::DeliveryAmount, QStringLiteral("- %2 %1")
-                    .arg(QString::fromStdString(product()))
-                    .arg(UiUtils::displayCCAmount((ccTxData_.inputAmount() - ccTxData_.change.value) / lotSize_)));
-
-      dialogData.setValue(keys::PaymentReceived, QStringLiteral("+ %2 %1")
-                    .arg(UiUtils::XbtCurrency)
-                    .arg(UiUtils::displayAmount(amount())));
+      dialogData.setValue(keys::TxInputProduct, product());
    }
 
 
@@ -119,8 +89,8 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
    dialogData.setValue(keys::DeliveryUTXOVerified, genAddrVerified_);
    dialogData.setValue(keys::SigningAllowed, genAddrVerified_);
 
-   dialogData.setValue(keys::RecipientsList, true);
-   dialogData.setValue(keys::InputsList, true);
+   dialogData.setValue(keys::RecipientsListVisible, true);
+   dialogData.setValue(keys::InputsListVisible, true);
 
    return dialogData;
 }
@@ -198,13 +168,13 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
 {
    const auto wallet = transactionData_->getSigningWallet();
    if (!wallet) {
-      logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] failed to get signing wallet");
+      logger_->error("[{}] failed to get signing wallet", __func__);
       return false;
    }
 
    if (side() == bs::network::Side::Sell) {
       const uint64_t spendVal = quantity() * assetMgr_->getCCLotSize(product());
-      logger_->debug("[CCSettlementTransactionWidget::createCCUnsignedTXdata] sell amount={}, spend value = {}", quantity(), spendVal);
+      logger_->debug("[{}] sell amount={}, spend value = {}", __func__, quantity(), spendVal);
       ccTxData_.walletIds = { wallet->walletId() };
       ccTxData_.prevStates = { dealerTx_ };
       const auto recipient = bs::Address(dealerAddress_).getRecipient(spendVal);
@@ -212,14 +182,14 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
          ccTxData_.recipients.push_back(recipient);
       }
       else {
-         logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] failed to create recipient from {} and value {}"
-            , dealerAddress_, spendVal);
+         logger_->error("[{}] failed to create recipient from {} and value {}"
+            , __func__, dealerAddress_, spendVal);
          return false;
       }
       ccTxData_.populateUTXOs = true;
       ccTxData_.inputs = utxoAdapter_->get(id());
-      logger_->debug("[CCSettlementTransactionWidget::createCCUnsignedTXdata] {} CC inputs reserved ({} recipients)"
-         , ccTxData_.inputs.size(), ccTxData_.recipients.size());
+      logger_->debug("[{}] {} CC inputs reserved ({} recipients)"
+         , __func__, ccTxData_.inputs.size(), ccTxData_.recipients.size());
 
       // KLUDGE - in current implementation, we should sign first to have sell/buy process aligned
       startSigning();
@@ -231,7 +201,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
             try {
                const auto recipient = bs::Address(dealerAddress_).getRecipient(spendVal);
                if (!recipient) {
-                  logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] invalid recipient: {}", dealerAddress_);
+                  logger_->error("[{}] invalid recipient: {}", __func__, dealerAddress_);
                   return;
                }
                ccTxData_ = transactionData_->createPartialTXRequest(spendVal, feePerByte, { recipient }
@@ -242,13 +212,13 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                startSigning();
             }
             catch (const std::exception &e) {
-               logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] Failed to create partial CC TX to {}: {}"
-                  , dealerAddress_, e.what());
+               logger_->error("[{}] Failed to create partial CC TX to {}: {}"
+                  , __func__, dealerAddress_, e.what());
                QMetaObject::invokeMethod(this, [this] { emit error(tr("Failed to create CC TX half")); });
             }
          };
          if (!transactionData_->getWallet()->getSpendableTxOutList(cbTxOutList, spendVal)) {
-            logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] getSpendableTxOutList failed");
+            logger_->error("[{}] getSpendableTxOutList failed", __func__);
          }
       };
       walletsMgr_->estimatedFeePerByte(0, cbFee, this);

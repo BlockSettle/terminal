@@ -6,6 +6,7 @@
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
 #include "DispatchQueue.h"
+#include "ProtobufHeadlessUtils.h"
 #include "ServerConnection.h"
 #include "StringUtils.h"
 #include "WalletEncryption.h"
@@ -292,49 +293,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       }
    }
 
-   uint64_t inputVal = 0;
-   bs::core::wallet::TXSignRequest txSignReq;
-   for (int i = 0; i < request.walletid_size(); ++i) {
-      txSignReq.walletIds.push_back(request.walletid(i));
-   }
-   for (int i = 0; i < request.inputs_size(); i++) {
-      UTXO utxo;
-      utxo.unserialize(request.inputs(i));
-      if (utxo.isInitialized()) {
-         txSignReq.inputs.push_back(utxo);
-         inputVal += utxo.getValue();
-      }
-   }
-
-   uint64_t outputVal = 0;
-   for (int i = 0; i < request.recipients_size(); i++) {
-      BinaryData serialized = request.recipients(i);
-      const auto recip = ScriptRecipient::deserialize(serialized);
-      txSignReq.recipients.push_back(recip);
-      outputVal += recip->getValue();
-   }
-   int64_t value = outputVal;
-
-   txSignReq.fee = request.fee();
-   txSignReq.RBF = request.rbf();
-
-   if (!request.unsignedstate().empty()) {
-      const BinaryData prevState(request.unsignedstate());
-      txSignReq.prevStates.push_back(prevState);
-      if (!value) {
-         bs::CheckRecipSigner signer(prevState);
-         value = signer.spendValue();
-         if (txSignReq.change.value) {
-            value -= txSignReq.change.value;
-         }
-      }
-   }
-
-   if (request.has_change()) {
-      txSignReq.change.address = request.change().address();
-      txSignReq.change.index = request.change().index();
-      txSignReq.change.value = request.change().value();
-   }
+   bs::core::wallet::TXSignRequest txSignReq = bs::signer::pbTxRequestToCore(request);
 
    if (!txSignReq.isValid()) {
       logger_->error("[HeadlessContainerListener] invalid SignTxRequest");
@@ -342,10 +301,10 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       return false;
    }
 
-   txSignReq.populateUTXOs = request.populateutxos();
-
    std::vector<std::shared_ptr<bs::core::hd::Leaf>> wallets;
    std::string rootWalletId;
+   uint64_t amount = 0;
+
    for (const auto &walletId : txSignReq.walletIds) {
       const auto wallet = walletsMgr_->getWalletById(walletId);
       if (!wallet) {
@@ -362,11 +321,35 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       }
       rootWalletId = curRootWalletId;
 
-      if ((wallet->type() == bs::core::wallet::Type::Bitcoin)
-         && !CheckSpendLimit(value, rootWalletId)) {
-         SignTXResponse(clientId, packet.id(), reqType, ErrorCode::TxSpendLimitExceed);
+      // get total spent
+      const std::function<bool(const bs::Address &)> &containsAddressCb = [this, walletId](const bs::Address &address){
+         const auto &hdWallet = walletsMgr_->getHDWalletById(walletId);
+         if (hdWallet) {
+            for (auto leaf : hdWallet->getLeaves()) {
+               if (leaf->containsAddress(address)) {
+                  return true;
+               }
+            }
+         }
+         else {
+            const auto &wallet = walletsMgr_->getWalletById(walletId);
+            if (wallet) {
+               return wallet->containsAddress(address);
+            }
+         }
          return false;
+      };
+
+      if ((wallet->type() == bs::core::wallet::Type::Bitcoin)) {
+         amount += txSignReq.amount(containsAddressCb);
       }
+
+   }
+
+   // FIXME: review spend limits
+   if (!CheckSpendLimit(amount, rootWalletId)) {
+      SignTXResponse(clientId, packet.id(), reqType, ErrorCode::TxSpendLimitExceed);
+      return false;
    }
 
    if (wallets.empty()) {
@@ -376,7 +359,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
    }
 
    const auto onPassword = [this, wallets, txSignReq, rootWalletId, clientId, id = packet.id(), partial
-      , reqType, value
+      , reqType, amount
       , keepDuplicatedRecipients = request.keepduplicatedrecipients()]
       (bs::error::ErrorCode result, const SecureBinaryData &pass)
    {
@@ -387,8 +370,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       }
 
       // check spend limits one more time after password received
-      if ((wallets.front()->type() == bs::core::wallet::Type::Bitcoin)
-         && !CheckSpendLimit(value, rootWalletId)) {
+      if (!CheckSpendLimit(amount, rootWalletId)) {
          SignTXResponse(clientId, id, reqType, ErrorCode::TxSpendLimitExceed);
          return;
       }
@@ -440,9 +422,9 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
             SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
          }
 
-         onXbtSpent(value, isAutoSignActive(rootWalletId));
+         onXbtSpent(amount, isAutoSignActive(rootWalletId));
          if (callbacks_) {
-            callbacks_->xbtSpent(value, false);
+            callbacks_->xbtSpent(amount, false);
          }
       }
       catch (const std::exception &e) {
@@ -553,6 +535,7 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
    }
 
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
+   dialogData.insert("PayOutType", true);
 
    bs::core::wallet::TXSignRequest txSignReq;
    txSignReq.walletIds = { walletsMgr_->getPrimaryWallet()->walletId() };

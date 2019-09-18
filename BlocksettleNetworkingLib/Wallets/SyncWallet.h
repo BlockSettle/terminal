@@ -106,6 +106,7 @@ namespace bs {
          virtual void unregisterWallet();
 
          virtual bool isBalanceAvailable() const;
+         void onBalanceAvailable(const std::function<void()> &) const;
          virtual BTCNumericTypes::balance_type getSpendableBalance() const;
          virtual BTCNumericTypes::balance_type getUnconfirmedBalance() const;
          virtual BTCNumericTypes::balance_type getTotalBalance() const;
@@ -131,7 +132,7 @@ namespace bs {
          virtual size_t getUsedAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getExtAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getIntAddressCount() const { return usedAddresses_.size(); }
-         virtual size_t getWalletAddressCount() const { return *addrCount_; }
+         virtual size_t getWalletAddressCount() const { return balanceData_ ? balanceData_->addrCount : 0; }
 
          virtual void getNewExtAddress(const CbAddress &) = 0;
          virtual void getNewIntAddress(const CbAddress &) = 0;
@@ -228,14 +229,6 @@ namespace bs {
          std::map<bs::Address, std::string>  addrComments_;
          std::map<BinaryData, std::string>   txComments_;
 
-         std::shared_ptr<std::atomic<BTCNumericTypes::balance_type>>  spendableBalance_;
-         std::shared_ptr<std::atomic<BTCNumericTypes::balance_type>>  unconfirmedBalance_;
-         std::shared_ptr<std::atomic<BTCNumericTypes::balance_type>>  totalBalance_;
-         std::shared_ptr<size_t>       addrCount_;
-         std::shared_ptr<std::mutex>   addrMapsMtx_;
-         std::shared_ptr<std::map<BinaryData, std::vector<uint64_t>>>   addressBalanceMap_;
-         std::shared_ptr<std::map<BinaryData, uint64_t>>                addressTxNMap_;
-
          class UtxoFilterAdapter : public bs::UtxoReservation::Adapter
          {
          public:
@@ -252,14 +245,30 @@ namespace bs {
       private:
          std::string regId_;
          mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
-         std::shared_ptr<std::vector<std::function<void(void)>>>  cbTxNs_;
-         std::shared_ptr<std::vector<std::function<void(void)>>>  cbBalances_;
+         mutable std::atomic_bool         balThreadRunning_{ false };
+         mutable std::condition_variable  balThrCV_;
+         mutable std::mutex               balThrMutex_;
+         mutable std::vector<std::function<void()>>   cbBalThread_;
 
       protected:
          bool firstInit_ = false;
          std::atomic_bool isRegistered_{false};
 
-         mutable std::shared_ptr<std::mutex> cbMutex_;
+         struct BalanceData {
+            std::atomic<BTCNumericTypes::balance_type>   spendableBalance{0};
+            std::atomic<BTCNumericTypes::balance_type>   unconfirmedBalance{0};
+            std::atomic<BTCNumericTypes::balance_type>   totalBalance{0};
+
+            size_t   addrCount = 0;
+            std::mutex  addrMapsMtx;
+            std::map<BinaryData, std::vector<uint64_t>>  addressBalanceMap;
+            std::map<BinaryData, uint64_t>               addressTxNMap;
+
+            std::mutex  cbMutex;
+            std::vector<std::function<void(void)>> cbTxNs;
+            std::vector<std::function<void(void)>> cbBalances;
+         };
+         mutable std::shared_ptr<BalanceData>   balanceData_;
          std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbLedgerByAddr_;
       };
 

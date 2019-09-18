@@ -139,6 +139,8 @@ private:
 
    const bs::Address authAddr_;
    bs::Address       dealerAuthAddress_;
+
+   int64_t payinSignedTs_;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__

@@ -1,10 +1,11 @@
 #include "HeadlessContainer.h"
 
+#include "BSErrorCodeStrings.h"
 #include "ConnectionManager.h"
+#include "ProtobufHeadlessUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "SystemFileUtils.h"
-#include "BSErrorCodeStrings.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 
 #include <QCoreApplication>
@@ -356,48 +357,6 @@ void HeadlessContainer::ProcessSetUserId(const std::string &data)
    }
 }
 
-headless::SignTxRequest HeadlessContainer::createSignTxRequest(const bs::core::wallet::TXSignRequest &txSignReq
-   , bool keepDuplicatedRecipients)
-{
-   headless::SignTxRequest request;
-   for (const auto &walletId : txSignReq.walletIds) {
-      request.add_walletid(walletId);
-   }
-   request.set_keepduplicatedrecipients(keepDuplicatedRecipients);
-
-   if (txSignReq.populateUTXOs) {
-      request.set_populateutxos(true);
-   }
-
-   for (const auto &utxo : txSignReq.inputs) {
-      request.add_inputs(utxo.serialize().toBinStr());
-   }
-
-   for (const auto &recip : txSignReq.recipients) {
-      request.add_recipients(recip->getSerializedScript().toBinStr());
-   }
-   if (txSignReq.fee) {
-      request.set_fee(txSignReq.fee);
-   }
-
-   if (txSignReq.RBF) {
-      request.set_rbf(true);
-   }
-
-   if (!txSignReq.prevStates.empty()) {
-      request.set_unsignedstate(txSignReq.serializeState().toBinStr());
-   }
-
-   if (txSignReq.change.value) {
-      auto change = request.mutable_change();
-      change->set_address(txSignReq.change.address.display());
-      change->set_index(txSignReq.change.index);
-      change->set_value(txSignReq.change.value);
-   }
-
-   return  request;
-}
-
 bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , SignContainer::TXSignMode mode, bool keepDuplicatedRecipients)
 {
@@ -406,7 +365,7 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
       return 0;
    }
 
-   headless::SignTxRequest request = createSignTxRequest(txSignReq, keepDuplicatedRecipients);
+   headless::SignTxRequest request = bs::signer::coreTxRequestToPb(txSignReq, keepDuplicatedRecipients);
 
    headless::RequestPacket packet;
    switch (mode) {
@@ -434,7 +393,7 @@ bs::signer::RequestId HeadlessContainer::signSettlementTXRequest(const bs::core:
       return 0;
    }
 
-   headless::SignTxRequest signTxRequest = createSignTxRequest(txSignReq, keepDuplicatedRecipients);
+   headless::SignTxRequest signTxRequest = bs::signer::coreTxRequestToPb(txSignReq, keepDuplicatedRecipients);
 
    headless::SignSettlementTxRequest settlementRequest;
    *(settlementRequest.mutable_signtxrequest()) = signTxRequest;
@@ -458,7 +417,7 @@ bs::signer::RequestId HeadlessContainer::signSettlementPartialTXRequest(const bs
       return 0;
    }
 
-   headless::SignTxRequest signTxRequest = createSignTxRequest(txSignReq, {});
+   headless::SignTxRequest signTxRequest = bs::signer::coreTxRequestToPb(txSignReq);
 
    headless::SignSettlementTxRequest settlementRequest;
    *(settlementRequest.mutable_signtxrequest()) = signTxRequest;
