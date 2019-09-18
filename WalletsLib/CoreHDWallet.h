@@ -18,7 +18,6 @@ namespace bs {
          class Wallet
          {
          private:
-
             Wallet(void) {}
             
             std::shared_ptr<AddressEntry_P2WSH> getAddressPtrForSettlement(
@@ -27,15 +26,14 @@ namespace bs {
                bool isMyKeyFirst) const;
 
             std::shared_ptr<hd::SettlementLeaf> getLeafForSettlementID(
-               const SecureBinaryData&) const;
+               const SecureBinaryData &settlementID) const;
 
-            std::shared_ptr<AssetEntry> getAssetForAddress(const bs::Address&);
+            std::shared_ptr<AssetEntry> getAssetForAddress(const bs::Address &);
 
          public:
-
             //init from seed
             Wallet(const std::string &name, const std::string &desc
-               , const wallet::Seed &, const SecureBinaryData& passphrase
+               , const wallet::Seed &, const bs::wallet::PasswordData &
                , const std::string& folder = "./"
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
@@ -46,13 +44,13 @@ namespace bs {
 
             //generate random seed and init
             Wallet(const std::string &name, const std::string &desc
-               , NetworkType netType, const SecureBinaryData& passphrase
+               , NetworkType netType, const bs::wallet::PasswordData &
                , const std::string& folder = "./"
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
             std::vector<BinaryData> encryptionKeys() const;
-            bs::wallet::KeyRank encryptionRank() const { return {1, /*pwdMeta_.size()*/1 }; }
+            bs::wallet::KeyRank encryptionRank() const { return {1, (unsigned int)pwdMeta_.size() }; }
 
             ~Wallet(void);
 
@@ -87,8 +85,10 @@ namespace bs {
             const std::string& getFileName(void) const;
             void copyToFile(const std::string& filename);
 
-            bool changePassword(const SecureBinaryData& newPass);
-            WalletEncryptionLock lockForEncryption(const SecureBinaryData& passphrase);
+            bool changePassword(const bs::wallet::PasswordMetaData &oldPD
+               , const bs::wallet::PasswordData &newPass);
+            bool addPassword(const bs::wallet::PasswordData &);
+            WalletEncryptionLock lockForEncryption(const SecureBinaryData &passphrase);
 
             static std::string fileNamePrefix(bool watchingOnly);
             bs::hd::CoinType getXBTGroupType() const { 
@@ -123,8 +123,8 @@ namespace bs {
 
 
          protected:
-            void initNew(const wallet::Seed &, 
-               const SecureBinaryData& passphrase, const std::string& folder);
+            void initNew(const wallet::Seed &, const bs::wallet::PasswordData &
+               , const std::string &folder);
             void loadFromFile(const std::string &filename, const std::string& folder);
             void putDataToDB(const BinaryData& key, const BinaryData& data);
             BinaryDataRef getDataRefForKey(LMDB* db, const BinaryData& key) const;

@@ -15,14 +15,14 @@ using namespace bs::core;
 
 hd::Wallet::Wallet(const std::string &name, const std::string &desc
                    , const wallet::Seed &seed
-                   , const SecureBinaryData& passphrase
+                   , const bs::wallet::PasswordData &pd
                    , const std::string& folder
                    , const std::shared_ptr<spdlog::logger> &logger)
    : name_(name), desc_(desc)
    , netType_(seed.networkType())
    , logger_(logger)
 {
-   initNew(seed, passphrase, folder);
+   initNew(seed, pd, folder);
 }
 
 hd::Wallet::Wallet(const std::string &filename, NetworkType netType,
@@ -33,7 +33,7 @@ hd::Wallet::Wallet(const std::string &filename, NetworkType netType,
 }
 
 hd::Wallet::Wallet(const std::string &name, const std::string &desc
-   , NetworkType netType, const SecureBinaryData& passphrase
+   , NetworkType netType, const bs::wallet::PasswordData & pd
    , const std::string& folder
    , const std::shared_ptr<spdlog::logger> &logger)
    : name_(name), desc_(desc)
@@ -41,7 +41,7 @@ hd::Wallet::Wallet(const std::string &name, const std::string &desc
    , logger_(logger)
 {
    wallet::Seed seed(CryptoPRNG::generateRandom(32), netType);
-   initNew(seed, passphrase, folder);
+   initNew(seed, pd, folder);
 }
 
 hd::Wallet::~Wallet()
@@ -50,15 +50,13 @@ hd::Wallet::~Wallet()
 }
 
 void hd::Wallet::initNew(const wallet::Seed &seed
-   , const SecureBinaryData &passphrase, const std::string &folder)
+   , const bs::wallet::PasswordData &pd, const std::string &folder)
 {
-   try
-   {
+   try {
       walletPtr_ = AssetWallet_Single::createFromSeed_BIP32_Blank(
-         folder, seed.seed(), passphrase);
+         folder, seed.seed(), pd.password);
    }
-   catch(WalletException&)
-   {
+   catch (const WalletException &) {
       //empty account structure, will be set at group creation
       std::set<std::shared_ptr<AccountType>> accountTypes;
       
@@ -68,16 +66,16 @@ void hd::Wallet::initNew(const wallet::Seed &seed
          throw WalletException("invalid seed node");
 
       walletPtr_ = AssetWallet_Single::createFromBIP32Node(
-         seed.getNode(),
-         accountTypes,
-         passphrase,
-         folder,
-         0); //no lookup, as there are no accounts
+         seed.getNode(), accountTypes, pd.password
+         , folder, 0); //no lookup, as there are no accounts
    }
+
+   pwdMeta_.push_back(pd.metaData);
 
    dbEnv_ = walletPtr_->getDbEnv();
    db_ = new LMDB(dbEnv_.get(), BS_WALLET_DBNAME);
    initializeDB();
+   writeToDB();
 }
 
 void hd::Wallet::loadFromFile(
@@ -151,12 +149,22 @@ std::shared_ptr<hd::Leaf> hd::Wallet::getLeaf(const std::string &id) const
 
 std::vector<bs::wallet::EncryptionType> hd::Wallet::encryptionTypes() const
 {
-   return {};
+   std::set<bs::wallet::EncryptionType> setOfTypes;
+   std::vector<bs::wallet::EncryptionType> result;
+   for (const auto &meta : pwdMeta_) {
+      setOfTypes.insert(meta.encType);
+   }
+   result.insert(result.end(), setOfTypes.cbegin(), setOfTypes.cend());
+   return result;
 }
 
 std::vector<BinaryData> hd::Wallet::encryptionKeys() const
 {
-   return {};
+   std::vector<BinaryData> result;
+   for (const auto &meta : pwdMeta_) {
+      result.push_back(meta.encKey);
+   }
+   return result;
 }
 
 std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
@@ -331,6 +339,19 @@ void hd::Wallet::readFromDB()
       extOnlyFlag_ = (bool)*getDataRefForKey(WALLET_EXTONLY_KEY).getPtr();
    }
 
+   { // password metadata
+      BinaryRefReader brrPwdMeta(getDataRefForKey(WALLET_PWD_META_KEY));
+      auto pwdMetaSize = brrPwdMeta.get_var_int();
+      if (pwdMetaSize > 32) { // unlikely there can be more than 32 passwords in a wallet
+         throw WalletException("invalid password meta of size " + std::to_string(pwdMetaSize));
+      }
+      while (pwdMetaSize--> 0) {
+         const auto encType = static_cast<bs::wallet::EncryptionType>(brrPwdMeta.get_uint8_t());
+         const auto encKeyLen = brrPwdMeta.get_var_int();
+         pwdMeta_.push_back({ encType, brrPwdMeta.get_BinaryData(encKeyLen) });
+      }
+   }
+
    {  // groups
       auto dbIter = db_->begin();
 
@@ -383,6 +404,18 @@ void hd::Wallet::readFromDB()
 
 void hd::Wallet::writeToDB(bool force)
 {
+   BinaryWriter bwKey;
+   bwKey.put_uint32_t(WALLET_PWD_META_KEY);
+
+   BinaryWriter bwData;
+   bwData.put_var_int(pwdMeta_.size());
+   for (const auto &meta : pwdMeta_) {
+      bwData.put_uint8_t(uint8_t(meta.encType));
+      bwData.put_var_int(meta.encKey.getSize());
+      bwData.put_BinaryData(meta.encKey);
+   }
+   putDataToDB(bwKey.getData(), bwData.getData());
+
    for (const auto &group : groups_) {
       group.second->commit(force);
    }
@@ -481,16 +514,53 @@ static bool nextCombi(std::vector<int> &a , const int n, const int m)
    return false;
 }
 
-bool hd::Wallet::changePassword(const SecureBinaryData& newPass)
+bool hd::Wallet::changePassword(const bs::wallet::PasswordMetaData &oldPD
+   , const bs::wallet::PasswordData &pd)
 {
-   if (newPass.getSize() == 0) {
+   if ((pd.password.getSize() < 6) ||
+      (pd.metaData.encType == bs::wallet::EncryptionType::Unencrypted)) {
+      logger_->error("[{}] invalid new password", __func__);
+      return false;
+   }
+
+   auto itPwdMeta = std::find_if(pwdMeta_.begin(), pwdMeta_.end()
+      , [oldPD](const bs::wallet::PasswordMetaData &pmd)->bool {
+      if ((oldPD.encType == pmd.encType) && (oldPD.encKey == pmd.encKey)) {
+         return true;
+      }
+      return false;
+   });
+   if (itPwdMeta == pwdMeta_.end()) {
+      logger_->error("[{}] failed to find previous password meta {}"
+         , __func__, oldPD.encKey.toBinStr());
       return false;
    }
 
 //   auto lock = walletPtr_->lockDecryptedContainer();
    // we assume there's an old password lock on the upper level
    try {
-      walletPtr_->changeMasterPassphrase(newPass);
+      walletPtr_->changeMasterPassphrase(pd.password);
+      *itPwdMeta = pd.metaData;
+      writeToDB();
+      return true;
+   }
+   catch (const std::exception &e) {
+      logger_->error("[{}] got error: {}", __func__, e.what());
+      return false;
+   }
+}
+
+bool hd::Wallet::addPassword(const bs::wallet::PasswordData &pd)
+{
+   if ((pd.password.getSize() < 6) ||
+      (pd.metaData.encType == bs::wallet::EncryptionType::Unencrypted)) {
+      logger_->error("[{}] invalid new password", __func__);
+      return false;
+   }
+   try { // we assume there's an old password lock on the upper level
+      walletPtr_->addPassphrase(pd.password);
+      pwdMeta_.push_back(pd.metaData);
+      writeToDB();
       return true;
    }
    catch (const std::exception &e) {
@@ -735,7 +805,7 @@ std::shared_ptr<AddressEntry_P2WSH> hd::Wallet::getAddressPtrForSettlement(
 }
 
 std::shared_ptr<hd::SettlementLeaf> hd::Wallet::getLeafForSettlementID(
-   const SecureBinaryData& id) const
+   const SecureBinaryData &id) const
 {
    auto group = getGroup(bs::hd::CoinType::BlockSettle_Settlement);
    auto settlGroup = std::dynamic_pointer_cast<hd::SettlementGroup>(group);

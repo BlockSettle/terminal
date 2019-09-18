@@ -20,6 +20,7 @@
 #define WALLETNAME_KEY          0x00000020
 #define WALLETDESCRIPTION_KEY   0x00000021
 #define WALLET_EXTONLY_KEY      0x00000030
+#define WALLET_PWD_META_KEY     0x00000031
 
 #define BS_WALLET_DBNAME "bs_wallet_name"
 
@@ -254,11 +255,6 @@ namespace bs {
          virtual std::string name() const { return walletName_; }
          virtual std::string shortName() const { return name(); }
          virtual wallet::Type type() const { return wallet::Type::Bitcoin; }
-
-         //stand in for the botched bs encryption code. too expensive to clean up after this mess
-         virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return { bs::wallet::EncryptionType::Password }; }
-         virtual std::vector<BinaryData> encryptionKeys() const { return {}; }
-         virtual bs::wallet::KeyRank encryptionRank() const { return { 1, 1 }; }
 
          bool operator ==(const Wallet &w) const { return (w.walletId() == walletId()); }
          bool operator !=(const Wallet &w) const { return (w.walletId() != walletId()); }
