@@ -160,10 +160,10 @@ QVariant fromPbVariant(const Any& v)
          return QVariant(msg.value_uint32());
       }
       else if (msg.value_case() == Internal::AnyMessage::ValueCase::kValueInt64) {
-         return QVariant(msg.value_int64());
+         return QVariant(qint64(msg.value_int64()));
       }
       else if (msg.value_case() == Internal::AnyMessage::ValueCase::kValueUint64) {
-         return QVariant(msg.value_uint64());
+         return QVariant(quint64(msg.value_uint64()));
       }
       else if (msg.value_case() == Internal::AnyMessage::ValueCase::kValueFloat) {
          return QVariant(msg.value_float());

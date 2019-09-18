@@ -51,7 +51,7 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData()
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
    dialogData.setValue(keys::Market, "CC");
    dialogData.setValue(keys::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
-   dialogData.setValue(keys::LotSize, lotSize_);
+   dialogData.setValue(keys::LotSize, qint64(lotSize_));
 
    dialogData.remove(keys::SettlementId);
 
