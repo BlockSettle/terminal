@@ -111,7 +111,6 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
 
 void ReqXBTSettlementContainer::acceptSpotXBT()
 {
-   emit info(tr("Waiting for transactions signing..."));
    if (clientSells_) {
       const auto &cbChangeAddr = [this](const bs::Address &changeAddr) {
          payInTxRequest_ = transactionData_->createTXRequest(false, changeAddr);
@@ -187,10 +186,6 @@ void ReqXBTSettlementContainer::activate()
 
    if (clientSells_) {
       sellFromPrimary_ = (walletInfoAuth_.rootId() == walletInfo_.rootId());
-
-      emit info(tr("Enter password for \"%1\" wallet to sign Pay-In")
-         .arg(QString::fromStdString(walletsMgr_->getHDRootForLeaf(
-            transactionData_->getWallet()->walletId())->name())));
 
       if (!sellFromPrimary_) {
          infoReqIdAuth_ = signContainer_->GetInfo(rootAuthWallet->walletId());
@@ -394,8 +389,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
 //         walletsMgr_->getSettlementWallet()->setTransactionComment(payoutData_, comment_); //TODO: later
       }
 
-      emit info(tr("Waiting for Order verification"));
-
+      //Waiting for Order verification
       emit acceptQuote(rfq_.requestId, payoutData_.toHexStr());
       startTimer(kWaitTimeoutInSec);
    }
@@ -412,15 +406,11 @@ void ReqXBTSettlementContainer::OrderReceived()
 //         walletsMgr_->getSettlementWallet()->setTransactionComment(payinData_, comment_);  //TODO: later
 
          logger_->debug("[XBTSettlementTransactionWidget::OrderReceived] Pay-In broadcasted");
-         emit info(tr("Waiting for own pay-in in blockchain..."));
       }
       catch (const std::exception &e) {
          logger_->error("[XBTSettlementTransactionWidget::OrderReceived] Pay-In failed: {}", e.what());
          emit error(tr("Sending of Pay-In failed: %1").arg(QString::fromStdString(e.what())));
       }
-   }
-   else {
-      emit info(tr("Waiting for dealer to broadcast both TXes to blockchain"));
    }
 }
 

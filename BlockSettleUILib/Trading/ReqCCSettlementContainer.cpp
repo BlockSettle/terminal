@@ -139,7 +139,7 @@ void ReqCCSettlementContainer::activate()
       emit genAddressVerified(false, tr("GA is null"));
    }
    else if (side() == bs::network::Side::Buy) {
-      emit info(tr("Waiting for genesis address verification to complete..."));
+      //Waiting for genesis address verification to complete...
 
       const auto &cbHasInput = [this](bool has) {
          userKeyOk_ = has;

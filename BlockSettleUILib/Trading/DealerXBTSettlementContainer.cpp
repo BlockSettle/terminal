@@ -269,7 +269,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
          , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::SettlementPayOut));
 
       logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payout sent");
-      emit info(tr("Pay-out broadcasted. Waiting to appear on chain"));
+      //Pay-out broadcasted. Waiting to appear on chain
    }
    else if (payinSignId_ && (payinSignId_ == id)) {
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
