@@ -1,7 +1,20 @@
 {
-   "latest_version": "0.21.5",
+   "latest_version": "0.21.6",
    "release_date": "18 Sep 2019",
    "changes": [
+      {
+         "version_string": "0.21.6",
+         "previous_version": "0.21.5",
+         "release_date": "18 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Balance update fixes (BST-2209)",
+            "Settlement dialogs fixes (#1344)"
+         ],
+         "bug_fixes": [],
+         "revision": "f121ad84",
+         "common_revision": "9964ffaa"
+      },
       {
          "version_string": "0.21.5",
          "previous_version": "0.21.4",
