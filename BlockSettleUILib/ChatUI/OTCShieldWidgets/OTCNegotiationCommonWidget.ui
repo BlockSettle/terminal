@@ -613,7 +613,7 @@
                  </size>
                 </property>
                 <property name="decimals">
-                 <number>8</number>
+                 <number>2</number>
                 </property>
                 <property name="minimum">
                  <double>1.000000000000000</double>
@@ -793,7 +793,7 @@
                  </size>
                 </property>
                 <property name="decimals">
-                 <number>8</number>
+                 <number>2</number>
                 </property>
                 <property name="minimum">
                  <double>1.000000000000000</double>

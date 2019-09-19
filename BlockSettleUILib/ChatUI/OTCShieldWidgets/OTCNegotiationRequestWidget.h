@@ -41,14 +41,13 @@ protected slots:
 
 protected:
    std::shared_ptr<bs::sync::hd::Wallet> getCurrentHDWallet() const;
-   BTCNumericTypes::balance_type getXBTTotalBalance() const;
    BTCNumericTypes::balance_type getXBTSpendableBalance() const;
 
 private slots:
    void onSellClicked();
    void onBuyClicked();
    void onShowXBTInputsClicked();
-   void onShowXBTInputReady();
+   void onXbtInputsProcessed();
    void onChanged();
    void onChatRoomChanged();
    void onNumCcySelected();
@@ -59,10 +58,6 @@ private slots:
 
 private:
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
-
-   std::set<std::string> awaitingLeafsResponse_;
-   std::vector<UTXO> allUTXOs_;
-   std::vector<UTXO> selectedUTXO_;
 
    bs::network::Asset::Type productGroup_ = bs::network::Asset::SpotXBT;
    QString security_{ QLatin1String("XBT/EUR") };

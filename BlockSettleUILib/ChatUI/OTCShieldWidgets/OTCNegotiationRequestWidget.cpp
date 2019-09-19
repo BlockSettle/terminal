@@ -13,6 +13,11 @@
 #include "CoinControlDialog.h"
 #include "ui_OTCNegotiationCommonWidget.h"
 
+namespace {
+   double kQuantityXBTSimpleStepAmount = 0.001;
+   double kQuantityCCSimpleStepAmount = 5;
+}
+
 OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
    : OTCWindowsAdapterBase{ parent }
    , ui_{ new Ui::OTCNegotiationCommonWidget{} }
@@ -35,6 +40,7 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateBalances);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::requestCreated);
    connect(ui_->toolButtonXBTInputs, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onShowXBTInputsClicked);
+   connect(this, &OTCWindowsAdapterBase::xbtInputsProcessed, this, &OTCNegotiationRequestWidget::onXbtInputsProcessed);
    connect(ui_->pushButtonNumCcy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onNumCcySelected);
    connect(ui_->comboBoxXBTWallets, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &OTCNegotiationRequestWidget::onCurrentWalletChanged);
    connect(ui_->priceUpdateButtonRequest, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateIndicativePrice);
@@ -88,17 +94,7 @@ void OTCNegotiationRequestWidget::onUpdateMD(bs::network::Asset::Type type, cons
       return;
    }
 
-   for (const auto &field : fields) {
-      switch (field.type) {
-      case bs::network::MDField::PriceBid:
-         sellIndicativePrice_ = field.value;
-         break;
-      case bs::network::MDField::PriceOffer:
-         buyIndicativePrice_ = field.value;
-         break;
-      default:  break;
-      }
-   }
+   updateIndicativePrices(type, security, fields, sellIndicativePrice_, buyIndicativePrice_);
 
    if (ui_->pushButtonBuy->isChecked()) {
       ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(buyIndicativePrice_, productGroup_));
@@ -116,11 +112,16 @@ void OTCNegotiationRequestWidget::onUpdateBalances()
       totalBalance = tr("%1 %2")
          .arg(UiUtils::displayCurrencyAmount(getAssetManager()->getBalance(buyProduct_.toStdString())))
          .arg(buyProduct_);
+      ui_->quantitySpinBox->setMaximum(std::numeric_limits<double>::max());
+      ui_->quantitySpinBox->setSingleStep(kQuantityCCSimpleStepAmount);
    }
    else {
+      double currentBalance = getXBTSpendableBalance();
       totalBalance = tr("%1 %2")
-         .arg(UiUtils::displayAmount(getXBTTotalBalance()))
+         .arg(UiUtils::displayAmount(currentBalance))
          .arg(QString::fromStdString(bs::network::XbtCurrency));
+      ui_->quantitySpinBox->setMaximum(currentBalance);
+      ui_->quantitySpinBox->setSingleStep(kQuantityXBTSimpleStepAmount);
    }
 
    ui_->labelBalanceValue->setText(totalBalance);
@@ -128,49 +129,17 @@ void OTCNegotiationRequestWidget::onUpdateBalances()
 
 std::shared_ptr<bs::sync::hd::Wallet> OTCNegotiationRequestWidget::getCurrentHDWallet() const
 {
-   const auto walletId = ui_->comboBoxXBTWallets->currentData(UiUtils::WalletIdRole).toString().toStdString();
-   return getWalletManager()->getHDWalletById(walletId);
-}
-
-BTCNumericTypes::balance_type OTCNegotiationRequestWidget::getXBTTotalBalance() const
-{
-   const auto hdWallet = getCurrentHDWallet();
-   if (!hdWallet) {
-      return .0;
-   }
-
-   BTCNumericTypes::balance_type totalBalance{};
-   for (auto wallet : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
-      totalBalance += wallet->getTotalBalance();
-   }
-
-   return totalBalance;
+   return getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
 }
 
 BTCNumericTypes::balance_type OTCNegotiationRequestWidget::getXBTSpendableBalance() const
 {
-   const auto hdWallet = getCurrentHDWallet();
-   if (!hdWallet) {
-      return .0;
-   }
-
-   BTCNumericTypes::balance_type totalBalance{};
-   for (auto wallet : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
-      totalBalance += wallet->getSpendableBalance();
-   }
-
-   return totalBalance;
+   return getXBTSpendableBalanceFromCombobox(ui_->comboBoxXBTWallets);
 }
 
-void OTCNegotiationRequestWidget::onShowXBTInputReady()
+void OTCNegotiationRequestWidget::onXbtInputsProcessed()
 {
-   auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs_);
-   CoinControlDialog dialog(inputs, false, this);
-   int rc = dialog.exec();
-   if (rc == QDialog::Accepted) {
-      selectedUTXO_ = dialog.selectedInputs();
-   }
-
+   onUpdateBalances();
    ui_->toolButtonXBTInputs->setEnabled(true);
 }
 
@@ -183,7 +152,7 @@ void OTCNegotiationRequestWidget::onSellClicked()
    ui_->receivingAddressLabel->setVisible(false);
    ui_->quantityMaxButton->setVisible(true);
    ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(sellIndicativePrice_, productGroup_));
-   ui_->quantitySpinBox->setValue(1.0);
+   ui_->quantitySpinBox->setValue(0.0);
 
    selectedUTXO_.clear();
 }
@@ -197,7 +166,7 @@ void OTCNegotiationRequestWidget::onBuyClicked()
    ui_->receivingAddressLabel->setVisible(true);
    ui_->quantityMaxButton->setVisible(false);
    ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(buyIndicativePrice_, productGroup_));
-   ui_->quantitySpinBox->setValue(1.0);
+   ui_->quantitySpinBox->setValue(0.0);
 
    selectedUTXO_.clear();
 }
@@ -205,31 +174,7 @@ void OTCNegotiationRequestWidget::onBuyClicked()
 void OTCNegotiationRequestWidget::onShowXBTInputsClicked()
 {
    ui_->toolButtonXBTInputs->setEnabled(false);
-   allUTXOs_.clear();
-   awaitingLeafsResponse_.clear();
-   selectedUTXO_.clear();
-
-   const auto hdWallet = getCurrentHDWallet();
-   for (auto wallet : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
-      auto cbUTXOs = [parentWidget = QPointer<OTCNegotiationRequestWidget>(this), walletId = wallet->walletId()](const std::vector<UTXO> &utxos) {
-         if (!parentWidget) {
-            return;
-         }
-
-         parentWidget->allUTXOs_.insert(parentWidget->allUTXOs_.end(), utxos.begin(), utxos.end());
-         parentWidget->awaitingLeafsResponse_.erase(walletId);
-
-         if (parentWidget->awaitingLeafsResponse_.empty()) {
-            QMetaObject::invokeMethod(parentWidget, "onShowXBTInputReady");
-         }
-      };
-
-      if (!wallet->getSpendableTxOutList(cbUTXOs, UINT64_MAX)) {
-         continue;
-      }
-
-      awaitingLeafsResponse_.insert(wallet->walletId());
-   }
+   showXBTInputsClicked(ui_->comboBoxXBTWallets);
 }
 
 void OTCNegotiationRequestWidget::onChanged()
@@ -245,6 +190,7 @@ void OTCNegotiationRequestWidget::onChatRoomChanged()
 void OTCNegotiationRequestWidget::onCurrentWalletChanged()
 {
    UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWallet());
+   selectedUTXO_.clear();
    onUpdateBalances();
 }
 

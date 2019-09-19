@@ -39,8 +39,13 @@ private slots:
    void onChanged();
    void onAcceptOrUpdateClicked();
    void onUpdateIndicativePrice();
+   void onShowXBTInputsClicked();
+   void onXbtInputsProcessed();
 
    void onCurrentWalletChanged();
+
+protected:
+   void updateIndicativePriceValue();
 
 private:
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
