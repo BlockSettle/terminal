@@ -232,6 +232,7 @@ void BsClient::OnDataReceived(const std::string &data)
 
    if (response->data_case() != Response::kCeler) {
       SPDLOG_LOGGER_DEBUG(logger_, "bs recv: {}", ProtobufUtils::toJsonCompact(*response));
+      logger_->debug("[BsClient::OnDataReceived] {}", response->DebugString());
    }
 
    QMetaObject::invokeMethod(this, [this, response] {
@@ -351,6 +352,8 @@ void BsClient::processCeler(const Response_Celer &response)
 
 void BsClient::processProxyPb(const Response_ProxyPb &response)
 {
+   logger_->debug("[BsClient::processProxyPb] PB message: {}"
+                  , response.DebugString());
    emit processPbMessage(response.data());
 }
 
