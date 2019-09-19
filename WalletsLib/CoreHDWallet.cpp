@@ -684,6 +684,7 @@ SecureBinaryData hd::Wallet::getDecryptedRootXpriv(void) const
    if (rootBip32 == nullptr)
       throw WalletException("unexpected wallet root type");
 
+   auto lock = walletPtr_->lockDecryptedContainer();
    auto decryptedRootPrivKey = walletPtr_->getDecryptedPrivateKeyForAsset(root);
    
    BIP32_Node node;
