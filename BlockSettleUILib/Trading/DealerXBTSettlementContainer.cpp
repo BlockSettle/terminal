@@ -263,6 +263,9 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
 
       emit sendSignedPayoutToPB(settlementIdString_, signedTX);
       logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payout sent");
+
+      // ok. there is nothing this container could/should do
+      emit completed();
    } else if (payinSignId_ && (payinSignId_ == id)) {
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          logger_->error("[DealerXBTSettlementContainer::onTXSigned] Failed to sign pay-in: {} ({})", (int)errCode, errMsg);
@@ -273,17 +276,19 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
 
       transactionData_->getWallet()->setTransactionComment(signedTX, comment_);
 //      settlWallet_->setTransactionComment(signedTX, comment_);  //TODO: implement later
-      emit sendSignedPayinToPB(settlementIdString_, signedTX);
 
+      emit sendSignedPayinToPB(settlementIdString_, signedTX);
       logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payin sent");
+
+      // ok. there is nothing this container could/should do
+      emit completed();
    }
 }
 
 void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& settlementId)
 {
    if (settlementIdString_ != settlementId) {
-      logger_->error("[DealerXBTSettlementContainer::onUnsignedPayinRequested] settlement id mismatch {}. expected {}"
-                     , settlementId, settlementIdString_);
+      // ignore
       return;
    }
 
@@ -316,8 +321,7 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
 void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash)
 {
    if (settlementIdString_ != settlementId) {
-      logger_->error("[DealerXBTSettlementContainer::onSignedPayoutRequested] settlement id mismatch {}. expected {}"
-                     , settlementId, settlementIdString_);
+      // ignore
       return;
    }
 
@@ -333,8 +337,7 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
 void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin)
 {
    if (settlementIdString_ != settlementId) {
-      logger_->error("[DealerXBTSettlementContainer::onSignedPayinRequested] settlement id mismatch {}. expected {}"
-                     , settlementId, settlementIdString_);
+      // ignore
       return;
    }
 

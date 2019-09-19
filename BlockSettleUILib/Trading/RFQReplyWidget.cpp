@@ -20,6 +20,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+#include "bs_proxy_terminal_pb.pb.h"
+
 #include <spdlog/logger.h>
 
 #include <QDesktopWidget>
@@ -248,6 +250,14 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                connect(settlContainer.get(), &bs::SettlementContainer::readyToActivate, this, &RFQReplyWidget::onReadyToActivate);
                connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
+               connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
+               connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);
+               connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayoutToPB, this, &RFQReplyWidget::sendSignedPayoutToPB);
+
+               connect(this, &RFQReplyWidget::unsignedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onUnsignedPayinRequested);
+               connect(this, &RFQReplyWidget::signedPayoutRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayoutRequested);
+               connect(this, &RFQReplyWidget::signedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayinRequested);
+
                ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
             } catch (const std::exception &e) {
                logger_->error("[RFQReplyWidget::onOrder] settlement failed: {}", e.what());
@@ -448,3 +458,42 @@ void RFQReplyWidget::showEditableRFQPage()
    ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::DealingPage));
 }
 
+
+void RFQReplyWidget::onMessageFromPB(std::string data)
+{
+   Blocksettle::Communication::ProxyTerminalPb::Response response;
+   bool result = response.ParseFromString(data);
+   if (!result) {
+      logger_->error("[RFQReplyWidget::onMessageFromPB] failed to parse message: {}"
+                     , data);
+      return;
+   }
+
+   switch (response.data_case()) {
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin:
+         {
+            auto command = response.send_unsigned_payin();
+
+            emit unsignedPayinRequested(command.settlement_id());
+         }
+         break;
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayout:
+         {
+            auto command = response.sign_payout();
+
+            // payin_data - payin hash . binary
+            emit signedPayoutRequested(command.settlement_id(), command.payin_data());
+         }
+         break;
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayin:
+         {
+            auto command = response.sign_payin();
+
+            // unsigned_payin_data - serialized payin. binary
+            emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data());
+         }
+         break;
+   }
+
+   // if not processed - not RFQ releated message. not error
+}

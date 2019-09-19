@@ -51,6 +51,7 @@ public:
 
    std::shared_ptr<bs::sync::Wallet> getWallet() const { return transactionData_->getWallet(); }
 
+public slots:
    void onUnsignedPayinRequested(const std::string& settlementId);
    void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
    void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
