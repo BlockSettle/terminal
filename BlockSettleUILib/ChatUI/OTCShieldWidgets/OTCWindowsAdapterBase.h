@@ -3,9 +3,12 @@
 
 #include <memory>
 #include "QWidget"
+#include "CommonTypes.h"
 
 class OTCWindowsManager;
 class AuthAddressManager;
+class AssetManager;
+
 namespace bs {
    namespace sync {
       class WalletsManager;
@@ -21,12 +24,15 @@ public:
    void setChatOTCManager(const std::shared_ptr<OTCWindowsManager>& otcManager);
    std::shared_ptr<bs::sync::WalletsManager> getWalletManager() const;
    std::shared_ptr<AuthAddressManager> getAuthManager() const;
+   std::shared_ptr<AssetManager> getAssetManager() const;
 
 signals:
    void chatRoomChanged();
 
 protected slots:
-   virtual void syncInterface();
+   virtual void onSyncInterface();
+   virtual void onUpdateMD(bs::network::Asset::Type, const QString&, const bs::network::MDFields&);
+   virtual void onUpdateBalances();
 
 protected:
    std::shared_ptr<OTCWindowsManager> otcManager_{};

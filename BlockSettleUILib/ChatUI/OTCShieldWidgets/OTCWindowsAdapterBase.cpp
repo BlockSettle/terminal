@@ -10,7 +10,15 @@ void OTCWindowsAdapterBase::setChatOTCManager(const std::shared_ptr<OTCWindowsMa
 {
    otcManager_ = otcManager;
    connect(otcManager_.get(), &OTCWindowsManager::syncInterfaceRequired, this, [this]() {
-      syncInterface();
+      onSyncInterface();
+   });
+
+   connect(otcManager_.get(), &OTCWindowsManager::updateMDDataRequired, this, [this](bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields) {
+      onUpdateMD(type, security, fields);
+   });
+
+   connect(otcManager_.get(), &OTCWindowsManager::updateBalances, this, [this]() {
+      onUpdateBalances();
    });
 }
 
@@ -24,7 +32,20 @@ std::shared_ptr<AuthAddressManager> OTCWindowsAdapterBase::getAuthManager() cons
    return otcManager_->getAuthManager();
 }
 
-void OTCWindowsAdapterBase::syncInterface()
+std::shared_ptr<AssetManager> OTCWindowsAdapterBase::getAssetManager() const
+{
+   return otcManager_->getAssetManager();
+}
+
+void OTCWindowsAdapterBase::onSyncInterface()
+{
+}
+
+void OTCWindowsAdapterBase::onUpdateMD(bs::network::Asset::Type, const QString&, const bs::network::MDFields&)
+{
+}
+
+void OTCWindowsAdapterBase::onUpdateBalances()
 {
 }
 

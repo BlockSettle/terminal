@@ -1,12 +1,18 @@
 #include "OTCWindowsManager.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "AuthAddressManager.h"
+#include "MarketDataProvider.h"
+#include "AssetManager.h"
 
 OTCWindowsManager::OTCWindowsManager(QObject* parent /*= nullptr*/)
 {
 }
 
-void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr, const std::shared_ptr<AuthAddressManager> &authManager)
+void OTCWindowsManager::init(
+   const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
+   , const std::shared_ptr<AuthAddressManager> &authManager
+   , const std::shared_ptr<MarketDataProvider>& mdProvider
+   , const std::shared_ptr<AssetManager>& assetManager)
 {
    // #new_logic : we shouldn't send aggregated signal for all events
 
@@ -22,6 +28,8 @@ void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& wa
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &OTCWindowsManager::syncInterfaceRequired);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::authWalletChanged, this, &OTCWindowsManager::syncInterfaceRequired);
 
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &OTCWindowsManager::updateBalances);
+
    authManager_ = authManager;
 
    connect(authManager_.get(), &AuthAddressManager::AddressListUpdated, this, &OTCWindowsManager::syncInterfaceRequired);
@@ -30,6 +38,15 @@ void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& wa
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, &OTCWindowsManager::syncInterfaceRequired);
    connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, &OTCWindowsManager::syncInterfaceRequired);
    connect(authManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, &OTCWindowsManager::syncInterfaceRequired);
+
+   mdProvider_ = mdProvider;
+
+   connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &OTCWindowsManager::updateMDDataRequired);
+
+   assetManager_ = assetManager;
+
+   connect(assetManager_.get(), &AssetManager::totalChanged, this, &OTCWindowsManager::updateBalances);
+   connect(assetManager_.get(), &AssetManager::securitiesChanged, this, &OTCWindowsManager::updateBalances);
 
    emit syncInterfaceRequired();
 }
@@ -42,5 +59,10 @@ std::shared_ptr<bs::sync::WalletsManager> OTCWindowsManager::getWalletManager() 
 std::shared_ptr<AuthAddressManager> OTCWindowsManager::getAuthManager() const
 {
    return authManager_;
+}
+
+std::shared_ptr<AssetManager> OTCWindowsManager::getAssetManager() const
+{
+   return assetManager_;
 }
 

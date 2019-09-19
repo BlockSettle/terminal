@@ -34,10 +34,15 @@ public:
 signals:
    void requestCreated();
 
+protected slots:
+   void onSyncInterface() override;
+   void onUpdateMD(bs::network::Asset::Type type, const QString &security, const bs::network::MDFields& fields) override;
+   void onUpdateBalances() override;
+
 protected:
-   void syncInterface() override;
    std::shared_ptr<bs::sync::hd::Wallet> getCurrentHDWallet() const;
-   
+   BTCNumericTypes::balance_type getXBTTotalBalance() const;
+   BTCNumericTypes::balance_type getXBTSpendableBalance() const;
 
 private slots:
    void onSellClicked();
@@ -46,15 +51,25 @@ private slots:
    void onShowXBTInputReady();
    void onChanged();
    void onChatRoomChanged();
+   void onNumCcySelected();
+   void onUpdateIndicativePrice();
+   void onMaxQuantityClicked();
 
    void onCurrentWalletChanged();
 
 private:
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
 
-   std::set<std::string> awaitingLeafsResponse;
-   std::vector<UTXO> allUTXOs;
-   std::vector<UTXO> selectedUTXO;
+   std::set<std::string> awaitingLeafsResponse_;
+   std::vector<UTXO> allUTXOs_;
+   std::vector<UTXO> selectedUTXO_;
+
+   bs::network::Asset::Type productGroup_ = bs::network::Asset::SpotXBT;
+   QString security_{ QLatin1String("XBT/EUR") };
+   QString sellProduct_{ QLatin1String("XBT") };
+   QString buyProduct_{ QLatin1String("EUR") };
+   double sellIndicativePrice_{};
+   double buyIndicativePrice_{};
 };
 
 #endif // __OTC_NEGOTIATION_REQUEST_WIDGET_H__

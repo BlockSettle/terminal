@@ -629,7 +629,8 @@ void BSTerminalMainWindow::InitChatView()
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, [this]() {
       //ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_, logMgr_->logger("chat"), walletsMgr_, armory_, signContainer_);
-      ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_, logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_);
+      ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_,
+         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_);
    });
 
    chatClientServicePtr_->Init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));

@@ -16,6 +16,8 @@ class SignContainer;
 class WalletsM;
 class ChatOTCHelper;
 class OTCWindowsManager;
+class MarketDataProvider;
+class AssetManager;
 
 namespace Ui {
    class ChatWidget;
@@ -42,7 +44,10 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<AuthAddressManager> &authManager
       , const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<SignContainer> &signContainer);
+      , const std::shared_ptr<SignContainer> &signContainer
+      , const std::shared_ptr<MarketDataProvider>& mdProvider
+      , const std::shared_ptr<AssetManager>& assetManager
+   );
 
    std::string login(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb&);
 
