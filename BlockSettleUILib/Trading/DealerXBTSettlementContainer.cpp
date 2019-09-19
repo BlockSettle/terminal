@@ -206,7 +206,8 @@ bool DealerXBTSettlementContainer::startPayOutSigning()
    //          , receivingAddress, transactionData_->feePerByte(), armory_->topBlock());
 
    //       bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(payOutTxRequest_);
-   //       dlgData.setValue(keys::SettlementId, QString::fromStdString(settlementId_.toHexStr()));
+   //       dlgData.setValue(keys::Market, "XBT");
+   //       dlgData.setValue(keys::SettlementId, settlementId_.toHexStr());
    //       dlgData.setValue(keys::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
 
    //       payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(payOutTxRequest_, { settlementId_
@@ -217,9 +218,8 @@ bool DealerXBTSettlementContainer::startPayOutSigning()
    //       emit failed();
    //    }
    // };
-   
    // settlMonitor_->getPayinInput(cbSettlInput);
-   return true;
+   // return true;
 }
 
 bool DealerXBTSettlementContainer::cancel()
