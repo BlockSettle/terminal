@@ -49,20 +49,23 @@ public:
    double amount() const override { return amount_; }
    bs::sync::PasswordDialogData toPasswordDialogData() const override;
 
-   bool weSell() const { return weSell_; }
-   uint64_t fee() const { return fee_; }
-   std::string walletName() const;
-   bs::Address receiveAddress() const;
-
    std::shared_ptr<bs::sync::Wallet> getWallet() const { return transactionData_->getWallet(); }
+
+   void onUnsignedPayinRequested(const std::string& settlementId);
+   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
+
+signals:
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
 private slots:
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string errMsg);
 
 private:
-   void onCptyVerified();
    bool startPayInSigning();
-   bool startPayOutSigning();
+   bool startPayOutSigning(const BinaryData& payinHash);
 
 private:
    const bs::network::Order   order_;
@@ -78,11 +81,12 @@ private:
    std::shared_ptr<SignContainer>               signContainer_;
    AddressVerificationState                     cptyAddressState_ = AddressVerificationState::InProgress;
    bs::Address settlAddr_;
+
+   std::string settlementIdString_;
    BinaryData  settlementId_;
    BinaryData  authKey_, reqAuthKey_;
 
-   uint64_t    fee_ = 0;
-   bs::core::wallet::TXSignRequest        payInTxRequest_, payOutTxRequest_;
+   bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
 
    unsigned int   payinSignId_ = 0;
    unsigned int   payoutSignId_ = 0;

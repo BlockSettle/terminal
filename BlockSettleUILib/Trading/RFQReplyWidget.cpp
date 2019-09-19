@@ -1,10 +1,5 @@
-
 #include "RFQReplyWidget.h"
 #include "ui_RFQReplyWidget.h"
-#include <spdlog/logger.h>
-
-#include <QDesktopWidget>
-#include <QPushButton>
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
@@ -24,6 +19,11 @@
 #include "SignContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+
+#include <spdlog/logger.h>
+
+#include <QDesktopWidget>
+#include <QPushButton>
 
 using namespace bs::ui;
 
@@ -250,7 +250,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
 
                ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
             } catch (const std::exception &e) {
-               logger_->error("[{}] settlement failed: {}", __func__, e.what());
+               logger_->error("[RFQReplyWidget::onOrder] settlement failed: {}", e.what());
                BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
                   , tr("Failed to start dealer's settlement")
                   , QString::fromLatin1(e.what())
@@ -286,7 +286,7 @@ void RFQReplyWidget::onReadyToActivate()
 {
    const auto settlContainer = qobject_cast<bs::SettlementContainer *>(sender());
    if (!settlContainer) {
-      logger_->error("[{}] failed to cast sender", __func__);
+      logger_->error("[RFQReplyWidget::onReadyToActivate] failed to cast sender");
       return;
    }
    settlContainer->activate();
