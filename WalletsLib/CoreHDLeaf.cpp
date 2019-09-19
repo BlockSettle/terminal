@@ -103,6 +103,11 @@ std::vector<bs::Address> hd::Leaf::getPooledAddressList() const
    return result;
 }
 
+ReentrantLock hd::Leaf::lockDecryptedContainer()
+{
+   return walletPtr_->lockDecryptedContainer();
+}
+
 // Return an external-facing address.
 bs::Address hd::Leaf::getNewExtAddress()
 {
@@ -498,11 +503,6 @@ void hd::Leaf::shutdown()
 
    walletPtr_ = nullptr;
    accountPtr_ = nullptr;
-}
-
-WalletEncryptionLock hd::Leaf::lockForEncryption(const SecureBinaryData& passphrase)
-{
-   return WalletEncryptionLock(walletPtr_, passphrase);
 }
 
 std::pair<bs::Address, bool> hd::Leaf::synchronizeUsedAddressChain(

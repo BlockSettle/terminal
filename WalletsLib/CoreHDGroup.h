@@ -24,7 +24,7 @@ namespace bs {
             friend class hd::SettlementGroup;
 
          public:
-            Group(std::shared_ptr<AssetWallet_Single>, bs::hd::Path::Elem, NetworkType netType
+            Group(const std::shared_ptr<AssetWallet_Single> &, bs::hd::Path::Elem, NetworkType netType
                , bool isExtOnly, const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
             ~Group(void);

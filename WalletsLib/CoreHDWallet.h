@@ -1,6 +1,7 @@
 #ifndef BS_CORE_HD_WALLET_H__
 #define BS_CORE_HD_WALLET_H__
 
+#include <deque>
 #include <memory>
 #include "CoreHDGroup.h"
 #include "CoreHDLeaf.h"
@@ -88,7 +89,9 @@ namespace bs {
             bool changePassword(const bs::wallet::PasswordMetaData &oldPD
                , const bs::wallet::PasswordData &newPass);
             bool addPassword(const bs::wallet::PasswordData &);
-            WalletEncryptionLock lockForEncryption(const SecureBinaryData &passphrase);
+
+            void pushPasswordPrompt(const std::function<SecureBinaryData()> &);
+            void popPasswordPrompt();
 
             static std::string fileNamePrefix(bool watchingOnly);
             bs::hd::CoinType getXBTGroupType() const { 
@@ -121,6 +124,7 @@ namespace bs {
             std::shared_ptr<LMDBEnv> dbEnv_ = nullptr;
             LMDB* db_ = nullptr;
 
+            std::deque<std::function<SecureBinaryData(const std::set<BinaryData> &)>>  lbdPwdPrompts_;
 
          protected:
             void initNew(const wallet::Seed &, const bs::wallet::PasswordData &
@@ -138,6 +142,30 @@ namespace bs {
          };
 
       }  //namespace hd
+
+      struct WalletPasswordScoped
+      {
+      private:
+         WalletPasswordScoped(const WalletPasswordScoped&) = delete;
+         WalletPasswordScoped(WalletPasswordScoped&& lock) = delete;
+         WalletPasswordScoped& operator=(const WalletPasswordScoped&) = delete;
+         WalletPasswordScoped& operator=(WalletPasswordScoped&&) = delete;
+
+      public:
+         WalletPasswordScoped(const std::shared_ptr<hd::Wallet> &wallet
+            , const SecureBinaryData &passphrase);
+
+         ~WalletPasswordScoped()
+         {
+            wallet_->popPasswordPrompt();
+         }
+
+      private:
+         std::shared_ptr<hd::Wallet>   wallet_;
+         const unsigned int   maxTries_ = 3;
+         unsigned int         nbTries_ = 0;
+      };
+
    }  //namespace core
 }  //namespace bs
 

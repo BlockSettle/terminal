@@ -190,7 +190,6 @@ bool InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::P
    try {
       const auto& password = pwdData[0].password;
 
-      auto lock = hdWallet->lockForEncryption(password);
       auto leaf = group->createLeaf(path);
       if (leaf != nullptr) {
          if (cb) {

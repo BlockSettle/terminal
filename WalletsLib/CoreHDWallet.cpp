@@ -407,13 +407,16 @@ void hd::Wallet::writeToDB(bool force)
    BinaryWriter bwKey;
    bwKey.put_uint32_t(WALLET_PWD_META_KEY);
 
-   BinaryWriter bwData;
-   bwData.put_var_int(pwdMeta_.size());
+   BinaryWriter bwPwdMeta;
+   bwPwdMeta.put_var_int(pwdMeta_.size());
    for (const auto &meta : pwdMeta_) {
-      bwData.put_uint8_t(uint8_t(meta.encType));
-      bwData.put_var_int(meta.encKey.getSize());
-      bwData.put_BinaryData(meta.encKey);
+      bwPwdMeta.put_uint8_t(uint8_t(meta.encType));
+      bwPwdMeta.put_var_int(meta.encKey.getSize());
+      bwPwdMeta.put_BinaryData(meta.encKey);
    }
+   BinaryWriter bwData;
+   bwData.put_var_int(bwPwdMeta.getSize());
+   bwData.put_BinaryData(bwPwdMeta.getData());
    putDataToDB(bwKey.getData(), bwData.getData());
 
    for (const auto &group : groups_) {
@@ -536,8 +539,6 @@ bool hd::Wallet::changePassword(const bs::wallet::PasswordMetaData &oldPD
       return false;
    }
 
-//   auto lock = walletPtr_->lockDecryptedContainer();
-   // we assume there's an old password lock on the upper level
    try {
       walletPtr_->changeMasterPassphrase(pd.password);
       *itPwdMeta = pd.metaData;
@@ -546,6 +547,10 @@ bool hd::Wallet::changePassword(const bs::wallet::PasswordMetaData &oldPD
    }
    catch (const std::exception &e) {
       logger_->error("[{}] got error: {}", __func__, e.what());
+      return false;
+   }
+   catch (const AlreadyLocked &) {
+      logger_->error("[{}] secure container already locked", __func__);
       return false;
    }
 }
@@ -557,7 +562,7 @@ bool hd::Wallet::addPassword(const bs::wallet::PasswordData &pd)
       logger_->error("[{}] invalid new password", __func__);
       return false;
    }
-   try { // we assume there's an old password lock on the upper level
+   try {
       walletPtr_->addPassphrase(pd.password);
       pwdMeta_.push_back(pd.metaData);
       writeToDB();
@@ -592,9 +597,24 @@ void hd::Wallet::copyToFile(const std::string& filename)
    dest.close();
 }
 
-WalletEncryptionLock hd::Wallet::lockForEncryption(const SecureBinaryData& passphrase)
+void hd::Wallet::pushPasswordPrompt(const std::function<SecureBinaryData()> &lbd)
 {
-   return WalletEncryptionLock(walletPtr_, passphrase);
+   const auto lbdWrap = [lbd, this](const std::set<BinaryData> &)->SecureBinaryData {
+      return lbd();
+   };
+   walletPtr_->setPassphrasePromptLambda(lbdWrap);
+   lbdPwdPrompts_.push_back(lbdWrap);
+}
+
+void hd::Wallet::popPasswordPrompt()
+{
+   lbdPwdPrompts_.pop_back();
+   if (lbdPwdPrompts_.empty()) {
+      walletPtr_->resetPassphrasePromptLambda();
+   }
+   else {
+      walletPtr_->setPassphrasePromptLambda(lbdPwdPrompts_.back());
+   }
 }
 
 void hd::Wallet::setExtOnly()
@@ -630,9 +650,10 @@ bs::core::wallet::Seed hd::Wallet::getDecryptedSeed(void) const
       throw WalletException("uninitialized armory wallet");
    }
    auto seedPtr = walletPtr_->getEncryptedSeed();
-   if(seedPtr == nullptr)
+   if (seedPtr == nullptr) {
       throw WalletException("wallet has no seed");
-
+   }
+   auto lock = walletPtr_->lockDecryptedContainer();
    auto clearSeed = walletPtr_->getDecryptedValue(seedPtr);
    bs::core::wallet::Seed rootObj(clearSeed, netType_);
    return rootObj;
@@ -828,7 +849,8 @@ BinaryData hd::Wallet::signSettlementTXRequest(const wallet::TXSignRequest &txRe
    resolver->seedFromAddressEntry(addrP2wsh);
 
    //get leaf
-   auto leafPtr = getLeafForSettlementID(sd.settlementId);
+   const auto leafPtr = getLeafForSettlementID(sd.settlementId);
+   const auto lock = leafPtr->lockDecryptedContainer();
 
    //sign & return
    auto signer = leafPtr->getSigner(txReq, false);
@@ -837,4 +859,18 @@ BinaryData hd::Wallet::signSettlementTXRequest(const wallet::TXSignRequest &txRe
 
    signer.sign();
    return signer.serialize();
+}
+
+
+WalletPasswordScoped::WalletPasswordScoped(const std::shared_ptr<hd::Wallet> &wallet
+   , const SecureBinaryData &passphrase) : wallet_(wallet)
+{
+   const auto lbd = [this, passphrase]()->SecureBinaryData
+   {
+      if (++nbTries_ > maxTries_) {
+         return {};
+      }
+      return passphrase;
+   };
+   wallet_->pushPasswordPrompt(lbd);
 }

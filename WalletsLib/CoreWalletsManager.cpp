@@ -298,7 +298,7 @@ WalletsManager::HDWalletPtr WalletsManager::createWallet(
    }
 
    {
-      auto lock = newWallet->lockForEncryption(pd.password);
+      const bs::core::WalletPasswordScoped lock(newWallet, pd.password);
       newWallet->createStructure();
       if (primary) {
          auto group = newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
