@@ -339,10 +339,13 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
       return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);;
    }
 
+   const auto hdWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
    try {
-      auto lock = wallet->lockForEncryption(request.password());
-      const auto tx = wallet->signTXRequest(txSignReq);
-      evt.set_signedtx(tx.toBinStr());
+      {
+         bs::core::WalletPasswordScoped lock(hdWallet, request.password());
+         const auto tx = wallet->signTXRequest(txSignReq);
+         evt.set_signedtx(tx.toBinStr());
+      }
       evt.set_errorcode((int)bs::error::ErrorCode::NoError);
       return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
    }
@@ -497,8 +500,7 @@ bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::sign
    std::string seedStr, privKeyStr;
 
    try {
-      const SecureBinaryData pwd(request.password());
-      const auto lock = hdWallet->lockForEncryption(pwd);
+      const bs::core::WalletPasswordScoped lock(hdWallet, request.password());
       const auto &seed = hdWallet->getDecryptedSeed();
       seedStr = seed.seed().toBinStr();
       privKeyStr = seed.toXpriv().toBinStr();
@@ -560,7 +562,8 @@ bool SignerAdapterListener::onPasswordReceived(const std::string &data)
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
    }
-   app_->passwordReceived(request.wallet_id(), static_cast<bs::error::ErrorCode>(request.errorcode()), request.password());
+   app_->passwordReceived(request.wallet_id(), static_cast<bs::error::ErrorCode>(request.errorcode())
+      , request.password());
    return true;
 }
 
@@ -608,7 +611,6 @@ bool SignerAdapterListener::onAutoSignRequest(const std::string &data, bs::signe
 bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::ChangePasswordResponse response;
-
    signer::ChangePasswordRequest request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerContainerListener] failed to parse ChangePasswordRequest");
@@ -662,7 +664,7 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
 
    bool result = false;
    {
-      auto lock = wallet->lockForEncryption(oldPass.password);
+      const bs::core::WalletPasswordScoped lock(wallet, oldPass.password);
       if (request.add_new()) {
          for (const auto &pwd : pwdData) {
             result &= wallet->addPassword(pwd);

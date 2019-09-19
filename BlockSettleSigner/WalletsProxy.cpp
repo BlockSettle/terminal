@@ -282,7 +282,7 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
             if (!newGroup) {
                throw std::runtime_error("failed to create group");
             }
-            auto lock = newWallet->lockForEncryption(passwordData->password);
+            const bs::core::WalletPasswordScoped lock(newWallet, passwordData->password);
             for (const auto &leaf : group->getLeaves()) {
                try {
                   auto newLeaf = newGroup->createLeaf(leaf->path());
