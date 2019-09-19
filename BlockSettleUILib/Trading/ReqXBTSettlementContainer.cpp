@@ -82,7 +82,8 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
          , transactionData_->GetTransactionSummary().feePerByte, armory_->topBlock());
 
       bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(txReq);
-      dlgData.setValue(keys::SettlementId, QString::fromStdString(settlementId_.toHexStr()));
+      dlgData.setValue(keys::Market, "XBT");
+      dlgData.setValue(keys::SettlementId, settlementId_.toHexStr());
       dlgData.setValue(keys::ResponderAuthAddressVerified, true);
       dlgData.setValue(keys::SigningAllowed, true);
 
