@@ -22,7 +22,7 @@ TxSignSettlementBaseDialog {
     readonly property bool is_payOut: passwordDialogData.value("PayOutType") === true
     readonly property bool is_payIn: !is_payOut
 
-    readonly property string onRevokeLabel: passwordDialogData.value("PayOutRevokeType") === true ? qsTr(" ON REVOKE") : ""
+    readonly property string onRevokeLabel: passwordDialogData.value("PayOutRevokeType") === true ? qsTr(" On Revoke") : ""
 
     function getTotalValue() {
         if (is_payOut) {
@@ -211,7 +211,7 @@ TxSignSettlementBaseDialog {
         CustomLabel {
             visible: passwordDialogData.value("TotalSpentVisible") === true
             Layout.fillWidth: true
-            text: is_payIn ? qsTr("I WILL SPEND ") : qsTr("I WILL RECEIVE") + onRevokeLabel
+            text: is_payIn ? qsTr("Total Sent ") : qsTr("Total Received ") + onRevokeLabel
         }
         CustomLabelValue {
             visible: passwordDialogData.value("TotalSpentVisible") === true

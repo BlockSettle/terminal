@@ -241,7 +241,7 @@ TxSignSettlementBaseDialog {
         CustomLabel {
             visible: is_sell
             Layout.fillWidth: true
-            text: qsTr("I WILL RECEIVE")
+            text: qsTr("Total Received")
         }
         CustomLabelValue {
             visible: is_sell
@@ -279,7 +279,7 @@ TxSignSettlementBaseDialog {
         CustomLabel {
             visible: is_buy
             Layout.fillWidth: true
-            text: qsTr("I WILL SPEND")
+            text: qsTr("Total Sent")
         }
         CustomLabelValue {
             visible: is_buy
