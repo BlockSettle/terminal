@@ -1,14 +1,26 @@
 {
-   "latest_version": "0.21.7",
-   "release_date": "18 Sep 2019",
+   "latest_version": "0.21.8",
+   "release_date": "19 Sep 2019",
    "changes": [
+      {
+         "version_string": "0.21.8",
+         "previous_version": "0.21.7",
+         "release_date": "19 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+         ],
+         "bug_fixes": [
+            "Settlement dialogs fixes"
+         ],
+         "revision": "82612fcb",
+         "common_revision": "064e542c"
+      },
       {
          "version_string": "0.21.7",
          "previous_version": "0.21.6",
          "release_date": "18 Sep 2019",
          "release_type": "dev",
-         "improvements": [
-         ],
+         "improvements": [],
          "bug_fixes": [
             "Fix crash on start"
          ],
