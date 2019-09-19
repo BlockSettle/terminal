@@ -115,7 +115,8 @@ protected:
    const double   initialAmount_ = 1.01;
    const uint32_t ccFundingAmount_ = 1000;
    const uint64_t ccLotSize_ = 526;
-   std::shared_ptr<bs::core::hd::Leaf>   authSignWallet_;
+   std::shared_ptr<bs::core::hd::Wallet>  priWallet_;
+   std::shared_ptr<bs::core::hd::Leaf>    authSignWallet_;
    std::shared_ptr<bs::sync::Wallet>   authWallet_;
    std::shared_ptr<bs::core::Wallet>   xbtSignWallet_;
    std::shared_ptr<bs::sync::Wallet>   xbtWallet_;

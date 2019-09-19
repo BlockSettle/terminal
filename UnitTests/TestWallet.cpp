@@ -63,15 +63,14 @@ public:
 
 TEST_F(TestWallet, BIP44_derivation)
 {
-   SecureBinaryData seed("test seed");
-   SecureBinaryData passphrase("passphrase");
-   auto wallet = std::make_shared<bs::core::hd::Wallet>("test", ""
-      , bs::core::wallet::Seed{ SecureBinaryData("test seed"), NetworkType::TestNet },
-      passphrase, walletFolder_);
+   const bs::core::wallet::Seed seed{ SecureBinaryData{"test seed"}, NetworkType::TestNet };
+   const SecureBinaryData passphrase("passphrase");
+   const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
+   auto wallet = std::make_shared<bs::core::hd::Wallet>("test", "", seed, pd, walletFolder_);
    ASSERT_NE(wallet, nullptr);
 
    {
-      auto lock = wallet->lockForEncryption(passphrase);
+      const bs::core::WalletPasswordScoped lock(wallet, passphrase);
       wallet->createStructure();
       ASSERT_NE(wallet->getGroup(wallet->getXBTGroupType()), nullptr);
    }
@@ -86,7 +85,7 @@ TEST_F(TestWallet, BIP44_derivation)
    auto val = leafXbt->getExtAddressCount();
 
    BIP32_Node node;
-   node.initFromSeed(seed);
+   node.initFromSeed(seed.seed());
    std::vector<unsigned> derPath = {
       0x8000002c, //44' 
       0x80000001, //1'
@@ -113,8 +112,10 @@ TEST_F(TestWallet, BIP44_primary)
 
    const bs::core::wallet::Seed seed{ SecureBinaryData("Sample test seed")
       , NetworkType::TestNet };
+   const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
+
    auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test"
-      , seed, walletFolder_, passphrase, true);
+      , seed, walletFolder_, pd, true);
    EXPECT_NE(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
 
    auto wltMgr = envPtr_->walletsMgr();
@@ -138,13 +139,13 @@ TEST_F(TestWallet, BIP44_primary)
    EXPECT_THROW(grpXbt->createLeaf(AddressEntryType_Default, 0), std::exception);
 
    {
-      auto lock = wallet->lockForEncryption(wrongPass);
+      const bs::core::WalletPasswordScoped lock(wallet, wrongPass);
       EXPECT_THROW(grpXbt->createLeaf(AddressEntryType_Default, 1, 10), std::exception);
       EXPECT_EQ(grpXbt->getNumLeaves(), 2);
    }
 
    {
-      auto lock = wallet->lockForEncryption(passphrase);
+      const bs::core::WalletPasswordScoped lock(wallet, passphrase);
       const auto leaf1 = grpXbt->createLeaf(AddressEntryType_P2WPKH, 1, 10);
       ASSERT_NE(leaf1, nullptr);
       EXPECT_EQ(grpXbt->getNumLeaves(), 3);
@@ -182,12 +183,14 @@ TEST_F(TestWallet, BIP44_primary)
 TEST_F(TestWallet, BIP44_address)
 {
    SecureBinaryData passphrase("passphrase");
+   const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
    auto wallet = std::make_shared<bs::core::hd::Wallet>("test", ""
-      , bs::core::wallet::Seed{ SecureBinaryData("test seed"), NetworkType::TestNet },
-      passphrase, walletFolder_);
+      , bs::core::wallet::Seed{ SecureBinaryData("test seed"), NetworkType::TestNet }
+      , pd, walletFolder_);
    ASSERT_NE(wallet, nullptr);
 
-   auto lock = wallet->lockForEncryption(passphrase);
+   const bs::core::WalletPasswordScoped lock(wallet, passphrase);
+
    auto grp = wallet->createGroup(wallet->getXBTGroupType());
    ASSERT_NE(grp, nullptr);
    auto leaf = grp->createLeaf(AddressEntryType_Default, 0, 10);
@@ -208,10 +211,11 @@ TEST_F(TestWallet, BIP44_address)
 TEST_F(TestWallet, BIP44_WatchingOnly)
 {
    SecureBinaryData passphrase("passphrase");
+   const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
    const size_t nbAddresses = 10;
    auto wallet = std::make_shared<bs::core::hd::Wallet>("test", ""
-      , bs::core::wallet::Seed{ SecureBinaryData("test seed"), NetworkType::TestNet},
-      passphrase, walletFolder_);
+      , bs::core::wallet::Seed{ SecureBinaryData("test seed"), NetworkType::TestNet}
+      , pd, walletFolder_);
    ASSERT_NE(wallet, nullptr);
    EXPECT_FALSE(wallet->isWatchingOnly());
    auto grp = wallet->createGroup(wallet->getXBTGroupType());
@@ -219,7 +223,7 @@ TEST_F(TestWallet, BIP44_WatchingOnly)
 
    std::shared_ptr<bs::core::hd::Leaf> leaf1;
    {
-      auto lock = wallet->lockForEncryption(passphrase);
+      const bs::core::WalletPasswordScoped lock(wallet, passphrase);
       leaf1 = grp->createLeaf(AddressEntryType_Default, 0, 10);
       ASSERT_NE(leaf1, nullptr);
       EXPECT_FALSE(leaf1->isWatchingOnly());
@@ -273,14 +277,17 @@ TEST_F(TestWallet, ExtOnlyAddresses)
 {
    SecureBinaryData passphrase("test");
    const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
-   bs::core::hd::Wallet wallet1("test1", "", seed, passphrase, walletFolder_, envPtr_->logger());
-   wallet1.setExtOnly();
+   const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
+
+   auto wallet1 = std::make_shared<bs::core::hd::Wallet>("test1", "", seed, pd, walletFolder_
+      , envPtr_->logger());
+   wallet1->setExtOnly();
 
    std::shared_ptr<bs::core::hd::Leaf> leaf1;
    {
-      auto lock = wallet1.lockForEncryption(passphrase);
+      const bs::core::WalletPasswordScoped lock(wallet1, passphrase);
 
-      auto grp1 = wallet1.createGroup(wallet1.getXBTGroupType());
+      auto grp1 = wallet1->createGroup(wallet1->getXBTGroupType());
       ASSERT_NE(grp1, nullptr);
 
       leaf1 = grp1->createLeaf(AddressEntryType_Default, 0);
@@ -293,13 +300,14 @@ TEST_F(TestWallet, ExtOnlyAddresses)
    EXPECT_EQ(index1, "0/0");
 
    const bs::core::wallet::Seed seed2{ SecureBinaryData("test seed 2"), NetworkType::TestNet };
-   bs::core::hd::Wallet wallet2("test2", "", seed2, passphrase, walletFolder_, envPtr_->logger());
+   auto wallet2 = std::make_shared<bs::core::hd::Wallet>("test2", "", seed2, pd, walletFolder_
+      , envPtr_->logger());
 
    std::shared_ptr<bs::core::hd::Leaf> leaf2;
    {
-      auto lock = wallet2.lockForEncryption(passphrase);
+      const bs::core::WalletPasswordScoped lock(wallet2, passphrase);
 
-      auto grp2 = wallet2.createGroup(wallet2.getXBTGroupType());
+      auto grp2 = wallet2->createGroup(wallet2->getXBTGroupType());
       ASSERT_NE(grp2, nullptr);
 
       leaf2 = grp2->createLeaf(AddressEntryType_Default, 0);
@@ -312,8 +320,8 @@ TEST_F(TestWallet, ExtOnlyAddresses)
    EXPECT_EQ(index2, "1/0");
    EXPECT_NE(addr1, addr2);
 
-   EXPECT_TRUE(wallet1.eraseFile());
-   EXPECT_TRUE(wallet2.eraseFile());
+   EXPECT_TRUE(wallet1->eraseFile());
+   EXPECT_TRUE(wallet2->eraseFile());
 }
 
 TEST_F(TestWallet, CreateDestroyLoad)
@@ -333,11 +341,12 @@ TEST_F(TestWallet, CreateDestroyLoad)
    {
       //create a wallet
       const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         "test", "", seed, passphrase, walletFolder_, envPtr_->logger());
+         "test", "", seed, pd, walletFolder_, envPtr_->logger());
 
       {
-         auto lock = walletPtr->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(walletPtr, passphrase);
          walletPtr->createStructure(10);
       }
 
@@ -557,11 +566,12 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
    {
       //create a wallet
       const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         "test", "", seed, passphrase, walletFolder_, envPtr_->logger());
+         "test", "", seed, pd, walletFolder_, envPtr_->logger());
 
       {
-         auto lock = walletPtr->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(walletPtr, passphrase);
          walletPtr->createStructure(10);
       }
 
@@ -826,8 +836,9 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
    {
       //create a wallet
       const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         "test", "", seed, passphrase, walletFolder_, envPtr_->logger());
+         "test", "", seed, pd, walletFolder_, envPtr_->logger());
 
       auto group = walletPtr->createGroup(bs::hd::BlockSettle_Auth);
       ASSERT_TRUE(group != nullptr);
@@ -839,7 +850,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       std::shared_ptr<bs::core::hd::Leaf> leafPtr;
 
       {
-         auto lock = walletPtr->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(walletPtr, passphrase);
          leafPtr = group->createLeaf(AddressEntryType_Default, 0x800000b1, 10);
          ASSERT_TRUE(leafPtr != nullptr);
          ASSERT_TRUE(leafPtr->hasExtOnlyAddresses());
@@ -1066,8 +1077,9 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
    {
       //create a wallet
       const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         "test", "", seed, passphrase, walletFolder_, envPtr_->logger());
+         "test", "", seed, pd, walletFolder_, envPtr_->logger());
 
       auto group = walletPtr->createGroup(bs::hd::BlockSettle_Auth);
       ASSERT_TRUE(group != nullptr);
@@ -1079,7 +1091,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
       std::shared_ptr<bs::core::hd::Leaf> leafPtr;
 
       {
-         auto lock = walletPtr->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(walletPtr, passphrase);
          leafPtr = group->createLeaf(AddressEntryType_Default, 0, 10);
          ASSERT_TRUE(leafPtr != nullptr);
          ASSERT_TRUE(leafPtr->hasExtOnlyAddresses());
@@ -1095,8 +1107,8 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
 
       {
          //need to lock for leaf creation
-         auto lock = walletPtr->lockForEncryption(passphrase);
-         
+         const bs::core::WalletPasswordScoped lock(walletPtr, passphrase);
+
          /*
          Create settlement leaf from address, wallet will generate 
          settlement group on the fly.
@@ -1287,11 +1299,12 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
    {
       //create a wallet
       const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         "test", "", seed, passphrase, walletFolder_, envPtr_->logger());
+         "test", "", seed, pd, walletFolder_, envPtr_->logger());
 
       {
-         auto lock = walletPtr->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(walletPtr, passphrase);
          walletPtr->createStructure(10);
       }
 
@@ -1444,6 +1457,7 @@ TEST_F(TestWallet, ImportExport_Easy16)
    SecureBinaryData passphrase("test");
 
    bs::core::wallet::Seed seed{ CryptoPRNG::generateRandom(32), NetworkType::TestNet };
+   const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
    ASSERT_EQ(seed.seed().getSize(), 32);
 
    std::string filename, leaf1Id;
@@ -1455,10 +1469,10 @@ TEST_F(TestWallet, ImportExport_Easy16)
       std::shared_ptr<bs::core::hd::Leaf> leaf1;
 
       auto wallet1 = std::make_shared<bs::core::hd::Wallet>(
-         "test1", "", seed, passphrase, walletFolder_, nullptr);
+         "test1", "", seed, pd, walletFolder_, nullptr);
       auto grp1 = wallet1->createGroup(wallet1->getXBTGroupType());
       {
-         auto lock = wallet1->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(wallet1, passphrase);
          leaf1 = grp1->createLeaf(AddressEntryType_Default, 0u);
          addr1 = leaf1->getNewExtAddress();
       }
@@ -1474,7 +1488,7 @@ TEST_F(TestWallet, ImportExport_Easy16)
       catch (...) { }
 
       try {
-         auto lock = wallet1->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(wallet1, passphrase);
          seed1 = std::make_shared<bs::core::wallet::Seed>(
             wallet1->getDecryptedSeed());
       }
@@ -1501,14 +1515,14 @@ TEST_F(TestWallet, ImportExport_Easy16)
       const auto seedRestored =
          bs::core::wallet::Seed::fromEasyCodeChecksum(easySeed, NetworkType::TestNet);
       auto wallet2 = std::make_shared<bs::core::hd::Wallet>(
-         "test2", "", seedRestored, passphrase, walletFolder_, nullptr);
+         "test2", "", seedRestored, pd, walletFolder_, nullptr);
       auto grp2 = wallet2->createGroup(wallet2->getXBTGroupType());
 
       //check leaf id and addr data
       std::shared_ptr<bs::core::hd::Leaf> leaf2;
       bs::Address addr2;
       {
-         auto lock = wallet2->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(wallet2, passphrase);
          leaf2 = grp2->createLeaf(AddressEntryType_Default, 0u);
          addr2 = leaf2->getNewExtAddress();
       }
@@ -1518,14 +1532,12 @@ TEST_F(TestWallet, ImportExport_Easy16)
 
       //check seeds again
       std::shared_ptr<bs::core::wallet::Seed> seed2;
-      try
-      {
-         auto lock = wallet2->lockForEncryption(passphrase);
+      try {
+         const bs::core::WalletPasswordScoped lock(wallet2, passphrase);
          seed2 = std::make_shared<bs::core::wallet::Seed>(
             wallet2->getDecryptedSeed());
       }
-      catch (...)
-      {
+      catch (...) {
          ASSERT_TRUE(false);
       }
 
@@ -1550,7 +1562,7 @@ TEST_F(TestWallet, ImportExport_Easy16)
    catch (...) { }
 
    try {
-      auto lock = wallet3->lockForEncryption(passphrase);
+      const bs::core::WalletPasswordScoped lock(wallet3, passphrase);
       seed3 = std::make_shared<bs::core::wallet::Seed>(
          wallet3->getDecryptedSeed());
    }
@@ -1560,7 +1572,6 @@ TEST_F(TestWallet, ImportExport_Easy16)
 
    //check seed
    EXPECT_EQ(seed.seed(), seed3->seed());
-
 
    //check addr & id
    const bs::hd::Path xbtPath({ bs::hd::Purpose::Native, bs::hd::Bitcoin_test, 0 });
@@ -1573,6 +1584,7 @@ TEST_F(TestWallet, ImportExport_Easy16)
 TEST_F(TestWallet, ImportExport_xpriv)
 {
    SecureBinaryData passphrase("test");
+   const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
 
    bs::core::wallet::Seed seed{ CryptoPRNG::generateRandom(32), NetworkType::TestNet };
    ASSERT_EQ(seed.seed().getSize(), 32);
@@ -1586,10 +1598,10 @@ TEST_F(TestWallet, ImportExport_xpriv)
       std::shared_ptr<bs::core::hd::Leaf> leaf1;
 
       auto wallet1 = std::make_shared<bs::core::hd::Wallet>(
-         "test1", "", seed, passphrase, walletFolder_, nullptr);
+         "test1", "", seed, pd, walletFolder_, nullptr);
       auto grp1 = wallet1->createGroup(wallet1->getXBTGroupType());
       {
-         auto lock = wallet1->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(wallet1, passphrase);
          leaf1 = grp1->createLeaf(AddressEntryType_Default, 0u);
          addr1 = leaf1->getNewExtAddress();
       }
@@ -1605,7 +1617,7 @@ TEST_F(TestWallet, ImportExport_xpriv)
       catch (...) { }
 
       try {
-         auto lock = wallet1->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(wallet1, passphrase);
          seed1 = std::make_shared<bs::core::wallet::Seed>(
             wallet1->getDecryptedSeed());
       }
@@ -1631,14 +1643,14 @@ TEST_F(TestWallet, ImportExport_xpriv)
       const auto seedRestored =
          bs::core::wallet::Seed::fromXpriv(xpriv, NetworkType::TestNet);
       auto wallet2 = std::make_shared<bs::core::hd::Wallet>(
-         "test2", "", seedRestored, passphrase, walletFolder_, nullptr);
+         "test2", "", seedRestored, pd, walletFolder_, nullptr);
       auto grp2 = wallet2->createGroup(wallet2->getXBTGroupType());
 
       //check leaf id and addr data
       std::shared_ptr<bs::core::hd::Leaf> leaf2;
       bs::Address addr2;
       {
-         auto lock = wallet2->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(wallet2, passphrase);
          leaf2 = grp2->createLeaf(AddressEntryType_Default, 0u);
          addr2 = leaf2->getNewExtAddress();
       }
@@ -1647,15 +1659,13 @@ TEST_F(TestWallet, ImportExport_xpriv)
       EXPECT_EQ(addr1, addr2);
 
       //check restoring from xpriv yields no seed
-      try
-      {
-         auto lock = wallet2->lockForEncryption(passphrase);
+      try {
+         const bs::core::WalletPasswordScoped lock(wallet2, passphrase);
          auto seed2 = std::make_shared<bs::core::wallet::Seed>(
             wallet2->getDecryptedSeed());
          ASSERT_TRUE(false);
       }
-      catch (WalletException&)
-      {}
+      catch (const WalletException &) {}
 
       //shut it all down, reload, check seeds again
       filename = wallet2->getFileName();
@@ -1666,19 +1676,17 @@ TEST_F(TestWallet, ImportExport_xpriv)
    auto grp3 = wallet3->getGroup(wallet3->getXBTGroupType());
 
    //there still shouldnt be a seed to grab
-   try
-   {
-      auto lock = wallet3->lockForEncryption(passphrase);
+   try {
+      const bs::core::WalletPasswordScoped lock(wallet3, passphrase);
       auto seed3 = std::make_shared<bs::core::wallet::Seed>(
          wallet3->getDecryptedSeed());
       ASSERT_TRUE(false);
    }
-   catch (...)
-   {}
+   catch (...) {}
 
    //grab root
    {
-      auto lock = wallet3->lockForEncryption(passphrase);
+      const bs::core::WalletPasswordScoped lock(wallet3, passphrase);
       auto xpriv3 = wallet3->getDecryptedRootXpriv();
       EXPECT_EQ(xpriv3, xpriv);
    }
@@ -1706,14 +1714,14 @@ protected:
       passphrase_ = SecureBinaryData("pass");
       bs::core::wallet::Seed seed{ 
          SecureBinaryData("dem seeds"), NetworkType::TestNet };
+      const bs::wallet::PasswordData pd{ passphrase_, { bs::wallet::EncryptionType::Password } };
 
       walletPtr_ = std::make_shared<bs::core::hd::Wallet>(
-         "test", "", seed, passphrase_, 
-         envPtr_->armoryInstance()->homedir_);
+         "test", "", seed, pd, envPtr_->armoryInstance()->homedir_);
 
       auto grp = walletPtr_->createGroup(walletPtr_->getXBTGroupType());
       {
-         auto lock = walletPtr_->lockForEncryption(passphrase_);
+         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
          leafPtr_ = grp->createLeaf(AddressEntryType_Default, 0, 10);
       }
    }
@@ -1861,13 +1869,13 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
       const auto txReq = syncLeaf->createTXRequest(inputs, { recipient });
       BinaryData txWrongSigned;
       {
-         auto lock = leaf->lockForEncryption(SecureBinaryData{"wrongPass"});
+         const bs::core::WalletPasswordScoped lock(walletPtr_, SecureBinaryData{"wrongPass"});
          EXPECT_THROW(txWrongSigned = leaf->signTXRequest(txReq), std::exception);
          EXPECT_TRUE(txWrongSigned.isNull());
       }
       BinaryData txSigned;
       {
-         auto lock = leaf->lockForEncryption(passphrase_);
+         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
          txSigned = leaf->signTXRequest(txReq);
          ASSERT_FALSE(txSigned.isNull());
       }
@@ -2041,7 +2049,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
          BinaryData txSigned;
          {
-            auto lock = leaf->lockForEncryption(passphrase_);
+            const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
             txSigned = leaf->signTXRequest(txReq);
             ASSERT_FALSE(txSigned.isNull());
          }
@@ -2093,7 +2101,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
       //grab wallet seed
       {
-         auto lock = walletPtr_->lockForEncryption(passphrase_);
+         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
          seed = std::make_shared<bs::core::wallet::Seed>(
             walletPtr_->getDecryptedSeed());
       }
@@ -2108,14 +2116,15 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
    {
       //restore wallet from seed
+      const bs::wallet::PasswordData pd{ passphrase_, { bs::wallet::EncryptionType::Password } };
       walletPtr_ = std::make_shared<bs::core::hd::Wallet>(
          "test", "",
-         *seed, passphrase_,
+         *seed, pd,
          envPtr_->armoryInstance()->homedir_);
 
       auto grp = walletPtr_->createGroup(walletPtr_->getXBTGroupType());
       {
-         auto lock = walletPtr_->lockForEncryption(passphrase_);
+         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
          leafPtr_ = grp->createLeaf(AddressEntryType_Default, 0, 100);
       }
 
@@ -2371,7 +2380,7 @@ TEST_F(TestWalletWithArmory, Comments)
 
    auto wallet = leafPtr_;
    auto passphrase = passphrase_;
-   auto cbTxOutList = [wallet, syncWallet, addr, txComment, promPtr, passphrase]
+   auto cbTxOutList = [wallet, hdWallet=walletPtr_, syncWallet, addr, txComment, promPtr, passphrase]
       (std::vector<UTXO> inputs)->void
    {
       if (inputs.empty()) {
@@ -2383,7 +2392,7 @@ TEST_F(TestWalletWithArmory, Comments)
 
       BinaryData txData;
       {
-         auto lock = wallet->lockForEncryption(passphrase);
+         const bs::core::WalletPasswordScoped lock(hdWallet, passphrase);
          txData = wallet->signTXRequest(txReq);
       }
 
@@ -2472,11 +2481,9 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    auto promPtr1 = std::make_shared<std::promise<bool>>();
    auto fut1 = promPtr1->get_future();
 
-   auto leaf = leafPtr_;
-   auto pass = passphrase_;
    const auto &cbTxOutList = 
-      [this, leaf, syncLeaf, changeAddr, addr2, otherAddr,
-       amount, fee, pass, promPtr1]
+      [this, hdWallet=walletPtr_, leaf=leafPtr_, syncLeaf, changeAddr, addr2, otherAddr,
+       amount, fee, pass=passphrase_, promPtr1]
       (std::vector<UTXO> inputs)->void
    {
       if (inputs.empty()) {
@@ -2494,7 +2501,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
          utxos, { recipient, recipient2 }, fee, false, changeAddr);
       BinaryData txSigned;
       {
-         auto lock = leaf->lockForEncryption(pass);
+         const bs::core::WalletPasswordScoped lock(hdWallet, pass);
          txSigned = leaf->signTXRequest(txReq);
          ASSERT_FALSE(txSigned.isNull());
       }
@@ -2634,7 +2641,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
 
       BinaryData txSigned1;
       {
-         auto lock = leafPtr_->lockForEncryption(passphrase_);
+         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
          txSigned1 = leafPtr_->signTXRequest(txReq1);
          ASSERT_FALSE(txSigned1.isNull());
       }
@@ -2680,7 +2687,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
 
       BinaryData txSigned2;
       {
-         auto lock = leafPtr_->lockForEncryption(passphrase_);
+         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
          txSigned2 = leafPtr_->signTXRequest(txReq2);
          ASSERT_FALSE(txSigned2.isNull());
       }
@@ -2720,7 +2727,7 @@ TEST_F(TestWalletWithArmory, SignSettlement)
 
    {
       //need to lock for leaf creation
-      auto lock = walletPtr_->lockForEncryption(passphrase_);
+      const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
 
       /*
       Create settlement leaf from address, wallet will generate
@@ -2823,7 +2830,7 @@ TEST_F(TestWalletWithArmory, SignSettlement)
       //sign it
       BinaryData signedTx;
       {
-         auto lock = walletPtr_->lockForEncryption(passphrase_);
+         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
          signedTx = walletPtr_->signSettlementTXRequest(
             txReq, { settlementIDs[0], counterpartyPubKey, true });
       }

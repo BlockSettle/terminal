@@ -72,18 +72,19 @@ void TestSettlement::SetUp()
 
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 //   walletsMgr_->createSettlementWallet(NetworkType::TestNet, {});
+   const bs::wallet::PasswordData pd{ passphrase_, { bs::wallet::EncryptionType::Password } };
 
    for (size_t i = 0; i < nbParties_; i++) {
       auto hdWallet = std::make_shared<bs::core::hd::Wallet>(
          "Primary" + std::to_string(i), ""
-         , NetworkType::TestNet, passphrase_
+         , NetworkType::TestNet, pd
          , envPtr_->armoryInstance()->homedir_, logger);
 
       std::shared_ptr<bs::core::hd::Leaf> leaf;
       bs::Address addr;
       auto grp = hdWallet->createGroup(hdWallet->getXBTGroupType());
       {
-         auto lock = hdWallet->lockForEncryption(passphrase_);
+         const bs::core::WalletPasswordScoped lock(hdWallet, passphrase_);
          leaf = grp->createLeaf(AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH), 0);
          addr = leaf->getNewExtAddress();
       }
@@ -96,7 +97,7 @@ void TestSettlement::SetUp()
       auto authGrp = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(grpPtr);
       authGrp->setSalt(CryptoPRNG::generateRandom(32));
       {
-         auto lock = hdWallet->lockForEncryption(passphrase_);
+         const bs::core::WalletPasswordScoped lock(hdWallet, passphrase_);
          authLeaf = authGrp->createLeaf(AddressEntryType_Default, 0);
          authAddr = authLeaf->getNewExtAddress();
       }

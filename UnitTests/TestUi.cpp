@@ -89,8 +89,10 @@ TEST(TestUi, RFQ_entry_CC_sell)
 
    TestEnv env(StaticLogger::loggerPtr);
    env.requireAssets();
+   const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
+
    env.walletsMgr()->createWallet("Primary", "", seed
-      , env.appSettings()->GetHomeDir().toStdString(), passphrase, true);
+      , env.appSettings()->GetHomeDir().toStdString(), pd, true);
    ASSERT_NE(env.walletsMgr()->getPrimaryWallet(), nullptr);
    const auto priWallet = env.walletsMgr()->getPrimaryWallet();
    const auto ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
