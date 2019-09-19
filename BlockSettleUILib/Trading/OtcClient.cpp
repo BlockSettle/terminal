@@ -95,9 +95,11 @@ namespace {
 
       bs::sync::PasswordDialogData dialogData;
 
+      dialogData.setValue(keys::Market, "XBT");
+
       dialogData.setValue(keys::ProductGroup, QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)));
-      dialogData.setValue(keys::Security, QString::fromStdString("XBT/EUR"));
-      dialogData.setValue(keys::Product, QString::fromStdString("XBT"));
+      dialogData.setValue(keys::Security, "XBT/EUR");
+      dialogData.setValue(keys::Product, "XBT");
       dialogData.setValue(keys::Side, QObject::tr(bs::network::Side::toString(bs::network::Side::Type(deal.side))));
 
       dialogData.setValue(keys::Title, QObject::tr("Settlement Transaction"));
