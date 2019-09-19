@@ -94,8 +94,8 @@ public:
    // currently we supports only single account for whole wallet, thus email stored in encKeys_.at(0)
    Q_INVOKABLE QString email() const;
 
-   bs::wallet::KeyRank keyRank() const;
-   void setKeyRank(const bs::wallet::KeyRank &keyRank);
+   bs::wallet::KeyRank keyRank() const { return keyRank_; }
+   void setKeyRank(const bs::wallet::KeyRank &keyRank) { keyRank_ = keyRank; }
 
    bool isEidAuthOnly() const;
    bool isPasswordOnly() const;

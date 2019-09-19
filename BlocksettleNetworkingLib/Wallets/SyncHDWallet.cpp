@@ -362,11 +362,6 @@ std::vector<BinaryData> hd::Wallet::encryptionKeys() const
    return encryptionKeys_;
 }
 
-bs::wallet::KeyRank hd::Wallet::encryptionRank() const
-{
-   return encryptionRank_;
-}
-
 void hd::Wallet::merge(const Wallet& rhs)
 {
    //rudimentary implementation, flesh it out on the go

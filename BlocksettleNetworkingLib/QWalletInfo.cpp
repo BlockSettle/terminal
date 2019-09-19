@@ -213,16 +213,6 @@ QString WalletInfo::email() const
    return QString::fromStdString(AutheIDClient::getDeviceInfo(encKeys_.at(0).toStdString()).userId);
 }
 
-bs::wallet::KeyRank WalletInfo::keyRank() const
-{
-   return keyRank_;
-}
-
-void WalletInfo::setKeyRank(const bs::wallet::KeyRank &keyRank)
-{
-   keyRank_ = keyRank;
-}
-
 bool WalletInfo::isEidAuthOnly() const
 {
    for (auto encType : encTypes()) {

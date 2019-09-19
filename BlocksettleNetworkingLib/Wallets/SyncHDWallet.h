@@ -4,6 +4,7 @@
 #include <functional>
 #include "SyncHDGroup.h"
 #include "SyncHDLeaf.h"
+#include "WalletEncryption.h"
 
 namespace spdlog {
    class logger;
@@ -37,7 +38,7 @@ namespace bs {
 
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
             std::vector<BinaryData> encryptionKeys() const;
-            bs::wallet::KeyRank encryptionRank() const;
+            bs::wallet::KeyRank encryptionRank() const { return encryptionRank_; }
             bool isPrimary() const;
             bool isOffline() const { return isOffline_; }
             NetworkType networkType() const { return netType_; }
