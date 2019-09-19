@@ -823,6 +823,11 @@ void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &resp
 
 void OtcClient::processPbVerifyOtc(const ProxyTerminalPb::Response_VerifyOtc &response)
 {
+   if (!response.success()) {
+      SPDLOG_LOGGER_ERROR(logger_, "OTC verification failed: {}", response.error_msg());
+      return;
+   }
+
    const auto settlementId = BinaryData(response.settlement_id());
 
    auto it = deals_.find(response.settlement_id());
