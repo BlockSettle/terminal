@@ -492,6 +492,10 @@ function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, wa
                "walletInfo": walletInfo
         })
     }
+    else {
+        console.log("[helper.js] Error: passwordDialogData.value(\"Market\") is not set, dialog not created")
+        return
+    }
 
     prepareLiteModeDialog(dlg)
 
