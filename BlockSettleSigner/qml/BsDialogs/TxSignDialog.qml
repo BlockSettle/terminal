@@ -100,7 +100,7 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("Sending Wallet")
+                text: qsTr("Wallet")
             }
             CustomLabelValue {
                 text: walletInfo.name

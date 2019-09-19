@@ -539,6 +539,12 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
                    "passwordDialogData": passwordDialogData
                   })
         }
+        else if (passwordDialogData.value("DialogType") === "RequestPasswordForRevokeAuthAddress") {
+            dlg = Qt.createComponent("../BsControls/BSPasswordInputRevokeAuthAddress.qml").createObject(mainWindow
+                , {"walletInfo": walletInfo,
+                   "passwordDialogData": passwordDialogData
+                  })
+        }
         else if (passwordDialogData.value("DialogType") === "RequestPasswordForPromoteHDWallet") {
             dlg = Qt.createComponent("../BsControls/BSPasswordInputPromoteWallet.qml").createObject(mainWindow
                 , {"walletInfo": walletInfo,
