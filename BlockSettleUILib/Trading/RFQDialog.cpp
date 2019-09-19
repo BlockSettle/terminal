@@ -66,10 +66,6 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, this, &RFQDialog::onOrderFilled);
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQDialog::onSignTxRequested);
 
-   if (rfq_.assetType == bs::network::Asset::SpotXBT) {
-      connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQDialog::onOrderUpdated, Qt::QueuedConnection);
-   }
-
    ui_->pageRequestingQuote->populateDetails(rfq_, transactionData_);
 
    quoteProvider_->SubmitRFQ(rfq_);
@@ -113,7 +109,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
 {
    xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
-      , authAddressManager_, assetMgr_, signContainer_, armory_, walletsManager_
+      , authAddressManager_, signContainer_, armory_, walletsManager_
       , rfq_, quote_, transactionData_, authAddr_);
 
    connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
@@ -197,9 +193,6 @@ void RFQDialog::onSettlementAccepted()
          ccTxMap_[rfq_.requestId] = ccSettlContainer_->txSignedData();
       }
    } else if (xbtSettlContainer_) {
-      if (XBTOrder_.settlementId != quote_.settlementId) {
-         logger_->debug("[RFQDialog::onSettlementAccepted] did not receive proper order");
-      }
       close();
    } else {
       // spotFX
@@ -230,15 +223,6 @@ void RFQDialog::onSignTxRequested(QString orderId, QString reqId)
    close();
 }
 
-void RFQDialog::onOrderUpdated(const bs::network::Order& order)
-{
-   if (xbtSettlContainer_ && (order.settlementId == quote_.settlementId)
-      && (rfq_.assetType == bs::network::Asset::SpotXBT) && (order.status == bs::network::Order::Pending)) {
-         XBTOrder_ = order;
-         xbtSettlContainer_->OrderReceived();
-   }
-}
-
 void RFQDialog::onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx)
 {
    quoteProvider_->AcceptQuote(QString::fromStdString(reqId), quote_, hexPayoutTx);
@@ -253,7 +237,7 @@ void RFQDialog::onUnsignedPayinRequested(const std::string& settlementId)
    xbtSettlContainer_->onUnsignedPayinRequested(settlementId);
 }
 
-void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const std::string& payinHash)
+void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash)
 {
    if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
       return;
@@ -262,11 +246,11 @@ void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const s
    xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash);
 }
 
-void RFQDialog::onSignedPayinRequested(const std::string& settlementId)
+void RFQDialog::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin)
 {
    if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
       return;
    }
 
-   xbtSettlContainer_->onSignedPayinRequested(settlementId);
+   xbtSettlContainer_->onSignedPayinRequested(settlementId, unsignedPayin);
 }

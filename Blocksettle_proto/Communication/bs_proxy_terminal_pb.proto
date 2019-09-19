@@ -103,6 +103,7 @@ message Response
     {
         string  settlement_id       = 1;
         bytes   signed_payout_data  = 2;
+        bytes   unsigned_payin_data = 3;
     }
 
     oneof data

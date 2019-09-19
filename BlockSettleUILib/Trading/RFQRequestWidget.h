@@ -69,8 +69,8 @@ signals:
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
    void unsignedPayinRequested(const std::string& settlementId);
-   void signedPayoutRequested(const std::string& settlementId, const std::string& payinHash);
-   void signedPayinRequested(const std::string& settlementId);
+   void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
+   void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
 
 private:
    void showEditableRFQPage();

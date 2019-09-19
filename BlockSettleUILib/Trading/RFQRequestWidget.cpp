@@ -368,6 +368,7 @@ void RFQRequestWidget::onMessageFromPB(std::string data)
          {
             auto command = response.sign_payout();
 
+            // payin_data - payin hash . binary
             emit signedPayoutRequested(command.settlement_id(), command.payin_data());
          }
          break;
@@ -375,7 +376,8 @@ void RFQRequestWidget::onMessageFromPB(std::string data)
          {
             auto command = response.sign_payin();
 
-            emit signedPayinRequested(command.settlement_id());
+            // unsigned_payin_data - serialized payin. binary
+            emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data());
          }
          break;
    }

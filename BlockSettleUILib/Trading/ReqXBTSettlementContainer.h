@@ -20,7 +20,6 @@ namespace bs {
 }
 class AddressVerificator;
 class ArmoryConnection;
-class AssetManager;
 class AuthAddressManager;
 class SignContainer;
 class QuoteProvider;
@@ -33,7 +32,6 @@ class ReqXBTSettlementContainer : public bs::SettlementContainer
 public:
    ReqXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
@@ -44,9 +42,6 @@ public:
    );
    ~ReqXBTSettlementContainer() override;
 
-   void OrderReceived();
-
-   bool startSigning();
    bool cancel() override;
 
    void activate() override;
@@ -68,21 +63,20 @@ public:
    bool weSell() const { return clientSells_; }
    bool isSellFromPrimary() const { return sellFromPrimary_; }
    bool userKeyOk() const { return userKeyOk_; }
-   bool payinReceived() const { return !payinData_.isNull(); }
+
 
    bs::hd::WalletInfo walletInfo() const { return walletInfo_; }
    bs::hd::WalletInfo walletInfoAuth() const { return walletInfoAuth_; }
 
    void onUnsignedPayinRequested(const std::string& settlementId);
-   void onSignedPayoutRequested(const std::string& settlementId, const std::string& payinHash);
-   void onSignedPayinRequested(const std::string& settlementId);
+   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
 
 signals:
    void settlementCancelled();
    void settlementAccepted();
    void acceptQuote(std::string reqId, std::string hexPayoutTx);
    void retry();
-   void stop();
    void authWalletInfoReceived();
 
 signals:
@@ -103,44 +97,38 @@ private:
    void activateProceed();
 
 private:
-   std::shared_ptr<spdlog::logger>        logger_;
-   std::shared_ptr<AuthAddressManager>    authAddrMgr_;
-   std::shared_ptr<AssetManager>          assetMgr_;
+   std::shared_ptr<spdlog::logger>           logger_;
+   std::shared_ptr<AuthAddressManager>       authAddrMgr_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
-   std::shared_ptr<SignContainer>         signContainer_;
-   std::shared_ptr<ArmoryConnection>      armory_;
-   std::shared_ptr<TransactionData>       transactionData_;
-   bs::core::wallet::TXSignRequest        payInTxRequest_;
-   bs::core::wallet::TXSignRequest        payOutTxRequest_;
+   std::shared_ptr<SignContainer>            signContainer_;
+   std::shared_ptr<ArmoryConnection>         armory_;
+   std::shared_ptr<TransactionData>          transactionData_;
 
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
    bs::Address                settlAddr_;
 
-   std::shared_ptr<AddressVerificator>       addrVerificator_;
+   std::shared_ptr<AddressVerificator>             addrVerificator_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
-   AddressVerificationState   dealerVerifState_ = AddressVerificationState::InProgress;
-
-   bs::hd::WalletInfo walletInfo_, walletInfoAuth_;
+   bs::hd::WalletInfo walletInfo_;
+   bs::hd::WalletInfo walletInfoAuth_;
 
 
    double            amount_;
    std::string       fxProd_;
    uint64_t          fee_;
    BinaryData        settlementId_;
+   std::string       settlementIdString_;
    BinaryData        userKey_;
    BinaryData        dealerAuthKey_;
    bs::Address       recvAddr_;
-   BinaryData        dealerTx_;
-   BinaryData        requesterTx_;
-   BinaryData        payinData_;
-   BinaryData        payoutData_;
-   std::string       dealerAddress_;
+
    std::string       comment_;
    const bool        clientSells_;
    bool              userKeyOk_ = false;
    bool              sellFromPrimary_ = false;
+
    unsigned int      payinSignId_ = 0;
    unsigned int      payoutSignId_ = 0;
    unsigned int      infoReqId_ = 0;
@@ -148,6 +136,8 @@ private:
 
    const bs::Address authAddr_;
    bs::Address       dealerAuthAddress_;
+
+   bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
 
    int64_t payinSignedTs_;
 };
