@@ -599,6 +599,9 @@ void hd::Wallet::copyToFile(const std::string& filename)
 
 void hd::Wallet::pushPasswordPrompt(const std::function<SecureBinaryData()> &lbd)
 {
+   if (!walletPtr_) {
+      return;
+   }
    const auto lbdWrap = [lbd, this](const std::set<BinaryData> &)->SecureBinaryData {
       return lbd();
    };
@@ -609,6 +612,9 @@ void hd::Wallet::pushPasswordPrompt(const std::function<SecureBinaryData()> &lbd
 void hd::Wallet::popPasswordPrompt()
 {
    lbdPwdPrompts_.pop_back();
+   if (!walletPtr_) {
+      return;
+   }
    if (lbdPwdPrompts_.empty()) {
       walletPtr_->resetPassphrasePromptLambda();
    }
