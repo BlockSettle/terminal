@@ -110,6 +110,9 @@ void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function
 
 void SignerAdapter::updateWallet(const std::string &walletId)
 {
+   if (!walletsMgr_) {
+      return;
+   }
    const auto wallet = walletsMgr_->getWalletById(walletId);
    if (!wallet) {
       logger_->debug("[{}] looks like a new wallet was added - syncing all of them");
