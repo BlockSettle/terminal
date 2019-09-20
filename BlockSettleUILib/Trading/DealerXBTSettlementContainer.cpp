@@ -265,6 +265,34 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payout sent: {}"
                      , signedTX.toHexStr());
 
+      // for test only
+      bool payoutCorrect = false;
+      {
+         Signer payoutTx;
+
+         try {
+            payoutTx.deserializeState(signedTX);
+
+            if (payoutTx.isValid()) {
+               if (payoutTx.verify()) {
+                  payoutCorrect = true;
+               } else {
+                  logger_->error("[DealerXBTSettlementContainer::onTXSigned] failed to verify signature");
+               }
+            } else {
+               logger_->error("[DealerXBTSettlementContainer::onTXSigned] signer state is invalid");
+            }
+         } catch(const std::exception& ex) {
+            logger_->error("[DealerXBTSettlementContainer::onTXSigned] failed to check payout : {}"
+                           , ex.what());
+         } catch(...) {
+            logger_->error("[DealerXBTSettlementContainer::onTXSigned] failed to check payout.");
+         }
+      }
+
+      logger_->debug("[DealerXBTSettlementContainer::onTXSigned] payout: {}"
+                     , (payoutCorrect ? "coorect" : "ver failed"));
+
       // ok. there is nothing this container could/should do
       emit completed();
    } else if (payinSignId_ && (payinSignId_ == id)) {
