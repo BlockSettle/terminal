@@ -46,7 +46,7 @@ public:
    TXInfo(const TXInfo &src);
 
    bool isValid() const { return txReq_.isValid(); }
-   size_t nbInputs() const { return txReq_.inputs.size(); }
+   size_t nbInputs() const { return inputsXBT().size(); }
 
    QStringList inputsXBT() const;
    QStringList inputsCC() const;
@@ -73,17 +73,17 @@ signals:
 
 private:
    void init();
-
-   QStringList inputs(core::wallet::Type coinType) const;
+   QStringList inputs(core::wallet::Type leafType) const;
 
 private:
    const bs::core::wallet::TXSignRequest  txReq_;
    QString  txId_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_ = nullptr; // nullptr init required for default constructor
-   std::shared_ptr<spdlog::logger>  logger_ = nullptr;
+   std::shared_ptr<spdlog::logger> logger_ = nullptr;
 
-   const std::function<bool(const bs::Address &)> containsThisAddressCb_ = [this](const bs::Address &address){
+   using ContainsAddressCb = const std::function<bool(const bs::Address &)>;
+   ContainsAddressCb containsThisAddressCb_ = [this](const bs::Address &address){
       if (txReq_.walletIds.empty()) {
          return false;
       }
@@ -105,19 +105,19 @@ private:
       return false;
    };
 
-   const std::function<bool(const bs::Address &)> containsAnyOurXbtAddressCb_ = [this](const bs::Address &address){
+   ContainsAddressCb containsAnyOurXbtAddressCb_ = [this](const bs::Address &address){
       return containsAddressImpl(address, core::wallet::Type::Bitcoin);
    };
 
-   const std::function<bool(const bs::Address &)> containsAnyOurCCAddressCb_ = [this](const bs::Address &address){
+   ContainsAddressCb containsAnyOurCCAddressCb_ = [this](const bs::Address &address){
       return containsAddressImpl(address, core::wallet::Type::ColorCoin);
    };
 
-   const std::function<bool(const bs::Address &)> containsCounterPartyAddressCb_ = [this](const bs::Address &address){
+   ContainsAddressCb containsCounterPartyAddressCb_ = [this](const bs::Address &address){
       return notContainsAddressImpl(address);
    };
 
-   bool containsAddressImpl(const bs::Address &address, core::wallet::Type coinType) const;
+   bool containsAddressImpl(const bs::Address &address, core::wallet::Type walletType) const;
    bool notContainsAddressImpl(const bs::Address &address) const;
 };
 
