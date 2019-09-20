@@ -155,7 +155,7 @@ bool wallet::TXSignRequest::isValid() const noexcept
    return true;
 }
 
-Signer wallet::TXSignRequest::getSigner() const
+Signer wallet::TXSignRequest::getSigner(const std::shared_ptr<ResolverFeed> &resolver) const
 {
    bs::CheckRecipSigner signer;
 
@@ -169,10 +169,10 @@ Signer wallet::TXSignRequest::getSigner() const
 
       for (const auto &utxo : inputs) {
          std::shared_ptr<ScriptSpender> spender;
-/*         if (resolver) {
+         if (resolver) {
             spender = std::make_shared<ScriptSpender>(utxo, resolver);
          }
-         else*/ if (populateUTXOs) {
+         else if (populateUTXOs) {
             spender = std::make_shared<ScriptSpender>(utxo.getTxHash(), utxo.getTxOutIndex(), utxo.getValue());
          }
          else {
@@ -205,9 +205,9 @@ Signer wallet::TXSignRequest::getSigner() const
    }
    signer.removeDupRecipients();
 
-/*   if (resolver) {
+   if (resolver) {
       signer.setFeed(resolver);
-   }*/
+   }
    return signer;
 }
 

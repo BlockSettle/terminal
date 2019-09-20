@@ -186,8 +186,12 @@ namespace bs {
             std::string offlineFilePath;
 
             bool isValid() const noexcept;
-            BinaryData serializeState() const { return getSigner().serializeState(); }
-            BinaryData txId() const { return getSigner().getTxId(); }
+            BinaryData serializeState(const std::shared_ptr<ResolverFeed> &resolver = nullptr) const {
+               return getSigner(resolver).serializeState();
+            }
+            BinaryData txId(const std::shared_ptr<ResolverFeed> &resolver=nullptr) const {
+               return getSigner(resolver).getTxId();
+            }
             size_t estimateTxVirtSize() const;
 
             using ContainsAddressCb = std::function<bool(const bs::Address &address)>;
@@ -201,8 +205,9 @@ namespace bs {
 
             std::vector<UTXO> getInputs(const ContainsAddressCb &containsAddressCb) const;
             std::vector<std::shared_ptr<ScriptRecipient>> getRecipients(const ContainsAddressCb &containsAddressCb) const;
+
          private:
-            Signer getSigner() const;
+            Signer getSigner(const std::shared_ptr<ResolverFeed> &resolver = nullptr) const;
          };
 
 

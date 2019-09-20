@@ -262,13 +262,12 @@ std::vector<std::string> hd::Wallet::registerWallet(
    const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    std::vector<std::string> result;
-   for (const auto &leaf : getLeaves()) 
-   {
+   for (const auto &leaf : getLeaves()) {
       //settlement leaves are not registered
       if (leaf->type() == bs::core::wallet::Type::Settlement)
          continue;
 
-      auto&& regIDs = leaf->registerWallet(armory, asNew);
+      const auto &regIDs = leaf->registerWallet(armory, asNew);
       result.insert(result.end(), regIDs.begin(), regIDs.end());
    }
 
