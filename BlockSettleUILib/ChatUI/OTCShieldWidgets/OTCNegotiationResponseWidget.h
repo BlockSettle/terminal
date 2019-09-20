@@ -6,6 +6,7 @@
 
 #include "OtcTypes.h"
 #include "OTCWindowsAdapterBase.h"
+#include "CommonTypes.h"
 
 namespace Ui {
    class OTCNegotiationCommonWidget;
@@ -29,18 +30,31 @@ signals:
    void responseUpdated();
    void responseRejected();
 
-protected:
-   void syncInterface() override;
+protected slots:
+   void onSyncInterface() override;
+   void onUpdateMD(bs::network::Asset::Type type, const QString &security, const bs::network::MDFields& fields) override;
+   void onUpdateBalances() override;
 
 private slots:
    void onChanged();
    void onAcceptOrUpdateClicked();
+   void onUpdateIndicativePrice();
+   void onShowXBTInputsClicked();
+   void onXbtInputsProcessed();
 
    void onCurrentWalletChanged();
+
+protected:
+   void updateIndicativePriceValue();
 
 private:
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
    bs::network::otc::Offer receivedOffer_;
+
+   bs::network::Asset::Type productGroup_ = bs::network::Asset::SpotXBT;
+   QString security_{ QLatin1String("XBT/EUR") };
+   double sellIndicativePrice_{};
+   double buyIndicativePrice_{};
 };
 
 #endif // __OTC_NEGOTIATION_RESPONSE_WIDGET_H__
