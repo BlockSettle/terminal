@@ -2883,7 +2883,7 @@ TEST(TestWallet, 1of2_SameKey)
 }
 #endif   //0
 
-TEST(TestWalletUtils, TxIdNativeSegwit)
+TEST_F(TestWallet, TxIdNativeSegwit)
 {
    bs::core::wallet::TXSignRequest request;
 
@@ -2901,7 +2901,7 @@ TEST(TestWalletUtils, TxIdNativeSegwit)
    ASSERT_NO_THROW(request.txId());
 }
 
-TEST(TestWalletUtils, TxIdNestedSegwit)
+TEST_F(TestWallet, TxIdNestedSegwit)
 {
    const SecureBinaryData passphrase("password");
    const bs::core::wallet::Seed seed{ SecureBinaryData("TxId test seed"), NetworkType::TestNet };
