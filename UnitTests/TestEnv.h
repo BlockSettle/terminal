@@ -155,7 +155,7 @@ public:
    
    static std::shared_ptr<DBNotificationStruct> waitOnNotification(void)
    {
-      return std::move(notifQueue_.pop_front());
+      return notifQueue_.pop_front();
    }
 
    static void waitOnRefresh(const std::vector<std::string>& ids)
@@ -256,8 +256,8 @@ public:
       const std::shared_ptr<spdlog::logger> &loggerRef,
       const std::string &txCacheFN, 
       bool cbInMainThread = true) :
-      armoryInstance_(armoryInstance),
       ArmoryObject(loggerRef, txCacheFN, cbInMainThread)
+      , armoryInstance_(armoryInstance)
    {}
 
    bool pushZC(const BinaryData& rawTx) const override

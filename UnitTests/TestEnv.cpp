@@ -245,6 +245,7 @@ std::map<unsigned, BinaryData> ArmoryInstance::mineNewBlock(
 
 void ArmoryInstance::pushZC(const BinaryData& zc, unsigned int blocksUntilMined)
 {
+   StaticLogger::loggerPtr->debug("new ZC: {}", zc.toHexStr());
    std::vector<std::pair<BinaryData, unsigned int>> zcVec;
    zcVec.push_back({ zc, blocksUntilMined });
    nodePtr_->pushZC(zcVec);

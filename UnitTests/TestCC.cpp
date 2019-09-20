@@ -55,10 +55,13 @@ void TestCC::sendTo(uint64_t value, bs::Address& addr)
    //sign & send
    signer.sign();
    envPtr_->armoryInstance()->pushZC(signer.serialize());
+   envPtr_->blockMonitor()->waitForZC();
 }
 
 void TestCC::SetUp()
 {
+   UnitTestWalletACT::clear();
+
    passphrase_ = SecureBinaryData("pass");
    coinbasePubKey_ = CryptoECDSA().ComputePublicKey(coinbasePrivKey_, true);
    coinbaseScrAddr_ = BtcUtils::getHash160(coinbasePubKey_);
@@ -73,7 +76,7 @@ void TestCC::SetUp()
    const bs::wallet::PasswordData pd{ passphrase_, { bs::wallet::EncryptionType::Password } };
 
    const auto priWallet = envPtr_->walletsMgr()->createWallet("Primary", "",
-      bs::core::wallet::Seed(CryptoPRNG::generateRandom(32), NetworkType::TestNet), 
+      bs::core::wallet::Seed(SecureBinaryData("test seed"), NetworkType::TestNet),
       envPtr_->armoryInstance()->homedir_, pd, true);
 
    if (!priWallet)
@@ -187,14 +190,14 @@ void TestCC::SetUp()
          throw e;
       }
    };
-   auto inputs = xbtWallet_->getSpendableTxOutList(cbInputs, UINT64_MAX);
+   xbtWallet_->getSpendableTxOutList(cbInputs, UINT64_MAX);
    ASSERT_TRUE(futFund.get());
 
    auto promPtr = std::make_shared<std::promise<bool>>();
    auto fut = promPtr->get_future();
    auto ctrPtr = std::make_shared<std::atomic<unsigned>>(0);
 
-   auto waitOnBalance = [this, ctrPtr, promPtr](void)->void
+   auto waitOnBalance = [ctrPtr, promPtr](void)->void
    {
       if (ctrPtr->fetch_add(1) == 1)
          promPtr->set_value(true);
@@ -207,6 +210,7 @@ void TestCC::SetUp()
 void TestCC::TearDown()
 {
    envPtr_->walletsMgr()->deleteWalletFile(envPtr_->walletsMgr()->getPrimaryWallet());
+   UnitTestWalletACT::clear();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -237,7 +241,7 @@ TEST_F(TestCC, Initial_balance)
    EXPECT_DOUBLE_EQ(xbtWallet_->getTotalBalance(), totalD);
 }
 
-TEST_F(TestCC, DISABLED_TX_buy)
+TEST_F(TestCC, TX_buy)
 {
    const float feePerByte = 7.5;
    const double qtyCC = 100;
@@ -271,7 +275,7 @@ TEST_F(TestCC, DISABLED_TX_buy)
 
       // requester uses dealer's TX
       const auto &cbTxOutList2 =
-         [this, qtyCC, spendVal2, txReq1, feePerByte, &txHash](std::vector<UTXO> inputs2) {
+         [this, spendVal2, txReq1, feePerByte, &txHash](std::vector<UTXO> inputs2) {
          const auto recipient2 = recvAddr_.getRecipient(spendVal2);
          ASSERT_NE(recipient2, nullptr);
          auto promChange2Addr = std::make_shared<std::promise<bs::Address>>();
@@ -289,7 +293,7 @@ TEST_F(TestCC, DISABLED_TX_buy)
 
          auto promPtr = std::make_shared<std::promise<bool>>();
          auto fut = promPtr->get_future();
-         const auto &cbGACheck = [this, promPtr](bool result) {
+         const auto &cbGACheck = [promPtr](bool result) {
             ASSERT_TRUE(result);
             promPtr->set_value(true);
          };
@@ -339,9 +343,10 @@ TEST_F(TestCC, DISABLED_TX_buy)
    };
    ccWallet_->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
 
-   auto zcVec = envPtr_->blockMonitor()->waitForZC();
+   auto zcVec = envPtr_->blockMonitor()->waitForZCs(3);
+
    ASSERT_EQ(zcVec.size(), 3);
-   EXPECT_EQ(zcVec[0].txHash, txHash);
+   EXPECT_EQ(zcVec[1].txHash, txHash);
 
    auto promBal = std::make_shared<std::promise<bool>>();
    auto futBal = promBal->get_future();
@@ -357,13 +362,15 @@ TEST_F(TestCC, DISABLED_TX_buy)
    futBal.wait();
 
    auto balances = ccWallet_->getAddrBalance(ccRecvAddr);
+   ASSERT_GE(balances.size(), 1);
    EXPECT_EQ(balances[0], qtyCC);
 
    balances = xbtWallet_->getAddrBalance(recvAddr_);
+   ASSERT_GE(balances.size(), 1);
    EXPECT_EQ(balances[0], spendVal2);
 }
 
-TEST_F(TestCC, DISABLED_TX_sell)
+TEST_F(TestCC, TX_sell)
 {
    const float feePerByte = 8.5;
    const double qtyCC = 100;
@@ -456,9 +463,9 @@ TEST_F(TestCC, DISABLED_TX_sell)
    };
    ccWallet_->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
 
-   auto&& zcVec = envPtr_->blockMonitor()->waitForZC();
+   auto zcVec = envPtr_->blockMonitor()->waitForZCs(3);
    ASSERT_EQ(zcVec.size(), 3);
-   EXPECT_EQ(zcVec[0].txHash, txHash);
+   EXPECT_EQ(zcVec[1].txHash, txHash);
 
    auto promBal = std::make_shared<std::promise<bool>>();
    auto futBal = promBal->get_future();

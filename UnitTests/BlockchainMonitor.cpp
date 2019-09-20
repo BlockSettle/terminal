@@ -40,7 +40,7 @@ std::vector<bs::TXEntry> BlockchainMonitor::waitForZC()
 {
    while (true) {
       try {
-         auto&& zcVec = zcQueue_.pop_front();
+         auto zcVec = zcQueue_.pop_front();
          return zcVec;
       }
       catch (IsEmpty&)
@@ -48,5 +48,15 @@ std::vector<bs::TXEntry> BlockchainMonitor::waitForZC()
 
       std::this_thread::sleep_for(std::chrono::milliseconds{10});
    }
+}
+
+std::vector<bs::TXEntry> BlockchainMonitor::waitForZCs(int count)
+{
+   std::vector<bs::TXEntry> result;
+   while (int(result.size()) < count) {
+      auto newItems = waitForZC();
+      result.insert(result.end(), std::make_move_iterator(newItems.begin()), std::make_move_iterator(newItems.end()));
+   }
+   return result;
 }
 

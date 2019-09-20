@@ -27,6 +27,7 @@ public:
 
    uint32_t waitForNewBlocks(uint32_t targetHeight = 0);
    std::vector<bs::TXEntry> waitForZC(void);
+   std::vector<bs::TXEntry> waitForZCs(int count);
 
    static bool waitForFlag(std::atomic_bool &
       , const std::chrono::milliseconds timeout = std::chrono::milliseconds{10000});
