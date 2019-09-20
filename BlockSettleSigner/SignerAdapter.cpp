@@ -147,25 +147,20 @@ void SignerAdapter::passwordReceived(const std::string &walletId
 }
 
 void SignerAdapter::createWallet(const std::string &name, const std::string &desc
-   , bs::core::wallet::Seed seed, bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
-   , bs::wallet::KeyRank keyRank, const std::function<void(bs::error::ErrorCode errorCode)> &cb)
+   , bs::core::wallet::Seed seed, bool primary, const bs::wallet::PasswordData &pwdData
+   , const std::function<void(bs::error::ErrorCode errorCode)> &cb)
 {
-   headless::CreateHDWalletRequest request;
+   signer::CreateHDWalletRequest request;
 
-   if (!pwdData.empty()) {
-      request.set_rankm(keyRank.first);
-      request.set_rankn(keyRank.second);
-   }
-   for (const auto &pwd : pwdData) {
-      auto reqPwd = request.add_password();
-      reqPwd->set_password(pwd.password.toBinStr());
-      reqPwd->set_enctype(static_cast<uint32_t>(pwd.encType));
-      reqPwd->set_enckey(pwd.encKey.toBinStr());
-   }
+   auto reqPwd = request.mutable_password();
+   reqPwd->set_password(pwdData.password.toBinStr());
+   reqPwd->set_enctype(static_cast<uint32_t>(pwdData.metaData.encType));
+   reqPwd->set_enckey(pwdData.metaData.encKey.toBinStr());
+
    auto wallet = request.mutable_wallet();
    wallet->set_name(name);
    wallet->set_description(desc);
-   wallet->set_nettype((seed.networkType() == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
+   wallet->set_testnet(seed.networkType() == NetworkType::TestNet);
    if (primary) {
       wallet->set_primary(true);
    }
@@ -207,8 +202,7 @@ void SignerAdapter::deleteWallet(const std::string &rootWalletId, const std::fun
 }
 
 void SignerAdapter::changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
-   , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
-   , bool addNew, bool removeOld, bool dryRun
+   , const bs::wallet::PasswordData &oldPass, bool addNew, bool removeOld
    , const std::function<void(bool)> &cb)
 {
    if (walletId.empty()) {
@@ -216,23 +210,23 @@ void SignerAdapter::changePassword(const std::string &walletId, const std::vecto
       return;
    }
    signer::ChangePasswordRequest request;
-   request.set_rootwalletid(walletId);
-   if (!oldPass.isNull()) {
-      request.set_oldpassword(oldPass.toBinStr());
-   }
-   for (const auto &pwd : newPass) {
-      auto reqNewPass = request.add_newpassword();
-      reqNewPass->set_password(pwd.password.toBinStr());
-      reqNewPass->set_enctype(static_cast<uint32_t>(pwd.encType));
-      reqNewPass->set_enckey(pwd.encKey.toBinStr());
-   }
-   request.set_rankm(keyRank.first);
-   request.set_rankn(keyRank.second);
-   request.set_addnew(addNew);
-   request.set_removeold(removeOld);
-   request.set_dryrun(dryRun);
+   request.set_root_wallet_id(walletId);
 
-   const auto reqId = listener_->send(signer::ChangePasswordRequestType, request.SerializeAsString());
+   auto oldPD = request.mutable_old_password();
+   oldPD->set_password(oldPass.password.toBinStr());
+   oldPD->set_enctype(static_cast<uint32_t>(oldPass.metaData.encType));
+   oldPD->set_enckey(oldPass.metaData.encKey.toBinStr());
+
+   for (const auto &pwd : newPass) {
+      auto reqNewPass = request.add_new_password();
+      reqNewPass->set_password(pwd.password.toBinStr());
+      reqNewPass->set_enctype(static_cast<uint32_t>(pwd.metaData.encType));
+      reqNewPass->set_enckey(pwd.metaData.encKey.toBinStr());
+   }
+   request.set_add_new(addNew);
+   request.set_remove_old(removeOld);
+
+   const auto reqId = listener_->send(signer::ChangePasswordType, request.SerializeAsString());
    listener_->setChangePwCb(reqId, cb);
 }
 

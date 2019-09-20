@@ -139,7 +139,7 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::ExecCustomDialogRequestType:
       onExecCustomDialog(packet.data(), packet.id());
       break;
-   case signer::ChangePasswordRequestType:
+   case signer::ChangePasswordType:
       onChangePassword(packet.data(), packet.id());
       break;
    case signer::CreateHDWalletType:
@@ -567,7 +567,7 @@ void SignerInterfaceListener::onChangePassword(const std::string &data, bs::sign
 
 void SignerInterfaceListener::onCreateHDWallet(const std::string &data, bs::signer::RequestId reqId)
 {
-   headless::CreateHDWalletResponse response;
+   signer::CreateHDWalletResponse response;
    if (!response.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
