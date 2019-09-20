@@ -40,14 +40,6 @@ bool TXInfo::containsAddressImpl(const bs::Address &address, bs::core::wallet::T
       }
    }
 
-   for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
-      const auto &wallet = walletsMgr_->getHDWallet(i);
-      for (auto leaf : wallet->getLeaves()) {
-         if (leaf->type() == walletType && leaf->containsAddress(address)) {
-            return true;
-         }
-      }
-   }
    return false;
 }
 
@@ -55,15 +47,14 @@ bool TXInfo::notContainsAddressImpl(const bs::Address &address) const
 {
    // not equal to !containsAddressImpl()
    bool contains = false;
-   for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
-      const auto &wallet = walletsMgr_->getHDWallet(i);
-      for (auto leaf : wallet->getLeaves()) {
-         if (leaf->containsAddress(address)) {
-            contains = true;
-            break;
-         }
+
+   for (const auto &leaf : walletsMgr_->getAllWallets()) {
+      if (leaf->containsAddress(address)) {
+         contains = true;
+         break;
       }
    }
+
    return !contains;
 }
 
