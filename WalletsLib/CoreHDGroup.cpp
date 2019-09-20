@@ -273,8 +273,7 @@ void hd::Group::initLeaf(
    }
    accTypePtr->setAddressLookup(lookup);
 
-   //Lock the underlying armory wallet to allow accounts to derive their root from
-   //the wallet's. We assume the passphrase prompt lambda is already set.
+   // We assume the passphrase prompt lambda is already set.
    auto lock = walletPtr_->lockDecryptedContainer();
 
    auto accID = walletPtr_->createBIP32Account(nullptr, pathInt, accTypePtr);

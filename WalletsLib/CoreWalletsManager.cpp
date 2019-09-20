@@ -331,7 +331,13 @@ WalletsManager::HDWalletPtr WalletsManager::createWallet(
          if (!ccLeaves_.empty()) {
             group = newWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
             for (const auto &cc : ccLeaves_) {
-               group->createLeaf(AddressEntryType_Default, cc);
+               try {
+                  group->createLeaf(AddressEntryType_Default, cc);
+               }
+               catch (const std::exception &e) {
+                  logger_->error("[{}] CC leaf {} creation failed: {}"
+                     , __func__, cc, e.what());
+               }
             }
          }
       }

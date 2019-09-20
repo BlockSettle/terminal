@@ -1112,7 +1112,7 @@ bool HeadlessContainerListener::createSettlementLeaves(const std::shared_ptr<bs:
 }
 
 bool HeadlessContainerListener::createAuthLeaf(const std::shared_ptr<bs::core::hd::Wallet> &wallet
-   , const BinaryData &salt, const SecureBinaryData &password)
+   , const BinaryData &salt)
 {
    if (salt.isNull()) {
       logger_->error("[{}] can't create auth leaf with empty salt", __func__);
@@ -1158,7 +1158,6 @@ bool HeadlessContainerListener::createAuthLeaf(const std::shared_ptr<bs::core::h
    }
 
    try {
-      const bs::core::WalletPasswordScoped lock(wallet, password);
       auto leaf = group->createLeaf(AddressEntryType_Default, 0 + bs::hd::hardFlag, 5);
       if (leaf) {
          return createSettlementLeaves(wallet, leaf->getPooledAddressList());
@@ -1201,7 +1200,9 @@ bool HeadlessContainerListener::onPromoteHDWallet(const std::string& clientId, h
       if (!group) {
          group = hdWallet->createGroup(bs::hd::BlockSettle_Auth);
       }
-      if (!createAuthLeaf(hdWallet, userId, pass)) {
+
+      const bs::core::WalletPasswordScoped lock(hdWallet, pass);
+      if (!createAuthLeaf(hdWallet, userId)) {
          logger_->error("[HeadlessContainerListener::onPromoteHDWallet] failed to create auth leaf");
       }
 
@@ -1210,7 +1211,6 @@ bool HeadlessContainerListener::onPromoteHDWallet(const std::string& clientId, h
             , walletsMgr_->ccLeaves().size());
          group = hdWallet->createGroup(bs::hd::BlockSettle_CC);
          if (group) {
-            const bs::core::WalletPasswordScoped lock(hdWallet, pass);
             for (const auto &cc : walletsMgr_->ccLeaves()) {
                try {
                   group->createLeaf(AddressEntryType_P2WPKH, cc);
@@ -1235,9 +1235,10 @@ void HeadlessContainerListener::CreateHDLeafResponse(const std::string &clientId
    , ErrorCode result, const std::shared_ptr<bs::core::hd::Leaf>& leaf)
 {
    headless::CreateHDLeafResponse response;
-   if (result != bs::error::ErrorCode::NoError && leaf) {
+   if (result == bs::error::ErrorCode::NoError && leaf) {
       const std::string pathString = leaf->path().toString();
-      logger_->debug("[HeadlessContainerListener] CreateHDWalletResponse: {}", pathString);
+      logger_->debug("[HeadlessContainerListener] CreateHDLeafResponse: {} {}"
+         , pathString, leaf->walletId());
 
       auto leafResponse = response.mutable_leaf();
 

@@ -162,8 +162,8 @@ namespace bs {
 
       private:
          std::shared_ptr<hd::Wallet>   wallet_;
-         const unsigned int   maxTries_ = 3;
-         unsigned int         nbTries_ = 0;
+         const unsigned int   maxTries_ = 32;   // Too low values may cause unexpected failures
+         unsigned int         nbTries_ = 0;     // when creating many wallets at once, for example
       };
 
    }  //namespace core
