@@ -351,30 +351,6 @@ string BlockDataViewer::broadcastThroughRPC(const BinaryData& rawTx)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-vector<UTXO> BlockDataViewer::getUtxosForAddrVec(
-   const vector<BinaryData>& addrVec)
-{
-   auto prom = make_shared<promise<vector<UTXO>>>();
-   auto fut = prom->get_future();
-
-   auto resultLBD = [prom](ReturnMessage<vector<UTXO>> vec)->void
-   {
-      try
-      {
-         prom->set_value(move(vec.get()));
-      }
-      catch (exception&)
-      {
-         auto eptr = current_exception();
-         prom->set_exception(eptr);
-      }
-   };
-
-   bdvAsync_.getUtxosForAddrVec(addrVec, resultLBD);
-   return move(fut.get());
-}
-
-///////////////////////////////////////////////////////////////////////////////
 bool BlockDataViewer::isValid() const
 {
    return bdvAsync_.isValid();

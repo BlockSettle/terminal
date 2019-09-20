@@ -16,13 +16,21 @@ namespace bs {
          Auth
       };
 
-      //! first - required number of keys, second - total number of keys
-      using KeyRank = std::pair<unsigned int, unsigned int>;
+      // first - required number of keys (M), second - total number of keys (N)
+      // now supporting only 1-of-N, and KeyRank is not used
+      using KeyRank = struct {
+         unsigned int   m;
+         unsigned int   n;
+      };
+
+      struct PasswordMetaData {
+         EncryptionType    encType;
+         BinaryData        encKey;
+      };
 
       struct PasswordData {
          SecureBinaryData  password;
-         EncryptionType    encType;
-         SecureBinaryData  encKey;
+         PasswordMetaData  metaData;
          BinaryData        salt;
       };
    }  // wallet

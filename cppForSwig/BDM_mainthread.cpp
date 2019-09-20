@@ -109,8 +109,7 @@ try
          bdm->notificationStack_.push_back(move(notifPtr));
       }
       catch (exception&)
-      {
-      }
+      {}
    };
 
    //connect to node as async, no need to wait for a succesful connection
@@ -198,6 +197,7 @@ try
             make_unique<BDV_Notification_NewBlock>(
                move(reorgState), purgePacket);
          notifPtr->zcState_ = bdm->zeroConfCont_->getSnapshot();
+         bdm->triggerOneTimeHooks(notifPtr.get());
          bdm->notificationStack_.push_back(move(notifPtr));
 
          return true;

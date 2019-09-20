@@ -203,7 +203,6 @@ private:
       std::unordered_map<std::string, SecureBinaryData> passwords;
    };
    std::unordered_map<int, TempPasswords> tempPasswords_;
-   int reqSeqNo_ = 0;
 
    const bool backupEnabled_ = true;
 

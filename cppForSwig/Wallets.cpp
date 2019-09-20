@@ -707,19 +707,6 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::createFromBIP32Node(
    //compute wallet ID
    auto pubkey = node.getPublicKey();
 
-   //walletID
-   auto chaincode_copy = node.getChaincode();
-   auto derScheme =
-      make_shared<DerivationScheme_ArmoryLegacy>(chaincode_copy);
-
-   auto asset_single = make_shared<AssetEntry_Single>(
-      ROOT_ASSETENTRY_ID, BinaryData(),
-      pubkey, nullptr);
-
-   BinaryData walletIdRaw = computeWalletID(derScheme, asset_single);
-   // Remove trailing \0 chars if needed
-   std::string walletIdStr = walletIdRaw.toBinStr().c_str();
-
    //compute master ID as hmac256(root pubkey, "MetaEntry")
    string hmacMasterMsg("MetaEntry");
    auto&& masterID_long = BtcUtils::getHMAC256(
@@ -730,9 +717,9 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::createFromBIP32Node(
    //create wallet file and dbenv
    stringstream pathSS;
    if (!isPublic)
-      pathSS << folder << "/BlockSettle_" << walletIdStr << "_wallet.lmdb";
+      pathSS << folder << "/armory_" << masterIDStr << "_wallet.lmdb";
    else
-      pathSS << folder << "/BlockSettle_" << walletIdStr << "_WatchingOnly.lmdb";
+      pathSS << folder << "/armory_" << masterIDStr << "_WatchingOnly.lmdb";
 
    auto dbenv = getEnvFromFile(pathSS.str(), 2);
    initWalletMetaDB(dbenv, masterIDStr);
@@ -740,7 +727,18 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::createFromBIP32Node(
    auto wltMetaPtr = make_shared<WalletMeta_Single>(dbenv);
    wltMetaPtr->parentID_ = masterID;
 
-   wltMetaPtr->walletID_ = std::move(walletIdRaw);
+   {
+      //walletID
+      auto chaincode_copy = node.getChaincode();
+      auto derScheme =
+         make_shared<DerivationScheme_ArmoryLegacy>(chaincode_copy);
+
+      auto asset_single = make_shared<AssetEntry_Single>(
+         ROOT_ASSETENTRY_ID, BinaryData(),
+         pubkey, nullptr);
+
+      wltMetaPtr->walletID_ = move(computeWalletID(derScheme, asset_single));
+   }
 
    //create kdf and master encryption key
    auto kdfPtr = make_shared<KeyDerivationFunction_Romix>();
@@ -1138,7 +1136,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
    {
       //custom passphrase, set prompt lambda for the chain extention
       auto passphraseLambda =
-         [&passphrase](const BinaryData&)->SecureBinaryData
+         [&passphrase](const set<BinaryData>&)->SecureBinaryData
       {
          return passphrase;
       };
@@ -1923,11 +1921,24 @@ const SecureBinaryData& AssetWallet_Multisig::getDecryptedValue(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void AssetWallet_Single::changeMasterPassphrase(const SecureBinaryData& newPassphrase)
+void AssetWallet_Single::changeMasterPassphrase(
+   const SecureBinaryData& newPassphrase)
 {
-   auto lock = lockDecryptedContainer();
    auto&& masterKeyId = root_->getPrivateEncryptionKeyId();
-   decryptedData_->encryptEncryptionKey(masterKeyId, newPassphrase);
+   auto&& kdfId = root_->getKdfId();
+
+   decryptedData_->encryptEncryptionKey(
+      masterKeyId, kdfId, newPassphrase, true);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AssetWallet_Single::addPassphrase(const SecureBinaryData& passphrase)
+{
+   auto&& masterKeyId = root_->getPrivateEncryptionKeyId();
+   auto&& masterKdfId = root_->getKdfId();
+
+   decryptedData_->encryptEncryptionKey(
+      masterKeyId, masterKdfId, passphrase, false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2266,13 +2277,14 @@ void AssetWallet_Single::setSeed(
    auto rootPtr = dynamic_pointer_cast<AssetEntry_BIP32Root>(root_);
    if (rootPtr == nullptr)
       throw WalletException("expected BIP32 root object");
-   auto cipherCopy = rootPtr->getPrivKey()->copyCipher();
+   auto cipherCopy = 
+      rootPtr->getPrivKey()->getCipherDataPtr()->cipher_->getCopy();
 
    //if custom passphrase, set prompt lambda prior to encryption
    if (passphrase.getSize() > 0)
    {
       auto passphraseLambda =
-         [&passphrase](const BinaryData&)->SecureBinaryData
+         [&passphrase](const set<BinaryData>&)->SecureBinaryData
       {
          return passphrase;
       };

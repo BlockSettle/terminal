@@ -80,6 +80,7 @@ namespace bs {
 
             SecureBinaryData getPublicKeyFor(const bs::Address &) override;
             std::shared_ptr<ResolverFeed> getResolver(void) const;
+            ReentrantLock lockDecryptedContainer() override;
 
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
@@ -91,7 +92,6 @@ namespace bs {
 
             void shutdown(void);
             std::string getFilename(void) const;
-            WalletEncryptionLock lockForEncryption(const SecureBinaryData& passphrase);
             std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt) override;
 
             std::map<BinaryData, bs::hd::Path> indexPath(const std::set<BinaryData>&) override;

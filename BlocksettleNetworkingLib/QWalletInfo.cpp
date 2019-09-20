@@ -12,7 +12,7 @@ using namespace bs::wallet;
 using namespace Blocksettle::Communication;
 
 WalletInfo::WalletInfo(const QString &rootId, const std::vector<EncryptionType> &encTypes
-                       , const std::vector<SecureBinaryData> &encKeys, const KeyRank &keyRank)
+                       , const std::vector<BinaryData> &encKeys, const KeyRank &keyRank)
 {
    rootId_ = rootId;
    keyRank_ = keyRank;
@@ -213,16 +213,6 @@ QString WalletInfo::email() const
    return QString::fromStdString(AutheIDClient::getDeviceInfo(encKeys_.at(0).toStdString()).userId);
 }
 
-bs::wallet::KeyRank WalletInfo::keyRank() const
-{
-   return keyRank_;
-}
-
-void WalletInfo::setKeyRank(const bs::wallet::KeyRank &keyRank)
-{
-   keyRank_ = keyRank;
-}
-
 bool WalletInfo::isEidAuthOnly() const
 {
    for (auto encType : encTypes()) {
@@ -243,7 +233,7 @@ bool WalletInfo::isPasswordOnly() const
    return true;
 }
 
-void WalletInfo::setEncKeys(const std::vector<SecureBinaryData> &encKeys)
+void WalletInfo::setEncKeys(const std::vector<BinaryData> &encKeys)
 {
    encKeys_.clear();
    for (const SecureBinaryData &encKey : encKeys) {
@@ -269,10 +259,10 @@ void WalletInfo::setPasswordData(const std::vector<PasswordData> &passwordData)
    bool isAuth = false;
    bool isPassword = false;
    for (const PasswordData &pw : passwordData) {
-      encKeys_.push_back(QString::fromStdString(pw.encKey.toBinStr()));
-      if (pw.encType == EncryptionType::Auth)
+      encKeys_.push_back(QString::fromStdString(pw.metaData.encKey.toBinStr()));
+      if (pw.metaData.encType == EncryptionType::Auth)
          isAuth = true;
-      if (pw.encType == EncryptionType::Password)
+      if (pw.metaData.encType == EncryptionType::Password)
          isPassword = true;
    }
 

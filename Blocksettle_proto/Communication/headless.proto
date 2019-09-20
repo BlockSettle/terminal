@@ -227,54 +227,12 @@ message SetUserIdResponse
    AuthWalletResponseType response = 2;
 }
 
-message NewHDLeaf
-{
-   string   rootWalletId = 1;
-   string   path = 2;
-}
-
-message NewHDWallet
-{
-   string   name = 1;
-   string   description = 2;
-   NetworkType  netType = 3;
-   bool     primary = 4;
-   bytes    privateKey = 5;
-   bytes    seed = 6;
-   bytes    chainCode = 7;
-}
-
-message PasswordData
-{
-   bytes   password = 1;
-   uint32   encType = 2;
-   bytes    encKey = 3;
-}
-
-message CreateHDWalletRequest
-{
-   oneof create {
-      NewHDWallet wallet = 1;
-      NewHDLeaf   leaf   = 2;
-   }
-   repeated PasswordData password = 3;
-   uint32   rankM = 4;
-   uint32   rankN = 5;
-}
-
 message CreateHDLeafRequest
 {
    string   rootWalletId = 1;
    string   path = 2;
    Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData = 3;
    bytes    salt = 4;
-}
-
-message PromoteHDWalletRequest
-{
-   string   rootWalletId = 1;
-   bytes    user_id = 2;
-   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData = 3;
 }
 
 message HDLeafWO
@@ -296,21 +254,22 @@ message HDWalletWO
    string walletId = 1;
    string name     = 2;
    string description = 3;
-   NetworkType       netType = 4;
+   bool     testnet = 4;
    repeated HDGroupWO groups = 5;
    repeated HDLeafWO  leaves = 6;
-}
-
-message CreateHDWalletResponse
-{
-   uint32    errorCode   = 1;
-   HDWalletWO wallet = 2;
 }
 
 message CreateHDLeafResponse
 {
    uint32    errorCode   = 1;
    HDLeafWO  leaf        = 2;
+}
+
+message PromoteHDWalletRequest
+{
+   string   rootWalletId = 1;
+   bytes    user_id = 2;
+   Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData = 3;
 }
 
 message PromoteHDWalletResponse

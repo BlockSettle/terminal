@@ -123,21 +123,24 @@ const SecureBinaryData& DecryptedDataContainer::getDecryptedPrivateData(
    }
 
    //check cipher
-   if (dataPtr->cipher_ == nullptr)
+   if (!dataPtr->hasData())
    {
       //null cipher, data is not encrypted, create entry and return it
-      auto dataCopy = dataPtr->cipherText_;
+      auto dataCopy = dataPtr->getCipherText();
       auto&& decrKey = make_unique<DecryptedData>(
          dataPtr->getId(), dataCopy);
       return insertDecryptedData(move(decrKey));
    }
 
    //we have a valid cipher, grab the encryption key
+   auto cipherCopy = dataPtr->getCipherDataPtr()->cipher_->getCopy();
    unique_ptr<DecryptedEncryptionKey> decrKey;
-   auto& encryptionKeyId = dataPtr->cipher_->getEncryptionKeyId();
-   auto& kdfId = dataPtr->cipher_->getKdfId();
+   auto& encryptionKeyId = cipherCopy->getEncryptionKeyId();
+   auto& kdfId = cipherCopy->getKdfId();
 
-   populateEncryptionKey(encryptionKeyId, kdfId);
+   map<BinaryData, BinaryData> encrKeyMap;
+   encrKeyMap.insert(make_pair(encryptionKeyId, kdfId));
+   populateEncryptionKey(encrKeyMap);
 
    auto decrKeyIter =
       lockedDecryptedData_->encryptionKeys_.find(encryptionKeyId);
@@ -161,8 +164,21 @@ const SecureBinaryData& DecryptedDataContainer::getDecryptedPrivateData(
 
 ////////////////////////////////////////////////////////////////////////////////
 void DecryptedDataContainer::populateEncryptionKey(
-   const BinaryData& keyid, const BinaryData& kdfid)
+   const map<BinaryData, BinaryData>& keyMap)
 {
+   /*
+   This method looks for existing encryption keys in the container. It will 
+   return the key decrypted encryption key is present, or populate the 
+   container until it cannot find precursors (an encryption key may be 
+   encrypted by another encrpytion). At which point, it will prompt the user
+   for a passphrase.
+
+   keyMap: <keyId, kdfId> for all eligible key|kdf pairs. These are listed by 
+   the encrypted data that you're looking to decrypt
+   */
+
+   BinaryData keyId, kdfId;
+
    //sanity check
    if (!ownsLock())
       throw DecryptedDataContainerException("unlocked/does not own lock");
@@ -189,68 +205,114 @@ void DecryptedDataContainer::populateEncryptionKey(
 
    //look for already decrypted data
    unique_ptr<DecryptedEncryptionKey> decryptedKey = nullptr;
-   auto dataIter = lockedDecryptedData_->encryptionKeys_.find(keyid);
-   if (dataIter != lockedDecryptedData_->encryptionKeys_.end())
-      decryptedKey = move(dataIter->second);
+
+   for (auto& keyPair : keyMap)
+   {
+      auto dataIter = lockedDecryptedData_->encryptionKeys_.find(keyPair.first);
+      if (dataIter != lockedDecryptedData_->encryptionKeys_.end())
+      {
+         decryptedKey = move(dataIter->second);
+         keyId = keyPair.first;
+         kdfId = keyPair.second;
+         break;
+      }
+   }
 
    if (decryptedKey == nullptr)
    {
       //we don't have a decrypted key, let's look for it in the encrypted map
-      auto encrKeyIter = encryptionKeyMap_.find(keyid);
-      if (encrKeyIter != encryptionKeyMap_.end())
+      for (auto& keyPair : keyMap)
       {
-         //sanity check
-         auto encryptedKeyPtr = dynamic_pointer_cast<Asset_EncryptionKey>(
-            encrKeyIter->second);
-         if (encryptedKeyPtr == nullptr)
+         auto encrKeyIter = encryptionKeyMap_.find(keyPair.first);
+         if (encrKeyIter != encryptionKeyMap_.end())
          {
-            throw DecryptedDataContainerException(
-               "unexpected object for encryption key id");
+            //sanity check
+            auto encryptedKeyPtr = dynamic_pointer_cast<Asset_EncryptionKey>(
+               encrKeyIter->second);
+            if (encryptedKeyPtr == nullptr)
+            {
+               throw DecryptedDataContainerException(
+                  "unexpected object for encryption key id");
+            }
+
+            //found the encrypted key, need to decrypt it first
+            map<BinaryData, BinaryData> parentKeyMap;
+            for (auto& cipherPair : encryptedKeyPtr->cipherData_)
+            {
+               auto cipherDataPtr = cipherPair.second.get();
+               if (cipherDataPtr == nullptr)
+                  continue;
+
+               parentKeyMap.insert(make_pair(
+                  cipherDataPtr->cipher_->getEncryptionKeyId(), cipherDataPtr->cipher_->getKdfId()));
+            }
+
+            populateEncryptionKey(parentKeyMap);
+
+            //grab encryption key from map
+            bool done = false;
+            for (auto& cipherPair : encryptedKeyPtr->cipherData_)
+            {
+               auto cipherDataPtr = cipherPair.second.get();
+               if (cipherDataPtr == nullptr)
+                  continue;
+
+               const auto& encrKeyId = cipherDataPtr->cipher_->getEncryptionKeyId();
+               const auto& encrKdfId = cipherDataPtr->cipher_->getKdfId();
+
+               auto decrKeyIter =
+                  lockedDecryptedData_->encryptionKeys_.find(encrKeyId);
+               if (decrKeyIter == lockedDecryptedData_->encryptionKeys_.end())
+                  continue;
+               auto&& decryptionKey = move(decrKeyIter->second);
+
+               //derive encryption key
+               decryptionKey = move(deriveEncryptionKey(move(decryptionKey), encrKdfId));
+
+               //decrypt encrypted key
+               auto&& rawDecryptedKey = cipherDataPtr->cipher_->decrypt(
+                  decryptionKey->getDerivedKey(encrKdfId),
+                  cipherDataPtr->cipherText_);
+
+               decryptedKey = move(make_unique<DecryptedEncryptionKey>(
+                  rawDecryptedKey));
+
+               //move decryption key back to container
+               insertDecryptedData(encrKeyId, move(decryptionKey));
+               done = true;
+            }
+
+            if(!done)
+               throw DecryptedDataContainerException("failed to decrypt key");
+
+            keyId = keyPair.first;
+            kdfId = keyPair.second;
+
+            break;
          }
-
-         //found the encrypted key, need to decrypt it first
-         populateEncryptionKey(
-            encryptedKeyPtr->cipher_->getEncryptionKeyId(),
-            encryptedKeyPtr->cipher_->getKdfId());
-
-         //grab encryption key from map
-         auto decrKeyIter =
-            lockedDecryptedData_->encryptionKeys_.find(
-               encryptedKeyPtr->cipher_->getEncryptionKeyId());
-         if (decrKeyIter == lockedDecryptedData_->encryptionKeys_.end())
-            throw DecryptedDataContainerException("failed to decrypt key");
-         auto&& decryptionKey = move(decrKeyIter->second);
-
-         //derive encryption key
-         decryptionKey = move(deriveEncryptionKey(
-            move(decryptionKey),
-            encryptedKeyPtr->cipher_->getKdfId()));
-
-         //decrypt encrypted key
-         auto&& rawDecryptedKey = encryptedKeyPtr->cipher_->decrypt(
-            decryptionKey->getDerivedKey(encryptedKeyPtr->cipher_->getKdfId()),
-            encryptedKeyPtr->cipherText_);
-
-         decryptedKey = move(make_unique<DecryptedEncryptionKey>(
-            rawDecryptedKey));
-
-         //move decryption key back to container
-         insertDecryptedData(
-            encryptedKeyPtr->cipher_->getEncryptionKeyId(), move(decryptionKey));
       }
    }
 
    if (decryptedKey == nullptr)
    {
       //still no key, prompt the user
-      decryptedKey = move(promptPassphrase(keyid, kdfid));
+      decryptedKey = move(promptPassphrase(keyMap));
+      for (auto& keyPair : keyMap)
+      {
+         if (decryptedKey->getId(keyPair.second) == keyPair.first)
+         {
+            keyId = keyPair.first;
+            kdfId = keyPair.second;
+            break;
+         }
+      }
    }
 
    //apply kdf
-   decryptedKey = move(deriveEncryptionKey(move(decryptedKey), kdfid));
+   decryptedKey = move(deriveEncryptionKey(move(decryptedKey), kdfId));
 
    //insert into map
-   insertDecryptedData(keyid, move(decryptedKey));
+   insertDecryptedData(keyId, move(decryptedKey));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -268,7 +330,10 @@ SecureBinaryData DecryptedDataContainer::encryptData(
       throw DecryptedDataContainerException(
       "nullptr lock! how did we get this far?");
 
-   populateEncryptionKey(cipher->getEncryptionKeyId(), cipher->getKdfId());
+   map<BinaryData, BinaryData> keyMap;
+   keyMap.insert(make_pair(cipher->getEncryptionKeyId(), cipher->getKdfId()));
+   populateEncryptionKey(keyMap);
+
    auto keyIter = lockedDecryptedData_->encryptionKeys_.find(
       cipher->getEncryptionKeyId());
    auto& derivedKey = keyIter->second->getDerivedKey(cipher->getKdfId());
@@ -278,23 +343,30 @@ SecureBinaryData DecryptedDataContainer::encryptData(
 
 ////////////////////////////////////////////////////////////////////////////////
 unique_ptr<DecryptedEncryptionKey> DecryptedDataContainer::promptPassphrase(
-   const BinaryData& keyId, const BinaryData& kdfId) const
+   const map<BinaryData, BinaryData>& keyMap) const
 {
    while (1)
    {
       if (!getPassphraseLambda_)
          throw DecryptedDataContainerException("empty passphrase lambda");
 
-      auto&& passphrase = getPassphraseLambda_(keyId);
+      set<BinaryData> keySet;
+      for (auto& keyPair : keyMap)
+         keySet.insert(keyPair.first);
+
+      auto&& passphrase = getPassphraseLambda_(keySet);
 
       if (passphrase.getSize() == 0)
          throw DecryptedDataContainerException("empty passphrase");
 
       auto keyPtr = make_unique<DecryptedEncryptionKey>(passphrase);
-      keyPtr = move(deriveEncryptionKey(move(keyPtr), kdfId));
+      for (auto& keyPair : keyMap)
+      {
+         keyPtr = move(deriveEncryptionKey(move(keyPtr), keyPair.second));
 
-      if (keyId == keyPtr->getId(kdfId))
-         return move(keyPtr);
+         if (keyPair.first == keyPtr->getId(keyPair.second))
+            return move(keyPtr);
+      }
    }
 
    return nullptr;
@@ -502,13 +574,28 @@ void DecryptedDataContainer::readFromDisk()
 
 ////////////////////////////////////////////////////////////////////////////////
 void DecryptedDataContainer::encryptEncryptionKey(
-   const BinaryData& keyID,
-   const SecureBinaryData& newPassphrase)
+   const BinaryData& keyID, const BinaryData& kdfID,
+   const SecureBinaryData& newPassphrase, bool replace)
 {
    /***
-   Encrypts an encryption key with "newPassphrase". If the key is already
-   encrypted, it will be changed.
+   Encrypts an encryption key with newPassphrase. 
+   
+   Will swap old passphrase with new one if replace is true.
+   Will add the passphrase to the designated key if replace is false.
+
+   The code detects which passphrase was used to decrypt the key prior to 
+   adding the new passphrase. For this purpose it needs to control the lifespan
+   of the encryption lock.
+   
+   Pre-existing locks may have the relevant key already decrypted, and the 
+   passphrase that was used to decrypt with will be replaced, which may not
+   reflect the user's intent.
+
+   Therefor, this method tries to SingleLock itself, and will fail if a lock is
+   held elsewhere, even within the same thread.
    ***/
+
+   SingleLock lock(this);
 
    //sanity check
    if (!ownsLock())
@@ -518,26 +605,26 @@ void DecryptedDataContainer::encryptEncryptionKey(
       throw DecryptedDataContainerException(
       "nullptr lock! how did we get this far?");
 
+   //grab encryption key object
    auto keyIter = encryptionKeyMap_.find(keyID);
    if (keyIter == encryptionKeyMap_.end())
       throw DecryptedDataContainerException(
       "cannot change passphrase for unknown key");
+   auto encryptedKey = dynamic_pointer_cast<Asset_EncryptionKey>(keyIter->second);
 
    //decrypt master encryption key
-   auto& kdfId = keyIter->second->cipher_->getKdfId();
-   populateEncryptionKey(keyID, kdfId);
+   map<BinaryData, BinaryData> encrKeyMap;
+   encrKeyMap.insert(make_pair(keyID, kdfID));
+   populateEncryptionKey(encrKeyMap);
 
    //grab decrypted key
    auto decryptedKeyIter = lockedDecryptedData_->encryptionKeys_.find(keyID);
    if (decryptedKeyIter == lockedDecryptedData_->encryptionKeys_.end())
-      throw DecryptedDataContainerException(
-      "failed to decrypt key");
-
+      throw DecryptedDataContainerException("failed to decrypt key");
    auto& decryptedKey = decryptedKeyIter->second->getData();
 
    //grab kdf for key id computation
-   auto masterKeyKdfId = keyIter->second->cipher_->getKdfId();
-   auto kdfIter = kdfMap_.find(masterKeyKdfId);
+   auto kdfIter = kdfMap_.find(kdfID);
    if (kdfIter == kdfMap_.end())
       throw DecryptedDataContainerException("failed to grab kdf");
 
@@ -547,10 +634,22 @@ void DecryptedDataContainer::encryptEncryptionKey(
    //kdf the key to get its id
    auto newEncryptionKey = make_unique<DecryptedEncryptionKey>(newPassphraseCopy);
    newEncryptionKey->deriveKey(kdfIter->second);
-   auto newKeyId = newEncryptionKey->getId(masterKeyKdfId);
+   auto newKeyId = newEncryptionKey->getId(kdfID);
+
+   //TODO: figure out which passphrase unlocked the key
+   Cipher* cipherPtr = nullptr;
+   for (auto& keyPair : lockedDecryptedData_->encryptionKeys_)
+   {
+       cipherPtr = encryptedKey->getCipherPtrForId(keyPair.first);
+       if (cipherPtr != nullptr)
+          break;
+   }
+
+   if (cipherPtr == nullptr)
+      throw DecryptedDataContainerException("failed to find encryption key");
 
    //create new cipher, pointing to the new key id
-   auto newCipher = keyIter->second->cipher_->getCopy(newKeyId);
+   auto newCipher = cipherPtr->getCopy(newKeyId);
 
    //add new encryption key object to container
    lockedDecryptedData_->encryptionKeys_.insert(
@@ -560,12 +659,18 @@ void DecryptedDataContainer::encryptEncryptionKey(
    auto&& newEncryptedKey = encryptData(newCipher.get(), decryptedKey);
 
    //create new encrypted container
-   auto keyIdCopy = keyID;
-   auto newEncryptedKeyPtr =
-      make_shared<Asset_EncryptionKey>(keyIdCopy, newEncryptedKey, move(newCipher));
+   auto newCipherData = make_unique<CipherData>(newEncryptedKey, move(newCipher));
 
-   //update
-   keyIter->second = newEncryptedKeyPtr;
+   if (replace)
+   {
+      //remove old cipher data from the encrypted key object
+      if (!encryptedKey->removeCipherData(cipherPtr->getEncryptionKeyId()))
+         throw DecryptedDataContainerException("failed to erase old encryption key");
+   }
+
+   //add new cipher data object to the encrypted key object
+   if (!encryptedKey->addCipherData(move(newCipherData)))
+      throw DecryptedDataContainerException("cipher data already present in encryption key");
 
    auto&& temp_key = WRITE_UINT8_BE(ENCRYPTIONKEY_PREFIX_TEMP);
    temp_key.append(keyID);
@@ -575,7 +680,7 @@ void DecryptedDataContainer::encryptEncryptionKey(
    {
       //write new encrypted key as temp key within it's own transaction
       LMDBEnv::Transaction tempTx(dbEnv_, LMDB::ReadWrite);
-      updateKeyOnDiskNoPrefix(temp_key, newEncryptedKeyPtr);
+      updateKeyOnDiskNoPrefix(temp_key, encryptedKey);
    }
 
    {
@@ -585,7 +690,7 @@ void DecryptedDataContainer::encryptEncryptionKey(
       deleteKeyFromDisk(perm_key);
 
       //write new key to disk
-      updateKeyOnDiskNoPrefix(perm_key, newEncryptedKeyPtr);
+      updateKeyOnDiskNoPrefix(perm_key, encryptedKey);
    }
 
    {

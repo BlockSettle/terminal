@@ -190,7 +190,6 @@ bool InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::P
    try {
       const auto& password = pwdData[0].password;
 
-      auto lock = hdWallet->lockForEncryption(password);
       auto leaf = group->createLeaf(path);
       if (leaf != nullptr) {
          if (cb) {
@@ -366,32 +365,39 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
 {
    bs::sync::WalletData result;
    const auto wallet = walletsMgr_->getWalletById(id);
-   if (wallet) 
-   {
-      result.encryptionTypes = wallet->encryptionTypes();
-      result.encryptionKeys = wallet->encryptionKeys();
-      result.encryptionRank = wallet->encryptionRank();
-      result.netType = wallet->networkType();
-      
-      result.highestExtIndex = wallet->getExtAddressCount();
-      result.highestIntIndex = wallet->getIntAddressCount();
-
-      size_t addrCnt = 0;
-      for (const auto &addr : wallet->getUsedAddressList()) {
-         const auto index = wallet->getAddressIndex(addr);
-         const auto comment = wallet->getAddressComment(addr);
-         result.addresses.push_back({index, addr, comment});
-      }
-
-      for (const auto &addr : wallet->getPooledAddressList()) {
-         const auto index = wallet->getAddressIndex(addr);
-         result.addrPool.push_back({ index, addr, ""});
-      }
-
-      for (const auto &txComment : wallet->getAllTxComments())
-         result.txComments.push_back({txComment.first, txComment.second});
+   if (!wallet) {
+      cb(result);
+      return;
+   }
+   const auto rootWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
+   if (!rootWallet) {
+      cb(result);
+      return;
    }
 
+   result.encryptionTypes = rootWallet->encryptionTypes();
+   result.encryptionKeys = rootWallet->encryptionKeys();
+   result.encryptionRank = rootWallet->encryptionRank();
+   result.netType = wallet->networkType();
+      
+   result.highestExtIndex = wallet->getExtAddressCount();
+   result.highestIntIndex = wallet->getIntAddressCount();
+
+   size_t addrCnt = 0;
+   for (const auto &addr : wallet->getUsedAddressList()) {
+      const auto index = wallet->getAddressIndex(addr);
+      const auto comment = wallet->getAddressComment(addr);
+      result.addresses.push_back({index, addr, comment});
+   }
+
+   for (const auto &addr : wallet->getPooledAddressList()) {
+      const auto index = wallet->getAddressIndex(addr);
+      result.addrPool.push_back({ index, addr, ""});
+   }
+
+   for (const auto &txComment : wallet->getAllTxComments()) {
+      result.txComments.push_back({ txComment.first, txComment.second });
+   }
    cb(result);
 }
 

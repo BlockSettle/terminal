@@ -682,6 +682,7 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request,
 
 BinaryData Wallet::signTXRequest(const wallet::TXSignRequest &request, bool keepDuplicatedRecipients)
 {
+   auto lock = lockDecryptedContainer();
    auto signer = getSigner(request, keepDuplicatedRecipients);
    signer.sign();
    if (!signer.verify()) {
@@ -692,6 +693,7 @@ BinaryData Wallet::signTXRequest(const wallet::TXSignRequest &request, bool keep
 
 BinaryData Wallet::signPartialTXRequest(const wallet::TXSignRequest &request)
 {
+   auto lock = lockDecryptedContainer();
    auto signer = getSigner(request);
    signer.sign();
    return signer.serializeState();
@@ -711,6 +713,7 @@ BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest
          if (wallet.second->isWatchingOnly()) {
             throw std::logic_error("Won't sign with watching-only wallet");
          }
+         auto lock = wallet.second->lockDecryptedContainer();
          signer.setFeed(wallet.second->getResolver());
          signer.sign();
          signer.resetFeeds();
@@ -724,6 +727,7 @@ BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest
          if (itWallet == wallets.end()) {
             throw std::runtime_error("missing wallet for id " + input.second);
          }
+         auto lock = itWallet->second->lockDecryptedContainer();
          auto spender = std::make_shared<ScriptSpender>(input.first, itWallet->second->getResolver());
          if (txMultiReq.RBF) {
             spender->setSequence(UINT32_MAX - 2);

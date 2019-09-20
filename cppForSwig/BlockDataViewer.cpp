@@ -852,7 +852,7 @@ BlockDataViewer::getAddressOutpoints(
                brr.advance(2);
 
                auto zcID = brr.get_uint32_t(BE);
-               if (zcID <= zcCutoff)
+               if (zcID < zcCutoff)
                   continue;
 
                //spent zc, grab the spender tx hash
@@ -871,7 +871,7 @@ BlockDataViewer::getAddressOutpoints(
                brr.advance(2);
 
                auto zcID = brr.get_uint32_t(BE);
-               if (zcID <= zcCutoff)
+               if (zcID < zcCutoff)
                   continue;
             }
 

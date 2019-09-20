@@ -33,7 +33,7 @@ enum PacketType
    // Request from headless, no response from ui
    ExecCustomDialogRequestType = 19;
 
-   ChangePasswordRequestType   = 20;
+   ChangePasswordType = 20;
 
    // Uses messages from headless
    CreateHDWalletType = 21;
@@ -310,20 +310,49 @@ message PasswordData
 
 message ChangePasswordRequest
 {
-   string   rootWalletId = 1;
-   bytes    oldPassword = 2;
-   repeated PasswordData newPassword = 3;
-   uint32   rankM = 4;
-   uint32   rankN = 5;
-   bool     addNew = 6;
-   bool     removeOld = 8;
-   bool     dryRun = 7;
+   string   root_wallet_id = 1;
+   PasswordData old_password = 2;
+   repeated PasswordData new_password = 3;
+   bool     add_new = 4;
+   bool     remove_old = 5;
 }
 
 message ChangePasswordResponse
 {
-   string   rootWalletId = 1;
+   string   root_wallet_id = 1;
    bool     success = 2;
+}
+
+message NewHDLeaf
+{
+   string   rootWalletId = 1;
+   string   path = 2;
+}
+
+message NewHDWallet
+{
+   string   name = 1;
+   string   description = 2;
+   bool     primary = 3;
+   bytes    privateKey = 4;
+   bool     testnet = 5;
+   bytes    seed = 6;
+   bytes    chainCode = 7;
+}
+
+message CreateHDWalletRequest
+{
+   oneof create {
+      NewHDWallet wallet = 1;
+      NewHDLeaf   leaf   = 2;
+   }
+   PasswordData password = 3;
+}
+
+message CreateHDWalletResponse
+{
+   uint32    errorCode = 1;
+   string    wallet_id = 2;   
 }
 
 message AutoSignActRequest

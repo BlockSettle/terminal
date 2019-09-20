@@ -20,6 +20,7 @@
 #define WALLETNAME_KEY          0x00000020
 #define WALLETDESCRIPTION_KEY   0x00000021
 #define WALLET_EXTONLY_KEY      0x00000030
+#define WALLET_PWD_META_KEY     0x00000031
 
 #define BS_WALLET_DBNAME "bs_wallet_name"
 
@@ -264,11 +265,6 @@ namespace bs {
          virtual std::string shortName() const { return name(); }
          virtual wallet::Type type() const { return wallet::Type::Bitcoin; }
 
-         //stand in for the botched bs encryption code. too expensive to clean up after this mess
-         virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return { bs::wallet::EncryptionType::Password }; }
-         virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
-         virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 1, 1 }; }
-
          bool operator ==(const Wallet &w) const { return (w.walletId() == walletId()); }
          bool operator !=(const Wallet &w) const { return (w.walletId() != walletId()); }
 
@@ -321,6 +317,7 @@ namespace bs {
          virtual std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt) = 0;
 
          virtual std::shared_ptr<ResolverFeed> getResolver(void) const = 0;
+         virtual ReentrantLock lockDecryptedContainer() = 0;
 
          virtual BinaryData signTXRequest(const wallet::TXSignRequest &
             , bool keepDuplicatedRecipients = false);
@@ -353,47 +350,6 @@ namespace bs {
 
       using WalletMap = std::unordered_map<std::string, std::shared_ptr<Wallet>>;   // key is wallet id
       BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &, const WalletMap &);
-
-      struct WalletEncryptionLock
-      {
-      private:
-         WalletEncryptionLock(const WalletEncryptionLock&) = delete;
-         WalletEncryptionLock& operator=(const WalletEncryptionLock&) = delete;
-         WalletEncryptionLock& operator=(WalletEncryptionLock&&) = delete;
-
-      public:
-         WalletEncryptionLock(const std::shared_ptr<AssetWallet_Single> &wallet
-            , const SecureBinaryData& passphrase)
-            : walletLock_(std::move(wallet->lockDecryptedContainer()))
-            , walletPtr_(wallet)
-         {  //std::function<SecureBinaryData(const BinaryData&)>
-            auto lbd = [passphrase, this](const BinaryData&)->SecureBinaryData
-            {
-               if (++nbTries_ > maxTries_) {
-                  return {};
-               }
-               return passphrase;
-            };
-            wallet->setPassphrasePromptLambda(lbd);
-         }
-         
-         WalletEncryptionLock(WalletEncryptionLock&& lock)
-            : walletLock_(std::move(lock.walletLock_))
-         {
-            walletPtr_ = lock.walletPtr_;
-         }
-
-         ~WalletEncryptionLock(void)
-         {
-            walletPtr_->resetPassphrasePromptLambda();
-         }
-
-      private:
-         std::shared_ptr<AssetWallet_Single> walletPtr_;
-         ReentrantLock        walletLock_;
-         const unsigned int   maxTries_ = 3;
-         unsigned int         nbTries_ = 0;
-      };
 
    }  //namespace core
 }  //namespace bs

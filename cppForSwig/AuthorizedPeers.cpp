@@ -69,7 +69,7 @@ AuthorizedPeers::AuthorizedPeers(
    SecureBinaryData privateKey;
    {
       //create & set password lambda
-      auto passphrasePrompt = [](const BinaryData&)->SecureBinaryData
+      auto passphrasePrompt = [](const set<BinaryData>&)->SecureBinaryData
       {
          return SecureBinaryData(PEERS_WALLET_PASSWORD);
       };

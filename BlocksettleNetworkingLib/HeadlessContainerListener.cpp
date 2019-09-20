@@ -375,15 +375,16 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
          return;
       }
 
+      const auto rootWallet = walletsMgr_->getHDWalletById(rootWalletId);
       try {
-         if (!wallets.front()->encryptionTypes().empty() && pass.isNull()) {
+         if (!rootWallet->encryptionTypes().empty() && pass.isNull()) {
             logger_->error("[HeadlessContainerListener] empty password for wallet {}", wallets.front()->name());
             SignTXResponse(clientId, id, reqType, ErrorCode::MissingPassword);
             return;
          }
          if (wallets.size() == 1) {
             const auto wallet = wallets.front();
-            auto passLock = wallet->lockForEncryption(pass);
+            const bs::core::WalletPasswordScoped passLock(rootWallet, pass);
             const auto tx = partial ? wallet->signPartialTXRequest(txSignReq)
                : wallet->signTXRequest(txSignReq, keepDuplicatedRecipients);
             SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
@@ -416,7 +417,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
             const auto hdWallet = walletsMgr_->getHDWalletById(rootWalletId);
             BinaryData tx;
             {
-               auto lock = hdWallet->lockForEncryption(pass);
+               const bs::core::WalletPasswordScoped passLock(rootWallet, pass);
                tx = bs::core::SignMultiInputTX(multiReq, wallets);
             }
             SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
@@ -434,7 +435,6 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       }
    };
 
-   logger_->debug("[{}] rootWalletId={}", __func__, rootWalletId);
    dialogData.insert("WalletId", rootWalletId);
    return RequestPasswordIfNeeded(clientId, rootWalletId, txSignReq, reqType, dialogData, onPassword);
 }
@@ -504,13 +504,12 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
       walletMap[wallet->walletId()] = wallet;
    }
 
-   const std::string prompt("Signing multi-wallet input (auth revoke) transaction");
-
    const auto cbOnAllPasswords = [this, txMultiReq, walletMap, clientId, reqType, id=packet.id()]
                                  (const std::unordered_map<std::string, SecureBinaryData> &walletPasswords) {
       try {
          const auto wallet = walletsMgr_->getWalletById(walletPasswords.begin()->first);
-         auto lock = wallet->lockForEncryption(walletPasswords.begin()->second);
+         const auto rootWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
+         const bs::core::WalletPasswordScoped passLock(rootWallet, walletPasswords.begin()->second);
          const auto tx = bs::core::SignMultiInputTX(txMultiReq, walletMap);
          SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
       }
@@ -519,7 +518,7 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
          SignTXResponse(clientId, id, reqType, ErrorCode::InternalError);
       }
    };
-   return RequestPasswordsIfNeeded(++reqSeqNo_, clientId, txMultiReq, walletMap, cbOnAllPasswords);
+   return RequestPasswordsIfNeeded(packet.id(), clientId, txMultiReq, walletMap, cbOnAllPasswords);
 }
 
 bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::string &clientId
@@ -578,7 +577,7 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
             return;
          }
          {
-            auto passLock = wallet->lockForEncryption(pass);
+            const bs::core::WalletPasswordScoped passLock(wallet, pass);
             const auto tx = wallet->signSettlementTXRequest(txSignReq, sd);
             SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
          }
@@ -640,7 +639,7 @@ bool HeadlessContainerListener::onSignAuthAddrRevokeRequest(const std::string &c
 
       try {
          {
-            auto passLock = wallet->lockForEncryption(pass);
+            const bs::core::WalletPasswordScoped passLock(walletsMgr_->getPrimaryWallet(), pass);
             const auto tx = AuthAddressLogic::revoke(request.auth_address(), wallet->getResolver()
                , request.validation_address(), utxo);
             SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
@@ -714,12 +713,10 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
    const auto wallet = walletsMgr_->getWalletById(walletId);
    bool needPassword = true;
    if (wallet) {
-      needPassword = !wallet->encryptionTypes().empty();
-      if (needPassword) {
-         const auto &hdRoot = walletsMgr_->getHDRootForLeaf(walletId);
-         if (hdRoot) {
-            rootId = hdRoot->walletId();
-         }
+      const auto &hdRoot = walletsMgr_->getHDRootForLeaf(walletId);
+      if (hdRoot) {
+         rootId = hdRoot->walletId();
+         needPassword = !hdRoot->encryptionTypes().empty();
       }
    }
    else {
@@ -1048,7 +1045,7 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
          auto leaf = group->getLeafByPath(path);
 
          if (leaf == nullptr) {
-            auto lock = hdWallet->lockForEncryption(pass);
+            const bs::core::WalletPasswordScoped lock(hdWallet, pass);
             leaf = group->createLeaf(path);
 
             if (leaf == nullptr) {
@@ -1161,7 +1158,7 @@ bool HeadlessContainerListener::createAuthLeaf(const std::shared_ptr<bs::core::h
    }
 
    try {
-      auto lock = wallet->lockForEncryption(password);
+      const bs::core::WalletPasswordScoped lock(wallet, password);
       auto leaf = group->createLeaf(AddressEntryType_Default, 0 + bs::hd::hardFlag, 5);
       if (leaf) {
          return createSettlementLeaves(wallet, leaf->getPooledAddressList());
@@ -1213,7 +1210,7 @@ bool HeadlessContainerListener::onPromoteHDWallet(const std::string& clientId, h
             , walletsMgr_->ccLeaves().size());
          group = hdWallet->createGroup(bs::hd::BlockSettle_CC);
          if (group) {
-            auto lock = hdWallet->lockForEncryption(pass);
+            const bs::core::WalletPasswordScoped lock(hdWallet, pass);
             for (const auto &cc : walletsMgr_->ccLeaves()) {
                try {
                   group->createLeaf(AddressEntryType_P2WPKH, cc);
@@ -1353,7 +1350,7 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       }
 
       {
-         auto lock = priWallet->lockForEncryption(password);
+         const bs::core::WalletPasswordScoped lock(priWallet, password);
          const auto leaf = priWallet->createSettlementLeaf(request.auth_address());
          if (!leaf) {
             logger_->error("[HeadlessContainerListener] failed to create settlement leaf for {}"
@@ -1552,8 +1549,8 @@ void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clien
       for (const auto &encKey : wallet->encryptionKeys()) {
          response.add_enckeys(encKey.toBinStr());
       }
-      response.set_rankm(wallet->encryptionRank().first);
-      response.set_rankn(wallet->encryptionRank().second);
+      response.set_rankm(wallet->encryptionRank().m);
+      response.set_rankn(wallet->encryptionRank().n);
    }
    if (!walletId.empty()) {
       response.set_rootwalletid(walletId);
@@ -1783,17 +1780,20 @@ bool HeadlessContainerListener::onSyncWallet(const std::string &clientId, headle
    const auto &lbdSend = [this, wallet, id=packet.id(), clientId]
    {
       headless::SyncWalletResponse response;
-
       response.set_walletid(wallet->walletId());
-      for (const auto &encType : wallet->encryptionTypes()) {
-         response.add_encryptiontypes(mapFrom(encType));
+
+      const auto rootWallet = walletsMgr_->getHDWalletById(wallet->walletId());
+      if (rootWallet) {
+         for (const auto &encType : rootWallet->encryptionTypes()) {
+            response.add_encryptiontypes(mapFrom(encType));
+         }
+         for (const auto &encKey : rootWallet->encryptionKeys()) {
+            response.add_encryptionkeys(encKey.toBinStr());
+         }
+         auto keyrank = response.mutable_keyrank();
+         keyrank->set_m(rootWallet->encryptionRank().m);
+         keyrank->set_n(rootWallet->encryptionRank().n);
       }
-      for (const auto &encKey : wallet->encryptionKeys()) {
-         response.add_encryptionkeys(encKey.toBinStr());
-      }
-      auto keyrank = response.mutable_keyrank();
-      keyrank->set_m(wallet->encryptionRank().first);
-      keyrank->set_n(wallet->encryptionRank().second);
 
       response.set_nettype(mapFrom(wallet->networkType()));
       response.set_highest_ext_index(wallet->getExtAddressCount());

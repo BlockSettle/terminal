@@ -214,8 +214,6 @@ namespace SwigClient
 
       std::string broadcastThroughRPC(const BinaryData& rawTx);
 
-      std::vector<UTXO> getUtxosForAddrVec(const std::vector<BinaryData>&);
-
       std::pair<unsigned, unsigned> getRekeyCount(void) const {
          return bdvAsync_.getRekeyCount();
       }

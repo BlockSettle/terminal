@@ -243,7 +243,7 @@ vector<shared_ptr<AssetEntry>>
 
       return computeNextPrivateEntry(
          ddc, 
-         privkeyData, move(privkey->copyCipher()),
+         privkeyData, move(privkey->getCipherDataPtr()->cipher_->getCopy()),
          account_id, id_int);
    };
 
@@ -344,7 +344,7 @@ vector<shared_ptr<AssetEntry>>
       auto& account_id = rootAsset_single->getAccountID();
       return computeNextPrivateEntry(
          ddc,
-         privkeyData, move(privkey->copyCipher()),
+         privkeyData, move(privkey->getCipherDataPtr()->cipher_->getCopy()),
          account_id, derivationIndex);
    };
 
@@ -707,7 +707,7 @@ vector<shared_ptr<AssetEntry>> DerivationScheme_ECDH::extendPrivateChain(
       auto& account_id = rootAsset_single->getAccountID();
       return computeNextPrivateEntry(
          ddc,
-         privkeyData, move(privkey->copyCipher()),
+         privkeyData, move(privkey->getCipherDataPtr()->cipher_->getCopy()),
          account_id, derivationIndex);
    };
 

@@ -942,11 +942,6 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       return result;
    }
 
-   case Methods::getUTXOsForAddrList:
-   {
-      throw runtime_error("deprecated");
-   }
-
    case Methods::getHeaderByHash:
    {
       /*

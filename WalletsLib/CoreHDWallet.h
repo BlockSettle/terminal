@@ -1,9 +1,11 @@
 #ifndef BS_CORE_HD_WALLET_H__
 #define BS_CORE_HD_WALLET_H__
 
+#include <deque>
 #include <memory>
 #include "CoreHDGroup.h"
 #include "CoreHDLeaf.h"
+#include "WalletEncryption.h"
 
 
 namespace spdlog {
@@ -17,7 +19,6 @@ namespace bs {
          class Wallet
          {
          private:
-
             Wallet(void) {}
             
             std::shared_ptr<AddressEntry_P2WSH> getAddressPtrForSettlement(
@@ -26,15 +27,14 @@ namespace bs {
                bool isMyKeyFirst) const;
 
             std::shared_ptr<hd::SettlementLeaf> getLeafForSettlementID(
-               const SecureBinaryData&) const;
+               const SecureBinaryData &settlementID) const;
 
-            std::shared_ptr<AssetEntry> getAssetForAddress(const bs::Address&);
+            std::shared_ptr<AssetEntry> getAssetForAddress(const bs::Address &);
 
          public:
-
             //init from seed
             Wallet(const std::string &name, const std::string &desc
-               , const wallet::Seed &, const SecureBinaryData& passphrase
+               , const wallet::Seed &, const bs::wallet::PasswordData &
                , const std::string& folder = "./"
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
@@ -45,14 +45,13 @@ namespace bs {
 
             //generate random seed and init
             Wallet(const std::string &name, const std::string &desc
-               , NetworkType netType, const SecureBinaryData& passphrase
+               , NetworkType netType, const bs::wallet::PasswordData &
                , const std::string& folder = "./"
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
-            //stand in for the botched bs encryption code. too expensive to clean up after this mess
-            std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return { bs::wallet::EncryptionType::Password }; }
-            std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
-            std::pair<unsigned int, unsigned int> encryptionRank() const { return { 1, 1 }; }
+            std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
+            std::vector<BinaryData> encryptionKeys() const;
+            bs::wallet::KeyRank encryptionRank() const { return {1, (unsigned int)pwdMeta_.size() }; }
 
             ~Wallet(void);
 
@@ -87,8 +86,12 @@ namespace bs {
             const std::string& getFileName(void) const;
             void copyToFile(const std::string& filename);
 
-            bool changePassword(const SecureBinaryData& newPass);
-            WalletEncryptionLock lockForEncryption(const SecureBinaryData& passphrase);
+            bool changePassword(const bs::wallet::PasswordMetaData &oldPD
+               , const bs::wallet::PasswordData &newPass);
+            bool addPassword(const bs::wallet::PasswordData &);
+
+            void pushPasswordPrompt(const std::function<SecureBinaryData()> &);
+            void popPasswordPrompt();
 
             static std::string fileNamePrefix(bool watchingOnly);
             bs::hd::CoinType getXBTGroupType() const { 
@@ -111,7 +114,8 @@ namespace bs {
          protected:
             std::string    name_, desc_;
             NetworkType    netType_ = NetworkType::Invalid;
-            std::map<bs::hd::Path::Elem, std::shared_ptr<Group>> groups_;
+            std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>  groups_;
+            std::vector<bs::wallet::PasswordMetaData>             pwdMeta_;
             std::shared_ptr<spdlog::logger>     logger_;
             bool extOnlyFlag_ = false;
 
@@ -120,15 +124,16 @@ namespace bs {
             std::shared_ptr<LMDBEnv> dbEnv_ = nullptr;
             LMDB* db_ = nullptr;
 
+            std::deque<std::function<SecureBinaryData(const std::set<BinaryData> &)>>  lbdPwdPrompts_;
 
          protected:
-            void initNew(const wallet::Seed &, 
-               const SecureBinaryData& passphrase, const std::string& folder);
+            void initNew(const wallet::Seed &, const bs::wallet::PasswordData &
+               , const std::string &folder);
             void loadFromFile(const std::string &filename, const std::string& folder);
             void putDataToDB(const BinaryData& key, const BinaryData& data);
             BinaryDataRef getDataRefForKey(LMDB* db, const BinaryData& key) const;
             BinaryDataRef getDataRefForKey(uint32_t key) const;
-            void writeGroupsToDB(bool force = false);
+            void writeToDB(bool force = false);
 
             bs::hd::Path getPathForAddress(const bs::Address &);
 
@@ -137,6 +142,30 @@ namespace bs {
          };
 
       }  //namespace hd
+
+      struct WalletPasswordScoped
+      {
+      private:
+         WalletPasswordScoped(const WalletPasswordScoped&) = delete;
+         WalletPasswordScoped(WalletPasswordScoped&& lock) = delete;
+         WalletPasswordScoped& operator=(const WalletPasswordScoped&) = delete;
+         WalletPasswordScoped& operator=(WalletPasswordScoped&&) = delete;
+
+      public:
+         WalletPasswordScoped(const std::shared_ptr<hd::Wallet> &wallet
+            , const SecureBinaryData &passphrase);
+
+         ~WalletPasswordScoped()
+         {
+            wallet_->popPasswordPrompt();
+         }
+
+      private:
+         std::shared_ptr<hd::Wallet>   wallet_;
+         const unsigned int   maxTries_ = 3;
+         unsigned int         nbTries_ = 0;
+      };
+
    }  //namespace core
 }  //namespace bs
 

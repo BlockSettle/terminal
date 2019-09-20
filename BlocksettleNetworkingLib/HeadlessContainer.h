@@ -39,11 +39,6 @@ class HeadlessContainer : public WalletSignerContainer
 public:
    static NetworkType mapNetworkType(Blocksettle::Communication::headless::NetworkType netType);
 
-   static void makeCreateHDWalletRequest(const std::string &name
-      , const std::string &desc, bool primary, const bs::core::wallet::Seed &seed
-      , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank
-      , Blocksettle::Communication::headless::CreateHDWalletRequest &request);
-
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
    ~HeadlessContainer() noexcept override = default;
 
