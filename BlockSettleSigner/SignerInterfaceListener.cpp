@@ -242,11 +242,11 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       requestPasswordForDialogType(QLatin1String("RequestPasswordForToken"), dialogData, walletInfo);
       break;
    case signer::CreateSettlementLeaf:
-      dialogData->setValue(keys::Title, tr("Create Settlement Leaf"));
+      dialogData->setValue(keys::Title, tr("Create Authentication Address"));
       requestPasswordForDialogType(QLatin1String("RequestPasswordForSettlementLeaf"), dialogData, walletInfo);
       break;
    case signer::RevokeAuthAddress:
-      dialogData->setValue(keys::Title, tr("Revoke Auth Address"));
+      dialogData->setValue(keys::Title, tr("Revoke Authentication Address"));
       requestPasswordForDialogType(QLatin1String("RequestPasswordForRevokeAuthAddress"), dialogData, walletInfo);
       break;
    case signer::PromoteHDWallet:

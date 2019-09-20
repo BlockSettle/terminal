@@ -10,6 +10,7 @@ import "../BsStyles"
 
 BSPasswordInput {
     id: root
+    width: 450
 
     property WalletInfo walletInfo: WalletInfo{}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
