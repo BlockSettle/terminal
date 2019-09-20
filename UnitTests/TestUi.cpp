@@ -99,7 +99,7 @@ TEST(TestUi, DISABLED_RFQ_entry_CC_sell)
    ASSERT_NE(ccGroup, nullptr);
    std::shared_ptr<bs::core::hd::Leaf> ccLeaf;
    {
-      auto lock = priWallet->lockForEncryption(passphrase);
+      const bs::core::WalletPasswordScoped lock(priWallet, passphrase);
       ccLeaf = ccGroup->createLeaf(AddressEntryType_Default, "BLK");
    }
    ASSERT_NE(ccLeaf, nullptr);
