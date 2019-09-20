@@ -51,7 +51,6 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
-   connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &ReqXBTSettlementContainer::onWalletInfo);
    connect(signContainer_.get(), &SignContainer::TXSigned, this, &ReqXBTSettlementContainer::onTXSigned);
 
    connect(this, &ReqXBTSettlementContainer::timerExpired, this, &ReqXBTSettlementContainer::onTimerExpired);
@@ -131,24 +130,6 @@ void ReqXBTSettlementContainer::activate()
 {
    startTimer(kWaitTimeoutInSec);
 
-   const auto &authWallet = walletsMgr_->getAuthWallet();
-   auto rootAuthWallet = walletsMgr_->getHDRootForLeaf(authWallet->walletId());
-
-   walletInfoAuth_.setName(rootAuthWallet->name());
-   walletInfoAuth_.setRootId(rootAuthWallet->walletId());
-
-   walletInfo_.setRootId(walletsMgr_->getHDRootForLeaf(transactionData_->getWallet()->walletId())->walletId());
-
-   if (clientSells_) {
-      sellFromPrimary_ = (walletInfoAuth_.rootId() == walletInfo_.rootId());
-
-      if (!sellFromPrimary_) {
-         infoReqIdAuth_ = signContainer_->GetInfo(rootAuthWallet->walletId());
-      }
-   }
-
-   infoReqId_ = signContainer_->GetInfo(walletInfo_.rootId().toStdString());
-
    QPointer<ReqXBTSettlementContainer> thisPtr = this;
    addrVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_
       , [thisPtr](const bs::Address &address, AddressVerificationState state)
@@ -161,6 +142,7 @@ void ReqXBTSettlementContainer::activate()
          thisPtr->dealerVerifStateChanged(state);
       });
    });
+
    addrVerificator_->SetBSAddressList(authAddrMgr_->GetBSAddresses());
 
    settlementIdString_ = quote_.settlementId;
@@ -350,28 +332,14 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
 //         walletsMgr_->getSettlementWallet()->setTransactionComment(payoutData_, comment_); //TODO: later
       }
 
+      logger_->debug("[ReqXBTSettlementContainer::onTXSigned] signed payout: {}"
+                     , signedTX.toHexStr());
+
       emit sendSignedPayoutToPB(settlementIdString_, signedTX);
 
       // OK. if payout created - settletlement accepted for this RFQ
       deactivate();
       emit settlementAccepted();
-   }
-}
-
-void ReqXBTSettlementContainer::onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo)
-{
-   if (infoReqId_ && (reqId == infoReqId_)) {
-      infoReqId_ = 0;
-      walletInfo_.setEncKeys(walletInfo.encKeys());
-      walletInfo_.setEncTypes(walletInfo.encTypes());
-      walletInfo_.setKeyRank(walletInfo.keyRank());
-   }
-   if (infoReqIdAuth_ && (reqId == infoReqIdAuth_)) {
-      infoReqIdAuth_ = 0;
-      walletInfoAuth_.setEncKeys(walletInfo.encKeys());
-      walletInfoAuth_.setEncTypes(walletInfo.encTypes());
-      walletInfoAuth_.setKeyRank(walletInfo.keyRank());
-      emit authWalletInfoReceived();
    }
 }
 

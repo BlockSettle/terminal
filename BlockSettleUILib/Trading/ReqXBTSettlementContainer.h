@@ -61,12 +61,8 @@ public:
    std::string fxProduct() const { return fxProd_; }
    uint64_t fee() const { return fee_; }
    bool weSell() const { return clientSells_; }
-   bool isSellFromPrimary() const { return sellFromPrimary_; }
    bool userKeyOk() const { return userKeyOk_; }
 
-
-   bs::hd::WalletInfo walletInfo() const { return walletInfo_; }
-   bs::hd::WalletInfo walletInfoAuth() const { return walletInfoAuth_; }
 
    void onUnsignedPayinRequested(const std::string& settlementId);
    void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
@@ -77,7 +73,6 @@ signals:
    void settlementAccepted();
    void acceptQuote(std::string reqId, std::string hexPayoutTx);
    void retry();
-   void authWalletInfoReceived();
 
 signals:
    void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin);
@@ -85,7 +80,6 @@ signals:
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
 private slots:
-   void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo);
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string error);
    void onTimerExpired();
 
@@ -111,10 +105,6 @@ private:
    std::shared_ptr<AddressVerificator>             addrVerificator_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
-   bs::hd::WalletInfo walletInfo_;
-   bs::hd::WalletInfo walletInfoAuth_;
-
-
    double            amount_;
    std::string       fxProd_;
    uint64_t          fee_;
@@ -127,12 +117,9 @@ private:
    std::string       comment_;
    const bool        clientSells_;
    bool              userKeyOk_ = false;
-   bool              sellFromPrimary_ = false;
 
    unsigned int      payinSignId_ = 0;
    unsigned int      payoutSignId_ = 0;
-   unsigned int      infoReqId_ = 0;
-   unsigned int      infoReqIdAuth_ = 0;
 
    const bs::Address authAddr_;
    bs::Address       dealerAuthAddress_;

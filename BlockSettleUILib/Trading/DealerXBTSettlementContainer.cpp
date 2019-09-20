@@ -262,7 +262,8 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
          , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::SettlementPayOut));
 
       emit sendSignedPayoutToPB(settlementIdString_, signedTX);
-      logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payout sent");
+      logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payout sent: {}"
+                     , signedTX.toHexStr());
 
       // ok. there is nothing this container could/should do
       emit completed();
