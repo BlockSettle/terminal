@@ -198,6 +198,8 @@ namespace bs {
             uint64_t amountReceived(const ContainsAddressCb &containsAddressCb) const;
             uint64_t amountSent(const ContainsAddressCb &containsAddressCb) const;
 
+            std::vector<UTXO> getInputs(const ContainsAddressCb &containsAddressCb) const;
+            std::vector<std::shared_ptr<ScriptRecipient>> getRecipients(const ContainsAddressCb &containsAddressCb) const;
          private:
             Signer getSigner() const;
          };
