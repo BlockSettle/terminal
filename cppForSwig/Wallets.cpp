@@ -707,6 +707,19 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::createFromBIP32Node(
    //compute wallet ID
    auto pubkey = node.getPublicKey();
 
+   //walletID
+   auto chaincode_copy = node.getChaincode();
+   auto derScheme =
+      make_shared<DerivationScheme_ArmoryLegacy>(chaincode_copy);
+
+   auto asset_single = make_shared<AssetEntry_Single>(
+      ROOT_ASSETENTRY_ID, BinaryData(),
+      pubkey, nullptr);
+
+   BinaryData walletIdRaw = computeWalletID(derScheme, asset_single);
+   // Remove trailing \0 chars if needed
+   std::string walletIdStr = walletIdRaw.toBinStr().c_str();
+
    //compute master ID as hmac256(root pubkey, "MetaEntry")
    string hmacMasterMsg("MetaEntry");
    auto&& masterID_long = BtcUtils::getHMAC256(
@@ -717,9 +730,9 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::createFromBIP32Node(
    //create wallet file and dbenv
    stringstream pathSS;
    if (!isPublic)
-      pathSS << folder << "/armory_" << masterIDStr << "_wallet.lmdb";
+      pathSS << folder << "/BlockSettle_" << walletIdStr << "_wallet.lmdb";
    else
-      pathSS << folder << "/armory_" << masterIDStr << "_WatchingOnly.lmdb";
+      pathSS << folder << "/BlockSettle_" << walletIdStr << "_WatchingOnly.lmdb";
 
    auto dbenv = getEnvFromFile(pathSS.str(), 2);
    initWalletMetaDB(dbenv, masterIDStr);
@@ -727,18 +740,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::createFromBIP32Node(
    auto wltMetaPtr = make_shared<WalletMeta_Single>(dbenv);
    wltMetaPtr->parentID_ = masterID;
 
-   {
-      //walletID
-      auto chaincode_copy = node.getChaincode();
-      auto derScheme =
-         make_shared<DerivationScheme_ArmoryLegacy>(chaincode_copy);
-
-      auto asset_single = make_shared<AssetEntry_Single>(
-         ROOT_ASSETENTRY_ID, BinaryData(),
-         pubkey, nullptr);
-
-      wltMetaPtr->walletID_ = move(computeWalletID(derScheme, asset_single));
-   }
+   wltMetaPtr->walletID_ = std::move(walletIdRaw);
 
    //create kdf and master encryption key
    auto kdfPtr = make_shared<KeyDerivationFunction_Romix>();
