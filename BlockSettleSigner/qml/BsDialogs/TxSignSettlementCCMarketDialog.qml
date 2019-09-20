@@ -21,6 +21,10 @@ TxSignSettlementBaseDialog {
     readonly property string inputProduct: is_sell ? " " + passwordDialogData.value("TxInputProduct") : " XBT"
     readonly property int lotSize: passwordDialogData.value("LotSize")
 
+    readonly property int recipientsAddrHeight: txInfo.recipients.length < 4 ? txInfo.recipients.length * addressRowHeight : addressRowHeight * 3
+    readonly property int inputsXBTAddrHeight: txInfo.inputsXBT.length < 4 ? txInfo.inputsXBT.length * addressRowHeight : addressRowHeight * 3
+    readonly property int inputsCCAddrHeight: txInfo.inputsCC.length < 4 ? txInfo.inputsCC.length * addressRowHeight : addressRowHeight * 3
+
     function displayAmount(amount) {
         if (is_sell) {
             return (amount * balanceDivider / lotSize).toFixed(0)
@@ -88,7 +92,7 @@ TxSignSettlementBaseDialog {
             visible: passwordDialogData.contains("InputsListVisible")
 
             CustomLabel {
-                text: qsTr("Payment UTXO(s)")
+                text: qsTr("Payment Address(es)")
                 Layout.alignment: Qt.AlignTop
             }
 
@@ -96,9 +100,9 @@ TxSignSettlementBaseDialog {
                 id: inputs
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignRight
-                model: txInfo.inputs
+                model: is_sell ? txInfo.inputsCC : txInfo.inputsXBT
                 clip: true
-                Layout.preferredHeight: txInfo.inputs.length < 4 ? txInfo.inputs.length * addressRowHeight : addressRowHeight * 3
+                Layout.preferredHeight: is_sell ? inputsCCAddrHeight : inputsXBTAddrHeight
 
                 flickableDirection: Flickable.VerticalFlick
                 boundsBehavior: Flickable.StopAtBounds
@@ -130,7 +134,7 @@ TxSignSettlementBaseDialog {
             visible: passwordDialogData.contains("RecipientsListVisible")
 
             CustomLabel {
-                text: qsTr("Delivery UTXO(s)")
+                text: qsTr("Delivery Address(es)")
                 Layout.alignment: Qt.AlignTop
             }
 
@@ -182,15 +186,15 @@ TxSignSettlementBaseDialog {
             Layout.preferredHeight: 25
         }
 
-        // Lot Size
-        CustomLabel {
-            Layout.fillWidth: true
-            text: qsTr("Lot Size")
-        }
-        CustomLabelValue {
-            text: lotSize
-            Layout.alignment: Qt.AlignRight
-        }
+//        // Lot Size
+//        CustomLabel {
+//            Layout.fillWidth: true
+//            text: qsTr("Lot Size")
+//        }
+//        CustomLabelValue {
+//            text: lotSize
+//            Layout.alignment: Qt.AlignRight
+//        }
 
         // Input Amount
         CustomLabel {

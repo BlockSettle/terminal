@@ -10,6 +10,7 @@ import "../BsStyles"
 
 BSPasswordInput {
     id: root
+    width: 450
 
     property WalletInfo walletInfo: WalletInfo{}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
@@ -66,7 +67,7 @@ BSPasswordInput {
     }
 
     CustomHeader {
-        text: qsTr("Settlement Leaf")
+        text: qsTr("Authentication Address")
         Layout.fillWidth: true
         Layout.preferredHeight: 25
         Layout.topMargin: 5
@@ -85,7 +86,7 @@ BSPasswordInput {
             Layout.preferredWidth: 110
             Layout.maximumWidth: 110
             Layout.fillWidth: true
-            text: qsTr("Authentication Address")
+            text: qsTr("Address")
         }
         CustomLabel {
             Layout.fillWidth: true

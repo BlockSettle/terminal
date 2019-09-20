@@ -22,8 +22,11 @@ class TXInfo : public QObject
 
    Q_PROPERTY(bool isValid READ isValid NOTIFY dataChanged)
    Q_PROPERTY(int nbInputs READ nbInputs NOTIFY dataChanged)
-   Q_PROPERTY(QStringList inputs READ inputs NOTIFY dataChanged)
+
+   Q_PROPERTY(QStringList inputsXBT READ inputsXBT NOTIFY dataChanged)
+   Q_PROPERTY(QStringList inputsCC READ inputsCC NOTIFY dataChanged)
    Q_PROPERTY(QStringList recipients READ recipients NOTIFY dataChanged)
+
    Q_PROPERTY(int txVirtSize READ txVirtSize NOTIFY dataChanged)
    Q_PROPERTY(double amount READ amount NOTIFY dataChanged)
    Q_PROPERTY(double total READ total NOTIFY dataChanged)
@@ -43,16 +46,19 @@ public:
    TXInfo(const TXInfo &src);
 
    bool isValid() const { return txReq_.isValid(); }
-   size_t nbInputs() const { return txReq_.inputs.size(); }
-   QStringList inputs() const;
+   size_t nbInputs() const { return inputsXBT().size(); }
+
+   QStringList inputsXBT() const;
+   QStringList inputsCC() const;
    QStringList recipients() const;
+
    size_t txVirtSize() const { return txReq_.estimateTxVirtSize(); }
-   double amount() const { return txReq_.amount(containsAddressCb) / BTCNumericTypes::BalanceDivider; }
-   double total() const { return txReq_.totalSpent(containsAddressCb) / BTCNumericTypes::BalanceDivider; }
+   double amount() const { return txReq_.amount(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }
+   double total() const { return txReq_.totalSpent(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }
    double fee() const { return txReq_.fee / BTCNumericTypes::BalanceDivider; }
    bool hasChange() const { return (changeAmount() > 0); }
-   double changeAmount() const { return txReq_.changeAmount(containsAddressCb) / BTCNumericTypes::BalanceDivider; }
-   double inputAmount() const { return txReq_.inputAmount(containsAddressCb) / BTCNumericTypes::BalanceDivider; }
+   double changeAmount() const { return txReq_.changeAmount(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }
+   double inputAmount() const { return txReq_.inputAmount(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }
    QString txId() const { return txId_; }
    void setTxId(const QString &);
    QString walletId() const { return QString::fromStdString(txReq_.walletIds.front()); }
@@ -67,15 +73,17 @@ signals:
 
 private:
    void init();
+   QStringList inputs(core::wallet::Type leafType) const;
 
 private:
    const bs::core::wallet::TXSignRequest  txReq_;
    QString  txId_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_ = nullptr; // nullptr init required for default constructor
-   std::shared_ptr<spdlog::logger>  logger_ = nullptr;
+   std::shared_ptr<spdlog::logger> logger_ = nullptr;
 
-   const std::function<bool(const bs::Address &)> containsAddressCb = [this](const bs::Address &address){
+   using ContainsAddressCb = const std::function<bool(const bs::Address &)>;
+   ContainsAddressCb containsThisAddressCb_ = [this](const bs::Address &address){
       if (txReq_.walletIds.empty()) {
          return false;
       }
@@ -96,6 +104,21 @@ private:
       }
       return false;
    };
+
+   ContainsAddressCb containsAnyOurXbtAddressCb_ = [this](const bs::Address &address){
+      return containsAddressImpl(address, core::wallet::Type::Bitcoin);
+   };
+
+   ContainsAddressCb containsAnyOurCCAddressCb_ = [this](const bs::Address &address){
+      return containsAddressImpl(address, core::wallet::Type::ColorCoin);
+   };
+
+   ContainsAddressCb containsCounterPartyAddressCb_ = [this](const bs::Address &address){
+      return notContainsAddressImpl(address);
+   };
+
+   bool containsAddressImpl(const bs::Address &address, core::wallet::Type walletType) const;
+   bool notContainsAddressImpl(const bs::Address &address) const;
 };
 
 }  //namespace wallet

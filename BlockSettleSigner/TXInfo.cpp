@@ -1,5 +1,6 @@
 #include "TXInfo.h"
 
+#include "CheckRecipSigner.h"
 #include "Wallets/SyncHDWallet.h"
 #include "QWalletInfo.h"
 
@@ -31,6 +32,32 @@ void TXInfo::init()
    txId_ = QString::fromStdString(txReq_.serializeState().toBinStr());
 }
 
+bool TXInfo::containsAddressImpl(const bs::Address &address, bs::core::wallet::Type walletType) const
+{
+   for (const auto &leaf : walletsMgr_->getAllWallets()) {
+      if (leaf->type() == walletType && leaf->containsAddress(address)) {
+         return true;
+      }
+   }
+
+   return false;
+}
+
+bool TXInfo::notContainsAddressImpl(const bs::Address &address) const
+{
+   // not equal to !containsAddressImpl()
+   bool contains = false;
+
+   for (const auto &leaf : walletsMgr_->getAllWallets()) {
+      if (leaf->containsAddress(address)) {
+         contains = true;
+         break;
+      }
+   }
+
+   return !contains;
+}
+
 void TXInfo::setTxId(const QString &txId)
 {
    txId_ = txId;
@@ -39,7 +66,7 @@ void TXInfo::setTxId(const QString &txId)
 
 double TXInfo::amountCCReceived(const QString &cc) const
 {
-   const std::function<bool(const bs::Address &)> &containsCCAddressCb = [this, cc](const bs::Address &address){
+   ContainsAddressCb &containsCCAddressCb = [this, cc](const bs::Address &address){
       const auto &wallet = walletsMgr_->getCCWallet(cc.toStdString());
       return wallet->containsAddress(address);
    };
@@ -52,36 +79,49 @@ double TXInfo::amountXBTReceived() const
    // calculate received amount from counterparty outputs
    // check all wallets and addresses
 
-   const std::function<bool(const bs::Address &)> &containsXbtAddressCb = [this](const bs::Address &address){
-      for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
-         const auto &wallet = walletsMgr_->getHDWallet(i);
-         for (auto leaf : wallet->getLeaves()) {
-            if (leaf->type() == core::wallet::Type::Bitcoin && leaf->containsAddress(address)) {
-               return true;
-            }
-         }
-      }
-      return false;
-   };
-
-   return txReq_.amountReceived(containsXbtAddressCb) / BTCNumericTypes::BalanceDivider;
+   return txReq_.amountReceived(containsAnyOurXbtAddressCb_) / BTCNumericTypes::BalanceDivider;
 }
 
-QStringList TXInfo::inputs() const
+QStringList TXInfo::inputs(bs::core::wallet::Type leafType) const
 {
+   std::vector<UTXO> inputsList;
+   if (leafType == bs::core::wallet::Type::Bitcoin) {
+      inputsList = txReq_.getInputs(containsAnyOurXbtAddressCb_);
+   }
+   else if (leafType == bs::core::wallet::Type::ColorCoin) {
+      inputsList = txReq_.getInputs(containsAnyOurCCAddressCb_);
+   }
+
    QStringList result;
-   for (const auto &input : txReq_.inputs) {
+   for (const auto &input : inputsList) {
       result.push_back(QString::fromStdString(bs::Address::fromUTXO(input).display()));
    }
+
+   result.removeDuplicates();
    return result;
 }
 
 QStringList TXInfo::recipients() const
 {
+   std::vector<std::shared_ptr<ScriptRecipient>> recipientsList;
+   recipientsList = txReq_.getRecipients(containsCounterPartyAddressCb_);
+
    QStringList result;
-   for (const auto &recip : txReq_.recipients) {
-      result.push_back(QString::fromStdString(bs::Address::fromRecipient(recip).display()));
+   for (const auto &recip : recipientsList) {
+      const auto addr = bs::Address::fromRecipient(recip);
+      result.push_back(QString::fromStdString(addr.display()));
    }
+
+   result.removeDuplicates();
    return result;
 }
 
+QStringList TXInfo::inputsXBT() const
+{
+   return inputs(bs::core::wallet::Type::Bitcoin);
+}
+
+QStringList TXInfo::inputsCC() const
+{
+   return inputs(bs::core::wallet::Type::ColorCoin);
+}
