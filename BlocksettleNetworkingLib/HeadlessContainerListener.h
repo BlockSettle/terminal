@@ -173,8 +173,7 @@ private:
       , const PasswordReceivedCb &cb);
    void RunDeferredPwDialog();
 
-   bool createAuthLeaf(const std::shared_ptr<bs::core::hd::Wallet> &, const BinaryData &salt
-      , const SecureBinaryData &password);
+   bool createAuthLeaf(const std::shared_ptr<bs::core::hd::Wallet> &, const BinaryData &salt);
    bool createSettlementLeaves(const std::shared_ptr<bs::core::hd::Wallet> &wallet
       , const std::vector<bs::Address> &authAddresses);
 
