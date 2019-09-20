@@ -70,9 +70,11 @@ void TestCC::SetUp()
 
    mineBlocks(101);
 
-   const auto priWallet = envPtr_->walletsMgr()->createWallet("Primary", "", 
+   const bs::wallet::PasswordData pd{ passphrase_, { bs::wallet::EncryptionType::Password } };
+
+   const auto priWallet = envPtr_->walletsMgr()->createWallet("Primary", "",
       bs::core::wallet::Seed(CryptoPRNG::generateRandom(32), NetworkType::TestNet), 
-      envPtr_->armoryInstance()->homedir_, passphrase_, true);
+      envPtr_->armoryInstance()->homedir_, pd, true);
 
    if (!priWallet)
       return;
@@ -81,7 +83,7 @@ void TestCC::SetUp()
       return;
 
    {
-      auto lock = priWallet->lockForEncryption(passphrase_);
+      const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
       ccSignWallet_ = ccGroup->createLeaf(AddressEntryType_Default, 0x00667675/*"BLK"*/);
       if (!ccSignWallet_)
          return;
@@ -97,7 +99,7 @@ void TestCC::SetUp()
       return;
    }
    {
-      auto lock = priWallet->lockForEncryption(passphrase_);
+      const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
       xbtSignWallet_ = xbtGroup->createLeaf(AddressEntryType_Default, 1);
       if (!xbtSignWallet_)
          return;
@@ -153,7 +155,8 @@ void TestCC::SetUp()
    const auto addr = futAddr.get();
    auto promFund = std::make_shared<std::promise<bool>>();
    auto futFund = promFund->get_future();
-   const auto &cbInputs = [this, xbtLeaf, addr, promFund](std::vector<UTXO> inputs) 
+   const auto &cbInputs = [this, priWallet, xbtLeaf, addr, promFund]
+      (std::vector<UTXO> inputs)
    {
       try 
       {
@@ -164,7 +167,7 @@ void TestCC::SetUp()
 
          BinaryData fundingTx;
          {
-            auto lock = xbtLeaf->lockForEncryption(passphrase_);
+            const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             fundingTx = xbtLeaf->signTXRequest(fundingTxReq);
          }
 
@@ -298,11 +301,13 @@ TEST_F(TestCC, DISABLED_TX_buy)
          txReq3.populateUTXOs = true;
          txReq3.inputs = txReq1.inputs;
 
+         const auto priWallet = envPtr_->walletsMgr()->getPrimaryWallet();
+
          BinaryData signed1;
          {
             auto ccLeaf =
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(ccSignWallet_);
-            auto lock = ccLeaf->lockForEncryption(passphrase_);
+            const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed1 = ccSignWallet_->signPartialTXRequest(txReq3);
             ASSERT_FALSE(signed1.isNull());
          }
@@ -311,7 +316,7 @@ TEST_F(TestCC, DISABLED_TX_buy)
          {
             auto xbtLeaf =
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(xbtSignWallet_);
-            auto lock = xbtLeaf->lockForEncryption(passphrase_);
+            const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed2 = xbtSignWallet_->signPartialTXRequest(txReq2);
             ASSERT_FALSE(signed2.isNull());
          }
@@ -413,11 +418,13 @@ TEST_F(TestCC, DISABLED_TX_sell)
          txReq3.populateUTXOs = true;
          txReq3.prevStates = { txReq2.serializeState() };
 
+         const auto priWallet = envPtr_->walletsMgr()->getPrimaryWallet();
+
          BinaryData signed1, signed2;
          {
             auto ccLeaf =
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(ccSignWallet_);
-            auto lock = ccLeaf->lockForEncryption(passphrase_);
+            const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed1 = ccSignWallet_->signPartialTXRequest(txReq3);
             ASSERT_FALSE(signed1.isNull());
          }
@@ -428,7 +435,7 @@ TEST_F(TestCC, DISABLED_TX_sell)
          {
             auto xbtLeaf =
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(xbtSignWallet_);
-            auto lock = xbtLeaf->lockForEncryption(passphrase_);
+            const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed2 = xbtSignWallet_->signPartialTXRequest(txReq2);
             ASSERT_FALSE(signed2.isNull());
          }
