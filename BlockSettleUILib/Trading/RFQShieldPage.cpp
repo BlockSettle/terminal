@@ -5,7 +5,8 @@
 
 namespace {
    // Label texts
-   const QString shieldLogin = QObject::tr("Login to submit RFQs");
+   const QString shieldLoginToSubmitRFQs = QObject::tr("Login to submit RFQs");
+   const QString shieldLoginToResponseRFQs = QObject::tr("Login to submit responsive quotes");
    const QString shieldTradingParticipantOnly = QObject::tr("Reserved for Trading Participants");
    const QString shieldDealingParticipantOnly = QObject::tr("Reserved for Dealing Participants");
 
@@ -44,9 +45,14 @@ void RFQShieldPage::setShieldButtonAction(std::function<void(void)>&& action)
    });
 }
 
-void RFQShieldPage::showShieldLoginRequired()
+void RFQShieldPage::showShieldLoginToSubmitRequired()
 {
-   prepareShield(shieldLogin);
+   prepareShield(shieldLoginToSubmitRFQs);
+}
+
+void RFQShieldPage::showShieldLoginToResponseRequired()
+{
+   prepareShield(shieldLoginToResponseRFQs);
 }
 
 void RFQShieldPage::showShieldReservedTradingParticipant()

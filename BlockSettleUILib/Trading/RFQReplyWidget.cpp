@@ -46,7 +46,7 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
       this, &RFQReplyWidget::requestPrimaryWalletCreation);
 
 
-   ui_->shieldPage->showShieldLoginRequired();
+   ui_->shieldPage->showShieldLoginToResponseRequired();
    popShield();
 }
 
@@ -310,7 +310,7 @@ void RFQReplyWidget::onConnectedToCeler()
 
 void RFQReplyWidget::onDisconnectedFromCeler()
 {
-   ui_->shieldPage->showShieldLoginRequired();
+   ui_->shieldPage->showShieldLoginToResponseRequired();
    popShield();
    ui_->pageRFQReply->onCelerDisconnected();
 }

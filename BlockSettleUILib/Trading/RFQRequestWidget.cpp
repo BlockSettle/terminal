@@ -36,7 +36,7 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    connect(ui_->pageRFQTicket, &RFQTicketXBT::submitRFQ, this, &RFQRequestWidget::onRFQSubmit);
    connect(ui_->shieldPage, &RFQShieldPage::requestPrimaryWalletCreation, this, &RFQRequestWidget::requestPrimaryWalletCreation);
    
-   ui_->shieldPage->showShieldLoginRequired();
+   ui_->shieldPage->showShieldLoginToSubmitRequired();
    popShield();
 }
 
@@ -210,7 +210,7 @@ void RFQRequestWidget::onDisconnectedFromCeler()
       QObject::disconnect(conn);
    }
 
-   ui_->shieldPage->showShieldLoginRequired();
+   ui_->shieldPage->showShieldLoginToSubmitRequired();
    popShield();
 }
 
