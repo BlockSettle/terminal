@@ -26,6 +26,7 @@
 #include "AuthAddressManager.h"
 #include "MarketDataProvider.h"
 #include "AssetManager.h"
+#include "BaseCelerClient.h"
 #include "ui_ChatWidget.h"
 
 using namespace bs::network;
@@ -87,9 +88,11 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    , const std::shared_ptr<ArmoryConnection>& armory
    , const std::shared_ptr<SignContainer>& signContainer
    , const std::shared_ptr<MarketDataProvider>& mdProvider
-   , const std::shared_ptr<AssetManager>& assetManager)
+   , const std::shared_ptr<AssetManager>& assetManager
+   , const std::shared_ptr<BaseCelerClient> &celerClient)
 {
    loggerPtr_ = loggerPtr;
+   celerClient_ = celerClient;
 
    chatClientServicePtr_ = chatClientServicePtr;
 
