@@ -96,10 +96,11 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
          command.append('-DCMAKE_CXX_FLAGS_DEBUG=/D_DEBUG -DBUILD_MT_RELEASE=OFF /MTd /Zi /Ob0 /Od /RTC1')
          command.append('-DCMAKE_CONFIGURATION_TYPES=Debug')
    else:
-      command.append('-DCMAKE_BUILD_TYPE=Release')
+      command.append('-DCMAKE_BUILD_TYPE=RelWithDebInfo')
       if project_settings._is_windows:
          command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /DNDEBUG')
-         command.append('-DCMAKE_CONFIGURATION_TYPES=Release')
+         command.append('-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=/MT /O2 /Ob2 /DNDEBUG')
+         command.append('-DCMAKE_CONFIGURATION_TYPES=RelWithDebInfo')
 
    if build_production:
       command.append('-DPRODUCTION_BUILD=1')
