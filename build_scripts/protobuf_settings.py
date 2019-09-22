@@ -12,7 +12,7 @@ class ProtobufSettings(Configurator):
         self._version = '3.9.0'
         self._package_name = 'protobuf-' + self._version
         self._package_name_url = 'protobuf-cpp-' + self._version
-        self._script_revision = '2'
+        self._script_revision = '3'
 
         self._package_url = 'https://github.com/protocolbuffers/protobuf/releases/download/v' + \
             self._version + '/' + self._package_name_url + '.tar.gz'
@@ -21,7 +21,7 @@ class ProtobufSettings(Configurator):
         return self._package_name
 
     def get_revision_string(self):
-        return self._version + self._script_revision
+        return self._version + '-' + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -85,7 +85,7 @@ class ProtobufSettings(Configurator):
 
     def get_win_build_mode(self):
         if self._project_settings.get_build_mode() == 'release':
-            return 'Release'
+            return 'RelWithDebInfo'
         else:
             return 'Debug'
 

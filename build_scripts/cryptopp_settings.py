@@ -10,6 +10,7 @@ class CryptoppSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = '32f715f1d723e2bbb78b44fa9e167da64214e2e6'
+        self._script_revision = '1'
         self._package_name = 'cryptopp'
 
         self._package_url = 'https://github.com/weidai11/cryptopp/archive/32f715f1d723e2bbb78b44fa9e167da64214e2e6.zip'
@@ -18,7 +19,7 @@ class CryptoppSettings(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + '-' + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -38,6 +39,7 @@ class CryptoppSettings(Configurator):
         if self._project_settings.on_windows():
             command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
             command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
+            command.append('-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=/MT')
         else:
             command.append('-DDISABLE_NATIVE_ARCH=1')
 
@@ -59,7 +61,7 @@ class CryptoppSettings(Configurator):
 
     def get_win_build_configuration(self):
         if self._project_settings.get_build_mode() == 'release':
-            return 'Release'
+            return 'RelWithDebInfo'
         else:
             return 'Debug'
 

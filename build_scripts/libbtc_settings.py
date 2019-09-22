@@ -13,7 +13,7 @@ class LibBTC(Configurator):
         self.mpir = MPIRSettings(settings)
         self._version = 'd5a25cb138532167d1475a1270e53a917d1f2156'
         self._package_name = 'libbtc'
-        self._script_revision = '1'
+        self._script_revision = '2'
 
         self._package_url = 'https://github.com/sergey-chernikov/' + self._package_name + '/archive/%s.zip' % self._version
 
@@ -21,7 +21,7 @@ class LibBTC(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version + self._script_revision
+        return self._version + '-' + self._script_revision
 
     def get_install_dir(self):
         return os.path.join(self._project_settings.get_common_build_dir(), 'libbtc')
@@ -44,6 +44,8 @@ class LibBTC(Configurator):
             else:
                 command.append('-DCMAKE_C_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
                 command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
+                command.append('-DCMAKE_C_FLAGS_RELWITHDEBINFO=/MT /O2 /Ob2 /D NDEBUG')
+                command.append('-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=/MT /O2 /Ob2 /D NDEBUG')
 
         command.append('-DGMP_INSTALL_DIR=' + self.mpir.get_install_dir())
         command.append('-G')
@@ -71,7 +73,7 @@ class LibBTC(Configurator):
 
     def get_win_build_configuration(self):
         if self._project_settings.get_build_mode() == 'release':
-            return 'Release'
+            return 'RelWithDebInfo'
         else:
             return 'Debug'
 

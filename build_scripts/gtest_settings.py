@@ -10,6 +10,7 @@ class GtestSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = '1.8.1'
+        self._script_revision = '1'
         self._package_name = 'Gtest'
 
         if settings.on_windows():
@@ -21,7 +22,7 @@ class GtestSettings(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + '-' + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -66,7 +67,7 @@ class GtestSettings(Configurator):
 
     def get_win_build_configuration(self):
         if self._project_settings.get_build_mode() == 'release':
-            return 'Release'
+            return 'RelWithDebInfo'
         else:
             return 'Debug'
 
