@@ -22,7 +22,8 @@ public:
 
    void setShieldButtonAction(std::function<void(void)>&& action);
 
-   void showShieldLoginRequired();
+   void showShieldLoginToSubmitRequired();
+   void showShieldLoginToResponseRequired();
    void showShieldReservedTradingParticipant();
    void showShieldReservedDealingParticipant();
    void showShieldPromoteToPrimaryWallet();

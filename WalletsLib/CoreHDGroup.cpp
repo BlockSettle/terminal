@@ -6,7 +6,7 @@
 using namespace bs::core;
 
 
-hd::Group::Group(std::shared_ptr<AssetWallet_Single> walletPtr
+hd::Group::Group(const std::shared_ptr<AssetWallet_Single> &walletPtr
    , bs::hd::Path::Elem index, NetworkType netType, bool isExtOnly,
    const std::shared_ptr<spdlog::logger> &logger)
    : walletPtr_(walletPtr), index_(index & ~bs::hd::hardFlag)
@@ -264,7 +264,7 @@ void hd::Group::initLeaf(
    }
 
    //address types
-   accTypePtr->setAddressTypes(/*getAddressTypeSet()*/ { leaf->addressType() });
+   accTypePtr->setAddressTypes({ leaf->addressType() });
    accTypePtr->setDefaultAddressType(leaf->addressType());
 
    //address lookup
@@ -273,8 +273,7 @@ void hd::Group::initLeaf(
    }
    accTypePtr->setAddressLookup(lookup);
 
-   //Lock the underlying armory wallet to allow accounts to derive their root from
-   //the wallet's. We assume the passphrase prompt lambda is already set.
+   // We assume the passphrase prompt lambda is already set.
    auto lock = walletPtr_->lockDecryptedContainer();
 
    auto accID = walletPtr_->createBIP32Account(nullptr, pathInt, accTypePtr);
@@ -609,6 +608,7 @@ std::shared_ptr<hd::Leaf> hd::SettlementGroup::createLeaf(
       to succeed.
       */
 
+      const auto lock = walletPtr_->lockDecryptedContainer();
       auto& privKey = walletPtr_->getDecryptedPrivateKeyForAsset(assetSingle);
       initLeaf(leaf, privKey, SecureBinaryData());
    }

@@ -1,5 +1,7 @@
 #include "PullOwnOTCRequestWidget.h"
 
+#include "OtcTypes.h"
+#include "UiUtils.h"
 #include "ui_PullOwnOTCRequestWidget.h"
 
 PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
@@ -8,16 +10,15 @@ PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
 {
    ui_->setupUi(this);
 
-   ui_->widgetRange->hide();
-
-   connect(ui_->pushButtonPull, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::requestPulled);
+   connect(ui_->pullPushButton, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::requestPulled);
 }
 
 PullOwnOTCRequestWidget::~PullOwnOTCRequestWidget() = default;
 
 void PullOwnOTCRequestWidget::setOffer(const bs::network::otc::Offer &offer)
 {
-   ui_->labelSide->setText(QString::fromStdString(bs::network::otc::toString(offer.ourSide)));
-   ui_->labelPrice->setText(QString::number(offer.price));
-   ui_->labelQuantity->setText(QString::number(offer.amount));
+   // #new_logic : fix security & product checking
+   ui_->sideValue->setText(QString::fromStdString(bs::network::otc::toString(offer.ourSide)));
+   ui_->priceValue->setText(UiUtils::displayCurrencyAmount(bs::network::otc::fromCents(offer.price)));
+   ui_->quantityValue->setText(UiUtils::displayAmount(bs::network::otc::satToBtc(offer.amount)));
 }

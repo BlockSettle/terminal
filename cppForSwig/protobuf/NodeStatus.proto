@@ -40,3 +40,9 @@ message Refresh
 	required uint32 refreshType = 1;
 	repeated bytes id = 2;
 }
+
+message NewBlock
+{
+	required uint32 height = 1;
+	optional uint32 branch_height = 2;
+}

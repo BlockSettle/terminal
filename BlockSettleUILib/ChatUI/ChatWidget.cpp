@@ -24,6 +24,9 @@
 #include "OTCRequestViewModel.h"
 #include "OTCShieldWidgets/OTCWindowsManager.h"
 #include "AuthAddressManager.h"
+#include "MarketDataProvider.h"
+#include "AssetManager.h"
+#include "BaseCelerClient.h"
 #include "ui_ChatWidget.h"
 
 using namespace bs::network;
@@ -83,9 +86,13 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
    , const std::shared_ptr<AuthAddressManager> &authManager
    , const std::shared_ptr<ArmoryConnection>& armory
-   , const std::shared_ptr<SignContainer>& signContainer)
+   , const std::shared_ptr<SignContainer>& signContainer
+   , const std::shared_ptr<MarketDataProvider>& mdProvider
+   , const std::shared_ptr<AssetManager>& assetManager
+   , const std::shared_ptr<BaseCelerClient> &celerClient)
 {
    loggerPtr_ = loggerPtr;
+   celerClient_ = celerClient;
 
    chatClientServicePtr_ = chatClientServicePtr;
 
@@ -147,7 +154,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    // OTC
    otcHelper_ = new ChatOTCHelper(this);
    otcHelper_->init(loggerPtr_, walletsMgr, armory, signContainer, authManager, appSettings);
-   otcWindowsManager_->init(walletsMgr, authManager);
+   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager);
    
    connect(otcHelper_->getClient(), &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
    connect(otcHelper_->getClient(), &OtcClient::sendMessage, this, &ChatWidget::onSendOtcMessage);

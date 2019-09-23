@@ -16,6 +16,9 @@ class SignContainer;
 class WalletsM;
 class ChatOTCHelper;
 class OTCWindowsManager;
+class MarketDataProvider;
+class AssetManager;
+class BaseCelerClient;
 
 namespace Ui {
    class ChatWidget;
@@ -42,7 +45,11 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<AuthAddressManager> &authManager
       , const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<SignContainer> &signContainer);
+      , const std::shared_ptr<SignContainer> &signContainer
+      , const std::shared_ptr<MarketDataProvider>& mdProvider
+      , const std::shared_ptr<AssetManager>& assetManager
+      , const std::shared_ptr<BaseCelerClient> &celerClient
+   );
 
    std::string login(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb&);
 
@@ -127,6 +134,7 @@ private:
    OTCRequestViewModel* otcRequestViewModel_ = nullptr;
    QPointer<ChatOTCHelper> otcHelper_{};
    std::shared_ptr<spdlog::logger>  loggerPtr_;
+   std::shared_ptr<BaseCelerClient> celerClient_;
    std::shared_ptr<ChatPartiesTreeModel> chatPartiesTreeModel_;
    std::shared_ptr<OTCWindowsManager> otcWindowsManager_{};
 

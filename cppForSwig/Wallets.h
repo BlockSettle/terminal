@@ -283,7 +283,7 @@ public:
    void shutdown(void);
 
    void setPassphrasePromptLambda(
-      std::function<SecureBinaryData(const BinaryData&)> lambda)
+      std::function<SecureBinaryData(const std::set<BinaryData>&)> lambda)
    {
       decryptedData_->setPassphrasePromptLambda(lambda);
    }
@@ -369,7 +369,9 @@ public:
    {}
 
    //locals
+   void addPassphrase(const SecureBinaryData&);
    void changeMasterPassphrase(const SecureBinaryData&);
+
    std::shared_ptr<AssetEntry_Single> getRoot(void) const { return root_; }
    const SecureBinaryData& getPublicRoot(void) const;
    std::shared_ptr<AssetEntry> getAccountRoot(const BinaryData& accountID) const;

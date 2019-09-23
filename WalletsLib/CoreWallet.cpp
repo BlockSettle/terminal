@@ -155,7 +155,7 @@ bool wallet::TXSignRequest::isValid() const noexcept
    return true;
 }
 
-Signer wallet::TXSignRequest::getSigner() const
+Signer wallet::TXSignRequest::getSigner(const std::shared_ptr<ResolverFeed> &resolver) const
 {
    bs::CheckRecipSigner signer;
 
@@ -169,10 +169,10 @@ Signer wallet::TXSignRequest::getSigner() const
 
       for (const auto &utxo : inputs) {
          std::shared_ptr<ScriptSpender> spender;
-/*         if (resolver) {
+         if (resolver) {
             spender = std::make_shared<ScriptSpender>(utxo, resolver);
          }
-         else*/ if (populateUTXOs) {
+         else if (populateUTXOs) {
             spender = std::make_shared<ScriptSpender>(utxo.getTxHash(), utxo.getTxOutIndex(), utxo.getValue());
          }
          else {
@@ -205,9 +205,9 @@ Signer wallet::TXSignRequest::getSigner() const
    }
    signer.removeDupRecipients();
 
-/*   if (resolver) {
+   if (resolver) {
       signer.setFeed(resolver);
-   }*/
+   }
    return signer;
 }
 
@@ -371,6 +371,74 @@ uint64_t wallet::TXSignRequest::amountSent(const wallet::TXSignRequest::Contains
    }
 
    return amount;
+}
+
+std::vector<UTXO> wallet::TXSignRequest::getInputs(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
+{
+   std::vector<UTXO> inputs;
+   std::set<UTXO> inputsSet;
+
+   if (!prevStates.empty() && containsAddressCb != nullptr) {
+      bs::CheckRecipSigner signer(prevStates.front());
+      for (auto spender : signer.spenders()) {
+         const auto &addr = bs::Address::fromUTXO(spender->getUtxo());
+
+         if (inputsSet.find(spender->getUtxo()) == inputsSet.cend()) {
+            if (containsAddressCb(addr)) {
+               inputsSet.insert(spender->getUtxo());
+               inputs.push_back(spender->getUtxo());
+            }
+         }
+      }
+   }
+
+   for (const auto &utxo : inputs) {
+      const auto &addr = bs::Address::fromUTXO(utxo);
+
+      if (inputsSet.find(utxo) == inputsSet.cend()) {
+         if (containsAddressCb(addr)) {
+            inputsSet.insert(utxo);
+            inputs.push_back(utxo);
+         }
+      }
+   }
+
+   return inputs;
+}
+
+std::vector<std::shared_ptr<ScriptRecipient>> wallet::TXSignRequest::getRecipients(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
+{
+   std::vector<std::shared_ptr<ScriptRecipient>> recipients;
+   std::set<BinaryData> recipientsSet;
+
+   if (!prevStates.empty() && containsAddressCb != nullptr) {
+      bs::CheckRecipSigner signer(prevStates.front());
+      for (auto recip : signer.recipients()) {
+         const auto &addr = bs::Address::fromRecipient(recip);
+         const auto &hash = recip->getSerializedScript();
+
+         if (recipientsSet.find(hash) == recipientsSet.cend()) {
+            if (containsAddressCb(addr)) {
+               recipientsSet.insert(hash);
+               recipients.push_back(recip);
+            }
+         }
+      }
+   }
+
+   for (const auto &recip : recipients) {
+      const auto &addr = bs::Address::fromRecipient(recip);
+      const auto &hash = recip->getSerializedScript();
+
+      if (recipientsSet.find(hash) == recipientsSet.cend()) {
+         if (containsAddressCb(addr)) {
+            recipientsSet.insert(hash);
+            recipients.push_back(recip);
+         }
+      }
+   }
+
+   return recipients;
 }
 
 bool wallet::TXMultiSignRequest::isValid() const noexcept
@@ -614,6 +682,7 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request,
 
 BinaryData Wallet::signTXRequest(const wallet::TXSignRequest &request, bool keepDuplicatedRecipients)
 {
+   auto lock = lockDecryptedContainer();
    auto signer = getSigner(request, keepDuplicatedRecipients);
    signer.sign();
    if (!signer.verify()) {
@@ -624,6 +693,7 @@ BinaryData Wallet::signTXRequest(const wallet::TXSignRequest &request, bool keep
 
 BinaryData Wallet::signPartialTXRequest(const wallet::TXSignRequest &request)
 {
+   auto lock = lockDecryptedContainer();
    auto signer = getSigner(request);
    signer.sign();
    return signer.serializeState();
@@ -643,6 +713,7 @@ BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest
          if (wallet.second->isWatchingOnly()) {
             throw std::logic_error("Won't sign with watching-only wallet");
          }
+         auto lock = wallet.second->lockDecryptedContainer();
          signer.setFeed(wallet.second->getResolver());
          signer.sign();
          signer.resetFeeds();
@@ -656,6 +727,7 @@ BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest
          if (itWallet == wallets.end()) {
             throw std::runtime_error("missing wallet for id " + input.second);
          }
+         auto lock = itWallet->second->lockDecryptedContainer();
          auto spender = std::make_shared<ScriptSpender>(input.first, itWallet->second->getResolver());
          if (txMultiReq.RBF) {
             spender->setSequence(UINT32_MAX - 2);

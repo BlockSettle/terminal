@@ -1138,7 +1138,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
    {
       //custom passphrase, set prompt lambda for the chain extention
       auto passphraseLambda =
-         [&passphrase](const BinaryData&)->SecureBinaryData
+         [&passphrase](const set<BinaryData>&)->SecureBinaryData
       {
          return passphrase;
       };
@@ -1923,11 +1923,24 @@ const SecureBinaryData& AssetWallet_Multisig::getDecryptedValue(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void AssetWallet_Single::changeMasterPassphrase(const SecureBinaryData& newPassphrase)
+void AssetWallet_Single::changeMasterPassphrase(
+   const SecureBinaryData& newPassphrase)
 {
-   auto lock = lockDecryptedContainer();
    auto&& masterKeyId = root_->getPrivateEncryptionKeyId();
-   decryptedData_->encryptEncryptionKey(masterKeyId, newPassphrase);
+   auto&& kdfId = root_->getKdfId();
+
+   decryptedData_->encryptEncryptionKey(
+      masterKeyId, kdfId, newPassphrase, true);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AssetWallet_Single::addPassphrase(const SecureBinaryData& passphrase)
+{
+   auto&& masterKeyId = root_->getPrivateEncryptionKeyId();
+   auto&& masterKdfId = root_->getKdfId();
+
+   decryptedData_->encryptEncryptionKey(
+      masterKeyId, masterKdfId, passphrase, false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2266,13 +2279,14 @@ void AssetWallet_Single::setSeed(
    auto rootPtr = dynamic_pointer_cast<AssetEntry_BIP32Root>(root_);
    if (rootPtr == nullptr)
       throw WalletException("expected BIP32 root object");
-   auto cipherCopy = rootPtr->getPrivKey()->copyCipher();
+   auto cipherCopy = 
+      rootPtr->getPrivKey()->getCipherDataPtr()->cipher_->getCopy();
 
    //if custom passphrase, set prompt lambda prior to encryption
    if (passphrase.getSize() > 0)
    {
       auto passphraseLambda =
-         [&passphrase](const BinaryData&)->SecureBinaryData
+         [&passphrase](const set<BinaryData>&)->SecureBinaryData
       {
          return passphrase;
       };

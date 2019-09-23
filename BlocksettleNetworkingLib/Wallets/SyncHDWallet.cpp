@@ -262,13 +262,12 @@ std::vector<std::string> hd::Wallet::registerWallet(
    const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    std::vector<std::string> result;
-   for (const auto &leaf : getLeaves()) 
-   {
+   for (const auto &leaf : getLeaves()) {
       //settlement leaves are not registered
       if (leaf->type() == bs::core::wallet::Type::Settlement)
          continue;
 
-      auto&& regIDs = leaf->registerWallet(armory, asNew);
+      const auto &regIDs = leaf->registerWallet(armory, asNew);
       result.insert(result.end(), regIDs.begin(), regIDs.end());
    }
 
@@ -357,14 +356,9 @@ std::vector<bs::wallet::EncryptionType> hd::Wallet::encryptionTypes() const
    return encryptionTypes_;
 }
 
-std::vector<SecureBinaryData> hd::Wallet::encryptionKeys() const
+std::vector<BinaryData> hd::Wallet::encryptionKeys() const
 {
    return encryptionKeys_;
-}
-
-bs::wallet::KeyRank hd::Wallet::encryptionRank() const
-{
-   return encryptionRank_;
 }
 
 void hd::Wallet::merge(const Wallet& rhs)

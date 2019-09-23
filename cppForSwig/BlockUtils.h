@@ -143,6 +143,8 @@ private:
    
    mutable std::shared_ptr<std::mutex> nodeStatusPollMutex_;
 
+   Queue<std::shared_ptr<BDVNotificationHook>> oneTimeHooks_;
+
 public:
    typedef std::function<void(BDMPhase, double,unsigned, unsigned)> ProgressCallback;
    std::shared_ptr<BitcoinP2P> networkNode_;
@@ -229,6 +231,9 @@ public:
    {
       zeroConfCont_->setZeroConfCallbacks(move(ptr));
    }
+
+   void registerOneTimeHook(std::shared_ptr<BDVNotificationHook>);
+   void triggerOneTimeHooks(BDV_Notification*);
 };
 
 ///////////////////////////////////////////////////////////////////////////////

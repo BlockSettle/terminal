@@ -9,7 +9,7 @@ class ZeroMQSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = '4.3.2'
-        self._script_revision = '1'
+        self._script_revision = '2'
 
         if settings.on_windows():
             self._package_name = 'libzmq-' + self._version
@@ -24,7 +24,7 @@ class ZeroMQSettings(Configurator):
         return self._package_name
 
     def get_revision_string(self):
-        return self._version + self._script_revision
+        return self._version + '-' + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -70,6 +70,8 @@ class ZeroMQSettings(Configurator):
             else:
                 command.append('-DCMAKE_C_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
                 command.append('-DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
+                command.append('-DCMAKE_C_FLAGS_RELWITHDEBINFO="/MT /O2 /Ob2 /D NDEBUG"')
+                command.append('-DCMAKE_CXX_FLAGS_RELWITHDEBINFO="/MT /O2 /Ob2 /D NDEBUG"')
                 
         command.append('-G')
         command.append(self._project_settings.get_cmake_generator())
@@ -115,15 +117,12 @@ class ZeroMQSettings(Configurator):
 
     def get_win_configuration(self):
         if self._project_settings.get_build_mode() == 'release':
-            return 'Release'
+            return 'RelWithDebInfo'
         else:
             return 'Debug'
 
     def get_win_configuration_output_dir(self):
-        if 'Release' in self.get_win_configuration():
-            return 'Release'
-        else:
-            return 'Debug'
+        return self.get_win_configuration()
 
     def get_win_platform(self):
         return 'x64'
@@ -143,12 +142,10 @@ class ZeroMQSettings(Configurator):
     def install_win(self):
         print('Installing ZeroMQ')
 
-        if self._project_settings.get_build_mode() == 'release':
-            src_lib_dir = os.path.join(self.get_build_dir(), 'lib', 'Release')
-            src_dll_dir = os.path.join(self.get_build_dir(), 'bin', 'Release')
-        else:
-            src_lib_dir = os.path.join(self.get_build_dir(), 'lib', 'Debug')
-            src_dll_dir = os.path.join(self.get_build_dir(), 'bin', 'Debug')
+        output_dir = self.get_win_configuration_output_dir()
+
+        src_lib_dir = os.path.join(self.get_build_dir(), 'lib', output_dir)
+        src_dll_dir = os.path.join(self.get_build_dir(), 'bin', output_dir)
 
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
 

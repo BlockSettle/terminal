@@ -468,14 +468,11 @@ namespace AsyncClient
          std::function<void(ReturnMessage<std::vector<UTXO>>)>);
 
       //outputs
-      void getOutpointsForAddresses(const std::vector<BinaryData>&, 
+      void getOutpointsForAddresses(const std::set<BinaryData>&, 
          unsigned startHeight, unsigned zcIndexCutoff,
          std::function<void(ReturnMessage<OutpointBatch>)>);
 
       void getUTXOsForAddress(const BinaryData&, bool,
-         std::function<void(ReturnMessage<std::vector<UTXO>>)>);
-
-      void getUtxosForAddrVec(const std::vector<BinaryData>&,
          std::function<void(ReturnMessage<std::vector<UTXO>>)>);
 
       void getSpentnessForOutputs(const std::map<BinaryData, std::set<unsigned>>&,

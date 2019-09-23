@@ -9,17 +9,12 @@
 // #old_logic : delete this all widget and use class RFQShieldPage(maybe need redo it but based class should be the same)
 enum class OTCPages : int
 {
-   OTCLoginRequiredShieldPage = 0,
-   OTCGeneralRoomShieldPage,
+   OTCShield = 0,
    OTCCreateRequestPage,
-   OTCPullOwnOTCRequestPage,
    OTCCreateResponsePage,
+   OTCPullOwnOTCRequestPage,
    OTCNegotiateRequestPage,
-   OTCNegotiateResponsePage,
-   OTCParticipantShieldPage,
-   OTCContactShieldPage,
-   OTCContactNetStatusShieldPage,
-   OTCSupportRoomShieldPage
+   OTCNegotiateResponsePage
 };
 
 class AbstractChatWidgetState {
@@ -31,7 +26,6 @@ public:
       applyUserFrameChange();
       applyChatFrameChange();
       applyRoomsFrameChange();
-      updateOtc();
    }
 
 protected:

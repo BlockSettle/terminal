@@ -4,6 +4,7 @@
 #include <functional>
 #include "SyncHDGroup.h"
 #include "SyncHDLeaf.h"
+#include "WalletEncryption.h"
 
 namespace spdlog {
    class logger;
@@ -36,8 +37,8 @@ namespace bs {
             void synchronize(const std::function<void()> &cbDone);
 
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
-            std::vector<SecureBinaryData> encryptionKeys() const;
-            bs::wallet::KeyRank encryptionRank() const;
+            std::vector<BinaryData> encryptionKeys() const;
+            bs::wallet::KeyRank encryptionRank() const { return encryptionRank_; }
             bool isPrimary() const;
             bool isOffline() const { return isOffline_; }
             NetworkType networkType() const { return netType_; }
@@ -111,8 +112,8 @@ namespace bs {
             std::shared_ptr<ArmoryConnection>   armory_;
             std::shared_ptr<spdlog::logger>     logger_;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
-            std::vector<SecureBinaryData>          encryptionKeys_;
-            std::pair<unsigned int, unsigned int>  encryptionRank_{ 1, 1 };
+            std::vector<BinaryData>                   encryptionKeys_;
+            bs::wallet::KeyRank  encryptionRank_{ 1, 1 };
             const bool isOffline_;
 
          private:

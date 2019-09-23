@@ -551,21 +551,6 @@ void BlockDataViewer::broadcastThroughRPC(const BinaryData& rawTx,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void BlockDataViewer::getUtxosForAddrVec(const vector<BinaryData>& addrVec,
-   function<void(ReturnMessage<vector<UTXO>>)> callback)
-{
-   auto payload = make_payload(Methods::getUTXOsForAddrList, bdvID_);
-   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
-   for (auto& addr : addrVec)
-      command->add_bindata(addr.getPtr(), addr.getSize());
-   
-   auto read_payload = make_shared<Socket_ReadPayload>();
-   read_payload->callbackReturn_ =
-      make_unique<CallbackReturn_VectorUTXO>(callback);
-   sock_->pushPayload(move(payload), read_payload);
-}
-
-///////////////////////////////////////////////////////////////////////////////
 void BlockDataViewer::getSpentnessForOutputs(
    const map<BinaryData, set<unsigned>>& outputs,
    std::function<void(ReturnMessage<
@@ -1063,7 +1048,7 @@ void AsyncClient::BlockDataViewer::getCombinedRBFTxOuts(
 
 ///////////////////////////////////////////////////////////////////////////////
 void AsyncClient::BlockDataViewer::getOutpointsForAddresses(
-   const std::vector<BinaryData>& addrVec, 
+   const std::set<BinaryData>& addrVec, 
    unsigned startHeight, unsigned zcIndexCutoff, 
    std::function<void(ReturnMessage<OutpointBatch>)> callback)
 {

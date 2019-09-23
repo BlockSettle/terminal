@@ -117,8 +117,8 @@ namespace bs {
 
          virtual bool isWatchingOnly() const { return false; }
          virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return {}; }
-         virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
-         virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 0, 0 }; }
+         virtual std::vector<BinaryData> encryptionKeys() const { return {}; }
+         virtual bs::wallet::KeyRank encryptionRank() const { return { 1, 1 }; }
          virtual bool hasExtOnlyAddresses() const { return false; }
          virtual std::string getAddressComment(const bs::Address& address) const;
          virtual bool setAddressComment(const bs::Address &addr, const std::string &comment, bool sync = true);
