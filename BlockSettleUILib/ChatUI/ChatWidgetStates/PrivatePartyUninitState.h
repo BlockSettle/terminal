@@ -37,7 +37,9 @@ protected:
       chat_->ui_->input_textEdit->setVisible(true);
       chat_->ui_->input_textEdit->setEnabled(false);
    }
-   void applyRoomsFrameChange() override {}
+   void applyRoomsFrameChange() override {
+      chat_->ui_->widgetOTCShield->showOtcAvailableOnlyForAcceptedContacts();
+   }
 };
 
 #endif // PRIVATEPARTYUNINITSTATE_H

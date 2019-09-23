@@ -2,6 +2,7 @@
 #define PRIVATEPARTYINITSTATE_H
 
 #include "AbstractChatWidgetState.h"
+#include "BaseCelerClient.h"
 
 namespace {
    enum class StackedMessages {
@@ -38,7 +39,46 @@ protected:
 
       restoreDraftMessage();
    }
-   void applyRoomsFrameChange() override {}
+   void applyRoomsFrameChange() override {
+      Chat::ClientPartyPtr clientPartyPtr = getParty(chat_->currentPartyId_);
+
+      auto checkIsTradingParticipant = [&]() -> bool {
+         const auto userCelerType = chat_->celerClient_->celerUserType();
+         if (BaseCelerClient::Dealing != userCelerType
+            && BaseCelerClient::Trading != userCelerType) {
+            chat_->ui_->widgetOTCShield->showOtcAvailableToTradingParticipants();
+            return false;
+         }
+
+         return true;
+      };
+
+      // #new_logic : change name after merge with global_otc
+      if (clientPartyPtr->isGlobal()) {
+         if (clientPartyPtr->displayName() == QObject::tr("Global").toStdString()) {
+            chat_->ui_->widgetOTCShield->showOtcUnavailableGlobal();
+            return;
+         } 
+         else if (clientPartyPtr->displayName() == QObject::tr("OTC").toStdString()) {
+            if (!checkIsTradingParticipant()) {
+               return;
+            }
+         }
+         else if (clientPartyPtr->displayName() == QObject::tr("Support").toStdString()) {
+            chat_->ui_->widgetOTCShield->showOtcUnavailableSupport();
+            return;
+         }
+      }
+      else if (clientPartyPtr->isPrivate()) {
+         if (!checkIsTradingParticipant()) {
+            return;
+         }
+
+         // check other party
+      }
+
+      updateOtc();
+   }
 
    bool canSendMessage() const override { return true; }
    bool canPerformOTCOperations() const override { return true; }
