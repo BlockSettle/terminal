@@ -361,7 +361,7 @@ void SignerInterfaceListener::onAutoSignActivated(const std::string &data, bs::s
 
 void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::SyncWalletInfoResponse response;
+   headless::SyncWalletInfoResponse response;
    if (!response.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
@@ -372,14 +372,8 @@ void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::sign
          , __func__, reqId);
       return;
    }
-   std::vector<bs::sync::WalletInfo> result;
-   for (int i = 0; i < response.wallets_size(); ++i) {
-      const auto wallet = response.wallets(i);
-      const auto format = (wallet.format() == signer::WalletFormatHD) ? bs::sync::WalletFormat::HD
-         : bs::sync::WalletFormat::Settlement;
-      result.push_back({ format, wallet.id(), wallet.name(), wallet.description()
-         , parent_->netType(), wallet.watching_only() });
-   }
+   std::vector<bs::sync::WalletInfo> result = bs::sync::WalletInfo::fromPbMessage(response);
+
    itCb->second(result);
    cbWalletInfo_.erase(itCb);
 }
@@ -426,16 +420,7 @@ void SignerInterfaceListener::onSyncWallet(const std::string &data, bs::signer::
       return;
    }
    bs::sync::WalletData result;
-   for (int i = 0; i < response.encryption_types_size(); ++i) {
-      result.encryptionTypes.push_back(static_cast<bs::wallet::EncryptionType>(
-         response.encryption_types(i)));
-   }
-   for (int i = 0; i < response.encryption_keys_size(); ++i) {
-      result.encryptionKeys.push_back(response.encryption_keys(i));
-   }
-   result.encryptionRank = { response.key_rank_m(), response.key_rank_n() };
 
-   result.netType = static_cast<NetworkType>(response.net_type());
    result.highestExtIndex = response.highest_ext_index();
    result.highestIntIndex = response.highest_int_index();
 

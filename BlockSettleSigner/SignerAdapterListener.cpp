@@ -7,6 +7,7 @@
 #include "CoreWalletsManager.h"
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
+#include "HeadlessDefs.h"
 #include "HeadlessContainerListener.h"
 #include "HeadlessSettings.h"
 #include "HeadlessSettings.h"
@@ -359,16 +360,7 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
 
 bool SignerAdapterListener::onSyncWalletInfo(bs::signer::RequestId reqId)
 {
-   signer::SyncWalletInfoResponse response;
-   for (size_t i = 0; i < walletsMgr_->getHDWalletsCount(); ++i) {
-      auto wallet = response.add_wallets();
-      const auto hdWallet = walletsMgr_->getHDWallet(i);
-      wallet->set_format(signer::WalletFormatHD);
-      wallet->set_id(hdWallet->walletId());
-      wallet->set_name(hdWallet->name());
-      wallet->set_description(hdWallet->description());
-      wallet->set_watching_only(hdWallet->isWatchingOnly());
-   }
+   headless::SyncWalletInfoResponse response = bs::sync::hd::exportHDWalletsInfoToPbMessage(walletsMgr_);
    return sendData(signer::SyncWalletInfoType, response.SerializeAsString(), reqId);
 }
 
@@ -436,16 +428,6 @@ bool SignerAdapterListener::onSyncWallet(const std::string &data, bs::signer::Re
 
    signer::SyncWalletResponse response;
    response.set_wallet_id(wallet->walletId());
-   for (const auto &encType : rootWallet->encryptionTypes()) {
-      response.add_encryption_types(static_cast<signer::EncryptionType>(encType));
-   }
-   for (const auto &encKey : rootWallet->encryptionKeys()) {
-      response.add_encryption_keys(encKey.toBinStr());
-   }
-   response.set_key_rank_m(rootWallet->encryptionRank().m);
-   response.set_key_rank_n(rootWallet->encryptionRank().n);
-
-   response.set_net_type(static_cast<int>(wallet->networkType()));
    response.set_highest_ext_index(wallet->getExtAddressCount());
    response.set_highest_int_index(wallet->getIntAddressCount());
 
