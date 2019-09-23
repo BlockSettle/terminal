@@ -9,7 +9,6 @@
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
 #include "HeadlessSettings.h"
-#include "HeadlessSettings.h"
 #include "ProtobufHeadlessUtils.h"
 #include "ServerConnection.h"
 #include "StringUtils.h"
