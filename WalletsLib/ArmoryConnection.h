@@ -48,6 +48,7 @@ namespace bs {
       void merge(const TXEntry &);
       static TXEntry fromLedgerEntry(const ClientClasses::LedgerEntry &);
       static std::vector<TXEntry> fromLedgerEntries(const std::vector<ClientClasses::LedgerEntry> &);
+      static std::vector<TXEntry> fromLedgerEntries(const std::vector<std::shared_ptr<ClientClasses::LedgerEntry>> &);
    };
 }
 
@@ -88,7 +89,7 @@ public:
       : RemoteCallback(), connection_(conn), logger_(logger) {}
    virtual ~ArmoryCallback() noexcept override = default;
 
-   void run(BDMAction action, void* ptr, int block = 0) override;
+   void run(BdmNotification) override;
    void progress(BDMPhase phase,
       const std::vector<std::string> &walletIdVec,
       float progress, unsigned secondsRem,
@@ -199,9 +200,9 @@ protected:
 
 private:
    void registerBDV(NetworkType);
-   void setTopBlock(unsigned int topBlock) { topBlock_ = topBlock; }
+   void setTopBlock(unsigned int topBlock, unsigned int branchHgt);
    void onRefresh(const std::vector<BinaryData> &);
-   void onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &);
+   void onZCsReceived(const std::vector<std::shared_ptr<ClientClasses::LedgerEntry>> &);
    void onZCsInvalidated(const std::set<BinaryData> &);
 
    void stopServiceThreads();
@@ -222,6 +223,7 @@ protected:
    std::shared_ptr<ArmoryCallback>  cbRemote_;
    std::atomic<ArmoryState>         state_ { ArmoryState::Offline };
    std::atomic_uint                 topBlock_ { 0 };
+   unsigned int                     branchHeight_{ 0 };
    std::shared_ptr<BlockHeader>     getTxBlockHeader_;
 
    std::vector<SecureBinaryData> bsBIP150PubKeys_;
