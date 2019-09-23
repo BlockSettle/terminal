@@ -7,9 +7,7 @@
 #include "CoreWalletsManager.h"
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
-#include "HeadlessDefs.h"
 #include "HeadlessContainerListener.h"
-#include "HeadlessSettings.h"
 #include "HeadlessSettings.h"
 #include "ProtobufHeadlessUtils.h"
 #include "ServerConnection.h"
@@ -360,7 +358,7 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
 
 bool SignerAdapterListener::onSyncWalletInfo(bs::signer::RequestId reqId)
 {
-   headless::SyncWalletInfoResponse response = bs::sync::hd::exportHDWalletsInfoToPbMessage(walletsMgr_);
+   headless::SyncWalletInfoResponse response = bs::sync::exportHDWalletsInfoToPbMessage(walletsMgr_);
    return sendData(signer::SyncWalletInfoType, response.SerializeAsString(), reqId);
 }
 
