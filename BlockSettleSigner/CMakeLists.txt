@@ -14,6 +14,10 @@ LIST(APPEND HEADERS ${HEADERS_QML})
 
 FILE(GLOB RESOURCE_FILES *.qrc)
 
+if(WIN32)
+   set(SOURCES ${SOURCES} ../breakpad/qtsystemexceptionhandler.cpp)
+   set(HEADERS ${HEADERS} ../breakpad/qtsystemexceptionhandler.h)
+endif()
 
 INCLUDE_DIRECTORIES( interfaces/GUI_QML )
 INCLUDE_DIRECTORIES( ${COMMON_LIB_INCLUDE_DIR} )
@@ -81,3 +85,12 @@ TARGET_LINK_LIBRARIES(${SIGNER_APP_NAME}
    ${OS_SPECIFIC_LIBS}
    ${OPENSSL_LIBS}
 )
+
+if(WIN32)
+   target_include_directories(${SIGNER_APP_NAME}
+      PRIVATE ${CMAKE_BINARY_DIR}/common/BlockSettleUILib # for TerminalVersion.h
+      PRIVATE ../breakpad
+   )
+   target_compile_definitions(${SIGNER_APP_NAME} PRIVATE -DENABLE_QT_BREAKPAD)
+   target_link_libraries(${SIGNER_APP_NAME} libbreakpad)
+endif()
