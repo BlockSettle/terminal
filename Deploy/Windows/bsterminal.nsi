@@ -104,7 +104,7 @@ Section "install"
         SetOutPath $INSTDIR
         RmDir /r $INSTDIR
         SetOverwrite on
-        File ..\..\build_terminal\Release\bin\Release\libzmq-v141-mt-4_3_2.dll
+        File ..\..\build_terminal\RelWithDebInfo\bin\RelWithDebInfo\libzmq-v141-mt-4_3_2.dll
         File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\concrt140.dll"
         File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\msvcp140.dll"
         File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\msvcp140_1.dll"
@@ -153,10 +153,10 @@ Section "install"
         File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-utility-l1-1-0.dll"
         File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\ucrtbase.dll"
 #	${If} ${SectionIsSelected} ${SEC_TERM}
-            File ..\..\build_terminal\Release\bin\Release\blocksettle.exe
+            File ..\..\build_terminal\RelWithDebInfo\bin\RelWithDebInfo\blocksettle.exe
 #	${Endif}
 #	${If} ${SectionIsSelected} ${SEC_SIGN}
-            File ..\..\build_terminal\Release\bin\Release\blocksettle_signer.exe
+            File ..\..\build_terminal\RelWithDebInfo\bin\RelWithDebInfo\blocksettle_signer.exe
 #	${Endif}
         SetOutPath $INSTDIR\scripts
         File ..\..\Scripts\DealerAutoQuote.qml

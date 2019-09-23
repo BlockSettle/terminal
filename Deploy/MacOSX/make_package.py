@@ -54,7 +54,7 @@ def check_signature(appPath):
    return subprocess.call(command, shell=True) == 0
 
 def sign_apps(sourcesRoot):
-   buildDir = os.path.abspath(os.path.join(sourcesRoot, 'build_terminal', 'Release', 'bin'))
+   buildDir = os.path.abspath(os.path.join(sourcesRoot, 'build_terminal', 'RelWithDebInfo', 'bin'))
 
    apps = ['BlockSettle Terminal.app', 'BlockSettle Signer.app']
 
@@ -72,7 +72,7 @@ def get_package_path(outputDir):
    return os.path.join(outputDir, 'BlockSettle.dmg')
 
 def make_package(sourcesRoot, packagePath):
-   buildDir = os.path.abspath(os.path.join(sourcesRoot, 'build_terminal', 'Release'))
+   buildDir = os.path.abspath(os.path.join(sourcesRoot, 'build_terminal', 'RelWithDebInfo'))
    binDir = os.path.join(buildDir, 'bin')
    packgeDir = os.path.join(buildDir, 'Blocksettle')
 
