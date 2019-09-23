@@ -1,14 +1,25 @@
 {
-   "latest_version": "0.21.8",
-   "release_date": "19 Sep 2019",
+   "latest_version": "0.22.0",
+   "release_date": "21 Sep 2019",
    "changes": [
+      {
+         "version_string": "0.22.0",
+         "previous_version": "0.21.8",
+         "release_date": "21 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "1-of-N encryption"
+         ],
+         "bug_fixes": [],
+         "revision": "1f8daaa7",
+         "common_revision": "e1c63957"
+      },
       {
          "version_string": "0.21.8",
          "previous_version": "0.21.7",
          "release_date": "19 Sep 2019",
          "release_type": "dev",
-         "improvements": [
-         ],
+         "improvements": [],
          "bug_fixes": [
             "Settlement dialogs fixes"
          ],
