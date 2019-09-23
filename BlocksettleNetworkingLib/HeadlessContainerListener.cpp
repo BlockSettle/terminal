@@ -1670,29 +1670,9 @@ void HeadlessContainerListener::resetConnection(ServerConnection *connection)
    connection_ = connection;
 }
 
-static headless::NetworkType mapFrom(NetworkType netType)
-{
-   switch (netType) {
-   case NetworkType::MainNet: return headless::MainNetType;
-   case NetworkType::TestNet:
-   default:    return headless::TestNetType;
-   }
-}
-
 bool HeadlessContainerListener::onSyncWalletInfo(const std::string &clientId, headless::RequestPacket packet)
 {
-   headless::SyncWalletInfoResponse response;
-
-   for (size_t i = 0; i < walletsMgr_->getHDWalletsCount(); ++i) {
-      const auto hdWallet = walletsMgr_->getHDWallet(i);
-      auto walletData = response.add_wallets();
-      walletData->set_format(headless::WalletFormatHD);
-      walletData->set_id(hdWallet->walletId());
-      walletData->set_name(hdWallet->name());
-      walletData->set_description(hdWallet->description());
-      walletData->set_nettype(mapFrom(hdWallet->networkType()));
-      walletData->set_watching_only(hdWallet->isWatchingOnly());
-   }
+   headless::SyncWalletInfoResponse response = bs::sync::exportHDWalletsInfoToPbMessage(walletsMgr_);
 
    packet.set_data(response.SerializeAsString());
    return sendData(packet.SerializeAsString(), clientId);
@@ -1754,16 +1734,6 @@ bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, head
    return sendData(packet.SerializeAsString(), clientId);
 }
 
-static headless::EncryptionType mapFrom(bs::wallet::EncryptionType encType)
-{
-   switch (encType) {
-   case bs::wallet::EncryptionType::Password:   return headless::EncryptionTypePassword;
-   case bs::wallet::EncryptionType::Auth:       return headless::EncryptionTypeAutheID;
-   case bs::wallet::EncryptionType::Unencrypted:
-   default:       return headless::EncryptionTypeUnencrypted;
-   }
-}
-
 bool HeadlessContainerListener::onSyncWallet(const std::string &clientId, headless::RequestPacket packet)
 {
    headless::SyncWalletRequest request;
@@ -1780,48 +1750,7 @@ bool HeadlessContainerListener::onSyncWallet(const std::string &clientId, headle
 
    const auto &lbdSend = [this, wallet, id=packet.id(), clientId]
    {
-      headless::SyncWalletResponse response;
-      response.set_walletid(wallet->walletId());
-
-      const auto rootWallet = walletsMgr_->getHDWalletById(wallet->walletId());
-      if (rootWallet) {
-         for (const auto &encType : rootWallet->encryptionTypes()) {
-            response.add_encryptiontypes(mapFrom(encType));
-         }
-         for (const auto &encKey : rootWallet->encryptionKeys()) {
-            response.add_encryptionkeys(encKey.toBinStr());
-         }
-         auto keyrank = response.mutable_keyrank();
-         keyrank->set_m(rootWallet->encryptionRank().m);
-         keyrank->set_n(rootWallet->encryptionRank().n);
-      }
-
-      response.set_nettype(mapFrom(wallet->networkType()));
-      response.set_highest_ext_index(wallet->getExtAddressCount());
-      response.set_highest_int_index(wallet->getIntAddressCount());
-
-      for (const auto &addr : wallet->getUsedAddressList()) {
-         const auto comment = wallet->getAddressComment(addr);
-         const auto index = wallet->getAddressIndex(addr);
-         auto addrData = response.add_addresses();
-         addrData->set_address(addr.display());
-         addrData->set_index(index);
-         if (!comment.empty()) {
-            addrData->set_comment(comment);
-         }
-      }
-      const auto &pooledAddresses = wallet->getPooledAddressList();
-      for (const auto &addr : pooledAddresses) {
-         const auto index = wallet->getAddressIndex(addr);
-         auto addrData = response.add_addrpool();
-         addrData->set_address(addr.display());
-         addrData->set_index(index);
-      }
-      for (const auto &txComment : wallet->getAllTxComments()) {
-         auto txCommData = response.add_txcomments();
-         txCommData->set_txhash(txComment.first.toBinStr());
-         txCommData->set_comment(txComment.second);
-      }
+      headless::SyncWalletResponse response = bs::sync::exportHDLeafToPbMessage(wallet);
 
       headless::RequestPacket packet;
       packet.set_id(id);

@@ -900,26 +900,6 @@ void HeadlessContainer::syncAddressBatch(
    });
 }
 
-static NetworkType mapFrom(headless::NetworkType netType)
-{
-   switch (netType) {
-   case headless::MainNetType:   return NetworkType::MainNet;
-   case headless::TestNetType:   return NetworkType::TestNet;
-   default:    return NetworkType::Invalid;
-   }
-}
-
-static bs::sync::WalletFormat mapFrom(headless::WalletFormat format)
-{
-   switch (format) {
-   case headless::WalletFormatHD:         return bs::sync::WalletFormat::HD;
-   case headless::WalletFormatPlain:      return bs::sync::WalletFormat::Plain;
-   case headless::WalletFormatSettlement: return bs::sync::WalletFormat::Settlement;
-   case headless::WalletFormatUnknown:
-   default:    return bs::sync::WalletFormat::Unknown;
-   }
-}
-
 void HeadlessContainer::ProcessSettlWalletCreate(unsigned int id, const std::string &data)
 {
    headless::CreateSettlWalletResponse response;
@@ -997,15 +977,14 @@ void HeadlessContainer::ProcessSyncWalletInfo(unsigned int id, const std::string
       emit Error(id, "no callback found for id " + std::to_string(id));
       return;
    }
-   std::vector<bs::sync::WalletInfo> result;
-   for (int i = 0; i < response.wallets_size(); ++i) {
-      const auto walletInfo = response.wallets(i);
-      result.push_back({ mapFrom(walletInfo.format()), walletInfo.id(), walletInfo.name()
-         , walletInfo.description(), mapFrom(walletInfo.nettype()), walletInfo.watching_only() });
-      if (walletInfo.watching_only()) {
-         woWallets_.insert(walletInfo.id());
+   std::vector<bs::sync::WalletInfo> result = bs::sync::WalletInfo::fromPbMessage(response);
+
+   for (size_t i = 0; i < result.size(); ++i) {
+      const auto &walletInfo = result.at(i);
+      if (walletInfo.watchOnly) {
+         woWallets_.insert(walletInfo.id);
       } else {
-         woWallets_.erase(walletInfo.id());
+         woWallets_.erase(walletInfo.id);
       }
    }
    itCb->second(result);
@@ -1047,16 +1026,6 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
    cbHDWalletMap_.erase(itCb);
 }
 
-static bs::wallet::EncryptionType mapFrom(headless::EncryptionType encType)
-{
-   switch (encType) {
-   case headless::EncryptionTypePassword: return bs::wallet::EncryptionType::Password;
-   case headless::EncryptionTypeAutheID:  return bs::wallet::EncryptionType::Auth;
-   case headless::EncryptionTypeUnencrypted:
-   default:    return bs::wallet::EncryptionType::Unencrypted;
-   }
-}
-
 void HeadlessContainer::ProcessSyncWallet(unsigned int id, const std::string &data)
 {
    headless::SyncWalletResponse response;
@@ -1071,42 +1040,8 @@ void HeadlessContainer::ProcessSyncWallet(unsigned int id, const std::string &da
       return;
    }
 
-   bs::sync::WalletData result;
-   for (int i = 0; i < response.encryptiontypes_size(); ++i) {
-      const auto encType = response.encryptiontypes(i);
-      result.encryptionTypes.push_back(mapFrom(encType));
-   }
-   for (int i = 0; i < response.encryptionkeys_size(); ++i) {
-      const auto encKey = response.encryptionkeys(i);
-      result.encryptionKeys.push_back(encKey);
-   }
-   result.encryptionRank = { response.keyrank().m(), response.keyrank().n() };
+   bs::sync::WalletData result = bs::sync::WalletData::fromPbMessage(response);
 
-   result.netType = mapFrom(response.nettype());
-   result.highestExtIndex = response.highest_ext_index();
-   result.highestIntIndex = response.highest_int_index();
-
-   for (int i = 0; i < response.addresses_size(); ++i) {
-      const auto addrInfo = response.addresses(i);
-      const bs::Address addr(addrInfo.address());
-      if (addr.isNull()) {
-         continue;
-      }
-      result.addresses.push_back({ addrInfo.index(), std::move(addr)
-         , addrInfo.comment() });
-   }
-   for (int i = 0; i < response.addrpool_size(); ++i) {
-      const auto addrInfo = response.addrpool(i);
-      const bs::Address addr(addrInfo.address());
-      if (addr.isNull()) {
-         continue;
-      }
-      result.addrPool.push_back({ addrInfo.index(), std::move(addr), "" });
-   }
-   for (int i = 0; i < response.txcomments_size(); ++i) {
-      const auto txInfo = response.txcomments(i);
-      result.txComments.push_back({ txInfo.txhash(), txInfo.comment() });
-   }
    itCb->second(result);
    cbWalletMap_.erase(itCb);
 }

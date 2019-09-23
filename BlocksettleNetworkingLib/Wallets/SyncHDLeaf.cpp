@@ -34,10 +34,6 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
    {
       reset();
 
-      encryptionTypes_ = data.encryptionTypes;
-      encryptionKeys_ = data.encryptionKeys;
-      encryptionRank_ = data.encryptionRank;
-      netType_ = data.netType;
       if (wct_) {
          wct_->metadataChanged(walletId());
       }

@@ -86,8 +86,7 @@ void WalletsManager::syncWallet(const bs::sync::WalletInfo &info, const std::fun
    case bs::sync::WalletFormat::HD:
    {
       try {
-         const auto hdWallet = std::make_shared<hd::Wallet>(info.id, info.name,
-            info.description, info.watchOnly, signContainer_.get(), logger_);
+         const auto hdWallet = std::make_shared<hd::Wallet>(info, signContainer_.get(), logger_);
          hdWallet->setWCT(this);
 
          if (hdWallet) {
@@ -1018,8 +1017,10 @@ void WalletsManager::onWalletsListUpdated()
             syncWallet(hdWallet.second, [this, hdWalletId=hdWallet.first]
             {
                const auto hdWallet = hdWallets_[hdWalletId];
-               hdWallet->registerWallet(armoryPtr_);
-               QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletAdded(hdWallet->walletId()); });
+               if (hdWallet) {
+                  hdWallet->registerWallet(armoryPtr_);
+                  QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletAdded(hdWallet->walletId()); });
+               }
             });
             newWallets_.insert(hdWallet.first);
          }
@@ -1518,10 +1519,6 @@ bs::Address WalletsManager::CCResolver::genesisAddrFor(const std::string &cc) co
    }
    return {};
 }
-
-// virtual bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
-//       , const std::vector<bs::wallet::PasswordData> &pwdData = {}
-//       , const std::function<void(bs::error::ErrorCode result)> &cb = nullptr) = 0;
 
 bool WalletsManager::CreateCCLeaf(const std::string &ccName, const std::function<void(bs::error::ErrorCode result)> &cb)
 {

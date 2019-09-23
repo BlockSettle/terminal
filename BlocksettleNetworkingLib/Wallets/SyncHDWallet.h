@@ -2,6 +2,7 @@
 #define BS_SYNC_HD_WALLET_H
 
 #include <functional>
+#include "SignerDefs.h"
 #include "SyncHDGroup.h"
 #include "SyncHDLeaf.h"
 #include "WalletEncryption.h"
@@ -24,9 +25,12 @@ namespace bs {
             using cb_scan_read_last = std::function<unsigned int(const std::string &walletId)>;
             using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
-            Wallet(const std::string &walletId, const std::string &name
-               , const std::string &desc, bool isOffline, WalletSignerContainer * = nullptr
+            Wallet(const bs::sync::WalletInfo &info, WalletSignerContainer * = nullptr
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
+
+            Wallet(const bs::sync::WatchingOnlyWallet &info, WalletSignerContainer * = nullptr
+               , const std::shared_ptr<spdlog::logger> &logger = nullptr);
+
             ~Wallet() override;
 
             Wallet(const Wallet&) = delete;

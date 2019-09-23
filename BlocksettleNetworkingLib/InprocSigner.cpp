@@ -303,12 +303,21 @@ void InprocSigner::syncWalletInfo(const std::function<void(std::vector<bs::sync:
    for (size_t i = 0; i < walletsMgr_->getHDWalletsCount(); ++i) 
    {
       const auto hdWallet = walletsMgr_->getHDWallet(i);
-      result.push_back(
-      { 
-         bs::sync::WalletFormat::HD, 
-         hdWallet->walletId(), hdWallet->name(), hdWallet->description(), 
-         hdWallet->networkType(), hdWallet->isWatchingOnly() 
-      });
+      bs::sync::WalletInfo walletInfo;
+
+      walletInfo.format = bs::sync::WalletFormat::HD;
+      walletInfo.id = hdWallet->walletId();
+      walletInfo.name = hdWallet->name();
+      walletInfo.description = hdWallet->description();
+      walletInfo.netType = hdWallet->networkType();
+      walletInfo.watchOnly = hdWallet->isWatchingOnly();
+
+      walletInfo.encryptionTypes = hdWallet->encryptionTypes();
+      walletInfo.encryptionKeys = hdWallet->encryptionKeys();
+      walletInfo.encryptionRank = hdWallet->encryptionRank();
+      walletInfo.netType = hdWallet->networkType();
+
+      result.push_back(walletInfo);
    }
 
    cb(result);
@@ -374,11 +383,6 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
       cb(result);
       return;
    }
-
-   result.encryptionTypes = rootWallet->encryptionTypes();
-   result.encryptionKeys = rootWallet->encryptionKeys();
-   result.encryptionRank = rootWallet->encryptionRank();
-   result.netType = wallet->networkType();
       
    result.highestExtIndex = wallet->getExtAddressCount();
    result.highestIntIndex = wallet->getIntAddressCount();

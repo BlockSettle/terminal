@@ -182,19 +182,6 @@ enum WalletFormat
    WalletFormatSettlement = 2;
 }
 
-message SyncWalletInfoResponse
-{
-   message WalletInfo {
-      WalletFormat format = 1;
-      string id = 2;
-      string name = 3;
-      string description = 4;
-      bool   watching_only = 5;
-   }
-   repeated WalletInfo wallets = 1;
-}
-
-
 message SyncWalletRequest
 {
    string wallet_id = 1;
@@ -226,19 +213,14 @@ enum EncryptionType
 message SyncWalletResponse
 {
    string wallet_id = 1;
-   repeated EncryptionType encryption_types = 2;
-   repeated bytes encryption_keys = 3;
-   uint32 key_rank_m = 4;
-   uint32 key_rank_n = 5;
-   uint32 net_type = 6;
-   uint32 highest_ext_index = 7;
-   uint32 highest_int_index = 8;
+   uint32 highest_ext_index = 2;
+   uint32 highest_int_index = 3;
 
    message Address {
       string index = 1;
       string address = 2;
    }
-   repeated Address   addresses = 9;
+   repeated Address   addresses = 4;
 }
 
 

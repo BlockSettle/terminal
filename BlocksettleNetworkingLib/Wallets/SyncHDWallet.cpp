@@ -13,19 +13,30 @@ if ((logger)) { \
 
 using namespace bs::sync;
 
-hd::Wallet::Wallet(const std::string &walletId, const std::string &name
-   , const std::string &desc, bool isOffline, WalletSignerContainer *container
+hd::Wallet::Wallet(const bs::sync::WalletInfo &info, WalletSignerContainer *container
    , const std::shared_ptr<spdlog::logger> &logger)
-   : walletId_(walletId), name_(name), desc_(desc)
-   , signContainer_(container), logger_(logger), isOffline_(isOffline)
+   : walletId_(info.id), name_(info.name), desc_(info.description)
+   , netType_(info.netType)
+   , signContainer_(container), logger_(logger)
+   , isOffline_(info.watchOnly)
+{
+   netType_ = getNetworkType();  // netType_ = info.netType ???
+   if (info.watchOnly) {
+      encryptionTypes_ = { bs::wallet::EncryptionType::Unencrypted };
+   } else {
+      encryptionTypes_ = info.encryptionTypes;
+      encryptionKeys_ = info.encryptionKeys;
+      encryptionRank_ = info.encryptionRank;
+   }
+}
+
+hd::Wallet::Wallet(const bs::sync::WatchingOnlyWallet &info, WalletSignerContainer *container
+   , const std::shared_ptr<spdlog::logger> &logger)
+   : walletId_(info.id), name_(info.name), desc_(info.description)
+   , signContainer_(container), logger_(logger), isOffline_(true)
 {
    netType_ = getNetworkType();
-   if (isOffline) {
-      encryptionTypes_.push_back(bs::wallet::EncryptionType::Unencrypted);
-   } else {
-      // FIXME: Add Auth eID
-      encryptionTypes_.push_back(bs::wallet::EncryptionType::Password);
-   }
+   encryptionTypes_.push_back(bs::wallet::EncryptionType::Unencrypted);
 }
 
 hd::Wallet::~Wallet()
