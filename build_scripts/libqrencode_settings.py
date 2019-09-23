@@ -11,7 +11,7 @@ class LibQREncode(Configurator):
         Configurator.__init__(self, settings)
         self._version = '13b159f9d9509b0c9f5ca0df7a144638337ddb15'
         self._package_name = 'libqrencode'
-        self._script_revision = '2'
+        self._script_revision = '3'
 
         self._package_url = 'https://github.com/fukuchi/libqrencode/archive/' + self._version + '.zip'
 
@@ -19,7 +19,7 @@ class LibQREncode(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version + self._script_revision
+        return self._version + '-' + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -45,6 +45,8 @@ class LibQREncode(Configurator):
             else:
                 command.append('-DCMAKE_C_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
                 command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
+                command.append('-DCMAKE_C_FLAGS_RELWITHDEBINFO=/MT /O2 /Ob2 /D NDEBUG')
+                command.append('-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=/MT /O2 /Ob2 /D NDEBUG')
 
         if self._project_settings.get_link_mode() == "shared":
             command.append('-DBUILD_SHARED_LIBS=YES')
@@ -72,7 +74,7 @@ class LibQREncode(Configurator):
 
     def get_win_build_configuration(self):
         if self._project_settings.get_build_mode() == 'release':
-            return 'Release'
+            return 'RelWithDebInfo'
         else:
             return 'Debug'
 

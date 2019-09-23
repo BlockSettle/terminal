@@ -51,7 +51,6 @@ enum Methods
 	getSpendableZCList = 61;
 	getRBFTxOutList = 62;
 	getSpendableTxOutListForAddr = 63;
-	getUTXOsForAddrList = 64;
 
 	getCombinedSpendableTxOutListForValue = 65;
 	getCombinedSpendableZcOutputs = 66;
@@ -117,7 +116,7 @@ message Notification
 	required NotificationType type = 1;
 	oneof payload
 	{
-		uint32 height = 2;
+		Codec_NodeStatus.NewBlock newBlock = 2;
 		Codec_NodeStatus.ProgressData progress = 3;
 		Codec_NodeStatus.NodeStatus nodeStatus = 4;
 		Codec_NodeStatus.BDV_Error error = 5;

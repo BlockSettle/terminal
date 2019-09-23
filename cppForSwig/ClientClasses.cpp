@@ -220,12 +220,20 @@ bool RemoteCallback::processNotifications(
 
       case NotificationType::newblock:
       {
-         if (!notif.has_height())
+         if (!notif.has_newblock())
             break;
 
-         unsigned int newblock = notif.height();
-         if (newblock != 0)
-            run(BDMAction::BDMAction_NewBlock, &newblock, newblock);
+         auto newblock = notif.newblock();
+         if (newblock.height() != 0)
+         {
+            BdmNotification bdmNotif(BDMAction_NewBlock);
+
+            bdmNotif.height_ = newblock.height();
+            if (newblock.has_branch_height())
+               bdmNotif.branchHeight_ = newblock.branch_height();
+
+            run(move(bdmNotif));
+         }
 
          break;
       }
@@ -237,14 +245,14 @@ bool RemoteCallback::processNotifications(
 
          auto& ledgers = notif.ledgers();
 
-         vector<LedgerEntry> leVec;
+         BdmNotification bdmNotif(BDMAction_ZC);
          for (int y = 0; y < ledgers.values_size(); y++)
          {
-            LedgerEntry le(callback, i, y);
-            leVec.push_back(move(le));
+            auto le = make_shared<LedgerEntry>(callback, i, y);
+            bdmNotif.ledgers_.push_back(le);
          }
 
-         run(BDMAction::BDMAction_ZC, &leVec, 0);
+         run(move(bdmNotif));
 
          break;
       }
@@ -258,14 +266,15 @@ bool RemoteCallback::processNotifications(
          auto& ids = notif.ids();
          set<BinaryData> idSet;
 
+         BdmNotification bdmNotif(BDMAction_InvalidatedZC);
          for (int y = 0; y < ids.value_size(); y++)
          {
             auto& id_str = ids.value(y).data();
             BinaryData id_bd((uint8_t*)id_str.c_str(), id_str.size());
-            idSet.emplace(id_bd);
+            bdmNotif.invalidatedZc_.emplace(id_bd);
          }
 
-         run(BDMAction::BDMAction_InvalidatedZC, &idSet, 0);
+         run(move(bdmNotif));
 
          break;
       }
@@ -278,35 +287,34 @@ bool RemoteCallback::processNotifications(
          auto& refresh = notif.refresh();
          auto refreshType = (BDV_refresh)refresh.refreshtype();
          
-         vector<BinaryData> bdVec;
-         for (int y = 0; y < refresh.id_size(); y++)
-         {
-            auto& str = refresh.id(y);
-            BinaryData bd; bd.copyFrom(str);
-            bdVec.push_back(move(bd));
-         }
-
+         BdmNotification bdmNotif(BDMAction_Refresh);
          if (refreshType != BDV_filterChanged)
          {
-            run(BDMAction::BDMAction_Refresh, (void*)&bdVec, 0);
+            for (int y = 0; y < refresh.id_size(); y++)
+            {
+               auto& str = refresh.id(y);
+               BinaryData bd; bd.copyFrom(str);
+               bdmNotif.ids_.emplace_back(bd);
+            }
          }
          else
          {
-            vector<BinaryData> bdvec;
-            bdvec.push_back(BinaryData("wallet_filter_changed"));
-            run(BDMAction::BDMAction_Refresh, (void*)&bdvec, 0);
+            bdmNotif.ids_.push_back(BinaryData("wallet_filter_changed"));
          }
+
+         run(move(bdmNotif));
 
          break;
       }
 
       case NotificationType::ready:
       {
-         if (!notif.has_height())
+         if (!notif.has_newblock())
             break;
 
-         unsigned int topblock = notif.height();
-         run(BDMAction::BDMAction_Ready, nullptr, topblock);
+         BdmNotification bdmNotif(BDMAction_Ready);
+         bdmNotif.height_ = notif.newblock().height();
+         run(move(bdmNotif));
 
          break;
       }
@@ -316,9 +324,9 @@ bool RemoteCallback::processNotifications(
          if (!notif.has_progress())
             break;
 
-         ProgressData pd(callback, i);
-         progress(pd.phase(), pd.wltIDs(), pd.progress(),
-            pd.time(), pd.numericProgress());
+         auto pd = ProgressData::make_new(callback, i);
+         progress(pd->phase(), pd->wltIDs(), pd->progress(),
+            pd->time(), pd->numericProgress());
 
          break;
       }
@@ -334,9 +342,11 @@ bool RemoteCallback::processNotifications(
          if (!notif.has_nodestatus())
             break;
 
-         ::ClientClasses::NodeStatusStruct nss(callback, i);
+         BdmNotification bdmNotif(BDMAction_NodeStatus);
+         bdmNotif.nodeStatus_ = 
+            ClientClasses::NodeStatusStruct::make_new(callback, i);
 
-         run(BDMAction::BDMAction_NodeStatus, &nss, 0);
+         run(move(bdmNotif));
          break;
       }
 
@@ -347,12 +357,12 @@ bool RemoteCallback::processNotifications(
 
          auto& msg = notif.error();
 
-         BDV_Error_Struct bdvErr;
-         bdvErr.errorStr_ = move(msg.error());
-         bdvErr.errType_ = (BDV_ErrorType)msg.type();
-         bdvErr.extraMsg_ = move(msg.extra());
+         BdmNotification bdmNotif(BDMAction_BDV_Error);
+         bdmNotif.error_.errorStr_ = move(msg.error());
+         bdmNotif.error_.errType_ = (BDV_ErrorType)msg.type();
+         bdmNotif.error_.extraMsg_ = move(msg.extra());
 
-         run(BDMAction::BDMAction_BDV_Error, &bdvErr, 0);
+         run(move(bdmNotif));
          break;
       }
 
@@ -420,6 +430,15 @@ RpcStatus ClientClasses::NodeStatusStruct::rpcStatus() const
    return NodeChainState(msg);
 }
 
+shared_ptr<ClientClasses::NodeStatusStruct> 
+ClientClasses::NodeStatusStruct::make_new(
+   std::shared_ptr<::Codec_BDVCommand::BDVCallback> msg, unsigned i)
+{
+   auto nss = make_shared<ClientClasses::NodeStatusStruct>(
+      NodeStatusStruct(msg, i));
+   return nss;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // NodeChainState
@@ -431,12 +450,6 @@ RpcStatus ClientClasses::NodeStatusStruct::rpcStatus() const
 {
    ptr_ = &msg->chainstate();
 }
-
-///////////////////////////////////////////////////////////////////////////////
-/*unsigned ::ClientClasses::NodeChainState::getTopBlock() const
-{
-   return ptr_->
-}*/
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -492,3 +505,12 @@ vector<string> ClientClasses::ProgressData::wltIDs() const
 
    return vec;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+std::shared_ptr<ProgressData> ClientClasses::ProgressData::make_new(
+   std::shared_ptr<::Codec_BDVCommand::BDVCallback> msg, unsigned i)
+{
+   auto pd = make_shared<ProgressData>(ProgressData(msg, i));
+   return pd;
+}
+

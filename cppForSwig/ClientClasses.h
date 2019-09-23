@@ -37,25 +37,6 @@ struct BDVAlreadyRegistered : public std::runtime_error
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-class RemoteCallback
-{
-public:
-   RemoteCallback(void) {}
-   virtual ~RemoteCallback(void) = 0;
-
-   virtual void run(BDMAction action, void* ptr, int block = 0) = 0;
-   virtual void progress(
-      BDMPhase phase,
-      const std::vector<std::string> &walletIdVec,
-      float progress, unsigned secondsRem,
-      unsigned progressNumeric
-   ) = 0;
-   virtual void disconnected(void) = 0;
-
-   bool processNotifications(std::shared_ptr<::Codec_BDVCommand::BDVCallback>);
-};
-
-///////////////////////////////////////////////////////////////////////////////
 namespace ClientClasses
 {
    void initLibrary(void);
@@ -191,15 +172,13 @@ namespace ClientClasses
    ////////////////////////////////////////////////////////////////////////////
    class NodeStatusStruct
    {
-      friend class ::RemoteCallback;
-
    private:
       std::shared_ptr<::google::protobuf::Message> msgPtr_;
       const ::Codec_NodeStatus::NodeStatus* ptr_;
-      
+
    private:
       NodeStatusStruct(std::shared_ptr<::Codec_BDVCommand::BDVCallback>, unsigned);
-
+      
    public:
       NodeStatusStruct(BinaryDataRef);
       NodeStatusStruct(std::shared_ptr<::Codec_NodeStatus::NodeStatus>);
@@ -208,13 +187,14 @@ namespace ClientClasses
       bool isSegWitEnabled(void) const;
       RpcStatus rpcStatus(void) const;
       NodeChainState chainState(void) const;
+
+      static std::shared_ptr<NodeStatusStruct> make_new(
+         std::shared_ptr<::Codec_BDVCommand::BDVCallback>, unsigned);
    };
 
    ////////////////////////////////////////////////////////////////////////////
    class ProgressData
    {
-      friend class ::RemoteCallback;
-
    private:
       std::shared_ptr<::google::protobuf::Message> msgPtr_;
       const ::Codec_NodeStatus::ProgressData* ptr_;
@@ -230,7 +210,50 @@ namespace ClientClasses
       unsigned time(void) const;
       unsigned numericProgress(void) const;
       std::vector<std::string> wltIDs(void) const;
+
+      static std::shared_ptr<ProgressData> make_new(
+         std::shared_ptr<::Codec_BDVCommand::BDVCallback>, unsigned);
    };
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct BdmNotification
+{
+   const BDMAction action_;
+
+   unsigned height_;
+   unsigned branchHeight_ = UINT32_MAX;
+
+   std::set<BinaryData> invalidatedZc_;
+   std::vector<std::shared_ptr<ClientClasses::LedgerEntry>> ledgers_;
+
+   std::vector<BinaryData> ids_;
+
+   std::shared_ptr<::ClientClasses::NodeStatusStruct> nodeStatus_;
+   BDV_Error_Struct error_;
+
+   BdmNotification(BDMAction action) :
+      action_(action)
+   {}
+};
+
+///////////////////////////////////////////////////////////////////////////////
+class RemoteCallback
+{
+public:
+   RemoteCallback(void) {}
+   virtual ~RemoteCallback(void) = 0;
+
+   virtual void run(BdmNotification) = 0;
+   virtual void progress(
+      BDMPhase phase,
+      const std::vector<std::string> &walletIdVec,
+      float progress, unsigned secondsRem,
+      unsigned progressNumeric
+   ) = 0;
+   virtual void disconnected(void) = 0;
+
+   bool processNotifications(std::shared_ptr<::Codec_BDVCommand::BDVCallback>);
 };
 
 #endif

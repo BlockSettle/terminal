@@ -11,13 +11,13 @@ class WebsocketsSettings(Configurator):
         self._version = '3.1.0'
         self._package_name = 'libwebsockets'
         self._package_url = 'https://github.com/warmcat/libwebsockets/archive/v' + self._version + '.zip'
-        self._script_revision = '4'
+        self._script_revision = '5'
 
     def get_package_name(self):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version + '_' + self._script_revision
+        return self._version + '-' + self._script_revision
 
     def get_install_dir(self):
         return os.path.join(self._project_settings.get_common_build_dir(), 'libwebsockets')
@@ -49,6 +49,8 @@ class WebsocketsSettings(Configurator):
             else:
                 command.append('-DCMAKE_C_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
                 command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
+                command.append('-DCMAKE_C_FLAGS_RELWITHDEBINFO=/MT /O2 /Ob2 /D NDEBUG')
+                command.append('-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=/MT /O2 /Ob2 /D NDEBUG')
 
         if self._project_settings.on_linux():
             command.append('-DLWS_WITH_STATIC=ON')
@@ -95,7 +97,7 @@ class WebsocketsSettings(Configurator):
 
     def get_win_build_configuration(self):
         if self._project_settings.get_build_mode() == 'release':
-            return 'Release'
+            return 'RelWithDebInfo'
         else:
             return 'Debug'
 

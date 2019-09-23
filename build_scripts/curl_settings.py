@@ -10,6 +10,7 @@ class CurlSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = '7_63_0'
+        self._script_revision = '3'
         self._package_name = 'curl-' + self._version
         self._package_url = 'https://github.com/curl/curl/archive/' + self._package_name + '.tar.gz'
 	self._package_dir_name = 'curl-' + self._package_name
@@ -18,7 +19,7 @@ class CurlSettings(Configurator):
         return self._package_name
 
     def get_revision_string(self):
-        return self._version + "-2"
+        return self._version + '-' + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -75,7 +76,7 @@ class CurlSettings(Configurator):
 
     def get_win_build_mode(self):
         if self._project_settings.get_build_mode() == 'release':
-            return 'Release'
+            return 'RelWithDebInfo'
         else:
             return 'Debug'
 

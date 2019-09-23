@@ -344,6 +344,12 @@ void ArmoryConnection::registerBDV(NetworkType netType)
    bdv_->registerWithDB(magicBytes);
 }
 
+void ArmoryConnection::setTopBlock(unsigned int topBlock, unsigned int branchHgt)
+{
+   topBlock_ = topBlock;
+   branchHeight_ = branchHgt;    // not clear where can we use it for now - just saved
+}
+
 void ArmoryConnection::setState(ArmoryState state)
 {
    if (state_ != state) {
@@ -636,10 +642,9 @@ bool ArmoryConnection::getOutpointsFor(const std::vector<bs::Address> &addresses
       return false;
    }
 
-   std::vector<BinaryData> addrVec;
-   addrVec.reserve(addresses.size());
+   std::set<BinaryData> addrVec;
    for (const auto &addr : addresses) {
-      addrVec.push_back(addr.prefixed());
+      addrVec.insert(addr.prefixed());
    }
 
    const auto cbWrap = [this, cb, addresses](ReturnMessage<OutpointBatch> opBatch)
@@ -1106,7 +1111,7 @@ void ArmoryConnection::processDelayedZC()
    }
 }
 
-void ArmoryConnection::onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &entries)
+void ArmoryConnection::onZCsReceived(const std::vector<std::shared_ptr<ClientClasses::LedgerEntry>> &entries)
 {
    logger_->debug("[ArmoryConnection::onZCsReceived] {} entries", entries.size());
 
@@ -1193,47 +1198,47 @@ void ArmoryCallback::progress(BDMPhase phase,
    }
 }
 
-void ArmoryCallback::run(BDMAction action, void* ptr, int block)
+void ArmoryCallback::run(BdmNotification bdmNotif)
 {
    std::lock_guard<std::mutex> lock(mutex_);
 
    if (!connection_) {
       return;
    }
-   if (block > 0) {
-      connection_->setTopBlock(static_cast<unsigned int>(block));
+   if (bdmNotif.height_ > 0) {
+      connection_->setTopBlock(bdmNotif.height_, bdmNotif.branchHeight_);
    }
-   switch (action) {
+   switch (bdmNotif.action_) {
    case BDMAction_Ready:
       logger_->debug("[ArmoryCallback::run] BDMAction_Ready");
       connection_->setState(ArmoryState::Ready);
       break;
 
    case BDMAction_NewBlock:
-      logger_->debug("[ArmoryCallback::run] BDMAction_NewBlock {}", block);
+      logger_->debug("[ArmoryCallback::run] BDMAction_NewBlock {}", bdmNotif.height_);
       connection_->setState(ArmoryState::Ready);
-      connection_->addToMaintQueue([block](ArmoryCallbackTarget *tgt) {
-         tgt->onNewBlock(block);
+      connection_->addToMaintQueue([height=bdmNotif.height_](ArmoryCallbackTarget *tgt) {
+         tgt->onNewBlock(height);
       });
       break;
 
    case BDMAction_ZC:
       logger_->debug("[ArmoryCallback::run] BDMAction_ZC");
-      connection_->onZCsReceived(*reinterpret_cast<std::vector<ClientClasses::LedgerEntry>*>(ptr));
+      connection_->onZCsReceived(bdmNotif.ledgers_);
       break;
 
    case BDMAction_InvalidatedZC:
       logger_->debug("[ArmoryCallback::run] BDMAction_InvalidateZC");
-      connection_->onZCsInvalidated(*reinterpret_cast<std::set<BinaryData> *>(ptr));
+      connection_->onZCsInvalidated(bdmNotif.invalidatedZc_);
       break;
 
    case BDMAction_Refresh:
       logger_->debug("[ArmoryCallback::run] BDMAction_Refresh");
-      connection_->onRefresh(*reinterpret_cast<std::vector<BinaryData> *>(ptr));
+      connection_->onRefresh(bdmNotif.ids_);
       break;
 
    case BDMAction_NodeStatus: {
-      const auto nodeStatus = *reinterpret_cast<ClientClasses::NodeStatusStruct *>(ptr);
+      const auto nodeStatus = *bdmNotif.nodeStatus_;
       logger_->debug("[ArmoryCallback::run] BDMAction_NodeStatus: status={}, RPC status={}"
          , (int)nodeStatus.status(), (int)nodeStatus.rpcStatus());
       connection_->addToMaintQueue([nodeStatus](ArmoryCallbackTarget *tgt) {
@@ -1243,7 +1248,7 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
    }
 
    case BDMAction_BDV_Error: {
-      const auto bdvError = *reinterpret_cast<BDV_Error_Struct *>(ptr);
+      const auto bdvError = bdmNotif.error_;
       logger_->debug("[ArmoryCallback::run] BDMAction_BDV_Error {}, str: {}, msg: {}"
                      , (int)bdvError.errType_, bdvError.errorStr_
                      , bdvError.extraMsg_);
@@ -1263,7 +1268,7 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
    }
 
    default:
-      logger_->debug("[ArmoryCallback::run] unknown BDMAction: {}", (int)action);
+      logger_->debug("[ArmoryCallback::run] unknown BDMAction: {}", (int)bdmNotif.action_);
       break;
    }
 }
@@ -1306,6 +1311,15 @@ std::vector<bs::TXEntry> bs::TXEntry::fromLedgerEntries(const std::vector<Client
    std::vector<bs::TXEntry> result;
    for (const auto &entry : entries) {
       result.emplace_back(fromLedgerEntry(entry));
+   }
+   return result;
+}
+
+std::vector<bs::TXEntry> bs::TXEntry::fromLedgerEntries(const std::vector<std::shared_ptr<ClientClasses::LedgerEntry>> &entries)
+{
+   std::vector<bs::TXEntry> result;
+   for (const auto &entry : entries) {
+      result.emplace_back(fromLedgerEntry(*entry));
    }
    return result;
 }

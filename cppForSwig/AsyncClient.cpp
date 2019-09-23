@@ -1048,7 +1048,7 @@ void AsyncClient::BlockDataViewer::getCombinedRBFTxOuts(
 
 ///////////////////////////////////////////////////////////////////////////////
 void AsyncClient::BlockDataViewer::getOutpointsForAddresses(
-   const std::vector<BinaryData>& addrVec, 
+   const std::set<BinaryData>& addrVec, 
    unsigned startHeight, unsigned zcIndexCutoff, 
    std::function<void(ReturnMessage<OutpointBatch>)> callback)
 {
