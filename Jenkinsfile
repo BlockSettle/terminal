@@ -37,7 +37,7 @@ pipeline {
                     }
                     steps {
                         bat 'set DEV_3RD_ROOT=C:\\Jenkins\\workspace\\3rd&& "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal && python generate.py release -production'
-                        bat '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal\\terminal.release && devenv BS_Terminal.sln /build Release"'
+                        bat '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal\\terminal.release && devenv BS_Terminal.sln /build RelWithDebInfo"'
                         bat "cd terminal\\Deploy\\Windows\\ && deploy.bat"
                     }
                 }
