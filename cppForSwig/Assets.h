@@ -12,10 +12,13 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <memory>
 
+#include "make_unique.h"
 #include "BinaryData.h"
 #include "EncryptionUtils.h"
 #include "AssetEncryption.h"
+
 
 class AssetException : public std::runtime_error
 {
@@ -239,7 +242,7 @@ public:
       SecureBinaryData& cipherText, std::unique_ptr<Cipher> cipher) :
       Asset(AssetType_EncryptedData)
    {
-      auto data = std::make_unique<CipherData>(cipherText, std::move(cipher));
+      auto data = make_unique<CipherData>(cipherText, std::move(cipher));
       cipherData_.insert(std::make_pair(
          data->cipher_->getEncryptionKeyId(), std::move(data)));
    }
