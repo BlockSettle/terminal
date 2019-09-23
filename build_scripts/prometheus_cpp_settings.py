@@ -10,6 +10,7 @@ class PrometheusCpp(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = '83e329c5512aa8dc4850a03d70621188d6fb92be'
+        self._script_revision = '1'
         self._package_name = 'PrometheusCpp'
         self._package_dir_name = 'PrometheusCpp'
 
@@ -19,7 +20,7 @@ class PrometheusCpp(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + '-' + self._script_revision
 
     def is_archive(self):
         return False
@@ -93,6 +94,7 @@ class PrometheusCpp(Configurator):
         if self._project_settings.on_windows():
             command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
             command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
+            command.append('-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=/MT')
 
         result = subprocess.call(command)
 
@@ -111,7 +113,7 @@ class PrometheusCpp(Configurator):
 
     def get_win_build_configuration(self):
         if self._project_settings.get_build_mode() == 'release':
-            return 'Release'
+            return 'RelWithDebInfo'
         else:
             return 'Debug'
 
