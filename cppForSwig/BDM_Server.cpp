@@ -1652,7 +1652,8 @@ void BDV_Server_Object::init()
    auto message = make_shared<BDVCallback>();
    auto notif = message->add_notification();
    notif->set_type(NotificationType::ready);
-   notif->set_height(blockchain().top()->getBlockHeight());
+   auto newBlockNotif = notif->mutable_newblock();
+   newBlockNotif->set_height(blockchain().top()->getBlockHeight());
    cb_->callback(message);
 
    DatabaseContainer_Sharded::clearThreadShardTx(this_thread::get_id());
@@ -1682,15 +1683,21 @@ void BDV_Server_Object::processNotification(
       notif->set_type(NotificationType::newblock);
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_NewBlock>(notifPtr);
-      notif->set_height(payload->reorgState_.newTop_->getBlockHeight());
+
+      auto newblockNotif = notif->mutable_newblock();
+      newblockNotif->set_height(payload->reorgState_.newTop_->getBlockHeight());
+      if (!payload->reorgState_.prevTopStillValid_)
+      {
+         newblockNotif->set_branch_height(
+            payload->reorgState_.reorgBranchPoint_->getBlockHeight());
+      }
 
       if (payload->zcPurgePacket_ != nullptr && 
           payload->zcPurgePacket_->invalidatedZcKeys_.size() != 0)
       {
          auto notif = callbackPtr->add_notification();
          notif->set_type(NotificationType::invalidated_zc);
-
-
+         
          auto ids = notif->mutable_ids();
          for (auto& id : payload->zcPurgePacket_->invalidatedZcKeys_)
          {
