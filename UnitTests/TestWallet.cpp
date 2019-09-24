@@ -1859,10 +1859,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    auto promPtr1 = std::make_shared<std::promise<bool>>();
    auto fut1 = promPtr1->get_future();
 
-   auto leaf = leafPtr_;
-   auto pass = passphrase_;
-   const auto &cbTxOutList =
-      [this, leaf, syncLeaf, addrVec, promPtr1]
+   const auto &cbTxOutList = [this, leaf=leafPtr_, syncLeaf, addrVec, promPtr1]
    (std::vector<UTXO> inputs)->void
    {
       const auto recipient = addrVec[11].getRecipient((uint64_t)(25 * COIN));
@@ -2901,10 +2898,82 @@ TEST_F(TestWallet, TxIdNativeSegwit)
 
 TEST_F(TestWallet, TxIdNestedSegwit)
 {
-   bs::core::wallet::TXSignRequest request;
+   const SecureBinaryData passphrase("password");
+   const bs::core::wallet::Seed seed{ SecureBinaryData("TxId test seed"), NetworkType::TestNet };
+   const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
 
-   UTXO input;
-   input.unserialize(BinaryData::CreateFromHex("80969800000000008b16180003000000202bc7112e419214b84de6e8afce84ada5c00e01774400da7880f71d3458718b4f17a914239efdcbd22beb7d4e609cee4ce98dc49a7cb07f87ffffffff"));
+   auto coreWallet = std::make_shared<bs::core::hd::Wallet>("test", "", seed, pd, walletFolder_);
+   ASSERT_NE(coreWallet, nullptr);
+
+   auto grp = coreWallet->createGroup(coreWallet->getXBTGroupType());
+   std::shared_ptr<bs::core::hd::Leaf> coreLeaf;
+   {
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphrase);
+      coreLeaf = grp->createLeaf(static_cast<AddressEntryType>(AddressEntryType_P2SH | AddressEntryType_P2WPKH)
+         , 0, 10);
+   }
+   ASSERT_NE(coreLeaf, nullptr);
+
+   const auto address = coreLeaf->getNewExtAddress();
+   ASSERT_FALSE(address.isNull());
+
+   envPtr_->requireArmory();
+   ASSERT_NE(envPtr_->armoryConnection(), nullptr);
+
+   auto inprocSigner = std::make_shared<InprocSigner>(coreWallet, envPtr_->logger());
+   inprocSigner->Start();
+   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+      , envPtr_->appSettings(), envPtr_->armoryConnection());
+   syncMgr->setSignContainer(inprocSigner);
+
+   auto promSync = std::make_shared<std::promise<bool>>();
+   auto futSync = promSync->get_future();
+   const auto &cbSync = [this, promSync](int cur, int total) {
+      if (cur == total) {
+         promSync->set_value(true);
+      }
+   };
+   syncMgr->syncWallets(cbSync);
+   EXPECT_TRUE(futSync.get());
+
+   const auto syncHdWallet = syncMgr->getHDWalletById(coreWallet->walletId());
+   ASSERT_NE(syncHdWallet, nullptr);
+
+   syncHdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   const auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
+   ASSERT_FALSE(regIDs.empty());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
+   auto syncWallet = syncMgr->getWalletById(coreLeaf->walletId());
+   auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
+   ASSERT_TRUE(syncLeaf != nullptr);
+
+   const auto armoryInstance = envPtr_->armoryInstance();
+   unsigned blockCount = 6;
+
+   auto curHeight = envPtr_->armoryConnection()->topBlock();
+   auto addrRecip = address.getRecipient((uint64_t)(50 * COIN));
+   armoryInstance->mineNewBlock(addrRecip.get(), blockCount);
+   auto newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
+
+   auto promUtxo = std::make_shared<std::promise<UTXO>>();
+   auto futUtxo = promUtxo->get_future();
+   const auto &cbTxOutList = [this, promUtxo]
+      (const std::vector<UTXO> &inputs)->void
+   {
+      if (inputs.size() != 1) {
+         promUtxo->set_value({});
+      }
+      else {
+         promUtxo->set_value(inputs.front());
+      }
+   };
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+   const auto input = futUtxo.get();
+   ASSERT_TRUE(input.isInitialized());
+
+   bs::core::wallet::TXSignRequest request;
    request.inputs.push_back(input);
 
    auto recipient = ScriptRecipient::deserialize(BinaryData::CreateFromHex("a086010000000000220020d35c94ed03ae988841bd990124e176dae3928ba41f5a684074a857e788d768ba"));
@@ -2914,5 +2983,42 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    request.fee = 271;
    request.change.address = bs::Address("2MykWqWBJGBeuyPGv73CisrokXKeGKNXU2C");
 
-   ASSERT_NO_THROW(request.txId());
+   class ResolverPreimage : public ResolverFeed
+   {
+   public:
+      ResolverPreimage(const bs::Address &addr, const BinaryData &preimage)
+         : ResolverFeed(), address_(addr), preimage_(preimage)
+      { }
+      BinaryData getByVal(const BinaryData &addr) override
+      {
+         if (addr == address_.unprefixed()) {
+            return preimage_;
+         }
+         throw std::runtime_error("not found");
+      }
+      const SecureBinaryData &getPrivKeyForPubkey(const BinaryData &pk) override
+      {
+         throw std::runtime_error("not supported");
+      }
+
+   private:
+      bs::Address address_;
+      BinaryData  preimage_;
+   };
+
+   // This operation doesn't require wallet decryption
+   const auto addrEntry = coreLeaf->getAddressEntryForAddr(address.prefixed());
+   ASSERT_NE(addrEntry, nullptr);
+   const auto addrPreimage = addrEntry->getPreimage();
+   ASSERT_FALSE(addrPreimage.isNull());
+
+   const auto resolver = std::make_shared<ResolverPreimage>(address, addrPreimage);
+
+   try {
+      const auto txId = request.txId(resolver);
+      std::cout << "txId = " << txId.toHexStr(true) << "\n";
+   }
+   catch (const std::exception &e) {
+      ASSERT_FALSE(true) << e.what();
+   }
 }
