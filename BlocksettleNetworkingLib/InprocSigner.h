@@ -89,6 +89,8 @@ public:
    void syncNewAddresses(const std::string &walletId, const std::vector<std::string> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &
       , bool persistent = true) override;
+   void getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &
+      , const std::function<void(const std::map<bs::Address, BinaryData> &)> &) override;
 
    void createSettlementWallet(const bs::Address &authAddr
       , const std::function<void(const SecureBinaryData &)> &) override;

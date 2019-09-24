@@ -900,6 +900,32 @@ void HeadlessContainer::syncAddressBatch(
    });
 }
 
+void HeadlessContainer::getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &inputs
+   , const std::function<void(const std::map<bs::Address, BinaryData> &)> &cb)
+{
+
+}
+
+static NetworkType mapFrom(headless::NetworkType netType)
+{
+   switch (netType) {
+   case headless::MainNetType:   return NetworkType::MainNet;
+   case headless::TestNetType:   return NetworkType::TestNet;
+   default:    return NetworkType::Invalid;
+   }
+}
+
+static bs::sync::WalletFormat mapFrom(headless::WalletFormat format)
+{
+   switch (format) {
+   case headless::WalletFormatHD:         return bs::sync::WalletFormat::HD;
+   case headless::WalletFormatPlain:      return bs::sync::WalletFormat::Plain;
+   case headless::WalletFormatSettlement: return bs::sync::WalletFormat::Settlement;
+   case headless::WalletFormatUnknown:
+   default:    return bs::sync::WalletFormat::Unknown;
+   }
+}
+
 void HeadlessContainer::ProcessSettlWalletCreate(unsigned int id, const std::string &data)
 {
    headless::CreateSettlWalletResponse response;

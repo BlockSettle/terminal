@@ -1727,3 +1727,46 @@ bool WalletsManager::createAuthLeaf(const std::function<void()> &cb)
    return signContainer_->createHDLeaf(primaryWallet->walletId(), authPath, { pwdData }
       , dialogData, createAuthLeafCb);
 }
+
+std::map<std::string, std::vector<bs::Address>> WalletsManager::getAddressToWalletsMapping(
+   const std::vector<UTXO> &utxos) const
+{
+   std::map<std::string, std::vector<bs::Address>> result;
+   for (const auto &utxo : utxos) {
+      const auto addr = bs::Address::fromUTXO(utxo);
+      const auto wallet = getWalletByAddress(addr);
+      result[wallet ? wallet->walletId() : ""].push_back(addr);
+   }
+   return result;
+}
+
+std::shared_ptr<ResolverFeed> WalletsManager::getPublicResolver(const std::map<bs::Address, BinaryData> &piMap)
+{
+   class PublicResolver : public ResolverFeed
+   {
+   public:
+      PublicResolver(const std::map<bs::Address, BinaryData> &preimageMap)
+         : ResolverFeed()
+      {
+         for (const auto &preimage : preimageMap) {
+            preimageMap_[preimage.first.unprefixed()] = preimage.second;
+         }
+      }
+
+      BinaryData getByVal(const BinaryData &addr) override
+      {
+         const auto itAddr = preimageMap_.find(addr);
+         if (itAddr != preimageMap_.end()) {
+            return itAddr->second;
+         }
+         throw std::runtime_error("not found");
+      }
+      const SecureBinaryData &getPrivKeyForPubkey(const BinaryData &pk) override
+      {
+         throw std::runtime_error("not supported");
+      }
+   private:
+      std::map<BinaryData, BinaryData>   preimageMap_;
+   };
+   return std::make_shared<PublicResolver>(piMap);
+}

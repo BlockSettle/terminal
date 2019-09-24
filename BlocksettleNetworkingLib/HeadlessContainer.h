@@ -95,6 +95,8 @@ public:
       const std::set<BinaryData>& addrSet, std::function<void(bs::sync::SyncState)>) override;
    void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
       const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override;
+   void getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &
+      , const std::function<void(const std::map<bs::Address, BinaryData> &)> &) override;
 
    void createSettlementWallet(const bs::Address &authAddr
       , const std::function<void(const SecureBinaryData &)> &) override;

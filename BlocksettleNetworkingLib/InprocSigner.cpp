@@ -391,12 +391,12 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
    for (const auto &addr : wallet->getUsedAddressList()) {
       const auto index = wallet->getAddressIndex(addr);
       const auto comment = wallet->getAddressComment(addr);
-      result.addresses.push_back({index, addr, comment});
+      const auto addrEntry = wallet->getAddressEntryForAddr(addr.prefixed());
    }
 
    for (const auto &addr : wallet->getPooledAddressList()) {
       const auto index = wallet->getAddressIndex(addr);
-      result.addrPool.push_back({ index, addr, ""});
+      const auto addrEntry = wallet->getAddressEntryForAddr(addr.prefixed());
    }
 
    for (const auto &txComment : wallet->getAllTxComments()) {
@@ -451,6 +451,26 @@ void InprocSigner::syncNewAddresses(const std::string &walletId
       result.push_back({ wallet->synchronizeUsedAddressChain(in).first, in });
    }
 
+   if (cb) {
+      cb(result);
+   }
+}
+
+void InprocSigner::getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &inputs
+   , const std::function<void(const std::map<bs::Address, BinaryData> &)> &cb)
+{
+   std::map<bs::Address, BinaryData> result;
+   for (const auto &input : inputs) {
+      const auto wallet = walletsMgr_->getWalletById(input.first);
+      if (wallet) {
+         for (const auto &addr : input.second) {
+            const auto addrEntry = wallet->getAddressEntryForAddr(addr.prefixed());
+            if (addrEntry) {
+               result[addr] = addrEntry->getPreimage();
+            }
+         }
+      }
+   }
    if (cb) {
       cb(result);
    }
