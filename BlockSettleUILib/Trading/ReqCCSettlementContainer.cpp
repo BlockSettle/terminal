@@ -60,37 +60,37 @@ ReqCCSettlementContainer::~ReqCCSettlementContainer()
 bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
-   dialogData.setValue(keys::Market, "CC");
-   dialogData.setValue(keys::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
-   dialogData.setValue(keys::LotSize, qint64(lotSize_));
+   dialogData.setValue(bs::sync::PasswordDialogData::Market, "CC");
+   dialogData.setValue(bs::sync::PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
+   dialogData.setValue(bs::sync::PasswordDialogData::LotSize, qint64(lotSize_));
 
-   dialogData.remove(keys::SettlementId);
+   dialogData.remove(bs::sync::PasswordDialogData::SettlementId);
 
    if (side() == bs::network::Side::Sell) {
-      dialogData.setValue(keys::Title, tr("Settlement Delivery"));
+      dialogData.setValue(bs::sync::PasswordDialogData::Title, tr("Settlement Delivery"));
    }
    else {
-      dialogData.setValue(keys::Title, tr("Settlement Payment"));
+      dialogData.setValue(bs::sync::PasswordDialogData::Title, tr("Settlement Payment"));
    }
 
    // rfq details
-   dialogData.setValue(keys::Price, UiUtils::displayPriceCC(price()));
+   dialogData.setValue(bs::sync::PasswordDialogData::Price, UiUtils::displayPriceCC(price()));
 
    // tx details
    if (side() == bs::network::Side::Buy) {
-      dialogData.setValue(keys::TxInputProduct, UiUtils::XbtCurrency);
+      dialogData.setValue(bs::sync::PasswordDialogData::TxInputProduct, UiUtils::XbtCurrency);
    }
    else {
-      dialogData.setValue(keys::TxInputProduct, product());
+      dialogData.setValue(bs::sync::PasswordDialogData::TxInputProduct, product());
    }
 
 
    // settlement details
-   dialogData.setValue(keys::DeliveryUTXOVerified, genAddrVerified_);
-   dialogData.setValue(keys::SigningAllowed, genAddrVerified_);
+   dialogData.setValue(bs::sync::PasswordDialogData::DeliveryUTXOVerified, genAddrVerified_);
+   dialogData.setValue(bs::sync::PasswordDialogData::SigningAllowed, genAddrVerified_);
 
-   dialogData.setValue(keys::RecipientsListVisible, true);
-   dialogData.setValue(keys::InputsListVisible, true);
+   dialogData.setValue(bs::sync::PasswordDialogData::RecipientsListVisible, true);
+   dialogData.setValue(bs::sync::PasswordDialogData::InputsListVisible, true);
 
    return dialogData;
 }
@@ -285,8 +285,8 @@ void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const 
    genAddrVerified_ = addressVerified;
 
    bs::sync::PasswordDialogData pd;
-   pd.setValue(keys::DeliveryUTXOVerified, addressVerified);
-   pd.setValue(keys::SigningAllowed, addressVerified);
+   pd.setValue(bs::sync::PasswordDialogData::DeliveryUTXOVerified, addressVerified);
+   pd.setValue(bs::sync::PasswordDialogData::SigningAllowed, addressVerified);
    signingContainer_->updateDialogData(pd);
 }
 

@@ -5,6 +5,7 @@
 #include "QString"
 #include "WalletEncryption.h"
 #include "BSErrorCode.h"
+#include "QMetaEnum"
 
 namespace bs {
    namespace signer {
@@ -13,7 +14,7 @@ namespace bs {
       Q_NAMESPACE
 
       // List of callable Signer dialogs
-      enum class DialogType {
+      enum class GeneralDialogType {
          CreateWallet,
          ImportWallet,
          BackupWallet,
@@ -21,26 +22,41 @@ namespace bs {
          ManageWallet,
          ActivateAutoSign,
       };
-      Q_ENUM_NS(DialogType)
+      Q_ENUM_NS(GeneralDialogType)
 
-      inline QString getSignerDialogPath(DialogType signerDialog) {
+      inline QString getGeneralDialogName(GeneralDialogType signerDialog) {
          switch (signerDialog) {
-         case DialogType::CreateWallet:
+         case GeneralDialogType::CreateWallet:
             return QStringLiteral("createNewWalletDialog");
-         case DialogType::ImportWallet:
+         case GeneralDialogType::ImportWallet:
             return QStringLiteral("importWalletDialog");
-         case DialogType::BackupWallet:
+         case GeneralDialogType::BackupWallet:
             return QStringLiteral("backupWalletDialog");
-         case DialogType::DeleteWallet:
+         case GeneralDialogType::DeleteWallet:
             return QStringLiteral("deleteWalletDialog");
-         case DialogType::ManageWallet:
+         case GeneralDialogType::ManageWallet:
             return QStringLiteral("manageEncryptionDialog");
-         case DialogType::ActivateAutoSign:
+         case GeneralDialogType::ActivateAutoSign:
             return QStringLiteral("activateAutoSignDialog");
          }
 
          assert(false);
          return QStringLiteral("");
+      }
+
+      // List of callable Signer dialogs
+      enum class PasswordInputDialogType {
+         RequestPasswordForAuthLeaf,
+         RequestPasswordForSettlementLeaf,
+         RequestPasswordForToken,
+         RequestPasswordForRevokeAuthAddress,
+         RequestPasswordForPromoteHDWallet
+      };
+      Q_ENUM_NS(PasswordInputDialogType)
+
+      inline QString getPasswordInputDialogName(PasswordInputDialogType signerDialog) {
+         QMetaEnum metaEnum = QMetaEnum::fromType<PasswordInputDialogType>();
+         return QString::fromLatin1(metaEnum.valueToKey(static_cast<int>(signerDialog)));
       }
 
       // List of signer run modes
@@ -51,6 +67,18 @@ namespace bs {
          cli
       };
       Q_ENUM_NS(RunMode)
+
+      // this string is function name in helper.js which can call various password input dialogs
+      static const char *createPasswordDialogForType = "createPasswordDialogForType";
+
+      // these strings are function names in helper.js which can be evaluated by name
+      const QList<std::string> qmlCallableDialogMethods =
+      {
+         "createTxSignDialog",
+         "createTxSignSettlementDialog",
+         "updateDialogData",
+         createPasswordDialogForType
+      };
 
       }  // namespace ui
    }  // namespace signer

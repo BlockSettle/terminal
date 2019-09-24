@@ -12,6 +12,7 @@
 
 using namespace bs::sync;
 using namespace bs::sync::dialog;
+using namespace bs::signer;
 
 bool isCCNameCorrect(const std::string& ccName)
 {
@@ -1549,8 +1550,10 @@ bool WalletsManager::CreateCCLeaf(const std::string &ccName, const std::function
    path.append(ccName);
 
    bs::sync::PasswordDialogData dialogData;
-   dialogData.setValue(keys::Title, tr("Create CC Leaf"));
-   dialogData.setValue(keys::Product, QString::fromStdString(ccName));
+   dialogData.setValue(bs::sync::PasswordDialogData::DialogType
+      , ui::getPasswordInputDialogName(ui::PasswordInputDialogType::RequestPasswordForToken));
+   dialogData.setValue(bs::sync::PasswordDialogData::Title, tr("Create CC Leaf"));
+   dialogData.setValue(bs::sync::PasswordDialogData::Product, QString::fromStdString(ccName));
 
    const auto &createCCLeafCb = [this, ccName, cb](bs::error::ErrorCode result
       , const std::string &walletId) {
@@ -1613,8 +1616,8 @@ bool WalletsManager::PromoteHDWallet(const std::string& walletId
    }
 
    bs::sync::PasswordDialogData dialogData;
-   dialogData.setValue(keys::Title, tr("Promote To Primary Wallet"));
-   dialogData.setValue(keys::XBT, tr("Authentification Addresses"));
+   dialogData.setValue(bs::sync::PasswordDialogData::Title, tr("Promote To Primary Wallet"));
+   dialogData.setValue(bs::sync::PasswordDialogData::XBT, tr("Authentification Addresses"));
 
    const auto& promoteHDWalletCb = [this, cb](bs::error::ErrorCode result
       , const std::string &walletId) {
@@ -1686,8 +1689,10 @@ bool WalletsManager::createAuthLeaf(const std::function<void()> &cb)
    bs::wallet::PasswordData pwdData;
    pwdData.salt = userId_;
    bs::sync::PasswordDialogData dialogData;
-   dialogData.setValue(keys::Title, tr("Create Auth Leaf"));
-   dialogData.setValue(keys::Product, QString::fromStdString(userId_.toHexStr()));
+   dialogData.setValue(bs::sync::PasswordDialogData::DialogType
+      , ui::getPasswordInputDialogName(ui::PasswordInputDialogType::RequestPasswordForAuthLeaf));
+   dialogData.setValue(bs::sync::PasswordDialogData::Title, tr("Create Auth Leaf"));
+   dialogData.setValue(bs::sync::PasswordDialogData::Product, QString::fromStdString(userId_.toHexStr()));
 
    const auto &createAuthLeafCb = [this, cb, primaryWallet, authPath]
       (bs::error::ErrorCode result, const std::string &walletId)

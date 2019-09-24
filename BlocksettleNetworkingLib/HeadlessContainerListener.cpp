@@ -435,7 +435,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       }
    };
 
-   dialogData.insert("WalletId", rootWalletId);
+   dialogData.insert(bs::sync::PasswordDialogData::WalletId, rootWalletId);
    return RequestPasswordIfNeeded(clientId, rootWalletId, txSignReq, reqType, dialogData, onPassword);
 }
 
@@ -534,7 +534,7 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
    }
 
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
-   dialogData.insert("PayOutType", true);
+   dialogData.insert(bs::sync::PasswordDialogData::PayOutType, true);
 
    bs::core::wallet::TXSignRequest txSignReq;
    txSignReq.walletIds = { walletsMgr_->getPrimaryWallet()->walletId() };
@@ -609,8 +609,8 @@ bool HeadlessContainerListener::onSignAuthAddrRevokeRequest(const std::string &c
    }
 
    Internal::PasswordDialogDataWrapper dialogData;
-   dialogData.insert("WalletId", request.wallet_id());
-   dialogData.insert("AuthAddress", request.auth_address());
+   dialogData.insert(bs::sync::PasswordDialogData::WalletId, request.wallet_id());
+   dialogData.insert(bs::sync::PasswordDialogData::AuthAddress, request.auth_address());
 
    bs::core::wallet::TXSignRequest txSignReq;
    txSignReq.walletIds = { wallet->walletId() };
@@ -1370,8 +1370,8 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
    };
 
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
-   dialogData.insert("WalletId", priWallet->walletId());
-   dialogData.insert("AuthAddress", request.auth_address());
+   dialogData.insert(bs::sync::PasswordDialogData::WalletId, priWallet->walletId());
+   dialogData.insert(bs::sync::PasswordDialogData::AuthAddress, request.auth_address());
 
    return RequestPasswordIfNeeded(clientId, priWallet->walletId(), {}, headless::CreateSettlWalletType
       , dialogData, onPassword);

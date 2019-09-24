@@ -7,25 +7,25 @@ using namespace Blocksettle::Communication::Internal;
 
 const std::string kTypeErrorMsg = "PasswordDialogData value read error: wrong type";
 
-void PasswordDialogDataWrapper::insert(const std::string &key, bool value) { insertImpl<bool>(key, value); }
+void PasswordDialogDataWrapper::insert(const bs::sync::dialog::keys::Key &key, bool value) { insertImpl<bool>(key.toString(), value); }
 
-void PasswordDialogDataWrapper::insert(const std::string &key, const std::string &value)
+void PasswordDialogDataWrapper::insert(const bs::sync::dialog::keys::Key &key, const std::string &value)
 {
-   insertImpl<std::string>(key, value);
+   insertImpl<std::string>(key.toString(), value);
 }
 
-void PasswordDialogDataWrapper::insert(const std::string &key, int value) { insertImpl<int>(key, value); }
+void PasswordDialogDataWrapper::insert(const bs::sync::dialog::keys::Key &key, int value) { insertImpl<int>(key.toString(), value); }
 
-void PasswordDialogDataWrapper::insert(const std::string &key, double value) { insertImpl<double>(key, value); }
+void PasswordDialogDataWrapper::insert(const bs::sync::dialog::keys::Key &key, double value) { insertImpl<double>(key.toString(), value); }
 
-void PasswordDialogDataWrapper::insert(const std::string &key, const char *data, size_t size)
+void PasswordDialogDataWrapper::insert(const bs::sync::dialog::keys::Key &key, const char *data, size_t size)
 {
    AnyMessage msg;
    msg.set_value_bytes(data, size);
 
    Any any;
    any.PackFrom(msg);
-   const auto &p = MapPair<std::string, Any>(key, any);
+   const auto &p = MapPair<std::string, Any>(key.toString(), any);
    mutable_valuesmap()->insert(p);
 }
 

@@ -513,7 +513,7 @@ bs::signer::RequestId HeadlessContainer::setUserId(const BinaryData &userId, con
    }
 
    bs::sync::PasswordDialogData info;
-   info.setValue(keys::WalletId, QString::fromStdString(walletId));
+   info.setValue(bs::sync::PasswordDialogData::WalletId, QString::fromStdString(walletId));
 
    headless::SetUserIdRequest request;
    auto dialogData = request.mutable_passworddialogdata();
@@ -559,7 +559,7 @@ bool HeadlessContainer::createHDLeaf(const std::string &rootWalletId, const bs::
          request.set_salt(pwData[0].salt.toBinStr());
       }
    }
-   dialogData.setValue(keys::WalletId, QString::fromStdString(rootWalletId));
+   dialogData.setValue(bs::sync::PasswordDialogData::WalletId, QString::fromStdString(rootWalletId));
 
    auto requestDialogData = request.mutable_passworddialogdata();
    *requestDialogData = dialogData.toProtobufMessage();
@@ -590,7 +590,7 @@ bool HeadlessContainer::promoteHDWallet(const std::string& rootWalletId
    request.set_rootwalletid(rootWalletId);
    request.set_user_id(userId.toBinStr());
 
-   dialogData.setValue(keys::WalletId, QString::fromStdString(rootWalletId));
+   dialogData.setValue(bs::sync::PasswordDialogData::WalletId, QString::fromStdString(rootWalletId));
 
    auto requestDialogData = request.mutable_passworddialogdata();
    *requestDialogData = dialogData.toProtobufMessage();
@@ -671,7 +671,7 @@ bs::signer::RequestId HeadlessContainer::SendDeleteHDRequest(const std::string &
 //   Send(packet);
 //}
 
-bs::signer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data)
+bs::signer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::GeneralDialogType signerDialog, const QVariantMap &data)
 {
    // serialize variant data
    QByteArray ba;
@@ -679,7 +679,7 @@ bs::signer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::Dia
    stream << data;
 
    headless::CustomDialogRequest request;
-   request.set_dialogname(bs::signer::ui::getSignerDialogPath(signerDialog).toStdString());
+   request.set_dialogname(bs::signer::ui::getGeneralDialogName(signerDialog).toStdString());
    request.set_variantdata(ba.data(), size_t(ba.size()));
 
    headless::RequestPacket packet;

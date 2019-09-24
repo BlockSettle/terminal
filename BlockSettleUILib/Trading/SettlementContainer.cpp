@@ -12,13 +12,13 @@ sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData info;
 
-   info.setValue(keys::SettlementId, QString::fromStdString(id()));
-   info.setValue(keys::Duration, durationMs());
+   info.setValue(bs::sync::PasswordDialogData::SettlementId, QString::fromStdString(id()));
+   info.setValue(bs::sync::PasswordDialogData::Duration, durationMs());
 
-   info.setValue(keys::ProductGroup, tr(bs::network::Asset::toString(assetType())));
-   info.setValue(keys::Security, QString::fromStdString(security()));
-   info.setValue(keys::Product, QString::fromStdString(product()));
-   info.setValue(keys::Side, tr(bs::network::Side::toString(side())));
+   info.setValue(bs::sync::PasswordDialogData::ProductGroup, tr(bs::network::Asset::toString(assetType())));
+   info.setValue(bs::sync::PasswordDialogData::Security, QString::fromStdString(security()));
+   info.setValue(bs::sync::PasswordDialogData::Product, QString::fromStdString(product()));
+   info.setValue(bs::sync::PasswordDialogData::Side, tr(bs::network::Side::toString(side())));
 
    return info;
 }
@@ -27,9 +27,9 @@ sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogDat
 {
    bs::sync::PasswordDialogData dialogData = toPasswordDialogData();
 
-   dialogData.setValue(keys::Title, tr("Settlement Pay-Out"));
-   dialogData.setValue(keys::Duration, 30000);
-   dialogData.setValue(keys::SettlementPayOutVisible, true);
+   dialogData.setValue(bs::sync::PasswordDialogData::Title, tr("Settlement Pay-Out"));
+   dialogData.setValue(bs::sync::PasswordDialogData::Duration, 30000);
+   dialogData.setValue(bs::sync::PasswordDialogData::SettlementPayOutVisible, true);
 
    return dialogData;
 }
