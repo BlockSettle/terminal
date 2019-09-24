@@ -2848,40 +2848,35 @@ TEST_F(TestWalletWithArmory, SignSettlement)
    }
 }
 
-#if 0
-TEST(TestWallet, 1of2_SameKey)
+TEST_F(TestWallet, MultipleKeys)
 {
-   bs::core::hd::Wallet wallet1("hdWallet", "", NetworkType::TestNet, TestEnv::logger());
-   const std::string email = "email@example.com";
-   const std::vector<bs::wallet::PasswordData> authKeys = {
-      { CryptoPRNG::generateRandom(32), bs::wallet::EncryptionType::Auth, email },
-      { CryptoPRNG::generateRandom(32), bs::wallet::EncryptionType::Auth, email }
-   };
-   const bs::wallet::KeyRank keyRank = { 1, 2 };
-   EXPECT_EQ(wallet1.changePassword(authKeys, keyRank, {}, false, false, false), true);
-   ASSERT_EQ(wallet1.encryptionTypes().size(), 1);
-   EXPECT_EQ(wallet1.encryptionTypes()[0], bs::wallet::EncryptionType::Auth);
-   ASSERT_EQ(wallet1.encryptionKeys().size(), 1);
-   EXPECT_EQ(wallet1.encryptionKeys()[0], email);
-   EXPECT_EQ(wallet1.encryptionRank(), keyRank);
-   EXPECT_NE(wallet1.getRootNode(authKeys[0].password), nullptr);
-   EXPECT_NE(wallet1.getRootNode(authKeys[1].password), nullptr);
+   const SecureBinaryData passphrase("test");
+   const auto authEidKey = CryptoPRNG::generateRandom(32);
+   const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+   const bs::wallet::PasswordData pd1{ passphrase, { bs::wallet::EncryptionType::Password } };
+   const bs::wallet::PasswordData pd2{ authEidKey, { bs::wallet::EncryptionType::Auth, std::string("email@example.com") } };
+   auto wallet = std::make_shared<bs::core::hd::Wallet>("test1", "", seed, pd1, "./homedir"
+      , StaticLogger::loggerPtr);
+   ASSERT_NE(wallet, nullptr);
 
-   const std::string filename = "m_of_n_test.lmdb";
-   wallet1.saveToFile(filename);
+   SecureBinaryData privKey;
    {
-      bs::core::hd::Wallet wallet2(filename);
-      ASSERT_EQ(wallet2.encryptionTypes().size(), 1);
-      EXPECT_EQ(wallet2.encryptionTypes()[0], bs::wallet::EncryptionType::Auth);
-      ASSERT_EQ(wallet2.encryptionKeys().size(), 1);
-      EXPECT_EQ(wallet2.encryptionKeys()[0], email);
-      EXPECT_EQ(wallet2.encryptionRank(), keyRank);
-      EXPECT_NE(wallet2.getRootNode(authKeys[0].password), nullptr);
-      EXPECT_NE(wallet2.getRootNode(authKeys[1].password), nullptr);
+      bs::core::WalletPasswordScoped lock(wallet, pd1.password);
+      privKey = wallet->getDecryptedRootXpriv();
+      ASSERT_FALSE(privKey.isNull());
+      wallet->addPassword(pd2);
    }
-   EXPECT_TRUE(wallet1.eraseFile());
+   {
+      bs::core::WalletPasswordScoped lock(wallet, pd2.password);
+      const auto privKey2 = wallet->getDecryptedRootXpriv();
+      EXPECT_EQ(privKey, privKey2);
+   }
+
+   EXPECT_EQ(wallet->encryptionKeys().size(), 2);
+   EXPECT_EQ(wallet->encryptionTypes().size(), 2);
+   EXPECT_EQ(wallet->encryptionRank().n, 2);
+   EXPECT_EQ(wallet->encryptionKeys()[1], pd2.metaData.encKey);
 }
-#endif   //0
 
 TEST_F(TestWallet, TxIdNativeSegwit)
 {
