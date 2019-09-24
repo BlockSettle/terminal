@@ -98,6 +98,9 @@ ENDIF()
 SET( PROJECT_BINARY_DIR ${BLOCK_SETTLE_ROOT}/build_terminal/${CMAKE_BUILD_TYPE} )
 SET( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
 
+include(GCCToolchain)
+include(LLVMToolchain)
+include(LTO)
 include(CompilerWarnings)
 include(CompilerColorDiagnostics)
 
