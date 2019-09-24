@@ -18,11 +18,11 @@ import "../js/helper.js" as JsHelper
 TxSignSettlementBaseDialog {
     id: root
     readonly property string inputProduct: " XBT"
-    readonly property string fxProduct: passwordDialogData.value("FxProduct")
-    readonly property bool is_payOut: passwordDialogData.value("PayOutType") === true
+    readonly property string fxProduct: passwordDialogData.FxProduct
+    readonly property bool is_payOut: passwordDialogData.PayOutType
     readonly property bool is_payIn: !is_payOut
 
-    readonly property string onRevokeLabel: passwordDialogData.value("PayOutRevokeType") === true ? qsTr(" On Revoke") : ""
+    readonly property string onRevokeLabel: passwordDialogData.PayOutRevokeType ? qsTr(" On Revoke") : ""
 
     function getTotalValue() {
         if (is_payOut) {
@@ -33,11 +33,11 @@ TxSignSettlementBaseDialog {
     }
 
     Component.onCompleted: {
-        if (passwordDialogData.contains("Quantity")) {
-            quantity = passwordDialogData.value("Quantity")
+        if (passwordDialogData.hasQuantity()) {
+            quantity = passwordDialogData.Quantity
         }
-        if (passwordDialogData.contains("TotalValue")) {
-            totalValue = passwordDialogData.value("TotalValue")
+        if (passwordDialogData.hasTotalValue()) {
+            totalValue = passwordDialogData.TotalValue
         }
         priceString = price + " " + fxProduct + " / 1 XBT"
     }
@@ -58,19 +58,19 @@ TxSignSettlementBaseDialog {
 
         // SettlementAddress
         CustomLabel {
-            visible: passwordDialogData.contains("SettlementAddress")
+            visible: passwordDialogData.hasSettlementAddress()
             Layout.fillWidth: true
             text: qsTr("Settlement Address")
         }
         CustomLabelCopyableValue {
             id: settlementAddress
-            visible: passwordDialogData.contains("SettlementAddress")
-            text: passwordDialogData.value("SettlementAddress")
-                .truncString(passwordDialogData.contains("RequesterAuthAddress") ? passwordDialogData.value("RequesterAuthAddress").length : 30)
+            visible: passwordDialogData.hasSettlementAddress()
+            text: passwordDialogData.SettlementAddress
+                .truncString(passwordDialogData.hasRequesterAuthAddress() ? passwordDialogData.RequesterAuthAddress.length : 30)
             Layout.alignment: Qt.AlignRight
-            textForCopy: passwordDialogData.value("SettlementAddress")
+            textForCopy: passwordDialogData.SettlementAddress
 
-            ToolTip.text: passwordDialogData.value("SettlementAddress")
+            ToolTip.text: passwordDialogData.SettlementAddress
             ToolTip.delay: 150
             ToolTip.timeout: 5000
             ToolTip.visible: settlementAddress.mouseArea.containsMouse
@@ -78,19 +78,19 @@ TxSignSettlementBaseDialog {
 
         // SettlementId
         CustomLabel {
-            visible: passwordDialogData.contains("SettlementId")
+            visible: passwordDialogData.hasSettlementId()
             Layout.fillWidth: true
             text: qsTr("Settlement Id")
         }
         CustomLabelCopyableValue {
             id: settlementId
-            visible: passwordDialogData.contains("SettlementId")
-            text: passwordDialogData.value("SettlementId")
-                .truncString(passwordDialogData.contains("RequesterAuthAddress") ? passwordDialogData.value("RequesterAuthAddress").length : 30)
+            visible: passwordDialogData.hasSettlementId()
+            text: passwordDialogData.SettlementId
+                .truncString(passwordDialogData.hasRequesterAuthAddress() ? passwordDialogData.RequesterAuthAddress.length : 30)
             Layout.alignment: Qt.AlignRight
-            textForCopy: passwordDialogData.value("SettlementId")
+            textForCopy: passwordDialogData.SettlementId
 
-            ToolTip.text: passwordDialogData.value("SettlementId")
+            ToolTip.text: passwordDialogData.SettlementId
             ToolTip.delay: 150
             ToolTip.timeout: 5000
             ToolTip.visible: settlementId.mouseArea.containsMouse
@@ -98,26 +98,26 @@ TxSignSettlementBaseDialog {
 
         // Requester Authentication Address
         CustomLabel {
-            visible: passwordDialogData.contains("RequesterAuthAddress")
+            visible: passwordDialogData.hasRequesterAuthAddress()
             Layout.fillWidth: true
             text: qsTr("Requester Auth")
         }
         CustomLabelCopyableValue {
-            visible: passwordDialogData.contains("RequesterAuthAddress")
-            text: passwordDialogData.value("RequesterAuthAddress")
+            visible: passwordDialogData.hasRequesterAuthAddress()
+            text: passwordDialogData.RequesterAuthAddress
             Layout.alignment: Qt.AlignRight
             color: passwordDialogData.requesterAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
 
         // Responder Authentication Address = dealer
         CustomLabel {
-            visible: passwordDialogData.contains("ResponderAuthAddress")
+            visible: passwordDialogData.hasResponderAuthAddress()
             Layout.fillWidth: true
             text: qsTr("Responder Auth")
         }
         CustomLabelCopyableValue {
-            visible: passwordDialogData.contains("ResponderAuthAddress")
-            text: passwordDialogData.value("ResponderAuthAddress")
+            visible: passwordDialogData.hasResponderAuthAddress()
+            text: passwordDialogData.ResponderAuthAddress
             Layout.alignment: Qt.AlignRight
             color: passwordDialogData.responderAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
@@ -209,12 +209,12 @@ TxSignSettlementBaseDialog {
 
         // Total value
         CustomLabel {
-            visible: passwordDialogData.value("TotalSpentVisible") === true
+            visible: passwordDialogData.TotalSpentVisible
             Layout.fillWidth: true
             text: is_payIn ? qsTr("Total Sent ") : qsTr("Total Received ") + onRevokeLabel
         }
         CustomLabelValue {
-            visible: passwordDialogData.value("TotalSpentVisible") === true
+            visible: passwordDialogData.TotalSpentVisible
             text: (is_payIn ? "- " : "+ ") + getTotalValue().toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }

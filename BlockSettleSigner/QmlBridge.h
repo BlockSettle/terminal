@@ -6,26 +6,17 @@
 #include <QQmlEngine>
 
 #include "ApplicationSettings.h"
-#include "QWalletInfo.h"
-#include "QSeed.h"
-#include "QPasswordData.h"
 #include "AuthProxy.h"
 #include "ConnectionManager.h"
+#include "SignerUiDefs.h"
 #include "QmlCallbackImpl.h"
+#include "QPasswordData.h"
+#include "QSeed.h"
+#include "QWalletInfo.h"
+
 #include <spdlog/spdlog.h>
 
 #include <memory>
-
-namespace  {
-   // these strings are function names in helper.js which can be evaluated by name
-   const QList<std::string> knownMethods =
-   {
-      "createTxSignDialog",
-      "createTxSignSettlementDialog",
-      "updateDialogData",
-      "createPasswordDialogForType"
-   };
-}
 
 using namespace bs::signer;
 
@@ -53,7 +44,7 @@ public:
                         QVariant val6 = QVariant(),
                         QVariant val7 = QVariant()) const
    {
-      if (!knownMethods.contains(method)) {
+      if (!bs::signer::ui::qmlCallableDialogMethods.contains(method)) {
          logger_->error("[{}] trying to call qml function which is not allowed: {}", __func__, method);
          return;
       }

@@ -22,15 +22,15 @@ CustomTitleDialogWindow {
     property QPasswordData passwordData: QPasswordData {}
     property AuthSignWalletObject  authSign: AuthSignWalletObject {}
 
-    property bool signingAllowed: passwordDialogData.value("SigningAllowed") === true
+    property bool signingAllowed: passwordDialogData.SigningAllowed
 
     // rfq details
-    readonly property string product: passwordDialogData.value("Product")
-    readonly property string productGroup: passwordDialogData.value("ProductGroup")
-    readonly property string security: passwordDialogData.value("Security")
-    readonly property string side: passwordDialogData.value("Side")
+    readonly property string product: passwordDialogData.Product
+    readonly property string productGroup: passwordDialogData.ProductGroup
+    readonly property string security: passwordDialogData.Security
+    readonly property string side: passwordDialogData.Side
     property string quantity
-    property string price: passwordDialogData.value("Price")
+    property string price: passwordDialogData.Price
     property string priceString
     property string totalValue
 
@@ -40,14 +40,14 @@ CustomTitleDialogWindow {
     readonly property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     readonly property int addressRowHeight: 24
 
-    readonly property int duration: passwordDialogData.value("Duration") / 1000.0 - 1 > 0 ? passwordDialogData.value("Duration") / 1000.0 - 1 : 60
+    readonly property int duration: passwordDialogData.Duration / 1000.0 - 1 > 0 ? passwordDialogData.Duration / 1000.0 - 1 : 60
     readonly property real balanceDivider : qmlFactory.balanceDivider()
 
     readonly property bool is_sell: side === "SELL"
     readonly property bool is_buy: side === "BUY"
 
     id: root
-    title: passwordDialogData.value("Title")
+    title: passwordDialogData.Title
     rejectable: true
     width: 500
 
@@ -87,7 +87,7 @@ CustomTitleDialogWindow {
 
         onCancelSignTx: {
             console.log("TxSignSettlementBaseDialog.qml, cancel requested for id=" + settlementId)
-            if (settlementId === passwordDialogData.value("SettlementId")) {
+            if (settlementId === passwordDialogData.SettlementId) {
                 rejectAnimated()
             }
         }
