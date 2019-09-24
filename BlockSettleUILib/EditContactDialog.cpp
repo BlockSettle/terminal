@@ -18,11 +18,8 @@ EditContactDialog::EditContactDialog(const QString &contactId
    refillFields();
    connect(ui_->buttonBox, &QDialogButtonBox::accepted, this, &EditContactDialog::accept);
 
-   if (displayName_.isEmpty()) {
-      ui_->nameOptionalLineEdit->setFocus();
-   } else {
-      ui_->buttonBox->setFocus();
-   }
+   ui_->nameOptionalLineEdit->setFocus();
+   ui_->nameOptionalLineEdit->selectAll();
 }
 
 EditContactDialog::~EditContactDialog() noexcept = default;
