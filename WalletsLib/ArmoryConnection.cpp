@@ -1205,9 +1205,12 @@ void ArmoryCallback::run(BdmNotification bdmNotif)
    if (!connection_) {
       return;
    }
-   if ((bdmNotif.height_ != UINT32_MAX) && (bdmNotif.height_ != 0xCCCCCCCCU)) {
+
+   if (bdmNotif.action_ == BDMAction_Ready || bdmNotif.action_ == BDMAction_NewBlock) {
+      // height_ is set only in these events
       connection_->setTopBlock(bdmNotif.height_, bdmNotif.branchHeight_);
    }
+
    switch (bdmNotif.action_) {
    case BDMAction_Ready:
       logger_->debug("[ArmoryCallback::run] BDMAction_Ready");
