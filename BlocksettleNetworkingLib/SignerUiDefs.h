@@ -68,8 +68,11 @@ namespace bs {
       };
       Q_ENUM_NS(RunMode)
 
-      // this string is function name in helper.js which can call various password input dialogs
+      // function name in helper.js which can call various password input dialogs
       static const char *createPasswordDialogForType = "createPasswordDialogForType";
+
+      // function name in helper.js which can call general dialogs
+      static const char *customDialogRequest = "customDialogRequest";
 
       // these strings are function names in helper.js which can be evaluated by name
       const QList<std::string> qmlCallableDialogMethods =
