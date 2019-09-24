@@ -130,6 +130,7 @@ protected:
    void ProcessSetUserId(const std::string &data);
    void ProcessGetPayinAddr(unsigned int id, const std::string &data);
    void ProcessSettlGetRootPubkey(unsigned int id, const std::string &data);
+   void ProcessAddrPreimageResponse(unsigned int id, const std::string &data);
 
 protected:
    std::shared_ptr<HeadlessListener>   listener_;
@@ -137,10 +138,11 @@ protected:
    std::unordered_set<std::string>     woWallets_;
    std::set<bs::signer::RequestId>     signRequests_;
 
-   std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>   cbWalletInfoMap_;
+   std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>         cbWalletInfoMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::SyncState)>>     cbSyncAddrsMap_;
+   std::map<bs::signer::RequestId, std::function<void(const std::map<bs::Address, BinaryData> &)>> cbAddrPreimageMap_;
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbExtAddrsMap_;
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
    std::map<bs::signer::RequestId, SignTxCb> cbSettlementSignTxMap_;

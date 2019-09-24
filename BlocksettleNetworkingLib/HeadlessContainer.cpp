@@ -903,7 +903,50 @@ void HeadlessContainer::syncAddressBatch(
 void HeadlessContainer::getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &inputs
    , const std::function<void(const std::map<bs::Address, BinaryData> &)> &cb)
 {
+   headless::AddressPreimageRequest request;
+   for (const auto &input : inputs) {
+      auto req = request.add_request();
+      req->set_wallet_id(input.first);
+      for (const auto &addr : input.second) {
+         req->add_address(addr.display());
+      }
+   }
+   headless::RequestPacket packet;
+   packet.set_type(headless::AddressPreimageType);
+   packet.set_data(request.SerializeAsString());
+   const auto reqId = Send(packet);
+   if (!reqId) {
+      if (cb) {
+         cb({});
+      }
+      return;
+   }
+   cbAddrPreimageMap_[reqId] = cb;
+}
 
+void HeadlessContainer::ProcessAddrPreimageResponse(unsigned int id, const std::string &data)
+{
+   headless::AddressPreimageResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[HeadlessContainer::ProcessAddrPreimageResponse] Failed to parse reply");
+      emit Error(id, "failed to parse");
+      return;
+   }
+   std::map<bs::Address, BinaryData> result;
+   for (int i = 0; i < response.response_size(); ++i) {
+      const auto resp = response.response(i);
+      for (int j = 0; j < resp.preimages_size(); ++j) {
+         const auto piData = resp.preimages(j);
+         result[piData.address()] = piData.preimage();
+      }
+   }
+   const auto itCb = cbAddrPreimageMap_.find(id);
+   if (itCb == cbAddrPreimageMap_.end()) {
+      emit Error(id, "no callback found for id " + std::to_string(id));
+      return;
+   }
+   itCb->second(result);
+   cbAddrPreimageMap_.erase(itCb);
 }
 
 static NetworkType mapFrom(headless::NetworkType netType)
@@ -940,6 +983,7 @@ void HeadlessContainer::ProcessSettlWalletCreate(unsigned int id, const std::str
       return;
    }
    itCb->second(response.public_key());
+   cbSettlWalletMap_.erase(itCb);
 }
 
 void HeadlessContainer::ProcessSetSettlementId(unsigned int id, const std::string &data)
@@ -956,6 +1000,7 @@ void HeadlessContainer::ProcessSetSettlementId(unsigned int id, const std::strin
       return;
    }
    itCb->second(response.success());
+   cbSettlIdMap_.erase(itCb);
 }
 
 void HeadlessContainer::ProcessGetPayinAddr(unsigned int id, const std::string &data)
@@ -972,6 +1017,7 @@ void HeadlessContainer::ProcessGetPayinAddr(unsigned int id, const std::string &
       return;
    }
    itCb->second(response.success(), response.address());
+   cbPayinAddrMap_.erase(itCb);
 }
 
 void HeadlessContainer::ProcessSettlGetRootPubkey(unsigned int id, const std::string &data)
@@ -988,6 +1034,7 @@ void HeadlessContainer::ProcessSettlGetRootPubkey(unsigned int id, const std::st
       return;
    }
    itCb->second(response.success(), response.public_key());
+   cbSettlPubkeyMap_.erase(itCb);
 }
 
 void HeadlessContainer::ProcessSyncWalletInfo(unsigned int id, const std::string &data)
@@ -1419,6 +1466,10 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
    case headless::WalletsListUpdatedType:
       logger_->debug("received WalletsListUpdatedType message");
       emit walletsListUpdated();
+      break;
+
+   case headless::AddressPreimageType:
+      ProcessAddrPreimageResponse(packet.id(), packet.data());
       break;
 
    default:
