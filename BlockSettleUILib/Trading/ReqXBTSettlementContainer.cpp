@@ -18,7 +18,7 @@
 
 static const unsigned int kWaitTimeoutInSec = 30;
 
-using namespace bs::sync::dialog;
+using namespace bs::sync;
 
 Q_DECLARE_METATYPE(AddressVerificationState)
 
@@ -82,17 +82,17 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
          , transactionData_->GetTransactionSummary().feePerByte, armory_->topBlock());
 
       bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(txReq);
-      dlgData.setValue(bs::sync::PasswordDialogData::Market, "XBT");
-      dlgData.setValue(bs::sync::PasswordDialogData::SettlementId, settlementId_.toHexStr());
-      dlgData.setValue(bs::sync::PasswordDialogData::ResponderAuthAddressVerified, true);
-      dlgData.setValue(bs::sync::PasswordDialogData::SigningAllowed, true);
+      dlgData.setValue(PasswordDialogData::Market, "XBT");
+      dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
+      dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
+      dlgData.setValue(PasswordDialogData::SigningAllowed, true);
 
       // mark revoke tx
       if ((side() == bs::network::Side::Type::Sell && product() == bs::network::XbtCurrency)
           || (side() == bs::network::Side::Type::Buy && product() != bs::network::XbtCurrency)) {
-         dlgData.setValue(bs::sync::PasswordDialogData::PayOutRevokeType, true);
-         dlgData.setValue(bs::sync::PasswordDialogData::Title, tr("Settlement Pay-Out (For Revoke)"));
-         dlgData.setValue(bs::sync::PasswordDialogData::Duration, 30000 - (QDateTime::currentMSecsSinceEpoch() - payinSignedTs_));
+         dlgData.setValue(PasswordDialogData::PayOutRevokeType, true);
+         dlgData.setValue(PasswordDialogData::Title, tr("Settlement Pay-Out (For Revoke)"));
+         dlgData.setValue(PasswordDialogData::Duration, 30000 - (QDateTime::currentMSecsSinceEpoch() - payinSignedTs_));
       }
 
       logger_->debug("[{}] pay-out fee={}, qty={} ({}), payin hash={}", __func__
@@ -116,7 +116,7 @@ void ReqXBTSettlementContainer::acceptSpotXBT()
          payInTxRequest_ = transactionData_->createTXRequest(false, changeAddr);
 
          bs::sync::PasswordDialogData dlgData = toPasswordDialogData();
-         dlgData.setValue(bs::sync::PasswordDialogData::SettlementPayInVisible, true);
+         dlgData.setValue(PasswordDialogData::SettlementPayInVisible, true);
 
          payinSignedTs_ = QDateTime::currentMSecsSinceEpoch();
          payinSignId_ = signContainer_->signSettlementTXRequest(payInTxRequest_, dlgData);
@@ -275,52 +275,52 @@ void ReqXBTSettlementContainer::deactivate()
 bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
-   dialogData.setValue(bs::sync::PasswordDialogData::Market, "XBT");
-   dialogData.setValue(bs::sync::PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
+   dialogData.setValue(PasswordDialogData::Market, "XBT");
+   dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
 
    // rfq details
    QString qtyProd = UiUtils::XbtCurrency;
    QString fxProd = QString::fromStdString(fxProduct());
 
-   dialogData.setValue(bs::sync::PasswordDialogData::Title, tr("Settlement Pay-In"));
-   dialogData.setValue(bs::sync::PasswordDialogData::Price, UiUtils::displayPriceXBT(price()));
-   dialogData.setValue(bs::sync::PasswordDialogData::FxProduct, fxProd);
+   dialogData.setValue(PasswordDialogData::Title, tr("Settlement Pay-In"));
+   dialogData.setValue(PasswordDialogData::Price, UiUtils::displayPriceXBT(price()));
+   dialogData.setValue(PasswordDialogData::FxProduct, fxProd);
 
 
 
    bool isFxProd = (quote_.product != bs::network::XbtCurrency);
 
    if (isFxProd) {
-      dialogData.setValue(bs::sync::PasswordDialogData::Quantity, tr("%1 %2")
+      dialogData.setValue(PasswordDialogData::Quantity, tr("%1 %2")
                     .arg(UiUtils::displayAmountForProduct(quantity(), fxProd, bs::network::Asset::Type::SpotXBT))
                     .arg(fxProd));
 
-      dialogData.setValue(bs::sync::PasswordDialogData::TotalValue, tr("%1 XBT")
+      dialogData.setValue(PasswordDialogData::TotalValue, tr("%1 XBT")
                     .arg(UiUtils::displayAmount(quantity() / price())));
    }
    else {
-      dialogData.setValue(bs::sync::PasswordDialogData::Quantity, tr("%1 XBT")
+      dialogData.setValue(PasswordDialogData::Quantity, tr("%1 XBT")
                     .arg(UiUtils::displayAmount(amount())));
 
-      dialogData.setValue(bs::sync::PasswordDialogData::TotalValue, tr("%1 %2")
+      dialogData.setValue(PasswordDialogData::TotalValue, tr("%1 %2")
                     .arg(UiUtils::displayAmountForProduct(amount() * price(), fxProd, bs::network::Asset::Type::SpotXBT))
                     .arg(fxProd));
    }
 
    // settlement details
-   dialogData.setValue(bs::sync::PasswordDialogData::SettlementId, settlementId_.toHexStr());
-   dialogData.setValue(bs::sync::PasswordDialogData::SettlementAddress, settlAddr_.display());
+   dialogData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
+   dialogData.setValue(PasswordDialogData::SettlementAddress, settlAddr_.display());
 
-   dialogData.setValue(bs::sync::PasswordDialogData::RequesterAuthAddress, authAddr_.display());
-   dialogData.setValue(bs::sync::PasswordDialogData::RequesterAuthAddressVerified, true);
+   dialogData.setValue(PasswordDialogData::RequesterAuthAddress, authAddr_.display());
+   dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
 
-   dialogData.setValue(bs::sync::PasswordDialogData::ResponderAuthAddress, bs::Address::fromPubKey(dealerAuthKey_).display());
-   dialogData.setValue(bs::sync::PasswordDialogData::ResponderAuthAddressVerified, false);
+   dialogData.setValue(PasswordDialogData::ResponderAuthAddress, bs::Address::fromPubKey(dealerAuthKey_).display());
+   dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, false);
 
 
    // tx details
-   dialogData.setValue(bs::sync::PasswordDialogData::TxInputProduct, UiUtils::XbtCurrency);
-   dialogData.setValue(bs::sync::PasswordDialogData::TotalSpentVisible, true);
+   dialogData.setValue(PasswordDialogData::TxInputProduct, UiUtils::XbtCurrency);
+   dialogData.setValue(PasswordDialogData::TotalSpentVisible, true);
 
    return dialogData;
 }
@@ -330,9 +330,9 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
    dealerVerifState_ = state;
 
    bs::sync::PasswordDialogData pd;
-   pd.setValue(bs::sync::PasswordDialogData::ResponderAuthAddress, dealerAuthAddress_.display());
-   pd.setValue(bs::sync::PasswordDialogData::ResponderAuthAddressVerified, state == AddressVerificationState::Verified);
-   pd.setValue(bs::sync::PasswordDialogData::SigningAllowed, state == AddressVerificationState::Verified);
+   pd.setValue(PasswordDialogData::ResponderAuthAddress, dealerAuthAddress_.display());
+   pd.setValue(PasswordDialogData::ResponderAuthAddressVerified, state == AddressVerificationState::Verified);
+   pd.setValue(PasswordDialogData::SigningAllowed, state == AddressVerificationState::Verified);
    signContainer_->updateDialogData(pd);
 }
 

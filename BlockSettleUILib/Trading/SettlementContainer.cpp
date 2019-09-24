@@ -2,7 +2,7 @@
 #include "UiUtils.h"
 
 using namespace bs;
-using namespace bs::sync::dialog;
+using namespace bs::sync;
 
 SettlementContainer::SettlementContainer()
    : QObject(nullptr)
@@ -12,13 +12,13 @@ sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData info;
 
-   info.setValue(bs::sync::PasswordDialogData::SettlementId, QString::fromStdString(id()));
-   info.setValue(bs::sync::PasswordDialogData::Duration, durationMs());
+   info.setValue(PasswordDialogData::SettlementId, QString::fromStdString(id()));
+   info.setValue(PasswordDialogData::Duration, durationMs());
 
-   info.setValue(bs::sync::PasswordDialogData::ProductGroup, tr(bs::network::Asset::toString(assetType())));
-   info.setValue(bs::sync::PasswordDialogData::Security, QString::fromStdString(security()));
-   info.setValue(bs::sync::PasswordDialogData::Product, QString::fromStdString(product()));
-   info.setValue(bs::sync::PasswordDialogData::Side, tr(bs::network::Side::toString(side())));
+   info.setValue(PasswordDialogData::ProductGroup, tr(bs::network::Asset::toString(assetType())));
+   info.setValue(PasswordDialogData::Security, QString::fromStdString(security()));
+   info.setValue(PasswordDialogData::Product, QString::fromStdString(product()));
+   info.setValue(PasswordDialogData::Side, tr(bs::network::Side::toString(side())));
 
    return info;
 }
@@ -27,9 +27,9 @@ sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogDat
 {
    bs::sync::PasswordDialogData dialogData = toPasswordDialogData();
 
-   dialogData.setValue(bs::sync::PasswordDialogData::Title, tr("Settlement Pay-Out"));
-   dialogData.setValue(bs::sync::PasswordDialogData::Duration, 30000);
-   dialogData.setValue(bs::sync::PasswordDialogData::SettlementPayOutVisible, true);
+   dialogData.setValue(PasswordDialogData::Title, tr("Settlement Pay-Out"));
+   dialogData.setValue(PasswordDialogData::Duration, 30000);
+   dialogData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
 
    return dialogData;
 }
