@@ -1205,9 +1205,12 @@ void ArmoryCallback::run(BdmNotification bdmNotif)
    if (!connection_) {
       return;
    }
-   if (bdmNotif.height_ > 0) {
+
+   if (bdmNotif.action_ == BDMAction_Ready || bdmNotif.action_ == BDMAction_NewBlock) {
+      // height_ is set only in these events
       connection_->setTopBlock(bdmNotif.height_, bdmNotif.branchHeight_);
    }
+
    switch (bdmNotif.action_) {
    case BDMAction_Ready:
       logger_->debug("[ArmoryCallback::run] BDMAction_Ready");
@@ -1285,7 +1288,8 @@ void ArmoryCallback::disconnected()
    }
 }
 
-void ArmoryCallback::resetConnection() {
+void ArmoryCallback::resetConnection()
+{
    std::lock_guard<std::mutex> lock(mutex_);
    connection_ = nullptr;
 }

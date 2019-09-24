@@ -89,7 +89,6 @@ namespace bs {
          virtual std::string description() const = 0;
          virtual void setDescription(const std::string &) = 0;
          virtual core::wallet::Type type() const { return core::wallet::Type::Bitcoin; }
-         NetworkType networkType() const { return netType_; }
          virtual bool hasId(const std::string &id) const { return (walletId() == id); }
 
          virtual void setArmory(const std::shared_ptr<ArmoryConnection> &);
@@ -224,7 +223,6 @@ namespace bs {
          std::shared_ptr<ArmoryConnection>   armory_;
          std::shared_ptr<spdlog::logger>     logger_; // May need to be set manually.
          mutable std::vector<bs::Address>    usedAddresses_;
-         NetworkType netType_ = NetworkType::Invalid;
 
          std::map<bs::Address, std::string>  addrComments_;
          std::map<BinaryData, std::string>   txComments_;

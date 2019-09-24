@@ -45,7 +45,6 @@ void Wallet::synchronize(const std::function<void()> &cbDone)
    const auto &cbProcess = [this, cbDone] (bs::sync::WalletData data)
    {
       usedAddresses_.clear();
-      netType_ = data.netType;
       for (const auto &addr : data.addresses) {
          addAddress(addr.address, addr.index, false);
          setAddressComment(addr.address, addr.comment, false);
