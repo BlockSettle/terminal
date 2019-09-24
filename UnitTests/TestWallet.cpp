@@ -2857,7 +2857,7 @@ TEST_F(TestWallet, MultipleKeys)
    const auto authEidKey = CryptoPRNG::generateRandom(32);
    const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
    const bs::wallet::PasswordData pd1{ passphrase, { bs::wallet::EncryptionType::Password } };
-   const bs::wallet::PasswordData pd2{ authEidKey, { bs::wallet::EncryptionType::Auth, "email@example.com" } };
+   const bs::wallet::PasswordData pd2{ authEidKey, { bs::wallet::EncryptionType::Auth, std::string("email@example.com") } };
    auto wallet = std::make_shared<bs::core::hd::Wallet>("test1", "", seed, pd1, "./homedir"
       , StaticLogger::loggerPtr);
    ASSERT_NE(wallet, nullptr);
