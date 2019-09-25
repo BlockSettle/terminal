@@ -89,7 +89,7 @@ BSPasswordInput {
         }
         CustomLabel {
             Layout.fillWidth: true
-            text: passwordDialogData.value("Product")
+            text: passwordDialogData.Product
         }
     }
 }

@@ -292,11 +292,11 @@ void QMLAppObj::onCancelSignTx(const BinaryData &txId)
 
 void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantMap &data)
 {
-   QMetaEnum metaSignerDialogType = QMetaEnum::fromType<bs::signer::ui::DialogType>();
+   QMetaEnum metaSignerDialogType = QMetaEnum::fromType<bs::signer::ui::GeneralDialogType>();
 
    bool isDialogCorrect = false;
    for (int i = 0; i < metaSignerDialogType.keyCount(); ++i) {
-      if (bs::signer::ui::getSignerDialogPath(static_cast<bs::signer::ui::DialogType>(i)) == dialogName) {
+      if (bs::signer::ui::getGeneralDialogName(static_cast<bs::signer::ui::GeneralDialogType>(i)) == dialogName) {
          isDialogCorrect = true;
          break;
       }
@@ -306,8 +306,8 @@ void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantM
       logger_->error("[{}] unknown signer dialog {}", __func__, dialogName.toStdString());
       throw(std::logic_error("Unknown signer dialog"));
    }
-   QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
-                             , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
+   QMetaObject::invokeMethod(rootObj_, bs::signer::ui::customDialogRequest
+      , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
 }
 
 void QMLAppObj::onTerminalHandshakeFailed(const std::string &peerAddress)

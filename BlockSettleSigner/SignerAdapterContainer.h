@@ -78,7 +78,7 @@ public:
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override { return 0; }
    bs::signer::RequestId GetInfo(const std::string &) override { return 0; }
    //void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
-   bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType, const QVariantMap& = QVariantMap()) override  { return 0; }
+   bs::signer::RequestId customDialogRequest(bs::signer::ui::GeneralDialogType, const QVariantMap& = QVariantMap()) override  { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;

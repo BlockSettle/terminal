@@ -478,14 +478,14 @@ function createTxSignDialog(jsCallback, txInfo, passwordDialogData, walletInfo) 
 
 function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, walletInfo) {
     var dlg = null
-    if (passwordDialogData.value("Market") === "XBT") {
+    if (passwordDialogData.Market === "XBT") {
         dlg = Qt.createComponent("../BsDialogs/TxSignSettlementXBTMarketDialog.qml").createObject(mainWindow
            , {"txInfo": txInfo,
               "passwordDialogData": passwordDialogData,
                "walletInfo": walletInfo
         })
     }
-    else if (passwordDialogData.value("Market") === "CC") {
+    else if (passwordDialogData.Market === "CC") {
         dlg = Qt.createComponent("../BsDialogs/TxSignSettlementCCMarketDialog.qml").createObject(mainWindow
            , {"txInfo": txInfo,
               "passwordDialogData": passwordDialogData,
@@ -493,7 +493,7 @@ function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, wa
         })
     }
     else {
-        console.log("[helper.js] Error: passwordDialogData.value(\"Market\") is not set, dialog not created")
+        console.log("[helper.js] Error: passwordDialogData.Market) is not set, dialog not created")
         return
     }
 
@@ -510,6 +510,9 @@ function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, wa
 }
 
 function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo) {
+    console.log("helper.js createPasswordDialogForType, dialogType: " + passwordDialogData.DialogType
+       + ", walletId: " + walletInfo.walletId)
+
     if (walletInfo.walletId === "") {
         jsCallback(qmlFactory.errorCodeTxCanceled(), walletInfo.walletId, {})
     }
@@ -521,31 +524,31 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
         })
     }
     else if (walletInfo.encType === QPasswordData.Password){
-        if (passwordDialogData.value("DialogType") === "RequestPasswordForAuthLeaf") {
+        if (passwordDialogData.DialogType === "RequestPasswordForAuthLeaf") {
             dlg = Qt.createComponent("../BsControls/BSPasswordInputAuthLeaf.qml").createObject(mainWindow
                 , {"walletInfo": walletInfo,
                    "passwordDialogData": passwordDialogData
                   })
         }
-        else if (passwordDialogData.value("DialogType") === "RequestPasswordForToken") {
+        else if (passwordDialogData.DialogType === "RequestPasswordForToken") {
             dlg = Qt.createComponent("../BsControls/BSPasswordInputToken.qml").createObject(mainWindow
                 , {"walletInfo": walletInfo,
                    "passwordDialogData": passwordDialogData
                   })
         }
-        else if (passwordDialogData.value("DialogType") === "RequestPasswordForSettlementLeaf") {
+        else if (passwordDialogData.DialogType === "RequestPasswordForSettlementLeaf") {
             dlg = Qt.createComponent("../BsControls/BSPasswordInputSettlementLeaf.qml").createObject(mainWindow
                 , {"walletInfo": walletInfo,
                    "passwordDialogData": passwordDialogData
                   })
         }
-        else if (passwordDialogData.value("DialogType") === "RequestPasswordForRevokeAuthAddress") {
+        else if (passwordDialogData.DialogType === "RequestPasswordForRevokeAuthAddress") {
             dlg = Qt.createComponent("../BsControls/BSPasswordInputRevokeAuthAddress.qml").createObject(mainWindow
                 , {"walletInfo": walletInfo,
                    "passwordDialogData": passwordDialogData
                   })
         }
-        else if (passwordDialogData.value("DialogType") === "RequestPasswordForPromoteHDWallet") {
+        else if (passwordDialogData.DialogType === "RequestPasswordForPromoteHDWallet") {
             dlg = Qt.createComponent("../BsControls/BSPasswordInputPromoteWallet.qml").createObject(mainWindow
                 , {"walletInfo": walletInfo,
                    "passwordDialogData": passwordDialogData
