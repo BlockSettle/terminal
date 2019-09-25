@@ -2,6 +2,10 @@
 
 using namespace Chat;
 
+const char *Chat::GlobalRoomName = "Global";
+const char *Chat::OtcRoomName = "OTC";
+const char *Chat::SupportRoomName = "Support";
+
 ClientParty::ClientParty(
    const std::string& id, const PartyType& partyType, const PartySubType& partySubType,
    const PartyState& partyState, QObject* parent)

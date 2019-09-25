@@ -34,6 +34,11 @@ using namespace bs::network;
 ChatWidget::ChatWidget(QWidget* parent)
    : QWidget(parent), ui_(new Ui::ChatWidget)
 {
+   qRegisterMetaType<std::vector<std::string>>();
+   qRegisterMetaType<Chat::UserPublicKeyInfoPtr>();
+   qRegisterMetaType<Chat::UserPublicKeyInfoList>();
+   qRegisterMetaType<Chat::PartyModelError>();
+
    ui_->setupUi(this);
 
 #ifndef Q_OS_WIN
@@ -49,16 +54,9 @@ ChatWidget::ChatWidget(QWidget* parent)
    ui_->frameContactActions->setVisible(false);
    ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
-   otcRequestViewModel_ = new OTCRequestViewModel(this);
-   ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
    ui_->textEditMessages->viewport()->installEventFilter(this);
    ui_->input_textEdit->viewport()->installEventFilter(this);
    ui_->treeViewUsers->viewport()->installEventFilter(this);
-
-   qRegisterMetaType<std::vector<std::string>>();
-   qRegisterMetaType<Chat::UserPublicKeyInfoPtr>();
-   qRegisterMetaType<Chat::UserPublicKeyInfoList>();
-
 
    otcWindowsManager_ = std::make_shared<OTCWindowsManager>();
    auto* sWidget = ui_->stackedWidgetOTC;
@@ -94,6 +92,14 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    loggerPtr_ = loggerPtr;
    celerClient_ = celerClient;
 
+   bool isProd = appSettings->get<int>(ApplicationSettings::envConfiguration) == ApplicationSettings::PROD;
+   auto env = isProd ? otc::Env::Prod : otc::Env::Test;
+
+   // OTC
+   otcHelper_ = new ChatOTCHelper(this);
+   otcHelper_->init(env, loggerPtr, walletsMgr, armory, signContainer, authManager, appSettings);
+   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager);
+
    chatClientServicePtr_ = chatClientServicePtr;
 
    installEventFilter(this);
@@ -104,7 +110,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->searchWidget, &SearchWidget::showUserRoom, this, &ChatWidget::onShowUserRoom);
    connect(ui_->searchWidget, &SearchWidget::contactFriendRequest, this, &ChatWidget::onContactFriendRequest);
 
-   chatPartiesTreeModel_ = std::make_shared<ChatPartiesTreeModel>(chatClientServicePtr_);
+   chatPartiesTreeModel_ = std::make_shared<ChatPartiesTreeModel>(chatClientServicePtr_, otcHelper_->client());
 
    ChatPartiesSortProxyModelPtr charTreeSortModel = std::make_shared<ChatPartiesSortProxyModel>(chatPartiesTreeModel_);
    ui_->treeViewUsers->setModel(charTreeSortModel.get());
@@ -151,20 +157,60 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    ui_->textEditMessages->onSetClientPartyModel(clientPartyModelPtr);
 
-   // OTC
-   otcHelper_ = new ChatOTCHelper(this);
-   otcHelper_->init(loggerPtr_, walletsMgr, armory, signContainer, authManager, appSettings);
-   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager);
-   
-   connect(otcHelper_->getClient(), &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
-   connect(otcHelper_->getClient(), &OtcClient::sendMessage, this, &ChatWidget::onSendOtcMessage);
-   connect(otcHelper_->getClient(), &OtcClient::peerUpdated, this, &ChatWidget::onOtcUpdated);
+   otcRequestViewModel_ = new OTCRequestViewModel(otcHelper_->client(), this);
+   ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
+   // Use Qt::QueuedConnection to prevent crash when stateCurrent_ is null
+   connect(ui_->treeViewOTCRequests->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWidget::onOtcRequestCurrentChanged, Qt::QueuedConnection);
+
+   connect(otcHelper_->client(), &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
+   connect(otcHelper_->client(), &OtcClient::sendContactMessage, this, &ChatWidget::onSendOtcMessage);
+   connect(otcHelper_->client(), &OtcClient::sendPublicMessage, this, &ChatWidget::onSendOtcPublicMessage);
+   connect(otcHelper_->client(), &OtcClient::peerUpdated, this, &ChatWidget::onOtcUpdated);
+   connect(otcHelper_->client(), &OtcClient::publicUpdated, this, &ChatWidget::onOtcPublicUpdated);
 
    connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::requestCreated, this, &ChatWidget::onOtcRequestSubmit);
-   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::requestPulled, this, &ChatWidget::onOtcRequestPull);
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::requestPulled, this, &ChatWidget::onOtcPullOrRejectCurrent);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseAccepted, this, &ChatWidget::onOtcResponseAccept);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseUpdated, this, &ChatWidget::onOtcResponseUpdate);
-   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseRejected, this, &ChatWidget::onOtcResponseReject);
+   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseRejected, this, &ChatWidget::onOtcPullOrRejectCurrent);
+   connect(ui_->widgetCreateOTCRequest, &CreateOTCRequestWidget::requestCreated, this, &ChatWidget::onOtcQuoteRequestSubmit);
+   connect(ui_->widgetCreateOTCResponse, &CreateOTCResponseWidget::responseCreated, this, &ChatWidget::onOtcQuoteResponseSubmit);
+
+   ui_->widgetCreateOTCRequest->init(env);
+}
+
+otc::Peer *ChatWidget::currentPeer() const
+{
+   ChatPartiesSortProxyModel* chartProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
+   PartyTreeItem* partyTreeItem = chartProxyModel->getInternalData(ui_->treeViewUsers->currentIndex());
+   if (!partyTreeItem || partyTreeItem->modelType() == UI::ElementType::Container) {
+      return nullptr;
+   }
+
+   if (currentPartyId_ == Chat::OtcRoomName) {
+      const auto &currentIndex = ui_->treeViewOTCRequests->currentIndex();
+      if (!currentIndex.isValid() || currentIndex.row() < 0 || currentIndex.row() >= int(otcHelper_->client()->requests().size())) {
+         // Show by default own request (if available)
+         return otcHelper_->client()->ownRequest();
+      }
+      return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
+   }
+
+   const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
+   if (!clientPartyPtr) {
+      return nullptr;
+   }
+
+   switch (partyTreeItem->peerType) {
+      case otc::PeerType::Contact:     return otcHelper_->client()->contact(clientPartyPtr->userHash());
+      // #new_logic : ???
+      // We should use userHash here too, but for some reasons it's not set here
+      case otc::PeerType::Request:     return otcHelper_->client()->request(clientPartyPtr->id());
+      case otc::PeerType::Response:    return otcHelper_->client()->response(clientPartyPtr->id());
+   }
+
+   assert(false);
+   return nullptr;
 }
 
 void acceptPartyRequest(const std::string& partyId) {}
@@ -202,9 +248,15 @@ void ChatWidget::onRemovePartyRequest(const std::string& partyId)
    stateCurrent_->onRemovePartyRequest(partyId);
 }
 
-void ChatWidget::onOtcUpdated(const std::string& partyId)
+void ChatWidget::onOtcUpdated(const otc::Peer *peer)
 {
-   stateCurrent_->onOtcUpdated(partyId);
+   stateCurrent_->onOtcUpdated(peer);
+}
+
+void ChatWidget::onOtcPublicUpdated()
+{
+   stateCurrent_->onOtcPublicUpdated();
+   ui_->treeViewUsers->onExpandGlobalOTC();
 }
 
 void ChatWidget::onPartyModelChanged()
@@ -224,7 +276,7 @@ void ChatWidget::onLogin()
    stateCurrent_->onResetPartyModel();
    ui_->treeViewUsers->expandAll();
 
-   onActivatePartyId(ChatModelNames::PrivateTabGlobal);
+   onActivatePartyId(QString::fromLatin1(Chat::GlobalRoomName));
 }
 
 void ChatWidget::onLogout()
@@ -288,6 +340,11 @@ void ChatWidget::onSendOtcMessage(const std::string& partyId, const BinaryData& 
    stateCurrent_->onSendOtcMessage(partyId, OtcUtils::serializeMessage(data));
 }
 
+void ChatWidget::onSendOtcPublicMessage(const BinaryData &data)
+{
+   stateCurrent_->onSendOtcPublicMessage(OtcUtils::serializePublicMessage(data));
+}
+
 void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString& partyId)
 {
    onActivatePartyId(partyId);
@@ -337,8 +394,7 @@ void ChatWidget::onUserListClicked(const QModelIndex& index)
 
 void ChatWidget::chatTransition(const Chat::ClientPartyPtr& clientPartyPtr)
 {
-   auto transitionChange = [this, clientPartyPtr]()
-   {
+   auto transitionChange = [this, clientPartyPtr]() {
       currentPartyId_ = clientPartyPtr->id();
    };
 
@@ -378,8 +434,8 @@ void ChatWidget::onActivatePartyId(const QString& partyId)
          changeState<ChatLogOutState>();
       }
       else {
-         Q_ASSERT(partyId != ChatModelNames::PrivateTabGlobal);
-         onActivatePartyId(ChatModelNames::PrivateTabGlobal);
+         Q_ASSERT(partyId != QString::fromLatin1(Chat::GlobalRoomName));
+         onActivatePartyId(QString::fromLatin1(Chat::GlobalRoomName));
       }
       return;
    }
@@ -422,11 +478,6 @@ void ChatWidget::onOtcRequestSubmit()
    stateCurrent_->onOtcRequestSubmit();
 }
 
-void ChatWidget::onOtcRequestPull()
-{
-   stateCurrent_->onOtcRequestPull();
-}
-
 void ChatWidget::onOtcResponseAccept()
 {
    stateCurrent_->onOtcResponseAccept();
@@ -437,9 +488,19 @@ void ChatWidget::onOtcResponseUpdate()
    stateCurrent_->onOtcResponseUpdate();
 }
 
-void ChatWidget::onOtcResponseReject()
+void ChatWidget::onOtcQuoteRequestSubmit()
 {
-   stateCurrent_->onOtcResponseReject();
+   stateCurrent_->onOtcQuoteRequestSubmit();
+}
+
+void ChatWidget::onOtcQuoteResponseSubmit()
+{
+   stateCurrent_->onOtcQuoteResponseSubmit();
+}
+
+void ChatWidget::onOtcPullOrRejectCurrent()
+{
+   stateCurrent_->onOtcPullOrRejectCurrent();
 }
 
 void ChatWidget::onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
@@ -494,4 +555,9 @@ void ChatWidget::onConfirmContactNewKeyData(const Chat::UserPublicKeyInfoList& u
    {
       chatClientServicePtr_->DeclineNewPublicKeys(declineList);
    }
+}
+
+void ChatWidget::onOtcRequestCurrentChanged(const QModelIndex &current, const QModelIndex &previous)
+{
+   onOtcPublicUpdated();
 }

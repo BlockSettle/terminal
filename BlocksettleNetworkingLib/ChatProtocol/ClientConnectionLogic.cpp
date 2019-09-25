@@ -172,14 +172,14 @@ void ClientConnectionLogic::handlePartyMessageStateUpdate(const PartyMessageStat
 
 void ClientConnectionLogic::prepareAndSendMessage(const ClientPartyPtr& clientPartyPtr, const std::string& data)
 {
-   if (clientPartyPtr->isGlobalStandard())
-   {
+   // Allow sending OTC messages
+   //if (clientPartyPtr->isGlobalStandard()) {
+   if (clientPartyPtr->isGlobal()) {
       prepareAndSendPublicMessage(clientPartyPtr, data);
       return;
    }
 
-   if (clientPartyPtr->isPrivateStandard())
-   {
+   if (clientPartyPtr->isPrivateStandard()) {
       prepareAndSendPrivateMessage(clientPartyPtr, data);
       return;
    }
@@ -234,7 +234,9 @@ void ClientConnectionLogic::handlePartyMessagePacket(PartyMessagePacket& partyMe
       return;
    }
 
-   if (clientPartyPtr->isGlobalStandard())
+   // Allow processing OTC messages
+   if (clientPartyPtr->isGlobal())
+   //if (clientPartyPtr->isGlobalStandard())
    {
       incomingGlobalPartyMessage(partyMessagePacket);
       return;

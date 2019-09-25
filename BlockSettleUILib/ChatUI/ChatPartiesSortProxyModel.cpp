@@ -47,6 +47,12 @@ QModelIndex ChatPartiesSortProxyModel::getProxyIndexById(const std::string& part
    return mapFromSource(sourceIndex);
 }
 
+QModelIndex ChatPartiesSortProxyModel::getOTCGlobalRoot() const
+{
+   const QModelIndex sourceOtcIndex = sourceModel_->getOTCGlobalRoot();
+   return mapFromSource(sourceOtcIndex);
+}
+
 bool ChatPartiesSortProxyModel::filterAcceptsRow(int row, const QModelIndex& parent) const
 {
    Q_ASSERT(sourceModel_);

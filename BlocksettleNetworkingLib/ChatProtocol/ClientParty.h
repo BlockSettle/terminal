@@ -8,9 +8,12 @@
 
 #include "chat.pb.h"
 
-namespace Chat
-{
-   
+namespace Chat {
+
+   extern const char *GlobalRoomName;
+   extern const char *OtcRoomName;
+   extern const char *SupportRoomName;
+
    class ClientParty : public QObject, public PrivateDirectMessageParty
    {
       Q_OBJECT
@@ -47,7 +50,7 @@ namespace Chat
 
    using ClientPartyPtr = std::shared_ptr<ClientParty>;
 
-}
+} // namespace Chat
 
 Q_DECLARE_METATYPE(Chat::ClientPartyPtr)
 

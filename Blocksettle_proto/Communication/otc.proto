@@ -2,18 +2,33 @@ syntax = "proto3";
 
 package Blocksettle.Communication.Otc;
 
-// Keep in sync with bs::network::OTCRangeID::Type
-enum Range
+// Keep in sync with bs::network::otc::RangeType
+enum RangeType
 {
-    RANGE_1_5     = 0;
-    RANGE_5_10    = 1;
-    RANGE_10_50   = 2;
-    RANGE_50_100  = 3;
-    RANGE_100_250 = 4;
-    RANGE_250PLUS = 5;
-};
+    RANGE_TYPE_0_1     = 0;
+    RANGE_TYPE_1_5     = 1;
+    RANGE_TYPE_5_10    = 2;
+    RANGE_TYPE_10_50   = 3;
+    RANGE_TYPE_50_100  = 4;
+    RANGE_TYPE_100_250 = 5;
+    RANGE_TYPE_250PLUS = 6;
+}
 
-message Message
+// Keep in sync with bs::network::otc::Side
+enum Side
+{
+    SIDE_INVALID = 0;
+    SIDE_BUY = 1;
+    SIDE_SELL = 2;
+}
+
+message Range
+{
+    int64 lower = 1;
+    int64 upper = 2;
+}
+
+message ContactMessage
 {
     message Offer
     {
@@ -63,6 +78,13 @@ message Message
     {
     }
 
+    message QuoteResponse
+    {
+        Side sender_side = 1;
+        Range amount = 2;
+        Range price = 3;
+    }
+
     oneof data
     {
         BuyerOffers buyer_offers = 1;
@@ -71,5 +93,33 @@ message Message
         SellerAccepts seller_accepts = 4;
         BuyerAcks buyer_acks = 5;
         Close close = 6;
+        QuoteResponse quote_response = 7;
+    }
+}
+
+message PublicMessage
+{
+    message Request
+    {
+        RangeType range = 1;
+        Side sender_side = 2;
+    }
+
+    message Close
+    {
+    }
+
+    message PrivateMessage
+    {
+        string receiver_id = 1;
+        bytes data = 2;
+        bool is_response = 3;
+    }
+
+    oneof data
+    {
+        Request request = 1;
+        Close close = 2;
+        PrivateMessage private_message = 3;
     }
 }

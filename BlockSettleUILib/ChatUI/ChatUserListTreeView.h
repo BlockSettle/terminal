@@ -23,6 +23,7 @@ public:
 
 public slots:
    void onCustomContextMenu(const QPoint &);
+   void onExpandGlobalOTC();
 
 signals:
    void partyClicked(const QModelIndex& index);
