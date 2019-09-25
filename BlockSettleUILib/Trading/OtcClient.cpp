@@ -285,7 +285,7 @@ bool OtcClient::sendOffer(Peer *peer, const Offer &offer)
    }
 
    settlementLeaf->getRootPubkey([this, peer, offer, handle = peer->validityFlag.handle()](const SecureBinaryData &ourPubKey) {
-      if (handle.isValid()) {
+      if (!handle.isValid()) {
          SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
          return;
       }
@@ -380,7 +380,7 @@ bool OtcClient::acceptOffer(Peer *peer, const bs::network::otc::Offer &offer)
    }
 
    settlementLeaf->getRootPubkey([this, offer, peer, handle = peer->validityFlag.handle()](const SecureBinaryData &ourPubKey) {
-      if (handle.isValid()) {
+      if (!handle.isValid()) {
          SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
          return;
       }
@@ -435,7 +435,7 @@ bool OtcClient::updateOffer(Peer *peer, const Offer &offer)
    }
 
    settlementLeaf->getRootPubkey([this, offer, peer, handle = peer->validityFlag.handle()](const SecureBinaryData &ourPubKey) {
-      if (handle.isValid()) {
+      if (!handle.isValid()) {
          SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
          return;
       }
@@ -840,7 +840,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
    createRequests(settlementId, peer, [this, peer, settlementId, offer = peer->offer
       , handle = peer->validityFlag.handle()] (OtcClientDeal &&deal)
    {
-      if (handle.isValid()) {
+      if (!handle.isValid()) {
          SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
          return;
       }
@@ -1018,7 +1018,7 @@ void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &resp
 
    const auto settlementId = BinaryData(response.settlement_id());
 
-   if (handle.isValid()) {
+   if (!handle.isValid()) {
       SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
       return;
    }
@@ -1026,7 +1026,7 @@ void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &resp
    createRequests(settlementId, peer, [this, peer, settlementId, offer = peer->offer
       , handle = peer->validityFlag.handle()](OtcClientDeal &&deal)
    {
-      if (handle.isValid()) {
+      if (!handle.isValid()) {
          SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
          return;
       }
@@ -1202,7 +1202,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, Peer *peer, const
    }
 
    leaf->setSettlementID(settlementId, [this, settlementId, peer, cb, handle = peer->validityFlag.handle()](bool result) {
-      if (handle.isValid()) {
+      if (!handle.isValid()) {
          SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
          return;
       }
@@ -1213,7 +1213,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, Peer *peer, const
       }
 
       auto cbFee = [this, cb, peer, settlementId, handle](float feePerByte) {
-         if (handle.isValid()) {
+         if (!handle.isValid()) {
             SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
             return;
          }
@@ -1236,7 +1236,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, Peer *peer, const
          }
 
          auto cbSettlAddr = [this, cb, peer, feePerByte, settlementId, targetHdWallet, handle](const bs::Address &settlAddr) {
-            if (handle.isValid()) {
+            if (!handle.isValid()) {
                SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
                return;
             }
@@ -1254,7 +1254,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, Peer *peer, const
             auto resetInputsCb = [this, cb, peer, transaction, settlAddr, feePerByte, settlementId, targetHdWallet, handle]() {
                // resetInputsCb will be destroyed when returns, create one more callback to hold variables
                QMetaObject::invokeMethod(this, [this, cb, peer, transaction, settlAddr, feePerByte, settlementId, targetHdWallet, handle] {
-                  if (handle.isValid()) {
+                  if (!handle.isValid()) {
                      SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
                      return;
                   }
