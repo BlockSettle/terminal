@@ -56,6 +56,7 @@ public:
 
    void onOtcUpdated(const bs::network::otc::Peer *peer);
    void onOtcPublicUpdated();
+   void onUpdateOTCShield();
 
    void onOtcRequestSubmit();
    void onOtcResponseAccept();

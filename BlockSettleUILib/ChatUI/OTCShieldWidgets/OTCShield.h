@@ -1,21 +1,16 @@
 #ifndef __OTC_SHIELD_H__
 #define __OTC_SHIELD_H__
 
-#include <QWidget>
-#include <memory>
+#include "WalletShieldBase.h"
 
-namespace Ui {
-    class OTCShield;
-}
-
-class OTCShield : public QWidget
+class OTCShield : public WalletShieldBase
 {
 Q_OBJECT
 
 public:
    explicit OTCShield(QWidget* parent = nullptr );
    ~OTCShield() noexcept override;
-
+  
    void showLoginToAccessOTC();
    void showOtcUnavailableGlobal();
    void showOtcUnavailableSupport();
@@ -24,11 +19,13 @@ public:
    void showContactIsOffline();
    void showOtcAvailableOnlyForAcceptedContacts();
 
-protected:
-   void showShield(const QString& shieldText);
+public slots:
+   bool onRequestCheckWalletSettings();
 
 private:
-   std::unique_ptr<Ui::OTCShield> ui_;
+
+   const ProductType productType_ = ProductType::SpotXBT;
+   const QString product_ = QLatin1String("XBT/EUR");
 };
 
 #endif // __OTC_SHIELD_H__

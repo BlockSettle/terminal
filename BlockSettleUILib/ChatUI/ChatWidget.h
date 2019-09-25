@@ -68,6 +68,7 @@ public slots:
    void onSendOtcPublicMessage(const BinaryData& data);
 
    void onNewChatMessageTrayNotificationClicked(const QString& partyId);
+   void onUpdateOTCShield();
 
 private slots:
    void onPartyModelChanged();
@@ -111,6 +112,7 @@ signals:
    // OTC
    void sendOtcPbMessage(const std::string& data);
    void chatRoomChanged();
+   void requestPrimaryWalletCreation();
 
 private:
    friend class AbstractChatWidgetState;

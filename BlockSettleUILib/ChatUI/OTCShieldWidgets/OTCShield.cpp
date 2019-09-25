@@ -1,6 +1,6 @@
 #include "OTCShield.h"
-#include "ui_OTCShield.h"
-#include <QStackedWidget>
+#include "AuthAddressManager.h"
+#include "Wallets/SyncWalletsManager.h"
 
 namespace {
    const QString shieldLoginToAccessOTC = QObject::tr("Login to access OTC chat");
@@ -10,15 +10,15 @@ namespace {
    const QString shieldCounterPartyIsntTradingParticipant = QObject::tr("Counter party isn't a Trading Participant");
    const QString shieldContactIsOffline = QObject::tr("Contact is offline");
    const QString shieldOtcAvailableOnlyForAcceptedContacts = QObject::tr("OTC available only for Accepted contacts");
+
+   const QString tradingKeyWord = QObject::tr("trading");
 }
 
 OTCShield::OTCShield(QWidget* parent)
-   : QWidget(parent)
-   , ui_(new Ui::OTCShield())
+   : WalletShieldBase(parent)
 {
-   ui_->setupUi(this);
+   tabType_ = tradingKeyWord;
 }
-
 
 OTCShield::~OTCShield() noexcept = default;
 
@@ -57,17 +57,7 @@ void OTCShield::showOtcAvailableOnlyForAcceptedContacts()
    showShield(shieldOtcAvailableOnlyForAcceptedContacts);
 }
 
-void OTCShield::showShield(const QString& shieldText)
+bool OTCShield::onRequestCheckWalletSettings()
 {
-   ui_->shieldLabel->setText(shieldText);
-
-   QStackedWidget* stack = qobject_cast<QStackedWidget*>(parent());
-
-   // We expected that shield widget will leave only under stack widget
-   Q_ASSERT(stack);
-   if (!stack) {
-      return;
-   }
-
-   stack->setCurrentWidget(this);
+   return checkWalletSettings(productType_, product_);
 }
