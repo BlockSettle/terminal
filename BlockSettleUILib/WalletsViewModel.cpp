@@ -1,9 +1,12 @@
 #include "WalletsViewModel.h"
+
 #include <QFont>
 #include <QTreeView>
 #include <QSortFilterProxyModel>
+
 #include "SignContainer.h"
 #include "UiUtils.h"
+#include "ValidityFlag.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -196,10 +199,9 @@ public:
       : WalletRootNode(vm, rootWallet, wallet->shortName(), wallet->description(), Type::Leaf, row, parent
          , 0, 0, 0, wallet->getUsedAddressCount())
       , wallet_(wallet)
-      , isValidFlag_(std::make_shared<bool>())
    {
-      wallet->onBalanceAvailable([this, wallet, isValid = std::weak_ptr<void>(isValidFlag_)] {
-         if (!isValid.lock()) {
+      wallet->onBalanceAvailable([this, wallet, handle = validityFlag_.handle()] {
+         if (!handle.isValid()) {
             return;
          }
          balTotal_ = wallet->getTotalBalance();
@@ -226,8 +228,8 @@ public:
    }
 
 private:
-   std::shared_ptr<bs::sync::Wallet>   wallet_;
-   std::shared_ptr<void> isValidFlag_;
+   std::shared_ptr<bs::sync::Wallet> wallet_;
+   ValidityFlag validityFlag_;
 };
 
 class WalletGroupNode : public WalletRootNode

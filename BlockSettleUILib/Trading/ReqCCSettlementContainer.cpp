@@ -12,7 +12,7 @@
 
 static const unsigned int kWaitTimeoutInSec = 30;
 
-using namespace bs::sync::dialog;
+using namespace bs::sync;
 
 ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory
@@ -60,37 +60,37 @@ ReqCCSettlementContainer::~ReqCCSettlementContainer()
 bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
-   dialogData.setValue(keys::Market, "CC");
-   dialogData.setValue(keys::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
-   dialogData.setValue(keys::LotSize, qint64(lotSize_));
+   dialogData.setValue(PasswordDialogData::Market, "CC");
+   dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
+   dialogData.setValue(PasswordDialogData::LotSize, qint64(lotSize_));
 
-   dialogData.remove(keys::SettlementId);
+   dialogData.remove(PasswordDialogData::SettlementId);
 
    if (side() == bs::network::Side::Sell) {
-      dialogData.setValue(keys::Title, tr("Settlement Delivery"));
+      dialogData.setValue(PasswordDialogData::Title, tr("Settlement Delivery"));
    }
    else {
-      dialogData.setValue(keys::Title, tr("Settlement Payment"));
+      dialogData.setValue(PasswordDialogData::Title, tr("Settlement Payment"));
    }
 
    // rfq details
-   dialogData.setValue(keys::Price, UiUtils::displayPriceCC(price()));
+   dialogData.setValue(PasswordDialogData::Price, UiUtils::displayPriceCC(price()));
 
    // tx details
    if (side() == bs::network::Side::Buy) {
-      dialogData.setValue(keys::TxInputProduct, UiUtils::XbtCurrency);
+      dialogData.setValue(PasswordDialogData::TxInputProduct, UiUtils::XbtCurrency);
    }
    else {
-      dialogData.setValue(keys::TxInputProduct, product());
+      dialogData.setValue(PasswordDialogData::TxInputProduct, product());
    }
 
 
    // settlement details
-   dialogData.setValue(keys::DeliveryUTXOVerified, genAddrVerified_);
-   dialogData.setValue(keys::SigningAllowed, genAddrVerified_);
+   dialogData.setValue(PasswordDialogData::DeliveryUTXOVerified, genAddrVerified_);
+   dialogData.setValue(PasswordDialogData::SigningAllowed, genAddrVerified_);
 
-   dialogData.setValue(keys::RecipientsListVisible, true);
-   dialogData.setValue(keys::InputsListVisible, true);
+   dialogData.setValue(PasswordDialogData::RecipientsListVisible, true);
+   dialogData.setValue(PasswordDialogData::InputsListVisible, true);
 
    return dialogData;
 }
@@ -285,8 +285,8 @@ void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const 
    genAddrVerified_ = addressVerified;
 
    bs::sync::PasswordDialogData pd;
-   pd.setValue(keys::DeliveryUTXOVerified, addressVerified);
-   pd.setValue(keys::SigningAllowed, addressVerified);
+   pd.setValue(PasswordDialogData::DeliveryUTXOVerified, addressVerified);
+   pd.setValue(PasswordDialogData::SigningAllowed, addressVerified);
    signingContainer_->updateDialogData(pd);
 }
 

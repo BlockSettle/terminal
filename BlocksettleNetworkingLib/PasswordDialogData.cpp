@@ -1,3 +1,5 @@
+#ifdef QT_CORE_LIB
+
 #include "PasswordDialogData.h"
 #include "google/protobuf/any.h"
 #include "google/protobuf/map.h"
@@ -7,51 +9,45 @@
 using namespace google::protobuf;
 using namespace Blocksettle::Communication;
 
-namespace bs {
-   namespace sync {
-      namespace dialog {
-         namespace keys {
+#define DIALOG_KEY_INIT(KEYNAME) const bs::sync::dialog::keys::Key bs::sync::PasswordDialogData::KEYNAME = bs::sync::dialog::keys::Key(#KEYNAME);
 
-            Key AutoSignCategory("AutoSignCategory");
-            Key DeliveryUTXOVerified("DeliveryUTXOVerified");
-            Key DialogType("DialogType");
-            Key Duration("Duration");
-            Key InputAmount("InputAmount");
-            Key InputsListVisible("InputsListVisible");
-            Key LotSize("LotSize");
-            Key Market("Market");
-            Key NetworkFee("NetworkFee");
-            Key PayOutRevokeType("PayOutRevokeType");
-            Key Price("Price");
-            Key Product("Product");
-            Key FxProduct("FxProduct");
-            Key ProductGroup("ProductGroup");
-            Key Quantity("Quantity");
-            Key RecipientsListVisible("RecipientsListVisible");
-            Key RequesterAuthAddress("RequesterAuthAddress");
-            Key RequesterAuthAddressVerified("RequesterAuthAddressVerified");
-            Key ResponderAuthAddress("ResponderAuthAddress");
-            Key ResponderAuthAddressVerified("ResponderAuthAddressVerified");
-            Key ReturnAmount("ReturnAmount");
-            Key Security("Security");
-            Key SettlementAddress("SettlementAddress");
-            Key SettlementId("SettlementId");
-            Key SettlementPayInVisible("SettlementPayInVisible");
-            Key SettlementPayOutVisible("SettlementPayOutVisible");
-            Key Side("Side");
-            Key SigningAllowed("SigningAllowed");
-            Key Title("Title");
-            Key TotalSpentVisible("TotalSpentVisible");
-            Key TotalValue("TotalValue");
-            Key TransactionAmount("TransactionAmount");
-            Key TxInputProduct("TxInputProduct");
-            Key WalletId("WalletId");
-            Key XBT("XBT");
-
-         } // keys
-      } // dialog
-   } // sync
-} // bs
+DIALOG_KEY_INIT(AutoSignCategory)
+DIALOG_KEY_INIT(AuthAddress)
+DIALOG_KEY_INIT(DeliveryUTXOVerified)
+DIALOG_KEY_INIT(DialogType)
+DIALOG_KEY_INIT(Duration)
+DIALOG_KEY_INIT(InputAmount)
+DIALOG_KEY_INIT(InputsListVisible)
+DIALOG_KEY_INIT(LotSize)
+DIALOG_KEY_INIT(Market)
+DIALOG_KEY_INIT(NetworkFee)
+DIALOG_KEY_INIT(PayOutRevokeType)
+DIALOG_KEY_INIT(PayOutType)
+DIALOG_KEY_INIT(Price)
+DIALOG_KEY_INIT(Product)
+DIALOG_KEY_INIT(FxProduct)
+DIALOG_KEY_INIT(ProductGroup)
+DIALOG_KEY_INIT(Quantity)
+DIALOG_KEY_INIT(RecipientsListVisible)
+DIALOG_KEY_INIT(RequesterAuthAddress)
+DIALOG_KEY_INIT(RequesterAuthAddressVerified)
+DIALOG_KEY_INIT(ResponderAuthAddress)
+DIALOG_KEY_INIT(ResponderAuthAddressVerified)
+DIALOG_KEY_INIT(ReturnAmount)
+DIALOG_KEY_INIT(Security)
+DIALOG_KEY_INIT(SettlementAddress)
+DIALOG_KEY_INIT(SettlementId)
+DIALOG_KEY_INIT(SettlementPayInVisible)
+DIALOG_KEY_INIT(SettlementPayOutVisible)
+DIALOG_KEY_INIT(Side)
+DIALOG_KEY_INIT(SigningAllowed)
+DIALOG_KEY_INIT(Title)
+DIALOG_KEY_INIT(TotalSpentVisible)
+DIALOG_KEY_INIT(TotalValue)
+DIALOG_KEY_INIT(TransactionAmount)
+DIALOG_KEY_INIT(TxInputProduct)
+DIALOG_KEY_INIT(WalletId)
+DIALOG_KEY_INIT(XBT)
 
 Any toPbVariant(const QVariant& v)
 {
@@ -219,14 +215,9 @@ void bs::sync::PasswordDialogData::setValues(const QVariantMap &values)
    emit dataChanged();
 }
 
-QVariant bs::sync::PasswordDialogData::value(const QString &key) const
+QVariant bs::sync::PasswordDialogData::value(const bs::sync::dialog::keys::Key &key) const
 {
-   return values_.value(key);
-}
-
-QVariant bs::sync::PasswordDialogData::value(const char *key) const
-{
-   return value(QString::fromLatin1(key));
+   return values_.value(key.toQString());
 }
 
 void bs::sync::PasswordDialogData::setValue(const QString &key, const QVariant &value)
@@ -237,7 +228,7 @@ void bs::sync::PasswordDialogData::setValue(const QString &key, const QVariant &
 
 void bs::sync::PasswordDialogData::setValue(const bs::sync::dialog::keys::Key &key, const QVariant &value)
 {
-   setValue(key.toString(), value);
+   setValue(key.toQString(), value);
 }
 
 void bs::sync::PasswordDialogData::setValue(const bs::sync::dialog::keys::Key &key, const char *value)
@@ -258,12 +249,8 @@ void bs::sync::PasswordDialogData::remove(const QString &key)
 
 void bs::sync::PasswordDialogData::remove(const bs::sync::dialog::keys::Key &key)
 {
-   remove(key.toString());
-}
-
-bool bs::sync::PasswordDialogData::contains(const QString &key)
-{
-   return values_.contains(key);
+   remove(key.toQString());
+   emit dataChanged();
 }
 
 void bs::sync::PasswordDialogData::merge(PasswordDialogData *other)
@@ -277,3 +264,5 @@ void bs::sync::PasswordDialogData::merge(PasswordDialogData *other)
       emit dataChanged();
    }
 }
+
+#endif

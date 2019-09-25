@@ -2,8 +2,11 @@
 
 #include <cassert>
 #include <cmath>
+#include <spdlog/spdlog.h>
 
 #include "BTCNumericTypes.h"
+
+using namespace bs::network;
 
 std::string bs::network::otc::toString(bs::network::otc::Side side)
 {
@@ -17,6 +20,8 @@ std::string bs::network::otc::toString(bs::network::otc::Side side)
 std::string bs::network::otc::toString(bs::network::otc::RangeType range)
 {
    switch(range) {
+      case RangeType::Range0_1:
+         return "0-1";
       case RangeType::Range1_5:
          return "1-5";
       case RangeType::Range5_10:
@@ -29,8 +34,6 @@ std::string bs::network::otc::toString(bs::network::otc::RangeType range)
          return "100-250";
       case RangeType::Range250plus:
          return "250+";
-      case RangeType::Count:
-         break;
    }
 
    assert(false);
@@ -40,6 +43,8 @@ std::string bs::network::otc::toString(bs::network::otc::RangeType range)
 bs::network::otc::Range bs::network::otc::getRange(bs::network::otc::RangeType range)
 {
    switch(range) {
+      case RangeType::Range0_1:
+         return Range{0, 1};
       case RangeType::Range1_5:
          return Range{1, 5};
       case RangeType::Range5_10:
@@ -51,9 +56,7 @@ bs::network::otc::Range bs::network::otc::getRange(bs::network::otc::RangeType r
       case RangeType::Range100_250:
          return Range{100, 250};
       case RangeType::Range250plus:
-         return Range{250, 1000000};
-      case RangeType::Count:
-         break;
+         return Range{250, 10000};
    }
 
    assert(false);
@@ -83,11 +86,13 @@ bs::network::otc::Side bs::network::otc::switchSide(bs::network::otc::Side side)
 std::string bs::network::otc::toString(bs::network::otc::State state)
 {
    switch (state) {
+      case State::Idle:             return "Idle";
+      case State::QuoteSent:        return "QuoteSent";
+      case State::QuoteRecv:        return "QuoteRecv";
       case State::OfferSent:        return "OfferSent";
       case State::OfferRecv:        return "OfferRecv";
       case State::WaitPayinInfo:    return "WaitPayinInfo";
       case State::SentPayinInfo:    return "SentPayinInfo";
-      case State::Idle:             return "Idle";
       case State::Blacklisted:      return "Blacklisted";
    }
 
@@ -130,4 +135,46 @@ double bs::network::otc::fromCents(int64_t value)
 int64_t bs::network::otc::toCents(double value)
 {
    return std::llround(value * 100);
+}
+
+bs::network::otc::RangeType bs::network::otc::firstRangeValue(bs::network::otc::Env env)
+{
+   switch (env) {
+      case Env::Prod: return RangeType::Range5_10;
+      case Env::Test: return RangeType::Range0_1;
+   }
+   assert(false);
+   return {};
+}
+
+bs::network::otc::RangeType bs::network::otc::lastRangeValue(bs::network::otc::Env env)
+{
+   return RangeType::Range250plus;
+}
+
+std::string bs::network::otc::toString(bs::network::otc::PeerType peerType)
+{
+   switch (peerType) {
+      case PeerType::Contact:    return "Private";
+      case PeerType::Request:    return "Request";
+      case PeerType::Response:   return "Response";
+   }
+   assert(false);
+   return {};
+}
+
+bool otc::isSubRange(otc::Range range, otc::Range subRange)
+{
+   return (range.lower <= subRange.lower) && (subRange.upper <= range.upper);
+}
+
+otc::Peer::Peer(const std::string &contactId, otc::PeerType type)
+   : contactId(contactId)
+   , type(type)
+{
+}
+
+std::string otc::Peer::toString() const
+{
+   return contactId + "/" + otc::toString(type);
 }

@@ -20,12 +20,15 @@ public:
    ~PullOwnOTCRequestWidget() override;
 
    void setOffer(const bs::network::otc::Offer &offer);
+   void setRequest(const bs::network::otc::QuoteRequest &request);
+   void setResponse(const bs::network::otc::QuoteResponse &response);
 
 signals:
    void requestPulled();
 
 private:
    std::unique_ptr<Ui::PullOwnOTCRequestWidget> ui_;
+
 };
 
 #endif // __PULL_OWN_OTC_REQUEST_WIDGET_H__

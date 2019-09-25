@@ -22,7 +22,8 @@ protected:
    void applyChatFrameChange() override {
       Chat::ClientPartyPtr clientPartyPtr = getParty(chat_->currentPartyId_);
 
-      if (clientPartyPtr->isGlobalOTC()) {
+      // #new_logic : fix me, party should exist!
+      if (clientPartyPtr && clientPartyPtr->isGlobalOTC()) {
          chat_->ui_->stackedWidgetMessages->setCurrentIndex(static_cast<int>(StackedMessages::OTCTable));
          return;
       }
@@ -34,7 +35,8 @@ protected:
 
       chat_->ui_->input_textEdit->setText({});
       chat_->ui_->input_textEdit->setVisible(true);
-      chat_->ui_->input_textEdit->setEnabled(true);
+      // #new_logic : fix me, party should exist! set always true
+      chat_->ui_->input_textEdit->setEnabled(clientPartyPtr != nullptr);
       chat_->ui_->input_textEdit->setFocus();
 
       restoreDraftMessage();
@@ -52,6 +54,12 @@ protected:
 
          return true;
       };
+
+      // #new_logic : update ClientPartyModel to receive public OTC requests/responses (clientPartyPtr should be set)
+      if (!clientPartyPtr) {
+         updateOtc();
+         return;
+      }
 
       // #new_logic : change name after merge with global_otc
       if (clientPartyPtr->isGlobal()) {
