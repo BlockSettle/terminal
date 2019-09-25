@@ -15,7 +15,6 @@
 
 namespace {
    double kQuantityXBTSimpleStepAmount = 0.001;
-   double kQuantityCCSimpleStepAmount = 5;
 }
 
 OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
@@ -48,9 +47,12 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
 
    connect(ui_->priceSpinBoxRequest, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &OTCNegotiationRequestWidget::onChanged);
    connect(ui_->quantitySpinBox, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &OTCNegotiationRequestWidget::onChanged);
+   connect(ui_->authenticationAddressComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &OTCNegotiationRequestWidget::onChanged);
 
    ui_->sideWidget->hide();
    ui_->priceLayoutResponse->hide();
+
+   ui_->quantitySpinBox->setSingleStep(kQuantityXBTSimpleStepAmount);
 
    onSellClicked();
    onChanged();
@@ -113,7 +115,6 @@ void OTCNegotiationRequestWidget::onUpdateBalances()
          .arg(UiUtils::displayCurrencyAmount(getAssetManager()->getBalance(buyProduct_.toStdString())))
          .arg(buyProduct_);
       ui_->quantitySpinBox->setMaximum(std::numeric_limits<double>::max());
-      ui_->quantitySpinBox->setSingleStep(kQuantityCCSimpleStepAmount);
    }
    else {
       double currentBalance = getXBTSpendableBalance();
@@ -121,7 +122,6 @@ void OTCNegotiationRequestWidget::onUpdateBalances()
          .arg(UiUtils::displayAmount(currentBalance))
          .arg(QString::fromStdString(bs::network::XbtCurrency));
       ui_->quantitySpinBox->setMaximum(currentBalance);
-      ui_->quantitySpinBox->setSingleStep(kQuantityXBTSimpleStepAmount);
    }
 
    ui_->labelBalanceValue->setText(totalBalance);
@@ -154,6 +154,7 @@ void OTCNegotiationRequestWidget::onSellClicked()
    ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(sellIndicativePrice_, productGroup_));
    ui_->quantitySpinBox->setValue(0.0);
 
+   onUpdateIndicativePrice();
    selectedUTXO_.clear();
 }
 
@@ -168,6 +169,7 @@ void OTCNegotiationRequestWidget::onBuyClicked()
    ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(buyIndicativePrice_, productGroup_));
    ui_->quantitySpinBox->setValue(0.0);
 
+   onUpdateIndicativePrice();
    selectedUTXO_.clear();
 }
 
@@ -179,7 +181,10 @@ void OTCNegotiationRequestWidget::onShowXBTInputsClicked()
 
 void OTCNegotiationRequestWidget::onChanged()
 {
-   ui_->pushButtonAccept->setEnabled(ui_->priceSpinBoxRequest->value() > 0 && ui_->quantitySpinBox->value() > 0);
+   ui_->pushButtonAccept->setEnabled(ui_->priceSpinBoxRequest->value() > 0
+      && ui_->quantitySpinBox->value() > 0
+      && !ui_->authenticationAddressComboBox->currentText().isEmpty()
+   );
 }
 
 void OTCNegotiationRequestWidget::onChatRoomChanged()

@@ -16,6 +16,7 @@
 
 using namespace Blocksettle::Communication;
 using namespace bs::error;
+using namespace bs::sync;
 using namespace std::chrono;
 
 constexpr std::chrono::seconds kDefaultDuration{60};
@@ -438,7 +439,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       }
    };
 
-   dialogData.insert("WalletId", rootWalletId);
+   dialogData.insert(PasswordDialogData::WalletId, rootWalletId);
    return RequestPasswordIfNeeded(clientId, rootWalletId, txSignReq, reqType, dialogData, onPassword);
 }
 
@@ -537,7 +538,7 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
    }
 
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
-   dialogData.insert("PayOutType", true);
+   dialogData.insert(PasswordDialogData::PayOutType, true);
 
    bs::core::wallet::TXSignRequest txSignReq;
    txSignReq.walletIds = { walletsMgr_->getPrimaryWallet()->walletId() };
@@ -612,8 +613,8 @@ bool HeadlessContainerListener::onSignAuthAddrRevokeRequest(const std::string &c
    }
 
    Internal::PasswordDialogDataWrapper dialogData;
-   dialogData.insert("WalletId", request.wallet_id());
-   dialogData.insert("AuthAddress", request.auth_address());
+   dialogData.insert(PasswordDialogData::WalletId, request.wallet_id());
+   dialogData.insert(PasswordDialogData::AuthAddress, request.auth_address());
 
    bs::core::wallet::TXSignRequest txSignReq;
    txSignReq.walletIds = { wallet->walletId() };
@@ -1373,8 +1374,8 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
    };
 
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
-   dialogData.insert("WalletId", priWallet->walletId());
-   dialogData.insert("AuthAddress", request.auth_address());
+   dialogData.insert(PasswordDialogData::WalletId, priWallet->walletId());
+   dialogData.insert(PasswordDialogData::AuthAddress, request.auth_address());
 
    return RequestPasswordIfNeeded(clientId, priWallet->walletId(), {}, headless::CreateSettlWalletType
       , dialogData, onPassword);

@@ -109,7 +109,7 @@ public:
 
    virtual bs::signer::RequestId GetInfo(const std::string &rootWalletId) = 0;
 
-   virtual bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog
+   virtual bs::signer::RequestId customDialogRequest(bs::signer::ui::GeneralDialogType signerDialog
       , const QVariantMap &data = QVariantMap()) = 0;
 
    virtual void syncNewAddress(const std::string &walletId, const std::string &index

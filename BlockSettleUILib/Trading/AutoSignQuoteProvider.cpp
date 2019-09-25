@@ -86,7 +86,7 @@ void AutoSignQuoteProvider::disableAutoSign()
    QVariantMap data;
    data[QLatin1String("rootId")] = QString::fromStdString(wallet->walletId());
    data[QLatin1String("enable")] = false;
-   signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ActivateAutoSign, data);
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ActivateAutoSign, data);
 }
 
 void AutoSignQuoteProvider::tryEnableAutoSign()
@@ -104,7 +104,7 @@ void AutoSignQuoteProvider::tryEnableAutoSign()
    QVariantMap data;
    data[QLatin1String("rootId")] = QString::fromStdString(wallet->walletId());
    data[QLatin1String("enable")] = true;
-   signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ActivateAutoSign, data);
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ActivateAutoSign, data);
 }
 
 bool AutoSignQuoteProvider::autoSignQuoteAvailable()

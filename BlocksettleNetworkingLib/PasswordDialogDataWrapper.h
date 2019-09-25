@@ -1,7 +1,9 @@
 #ifndef __PASSWORD_DIALOG_DATA_WRAPPER_H__
 #define __PASSWORD_DIALOG_DATA_WRAPPER_H__
 
+#include "PasswordDialogData.h"
 #include "Blocksettle_Communication_Internal.pb.h"
+
 namespace Blocksettle {
 namespace Communication {
 namespace Internal {
@@ -16,11 +18,11 @@ public:
    PasswordDialogDataWrapper(const PasswordDialogDataWrapper &other) : PasswordDialogData(static_cast<PasswordDialogData>(other)) {}
    PasswordDialogDataWrapper& operator= (const PasswordDialogData &other) { PasswordDialogData::operator=(other); return *this;}
 
-   void insert(const std::string &key, bool value);
-   void insert(const std::string &key, const std::string &value);
-   void insert(const std::string &key, int value);
-   void insert(const std::string &key, double value);
-   void insert(const std::string &key, const char *data, size_t size);
+   void insert(const bs::sync::dialog::keys::Key &key, bool value);
+   void insert(const bs::sync::dialog::keys::Key &key, const std::string &value);
+   void insert(const bs::sync::dialog::keys::Key &key, int value);
+   void insert(const bs::sync::dialog::keys::Key &key, double value);
+   void insert(const bs::sync::dialog::keys::Key &key, const char *data, size_t size);
 
    template<typename T>
    T value(const std::string &key) const noexcept

@@ -16,6 +16,7 @@ public:
    Qt::ItemFlags flags(const QModelIndex& index) const override;
 
    QModelIndex getProxyIndexById(const std::string& partyId) const;
+   QModelIndex getOTCGlobalRoot() const;
 
 protected:
 
