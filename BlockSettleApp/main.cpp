@@ -21,6 +21,8 @@
 
 #include "btc/ecc.h"
 
+#include "AppNap.h"
+
 #ifdef USE_QWindowsIntegrationPlugin
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
@@ -137,6 +139,8 @@ static int runUnchecked(QApplication *app, const std::shared_ptr<ApplicationSett
    }
 
    mainWindow.postSplashscreenActions();
+
+   bs::disableAppNap();
 
    return app->exec();
 }
