@@ -40,17 +40,6 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       throw std::runtime_error("no wallet");
    }
 
-   if (weSell_) {
-      const Tx tx(BinaryData::CreateFromHex(order_.reqTransaction));
-      if (!tx.isInitialized()) {
-         throw std::runtime_error("no requester transaction");
-      }
-      const bs::TxChecker txChecker(tx);
-      if ((tx.getNumTxIn() != 1) || !txChecker.hasInput(BinaryData::CreateFromHex(order_.dealerTransaction))) {
-         throw std::runtime_error("invalid payout spender");
-      }
-   }
-
    auto qn = quoteProvider->getSubmittedXBTQuoteNotification(order.settlementId);
    if (qn.authKey.empty() || qn.reqAuthKey.empty() || qn.settlementId.empty()) {
       throw std::invalid_argument("failed to get submitted QN for " + order.quoteId);
