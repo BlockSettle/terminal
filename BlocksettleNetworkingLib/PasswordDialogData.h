@@ -8,21 +8,21 @@
 #include <QObject>
 #include <QVariantMap>
 
-#define DIALOG_KEY(KEYNAME) constexpr static bs::sync::dialog::keys::Key KEYNAME = bs::sync::dialog::keys::Key(#KEYNAME);\
+#define DIALOG_KEY(KEYNAME) const static bs::sync::dialog::keys::Key KEYNAME;\
 QVariant get##KEYNAME() { return values_.value(KEYNAME.toQString()); }\
 void set##KEYNAME(const QVariant &v) { values_.insert(KEYNAME.toQString(), v); emit dataChanged(); }\
 Q_INVOKABLE bool has##KEYNAME() { return values_.contains(KEYNAME.toQString()); }\
 Q_PROPERTY(QVariant KEYNAME READ get##KEYNAME WRITE set##KEYNAME NOTIFY dataChanged)
 
-#define DIALOG_KEY_BOOL(KEYNAME) constexpr static bs::sync::dialog::keys::Key KEYNAME = bs::sync::dialog::keys::Key(#KEYNAME);\
+#define DIALOG_KEY_BOOL(KEYNAME) const static bs::sync::dialog::keys::Key KEYNAME;\
 bool get##KEYNAME() { return values_.value(KEYNAME.toQString()).toBool(); }\
 void set##KEYNAME(bool b) { values_.insert(KEYNAME.toQString(), QVariant::fromValue(b)); emit dataChanged(); }\
 Q_INVOKABLE bool has##KEYNAME() { return values_.contains(KEYNAME.toQString()); }\
 Q_PROPERTY(bool KEYNAME READ get##KEYNAME WRITE set##KEYNAME NOTIFY dataChanged)
 
 #else
-#define DIALOG_KEY(KEYNAME) constexpr static bs::sync::dialog::keys::Key KEYNAME = bs::sync::dialog::keys::Key(#KEYNAME);
-#define DIALOG_KEY_BOOL(KEYNAME) constexpr static bs::sync::dialog::keys::Key KEYNAME = bs::sync::dialog::keys::Key(#KEYNAME);
+#define DIALOG_KEY(KEYNAME) const static bs::sync::dialog::keys::Key KEYNAME;
+#define DIALOG_KEY_BOOL(KEYNAME) const static bs::sync::dialog::keys::Key KEYNAME;
 #endif
 
 namespace bs {
