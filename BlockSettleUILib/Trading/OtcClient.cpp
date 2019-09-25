@@ -996,10 +996,6 @@ void OtcClient::processPublicClose(QDateTime timestamp, const std::string &conta
 {
    requestMap_.erase(contactId);
 
-   // This will remove everything when remote peer pulls public request.
-   // We could keep current shield and show that public request was pulled instead.
-   responseMap_.erase(contactId);
-
    updatePublicLists();
 }
 
