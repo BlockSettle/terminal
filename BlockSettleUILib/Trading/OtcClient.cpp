@@ -25,7 +25,7 @@ using namespace Blocksettle::Communication::Otc;
 using namespace Blocksettle::Communication;
 using namespace bs::network;
 using namespace bs::network::otc;
-using namespace bs::sync::dialog;
+using namespace bs::sync;
 
 struct OtcClientDeal
 {
@@ -96,25 +96,25 @@ namespace {
 
       bs::sync::PasswordDialogData dialogData;
 
-      dialogData.setValue(keys::Market, "XBT");
+      dialogData.setValue(PasswordDialogData::Market, "XBT");
 
-      dialogData.setValue(keys::ProductGroup, QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)));
-      dialogData.setValue(keys::Security, "XBT/EUR");
-      dialogData.setValue(keys::Product, "XBT");
-      dialogData.setValue(keys::Side, QObject::tr(bs::network::Side::toString(bs::network::Side::Type(deal.side))));
+      dialogData.setValue(PasswordDialogData::ProductGroup, QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)));
+      dialogData.setValue(PasswordDialogData::Security, "XBT/EUR");
+      dialogData.setValue(PasswordDialogData::Product, "XBT");
+      dialogData.setValue(PasswordDialogData::Side, QObject::tr(bs::network::Side::toString(bs::network::Side::Type(deal.side))));
 
-      dialogData.setValue(keys::Title, QObject::tr("Settlement Transaction"));
+      dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Transaction"));
 
-      dialogData.setValue(keys::Price, UiUtils::displayPriceXBT(price));
+      dialogData.setValue(PasswordDialogData::Price, UiUtils::displayPriceXBT(price));
 
-      dialogData.setValue(keys::SettlementAddress, deal.settlementAddr.display());
-      dialogData.setValue(keys::SettlementId, deal.settlementId.toHexStr());
+      dialogData.setValue(PasswordDialogData::SettlementAddress, deal.settlementAddr.display());
+      dialogData.setValue(PasswordDialogData::SettlementId, deal.settlementId.toHexStr());
 
-      dialogData.setValue(keys::RequesterAuthAddress, deal.requestorAuthAddress().display());
-      dialogData.setValue(keys::RequesterAuthAddressVerified, deal.isRequestor());
+      dialogData.setValue(PasswordDialogData::RequesterAuthAddress, deal.requestorAuthAddress().display());
+      dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, deal.isRequestor());
 
-      dialogData.setValue(keys::ResponderAuthAddress, deal.responderAuthAddress().display());
-      dialogData.setValue(keys::ResponderAuthAddressVerified, !deal.isRequestor());
+      dialogData.setValue(PasswordDialogData::ResponderAuthAddress, deal.responderAuthAddress().display());
+      dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, !deal.isRequestor());
 
       return dialogData;
    }
@@ -122,16 +122,16 @@ namespace {
    bs::sync::PasswordDialogData toPasswordDialogDataPayin(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
    {
       auto dialogData = toPasswordDialogData(deal, signRequest);
-      dialogData.setValue(keys::SettlementPayInVisible, true);
-      dialogData.setValue(keys::Title, QObject::tr("Settlement Pay-In"));
+      dialogData.setValue(PasswordDialogData::SettlementPayInVisible, true);
+      dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-In"));
       return dialogData;
    }
 
    bs::sync::PasswordDialogData toPasswordDialogDataPayout(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
    {
       auto dialogData = toPasswordDialogData(deal, signRequest);
-      dialogData.setValue(keys::SettlementPayOutVisible, true);
-      dialogData.setValue(keys::Title, QObject::tr("Settlement Pay-Out"));
+      dialogData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
+      dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-Out"));
       return dialogData;
    }
 
@@ -1407,8 +1407,8 @@ void OtcClient::verifyAuthAddresses(OtcClientDeal *deal)
       SPDLOG_LOGGER_DEBUG(logger_, "counterparty's address verification {} for {}", to_string(state), address.display());
       if (state == AddressVerificationState::Verified) {
          bs::sync::PasswordDialogData dialogData;
-         dialogData.setValue(deal->isRequestor() ? keys::ResponderAuthAddressVerified : keys::RequesterAuthAddressVerified, true);
-         dialogData.setValue(keys::SettlementId, deal->settlementId.toHexStr());
+         dialogData.setValue(deal->isRequestor() ? PasswordDialogData::ResponderAuthAddressVerified : PasswordDialogData::RequesterAuthAddressVerified, true);
+         dialogData.setValue(PasswordDialogData::SettlementId, deal->settlementId.toHexStr());
          signContainer_->updateDialogData(dialogData);
       }
    });
