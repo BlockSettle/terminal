@@ -29,7 +29,7 @@ e64206261696c6f757420666f722062616e6b73ffffffff0100f2052a01000000434104678afdb0f
 112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000");
 
 std::shared_ptr<spdlog::logger> StaticLogger::loggerPtr = nullptr;
-BlockingQueue<std::shared_ptr<DBNotificationStruct>> UnitTestWalletACT::notifQueue_;
+BlockingQueue<std::shared_ptr<DBNotificationStruct>> /*UnitTestWalletACT::*/ACTqueue::notifQueue_;
 
 TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
 {
@@ -245,8 +245,52 @@ std::map<unsigned, BinaryData> ArmoryInstance::mineNewBlock(
 
 void ArmoryInstance::pushZC(const BinaryData& zc, unsigned int blocksUntilMined)
 {
-   StaticLogger::loggerPtr->debug("new ZC: {}", zc.toHexStr());
    std::vector<std::pair<BinaryData, unsigned int>> zcVec;
    zcVec.push_back({ zc, blocksUntilMined });
    nodePtr_->pushZC(zcVec);
+}
+
+
+SingleUTWalletACT::~SingleUTWalletACT()
+{
+   cleanup();
+}
+
+void SingleUTWalletACT::onRefresh(const std::vector<BinaryData> &ids, bool online)
+{
+   auto dbns = std::make_shared<DBNotificationStruct>(DBNS_Refresh);
+   dbns->ids_ = ids;
+   dbns->online_ = online;
+
+   ACTqueue::notifQueue_.push_back(std::move(dbns));
+}
+
+void SingleUTWalletACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
+{
+   auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
+   dbns->zc_ = zcs;
+
+   ACTqueue::notifQueue_.push_back(std::move(dbns));
+}
+
+void SingleUTWalletACT::onNewBlock(unsigned int block)
+{
+   auto dbns = std::make_shared<DBNotificationStruct>(DBNS_NewBlock);
+   dbns->block_ = block;
+
+   ACTqueue::notifQueue_.push_back(std::move(dbns));
+}
+
+std::vector<bs::TXEntry> UnitTestWalletACT::waitOnZC(bool soft)
+{
+   while (true) {
+      const auto &notif = ACTqueue::notifQueue_.pop_front();
+      if (notif->type_ != DBNS_ZC) {
+         if (soft) {
+            continue;
+         }
+         throw std::runtime_error("expected zc notification");
+      }
+      return notif->zc_;
+   }
 }
