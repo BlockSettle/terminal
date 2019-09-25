@@ -26,6 +26,8 @@ ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBSer
    connect(this, &ClientPartyLogic::error, this, &ClientPartyLogic::handleLocalErrors);
    connect(clientDBServicePtr.get(), &ClientDBService::messageArrived, clientPartyModelPtr_.get(), &ClientPartyModel::messageArrived);
    connect(clientDBServicePtr.get(), &ClientDBService::messageStateChanged, clientPartyModelPtr_.get(), &ClientPartyModel::messageStateChanged);
+   connect(clientDBServicePtr_.get(), &ClientDBService::recipientKeysHasChanged, this, &ClientPartyLogic::onRecipientKeysHasChanged);
+   connect(clientDBServicePtr_.get(), &ClientDBService::recipientKeysUnchanged, this, &ClientPartyLogic::onRecipientKeysUnchanged);
 
    connect(clientPartyModelPtr_.get(), &ClientPartyModel::partyInserted, this, &ClientPartyLogic::handlePartyInserted);
    connect(this, &ClientPartyLogic::userPublicKeyChanged, clientPartyModelPtr_.get(), &ClientPartyModel::userPublicKeyChanged, Qt::QueuedConnection);
