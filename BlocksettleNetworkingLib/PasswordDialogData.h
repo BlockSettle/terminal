@@ -21,8 +21,8 @@ Q_INVOKABLE bool has##KEYNAME() { return values_.contains(KEYNAME.toQString()); 
 Q_PROPERTY(bool KEYNAME READ get##KEYNAME WRITE set##KEYNAME NOTIFY dataChanged)
 
 #else
-#define DIALOG_KEY(KEYNAME) const static bs::sync::dialog::keys::Key KEYNAME = bs::sync::dialog::keys::Key(#KEYNAME);
-#define DIALOG_KEY_BOOL(KEYNAME) const static bs::sync::dialog::keys::Key KEYNAME = bs::sync::dialog::keys::Key(#KEYNAME);
+#define DIALOG_KEY(KEYNAME) const static bs::sync::dialog::keys::Key KEYNAME;
+#define DIALOG_KEY_BOOL(KEYNAME) const static bs::sync::dialog::keys::Key KEYNAME;
 #endif
 
 namespace bs {
