@@ -15,7 +15,7 @@ BSPasswordInput {
     property WalletInfo walletInfo: WalletInfo{}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
 
-    title: passwordDialogData.value("Title")
+    title: passwordDialogData.Title
 
     CustomHeader {
         text: qsTr("Wallet Details")
@@ -86,11 +86,11 @@ BSPasswordInput {
             Layout.preferredWidth: 110
             Layout.maximumWidth: 110
             Layout.fillWidth: true
-            text: qsTr("Email")
+            text: qsTr("Authentication Address")
         }
         CustomLabel {
             Layout.fillWidth: true
-            text: passwordDialogData.value("Email")
+            text: passwordDialogData.AuthAddress
         }
     }
 }

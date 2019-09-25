@@ -18,8 +18,8 @@ import "../js/helper.js" as JsHelper
 TxSignSettlementBaseDialog {
     id: root
 
-    readonly property string inputProduct: is_sell ? " " + passwordDialogData.value("TxInputProduct") : " XBT"
-    readonly property int lotSize: passwordDialogData.value("LotSize")
+    readonly property string inputProduct: is_sell ? " " + passwordDialogData.TxInputProduct : " XBT"
+    readonly property int lotSize: passwordDialogData.LotSize
 
     readonly property int recipientsAddrHeight: txInfo.recipients.length < 4 ? txInfo.recipients.length * addressRowHeight : addressRowHeight * 3
     readonly property int inputsXBTAddrHeight: txInfo.inputsXBT.length < 4 ? txInfo.inputsXBT.length * addressRowHeight : addressRowHeight * 3
@@ -67,19 +67,19 @@ TxSignSettlementBaseDialog {
 
         // SettlementId
         CustomLabel {
-            visible: passwordDialogData.contains("SettlementId")
+            visible: passwordDialogData.hasSettlementId()
             Layout.fillWidth: true
             text: qsTr("Settlement Id")
         }
         CustomLabelCopyableValue {
             id: settlementId
-            visible: passwordDialogData.contains("SettlementId")
-            text: passwordDialogData.value("SettlementId")
-                .truncString(passwordDialogData.contains("RequesterAuthAddress") ? passwordDialogData.value("RequesterAuthAddress").length : 30)
+            visible: passwordDialogData.hasSettlementId()
+            text: passwordDialogData.SettlementId
+                .truncString(passwordDialogData.hasRequesterAuthAddress() ? passwordDialogData.RequesterAuthAddress.length : 30)
             Layout.alignment: Qt.AlignRight
-            textForCopy: passwordDialogData.value("SettlementId")
+            textForCopy: passwordDialogData.SettlementId
 
-            ToolTip.text: passwordDialogData.value("SettlementId")
+            ToolTip.text: passwordDialogData.SettlementId
             ToolTip.delay: 150
             ToolTip.timeout: 5000
             ToolTip.visible: settlementId.mouseArea.containsMouse
@@ -89,7 +89,7 @@ TxSignSettlementBaseDialog {
         RowLayout {
             Layout.columnSpan: 2
             Layout.fillWidth: true
-            visible: passwordDialogData.contains("InputsListVisible")
+            visible: passwordDialogData.InputsListVisible
 
             CustomLabel {
                 text: qsTr("Payment Address(es)")
@@ -131,7 +131,7 @@ TxSignSettlementBaseDialog {
         RowLayout {
             Layout.columnSpan: 2
             Layout.fillWidth: true
-            visible: passwordDialogData.contains("RecipientsListVisible")
+            visible: passwordDialogData.RecipientsListVisible
 
             CustomLabel {
                 text: qsTr("Delivery Address(es)")
