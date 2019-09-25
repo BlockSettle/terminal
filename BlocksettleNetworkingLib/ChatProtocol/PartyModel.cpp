@@ -128,7 +128,7 @@ void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
       }
 
       // party exist, update
-      for (const auto recipientPtr : privatePartyPtr->recipients())
+      for (const auto &recipientPtr : privatePartyPtr->recipients())
       {
          existingPartyPtr->insertOrUpdateRecipient(recipientPtr);
       }

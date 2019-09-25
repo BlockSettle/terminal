@@ -7,12 +7,21 @@
 #include "../BlocksettleNetworkingLib/ChatProtocol/Party.h"
 #include "chat.pb.h"
 // Internal enum
+
+namespace bs {
+   namespace network {
+      namespace otc {
+         enum class PeerType : int;
+      }
+   }
+}
+
 namespace UI {
    enum class ElementType
    {
       Root = 0,
       Container,
-      Party
+      Party,
    };
 }
 
@@ -40,6 +49,9 @@ public:
    void increaseUnseenCounter(int newMessageCount);
    void decreaseUnseenCounter(int seenMessageCount);
    bool hasNewMessages() const;
+
+   // #new_logic : use Chat::ClientParty for this
+   bs::network::otc::PeerType peerType{};
 
 private:
    std::vector<std::unique_ptr<PartyTreeItem>> childItems_;

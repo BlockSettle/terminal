@@ -62,7 +62,8 @@ namespace Chat
    };
 
    using PartyModelPtr = std::shared_ptr<PartyModel>;
-
 }
+
+Q_DECLARE_METATYPE(Chat::PartyModelError)
 
 #endif // PARTYMODEL_H

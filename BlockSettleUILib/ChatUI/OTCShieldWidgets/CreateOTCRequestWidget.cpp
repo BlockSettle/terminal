@@ -6,24 +6,37 @@
 #include <QComboBox>
 #include <QPushButton>
 
+using namespace bs::network;
+
 CreateOTCRequestWidget::CreateOTCRequestWidget(QWidget* parent)
    : OTCWindowsAdapterBase{parent}
    , ui_{new Ui::CreateOTCRequestWidget{}}
 {
    ui_->setupUi(this);
+}
 
-   for (int i = 0; i < int(bs::network::otc::RangeType::Count); ++i) {
-      auto range = bs::network::otc::RangeType(i);
-      ui_->comboBoxRange->addItem(QString::fromStdString(bs::network::otc::toString(range)), i);
+CreateOTCRequestWidget::~CreateOTCRequestWidget() = default;
+
+void CreateOTCRequestWidget::init(otc::Env env)
+{
+   for (int i = int(otc::firstRangeValue(env)); i <= int(otc::lastRangeValue(env)); ++i) {
+      ui_->comboBoxRange->addItem(QString::fromStdString(otc::toString(otc::RangeType(i))), i);
    }
 
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &CreateOTCRequestWidget::onBuyClicked);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &CreateOTCRequestWidget::onSellClicked);
+   connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &CreateOTCRequestWidget::requestCreated);
 
    onSellClicked();
 }
 
-CreateOTCRequestWidget::~CreateOTCRequestWidget() = default;
+otc::QuoteRequest CreateOTCRequestWidget::request() const
+{
+   bs::network::otc::QuoteRequest result;
+   result.rangeType = otc::RangeType(ui_->comboBoxRange->currentData().toInt());
+   result.ourSide = ui_->pushButtonSell->isChecked() ? otc::Side::Sell : otc::Side::Buy;
+   return result;
+}
 
 void CreateOTCRequestWidget::onSellClicked()
 {

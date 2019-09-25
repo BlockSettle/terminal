@@ -149,15 +149,32 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
    //selectionModel()->clearSelection();
 }
 
+void ChatUserListTreeView::onExpandGlobalOTC()
+{
+   auto* proxyModel = static_cast<ChatPartiesSortProxyModel*>(model());
+   if (!proxyModel) {
+      return;
+   }
+
+   const QModelIndex otcIndex = proxyModel->getOTCGlobalRoot();
+   if (!otcIndex.isValid()) {
+      return;
+   }
+
+   // Qt 5.13 -> change this two functions to expandRecursively
+   expand(otcIndex.child(0, 0));
+   expand(otcIndex.child(1, 0));
+}
+
 PartyTreeItem* ChatUserListTreeView::internalPartyTreeItem(const QModelIndex& index)
 {
    if (!index.isValid()) {
       return nullptr;
    }
 
-   auto *proxyModel = static_cast<ChatPartiesSortProxyModel*>(model());
+   auto* proxyModel = static_cast<ChatPartiesSortProxyModel*>(model());
    if (!proxyModel) {
-      nullptr;
+      return nullptr;
    }
 
    return proxyModel->getInternalData(index);

@@ -5,6 +5,7 @@
 
 #include "ApplicationSettings.h"
 #include "ArmoryConnection.h"
+#include "ChatProtocol/ClientParty.h"
 #include "OtcClient.h"
 #include "OtcUtils.h"
 #include "SignContainer.h"
@@ -15,7 +16,8 @@ ChatOTCHelper::ChatOTCHelper(QObject* parent /*= nullptr*/)
 {
 }
 
-void ChatOTCHelper::init(const std::shared_ptr<spdlog::logger>& loggerPtr
+void ChatOTCHelper::init(bs::network::otc::Env env
+   , const std::shared_ptr<spdlog::logger>& loggerPtr
    , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
    , const std::shared_ptr<ArmoryConnection>& armory
    , const std::shared_ptr<SignContainer>& signContainer
@@ -25,6 +27,8 @@ void ChatOTCHelper::init(const std::shared_ptr<spdlog::logger>& loggerPtr
    loggerPtr_ = loggerPtr;
 
    OtcClientParams params;
+
+   params.env = env;
 
    params.offlineLoadPathCb = [applicationSettings]() -> std::string {
       QString signerOfflineDir = applicationSettings->get<QString>(ApplicationSettings::signerOfflineDir);
@@ -65,27 +69,22 @@ void ChatOTCHelper::init(const std::shared_ptr<spdlog::logger>& loggerPtr
    otcClient_ = new OtcClient(loggerPtr, walletsMgr, armory, signContainer, authAddressManager, std::move(params), this);
 }
 
-OtcClient* ChatOTCHelper::getClient() const
+OtcClient* ChatOTCHelper::client() const
 {
    return otcClient_;
 }
 
 void ChatOTCHelper::setCurrentUserId(const std::string& ownUserId)
 {
-   otcClient_->setCurrentUserId(ownUserId);
-}
-
-const bs::network::otc::Peer* ChatOTCHelper::getPeer(const std::string& partyId) const
-{
-   return otcClient_->peer(partyId);
+   otcClient_->setOwnContactId(ownUserId);
 }
 
 void ChatOTCHelper::onLogout()
 {
-   for (const auto &partyId : connectedPeers_) {
-      otcClient_->peerDisconnected(partyId);
+   for (const auto &contactId : connectedContacts_) {
+      otcClient_->contactDisconnected(contactId);
    }
-   connectedPeers_.clear();
+   connectedContacts_.clear();
 }
 
 void ChatOTCHelper::onProcessOtcPbMessage(const std::string& data)
@@ -93,47 +92,95 @@ void ChatOTCHelper::onProcessOtcPbMessage(const std::string& data)
    otcClient_->processPbMessage(data);
 }
 
-void ChatOTCHelper::onOtcRequestSubmit(const std::string& partyId, const bs::network::otc::Offer& offer)
+void ChatOTCHelper::onOtcRequestSubmit(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer)
 {
-   bool result = otcClient_->sendOffer(offer, partyId);
+   if (!peer) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
+      return;
+   }
+
+   bool result = otcClient_->sendOffer(peer, offer);
    if (!result) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "send offer failed");
       return;
    }
 }
 
-void ChatOTCHelper::onOtcRequestPull(const std::string& partyId)
+void ChatOTCHelper::onOtcPullOrReject(bs::network::otc::Peer *peer)
 {
-   bool result = otcClient_->pullOrRejectOffer(partyId);
+   if (!peer) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
+      return;
+   }
+
+   bool result = otcClient_->pullOrReject(peer);
    if (!result) {
-      SPDLOG_LOGGER_ERROR(loggerPtr_, "pull offer failed");
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "pull or reject failed");
       return;
    }
 }
 
-void ChatOTCHelper::onOtcResponseAccept(const std::string& partyId, const bs::network::otc::Offer& offer)
+void ChatOTCHelper::onOtcResponseAccept(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer)
 {
-   bool result = otcClient_->acceptOffer(offer, partyId);
+   if (!peer) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
+      return;
+   }
+
+   bool result = otcClient_->acceptOffer(peer, offer);
    if (!result) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "accept offer failed");
       return;
    }
 }
 
-void ChatOTCHelper::onOtcResponseUpdate(const std::string& partyId, const bs::network::otc::Offer& offer)
+void ChatOTCHelper::onOtcResponseUpdate(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer)
 {
-   bool result = otcClient_->updateOffer(offer, partyId);
+   if (!peer) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
+      return;
+   }
+
+   bool result = otcClient_->updateOffer(peer, offer);
    if (!result) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "update offer failed");
       return;
    }
 }
 
-void ChatOTCHelper::onOtcResponseReject(const std::string& partyId)
+void ChatOTCHelper::onOtcResponseReject(bs::network::otc::Peer *peer)
 {
-   bool result = otcClient_->pullOrRejectOffer(partyId);
+   if (!peer) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
+      return;
+   }
+
+   bool result = otcClient_->pullOrReject(peer);
    if (!result) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "reject offer failed");
+      return;
+   }
+}
+
+void ChatOTCHelper::onOtcQuoteRequestSubmit(const bs::network::otc::QuoteRequest &request)
+{
+   bool result = otcClient_->sendQuoteRequest(request);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "sending quote request failed");
+      return;
+   }
+}
+
+void ChatOTCHelper::onOtcQuoteResponseSubmit(bs::network::otc::Peer *peer, const bs::network::otc::QuoteResponse &response)
+{
+   if (!peer) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
+      return;
+   }
+
+   bool result = otcClient_->sendQuoteResponse(peer, response);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "sending response failed");
       return;
    }
 }
@@ -141,16 +188,20 @@ void ChatOTCHelper::onOtcResponseReject(const std::string& partyId)
 void ChatOTCHelper::onMessageArrived(const Chat::MessagePtrList& messagePtr)
 {
    for (const auto &msg : messagePtr) {
-      if (msg->partyMessageState() == Chat::SENT && msg->senderHash() != otcClient_->getCurrentUser()) {
-         
-         auto connIt = connectedPeers_.find(msg->partyId());
-         if (connIt == connectedPeers_.end()) {
+      if (msg->partyId() == Chat::OtcRoomName) {
+         auto data = OtcUtils::deserializePublicMessage(msg->messageText());
+         if (!data.isNull()) {
+            otcClient_->processPublicMessage(msg->timestamp(), msg->senderHash(), data);
+         }
+      } else if (msg->partyMessageState() == Chat::SENT && msg->senderHash() != otcClient_->ownContactId()) {
+         auto connIt = connectedContacts_.find(msg->partyId());
+         if (connIt == connectedContacts_.end()) {
             continue;
          }
 
          auto data = OtcUtils::deserializeMessage(msg->messageText());
          if (!data.isNull()) {
-            otcClient_->processMessage(msg->partyId(), data);
+            otcClient_->processContactMessage(msg->partyId(), data);
          }
       }
    }
@@ -158,17 +209,13 @@ void ChatOTCHelper::onMessageArrived(const Chat::MessagePtrList& messagePtr)
 
 void ChatOTCHelper::onPartyStateChanged(const Chat::ClientPartyPtr& clientPartyPtr)
 {
-   if (clientPartyPtr->partyType() != Chat::PRIVATE_DIRECT_MESSAGE) {
-      return;
-   }
-   
-   const std::string& partyId = clientPartyPtr->id();
-   auto connIt = connectedPeers_.find(partyId);
-   if (clientPartyPtr->clientStatus() == Chat::ONLINE && connIt == connectedPeers_.end()) {
-      otcClient_->peerConnected(partyId);
-      connectedPeers_.insert(partyId);
-   } else if (clientPartyPtr->clientStatus() == Chat::OFFLINE && connIt != connectedPeers_.end()) {
-      otcClient_->peerDisconnected(partyId);
-      connectedPeers_.erase(connIt);
+   const std::string& contactId = clientPartyPtr->userHash();
+   auto connIt = connectedContacts_.find(contactId);
+   if (clientPartyPtr->clientStatus() == Chat::ONLINE && connIt == connectedContacts_.end()) {
+      otcClient_->contactConnected(contactId);
+      connectedContacts_.insert(contactId);
+   } else if (clientPartyPtr->clientStatus() == Chat::OFFLINE && connIt != connectedContacts_.end()) {
+      otcClient_->contactDisconnected(contactId);
+      connectedContacts_.erase(connIt);
    }
 }

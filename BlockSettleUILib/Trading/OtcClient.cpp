@@ -10,6 +10,7 @@
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "OfflineSigner.h"
+#include "ProtobufUtils.h"
 #include "SelectedTransactionInputs.h"
 #include "SettlementMonitor.h"
 #include "TransactionData.h"
@@ -134,15 +135,33 @@ namespace {
       return dialogData;
    }
 
-   bool isValidOffer(const Message_Offer &offer)
+   bool isValidOffer(const ContactMessage_Offer &offer)
    {
       return offer.price() > 0 && offer.amount() > 0;
    }
 
-   void copyOffer(const Offer &src, Message_Offer *dst)
+   void copyOffer(const Offer &src, ContactMessage_Offer *dst)
    {
       dst->set_price(src.price);
       dst->set_amount(src.amount);
+   }
+
+   void copyRange(const otc::Range &src, Otc::Range *dst)
+   {
+      dst->set_lower(src.lower);
+      dst->set_upper(src.upper);
+   }
+
+   void copyRange(const Otc::Range&src, otc::Range *dst)
+   {
+      dst->lower = src.lower();
+      dst->upper = src.upper();
+   }
+
+   Peer *findPeer(std::unordered_map<std::string, bs::network::otc::Peer> &map, const std::string &contactId)
+   {
+      auto it = map.find(contactId);
+      return it == map.end() ? nullptr : &it->second;
    }
 
 } // namespace
@@ -167,28 +186,92 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
 
 OtcClient::~OtcClient() = default;
 
-const Peer *OtcClient::peer(const std::string &peerId) const
+Peer *OtcClient::contact(const std::string &contactId)
 {
-   auto it = peers_.find(peerId);
-   if (it == peers_.end()) {
-      return nullptr;
+   return findPeer(contactMap_, contactId);
+}
+
+Peer *OtcClient::request(const std::string &contactId)
+{
+   return findPeer(requestMap_, contactId);
+}
+
+Peer *OtcClient::response(const std::string &contactId)
+{
+   return findPeer(responseMap_, contactId);
+}
+
+void OtcClient::setOwnContactId(const std::string &contactId)
+{
+   ownContactId_ = contactId;
+}
+
+const std::string &OtcClient::ownContactId() const
+{
+   return ownContactId_;
+}
+
+
+bool OtcClient::sendQuoteRequest(const QuoteRequest &request)
+{
+   if (ownRequest_) {
+      SPDLOG_LOGGER_ERROR(logger_, "own quote request was already sent");
+      return false;
    }
-   return &it->second;
+
+   if (ownContactId_.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "own contact id is not set");
+      return false;
+   }
+
+   ownRequest_ = std::make_unique<Peer>(ownContactId_, PeerType::Request);
+   ownRequest_->request = request;
+   ownRequest_->isOwnRequest = true;
+
+   Otc::PublicMessage msg;
+   auto d = msg.mutable_request();
+   d->set_sender_side(Otc::Side(request.ourSide));
+   d->set_range(Otc::RangeType(request.rangeType));
+   emit sendPublicMessage(msg.SerializeAsString());
+
+   updatePublicLists();
+
+   return true;
 }
 
-void OtcClient::setCurrentUserId(const std::string &userId)
+bool OtcClient::sendQuoteResponse(Peer *peer, const QuoteResponse &quoteResponse)
 {
-   currentUserId_ = userId;
+   if (peer->state != State::Idle) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}', peer should be in IdleRequestor state", peer->toString());
+      return false;
+   }
+
+   if (!isSubRange(otc::getRange(peer->request.rangeType), quoteResponse.amount)) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid range");
+      return false;
+   }
+
+   if (peer->state != State::Idle) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't send quote response to '{}', peer should be in IdleRequestor state", peer->toString());
+      return false;
+   }
+
+   changePeerState(peer, State::QuoteSent);
+   peer->response = quoteResponse;
+
+   Otc::ContactMessage msg;
+   auto d = msg.mutable_quote_response();
+   copyRange(quoteResponse.price, d->mutable_price());
+   copyRange(quoteResponse.amount, d->mutable_amount());
+   send(peer, msg);
+
+   updatePublicLists();
+   return true;
 }
 
-const std::string &OtcClient::getCurrentUser() const
+bool OtcClient::sendOffer(Peer *peer, const Offer &offer)
 {
-   return currentUserId_;
-}
-
-bool OtcClient::sendOffer(const Offer &offer, const std::string &peerId)
-{
-   SPDLOG_LOGGER_DEBUG(logger_, "send offer to {} (price: {}, amount: {})", peerId, offer.price, offer.amount);
+   SPDLOG_LOGGER_DEBUG(logger_, "send offer to {} (price: {}, amount: {})", peer->toString(), offer.price, offer.amount);
 
    if (!verifyOffer(offer)) {
       SPDLOG_LOGGER_ERROR(logger_, "invalid offer details");
@@ -201,20 +284,19 @@ bool OtcClient::sendOffer(const Offer &offer, const std::string &peerId)
       return false;
    }
 
-   settlementLeaf->getRootPubkey([this, peerId, offer](const SecureBinaryData &ourPubKey) {
+   settlementLeaf->getRootPubkey([this, peer, offer, handle = peer->validityFlag.handle()](const SecureBinaryData &ourPubKey) {
+      if (handle.isValid()) {
+         SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
+         return;
+      }
+
       if (ourPubKey.getSize() != kPubKeySize) {
          SPDLOG_LOGGER_ERROR(logger_, "invalid auth address root public key");
          return;
       }
 
-      auto peer = findPeer(peerId);
-      if (!peer) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
-         return;
-      }
-
       if (peer->state != State::Idle) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}', peer should be in idle state", peerId);
+         SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}', peer should be in idle state", peer->toString());
          return;
       }
 
@@ -222,7 +304,7 @@ bool OtcClient::sendOffer(const Offer &offer, const std::string &peerId)
       peer->ourAuthPubKey = ourPubKey;
       changePeerState(peer, State::OfferSent);
 
-      Message msg;
+      ContactMessage msg;
       if (offer.ourSide == otc::Side::Buy) {
          auto d = msg.mutable_buyer_offers();
          copyOffer(offer, d->mutable_offer());
@@ -237,32 +319,54 @@ bool OtcClient::sendOffer(const Offer &offer, const std::string &peerId)
    return true;
 }
 
-bool OtcClient::pullOrRejectOffer(const std::string &peerId)
+bool OtcClient::pullOrReject(Peer *peer)
 {
-   SPDLOG_LOGGER_DEBUG(logger_, "pull of reject offer from {}", peerId);
+   if (peer->isOwnRequest) {
+      assert(peer == ownRequest_.get());
 
-   auto peer = findPeer(peerId);
-   if (!peer) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
-      return false;
+      SPDLOG_LOGGER_DEBUG(logger_, "pull own quote request");
+      ownRequest_.reset();
+
+      // This will remove everything when we pull public request.
+      // We could keep current shield and show that our public request was pulled instead.
+      responseMap_.clear();
+
+      Otc::PublicMessage msg;
+      msg.mutable_close();
+      emit sendPublicMessage(msg.SerializeAsString());
+
+      updatePublicLists();
+      return true;
    }
 
-   if (peer->state != State::OfferSent && peer->state != State::OfferRecv) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't pull offer from '{}', we should be in OfferSent or OfferRecv state", peerId);
-      return false;
+   switch (peer->state) {
+      case State::QuoteSent:
+      case State::OfferSent:
+      case State::OfferRecv:
+         break;
+      default:
+         SPDLOG_LOGGER_ERROR(logger_, "can't pull offer from '{}'", peer->toString());
+         return false;
    }
 
-   Message msg;
+   SPDLOG_LOGGER_DEBUG(logger_, "pull of reject offer from {}", peer->toString());
+
+   ContactMessage msg;
    msg.mutable_close();
    send(peer, msg);
 
    changePeerState(peer, State::Idle);
+
+   if (peer->type == PeerType::Request) {
+      updatePublicLists();
+   }
+
    return true;
 }
 
-bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::string &peerId)
+bool OtcClient::acceptOffer(Peer *peer, const bs::network::otc::Offer &offer)
 {
-   SPDLOG_LOGGER_DEBUG(logger_, "accept offer from {} (price: {}, amount: {})", peerId, offer.price, offer.amount);
+   SPDLOG_LOGGER_DEBUG(logger_, "accept offer from {} (price: {}, amount: {})", peer->toString(), offer.price, offer.amount);
 
    if (!verifyOffer(offer)) {
       SPDLOG_LOGGER_ERROR(logger_, "invalid offer details");
@@ -275,15 +379,14 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
       return false;
    }
 
-   settlementLeaf->getRootPubkey([this, offer, peerId](const SecureBinaryData &ourPubKey) {
-      auto peer = findPeer(peerId);
-      if (!peer) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+   settlementLeaf->getRootPubkey([this, offer, peer, handle = peer->validityFlag.handle()](const SecureBinaryData &ourPubKey) {
+      if (handle.isValid()) {
+         SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
          return;
       }
 
       if (peer->state != State::OfferRecv) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peerId);
+         SPDLOG_LOGGER_ERROR(logger_, "can't accept offer from '{}', we should be in OfferRecv state", peer->toString());
          return;
       }
 
@@ -304,7 +407,7 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
 
       // Need to get other details from seller first.
       // They should be available from Accept reply.
-      Message msg;
+      ContactMessage msg;
       auto d = msg.mutable_buyer_accepts();
       copyOffer(offer, d->mutable_offer());
       d->set_auth_address_buyer(peer->ourAuthPubKey.toBinStr());
@@ -316,9 +419,9 @@ bool OtcClient::acceptOffer(const bs::network::otc::Offer &offer, const std::str
    return true;
 }
 
-bool OtcClient::updateOffer(const Offer &offer, const std::string &peerId)
+bool OtcClient::updateOffer(Peer *peer, const Offer &offer)
 {
-   SPDLOG_LOGGER_DEBUG(logger_, "update offer from {} (price: {}, amount: {})", peerId, offer.price, offer.amount);
+   SPDLOG_LOGGER_DEBUG(logger_, "update offer from {} (price: {}, amount: {})", peer->toString(), offer.price, offer.amount);
 
    if (!verifyOffer(offer)) {
       SPDLOG_LOGGER_ERROR(logger_, "invalid offer details");
@@ -331,15 +434,14 @@ bool OtcClient::updateOffer(const Offer &offer, const std::string &peerId)
       return false;
    }
 
-   settlementLeaf->getRootPubkey([this, offer, peerId](const SecureBinaryData &ourPubKey) {
-      auto peer = findPeer(peerId);
-      if (!peer) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+   settlementLeaf->getRootPubkey([this, offer, peer, handle = peer->validityFlag.handle()](const SecureBinaryData &ourPubKey) {
+      if (handle.isValid()) {
+         SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
          return;
       }
 
       if (peer->state != State::OfferRecv) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't pull offer from '{}', we should be in OfferRecv state", peerId);
+         SPDLOG_LOGGER_ERROR(logger_, "can't pull offer from '{}', we should be in OfferRecv state", peer->toString());
          return;
       }
 
@@ -356,7 +458,7 @@ bool OtcClient::updateOffer(const Offer &offer, const std::string &peerId)
       peer->offer = offer;
       peer->ourAuthPubKey = ourPubKey;
 
-      Message msg;
+      ContactMessage msg;
       if (offer.ourSide == otc::Side::Buy) {
          auto d = msg.mutable_buyer_offers();
          copyOffer(offer, d->mutable_offer());
@@ -374,73 +476,40 @@ bool OtcClient::updateOffer(const Offer &offer, const std::string &peerId)
    return true;
 }
 
-void OtcClient::peerConnected(const std::string &peerId)
+Peer *OtcClient::ownRequest() const
 {
-   Peer *oldPeer = findPeer(peerId);
-   assert(!oldPeer);
-   if (oldPeer) {
-      oldPeer->state = State::Blacklisted;
-      return;
-   }
-
-   peers_.emplace(peerId, Peer(peerId));
-   emit peerUpdated(peerId);
+   return ownRequest_.get();
 }
 
-void OtcClient::peerDisconnected(const std::string &peerId)
+void OtcClient::contactConnected(const std::string &contactId)
 {
-   peers_.erase(peerId);
+   assert(!contact(contactId));
+   contactMap_.emplace(contactId, otc::Peer(contactId, PeerType::Contact));
+   emit publicUpdated();
+}
+
+void OtcClient::contactDisconnected(const std::string &contactId)
+{
+   contactMap_.erase(contactId);
 
    // TODO: Close tradings
-   emit peerUpdated(peerId);
+   emit publicUpdated();
 }
 
-void OtcClient::processMessage(const std::string &peerId, const BinaryData &data)
+void OtcClient::processContactMessage(const std::string &contactId, const BinaryData &data)
 {
-   Peer *peer = findPeer(peerId);
-   assert(peer);
+   Peer *peer = contact(contactId);
    if (!peer) {
-      SPDLOG_LOGGER_CRITICAL(logger_, "can't find peer '{}'", peerId);
+      SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", contactId);
       return;
    }
 
    if (peer->state == State::Blacklisted) {
-      SPDLOG_LOGGER_DEBUG(logger_, "ignoring message from blacklisted peer '{}'", peerId);
+      SPDLOG_LOGGER_DEBUG(logger_, "ignoring message from blacklisted peer '{}'", contactId);
       return;
    }
 
-   Message message;
-   bool result = message.ParseFromArray(data.getPtr(), int(data.getSize()));
-   if (!result) {
-      blockPeer("can't parse OTC message", peer);
-      return;
-   }
-
-   switch (message.data_case()) {
-      case Message::kBuyerOffers:
-         processBuyerOffers(peer, message.buyer_offers());
-         return;
-      case Message::kSellerOffers:
-         processSellerOffers(peer, message.seller_offers());
-         return;
-      case Message::kBuyerAccepts:
-         processBuyerAccepts(peer, message.buyer_accepts());
-         return;
-      case Message::kSellerAccepts:
-         processSellerAccepts(peer, message.seller_accepts());
-         return;
-      case Message::kBuyerAcks:
-         processBuyerAcks(peer, message.buyer_acks());
-         return;
-      case Message::kClose:
-         processClose(peer, message.close());
-         return;
-      case Message::DATA_NOT_SET:
-         blockPeer("unknown or empty OTC message", peer);
-         return;
-   }
-
-   SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
+   processPeerMessage(peer, data);
 }
 
 void OtcClient::processPbMessage(const std::string &data)
@@ -451,6 +520,8 @@ void OtcClient::processPbMessage(const std::string &data)
       SPDLOG_LOGGER_ERROR(logger_, "can't parse message from PB");
       return;
    }
+
+   SPDLOG_LOGGER_DEBUG(logger_, "process PB message: {}", ProtobufUtils::toJsonCompact(response));
 
    switch (response.data_case()) {
       case ProxyTerminalPb::Response::kStartOtc:
@@ -465,6 +536,66 @@ void OtcClient::processPbMessage(const std::string &data)
    }
 
    SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
+}
+
+void OtcClient::processPublicMessage(QDateTime timestamp, const std::string &contactId, const BinaryData &data)
+{
+   assert(!ownContactId_.empty());
+   if (contactId == ownContactId_) {
+      return;
+   }
+
+   Otc::PublicMessage msg;
+   bool result = msg.ParseFromArray(data.getPtr(), int(data.getSize()));
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "parsing public OTC message failed");
+      return;
+   }
+
+   switch (msg.data_case()) {
+      case Otc::PublicMessage::kRequest:
+         processPublicRequest(timestamp, contactId, msg.request());
+         return;
+      case Otc::PublicMessage::kClose:
+         processPublicClose(timestamp, contactId, msg.close());
+         return;
+      case Otc::PublicMessage::kPrivateMessage:
+         processPublicPrivateMessage(timestamp, contactId, msg.private_message());
+         return;
+      case Otc::PublicMessage::DATA_NOT_SET:
+         SPDLOG_LOGGER_ERROR(logger_, "invalid public request detected");
+         return;
+   }
+
+   SPDLOG_LOGGER_CRITICAL(logger_, "unknown public message was detected!");
+}
+
+void OtcClient::processPrivateMessage(QDateTime timestamp, const std::string &contactId, bool isResponse, const BinaryData &data)
+{
+   if (isResponse) {
+      if (!ownRequest_) {
+         SPDLOG_LOGGER_ERROR(logger_, "response is not expected");
+         return;
+      }
+
+      auto peer = response(contactId);
+      if (!peer) {
+         auto result = responseMap_.emplace(contactId, Peer(contactId, PeerType::Response));
+         peer = &result.first->second;
+      }
+
+      processPeerMessage(peer, data);
+      emit publicUpdated();
+      return;
+   }
+
+   auto peer = request(contactId);
+   if (!peer) {
+      SPDLOG_LOGGER_ERROR(logger_, "request is not expected");
+      return;
+   }
+
+   processPeerMessage(peer, data);
 }
 
 void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason)
@@ -533,7 +664,46 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
    }
 }
 
-void OtcClient::processBuyerOffers(Peer *peer, const Message_BuyerOffers &msg)
+void OtcClient::processPeerMessage(Peer *peer, const BinaryData &data)
+{
+   ContactMessage message;
+   bool result = message.ParseFromArray(data.getPtr(), int(data.getSize()));
+   if (!result) {
+      blockPeer("can't parse OTC message", peer);
+      return;
+   }
+
+   switch (message.data_case()) {
+      case ContactMessage::kBuyerOffers:
+         processBuyerOffers(peer, message.buyer_offers());
+         return;
+      case ContactMessage::kSellerOffers:
+         processSellerOffers(peer, message.seller_offers());
+         return;
+      case ContactMessage::kBuyerAccepts:
+         processBuyerAccepts(peer, message.buyer_accepts());
+         return;
+      case ContactMessage::kSellerAccepts:
+         processSellerAccepts(peer, message.seller_accepts());
+         return;
+      case ContactMessage::kBuyerAcks:
+         processBuyerAcks(peer, message.buyer_acks());
+         return;
+      case ContactMessage::kClose:
+         processClose(peer, message.close());
+         return;
+      case ContactMessage::kQuoteResponse:
+         processQuoteResponse(peer, message.quote_response());
+         return;
+      case ContactMessage::DATA_NOT_SET:
+         blockPeer("unknown or empty OTC message", peer);
+         return;
+   }
+
+   SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
+}
+
+void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers &msg)
 {
    if (!isValidOffer(msg.offer())) {
       blockPeer("invalid offer", peer);
@@ -580,7 +750,7 @@ void OtcClient::processBuyerOffers(Peer *peer, const Message_BuyerOffers &msg)
    }
 }
 
-void OtcClient::processSellerOffers(Peer *peer, const Message_SellerOffers &msg)
+void OtcClient::processSellerOffers(Peer *peer, const ContactMessage_SellerOffers &msg)
 {
    if (!isValidOffer(msg.offer())) {
       blockPeer("invalid offer", peer);
@@ -621,7 +791,7 @@ void OtcClient::processSellerOffers(Peer *peer, const Message_SellerOffers &msg)
    }
 }
 
-void OtcClient::processBuyerAccepts(Peer *peer, const Message_BuyerAccepts &msg)
+void OtcClient::processBuyerAccepts(Peer *peer, const ContactMessage_BuyerAccepts &msg)
 {
    if (peer->state != State::OfferSent || peer->offer.ourSide != otc::Side::Sell) {
       blockPeer("unexpected BuyerAccepts message, should be in OfferSent state and be seller", peer);
@@ -642,7 +812,7 @@ void OtcClient::processBuyerAccepts(Peer *peer, const Message_BuyerAccepts &msg)
    sendSellerAccepts(peer);
 }
 
-void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &msg)
+void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAccepts &msg)
 {
    if (msg.offer().price() != peer->offer.price || msg.offer().amount() != peer->offer.amount) {
       blockPeer("wrong accepted price or amount in SellerAccepts message", peer);
@@ -667,15 +837,16 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
    }
    peer->payinTxIdFromSeller = BinaryData(msg.payin_tx_id());
 
-   createRequests(settlementId, *peer, [this, settlementId, offer = peer->offer, peerId = peer->peerId](OtcClientDeal &&deal) {
-      if (!deal.success) {
-         SPDLOG_LOGGER_ERROR(logger_, "creating pay-out sign request fails: {}", deal.errorMsg);
+   createRequests(settlementId, peer, [this, peer, settlementId, offer = peer->offer
+      , handle = peer->validityFlag.handle()] (OtcClientDeal &&deal)
+   {
+      if (handle.isValid()) {
+         SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
          return;
       }
 
-      auto peer = findPeer(peerId);
-      if (!peer) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+      if (!deal.success) {
+         SPDLOG_LOGGER_ERROR(logger_, "creating pay-out sign request fails: {}", deal.errorMsg);
          return;
       }
 
@@ -692,7 +863,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
       auto unsignedPayout = deal.payout.serializeState();
       deals_.emplace(settlementId, std::make_unique<OtcClientDeal>(std::move(deal)));
 
-      Message msg;
+      ContactMessage msg;
       msg.mutable_buyer_acks()->set_settlement_id(settlementId.toBinStr());
       send(peer, msg);
 
@@ -707,16 +878,16 @@ void OtcClient::processSellerAccepts(Peer *peer, const Message_SellerAccepts &ms
       d->set_auth_address_buyer(peer->ourAuthPubKey.toBinStr());
       d->set_auth_address_seller(peer->authPubKey.toBinStr());
       d->set_unsigned_payout(unsignedPayout.toBinStr());
-      d->set_chat_id_buyer(currentUserId_);
-      d->set_chat_id_seller(peer->peerId);
+      d->set_chat_id_buyer(ownContactId_);
+      d->set_chat_id_seller(peer->contactId);
       emit sendPbMessage(request.SerializeAsString());
 
-      *peer = Peer(peer->peerId);
-      emit peerUpdated(peer->peerId);
+      *peer = Peer(peer->contactId, peer->type);
+      emit peerUpdated(peer);
    });
 }
 
-void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
+void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg)
 {
    if (peer->state != State::SentPayinInfo || peer->offer.ourSide != otc::Side::Sell) {
       blockPeer("unexpected BuyerAcks message, should be in SentPayinInfo state and be seller", peer);
@@ -742,22 +913,38 @@ void OtcClient::processBuyerAcks(Peer *peer, const Message_BuyerAcks &msg)
    d->set_auth_address_buyer(peer->authPubKey.toBinStr());
    d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
    d->set_unsigned_payout(deal->payout.serializeState().toBinStr());
-   d->set_chat_id_buyer(currentUserId_);
-   d->set_chat_id_seller(peer->peerId);
+   d->set_chat_id_buyer(ownContactId_);
+   d->set_chat_id_seller(peer->contactId);
    emit sendPbMessage(request.SerializeAsString());
 
-   *peer = Peer(peer->peerId);
-   emit peerUpdated(peer->peerId);
+   *peer = Peer(peer->contactId, peer->type);
+   emit peerUpdated(peer);
 }
 
-void OtcClient::processClose(Peer *peer, const Message_Close &msg)
+void OtcClient::processClose(Peer *peer, const ContactMessage_Close &msg)
 {
    switch (peer->state) {
+      case State::QuoteSent:
+      case State::QuoteRecv:
       case State::OfferSent:
-      case State::OfferRecv:
-         *peer = Peer(peer->peerId);
-         emit peerUpdated(peer->peerId);
+      case State::OfferRecv: {
+         if (peer->type == PeerType::Response) {
+            SPDLOG_LOGGER_DEBUG(logger_, "remove active response because peer have sent close message");
+            responseMap_.erase(peer->contactId);
+            updatePublicLists();
+            return;
+         }
+
+         Peer newPeer(peer->contactId, peer->type);
+         // preserve original request for quote requests (required only for public OTC)
+         newPeer.request = std::move(peer->request);
+         *peer = std::move(newPeer);
+         if (peer->type != PeerType::Contact) {
+            updatePublicLists();
+         }
+         emit peerUpdated(peer);
          break;
+      }
 
       case State::Idle:
       case State::WaitPayinInfo:
@@ -771,6 +958,57 @@ void OtcClient::processClose(Peer *peer, const Message_Close &msg)
    }
 }
 
+void OtcClient::processQuoteResponse(Peer *peer, const ContactMessage_QuoteResponse &msg)
+{
+   if (!ownRequest_) {
+      SPDLOG_LOGGER_ERROR(logger_, "own request is not available");
+      return;
+   }
+
+   changePeerState(peer, State::QuoteRecv);
+   peer->response.ourSide = otc::switchSide(otc::Side(msg.sender_side()));
+   copyRange(msg.price(), &peer->response.price);
+   copyRange(msg.amount(), &peer->response.amount);
+
+   updatePublicLists();
+}
+
+void OtcClient::processPublicRequest(QDateTime timestamp, const std::string &contactId, const PublicMessage_Request &msg)
+{
+   auto range = otc::RangeType(msg.range());
+   if (range < otc::firstRangeValue(params_.env) || range > otc::lastRangeValue(params_.env)) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid range");
+      return;
+   }
+
+   requestMap_.erase(contactId);
+   auto result = requestMap_.emplace(contactId, Peer(contactId, PeerType::Request));
+   auto peer = &result.first->second;
+
+   peer->request.ourSide = otc::switchSide(otc::Side(msg.sender_side()));
+   peer->request.rangeType = range;
+   peer->request.timestamp = timestamp;
+
+   updatePublicLists();
+}
+
+void OtcClient::processPublicClose(QDateTime timestamp, const std::string &contactId, const PublicMessage_Close &msg)
+{
+   requestMap_.erase(contactId);
+
+   // This will remove everything when remote peer pulls public request.
+   // We could keep current shield and show that public request was pulled instead.
+   responseMap_.erase(contactId);
+
+   updatePublicLists();
+}
+
+void OtcClient::processPublicPrivateMessage(QDateTime timestamp, const std::string &contactId, const PublicMessage_PrivateMessage &msg)
+{
+   // FIXME: Remove this and send messages directly
+   processPrivateMessage(timestamp, contactId, msg.is_response(), msg.data());
+}
+
 void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &response)
 {
    auto it = waitSettlementIds_.find(response.request_id());
@@ -778,20 +1016,27 @@ void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &resp
       SPDLOG_LOGGER_ERROR(logger_, "unexpected StartOtc response: can't find request");
       return;
    }
-   Peer peer = std::move(it->second);
+   auto handle = std::move(it->second.handle);
+   auto peer = it->second.peer;
    waitSettlementIds_.erase(it);
 
    const auto settlementId = BinaryData(response.settlement_id());
 
-   createRequests(settlementId, peer, [this, settlementId, offer = peer.offer, peerId = peer.peerId](OtcClientDeal &&deal) {
-      if (!deal.success) {
-         SPDLOG_LOGGER_ERROR(logger_, "creating pay-in sign request fails: {}", deal.errorMsg);
+   if (handle.isValid()) {
+      SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
+      return;
+   }
+
+   createRequests(settlementId, peer, [this, peer, settlementId, offer = peer->offer
+      , handle = peer->validityFlag.handle()](OtcClientDeal &&deal)
+   {
+      if (handle.isValid()) {
+         SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
          return;
       }
 
-      auto peer = findPeer(peerId);
-      if (!peer) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", peerId);
+      if (!deal.success) {
+         SPDLOG_LOGGER_ERROR(logger_, "creating pay-in sign request fails: {}", deal.errorMsg);
          return;
       }
 
@@ -807,7 +1052,7 @@ void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &resp
 
       auto payinTxId = deal.payin.txId();
 
-      Message msg;
+      ContactMessage msg;
       auto d = msg.mutable_seller_accepts();
       copyOffer(peer->offer, d->mutable_offer());
       d->set_settlement_id(settlementId.toBinStr());
@@ -920,45 +1165,63 @@ bool OtcClient::verifyOffer(const Offer &offer) const
 
 void OtcClient::blockPeer(const std::string &reason, Peer *peer)
 {
-   SPDLOG_LOGGER_ERROR(logger_, "block broken peer '{}': {}, current state: {}"
-      , peer->peerId, reason, toString(peer->state));
-   peer->state = State::Blacklisted;
-   emit peerUpdated(peer->peerId);
+   SPDLOG_LOGGER_ERROR(logger_, "block broken peer '{}': {}", peer->toString(), reason);
+   changePeerState(peer, State::Blacklisted);
+   emit peerUpdated(peer);
 }
 
-Peer *OtcClient::findPeer(const std::string &peerId)
+void OtcClient::send(Peer *peer, const ContactMessage &msg)
 {
-   return const_cast<Peer*>(peer(peerId));
-}
-
-void OtcClient::send(Peer *peer, const Message &msg)
-{
-   assert(!peer->peerId.empty());
-   emit sendMessage(peer->peerId, msg.SerializeAsString());
-}
-
-void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer, const OtcClientDealCb &cb)
-{
-   assert(peer.authPubKey.getSize() == kPubKeySize);
-   assert(settlementId.getSize() == kSettlementIdSize);
-   if (peer.offer.ourSide == bs::network::otc::Side::Buy) {
-      assert(peer.payinTxIdFromSeller.getSize() == kTxHashSize);
+   assert(!peer->contactId.empty());
+   switch (peer->type) {
+      case PeerType::Contact:
+         emit sendContactMessage(peer->contactId, msg.SerializeAsString());
+         break;
+      case PeerType::Request:
+      case PeerType::Response: {
+         PublicMessage publicMessage;
+         auto d = publicMessage.mutable_private_message();
+         d->set_data(msg.SerializeAsString());
+         d->set_receiver_id(peer->contactId);
+         d->set_is_response(peer->type == PeerType::Request);
+         emit sendPublicMessage(publicMessage.SerializeAsString());
+         break;
+      }
    }
-   assert(!peer.offer.authAddress.empty());
+}
 
-   auto leaf = findSettlementLeaf(peer.offer.authAddress);
+void OtcClient::createRequests(const BinaryData &settlementId, Peer *peer, const OtcClientDealCb &cb)
+{
+   assert(peer->authPubKey.getSize() == kPubKeySize);
+   assert(settlementId.getSize() == kSettlementIdSize);
+   if (peer->offer.ourSide == bs::network::otc::Side::Buy) {
+      assert(peer->payinTxIdFromSeller.getSize() == kTxHashSize);
+   }
+   assert(!peer->offer.authAddress.empty());
+
+   auto leaf = findSettlementLeaf(peer->offer.authAddress);
    if (!leaf) {
       cb(OtcClientDeal::error("can't find settlement leaf"));
       return;
    }
 
-   leaf->setSettlementID(settlementId, [this, settlementId, peer, cb](bool result) {
+   leaf->setSettlementID(settlementId, [this, settlementId, peer, cb, handle = peer->validityFlag.handle()](bool result) {
+      if (handle.isValid()) {
+         SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
+         return;
+      }
+
       if (!result) {
          cb(OtcClientDeal::error("setSettlementID failed"));
          return;
       }
 
-      auto cbFee = [this, cb, peer, settlementId](float feePerByte) {
+      auto cbFee = [this, cb, peer, settlementId, handle](float feePerByte) {
+         if (handle.isValid()) {
+            SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
+            return;
+         }
+
          if (feePerByte < 1) {
             cb(OtcClientDeal::error("invalid fees"));
             return;
@@ -970,13 +1233,18 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
             return;
          }
 
-         auto targetHdWallet = walletsMgr_->getHDWalletById(peer.offer.hdWalletId);
+         auto targetHdWallet = walletsMgr_->getHDWalletById(peer->offer.hdWalletId);
          if (!targetHdWallet) {
-            cb(OtcClientDeal::error(fmt::format("can't find wallet: {}", peer.offer.hdWalletId)));
+            cb(OtcClientDeal::error(fmt::format("can't find wallet: {}", peer->offer.hdWalletId)));
             return;
          }
 
-         auto cbSettlAddr = [this, cb, peer, feePerByte, settlementId, targetHdWallet](const bs::Address &settlAddr) {
+         auto cbSettlAddr = [this, cb, peer, feePerByte, settlementId, targetHdWallet, handle](const bs::Address &settlAddr) {
+            if (handle.isValid()) {
+               SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
+               return;
+            }
+
             if (settlAddr.isNull()) {
                cb(OtcClientDeal::error("invalid settl addr"));
                return;
@@ -987,21 +1255,26 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
             const bool confirmedOnly = true;
             auto transaction = std::make_shared<TransactionData>(changedCallback, logger_, isSegWitInputsOnly, confirmedOnly);
 
-            auto resetInputsCb = [this, cb, peer, transaction, settlAddr, feePerByte, settlementId, targetHdWallet]() {
+            auto resetInputsCb = [this, cb, peer, transaction, settlAddr, feePerByte, settlementId, targetHdWallet, handle]() {
                // resetInputsCb will be destroyed when returns, create one more callback to hold variables
-               QMetaObject::invokeMethod(this, [this, cb, peer, transaction, settlAddr, feePerByte, settlementId, targetHdWallet] {
-                  const double amount = peer.offer.amount / BTCNumericTypes::BalanceDivider;
+               QMetaObject::invokeMethod(this, [this, cb, peer, transaction, settlAddr, feePerByte, settlementId, targetHdWallet, handle] {
+                  if (handle.isValid()) {
+                     SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
+                     return;
+                  }
+
+                  const double amount = peer->offer.amount / BTCNumericTypes::BalanceDivider;
 
                   OtcClientDeal result;
                   result.settlementId = settlementId;
                   result.settlementAddr = settlAddr;
-                  result.ourAuthAddress = peer.offer.authAddress;
-                  result.cpPubKey = peer.authPubKey;
-                  result.amount = peer.offer.amount;
-                  result.price = peer.offer.price;
+                  result.ourAuthAddress = peer->offer.authAddress;
+                  result.cpPubKey = peer->authPubKey;
+                  result.amount = peer->offer.amount;
+                  result.price = peer->offer.price;
                   result.hdWalletId = targetHdWallet->walletId();
 
-                  if (peer.offer.ourSide == bs::network::otc::Side::Sell) {
+                  if (peer->offer.ourSide == bs::network::otc::Side::Sell) {
                      // Seller
                      auto index = transaction->RegisterNewRecipient();
                      assert(index == 0);
@@ -1026,8 +1299,8 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
                   // Buyer
                   result.success = true;
                   result.side = otc::Side::Buy;
-                  auto outputAddr = peer.offer.recvAddress.empty() ? transaction->GetFallbackRecvAddress() : bs::Address(peer.offer.recvAddress);
-                  auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer.payinTxIdFromSeller, amount);
+                  auto outputAddr = peer->offer.recvAddress.empty() ? transaction->GetFallbackRecvAddress() : bs::Address(peer->offer.recvAddress);
+                  auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer->payinTxIdFromSeller, amount);
                   result.payout = bs::SettlementMonitor::createPayoutTXRequest(
                      payinUTXO, outputAddr, feePerByte, armory_->topBlock());
                   result.fee = int64_t(result.payout.fee);
@@ -1037,17 +1310,17 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
 
             transaction->setFeePerByte(feePerByte);
 
-            if (peer.offer.inputs.empty()) {
+            if (peer->offer.inputs.empty()) {
                transaction->setGroup(targetHdWallet->getGroup(targetHdWallet->getXBTGroupType()), armory_->topBlock(), false, resetInputsCb);
             } else {
-               transaction->setGroupAndInputs(targetHdWallet->getGroup(targetHdWallet->getXBTGroupType()), peer.offer.inputs, armory_->topBlock());
+               transaction->setGroupAndInputs(targetHdWallet->getGroup(targetHdWallet->getXBTGroupType()), peer->offer.inputs, armory_->topBlock());
                transaction->getSelectedInputs()->SetUseAutoSel(true);
                resetInputsCb();
             }
          };
 
-         const bool myKeyFirst = (peer.offer.ourSide == bs::network::otc::Side::Buy);
-         primaryHdWallet->getSettlementPayinAddress(settlementId, peer.authPubKey, cbSettlAddr, myKeyFirst);
+         const bool myKeyFirst = (peer->offer.ourSide == bs::network::otc::Side::Buy);
+         primaryHdWallet->getSettlementPayinAddress(settlementId, peer->authPubKey, cbSettlAddr, myKeyFirst);
       };
       walletsMgr_->estimatedFeePerByte(2, cbFee, this);
    });
@@ -1056,7 +1329,7 @@ void OtcClient::createRequests(const BinaryData &settlementId, const Peer &peer,
 void OtcClient::sendSellerAccepts(Peer *peer)
 {
    int requestId = genLocalUniqueId();
-   waitSettlementIds_.emplace(requestId, *peer);
+   waitSettlementIds_.emplace(requestId, SettlementIdRequest{peer, peer->validityFlag.handle()});
 
    ProxyTerminalPb::Request request;
    auto d = request.mutable_start_otc();
@@ -1094,9 +1367,9 @@ std::shared_ptr<bs::sync::hd::SettlementLeaf> OtcClient::findSettlementLeaf(cons
 void OtcClient::changePeerState(Peer *peer, bs::network::otc::State state)
 {
    SPDLOG_LOGGER_DEBUG(logger_, "changing peer '{}' state from {} to {}"
-      , peer->peerId, toString(peer->state), toString(state));
+      , peer->toString(), toString(peer->state), toString(state));
    peer->state = state;
-   emit peerUpdated(peer->peerId);
+   emit peerUpdated(peer);
 }
 
 void OtcClient::trySendSignedTxs(OtcClientDeal *deal)
@@ -1158,4 +1431,30 @@ void OtcClient::setComments(OtcClientDeal *deal)
          , bs::network::otc::toString(deal->side), UiUtils::displayPriceFX(bs::network::otc::fromCents(deal->price)).toStdString());
       leaf->setTransactionComment(signedTx, comment);
    }
+}
+
+void OtcClient::updatePublicLists()
+{
+   contacts_.clear();
+   contacts_.reserve(contactMap_.size());
+   for (auto &item : contactMap_) {
+      contacts_.push_back(&item.second);
+   }
+
+   requests_.clear();
+   requests_.reserve(requestMap_.size() + (ownRequest_ ? 1 : 0));
+   if (ownRequest_) {
+      requests_.push_back(ownRequest_.get());
+   }
+   for (auto &item : requestMap_) {
+      requests_.push_back(&item.second);
+   }
+
+   responses_.clear();
+   responses_.reserve(responseMap_.size());
+   for (auto &item : responseMap_) {
+      responses_.push_back(&item.second);
+   }
+
+   emit publicUpdated();
 }

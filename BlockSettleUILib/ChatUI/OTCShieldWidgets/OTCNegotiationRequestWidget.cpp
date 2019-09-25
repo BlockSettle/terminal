@@ -47,6 +47,7 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
 
    connect(ui_->priceSpinBoxRequest, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &OTCNegotiationRequestWidget::onChanged);
    connect(ui_->quantitySpinBox, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &OTCNegotiationRequestWidget::onChanged);
+   connect(ui_->authenticationAddressComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &OTCNegotiationRequestWidget::onChanged);
 
    ui_->sideWidget->hide();
    ui_->priceLayoutResponse->hide();
@@ -180,7 +181,10 @@ void OTCNegotiationRequestWidget::onShowXBTInputsClicked()
 
 void OTCNegotiationRequestWidget::onChanged()
 {
-   ui_->pushButtonAccept->setEnabled(ui_->priceSpinBoxRequest->value() > 0 && ui_->quantitySpinBox->value() > 0);
+   ui_->pushButtonAccept->setEnabled(ui_->priceSpinBoxRequest->value() > 0
+      && ui_->quantitySpinBox->value() > 0
+      && !ui_->authenticationAddressComboBox->currentText().isEmpty()
+   );
 }
 
 void OTCNegotiationRequestWidget::onChatRoomChanged()
