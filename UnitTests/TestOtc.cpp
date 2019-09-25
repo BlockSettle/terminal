@@ -5,6 +5,8 @@
 #include "Trading/OtcClient.h"
 #include "Wallets/SyncWalletsManager.h"
 
+using namespace bs::network;
+
 class TestPeer
 {
 public:
@@ -67,8 +69,12 @@ class TestOtc : public ::testing::Test
       peer1_.init(*env_, "test1");
       peer2_.init(*env_, "test2");
 
-      QObject::connect(peer1_.otc_.get(), &OtcClient::sendContactMessage, peer2_.otc_.get(), &OtcClient::processContactMessage);
-      QObject::connect(peer2_.otc_.get(), &OtcClient::sendContactMessage, peer1_.otc_.get(), &OtcClient::processContactMessage);
+      QObject::connect(peer1_.otc_.get(), &OtcClient::sendContactMessage, [this](const std::string &contactId, const BinaryData &data) {
+         peer2_.otc_->processContactMessage(peer1_.name_, data);
+      });
+      QObject::connect(peer2_.otc_.get(), &OtcClient::sendContactMessage, [this](const std::string &contactId, const BinaryData &data) {
+         peer1_.otc_->processContactMessage(peer2_.name_, data);
+      });
    }
 
 public:
@@ -90,4 +96,8 @@ TEST_F(TestOtc, BasicTest)
    offer.hdWalletId = peer1_.wallet_->walletId();
    offer.authAddress = peer1_.authAddress_.display();
    peer1_.otc_->sendOffer(peer1_.otc_->contact(peer2_.name_), offer);
+
+   auto remotePeer1 = peer2_.otc_->contact(peer1_.name_);
+   ASSERT_TRUE(remotePeer1);
+   ASSERT_TRUE(remotePeer1->state == otc::State::OfferRecv);
 }
