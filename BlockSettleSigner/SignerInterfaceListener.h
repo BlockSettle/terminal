@@ -72,7 +72,7 @@ public:
    void setReloadWalletsCb(bs::signer::RequestId reqId, const std::function<void()> &cb) {
       cbReloadWallets_[reqId] = cb;
    }
-   void setChangePwCb(bs::signer::RequestId reqId, const std::function<void(bool)> &cb) {
+   void setChangePwCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
       cbChangePwReqs_[reqId] = cb;
    }
    void setCreateHDWalletCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
@@ -144,7 +144,7 @@ private:
    std::map<bs::signer::RequestId
       , std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)>>   cbDecryptNode_;
    std::map<bs::signer::RequestId, std::function<void()>>   cbReloadWallets_;
-   std::map<bs::signer::RequestId, std::function<void(bool success)>> cbChangePwReqs_;
+   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbChangePwReqs_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbCreateHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbDeleteHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbAutoSignReqs_;

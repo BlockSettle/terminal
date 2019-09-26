@@ -73,7 +73,7 @@ public:
 
    void changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , const bs::wallet::PasswordData &oldPass, bool addNew, bool removeOld
-      , const std::function<void(bool)> &);
+      , const std::function<void(bs::error::ErrorCode errorCode)> &);
 
    void signOfflineTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &);

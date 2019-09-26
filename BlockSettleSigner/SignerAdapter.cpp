@@ -206,7 +206,7 @@ void SignerAdapter::deleteWallet(const std::string &rootWalletId, const std::fun
 
 void SignerAdapter::changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
    , const bs::wallet::PasswordData &oldPass, bool addNew, bool removeOld
-   , const std::function<void(bool)> &cb)
+   , const std::function<void(bs::error::ErrorCode errorCode)> &cb)
 {
    if (walletId.empty()) {
       logger_->error("[HeadlessContainer] no walletId for ChangePassword");
