@@ -64,7 +64,7 @@ protected:
 
 public slots:
    void onProcessOtcPbMessage(const std::string& data);
-   void onSendOtcMessage(const std::string& partyId, const BinaryData& data);
+   void onSendOtcMessage(const std::string& contactId, const BinaryData& data);
    void onSendOtcPublicMessage(const BinaryData& data);
 
    void onNewChatMessageTrayNotificationClicked(const QString& partyId);

@@ -1,5 +1,6 @@
 #include "ChatWidget.h"
 
+#include <spdlog/spdlog.h>
 #include <QTreeView>
 #include <QFrame>
 #include <QAbstractScrollArea>
@@ -335,9 +336,14 @@ void ChatWidget::onProcessOtcPbMessage(const std::string& data)
    stateCurrent_->onProcessOtcPbMessage(data);
 }
 
-void ChatWidget::onSendOtcMessage(const std::string& partyId, const BinaryData& data)
+void ChatWidget::onSendOtcMessage(const std::string& contactId, const BinaryData& data)
 {
-   stateCurrent_->onSendOtcMessage(partyId, OtcUtils::serializeMessage(data));
+   auto clientParty = chatClientServicePtr_->getClientPartyModelPtr()->getClientPartyByUserHash(contactId);
+   if (!clientParty || !clientParty->isPrivateStandard()) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "can't find valid private party to send OTC message");
+      return;
+   }
+   stateCurrent_->onSendOtcMessage(clientParty->id(), OtcUtils::serializeMessage(data));
 }
 
 void ChatWidget::onSendOtcPublicMessage(const BinaryData &data)
