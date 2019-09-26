@@ -337,6 +337,41 @@ bool Wallet::getRBFTxOutList(const ArmoryConnection::UTXOsCb &cb) const
    return true;
 }
 
+bool Wallet::getSpendableTxOutList(std::vector<std::shared_ptr<Wallet>> &wallets, ArmoryConnection::UTXOsCb cb)
+{
+   struct Result
+   {
+      std::map<int, std::vector<UTXO>> utxosMap;
+      ArmoryConnection::UTXOsCb cb;
+      // Prevent calling callback with partial results
+      bool valid{};
+   };
+   auto result = std::make_shared<Result>();
+   result->cb = std::move(cb);
+
+   for (size_t i = 0; i < wallets.size(); ++i) {
+      const auto &wallet = wallets[i];
+      auto cbWrap = [i, result, size = wallets.size()](std::vector<UTXO> utxos) {
+         result->utxosMap.emplace(i, std::move(utxos));
+         if (result->utxosMap.size() != size || !result->valid) {
+            return;
+         }
+         std::vector<UTXO> utxosAll;
+         for (auto &item : result->utxosMap) {
+            utxosAll.insert(utxosAll.end(), std::make_move_iterator(item.second.begin())
+               , std::make_move_iterator(item.second.end()));
+         }
+         result->cb(utxosAll);
+      };
+      bool status = wallet->getSpendableTxOutList(cbWrap, UINT64_MAX);
+      if (!status) {
+         return false;
+      }
+   }
+   result->valid = true;
+   return true;
+}
+
 void Wallet::setWCT(WalletCallbackTarget *wct)
 {
    wct_ = wct;

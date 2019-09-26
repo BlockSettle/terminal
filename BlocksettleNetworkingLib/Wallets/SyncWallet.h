@@ -187,6 +187,8 @@ namespace bs {
          virtual bool getSpendableZCList(const ArmoryConnection::UTXOsCb &) const;
          virtual bool getRBFTxOutList(const ArmoryConnection::UTXOsCb &) const;
 
+         static bool getSpendableTxOutList(std::vector<std::shared_ptr<Wallet>> &wallets, ArmoryConnection::UTXOsCb);
+
          //custom ACT
          template<class U> void setCustomACT(
             const std::shared_ptr<ArmoryConnection> &armory)
