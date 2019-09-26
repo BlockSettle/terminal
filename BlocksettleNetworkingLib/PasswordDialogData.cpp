@@ -9,6 +9,46 @@
 using namespace google::protobuf;
 using namespace Blocksettle::Communication;
 
+#define DIALOG_KEY_INIT(KEYNAME) const bs::sync::dialog::keys::Key bs::sync::PasswordDialogData::KEYNAME = bs::sync::dialog::keys::Key(#KEYNAME);
+
+DIALOG_KEY_INIT(AutoSignCategory)
+DIALOG_KEY_INIT(AuthAddress)
+DIALOG_KEY_INIT(DeliveryUTXOVerified)
+DIALOG_KEY_INIT(DialogType)
+DIALOG_KEY_INIT(Duration)
+DIALOG_KEY_INIT(InputAmount)
+DIALOG_KEY_INIT(InputsListVisible)
+DIALOG_KEY_INIT(LotSize)
+DIALOG_KEY_INIT(Market)
+DIALOG_KEY_INIT(NetworkFee)
+DIALOG_KEY_INIT(PayOutRevokeType)
+DIALOG_KEY_INIT(PayOutType)
+DIALOG_KEY_INIT(Price)
+DIALOG_KEY_INIT(Product)
+DIALOG_KEY_INIT(FxProduct)
+DIALOG_KEY_INIT(ProductGroup)
+DIALOG_KEY_INIT(Quantity)
+DIALOG_KEY_INIT(RecipientsListVisible)
+DIALOG_KEY_INIT(RequesterAuthAddress)
+DIALOG_KEY_INIT(RequesterAuthAddressVerified)
+DIALOG_KEY_INIT(ResponderAuthAddress)
+DIALOG_KEY_INIT(ResponderAuthAddressVerified)
+DIALOG_KEY_INIT(ReturnAmount)
+DIALOG_KEY_INIT(Security)
+DIALOG_KEY_INIT(SettlementAddress)
+DIALOG_KEY_INIT(SettlementId)
+DIALOG_KEY_INIT(SettlementPayInVisible)
+DIALOG_KEY_INIT(SettlementPayOutVisible)
+DIALOG_KEY_INIT(Side)
+DIALOG_KEY_INIT(SigningAllowed)
+DIALOG_KEY_INIT(Title)
+DIALOG_KEY_INIT(TotalSpentVisible)
+DIALOG_KEY_INIT(TotalValue)
+DIALOG_KEY_INIT(TransactionAmount)
+DIALOG_KEY_INIT(TxInputProduct)
+DIALOG_KEY_INIT(WalletId)
+DIALOG_KEY_INIT(XBT)
+
 Any toPbVariant(const QVariant& v)
 {
    Any any;

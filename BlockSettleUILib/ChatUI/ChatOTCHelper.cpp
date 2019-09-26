@@ -194,14 +194,14 @@ void ChatOTCHelper::onMessageArrived(const Chat::MessagePtrList& messagePtr)
             otcClient_->processPublicMessage(msg->timestamp(), msg->senderHash(), data);
          }
       } else if (msg->partyMessageState() == Chat::SENT && msg->senderHash() != otcClient_->ownContactId()) {
-         auto connIt = connectedContacts_.find(msg->partyId());
+         auto connIt = connectedContacts_.find(msg->senderHash());
          if (connIt == connectedContacts_.end()) {
             continue;
          }
 
          auto data = OtcUtils::deserializeMessage(msg->messageText());
          if (!data.isNull()) {
-            otcClient_->processContactMessage(msg->partyId(), data);
+            otcClient_->processContactMessage(msg->senderHash(), data);
          }
       }
    }
