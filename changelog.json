@@ -1,7 +1,27 @@
 {
-   "latest_version": "0.22.3",
-   "release_date": "25 Sep 2019",
+   "latest_version": "0.22.4",
+   "release_date": "26 Sep 2019",
    "changes": [
+      {
+         "version_string": "0.22.4",
+         "previous_version": "0.22.3",
+         "release_date": "26 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Enable LTO for release builds",
+            "Auth eid wallet encryption ui fixes (#406)",
+            "PasswordDialogData refactoring (#405)",
+            "Share wallet logic between OTC and RFQ UI",
+            "TXId for unsigned TX for dealer's pay-in ( BST-2238 )",
+            "PasswordDialogData refactoring (#1392)",
+            "Public OTC (#1387)"
+         ],
+         "bug_fixes": [
+            "Fixes for P2P OTC"
+         ],
+         "revision": "435c4bec",
+         "common_revision": "48420287"
+      },
       {
          "version_string": "0.22.3",
          "previous_version": "0.22.2",
