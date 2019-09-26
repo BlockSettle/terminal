@@ -383,7 +383,7 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
       cb(result);
       return;
    }
-      
+
    result.highestExtIndex = wallet->getExtAddressCount();
    result.highestIntIndex = wallet->getIntAddressCount();
 
@@ -391,12 +391,12 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
    for (const auto &addr : wallet->getUsedAddressList()) {
       const auto index = wallet->getAddressIndex(addr);
       const auto comment = wallet->getAddressComment(addr);
-      const auto addrEntry = wallet->getAddressEntryForAddr(addr.prefixed());
+      result.addresses.push_back({ index, addr, comment });
    }
 
    for (const auto &addr : wallet->getPooledAddressList()) {
       const auto index = wallet->getAddressIndex(addr);
-      const auto addrEntry = wallet->getAddressEntryForAddr(addr.prefixed());
+      result.addrPool.push_back({ index, addr, {} });
    }
 
    for (const auto &txComment : wallet->getAllTxComments()) {

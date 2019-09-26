@@ -1081,7 +1081,7 @@ void ArmoryConnection::processDelayedZC()
       while (it != waitingEntries.end()) {
          auto &waitingEntry = it->second;
          const auto timeDiff = currentTime - waitingEntry.recvTime;
-         if (timeDiff < std::chrono::milliseconds(2300)) { // can be tuned later
+         if (timeDiff < std::chrono::milliseconds(300)) { // can be tuned later
             ++it;
             continue;
          }
@@ -1102,7 +1102,7 @@ void ArmoryConnection::processDelayedZC()
          }
 
          notifiedEntries.emplace(newEntry.txHash, newEntry);
-         addToMaintQueue([newEntry](ArmoryCallbackTarget *tgt) {
+         addToMaintQueue([newEntry, this](ArmoryCallbackTarget *tgt) {
             tgt->onZCReceived({newEntry});
          });
 
@@ -1113,32 +1113,38 @@ void ArmoryConnection::processDelayedZC()
 
 void ArmoryConnection::onZCsReceived(const std::vector<std::shared_ptr<ClientClasses::LedgerEntry>> &entries)
 {
-   logger_->debug("[ArmoryConnection::onZCsReceived] {} entries", entries.size());
-
-   std::vector<bs::TXEntry> immediates;
    auto newEntries = bs::TXEntry::fromLedgerEntries(entries);
+   std::vector<bs::TXEntry> immediates;
+   std::map<std::string, std::set<BinaryData>> immediateHashes;
 
-   std::unique_lock<std::mutex> lock(zcMutex_);
+   {
+      std::unique_lock<std::mutex> lock(zcMutex_);
+      for (auto &newEntry : newEntries) {
+         std::string mergedWalletId = getMergedWalletId(newEntry.walletId);
+         auto &waitingEntries = zcWaitingEntries_[mergedWalletId];
+         newEntry.walletId = mergedWalletId;
 
-   for (auto &newEntry : newEntries) {
-      std::string mergedWalletId = getMergedWalletId(newEntry.walletId);
-      auto &waitingEntries = zcWaitingEntries_[mergedWalletId];
-      newEntry.walletId = mergedWalletId;
-
-      auto it = waitingEntries.find(newEntry.txHash);
-
-      if (it == waitingEntries.end()) {
-         waitingEntries.emplace(newEntry.txHash, newEntry);
-         continue;
+         auto it = waitingEntries.find(newEntry.txHash);
+         if (it != waitingEntries.end()) {
+            auto mergedEntry = it->second;
+            mergedEntry.merge(newEntry);
+            it->second = mergedEntry;
+         } else {
+            waitingEntries[newEntry.txHash] = newEntry;
+            immediateHashes[mergedWalletId].insert(newEntry.txHash);
+         }
       }
 
-      auto mergedEntry = std::move(it->second);
-      waitingEntries.erase(it);
-
-      auto &notifiedEntries = zcNotifiedEntries_[mergedWalletId];
-      mergedEntry.merge(newEntry);
-      notifiedEntries.emplace(mergedEntry.txHash, mergedEntry);
-      immediates.push_back(std::move(mergedEntry));
+      for (const auto &imm : immediateHashes) {
+         auto &waitingEntries = zcWaitingEntries_[imm.first];
+         for (const auto &hash : imm.second) {
+            auto it = waitingEntries.find(hash);
+            if (it != waitingEntries.end()) {
+               immediates.push_back(it->second);
+               waitingEntries.erase(it);
+            }
+         }
+      }
    }
 
    if (!immediates.empty()) {

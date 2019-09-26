@@ -34,7 +34,7 @@ SelectedTransactionInputs::SelectedTransactionInputs(const std::vector<UTXO> &ut
    , isSegWitInputsOnly_(false)
    , confirmedOnly_(false)
    , selectionChanged_(selectionChanged)
-   , useAutoSel_(false)
+   , useAutoSel_(true)
 {
    SetFixedInputs(utxos);
 }
