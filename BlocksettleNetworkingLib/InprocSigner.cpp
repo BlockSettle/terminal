@@ -330,7 +330,7 @@ void InprocSigner::syncHDWallet(const std::string &id, const std::function<void(
    if (hdWallet) {
       for (const auto &group : hdWallet->getGroups()) {
          bs::sync::HDWalletData::Group groupData;
-         groupData.type = static_cast<bs::hd::CoinType>(group->index());
+         groupData.type = static_cast<bs::hd::CoinType>(group->index() | bs::hd::hardFlag);
          groupData.extOnly = group->isExtOnly();
 
          if (groupData.type == bs::hd::CoinType::BlockSettle_Auth) {
@@ -383,7 +383,7 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
       cb(result);
       return;
    }
-      
+
    result.highestExtIndex = wallet->getExtAddressCount();
    result.highestIntIndex = wallet->getIntAddressCount();
 
@@ -391,12 +391,12 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
    for (const auto &addr : wallet->getUsedAddressList()) {
       const auto index = wallet->getAddressIndex(addr);
       const auto comment = wallet->getAddressComment(addr);
-      result.addresses.push_back({index, addr, comment});
+      result.addresses.push_back({ index, addr, comment });
    }
 
    for (const auto &addr : wallet->getPooledAddressList()) {
       const auto index = wallet->getAddressIndex(addr);
-      result.addrPool.push_back({ index, addr, ""});
+      result.addrPool.push_back({ index, addr, {} });
    }
 
    for (const auto &txComment : wallet->getAllTxComments()) {
@@ -451,6 +451,26 @@ void InprocSigner::syncNewAddresses(const std::string &walletId
       result.push_back({ wallet->synchronizeUsedAddressChain(in).first, in });
    }
 
+   if (cb) {
+      cb(result);
+   }
+}
+
+void InprocSigner::getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &inputs
+   , const std::function<void(const std::map<bs::Address, BinaryData> &)> &cb)
+{
+   std::map<bs::Address, BinaryData> result;
+   for (const auto &input : inputs) {
+      const auto wallet = walletsMgr_->getWalletById(input.first);
+      if (wallet) {
+         for (const auto &addr : input.second) {
+            const auto addrEntry = wallet->getAddressEntryForAddr(addr.prefixed());
+            if (addrEntry) {
+               result[addr] = addrEntry->getPreimage();
+            }
+         }
+      }
+   }
    if (cb) {
       cb(result);
    }

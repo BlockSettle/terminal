@@ -109,13 +109,15 @@ public:
 
    virtual bs::signer::RequestId GetInfo(const std::string &rootWalletId) = 0;
 
-   virtual bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog
+   virtual bs::signer::RequestId customDialogRequest(bs::signer::ui::GeneralDialogType signerDialog
       , const QVariantMap &data = QVariantMap()) = 0;
 
    virtual void syncNewAddress(const std::string &walletId, const std::string &index
       , const std::function<void(const bs::Address &)> &);
    virtual void syncNewAddresses(const std::string &walletId, const std::vector<std::string> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) = 0;
+   virtual void getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &
+      , const std::function<void(const std::map<bs::Address, BinaryData> &)> &) = 0;
 
    const OpMode &opMode() const { return mode_; }
    virtual bool isReady() const { return true; }

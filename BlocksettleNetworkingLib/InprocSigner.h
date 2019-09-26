@@ -73,7 +73,7 @@ public:
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override;
    bs::signer::RequestId GetInfo(const std::string &) override;
 
-   bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType, const QVariantMap&) override { return 0; }
+   bs::signer::RequestId customDialogRequest(bs::signer::ui::GeneralDialogType, const QVariantMap&) override { return 0; }
    bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &dialogData, uint32_t dialogId = 0) override { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
@@ -89,6 +89,8 @@ public:
    void syncNewAddresses(const std::string &walletId, const std::vector<std::string> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &
       , bool persistent = true) override;
+   void getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &
+      , const std::function<void(const std::map<bs::Address, BinaryData> &)> &) override;
 
    void createSettlementWallet(const bs::Address &authAddr
       , const std::function<void(const SecureBinaryData &)> &) override;

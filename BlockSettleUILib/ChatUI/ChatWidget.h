@@ -6,6 +6,9 @@
 #include <QWidget>
 #include "ChatProtocol/ChatClientService.h"
 #include "ChatProtocol/ClientParty.h"
+#include "OtcTypes.h"
+
+class QItemSelection;
 
 class AbstractChatWidgetState;
 class AuthAddressManager;
@@ -53,15 +56,19 @@ public:
 
    std::string login(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb&);
 
+   bs::network::otc::Peer *currentPeer() const;
+
 protected:
    void showEvent(QShowEvent* e) override;
    bool eventFilter(QObject* sender, QEvent* event) override;
 
 public slots:
    void onProcessOtcPbMessage(const std::string& data);
-   void onSendOtcMessage(const std::string& partyId, const BinaryData& data);
+   void onSendOtcMessage(const std::string& contactId, const BinaryData& data);
+   void onSendOtcPublicMessage(const BinaryData& data);
 
    void onNewChatMessageTrayNotificationClicked(const QString& partyId);
+   void onUpdateOTCShield();
 
 private slots:
    void onPartyModelChanged();
@@ -81,6 +88,8 @@ private slots:
    void onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
    void onConfirmContactNewKeyData(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList, bool bForceUpdateAllUsers);
 
+   void onOtcRequestCurrentChanged(const QModelIndex &current, const QModelIndex &previous);
+
    void onContactRequestAcceptClicked(const std::string& partyId);
    void onContactRequestRejectClicked(const std::string& partyId);
    void onContactRequestSendClicked(const std::string& partyId);
@@ -89,18 +98,21 @@ private slots:
    void onNewPartyRequest(const std::string& userName);
    void onRemovePartyRequest(const std::string& partyId);
 
-   void onOtcUpdated(const std::string& partyId);
+   void onOtcUpdated(const bs::network::otc::Peer *peer);
+   void onOtcPublicUpdated();
 
    void onOtcRequestSubmit();
-   void onOtcRequestPull();
    void onOtcResponseAccept();
    void onOtcResponseUpdate();
-   void onOtcResponseReject();
+   void onOtcQuoteRequestSubmit();
+   void onOtcQuoteResponseSubmit();
+   void onOtcPullOrRejectCurrent();
 
 signals:
    // OTC
    void sendOtcPbMessage(const std::string& data);
    void chatRoomChanged();
+   void requestPrimaryWalletCreation();
 
 private:
    friend class AbstractChatWidgetState;
@@ -139,7 +151,7 @@ private:
    std::shared_ptr<OTCWindowsManager> otcWindowsManager_{};
 
    std::string ownUserId_;
-   std::string  currentPartyId_;
+   std::string currentPartyId_;
    QMap<std::string, QString> draftMessages_;
    bool bNeedRefresh_ = false;
 };

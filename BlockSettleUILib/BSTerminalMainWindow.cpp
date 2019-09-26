@@ -638,6 +638,7 @@ void BSTerminalMainWindow::InitChatView()
    //ui_->widgetChat->setCelerClient(celerConnection_);
 
    connect(ui_->tabWidget, &QTabWidget::currentChanged, this, &BSTerminalMainWindow::onTabWidgetCurrentChanged);
+   connect(ui_->widgetChat, &ChatWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
 
    if (NotificationCenter::instance() != nullptr) {
       connect(NotificationCenter::instance(), &NotificationCenter::newChatMessageClick, ui_->widgetChat, &ChatWidget::onNewChatMessageTrayNotificationClicked);
@@ -859,7 +860,7 @@ void BSTerminalMainWindow::connectSigner()
    }
 }
 
-void BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb
+bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb
    , bool reportSuccess)
 {
    if (primary && (walletsMgr_->hdWalletsCount() > 0)) {
@@ -868,7 +869,7 @@ void BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
          if (cb) {
             cb();
          }
-         return;
+         return true;
       }
       BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
          , tr("To trade through BlockSettle, you are required to have a wallet which"
@@ -881,14 +882,16 @@ void BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
                cb();
             }
          });
+         return true;
       }
-      return;
+
+      return false;
    }
 
    if (!signContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(true, applicationSettings_, this);
       if (newWalletDialog.exec() != QDialog::Accepted) {
-         return;
+         return false;
       }
 
       if (newWalletDialog.isCreate()) {
@@ -905,6 +908,20 @@ void BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
       if (ui_->widgetWallets->ImportNewWallet(reportSuccess) && cb) {
          cb();
       }
+   }
+
+   return true;
+}
+
+void BSTerminalMainWindow::onCreatePrimaryWalletRequest()
+{
+   bool result = createWallet(true, [] {});
+
+   if (!result) {
+      // Need to inform UI about rejection
+      ui_->widgetRFQ->forceCheckCondition();
+      ui_->widgetRFQReply->forceCheckCondition();
+      ui_->widgetChat->onUpdateOTCShield();
    }
 }
 
@@ -1556,17 +1573,26 @@ void BSTerminalMainWindow::InitWidgets()
    ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
       , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_, dealerUtxoAdapter_, autoSignQuoteProvider_);
 
-   auto primaryWalletCreationCb = [this]() {
-      createWallet(true, [this] {
-         QMetaObject::invokeMethod(this, [this] {
-            ui_->widgetRFQ->forceCheckCondition();
-            ui_->widgetRFQReply->forceCheckCondition();
-         });
-      });
-   };
+   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
 
-   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, primaryWalletCreationCb);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this, primaryWalletCreationCb);
+   connect(ui_->tabWidget, &QTabWidget::tabBarClicked, this,
+      [requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ), replyRFQ = QPointer<RFQReplyWidget>(ui_->widgetRFQReply),
+         tabWidget = QPointer<QTabWidget>(ui_->tabWidget)](int index) {
+      
+      if (!tabWidget) {
+         return;
+      }
+
+      if (requestRFQ && requestRFQ == tabWidget->widget(index)) {
+         requestRFQ->forceCheckCondition();
+      }
+
+      if (replyRFQ && replyRFQ == tabWidget->widget(index)) {
+         replyRFQ->forceCheckCondition();
+      }
+
+   });
 }
 
 void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settings)

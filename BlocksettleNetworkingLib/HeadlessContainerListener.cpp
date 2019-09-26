@@ -16,6 +16,7 @@
 
 using namespace Blocksettle::Communication;
 using namespace bs::error;
+using namespace bs::sync;
 using namespace std::chrono;
 
 constexpr std::chrono::seconds kDefaultDuration{60};
@@ -245,6 +246,9 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
    case headless::ExecCustomDialogRequestType:
       return onExecCustomDialog(clientId, packet);
 
+   case headless::AddressPreimageType:
+      return onAddrPreimage(clientId, packet);
+
    default:
       logger_->error("[HeadlessContainerListener] unknown request type {}", packet.type());
       return false;
@@ -435,7 +439,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       }
    };
 
-   dialogData.insert("WalletId", rootWalletId);
+   dialogData.insert(PasswordDialogData::WalletId, rootWalletId);
    return RequestPasswordIfNeeded(clientId, rootWalletId, txSignReq, reqType, dialogData, onPassword);
 }
 
@@ -534,7 +538,7 @@ bool HeadlessContainerListener::onSignSettlementPayoutTxRequest(const std::strin
    }
 
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
-   dialogData.insert("PayOutType", true);
+   dialogData.insert(PasswordDialogData::PayOutType, true);
 
    bs::core::wallet::TXSignRequest txSignReq;
    txSignReq.walletIds = { walletsMgr_->getPrimaryWallet()->walletId() };
@@ -609,8 +613,8 @@ bool HeadlessContainerListener::onSignAuthAddrRevokeRequest(const std::string &c
    }
 
    Internal::PasswordDialogDataWrapper dialogData;
-   dialogData.insert("WalletId", request.wallet_id());
-   dialogData.insert("AuthAddress", request.auth_address());
+   dialogData.insert(PasswordDialogData::WalletId, request.wallet_id());
+   dialogData.insert(PasswordDialogData::AuthAddress, request.auth_address());
 
    bs::core::wallet::TXSignRequest txSignReq;
    txSignReq.walletIds = { wallet->walletId() };
@@ -1370,8 +1374,8 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
    };
 
    Internal::PasswordDialogDataWrapper dialogData = request.passworddialogdata();
-   dialogData.insert("WalletId", priWallet->walletId());
-   dialogData.insert("AuthAddress", request.auth_address());
+   dialogData.insert(PasswordDialogData::WalletId, priWallet->walletId());
+   dialogData.insert(PasswordDialogData::AuthAddress, request.auth_address());
 
    return RequestPasswordIfNeeded(clientId, priWallet->walletId(), {}, headless::CreateSettlWalletType
       , dialogData, onPassword);
@@ -1943,6 +1947,41 @@ bool HeadlessContainerListener::onSyncNewAddr(const std::string &clientId, headl
 
    if (callbacks_) {
       callbacks_->walletChanged(wallet->walletId());
+   }
+
+   packet.set_data(response.SerializeAsString());
+   sendData(packet.SerializeAsString(), clientId);
+   return true;
+}
+
+bool HeadlessContainerListener::onAddrPreimage(const std::string &clientId, headless::RequestPacket packet)
+{
+   headless::AddressPreimageRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      return false;
+   }
+   headless::AddressPreimageResponse response;
+   for (int i = 0; i < request.request_size(); ++i) {
+      const auto req = request.request(i);
+      const auto wallet = walletsMgr_->getWalletById(req.wallet_id());
+      if (wallet == nullptr) {
+         logger_->error("[{}] wallet with ID {} not found", __func__, req.wallet_id());
+         continue;
+      }
+
+      auto resp = response.add_response();
+      resp->set_wallet_id(req.wallet_id());
+
+      for (int j = 0; j < req.address_size(); ++j) {
+         const bs::Address addr = req.address(j);
+         const auto addrEntry = wallet->getAddressEntryForAddr(addr);
+         if (addrEntry) {
+            auto piData = resp->add_preimages();
+            piData->set_address(addr.display());
+            piData->set_preimage(addrEntry->getPreimage().toBinStr());
+         }
+      }
    }
 
    packet.set_data(response.SerializeAsString());

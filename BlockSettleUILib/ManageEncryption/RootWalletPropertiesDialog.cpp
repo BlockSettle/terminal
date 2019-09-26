@@ -114,21 +114,21 @@ RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
 
 void RootWalletPropertiesDialog::onDeleteWallet()
 {
-   signingContainer_->customDialogRequest(bs::signer::ui::DialogType::DeleteWallet
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::DeleteWallet
                                                              , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
    close();
 }
 
 void RootWalletPropertiesDialog::onBackupWallet()
 {
-   signingContainer_->customDialogRequest(bs::signer::ui::DialogType::BackupWallet
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::BackupWallet
                                                              , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
    close();
 }
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ManageWallet
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ManageWallet
                                                              , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
    close();
 }

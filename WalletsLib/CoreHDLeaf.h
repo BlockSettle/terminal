@@ -80,6 +80,7 @@ namespace bs {
 
             SecureBinaryData getPublicKeyFor(const bs::Address &) override;
             std::shared_ptr<ResolverFeed> getResolver(void) const;
+            std::shared_ptr<ResolverFeed> getPublicResolver(void) const;
             ReentrantLock lockDecryptedContainer() override;
 
             const bs::hd::Path &path() const { return path_; }

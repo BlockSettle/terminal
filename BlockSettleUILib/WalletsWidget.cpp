@@ -525,13 +525,13 @@ void WalletsWidget::onNewWallet()
 
 bool WalletsWidget::CreateNewWallet(bool report)
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::DialogType::CreateWallet);
+   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::CreateWallet);
    return true;
 }
 
 bool WalletsWidget::ImportNewWallet(bool report)
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ImportWallet);
+   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportWallet);
    return true;
 }
 
