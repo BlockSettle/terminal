@@ -1,3 +1,4 @@
+#include "ApplicationSettings.h"
 #include "AutheIDClient.h"
 #include "AuthProxy.h"
 #include "ConnectionManager.h"
