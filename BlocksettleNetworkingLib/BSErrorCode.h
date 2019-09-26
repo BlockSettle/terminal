@@ -23,7 +23,11 @@ namespace bs {
          TxSpendLimitExceed,
          TxRequestFileExist,
          TxFailedToOpenRequestFile,
-         TxFailedToWriteRequestFile
+         TxFailedToWriteRequestFile,
+
+         // Change wallet error codes
+         WalletFailedRemoveLastEidDevice,
+
       };
    }
 }
