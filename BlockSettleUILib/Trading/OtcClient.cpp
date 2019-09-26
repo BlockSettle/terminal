@@ -7,6 +7,7 @@
 #include "AddressVerificator.h"
 #include "AuthAddressManager.h"
 #include "BtcUtils.h"
+#include "CoinSelection.h"
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "OfflineSigner.h"
@@ -487,6 +488,31 @@ bool OtcClient::updateOffer(Peer *peer, const Offer &offer)
 Peer *OtcClient::ownRequest() const
 {
    return ownRequest_.get();
+}
+
+unsigned OtcClient::feeTargetBlockCount()
+{
+   return 2;
+}
+
+uint64_t OtcClient::estimatePayinFeeWithoutChange(const std::vector<UTXO> &inputs, float feePerByte)
+{
+   // add workaround for computeSizeAndFee (it can't compute exact v-size before signing,
+   // sometimes causing "fee not met" error for 1 sat/byte)
+   if (feePerByte >= 1.0f && feePerByte < 1.01f) {
+      feePerByte = 1.01f;
+   }
+
+   std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
+   // Use some fake settlement address as the only recipient
+   auto recipient = bs::Address(CryptoPRNG::generateRandom(32), AddressEntryType_P2WSH);
+   // Select some random amount
+   recipientsMap[0] = recipient.getRecipient(uint64_t(1000));
+
+   auto inputsCopy = bs::Address::decorateUTXOsCopy(inputs);
+   PaymentStruct payment(recipientsMap, 0, feePerByte, 0);
+   uint64_t result = bs::Address::getFeeForMaxVal(inputsCopy, payment.size_, feePerByte);
+   return result;
 }
 
 void OtcClient::contactConnected(const std::string &contactId)
