@@ -141,8 +141,9 @@ void CCTokenEntryDialog::accept()
 void CCTokenEntryDialog::onCCAddrSubmitted(const QString)
 {
    QDialog::accept();
-   BSMessageBox(BSMessageBox::info, tr("Submission Successful")
-      , tr("Your token has been submitted. Please allow up to 24h for the transaction to be broadcast.")).exec();
+   BSMessageBox(BSMessageBox::success, tr("Submission Successful")
+      , tr("Equity token submitted")
+      , tr("Please allow up to 24h for the transaction to be broadcast.")).exec();
 }
 
 void CCTokenEntryDialog::onCCInitialSubmitted(const QString)
