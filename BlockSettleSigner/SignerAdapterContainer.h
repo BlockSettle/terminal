@@ -91,6 +91,8 @@ public:
       const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override {}
    void syncNewAddresses(const std::string &, const std::vector<std::string> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool = true) override {}
+   void getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &
+      , const std::function<void(const std::map<bs::Address, BinaryData> &)> &) override {}
 
    bool isWalletOffline(const std::string &id) const override { return (woWallets_.find(id) != woWallets_.end()); }
 
