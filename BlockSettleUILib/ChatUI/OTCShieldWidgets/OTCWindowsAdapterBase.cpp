@@ -77,7 +77,7 @@ void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
          parentWidget->awaitingLeafsResponse_.erase(walletId);
 
          if (parentWidget->awaitingLeafsResponse_.empty()) {
-            QMetaObject::invokeMethod(parentWidget, "onShowXBTInputReady");
+            QMetaObject::invokeMethod(parentWidget, &OTCWindowsAdapterBase::onShowXBTInputReady);
          }
       };
 
@@ -129,7 +129,7 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
       }
    }
    else {
-      for (auto utxo : selectedUTXO_) {
+      for (const auto &utxo : selectedUTXO_) {
          totalBalance += static_cast<double>(utxo.getValue()) / BTCNumericTypes::BalanceDivider;
       }
    }
