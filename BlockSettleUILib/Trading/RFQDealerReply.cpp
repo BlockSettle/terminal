@@ -714,7 +714,6 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                      (const std::map<bs::Address, BinaryData> &preimages)
                   {
                      const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
-                     quoteProvider_->saveDealerPayin(qrn.settlementId, unsignedTxReq.serializeState());
                      dealerUtxoAdapter_->reserve(unsignedTxReq, qrn.settlementId);
 
                      const auto txData = unsignedTxReq.txId(resolver).toHexStr();
