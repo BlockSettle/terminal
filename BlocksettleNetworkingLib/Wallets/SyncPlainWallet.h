@@ -48,6 +48,8 @@ namespace bs {
          size_t getUsedAddressCount() const override { return usedAddresses_.size(); }
          std::string getAddressIndex(const bs::Address &) override;
 
+         std::shared_ptr<ResolverFeed> getPublicResolver() const { return nullptr; }   // not needed, yet
+
          bool deleteRemotely() override;
 
          virtual void merge(const std::shared_ptr<Wallet>)

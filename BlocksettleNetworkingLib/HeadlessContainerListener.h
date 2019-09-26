@@ -140,6 +140,7 @@ private:
    bool onSyncAddresses(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onExtAddrChain(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onSyncNewAddr(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onAddrPreimage(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onExecCustomDialog(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
 
    bool onCreateSettlWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);

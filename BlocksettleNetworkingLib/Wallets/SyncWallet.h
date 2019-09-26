@@ -139,6 +139,8 @@ namespace bs {
 
          virtual std::string getAddressIndex(const bs::Address &) = 0;
 
+         virtual std::shared_ptr<ResolverFeed> getPublicResolver() const = 0;
+
          //Adds an arbitrary address identified by index
          virtual int addAddress(const bs::Address &, const std::string &index, bool sync = true);
 

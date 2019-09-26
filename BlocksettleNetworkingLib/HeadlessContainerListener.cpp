@@ -246,6 +246,9 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
    case headless::ExecCustomDialogRequestType:
       return onExecCustomDialog(clientId, packet);
 
+   case headless::AddressPreimageType:
+      return onAddrPreimage(clientId, packet);
+
    default:
       logger_->error("[HeadlessContainerListener] unknown request type {}", packet.type());
       return false;
@@ -1944,6 +1947,41 @@ bool HeadlessContainerListener::onSyncNewAddr(const std::string &clientId, headl
 
    if (callbacks_) {
       callbacks_->walletChanged(wallet->walletId());
+   }
+
+   packet.set_data(response.SerializeAsString());
+   sendData(packet.SerializeAsString(), clientId);
+   return true;
+}
+
+bool HeadlessContainerListener::onAddrPreimage(const std::string &clientId, headless::RequestPacket packet)
+{
+   headless::AddressPreimageRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      return false;
+   }
+   headless::AddressPreimageResponse response;
+   for (int i = 0; i < request.request_size(); ++i) {
+      const auto req = request.request(i);
+      const auto wallet = walletsMgr_->getWalletById(req.wallet_id());
+      if (wallet == nullptr) {
+         logger_->error("[{}] wallet with ID {} not found", __func__, req.wallet_id());
+         continue;
+      }
+
+      auto resp = response.add_response();
+      resp->set_wallet_id(req.wallet_id());
+
+      for (int j = 0; j < req.address_size(); ++j) {
+         const bs::Address addr = req.address(j);
+         const auto addrEntry = wallet->getAddressEntryForAddr(addr);
+         if (addrEntry) {
+            auto piData = resp->add_preimages();
+            piData->set_address(addr.display());
+            piData->set_preimage(addrEntry->getPreimage().toBinStr());
+         }
+      }
    }
 
    packet.set_data(response.SerializeAsString());

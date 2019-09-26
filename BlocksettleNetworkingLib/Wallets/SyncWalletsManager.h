@@ -123,6 +123,9 @@ namespace bs {
          //run after registration to update address chain usage counters
          void trackAddressChainUse(std::function<void(bool)>);
 
+         std::map<std::string, std::vector<bs::Address>> getAddressToWalletsMapping(const std::vector<UTXO> &) const;
+         static std::shared_ptr<ResolverFeed> getPublicResolver(const std::map<bs::Address, BinaryData> &);
+
       signals:
          void CCLeafCreated(const std::string& ccName);
          void CCLeafCreateFailed(const std::string& ccName, bs::error::ErrorCode result);
