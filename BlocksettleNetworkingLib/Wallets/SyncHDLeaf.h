@@ -93,6 +93,8 @@ namespace bs {
 
             virtual void OnLeafRegistrationCompleted() {}
 
+            std::shared_ptr<ResolverFeed> getPublicResolver() const override;
+
          protected:
             struct AddrPoolKey {
                bs::hd::Path  path;
@@ -230,7 +232,8 @@ namespace bs {
 
             void restartValidation();
 
-            void OnLeafRegistrationCompleted() override { restartValidation();  }
+            void OnLeafRegistrationCompleted() override { restartValidation(); }
+
          protected:
             void onZeroConfReceived(const std::vector<bs::TXEntry> &) override;
 

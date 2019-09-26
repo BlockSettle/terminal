@@ -407,6 +407,22 @@ std::shared_ptr<ResolverFeed> hd::Leaf::getResolver() const
    return std::make_shared<ResolverFeed_AssetWalletSingle>(walletPtr_);
 }
 
+std::shared_ptr<ResolverFeed> hd::Leaf::getPublicResolver() const
+{
+   class PublicResolver : public ResolverFeed_AssetWalletSingle
+   {
+   public:
+      PublicResolver(const std::shared_ptr<AssetWallet_Single> &walletPtr)
+         : ResolverFeed_AssetWalletSingle(walletPtr)  { }
+
+      const SecureBinaryData &getPrivKeyForPubkey(const BinaryData &pk) override
+      {
+         throw std::runtime_error("not supported");
+      }
+   };
+   return std::make_shared<PublicResolver>(walletPtr_);
+}
+
 bool hd::Leaf::isWatchingOnly() const
 {
    auto rootPtr = accountPtr_->getOutterAssetRoot();

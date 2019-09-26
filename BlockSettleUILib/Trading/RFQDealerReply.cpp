@@ -710,10 +710,18 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                      unsignedTxReq = transData->createUnsignedTransaction();
                   }
 
-                  dealerUtxoAdapter_->reserve(unsignedTxReq, qrn.settlementId);
+                  const auto cbPreimage = [this, unsignedTxReq, qrn, lbdQuoteNotif]
+                     (const std::map<bs::Address, BinaryData> &preimages)
+                  {
+                     const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
+                     quoteProvider_->saveDealerPayin(qrn.settlementId, unsignedTxReq.serializeState());
+                     dealerUtxoAdapter_->reserve(unsignedTxReq, qrn.settlementId);
 
-                  const auto txData = unsignedTxReq.txId().toHexStr();
-                  lbdQuoteNotif(txData);
+                     const auto txData = unsignedTxReq.txId(resolver).toHexStr();
+                     lbdQuoteNotif(txData);
+                  };
+                  const auto addrMapping = walletsManager_->getAddressToWalletsMapping(transData->inputs());
+                  signingContainer_->getAddressPreimage(addrMapping, cbPreimage);
                } else {
                   logger_->warn("[RFQDealerReply::submit] pay-in transaction is invalid!");
                }
