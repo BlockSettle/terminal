@@ -178,6 +178,15 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 Layout.fillWidth: true
+                text: qsTr("Transaction Amount")
+            }
+            CustomLabelValue {
+                text: txInfo.amount.toFixed(8)
+                Layout.alignment: Qt.AlignRight
+            }
+
+            CustomLabel {
+                Layout.fillWidth: true
                 text: qsTr("Return Amount")
             }
             CustomLabelValue {
@@ -196,7 +205,7 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("Transaction Amount")
+                text: qsTr("Total Spent")
             }
             CustomLabelValue {
                 text: txInfo.total.toFixed(8)
