@@ -187,6 +187,9 @@ public:
 
    std::shared_ptr<AsyncClient::BtcWallet> instantiateWallet(const std::string &walletId);
 
+   // Converts BTC/kb (returned by armory) to sat/byte
+   static float toFeePerByte(float fee);
+
 protected:
    void setupConnection(NetworkType, const std::string &host, const std::string &port
       , const std::string &dataDir, const BinaryData &serverKey
