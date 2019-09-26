@@ -24,7 +24,9 @@ void OTCWindowsAdapterBase::setChatOTCManager(const std::shared_ptr<OTCWindowsMa
       onSyncInterface();
    });
 
-   connect(otcManager_.get(), &OTCWindowsManager::updateMDDataRequired, this, [this](bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields) {
+   connect(otcManager_.get(), &OTCWindowsManager::updateMDDataRequired, this,
+      [this](bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields)
+   {
       onUpdateMD(type, security, fields);
    });
 
@@ -100,7 +102,8 @@ void OTCWindowsAdapterBase::onShowXBTInputReady()
    emit xbtInputsProcessed();
 }
 
-void OTCWindowsAdapterBase::updateIndicativePrices(bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields, double& sellIndicativePrice, double& buyIndicativePrice)
+void OTCWindowsAdapterBase::updateIndicativePrices(bs::network::Asset::Type type, const QString& security
+   , const bs::network::MDFields& fields, double& sellIndicativePrice, double& buyIndicativePrice)
 {
    for (const auto &field : fields) {
       switch (field.type) {
