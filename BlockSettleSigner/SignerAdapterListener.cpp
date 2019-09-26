@@ -594,7 +594,7 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
    signer::ChangePasswordRequest request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerContainerListener] failed to parse ChangePasswordRequest");
-      response.set_success(false);
+      response.set_errorcode(static_cast<int>(bs::error::ErrorCode::FailedToParse));
       response.set_root_wallet_id(std::string());
       sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
       return false;
@@ -602,7 +602,7 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
    const auto &wallet = walletsMgr_->getHDWalletById(request.root_wallet_id());
    if (!wallet) {
       logger_->error("[SignerContainerListener] failed to find wallet for id {}", request.root_wallet_id());
-      response.set_success(false);
+      response.set_errorcode(static_cast<int>(bs::error::ErrorCode::WalletNotFound));
       response.set_root_wallet_id(request.root_wallet_id());
       sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
       return false;
@@ -616,7 +616,7 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
 
    if (!request.remove_old() && pwdData.empty()) {
       logger_->error("[SignerContainerListener] can't change/add empty password for {}", request.root_wallet_id());
-      response.set_success(false);
+      response.set_errorcode(static_cast<int>(bs::error::ErrorCode::MissingPassword));
       response.set_root_wallet_id(request.root_wallet_id());
       sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
       return false;
@@ -624,7 +624,7 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
    if (!request.add_new() && (pwdData.size() > 1)) {
       logger_->error("[SignerContainerListener] can't remove/change more than 1 password at a time for {}"
          , request.root_wallet_id());
-      response.set_success(false);
+      response.set_errorcode(static_cast<int>(bs::error::ErrorCode::InternalError));
       response.set_root_wallet_id(request.root_wallet_id());
       sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
       return false;
@@ -636,7 +636,7 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
 
    if (request.remove_old()) {
       logger_->warn("[SignerContainerListener] password removal is not supported, yet");
-      response.set_success(false);
+      response.set_errorcode(static_cast<int>(bs::error::ErrorCode::InternalError));
       response.set_root_wallet_id(request.root_wallet_id());
       sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
       return false;
@@ -658,10 +658,16 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
       walletsListUpdated();
    }
 
-   response.set_success(result);
+   if (result) {
+      response.set_errorcode(static_cast<int>(bs::error::ErrorCode::NoError));
+   }
+   else {
+      response.set_errorcode(static_cast<int>(bs::error::ErrorCode::InvalidPassword));
+   }
    response.set_root_wallet_id(request.root_wallet_id());
    logger_->info("[SignerAdapterListener::{}] password changed for wallet {} with result {}"
       , __func__, request.root_wallet_id(), result);
+
    return sendData(signer::ChangePasswordType, response.SerializeAsString(), reqId);
 }
 
