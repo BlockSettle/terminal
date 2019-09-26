@@ -677,6 +677,11 @@ bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
    return index.path;
 }
 
+std::shared_ptr<ResolverFeed> hd::Leaf::getPublicResolver() const
+{
+   return nullptr;
+}
+
 bool hd::Leaf::getLedgerDelegateForAddress(const bs::Address &addr
    , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &cb)
 {

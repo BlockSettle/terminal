@@ -39,6 +39,7 @@ enum RequestType
    SettlGetRootPubkeyType      = 30;
    PromoteHDWalletRequestType  = 31;
    UpdateDialogDataType        = 32; // update fields in password input dialogs in signer ui
+   AddressPreimageType         = 33;
 }
 
 message RequestPacket
@@ -448,6 +449,28 @@ message ExtendAddressChainResponse
    }
    string wallet_id = 1;
    repeated AddressPair addresses = 2;
+}
+
+message AddressPreimageRequest
+{
+   message Request {
+      string wallet_id = 1;
+      repeated string address = 2;
+   }
+   repeated Request request = 1;
+}
+
+message AddressPreimageResponse
+{
+   message Response {
+      string wallet_id = 1;
+      message Result {
+         string address = 1;
+         bytes  preimage = 2;
+      }
+      repeated Result preimages = 2;
+   }
+   repeated Response response = 1;
 }
 
 

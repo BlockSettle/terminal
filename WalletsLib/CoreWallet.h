@@ -322,6 +322,7 @@ namespace bs {
          virtual std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt) = 0;
 
          virtual std::shared_ptr<ResolverFeed> getResolver(void) const = 0;
+         virtual std::shared_ptr<ResolverFeed> getPublicResolver(void) const = 0;
          virtual ReentrantLock lockDecryptedContainer() = 0;
 
          virtual BinaryData signTXRequest(const wallet::TXSignRequest &
