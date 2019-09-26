@@ -330,7 +330,7 @@ void InprocSigner::syncHDWallet(const std::string &id, const std::function<void(
    if (hdWallet) {
       for (const auto &group : hdWallet->getGroups()) {
          bs::sync::HDWalletData::Group groupData;
-         groupData.type = static_cast<bs::hd::CoinType>(group->index());
+         groupData.type = static_cast<bs::hd::CoinType>(group->index() | bs::hd::hardFlag);
          groupData.extOnly = group->isExtOnly();
 
          if (groupData.type == bs::hd::CoinType::BlockSettle_Auth) {

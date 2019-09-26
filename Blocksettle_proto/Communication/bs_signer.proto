@@ -301,8 +301,8 @@ message ChangePasswordRequest
 
 message ChangePasswordResponse
 {
-   string   root_wallet_id = 1;
-   bool     success = 2;
+   uint32   errorCode = 1;
+   string   root_wallet_id = 2;
 }
 
 message NewHDLeaf
