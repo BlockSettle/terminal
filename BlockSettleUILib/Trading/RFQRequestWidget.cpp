@@ -47,7 +47,7 @@ void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::Wallets
    if (walletsManager_ == nullptr) {
       walletsManager_ = walletsManager;
       ui_->pageRFQTicket->setWalletsManager(walletsManager);
-      ui_->shieldPage->setWalletsManager(walletsManager, authAddressManager_);
+      ui_->shieldPage->init(walletsManager, authAddressManager_);
 
       connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
       connect(walletsManager_.get(), &bs::sync::WalletsManager::AuthLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
@@ -296,6 +296,8 @@ void RFQRequestWidget::forceCheckCondition()
    if (!currentInfo.isValid()) {
       return;
    }
+
+   onCurrencySelected(currentInfo);
 }
 
 void RFQRequestWidget::onCurrencySelected(const MarketSelectedInfo& selectedInfo)
