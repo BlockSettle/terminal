@@ -385,6 +385,7 @@ TEST_F(TestSettlement, SpotXBT_buy)
    EXPECT_EQ(txPayinObj.getThisHash(), dealerPayInHash);
 
    UnitTestWalletACT::clear();
+   StaticLogger::loggerPtr->debug("[{}] payin TX: {}", __func__, txPayIn.toHexStr());
    envPtr_->armoryInstance()->pushZC(txPayIn);
    const auto& zcVecPayin = UnitTestWalletACT::waitOnZC();
    ASSERT_GE(zcVecPayin.size(), 1);
@@ -412,6 +413,7 @@ TEST_F(TestSettlement, SpotXBT_buy)
 
    Tx txPayoutObj(txPayOut);
    ASSERT_TRUE(txPayoutObj.isInitialized());
+   StaticLogger::loggerPtr->debug("[{}] payout TX: {}", __func__, txPayOut.toHexStr());
    envPtr_->armoryInstance()->pushZC(txPayOut);
    const auto& zcVecPayout = UnitTestWalletACT::waitOnZC(true);
    ASSERT_GE(zcVecPayout.size(), 1);
