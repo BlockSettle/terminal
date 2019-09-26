@@ -5,6 +5,7 @@
 #include "ChatUI/OTCRequestViewModel.h"
 #include "NotificationCenter.h"
 #include "OtcClient.h"
+#include "OtcUtils.h"
 
 namespace {
 
@@ -57,16 +58,17 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
          chat_->ownUserId_ != message->senderHash()) {
          ++bNewMessagesCounter;
 
-         auto messageTitle = clientPartyPtr->displayName();
+         const auto messageTitle = clientPartyPtr->displayName();
          auto messageText = message->messageText();
+         const auto otcText = OtcUtils::toReadableString(QString::fromStdString(messageText));
 
-         if (messageText.length() > kMaxMessageNotifLength) {
+         if (otcText.isEmpty() && messageText.length() > kMaxMessageNotifLength) {
             messageText = messageText.substr(0, kMaxMessageNotifLength) + "...";
          }
 
          bs::ui::NotifyMessage notifyMsg;
          notifyMsg.append(QString::fromStdString(messageTitle));
-         notifyMsg.append(QString::fromStdString(messageText));
+         notifyMsg.append(otcText.isEmpty() ? QString::fromStdString(messageText) : otcText);
          notifyMsg.append(QString::fromStdString(partyId));
 
          NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
