@@ -2,13 +2,8 @@
 #define __AUTH_PROXY_H__
 
 #include "AutheIDClient.h"
-#include "ApplicationSettings.h"
-#include "EncryptionUtils.h"
-#include "QWalletInfo.h"
-#include "WalletEncryption.h"
 
 #include <memory>
-
 #include <QObject>
 
 class ApplicationSettings;
@@ -16,6 +11,12 @@ class ConnectionManager;
 
 namespace spdlog {
    class logger;
+}
+
+namespace bs {
+namespace hd {
+    class WalletInfo;
+}
 }
 
 

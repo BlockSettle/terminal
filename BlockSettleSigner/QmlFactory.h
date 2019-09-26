@@ -5,12 +5,9 @@
 #include <QQmlEngine>
 #include <QQuickWindow>
 
-#include "ApplicationSettings.h"
-#include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
 #include "AuthProxy.h"
-#include "ConnectionManager.h"
 
 #include "BSErrorCode.h"
 
