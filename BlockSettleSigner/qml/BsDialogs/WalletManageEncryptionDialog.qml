@@ -355,12 +355,15 @@ CustomTitleDialogWindow {
                                     return
                                 }
 
-                                JsHelper.removeEidDevice(index
-                                    , walletInfo
-                                    , function(oldPwEidData){
-                                        var ok = walletsProxy.removeEidDevice(walletInfo.walletId, oldPwEidData , index)
-                                        var mb = JsHelper.resultBox(BSResultBox.RemoveDevice, ok, walletInfo)
-                                })
+                                var onEidSuccess = function(oldPwEidData) {
+                                    var onRemoveDeviceCb = function(result){
+                                        JsHelper.resultBox(BSResultBox.RemoveDevice, result, walletInfo)
+                                    }
+
+                                    walletsProxy.removeEidDevice(walletInfo.walletId, oldPwEidData, index, onRemoveDeviceCb)
+                                }
+
+                                JsHelper.removeEidDevice(index, walletInfo, onEidSuccess)
                             }
                         }
                     }
@@ -565,19 +568,24 @@ CustomTitleDialogWindow {
                     }
                     else if (tabBar.currentIndex === 1) {
                         // add device
-                        // step #1. request old device
-                        JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletOldDevice
-                            , walletInfo
-                            , function(oldPwEidData){
-                                // step #2. add new device
-                                JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletNewDevice
-                                    , walletInfo
-                                    , function(newPwEidData){
-                                        ok = walletsProxy.addEidDevice(walletInfo.walletId, oldPwEidData, newPwEidData)
-                                        var mb = JsHelper.resultBox(BSResultBox.AddDevice, ok, walletInfo)
-                                })
-                        })
 
+                        var passwordChangedCb = function(result, error){
+                            // step #4. result
+                            JsHelper.resultBox(BSResultBox.AddDevice, result, walletInfo)
+                        }
+
+                        var eidOldPasswordCb = function(oldPwEidData) {
+                            var eidNewPasswordCb = function(newPwEidData){
+                                // step #3. change password
+                                walletsProxy.addEidDevice(walletInfo.walletId, oldPwEidData, newPwEidData, passwordChangedCb)
+                            }
+
+                            // step #2. add new device
+                            JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletNewDevice, walletInfo, eidNewPasswordCb)
+                        }
+
+                        // step #1. request old device
+                        JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletOldDevice, walletInfo, eidOldPasswordCb)
                     }
                 }
             }

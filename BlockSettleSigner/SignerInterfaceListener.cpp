@@ -554,7 +554,7 @@ void SignerInterfaceListener::onChangePassword(const std::string &data, bs::sign
          , __func__, reqId);
       return;
    }
-   itCb->second(response.success());
+   itCb->second(static_cast<bs::error::ErrorCode>(response.errorcode()));
    cbChangePwReqs_.erase(itCb);
 }
 

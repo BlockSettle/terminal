@@ -4,6 +4,8 @@
 #include <memory>
 #include <QObject>
 #include <QJSValue>
+
+#include "BSErrorCode.h"
 #include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
@@ -43,17 +45,16 @@ public:
    Q_INVOKABLE void deleteWallet(const QString &walletId, const QJSValue &jsCallback);
 
    Q_INVOKABLE void changePassword(const QString &walletId
-      , bs::wallet::QPasswordData *oldPasswordData
-      , bs::wallet::QPasswordData *newPasswordData
+      , bs::wallet::QPasswordData *oldPasswordData, bs::wallet::QPasswordData *newPasswordData
       , const QJSValue &jsCallback);
 
    Q_INVOKABLE void addEidDevice(const QString &walletId
-      , bs::wallet::QPasswordData *oldPasswordData
-      , bs::wallet::QPasswordData *newPasswordData);
+      , bs::wallet::QPasswordData *oldPasswordData, bs::wallet::QPasswordData *newPasswordData
+      , const QJSValue &jsCallback);
 
    Q_INVOKABLE void removeEidDevice(const QString &walletId
       , bs::wallet::QPasswordData *oldPasswordData
-      , int removedIndex);
+      , int removedIndex, const QJSValue &jsCallback);
 
    Q_INVOKABLE QString getWoWalletFile(const QString &walletId) const;
    Q_INVOKABLE void importWoWallet(const QString &pathName, const QJSValue &jsCallback);
@@ -84,7 +85,6 @@ public:
    QString defaultBackupLocation() const;
 
 signals:
-   void walletError(const QString &walletId, const QString &errMsg) const;
    void walletsChanged();
    void ccInfoChanged();
 
@@ -106,6 +106,8 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    bool walletsSynchronized_ = false;
    bool hasCCInfo_ = false;
+
+   std::function<void(bs::error::ErrorCode result)> createChangePwdResultCb(const QString &walletId, const QJSValue &jsCallback);
 };
 
 #endif // __WALLETS_PROXY_H__
