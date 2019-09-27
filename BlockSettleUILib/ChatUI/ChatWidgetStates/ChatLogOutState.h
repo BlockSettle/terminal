@@ -49,6 +49,8 @@ protected:
    bool canSendPartyRequest() const override { return false; }
    bool canRemovePartyRequest() const override { return false; }
    bool canUpdatePartyName() const override { return false; }
+   bool canReceiveOTCOperations() const override { return false; }
+
 };
 
 #endif // CHATLOGOUTSTATE_H

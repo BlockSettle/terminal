@@ -207,14 +207,14 @@ void AbstractChatWidgetState::onSendOtcPublicMessage(const std::string &data)
 
 void AbstractChatWidgetState::onProcessOtcPbMessage(const std::string& data)
 {
-   if (canPerformOTCOperations()) {
+   if (canReceiveOTCOperations()) {
       chat_->otcHelper_->onProcessOtcPbMessage(data);
    }
 }
 
 void AbstractChatWidgetState::onOtcUpdated(const otc::Peer *peer)
 {
-   if (canPerformOTCOperations() && chat_->currentPeer() == peer) {
+   if (canReceiveOTCOperations() && chat_->currentPeer() == peer) {
       chat_->ui_->widgetPullOwnOTCRequest->registerOTCUpdatedTime(peer, QDateTime::currentDateTime());
       onUpdateOTCShield();
    }
@@ -222,7 +222,7 @@ void AbstractChatWidgetState::onOtcUpdated(const otc::Peer *peer)
 
 void AbstractChatWidgetState::onOtcPublicUpdated()
 {
-   if (!canPerformOTCOperations()) {
+   if (!canReceiveOTCOperations()) {
       return;
    }
 
@@ -232,7 +232,7 @@ void AbstractChatWidgetState::onOtcPublicUpdated()
 
 void AbstractChatWidgetState::onUpdateOTCShield()
 {
-   if (!canPerformOTCOperations()) {
+   if (!canReceiveOTCOperations()) {
       return;
    }
 
