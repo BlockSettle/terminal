@@ -183,7 +183,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       if (msg.size() < 2) {
          return;
       }
-      title = tr("Auth address %1").arg(msg[1].toString());
+      title = tr("Authentication Address %1").arg(msg[1].toString());
       text = msg[0].toString();
       break;
 

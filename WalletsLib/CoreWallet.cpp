@@ -375,7 +375,7 @@ uint64_t wallet::TXSignRequest::amountSent(const wallet::TXSignRequest::Contains
 
 std::vector<UTXO> wallet::TXSignRequest::getInputs(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
 {
-   std::vector<UTXO> inputs;
+   std::vector<UTXO> inputsVector;
    std::set<UTXO> inputsSet;
 
    if (!prevStates.empty() && containsAddressCb != nullptr) {
@@ -386,7 +386,7 @@ std::vector<UTXO> wallet::TXSignRequest::getInputs(const wallet::TXSignRequest::
          if (inputsSet.find(spender->getUtxo()) == inputsSet.cend()) {
             if (containsAddressCb(addr)) {
                inputsSet.insert(spender->getUtxo());
-               inputs.push_back(spender->getUtxo());
+               inputsVector.push_back(spender->getUtxo());
             }
          }
       }
@@ -398,17 +398,17 @@ std::vector<UTXO> wallet::TXSignRequest::getInputs(const wallet::TXSignRequest::
       if (inputsSet.find(utxo) == inputsSet.cend()) {
          if (containsAddressCb(addr)) {
             inputsSet.insert(utxo);
-            inputs.push_back(utxo);
+            inputsVector.push_back(utxo);
          }
       }
    }
 
-   return inputs;
+   return inputsVector;
 }
 
 std::vector<std::shared_ptr<ScriptRecipient>> wallet::TXSignRequest::getRecipients(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
 {
-   std::vector<std::shared_ptr<ScriptRecipient>> recipients;
+   std::vector<std::shared_ptr<ScriptRecipient>> recipientsVector;
    std::set<BinaryData> recipientsSet;
 
    if (!prevStates.empty() && containsAddressCb != nullptr) {
@@ -420,7 +420,7 @@ std::vector<std::shared_ptr<ScriptRecipient>> wallet::TXSignRequest::getRecipien
          if (recipientsSet.find(hash) == recipientsSet.cend()) {
             if (containsAddressCb(addr)) {
                recipientsSet.insert(hash);
-               recipients.push_back(recip);
+               recipientsVector.push_back(recip);
             }
          }
       }
@@ -433,12 +433,12 @@ std::vector<std::shared_ptr<ScriptRecipient>> wallet::TXSignRequest::getRecipien
       if (recipientsSet.find(hash) == recipientsSet.cend()) {
          if (containsAddressCb(addr)) {
             recipientsSet.insert(hash);
-            recipients.push_back(recip);
+            recipientsVector.push_back(recip);
          }
       }
    }
 
-   return recipients;
+   return recipientsVector;
 }
 
 bool wallet::TXMultiSignRequest::isValid() const noexcept
