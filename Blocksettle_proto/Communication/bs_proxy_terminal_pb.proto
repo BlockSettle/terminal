@@ -27,7 +27,6 @@ message Request
         // Used to check fees and other details (UTXO for payin, settlement address etc)
         bytes unsigned_payin = 7;
         bytes unsigned_payout = 8;
-        bytes unsigned_payout_fallback = 9;
 
         string chat_id_seller = 10;
         string chat_id_buyer = 11;
