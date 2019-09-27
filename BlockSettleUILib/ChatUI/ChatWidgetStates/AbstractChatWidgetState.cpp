@@ -320,7 +320,9 @@ void AbstractChatWidgetState::updateOtc()
       return;
    }
 
-   if (globalRoom) {
+   if (!peer) {
+      // Must be in globalRoom if checks above hold
+      assert(globalRoom);
       chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateRequestPage));
       return;
    }

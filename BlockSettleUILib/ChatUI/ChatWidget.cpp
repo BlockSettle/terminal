@@ -520,6 +520,14 @@ void ChatWidget::onOtcPullOrRejectCurrent()
 
 void ChatWidget::onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
 {
+   // only one key needs to be replaced - show one message box
+   if (userPublicKeyInfoList.size() == 1)
+   {
+      onConfirmContactNewKeyData(userPublicKeyInfoList, false);
+      return;
+   }
+
+   // multiple keys replacing
    QString detailsPattern = tr("Contacts Require key update: %1");
 
    QString  detailsString = detailsPattern.arg(userPublicKeyInfoList.size());
