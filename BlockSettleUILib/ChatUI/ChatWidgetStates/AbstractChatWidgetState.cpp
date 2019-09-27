@@ -232,6 +232,10 @@ void AbstractChatWidgetState::onOtcPublicUpdated()
 
 void AbstractChatWidgetState::onUpdateOTCShield()
 {
+   if (!canPerformOTCOperations()) {
+      return;
+   }
+
    applyRoomsFrameChange();
 }
 
