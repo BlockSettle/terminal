@@ -71,6 +71,10 @@ namespace bs {
       static void decorateUTXOs(std::vector<UTXO> &utxos);
       static std::vector<UTXO> decorateUTXOsCopy(const std::vector<UTXO> &utxos);
 
+      // Compute fee for max value (copied from CoinSelection::getFeeForMaxVal).
+      // See OtcClient::estimatePayinFeeWithoutChange for usage example.
+      static uint64_t getFeeForMaxVal(const std::vector<UTXO> &utxos, size_t txOutSize, float feePerByte);
+
    private:
       Format               format_ = Format::Binary;
       AddressEntryType     aet_;

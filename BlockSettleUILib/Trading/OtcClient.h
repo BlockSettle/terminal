@@ -109,6 +109,10 @@ public:
    const bs::network::otc::Peers &responses() { return responses_; }
    bs::network::otc::Peer *ownRequest() const;
 
+   static unsigned feeTargetBlockCount();
+
+   static uint64_t estimatePayinFeeWithoutChange(const std::vector<UTXO> &inputs, float feePerByte);
+
 public slots:
    void contactConnected(const std::string &contactId);
    void contactDisconnected(const std::string &contactId);

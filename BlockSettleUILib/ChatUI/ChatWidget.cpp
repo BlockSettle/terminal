@@ -68,6 +68,7 @@ ChatWidget::ChatWidget(QWidget* parent)
          connect(this, &ChatWidget::chatRoomChanged, widget, &OTCWindowsAdapterBase::chatRoomChanged);
       }
    }
+   connect(otcWindowsManager_.get(), &OTCWindowsManager::syncInterfaceRequired, this, &ChatWidget::onUpdateOTCShield);
 
    changeState<ChatLogOutState>(); //Initial state is LoggedOut
 }
@@ -99,7 +100,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    // OTC
    otcHelper_ = new ChatOTCHelper(this);
    otcHelper_->init(env, loggerPtr, walletsMgr, armory, signContainer, authManager, appSettings);
-   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager);
+   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager, armory);
 
    chatClientServicePtr_ = chatClientServicePtr;
 
@@ -126,6 +127,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->searchWidget->onSetListVisible(false);
 
    ui_->textEditMessages->onSwitchToChat("Global");
+
+   ui_->widgetOTCShield->init(walletsMgr, authManager);
+   connect(ui_->widgetOTCShield, &OTCShield::requestPrimaryWalletCreation, this, &ChatWidget::requestPrimaryWalletCreation);
 
    // connections
    // User actions
@@ -258,6 +262,11 @@ void ChatWidget::onOtcPublicUpdated()
 {
    stateCurrent_->onOtcPublicUpdated();
    ui_->treeViewUsers->onExpandGlobalOTC();
+}
+
+void ChatWidget::onUpdateOTCShield()
+{
+   stateCurrent_->onUpdateOTCShield();
 }
 
 void ChatWidget::onPartyModelChanged()
@@ -511,6 +520,14 @@ void ChatWidget::onOtcPullOrRejectCurrent()
 
 void ChatWidget::onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
 {
+   // only one key needs to be replaced - show one message box
+   if (userPublicKeyInfoList.size() == 1)
+   {
+      onConfirmContactNewKeyData(userPublicKeyInfoList, false);
+      return;
+   }
+
+   // multiple keys replacing
    QString detailsPattern = tr("Contacts Require key update: %1");
 
    QString  detailsString = detailsPattern.arg(userPublicKeyInfoList.size());

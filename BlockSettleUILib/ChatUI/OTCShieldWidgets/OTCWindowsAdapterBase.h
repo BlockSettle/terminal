@@ -58,7 +58,6 @@ protected:
 protected:
    std::shared_ptr<OTCWindowsManager> otcManager_{};
 
-   std::set<std::string> awaitingLeafsResponse_;
    std::vector<UTXO> allUTXOs_;
    std::vector<UTXO> selectedUTXO_;
 };

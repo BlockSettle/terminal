@@ -227,6 +227,11 @@ void AbstractChatWidgetState::onOtcPublicUpdated()
    chat_->chatPartiesTreeModel_->onGlobalOTCChanged();
 }
 
+void AbstractChatWidgetState::onUpdateOTCShield()
+{
+   applyRoomsFrameChange();
+}
+
 void AbstractChatWidgetState::onOtcRequestSubmit()
 {
    if (canPerformOTCOperations()) {
@@ -304,13 +309,21 @@ void AbstractChatWidgetState::updateOtc()
       return;
    }
 
+   const bool globalRoom = chat_->currentPartyId_ == Chat::OtcRoomName;
    const bs::network::otc::Peer* peer = chat_->currentPeer();
+   if (!peer && !globalRoom) {
+      chat_->ui_->widgetOTCShield->showContactIsOffline();
+      return;
+   }
+
+   if (chat_->ui_->widgetOTCShield->onRequestCheckWalletSettings()) {
+      return;
+   }
+
    if (!peer) {
-      if (chat_->currentPartyId_ == Chat::OtcRoomName) {
-         chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateRequestPage));
-      } else {
-         chat_->ui_->widgetOTCShield->showContactIsOffline();
-      }
+      // Must be in globalRoom if checks above hold
+      assert(globalRoom);
+      chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateRequestPage));
       return;
    }
 

@@ -1292,7 +1292,7 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
          invokeFeeCallbacks(blocks, fee);
          return;
       }
-      fee *= BTCNumericTypes::BalanceDivider / 1000.0;
+      fee = ArmoryConnection::toFeePerByte(fee);
       if (fee != 0) {
          feePerByte_[blocks] = fee;
          lastFeePerByte_[blocks] = QDateTime::currentDateTime();

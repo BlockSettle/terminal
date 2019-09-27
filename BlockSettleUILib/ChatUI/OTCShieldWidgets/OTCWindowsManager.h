@@ -10,9 +10,10 @@ namespace bs {
       class WalletsManager;
    }
 }
+class ArmoryConnection;
+class AssetManager;
 class AuthAddressManager;
 class MarketDataProvider;
-class AssetManager;
 
 namespace bs {
    namespace network {
@@ -30,10 +31,11 @@ public:
       , const std::shared_ptr<AuthAddressManager> &authManager
       , const std::shared_ptr<MarketDataProvider>& mdProvider
       , const std::shared_ptr<AssetManager>& assetManager
-   );
+      , const std::shared_ptr<ArmoryConnection>& armory);
    std::shared_ptr<bs::sync::WalletsManager> getWalletManager() const;
    std::shared_ptr<AuthAddressManager> getAuthManager() const;
    std::shared_ptr<AssetManager> getAssetManager() const;
+   std::shared_ptr<ArmoryConnection> getArmory() const;
 
 signals:
    void syncInterfaceRequired();
@@ -45,6 +47,7 @@ protected:
    std::shared_ptr<AuthAddressManager> authManager_;
    std::shared_ptr<MarketDataProvider> mdProvider_;
    std::shared_ptr<AssetManager> assetManager_;
+   std::shared_ptr<ArmoryConnection> armory_;
 };
 
 #endif // __OTCWINDOWSADAPTERBASE_H__

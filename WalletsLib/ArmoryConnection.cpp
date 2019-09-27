@@ -1186,6 +1186,10 @@ std::shared_ptr<AsyncClient::BtcWallet> ArmoryConnection::instantiateWallet(cons
    return std::make_shared<AsyncClient::BtcWallet>(bdv_->instantiateWallet(walletId));
 }
 
+float ArmoryConnection::toFeePerByte(float fee)
+{
+   return float(double(fee) * BTCNumericTypes::BalanceDivider / 1000.0);
+}
 
 void ArmoryCallback::progress(BDMPhase phase,
    const std::vector<std::string> &walletIdVec, float progress,
