@@ -743,7 +743,7 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                lbdUnsignedTx();
             };
             const auto cpAuthPubKey = BinaryData::CreateFromHex(qrn.requestorAuthPublicKey);
-            const auto &cbSetSettlId = [priWallet, settlementId, cpAuthPubKey, cbSettlAddr, this](bool result) {
+            const auto &cbSetSettlId = [priWallet, settlementId, cpAuthPubKey, cbSettlAddr](bool result) {
                if (!result) {
                   return;
                }
