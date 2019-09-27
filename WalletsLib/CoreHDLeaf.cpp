@@ -776,13 +776,12 @@ unsigned hd::SettlementLeaf::addSettlementID(const SecureBinaryData& id)
 
 unsigned hd::SettlementLeaf::getIndexForSettlementID(const SecureBinaryData& id) const
 {
-   try
-   {
+   try {
       auto accountPtr = accountPtr_->getOuterAccount();
       auto accountEcdh = std::dynamic_pointer_cast<AssetAccount_ECDH>(accountPtr);
-      if (accountEcdh == nullptr)
+      if (accountEcdh == nullptr) {
          throw AccountException("unexpected account type");
-
+      }
       return accountEcdh->getSaltIndex(id);
    }
    catch(DerivationSchemeException&)

@@ -1252,8 +1252,9 @@ void hd::SettlementLeaf::setSettlementID(const SecureBinaryData& id
 void hd::SettlementLeaf::getRootPubkey(const std::function<void(const SecureBinaryData &)> &cb) const
 {
    if (signContainer_ == nullptr) {
-      if (cb)
+      if (cb) {
          cb({});
+      }
       return;
    }
 

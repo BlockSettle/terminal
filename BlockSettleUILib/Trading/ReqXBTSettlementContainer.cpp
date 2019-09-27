@@ -96,7 +96,7 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
          , txReq.fee, qty, qty * BTCNumericTypes::BalanceDivider, payinHash.toHexStr(true));
 
       return signContainer_->signSettlementPayoutTXRequest(txReq
-         , {settlementId_, dealerAuthKey_, !clientSells_ }, dlgData);
+         , {settlementId_, dealerAuthKey_, true }, dlgData);
    }
    catch (const std::exception &e) {
       logger_->warn("[ReqXBTSettlementContainer::createPayoutTx] failed to create pay-out transaction based on {}: {}"
@@ -168,16 +168,17 @@ void ReqXBTSettlementContainer::activate()
       return;
    }
 
-   settlLeaf->setSettlementID(settlementId_, [thisPtr](bool success) {
+   settlLeaf->setSettlementID(settlementId_, [thisPtr](bool success)
+   {
       if (!thisPtr) {
          return;
       }
 
       if (!success) {
-         SPDLOG_LOGGER_ERROR(thisPtr->logger_, "can't find settlement leaf for auth address '{}'", thisPtr->authAddr_.display());
+         SPDLOG_LOGGER_ERROR(thisPtr->logger_, "can't find settlement leaf for auth address '{}'"
+            , thisPtr->authAddr_.display());
          return;
       }
-
       thisPtr->activateProceed();
    });
 }
