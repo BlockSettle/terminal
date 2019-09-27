@@ -230,11 +230,6 @@ void BsClient::OnDataReceived(const std::string &data)
       return;
    }
 
-   if (response->data_case() != Response::kCeler) {
-      SPDLOG_LOGGER_DEBUG(logger_, "bs recv: {}", ProtobufUtils::toJsonCompact(*response));
-      logger_->debug("[BsClient::OnDataReceived] {}", response->DebugString());
-   }
-
    QMetaObject::invokeMethod(this, [this, response] {
       if (response->request_id() != 0) {
          auto it = activeRequests_.find(response->request_id());
@@ -322,10 +317,6 @@ void BsClient::sendRequest(Request *request, std::chrono::milliseconds timeout
 
 void BsClient::sendMessage(Request *request)
 {
-   if (request->data_case() != Request::kCeler) {
-      SPDLOG_LOGGER_DEBUG(logger_, "bs send: {}", ProtobufUtils::toJsonCompact(*request));
-   }
-
    connection_->send(request->SerializeAsString());
 }
 
@@ -352,8 +343,6 @@ void BsClient::processCeler(const Response_Celer &response)
 
 void BsClient::processProxyPb(const Response_ProxyPb &response)
 {
-   logger_->debug("[BsClient::processProxyPb] PB message: {}"
-                  , response.DebugString());
    emit processPbMessage(response.data());
 }
 
