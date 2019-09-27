@@ -17,6 +17,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+#include <sstream>
+
 static const unsigned int kWaitTimeoutInSec = 30;
 
 using namespace bs::sync;
@@ -308,6 +310,19 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
          return;
       }
 
+      try {
+         Tx tx{signedTX};
+
+         std::stringstream ss;
+
+         tx.pprintAlot(ss);
+
+         logger_->debug("[ReqXBTSettlementContainer::onTXSigned] info on signed payin:\n{}"
+                        , ss.str());
+      } catch (...) {
+         logger_->error("[ReqXBTSettlementContainer::onTXSigned] failed to deserialize signed payin");
+      }
+
       emit sendSignedPayinToPB(settlementIdString_, signedTX);
 
       transactionData_->getWallet()->setTransactionComment(signedTX, comment_);
@@ -335,6 +350,19 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
 
       logger_->debug("[ReqXBTSettlementContainer::onTXSigned] signed payout: {}"
                      , signedTX.toHexStr());
+
+      try {
+         Tx tx{signedTX};
+
+         std::stringstream ss;
+
+         tx.pprintAlot(ss);
+
+         logger_->debug("[ReqXBTSettlementContainer::onTXSigned] info on signed payout:\n{}"
+                        , ss.str());
+      } catch (...) {
+         logger_->error("[ReqXBTSettlementContainer::onTXSigned] failed to deserialize signed payout");
+      }
 
       emit sendSignedPayoutToPB(settlementIdString_, signedTX);
 
@@ -369,6 +397,8 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
                         , settlementIdString_);
          return;
       }
+
+      unsignedPayinRequest_.DebugPrint("[ReqXBTSettlementContainer::onUnsignedPayinRequested] unsigned payin", logger_, true);
 
       // XXX: make reservation on UTXO
 

@@ -174,6 +174,9 @@ bool DealerXBTSettlementContainer::startPayInSigning()
 
 bool DealerXBTSettlementContainer::startPayOutSigning(const BinaryData& payinHash)
 {
+   logger_->debug("[DealerXBTSettlementContainer::startPayOutSigning] create payout for {} on {} for {}"
+                  , settlementIdString_, payinHash.toHexStr(), amount_);
+
    const auto &txWallet = transactionData_->getWallet();
    if (txWallet->type() != bs::core::wallet::Type::Bitcoin) {
       logger_->error("[DealerSettlDialog::onAccepted] Invalid payout wallet type: {}", (int)txWallet->type());
@@ -194,13 +197,15 @@ bool DealerXBTSettlementContainer::startPayOutSigning(const BinaryData& payinHas
          bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, amount_), receivingAddress
          , transactionData_->GetTransactionSummary().feePerByte, armory_->topBlock());
 
+      payOutTxRequest.DebugPrint("[DealerXBTSettlementContainer::startPayOutSigning] payout request", logger_, true);
+
       bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(payOutTxRequest);
       dlgData.setValue(PasswordDialogData::Market, "XBT");
       dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
       dlgData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
 
       payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(payOutTxRequest
-         , { settlementId_, reqAuthKey_, !weSell_ }
+         , { settlementId_, reqAuthKey_, true }
          , dlgData);
    } catch (const std::exception &e) {
       logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());
@@ -249,6 +254,23 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       txWallet->setAddressComment(transactionData_->GetFallbackRecvAddress()
          , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::SettlementPayOut));
 
+      logger_->debug("[DealerXBTSettlementContainer::onTXSigned] signed payout: {}"
+                     , signedTX.toHexStr());
+
+      try {
+         Tx tx{signedTX};
+
+         std::stringstream ss;
+
+         tx.pprintAlot(ss);
+
+         logger_->debug("[DealerXBTSettlementContainer::onTXSigned] info on signed payout:\n{}"
+                        , ss.str());
+      } catch (...) {
+         logger_->error("[DealerXBTSettlementContainer::onTXSigned] failed to deserialize signed payout");
+      }
+
+
       emit sendSignedPayoutToPB(settlementIdString_, signedTX);
 
       // ok. there is nothing this container could/should do
@@ -263,6 +285,19 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
 
       transactionData_->getWallet()->setTransactionComment(signedTX, comment_);
 //      settlWallet_->setTransactionComment(signedTX, comment_);  //TODO: implement later
+
+      try {
+         Tx tx{signedTX};
+
+         std::stringstream ss;
+
+         tx.pprintAlot(ss);
+
+         logger_->debug("[DealerXBTSettlementContainer::onTXSigned] info on signed payin:\n{}"
+                        , ss.str());
+      } catch (...) {
+         logger_->error("[DealerXBTSettlementContainer::onTXSigned] failed to deserialize signed payin");
+      }
 
       emit sendSignedPayinToPB(settlementIdString_, signedTX);
       logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payin sent");
@@ -293,6 +328,8 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
                         , settlementIdString_);
          return;
       }
+
+      unsignedPayinRequest_.DebugPrint("[DealerXBTSettlementContainer::onUnsignedPayinRequested] unsigned payin", logger_, true);
 
       emit sendUnsignedPayinToPB(settlementIdString_, unsignedPayinRequest_.serializeState());
    };
