@@ -663,8 +663,7 @@ std::shared_ptr<hd::SettlementLeaf> hd::SettlementGroup::getLeafForSettlementID(
    const SecureBinaryData& id) const
 {
    for (auto& leafPair : leaves_) {
-      auto settlLeaf = std::dynamic_pointer_cast<hd::SettlementLeaf>(
-         leafPair.second);
+      auto settlLeaf = std::dynamic_pointer_cast<hd::SettlementLeaf>(leafPair.second);
       
       if (settlLeaf == nullptr) {
          throw AccountException("unexpected leaf type");
