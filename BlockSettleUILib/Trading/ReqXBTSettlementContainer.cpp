@@ -310,6 +310,8 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
          return;
       }
 
+      logger_->debug("[ReqXBTSettlementContainer::onTXSigned] signed payin TX:\n{}", signedTX.toHexStr());
+
       try {
          Tx tx{signedTX};
 

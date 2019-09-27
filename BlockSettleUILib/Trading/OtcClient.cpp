@@ -555,8 +555,6 @@ void OtcClient::processPbMessage(const std::string &data)
       return;
    }
 
-   SPDLOG_LOGGER_DEBUG(logger_, "process PB message: {}", ProtobufUtils::toJsonCompact(response));
-
    switch (response.data_case()) {
       case ProxyTerminalPb::Response::kStartOtc:
          processPbStartOtc(response.start_otc());

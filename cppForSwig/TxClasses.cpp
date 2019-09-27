@@ -487,7 +487,7 @@ void Tx::pprint(ostream & os, int nIndent, bool pBigendian)
    for (int i = 0; i<nIndent; i++)
       indent = indent + "   ";
 
-   os << indent << "Tx:   " << thisHash_.toHexStr(pBigendian)
+   os << indent << "Tx:   " << getThisHash().toHexStr(pBigendian)
       << (pBigendian ? " (BE)" : " (LE)") << endl;
 
    os << indent << "   TxSize:      " << getSize() << " bytes" << endl;
