@@ -15,6 +15,8 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "ui_OTCNegotiationCommonWidget.h"
 
+using namespace bs::network;
+
 namespace {
    double kQuantityXBTSimpleStepAmount = 0.001;
 }
@@ -81,6 +83,18 @@ bs::network::otc::Offer OTCNegotiationRequestWidget::offer()
    selectedUTXO_.clear();
 
    return result;
+}
+
+void OTCNegotiationRequestWidget::setQuoteRequest(const bs::network::otc::QuoteRequest &request)
+{
+   // Fix side for OTC response
+   const bool isBuy = request.ourSide == otc::Side::Buy;
+   ui_->pushButtonBuy->setChecked(isBuy);
+   ui_->pushButtonSell->setChecked(!isBuy);
+   ui_->pushButtonBuy->setEnabled(false);
+   ui_->pushButtonSell->setEnabled(false);
+
+   ui_->rangeValue->setText(QString::fromStdString(otc::toString(request.rangeType)));
 }
 
 void OTCNegotiationRequestWidget::onSyncInterface()

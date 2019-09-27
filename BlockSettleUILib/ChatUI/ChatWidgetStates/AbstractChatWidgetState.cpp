@@ -346,6 +346,7 @@ void AbstractChatWidgetState::updateOtc()
          pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          break;
       case State::QuoteRecv:
+         chat_->ui_->widgetNegotiateRequest->setQuoteRequest(peer->request);
          pageNumber = OTCPages::OTCNegotiateRequestPage;
          break;
       case State::OfferSent:

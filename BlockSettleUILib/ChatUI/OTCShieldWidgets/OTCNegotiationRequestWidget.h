@@ -31,6 +31,8 @@ public:
 
    bs::network::otc::Offer offer();
 
+   void setQuoteRequest(const bs::network::otc::QuoteRequest &request);
+
 signals:
    void requestCreated();
 
