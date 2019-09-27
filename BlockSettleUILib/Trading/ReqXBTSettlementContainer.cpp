@@ -386,7 +386,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
       return;
    }
 
-   logger_->debug("[ReqXBTSettlementContainer::onUnsignedPayinRequested] unsigned payout requested: {}"
+   logger_->debug("[ReqXBTSettlementContainer::onUnsignedPayinRequested] unsigned payin requested: {}"
                   , settlementId);
 
    const auto &cbChangeAddr = [this](const bs::Address &changeAddr) {
