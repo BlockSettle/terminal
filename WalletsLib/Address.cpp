@@ -288,6 +288,29 @@ std::vector<UTXO> bs::Address::decorateUTXOsCopy(const std::vector<UTXO> &utxos)
    return result;
 }
 
+uint64_t bs::Address::getFeeForMaxVal(const std::vector<UTXO> &utxos, size_t txOutSize, float feePerByte)
+{
+   //version, locktime, txin & txout count + outputs size
+   size_t txSize = 10 + txOutSize;
+   size_t witnessSize = 0;
+
+   for (const auto& utxo : utxos) {
+      txSize += utxo.getInputRedeemSize();
+      if (utxo.isSegWit()) {
+         witnessSize += utxo.getWitnessDataSize();
+      }
+   }
+
+   if (witnessSize != 0) {
+      txSize += 2;
+      txSize += utxos.size();
+   }
+
+   uint64_t fee = uint64_t(feePerByte * float(txSize));
+   fee += uint64_t(float(witnessSize) * 0.25f * feePerByte);
+   return fee;
+}
+
 std::string bs::Address::display(Format format) const
 {
    if (!isProperHash()) {
