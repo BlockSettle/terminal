@@ -765,6 +765,17 @@ void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers 
          changePeerState(peer, State::OfferRecv);
          break;
 
+      case State::QuoteSent:
+         peer->offer.ourSide = otc::Side::Sell;
+         peer->offer.amount = msg.offer().amount();
+         peer->offer.price = msg.offer().price();
+         changePeerState(peer, State::OfferRecv);
+         break;
+
+      case State::QuoteRecv:
+         SPDLOG_LOGGER_ERROR(logger_, "not implemented");
+         return;
+
       case State::OfferSent:
          if (peer->offer.ourSide != otc::Side::Sell) {
             blockPeer("unexpected side in counter-offer", peer);
