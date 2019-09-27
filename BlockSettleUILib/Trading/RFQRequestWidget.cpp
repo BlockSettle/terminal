@@ -219,7 +219,8 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
    auto authAddr = ui_->pageRFQTicket->selectedAuthAddress();
 
    RFQDialog* dialog = new RFQDialog(logger_, rfq, ui_->pageRFQTicket->GetTransactionData(), quoteProvider_,
-      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_, connectionManager_, authAddr, this);
+      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
+      , connectionManager_, authAddr, this);
 
    dialog->setAttribute(Qt::WA_DeleteOnClose);
 

@@ -125,7 +125,7 @@ namespace bs {
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Settlement; }
             std::shared_ptr<hd::SettlementLeaf> getLeaf(const bs::Address &) const;
-            void addMap(const BinaryData &addr, const bs::hd::Path &path) { addrMap_[addr] = path; }
+            void addMap(const BinaryData &addr, const bs::hd::Path &path);
 
          protected:
             std::shared_ptr<hd::Leaf> newLeaf(const std::string &walletId) const override;

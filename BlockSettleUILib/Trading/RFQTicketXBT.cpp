@@ -524,11 +524,12 @@ bs::network::Side::Type RFQTicketXBT::getSelectedSide() const
 
 void RFQTicketXBT::onAuthAddrChanged(int index)
 {
-   const auto authAddr = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
-   if (authAddr.isNull()) {
+   authAddr_ = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
+   authKey_.clear();
+   if (authAddr_.isNull()) {
       return;
    }
-   const auto settlLeaf = authAddressManager_->getSettlementLeaf(authAddr);
+   const auto settlLeaf = authAddressManager_->getSettlementLeaf(authAddr_);
 
    const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
       authKey_ = pubKey.toHexStr();
@@ -539,8 +540,7 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
       settlLeaf->getRootPubkey(cbPubKey);
    }
    else {
-      walletsManager_->createSettlementLeaf(authAddr, cbPubKey);
-      return;
+      walletsManager_->createSettlementLeaf(authAddr_, cbPubKey);
    }
 }
 
@@ -800,7 +800,7 @@ QPushButton* RFQTicketXBT::denomCcyButton() const
 
 bs::Address RFQTicketXBT::selectedAuthAddress() const
 {
-   return authAddressManager_->GetAddress(ui_->authenticationAddressComboBox->currentIndex());
+   return authAddr_;
 }
 
 double RFQTicketXBT::estimatedXbtPayinFee() const
