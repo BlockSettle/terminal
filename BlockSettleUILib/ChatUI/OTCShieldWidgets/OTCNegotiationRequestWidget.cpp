@@ -81,6 +81,11 @@ bs::network::otc::Offer OTCNegotiationRequestWidget::offer()
    return result;
 }
 
+void OTCNegotiationRequestWidget::onAboutToApply()
+{
+   onUpdateIndicativePrice();
+}
+
 void OTCNegotiationRequestWidget::onSyncInterface()
 {
    int index = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWallets, getWalletManager());

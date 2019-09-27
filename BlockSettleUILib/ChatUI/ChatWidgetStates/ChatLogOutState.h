@@ -35,6 +35,8 @@ protected:
       if (chat_->otcHelper_) {
          chat_->otcHelper_->onLogout();
       }
+      chat_->ui_->widgetPullOwnOTCRequest->onLogout();
+
       chat_->ui_->widgetOTCShield->showLoginToAccessOTC();
    }
 

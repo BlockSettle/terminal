@@ -215,7 +215,8 @@ void AbstractChatWidgetState::onProcessOtcPbMessage(const std::string& data)
 void AbstractChatWidgetState::onOtcUpdated(const otc::Peer *peer)
 {
    if (canPerformOTCOperations() && chat_->currentPeer() == peer) {
-      updateOtc();
+      chat_->ui_->widgetPullOwnOTCRequest->registerOTCUpdatedTime(peer, QDateTime::currentDateTime());
+      onUpdateOTCShield();
    }
 }
 
@@ -225,7 +226,7 @@ void AbstractChatWidgetState::onOtcPublicUpdated()
       return;
    }
 
-   updateOtc();
+   onUpdateOTCShield();
    chat_->chatPartiesTreeModel_->onGlobalOTCChanged();
 }
 
@@ -278,6 +279,13 @@ void AbstractChatWidgetState::onOtcPullOrRejectCurrent()
          return;
       }
       chat_->otcHelper_->onOtcPullOrReject(peer);
+   }
+}
+
+void AbstractChatWidgetState::onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type)
+{
+   if (canPerformOTCOperations()) {
+      chat_->otcHelper_->onPullOrRejectOnTimeout(contactId, type);
    }
 }
 
@@ -334,7 +342,7 @@ void AbstractChatWidgetState::updateOtc()
          if (peer->type == otc::PeerType::Contact) {
             pageNumber = OTCPages::OTCNegotiateRequestPage;
          } else if (peer->isOwnRequest) {
-            chat_->ui_->widgetPullOwnOTCRequest->setRequest(peer->request);
+            chat_->ui_->widgetPullOwnOTCRequest->setRequest(peer->contactId, peer->request);
             pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          } else if (peer->type == otc::PeerType::Request) {
             chat_->ui_->widgetCreateOTCResponse->setRequest(peer->request);
@@ -342,14 +350,14 @@ void AbstractChatWidgetState::updateOtc()
          }
          break;
       case State::QuoteSent:
-         chat_->ui_->widgetPullOwnOTCRequest->setResponse(peer->response);
+         chat_->ui_->widgetPullOwnOTCRequest->setResponse(peer->contactId, peer->response);
          pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          break;
       case State::QuoteRecv:
          pageNumber = OTCPages::OTCNegotiateRequestPage;
          break;
       case State::OfferSent:
-         chat_->ui_->widgetPullOwnOTCRequest->setOffer(peer->offer);
+         chat_->ui_->widgetPullOwnOTCRequest->setOffer(peer->contactId, peer->offer);
          pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          break;
       case State::OfferRecv:
@@ -363,6 +371,11 @@ void AbstractChatWidgetState::updateOtc()
       case State::Blacklisted:
          chat_->ui_->widgetOTCShield->showContactIsOffline();
          break;
+   }
+
+   auto* actionWidget = qobject_cast<OTCWindowsAdapterBase*>(chat_->ui_->stackedWidgetOTC->widget(static_cast<int>(pageNumber)));
+   if (actionWidget) {
+      actionWidget->onAboutToApply();
    }
 
    chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(pageNumber));

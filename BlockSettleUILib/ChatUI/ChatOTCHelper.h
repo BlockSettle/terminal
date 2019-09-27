@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <set>
+#include "OtcTypes.h"
 #include "ChatProtocol/Message.h"
 #include "ChatProtocol/ClientParty.h"
 
@@ -65,6 +66,8 @@ public slots:
 
    void onMessageArrived(const Chat::MessagePtrList& messagePtr);
    void onPartyStateChanged(const Chat::ClientPartyPtr& clientPartyPtr);
+
+   void onPullOrRejectOnTimeout(const std::string& contactId, bs::network::otc::PeerType type);
 
 private:
    OtcClient* otcClient_{};
