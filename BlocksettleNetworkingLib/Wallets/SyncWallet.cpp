@@ -337,14 +337,16 @@ bool Wallet::getRBFTxOutList(const ArmoryConnection::UTXOsCb &cb) const
    return true;
 }
 
-bool Wallet::getSpendableTxOutList(std::vector<std::shared_ptr<Wallet>> &wallets, ArmoryConnection::UTXOsCb cb)
+bool Wallet::getSpendableTxOutList(const std::vector<std::shared_ptr<Wallet>> &wallets, ArmoryConnection::UTXOsCb cb)
 {
+   if (wallets.empty()) {
+      cb({});
+      return true;
+   }
    struct Result
    {
       std::map<int, std::vector<UTXO>> utxosMap;
       ArmoryConnection::UTXOsCb cb;
-      // Prevent calling callback with partial results
-      bool valid{};
    };
    auto result = std::make_shared<Result>();
    result->cb = std::move(cb);
@@ -353,22 +355,29 @@ bool Wallet::getSpendableTxOutList(std::vector<std::shared_ptr<Wallet>> &wallets
       const auto &wallet = wallets[i];
       auto cbWrap = [i, result, size = wallets.size()](std::vector<UTXO> utxos) {
          result->utxosMap.emplace(i, std::move(utxos));
-         if (result->utxosMap.size() != size || !result->valid) {
+         if (result->utxosMap.size() != size) {
             return;
          }
+
+         size_t total = 0;
+         for (auto &item : result->utxosMap) {
+            total += item.second.size();
+         }
          std::vector<UTXO> utxosAll;
+         utxosAll.reserve(total);
+
          for (auto &item : result->utxosMap) {
             utxosAll.insert(utxosAll.end(), std::make_move_iterator(item.second.begin())
                , std::make_move_iterator(item.second.end()));
          }
          result->cb(utxosAll);
       };
+      // If request for some wallet failed resulted callback won't be called.
       bool status = wallet->getSpendableTxOutList(cbWrap, UINT64_MAX);
       if (!status) {
          return false;
       }
    }
-   result->valid = true;
    return true;
 }
 
