@@ -162,6 +162,15 @@ bool QmlFactory::eventFilter(QObject *object, QEvent *event)
    return false;
 }
 
+bool QmlFactory::isDebugBuild()
+{
+#ifndef NDEBUG
+   return true;
+#else
+   return false;
+#endif
+}
+
 QString QmlFactory::headlessPubKey() const
 {
    return headlessPubKey_;
