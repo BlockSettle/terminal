@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.22.4",
-   "release_date": "26 Sep 2019",
+   "latest_version": "0.22.5",
+   "release_date": "27 Sep 2019",
    "changes": [
+      {
+         "version_string": "0.22.5",
+         "previous_version": "0.22.4",
+         "release_date": "27 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+         ],
+         "bug_fixes": [
+            "Fix chat public keys",
+            "Fix Max button for OTC",
+            "Fix public OTC",
+            "Copy nested SW fix from RFQDealerReply to OTC (#1402)"
+         ],
+         "revision": "10d4b334",
+         "common_revision": "7fd4c77d"
+      },
       {
          "version_string": "0.22.4",
          "previous_version": "0.22.3",
