@@ -48,7 +48,7 @@ const static QMap <QString, TableStructure> clientTablesMap{
             {partyMessage::kPartyMessageTableId, QStringLiteral("INTEGER PRIMARY KEY AUTOINCREMENT")},
             {partyMessage::kPartyTableId, QStringLiteral("INTEGER NOT NULL")},
             {partyMessage::kMessageId, QStringLiteral("CHAR(32) NOT NULL")},
-            {partyMessage::kTimestamp, QStringLiteral("DATETIME NOT NULL")},
+            {partyMessage::kTimestamp, QStringLiteral("INTEGER NOT NULL")},
             {partyMessage::kMessageState, QStringLiteral("INTEGER NOT NULL")},
             {partyMessage::kEncryptionType, QStringLiteral("INTEGER NOT NULL")},
             {partyMessage::kNonce, QStringLiteral("BLOB")},
@@ -66,7 +66,7 @@ const static QMap <QString, TableStructure> clientTablesMap{
             {user::kUserTableId, QStringLiteral("INTEGER PRIMARY KEY AUTOINCREMENT")},
             {user::kUserHash, QStringLiteral("TEXT NOT NULL UNIQUE")},
             {user::kPublicKey, QStringLiteral("TEXT NOT NULL")},
-            {user::kPublicKeyTimestamp, QStringLiteral("DATETIME NOT NULL")}
+            {user::kPublicKeyTimestamp, QStringLiteral("INTEGER NOT NULL")}
          }
       }
    }
