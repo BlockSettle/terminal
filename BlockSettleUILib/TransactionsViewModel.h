@@ -133,7 +133,7 @@ public:
    TransactionsViewModel(TransactionsViewModel&&) = delete;
    TransactionsViewModel& operator = (TransactionsViewModel&&) = delete;
 
-   void loadAllWallets();
+   void loadAllWallets(bool onNewBlock=false);
    size_t itemsCount() const { return currentItems_.size(); }
 
 public:
@@ -167,8 +167,9 @@ private:
 
    void init();
    void clear();
-   void loadLedgerEntries();
-   void ledgerToTxData(const std::map<int, std::vector<bs::TXEntry>> &rawData);
+   void loadLedgerEntries(bool onNewBlock=false);
+   void ledgerToTxData(const std::map<int, std::vector<bs::TXEntry>> &rawData
+      , bool onNewBlock=false);
    std::pair<size_t, size_t> updateTransactionsPage(const std::vector<bs::TXEntry> &);
    void updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &);
    void updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
