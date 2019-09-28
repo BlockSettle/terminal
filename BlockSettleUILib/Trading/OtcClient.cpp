@@ -975,7 +975,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    d->set_settlement_id(settlementId.toBinStr());
    d->set_auth_address_buyer(peer->authPubKey.toBinStr());
    d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
-   d->set_unsigned_payout(deal->payout.serializeState().toBinStr());
+   d->set_unsigned_payin(deal->payin.serializeState().toBinStr());
    d->set_chat_id_buyer(ownContactId_);
    d->set_chat_id_seller(peer->contactId);
    emit sendPbMessage(request.SerializeAsString());
