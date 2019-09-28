@@ -85,16 +85,29 @@ bs::network::otc::Offer OTCNegotiationRequestWidget::offer()
    return result;
 }
 
-void OTCNegotiationRequestWidget::setQuoteRequest(const bs::network::otc::QuoteRequest &request)
+void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
 {
-   // Fix side for OTC response
-   const bool isBuy = request.ourSide == otc::Side::Buy;
-   ui_->pushButtonBuy->setChecked(isBuy);
-   ui_->pushButtonSell->setChecked(!isBuy);
-   ui_->pushButtonBuy->setEnabled(false);
-   ui_->pushButtonSell->setEnabled(false);
+   const bool isContact = (peer.type == otc::PeerType::Contact);
 
-   ui_->rangeValue->setText(QString::fromStdString(otc::toString(request.rangeType)));
+   switch (peer.type) {
+      case otc::PeerType::Contact: {
+         toggleButtons(true);
+         break;
+      }
+
+      case otc::PeerType::Request:
+      case otc::PeerType::Response: {
+         toggleButtons(peer.request.ourSide == otc::Side::Sell);
+         ui_->rangeValue->setText(QString::fromStdString(otc::toString(peer.request.rangeType)));
+         break;
+      }
+   }
+
+   ui_->pushButtonBuy->setEnabled(isContact);
+   ui_->pushButtonSell->setEnabled(isContact);
+   ui_->rangeWidget->setVisible(!isContact);
+
+   onChanged();
 }
 
 void OTCNegotiationRequestWidget::onSyncInterface()
@@ -213,6 +226,12 @@ void OTCNegotiationRequestWidget::onCurrentWalletChanged()
    UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWallet());
    selectedUTXO_.clear();
    onUpdateBalances();
+}
+
+void OTCNegotiationRequestWidget::toggleButtons(bool isSell)
+{
+   ui_->pushButtonSell->setChecked(isSell);
+   ui_->pushButtonBuy->setChecked(!isSell);
 }
 
 void OTCNegotiationRequestWidget::onNumCcySelected()

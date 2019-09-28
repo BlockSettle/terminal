@@ -31,7 +31,7 @@ public:
 
    bs::network::otc::Offer offer();
 
-   void setQuoteRequest(const bs::network::otc::QuoteRequest &request);
+   void setPeer(const bs::network::otc::Peer &peer);
 
 signals:
    void requestCreated();
@@ -55,10 +55,11 @@ private slots:
    void onNumCcySelected();
    void onUpdateIndicativePrice();
    void onMaxQuantityClicked();
-
    void onCurrentWalletChanged();
 
 private:
+   void toggleButtons(bool isSell);
+
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
 
    bs::network::Asset::Type productGroup_ = bs::network::Asset::SpotXBT;
