@@ -22,18 +22,13 @@ CustomTitleDialogWindow {
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
 
     property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
-    property bool   cancelledByUser: false
     property int addressRowHeight: 24
-    property int recipientsAddrHeight: txInfo.recipients.length < 4 ? txInfo.recipients.length * addressRowHeight : addressRowHeight * 3
+    property int recipientsAddrHeight: txInfo.allRecipients.length < 4 ? txInfo.allRecipients.length * addressRowHeight : addressRowHeight * 3
 
     id: root
     title: qsTr("Sign Transaction")
     rejectable: true
     width: 500
-
-    function clickConfirmBtn() {
-        btnConfirm.clicked()
-    }
 
     function init() {
         if (walletInfo.encType !== QPasswordData.Auth) {
@@ -58,7 +53,6 @@ CustomTitleDialogWindow {
             mb.bsAccepted.connect(function() { rejectAnimated() })
         })
         authSign.userCancelled.connect(function() {
-            cancelledByUser = true
             rejectAnimated()
         })
     }
@@ -75,7 +69,7 @@ CustomTitleDialogWindow {
 
     onBsRejected: {
         if (authSign) {
-           authSign.cancel();
+            authSign.cancel()
         }
     }
 
@@ -85,7 +79,6 @@ CustomTitleDialogWindow {
 
         GridLayout {
             id: gridDashboard
-            //visible: txInfo.nbInputs
             columns: 2
             Layout.leftMargin: 10
             Layout.rightMargin: 10
@@ -129,7 +122,7 @@ CustomTitleDialogWindow {
                     id: recipients
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignRight
-                    model: txInfo.recipients
+                    model: txInfo.allRecipients
                     clip: true
                     Layout.preferredHeight: recipientsAddrHeight
 
@@ -244,7 +237,7 @@ CustomTitleDialogWindow {
 
             CustomPasswordTextInput {
                 id: tfPassword
-                visible: true //walletInfo.encType === QPasswordData.Password
+                visible: walletInfo.encType === QPasswordData.Password
                 focus: true
                 //placeholderText: qsTr("Password")
                 Layout.fillWidth: true
@@ -255,11 +248,24 @@ CustomTitleDialogWindow {
                     if (btnConfirm.enabled) btnConfirm.onClicked()
                 }
             }
+        }
+
+        RowLayout {
+            spacing: 25
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
 
             CustomLabel {
-                id: labelAuth
                 visible: walletInfo.encType === QPasswordData.Auth
-                text: authSign.status
+                Layout.fillWidth: true
+                text: qsTr("Auth Eid Email")
+            }
+
+            CustomLabel {
+                visible: walletInfo.encType === QPasswordData.Auth
+                Layout.alignment: Qt.AlignRight
+                text: walletInfo.email()
             }
         }
 
@@ -279,19 +285,12 @@ CustomTitleDialogWindow {
                     timeLeft -= 0.5
                     if (timeLeft <= 0) {
                         stop()
-                        // assume non signed tx is cancelled tx
-                        cancelledByUser = true
                         rejectAnimated()
                     }
                 }
                 signal expired()
             }
 
-//            CustomLabel {
-//                text: qsTr("On completion just press [Enter] or [Return]")
-//                visible: walletInfo.encType !== QPasswordData.Auth
-//                Layout.fillWidth: true
-//            }
             CustomLabelValue {
                 text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed((0)))
                 Layout.fillWidth: true
@@ -320,7 +319,6 @@ CustomTitleDialogWindow {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
-                    cancelledByUser = true
                     rejectAnimated()
                 }
             }

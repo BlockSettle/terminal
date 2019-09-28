@@ -1,13 +1,9 @@
 #ifndef SIGNER_INTERFACE_LISTENER_H
 #define SIGNER_INTERFACE_LISTENER_H
 
-#include <memory>
 #include <QObject>
-#include "CoreWallet.h"
-#include "SignContainer.h"
 #include "DataConnectionListener.h"
-#include "QmlBridge.h"
-#include "QmlFactory.h"
+#include "SignerUiDefs.h"
 #include "TXInfo.h"
 
 #include "bs_signer.pb.h"
@@ -16,15 +12,18 @@
 #include <memory>
 
 namespace bs {
-   namespace sync {
-      class WalletsManager;
+   namespace signer {
+      class QmlCallbackBase;
    }
 }
 namespace spdlog {
    class logger;
 }
+
 class ZmqBIP15XDataConnection;
 class SignerAdapter;
+class QmlBridge;
+class QmlFactory;
 
 using namespace Blocksettle::Communication;
 
@@ -125,7 +124,7 @@ private:
    bs::signer::QmlCallbackBase *createQmlPasswordCallback();
 
 protected:
-   void requestPasswordForDialogType(ui::PasswordInputDialogType dialogType
+   void requestPasswordForDialogType(bs::signer::ui::PasswordInputDialogType dialogType
       , bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo);
 
 private:

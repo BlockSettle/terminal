@@ -101,10 +101,31 @@ QStringList TXInfo::inputs(bs::core::wallet::Type leafType) const
    return result;
 }
 
-QStringList TXInfo::recipients() const
+QStringList TXInfo::counterPartyRecipients() const
 {
+   // Get recipients not listed in our wallets
+   // Usable for settlement tx dialog
+
    std::vector<std::shared_ptr<ScriptRecipient>> recipientsList;
    recipientsList = txReq_.getRecipients(containsCounterPartyAddressCb_);
+
+   QStringList result;
+   for (const auto &recip : recipientsList) {
+      const auto addr = bs::Address::fromRecipient(recip);
+      result.push_back(QString::fromStdString(addr.display()));
+   }
+
+   result.removeDuplicates();
+   return result;
+}
+
+QStringList TXInfo::allRecipients() const
+{
+   // Get all recipients from this tx
+   // Usable for regular tx sign dialog
+
+   std::vector<std::shared_ptr<ScriptRecipient>> recipientsList;
+   recipientsList = txReq_.getRecipients([](const bs::Address &){ return true; });
 
    QStringList result;
    for (const auto &recip : recipientsList) {

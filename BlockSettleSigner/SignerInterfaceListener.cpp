@@ -8,7 +8,6 @@
 #include <QApplication>
 #include "CelerClientConnection.h"
 #include "DataConnection.h"
-#include "DataConnectionListener.h"
 #include "HeadlessApp.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
@@ -182,10 +181,10 @@ void SignerInterfaceListener::onPeerConnected(const std::string &data, bool conn
    }
    const auto ip = QString::fromStdString(evt.ip_address());
    if (connected) {
-      emit parent_->peerConnected(ip);;
+      emit parent_->peerConnected(ip);
    }
    else {
-      emit parent_->peerDisconnected(ip);;
+      emit parent_->peerDisconnected(ip);
    }
 }
 

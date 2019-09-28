@@ -518,55 +518,55 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
     }
 
     let dlg = null;
-    if (walletInfo.encType === QPasswordData.Auth) {
-        dlg = requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
-            jsCallback(qmlFactory.errorCodeNoError(), walletInfo.walletId, passwordData)
-        })
+
+    if (passwordDialogData.DialogType === "RequestPasswordForAuthLeaf") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputAuthLeaf.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
     }
-    else if (walletInfo.encType === QPasswordData.Password){
-        if (passwordDialogData.DialogType === "RequestPasswordForAuthLeaf") {
-            dlg = Qt.createComponent("../BsControls/BSPasswordInputAuthLeaf.qml").createObject(mainWindow
-                , {"walletInfo": walletInfo,
-                   "passwordDialogData": passwordDialogData
-                  })
-        }
-        else if (passwordDialogData.DialogType === "RequestPasswordForToken") {
-            dlg = Qt.createComponent("../BsControls/BSPasswordInputToken.qml").createObject(mainWindow
-                , {"walletInfo": walletInfo,
-                   "passwordDialogData": passwordDialogData
-                  })
-        }
-        else if (passwordDialogData.DialogType === "RequestPasswordForSettlementLeaf") {
-            dlg = Qt.createComponent("../BsControls/BSPasswordInputSettlementLeaf.qml").createObject(mainWindow
-                , {"walletInfo": walletInfo,
-                   "passwordDialogData": passwordDialogData
-                  })
-        }
-        else if (passwordDialogData.DialogType === "RequestPasswordForRevokeAuthAddress") {
-            dlg = Qt.createComponent("../BsControls/BSPasswordInputRevokeAuthAddress.qml").createObject(mainWindow
-                , {"walletInfo": walletInfo,
-                   "passwordDialogData": passwordDialogData
-                  })
-        }
-        else if (passwordDialogData.DialogType === "RequestPasswordForPromoteHDWallet") {
-            dlg = Qt.createComponent("../BsControls/BSPasswordInputPromoteWallet.qml").createObject(mainWindow
-                , {"walletInfo": walletInfo,
-                   "passwordDialogData": passwordDialogData
-                  })
-        }
-
-        dlg.open()
-        dlg.bsAccepted.connect(function() {
-            var passwordData = qmlFactory.createPasswordData()
-            passwordData.encType = QPasswordData.Password
-            passwordData.encKey = ""
-            passwordData.textPassword = dlg.enteredPassword
-
-            jsCallback(qmlFactory.errorCodeNoError(), walletInfo.walletId, passwordData)
-        })
+    else if (passwordDialogData.DialogType === "RequestPasswordForToken") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputToken.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
+    }
+    else if (passwordDialogData.DialogType === "RequestPasswordForSettlementLeaf") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputSettlementLeaf.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
+    }
+    else if (passwordDialogData.DialogType === "RequestPasswordForRevokeAuthAddress") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputRevokeAuthAddress.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
+    }
+    else if (passwordDialogData.DialogType === "RequestPasswordForPromoteHDWallet") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputPromoteWallet.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
     }
 
     prepareLiteModeDialog(dlg)
+
+    dlg.bsAccepted.connect(function() {
+        var passwordData = qmlFactory.createPasswordData()
+        passwordData.encType = QPasswordData.Password
+        passwordData.encKey = ""
+        passwordData.textPassword = dlg.enteredPassword
+
+        jsCallback(qmlFactory.errorCodeNoError(), walletInfo.walletId, passwordData)
+    })
+
+    dlg.bsRejected.connect(function() {
+        jsCallback(qmlFactory.errorCodeTxCanceled(), walletInfo.rootId, dlg.passwordData)
+    })
+
+    dlg.open()
+    dlg.init()
 }
 
 function updateDialogData(jsCallback, passwordDialogData) {

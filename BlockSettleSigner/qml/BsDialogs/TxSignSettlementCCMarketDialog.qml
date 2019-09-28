@@ -21,7 +21,7 @@ TxSignSettlementBaseDialog {
     readonly property string inputProduct: is_sell ? " " + passwordDialogData.TxInputProduct : " XBT"
     readonly property int lotSize: passwordDialogData.LotSize
 
-    readonly property int recipientsAddrHeight: txInfo.recipients.length < 4 ? txInfo.recipients.length * addressRowHeight : addressRowHeight * 3
+    readonly property int recipientsAddrHeight: txInfo.counterPartyRecipients.length < 4 ? txInfo.counterPartyRecipients.length * addressRowHeight : addressRowHeight * 3
     readonly property int inputsXBTAddrHeight: txInfo.inputsXBT.length < 4 ? txInfo.inputsXBT.length * addressRowHeight : addressRowHeight * 3
     readonly property int inputsCCAddrHeight: txInfo.inputsCC.length < 4 ? txInfo.inputsCC.length * addressRowHeight : addressRowHeight * 3
 
@@ -142,7 +142,7 @@ TxSignSettlementBaseDialog {
                 id: recipients
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignRight
-                model: txInfo.recipients
+                model: txInfo.counterPartyRecipients
                 clip: true
                 Layout.preferredHeight: recipientsAddrHeight
 

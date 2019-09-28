@@ -7,11 +7,6 @@
 #include "SignerAdapter.h"
 #include "WalletSignerContainer.h"
 
-namespace bs {
-   namespace sync {
-      class WalletsManager;
-   }
-}
 namespace spdlog {
    class logger;
 }

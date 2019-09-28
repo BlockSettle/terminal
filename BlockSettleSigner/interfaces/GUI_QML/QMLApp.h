@@ -1,8 +1,6 @@
 #ifndef __QML_APP_H__
 #define __QML_APP_H__
 
-#include "SecureBinaryData.h"
-
 #include <memory>
 #include <unordered_set>
 #include <QObject>

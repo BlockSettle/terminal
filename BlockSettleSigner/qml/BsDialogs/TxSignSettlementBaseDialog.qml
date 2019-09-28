@@ -51,10 +51,6 @@ CustomTitleDialogWindow {
     rejectable: true
     width: 500
 
-    function clickConfirmBtn() {
-        btnConfirm.clicked()
-    }
-
     function init() {
         if (walletInfo.encType !== QPasswordData.Auth) {
             return
