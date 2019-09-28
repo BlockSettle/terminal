@@ -1402,12 +1402,15 @@ bool HeadlessContainerListener::onSetSettlementId(const std::string &clientId
    }
 
    // Call addSettlementID only once, otherwise addSettlementID will crash
-   if (settlLeaf->getIndexForSettlementID(request.settlement_id()) == UINT32_MAX) {
-      settlLeaf->addSettlementID(request.settlement_id());
+   const SecureBinaryData settlementId(request.settlement_id());
+   if (settlLeaf->getIndexForSettlementID(settlementId) == UINT32_MAX) {
+      settlLeaf->addSettlementID(settlementId);
       settlLeaf->getNewExtAddress();
       if (callbacks_) {
          callbacks_->walletChanged(settlLeaf->walletId());
       }
+      logger_->debug("[{}] set settlement id {} for wallet {}", __func__
+         , settlementId.toHexStr(), settlLeaf->walletId());
    }
 
    response.set_success(true);

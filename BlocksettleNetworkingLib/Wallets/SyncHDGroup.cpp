@@ -207,6 +207,11 @@ std::shared_ptr<hd::Leaf> hd::SettlementGroup::newLeaf(const std::string &wallet
       , signContainer_, logger_);
 }
 
+void hd::SettlementGroup::addMap(const BinaryData &addr, const bs::hd::Path &path)
+{
+   addrMap_[addr] = path;
+}
+
 std::shared_ptr<hd::SettlementLeaf> hd::SettlementGroup::getLeaf(const bs::Address &addr) const
 {
    const auto &it = addrMap_.find(addr.unprefixed());

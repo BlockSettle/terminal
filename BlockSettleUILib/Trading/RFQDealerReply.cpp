@@ -403,7 +403,6 @@ void RFQDealerReply::onAuthAddrChanged(int index)
       settlLeaf->getRootPubkey(cbPubKey);
    } else {
       walletsManager_->createSettlementLeaf(authAddr_, cbPubKey);
-      return;
    }
 }
 
