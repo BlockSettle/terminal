@@ -127,20 +127,9 @@ void OTCNegotiationRequestWidget::onSyncInterface()
    UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, getAuthManager());
 }
 
-void OTCNegotiationRequestWidget::onUpdateMD(bs::network::Asset::Type type, const QString &security, const bs::network::MDFields& fields)
+void OTCNegotiationRequestWidget::onMDUpdated()
 {
-   if (productGroup_ != type || security_ != security) {
-      return;
-   }
-
-   updateIndicativePrices(type, security, fields, sellIndicativePrice_, buyIndicativePrice_);
-
-   if (ui_->pushButtonBuy->isChecked()) {
-      ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(buyIndicativePrice_, productGroup_));
-   }
-   else {
-      ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(sellIndicativePrice_, productGroup_));
-   }
+   updateIndicativePriceValue(ui_->indicativePriceValue, ui_->pushButtonBuy->isChecked());
 }
 
 void OTCNegotiationRequestWidget::onUpdateBalances()

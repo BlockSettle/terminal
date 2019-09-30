@@ -10,6 +10,7 @@ namespace Ui {
 
 class RangeWidget : public QWidget
 {
+   Q_OBJECT
 public:
    RangeWidget(QWidget* parent = nullptr);
    ~RangeWidget() override;
@@ -25,6 +26,11 @@ public:
 private slots:
    void onLowerValueChanged(int newLower);
    void onUpperValueChanged(int newUpper);
+
+signals:
+   void lowerValueChanged(int lowerValue);
+   void upperValueChanged(int upperValue);
+
 private:
    std::unique_ptr<Ui::RangeWidget> ui_;
 };

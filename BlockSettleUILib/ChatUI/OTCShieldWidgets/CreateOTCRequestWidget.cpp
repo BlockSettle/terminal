@@ -1,6 +1,9 @@
 #include "CreateOTCRequestWidget.h"
 
 #include "OtcTypes.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "UiUtils.h"
+#include "AssetManager.h"
 #include "ui_CreateOTCRequestWidget.h"
 
 #include <QComboBox>
@@ -26,6 +29,7 @@ void CreateOTCRequestWidget::init(otc::Env env)
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &CreateOTCRequestWidget::onBuyClicked);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &CreateOTCRequestWidget::onSellClicked);
    connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &CreateOTCRequestWidget::requestCreated);
+   connect(ui_->pushButtonNumCcy, &QPushButton::clicked, this, &CreateOTCRequestWidget::onNumCcySelected);
 
    onSellClicked();
 }
@@ -42,10 +46,36 @@ void CreateOTCRequestWidget::onSellClicked()
 {
    ui_->pushButtonSell->setChecked(true);
    ui_->pushButtonBuy->setChecked(false);
+   onUpdateBalances();
 }
 
 void CreateOTCRequestWidget::onBuyClicked()
 {
    ui_->pushButtonSell->setChecked(false);
    ui_->pushButtonBuy->setChecked(true);
+
+   onUpdateBalances();
+}
+
+void CreateOTCRequestWidget::onNumCcySelected()
+{
+   ui_->pushButtonNumCcy->setChecked(true);
+   ui_->pushButtonDenomCcy->setChecked(false);
+}
+
+void CreateOTCRequestWidget::onUpdateBalances()
+{
+   QString totalBalance;
+   if (ui_->pushButtonBuy->isChecked()) {
+      totalBalance = tr("%1 %2")
+         .arg(UiUtils::displayCurrencyAmount(getAssetManager()->getBalance(buyProduct_.toStdString())))
+         .arg(buyProduct_);
+   }
+   else {
+      totalBalance = tr("%1 %2")
+         .arg(UiUtils::displayAmount(getWalletManager()->getTotalBalance()))
+         .arg(QString::fromStdString(bs::network::XbtCurrency));
+   }
+
+   ui_->labelBalanceValue->setText(totalBalance);
 }

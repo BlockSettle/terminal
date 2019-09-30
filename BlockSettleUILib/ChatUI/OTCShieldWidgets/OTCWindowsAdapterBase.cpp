@@ -10,7 +10,8 @@
 #include "SelectedTransactionInputs.h"
 #include "CoinControlDialog.h"
 
-#include "QComboBox"
+#include <QComboBox>
+#include <QLabel>
 
 OTCWindowsAdapterBase::OTCWindowsAdapterBase(QWidget* parent /*= nullptr*/)
    : QWidget(parent)
@@ -50,6 +51,10 @@ std::shared_ptr<AssetManager> OTCWindowsAdapterBase::getAssetManager() const
    return otcManager_->getAssetManager();
 }
 
+void OTCWindowsAdapterBase::setPeer(const bs::network::otc::Peer &)
+{
+}
+
 void OTCWindowsAdapterBase::onAboutToApply()
 {
 }
@@ -58,7 +63,19 @@ void OTCWindowsAdapterBase::onSyncInterface()
 {
 }
 
-void OTCWindowsAdapterBase::onUpdateMD(bs::network::Asset::Type, const QString&, const bs::network::MDFields&)
+void OTCWindowsAdapterBase::onUpdateMD(bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields)
+{
+   if (productGroup_ != type || security_ != security) {
+      return;
+   }
+
+   updateIndicativePrices(type, security, fields);
+
+   // overloaded in direved class
+   onMDUpdated();
+}
+
+void OTCWindowsAdapterBase::onMDUpdated()
 {
 }
 
@@ -97,15 +114,15 @@ void OTCWindowsAdapterBase::onShowXBTInputReady()
 }
 
 void OTCWindowsAdapterBase::updateIndicativePrices(bs::network::Asset::Type type, const QString& security
-   , const bs::network::MDFields& fields, double& sellIndicativePrice, double& buyIndicativePrice)
+   , const bs::network::MDFields& fields)
 {
    for (const auto &field : fields) {
       switch (field.type) {
       case bs::network::MDField::PriceBid:
-         sellIndicativePrice = field.value;
+         sellIndicativePrice_ = field.value;
          break;
       case bs::network::MDField::PriceOffer:
-         buyIndicativePrice = field.value;
+         buyIndicativePrice_ = field.value;
          break;
       default:  break;
       }
@@ -138,5 +155,17 @@ std::shared_ptr<bs::sync::hd::Wallet> OTCWindowsAdapterBase::getCurrentHDWalletF
 {
    const auto walletId = walletsCombobox->currentData(UiUtils::WalletIdRole).toString().toStdString();
    return getWalletManager()->getHDWalletById(walletId);
+}
+
+double OTCWindowsAdapterBase::updateIndicativePriceValue(QLabel *label, bool isBuySide)
+{
+   if (isBuySide) {
+      label->setText(UiUtils::displayPriceForAssetType(buyIndicativePrice_, productGroup_));
+      return buyIndicativePrice_;
+   }
+   else {
+      label->setText(UiUtils::displayPriceForAssetType(sellIndicativePrice_, productGroup_));
+      return sellIndicativePrice_;
+   }
 }
 
