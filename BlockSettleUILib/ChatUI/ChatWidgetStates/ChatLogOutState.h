@@ -35,6 +35,8 @@ protected:
       if (chat_->otcHelper_) {
          chat_->otcHelper_->onLogout();
       }
+      chat_->ui_->widgetPullOwnOTCRequest->onLogout();
+
       chat_->ui_->widgetOTCShield->showLoginToAccessOTC();
    }
 
@@ -47,6 +49,8 @@ protected:
    bool canSendPartyRequest() const override { return false; }
    bool canRemovePartyRequest() const override { return false; }
    bool canUpdatePartyName() const override { return false; }
+   bool canReceiveOTCOperations() const override { return false; }
+
 };
 
 #endif // CHATLOGOUTSTATE_H

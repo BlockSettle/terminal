@@ -15,6 +15,8 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "ui_OTCNegotiationCommonWidget.h"
 
+using namespace bs::network;
+
 namespace {
    double kQuantityXBTSimpleStepAmount = 0.001;
 }
@@ -81,6 +83,39 @@ bs::network::otc::Offer OTCNegotiationRequestWidget::offer()
    selectedUTXO_.clear();
 
    return result;
+}
+
+
+void OTCNegotiationRequestWidget::onAboutToApply()
+{
+   onUpdateIndicativePrice();
+}
+
+void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
+{
+   const bool isContact = (peer.type == otc::PeerType::Contact);
+
+   switch (peer.type) {
+      case otc::PeerType::Contact: {
+         // Reset side to sell by default for contacts
+         toggleSideButtons(/*isSell*/ true);
+         break;
+      }
+
+      case otc::PeerType::Request:
+      case otc::PeerType::Response: {
+         // For public OTC side is fixed, use it from original request details
+         toggleSideButtons(peer.request.ourSide == otc::Side::Sell);
+         ui_->rangeValue->setText(QString::fromStdString(otc::toString(peer.request.rangeType)));
+         break;
+      }
+   }
+
+   ui_->pushButtonBuy->setEnabled(isContact);
+   ui_->pushButtonSell->setEnabled(isContact);
+   ui_->rangeWidget->setVisible(!isContact);
+
+   onChanged();
 }
 
 void OTCNegotiationRequestWidget::onSyncInterface()
@@ -199,6 +234,12 @@ void OTCNegotiationRequestWidget::onCurrentWalletChanged()
    UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWallet());
    selectedUTXO_.clear();
    onUpdateBalances();
+}
+
+void OTCNegotiationRequestWidget::toggleSideButtons(bool isSell)
+{
+   ui_->pushButtonSell->setChecked(isSell);
+   ui_->pushButtonBuy->setChecked(!isSell);
 }
 
 void OTCNegotiationRequestWidget::onNumCcySelected()

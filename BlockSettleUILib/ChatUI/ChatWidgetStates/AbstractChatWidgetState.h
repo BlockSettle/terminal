@@ -66,6 +66,7 @@ public:
    void onOtcQuoteResponseSubmit();
 
    void onOtcPullOrRejectCurrent();
+   void onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type);
 
 protected:
 
@@ -81,6 +82,7 @@ protected:
    virtual bool canRemovePartyRequest() const { return true; }
    virtual bool canUpdatePartyName() const { return true; }
    virtual bool canPerformOTCOperations() const { return false; }
+   virtual bool canReceiveOTCOperations() const { return true; }
 
    void saveDraftMessage();
    void restoreDraftMessage();
