@@ -70,7 +70,7 @@ signals:
    void orderFilled();
    void requestPrimaryWalletCreation();
 
-   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 

@@ -75,7 +75,7 @@ signals:
    void retry();
 
 signals:
-   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& txId);
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 

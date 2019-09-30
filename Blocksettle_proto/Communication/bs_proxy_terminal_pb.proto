@@ -41,8 +41,9 @@ message Request
 
    message XBTUnsignedPayin
     {
-        string  settlement_id   = 1;
-        bytes   unsigned_payin  = 2;
+        string  settlement_id       = 1;
+        bytes   unsigned_payin      = 2;
+        bytes   unsigned_payin_id   = 3;
     }
 
     message XBTSignedPayin

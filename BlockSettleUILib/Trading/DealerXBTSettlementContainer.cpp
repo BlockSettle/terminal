@@ -329,9 +329,29 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
          return;
       }
 
-      unsignedPayinRequest_.DebugPrint("[DealerXBTSettlementContainer::onUnsignedPayinRequested] unsigned payin", logger_, true);
+      const auto cbPreimage = [this](const std::map<bs::Address, BinaryData> &preimages)
+      {
+         const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
 
-      emit sendUnsignedPayinToPB(settlementIdString_, unsignedPayinRequest_.serializeState());
+         const auto unsignedTxId = unsignedPayinRequest_.txId(resolver);
+
+
+         unsignedPayinRequest_.DebugPrint("[DealerXBTSettlementContainer::onUnsignedPayinRequested cbPreimage] unsigned payin", logger_, true);
+         logger_->debug("[DealerXBTSettlementContainer::onUnsignedPayinRequested cbPreimage] unsigned tx id {}", unsignedTxId.toHexStr());
+
+         emit sendUnsignedPayinToPB(settlementIdString_, unsignedPayinRequest_.serializeState(), unsignedTxId);
+      };
+
+      std::map<std::string, std::vector<bs::Address>> addrMapping;
+      const auto wallet = transactionData_->getWallet();
+      const auto walletId = wallet->walletId();
+
+      for (const auto &utxo : transactionData_->inputs()) {
+         const auto addr = bs::Address::fromUTXO(utxo);
+         addrMapping[walletId].push_back(addr);
+      }
+
+      signContainer_->getAddressPreimage(addrMapping, cbPreimage);
    };
 
    if (transactionData_->GetTransactionSummary().hasChange) {
