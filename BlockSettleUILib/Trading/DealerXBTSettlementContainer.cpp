@@ -195,10 +195,7 @@ bool DealerXBTSettlementContainer::startPayOutSigning(const BinaryData& payinHas
    try {
       auto payOutTxRequest = bs::SettlementMonitor::createPayoutTXRequest(
          bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, amount_), receivingAddress
-         , 2, armory_->topBlock());
-
-      logger_->debug("[DealerXBTSettlementContainer::startPayOutSigning] fee set to {}"
-                     , transactionData_->GetTransactionSummary().feePerByte);
+         , transactionData_->feePerByte(), armory_->topBlock());
 
       bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(payOutTxRequest);
       dlgData.setValue(PasswordDialogData::Market, "XBT");
