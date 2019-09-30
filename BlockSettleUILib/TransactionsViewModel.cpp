@@ -278,7 +278,12 @@ void TransactionsViewModel::loadAllWallets(bool onNewBlock)
       loadLedgerEntries(onNewBlock);
    };
    if (initialLoadCompleted_) {
-      armory_->getWalletsLedgerDelegate(cbWalletsLD);
+      if (ledgerDelegate_) {
+         loadLedgerEntries(onNewBlock);
+      }
+      else {
+         armory_->getWalletsLedgerDelegate(cbWalletsLD);
+      }
    }
 }
 
@@ -689,7 +694,6 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
             item->amountStr.clear();
             item->calcAmount(walletsManager_);
          }
-         logger_->debug("[{}] newBlockNum={} for item {}", __func__, newBlockNum, updItem->txEntry.txHash.toHexStr(true));
          if (newBlockNum != UINT32_MAX) {
             const auto confNum = armory_->getConfirmationsNumber(newBlockNum);
             if (!item->confirmations) {
