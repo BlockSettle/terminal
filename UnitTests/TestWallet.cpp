@@ -3161,36 +3161,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    request.fee = 271;
    request.change.address = bs::Address("2MykWqWBJGBeuyPGv73CisrokXKeGKNXU2C");
 
-   class ResolverPreimage : public ResolverFeed
-   {
-   public:
-      ResolverPreimage(const bs::Address &addr, const BinaryData &preimage)
-         : ResolverFeed(), address_(addr), preimage_(preimage)
-      { }
-      BinaryData getByVal(const BinaryData &addr) override
-      {
-         if (addr == address_.unprefixed()) {
-            return preimage_;
-         }
-         throw std::runtime_error("not found");
-      }
-      const SecureBinaryData &getPrivKeyForPubkey(const BinaryData &pk) override
-      {
-         throw std::runtime_error("not supported");
-      }
-
-   private:
-      bs::Address address_;
-      BinaryData  preimage_;
-   };
-
-   // This operation doesn't require wallet decryption
-   const auto addrEntry = coreLeaf->getAddressEntryForAddr(address.prefixed());
-   ASSERT_NE(addrEntry, nullptr);
-   const auto addrPreimage = addrEntry->getPreimage();
-   ASSERT_FALSE(addrPreimage.isNull());
-
-   const auto resolver = std::make_shared<ResolverPreimage>(address, addrPreimage);
+   const auto resolver = coreLeaf->getPublicResolver();
 
    try {
       const auto txId = request.txId(resolver);
