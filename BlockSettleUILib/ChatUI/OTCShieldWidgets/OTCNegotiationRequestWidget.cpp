@@ -3,15 +3,19 @@
 #include <QComboBox>
 #include <QPushButton>
 
-#include "OtcTypes.h"
-#include "UiUtils.h"
-#include "Wallets/SyncWalletsManager.h"
-#include "Wallets/SyncHDWallet.h"
-#include "AuthAddressManager.h"
 #include "AssetManager.h"
-#include "SelectedTransactionInputs.h"
+#include "AuthAddressManager.h"
 #include "CoinControlDialog.h"
+#include "OTCWindowsManager.h"
+#include "OtcClient.h"
+#include "OtcTypes.h"
+#include "SelectedTransactionInputs.h"
+#include "UiUtils.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "ui_OTCNegotiationCommonWidget.h"
+
+using namespace bs::network;
 
 namespace {
    double kQuantityXBTSimpleStepAmount = 0.001;
@@ -81,9 +85,37 @@ bs::network::otc::Offer OTCNegotiationRequestWidget::offer()
    return result;
 }
 
+
 void OTCNegotiationRequestWidget::onAboutToApply()
 {
    onUpdateIndicativePrice();
+}
+
+void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
+{
+   const bool isContact = (peer.type == otc::PeerType::Contact);
+
+   switch (peer.type) {
+      case otc::PeerType::Contact: {
+         // Reset side to sell by default for contacts
+         toggleSideButtons(/*isSell*/ true);
+         break;
+      }
+
+      case otc::PeerType::Request:
+      case otc::PeerType::Response: {
+         // For public OTC side is fixed, use it from original request details
+         toggleSideButtons(peer.request.ourSide == otc::Side::Sell);
+         ui_->rangeValue->setText(QString::fromStdString(otc::toString(peer.request.rangeType)));
+         break;
+      }
+   }
+
+   ui_->pushButtonBuy->setEnabled(isContact);
+   ui_->pushButtonSell->setEnabled(isContact);
+   ui_->rangeWidget->setVisible(!isContact);
+
+   onChanged();
 }
 
 void OTCNegotiationRequestWidget::onSyncInterface()
@@ -204,6 +236,12 @@ void OTCNegotiationRequestWidget::onCurrentWalletChanged()
    onUpdateBalances();
 }
 
+void OTCNegotiationRequestWidget::toggleSideButtons(bool isSell)
+{
+   ui_->pushButtonSell->setChecked(isSell);
+   ui_->pushButtonBuy->setChecked(!isSell);
+}
+
 void OTCNegotiationRequestWidget::onNumCcySelected()
 {
    ui_->pushButtonNumCcy->setChecked(true);
@@ -218,6 +256,42 @@ void OTCNegotiationRequestWidget::onUpdateIndicativePrice()
 
 void OTCNegotiationRequestWidget::onMaxQuantityClicked()
 {
-   const double spendableQuantity = getXBTSpendableBalance();
-   ui_->quantitySpinBox->setValue(spendableQuantity);
+   const auto hdWallet = getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
+   if (!hdWallet) {
+      ui_->quantitySpinBox->setValue(0);
+      return;
+   }
+
+   auto cb = [this, parentWidget = QPointer<OTCWindowsAdapterBase>(this)](const std::vector<UTXO> &utxos) {
+      QMetaObject::invokeMethod(qApp, [this, utxos, parentWidget] {
+         if (!parentWidget) {
+            return;
+         }
+         auto feeCb = [this, parentWidget, utxos = std::move(utxos)](float fee) {
+            QMetaObject::invokeMethod(qApp, [this, parentWidget, fee, utxos = std::move(utxos)] {
+               if (!parentWidget) {
+                  return;
+               }
+               float feePerByte = ArmoryConnection::toFeePerByte(fee);
+               uint64_t total = 0;
+               for (const auto &utxo : utxos) {
+                  total += utxo.getValue();
+               }
+               const uint64_t fee = OtcClient::estimatePayinFeeWithoutChange(utxos, feePerByte);
+               const double spendableQuantity = std::max(0.0, (total - fee) / BTCNumericTypes::BalanceDivider);
+               ui_->quantitySpinBox->setValue(spendableQuantity);
+            });
+         };
+         otcManager_->getArmory()->estimateFee(OtcClient::feeTargetBlockCount(), feeCb);
+      });
+   };
+
+   if (!selectedUTXO_.empty()) {
+      cb(selectedUTXO_);
+      return;
+   }
+
+   const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
+   bs::sync::Wallet::getSpendableTxOutList(wallets, cb);
 }

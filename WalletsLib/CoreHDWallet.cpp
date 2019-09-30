@@ -794,6 +794,10 @@ std::shared_ptr<AddressEntry_P2WSH> hd::Wallet::getAddressPtrForSettlement(
 
    //grab settlement asset from leaf
    auto index = leafPtr->getIndexForSettlementID(settlementID);
+   if (index == UINT32_MAX) {
+      throw AssetException("settlement id " + settlementID.toHexStr()
+         + " not found in " + leafPtr->walletId());
+   }
    auto myAssetPtr = leafPtr->accountPtr_->getAssetForID(index, true);
    auto myAssetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(myAssetPtr);
    if (myAssetSingle == nullptr) {
@@ -837,9 +841,9 @@ std::shared_ptr<hd::SettlementLeaf> hd::Wallet::getLeafForSettlementID(
 {
    auto group = getGroup(bs::hd::CoinType::BlockSettle_Settlement);
    auto settlGroup = std::dynamic_pointer_cast<hd::SettlementGroup>(group);
-   if (settlGroup == nullptr)
+   if (settlGroup == nullptr) {
       throw AccountException("missing settlement group");
-
+   }
    return settlGroup->getLeafForSettlementID(id);
 }
 

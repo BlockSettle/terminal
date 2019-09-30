@@ -7,6 +7,7 @@
 #include "AddressVerificator.h"
 #include "AuthAddressManager.h"
 #include "BtcUtils.h"
+#include "CoinSelection.h"
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "OfflineSigner.h"
@@ -213,7 +214,6 @@ const std::string &OtcClient::ownContactId() const
    return ownContactId_;
 }
 
-
 bool OtcClient::sendQuoteRequest(const QuoteRequest &request)
 {
    if (ownRequest_) {
@@ -244,17 +244,12 @@ bool OtcClient::sendQuoteRequest(const QuoteRequest &request)
 bool OtcClient::sendQuoteResponse(Peer *peer, const QuoteResponse &quoteResponse)
 {
    if (peer->state != State::Idle) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}', peer should be in IdleRequestor state", peer->toString());
+      SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}', peer should be in Idle state", peer->toString());
       return false;
    }
 
    if (!isSubRange(otc::getRange(peer->request.rangeType), quoteResponse.amount)) {
       SPDLOG_LOGGER_ERROR(logger_, "invalid range");
-      return false;
-   }
-
-   if (peer->state != State::Idle) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't send quote response to '{}', peer should be in IdleRequestor state", peer->toString());
       return false;
    }
 
@@ -299,9 +294,22 @@ bool OtcClient::sendOffer(Peer *peer, const Offer &offer)
          return;
       }
 
-      if (peer->state != State::Idle) {
-         SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}', peer should be in idle state", peer->toString());
-         return;
+      switch (peer->type) {
+         case PeerType::Contact:
+            if (peer->state != State::Idle) {
+               SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}', peer should be in idle state", peer->toString());
+               return;
+            }
+            break;
+         case PeerType::Request:
+            SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}'", peer->toString());
+            return;
+         case PeerType::Response:
+            if (peer->state != State::QuoteRecv) {
+               SPDLOG_LOGGER_ERROR(logger_, "can't send offer to '{}', peer should be in QuoteRecv state", peer->toString());
+               return;
+            }
+            break;
       }
 
       peer->offer = offer;
@@ -487,6 +495,31 @@ bool OtcClient::updateOffer(Peer *peer, const Offer &offer)
 Peer *OtcClient::ownRequest() const
 {
    return ownRequest_.get();
+}
+
+unsigned OtcClient::feeTargetBlockCount()
+{
+   return 2;
+}
+
+uint64_t OtcClient::estimatePayinFeeWithoutChange(const std::vector<UTXO> &inputs, float feePerByte)
+{
+   // add workaround for computeSizeAndFee (it can't compute exact v-size before signing,
+   // sometimes causing "fee not met" error for 1 sat/byte)
+   if (feePerByte >= 1.0f && feePerByte < 1.01f) {
+      feePerByte = 1.01f;
+   }
+
+   std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
+   // Use some fake settlement address as the only recipient
+   auto recipient = bs::Address(CryptoPRNG::generateRandom(32), AddressEntryType_P2WSH);
+   // Select some random amount
+   recipientsMap[0] = recipient.getRecipient(uint64_t(1000));
+
+   auto inputsCopy = bs::Address::decorateUTXOsCopy(inputs);
+   PaymentStruct payment(recipientsMap, 0, feePerByte, 0);
+   uint64_t result = bs::Address::getFeeForMaxVal(inputsCopy, payment.size_, feePerByte);
+   return result;
 }
 
 void OtcClient::contactConnected(const std::string &contactId)
@@ -732,6 +765,17 @@ void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers 
          changePeerState(peer, State::OfferRecv);
          break;
 
+      case State::QuoteSent:
+         peer->offer.ourSide = otc::Side::Sell;
+         peer->offer.amount = msg.offer().amount();
+         peer->offer.price = msg.offer().price();
+         changePeerState(peer, State::OfferRecv);
+         break;
+
+      case State::QuoteRecv:
+         SPDLOG_LOGGER_ERROR(logger_, "not implemented");
+         return;
+
       case State::OfferSent:
          if (peer->offer.ourSide != otc::Side::Sell) {
             blockPeer("unexpected side in counter-offer", peer);
@@ -774,9 +818,15 @@ void OtcClient::processSellerOffers(Peer *peer, const ContactMessage_SellerOffer
          break;
 
       case State::QuoteSent:
-      case State::QuoteRecv:
-         // FIXME: Implement for public OTC
+         peer->offer.ourSide = otc::Side::Buy;
+         peer->offer.amount = msg.offer().amount();
+         peer->offer.price = msg.offer().price();
+         changePeerState(peer, State::OfferRecv);
          break;
+
+      case State::QuoteRecv:
+         SPDLOG_LOGGER_ERROR(logger_, "not implemented");
+         return;
 
       case State::OfferSent:
          if (peer->offer.ourSide != otc::Side::Buy) {
@@ -925,7 +975,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    d->set_settlement_id(settlementId.toBinStr());
    d->set_auth_address_buyer(peer->authPubKey.toBinStr());
    d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
-   d->set_unsigned_payout(deal->payout.serializeState().toBinStr());
+   d->set_unsigned_payin(deal->payin.serializeState().toBinStr());
    d->set_chat_id_buyer(ownContactId_);
    d->set_chat_id_seller(peer->contactId);
    emit sendPbMessage(request.SerializeAsString());

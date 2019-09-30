@@ -24,7 +24,9 @@ void OTCWindowsAdapterBase::setChatOTCManager(const std::shared_ptr<OTCWindowsMa
       onSyncInterface();
    });
 
-   connect(otcManager_.get(), &OTCWindowsManager::updateMDDataRequired, this, [this](bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields) {
+   connect(otcManager_.get(), &OTCWindowsManager::updateMDDataRequired, this,
+      [this](bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields)
+   {
       onUpdateMD(type, security, fields);
    });
 
@@ -67,30 +69,20 @@ void OTCWindowsAdapterBase::onUpdateBalances()
 void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 {
    allUTXOs_.clear();
-   awaitingLeafsResponse_.clear();
    selectedUTXO_.clear();
 
-   const auto hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
-   for (auto wallet : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
-      auto cbUTXOs = [parentWidget = QPointer<OTCWindowsAdapterBase>(this), walletId = wallet->walletId()](const std::vector<UTXO> &utxos) {
-         if (!parentWidget) {
-            return;
-         }
-
-         parentWidget->allUTXOs_.insert(parentWidget->allUTXOs_.end(), utxos.begin(), utxos.end());
-         parentWidget->awaitingLeafsResponse_.erase(walletId);
-
-         if (parentWidget->awaitingLeafsResponse_.empty()) {
-            QMetaObject::invokeMethod(parentWidget, "onShowXBTInputReady");
-         }
-      };
-
-      if (!wallet->getSpendableTxOutList(cbUTXOs, UINT64_MAX)) {
-         continue;
+   auto cb = [parentWidget = QPointer<OTCWindowsAdapterBase>(this)](const std::vector<UTXO> &utxos) {
+      if (!parentWidget) {
+         return;
       }
+      parentWidget->allUTXOs_ = utxos;
+      QMetaObject::invokeMethod(parentWidget, &OTCWindowsAdapterBase::onShowXBTInputReady);
+   };
 
-      awaitingLeafsResponse_.insert(wallet->walletId());
-   }
+   const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
+   const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
+   bs::sync::Wallet::getSpendableTxOutList(wallets, cb);
 }
 
 void OTCWindowsAdapterBase::onShowXBTInputReady()
@@ -104,7 +96,8 @@ void OTCWindowsAdapterBase::onShowXBTInputReady()
    emit xbtInputsProcessed();
 }
 
-void OTCWindowsAdapterBase::updateIndicativePrices(bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields, double& sellIndicativePrice, double& buyIndicativePrice)
+void OTCWindowsAdapterBase::updateIndicativePrices(bs::network::Asset::Type type, const QString& security
+   , const bs::network::MDFields& fields, double& sellIndicativePrice, double& buyIndicativePrice)
 {
    for (const auto &field : fields) {
       switch (field.type) {
@@ -133,7 +126,7 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
       }
    }
    else {
-      for (auto utxo : selectedUTXO_) {
+      for (const auto &utxo : selectedUTXO_) {
          totalBalance += static_cast<double>(utxo.getValue()) / BTCNumericTypes::BalanceDivider;
       }
    }

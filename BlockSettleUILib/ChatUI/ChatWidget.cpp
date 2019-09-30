@@ -100,7 +100,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    // OTC
    otcHelper_ = new ChatOTCHelper(this);
    otcHelper_->init(env, loggerPtr, walletsMgr, armory, signContainer, authManager, appSettings);
-   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager);
+   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager, armory);
 
    chatClientServicePtr_ = chatClientServicePtr;
 
@@ -526,6 +526,14 @@ void ChatWidget::onOtcPullOrReject(const std::string& contactId, bs::network::ot
 
 void ChatWidget::onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
 {
+   // only one key needs to be replaced - show one message box
+   if (userPublicKeyInfoList.size() == 1)
+   {
+      onConfirmContactNewKeyData(userPublicKeyInfoList, false);
+      return;
+   }
+
+   // multiple keys replacing
    QString detailsPattern = tr("Contacts Require key update: %1");
 
    QString  detailsString = detailsPattern.arg(userPublicKeyInfoList.size());
