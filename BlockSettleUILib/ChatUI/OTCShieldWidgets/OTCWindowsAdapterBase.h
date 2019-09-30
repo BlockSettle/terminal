@@ -35,6 +35,9 @@ signals:
    void chatRoomChanged();
    void xbtInputsProcessed();
 
+public slots:
+   virtual void onAboutToApply();
+
 protected slots:
    virtual void onSyncInterface();
    virtual void onUpdateMD(bs::network::Asset::Type, const QString&, const bs::network::MDFields&);

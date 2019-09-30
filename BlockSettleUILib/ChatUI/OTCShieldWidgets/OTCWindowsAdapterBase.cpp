@@ -50,6 +50,10 @@ std::shared_ptr<AssetManager> OTCWindowsAdapterBase::getAssetManager() const
    return otcManager_->getAssetManager();
 }
 
+void OTCWindowsAdapterBase::onAboutToApply()
+{
+}
+
 void OTCWindowsAdapterBase::onSyncInterface()
 {
 }

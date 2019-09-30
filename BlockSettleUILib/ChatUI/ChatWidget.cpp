@@ -174,7 +174,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(otcHelper_->client(), &OtcClient::publicUpdated, this, &ChatWidget::onOtcPublicUpdated);
 
    connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::requestCreated, this, &ChatWidget::onOtcRequestSubmit);
-   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::requestPulled, this, &ChatWidget::onOtcPullOrRejectCurrent);
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::currentRequestPulled, this, &ChatWidget::onOtcPullOrRejectCurrent);
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::requestPulled, this, &ChatWidget::onOtcPullOrReject);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseAccepted, this, &ChatWidget::onOtcResponseAccept);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseUpdated, this, &ChatWidget::onOtcResponseUpdate);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseRejected, this, &ChatWidget::onOtcPullOrRejectCurrent);
@@ -516,6 +517,11 @@ void ChatWidget::onOtcQuoteResponseSubmit()
 void ChatWidget::onOtcPullOrRejectCurrent()
 {
    stateCurrent_->onOtcPullOrRejectCurrent();
+}
+
+void ChatWidget::onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type)
+{
+   stateCurrent_->onOtcPullOrReject(contactId, type);
 }
 
 void ChatWidget::onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)

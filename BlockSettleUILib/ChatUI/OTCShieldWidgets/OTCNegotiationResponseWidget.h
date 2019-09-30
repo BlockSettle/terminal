@@ -30,6 +30,9 @@ signals:
    void responseUpdated();
    void responseRejected();
 
+public slots:
+   void onAboutToApply() override;
+
 protected slots:
    void onSyncInterface() override;
    void onUpdateMD(bs::network::Asset::Type type, const QString &security, const bs::network::MDFields& fields) override;

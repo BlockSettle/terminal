@@ -85,6 +85,12 @@ bs::network::otc::Offer OTCNegotiationRequestWidget::offer()
    return result;
 }
 
+
+void OTCNegotiationRequestWidget::onAboutToApply()
+{
+   onUpdateIndicativePrice();
+}
+
 void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
 {
    const bool isContact = (peer.type == otc::PeerType::Contact);
