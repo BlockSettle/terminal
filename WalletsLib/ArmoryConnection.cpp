@@ -1309,6 +1309,7 @@ void ArmoryCallback::resetConnection()
 void bs::TXEntry::merge(const bs::TXEntry &other)
 {
    value += other.value;
+   blockNum = other.blockNum;
    merged = true;
 }
 
