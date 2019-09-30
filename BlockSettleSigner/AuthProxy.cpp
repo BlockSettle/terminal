@@ -6,7 +6,10 @@
 #include <QBuffer>
 #include <QByteArray>
 #include <QPixmap>
+
+#include "ApplicationSettings.h"
 #include "ConnectionManager.h"
+#include "QWalletInfo.h"
 
 AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &settings

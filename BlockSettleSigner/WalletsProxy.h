@@ -6,15 +6,19 @@
 #include <QJSValue>
 
 #include "BSErrorCode.h"
-#include "QWalletInfo.h"
-#include "QSeed.h"
-#include "QPasswordData.h"
 #include "SignerDefs.h"
 
 namespace spdlog {
    class logger;
 }
 namespace bs {
+   namespace hd {
+      class WalletInfo;
+   }
+   namespace wallet {
+      class QPasswordData;
+      class QSeed;
+   }
    namespace sync {
       namespace hd {
          class Wallet;

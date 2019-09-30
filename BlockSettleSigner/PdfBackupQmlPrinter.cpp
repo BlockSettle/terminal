@@ -10,6 +10,8 @@
 #include <QFileDialog>
 #include <QDesktopServices>
 
+#include "PaperBackupWriter.h"
+
 //
 // QmlPdfBackup
 //

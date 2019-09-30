@@ -5,9 +5,9 @@
 #include "CoreWallet.h"
 #include "SignerDefs.h"
 #include "ServerConnectionListener.h"
-#include "ZMQ_BIP15X_ServerConnection.h"
 
 #include "bs_signer.pb.h"
+#include "headless.pb.h"
 
 namespace spdlog {
    class logger;
@@ -25,7 +25,7 @@ class HeadlessAppObj;
 class HeadlessContainerCallbacks;
 class HeadlessContainerCallbacksImpl;
 class HeadlessSettings;
-class ServerConnection;
+class ZmqBIP15XServerConnection;
 
 class SignerAdapterListener : public ServerConnectionListener
 {

@@ -13,6 +13,7 @@
 #include "ServerConnection.h"
 #include "StringUtils.h"
 #include "SystemFileUtils.h"
+#include "ZMQ_BIP15X_ServerConnection.h"
 
 using namespace Blocksettle::Communication;
 

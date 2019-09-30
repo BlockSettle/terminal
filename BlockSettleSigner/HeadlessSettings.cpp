@@ -2,7 +2,6 @@
 #include <fstream>
 
 #include "BIP150_151.h"
-#include "BtcDefinitions.h"
 #include "BlockDataManagerConfig.h"
 #include "BtcUtils.h"
 #include "cxxopts.hpp"

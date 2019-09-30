@@ -5,7 +5,6 @@
 #include <QQuickWindow>
 #include <QKeyEvent>
 #include <spdlog/spdlog.h>
-#include "AuthProxy.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "SignerAdapter.h"
 

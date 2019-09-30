@@ -1,15 +1,16 @@
-
 #ifndef PDFBACKUPQMLPRINTER_H_INCLUDED
 #define PDFBACKUPQMLPRINTER_H_INCLUDED
 
 #include <QQuickPaintedItem>
 
-#include "PaperBackupWriter.h"
-#include "QWalletInfo.h"
 #include "QSeed.h"
-#include "QPasswordData.h"
+#include "PaperBackupWriter.h"
 #include <memory>
 
+namespace bs {
+namespace wallet {
+class QSeed;
+} }
 //
 // QmlPdfBackup
 //

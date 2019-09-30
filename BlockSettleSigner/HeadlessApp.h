@@ -4,8 +4,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include "CoreWallet.h"
-#include "EncryptionUtils.h"
+
 #include "SignerDefs.h"
 #include "BSErrorCode.h"
 
@@ -27,9 +26,7 @@ namespace Blocksettle {
 class HeadlessContainerListener;
 class SignerAdapterListener;
 class HeadlessSettings;
-class SignerSettings;
 class ZmqBIP15XServerConnection;
-class HeadlessContainerCallbacks;
 class DispatchQueue;
 
 class HeadlessAppObj
