@@ -58,7 +58,7 @@ private slots:
    void onCurrentWalletChanged();
 
 private:
-   void toggleButtons(bool isSell);
+   void toggleSideButtons(bool isSell);
 
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
 

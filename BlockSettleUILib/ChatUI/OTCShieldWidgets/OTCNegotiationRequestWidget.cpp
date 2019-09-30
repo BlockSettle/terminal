@@ -91,13 +91,15 @@ void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
 
    switch (peer.type) {
       case otc::PeerType::Contact: {
-         toggleButtons(true);
+         // Reset side to sell by default for contacts
+         toggleSideButtons(/*isSell*/ true);
          break;
       }
 
       case otc::PeerType::Request:
       case otc::PeerType::Response: {
-         toggleButtons(peer.request.ourSide == otc::Side::Sell);
+         // For public OTC side is fixed, use it from original request details
+         toggleSideButtons(peer.request.ourSide == otc::Side::Sell);
          ui_->rangeValue->setText(QString::fromStdString(otc::toString(peer.request.rangeType)));
          break;
       }
@@ -228,7 +230,7 @@ void OTCNegotiationRequestWidget::onCurrentWalletChanged()
    onUpdateBalances();
 }
 
-void OTCNegotiationRequestWidget::toggleButtons(bool isSell)
+void OTCNegotiationRequestWidget::toggleSideButtons(bool isSell)
 {
    ui_->pushButtonSell->setChecked(isSell);
    ui_->pushButtonBuy->setChecked(!isSell);
