@@ -2848,6 +2848,184 @@ TEST_F(TestWalletWithArmory, SignSettlement)
    }
 }
 
+TEST_F(TestWalletWithArmory, GlobalDelegateConf)
+{
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   inprocSigner->Start();
+   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+      , envPtr_->appSettings(), envPtr_->armoryConnection());
+   syncMgr->setSignContainer(inprocSigner);
+
+   auto promSync = std::make_shared<std::promise<bool>>();
+   auto futSync = promSync->get_future();
+   const auto &cbSync = [this, promSync](int cur, int total) {
+      if (cur == total) {
+         promSync->set_value(true);
+      }
+   };
+   syncMgr->syncWallets(cbSync);
+   EXPECT_TRUE(futSync.get());
+
+   auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
+   ASSERT_NE(syncHdWallet, nullptr);
+
+   syncHdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
+   auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
+   auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
+   ASSERT_TRUE(syncLeaf != nullptr);
+
+   const auto &lbdGetExtAddress = [syncWallet](AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+      auto promAddr = std::make_shared<std::promise<bs::Address>>();
+      auto futAddr = promAddr->get_future();
+      const auto &cbAddr = [promAddr](const bs::Address &addr) {
+         promAddr->set_value(addr);
+      };
+      syncWallet->getNewExtAddress(cbAddr);
+      return futAddr.get();
+   };
+
+   const bs::Address addr = lbdGetExtAddress();
+
+   const auto armoryInstance = envPtr_->armoryInstance();
+
+   auto curHeight = envPtr_->armoryConnection()->topBlock();
+   const auto recipient = addr.getRecipient((uint64_t)(5 * COIN));
+   armoryInstance->mineNewBlock(recipient.get(), 6);
+   auto newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + 6, newTop);
+   curHeight = newTop;
+
+   //check the address balances
+   //update balance
+   auto promPtrBal = std::make_shared<std::promise<bool>>();
+   auto futBal = promPtrBal->get_future();
+   const auto &cbBalance = [promPtrBal](void)
+   {
+      promPtrBal->set_value(true);
+   };
+
+   //async, has to wait
+   syncLeaf->updateBalances(cbBalance);
+   futBal.wait();
+
+   //check balance
+   const auto balances = syncLeaf->getAddrBalance(addr);
+   EXPECT_EQ(balances[0], 30 * COIN);
+
+   auto promLedger1 = std::make_shared<std::promise<std::shared_ptr<AsyncClient::LedgerDelegate>>>();
+   auto futLedger1 = promLedger1->get_future();
+   const auto cbLedger1 = [promLedger1](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
+      promLedger1->set_value(delegate);
+   };
+   ASSERT_TRUE(envPtr_->armoryConnection()->getWalletsLedgerDelegate(cbLedger1));
+   auto globalLedger = futLedger1.get();
+   ASSERT_NE(globalLedger, nullptr);
+
+   const auto &lbdGetLDEntries = [](const std::shared_ptr<AsyncClient::LedgerDelegate> &ledger)
+      -> std::shared_ptr<std::vector<ClientClasses::LedgerEntry>>
+   {
+      auto promLDPageCnt1 = std::make_shared<std::promise<uint64_t>>();
+      auto futLDPageCnt1 = promLDPageCnt1->get_future();
+      const auto cbLDPageCnt1 = [promLDPageCnt1](ReturnMessage<uint64_t> msg) {
+         try {
+            const auto pageCnt = msg.get();
+            promLDPageCnt1->set_value(pageCnt);
+         } catch (...) {
+            promLDPageCnt1->set_value(0);
+         }
+      };
+      ledger->getPageCount(cbLDPageCnt1);
+      auto pageCnt1 = futLDPageCnt1.get();
+      EXPECT_GE(pageCnt1, 1);
+
+      auto ledgerEntries = std::make_shared<std::vector<ClientClasses::LedgerEntry>>();
+      auto promLDEntries1 = std::make_shared<std::promise<bool>>();
+      auto futLDEntries1 = promLDEntries1->get_future();
+      const auto &cbHistPage1 = [&pageCnt1, promLDEntries1, ledgerEntries]
+      (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> msg)
+      {
+         try {
+            const auto &entries = msg.get();
+            ledgerEntries->insert(ledgerEntries->end(), entries.cbegin(), entries.cend());
+         } catch (...) {
+            promLDEntries1->set_value(false);
+            return;
+         }
+         if (--pageCnt1 == 0) {
+            promLDEntries1->set_value(true);
+         }
+      };
+      for (uint64_t pageId = 0; pageId < pageCnt1; ++pageId) {
+         ledger->getHistoryPage(pageId, cbHistPage1);
+      }
+      EXPECT_TRUE(futLDEntries1.get());
+      return ledgerEntries;
+   };
+   auto ledgerEntries = lbdGetLDEntries(globalLedger);
+   ASSERT_FALSE(ledgerEntries->empty());
+   EXPECT_EQ(ledgerEntries->size(), 6);   // 6 blocks were mined as initial funding
+   EXPECT_EQ((*ledgerEntries)[0].getBlockNum(), newTop);
+   EXPECT_EQ((*ledgerEntries)[5].getBlockNum(), 1);
+
+   const auto addr1 = lbdGetExtAddress();
+
+   auto promTxOut = std::make_shared<std::promise<bool>>();
+   auto futTxOut = promTxOut->get_future();
+   const auto &cbTxOutList = [this, leaf = leafPtr_, syncLeaf, addr1, promTxOut]
+      (std::vector<UTXO> inputs)->void
+   {
+      const auto recipient = addr1.getRecipient((uint64_t)(5 * COIN));
+      const auto txReq = syncLeaf->createTXRequest(inputs, { recipient });
+      BinaryData txSigned;
+      {
+         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
+         txSigned = leaf->signTXRequest(txReq);
+         ASSERT_FALSE(txSigned.isNull());
+      }
+
+      UnitTestWalletACT::clear();
+
+      envPtr_->armoryInstance()->pushZC(txSigned);
+
+      auto&& zcVec = UnitTestWalletACT::waitOnZC();
+      promTxOut->set_value(zcVec.size() == 1);
+   };
+
+   //async, has to wait
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+   ASSERT_TRUE(futTxOut.get());
+
+   ledgerEntries = lbdGetLDEntries(globalLedger);
+   ASSERT_FALSE(ledgerEntries->empty());
+   EXPECT_EQ(ledgerEntries->size(), 7);
+   EXPECT_EQ((*ledgerEntries)[0].getBlockNum(), UINT32_MAX);
+
+   // Mine new block - conf count for entry[0] should increase
+   armoryInstance->mineNewBlock(recipient.get(), 1);
+   newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + 1, newTop);
+
+#if 0    // ledger delegate should be refreshed on each new block event, but it works fine even without it
+   auto promLedger2 = std::make_shared<std::promise<std::shared_ptr<AsyncClient::LedgerDelegate>>>();
+   auto futLedger2 = promLedger2->get_future();
+   const auto cbLedger2 = [promLedger2](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
+      promLedger2->set_value(delegate);
+   };
+   ASSERT_TRUE(envPtr_->armoryConnection()->getWalletsLedgerDelegate(cbLedger2));
+   globalLedger = futLedger2.get();
+   ASSERT_NE(globalLedger, nullptr);
+#endif   //0
+
+   ledgerEntries = lbdGetLDEntries(globalLedger);
+   ASSERT_FALSE(ledgerEntries->empty());
+   EXPECT_EQ(ledgerEntries->size(), 8);   // we have one additional TX on addr at mining
+   EXPECT_EQ(envPtr_->armoryConnection()->getConfirmationsNumber((*ledgerEntries)[1].getBlockNum()), 1);
+}
+
+
 TEST_F(TestWallet, MultipleKeys)
 {
    const SecureBinaryData passphrase("test");
