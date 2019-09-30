@@ -198,7 +198,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Ok")
                 onClicked: {
                     if (walletInfo.encType === QPasswordData.Password) {
-                        passwordData.textPassword = tfPassword.text
+                        passwordData.textPassword = passwordInput.text
                         passwordData.encType = QPasswordData.Password
                         acceptAnimated()
                     }
