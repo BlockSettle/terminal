@@ -349,6 +349,7 @@ void AbstractChatWidgetState::updateOtc()
             chat_->ui_->widgetNegotiateRequest->setPeer(*peer);
             pageNumber = OTCPages::OTCNegotiateRequestPage;
          } else if (peer->isOwnRequest) {
+            chat_->ui_->widgetPullOwnOTCRequest->registerOTCUpdatedTime(peer, QDateTime::currentDateTime());
             chat_->ui_->widgetPullOwnOTCRequest->setRequest(peer->contactId, peer->request);
             pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          } else if (peer->type == otc::PeerType::Request) {
