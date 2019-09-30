@@ -30,6 +30,33 @@ CustomTitleDialogWindow {
     width: 350
     rejectable: true
 
+    function init() {
+        if (walletInfo.encType !== QPasswordData.Auth) {
+            return
+        }
+
+        btnAccept.visible = false
+        btnReject.anchors.horizontalCenter = barFooter.horizontalCenter
+
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo)
+
+        authSign.succeeded.connect(function(encKey, password) {
+            passwordData.encType = QPasswordData.Auth
+            passwordData.encKey = encKey
+            passwordData.binaryPassword = password
+            acceptAnimated()
+        });
+        authSign.failed.connect(function(errorText) {
+            var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
+                , qsTr("Wallet"), qsTr("eID request failed with error: \n") + errorText
+                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
+            mb.bsAccepted.connect(function() { rejectAnimated() })
+        })
+        authSign.userCancelled.connect(function() {
+            rejectAnimated()
+        })
+    }
+
     onBsRejected: {
         if (authSign) {
             authSign.cancel()
@@ -100,12 +127,6 @@ CustomTitleDialogWindow {
                         if (btnAccept.enabled) btnAccept.onClicked()
                     }
                 }
-
-                CustomLabel {
-                    id: labelAuth
-                    visible: walletInfo.encType === QPasswordData.Auth
-                    text: authSign.status
-                }
             }
 
             ColumnLayout {
@@ -131,12 +152,6 @@ CustomTitleDialogWindow {
                     signal expired()
                 }
 
-                CustomLabelValue {
-                    visible: walletInfo.encType === QPasswordData.Auth
-                    text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed(0))
-                    Layout.fillWidth: true
-                }
-
                 CustomProgressBar {
                     visible: walletInfo.encType === QPasswordData.Auth
                     Layout.minimumHeight: 6
@@ -147,6 +162,12 @@ CustomTitleDialogWindow {
                     to: duration
                     value: timer.timeLeft
                 }
+
+                CustomLabelValue {
+                    visible: walletInfo.encType === QPasswordData.Auth
+                    text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed(0))
+                    Layout.fillWidth: true
+                }
             }
 
         }
@@ -155,7 +176,7 @@ CustomTitleDialogWindow {
     cFooterItem: RowLayout {
         Layout.fillWidth: true
         CustomButtonBar {
-            id: buttonBar
+            id: barFooter
             Layout.fillWidth: true
 
             CustomButton {
@@ -176,7 +197,17 @@ CustomTitleDialogWindow {
                 anchors.margins: 5
                 text: qsTr("Ok")
                 onClicked: {
-                    acceptAnimated()
+                    if (walletInfo.encType === QPasswordData.Password) {
+                        passwordData.textPassword = tfPassword.text
+                        passwordData.encType = QPasswordData.Password
+                        acceptAnimated()
+                    }
+                    else if (walletInfo.encType === QPasswordData.Auth) {
+                    }
+                    else {
+                        passwordData.encType = QPasswordData.Unencrypted
+                        acceptAnimated()
+                    }
                 }
             }
         }
