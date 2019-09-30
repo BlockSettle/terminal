@@ -83,7 +83,7 @@ void AddressVerificator::commandQueueThreadFunction()
          }
 
          assert(!commandsQueue_.empty());
-         nextCommand = commandsQueue_.front();
+         nextCommand = std::move(commandsQueue_.front());
          commandsQueue_.pop();
       }
 
