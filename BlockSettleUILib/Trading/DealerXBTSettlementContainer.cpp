@@ -195,9 +195,10 @@ bool DealerXBTSettlementContainer::startPayOutSigning(const BinaryData& payinHas
    try {
       auto payOutTxRequest = bs::SettlementMonitor::createPayoutTXRequest(
          bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, amount_), receivingAddress
-         , transactionData_->GetTransactionSummary().feePerByte, armory_->topBlock());
+         , 2, armory_->topBlock());
 
-      payOutTxRequest.DebugPrint("[DealerXBTSettlementContainer::startPayOutSigning] payout request", logger_, true);
+      logger_->debug("[DealerXBTSettlementContainer::startPayOutSigning] fee set to {}"
+                     , transactionData_->GetTransactionSummary().feePerByte);
 
       bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(payOutTxRequest);
       dlgData.setValue(PasswordDialogData::Market, "XBT");
@@ -335,11 +336,10 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
 
          const auto unsignedTxId = unsignedPayinRequest_.txId(resolver);
 
-
          unsignedPayinRequest_.DebugPrint("[DealerXBTSettlementContainer::onUnsignedPayinRequested cbPreimage] unsigned payin", logger_, true);
          logger_->debug("[DealerXBTSettlementContainer::onUnsignedPayinRequested cbPreimage] unsigned tx id {}", unsignedTxId.toHexStr());
 
-         emit sendUnsignedPayinToPB(settlementIdString_, unsignedPayinRequest_.serializeState(), unsignedTxId);
+         emit sendUnsignedPayinToPB(settlementIdString_, unsignedPayinRequest_.serializeState(resolver), unsignedTxId);
       };
 
       std::map<std::string, std::vector<bs::Address>> addrMapping;

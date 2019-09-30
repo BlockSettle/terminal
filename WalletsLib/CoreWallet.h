@@ -206,7 +206,7 @@ namespace bs {
             std::vector<UTXO> getInputs(const ContainsAddressCb &containsAddressCb) const;
             std::vector<std::shared_ptr<ScriptRecipient>> getRecipients(const ContainsAddressCb &containsAddressCb) const;
 
-            void DebugPrint(const std::string& prefix, const std::shared_ptr<spdlog::logger>& logger, bool serializeAndPrint);
+            void DebugPrint(const std::string& prefix, const std::shared_ptr<spdlog::logger>& logger, bool serializeAndPrint, const std::shared_ptr<ResolverFeed> &resolver=nullptr);
 
          private:
             Signer getSigner(const std::shared_ptr<ResolverFeed> &resolver = nullptr) const;

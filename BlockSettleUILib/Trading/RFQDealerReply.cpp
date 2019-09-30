@@ -198,6 +198,7 @@ void RFQDealerReply::reset()
             };
             walletsManager_->estimatedFeePerByte(2, cbFee, this);
          }
+
          if (currentQRN_.assetType == bs::network::Asset::SpotXBT) {
             transactionData_->setWallet(getSelectedXbtWallet(), armory_->topBlock());
          } else if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {

@@ -770,55 +770,57 @@ BinaryData wallet::computeID(const BinaryData &input)
 }
 
 
-void wallet::TXSignRequest::DebugPrint(const std::string& prefix, const std::shared_ptr<spdlog::logger>& logger, bool serializeAndPrint)
+void wallet::TXSignRequest::DebugPrint(const std::string& prefix, const std::shared_ptr<spdlog::logger>& logger
+                                       , bool serializeAndPrint
+                                       , const std::shared_ptr<ResolverFeed> &resolver)
 {
    std::stringstream ss;
 
    // wallet ids
-   ss << "TXSignRequest:   " << txId().toHexStr() << "\n";
+   ss << "   TXSignRequest TX ID:   " << txId(resolver).toHexStr(true) << "\n";
 
    uint64_t inputAmount = 0;
-   ss << "Inputs: " << inputs.size() << '\n';
+   ss << "      Inputs: " << inputs.size() << '\n';
    for (const auto& utxo : inputs) {
-      ss << " UTXO txHash : " << utxo.txHash_.toHexStr() << '\n';
-      ss << "      txOutIndex : " << utxo.txOutIndex_ << '\n';
-      ss << "      txHeight : " << utxo.txHeight_ << '\n';
-      ss << "      txIndex : " << utxo.txIndex_ << '\n';
-      ss << "      value : " << utxo.value_ << '\n';
-      ss << "      script : " << utxo.script_.toHexStr() << '\n';
-      ss << "      SW  : " << (utxo.isInputSW_ ? "yes" : "no") << '\n';
-      ss << "      txinRedeemSizeBytes: " << utxo.txinRedeemSizeBytes_ << '\n';
-      ss << "      witnessDataSizeBytes: " << utxo.witnessDataSizeBytes_ << '\n';
+      ss << "    UTXO txHash : " << utxo.txHash_.toHexStr() << '\n';
+      ss << "         txOutIndex : " << utxo.txOutIndex_ << '\n';
+      ss << "         txHeight : " << utxo.txHeight_ << '\n';
+      ss << "         txIndex : " << utxo.txIndex_ << '\n';
+      ss << "         value : " << utxo.value_ << '\n';
+      ss << "         script : " << utxo.script_.toHexStr() << '\n';
+      ss << "         SW  : " << (utxo.isInputSW_ ? "yes" : "no") << '\n';
+      ss << "         txinRedeemSizeBytes: " << utxo.txinRedeemSizeBytes_ << '\n';
+      ss << "         witnessDataSizeBytes: " << utxo.witnessDataSizeBytes_ << '\n';
       inputAmount += utxo.getValue();
    }
 
    // outputs
-   ss << "Outputs: " << recipients.size() << '\n';
+   ss << "   Outputs: " << recipients.size() << '\n';
    for (const auto &recipient : recipients) {
-      ss << "    Amount: " << recipient->getValue() << '\n';
+      ss << "       Amount: " << recipient->getValue() << '\n';
    }
 
    // amount
-   ss << " Inputs Amount: " << inputAmount << '\n';
+   ss << "    Inputs Amount: " << inputAmount << '\n';
    // change
    if (change.value != 0) {
-      ss << " Change : " << change.value << " to " << change.address.display() << '\n';
+      ss << "    Change : " << change.value << " to " << change.address.display() << '\n';
    } else  {
-      ss << " No change\n";
+      ss << "    No change\n";
    }
    // fee
-   ss << " Fee: " << fee << '\n';
+   ss << "    Fee: " << fee << '\n';
 
    if (serializeAndPrint) {
-      const auto &serialized = serializeState();
+      const auto &serialized = serializeState(resolver);
 
-      ss << "  Serialized: " << serialized.toHexStr() << '\n';
+      ss << "     Serialized: " << serialized.toHexStr() << '\n';
       try {
          Tx tx{serialized};
-         std::string payinHash = tx.getThisHash().toHexStr();
+         std::string payinHash = tx.getThisHash().toHexStr(true);
 
-         ss << " TX hash: " << payinHash << '\n';
-         ss <<  "SS info:\n";
+         ss << "    TX hash: " << payinHash << '\n';
+         ss << "    SS info:\n";
          tx.pprintAlot(ss);
       } catch (...) {
          ss << "   error: failed to serialize tx\n";
