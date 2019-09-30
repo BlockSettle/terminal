@@ -553,12 +553,7 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
     prepareLiteModeDialog(dlg)
 
     dlg.bsAccepted.connect(function() {
-        var passwordData = qmlFactory.createPasswordData()
-        passwordData.encType = QPasswordData.Password
-        passwordData.encKey = ""
-        passwordData.textPassword = dlg.enteredPassword
-
-        jsCallback(qmlFactory.errorCodeNoError(), walletInfo.walletId, passwordData)
+        jsCallback(qmlFactory.errorCodeNoError(), walletInfo.walletId, dlg.passwordData)
     })
 
     dlg.bsRejected.connect(function() {

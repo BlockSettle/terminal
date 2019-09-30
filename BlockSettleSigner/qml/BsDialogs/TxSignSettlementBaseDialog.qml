@@ -269,12 +269,6 @@ CustomTitleDialogWindow {
                         if (btnConfirm.enabled) btnConfirm.onClicked()
                     }
                 }
-
-                CustomLabel {
-                    id: labelAuth
-                    visible: walletInfo.encType === QPasswordData.Auth
-                    text: authSign.status
-                }
             }
 
             ColumnLayout {
@@ -297,12 +291,6 @@ CustomTitleDialogWindow {
                     }
                     signal expired()
                 }
-
-    //            CustomLabel {
-    //                text: qsTr("On completion just press [Enter] or [Return]")
-    //                visible: walletInfo.encType !== QPasswordData.Auth
-    //                Layout.fillWidth: true
-    //            }
 
                 CustomProgressBar {
                     Layout.minimumHeight: 6
