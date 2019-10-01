@@ -117,6 +117,12 @@ public:
    // NOTE: CC address text details are not enforced on PB right now!
    static std::string requestTitleCcAddr();
    static std::string requestDescCcAddr(const bs::Address &address, const std::string &token);
+
+public slots:
+   void sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
+   void sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout);
+
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
    void getLoginResultDone(AutheIDClient::ErrorType status, const std::string &celerLogin);
@@ -127,6 +133,7 @@ signals:
    void connected();
    void disconnected();
    void connectionFailed();
+
 private:
    using ProcessCb = std::function<void(const Blocksettle::Communication::ProxyTerminal::Response &response)>;
    using TimeoutCb = std::function<void()>;

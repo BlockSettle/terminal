@@ -562,8 +562,6 @@ void OtcClient::processPbMessage(const std::string &data)
       return;
    }
 
-   SPDLOG_LOGGER_DEBUG(logger_, "process PB message: {}", ProtobufUtils::toJsonCompact(response));
-
    switch (response.data_case()) {
       case ProxyTerminalPb::Response::kStartOtc:
          processPbStartOtc(response.start_otc());
@@ -576,7 +574,7 @@ void OtcClient::processPbMessage(const std::string &data)
          return;
    }
 
-   SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
+   // if not processed - not OTC message. not error
 }
 
 void OtcClient::processPublicMessage(QDateTime timestamp, const std::string &contactId, const BinaryData &data)

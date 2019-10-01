@@ -188,7 +188,7 @@ void SubscriberConnection::stopListen()
          listenThread_.join();
       }
       catch (const std::exception &e) {
-         logger_->error("[{}] failed to join thread: {}", __func__, e.what());
+         logger_->error("[SubscriberConnection::stopListen] failed to join thread: {}", e.what());
       }
    }
 

@@ -122,7 +122,7 @@ bool DealerCCSettlementContainer::startSigning()
    logger_->debug("[DealerCCSettlementContainer::accept] signing with wallet {}, {} inputs"
       , wallet_->name(), txReq_.inputs.size());
 
-   emit info(tr("Waiting for TX half signing..."));
+   //Waiting for TX half signing...
 
    bs::signer::RequestId signId = signingContainer_->signSettlementPartialTXRequest(txReq_, toPasswordDialogData(), cbTx);
    return (signId > 0);
@@ -158,7 +158,7 @@ void DealerCCSettlementContainer::activate()
       emit genAddressVerified(false);
    }
    else if (order_.side == bs::network::Side::Buy) {
-      emit info(tr("Waiting for genesis address verification to complete..."));
+      //Waiting for genesis address verification to complete...
       const auto &cbHasInput = [this](bool has) {
          emit genAddressVerified(has);
       };
@@ -176,7 +176,7 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 {
    genAddrVerified_ = addressVerified;
    if (addressVerified) {
-      emit info(tr("Accept offer to send your own signed half of the CoinJoin transaction"));
+      //Accept offer to send your own signed half of the CoinJoin transaction
       emit readyToAccept();
    }
    else {
@@ -190,11 +190,6 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
    pd.setValue(PasswordDialogData::SigningAllowed, addressVerified);
 
    signingContainer_->updateDialogData(pd);
-}
-
-bool DealerCCSettlementContainer::isAcceptable() const
-{
-   return (foundRecipAddr_ && amountValid_ && genAddrVerified_ && wallet_);
 }
 
 bool DealerCCSettlementContainer::cancel()

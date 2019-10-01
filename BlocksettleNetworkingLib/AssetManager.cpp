@@ -346,7 +346,6 @@ bool AssetManager::onAccountBalanceUpdatedEvent(const std::string &data)
       return false;
    }
 
-   logger_->debug("[AssetManager::onAccountBalanceUpdatedEvent] get update:\n{}", snapshot.DebugString());
    onAccountBalanceLoaded(snapshot.currency(), snapshot.netposition());
    return true;
 }

@@ -198,6 +198,7 @@ void RFQDealerReply::reset()
             };
             walletsManager_->estimatedFeePerByte(2, cbFee, this);
          }
+
          if (currentQRN_.assetType == bs::network::Asset::SpotXBT) {
             transactionData_->setWallet(getSelectedXbtWallet(), armory_->topBlock());
          } else if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
@@ -708,11 +709,11 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                   } else {
                      unsignedTxReq = transData->createUnsignedTransaction();
                   }
+
                   const auto cbPreimage = [this, unsignedTxReq, qrn, lbdQuoteNotif]
                      (const std::map<bs::Address, BinaryData> &preimages)
                   {
                      const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
-                     quoteProvider_->saveDealerPayin(qrn.settlementId, unsignedTxReq.serializeState());
                      dealerUtxoAdapter_->reserve(unsignedTxReq, qrn.settlementId);
 
                      const auto txData = unsignedTxReq.txId(resolver).toHexStr();

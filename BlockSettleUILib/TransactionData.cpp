@@ -537,12 +537,16 @@ void TransactionData::setTotalFee(uint64_t fee, bool overrideFeePerByte)
 
 float TransactionData::feePerByte() const
 {
-   if (feePerByte_ > 0) {
+   if (!qFuzzyIsNull(feePerByte_) && (feePerByte_ > 0)) {
       return feePerByte_;
    }
-   if (summary_.txVirtSize) {
-      return totalFee_ / summary_.txVirtSize;
+
+   if (summary_.initialized) {
+	   if (summary_.txVirtSize) {
+		   return totalFee_ / summary_.txVirtSize;
+	   }
    }
+
    return 0;
 }
 

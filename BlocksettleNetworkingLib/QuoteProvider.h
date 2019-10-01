@@ -19,22 +19,6 @@ namespace bs {
    namespace network {
       struct QuoteNotification;
    }
-
-   class PayinsContainer
-   {
-   public:
-      PayinsContainer(const std::shared_ptr<spdlog::logger> &logger) : logger_(logger) {}
-
-      bool save(const std::string& settlementId, const SecureBinaryData& payin);
-      SecureBinaryData get(const std::string& settlementId) const;
-      bool erase(const std::string& settlementId);
-
-   private:
-      std::shared_ptr<spdlog::logger>  logger_;
-      // key - settlementId
-      std::unordered_map<std::string, SecureBinaryData>  payIns_;
-      mutable std::atomic_flag                           payInsLock_ = ATOMIC_FLAG_INIT;
-   };
 }
 
 class AssetManager;
@@ -60,9 +44,6 @@ public:
    QuoteProvider& operator = (QuoteProvider&&) = delete;
 
    void ConnectToCelerClient(const std::shared_ptr<BaseCelerClient>& celerClient);
-
-   void saveDealerPayin(const std::string& settlementId, const SecureBinaryData& dealerPayin);
-   SecureBinaryData getDealerPayin(const std::string& settlementId) const;
 
    bs::network::QuoteNotification getSubmittedXBTQuoteNotification(const std::string& settlementId);
 
@@ -131,7 +112,6 @@ private:
    std::shared_ptr<AssetManager>    assetManager_;
    std::shared_ptr<BaseCelerClient>     celerClient_;
    std::unordered_map<std::string, bs::network::RFQ>   submittedRFQs_;
-   bs::PayinsContainer              dealerPayins_;
 
    std::unordered_map<std::string, std::string> quoteIdMap_;
    std::unordered_map<std::string, std::vector<std::string>>   quoteIds_;

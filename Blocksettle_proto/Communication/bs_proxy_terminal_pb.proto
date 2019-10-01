@@ -39,14 +39,36 @@ message Request
         bytes signed_payout = 3;
     }
 
+   message XBTUnsignedPayin
+    {
+        string  settlement_id       = 1;
+        bytes   unsigned_payin      = 2;
+        bytes   unsigned_payin_id   = 3;
+    }
+
+    message XBTSignedPayin
+    {
+        string  settlement_id   = 1;
+        bytes   signed_payin    = 2;
+    }
+
+    message XBTSignedPayout
+    {
+        string  settlement_id   = 1;
+        bytes   signed_payout   = 2;
+    }
+
     oneof data
     {
         // Requests
-        StartOtc start_otc = 1;
-        VerifyOtc verify_otc = 2;
+        StartOtc  start_otc     = 1;
+        VerifyOtc verify_otc    = 2;
 
         // Messages
-        BroadcastXBT broadcast_xbt = 30;
+        BroadcastXBT        broadcast_xbt   = 30;
+        XBTUnsignedPayin    unsigned_payin  = 31;
+        XBTSignedPayin      signed_payin    = 32;
+        XBTSignedPayout     signed_payout   = 33;
     }
 }
 
@@ -54,21 +76,42 @@ message Response
 {
     message StartOtc
     {
-        int32 request_id = 1;
+        int32 request_id    = 1;
         bytes settlement_id = 2;
     }
 
     message VerifyOtc
     {
-        bool success = 1;
-        string error_msg = 2;
-        bytes settlement_id = 3;
+        bool    success         = 1;
+        string  error_msg       = 2;
+        bytes   settlement_id   = 3;
+    }
+
+    message UnsignedPayinRequest
+    {
+      string  settlement_id   = 1;
+    }
+
+    message SignPayoutRequest
+    {
+        string  settlement_id   = 1;
+        bytes   payin_data      = 2;
+    }
+
+    message SignPayinRequest
+    {
+        string  settlement_id       = 1;
+        bytes   signed_payout_data  = 2;
+        bytes   unsigned_payin_data = 3;
     }
 
     oneof data
     {
         // Requests
-        StartOtc start_otc = 1;
-        VerifyOtc verify_otc = 2;
+        StartOtc              start_otc            = 1;
+        VerifyOtc             verify_otc           = 2;
+        UnsignedPayinRequest  send_unsigned_payin  = 3;
+        SignPayoutRequest     sign_payout          = 4;
+        SignPayinRequest      sign_payin           = 5;
     }
 }

@@ -70,9 +70,18 @@ signals:
    void orderFilled();
    void requestPrimaryWalletCreation();
 
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
+   void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
+
+   void unsignedPayinRequested(const std::string& settlementId);
+   void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
+   void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
 
 public slots:
    void forceCheckCondition();
+
+   void onMessageFromPB(std::string data);
 
 private slots:
    void onReplied(bs::network::QuoteNotification qn);

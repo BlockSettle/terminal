@@ -56,13 +56,22 @@ public:
 protected:
    void reject() override;
 
+signals:
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
+   void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
+
+public slots:
+   void onUnsignedPayinRequested(const std::string& settlementId);
+   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
+
 private slots:
    bool close();
 
    void onRFQResponseAccepted(const QString &reqId, const bs::network::Quote& quote);
    void onQuoteReceived(const bs::network::Quote& quote);
    void onOrderFilled(const std::string &quoteId);
-   void onOrderUpdated(const bs::network::Order& order);
    void onOrderFailed(const std::string& quoteId, const std::string& reason);
    void onSettlementAccepted();
    void onSignTxRequested(QString orderId, QString reqId);
@@ -90,8 +99,6 @@ private:
    std::shared_ptr<ConnectionManager>  connectionManager_;
    std::unordered_map<std::string, std::string> ccTxMap_;
    std::map<QString, QString>          ccReqIdToOrder_;
-
-   bs::network::Order                  XBTOrder_;
 
    std::shared_ptr<bs::SettlementContainer>     curContainer_;
    std::shared_ptr<ReqCCSettlementContainer>    ccSettlContainer_;
