@@ -12,7 +12,7 @@ namespace {
 
 class PrivatePartyUninitState : public AbstractChatWidgetState {
 public:
-   explicit PrivatePartyUninitState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   explicit PrivatePartyUninitState(ChatWidget* chat) : AbstractChatWidgetState(chat) {}
    ~PrivatePartyUninitState() override = default;
 protected:
    void applyUserFrameChange() override {}

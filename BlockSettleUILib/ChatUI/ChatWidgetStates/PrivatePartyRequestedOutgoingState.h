@@ -5,7 +5,7 @@
 
 class PrivatePartyRequestedOutgoingState : public AbstractChatWidgetState {
 public:
-   explicit PrivatePartyRequestedOutgoingState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   explicit PrivatePartyRequestedOutgoingState(ChatWidget* chat) : AbstractChatWidgetState(chat) {}
    ~PrivatePartyRequestedOutgoingState() override = default;
 protected:
    void applyUserFrameChange() override {}

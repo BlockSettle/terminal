@@ -28,7 +28,7 @@ void CreateOTCResponseWidget::setRequest(const otc::QuoteRequest &request)
    int upperBound = std::max(static_cast<int>(std::ceil((currentIndicativePrice + 1000) / 1000) * 1000), 1000);
    ui_->widgetPriceRange->SetRange(lowerBound, upperBound);
 
-   ui_->sideValue->setText(QString::fromStdString(otc::toString(otc::switchSide(request.ourSide))));
+   ui_->sideValue->setText(QString::fromStdString(otc::toString(request.ourSide)));
 
    ui_->rangeValue->setText(QString::fromStdString(otc::toString(request.rangeType)));
 

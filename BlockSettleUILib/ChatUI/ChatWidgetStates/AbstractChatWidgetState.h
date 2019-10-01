@@ -17,12 +17,22 @@ enum class OTCPages : int
    OTCNegotiateResponsePage
 };
 
-class AbstractChatWidgetState {
+class AbstractChatWidgetState
+{
 public:
    explicit AbstractChatWidgetState(ChatWidget* chat);
    virtual ~AbstractChatWidgetState() = default;
 
-   void enterState() {
+   template <typename StateType, typename = typename std::enable_if<std::is_base_of<AbstractChatWidgetState, StateType>::value>::type>
+   static StateType* generateState(ChatWidget* chat)
+   {
+      StateType* newState = new StateType(chat);
+      newState->applyState();
+      return newState;
+   }
+
+protected:
+   void applyState() {
       applyUserFrameChange();
       applyChatFrameChange();
       applyRoomsFrameChange();

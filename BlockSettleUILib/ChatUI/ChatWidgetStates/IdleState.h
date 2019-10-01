@@ -5,7 +5,7 @@
 
 class IdleState : public AbstractChatWidgetState {
 public:
-   explicit IdleState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   explicit IdleState(ChatWidget* chat) : AbstractChatWidgetState(chat) {}
    ~IdleState() override = default;
 protected:
    void applyUserFrameChange() override {

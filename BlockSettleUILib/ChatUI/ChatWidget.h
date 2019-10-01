@@ -133,7 +133,7 @@ private:
 
          // Enter new state
          transitionChanges();
-         stateCurrent_ = std::make_unique<stateType>(this);
+         stateCurrent_.reset(AbstractChatWidgetState::generateState<stateType>(this));
       }
 
 protected:

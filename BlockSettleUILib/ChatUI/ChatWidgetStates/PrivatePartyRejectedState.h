@@ -5,7 +5,7 @@
 
 class PrivatePartyRejectedState : public AbstractChatWidgetState {
 public:
-   explicit PrivatePartyRejectedState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   explicit PrivatePartyRejectedState(ChatWidget* chat) : AbstractChatWidgetState(chat) {}
    ~PrivatePartyRejectedState() override = default;
 protected:
    void applyUserFrameChange() override {}
