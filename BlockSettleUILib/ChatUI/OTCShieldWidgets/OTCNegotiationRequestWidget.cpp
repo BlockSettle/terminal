@@ -125,6 +125,7 @@ void OTCNegotiationRequestWidget::onSyncInterface()
    onCurrentWalletChanged();
 
    UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, getAuthManager());
+   ui_->widgetButtons->setEnabled(ui_->authenticationAddressComboBox->isEnabled());
 }
 
 void OTCNegotiationRequestWidget::onMDUpdated()
