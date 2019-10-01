@@ -230,6 +230,12 @@ void OTCNegotiationRequestWidget::toggleSideButtons(bool isSell)
 {
    ui_->pushButtonSell->setChecked(isSell);
    ui_->pushButtonBuy->setChecked(!isSell);
+   if (isSell) {
+      onSellClicked();
+   }
+   else {
+      onBuyClicked();
+   }
 }
 
 void OTCNegotiationRequestWidget::onNumCcySelected()
