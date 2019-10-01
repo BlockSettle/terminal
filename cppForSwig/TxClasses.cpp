@@ -487,7 +487,7 @@ void Tx::pprint(ostream & os, int nIndent, bool pBigendian)
    for (int i = 0; i<nIndent; i++)
       indent = indent + "   ";
 
-   os << indent << "Tx:   " << getThisHash().toHexStr(pBigendian)
+   os << indent << "Tx:   " << thisHash_.toHexStr(pBigendian)
       << (pBigendian ? " (BE)" : " (LE)") << endl;
 
    os << indent << "   TxSize:      " << getSize() << " bytes" << endl;
@@ -508,30 +508,30 @@ void Tx::pprint(ostream & os, int nIndent, bool pBigendian)
 // know what happened.
 void Tx::pprintAlot(ostream & os)
 {
-   os << "Tx hash:   " << thisHash_.toHexStr(true) << endl;
+   cout << "Tx hash:   " << thisHash_.toHexStr(true) << endl;
 
-   os << endl << "NumTxIn:   " << getNumTxIn() << endl;
+   cout << endl << "NumTxIn:   " << getNumTxIn() << endl;
    for (uint32_t i = 0; i<getNumTxIn(); i++)
    {
       TxIn txin = getTxInCopy(i);
-      os << "   TxIn: " << i << endl;
-      os << "      Siz:  " << txin.getSize() << endl;
-      os << "      Scr:  " << txin.getScriptSize() << "  Type: "
+      cout << "   TxIn: " << i << endl;
+      cout << "      Siz:  " << txin.getSize() << endl;
+      cout << "      Scr:  " << txin.getScriptSize() << "  Type: "
          << (int)txin.getScriptType() << endl;
-      os << "      OPR:  " << txin.getOutPoint().getTxHash().toHexStr(true)
+      cout << "      OPR:  " << txin.getOutPoint().getTxHash().toHexStr(true)
          << txin.getOutPoint().getTxOutIndex() << endl;
-      os << "      Seq:  " << txin.getSequence() << endl;
+      cout << "      Seq:  " << txin.getSequence() << endl;
    }
 
-   os << endl << "NumTxOut:   " << getNumTxOut() << endl;
+   cout << endl << "NumTxOut:   " << getNumTxOut() << endl;
    for (uint32_t i = 0; i<getNumTxOut(); i++)
    {
       TxOut txout = getTxOutCopy(i);
-      os << "   TxOut: " << i << endl;
-      os << "      Siz:  " << txout.getSize() << endl;
-      os << "      Scr:  " << txout.getScriptSize() << "  Type: "
+      cout << "   TxOut: " << i << endl;
+      cout << "      Siz:  " << txout.getSize() << endl;
+      cout << "      Scr:  " << txout.getScriptSize() << "  Type: "
          << (int)txout.getScriptType() << endl;
-      os << "      Val:  " << txout.getValue() << endl;
+      cout << "      Val:  " << txout.getValue() << endl;
    }
 
 }
