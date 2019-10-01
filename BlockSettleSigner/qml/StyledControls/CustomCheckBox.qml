@@ -27,7 +27,7 @@ CheckBox {
 
     contentItem: Text {
         text: control.text
-        font.pixelSize: 12
+        font.pixelSize: 11
         opacity: enabled ? 1.0 : 0.3
         color: control.checked ? BSStyle.textColor : BSStyle.buttonsUncheckedColor
         verticalAlignment: Text.AlignVCenter

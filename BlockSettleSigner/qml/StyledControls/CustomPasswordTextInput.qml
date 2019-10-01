@@ -5,7 +5,7 @@ import "../BsStyles"
 
 TextField {
     horizontalAlignment: Text.AlignHLeft
-    font.pixelSize: 12
+    font.pixelSize: 11
     color: BSStyle.inputsFontColor
     padding: 0
     echoMode: button.pressed ? TextInput.Normal : TextInput.Password

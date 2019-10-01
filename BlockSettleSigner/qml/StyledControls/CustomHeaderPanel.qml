@@ -26,7 +26,7 @@ Rectangle {
         text: parent.text
         font.capitalization: Font.AllUppercase
         color: BSStyle.textColor
-        font.pixelSize: 12
+        font.pixelSize: 11
         verticalAlignment: Text.AlignVCenter
     }
 }

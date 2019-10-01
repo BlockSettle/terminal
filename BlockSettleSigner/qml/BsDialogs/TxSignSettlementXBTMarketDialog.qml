@@ -24,9 +24,19 @@ TxSignSettlementBaseDialog {
 
     readonly property string onRevokeLabel: passwordDialogData.PayOutRevokeType ? qsTr(" On Revoke") : ""
 
+    signingAllowed: passwordDialogData.RequesterAuthAddressVerified && passwordDialogData.ResponderAuthAddressVerified
+
+    function getInputValue() {
+        if (is_payOut) {
+            return txInfo.amount + txInfo.fee
+        } else {
+            return txInfo.inputAmount
+        }
+    }
+
     function getTotalValue() {
         if (is_payOut) {
-            return txInfo.amountXBTReceived()
+            return txInfo.amount + txInfo.fee
         } else {
             return txInfo.total
         }
@@ -106,7 +116,7 @@ TxSignSettlementBaseDialog {
             visible: passwordDialogData.hasRequesterAuthAddress()
             text: passwordDialogData.RequesterAuthAddress
             Layout.alignment: Qt.AlignRight
-            color: passwordDialogData.requesterAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+            color: passwordDialogData.RequesterAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
 
         // Responder Authentication Address = dealer
@@ -119,7 +129,7 @@ TxSignSettlementBaseDialog {
             visible: passwordDialogData.hasResponderAuthAddress()
             text: passwordDialogData.ResponderAuthAddress
             Layout.alignment: Qt.AlignRight
-            color: passwordDialogData.responderAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+            color: passwordDialogData.ResponderAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
     }
 
@@ -139,25 +149,32 @@ TxSignSettlementBaseDialog {
 
         // Input Amount
         CustomLabel {
-            visible: is_payIn
             Layout.fillWidth: true
             text: qsTr("Input Amount")
         }
         CustomLabelValue {
-            visible: is_payIn
-            text: "- " + txInfo.inputAmount.toFixed(8) + inputProduct
+            text: minus_string + getInputValue().toFixed(8) + inputProduct
+
+            Layout.alignment: Qt.AlignRight
+        }
+
+        // Output Amount
+        CustomLabel {
+            Layout.fillWidth: true
+            text: qsTr("Output Amount ") + onRevokeLabel
+        }
+        CustomLabelValue {
+            text: plus_string + getTotalValue().toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 
         // Return Amount
         CustomLabel {
-            visible: is_payIn
             Layout.fillWidth: true
             text: qsTr("Return Amount")
         }
         CustomLabelValue {
-            visible: is_payIn
-            text: "+ " + txInfo.changeAmount.toFixed(8) + inputProduct
+            text: plus_string + txInfo.changeAmount.toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 
@@ -167,7 +184,7 @@ TxSignSettlementBaseDialog {
             text: qsTr("Network Fee")
         }
         CustomLabelValue {
-            text: "- " + txInfo.fee.toFixed(8) + inputProduct
+            text: minus_string + txInfo.fee.toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 
@@ -179,19 +196,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_payIn
-            text: "- " + txInfo.amount.toFixed(8) + inputProduct
-            Layout.alignment: Qt.AlignRight
-        }
-
-        // Sent amount
-        CustomLabel {
-            visible: is_payOut
-            Layout.fillWidth: true
-            text: qsTr("Sent Amount")
-        }
-        CustomLabelValue {
-            visible: is_payOut
-            text: "+ " + (txInfo.amountXBTReceived() + txInfo.fee).toFixed(8) + inputProduct
+            text: minus_string + txInfo.amount.toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 
@@ -203,19 +208,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_payOut
-            text: "+ " + txInfo.amount.toFixed(8) + inputProduct
-            Layout.alignment: Qt.AlignRight
-        }
-
-        // Total value
-        CustomLabel {
-            visible: passwordDialogData.TotalSpentVisible
-            Layout.fillWidth: true
-            text: is_payIn ? qsTr("Total Sent ") : qsTr("Total Received ") + onRevokeLabel
-        }
-        CustomLabelValue {
-            visible: passwordDialogData.TotalSpentVisible
-            text: (is_payIn ? "- " : "+ ") + getTotalValue().toFixed(8) + inputProduct
+            text: plus_string + txInfo.amount.toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
      }
