@@ -21,6 +21,13 @@ public:
 
    bs::network::otc::QuoteResponse response() const;
 
+protected slots:
+   void onUpdateBalances() override;
+   void onMDUpdated() override;
+
+private slots:
+   void updateAcceptButton();
+
 signals:
    void responseCreated();
 
@@ -28,7 +35,6 @@ private:
    std::unique_ptr<Ui::CreateOTCResponseWidget> ui_;
 
    bs::network::otc::Side ourSide_{};
-
 };
 
 #endif // __CREATE_OTC_RESPONSE_WIDGET_H__

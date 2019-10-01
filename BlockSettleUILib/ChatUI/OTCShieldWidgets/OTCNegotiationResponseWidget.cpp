@@ -4,6 +4,7 @@
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "AuthAddressManager.h"
+#include "OtcClient.h"
 #include "ui_OTCNegotiationCommonWidget.h"
 
 #include <QComboBox>
@@ -68,6 +69,12 @@ bs::network::otc::Offer OTCNegotiationResponseWidget::offer() const
    return result;
 }
 
+void OTCNegotiationResponseWidget::setPeer(const bs::network::otc::Peer &peer)
+{
+   const bool isContact = (peer.type == bs::network::otc::PeerType::Contact);
+   ui_->rangeWidget->setVisible(!isContact);
+}
+
 void OTCNegotiationResponseWidget::onAboutToApply()
 {
    updateIndicativePriceValue();
@@ -82,13 +89,8 @@ void OTCNegotiationResponseWidget::onSyncInterface()
    UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, getAuthManager());
 }
 
-void OTCNegotiationResponseWidget::onUpdateMD(bs::network::Asset::Type type, const QString &security, const bs::network::MDFields& fields)
+void OTCNegotiationResponseWidget::onMDUpdated()
 {
-   if (productGroup_ != type || security_ != security) {
-      return;
-   }
-
-   updateIndicativePrices(type, security, fields, sellIndicativePrice_, buyIndicativePrice_);
    updateIndicativePriceValue();
 }
 
@@ -149,10 +151,5 @@ void OTCNegotiationResponseWidget::onCurrentWalletChanged()
 
 void OTCNegotiationResponseWidget::updateIndicativePriceValue()
 {
-   if (receivedOffer_.ourSide == bs::network::otc::Side::Buy) {
-      ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(buyIndicativePrice_, productGroup_));
-   }
-   else if (receivedOffer_.ourSide == bs::network::otc::Side::Sell) {
-      ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(sellIndicativePrice_, productGroup_));
-   }
+   OTCWindowsAdapterBase::updateIndicativePriceValue(ui_->indicativePriceValue, receivedOffer_.ourSide == bs::network::otc::Side::Buy);
 }

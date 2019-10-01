@@ -26,12 +26,18 @@ public:
 signals:
    void requestCreated();
 
+protected slots:
+   void onUpdateBalances() override;
+
 private slots:
    void onSellClicked();
    void onBuyClicked();
+   void onNumCcySelected();
 
 private:
    std::unique_ptr<Ui::CreateOTCRequestWidget> ui_;
+
+   QString buyProduct_{ QLatin1String("EUR") };
 };
 
 #endif // __CREATE_OTC_REQUEST_WIDGET_H__

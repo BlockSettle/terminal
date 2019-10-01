@@ -46,9 +46,11 @@ void RangeWidget::SetUpperValue(int value)
 void RangeWidget::onLowerValueChanged(int newLower)
 {
    ui_->labelLower->setText(QString::number(newLower));
+   emit lowerValueChanged(newLower);
 }
 
 void RangeWidget::onUpperValueChanged(int newUpper)
 {
    ui_->labelUpper->setText(QString::number(newUpper));
+   emit upperValueChanged(newUpper);
 }
