@@ -537,7 +537,7 @@ void TransactionData::setTotalFee(uint64_t fee, bool overrideFeePerByte)
 
 float TransactionData::feePerByte() const
 {
-   if (!qFuzzyIsNull(feePerByte_)) {
+   if (!qFuzzyIsNull(feePerByte_) && (feePerByte_ > 0)) {
       return feePerByte_;
    }
 
