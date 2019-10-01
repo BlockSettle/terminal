@@ -333,7 +333,6 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
 
          const auto unsignedTxId = unsignedPayinRequest_.txId(resolver);
 
-         unsignedPayinRequest_.DebugPrint("[DealerXBTSettlementContainer::onUnsignedPayinRequested cbPreimage] unsigned payin", logger_, true);
          logger_->debug("[DealerXBTSettlementContainer::onUnsignedPayinRequested cbPreimage] unsigned tx id {}", unsignedTxId.toHexStr());
 
          emit sendUnsignedPayinToPB(settlementIdString_, unsignedPayinRequest_.serializeState(resolver), unsignedTxId);

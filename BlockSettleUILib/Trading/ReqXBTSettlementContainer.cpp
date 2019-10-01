@@ -406,8 +406,6 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
 
          const auto unsignedTxId = unsignedPayinRequest_.txId(resolver);
 
-
-         unsignedPayinRequest_.DebugPrint("[ReqXBTSettlementContainer::onUnsignedPayinRequested cbPreimage] unsigned payin", logger_, true, resolver);
          logger_->debug("[ReqXBTSettlementContainer::onUnsignedPayinRequested cbPreimage] unsigned tx id {}", unsignedTxId.toHexStr(true));
 
          // XXX: make reservation on UTXO
