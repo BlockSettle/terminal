@@ -1,7 +1,6 @@
 #ifndef ABSTRACTCHATWIDGETSTATE_H
 #define ABSTRACTCHATWIDGETSTATE_H
 
-#include "ChatUI/ChatWidget.h"
 #include "ChatProtocol/Message.h"
 #include "ChatProtocol/ClientParty.h"
 #include "ui_ChatWidget.h"
@@ -17,6 +16,7 @@ enum class OTCPages : int
    OTCNegotiateResponsePage
 };
 
+class ChatWidget;
 class AbstractChatWidgetState
 {
 public:

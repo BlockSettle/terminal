@@ -6,11 +6,11 @@
 #include <QWidget>
 #include "ChatProtocol/ChatClientService.h"
 #include "ChatProtocol/ClientParty.h"
+#include "ChatWidgetStates/AbstractChatWidgetState.h"
 #include "OtcTypes.h"
 
 class QItemSelection;
 
-class AbstractChatWidgetState;
 class AuthAddressManager;
 class ArmoryConnection;
 class ChatPartiesTreeModel;
@@ -125,16 +125,16 @@ private:
    friend class PrivatePartyRequestedIncomingState;
    friend class PrivatePartyRejectedState;
 
-   template <typename stateType, typename = typename std::enable_if<std::is_base_of<AbstractChatWidgetState, stateType>::value>::type>
-      void changeState(std::function<void(void)>&& transitionChanges = []() {})
-      {
-         // Exit previous state
-         stateCurrent_.reset();
+   template <typename StateType, typename = typename std::enable_if<std::is_base_of<AbstractChatWidgetState, StateType>::value>::type>
+   void changeState(std::function<void(void)>&& transitionChanges = []() {})
+   {
+      // Exit previous state
+      stateCurrent_.reset();
 
-         // Enter new state
-         transitionChanges();
-         stateCurrent_.reset(AbstractChatWidgetState::generateState<stateType>(this));
-      }
+      // Enter new state
+      transitionChanges();
+      stateCurrent_.reset(AbstractChatWidgetState::generateState<StateType>(this));
+   }
 
 protected:
    std::unique_ptr<AbstractChatWidgetState> stateCurrent_;

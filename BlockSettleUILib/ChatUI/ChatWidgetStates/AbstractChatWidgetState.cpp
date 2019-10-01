@@ -1,5 +1,6 @@
 #include "AbstractChatWidgetState.h"
 
+#include "ChatUI/ChatWidget.h"
 #include "ChatUI/ChatOTCHelper.h"
 #include "ChatUI/ChatPartiesTreeModel.h"
 #include "ChatUI/OTCRequestViewModel.h"
