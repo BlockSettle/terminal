@@ -99,8 +99,6 @@ public:
    size_t FromVerifiedIndex(size_t index) const;
    const std::unordered_set<std::string> &GetBSAddresses() const;
 
-   static AddressEntryType mapFromScriptType(Blocksettle::Communication::AddressScriptType scrType);
-
 private slots:
    void VerifyWalletAddresses();
    void onAuthWalletChanged();
