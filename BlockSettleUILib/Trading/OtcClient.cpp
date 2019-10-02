@@ -135,6 +135,7 @@ namespace {
       auto dialogData = toPasswordDialogData(deal, signRequest);
       dialogData.setValue(PasswordDialogData::SettlementPayInVisible, true);
       dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-In"));
+      dialogData.setValue(PasswordDialogData::Duration, int(std::chrono::duration_cast<std::chrono::milliseconds>(OtcClient::payinTimeout()).count()));
       return dialogData;
    }
 
@@ -143,6 +144,7 @@ namespace {
       auto dialogData = toPasswordDialogData(deal, signRequest);
       dialogData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
       dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-Out"));
+      dialogData.setValue(PasswordDialogData::Duration, int(std::chrono::duration_cast<std::chrono::milliseconds>(OtcClient::payoutTimeout()).count()));
       return dialogData;
    }
 
