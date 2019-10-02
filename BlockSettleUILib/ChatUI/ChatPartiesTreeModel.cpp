@@ -151,17 +151,19 @@ void ChatPartiesTreeModel::onDecreaseUnseenCounter(const std::string& partyId, i
 const QModelIndex ChatPartiesTreeModel::getPartyIndexById(const std::string& partyId, const QModelIndex parent) const
 {
    PartyTreeItem* parentItem = nullptr;
-   if (parent.isValid())
+   if (parent.isValid()) {
       parentItem = static_cast<PartyTreeItem*>(parent.internalPointer());
-   else
+   } 
+   else {
       parentItem = rootItem_;
+   }
    Q_ASSERT(parentItem);
 
    QList<QPair<QModelIndex, PartyTreeItem*>> itemsToCheck;
    itemsToCheck.push_back({ parent , parentItem });
 
    QPair<QModelIndex, PartyTreeItem*> currentPair;
-   for (; !itemsToCheck.isEmpty(); ) {
+   while (!itemsToCheck.isEmpty()) {
       currentPair = itemsToCheck[0];
       itemsToCheck.pop_front();
 
