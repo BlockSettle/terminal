@@ -291,11 +291,6 @@ CustomTitleDialogWindow {
                 signal expired()
             }
 
-            CustomLabelValue {
-                text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed((0)))
-                Layout.fillWidth: true
-            }
-
             CustomProgressBar {
                 Layout.minimumHeight: 6
                 Layout.preferredHeight: 6
@@ -304,6 +299,11 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
                 to: 120
                 value: timer.timeLeft
+            }
+
+            CustomLabelValue {
+                text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed((0)))
+                Layout.fillWidth: true
             }
         }
     }

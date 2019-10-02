@@ -90,7 +90,7 @@ CustomTitleDialogWindow {
 
         onCancelSignTx: {
             console.log("TxSignSettlementBaseDialog.qml, cancel requested for id=" + settlementId)
-            if (settlementId === passwordDialogData.SettlementId) {
+            if (txId === passwordDialogData.SettlementId) {
                 rejectAnimated()
             }
         }
@@ -261,16 +261,17 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
                 visible: walletInfo.encType === QPasswordData.Auth
 
-                CustomLabel {
+                CustomLabelValue {
                     Layout.fillWidth: true
-                    text: qsTr("Auth eID Email")
+                    Layout.alignment: Qt.AlignCenter
+                    text: qsTr("Auth eID")
                     visible: walletInfo.encType === QPasswordData.Auth
                 }
-                CustomLabel {
-                    Layout.alignment: Qt.AlignRight
-                    // text: walletInfo.email()
-                    visible: walletInfo.encType === QPasswordData.Auth
-                }
+//                CustomLabel {
+//                    Layout.alignment: Qt.AlignRight
+//                    // text: walletInfo.email()
+//                    visible: walletInfo.encType === QPasswordData.Auth
+//                }
             }
 
             RowLayout {
@@ -357,7 +358,8 @@ CustomTitleDialogWindow {
 
             CustomButtonPrimary {
                 id: btnConfirm
-                text: walletInfo.encType === QPasswordData.Password ? qsTr("CONFIRM") : qsTr("Continue")
+                visible: walletInfo.encType === QPasswordData.Password
+                text: qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: (signingAllowed && (tfPassword.text.length || acceptable))

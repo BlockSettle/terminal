@@ -23,6 +23,7 @@ CustomTitleDialogWindow {
     property alias btnReject : btnReject
     property alias btnAccept : btnAccept
     property alias passwordInput : passwordInput
+    property string decryptHeaderText: qsTr("Decrypt Wallet")
 
     readonly property int duration: 30
 
@@ -85,8 +86,9 @@ CustomTitleDialogWindow {
             }
 
             CustomHeader {
+                id: decryptHeader
                 Layout.alignment: Qt.AlignTop
-                text: qsTr("Enter password")
+                text: decryptHeaderText
                 Layout.fillWidth: true
                 Layout.preferredHeight: 25
                 Layout.topMargin: 5
