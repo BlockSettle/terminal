@@ -145,7 +145,7 @@ namespace ClientClasses
       bool                isChainedZC(void) const;
       bool                isWitness(void) const;
 
-      std::vector<BinaryDataRef> getScrAddrList(void) const;
+      std::vector<BinaryData> getScrAddrList(void) const;
 
       bool operator==(const LedgerEntry& rhs);
    };
