@@ -114,7 +114,7 @@ signals:
    void AuthWalletChanged();
    void AuthWalletCreated(const QString &walletId);
    void ConnectionComplete();
-   void Error(const QString &errorText);
+   void Error(const QString &errorText) const;
    void Info(const QString &info);
    void AuthAddrSubmitError(const QString &address, const QString &error);
    void AuthConfirmSubmitError(const QString &address, const QString &error);
