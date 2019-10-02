@@ -23,13 +23,6 @@ enum AddressNetworkType
    TestNetType = 2;
 }
 
-enum AddressScriptType
-{
-   PayToHashScriptType = 1;
-   NestedSegWitScriptType = 2;
-   NativeSegWitScriptType = 3;
-}
-
 // type of address used for verifications ( bitcoin, colored coin etc)
 enum AddressType
 {
