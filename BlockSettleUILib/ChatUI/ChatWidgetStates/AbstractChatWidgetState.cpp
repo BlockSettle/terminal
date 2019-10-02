@@ -1,5 +1,6 @@
 #include "AbstractChatWidgetState.h"
 
+#include "ChatUI/ChatWidget.h"
 #include "ChatUI/ChatOTCHelper.h"
 #include "ChatUI/ChatPartiesTreeModel.h"
 #include "ChatUI/OTCRequestViewModel.h"
@@ -375,6 +376,21 @@ void AbstractChatWidgetState::updateOtc()
       case State::WaitPayinInfo:
          chat_->ui_->widgetOTCShield->showContactIsOffline();
          break;
+
+      case State::WaitBuyerSign:
+      case State::WaitSellerSeal:
+         // FIXME: Show new shields
+         pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
+         break;
+
+      case State::WaitVerification:
+         // FIXME: Show something while we wait for PB response
+         break;
+
+      case State::WaitSellerSign:
+         // FIXME: Show something while we wait for PB response
+         break;
+
       case State::Blacklisted:
          chat_->ui_->widgetOTCShield->showContactIsOffline();
          break;

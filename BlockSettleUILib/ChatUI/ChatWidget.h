@@ -81,6 +81,8 @@ private slots:
    void onMessageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
    void onUserListClicked(const QModelIndex& index);
    void onActivatePartyId(const QString& partyId);
+   void onActivateGlobalPartyId();
+   void onActivateCurrentPartyId();
    void onRegisterNewChangingRefresh();
    void onShowUserRoom(const QString& userHash);
    void onContactFriendRequest(const QString& userHash);
@@ -134,6 +136,7 @@ private:
          // Enter new state
          transitionChanges();
          stateCurrent_ = std::make_unique<stateType>(this);
+         stateCurrent_->applyState();
       }
 
 protected:

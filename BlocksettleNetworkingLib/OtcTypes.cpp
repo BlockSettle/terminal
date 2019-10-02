@@ -93,6 +93,10 @@ std::string bs::network::otc::toString(bs::network::otc::State state)
       case State::OfferRecv:        return "OfferRecv";
       case State::WaitPayinInfo:    return "WaitPayinInfo";
       case State::SentPayinInfo:    return "SentPayinInfo";
+      case State::WaitVerification: return "WaitVerification";
+      case State::WaitBuyerSign:    return "WaitBuyerSign";
+      case State::WaitSellerSeal:   return "WaitSellerSeal";
+      case State::WaitSellerSign:   return "WaitSellerSign";
       case State::Blacklisted:      return "Blacklisted";
    }
 
@@ -171,6 +175,7 @@ bool otc::isSubRange(otc::Range range, otc::Range subRange)
 otc::Peer::Peer(const std::string &contactId, otc::PeerType type)
    : contactId(contactId)
    , type(type)
+   , stateTimestamp(QDateTime::currentDateTime())
 {
 }
 

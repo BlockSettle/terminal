@@ -13,7 +13,7 @@ namespace {
 
 class PrivatePartyInitState : public AbstractChatWidgetState {
 public:
-   explicit PrivatePartyInitState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   explicit PrivatePartyInitState(ChatWidget* chat) : AbstractChatWidgetState(chat) {}
    ~PrivatePartyInitState() override {
       saveDraftMessage();
    };

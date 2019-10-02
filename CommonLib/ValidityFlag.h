@@ -38,20 +38,22 @@
 //   };
 
 #include <memory>
+#include <mutex>
 
 struct ValidityFlagData;
 
 class ValidityHandle
 {
 public:
+   ValidityHandle();
    ValidityHandle(const std::shared_ptr<ValidityFlagData> &flag);
    ~ValidityHandle();
 
    ValidityHandle(const ValidityHandle &other);
-   ValidityHandle& operator = (const ValidityHandle &other);
+   ValidityHandle& operator=(const ValidityHandle &other);
 
    ValidityHandle(ValidityHandle &&other);
-   ValidityHandle& operator = (ValidityHandle &&other);
+   ValidityHandle& operator=(ValidityHandle &&other);
 
    // Blocks parent object destructor if needed.
    void lock();
@@ -67,6 +69,8 @@ private:
 
 };
 
+using ValidityGuard = std::lock_guard<ValidityHandle>;
+
 class ValidityFlag
 {
 public:
@@ -74,14 +78,14 @@ public:
    ~ValidityFlag();
 
    ValidityFlag(const ValidityFlag&) = delete;
-   ValidityFlag &operator = (const ValidityFlag&) = delete;
+   ValidityFlag &operator=(const ValidityFlag&) = delete;
 
    ValidityFlag(ValidityFlag &&other);
    ValidityFlag &operator=(ValidityFlag &&other);
 
    // Creates new handle that points to this object.
    // Method is not thread-safe.
-   ValidityHandle handle();
+   ValidityHandle handle() const;
 
    // Marks as invalid. Creating new handles is not possible after that.
    // Method is not thread-safe.

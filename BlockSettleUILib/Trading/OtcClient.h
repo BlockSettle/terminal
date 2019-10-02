@@ -37,7 +37,7 @@ namespace Blocksettle {
       namespace ProxyTerminalPb {
          class Response;
          class Response_StartOtc;
-         class Response_VerifyOtc;
+         class Response_UpdateOtcState;
       }
    }
 }
@@ -127,6 +127,9 @@ signals:
    void sendPublicMessage(const BinaryData &data);
 
    void peerUpdated(const bs::network::otc::Peer *peer);
+   // Used to update UI when there is some problems (for example deal verification failed)
+   void peerError(const bs::network::otc::Peer *peer, const std::string &errorMsg);
+
    void publicUpdated();
 
 private slots:
@@ -156,7 +159,7 @@ private:
    void processPublicPrivateMessage(QDateTime timestamp, const std::string &contactId, const Blocksettle::Communication::Otc::PublicMessage_PrivateMessage &msg);
 
    void processPbStartOtc(const Blocksettle::Communication::ProxyTerminalPb::Response_StartOtc &response);
-   void processPbVerifyOtc(const Blocksettle::Communication::ProxyTerminalPb::Response_VerifyOtc &response);
+   void processPbUpdateOtcState(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOtcState &response);
 
    // Checks that hdWallet, auth address and recv address (is set) are valid
    bool verifyOffer(const bs::network::otc::Offer &offer) const;
@@ -164,14 +167,17 @@ private:
 
    void send(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage &msg);
 
-   void createRequests(const BinaryData &settlementId, bs::network::otc::Peer *peer, const OtcClientDealCb &cb);
+   void createRequests(const std::string &settlementId, bs::network::otc::Peer *peer, const OtcClientDealCb &cb);
    void sendSellerAccepts(bs::network::otc::Peer *peer);
 
    std::shared_ptr<bs::sync::hd::SettlementLeaf> findSettlementLeaf(const std::string &ourAuthAddress);
 
+   void changePeerStateWithoutUpdate(bs::network::otc::Peer *peer, bs::network::otc::State state);
    void changePeerState(bs::network::otc::Peer *peer, bs::network::otc::State state);
+   void resetPeerStateToIdle(bs::network::otc::Peer *peer);
+
    int genLocalUniqueId() { return ++latestUniqueId_; }
-   void trySendSignedTxs(OtcClientDeal *deal);
+   void trySendSignedTx(OtcClientDeal *deal);
    void verifyAuthAddresses(OtcClientDeal *deal);
    void setComments(OtcClientDeal *deal);
 
@@ -186,19 +192,24 @@ private:
 
    std::string ownContactId_;
 
-   std::map<BinaryData, std::unique_ptr<OtcClientDeal>> deals_;
+   // Maps settlementId to OtcClientDeal
+   std::map<std::string, std::unique_ptr<OtcClientDeal>> deals_;
 
    int latestUniqueId_{};
    std::map<int, SettlementIdRequest> waitSettlementIds_;
 
    // Maps sign requests to settlementId
-   std::map<unsigned, BinaryData> signRequestIds_;
+   std::map<unsigned, std::string> signRequestIds_;
 
+   // Own public request if exists
    std::unique_ptr<bs::network::otc::Peer> ownRequest_;
+
+   // Maps contactId to corresponding Peer
    std::unordered_map<std::string, bs::network::otc::Peer> contactMap_;
    std::unordered_map<std::string, bs::network::otc::Peer> requestMap_;
    std::unordered_map<std::string, bs::network::otc::Peer> responseMap_;
 
+   // Cached pointer lists from the above
    bs::network::otc::Peers contacts_;
    bs::network::otc::Peers requests_;
    bs::network::otc::Peers responses_;
