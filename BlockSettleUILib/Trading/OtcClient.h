@@ -113,6 +113,9 @@ public:
 
    static uint64_t estimatePayinFeeWithoutChange(const std::vector<UTXO> &inputs, float feePerByte);
 
+   static std::chrono::milliseconds payoutTimeout();
+   static std::chrono::milliseconds payinTimeout();
+
 public slots:
    void contactConnected(const std::string &contactId);
    void contactDisconnected(const std::string &contactId);

@@ -85,11 +85,18 @@ struct OtcClientDeal
 
 namespace {
 
-   const int kSettlementIdSize = 64;
+   const int kSettlementIdHexSize = 64;
    const int kTxHashSize = 32;
    const int kPubKeySize = 33;
 
+   // Normally pay-in/pay-out timeout is detected using server's status update.
+   // Use some delay to detect networking problems locally to prevent race.
+   const auto kLocalTimeoutDelay = std::chrono::seconds(5);
+
    const auto kStartOtcTimeout = std::chrono::seconds(10);
+
+   const auto kTimeoutError = "connection is timed out";
+   const auto kCancelledError = "deal is cancelled";
 
    bs::sync::PasswordDialogData toPasswordDialogData(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
    {
@@ -535,6 +542,17 @@ uint64_t OtcClient::estimatePayinFeeWithoutChange(const std::vector<UTXO> &input
    return result;
 }
 
+std::chrono::milliseconds OtcClient::payoutTimeout()
+{
+   return std::chrono::seconds(30);
+}
+
+std::chrono::milliseconds OtcClient::payinTimeout()
+{
+   // payin timeout is higher because offline wallet could be used
+   return std::chrono::seconds(300);
+}
+
 void OtcClient::contactConnected(const std::string &contactId)
 {
    assert(!contact(contactId));
@@ -925,7 +943,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
       return;
    }
 
-   if (msg.settlement_id().size() != kSettlementIdSize) {
+   if (msg.settlement_id().size() != kSettlementIdHexSize) {
       blockPeer("invalid settlement_id in SellerAccepts message", peer);
       return;
    }
@@ -1032,7 +1050,8 @@ void OtcClient::processClose(Peer *peer, const ContactMessage_Close &msg)
       case State::QuoteSent:
       case State::QuoteRecv:
       case State::OfferSent:
-      case State::OfferRecv: {
+      case State::OfferRecv:
+      case State::WaitPayinInfo: {
          if (peer->type == PeerType::Response) {
             SPDLOG_LOGGER_DEBUG(logger_, "remove active response because peer have sent close message");
             responseMap_.erase(peer->contactId);
@@ -1040,26 +1059,23 @@ void OtcClient::processClose(Peer *peer, const ContactMessage_Close &msg)
             return;
          }
 
-         Peer newPeer(peer->contactId, peer->type);
-         // preserve original request for quote requests (required only for public OTC)
-         newPeer.request = std::move(peer->request);
-         *peer = std::move(newPeer);
+         resetPeerStateToIdle(peer);
          if (peer->type != PeerType::Contact) {
             updatePublicLists();
          }
-         emit peerUpdated(peer);
          break;
       }
 
       case State::Idle:
-      case State::WaitPayinInfo:
-      case State::SentPayinInfo:
+      case State::SentPayinInfo: {
          blockPeer("unexpected close", peer);
          break;
+      }
 
-      case State::Blacklisted:
+      case State::Blacklisted: {
          assert(false);
          break;
+      }
    }
 }
 
@@ -1223,9 +1239,15 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             peer->activeSignRequest = deal->payout.serializeState();
          }
 
-         // TODO: Add timeout detection
-
          changePeerState(peer, State::WaitBuyerSign);
+
+         QTimer::singleShot(payoutTimeout() + kLocalTimeoutDelay, this, [this, peer, handle = peer->validityFlag.handle()] {
+            if (!handle.isValid() || peer->state != State::WaitBuyerSign) {
+               return;
+            }
+            emit peerError(peer, kTimeoutError);
+            resetPeerStateToIdle(peer);
+         });
          break;
       }
 
@@ -1261,8 +1283,15 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             }
          }
 
-         // TODO: Add timeout detection
          changePeerState(peer, State::WaitSellerSeal);
+
+         QTimer::singleShot(payinTimeout() + kLocalTimeoutDelay, this, [this, peer, handle = peer->validityFlag.handle()] {
+            if (!handle.isValid() || peer->state != State::WaitSellerSeal) {
+               return;
+            }
+            emit peerError(peer, kTimeoutError);
+            resetPeerStateToIdle(peer);
+         });
          break;
       }
 
@@ -1284,8 +1313,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
             return;
          }
-
-         // TODO: Print status update
+         emit peerError(peer, kCancelledError);
          resetPeerStateToIdle(peer);
          break;
       }
@@ -1364,7 +1392,7 @@ void OtcClient::send(Peer *peer, const ContactMessage &msg)
 void OtcClient::createRequests(const std::string &settlementId, Peer *peer, const OtcClientDealCb &cb)
 {
    assert(peer->authPubKey.getSize() == kPubKeySize);
-   assert(settlementId.size() == kSettlementIdSize);
+   assert(settlementId.size() == kSettlementIdHexSize);
    if (peer->offer.ourSide == bs::network::otc::Side::Buy) {
       assert(peer->payinTxIdFromSeller.getSize() == kTxHashSize);
    }
@@ -1537,14 +1565,18 @@ void OtcClient::sendSellerAccepts(Peer *peer)
    d->set_request_id(requestId);
    emit sendPbMessage(request.SerializeAsString());
 
-   QTimer::singleShot(kStartOtcTimeout, this, [this, requestId] {
-      auto it = waitSettlementIds_.find(requestId);
-      if (it != waitSettlementIds_.end()) {
-         waitSettlementIds_.erase(it);
-         SPDLOG_LOGGER_ERROR(logger_, "can't get settlementId from PB: timeout");
-
-         // TODO: Report error that PB is not accessible to peer and cancel deal
+   QTimer::singleShot(kStartOtcTimeout, this, [this, requestId, peer, handle = peer->validityFlag.handle()] {
+      if (!handle.isValid()) {
+         return;
       }
+      auto it = waitSettlementIds_.find(requestId);
+      if (it == waitSettlementIds_.end()) {
+         return;
+      }
+      waitSettlementIds_.erase(it);
+      SPDLOG_LOGGER_ERROR(logger_, "can't get settlementId from PB: timeout");
+      emit peerError(peer, kTimeoutError);
+      pullOrReject(peer);
    });
 }
 
