@@ -1194,7 +1194,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
 
    switch (response.state()) {
       case ProxyTerminalPb::OTC_STATE_FAILED: {
-         if (peer->state != State::WaitVerification) {
+         if (peer->state != State::WaitVerification && peer->state != State::WaitBuyerSign && peer->state != State::WaitSellerSeal) {
             SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
             return;
          }
@@ -1202,9 +1202,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
          SPDLOG_LOGGER_ERROR(logger_, "OTC trade failed: {}", response.error_msg());
          emit peerError(peer, response.error_msg());
 
-         changePeerStateWithoutUpdate(peer, State::Idle);
-         *peer = Peer(peer->contactId, peer->type);
-         emit peerUpdated(peer);
+         resetPeerStateToIdle(peer);
          break;
       }
 
