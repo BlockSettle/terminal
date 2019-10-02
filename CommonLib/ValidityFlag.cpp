@@ -65,7 +65,7 @@ ValidityFlag &ValidityFlag::operator=(ValidityFlag &&other)
    return *this;
 }
 
-ValidityHandle ValidityFlag::handle()
+ValidityHandle ValidityFlag::handle() const
 {
    assert(data_);
    return ValidityHandle(data_);

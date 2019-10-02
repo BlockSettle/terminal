@@ -38,6 +38,7 @@
 //   };
 
 #include <memory>
+#include <mutex>
 
 struct ValidityFlagData;
 
@@ -67,6 +68,8 @@ private:
 
 };
 
+using ValidityGuard = std::lock_guard<ValidityHandle>;
+
 class ValidityFlag
 {
 public:
@@ -81,7 +84,7 @@ public:
 
    // Creates new handle that points to this object.
    // Method is not thread-safe.
-   ValidityHandle handle();
+   ValidityHandle handle() const;
 
    // Marks as invalid. Creating new handles is not possible after that.
    // Method is not thread-safe.
