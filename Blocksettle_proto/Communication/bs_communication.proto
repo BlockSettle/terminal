@@ -23,13 +23,6 @@ enum AddressNetworkType
    TestNetType = 2;
 }
 
-enum AddressScriptType
-{
-   PayToHashScriptType = 1;
-   NestedSegWitScriptType = 2;
-   NativeSegWitScriptType = 3;
-}
-
 // type of address used for verifications ( bitcoin, colored coin etc)
 enum AddressType
 {
@@ -80,10 +73,8 @@ message ResponsePacket
 
 message SubmitAuthAddressForVerificationRequest
 {
-   required AddressType          addressType = 2;
    required AddressNetworkType   networkType = 3;
-   required AddressScriptType    scriptType = 4;
-   required bytes                address160hex = 5;
+   required string               address = 5;
    required string               userName = 8;
 }
 
@@ -104,11 +95,10 @@ message SubmitAuthAddressForVerificationResponse
 {
    required bool                 keySubmitted = 1;
    optional AddressNetworkType   networkType = 2;
-   optional AddressScriptType    scriptType = 3;
-   required bytes                address160hex = 4;
+   required string               address = 4;
    optional string               errorMessage = 6;
    optional bool                 requestConfirmation = 7;
-   optional float 		         validationAmount = 8;
+   optional float                validationAmount = 8;
 }
 
 message ErrorMessageResponse
@@ -191,7 +181,6 @@ message ConfirmAuthSubmitRequest
    required string userName = 1;
    required string address = 2;
    required AddressNetworkType networkType = 3;
-   required AddressScriptType  scriptType = 4;
    required string userId = 6;
 }
 
