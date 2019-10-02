@@ -61,18 +61,17 @@ protected:
          return;
       }
 
-      // #new_logic : change name after merge with global_otc
       if (clientPartyPtr->isGlobal()) {
-         if (clientPartyPtr->displayName() == QObject::tr("Global").toStdString()) {
+         if (clientPartyPtr->displayName() == Chat::GlobalRoomName) {
             chat_->ui_->widgetOTCShield->showOtcUnavailableGlobal();
             return;
          } 
-         else if (clientPartyPtr->displayName() == QObject::tr("OTC").toStdString()) {
+         else if (clientPartyPtr->displayName() == Chat::OtcRoomName) {
             if (!checkIsTradingParticipant()) {
                return;
             }
          }
-         else if (clientPartyPtr->displayName() == QObject::tr("Support").toStdString()) {
+         else if (clientPartyPtr->displayName() == Chat::SupportRoomName) {
             chat_->ui_->widgetOTCShield->showOtcUnavailableSupport();
             return;
          }

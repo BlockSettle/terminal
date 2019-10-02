@@ -54,11 +54,15 @@ ChatWidget::ChatWidget(QWidget* parent)
 
    //Init UI and other stuff
    ui_->frameContactActions->setVisible(false);
-   ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
    ui_->textEditMessages->viewport()->installEventFilter(this);
    ui_->input_textEdit->viewport()->installEventFilter(this);
    ui_->treeViewUsers->viewport()->installEventFilter(this);
+
+   // Global OTC setup
+   ui_->treeViewOTCRequests->setAlternatingRowColors(true);
+   ui_->treeViewOTCRequests->setItemsExpandable(true);
+   ui_->treeViewOTCRequests->setRootIsDecorated(false);
 
    otcWindowsManager_ = std::make_shared<OTCWindowsManager>();
    auto* sWidget = ui_->stackedWidgetOTC;
