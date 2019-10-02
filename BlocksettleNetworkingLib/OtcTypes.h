@@ -147,6 +147,8 @@ namespace bs {
             bool isOwnRequest{};
 
             State state{State::Idle};
+            // timestamp of the latest status change (it's always valid)
+            QDateTime stateTimestamp;
 
             QuoteRequest request;
             QuoteResponse response;
@@ -159,6 +161,8 @@ namespace bs {
             std::string settlementId;
 
             ValidityFlag validityFlag;
+
+            BinaryData activeSignRequest;
 
             Peer(const std::string &contactId, PeerType type);
 

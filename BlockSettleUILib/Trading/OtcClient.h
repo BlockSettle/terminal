@@ -127,6 +127,9 @@ signals:
    void sendPublicMessage(const BinaryData &data);
 
    void peerUpdated(const bs::network::otc::Peer *peer);
+   // Used to update UI when there is some problems (for example deal verification failed)
+   void peerError(const bs::network::otc::Peer *peer, const std::string &errorMsg);
+
    void publicUpdated();
 
 private slots:
