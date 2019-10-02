@@ -22,7 +22,10 @@ public:
    const std::string& currentUser() const;
 
    QModelIndex getOTCGlobalRoot() const;
-   const QModelIndex getPartyIndexById(const std::string& partyId) const;
+   const QModelIndex getPartyIndexById(const std::string& partyId, const QModelIndex parent = {}) const;
+
+signals:
+   void restoreSelectedIndex();
 
 public slots:
    void onPartyModelChanged();

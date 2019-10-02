@@ -6,7 +6,7 @@
 
 class ChatLogOutState : public AbstractChatWidgetState {
 public:
-   explicit ChatLogOutState(ChatWidget* chat) : AbstractChatWidgetState(chat) { enterState(); }
+   explicit ChatLogOutState(ChatWidget* chat) : AbstractChatWidgetState(chat) {}
    ~ChatLogOutState() override = default;
 protected:
    void applyUserFrameChange() override {

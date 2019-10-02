@@ -125,6 +125,7 @@ void OTCNegotiationRequestWidget::onSyncInterface()
    onCurrentWalletChanged();
 
    UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, getAuthManager());
+   ui_->widgetButtons->setEnabled(ui_->authenticationAddressComboBox->isEnabled());
 }
 
 void OTCNegotiationRequestWidget::onMDUpdated()
@@ -229,6 +230,12 @@ void OTCNegotiationRequestWidget::toggleSideButtons(bool isSell)
 {
    ui_->pushButtonSell->setChecked(isSell);
    ui_->pushButtonBuy->setChecked(!isSell);
+   if (isSell) {
+      onSellClicked();
+   }
+   else {
+      onBuyClicked();
+   }
 }
 
 void OTCNegotiationRequestWidget::onNumCcySelected()

@@ -17,7 +17,7 @@ ChatPartiesTreeModel::~ChatPartiesTreeModel() = default;
 void ChatPartiesTreeModel::onPartyModelChanged()
 {
    Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
-
+   
    beginResetModel();
 
    rootItem_->removeAll();
@@ -54,6 +54,7 @@ void ChatPartiesTreeModel::onPartyModelChanged()
    rootItem_->insertChildren(std::move(requestSection));
 
    endResetModel();
+   emit restoreSelectedIndex();
 
    onGlobalOTCChanged();
 }
@@ -105,6 +106,7 @@ void ChatPartiesTreeModel::onGlobalOTCChanged()
    otcParty->insertChildren(std::move(responseSection));
 
    endInsertRows();
+   emit restoreSelectedIndex();
 }
 
 void ChatPartiesTreeModel::onCleanModel()
@@ -146,26 +148,50 @@ void ChatPartiesTreeModel::onDecreaseUnseenCounter(const std::string& partyId, i
    partyItem->decreaseUnseenCounter(seenMessageCount);
 }
 
-const QModelIndex ChatPartiesTreeModel::getPartyIndexById(const std::string& partyId) const
+const QModelIndex ChatPartiesTreeModel::getPartyIndexById(const std::string& partyId, const QModelIndex parent) const
 {
-   for (int iContainer = 0; iContainer < rootItem_->childCount(); ++iContainer) {
-      auto* container = rootItem_->child(iContainer);
+   PartyTreeItem* parentItem = nullptr;
+   if (parent.isValid()) {
+      parentItem = static_cast<PartyTreeItem*>(parent.internalPointer());
+   } 
+   else {
+      parentItem = rootItem_;
+   }
+   Q_ASSERT(parentItem);
 
-      for (int iParty = 0; iParty < container->childCount(); ++iParty) {
-         const PartyTreeItem* party = container->child(iParty);
-         if (party->data().canConvert<Chat::ClientPartyPtr>()) {
-            const Chat::ClientPartyPtr clientPtr = party->data().value<Chat::ClientPartyPtr>();
-            if (clientPtr->id() == partyId) {
-               return index(iParty, 0, index(iContainer, 0));
+   QList<QPair<QModelIndex, PartyTreeItem*>> itemsToCheck;
+   itemsToCheck.push_back({ parent , parentItem });
+
+   QPair<QModelIndex, PartyTreeItem*> currentPair;
+   while (!itemsToCheck.isEmpty()) {
+      currentPair = itemsToCheck[0];
+      itemsToCheck.pop_front();
+
+      QModelIndex iterModelIndex = currentPair.first;
+      PartyTreeItem* iterItem= currentPair.second;
+
+
+      for (int iChild = 0; iChild < iterItem->childCount(); ++iChild) {
+         auto* child = iterItem->child(iChild);
+
+         auto childIndex = index(iChild, 0, iterModelIndex);
+         if (child->modelType() == UI::ElementType::Container && child->data().canConvert<QString>()) {
+            if (child->data().toString().toStdString() == partyId) {
+               return childIndex;
             }
          }
-      }
+         else if (child->modelType() == UI::ElementType::Party && child->data().canConvert<Chat::ClientPartyPtr>()) {
+            const Chat::ClientPartyPtr clientPtr = child->data().value<Chat::ClientPartyPtr>();
+            if (clientPtr->id() == partyId) {
+               return childIndex;
+            }
+         }
 
-      if (container->data().canConvert<QString>()) {
-         if (container->data().toString().toStdString() == partyId) {
-            return index(iContainer, 0);
+         if (child->childCount() != 0) {
+            itemsToCheck.push_back({ childIndex , child });
          }
       }
+
    }
 
    return {};
