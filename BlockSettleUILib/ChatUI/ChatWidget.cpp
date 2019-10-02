@@ -138,11 +138,13 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->treeViewUsers, &ChatUserListTreeView::acceptFriendRequest, this, &ChatWidget::onContactRequestAcceptClicked);
    connect(ui_->treeViewUsers, &ChatUserListTreeView::declineFriendRequest, this, &ChatWidget::onContactRequestRejectClicked);
    connect(ui_->treeViewUsers, &ChatUserListTreeView::setDisplayName, this, &ChatWidget::onSetDisplayName);
+   // This should be queued connection to make sure first view is updated
+   connect(chatPartiesTreeModel_.get(), &ChatPartiesTreeModel::restoreSelectedIndex, this, &ChatWidget::onActivateCurrentPartyId, Qt::QueuedConnection);
 
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendMessage);
-   connect(ui_->textEditMessages, &ChatMessagesTextEdit::messageRead, this, &ChatWidget::onMessageRead, Qt::QueuedConnection);
-   connect(ui_->textEditMessages, &ChatMessagesTextEdit::newPartyRequest, this, &ChatWidget::onNewPartyRequest, Qt::QueuedConnection);
-   connect(ui_->textEditMessages, &ChatMessagesTextEdit::removePartyRequest, this, &ChatWidget::onRemovePartyRequest, Qt::QueuedConnection);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::messageRead, this, &ChatWidget::onMessageRead);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::newPartyRequest, this, &ChatWidget::onNewPartyRequest);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::removePartyRequest, this, &ChatWidget::onRemovePartyRequest);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::switchPartyRequest, this, &ChatWidget::onActivatePartyId);
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::clientLoggedInToServer, this, &ChatWidget::onLogin, Qt::QueuedConnection);
@@ -153,7 +155,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onSendArrived, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onClientPartyStatusChanged, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onMessageStateChanged, Qt::QueuedConnection);
-   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::userPublicKeyChanged, this, &ChatWidget::onUserPublicKeyChanged);
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::userPublicKeyChanged, this, &ChatWidget::onUserPublicKeyChanged, Qt::QueuedConnection);
 
    // Connect all signal that influence on widget appearance 
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
@@ -164,8 +166,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    otcRequestViewModel_ = new OTCRequestViewModel(otcHelper_->client(), this);
    ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
-   // Use Qt::QueuedConnection to prevent crash when stateCurrent_ is null
-   connect(ui_->treeViewOTCRequests->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWidget::onOtcRequestCurrentChanged, Qt::QueuedConnection);
+   connect(ui_->treeViewOTCRequests->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWidget::onOtcRequestCurrentChanged);
 
    connect(otcHelper_->client(), &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
    connect(otcHelper_->client(), &OtcClient::sendContactMessage, this, &ChatWidget::onSendOtcMessage);
@@ -458,6 +459,30 @@ void ChatWidget::onActivatePartyId(const QString& partyId)
 
    ui_->treeViewUsers->setCurrentIndex(partyProxyIndex);
    onUserListClicked(partyProxyIndex);
+}
+
+void ChatWidget::onActivateGlobalPartyId()
+{
+   onActivatePartyId(QString::fromLatin1(Chat::GlobalRoomName));
+}
+
+void ChatWidget::onActivateCurrentPartyId()
+{
+   if (currentPartyId_.empty()) {
+      return;
+   }
+
+   ChatPartiesSortProxyModel* chatProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
+   Q_ASSERT(chatProxyModel);
+
+   QModelIndex index = chatProxyModel->getProxyIndexById(currentPartyId_);
+   if (!index.isValid()) {
+      onActivateGlobalPartyId();
+   }
+
+   if (ui_->treeViewUsers->selectionModel()->currentIndex() != index) {
+      ui_->treeViewUsers->selectionModel()->setCurrentIndex(index, QItemSelectionModel::Select);
+   }
 }
 
 void ChatWidget::onRegisterNewChangingRefresh()
