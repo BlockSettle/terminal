@@ -374,25 +374,25 @@ void AbstractChatWidgetState::updateOtc()
          break;
       case State::SentPayinInfo:
       case State::WaitPayinInfo:
-         chat_->ui_->widgetOTCShield->showContactIsOffline();
-         break;
-
+         chat_->ui_->widgetOTCShield->showOtcSetupTransaction();
+         return;
       case State::WaitBuyerSign:
-      case State::WaitSellerSeal:
-         // FIXME: Show new shields
+         chat_->ui_->widgetPullOwnOTCRequest->setPendingBuyerSign(peer->offer);
          pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          break;
-
+      case State::WaitSellerSeal:
+         chat_->ui_->widgetPullOwnOTCRequest->setPendingSellerSign(peer->offer);
+         pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
+         break;
       case State::WaitVerification:
-         // FIXME: Show something while we wait for PB response
-         break;
-
       case State::WaitSellerSign:
-         // FIXME: Show something while we wait for PB response
-         break;
-
+         chat_->ui_->widgetOTCShield->showOtcSetupTransaction();
+         return;
       case State::Blacklisted:
          chat_->ui_->widgetOTCShield->showContactIsOffline();
+         return;
+      default:
+         assert(false && " Did you forget to handle new otc::State state? ");
          break;
    }
 

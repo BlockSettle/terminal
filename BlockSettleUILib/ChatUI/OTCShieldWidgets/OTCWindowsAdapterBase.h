@@ -75,6 +75,7 @@ protected:
    std::vector<UTXO> selectedUTXO_;
 
    bs::network::Asset::Type productGroup_ = bs::network::Asset::SpotXBT;
+   // #new_logic : fix security & product checking
    QString security_{ QLatin1String("XBT/EUR") };
    QString sellProduct_{ QLatin1String("XBT") };
    QString buyProduct_{ QLatin1String("EUR") };
