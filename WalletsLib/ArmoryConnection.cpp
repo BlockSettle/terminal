@@ -1310,14 +1310,19 @@ void bs::TXEntry::merge(const bs::TXEntry &other)
 {
    value += other.value;
    blockNum = other.blockNum;
+   addresses.insert(addresses.end(), other.addresses.cbegin(), other.addresses.cend());
    merged = true;
 }
 
 bs::TXEntry bs::TXEntry::fromLedgerEntry(const ClientClasses::LedgerEntry &entry)
 {
-   return { entry.getTxHash(), entry.getID(), entry.getValue(), entry.getBlockNum()
+   bs::TXEntry result{ entry.getTxHash(), entry.getID(), entry.getValue(), entry.getBlockNum()
          , entry.getTxTime(), entry.isOptInRBF(), entry.isChainedZC(), false
          , std::chrono::steady_clock::now() };
+   for (const auto &addr : entry.getScrAddrList()) {
+      result.addresses.push_back(addr);
+   }
+   return result;
 }
 
 std::vector<bs::TXEntry> bs::TXEntry::fromLedgerEntries(const std::vector<ClientClasses::LedgerEntry> &entries)
