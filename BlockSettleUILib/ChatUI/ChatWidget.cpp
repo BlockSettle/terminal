@@ -138,6 +138,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->treeViewUsers, &ChatUserListTreeView::acceptFriendRequest, this, &ChatWidget::onContactRequestAcceptClicked);
    connect(ui_->treeViewUsers, &ChatUserListTreeView::declineFriendRequest, this, &ChatWidget::onContactRequestRejectClicked);
    connect(ui_->treeViewUsers, &ChatUserListTreeView::setDisplayName, this, &ChatWidget::onSetDisplayName);
+   // This should be queued connection to make sure first view is updated
+   connect(chatPartiesTreeModel_.get(), &ChatPartiesTreeModel::restoreSelectedIndex, this, &ChatWidget::onActivateCurrentPartyId, Qt::QueuedConnection);
 
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendMessage);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::messageRead, this, &ChatWidget::onMessageRead);
@@ -457,6 +459,30 @@ void ChatWidget::onActivatePartyId(const QString& partyId)
 
    ui_->treeViewUsers->setCurrentIndex(partyProxyIndex);
    onUserListClicked(partyProxyIndex);
+}
+
+void ChatWidget::onActivateGlobalPartyId()
+{
+   onActivatePartyId(QString::fromLatin1(Chat::GlobalRoomName));
+}
+
+void ChatWidget::onActivateCurrentPartyId()
+{
+   if (currentPartyId_.empty()) {
+      return;
+   }
+
+   ChatPartiesSortProxyModel* chatProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
+   Q_ASSERT(chatProxyModel);
+
+   QModelIndex index = chatProxyModel->getProxyIndexById(currentPartyId_);
+   if (!index.isValid()) {
+      onActivateGlobalPartyId();
+   }
+
+   if (ui_->treeViewUsers->selectionModel()->currentIndex() != index) {
+      ui_->treeViewUsers->selectionModel()->setCurrentIndex(index, QItemSelectionModel::Select);
+   }
 }
 
 void ChatWidget::onRegisterNewChangingRefresh()
