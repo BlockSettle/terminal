@@ -1,5 +1,6 @@
 #include "OtcClient.h"
 
+#include <QApplication>
 #include <QFile>
 #include <QTimer>
 #include <spdlog/spdlog.h>
@@ -105,11 +106,17 @@ namespace {
       dialogData.setValue(PasswordDialogData::ProductGroup, QObject::tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)));
       dialogData.setValue(PasswordDialogData::Security, "XBT/EUR");
       dialogData.setValue(PasswordDialogData::Product, "XBT");
+      dialogData.setValue(PasswordDialogData::FxProduct, fxProd);
+
       dialogData.setValue(PasswordDialogData::Side, QObject::tr(bs::network::Side::toString(bs::network::Side::Type(deal.side))));
-
-      dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Transaction"));
-
       dialogData.setValue(PasswordDialogData::Price, UiUtils::displayPriceXBT(price));
+
+      dialogData.setValue(PasswordDialogData::Quantity, qApp->tr("%1 XBT")
+                    .arg(UiUtils::displayAmount(deal.amount)));
+
+      dialogData.setValue(PasswordDialogData::TotalValue, qApp->tr("%1 %2")
+                    .arg(UiUtils::displayAmountForProduct((deal.amount / BTCNumericTypes::BalanceDivider) * price, fxProd, bs::network::Asset::Type::SpotXBT))
+                    .arg(fxProd));
 
       dialogData.setValue(PasswordDialogData::SettlementAddress, deal.settlementAddr.display());
       dialogData.setValue(PasswordDialogData::SettlementId, deal.settlementId);

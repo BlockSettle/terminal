@@ -74,6 +74,7 @@ private:
    // read comments in source code
    bool createCCUnsignedTXdata();
    bool startSigning();
+   std::string txComment();
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
