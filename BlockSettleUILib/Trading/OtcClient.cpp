@@ -135,7 +135,7 @@ namespace {
       auto dialogData = toPasswordDialogData(deal, signRequest);
       dialogData.setValue(PasswordDialogData::SettlementPayInVisible, true);
       dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-In"));
-      dialogData.setValue(PasswordDialogData::Duration, int(std::chrono::duration_cast<std::chrono::milliseconds>(OtcClient::payinTimeout()).count()));
+      dialogData.setValue(PasswordDialogData::Duration, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payinTimeout()).count()));
       return dialogData;
    }
 
@@ -144,7 +144,7 @@ namespace {
       auto dialogData = toPasswordDialogData(deal, signRequest);
       dialogData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
       dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-Out"));
-      dialogData.setValue(PasswordDialogData::Duration, int(std::chrono::duration_cast<std::chrono::milliseconds>(OtcClient::payoutTimeout()).count()));
+      dialogData.setValue(PasswordDialogData::Duration, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payoutTimeout()).count()));
       return dialogData;
    }
 
@@ -542,17 +542,6 @@ uint64_t OtcClient::estimatePayinFeeWithoutChange(const std::vector<UTXO> &input
    PaymentStruct payment(recipientsMap, 0, feePerByte, 0);
    uint64_t result = bs::Address::getFeeForMaxVal(inputsCopy, payment.size_, feePerByte);
    return result;
-}
-
-std::chrono::milliseconds OtcClient::payoutTimeout()
-{
-   return std::chrono::seconds(30);
-}
-
-std::chrono::milliseconds OtcClient::payinTimeout()
-{
-   // payin timeout is higher because offline wallet could be used
-   return std::chrono::seconds(300);
 }
 
 void OtcClient::contactConnected(const std::string &contactId)
