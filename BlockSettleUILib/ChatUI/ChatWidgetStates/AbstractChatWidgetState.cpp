@@ -240,6 +240,28 @@ void AbstractChatWidgetState::onUpdateOTCShield()
    applyRoomsFrameChange();
 }
 
+void AbstractChatWidgetState::onOTCPeerError(const bs::network::otc::Peer *peer, const std::string &errorMsg)
+{
+   if (!canReceiveOTCOperations()) {
+      return;
+   }
+      
+   if (!peer) {
+      return;
+   }
+
+   const Chat::ClientPartyPtr clientPartyPtr = getPartyByUserHash(peer->contactId);
+   if (!clientPartyPtr) {
+      return;
+   }
+      
+   bs::ui::NotifyMessage notifyMsg;
+   notifyMsg.append(QString::fromStdString(clientPartyPtr->displayName()));
+   notifyMsg.append(QString::fromStdString(errorMsg));
+
+   NotificationCenter::notify(bs::ui::NotifyType::OTCOrderError, notifyMsg);
+}
+
 void AbstractChatWidgetState::onOtcRequestSubmit()
 {
    if (canPerformOTCOperations()) {
@@ -409,4 +431,10 @@ Chat::ClientPartyPtr AbstractChatWidgetState::getParty(const std::string& partyI
 {
    Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
    return partyModel->getClientPartyById(partyId);
+}
+
+Chat::ClientPartyPtr AbstractChatWidgetState::getPartyByUserHash(const std::string& userHash) const
+{
+   Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+   return partyModel->getClientPartyByUserHash(userHash);
 }

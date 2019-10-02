@@ -232,6 +232,16 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       text = tr("%1 would like to add you as a contact").arg(msg[0].toString());
       break;
 
+   case bs::ui::NotifyType::OTCOrderError:
+      if (msg.size() != 2) {
+         return;
+      }
+
+      title = tr("OTC order failed");
+      text = tr("OTC order %1 was rejected with reason: %2").arg(msg[0].toString()).arg(msg[1].toString());
+      icon = QSystemTrayIcon::Warning;
+      break;
+
    case bs::ui::NotifyType::LogOut:
       // hide icons in all tabs on user logout
       for (int i=0; i<mainWinUi_->tabWidget->count(); i++) {
