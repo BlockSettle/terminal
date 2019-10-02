@@ -24,15 +24,19 @@ public:
    void setOffer(const bs::network::otc::Offer &offer);
 
    bs::network::otc::Offer offer() const;
+   void setPeer(const bs::network::otc::Peer &peer) override;
 
 signals:
    void responseAccepted();
    void responseUpdated();
    void responseRejected();
 
+public slots:
+   void onAboutToApply() override;
+
 protected slots:
    void onSyncInterface() override;
-   void onUpdateMD(bs::network::Asset::Type type, const QString &security, const bs::network::MDFields& fields) override;
+   void onMDUpdated() override;
    void onUpdateBalances() override;
 
 private slots:
@@ -50,11 +54,6 @@ protected:
 private:
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
    bs::network::otc::Offer receivedOffer_;
-
-   bs::network::Asset::Type productGroup_ = bs::network::Asset::SpotXBT;
-   QString security_{ QLatin1String("XBT/EUR") };
-   double sellIndicativePrice_{};
-   double buyIndicativePrice_{};
 };
 
 #endif // __OTC_NEGOTIATION_RESPONSE_WIDGET_H__

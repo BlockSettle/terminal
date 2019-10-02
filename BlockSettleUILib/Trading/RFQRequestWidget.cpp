@@ -6,6 +6,7 @@
 #include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
 #include "CelerClient.h"
+#include "CurrencyPair.h"
 #include "DialogManager.h"
 #include "NotificationCenter.h"
 #include "OrderListModel.h"
@@ -14,9 +15,10 @@
 #include "RFQDialog.h"
 #include "SignContainer.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "CurrencyPair.h"
-#include "ui_RFQRequestWidget.h"
 
+#include "bs_proxy_terminal_pb.pb.h"
+
+#include "ui_RFQRequestWidget.h"
 
 namespace  {
    enum class RFQPages : int
@@ -35,8 +37,9 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
 
    connect(ui_->pageRFQTicket, &RFQTicketXBT::submitRFQ, this, &RFQRequestWidget::onRFQSubmit);
    connect(ui_->shieldPage, &RFQShieldPage::requestPrimaryWalletCreation, this, &RFQRequestWidget::requestPrimaryWalletCreation);
-   
+
    ui_->shieldPage->showShieldLoginToSubmitRequired();
+
    popShield();
 }
 
@@ -205,7 +208,7 @@ void RFQRequestWidget::onConnectedToCeler()
 }
 
 void RFQRequestWidget::onDisconnectedFromCeler()
-{  
+{
    for (QMetaObject::Connection &conn : marketDataConnection) {
       QObject::disconnect(conn);
    }
@@ -219,7 +222,18 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
    auto authAddr = ui_->pageRFQTicket->selectedAuthAddress();
 
    RFQDialog* dialog = new RFQDialog(logger_, rfq, ui_->pageRFQTicket->GetTransactionData(), quoteProvider_,
-      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_, connectionManager_, authAddr, this);
+      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
+      , connectionManager_, authAddr, this);
+
+   // connect to requests from PB
+   // just re-emit signal
+   connect(dialog, &RFQDialog::sendUnsignedPayinToPB, this, &RFQRequestWidget::sendUnsignedPayinToPB);
+   connect(dialog, &RFQDialog::sendSignedPayinToPB, this, &RFQRequestWidget::sendSignedPayinToPB);
+   connect(dialog, &RFQDialog::sendSignedPayoutToPB, this, &RFQRequestWidget::sendSignedPayoutToPB);
+
+   connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
+   connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);
+   connect(this, &RFQRequestWidget::signedPayinRequested, dialog, &RFQDialog::onSignedPayinRequested);
 
    dialog->setAttribute(Qt::WA_DeleteOnClose);
 
@@ -334,4 +348,43 @@ void RFQRequestWidget::onDisableSelectedInfo()
 {
    ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
+}
+
+void RFQRequestWidget::onMessageFromPB(std::string data)
+{
+   Blocksettle::Communication::ProxyTerminalPb::Response response;
+   bool result = response.ParseFromString(data);
+   if (!result) {
+      logger_->error("[RFQRequestWidget::onMessageFromPB] failed to parse message: {}"
+                     , data);
+      return;
+   }
+
+   switch (response.data_case()) {
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin:
+         {
+            auto command = response.send_unsigned_payin();
+
+            emit unsignedPayinRequested(command.settlement_id());
+         }
+         break;
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayout:
+         {
+            auto command = response.sign_payout();
+
+            // payin_data - payin hash . binary
+            emit signedPayoutRequested(command.settlement_id(), command.payin_data());
+         }
+         break;
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayin:
+         {
+            auto command = response.sign_payin();
+
+            // unsigned_payin_data - serialized payin. binary
+            emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data());
+         }
+         break;
+   }
+
+   // if not processed - not RFQ releated message. not error
 }

@@ -124,6 +124,7 @@ public:
    bool broadcastZC(const BinaryData& rawTx);
 
    unsigned int topBlock() const { return topBlock_; }
+   unsigned int branchHeight() const { return branchHeight_; }
 
    using RegisterWalletCb = std::function<void(const std::string &regId)>;
    using WalletsHistoryCb = std::function<void(const std::vector<ClientClasses::LedgerEntry>&)>;
@@ -187,6 +188,9 @@ public:
 
    std::shared_ptr<AsyncClient::BtcWallet> instantiateWallet(const std::string &walletId);
 
+   // Converts BTC/kb (returned by armory) to sat/byte
+   static float toFeePerByte(float fee);
+
 protected:
    void setupConnection(NetworkType, const std::string &host, const std::string &port
       , const std::string &dataDir, const BinaryData &serverKey
@@ -200,7 +204,8 @@ protected:
 
 private:
    void registerBDV(NetworkType);
-   void setTopBlock(unsigned int topBlock, unsigned int branchHgt);
+   void setTopBlock(unsigned int topBlock);
+   void setBranchHeight(unsigned int branchHgt);
    void onRefresh(const std::vector<BinaryData> &);
    void onZCsReceived(const std::vector<std::shared_ptr<ClientClasses::LedgerEntry>> &);
    void onZCsInvalidated(const std::set<BinaryData> &);

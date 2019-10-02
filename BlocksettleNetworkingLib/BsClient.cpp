@@ -61,13 +61,37 @@ void BsClient::sendPbMessage(std::string data)
    sendMessage(&request);
 }
 
-void BsClient::sendPbBroadcastXbt(const BsClient::BroadcastXbt &data)
+void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId)
 {
    ProxyTerminalPb::Request request;
-   auto d = request.mutable_broadcast_xbt();
-   d->set_settlement_id(data.settlementId.toBinStr());
-   d->set_signed_payin(data.signedPayin.toBinStr());
-   d->set_signed_payout(data.signedPayout.toBinStr());
+
+   auto data = request.mutable_unsigned_payin();
+   data->set_settlement_id(settlementId);
+   data->set_unsigned_payin(unsignedPayin.toBinStr());
+   data->set_unsigned_payin_id(unsignedTxId.toBinStr());
+
+   sendPbMessage(request.SerializeAsString());
+}
+
+void BsClient::sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin)
+{
+   ProxyTerminalPb::Request request;
+
+   auto data = request.mutable_signed_payin();
+   data->set_settlement_id(settlementId);
+   data->set_signed_payin(signedPayin.toBinStr());
+
+   sendPbMessage(request.SerializeAsString());
+}
+
+void BsClient::sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout)
+{
+   ProxyTerminalPb::Request request;
+
+   auto data = request.mutable_signed_payout();
+   data->set_settlement_id(settlementId);
+   data->set_signed_payout(signedPayout.toBinStr());
+
    sendPbMessage(request.SerializeAsString());
 }
 
@@ -197,10 +221,6 @@ void BsClient::OnDataReceived(const std::string &data)
       return;
    }
 
-   if (response->data_case() != Response::kCeler) {
-      SPDLOG_LOGGER_DEBUG(logger_, "bs recv: {}", ProtobufUtils::toJsonCompact(*response));
-   }
-
    QMetaObject::invokeMethod(this, [this, response] {
       if (response->request_id() != 0) {
          auto it = activeRequests_.find(response->request_id());
@@ -288,10 +308,6 @@ void BsClient::sendRequest(Request *request, std::chrono::milliseconds timeout
 
 void BsClient::sendMessage(Request *request)
 {
-   if (request->data_case() != Request::kCeler) {
-      SPDLOG_LOGGER_DEBUG(logger_, "bs send: {}", ProtobufUtils::toJsonCompact(*request));
-   }
-
    connection_->send(request->SerializeAsString());
 }
 

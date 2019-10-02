@@ -1,29 +1,31 @@
-
 #include "RFQReplyWidget.h"
 #include "ui_RFQReplyWidget.h"
-#include <spdlog/logger.h>
-
-#include <QDesktopWidget>
-#include <QPushButton>
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
+#include "BSMessageBox.h"
 #include "CelerClient.h"
 #include "CelerSubmitQuoteNotifSequence.h"
+#include "CustomDoubleSpinBox.h"
 #include "DealerCCSettlementContainer.h"
 #include "DealerXBTSettlementContainer.h"
 #include "DialogManager.h"
 #include "MarketDataProvider.h"
-#include "BSMessageBox.h"
 #include "OrderListModel.h"
+#include "OrdersView.h"
 #include "QuoteProvider.h"
+#include "RFQBlotterTreeView.h"
 #include "RFQDialog.h"
 #include "SignContainer.h"
-#include "RFQBlotterTreeView.h"
-#include "CustomDoubleSpinBox.h"
-#include "OrdersView.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+
+#include "bs_proxy_terminal_pb.pb.h"
+
+#include <spdlog/logger.h>
+
+#include <QDesktopWidget>
+#include <QPushButton>
 
 using namespace bs::ui;
 
@@ -228,11 +230,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
             ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
-
-//               auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
-//                  sr.requestorAuthAddress, walletsManager_, signingContainer_
-//                  , celerClient_, appSettings_, connectionManager_, this);
-//               showSettlementDialog(settlDlg);
             settlContainer->activate();
          } catch (const std::exception &e) {
             BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
@@ -253,13 +250,17 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                connect(settlContainer.get(), &bs::SettlementContainer::readyToActivate, this, &RFQReplyWidget::onReadyToActivate);
                connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
-               ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
+               connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
+               connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);
+               connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayoutToPB, this, &RFQReplyWidget::sendSignedPayoutToPB);
 
-//                  auto *dsd = new DealerXBTSettlementDialog(logger_, settlContainer, assetManager_,
-//                     walletsManager_, signingContainer_, celerClient_, appSettings_, connectionManager_, this);
-//                  showSettlementDialog(dsd);
+               connect(this, &RFQReplyWidget::unsignedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onUnsignedPayinRequested);
+               connect(this, &RFQReplyWidget::signedPayoutRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayoutRequested);
+               connect(this, &RFQReplyWidget::signedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayinRequested);
+
+               ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
             } catch (const std::exception &e) {
-               logger_->error("[{}] settlement failed: {}", __func__, e.what());
+               logger_->error("[RFQReplyWidget::onOrder] settlement failed: {}", e.what());
                BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
                   , tr("Failed to start dealer's settlement")
                   , QString::fromLatin1(e.what())
@@ -295,7 +296,7 @@ void RFQReplyWidget::onReadyToActivate()
 {
    const auto settlContainer = qobject_cast<bs::SettlementContainer *>(sender());
    if (!settlContainer) {
-      logger_->error("[{}] failed to cast sender", __func__);
+      logger_->error("[RFQReplyWidget::onReadyToActivate] failed to cast sender");
       return;
    }
    settlContainer->activate();
@@ -457,3 +458,42 @@ void RFQReplyWidget::showEditableRFQPage()
    ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::DealingPage));
 }
 
+
+void RFQReplyWidget::onMessageFromPB(std::string data)
+{
+   Blocksettle::Communication::ProxyTerminalPb::Response response;
+   bool result = response.ParseFromString(data);
+   if (!result) {
+      logger_->error("[RFQReplyWidget::onMessageFromPB] failed to parse message: {}"
+                     , data);
+      return;
+   }
+
+   switch (response.data_case()) {
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin:
+         {
+            auto command = response.send_unsigned_payin();
+
+            emit unsignedPayinRequested(command.settlement_id());
+         }
+         break;
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayout:
+         {
+            auto command = response.sign_payout();
+
+            // payin_data - payin hash . binary
+            emit signedPayoutRequested(command.settlement_id(), command.payin_data());
+         }
+         break;
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayin:
+         {
+            auto command = response.sign_payin();
+
+            // unsigned_payin_data - serialized payin. binary
+            emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data());
+         }
+         break;
+   }
+
+   // if not processed - not RFQ releated message. not error
+}

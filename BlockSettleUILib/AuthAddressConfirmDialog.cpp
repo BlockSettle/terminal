@@ -107,7 +107,7 @@ void AuthAddressConfirmDialog::onAuthConfirmSubmitError(const QString &address, 
 
 void AuthAddressConfirmDialog::onAuthAddrSubmitSuccess(const QString &address)
 {
-   BSMessageBox(BSMessageBox::info, tr("Submission Successful")
+   BSMessageBox(BSMessageBox::success, tr("Submission Successful")
       , tr("Your Authentication Address has now been submitted.")
       , tr("Please allow BlockSettle 24 hours to fund your Authentication Address.")
       , this).exec();

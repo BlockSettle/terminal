@@ -165,13 +165,13 @@ void AuthAddressDialog::onAuthVerifyTxSent()
 void AuthAddressDialog::onAddressStateChanged(const QString &addr, const QString &state)
 {
    if (state == QLatin1String("Verified")) {
-      BSMessageBox(BSMessageBox::info, tr("Authentication Address")
-         , tr("Authentication Address verified.")
-         , tr("Your Authentication Address is confirmed and you may now place orders in the Spot XBT product group.")
+      BSMessageBox(BSMessageBox::success, tr("Authentication Address")
+         , tr("Authentication Address verified")
+         , tr("You may now place orders in the Spot XBT product group.")
          ).exec();
    } else if (state == QLatin1String("Revoked")) {
       BSMessageBox(BSMessageBox::warning, tr("Authentication Address")
-         , tr("Authentication Address revoked.")
+         , tr("Authentication Address revoked")
          , tr("Authentication Address %1 was revoked and could not be used for Spot XBT trading.").arg(addr)).exec();
    }
 }
@@ -252,9 +252,12 @@ void AuthAddressDialog::revokeSelectedAddress()
       return;
    }
 
-   BSMessageBox revokeQ(BSMessageBox::question, tr("Auth Address Revoke")
-      , tr("Revoking Authentication Address")
-      , tr("Revoking Authentication Address will lead to using your own XBT funds to pay transfer commission. Are you sure you wish to revoke?")
+   BSMessageBox revokeQ(BSMessageBox::question, tr("Authentication Address")
+      , tr("Revoke Authentication Address")
+      , tr("Your Authentication Address\n"
+           "%1\n"
+           "will be revoked. Are you sure you wish to continue?")
+         .arg(QString::fromStdString(selectedAddress.display()))
       , this);
    if (revokeQ.exec() == QDialog::Accepted) {
       authAddressManager_->RevokeAddress(selectedAddress);

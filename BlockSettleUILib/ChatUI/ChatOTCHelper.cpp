@@ -219,3 +219,26 @@ void ChatOTCHelper::onPartyStateChanged(const Chat::ClientPartyPtr& clientPartyP
       connectedContacts_.erase(connIt);
    }
 }
+
+void ChatOTCHelper::onPullOrRejectOnTimeout(const std::string& contactId, bs::network::otc::PeerType type)
+{
+   bs::network::otc::Peer* peer = nullptr;
+   switch (type)
+   {
+   case bs::network::otc::PeerType::Contact:
+      peer = otcClient_->contact(contactId);
+      break;
+   case bs::network::otc::PeerType::Request:
+      peer = otcClient_->request(contactId);
+      break;
+   case bs::network::otc::PeerType::Response:
+      peer = otcClient_->response(contactId);
+      break;
+   }
+
+   if (!peer) {
+      return;
+   }
+
+   otcClient_->pullOrReject(peer);
+}

@@ -4,9 +4,10 @@
 #include <QWidget>
 #include <QTimer>
 #include <memory>
+
 #include "CommonTypes.h"
-#include "TabWithShortcut.h"
 #include "MarketDataWidget.h"
+#include "TabWithShortcut.h"
 
 namespace Ui {
     class RFQRequestWidget;
@@ -19,6 +20,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+
 class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
@@ -59,10 +61,16 @@ public:
 
    void setAuthorized(bool authorized);
 
-   
-
 signals:
    void requestPrimaryWalletCreation();
+
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
+   void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
+
+   void unsignedPayinRequested(const std::string& settlementId);
+   void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
+   void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
 
 private:
    void showEditableRFQPage();
@@ -77,6 +85,8 @@ public slots:
    void onBidClicked(const MarketSelectedInfo& selectedInfo);
    void onAskClicked(const MarketSelectedInfo& selectedInfo);
    void onDisableSelectedInfo();
+
+   void onMessageFromPB(std::string data);
 
 private slots:
    void onConnectedToCeler();

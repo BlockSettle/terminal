@@ -100,7 +100,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    // OTC
    otcHelper_ = new ChatOTCHelper(this);
    otcHelper_->init(env, loggerPtr, walletsMgr, armory, signContainer, authManager, appSettings);
-   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager);
+   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager, armory);
 
    chatClientServicePtr_ = chatClientServicePtr;
 
@@ -174,7 +174,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(otcHelper_->client(), &OtcClient::publicUpdated, this, &ChatWidget::onOtcPublicUpdated);
 
    connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::requestCreated, this, &ChatWidget::onOtcRequestSubmit);
-   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::requestPulled, this, &ChatWidget::onOtcPullOrRejectCurrent);
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::currentRequestPulled, this, &ChatWidget::onOtcPullOrRejectCurrent);
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::requestPulled, this, &ChatWidget::onOtcPullOrReject);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseAccepted, this, &ChatWidget::onOtcResponseAccept);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseUpdated, this, &ChatWidget::onOtcResponseUpdate);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseRejected, this, &ChatWidget::onOtcPullOrRejectCurrent);
@@ -518,8 +519,21 @@ void ChatWidget::onOtcPullOrRejectCurrent()
    stateCurrent_->onOtcPullOrRejectCurrent();
 }
 
+void ChatWidget::onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type)
+{
+   stateCurrent_->onOtcPullOrReject(contactId, type);
+}
+
 void ChatWidget::onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
 {
+   // only one key needs to be replaced - show one message box
+   if (userPublicKeyInfoList.size() == 1)
+   {
+      onConfirmContactNewKeyData(userPublicKeyInfoList, false);
+      return;
+   }
+
+   // multiple keys replacing
    QString detailsPattern = tr("Contacts Require key update: %1");
 
    QString  detailsString = detailsPattern.arg(userPublicKeyInfoList.size());

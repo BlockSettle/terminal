@@ -7,6 +7,10 @@
 #define SAFE_NUM_CONFS        6
 #define ASSETMETA_PREFIX      0xAC
 
+#include <spdlog/spdlog.h>
+
+#include <sstream>
+
 using namespace bs::core;
 
 std::shared_ptr<wallet::AssetEntryMeta> wallet::AssetEntryMeta::deserialize(int, BinaryDataRef value)
@@ -274,7 +278,7 @@ uint64_t wallet::TXSignRequest::inputAmount(const ContainsAddressCb &containsAdd
       }
    }
 
-   for (const auto &utxo: inputs) {     
+   for (const auto &utxo: inputs) {
       const auto addr = bs::Address::fromUTXO(utxo);
 
       if (utxoSet.find(utxo) == utxoSet.cend()) {
@@ -375,7 +379,7 @@ uint64_t wallet::TXSignRequest::amountSent(const wallet::TXSignRequest::Contains
 
 std::vector<UTXO> wallet::TXSignRequest::getInputs(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
 {
-   std::vector<UTXO> inputs;
+   std::vector<UTXO> inputsVector;
    std::set<UTXO> inputsSet;
 
    if (!prevStates.empty() && containsAddressCb != nullptr) {
@@ -386,7 +390,7 @@ std::vector<UTXO> wallet::TXSignRequest::getInputs(const wallet::TXSignRequest::
          if (inputsSet.find(spender->getUtxo()) == inputsSet.cend()) {
             if (containsAddressCb(addr)) {
                inputsSet.insert(spender->getUtxo());
-               inputs.push_back(spender->getUtxo());
+               inputsVector.push_back(spender->getUtxo());
             }
          }
       }
@@ -398,17 +402,17 @@ std::vector<UTXO> wallet::TXSignRequest::getInputs(const wallet::TXSignRequest::
       if (inputsSet.find(utxo) == inputsSet.cend()) {
          if (containsAddressCb(addr)) {
             inputsSet.insert(utxo);
-            inputs.push_back(utxo);
+            inputsVector.push_back(utxo);
          }
       }
    }
 
-   return inputs;
+   return inputsVector;
 }
 
 std::vector<std::shared_ptr<ScriptRecipient>> wallet::TXSignRequest::getRecipients(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
 {
-   std::vector<std::shared_ptr<ScriptRecipient>> recipients;
+   std::vector<std::shared_ptr<ScriptRecipient>> recipientsVector;
    std::set<BinaryData> recipientsSet;
 
    if (!prevStates.empty() && containsAddressCb != nullptr) {
@@ -420,7 +424,7 @@ std::vector<std::shared_ptr<ScriptRecipient>> wallet::TXSignRequest::getRecipien
          if (recipientsSet.find(hash) == recipientsSet.cend()) {
             if (containsAddressCb(addr)) {
                recipientsSet.insert(hash);
-               recipients.push_back(recip);
+               recipientsVector.push_back(recip);
             }
          }
       }
@@ -433,12 +437,12 @@ std::vector<std::shared_ptr<ScriptRecipient>> wallet::TXSignRequest::getRecipien
       if (recipientsSet.find(hash) == recipientsSet.cend()) {
          if (containsAddressCb(addr)) {
             recipientsSet.insert(hash);
-            recipients.push_back(recip);
+            recipientsVector.push_back(recip);
          }
       }
    }
 
-   return recipients;
+   return recipientsVector;
 }
 
 bool wallet::TXMultiSignRequest::isValid() const noexcept
@@ -548,13 +552,13 @@ wallet::Seed wallet::Seed::fromXpriv(const SecureBinaryData& xpriv, NetworkType 
 {
    wallet::Seed seed(netType);
    seed.node_.initFromBase58(xpriv);
-   
+
    //check network
 
    //check base
    if (seed.node_.getDepth() > 0 || seed.node_.getFingerPrint() != 0)
       throw WalletException("xpriv is not for wallet root");
-   
+
    return seed;
 }
 
@@ -763,4 +767,66 @@ BinaryData wallet::computeID(const BinaryData &input)
       result.resize(outSz - 1);
    }
    return result;
+}
+
+
+void wallet::TXSignRequest::DebugPrint(const std::string& prefix, const std::shared_ptr<spdlog::logger>& logger
+                                       , bool serializeAndPrint
+                                       , const std::shared_ptr<ResolverFeed> &resolver)
+{
+   std::stringstream ss;
+
+   // wallet ids
+   ss << "   TXSignRequest TX ID:   " << txId(resolver).toHexStr(true) << "\n";
+
+   uint64_t inputAmount = 0;
+   ss << "      Inputs: " << inputs.size() << '\n';
+   for (const auto& utxo : inputs) {
+      ss << "    UTXO txHash : " << utxo.txHash_.toHexStr() << '\n';
+      ss << "         txOutIndex : " << utxo.txOutIndex_ << '\n';
+      ss << "         txHeight : " << utxo.txHeight_ << '\n';
+      ss << "         txIndex : " << utxo.txIndex_ << '\n';
+      ss << "         value : " << utxo.value_ << '\n';
+      ss << "         script : " << utxo.script_.toHexStr() << '\n';
+      ss << "         SW  : " << (utxo.isInputSW_ ? "yes" : "no") << '\n';
+      ss << "         txinRedeemSizeBytes: " << utxo.txinRedeemSizeBytes_ << '\n';
+      ss << "         witnessDataSizeBytes: " << utxo.witnessDataSizeBytes_ << '\n';
+      inputAmount += utxo.getValue();
+   }
+
+   // outputs
+   ss << "   Outputs: " << recipients.size() << '\n';
+   for (const auto &recipient : recipients) {
+      ss << "       Amount: " << recipient->getValue() << '\n';
+   }
+
+   // amount
+   ss << "    Inputs Amount: " << inputAmount << '\n';
+   // change
+   if (change.value != 0) {
+      ss << "    Change : " << change.value << " to " << change.address.display() << '\n';
+   } else  {
+      ss << "    No change\n";
+   }
+   // fee
+   ss << "    Fee: " << fee << '\n';
+
+   if (serializeAndPrint) {
+      const auto &serialized = serializeState(resolver);
+
+      ss << "     Serialized: " << serialized.toHexStr() << '\n';
+      try {
+         Tx tx{serialized};
+         std::string payinHash = tx.getThisHash().toHexStr(true);
+
+         ss << "    TX hash: " << payinHash << '\n';
+         ss << "    SS info:\n";
+         tx.pprintAlot(ss);
+      } catch (...) {
+         ss << "   error: failed to serialize tx\n";
+      }
+   }
+
+   logger->debug("{} :\n{}"
+                  ,prefix , ss.str());
 }

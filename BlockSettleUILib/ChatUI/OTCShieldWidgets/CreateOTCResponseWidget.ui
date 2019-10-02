@@ -13,9 +13,9 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_7">
+  <layout class="QVBoxLayout" name="verticalLayout_6">
    <property name="spacing">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="leftMargin">
     <number>0</number>
@@ -59,7 +59,7 @@
       <item>
        <widget class="QLabel" name="headerLabel">
         <property name="text">
-         <string>OTC Response</string>
+         <string>OTC RESPONSE</string>
         </property>
         <property name="headerLabel" stdset="0">
          <bool>true</bool>
@@ -74,30 +74,33 @@
    </item>
    <item>
     <widget class="QWidget" name="generalWidget" native="true">
-     <layout class="QVBoxLayout" name="verticalLayout_6">
+     <layout class="QVBoxLayout" name="verticalLayout_2">
       <property name="spacing">
        <number>5</number>
       </property>
       <property name="leftMargin">
-       <number>0</number>
+       <number>5</number>
       </property>
       <property name="topMargin">
-       <number>0</number>
+       <number>5</number>
       </property>
       <property name="rightMargin">
-       <number>0</number>
+       <number>5</number>
       </property>
       <property name="bottomMargin">
-       <number>0</number>
+       <number>5</number>
       </property>
       <item>
-       <widget class="QGroupBox" name="groupBox">
+       <widget class="QGroupBox" name="groupBoxGeneral">
         <property name="title">
          <string>GENERAL</string>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="wellGroupBoxWithButtonBar" stdset="0">
+         <bool>true</bool>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_13">
          <property name="spacing">
-          <number>5</number>
+          <number>10</number>
          </property>
          <property name="leftMargin">
           <number>5</number>
@@ -112,10 +115,79 @@
           <number>5</number>
          </property>
          <item>
-          <widget class="QWidget" name="widgetProduct" native="true">
-           <layout class="QHBoxLayout" name="horizontalLayout">
+          <layout class="QHBoxLayout" name="horizontalLayout_7">
+           <property name="spacing">
+            <number>5</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="productName">
+             <property name="text">
+              <string>Product Group</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="productValue">
+             <property name="text">
+              <string>Spot XBT</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+             <property name="whiteLabel" stdset="0">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_8">
+           <property name="spacing">
+            <number>5</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="securityLabel">
+             <property name="text">
+              <string>Security ID</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="securityValue">
+             <property name="text">
+              <string>XBT/EUR</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+             <property name="whiteLabel" stdset="0">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QWidget" name="indicativePriceWidget" native="true">
+           <layout class="QHBoxLayout" name="indicativePriceLayout">
             <property name="spacing">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="leftMargin">
              <number>0</number>
@@ -130,16 +202,16 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLabel" name="label">
+             <widget class="QLabel" name="indicativePriceLabel">
               <property name="text">
-               <string>Product:</string>
+               <string>Indicative Price</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label_2">
+             <widget class="QLabel" name="indicativePriceValue">
               <property name="text">
-               <string>XBT</string>
+               <string>-</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -153,10 +225,10 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="widgetSecurity" native="true">
-           <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <widget class="QWidget" name="sideWidget" native="true">
+           <layout class="QHBoxLayout" name="sideLayout">
             <property name="spacing">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="leftMargin">
              <number>0</number>
@@ -171,16 +243,16 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLabel" name="label_3">
+             <widget class="QLabel" name="sideLabel">
               <property name="text">
-               <string>Security:</string>
+               <string>Side</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label_4">
+             <widget class="QLabel" name="sideValue">
               <property name="text">
-               <string>EUR/XBT</string>
+               <string>-</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -194,10 +266,10 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="widgetRange" native="true">
-           <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <widget class="QWidget" name="rangeWidget" native="true">
+           <layout class="QHBoxLayout" name="sideLayout_2">
             <property name="spacing">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="leftMargin">
              <number>0</number>
@@ -212,98 +284,16 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLabel" name="label_6">
+             <widget class="QLabel" name="rangeLabel">
               <property name="text">
-               <string>Quantity Range:</string>
+               <string>Quantity Range</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="labelRange">
+             <widget class="QLabel" name="rangeValue">
               <property name="text">
-               <string>---</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-              <property name="whiteLabel" stdset="0">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QWidget" name="widgetSide" native="true">
-           <layout class="QHBoxLayout" name="horizontalLayout_3">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="label_5">
-              <property name="text">
-               <string>Side:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="labelSide">
-              <property name="text">
-               <string>---</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-              <property name="whiteLabel" stdset="0">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QWidget" name="widgetBalance" native="true">
-           <layout class="QHBoxLayout" name="horizontalLayout_6">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="label_7">
-              <property name="text">
-               <string>Balance:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_8">
-              <property name="text">
-               <string>---</string>
+               <string>-</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -320,81 +310,180 @@
        </widget>
       </item>
       <item>
-       <widget class="QWidget" name="widgetSliders" native="true">
-        <layout class="QVBoxLayout" name="verticalLayout_5">
-         <property name="spacing">
-          <number>5</number>
-         </property>
+       <widget class="QGroupBox" name="groupBoxRequest">
+        <property name="title">
+         <string>OTC DETAILS</string>
+        </property>
+        <property name="wellGroupBoxWithButtonBar" stdset="0">
+         <bool>true</bool>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
          <property name="leftMargin">
-          <number>5</number>
+          <number>0</number>
          </property>
          <property name="topMargin">
-          <number>5</number>
+          <number>0</number>
          </property>
          <property name="rightMargin">
-          <number>5</number>
+          <number>0</number>
          </property>
          <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <property name="horizontalSpacing">
+          <number>0</number>
+         </property>
+         <property name="verticalSpacing">
           <number>5</number>
          </property>
-         <item>
-          <widget class="QWidget" name="widgetPriceRangeContainer" native="true">
-           <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item row="2" column="0">
+          <widget class="QWidget" name="balanceLayout" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_19">
             <property name="spacing">
-             <number>5</number>
+             <number>3</number>
             </property>
             <property name="leftMargin">
-             <number>0</number>
+             <number>10</number>
             </property>
             <property name="topMargin">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="rightMargin">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="bottomMargin">
-             <number>0</number>
+             <number>10</number>
             </property>
             <item>
-             <widget class="QLabel" name="labelRangePriceProduct">
+             <widget class="QLabel" name="cashBalanceLabel">
               <property name="text">
-               <string>Bid ( EUR )</string>
+               <string>Balance</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="RangeWidget" name="widgetPriceRange" native="true"/>
+             <widget class="QLabel" name="labelBalanceValue">
+              <property name="styleSheet">
+               <string notr="true">font-weight: bold;</string>
+              </property>
+              <property name="text">
+               <string>xxx</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+              <property name="whiteLabel" stdset="0">
+               <bool>true</bool>
+              </property>
+             </widget>
             </item>
            </layout>
           </widget>
          </item>
-         <item>
-          <widget class="QWidget" name="widgetAmountRangeContainer" native="true">
-           <layout class="QVBoxLayout" name="verticalLayout_4">
+         <item row="1" column="0">
+          <widget class="Line" name="lineBeforeBalance">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>1</height>
+            </size>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QWidget" name="widgetSliders" native="true">
+           <layout class="QVBoxLayout" name="verticalLayout_5">
             <property name="spacing">
              <number>5</number>
             </property>
             <property name="leftMargin">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="topMargin">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="rightMargin">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="bottomMargin">
-             <number>0</number>
+             <number>5</number>
             </property>
             <item>
-             <widget class="QLabel" name="labelQuantity">
-              <property name="text">
-               <string>Quantity ( XBT )</string>
-              </property>
+             <widget class="QWidget" name="widgetPriceRangeContainer" native="true">
+              <layout class="QVBoxLayout" name="verticalLayout_3">
+               <property name="spacing">
+                <number>5</number>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="labelRangePriceProduct">
+                 <property name="text">
+                  <string>Bid ( EUR )</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="RangeWidget" name="widgetPriceRange" native="true"/>
+               </item>
+              </layout>
              </widget>
             </item>
             <item>
-             <widget class="RangeWidget" name="widgetAmountRange" native="true"/>
+             <widget class="QWidget" name="widgetAmountRangeContainer" native="true">
+              <layout class="QVBoxLayout" name="verticalLayout_4">
+               <property name="spacing">
+                <number>5</number>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="labelQuantity">
+                 <property name="text">
+                  <string>Quantity ( XBT )</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="RangeWidget" name="widgetAmountRange" native="true"/>
+               </item>
+              </layout>
+             </widget>
             </item>
            </layout>
           </widget>
@@ -440,6 +529,9 @@
        <widget class="QLabel" name="label_9">
         <property name="text">
          <string>Settlement Period: 300 sec</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>

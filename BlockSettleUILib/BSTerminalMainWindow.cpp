@@ -1127,6 +1127,18 @@ void BSTerminalMainWindow::onLogin()
 
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 
+   // connect to RFQ dialog
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
+
+   // connect to quote dialog
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQReply, &RFQReplyWidget::onMessageFromPB);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
+
    networkSettingsReceived(loginDialog.networkSettings());
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
@@ -1544,7 +1556,7 @@ void BSTerminalMainWindow::onArmoryNeedsReconnect()
 }
 
 void BSTerminalMainWindow::onTabWidgetCurrentChanged(const int &index)
-{   
+{
    const int chatIndex = ui_->tabWidget->indexOf(ui_->widgetChat);
    const bool isChatTab = index == chatIndex;
    //ui_->widgetChat->updateChat(isChatTab);

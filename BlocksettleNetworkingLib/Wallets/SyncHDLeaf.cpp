@@ -857,7 +857,8 @@ void hd::CCLeaf::setCCDataResolver(const std::shared_ptr<CCDataResolver> &resolv
 {
    ccResolver_ = resolver;
    setPath(path_);
-   checker_ = std::make_shared<TxAddressChecker>(ccResolver_->genesisAddrFor(suffix_), armory_);
+   const auto genAddr = ccResolver_->genesisAddrFor(suffix_);
+   checker_ = genAddr.isNull() ? nullptr : std::make_shared<TxAddressChecker>(genAddr, armory_);
 }
 
 void hd::CCLeaf::setPath(const bs::hd::Path &path)
@@ -935,7 +936,7 @@ void hd::CCLeaf::restartValidation()
 void hd::CCLeaf::validationProc()
 {
    validationStarted_ = true;
-   if (!armory_ || (armory_->state() != ArmoryState::Ready) || !isRegistered_ || checker_ == nullptr) {
+   if (!armory_ || (armory_->state() != ArmoryState::Ready) || !isRegistered_) {
       validationStarted_ = false;
       return;
    }
@@ -944,6 +945,11 @@ void hd::CCLeaf::validationProc()
    hd::Leaf::init();
 
    if (!validationStarted_) {
+      return;
+   }
+
+   if (!checker_) {  // special case for BS CC wallets
+      validationEnded_ = true;
       return;
    }
 
@@ -1246,8 +1252,9 @@ void hd::SettlementLeaf::setSettlementID(const SecureBinaryData& id
 void hd::SettlementLeaf::getRootPubkey(const std::function<void(const SecureBinaryData &)> &cb) const
 {
    if (signContainer_ == nullptr) {
-      if (cb)
+      if (cb) {
          cb({});
+      }
       return;
    }
 

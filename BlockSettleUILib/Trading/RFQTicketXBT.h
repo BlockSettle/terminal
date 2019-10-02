@@ -198,6 +198,7 @@ private:
    std::shared_ptr<bs::sync::Wallet>   curWallet_;
    std::shared_ptr<bs::sync::Wallet>   ccWallet_;
    std::shared_ptr<bs::sync::Wallet>   recvWallet_;
+   bs::Address authAddr_;
    std::string authKey_;
 
    unsigned int      leafCreateReqId_ = 0;

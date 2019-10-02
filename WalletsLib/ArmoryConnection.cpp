@@ -344,9 +344,13 @@ void ArmoryConnection::registerBDV(NetworkType netType)
    bdv_->registerWithDB(magicBytes);
 }
 
-void ArmoryConnection::setTopBlock(unsigned int topBlock, unsigned int branchHgt)
+void ArmoryConnection::setTopBlock(unsigned int topBlock)
 {
    topBlock_ = topBlock;
+}
+
+void ArmoryConnection::setBranchHeight(unsigned int branchHgt)
+{
    branchHeight_ = branchHgt;    // not clear where can we use it for now - just saved
 }
 
@@ -1186,6 +1190,10 @@ std::shared_ptr<AsyncClient::BtcWallet> ArmoryConnection::instantiateWallet(cons
    return std::make_shared<AsyncClient::BtcWallet>(bdv_->instantiateWallet(walletId));
 }
 
+float ArmoryConnection::toFeePerByte(float fee)
+{
+   return float(double(fee) * BTCNumericTypes::BalanceDivider / 1000.0);
+}
 
 void ArmoryCallback::progress(BDMPhase phase,
    const std::vector<std::string> &walletIdVec, float progress,
@@ -1212,19 +1220,17 @@ void ArmoryCallback::run(BdmNotification bdmNotif)
       return;
    }
 
-   if (bdmNotif.action_ == BDMAction_Ready || bdmNotif.action_ == BDMAction_NewBlock) {
-      // height_ is set only in these events
-      connection_->setTopBlock(bdmNotif.height_, bdmNotif.branchHeight_);
-   }
-
    switch (bdmNotif.action_) {
    case BDMAction_Ready:
       logger_->debug("[ArmoryCallback::run] BDMAction_Ready");
+      connection_->setTopBlock(bdmNotif.height_);
       connection_->setState(ArmoryState::Ready);
       break;
 
    case BDMAction_NewBlock:
       logger_->debug("[ArmoryCallback::run] BDMAction_NewBlock {}", bdmNotif.height_);
+      connection_->setBranchHeight(bdmNotif.branchHeight_);
+      connection_->setTopBlock(bdmNotif.height_);
       connection_->setState(ArmoryState::Ready);
       connection_->addToMaintQueue([height=bdmNotif.height_](ArmoryCallbackTarget *tgt) {
          tgt->onNewBlock(height);
@@ -1303,6 +1309,7 @@ void ArmoryCallback::resetConnection()
 void bs::TXEntry::merge(const bs::TXEntry &other)
 {
    value += other.value;
+   blockNum = other.blockNum;
    merged = true;
 }
 

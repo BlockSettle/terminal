@@ -8,11 +8,11 @@ OTCWindowsManager::OTCWindowsManager(QObject* parent /*= nullptr*/)
 {
 }
 
-void OTCWindowsManager::init(
-   const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
+void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
    , const std::shared_ptr<AuthAddressManager> &authManager
    , const std::shared_ptr<MarketDataProvider>& mdProvider
-   , const std::shared_ptr<AssetManager>& assetManager)
+   , const std::shared_ptr<AssetManager>& assetManager
+   , const std::shared_ptr<ArmoryConnection> &armory)
 {
    // #new_logic : we shouldn't send aggregated signal for all events
 
@@ -48,6 +48,8 @@ void OTCWindowsManager::init(
    connect(assetManager_.get(), &AssetManager::totalChanged, this, &OTCWindowsManager::updateBalances);
    connect(assetManager_.get(), &AssetManager::securitiesChanged, this, &OTCWindowsManager::updateBalances);
 
+   armory_ = armory;
+
    emit syncInterfaceRequired();
 }
 
@@ -64,5 +66,10 @@ std::shared_ptr<AuthAddressManager> OTCWindowsManager::getAuthManager() const
 std::shared_ptr<AssetManager> OTCWindowsManager::getAssetManager() const
 {
    return assetManager_;
+}
+
+std::shared_ptr<ArmoryConnection> OTCWindowsManager::getArmory() const
+{
+   return armory_;
 }
 

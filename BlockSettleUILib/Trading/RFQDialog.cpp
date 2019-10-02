@@ -66,10 +66,6 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, this, &RFQDialog::onOrderFilled);
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQDialog::onSignTxRequested);
 
-   if (rfq_.assetType == bs::network::Asset::SpotXBT) {
-      connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQDialog::onOrderUpdated, Qt::QueuedConnection);
-   }
-
    ui_->pageRequestingQuote->populateDetails(rfq_, transactionData_);
 
    quoteProvider_->SubmitRFQ(rfq_);
@@ -103,8 +99,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
    else {
       if (rfq_.assetType == bs::network::Asset::SpotXBT) {
          curContainer_ = newXBTcontainer();
-      }
-      else {
+      } else {
          curContainer_ = newCCcontainer();
       }
       curContainer_->activate();
@@ -114,7 +109,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
 {
    xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
-      , authAddressManager_, assetMgr_, signContainer_, armory_, walletsManager_
+      , authAddressManager_, signContainer_, armory_, walletsManager_
       , rfq_, quote_, transactionData_, authAddr_);
 
    connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
@@ -124,11 +119,13 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::acceptQuote
       , this, &RFQDialog::onXBTQuoteAccept);
 
-//   const auto xbtSettlementWidget = new XBTSettlementTransactionWidget(logger_
-//      , celerClient_, appSettings_, xbtSettlContainer_, connectionManager_, this);
+   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendUnsignedPayinToPB
+      , this, &RFQDialog::sendUnsignedPayinToPB);
+   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayinToPB
+      , this, &RFQDialog::sendSignedPayinToPB);
+   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayoutToPB
+      , this, &RFQDialog::sendSignedPayoutToPB);
 
-//   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(xbtSettlementWidget);
-//   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
 
    return xbtSettlContainer_;
 }
@@ -144,12 +141,6 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
       , this, &RFQDialog::onSettlementOrder);
    connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementCancelled
       , this, &QDialog::close);
-
-//   const auto ccSettlementWidget = new CCSettlementTransactionWidget(logger_
-//      , celerClient_, appSettings_, ccSettlContainer_, connectionManager_, this);
-
-//   auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(ccSettlementWidget);
-//   ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
 
    return ccSettlContainer_;
 }
@@ -202,9 +193,6 @@ void RFQDialog::onSettlementAccepted()
          ccTxMap_[rfq_.requestId] = ccSettlContainer_->txSignedData();
       }
    } else if (xbtSettlContainer_) {
-      if (XBTOrder_.settlementId != quote_.settlementId) {
-         logger_->debug("[RFQDialog::onSettlementAccepted] did not receive proper order");
-      }
       close();
    } else {
       // spotFX
@@ -214,7 +202,7 @@ void RFQDialog::onSettlementAccepted()
 
 void RFQDialog::onSettlementOrder()
 {
-   logger_->debug("onSettlementOrder");
+   logger_->debug("[RFQDialog::onSettlementOrder]");
    if (ccSettlContainer_) {
       quoteProvider_->AcceptQuote(QString::fromStdString(rfq_.requestId), quote_
          , ccSettlContainer_->txData());
@@ -226,7 +214,7 @@ void RFQDialog::onSignTxRequested(QString orderId, QString reqId)
    const auto itCCtx = ccTxMap_.find(reqId.toStdString());
    if (itCCtx == ccTxMap_.end()) {
       // KLUDGE
-      logger_->debug("[RFQDialog] signTX for reqId={} requested before signing", reqId.toStdString());
+      logger_->debug("[RFQDialog::onSignTxRequested] signTX for reqId={} requested before signing", reqId.toStdString());
       ccReqIdToOrder_[reqId] = orderId;
       return;
    }
@@ -235,16 +223,34 @@ void RFQDialog::onSignTxRequested(QString orderId, QString reqId)
    close();
 }
 
-void RFQDialog::onOrderUpdated(const bs::network::Order& order)
-{
-   if (xbtSettlContainer_ && (order.settlementId == quote_.settlementId)
-      && (rfq_.assetType == bs::network::Asset::SpotXBT) && (order.status == bs::network::Order::Pending)) {
-         XBTOrder_ = order;
-         xbtSettlContainer_->OrderReceived();
-   }
-}
-
 void RFQDialog::onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx)
 {
    quoteProvider_->AcceptQuote(QString::fromStdString(reqId), quote_, hexPayoutTx);
+}
+
+void RFQDialog::onUnsignedPayinRequested(const std::string& settlementId)
+{
+   if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
+      return;
+   }
+
+   xbtSettlContainer_->onUnsignedPayinRequested(settlementId);
+}
+
+void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash)
+{
+   if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
+      return;
+   }
+
+   xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash);
+}
+
+void RFQDialog::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin)
+{
+   if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
+      return;
+   }
+
+   xbtSettlContainer_->onSignedPayinRequested(settlementId, unsignedPayin);
 }

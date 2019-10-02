@@ -963,7 +963,7 @@ void WalletsManager::createSettlementLeaf(const bs::Address &authAddr
          logger_->error("[WalletsManager::createSettlementLeaf] no primary wallet");
          return;
       }
-      priWallet->synchronize([this, cb, pubKey, priWallet] {
+      priWallet->synchronize([this, priWallet] {
          const auto group = priWallet->getGroup(bs::hd::BlockSettle_Settlement);
          if (!group) {
             logger_->error("[WalletsManager::createSettlementLeaf] no settlement group");
@@ -980,6 +980,9 @@ void WalletsManager::createSettlementLeaf(const bs::Address &authAddr
             emit walletAdded(settlLeaf->walletId());
          }
       });
+      if (cb) {
+         cb(pubKey);
+      }
    };
    signContainer_->createSettlementWallet(authAddr, cbWrap);
 }
@@ -1292,7 +1295,7 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
          invokeFeeCallbacks(blocks, fee);
          return;
       }
-      fee *= BTCNumericTypes::BalanceDivider / 1000.0;
+      fee = ArmoryConnection::toFeePerByte(fee);
       if (fee != 0) {
          feePerByte_[blocks] = fee;
          lastFeePerByte_[blocks] = QDateTime::currentDateTime();

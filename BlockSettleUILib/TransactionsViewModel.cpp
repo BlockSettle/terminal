@@ -255,20 +255,35 @@ TransactionsViewModel::~TransactionsViewModel() noexcept
 
 void TransactionsViewModel::onNewBlock(unsigned int)
 {
-   QMetaObject::invokeMethod(this, [this] { updatePage(); });
+   QMetaObject::invokeMethod(this, [this] {
+      if (allWallets_) {
+         loadAllWallets(true);
+      }
+   });
 }
 
-void TransactionsViewModel::loadAllWallets()
+void TransactionsViewModel::loadAllWallets(bool onNewBlock)
 {
-   const auto &cbWalletsLD = [this](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
+   const auto &cbWalletsLD = [this, onNewBlock](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
       if (!initialLoadCompleted_) {
+         if (onNewBlock && logger_) {
+            logger_->debug("[TransactionsViewModel::loadAllWallets] previous loading is not complete, yet");
+         }
          return;
       }
       ledgerDelegate_ = delegate;
-      loadLedgerEntries();
+      if (onNewBlock && logger_) {
+         logger_->debug("[TransactionsViewModel::loadAllWallets] ledger delegate is updated");
+      }
+      loadLedgerEntries(onNewBlock);
    };
    if (initialLoadCompleted_) {
-      armory_->getWalletsLedgerDelegate(cbWalletsLD);
+      if (ledgerDelegate_) {
+         loadLedgerEntries(onNewBlock);
+      }
+      else {
+         armory_->getWalletsLedgerDelegate(cbWalletsLD);
+      }
    }
 }
 
@@ -473,6 +488,7 @@ void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entr
    {
       QMutexLocker locker(&updateMutex_);
       for (const auto &entry : entries) {
+         logger_->debug("[{}] entry {} is invalidated", __func__, entry.txHash.toHexStr(true));
          const auto key = mkTxKey(entry);
          const auto node = rootNode_->find(key);
          if (node && (node->parent() == rootNode_.get()) && !node->item()->confirmations) {
@@ -490,9 +506,11 @@ void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entr
       }
    }
    if (!delRows.empty()) {
+      logger_->debug("[{}] {} deleted row[s]", __func__, delRows.size());
       onDelRows(delRows);
    }
    if (!children.empty()) {
+      logger_->debug("[{}] {} children to update", __func__, children.size());
       updateTransactionsPage(children);
    }
 }
@@ -656,17 +674,18 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
 {
    {
       if (!rootNode_->hasChildren()) {
+         logger_->debug("[{}] root node doesn't have children", __func__);
          return;
       }
 
       for (const auto &updItem : updItems) {
          const auto &itItem = currentItems_.find(updItem->id());
          if (itItem == currentItems_.end()) {
+            logger_->debug("[{}] unknown item {}", __func__, updItem->txEntry.txHash.toHexStr(true));
             continue;
          }
          const auto &item = itItem->second;
-         uint32_t newBlockNum = UINT32_MAX;
-         newBlockNum = updItem->txEntry.blockNum;
+         const auto newBlockNum = updItem->txEntry.blockNum;
          if (item->wallet) {
             item->isValid = item->wallet->isTxValid(updItem->txEntry.txHash);
          }
@@ -676,7 +695,11 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
             item->calcAmount(walletsManager_);
          }
          if (newBlockNum != UINT32_MAX) {
-            item->confirmations = armory_->getConfirmationsNumber(newBlockNum);
+            const auto confNum = armory_->getConfirmationsNumber(newBlockNum);
+            if (!item->confirmations) {
+               logger_->debug("[{}] first conf for {}: {}", __func__, item->txEntry.txHash.toHexStr(true), confNum);
+            }
+            item->confirmations = confNum;
             item->txEntry.blockNum = newBlockNum;
             onItemConfirmed(item);
          }
@@ -698,9 +721,12 @@ void TransactionsViewModel::onItemConfirmed(const TransactionPtr item)
    }
 }
 
-void TransactionsViewModel::loadLedgerEntries()
+void TransactionsViewModel::loadLedgerEntries(bool onNewBlock)
 {
    if (!initialLoadCompleted_ || !ledgerDelegate_) {
+      if (onNewBlock && logger_) {
+         logger_->debug("[TransactionsViewModel::loadLedgerEntries] previous loading is not complete/started");
+      }
       return;
    }
    initialLoadCompleted_ = false;
@@ -709,7 +735,9 @@ void TransactionsViewModel::loadLedgerEntries()
    auto rawData = std::make_shared<std::map<int, std::vector<bs::TXEntry>>>();
    auto rawDataMutex = std::make_shared<std::mutex>();
 
-   const auto &cbPageCount = [thisPtr, stopped = stopped_, logger = logger_, rawData, rawDataMutex, ledgerDelegate = ledgerDelegate_](ReturnMessage<uint64_t> pageCnt)->void {
+   const auto &cbPageCount = [thisPtr, onNewBlock, stopped = stopped_, logger = logger_, rawData, rawDataMutex, ledgerDelegate = ledgerDelegate_]
+      (ReturnMessage<uint64_t> pageCnt)
+   {
       try {
          int inPageCnt = int(pageCnt.get());
 
@@ -725,7 +753,7 @@ void TransactionsViewModel::loadLedgerEntries()
                break;
             }
 
-            const auto &cbLedger = [thisPtr, pageId, inPageCnt, rawData, logger, rawDataMutex]
+            const auto &cbLedger = [thisPtr, onNewBlock, pageId, inPageCnt, rawData, logger, rawDataMutex]
                (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
                try {
                   auto le = entries.get();
@@ -733,11 +761,15 @@ void TransactionsViewModel::loadLedgerEntries()
                   std::lock_guard<std::mutex> lock(*rawDataMutex);
 
                   (*rawData)[pageId] = bs::TXEntry::fromLedgerEntries(le);
+                  if (onNewBlock && logger) {
+                     logger->debug("[TransactionsViewModel::loadLedgerEntries] loaded {} entries for page {} (of {})"
+                        , le.size(), pageId, inPageCnt);
+                  }
 
                   if (int(rawData->size()) >= inPageCnt) {
-                     QMetaObject::invokeMethod(qApp, [thisPtr, rawData] {
+                     QMetaObject::invokeMethod(qApp, [thisPtr, rawData, onNewBlock] {
                         if (thisPtr) {
-                           thisPtr->ledgerToTxData(*rawData);
+                           thisPtr->ledgerToTxData(*rawData, onNewBlock);
                         }
                      });
                   }
@@ -765,14 +797,19 @@ void TransactionsViewModel::loadLedgerEntries()
    ledgerDelegate_->getPageCount(cbPageCount);
 }
 
-void TransactionsViewModel::ledgerToTxData(const std::map<int, std::vector<bs::TXEntry>> &rawData)
+void TransactionsViewModel::ledgerToTxData(const std::map<int, std::vector<bs::TXEntry>> &rawData
+   , bool onNewBlock)
 {
    int pageCnt = 0;
 
    signalOnEndLoading_ = true;
    for (const auto &le : rawData) {
-      updateTransactionsPage(le.second);
+      const auto result = updateTransactionsPage(le.second);
       emit updateProgress(int(rawData.size()) + pageCnt++);
+      if (onNewBlock && logger_) {
+         logger_->debug("[{}] {}: added {} items, updated {} of {}", __func__
+            , le.first, result.first, result.second, le.second.size());
+      }
    }
    initialLoadCompleted_ = true;
 }

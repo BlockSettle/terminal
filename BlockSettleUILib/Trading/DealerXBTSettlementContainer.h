@@ -4,7 +4,6 @@
 #include "AddressVerificator.h"
 #include "BSErrorCode.h"
 #include "SettlementContainer.h"
-#include "SettlementMonitor.h"
 #include "TransactionData.h"
 
 #include <memory>
@@ -37,8 +36,6 @@ public:
 
    bool cancel() override;
 
-   bool isAcceptable() const override;
-
    void activate() override;
    void deactivate() override;
 
@@ -52,28 +49,24 @@ public:
    double amount() const override { return amount_; }
    bs::sync::PasswordDialogData toPasswordDialogData() const override;
 
-   bool weSell() const { return weSell_; }
-   uint64_t fee() const { return fee_; }
-   std::string walletName() const;
-   bs::Address receiveAddress() const;
-
    std::shared_ptr<bs::sync::Wallet> getWallet() const { return transactionData_->getWallet(); }
 
+public slots:
+   void onUnsignedPayinRequested(const std::string& settlementId);
+   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
+
 signals:
-   void cptyAddressStateChanged(AddressVerificationState);
-   void payInDetected(int confirmationsNumber, const BinaryData &txHash);
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
+   void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
+   void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
 private slots:
-   void onPayInDetected(int confirmationsNumber, const BinaryData &txHash);
-   void onPayOutDetected(bs::PayoutSigner::Type signedBy);
-
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string errMsg);
 
 private:
-   void onCptyVerified();
-   void sendBuyReqPayout();
    bool startPayInSigning();
-   bool startPayOutSigning();
+   bool startPayOutSigning(const BinaryData& payinHash);
 
 private:
    const bs::network::Order   order_;
@@ -85,17 +78,16 @@ private:
    std::shared_ptr<ArmoryConnection>            armory_;
    std::shared_ptr<TransactionData>             transactionData_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
-   std::shared_ptr<bs::SettlementMonitorCb>     settlMonitor_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signContainer_;
    AddressVerificationState                     cptyAddressState_ = AddressVerificationState::InProgress;
    bs::Address settlAddr_;
+
+   std::string settlementIdString_;
    BinaryData  settlementId_;
    BinaryData  authKey_, reqAuthKey_;
-   bool        payInDetected_ = false;
-   bool        payInSent_ = false;
-   uint64_t    fee_ = 0;
-   bs::core::wallet::TXSignRequest        payInTxRequest_, payOutTxRequest_;
+
+   bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
 
    unsigned int   payinSignId_ = 0;
    unsigned int   payoutSignId_ = 0;

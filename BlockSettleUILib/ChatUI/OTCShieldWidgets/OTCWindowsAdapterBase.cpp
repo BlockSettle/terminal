@@ -10,7 +10,8 @@
 #include "SelectedTransactionInputs.h"
 #include "CoinControlDialog.h"
 
-#include "QComboBox"
+#include <QComboBox>
+#include <QLabel>
 
 OTCWindowsAdapterBase::OTCWindowsAdapterBase(QWidget* parent /*= nullptr*/)
    : QWidget(parent)
@@ -24,7 +25,9 @@ void OTCWindowsAdapterBase::setChatOTCManager(const std::shared_ptr<OTCWindowsMa
       onSyncInterface();
    });
 
-   connect(otcManager_.get(), &OTCWindowsManager::updateMDDataRequired, this, [this](bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields) {
+   connect(otcManager_.get(), &OTCWindowsManager::updateMDDataRequired, this,
+      [this](bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields)
+   {
       onUpdateMD(type, security, fields);
    });
 
@@ -48,11 +51,31 @@ std::shared_ptr<AssetManager> OTCWindowsAdapterBase::getAssetManager() const
    return otcManager_->getAssetManager();
 }
 
+void OTCWindowsAdapterBase::setPeer(const bs::network::otc::Peer &)
+{
+}
+
+void OTCWindowsAdapterBase::onAboutToApply()
+{
+}
+
 void OTCWindowsAdapterBase::onSyncInterface()
 {
 }
 
-void OTCWindowsAdapterBase::onUpdateMD(bs::network::Asset::Type, const QString&, const bs::network::MDFields&)
+void OTCWindowsAdapterBase::onUpdateMD(bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields)
+{
+   if (productGroup_ != type || security_ != security) {
+      return;
+   }
+
+   updateIndicativePrices(type, security, fields);
+
+   // overloaded in direved class
+   onMDUpdated();
+}
+
+void OTCWindowsAdapterBase::onMDUpdated()
 {
 }
 
@@ -63,30 +86,20 @@ void OTCWindowsAdapterBase::onUpdateBalances()
 void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 {
    allUTXOs_.clear();
-   awaitingLeafsResponse_.clear();
    selectedUTXO_.clear();
 
-   const auto hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
-   for (auto wallet : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
-      auto cbUTXOs = [parentWidget = QPointer<OTCWindowsAdapterBase>(this), walletId = wallet->walletId()](const std::vector<UTXO> &utxos) {
-         if (!parentWidget) {
-            return;
-         }
-
-         parentWidget->allUTXOs_.insert(parentWidget->allUTXOs_.end(), utxos.begin(), utxos.end());
-         parentWidget->awaitingLeafsResponse_.erase(walletId);
-
-         if (parentWidget->awaitingLeafsResponse_.empty()) {
-            QMetaObject::invokeMethod(parentWidget, "onShowXBTInputReady");
-         }
-      };
-
-      if (!wallet->getSpendableTxOutList(cbUTXOs, UINT64_MAX)) {
-         continue;
+   auto cb = [parentWidget = QPointer<OTCWindowsAdapterBase>(this)](const std::vector<UTXO> &utxos) {
+      if (!parentWidget) {
+         return;
       }
+      parentWidget->allUTXOs_ = utxos;
+      QMetaObject::invokeMethod(parentWidget, &OTCWindowsAdapterBase::onShowXBTInputReady);
+   };
 
-      awaitingLeafsResponse_.insert(wallet->walletId());
-   }
+   const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
+   const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
+   bs::sync::Wallet::getSpendableTxOutList(wallets, cb);
 }
 
 void OTCWindowsAdapterBase::onShowXBTInputReady()
@@ -100,15 +113,16 @@ void OTCWindowsAdapterBase::onShowXBTInputReady()
    emit xbtInputsProcessed();
 }
 
-void OTCWindowsAdapterBase::updateIndicativePrices(bs::network::Asset::Type type, const QString& security, const bs::network::MDFields& fields, double& sellIndicativePrice, double& buyIndicativePrice)
+void OTCWindowsAdapterBase::updateIndicativePrices(bs::network::Asset::Type type, const QString& security
+   , const bs::network::MDFields& fields)
 {
    for (const auto &field : fields) {
       switch (field.type) {
       case bs::network::MDField::PriceBid:
-         sellIndicativePrice = field.value;
+         sellIndicativePrice_ = field.value;
          break;
       case bs::network::MDField::PriceOffer:
-         buyIndicativePrice = field.value;
+         buyIndicativePrice_ = field.value;
          break;
       default:  break;
       }
@@ -129,7 +143,7 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
       }
    }
    else {
-      for (auto utxo : selectedUTXO_) {
+      for (const auto &utxo : selectedUTXO_) {
          totalBalance += static_cast<double>(utxo.getValue()) / BTCNumericTypes::BalanceDivider;
       }
    }
@@ -141,5 +155,17 @@ std::shared_ptr<bs::sync::hd::Wallet> OTCWindowsAdapterBase::getCurrentHDWalletF
 {
    const auto walletId = walletsCombobox->currentData(UiUtils::WalletIdRole).toString().toStdString();
    return getWalletManager()->getHDWalletById(walletId);
+}
+
+double OTCWindowsAdapterBase::updateIndicativePriceValue(QLabel *label, bool isBuySide)
+{
+   if (isBuySide) {
+      label->setText(UiUtils::displayPriceForAssetType(buyIndicativePrice_, productGroup_));
+      return buyIndicativePrice_;
+   }
+   else {
+      label->setText(UiUtils::displayPriceForAssetType(sellIndicativePrice_, productGroup_));
+      return sellIndicativePrice_;
+   }
 }
 

@@ -31,12 +31,17 @@ public:
 
    bs::network::otc::Offer offer();
 
+   void setPeer(const bs::network::otc::Peer &peer) override;
+
 signals:
    void requestCreated();
 
+public slots:
+   void onAboutToApply() override;
+
 protected slots:
    void onSyncInterface() override;
-   void onUpdateMD(bs::network::Asset::Type type, const QString &security, const bs::network::MDFields& fields) override;
+   void onMDUpdated() override;
    void onUpdateBalances() override;
 
 protected:
@@ -53,18 +58,12 @@ private slots:
    void onNumCcySelected();
    void onUpdateIndicativePrice();
    void onMaxQuantityClicked();
-
    void onCurrentWalletChanged();
 
 private:
-   std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
+   void toggleSideButtons(bool isSell);
 
-   bs::network::Asset::Type productGroup_ = bs::network::Asset::SpotXBT;
-   QString security_{ QLatin1String("XBT/EUR") };
-   QString sellProduct_{ QLatin1String("XBT") };
-   QString buyProduct_{ QLatin1String("EUR") };
-   double sellIndicativePrice_{};
-   double buyIndicativePrice_{};
+   std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
 };
 
 #endif // __OTC_NEGOTIATION_REQUEST_WIDGET_H__
