@@ -45,14 +45,15 @@ struct ValidityFlagData;
 class ValidityHandle
 {
 public:
+   ValidityHandle();
    ValidityHandle(const std::shared_ptr<ValidityFlagData> &flag);
    ~ValidityHandle();
 
    ValidityHandle(const ValidityHandle &other);
-   ValidityHandle& operator = (const ValidityHandle &other);
+   ValidityHandle& operator=(const ValidityHandle &other);
 
    ValidityHandle(ValidityHandle &&other);
-   ValidityHandle& operator = (ValidityHandle &&other);
+   ValidityHandle& operator=(ValidityHandle &&other);
 
    // Blocks parent object destructor if needed.
    void lock();
@@ -77,7 +78,7 @@ public:
    ~ValidityFlag();
 
    ValidityFlag(const ValidityFlag&) = delete;
-   ValidityFlag &operator = (const ValidityFlag&) = delete;
+   ValidityFlag &operator=(const ValidityFlag&) = delete;
 
    ValidityFlag(ValidityFlag &&other);
    ValidityFlag &operator=(ValidityFlag &&other);

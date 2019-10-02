@@ -5,8 +5,21 @@ package Blocksettle.Communication.ProxyTerminalPb;
 // Messages sent from terminal to PB and back.
 // `Request` is sent from terminal (PB is a server here).
 
+enum OtcState
+{
+    OTC_STATE_UNKNOWN = 0;
+    OTC_STATE_FAILED = 1;
+    OTC_STATE_WAIT_BUYER_SIGN = 2;
+    OTC_STATE_WAIT_SELLER_SEAL = 3;
+    OTC_STATE_WAIT_SELLER_SIGN = 4;
+    OTC_STATE_CANCELLED = 5;
+    OTC_STATE_SUCCEED = 6;
+}
+
 message Request
 {
+    // OTC
+
     message StartOtc
     {
         int32 request_id = 1;
@@ -19,27 +32,38 @@ message Request
         int64 amount = 2;
         int64 price = 3;
 
-        bytes settlement_id = 4;
+        string settlement_id = 4;
 
         bytes auth_address_seller = 5;
         bytes auth_address_buyer = 6;
 
         // Used to check fees and other details (UTXO for payin, settlement address etc)
-        bytes unsigned_payin = 7;
-        bytes unsigned_payout = 8;
+        bytes unsigned_tx = 7;
 
         string chat_id_seller = 10;
         string chat_id_buyer = 11;
     }
 
-    message BroadcastXBT
+    message SealPayinValididy
     {
-        bytes settlement_id = 1;
-        bytes signed_payin = 2;
-        bytes signed_payout = 3;
+        string settlement_id = 1;
     }
 
-   message XBTUnsignedPayin
+    message ProcessTx
+    {
+        string settlement_id = 1;
+        bytes signed_tx = 2;
+    }
+
+    message Cancel
+    {
+        // Try to cancel deal (could be used after VerifyOtc)
+        string settlement_id = 1;
+    }
+
+    // Trades
+
+    message XBTUnsignedPayin
     {
         string  settlement_id       = 1;
         bytes   unsigned_payin      = 2;
@@ -60,36 +84,41 @@ message Request
 
     oneof data
     {
-        // Requests
-        StartOtc  start_otc     = 1;
-        VerifyOtc verify_otc    = 2;
+        StartOtc              start_otc            = 1;
+        VerifyOtc             verify_otc           = 2;
+        SealPayinValididy     seal_payin_valididy  = 3;
+        ProcessTx             process_tx           = 4;
+        Cancel                cancel               = 5;
 
-        // Messages
-        BroadcastXBT        broadcast_xbt   = 30;
-        XBTUnsignedPayin    unsigned_payin  = 31;
-        XBTSignedPayin      signed_payin    = 32;
-        XBTSignedPayout     signed_payout   = 33;
+        XBTUnsignedPayin      unsigned_payin       = 31;
+        XBTSignedPayin        signed_payin         = 32;
+        XBTSignedPayout       signed_payout        = 33;
     }
 }
 
 message Response
 {
+    // OTC
+
     message StartOtc
     {
-        int32 request_id    = 1;
-        bytes settlement_id = 2;
+        int32 request_id = 1;
+        string settlement_id = 2;
     }
 
-    message VerifyOtc
+    message UpdateOtcState
     {
-        bool    success         = 1;
-        string  error_msg       = 2;
-        bytes   settlement_id   = 3;
+        string settlement_id = 1;
+        OtcState state = 2;
+        string error_msg = 3;
+        int64 timestamp_ms = 4;
     }
+
+    // Trades
 
     message UnsignedPayinRequest
     {
-      string  settlement_id   = 1;
+        string  settlement_id   = 1;
     }
 
     message SignPayoutRequest
@@ -107,9 +136,9 @@ message Response
 
     oneof data
     {
-        // Requests
         StartOtc              start_otc            = 1;
-        VerifyOtc             verify_otc           = 2;
+        UpdateOtcState        update_otc_state     = 2;
+
         UnsignedPayinRequest  send_unsigned_payin  = 3;
         SignPayoutRequest     sign_payout          = 4;
         SignPayinRequest      sign_payin           = 5;

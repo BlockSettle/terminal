@@ -9,9 +9,17 @@ struct ValidityFlagData
    bool isValid{true};
 };
 
+ValidityHandle::ValidityHandle() = default;
+
 ValidityHandle::ValidityHandle(const std::shared_ptr<ValidityFlagData> &data)
    : data_(data)
 {
+}
+
+ValidityHandle &ValidityHandle::operator=(const ValidityHandle &other)
+{
+   data_ = other.data_;
+   return *this;
 }
 
 ValidityHandle::~ValidityHandle() = default;
@@ -41,7 +49,7 @@ void ValidityHandle::unlock()
 
 bool ValidityHandle::isValid() const
 {
-   return data_->isValid;
+   return data_ && data_->isValid;
 }
 
 ValidityFlag::ValidityFlag()
