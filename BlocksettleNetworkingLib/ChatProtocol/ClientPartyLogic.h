@@ -42,7 +42,7 @@ namespace Chat
 
       void handlePartiesFromWelcomePacket(const WelcomeResponse& msg);
 
-      void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName);
+      void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType = Chat::PartySubType::STANDARD);
       void createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const PrivatePartyRequest& privatePartyRequest);
 
    signals:
@@ -69,6 +69,7 @@ namespace Chat
       void onRecipientKeysUnchanged();
 
    private:
+      bool isPrivatePartyForUserExist(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType = Chat::PartySubType::STANDARD);
       LoggerPtr loggerPtr_;
       ClientPartyModelPtr clientPartyModelPtr_;
       ClientDBServicePtr clientDBServicePtr_;

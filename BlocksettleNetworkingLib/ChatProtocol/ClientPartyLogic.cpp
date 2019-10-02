@@ -141,39 +141,18 @@ void ClientPartyLogic::handlePartyInserted(const Chat::PartyPtr& partyPtr)
    clientDBServicePtr_->createNewParty(partyPtr->id());
 }
 
-void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName)
+void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType)
 {
    // check if private party exist
-   IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
-
-   for (const auto& partyId : idPartyList)
+   if (isPrivatePartyForUserExist(currentUserPtr, remoteUserName, partySubType))
    {
-      ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(partyId);
-      if (!clientPartyPtr)
-      {
-         continue;
-      }
-
-      if (clientPartyPtr->isPrivateStandard())
-      {
-         continue;
-      }
-
-      PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
-      for (const auto& recipient : recipients)
-      {
-         if (recipient->userName() == remoteUserName)
-         {
-            // party already existed
-            emit privatePartyAlreadyExist(clientPartyPtr->id());
-            return;
-         }
-      }
+      // TODO: uncomments before merge!!!
+      //return;
    }
 
    // party not exist, create new one
    ClientPartyPtr newClientPrivatePartyPtr =
-      std::make_shared<ClientParty>(QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString(), PartyType::PRIVATE_DIRECT_MESSAGE, PartySubType::STANDARD);
+      std::make_shared<ClientParty>(QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString(), PartyType::PRIVATE_DIRECT_MESSAGE, partySubType);
 
    newClientPrivatePartyPtr->setDisplayName(remoteUserName);
    newClientPrivatePartyPtr->setUserHash(remoteUserName);
@@ -192,6 +171,49 @@ void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, con
    clientDBServicePtr_->createNewParty(newClientPrivatePartyPtr->id());
 
    emit privatePartyCreated(newClientPrivatePartyPtr->id());
+}
+
+bool ClientPartyLogic::isPrivatePartyForUserExist(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType)
+{
+   IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
+
+   for (const auto& partyId : idPartyList)
+   {
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(partyId);
+      if (!clientPartyPtr)
+      {
+         continue;
+      }
+
+      if (partySubType == Chat::PartySubType::STANDARD)
+      {
+         if (!clientPartyPtr->isPrivateStandard())
+         {
+            continue;
+         }
+      }
+
+      if (partySubType == Chat::PartySubType::OTC)
+      {
+         if (!clientPartyPtr->isPrivateOTC())
+         {
+            continue;
+         }
+      }
+
+      PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
+      for (const auto& recipient : recipients)
+      {
+         if (recipient->userName() == remoteUserName)
+         {
+            // party already existed
+            emit privatePartyAlreadyExist(clientPartyPtr->id());
+            return true;
+         }
+      }
+   }
+
+   return false;
 }
 
 void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const PrivatePartyRequest& privatePartyRequest)

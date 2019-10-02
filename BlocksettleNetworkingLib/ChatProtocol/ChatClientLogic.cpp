@@ -249,6 +249,11 @@ void ChatClientLogic::SetMessageSeen(const std::string& partyId, const std::stri
    clientConnectionLogicPtr_->setMessageSeen(clientPartyPtr, messageId);
 }
 
+void ChatClientLogic::RequestPrivatePartyOTC(const std::string& remoteUserName)
+{
+   clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName, Chat::PartySubType::OTC);
+}
+
 void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName)
 {
    clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName);

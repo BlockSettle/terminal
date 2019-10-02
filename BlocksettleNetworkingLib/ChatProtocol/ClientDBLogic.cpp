@@ -399,7 +399,8 @@ void ClientDBLogic::readHistoryMessages(const std::string& partyId, const int li
 void ClientDBLogic::saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients)
 {
    const QString cmd = QStringLiteral("INSERT INTO user (user_hash, public_key, public_key_timestamp) "
-      "VALUES (:user_hash, :public_key, :public_key_timestamp);");
+      "VALUES (:user_hash, :public_key, :public_key_timestamp) ON CONFLICT(user_hash) DO UPDATE SET "
+      "user_hash=:user_hash, public_key=:public_key, public_key_timestamp=:public_key_timestamp;");
 
    for (const auto& recipient : recipients)
    {
