@@ -234,8 +234,6 @@ void ChatOTCHelper::onPullOrRejectOnTimeout(const std::string& contactId, bs::ne
    case bs::network::otc::PeerType::Response:
       peer = otcClient_->response(contactId);
       break;
-   default:
-      break;
    }
 
    if (!peer) {

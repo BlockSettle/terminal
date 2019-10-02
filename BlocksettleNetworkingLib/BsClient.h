@@ -79,13 +79,6 @@ public:
       std::string srcCcToken;
    };
 
-   struct BroadcastXbt
-   {
-      BinaryData settlementId;
-      BinaryData signedPayin;
-      BinaryData signedPayout;
-   };
-
    BsClient(const std::shared_ptr<spdlog::logger>& logger, const BsClientParams &params
       , QObject *parent = nullptr);
    ~BsClient() override;
@@ -95,7 +88,6 @@ public:
    void startLogin(const std::string &email);
 
    void sendPbMessage(std::string data);
-   void sendPbBroadcastXbt(const BroadcastXbt &data);
 
    // Cancel login. Please note that this will close channel.
    void cancelLogin();

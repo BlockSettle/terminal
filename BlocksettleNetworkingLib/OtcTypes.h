@@ -53,6 +53,15 @@ namespace bs {
             // Payin TX will be signed after confirmation from PB.
             SentPayinInfo,
 
+            // VerifyOtc request was sent
+            WaitVerification,
+
+            WaitBuyerSign,
+
+            WaitSellerSeal,
+
+            WaitSellerSign,
+
             // Peer does not comply to protocol, block it
             Blacklisted,
          };
@@ -146,6 +155,8 @@ namespace bs {
             BinaryData payinTxIdFromSeller;
             BinaryData authPubKey;
             BinaryData ourAuthPubKey;
+
+            std::string settlementId;
 
             ValidityFlag validityFlag;
 

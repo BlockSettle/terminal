@@ -14,7 +14,6 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection>
    , sellAuthKey_(sellAuthKey)
 {
    init(armory.get());
-   initialize();
 
    ownAddresses_.insert({ addr.unprefixed() });
 
@@ -35,20 +34,14 @@ void bs::SettlementMonitor::onZCReceived(const std::vector<bs::TXEntry> &)
    checkNewEntries();
 }
 
-void bs::SettlementMonitor::initialize()
-{
-   quitFlag_ = std::make_shared<bool>(false);
-   quitFlagLock_ = std::make_shared<std::recursive_mutex>();
-}
-
 void bs::SettlementMonitor::checkNewEntries()
 {
    logger_->debug("[SettlementMonitor::checkNewEntries] checking entries for {}"
       , settlAddress_.display());
 
-   const auto &cbHistory = [this, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
-      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
-      if (*quitFlag) {
+   const auto &cbHistory = [this, handle = validityFlag_.handle()] (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) mutable ->void {
+      std::lock_guard<ValidityHandle> lock(handle);
+      if (!handle.isValid()) {
          return;
       }
 
@@ -64,9 +57,9 @@ void bs::SettlementMonitor::checkNewEntries()
          }
 
          for (const auto &entry : le) {
-            const auto &cbPayOut = [this, entry, quitFlag, quitFlagLock](bool ack) {
-               std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
-               if (*quitFlag) {
+            const auto &cbPayOut = [this, entry, handle](bool ack) mutable {
+               std::lock_guard<ValidityHandle> lock(handle);
+               if (!handle.isValid()) {
                   return;
                }
 
@@ -79,9 +72,9 @@ void bs::SettlementMonitor::checkNewEntries()
                                  "settlement address {}", settlAddress_.display());
                }
             };
-            const auto &cbPayIn = [this, entry, cbPayOut, quitFlag, quitFlagLock](bool ack) {
-               std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
-               if (*quitFlag) {
+            const auto &cbPayIn = [this, entry, cbPayOut, handle](bool ack) mutable {
+               std::lock_guard<ValidityHandle> lock(handle);
+               if (!handle.isValid()) {
                   return;
                }
 
@@ -122,9 +115,9 @@ void bs::SettlementMonitor::checkNewEntries()
 void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](const Tx &tx) {
-      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
-      if (*quitFlag) {
+   const auto &cbTX = [this, entry, cb, handle = validityFlag_.handle()](const Tx &tx) mutable {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
          return;
       }
 
@@ -151,9 +144,9 @@ void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry 
 void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](const Tx &tx) {
-      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
-      if (*quitFlag) {
+   const auto &cbTX = [this, entry, cb, handle = validityFlag_.handle()](const Tx &tx) mutable {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
          return;
       }
 
@@ -174,9 +167,9 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
          txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
       }
 
-      const auto &cbTXs = [this, txOutIdx, cb, quitFlag, quitFlagLock](const std::vector<Tx> &txs) {
-         std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
-         if (*quitFlag) {
+      const auto &cbTXs = [this, txOutIdx, cb, handle](const std::vector<Tx> &txs) mutable {
+         ValidityGuard lock(handle);
+         if (!handle.isValid()) {
             return;
          }
 
@@ -221,9 +214,9 @@ void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEn
    if (payoutConfirmations_ != confirmationsNumber) {
       payoutConfirmations_ = confirmationsNumber;
 
-      const auto &cbPayoutType = [this, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_](bs::PayoutSigner::Type poType) {
-         std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
-         if (*quitFlag) {
+      const auto &cbPayoutType = [this, handle = validityFlag_.handle()](bs::PayoutSigner::Type poType) mutable {
+         ValidityGuard lock(handle);
+         if (!handle.isValid()) {
             return;
          }
 
@@ -249,10 +242,10 @@ void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEn
 void bs::SettlementMonitor::getPayinInput(const std::function<void(UTXO)> &cb
    , bool allowZC)
 {
-   const auto &cbSpendable = [this, cb, allowZC, quitFlag = quitFlag_, quitFlagLock = quitFlagLock_]
-      (ReturnMessage<std::vector<UTXO>> inputs) {
-      std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
-      if (*quitFlag) {
+   const auto &cbSpendable = [this, cb, allowZC, handle = validityFlag_.handle()]
+      (ReturnMessage<std::vector<UTXO>> inputs) mutable {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
          return;
       }
 
@@ -260,10 +253,10 @@ void bs::SettlementMonitor::getPayinInput(const std::function<void(UTXO)> &cb
          auto inUTXOs = inputs.get();
          if (inUTXOs.empty()) {
             if (allowZC) {
-               const auto &cbZC = [this, cb, quitFlag, quitFlagLock]
-               (ReturnMessage<std::vector<UTXO>> zcs)->void {
-                  std::lock_guard<std::recursive_mutex> lock(*quitFlagLock);
-                  if (*quitFlag) {
+               const auto &cbZC = [this, cb, handle]
+               (ReturnMessage<std::vector<UTXO>> zcs) mutable -> void {
+                  ValidityGuard lock(handle);
+                  if (!handle.isValid()) {
                      return;
                   }
 
@@ -464,8 +457,8 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
 
 bs::SettlementMonitor::~SettlementMonitor() noexcept
 {
-   std::lock_guard<std::recursive_mutex> lock(*quitFlagLock_);
-   *quitFlag_ = true;
+   // Stop callbacks just in case (calling cleanup below should be enough)
+   validityFlag_.reset();
 
    cleanup();
    FastLock locker(walletLock_);
@@ -474,6 +467,9 @@ bs::SettlementMonitor::~SettlementMonitor() noexcept
 
 bs::SettlementMonitorCb::~SettlementMonitorCb() noexcept
 {
+   // Need to stop callbacks here because ValidityFlag destructor would be called too late
+   validityFlag_.reset();
+
    stop();
 }
 
