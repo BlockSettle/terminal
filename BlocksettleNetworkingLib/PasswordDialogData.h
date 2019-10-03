@@ -85,7 +85,6 @@ public:
    DIALOG_KEY(Side)
    DIALOG_KEY_BOOL(SigningAllowed)
    DIALOG_KEY(Title)
-   DIALOG_KEY(TotalSpentVisible)
    DIALOG_KEY(TotalValue)
    DIALOG_KEY(TransactionAmount)
    DIALOG_KEY(TxInputProduct)

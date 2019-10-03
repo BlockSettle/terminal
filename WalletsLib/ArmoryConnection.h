@@ -43,6 +43,7 @@ namespace bs {
       bool        isChainedZC;
       bool        merged;
       std::chrono::time_point<std::chrono::steady_clock> recvTime;
+      std::vector<bs::Address>   addresses;
 
       bool operator==(const TXEntry &other) const { return (txHash == other.txHash); }
       void merge(const TXEntry &);

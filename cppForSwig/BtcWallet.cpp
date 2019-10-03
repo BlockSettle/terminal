@@ -490,8 +490,18 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
          if (scanInfo.saStruct_.newKeysAndScrAddr_ != nullptr)
          {
             //compute zc ledgers
-            auto&& txioMap =
-               getTxioForRange(scanInfo.endBlock_ + 1, UINT32_MAX);
+
+            //TODO: use native <BinaryData, shared_ptr<TxIOPair>> instead
+            map<BinaryData, TxIOPair> txioMap;
+            for (auto& scrAddrTxios : scanInfo.saStruct_.zcMap_)
+            {
+               for (auto& txioPair : *scrAddrTxios.second)
+               {
+                 auto insertIter = txioMap.insert(
+                    make_pair(txioPair.first, *txioPair.second));
+                 insertIter.first->second.setScrAddrRef(scrAddrTxios.first.getRef());
+               }
+            }
 
             auto&& ledgerMap = updateWalletLedgersFromTxio(
                txioMap, scanInfo.endBlock_ + 1, UINT32_MAX);
