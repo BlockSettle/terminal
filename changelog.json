@@ -1,7 +1,19 @@
 {
-   "latest_version": "0.23.1",
+   "latest_version": "0.23.2",
    "release_date": "03 Oct 2019",
    "changes": [
+      {
+         "version_string": "0.23.2",
+         "previous_version": "0.23.1",
+         "release_date": "03 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Ui fixes"
+         ],
+         "bug_fixes": [],
+         "revision": "ec036852",
+         "common_revision": "c451f833"
+      },
       {
          "version_string": "0.23.1",
          "previous_version": "0.23.0",
