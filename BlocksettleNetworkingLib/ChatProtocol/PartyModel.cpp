@@ -25,7 +25,7 @@ void PartyModel::insertParty(const PartyPtr& partyPtr)
       partyMap_.erase(partyPtr->id());
 
       emit partyModelChanged();
-      emit error(PartyModelError::InsertExistingParty, partyPtr->id());
+      emit error(PartyModelError::InsertExistingParty, partyPtr->id(), true);
    }
 
    partyMap_[partyPtr->id()] = partyPtr;
@@ -80,7 +80,7 @@ PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& 
    if (nullptr == privateDMPartyPtr)
    {
       // this should not happen
-      emit error(PartyModelError::PrivatePartyCasting, party_id);
+      emit error(PartyModelError::PrivatePartyCasting, party_id, true);
       return nullptr;
    }
 
@@ -114,7 +114,7 @@ void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
 
       if (nullptr == privatePartyPtr)
       {
-         emit error(PartyModelError::DynamicPointerCast, partyPtr->id());
+         emit error(PartyModelError::DynamicPointerCast, partyPtr->id(), true);
          return;
       }
 
