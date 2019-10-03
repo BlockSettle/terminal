@@ -183,3 +183,14 @@ std::string otc::Peer::toString() const
 {
    return contactId + "/" + otc::toString(type);
 }
+
+std::chrono::milliseconds otc::payoutTimeout()
+{
+   return std::chrono::seconds(30);
+}
+
+std::chrono::milliseconds otc::payinTimeout()
+{
+   // payin timeout is higher because offline wallet could be used
+   return std::chrono::seconds(300);
+}
