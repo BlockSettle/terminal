@@ -146,8 +146,7 @@ void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, con
    // check if private party exist
    if (isPrivatePartyForUserExist(currentUserPtr, remoteUserName, partySubType))
    {
-      // TODO: uncomments before merge!!!
-      //return;
+      return;
    }
 
    // party not exist, create new one
@@ -270,6 +269,12 @@ void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserP
 
    // save party in db
    clientDBServicePtr_->createNewParty(newClientPrivatePartyPtr->id());
+
+   // auto accept private otc party
+   if (newClientPrivatePartyPtr->isPrivateOTC())
+   {
+       emit acceptOTCPrivateParty(newClientPrivatePartyPtr->id());
+   }
 
    // ! Do NOT emit here privatePartyCreated, it's connected with party request
 }

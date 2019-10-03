@@ -162,6 +162,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
 
+   // OTC
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::otcPrivatePartyReady, this, &ChatWidget::onOtcPrivatePartyReady, Qt::QueuedConnection);
+
    ui_->textEditMessages->onSetClientPartyModel(clientPartyModelPtr);
 
    otcRequestViewModel_ = new OTCRequestViewModel(otcHelper_->client(), this);
@@ -349,8 +352,8 @@ void ChatWidget::onProcessOtcPbMessage(const std::string& data)
 
 void ChatWidget::onSendOtcMessage(const std::string& contactId, const BinaryData& data)
 {
-   auto clientParty = chatClientServicePtr_->getClientPartyModelPtr()->getClientPartyByUserHash(contactId);
-   if (!clientParty || !clientParty->isPrivateStandard()) {
+   auto clientParty = chatClientServicePtr_->getClientPartyModelPtr()->getClientPartyByUserHash(contactId, true);
+   if (!clientParty || !clientParty->isPrivateOTC()) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "can't find valid private party to send OTC message");
       return;
    }
@@ -614,4 +617,9 @@ void ChatWidget::onConfirmContactNewKeyData(const Chat::UserPublicKeyInfoList& u
 void ChatWidget::onOtcRequestCurrentChanged(const QModelIndex &current, const QModelIndex &previous)
 {
    onOtcPublicUpdated();
+}
+
+void ChatWidget::onOtcPrivatePartyReady(const Chat::ClientPartyPtr& clientPartyPtr)
+{
+   stateCurrent_->onOtcPrivatePartyReady(clientPartyPtr);
 }

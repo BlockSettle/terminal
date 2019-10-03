@@ -44,6 +44,7 @@ void ChatClientLogic::initDbDone()
    connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::privatePartyAlreadyExist, this, &ChatClientLogic::privatePartyAlreadyExist);
    connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::deletePrivateParty, this, &ChatClientLogic::DeletePrivateParty);
    connect(this, &ChatClientLogic::clientLoggedOutFromServer, clientPartyLogicPtr_.get(), &ClientPartyLogic::loggedOutFromServer);
+   connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::acceptOTCPrivateParty, this, &ChatClientLogic::AcceptPrivateParty);
 
    sessionKeyHolderPtr_ = std::make_shared<SessionKeyHolder>(loggerPtr_, this);
    clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(
@@ -68,6 +69,9 @@ void ChatClientLogic::initDbDone()
 
    // close connection from callback
    connect(this, &ChatClientLogic::disconnected, this, &ChatClientLogic::onCloseConnection);
+
+   // OTC
+   connect(this, &ChatClientLogic::otcPrivatePartyReady, clientPartyLogicPtr_->clientPartyModelPtr().get(), &ClientPartyModel::otcPrivatePartyReady);
 
    emit initDone();
 }
@@ -266,6 +270,15 @@ void ChatClientLogic::privatePartyCreated(const std::string& partyId)
 
 void ChatClientLogic::privatePartyAlreadyExist(const std::string& partyId)
 {
+   // check if it's otc private party
+   const ClientPartyPtr clientPartyPtr = clientPartyModelPtr()->getClientPartyById(partyId);
+
+   if (clientPartyPtr->isPrivateOTC())
+   {
+      emit otcPrivatePartyReady(clientPartyPtr);
+      return;
+   }
+
    clientConnectionLogicPtr_->prepareRequestPrivateParty(partyId);
 }
 

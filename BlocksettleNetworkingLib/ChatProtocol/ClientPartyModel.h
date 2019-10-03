@@ -52,7 +52,7 @@ namespace Chat
       ClientPartyPtr getPartyByUserName(const std::string& userName);
       ClientPartyPtr getClientPartyById(const std::string& party_id);
       ClientPartyPtr getClientPartyByCreatorHash(const std::string& creatorHash);
-      ClientPartyPtr getClientPartyByUserHash(const std::string& userHash);
+      ClientPartyPtr getClientPartyByUserHash(const std::string& userHash, const bool isPrivateOTC = false);
 
       const std::string& ownUserName() const { return ownUserName_; }
       void setOwnUserName(std::string val) { ownUserName_ = val; }
@@ -66,6 +66,7 @@ namespace Chat
       void partyStateChanged(const std::string& partyId);
       void clientPartyDisplayNameChanged(const std::string& partyId);
       void userPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
+      void otcPrivatePartyReady(const ClientPartyPtr& clientPartyPtr);
 
    private slots:
       void handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false);

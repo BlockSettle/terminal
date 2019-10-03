@@ -53,6 +53,7 @@ namespace Chat
       void privatePartyAlreadyExist(const std::string& partyId);
       void deletePrivateParty(const std::string& partyId);
       void userPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
+      void acceptOTCPrivateParty(const std::string& partyId);
 
    public slots:
       void onUserStatusChanged(const StatusChanged& statusChanged);

@@ -90,6 +90,7 @@ namespace Chat
       void initDone();
       void properlyConnected();
       void searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
+      void otcPrivatePartyReady(const ClientPartyPtr& clientPartyPtr);
 
    private slots:
       void sendPacket(const google::protobuf::Message& message);

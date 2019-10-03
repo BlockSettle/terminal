@@ -277,6 +277,19 @@ void AbstractChatWidgetState::onOtcQuoteResponseSubmit()
    }
 }
 
+void AbstractChatWidgetState::onOtcPrivatePartyReady(const Chat::ClientPartyPtr& clientPartyPtr)
+{
+   if (canPerformOTCOperations() && clientPartyPtr->isPrivateOTC()) {
+      Chat::PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(chat_->ownUserId_);
+      for (const auto& recipient : recipients) {
+         if (recipient->userName() == chat_->currentPeer()->contactId) {
+            // found user, send request
+            chat_->otcHelper_->onOtcQuoteResponseSubmit(chat_->currentPeer(), chat_->ui_->widgetCreateOTCResponse->response());
+         }
+      }
+   }
+}
+
 void AbstractChatWidgetState::onOtcPullOrRejectCurrent()
 {
    if (canPerformOTCOperations()) {

@@ -206,9 +206,25 @@ ClientPartyPtr ClientPartyModel::getClientPartyByCreatorHash(const std::string& 
    return clientPartyPtr;
 }
 
-ClientPartyPtr ClientPartyModel::getClientPartyByUserHash(const std::string& userHash)
+ClientPartyPtr ClientPartyModel::getClientPartyByUserHash(const std::string& userHash, const bool isPrivateOTC)
 {
-   const std::function<bool(const ClientPartyPtr&)> compareCb = [userHash](const ClientPartyPtr& cp) {
+   const std::function<bool(const ClientPartyPtr&)> compareCb = [userHash, isPrivateOTC](const ClientPartyPtr& cp) {
+      if (isPrivateOTC)
+      {
+         if (cp->isPrivateOTC() && cp->userHash() == userHash)
+         {
+            return true;
+         }
+         
+         return false;
+      }
+
+      // don't return private otc in standard search
+      if (cp->isPrivateOTC())
+      {
+         return false;
+      }
+
       return cp->userHash() == userHash; 
    };
 

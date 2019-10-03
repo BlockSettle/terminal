@@ -363,7 +363,7 @@ bool OtcClient::pullOrReject(Peer *peer)
       case State::QuoteSent:
       case State::OfferSent:
       case State::OfferRecv: {
-         SPDLOG_LOGGER_DEBUG(logger_, "pull of reject offer from {}", peer->toString());
+         SPDLOG_LOGGER_DEBUG(logger_, "pull or reject offer from {}", peer->toString());
 
          ContactMessage msg;
          msg.mutable_close();
