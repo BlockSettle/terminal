@@ -60,7 +60,7 @@ PartyPtr PartyModel::getPartyById(const std::string& party_id)
       return it->second;
    }
 
-   emit error(PartyModelError::CouldNotFindParty, party_id);
+   emit error(PartyModelError::CouldNotFindParty, party_id, true);
 
    return nullptr;
 }
@@ -71,7 +71,7 @@ PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& 
 
    if (!partyPtr)
    {
-      emit error(PartyModelError::CouldNotFindParty, party_id);
+      emit error(PartyModelError::CouldNotFindParty, party_id, true);
       return nullptr;
    }
 
