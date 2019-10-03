@@ -498,7 +498,8 @@ void ChatWidget::onRegisterNewChangingRefresh()
 void ChatWidget::onShowUserRoom(const QString& userHash)
 {
    const auto clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
-   Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getPartyByUserName(userHash.toStdString());
+
+   Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getStandardPartyForUsers(ownUserId_, userHash.toStdString());
 
    if (!clientPartyPtr) {
       return;

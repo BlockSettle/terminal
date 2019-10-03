@@ -364,7 +364,7 @@ void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& use
             recipientsToUpdate.push_back(existingRecipient);
 
             // force clear session keys
-            sessionKeyHolderPtr_->clearSessionForUser(existingRecipient->userName());
+            sessionKeyHolderPtr_->clearSessionForUser(existingRecipient->userHash());
 
             // save party id for handling later
             partiesToCheckUnsentMessages.push_back(clientPartyPtr->id());

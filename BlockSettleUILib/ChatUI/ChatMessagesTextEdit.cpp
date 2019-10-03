@@ -84,12 +84,12 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
             return QString::fromStdString(previousClientPartyPtr->displayName());
          }
          else {
-            Chat::ClientPartyPtr userParty = partyModel_->getPartyByUserName(senderHash);
+            Chat::ClientPartyPtr clientPartyPtr = partyModel_->getStandardPartyForUsers(ownUserId_, senderHash);
 
-            if (userParty) {
-               return toHtmlUsername(userParty->displayName(), userParty->userHash());
+            if (clientPartyPtr)
+            {
+               return toHtmlUsername(clientPartyPtr->displayName(), clientPartyPtr->userHash());
             }
-
             return toHtmlUsername(senderHash, senderHash);
          }         
       }
@@ -233,7 +233,7 @@ void ChatMessagesTextEdit::onTextChanged()
 void ChatMessagesTextEdit::onUserUrlOpened(const QUrl &url)
 {
    std::string userId = url.path().toStdString();
-   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getPartyByUserName(userId);
+   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getStandardPartyForUsers(ownUserId_, userId);
 
    if (!clientPartyPtr) {
       emit newPartyRequest(userId);
@@ -446,7 +446,7 @@ std::unique_ptr<QMenu> ChatMessagesTextEdit::initUserContextMenu(const QString& 
 {
    std::unique_ptr<QMenu> userMenuPtr = std::make_unique<QMenu>(this);
 
-   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getPartyByUserName(userName.toStdString());
+   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getStandardPartyForUsers(ownUserId_, userName.toStdString());
    if (!clientPartyPtr) {
       QAction* addAction = userMenuPtr->addAction(contextMenuAddUserMenu);
       addAction->setStatusTip(contextMenuAddUserMenuStatusTip);

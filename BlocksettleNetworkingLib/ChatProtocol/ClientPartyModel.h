@@ -49,7 +49,17 @@ namespace Chat
    public:
       ClientPartyModel(const LoggerPtr& loggerPtr, QObject* parent = nullptr);
       IdPartyList getIdPartyList() const;
-      ClientPartyPtr getPartyByUserName(const std::string& userName);
+      IdPartyList getIdPrivatePartyList();
+      IdPartyList getIdPrivatePartyListBySubType(const PartySubType& partySubType = PartySubType::STANDARD);
+
+      ClientPartyPtrList getClientPartyListForRecipient(const IdPartyList& idPartyList, const std::string& recipientUserHash);
+      ClientPartyPtrList getStandardPrivatePartyListForRecipient(const std::string& recipientUserHash);
+      ClientPartyPtrList getOtcPrivatePartyListForRecipient(const std::string& recipientUserHash);
+
+      ClientPartyPtr getStandardPartyForUsers(const std::string& firstUserHash, const std::string& secondUserHash);
+      ClientPartyPtr getOtcPartyForUsers(const std::string& firstUserHash, const std::string& secondUserHash);
+      ClientPartyPtr getClientPartyForRecipients(const ClientPartyPtrList& clientPartyPtrList, const std::string& firstUserHash, const std::string& secondUserHash);
+
       ClientPartyPtr getClientPartyById(const std::string& party_id);
       ClientPartyPtr getClientPartyByCreatorHash(const std::string& creatorHash);
       ClientPartyPtr getClientPartyByUserHash(const std::string& userHash, const bool isPrivateOTC = false);

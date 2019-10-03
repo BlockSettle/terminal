@@ -17,10 +17,10 @@ namespace Chat
    class PartyRecipient
    {
    public:
-      PartyRecipient(const std::string& userName, const BinaryData& publicKey = BinaryData(), const QDateTime& publicKeyTime = QDateTime::currentDateTime());
+      PartyRecipient(const std::string& userHash, const BinaryData& publicKey = BinaryData(), const QDateTime& publicKeyTime = QDateTime::currentDateTime());
 
-      std::string userName() const { return userName_; }
-      void setUserName(std::string val) { userName_ = val; }
+      std::string userHash() const { return userHash_; }
+      void setUserHash(std::string val) { userHash_ = val; }
 
       BinaryData publicKey() const { return publicKey_; }
       void setPublicKey(BinaryData val) { publicKey_ = val; }
@@ -29,7 +29,7 @@ namespace Chat
       void setPublicKeyTime(QDateTime val) { publicKeyTime_ = val; }
 
    private:
-      std::string userName_;
+      std::string userHash_;
       BinaryData publicKey_;
       QDateTime publicKeyTime_;
    };

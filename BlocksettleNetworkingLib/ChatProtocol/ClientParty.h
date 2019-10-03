@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <memory>
+#include <vector>
 
 #include "ChatProtocol/PrivateDirectMessageParty.h"
 
@@ -49,6 +50,7 @@ namespace Chat {
    };
 
    using ClientPartyPtr = std::shared_ptr<ClientParty>;
+   using ClientPartyPtrList = std::vector<ClientPartyPtr>;
 
 } // namespace Chat
 

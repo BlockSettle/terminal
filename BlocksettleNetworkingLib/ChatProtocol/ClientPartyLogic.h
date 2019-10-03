@@ -56,7 +56,7 @@ namespace Chat
       void acceptOTCPrivateParty(const std::string& partyId);
 
    public slots:
-      void onUserStatusChanged(const StatusChanged& statusChanged);
+      void onUserStatusChanged(const ChatUserPtr& currentUserPtr, const StatusChanged& statusChanged);
       void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
       void loggedOutFromServer();
       void updateModelAndRefreshPartyDisplayNames();
