@@ -4,6 +4,7 @@
 #include <memory>
 #include "QWidget"
 #include "CommonTypes.h"
+#include "OtcTypes.h"
 
 class QComboBox;
 class OTCWindowsManager;
@@ -67,6 +68,9 @@ protected:
    std::shared_ptr<bs::sync::hd::Wallet> getCurrentHDWalletFromCombobox(QComboBox *walletsCombobox) const;
 
    double updateIndicativePriceValue(QLabel *label, bool isBuySide);
+
+   QString getXBTRange(bs::network::otc::Range xbtRange);
+   QString getCCRange(bs::network::otc::Range ccRange);
 
 protected:
    std::shared_ptr<OTCWindowsManager> otcManager_{};

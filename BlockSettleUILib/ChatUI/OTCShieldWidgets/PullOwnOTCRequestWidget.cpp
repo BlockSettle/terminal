@@ -59,13 +59,8 @@ void PullOwnOTCRequestWidget::setResponse(const std::string& contactId, const ot
    setupNegotiationInterface(headerTextOTCResponse);
 
    ui_->sideValue->setText(QString::fromStdString(otc::toString(response.ourSide)));
-   ui_->quantityValue->setText(QStringLiteral("%1 - %2")
-      .arg(UiUtils::displayCurrencyAmount(response.amount.lower))
-      .arg(UiUtils::displayCurrencyAmount(response.amount.upper)));
-
-   ui_->priceValue->setText(QStringLiteral("%1 - %2")
-      .arg(UiUtils::displayCurrencyAmount(otc::fromCents(response.price.lower)))
-      .arg(UiUtils::displayCurrencyAmount(otc::fromCents(response.price.upper))));
+   ui_->quantityValue->setText(getXBTRange(response.amount));
+   ui_->priceValue->setText(getCCRange(response.price));
    ui_->priceWidget->show();
 
    setupTimer(contactId);
