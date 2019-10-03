@@ -59,6 +59,9 @@ CustomTitleDialogWindow {
             btnConfirm.visible = false
             btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
         }
+
+        // auth addr verification temporally disabled, eid auth init immediately
+        initAuth()
     }
 
     function initAuth() {
@@ -103,9 +106,10 @@ CustomTitleDialogWindow {
     }
 
     onSigningAllowedChanged: {
-        if (signingAllowed) {
-            initAuth()
-        }
+        // auth addr verification temporally disabled
+//        if (signingAllowed) {
+//            initAuth()
+//        }
     }
 
     cContentItem: ColumnLayout {
