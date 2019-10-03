@@ -1,7 +1,27 @@
 {
-   "latest_version": "0.23.0",
-   "release_date": "01 Oct 2019",
+   "latest_version": "0.23.1",
+   "release_date": "03 Oct 2019",
    "changes": [
+      {
+         "version_string": "0.23.1",
+         "previous_version": "0.23.0",
+         "release_date": "03 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Allow cancel OTC sign request (#1415)",
+            "Detect PB timeouts from OtcClient",
+            "LedgerEntry addresses support"
+         ],
+         "bug_fixes": [
+            "Signer ui fixes",
+            "Fixed signing for multi-wallet inputs TX",
+            "Fix for auth revoke signing",
+            "Fix for otc settlement pw input dialog (#1416)",
+            "Small OTC fixes (#1420)"
+         ],
+         "revision": "4d9a3690",
+         "common_revision": "ed95d9fb"
+      },
       {
          "version_string": "0.23.0",
          "previous_version": "0.22.6",
