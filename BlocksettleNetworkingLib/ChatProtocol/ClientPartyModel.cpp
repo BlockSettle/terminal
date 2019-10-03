@@ -80,7 +80,10 @@ ClientPartyPtrList ClientPartyModel::getClientPartyListForRecipient(const IdPart
       }
    }
 
-   emit error(ClientPartyModelError::UserNameNotFound, recipientUserHash);
+   if (clientPartyPtrList.empty())
+   {
+      emit error(ClientPartyModelError::UserNameNotFound, recipientUserHash, true);
+   }
 
    return clientPartyPtrList;
 }
@@ -214,7 +217,7 @@ ClientPartyPtr ClientPartyModel::castToClientPartyPtr(const PartyPtr& partyPtr)
 
    if (!clientPartyPtr)
    {
-      emit error(ClientPartyModelError::DynamicPointerCast, partyPtr->id());
+      emit error(ClientPartyModelError::DynamicPointerCast, partyPtr->id(), true);
       return nullptr;
    }
 
@@ -227,7 +230,7 @@ ClientPartyPtr ClientPartyModel::getClientPartyById(const std::string& party_id)
 
    if (nullptr == partyPtr)
    {
-      emit error(ClientPartyModelError::PartyNotFound, party_id);
+      emit error(ClientPartyModelError::PartyNotFound, party_id, true);
       return nullptr;
    }
 
