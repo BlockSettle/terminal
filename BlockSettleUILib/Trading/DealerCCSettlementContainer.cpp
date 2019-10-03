@@ -9,6 +9,7 @@
 #include "Wallets/SyncWallet.h"
 #include "SignerDefs.h"
 
+#include <QApplication>
 #include <QPointer>
 
 using namespace bs::sync;
@@ -95,24 +96,26 @@ bool DealerCCSettlementContainer::startSigning()
 
    QPointer<DealerCCSettlementContainer> context(this);
    const auto &cbTx = [this, context, logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
-      if (!context) {
-         logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
-         return;
-      }
+      QMetaObject::invokeMethod(qApp, [this, result, signedTX, context, logger] {
+         if (!context) {
+            logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
+            return;
+         }
 
-      if (result == bs::error::ErrorCode::NoError) {
-         emit signTxRequest(orderId_, signedTX.toHexStr());
-         emit completed();
-      }
-      else if (result == bs::error::ErrorCode::TxCanceled) {
-         // FIXME
-         emit failed();
-      }
-      else {
-         logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
-         emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
-         emit failed();
-      }
+         if (result == bs::error::ErrorCode::NoError) {
+            emit signTxRequest(orderId_, signedTX.toHexStr());
+            emit completed();
+         }
+         else if (result == bs::error::ErrorCode::TxCanceled) {
+            // FIXME
+            emit failed();
+         }
+         else {
+            logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
+            emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
+            emit failed();
+         }
+      });
    };
 
    txReq_.walletIds = { wallet_->walletId() };
