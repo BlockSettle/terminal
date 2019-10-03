@@ -38,12 +38,13 @@ int OTCRequestViewModel::columnCount(const QModelIndex &parent) const
 
 QVariant OTCRequestViewModel::data(const QModelIndex &index, int role) const
 {
-   const auto &request = request_.at(size_t(index.row()));
+   const auto &requestData = request_.at(size_t(index.row()));
+   const auto &request = requestData.request_;
    const auto column = Columns(index.column());
 
    switch (role) {
       case Qt::TextAlignmentRole:
-         return int(Qt::AlignLeft | Qt::AlignVCenter);
+         return { static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter) };
 
       case Qt::DisplayRole:
          switch (column) {
@@ -56,6 +57,9 @@ QVariant OTCRequestViewModel::data(const QModelIndex &index, int role) const
          }
          assert(false);
          return {};
+
+      case static_cast<int>(CustomRoles::OwnQuote):
+         return { requestData.isOwnRequest_ };
 
       default:
          return {};
@@ -85,7 +89,7 @@ void OTCRequestViewModel::onRequestsUpdated()
    beginResetModel();
    request_.clear();
    for (const auto &peer : otcClient_->requests()) {
-      request_.push_back(peer->request);
+      request_.push_back({ peer->request, peer->isOwnRequest });
    }
    endResetModel();
 }

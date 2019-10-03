@@ -7,6 +7,11 @@
 
 class OtcClient;
 
+enum class CustomRoles
+{
+   OwnQuote = Qt::UserRole + 1
+};
+
 class OTCRequestViewModel : public QAbstractTableModel
 {
    Q_OBJECT
@@ -36,7 +41,12 @@ private:
       Latest = Duration,
    };
 
-   std::vector<bs::network::otc::QuoteRequest> request_;
+   struct OTCRequest
+   {
+      bs::network::otc::QuoteRequest request_;
+      bool isOwnRequest_;
+   };
+   std::vector<OTCRequest> request_;
 
    OtcClient *otcClient_{};
 
