@@ -743,13 +743,6 @@ BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest
          signer.addRecipient(recipient);
       }
 
-      for (const auto &wallet : wallets) {
-         if (wallet.second->isWatchingOnly()) {
-            throw std::logic_error("Won't sign with watching-only wallet");
-         }
-         auto lock = wallet.second->lockDecryptedContainer();
-         signer.setFeed(wallet.second->getResolver());
-      }
       auto lock = wallets.begin()->second->lockDecryptedContainer();
       signer.sign();
    }
