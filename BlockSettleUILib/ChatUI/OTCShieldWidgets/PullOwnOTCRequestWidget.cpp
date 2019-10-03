@@ -13,8 +13,8 @@ namespace {
 
    const QString headerTextOTCRequest = QObject::tr("OTC REQUEST");
    const QString headerTextOTCResponse = QObject::tr("OTC RESPONSE");
-   const QString headerTextOTCPendingBuyerSign = QObject::tr("OTC PENDING BUYER'S SIGNATURE");
-   const QString headerTextOTCPendingSellerSign = QObject::tr("OTC PENDING SELLER'S SIGNATURE");
+   const QString headerTextOTCPendingBuyerSign = QObject::tr("OTC PENDING SETTLEMENT PAY-IN");
+   const QString headerTextOTCPendingSellerSign = QObject::tr("OTC PENDING SETTLEMENT PAY-OUT");
 
    const QString buttonTextPull = QObject::tr("PULL");
    const QString buttonTextCancel = QObject::tr("CANCEL");
