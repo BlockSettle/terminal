@@ -303,8 +303,8 @@ bool AuthAddressManager::SubmitAddressToPublicBridge(const bs::Address &address)
    request.set_requesttype(SubmitAuthAddressForVerificationType);
    request.set_requestdata(addressRequest.SerializeAsString());
 
-   logger_->debug("[AuthAddressManager::SubmitAddressToPublicBridge] submitting address {} => {}"
-      , address.display(), address.unprefixed().toHexStr());
+   logger_->debug("[AuthAddressManager::SubmitAddressToPublicBridge] submitting address {}"
+      , address.display());
 
    return SubmitRequestToPB("submit_address", request.SerializeAsString());
 }
@@ -472,8 +472,8 @@ void AuthAddressManager::ProcessErrorResponse(const std::string& responseString)
       logger_->error("[AuthAddressManager::ProcessErrorResponse] failed to parse error message response");
       return;
    }
-
    logger_->error("[AuthAddressManager::ProcessErrorResponse] error message from public bridge: {}", response.errormessage());
+   emit Error(tr("Received error from BS server: %1").arg(QString::fromStdString(response.errormessage())));
 }
 
 void AuthAddressManager::VerifyWalletAddresses()
