@@ -251,6 +251,7 @@ bool ReqCCSettlementContainer::startSigning()
 
          // notify RFQ dialog that signed half could be saved
          emit settlementAccepted();
+         transactionData_->getWallet()->setTransactionComment(txSignedData(), txComment());
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
          emit settlementCancelled();
@@ -264,6 +265,12 @@ bool ReqCCSettlementContainer::startSigning()
    ccSignId_ = signingContainer_->signSettlementPartialTXRequest(ccTxData_, toPasswordDialogData(), cbTx);
    logger_->debug("[CCSettlementTransactionWidget::createCCSignedTXdata] {} recipients", ccTxData_.recipients.size());
    return (ccSignId_ > 0);
+}
+
+std::string ReqCCSettlementContainer::txComment()
+{
+   return std::string(bs::network::Side::toString(bs::network::Side::invert(quote_.side))) + " "
+      + quote_.security + " @ " + std::to_string(price());
 }
 
 void ReqCCSettlementContainer::onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo)

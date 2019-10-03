@@ -154,7 +154,9 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 struct ZeroConfBatch
 {
+   //<zcKey ref, ParsedTx>. ParsedTx carries the key object.
    std::map<BinaryDataRef, std::shared_ptr<ParsedTx>> txMap_;
+   
    std::atomic<unsigned> counter_;
    std::promise<bool> isReadyPromise_;
    unsigned timeout_ = TXGETDATA_TIMEOUT_MS;
@@ -226,7 +228,8 @@ struct ZeroConfSharedStateSnapshot
 
    //TODO: rethink this map, slow to purge
    //<scrAddr,  <dbKeyOfOutput, TxIOPair>> 
-   std::map<BinaryData, std::shared_ptr<std::map<BinaryData, std::shared_ptr<TxIOPair>>>>  txioMap_;
+   std::map<BinaryData, std::shared_ptr<
+      std::map<BinaryData, std::shared_ptr<TxIOPair>>>>  txioMap_;
 
    static std::shared_ptr<ZeroConfSharedStateSnapshot> copy(
       std::shared_ptr<ZeroConfSharedStateSnapshot> obj)
