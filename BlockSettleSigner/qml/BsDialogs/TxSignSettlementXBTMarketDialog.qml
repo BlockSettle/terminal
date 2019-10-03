@@ -24,7 +24,8 @@ TxSignSettlementBaseDialog {
 
     readonly property string onRevokeLabel: passwordDialogData.PayOutRevokeType ? qsTr(" On Revoke") : ""
 
-    signingAllowed: passwordDialogData.RequesterAuthAddressVerified && passwordDialogData.ResponderAuthAddressVerified
+    //signingAllowed: passwordDialogData.RequesterAuthAddressVerified && passwordDialogData.ResponderAuthAddressVerified
+    signingAllowed: true
 
     function getInputValue() {
         if (is_payOut) {

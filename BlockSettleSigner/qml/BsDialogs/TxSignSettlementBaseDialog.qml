@@ -55,10 +55,13 @@ CustomTitleDialogWindow {
     width: 500
 
     function init() {
-        if (walletInfo.encType === QPasswordData.Password) {
+        if (walletInfo.encType === QPasswordData.Auth) {
             btnConfirm.visible = false
             btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
         }
+
+        // auth addr verification temporally disabled, eid auth init immediately
+        initAuth()
     }
 
     function initAuth() {
@@ -103,9 +106,10 @@ CustomTitleDialogWindow {
     }
 
     onSigningAllowedChanged: {
-        if (signingAllowed) {
-            initAuth()
-        }
+        // auth addr verification temporally disabled
+//        if (signingAllowed) {
+//            initAuth()
+//        }
     }
 
     cContentItem: ColumnLayout {
@@ -267,11 +271,11 @@ CustomTitleDialogWindow {
                     text: qsTr("Auth eID")
                     visible: walletInfo.encType === QPasswordData.Auth
                 }
-//                CustomLabel {
-//                    Layout.alignment: Qt.AlignRight
-//                    // text: walletInfo.email()
-//                    visible: walletInfo.encType === QPasswordData.Auth
-//                }
+                CustomLabel {
+                    Layout.alignment: Qt.AlignRight
+                    text: walletInfo.email()
+                    visible: walletInfo.encType === QPasswordData.Auth
+                }
             }
 
             RowLayout {
