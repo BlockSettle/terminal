@@ -387,7 +387,7 @@ void WalletsWidget::onShowContextMenu(QMenu *menu, QPoint where)
 void WalletsWidget::onWalletContextMenu(const QPoint &p)
 {
    const auto node = walletsModel_->getNode(ui_->treeViewWallets->indexAt(p));
-   if (!node || node->hasChildren() || (node->parent()->type() != WalletNode::Type::Root)) {
+   if (!node || node->hasChildren() || !node->parent() || (node->parent()->type() != WalletNode::Type::Root)) {
       return;
    }
 

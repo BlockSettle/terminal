@@ -275,6 +275,7 @@ bool OtcClient::sendQuoteResponse(Peer *peer, const QuoteResponse &quoteResponse
 
    Otc::ContactMessage msg;
    auto d = msg.mutable_quote_response();
+   d->set_sender_side(Otc::Side(quoteResponse.ourSide));
    copyRange(quoteResponse.price, d->mutable_price());
    copyRange(quoteResponse.amount, d->mutable_amount());
    send(peer, msg);

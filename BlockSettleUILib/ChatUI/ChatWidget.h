@@ -4,13 +4,14 @@
 #include <memory>
 #include <QPointer>
 #include <QWidget>
+
+#include "ChatWidgetStates/AbstractChatWidgetState.h"
 #include "ChatProtocol/ChatClientService.h"
 #include "ChatProtocol/ClientParty.h"
 #include "OtcTypes.h"
 
 class QItemSelection;
 
-class AbstractChatWidgetState;
 class AuthAddressManager;
 class ArmoryConnection;
 class ChatPartiesTreeModel;
