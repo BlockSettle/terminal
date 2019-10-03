@@ -16,6 +16,7 @@ BSPasswordInput {
     btnAccept.text: qsTr("Continue")
     btnAccept.enabled: passwordCorrect
 
+    decryptHeaderText: qsTr("Check Password")
 
     CustomHeader {
         text: qsTr("Please take care of your assets!")

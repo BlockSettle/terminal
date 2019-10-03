@@ -16,7 +16,6 @@ CustomTitleDialogWindow {
     property string walletName
     property int requestType
 
-    property string centralText : qsTr("Activate Auth eID signing\n Wallet ID: %1\n Wallet Name: %2").arg(walletId).arg(walletName)
     acceptable: false
     rejectable: true
     onEnterPressed: {
@@ -37,9 +36,10 @@ CustomTitleDialogWindow {
             root.title = "Deactivate Auth eID encryption"
             break
         case AutheIDClient.BackupWallet:
-            root.title = "Backup Wallet"
+            root.title = qsTr("Export Wallet")
             break
         case AutheIDClient.SignWallet:
+            break
         default:
             root.title = "Sign with Auth eID"
             break
@@ -63,30 +63,67 @@ CustomTitleDialogWindow {
     cContentItem: ColumnLayout {
         Layout.fillWidth: true
         ColumnLayout {
-            CustomLabelValue{
-                id: labelText_
-                text: centralText
-                lineHeight: 1.5
-                padding: 0
-                Layout.preferredWidth: root.width
-                horizontalAlignment: Text.AlignHCenter
-                color: BSStyle.dialogTitleWhiteColor
-                Layout.minimumHeight: 40
+            spacing: 0
+            Layout.topMargin: 5
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
+            CustomHeader {
+                text: qsTr("Wallet Details")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
             }
 
-            CustomLabel{
-                id: labelDetails_
-                text: email
-                padding: 15
-                //textFormat: Text.RichText
-                Layout.preferredWidth: root.width
-                horizontalAlignment: Text.AlignHCenter
+            RowLayout {
+                spacing: 5
+                Layout.topMargin: 5
+                Layout.fillWidth: true
 
-                onLinkActivated: Qt.openUrlExternally(link)
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.NoButton
-                    cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                CustomLabel {
+                    Layout.minimumWidth: 110
+                    Layout.preferredWidth: 110
+                    Layout.maximumWidth: 110
+                    Layout.fillWidth: true
+                    text: qsTr("Wallet name")
+                }
+                CustomLabel {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 110
+                    text: walletInfo.name
+                }
+            }
+
+            RowLayout {
+                spacing: 5
+                Layout.fillWidth: true
+
+                CustomLabel {
+                    Layout.minimumWidth: 110
+                    Layout.preferredWidth: 110
+                    Layout.maximumWidth: 110
+                    Layout.fillWidth: true
+                    text: qsTr("Wallet ID")
+                }
+                CustomLabel {
+                    Layout.fillWidth: true
+                    text: walletInfo.walletId
+                }
+            }
+
+            RowLayout {
+                spacing: 5
+                Layout.fillWidth: true
+
+                CustomLabel {
+                    Layout.minimumWidth: 110
+                    Layout.preferredWidth: 110
+                    Layout.maximumWidth: 110
+                    Layout.fillWidth: true
+                    text: qsTr("Auth eID")
+                }
+                CustomLabel {
+                    Layout.fillWidth: true
+                    text: walletInfo.email()
                 }
             }
 
@@ -94,8 +131,6 @@ CustomTitleDialogWindow {
                 id: authProgress
                 Layout.fillWidth: true
                 Layout.topMargin: 5
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
                 from: 0.0
                 to: timeout
                 value: countDown
@@ -112,7 +147,6 @@ CustomTitleDialogWindow {
             }
 
         }
-
     }
 
     cFooterItem: RowLayout {

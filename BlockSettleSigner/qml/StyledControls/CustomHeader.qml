@@ -15,7 +15,7 @@ Button {
         text: parent.text
         font.capitalization: Font.AllUppercase
         color: { parent.enabled ? textColor : BSStyle.disabledHeaderColor }
-        font.pixelSize: 12
+        font.pixelSize: 11
     }
 
     Rectangle {

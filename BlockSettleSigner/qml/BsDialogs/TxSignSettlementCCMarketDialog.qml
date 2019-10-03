@@ -41,9 +41,9 @@ TxSignSettlementBaseDialog {
         }
     }
 
-    readonly property string inputAmount: "- " + displayAmount(txInfo.inputAmount) + inputProduct
-    readonly property string changeAmount: "+ " + displayAmount(txInfo.changeAmount) + inputProduct
-    readonly property string fee: "- " + displayAmount(txInfo.fee) + inputProduct
+    readonly property string inputAmount: minus_string + displayAmount(txInfo.inputAmount) + inputProduct
+    readonly property string changeAmount: plus_string + displayAmount(txInfo.changeAmount) + inputProduct
+    readonly property string fee: minus_string + displayAmount(txInfo.fee) + inputProduct
 
     Component.onCompleted: {
         quantity = getQuantity() + " " + product
@@ -165,7 +165,7 @@ TxSignSettlementBaseDialog {
                         horizontalAlignment: Text.AlignRight
                         verticalAlignment: Text.AlignTop
                         font: fixedFont
-                        color: passwordDialogData.deliveryUTXOVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+                        color: passwordDialogData.DeliveryUTXOVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
                     }
                 }
             }
@@ -237,7 +237,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_sell
-            text: "- " + displayAmount(txInfo.amount) + inputProduct
+            text: minus_string + displayAmount(txInfo.amount) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 
@@ -249,7 +249,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_sell
-            text: "+ " + txInfo.amountXBTReceived().toFixed(8) + " XBT"
+            text: plus_string + txInfo.amountXBTReceived().toFixed(8) + " XBT"
             Layout.alignment: Qt.AlignRight
         }
 
@@ -262,7 +262,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_buy
-            text: "- " + txInfo.amount.toFixed(8) + inputProduct
+            text: minus_string + txInfo.amount.toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 
@@ -274,7 +274,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_buy
-            text: "+ " + getQuantity() + " " + product
+            text: plus_string + getQuantity() + " " + product
             Layout.alignment: Qt.AlignRight
         }
 
@@ -287,7 +287,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_buy
-            text: "- " + txInfo.total.toFixed(8) + inputProduct
+            text: minus_string + txInfo.total.toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
     }

@@ -6,7 +6,7 @@ import "../BsStyles"
 TextField {
     id: root
     horizontalAlignment: Text.AlignHLeft
-    font.pixelSize: 12
+    font.pixelSize: 11
     color: BSStyle.inputsFontColor
     padding: 0
     selectByMouse: true

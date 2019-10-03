@@ -4,7 +4,7 @@ import "../BsStyles"
 
 TextArea {
     horizontalAlignment: Text.AlignHLeft
-    font.pixelSize: 12
+    font.pixelSize: 11
     color: "white"
     wrapMode: TextEdit.WordWrap
 

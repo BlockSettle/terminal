@@ -4,7 +4,7 @@ import "../BsStyles"
 
 Label {
     horizontalAlignment: Text.AlignHLeft
-    font.pixelSize: 12
+    font.pixelSize: 11
     color: { enabled ? BSStyle.labelsTextColor : BSStyle.disabledColor }
     wrapMode: Text.WordWrap
     topPadding: 5

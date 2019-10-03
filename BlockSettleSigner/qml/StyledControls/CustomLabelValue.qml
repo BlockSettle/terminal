@@ -3,7 +3,7 @@ import QtQuick.Controls 2.3
 import "../BsStyles"
 
 Label {
-    font.pixelSize: 12
+    font.pixelSize: 11
     color: "white"
     wrapMode: Text.WordWrap
     topPadding: 5

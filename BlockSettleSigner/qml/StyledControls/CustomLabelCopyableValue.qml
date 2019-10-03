@@ -11,7 +11,7 @@ Label {
     property alias mouseArea: mouseArea
     property string textForCopy
 
-    font.pixelSize: 12
+    font.pixelSize: 11
     color: "white"
     wrapMode: Text.WordWrap
     padding: 5

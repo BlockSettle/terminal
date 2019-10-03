@@ -46,20 +46,27 @@ CustomTitleDialogWindow {
     readonly property bool is_sell: side === "SELL"
     readonly property bool is_buy: side === "BUY"
 
+    readonly property string minus_string: ""  // "- "
+    readonly property string plus_string: ""   // "+ "
+
     id: root
     title: passwordDialogData.Title
     rejectable: true
     width: 500
 
     function init() {
+        if (walletInfo.encType === QPasswordData.Password) {
+            btnConfirm.visible = false
+            btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
+        }
+    }
+
+    function initAuth() {
         if (walletInfo.encType !== QPasswordData.Auth) {
             return
         }
 
-        btnConfirm.visible = false
-        btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
-
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo)
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo)
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth
@@ -83,7 +90,7 @@ CustomTitleDialogWindow {
 
         onCancelSignTx: {
             console.log("TxSignSettlementBaseDialog.qml, cancel requested for id=" + settlementId)
-            if (settlementId === passwordDialogData.SettlementId) {
+            if (txId === passwordDialogData.SettlementId) {
                 rejectAnimated()
             }
         }
@@ -92,6 +99,12 @@ CustomTitleDialogWindow {
     onBsRejected: {
         if (authSign) {
             authSign.cancel()
+        }
+    }
+
+    onSigningAllowedChanged: {
+        if (signingAllowed) {
+            initAuth()
         }
     }
 
@@ -244,6 +257,24 @@ CustomTitleDialogWindow {
             }
 
             RowLayout {
+                spacing: 5
+                Layout.fillWidth: true
+                visible: walletInfo.encType === QPasswordData.Auth
+
+                CustomLabelValue {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignCenter
+                    text: qsTr("Auth eID")
+                    visible: walletInfo.encType === QPasswordData.Auth
+                }
+//                CustomLabel {
+//                    Layout.alignment: Qt.AlignRight
+//                    // text: walletInfo.email()
+//                    visible: walletInfo.encType === QPasswordData.Auth
+//                }
+            }
+
+            RowLayout {
                 spacing: 25
                 Layout.fillWidth: true
 
@@ -303,7 +334,7 @@ CustomTitleDialogWindow {
                 }
 
                 CustomLabelValue {
-                    text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed(0))
+                    text: signingAllowed ? qsTr("%1 seconds left").arg(timer.timeLeft.toFixed(0)) : qsTr("Authentication Address could not be verified")
                     Layout.fillWidth: true
                 }
             }
@@ -327,10 +358,11 @@ CustomTitleDialogWindow {
 
             CustomButtonPrimary {
                 id: btnConfirm
-                text: walletInfo.encType === QPasswordData.Password ? qsTr("CONFIRM") : qsTr("Continue")
+                visible: walletInfo.encType === QPasswordData.Password
+                text: qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                enabled: (tfPassword.text.length || acceptable)
+                enabled: (signingAllowed && (tfPassword.text.length || acceptable))
                 onClicked: {
                     if (walletInfo.encType === QPasswordData.Password) {
                         passwordData.textPassword = tfPassword.text

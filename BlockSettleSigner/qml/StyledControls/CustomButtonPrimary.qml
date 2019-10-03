@@ -14,7 +14,7 @@ Button {
         opacity: enabled ? 1.0 : 0.3
         color: BSStyle.textColor
         font.capitalization: Font.AllUppercase
-        font.pixelSize: 12
+        font.pixelSize: 11
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
