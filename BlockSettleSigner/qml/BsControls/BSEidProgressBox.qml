@@ -69,7 +69,7 @@ CustomTitleDialogWindow {
             Layout.rightMargin: 10
 
             CustomHeader {
-                text: root.title
+                text: qsTr("Wallet Details")
                 Layout.fillWidth: true
                 Layout.preferredHeight: 25
             }
