@@ -643,7 +643,7 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
       return false;
    }
 
-   bool result = false;
+   bool result = true;
    {
       const bs::core::WalletPasswordScoped lock(wallet, oldPass.password);
       if (request.add_new()) {
