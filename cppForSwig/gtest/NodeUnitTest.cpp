@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "NodeUnitTest.h"
+#include "../BlockUtils.h"
 
 using namespace std;
 
@@ -14,6 +15,7 @@ using namespace std;
 NodeUnitTest::NodeUnitTest(uint32_t magic_word) :
    BitcoinP2P("", "", magic_word)
 {
+   //0 is reserved for coinbase tx ordering in spoofed blocks
    counter_.store(1, memory_order_relaxed);
 }
 
@@ -30,33 +32,34 @@ void NodeUnitTest::notifyNewBlock(void)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void NodeUnitTest::mineNewBlock(unsigned count, const BinaryData& h160)
+map<unsigned, BinaryData> NodeUnitTest::mineNewBlock(BlockDataManager* bdm,
+   unsigned count, const BinaryData& h160)
 {
    Recipient_P2PKH recipient(h160, 50 * COIN);
-   mineNewBlock(count, &recipient);
+   return mineNewBlock(bdm, count, &recipient);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::map<unsigned, BinaryData> NodeUnitTest::mineNewBlock(
+map<unsigned, BinaryData> NodeUnitTest::mineNewBlock(BlockDataManager* bdm,
    unsigned count, ScriptRecipient* recipient)
 {
-   BinaryData prevHash;
-   uint32_t timestamp;
-   BinaryData diffBits;
-   unsigned blockHeight;
-   
+
+   if(header_.prevHash_.getSize() == 0)
    {
       auto top = blockchain_->top();
-      prevHash = top->getThisHash();
-      timestamp = top->getTimestamp();
-      diffBits  = top->getDiffBits();
-      blockHeight = top->getBlockHeight() + 1;
+      header_.prevHash_ = top->getThisHash();
+      header_.timestamp_ = top->getTimestamp();
+      header_.diffBits_  = top->getDiffBits();
+      header_.blockHeight_ = top->getBlockHeight() + 1;
    }
 
    std::map<unsigned, BinaryData> result;
+   bool stagedZc = false;
 
    for (unsigned i = 0; i < count; i++)
    {
+      UnitTestBlock block;
+
       //create coinbase tx
       BinaryWriter bwCoinbase;
       {
@@ -93,8 +96,10 @@ std::map<unsigned, BinaryData> NodeUnitTest::mineNewBlock(
       coinbaseObj->rawTx_ = bwCoinbase.getData();
       coinbaseObj->hash_ = BtcUtils::getHash256(coinbaseObj->rawTx_);
       coinbaseObj->order_ = 0;
+      block.coinbase_ = Tx(coinbaseObj->rawTx_);
+      block.height_ = header_.blockHeight_++;
 
-      result.insert(make_pair(blockHeight++, coinbaseObj->hash_));
+      result.insert(make_pair(block.height_, coinbaseObj->hash_));
 
       //grab all tx in the mempool, respect ordering
       vector<shared_ptr<MempoolObject>> mempoolV;
@@ -102,6 +107,9 @@ std::map<unsigned, BinaryData> NodeUnitTest::mineNewBlock(
       mempoolV.push_back(coinbaseObj);
       for (auto& obj : mempool_)
       {
+         if (obj.second->staged_)
+            stagedZc = true;
+
          if (obj.second->blocksUntilMined_ == 0)
          {
             mempoolV.push_back(obj.second);
@@ -114,7 +122,16 @@ std::map<unsigned, BinaryData> NodeUnitTest::mineNewBlock(
          }
       }
 
-      sort(mempoolV.begin(), mempoolV.end());
+      struct SortStruct
+      {
+         bool operator()(const shared_ptr<MempoolObject>& lhs,
+            const shared_ptr<MempoolObject>& rhs) const
+         {
+            return *lhs < *rhs;
+         }
+      };
+
+      sort(mempoolV.begin(), mempoolV.end(), SortStruct());
 
       //compute merkle
       vector<BinaryData> txHashes;
@@ -135,23 +152,29 @@ std::map<unsigned, BinaryData> NodeUnitTest::mineNewBlock(
          bwBlock.put_uint32_t(1);
 
          //previous hash
-         bwBlock.put_BinaryData(prevHash);
+         bwBlock.put_BinaryData(header_.prevHash_);
 
          //merkle root
          bwBlock.put_BinaryData(merkleRoot);
 
          //timestamp
-         bwBlock.put_uint32_t(timestamp + 600);
+         bwBlock.put_uint32_t(header_.timestamp_ + 600);
 
          //diff bits
-         bwBlock.put_BinaryData(diffBits);
+         bwBlock.put_BinaryData(header_.diffBits_);
 
          //nonce
          bwBlock.put_uint32_t(0);
 
          //update prev hash and timestamp for the next block
-         prevHash = BtcUtils::getHash256(bwBlock.getDataRef());
-         timestamp += 600;
+         header_.prevHash_ = BtcUtils::getHash256(bwBlock.getDataRef());
+
+         block.headerHash_ = header_.prevHash_;
+         block.rawHeader_ = bwBlock.getDataRef();
+         
+         block.diffBits_ = header_.diffBits_;
+         block.timestamp_ = header_.timestamp_;
+         header_.timestamp_ += 600;
       }
 
       {
@@ -162,8 +185,13 @@ std::map<unsigned, BinaryData> NodeUnitTest::mineNewBlock(
 
          //tx
          for (auto& txObj : mempoolV)
+         {
             bwBlock.put_BinaryData(txObj->rawTx_);
+            block.transactions_.push_back(Tx(txObj->rawTx_));
+         }
       }
+
+      blocks_.push_back(block);
 
       {
          /* append to blocks data file */
@@ -191,14 +219,78 @@ std::map<unsigned, BinaryData> NodeUnitTest::mineNewBlock(
       }
    }
 
-   //push notification
-   notifyNewBlock();
+   if (stagedZc && mempool_.size() > 0)
+   {
+      /*
+      We have staged zc, need to push them. Have to wait for the mining to 
+      complete first however, or the staged zc will most likely be rejected
+      as invalid.
+      */
+
+      //create hook
+      auto promPtr = make_shared<promise<bool>>();
+      auto fut = promPtr->get_future();
+      auto waitOnNotif = [promPtr](BDV_Notification* notifPtr)->void
+      {
+         auto blockNotif = dynamic_cast<BDV_Notification_NewBlock*>(notifPtr);
+         if (blockNotif == nullptr)
+            promPtr->set_value(false);
+         else
+            promPtr->set_value(true);
+      };
+
+      auto hookPtr = make_shared<BDVNotificationHook>();
+      hookPtr->lambda_ = waitOnNotif;
+
+      //set hook
+      bdm->registerOneTimeHook(hookPtr);
+
+      //push db block notification
+      notifyNewBlock();
+
+      //wait on hook
+      if (!fut.get())
+         throw runtime_error("unexpected bdm notificaiton");
+
+      //push the staged transactions
+      vector<InvEntry> invVec;
+      for (auto& tx : mempool_)
+      {
+         InvEntry ie;
+         ie.invtype_ = Inv_Msg_Witness_Tx;
+         memcpy(ie.hash, tx.first.getPtr(), 32);
+         invVec.emplace_back(ie);
+      }
+      
+      processInvTx(invVec);
+   }
+   else
+   {
+      //push db block notification
+      notifyNewBlock();
+   }
 
    return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void NodeUnitTest::pushZC(const vector<pair<BinaryData, unsigned>>& txVec)
+void NodeUnitTest::setReorgBranchPoint(shared_ptr<BlockHeader> header)
+{
+   if (header == nullptr)
+      throw runtime_error("null header");
+
+   header_.prevHash_ = header->getThisHash();
+   header_.blockHeight_ = header->getBlockHeight();
+   header_.timestamp_ = header->getTimestamp();
+   header_.diffBits_ = header->getDiffBits();
+
+   //purge mempool
+   mempool_.clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void NodeUnitTest::pushZC(const vector<pair<BinaryData, unsigned>>& txVec, 
+   bool stage)
 {
    vector<InvEntry> invVec;
 
@@ -211,6 +303,7 @@ void NodeUnitTest::pushZC(const vector<pair<BinaryData, unsigned>>& txVec)
       obj->hash_ = txNew.getThisHash();
       obj->order_ = counter_.fetch_add(1, memory_order_relaxed);
       obj->blocksUntilMined_ = tx.second;
+      obj->staged_ = stage;
 
       /***
       cheap zc replacement code: check for outpoint reuse, assume unit
@@ -262,6 +355,14 @@ void NodeUnitTest::pushZC(const vector<pair<BinaryData, unsigned>>& txVec)
       memcpy(ie.hash, insertIter.first->second->hash_.getPtr(), 32);
       invVec.emplace_back(ie);
    }
+
+   /*
+   Do not push the tx to the db if it is flagged for staging. It will get
+   pushed after the next mining call. This is mostly useful for reorgs 
+   (where you can't push zc that conflicts with the still valid branch)
+   */
+   if (stage)
+      return;
 
    processInvTx(invVec);
 }

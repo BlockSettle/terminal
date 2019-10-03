@@ -644,6 +644,7 @@ bool HeadlessContainerListener::onSignAuthAddrRevokeRequest(const std::string &c
       try {
          {
             const bs::core::WalletPasswordScoped passLock(walletsMgr_->getPrimaryWallet(), pass);
+            const auto lock = wallet->lockDecryptedContainer();
             const auto tx = AuthAddressLogic::revoke(request.auth_address(), wallet->getResolver()
                , request.validation_address(), utxo);
             SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);

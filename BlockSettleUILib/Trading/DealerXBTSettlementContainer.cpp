@@ -142,7 +142,6 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
 
    // tx details
    dialogData.setValue(PasswordDialogData::TxInputProduct, UiUtils::XbtCurrency);
-   dialogData.setValue(PasswordDialogData::TotalSpentVisible, true);
 
    return dialogData;
 }

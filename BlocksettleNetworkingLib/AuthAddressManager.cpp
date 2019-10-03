@@ -289,35 +289,22 @@ void AuthAddressManager::OnDataReceived(const std::string& data)
    }
 }
 
-static AddressScriptType mapToScriptType(AddressEntryType aet)
-{
-   switch (aet) {
-   case AddressEntryType_P2SH:   return AddressScriptType::NestedSegWitScriptType;
-   case AddressEntryType_P2WSH:
-   case AddressEntryType_P2WPKH: return AddressScriptType::NativeSegWitScriptType;
-   default:    break;
-   }
-   return AddressScriptType::PayToHashScriptType;
-}
-
 bool AuthAddressManager::SubmitAddressToPublicBridge(const bs::Address &address)
 {
    SubmitAuthAddressForVerificationRequest addressRequest;
 
    addressRequest.set_username(celerClient_->email());
-   addressRequest.set_addresstype(AddressType::BitcoinsAddressType);
    addressRequest.set_networktype((settings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
       ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
-   addressRequest.set_scripttype(mapToScriptType(address.getType()));
 
-   addressRequest.set_address160hex(address.prefixed().toHexStr());
+   addressRequest.set_address(address.display());
 
    RequestPacket  request;
    request.set_requesttype(SubmitAuthAddressForVerificationType);
    request.set_requestdata(addressRequest.SerializeAsString());
 
-   logger_->debug("[AuthAddressManager::SubmitAddressToPublicBridge] submitting address {} => {}"
-      , address.display(), address.unprefixed().toHexStr());
+   logger_->debug("[AuthAddressManager::SubmitAddressToPublicBridge] submitting address {}"
+      , address.display());
 
    return SubmitRequestToPB("submit_address", request.SerializeAsString());
 }
@@ -330,7 +317,6 @@ void AuthAddressManager::ConfirmSubmitForVerification(BsClient *bsClient, const 
    request.set_address(address.display());
    request.set_networktype((settings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
       ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
-   request.set_scripttype(mapToScriptType(address.getType()));
    request.set_userid(celerClient_->userId());
 
    std::string requestData = request.SerializeAsString();
@@ -397,16 +383,6 @@ bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)
    return SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
 }
 
-AddressEntryType AuthAddressManager::mapFromScriptType(AddressScriptType scrType)
-{
-   switch (scrType) {
-   case AddressScriptType::NestedSegWitScriptType: return AddressEntryType_P2SH;
-   case AddressScriptType::NativeSegWitScriptType: return AddressEntryType_P2WPKH;
-   default:    break;
-   }
-   return AddressEntryType_P2PKH;
-}
-
 void AuthAddressManager::SubmitToCeler(const bs::Address &address)
 {
    if (celerClient_->IsConnected()) {
@@ -430,7 +406,7 @@ void AuthAddressManager::ProcessSubmitAuthAddressResponse(const std::string& res
       return;
    }
 
-   const bs::Address address(BinaryData::CreateFromHex(response.address160hex()), mapFromScriptType(response.scripttype()));
+   const bs::Address address(response.address());
    if (response.keysubmitted()) {
       if (response.requestconfirmation()) {
          emit AuthAddressConfirmationRequired(response.validationamount());
@@ -441,11 +417,11 @@ void AuthAddressManager::ProcessSubmitAuthAddressResponse(const std::string& res
    else {
       if (response.has_errormessage()) {
          logger_->error("[AuthAddressManager::ProcessSubmitAuthAddressResponse] auth address {} rejected: {}"
-            , BinaryData(response.address160hex()).toHexStr(), response.errormessage());
+            , address.display(), response.errormessage());
          emit Error(tr("Authentication Address rejected: %1").arg(QString::fromStdString(response.errormessage())));
       } else {
          logger_->error("[AuthAddressManager::ProcessSubmitAuthAddressResponse] auth address {} rejected"
-            , BinaryData(response.address160hex()).toHexStr());
+            , address.display());
          emit Error(tr("Authentication Address rejected"));
       }
    }
@@ -496,8 +472,8 @@ void AuthAddressManager::ProcessErrorResponse(const std::string& responseString)
       logger_->error("[AuthAddressManager::ProcessErrorResponse] failed to parse error message response");
       return;
    }
-
    logger_->error("[AuthAddressManager::ProcessErrorResponse] error message from public bridge: {}", response.errormessage());
+   emit Error(tr("Received error from BS server: %1").arg(QString::fromStdString(response.errormessage())));
 }
 
 void AuthAddressManager::VerifyWalletAddresses()

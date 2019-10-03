@@ -1,6 +1,7 @@
 #ifndef OTC_TYPES_H
 #define OTC_TYPES_H
 
+#include <chrono>
 #include <cstdint>
 #include <string>
 #include <QDateTime>
@@ -177,6 +178,9 @@ namespace bs {
 
          double fromCents(int64_t value);
          int64_t toCents(double value);
+
+         std::chrono::milliseconds payoutTimeout();
+         std::chrono::milliseconds payinTimeout();
       }
    }
 }

@@ -198,6 +198,25 @@ bool LedgerEntry::operator==(const LedgerEntry& rhs)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+vector<BinaryData> LedgerEntry::getScrAddrList() const
+{
+   if (ptr_ == nullptr)
+      throw runtime_error("uninitialized ledger entry");
+   auto addrListPtr = ptr_->scraddr();
+
+   vector<BinaryData> addrList;
+   for (unsigned i = 0; i < ptr_->scraddr_size(); i++)
+   {
+      const auto& addrPtr = addrListPtr[i];
+      BinaryDataRef addrRef; addrRef.setRef(addrPtr);
+
+      addrList.push_back(addrRef);
+   }
+
+   return addrList;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //
 // RemoteCallback
 //
