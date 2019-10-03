@@ -246,7 +246,7 @@ void AbstractChatWidgetState::onOTCPeerError(const bs::network::otc::Peer *peer,
       return;
    }
       
-   if (!peer) {
+   if (!peer || peer->state == bs::network::otc::State::Idle) {
       return;
    }
 
