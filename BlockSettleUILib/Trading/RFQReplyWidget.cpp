@@ -124,7 +124,9 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<bs::DealerUtxoResAdapter> &dealerUtxoAdapter
-   , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider)
+   , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
+   , OrderListModel *orderListModel
+)
 {
    logger_ = logger;
    celerClient_ = celerClient;
@@ -169,10 +171,9 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    connect(quoteProvider_.get(), &QuoteProvider::quoteNotifCancelled, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteNotifCancelled);
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQReplyWidget::onSignTxRequested);
 
-   auto ordersModel = new OrderListModel(quoteProvider_, assetManager, this);
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   ui_->treeViewOrders->setModel(ordersModel);
-   ui_->treeViewOrders->initWithModel(ordersModel);
+   ui_->treeViewOrders->setModel(orderListModel);
+   ui_->treeViewOrders->initWithModel(orderListModel);
 
    connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQReplyWidget::onConnectedToCeler);
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQReplyWidget::onDisconnectedFromCeler);
@@ -459,16 +460,8 @@ void RFQReplyWidget::showEditableRFQPage()
 }
 
 
-void RFQReplyWidget::onMessageFromPB(std::string data)
+void RFQReplyWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
-   Blocksettle::Communication::ProxyTerminalPb::Response response;
-   bool result = response.ParseFromString(data);
-   if (!result) {
-      logger_->error("[RFQReplyWidget::onMessageFromPB] failed to parse message: {}"
-                     , data);
-      return;
-   }
-
    switch (response.data_case()) {
       case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin:
          {
@@ -492,6 +485,8 @@ void RFQReplyWidget::onMessageFromPB(std::string data)
             // unsigned_payin_data - serialized payin. binary
             emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data());
          }
+         break;
+      default:
          break;
    }
 

@@ -334,7 +334,13 @@ void BsClient::processCeler(const Response_Celer &response)
 
 void BsClient::processProxyPb(const Response_ProxyPb &response)
 {
-   emit processPbMessage(response.data());
+   Blocksettle::Communication::ProxyTerminalPb::Response message;
+   bool result = message.ParseFromString(response.data());
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid PB message");
+      return;
+   }
+   emit processPbMessage(message);
 }
 
 void BsClient::requestSignResult(std::chrono::seconds timeout

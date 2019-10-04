@@ -212,13 +212,13 @@ namespace bs {
          std::string reqTransaction;
          std::string dealerTransaction;
          std::string pendingStatus;
-         double quantity;
-         double leavesQty;
-         double price;
-         double avgPx;
+         double quantity{};
+         double leavesQty{};
+         double price{};
+         double avgPx{};
 
-         Side::Type  side;
-         Asset::Type assetType;
+         Side::Type  side{};
+         Asset::Type assetType{};
 
          enum Status {
             New,
@@ -226,7 +226,7 @@ namespace bs {
             Failed,
             Filled
          };
-         Status status;
+         Status status{};
       };
 
 
