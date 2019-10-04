@@ -15,18 +15,10 @@ message Request
         bytes data = 2;
     }
 
-    message FindOrders
-    {
-        string email = 1;
-        // should be com::celertech::baseserver::communication::protobuf::MultiResponseMessage
-        bytes data = 2;
-    }
-
     oneof data
     {
         // Messages
         Terminal terminal = 30;
-        FindOrders find_orders = 31;
     }
 }
 
@@ -49,11 +41,9 @@ message Response
         bytes data = 2;
     }
 
-    message FindOrders
+    message ClientConnected
     {
         string email = 1;
-        // should be com::celertech::marketmerchant::api::order::FindAllOrderSnapshotsBySessionKey from terminal (not checked)
-        bytes data = 2;
     }
 
     oneof data
@@ -61,6 +51,6 @@ message Response
         // Messages
         Terminal terminal = 30;
         OnlineUsers online_users = 31;
-        FindOrders find_orders = 32;
+        ClientConnected client_connected = 32;
     }
 }
