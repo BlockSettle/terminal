@@ -32,8 +32,8 @@ namespace bs {
             switch (side) {
                case com::celertech::marketmerchant::api::enums::side::BUY:    return Buy;
                case com::celertech::marketmerchant::api::enums::side::SELL:   return Sell;
-               default: return Undefined;
             }
+            return Undefined;
          }
          static com::celertech::marketmerchant::api::enums::side::Side toCeler(Type side) {
             switch (side) {
@@ -363,6 +363,15 @@ namespace bs {
          uint64_t    amount;
          std::string product;
          uint64_t    timestamp;
+      };
+
+      enum class Subsystem : int
+      {
+         Celer = 0,
+         Otc = 1,
+
+         First = Celer,
+         Last = Otc,
       };
 
    }  //namespace network
