@@ -103,6 +103,7 @@ private slots:
 
    void onOtcUpdated(const bs::network::otc::Peer *peer);
    void onOtcPublicUpdated();
+   void onOTCPeerError(const bs::network::otc::Peer *peer, const std::string &errorMsg);
 
    void onOtcRequestSubmit();
    void onOtcResponseAccept();

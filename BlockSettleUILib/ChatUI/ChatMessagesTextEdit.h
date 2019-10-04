@@ -76,7 +76,7 @@ public:
    QString getFormattedTextFromSelection();
 
 public slots:
-   void onSetColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
+   void onSetColumnsWidth(int time, int icon, int user, int message);
    void onSetOwnUserId(const std::string &userId) { ownUserId_ = userId; }
    void onSetClientPartyModel(const Chat::ClientPartyModelPtr& partyModel);
    void onSwitchToChat(const std::string& partyId);
@@ -130,6 +130,7 @@ private:
    void notifyMessageChanged(Chat::MessagePtr message);
    void insertMessageInDoc(QTextCursor& cursor, const std::string& partyId, int index);
    void updateMessage(const std::string& partyId, int index);
+   QString elideUserName(const std::string& displayName);
 
 private:
    Chat::ClientPartyModelPtr partyModel_;
@@ -150,6 +151,7 @@ private:
 
    QTextCursor textCursor_;
    QString anchor_;
+   int userColumnWidth_ = 0;
 };
 
 #endif // CHATMESSAGESTEXTEDIT_H

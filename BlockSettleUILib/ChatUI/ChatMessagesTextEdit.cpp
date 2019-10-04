@@ -81,7 +81,7 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
          }
 
          if (!previousClientPartyPtr->isGlobal()) {
-            return QString::fromStdString(previousClientPartyPtr->displayName());
+            return elideUserName(previousClientPartyPtr->displayName());
          }
          else {
             Chat::ClientPartyPtr userParty = partyModel_->getPartyByUserName(senderHash);
@@ -301,7 +301,7 @@ const Chat::MessagePtr ChatMessagesTextEdit::onMessageStatusChanged(const std::s
    return message;
 }
 
-void ChatMessagesTextEdit::onSetColumnsWidth(const int &time, const int &icon, const int &user, const int &message)
+void ChatMessagesTextEdit::onSetColumnsWidth(int time, int icon, int user, int message)
 {
    QVector <QTextLength> col_widths;
    col_widths << QTextLength(QTextLength::FixedLength, time);
@@ -309,6 +309,7 @@ void ChatMessagesTextEdit::onSetColumnsWidth(const int &time, const int &icon, c
    col_widths << QTextLength(QTextLength::FixedLength, user);
    col_widths << QTextLength(QTextLength::VariableLength, message);
    tableFormat_.setColumnWidthConstraints(col_widths);
+   userColumnWidth_ = user;
 }
 
 void ChatMessagesTextEdit::onSetClientPartyModel(const Chat::ClientPartyModelPtr& partyModel)
@@ -416,6 +417,11 @@ void ChatMessagesTextEdit::updateMessage(const std::string& partyId, int index)
    cursor.removeSelectedText();
 
    insertMessageInDoc(cursor, partyId, index);
+}
+
+QString ChatMessagesTextEdit::elideUserName(const std::string& displayName)
+{
+   return fontMetrics().elidedText(QString::fromStdString(displayName), Qt::ElideRight, userColumnWidth_);
 }
 
 void ChatMessagesTextEdit::showMessage(const std::string& partyId, int messageIndex)
@@ -538,7 +544,7 @@ QString ChatMessagesTextEdit::toHtmlUsername(const std::string& username, const 
    return QStringLiteral("<a href=\"user:%1\" style=\"color:%2\">%3</a>")
       .arg(QString::fromStdString(userId))
       .arg(internalStyle_.colorHyperlink().name())
-      .arg(QString::fromStdString(username));
+      .arg(elideUserName(username));
 }
 
 QString ChatMessagesTextEdit::toHtmlInvalid(const QString &text)
