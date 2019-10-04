@@ -43,11 +43,13 @@ void bs::SettlementMonitor::checkNewEntries()
       (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) mutable -> void
    {
       logger->debug("[SettlementMonitor::checkNewEntries::cbHistory]");
+#ifdef VALIDITY_LOCK
       std::lock_guard<ValidityHandle> lock(handle);
       if (!handle.isValid()) {
          logger->debug("[SettlementMonitor::checkNewEntries::cbHistory] aborted");
          return;
       }
+#endif
 
       try {
          auto le = entries.get();
@@ -63,11 +65,13 @@ void bs::SettlementMonitor::checkNewEntries()
          for (const auto &entry : le) {
             const auto &cbPayOut = [this, entry, handle, logger](bool ack) mutable {
                logger->debug("[SettlementMonitor::checkNewEntries::cbPayOut]");
+#ifdef VALIDITY_LOCK
                std::lock_guard<ValidityHandle> lock(handle);
                if (!handle.isValid()) {
                   logger->debug("[SettlementMonitor::checkNewEntries::cbPayOut] aborted");
                   return;
                }
+#endif
 
                logger->debug("[SettlementMonitor::checkNewEntries::cbPayOut] ack={}", ack);
                if (ack) {
@@ -82,11 +86,13 @@ void bs::SettlementMonitor::checkNewEntries()
             const auto &cbPayIn = [this, entry, cbPayOut, handle, logger](bool ack) mutable
             {
                logger->debug("[SettlementMonitor::checkNewEntries::cbPayIn]");
+#ifdef VALIDITY_LOCK
                std::lock_guard<ValidityHandle> lock(handle);
                if (!handle.isValid()) {
                   logger->debug("[SettlementMonitor::checkNewEntries::cbPayIn] aborted");
                   return;
                }
+#endif
 
                logger->debug("[SettlementMonitor::checkNewEntries::cbPayIn] ack={}", ack);
                if (ack) {
@@ -122,11 +128,13 @@ void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry 
       (const Tx &tx) mutable
    {
       logger->debug("[SettlementMonitor::IsPayInTransaction::cbTX]");
+#ifdef VALIDITY_LOCK
       ValidityGuard lock(handle);
       if (!handle.isValid()) {
          logger->debug("[SettlementMonitor::IsPayInTransaction::cbTX] aborted");
          return;
       }
+#endif
 
       if (!tx.isInitialized()) {
          logger->error("[bs::SettlementMonitor::IsPayInTransaction] TX not initialized for {}."
@@ -155,11 +163,13 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
       (const Tx &tx) mutable
    {
       logger->debug("[SettlementMonitor::IsPayOutTransaction::cbTX]");
+#ifdef VALIDITY_LOCK
       ValidityGuard lock(handle);
       if (!handle.isValid()) {
          logger->debug("[SettlementMonitor::IsPayOutTransaction::cbTX] aborted");
          return;
       }
+#endif
 
       if (!tx.isInitialized()) {
          logger->error("[bs::SettlementMonitor::IsPayOutTransaction] TX not initialized for {}."
@@ -182,11 +192,13 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
          (const std::vector<Tx> &txs) mutable
       {
          logger->debug("[SettlementMonitor::IsPayOutTransaction::cbTXs]");
+#ifdef VALIDITY_LOCK
          ValidityGuard lock(handle);
          if (!handle.isValid()) {
             logger->debug("[SettlementMonitor::IsPayOutTransaction::cbTXs] aborted");
             return;
          }
+#endif
 
          for (const auto &prevTx : txs) {
             const auto &itIdx = txOutIdx.find(prevTx.getThisHash());
