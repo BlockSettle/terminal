@@ -87,7 +87,7 @@ void ScrAddrObj::clearBlkData(void)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
+map<BinaryData, TxIOPair> ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
    function<bool(const BinaryDataRef)> isZcFromWallet, int32_t updateID)
 {
    //Dont use a reference for this loop. We check and set the isFromSelf flag
@@ -97,6 +97,7 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
    //can't modify original txio, so we use a copy.
 
    map<BinaryData, BinaryDataRef> invalidatedZCMap;
+   map<BinaryData, TxIOPair> newZC;
 
    //look for invalidated keys, delete from validZcKeys_ as we go
    bool purge = false;
@@ -156,24 +157,21 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
    if (haveIter == scanInfo.zcMap_.end())
    {
       if(scanInfo.zcState_ == nullptr)
-         return;
+         return newZC;
 
       haveIter = scanInfo.zcState_->txioMap_.find(scrAddr_);
       if (haveIter == scanInfo.zcState_->txioMap_.end())
-         return;
+         return newZC;
    }
 
    if (haveIter->second == nullptr)
    {
       LOGWARN << "empty zc notification txio map";
-      return;
+      return newZC;
    }
 
-   auto& zcTxIOMap = *haveIter->second;
-
    //look for new keys
-   map<BinaryData, TxIOPair> newZC;
-
+   auto& zcTxIOMap = *haveIter->second;
    for (auto& txiopair : zcTxIOMap)
    {
       auto& newtxio = txiopair.second;
@@ -209,7 +207,7 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
 
    //nothing to do if we didn't find new ZC
    if (newZC.size() == 0)
-      return;
+      return newZC;
 
    updateID_ = updateID;
 
@@ -220,8 +218,10 @@ void ScrAddrObj::scanZC(const ScanAddressStruct& scanInfo,
          txioPair.second.setTxOutFromSelf(true);
 
       txioPair.second.setScrAddrRef(getScrAddr());
-      zcTxios_[txioPair.first] = move(txioPair.second);
+      zcTxios_[txioPair.first] = txioPair.second;
    }
+
+   return newZC;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
