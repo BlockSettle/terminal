@@ -21,6 +21,14 @@ namespace bs {
    }
 }
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Response;
+      }
+   }
+}
+
 class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
@@ -86,7 +94,7 @@ public slots:
    void onAskClicked(const MarketSelectedInfo& selectedInfo);
    void onDisableSelectedInfo();
 
-   void onMessageFromPB(std::string data);
+   void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
 private slots:
    void onConnectedToCeler();

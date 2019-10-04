@@ -347,9 +347,9 @@ bool ChatWidget::eventFilter(QObject* sender, QEvent* event)
    return QWidget::eventFilter(sender, event);
 }
 
-void ChatWidget::onProcessOtcPbMessage(const std::string& data)
+void ChatWidget::onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
-   stateCurrent_->onProcessOtcPbMessage(data);
+   stateCurrent_->onProcessOtcPbMessage(response);
 }
 
 void ChatWidget::onSendOtcMessage(const std::string& contactId, const BinaryData& data)

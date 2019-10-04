@@ -350,16 +350,8 @@ void RFQRequestWidget::onDisableSelectedInfo()
    popShield();
 }
 
-void RFQRequestWidget::onMessageFromPB(std::string data)
+void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
-   Blocksettle::Communication::ProxyTerminalPb::Response response;
-   bool result = response.ParseFromString(data);
-   if (!result) {
-      logger_->error("[RFQRequestWidget::onMessageFromPB] failed to parse message: {}"
-                     , data);
-      return;
-   }
-
    switch (response.data_case()) {
       case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin:
          {
@@ -383,6 +375,8 @@ void RFQRequestWidget::onMessageFromPB(std::string data)
             // unsigned_payin_data - serialized payin. binary
             emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data());
          }
+         break;
+      default:
          break;
    }
 

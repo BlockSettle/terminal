@@ -117,7 +117,7 @@ public slots:
    void contactConnected(const std::string &contactId);
    void contactDisconnected(const std::string &contactId);
    void processContactMessage(const std::string &contactId, const BinaryData &data);
-   void processPbMessage(const std::string &data);
+   void processPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
    void processPublicMessage(QDateTime timestamp, const std::string &contactId, const BinaryData &data);
    void processPrivateMessage(QDateTime timestamp, const std::string &contactId, bool isResponse, const BinaryData &data);
 

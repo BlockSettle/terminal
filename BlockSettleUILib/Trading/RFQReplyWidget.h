@@ -39,6 +39,13 @@ class SignContainer;
 class ApplicationSettings;
 class ConnectionManager;
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Response;
+      }
+   }
+}
 
 class RFQReplyWidget : public TabWithShortcut
 {
@@ -81,7 +88,7 @@ signals:
 public slots:
    void forceCheckCondition();
 
-   void onMessageFromPB(std::string data);
+   void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
 private slots:
    void onReplied(bs::network::QuoteNotification qn);
