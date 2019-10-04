@@ -39,7 +39,9 @@ void bs::SettlementMonitor::checkNewEntries()
    logger_->debug("[SettlementMonitor::checkNewEntries] checking entries for {}"
       , settlAddress_.display());
 
-   const auto &cbHistory = [this, handle = validityFlag_.handle()] (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) mutable ->void {
+   const auto &cbHistory = [this, handle = validityFlag_.handle()]
+      (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) mutable -> void
+   {
       std::lock_guard<ValidityHandle> lock(handle);
       if (!handle.isValid()) {
          return;
@@ -48,8 +50,6 @@ void bs::SettlementMonitor::checkNewEntries()
       try {
          auto le = entries.get();
          if (le.empty()) {
-            logger_->debug("[SettlementMonitor::checkNewEntries] empty history page for {}"
-               , settlAddress_.display());
             return;
          } else {
             logger_->debug("[SettlementMonitor::checkNewEntries] get {} entries for {}"
@@ -72,7 +72,8 @@ void bs::SettlementMonitor::checkNewEntries()
                                  "settlement address {}", settlAddress_.display());
                }
             };
-            const auto &cbPayIn = [this, entry, cbPayOut, handle](bool ack) mutable {
+            const auto &cbPayIn = [this, entry, cbPayOut, handle](bool ack) mutable
+            {
                std::lock_guard<ValidityHandle> lock(handle);
                if (!handle.isValid()) {
                   return;
@@ -89,33 +90,27 @@ void bs::SettlementMonitor::checkNewEntries()
             IsPayInTransaction(entry, cbPayIn);
          }
       }
-      catch (std::exception& e) {
-         if(logger_ != nullptr) {
-            logger_->error("[bs::SettlementMonitor::checkNewEntries] Return " \
-               "data error - {}", e.what());
-         }
-      }
-
-      {
-         FastLock locker(walletLock_);
-         if (!rtWallet_) {
-            return;
+      catch (const std::exception &e) {
+         if (logger_) {
+            logger_->error("[bs::SettlementMonitor::checkNewEntries] failed to " \
+               "get ledger entries: {}", e.what());
          }
       }
    };
    {
       FastLock locker(walletLock_);
-      if (!rtWallet_) {
-         return;
+      if (rtWallet_) {
+         rtWallet_->getHistoryPage(0, cbHistory);  //XXX use only the first page for monitoring purposes
       }
    }
-   rtWallet_->getHistoryPage(0, cbHistory);  //XXX use only the first page for monitoring purposes
 }
 
 void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb, handle = validityFlag_.handle()](const Tx &tx) mutable {
+   const auto &cbTX = [this, entry, cb, handle = validityFlag_.handle()]
+      (const Tx &tx) mutable
+   {
       ValidityGuard lock(handle);
       if (!handle.isValid()) {
          return;
@@ -144,7 +139,9 @@ void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry 
 void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb, handle = validityFlag_.handle()](const Tx &tx) mutable {
+   const auto &cbTX = [this, entry, cb, handle = validityFlag_.handle()]
+      (const Tx &tx) mutable
+   {
       ValidityGuard lock(handle);
       if (!handle.isValid()) {
          return;
@@ -167,7 +164,8 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
          txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
       }
 
-      const auto &cbTXs = [this, txOutIdx, cb, handle](const std::vector<Tx> &txs) mutable {
+      const auto &cbTXs = [this, txOutIdx, cb, handle] (const std::vector<Tx> &txs) mutable
+      {
          ValidityGuard lock(handle);
          if (!handle.isValid()) {
             return;
