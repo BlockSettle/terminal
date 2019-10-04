@@ -455,7 +455,6 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
 
 bs::SettlementMonitor::~SettlementMonitor() noexcept
 {
-   logger_->debug("[{}] {}", __func__, settlAddress_.display());
    // Stop callbacks just in case (calling cleanup below should be enough)
    validityFlag_.reset();
 
