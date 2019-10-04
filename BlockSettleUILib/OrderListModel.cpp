@@ -345,8 +345,9 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
    {
       case bs::network::Order::New:
          group->rows_[static_cast<std::size_t>(index)]->status_ = tr("New");
+         break;
+
       case bs::network::Order::Pending:
-      {
          if (!order.pendingStatus.empty()) {
             auto statusString = QString::fromStdString(order.pendingStatus);
             group->rows_[static_cast<std::size_t>(index)]->status_ = statusString;
@@ -357,7 +358,6 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
             }
          }
          group->rows_[static_cast<std::size_t>(index)]->statusColor_ = QColor{0x63, 0xB0, 0xB2};
-      }
          break;
 
       case bs::network::Order::Filled:
@@ -368,10 +368,6 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
       case bs::network::Order::Failed:
          group->rows_[static_cast<std::size_t>(index)]->status_ = tr("Failed");
          group->rows_[static_cast<std::size_t>(index)]->statusColor_ = QColor{0xEC, 0x0A, 0x35};
-         break;
-
-      default:
-         group->rows_[static_cast<std::size_t>(index)]->status_ = tr("Unknown");
          break;
    }
 
@@ -393,9 +389,9 @@ OrderListModel::StatusGroup::Type OrderListModel::getStatusGroup(const bs::netwo
       case bs::network::Order::Filled:
       case bs::network::Order::Failed:
          return StatusGroup::Settled;
-
-      default: return StatusGroup::last;
    }
+
+   return StatusGroup::last;
 }
 
 std::pair<OrderListModel::Group*, int> OrderListModel::findItem(const bs::network::Order &order)
@@ -577,6 +573,22 @@ void OrderListModel::processUpdateOrder(const Blocksettle::Communication::ProxyT
          break;
    }
 
+   switch (data.asset_type()) {
+      case bs::types::ASSET_TYPE_SPOT_FX:
+         order.assetType = bs::network::Asset::SpotFX;
+         break;
+      case bs::types::ASSET_TYPE_SPOT_XBT:
+         order.assetType = bs::network::Asset::SpotXBT;
+         break;
+      case bs::types::ASSET_TYPE_PRIVATE_MARKET:
+         order.assetType = bs::network::Asset::PrivateMarket;
+         break;
+      default:
+         order.assetType = bs::network::Asset::Undefined;
+         break;
+   }
+
+   order.exchOrderId = QString::fromStdString(message.order_id());
    order.side = bs::network::Side::Type(data.side());
    order.pendingStatus = data.status_text();
    order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());

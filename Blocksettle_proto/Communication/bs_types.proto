@@ -2,6 +2,14 @@ syntax = "proto3";
 
 package bs.types;
 
+enum AssetType
+{
+   ASSET_TYPE_UNKNOWN = 0;
+   ASSET_TYPE_SPOT_FX = 1;
+   ASSET_TYPE_SPOT_XBT = 2;
+   ASSET_TYPE_PRIVATE_MARKET = 3;
+}
+
 enum Side
 {
     SIDE_INVALID = 0;
@@ -19,6 +27,7 @@ enum OrderStatus
 
 message Order
 {
+   AssetType asset_type = 1;
    OrderStatus status = 2;
    string status_text = 3;
    int64 timestamp_ms = 4;
