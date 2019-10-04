@@ -186,6 +186,9 @@ public:
    bool removeTarget(ArmoryCallbackTarget *);
 
    using BIP151Cb = std::function<bool(const BinaryData&, const std::string&)>;
+   void setupConnection(NetworkType, const std::string &host, const std::string &port
+      , const std::string &dataDir, const BinaryData &serverKey
+      , const BIP151Cb &cbBIP151 = [](const BinaryData&, const std::string&) {return true; });
 
    std::shared_ptr<AsyncClient::BtcWallet> instantiateWallet(const std::string &walletId);
 
@@ -193,10 +196,6 @@ public:
    static float toFeePerByte(float fee);
 
 protected:
-   void setupConnection(NetworkType, const std::string &host, const std::string &port
-      , const std::string &dataDir, const BinaryData &serverKey
-      , const BIP151Cb &cbBIP151);
-
    using CallbackQueueCb = std::function<void(ArmoryCallbackTarget *)>;
    void addToMaintQueue(const CallbackQueueCb &);
 

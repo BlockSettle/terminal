@@ -246,10 +246,6 @@ void AbstractChatWidgetState::onOTCPeerError(const bs::network::otc::Peer *peer,
       return;
    }
       
-   if (!peer || peer->state == bs::network::otc::State::Idle) {
-      return;
-   }
-
    const Chat::ClientPartyPtr clientPartyPtr = getPartyByUserHash(peer->contactId);
    if (!clientPartyPtr) {
       return;

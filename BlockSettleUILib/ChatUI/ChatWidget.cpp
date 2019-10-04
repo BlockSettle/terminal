@@ -29,7 +29,6 @@
 #include "AssetManager.h"
 #include "BaseCelerClient.h"
 #include "ui_ChatWidget.h"
-#include <QDebug>
 
 using namespace bs::network;
 

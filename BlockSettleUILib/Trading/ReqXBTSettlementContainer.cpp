@@ -309,21 +309,6 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
          return;
       }
 
-      logger_->debug("[ReqXBTSettlementContainer::onTXSigned] signed payin TX:\n{}", signedTX.toHexStr());
-
-      try {
-         Tx tx{signedTX};
-
-         std::stringstream ss;
-
-         tx.pprintAlot(ss);
-
-         logger_->debug("[ReqXBTSettlementContainer::onTXSigned] info on signed payin:\n{}"
-                        , ss.str());
-      } catch (...) {
-         logger_->error("[ReqXBTSettlementContainer::onTXSigned] failed to deserialize signed payin");
-      }
-
       emit sendSignedPayinToPB(settlementIdString_, signedTX);
 
       transactionData_->getWallet()->setTransactionComment(signedTX, comment_);
