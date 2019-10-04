@@ -39,62 +39,46 @@ void bs::SettlementMonitor::checkNewEntries()
    logger_->debug("[SettlementMonitor::checkNewEntries] checking entries for {}"
       , settlAddress_.display());
 
-   const auto &cbHistory = [this, handle = validityFlag_.handle(), logger=logger_]
+   const auto &cbHistory = [this, handle = validityFlag_.handle()]
       (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) mutable -> void
    {
-      logger->debug("[SettlementMonitor::checkNewEntries::cbHistory]");
-#ifdef VALIDITY_LOCK
       std::lock_guard<ValidityHandle> lock(handle);
       if (!handle.isValid()) {
-         logger->debug("[SettlementMonitor::checkNewEntries::cbHistory] aborted");
          return;
       }
-#endif
 
       try {
          auto le = entries.get();
          if (le.empty()) {
-            logger->debug("[SettlementMonitor::checkNewEntries] empty history page for {}"
-               , settlAddress_.display());
             return;
          } else {
-            logger->debug("[SettlementMonitor::checkNewEntries] get {} entries for {}"
+            logger_->debug("[SettlementMonitor::checkNewEntries] get {} entries for {}"
                , le.size(), settlAddress_.display());
          }
 
          for (const auto &entry : le) {
-            const auto &cbPayOut = [this, entry, handle, logger](bool ack) mutable {
-               logger->debug("[SettlementMonitor::checkNewEntries::cbPayOut]");
-#ifdef VALIDITY_LOCK
+            const auto &cbPayOut = [this, entry, handle](bool ack) mutable {
                std::lock_guard<ValidityHandle> lock(handle);
                if (!handle.isValid()) {
-                  logger->debug("[SettlementMonitor::checkNewEntries::cbPayOut] aborted");
                   return;
                }
-#endif
 
-               logger->debug("[SettlementMonitor::checkNewEntries::cbPayOut] ack={}", ack);
                if (ack) {
                   SendPayOutNotification(entry);
                }
                else {
-                  logger->error("[SettlementMonitor::checkNewEntries] not "
+                  logger_->error("[SettlementMonitor::checkNewEntries] not "
                                  "payin or payout transaction detected for "
                                  "settlement address {}", settlAddress_.display());
                }
             };
-            const auto &cbPayIn = [this, entry, cbPayOut, handle, logger](bool ack) mutable
+            const auto &cbPayIn = [this, entry, cbPayOut, handle](bool ack) mutable
             {
-               logger->debug("[SettlementMonitor::checkNewEntries::cbPayIn]");
-#ifdef VALIDITY_LOCK
                std::lock_guard<ValidityHandle> lock(handle);
                if (!handle.isValid()) {
-                  logger->debug("[SettlementMonitor::checkNewEntries::cbPayIn] aborted");
                   return;
                }
-#endif
 
-               logger->debug("[SettlementMonitor::checkNewEntries::cbPayIn] ack={}", ack);
                if (ack) {
                   SendPayInNotification(armoryPtr_->getConfirmationsNumber(entry),
                                         entry.getTxHash());
@@ -107,8 +91,8 @@ void bs::SettlementMonitor::checkNewEntries()
          }
       }
       catch (const std::exception &e) {
-         if (logger) {
-            logger->error("[bs::SettlementMonitor::checkNewEntries] failed to " \
+         if (logger_) {
+            logger_->error("[bs::SettlementMonitor::checkNewEntries] failed to " \
                "get ledger entries: {}", e.what());
          }
       }
@@ -124,20 +108,16 @@ void bs::SettlementMonitor::checkNewEntries()
 void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb, handle = validityFlag_.handle(), logger=logger_]
+   const auto &cbTX = [this, entry, cb, handle = validityFlag_.handle()]
       (const Tx &tx) mutable
    {
-      logger->debug("[SettlementMonitor::IsPayInTransaction::cbTX]");
-#ifdef VALIDITY_LOCK
       ValidityGuard lock(handle);
       if (!handle.isValid()) {
-         logger->debug("[SettlementMonitor::IsPayInTransaction::cbTX] aborted");
          return;
       }
-#endif
 
       if (!tx.isInitialized()) {
-         logger->error("[bs::SettlementMonitor::IsPayInTransaction] TX not initialized for {}."
+         logger_->error("[bs::SettlementMonitor::IsPayInTransaction] TX not initialized for {}."
             , entry.getTxHash().toHexStr());
          cb(false);
          return;
@@ -159,20 +139,16 @@ void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry 
 void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb, handle = validityFlag_.handle(), logger=logger_]
+   const auto &cbTX = [this, entry, cb, handle = validityFlag_.handle()]
       (const Tx &tx) mutable
    {
-      logger->debug("[SettlementMonitor::IsPayOutTransaction::cbTX]");
-#ifdef VALIDITY_LOCK
       ValidityGuard lock(handle);
       if (!handle.isValid()) {
-         logger->debug("[SettlementMonitor::IsPayOutTransaction::cbTX] aborted");
          return;
       }
-#endif
 
       if (!tx.isInitialized()) {
-         logger->error("[bs::SettlementMonitor::IsPayOutTransaction] TX not initialized for {}."
+         logger_->error("[bs::SettlementMonitor::IsPayOutTransaction] TX not initialized for {}."
             , entry.getTxHash().toHexStr());
          cb(false);
          return;
@@ -188,17 +164,12 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
          txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
       }
 
-      const auto &cbTXs = [this, txOutIdx, cb, handle, logger]
-         (const std::vector<Tx> &txs) mutable
+      const auto &cbTXs = [this, txOutIdx, cb, handle] (const std::vector<Tx> &txs) mutable
       {
-         logger->debug("[SettlementMonitor::IsPayOutTransaction::cbTXs]");
-#ifdef VALIDITY_LOCK
          ValidityGuard lock(handle);
          if (!handle.isValid()) {
-            logger->debug("[SettlementMonitor::IsPayOutTransaction::cbTXs] aborted");
             return;
          }
-#endif
 
          for (const auto &prevTx : txs) {
             const auto &itIdx = txOutIdx.find(prevTx.getThisHash());
