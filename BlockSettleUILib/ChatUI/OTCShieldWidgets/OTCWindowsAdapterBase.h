@@ -4,6 +4,7 @@
 #include <memory>
 #include "QWidget"
 #include "CommonTypes.h"
+#include "OtcTypes.h"
 
 class QComboBox;
 class OTCWindowsManager;
@@ -68,6 +69,9 @@ protected:
 
    double updateIndicativePriceValue(QLabel *label, bool isBuySide);
 
+   QString getXBTRange(bs::network::otc::Range xbtRange);
+   QString getCCRange(bs::network::otc::Range ccRange);
+
 protected:
    std::shared_ptr<OTCWindowsManager> otcManager_{};
 
@@ -75,6 +79,7 @@ protected:
    std::vector<UTXO> selectedUTXO_;
 
    bs::network::Asset::Type productGroup_ = bs::network::Asset::SpotXBT;
+   // #new_logic : fix security & product checking
    QString security_{ QLatin1String("XBT/EUR") };
    QString sellProduct_{ QLatin1String("XBT") };
    QString buyProduct_{ QLatin1String("EUR") };

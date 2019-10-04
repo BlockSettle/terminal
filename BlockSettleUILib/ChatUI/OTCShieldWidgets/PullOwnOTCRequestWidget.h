@@ -24,6 +24,8 @@ public:
    void setOffer(const std::string& contactId, const bs::network::otc::Offer &offer);
    void setRequest(const std::string& contactId, const bs::network::otc::QuoteRequest &request);
    void setResponse(const std::string& contactId, const bs::network::otc::QuoteResponse &response);
+   void setPendingBuyerSign(const bs::network::otc::Offer &offer);
+   void setPendingSellerSign(const bs::network::otc::Offer &offer);
 
    void registerOTCUpdatedTime(const bs::network::otc::Peer* peer, QDateTime timestamp);
 
@@ -39,6 +41,9 @@ protected slots:
 
 protected:
    void setupTimer(const std::string& contactId);
+   void setupNegotiationInterface(const QString& headerText);
+   void setupSignAwaitingInterface(const QString& headerText);
+   void setupOfferInfo(const bs::network::otc::Offer &offer);
 
 private:
    std::unique_ptr<Ui::PullOwnOTCRequestWidget> ui_;

@@ -72,7 +72,14 @@ bs::network::otc::Offer OTCNegotiationResponseWidget::offer() const
 void OTCNegotiationResponseWidget::setPeer(const bs::network::otc::Peer &peer)
 {
    const bool isContact = (peer.type == bs::network::otc::PeerType::Contact);
-   ui_->rangeWidget->setVisible(!isContact);
+
+   if (peer.type == bs::network::otc::PeerType::Request) {
+      ui_->labelQuantityValue->setText(getXBTRange(peer.response.amount));
+      ui_->labelBidValue->setText(getCCRange(peer.response.price));
+   }
+
+   ui_->rangeQuantity->setVisible(!isContact);
+   ui_->rangeBid->setVisible(!isContact);
 }
 
 void OTCNegotiationResponseWidget::onAboutToApply()
