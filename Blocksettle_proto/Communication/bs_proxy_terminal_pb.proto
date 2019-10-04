@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package Blocksettle.Communication.ProxyTerminalPb;
 
+import "bs_types.proto";
+
 // Messages sent from terminal to PB and back.
 // `Request` is sent from terminal (PB is a server here).
 
@@ -134,6 +136,14 @@ message Response
         bytes   unsigned_payin_data = 3;
     }
 
+    // Blotter
+
+    message UpdateOrder
+    {
+        string order_id = 1;
+        bs.types.Order order = 2;
+    }
+
     oneof data
     {
         StartOtc              start_otc            = 1;
@@ -142,5 +152,7 @@ message Response
         UnsignedPayinRequest  send_unsigned_payin  = 3;
         SignPayoutRequest     sign_payout          = 4;
         SignPayinRequest      sign_payin           = 5;
+
+        UpdateOrder           update_order         = 20;
     }
 }

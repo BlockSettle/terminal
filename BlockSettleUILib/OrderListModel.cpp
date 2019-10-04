@@ -1,9 +1,10 @@
-
 #include "OrderListModel.h"
+
 #include "AssetManager.h"
 #include "QuoteProvider.h"
 #include "UiUtils.h"
-#include "make_unique.h"
+
+#include "bs_proxy_terminal_pb.pb.h"
 
 
 QString OrderListModel::Header::toString(OrderListModel::Header::Index h)
@@ -30,14 +31,12 @@ QString OrderListModel::StatusGroup::toString(OrderListModel::StatusGroup::Type 
 }
 
 
-OrderListModel::OrderListModel(std::shared_ptr<QuoteProvider> quoteProvider, const std::shared_ptr<AssetManager>& assetManager, QObject* parent)
+OrderListModel::OrderListModel(const std::shared_ptr<AssetManager>& assetManager, QObject* parent)
    : QAbstractItemModel(parent)
-   , quoteProvider_(quoteProvider)
    , assetManager_(assetManager)
    , unsettled_(new StatusGroup(StatusGroup::toString(StatusGroup::UnSettled), 0))
    , settled_(new StatusGroup(StatusGroup::toString(StatusGroup::Settled), 1))
 {
-   connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &OrderListModel::onOrderUpdated);
 }
 
 int OrderListModel::columnCount(const QModelIndex &) const
@@ -328,6 +327,17 @@ QVariant OrderListModel::headerData(int section, Qt::Orientation orientation, in
    return Header::toString(static_cast<Header::Index>(section));
 }
 
+void OrderListModel::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
+{
+   switch (response.data_case()) {
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrder:
+         processUpdateOrder(response.update_order());
+         break;
+      default:
+         break;
+   }
+}
+
 void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::Order& order,
    bool emitUpdate)
 {
@@ -546,6 +556,35 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
       groupItem = marketItem->rows_.back().get();
       endInsertRows();
    }
+}
+
+void OrderListModel::processUpdateOrder(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrder &message)
+{
+   auto &order = orders_[message.order_id()];
+   const bs::types::Order &data = message.order();
+
+   switch (data.status()) {
+      case bs::types::ORDER_STATUS_PENDING:
+         order.status = bs::network::Order::Pending;
+         break;
+      case bs::types::ORDER_STATUS_FILLED:
+         order.status = bs::network::Order::Filled;
+         break;
+      case bs::types::ORDER_STATUS_VOID:
+         order.status = bs::network::Order::Failed;
+         break;
+      default:
+         break;
+   }
+
+   order.side = bs::network::Side::Type(data.side());
+   order.pendingStatus = data.status_text();
+   order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());
+   order.product = data.product();
+   order.quantity = data.quantity();
+   order.price = data.price();
+
+   onOrderUpdated(order);
 }
 
 void OrderListModel::onOrderUpdated(const bs::network::Order& order)

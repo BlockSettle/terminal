@@ -48,6 +48,7 @@ class CCPortfolioModel;
 class ConnectionManager;
 class LoginWindow;
 class NetworkSettingsLoader;
+class OrderListModel;
 class QSystemTrayIcon;
 class RequestReplyCommand;
 class SignersProvider;
@@ -164,6 +165,7 @@ private:
    std::shared_ptr<bs::DealerUtxoResAdapter> dealerUtxoAdapter_;
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
 
+   std::unique_ptr<OrderListModel>           orderListModel_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 

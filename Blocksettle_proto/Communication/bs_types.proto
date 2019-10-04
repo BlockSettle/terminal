@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package bs.types;
+
+enum Side
+{
+    SIDE_INVALID = 0;
+    SIDE_BUY = 1;
+    SIDE_SELL = 2;
+}
+
+enum OrderStatus
+{
+   ORDER_STATUS_UNKNOWN = 0;
+   ORDER_STATUS_PENDING = 1;
+   ORDER_STATUS_FILLED = 2;
+   ORDER_STATUS_VOID = 3;
+}
+
+message Order
+{
+   OrderStatus status = 2;
+   string status_text = 3;
+   int64 timestamp_ms = 4;
+   string product = 5; // XBT, EUR etc
+   Side side = 6;
+   double quantity = 7;
+   double price = 8;
+}

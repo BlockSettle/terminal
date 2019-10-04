@@ -37,9 +37,9 @@ class BaseCelerClient;
 class ConnectionManager;
 class DialogManager;
 class MarketDataProvider;
+class OrderListModel;
 class QuoteProvider;
 class SignContainer;
-
 
 class RFQRequestWidget : public TabWithShortcut
 {
@@ -61,7 +61,7 @@ public:
          , const std::shared_ptr<SignContainer> &
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<ConnectionManager> &connectionManager
-   );
+         , OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
