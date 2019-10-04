@@ -554,6 +554,19 @@ QString AutheIDClient::getAutheIDClientRequestText(RequestType requestType)
       return tr("Confirm Auth eID Signing");
    case ActivateOTP:
       return tr("Activate OTP");
+   case CreateAuthLeaf:
+      return tr("Create auth leaf");
+   case CreateSettlementLeaf:
+      return tr("Create settlement leaf");
+   case PromoteWallet:
+      return tr("Promote wallet to primary");
+   case EnableAutoSign:
+      return tr("Enable auto signing");
+   case RevokeAuthAddress:
+      return tr("Revoke auth address");
+   case ActivateCCToken:
+      return tr("Activate equity token");
+
    case SettlementTransaction:
       return tr("Sign transaction");
    default:

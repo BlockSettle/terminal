@@ -48,7 +48,7 @@ public:
       std::string email;
       Serialization serialization{Serialization::Protobuf};
       BinaryData invisibleData;
-      int expiration{30};
+      int expiration{AutheIDClient::kDefaultSettlementExpiration};
    };
 
    struct SignResult
@@ -73,6 +73,12 @@ public:
       DeactivateWalletDevice,
       VerifyWalletKey,
       ActivateOTP,
+      CreateAuthLeaf,
+      CreateSettlementLeaf,
+      PromoteWallet,
+      EnableAutoSign,
+      RevokeAuthAddress,
+      ActivateCCToken,
       // Private market and others with lower timeout
       SettlementTransaction,
 
@@ -132,6 +138,8 @@ public:
    static QString errorString(ErrorType error);
 
    static DeviceInfo getDeviceInfo(const std::string &encKey);
+   static constexpr int kDefaultExpiration = 120;
+   static constexpr int kDefaultSettlementExpiration = 30;
 
    // Verifies signature only
    // Check uniqueUserId to make sure that valid user did sign request.
@@ -146,9 +154,9 @@ public:
    ~AutheIDClient() override;
 
    void getDeviceKey(RequestType requestType, const std::string &email, const std::string &walletId
-      , const std::vector<std::string> &knownDeviceIds, int expiration = 120);
+      , const std::vector<std::string> &knownDeviceIds, int expiration = kDefaultExpiration);
    void sign(const SignRequest &request, bool autoRequestResult = true);
-   void authenticate(const std::string &email, int expiration = 120, bool autoRequestResult = true);
+   void authenticate(const std::string &email, int expiration = kDefaultExpiration, bool autoRequestResult = true);
    void cancel();
 
    void requestResult();
