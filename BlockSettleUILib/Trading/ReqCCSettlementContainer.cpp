@@ -251,7 +251,7 @@ bool ReqCCSettlementContainer::startSigning()
 
          // notify RFQ dialog that signed half could be saved
          emit settlementAccepted();
-         transactionData_->getWallet()->setTransactionComment(txSignedData(), txComment());
+         //transactionData_->getWallet()->setTransactionComment(txSignedData(), txComment());
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
          emit settlementCancelled();
