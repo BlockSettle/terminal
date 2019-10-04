@@ -14,8 +14,9 @@ import com.blocksettle.QPasswordData 1.0
 CustomTitleDialogWindow {
     id: root
 
-    property AuthSignWalletObject  authSign: AuthSignWalletObject{}
+    property AuthSignWalletObject authSign: AuthSignWalletObject{}
     property QPasswordData passwordData: QPasswordData{}
+    property int autheIDSignType: AutheIDClient.SignWallet
 
     property alias enteredPassword : passwordInput.text
     default property alias details: detailsContainer.data
@@ -25,7 +26,8 @@ CustomTitleDialogWindow {
     property alias passwordInput : passwordInput
     property string decryptHeaderText: qsTr("Decrypt Wallet")
 
-    readonly property int duration: 30
+    readonly property int duration: authSign.kDefaultExpiration()
+    property real timeLeft: duration
 
     title: qsTr("Decrypt Wallet")
     width: 350
@@ -39,7 +41,7 @@ CustomTitleDialogWindow {
         btnAccept.visible = false
         btnReject.anchors.horizontalCenter = barFooter.horizontalCenter
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo)
+        authSign = qmlFactory.createAutheIDSignObject(autheIDSignType, walletInfo, timeLeft - 1)
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth
@@ -140,7 +142,6 @@ CustomTitleDialogWindow {
 
                 Timer {
                     id: timer
-                    property real timeLeft: duration
                     interval: 500
                     running: true
                     repeat: true
@@ -162,12 +163,12 @@ CustomTitleDialogWindow {
                     Layout.bottomMargin: 10
                     Layout.fillWidth: true
                     to: duration
-                    value: timer.timeLeft
+                    value: timeLeft
                 }
 
                 CustomLabelValue {
                     visible: walletInfo.encType === QPasswordData.Auth
-                    text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed(0))
+                    text: qsTr("%1 seconds left").arg(timeLeft.toFixed(0))
                     Layout.fillWidth: true
                 }
             }

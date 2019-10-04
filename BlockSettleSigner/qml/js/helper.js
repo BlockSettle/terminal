@@ -63,7 +63,7 @@ function hideWindow(w) {
 }
 
 function requesteIdAuth (requestType, walletInfo, onSuccess) {
-    var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo)
+    var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo, authSign.kDefaultExpiration() - 1)
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
     authProgress.email = walletInfo.email()
@@ -414,6 +414,8 @@ function tryActivateAutoSign(walletInfo, showResult) {
 
     prepareLiteModeDialog(passwordDialog)
     passwordDialog.open()
+    passwordDialog.init()
+
     passwordDialog.bsAccepted.connect(function() {
         var passwordData = qmlFactory.createPasswordData()
         passwordData.encType = QPasswordData.Password

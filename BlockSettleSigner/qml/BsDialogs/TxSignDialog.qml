@@ -12,18 +12,22 @@ import com.blocksettle.QPasswordData 1.0
 
 import "../StyledControls"
 import "../BsControls"
+import "../BsStyles"
 import "../js/helper.js" as JsHelper
 
 CustomTitleDialogWindow {
-    property WalletInfo walletInfo: WalletInfo{}
+    property WalletInfo walletInfo: WalletInfo {}
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
-    property QPasswordData passwordData: QPasswordData{}
-    property AuthSignWalletObject  authSign: AuthSignWalletObject{}
+    property QPasswordData passwordData: QPasswordData {}
+    property AuthSignWalletObject authSign: AuthSignWalletObject {}
 
-    property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
+    property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property int addressRowHeight: 24
     property int recipientsAddrHeight: txInfo.allRecipients.length < 4 ? txInfo.allRecipients.length * addressRowHeight : addressRowHeight * 3
+
+    readonly property int duration: authSign.kDefaultExpiration()
+    property real timeLeft: duration
 
     id: root
     title: qsTr("Sign Transaction")
@@ -38,7 +42,7 @@ CustomTitleDialogWindow {
         btnConfirm.visible = false
         btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo)
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo, timeLeft - 1)
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth
@@ -277,7 +281,6 @@ CustomTitleDialogWindow {
 
             Timer {
                 id: timer
-                property real timeLeft: 120
                 interval: 500
                 running: true
                 repeat: true
@@ -298,11 +301,11 @@ CustomTitleDialogWindow {
                 Layout.bottomMargin: 10
                 Layout.fillWidth: true
                 to: 120
-                value: timer.timeLeft
+                value: timeLeft
             }
 
             CustomLabelValue {
-                text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed((0)))
+                text: qsTr("%1 seconds left").arg(timeLeft.toFixed((0)))
                 Layout.fillWidth: true
             }
         }

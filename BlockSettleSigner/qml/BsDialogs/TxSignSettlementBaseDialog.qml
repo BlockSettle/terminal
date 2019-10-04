@@ -16,11 +16,11 @@ import "../BsStyles"
 import "../js/helper.js" as JsHelper
 
 CustomTitleDialogWindow {
-    property WalletInfo walletInfo: WalletInfo{}
+    property WalletInfo walletInfo: WalletInfo {}
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
     property QPasswordData passwordData: QPasswordData {}
-    property AuthSignWalletObject  authSign: AuthSignWalletObject {}
+    property AuthSignWalletObject authSign: AuthSignWalletObject {}
 
     property bool signingAllowed: passwordDialogData.SigningAllowed
 
@@ -40,7 +40,9 @@ CustomTitleDialogWindow {
     readonly property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     readonly property int addressRowHeight: 24
 
-    readonly property int duration: passwordDialogData.Duration / 1000.0 - 1 > 0 ? passwordDialogData.Duration / 1000.0 - 1 : 60
+    readonly property int duration: passwordDialogData.Duration / 1000.0 - 1 > 0 ? passwordDialogData.Duration / 1000.0 - 1 : authSign.kDefaultSettlementExpiration()
+    property real timeLeft: duration
+
     readonly property real balanceDivider : qmlFactory.balanceDivider()
 
     readonly property bool is_sell: side === "SELL"
@@ -69,7 +71,7 @@ CustomTitleDialogWindow {
             return
         }
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo)
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo, timeLeft - 1)
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth
@@ -312,7 +314,6 @@ CustomTitleDialogWindow {
 
                 Timer {
                     id: timer
-                    property real timeLeft: duration
                     interval: 500
                     running: true
                     repeat: true
@@ -334,11 +335,11 @@ CustomTitleDialogWindow {
                     Layout.topMargin: 10
                     Layout.fillWidth: true
                     to: duration
-                    value: timer.timeLeft
+                    value: timeLeft
                 }
 
                 CustomLabelValue {
-                    text: signingAllowed ? qsTr("%1 seconds left").arg(timer.timeLeft.toFixed(0)) : qsTr("Authentication Address could not be verified")
+                    text: signingAllowed ? qsTr("%1 seconds left").arg(timeLeft.toFixed(0)) : qsTr("Authentication Address could not be verified")
                     Layout.fillWidth: true
                 }
             }
