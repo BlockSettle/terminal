@@ -119,7 +119,8 @@ private:
 
    //wallet side reorg processing
    void updateAfterReorg(uint32_t lastValidBlockHeight);
-   void scanWalletZeroConf(const ScanWalletStruct&, int32_t);
+   std::map<BinaryData, TxIOPair> scanWalletZeroConf(
+      const ScanWalletStruct&, int32_t);
 
    void setRegistered(bool isTrue = true) { isRegistered_ = isTrue; }
 

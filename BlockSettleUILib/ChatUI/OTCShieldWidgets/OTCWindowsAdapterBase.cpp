@@ -1,7 +1,6 @@
 #include "OTCWindowsAdapterBase.h"
 #include "OTCWindowsManager.h"
 
-#include "OtcTypes.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
@@ -169,3 +168,16 @@ double OTCWindowsAdapterBase::updateIndicativePriceValue(QLabel *label, bool isB
    }
 }
 
+QString OTCWindowsAdapterBase::getXBTRange(bs::network::otc::Range xbtRange)
+{
+   return QStringLiteral("%1 - %2")
+      .arg(UiUtils::displayCurrencyAmount(xbtRange.lower))
+      .arg(UiUtils::displayCurrencyAmount(xbtRange.upper));
+}
+
+QString OTCWindowsAdapterBase::getCCRange(bs::network::otc::Range ccRange)
+{
+   return QStringLiteral("%1 - %2")
+      .arg(UiUtils::displayCurrencyAmount(bs::network::otc::fromCents(ccRange.lower)))
+      .arg(UiUtils::displayCurrencyAmount(bs::network::otc::fromCents(ccRange.upper)));
+}

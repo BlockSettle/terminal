@@ -58,6 +58,7 @@ public:
    void onOtcUpdated(const bs::network::otc::Peer *peer);
    void onOtcPublicUpdated();
    void onUpdateOTCShield();
+   void onOTCPeerError(const bs::network::otc::Peer *peer, const std::string &errorMsg);
 
    void onOtcRequestSubmit();
    void onOtcResponseAccept();
@@ -91,6 +92,7 @@ protected:
    void updateOtc();
 
    Chat::ClientPartyPtr getParty(const std::string& partyId) const;
+   Chat::ClientPartyPtr getPartyByUserHash(const std::string& userHash) const;
 
    ChatWidget* chat_;
 };

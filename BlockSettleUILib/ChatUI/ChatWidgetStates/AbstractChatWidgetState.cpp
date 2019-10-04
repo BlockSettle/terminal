@@ -240,6 +240,24 @@ void AbstractChatWidgetState::onUpdateOTCShield()
    applyRoomsFrameChange();
 }
 
+void AbstractChatWidgetState::onOTCPeerError(const bs::network::otc::Peer *peer, const std::string &errorMsg)
+{
+   if (!canReceiveOTCOperations()) {
+      return;
+   }
+      
+   const Chat::ClientPartyPtr clientPartyPtr = getPartyByUserHash(peer->contactId);
+   if (!clientPartyPtr) {
+      return;
+   }
+      
+   bs::ui::NotifyMessage notifyMsg;
+   notifyMsg.append(QString::fromStdString(clientPartyPtr->displayName()));
+   notifyMsg.append(QString::fromStdString(errorMsg));
+
+   NotificationCenter::notify(bs::ui::NotifyType::OTCOrderError, notifyMsg);
+}
+
 void AbstractChatWidgetState::onOtcRequestSubmit()
 {
    if (canPerformOTCOperations()) {
@@ -374,25 +392,25 @@ void AbstractChatWidgetState::updateOtc()
          break;
       case State::SentPayinInfo:
       case State::WaitPayinInfo:
-         chat_->ui_->widgetOTCShield->showContactIsOffline();
-         break;
-
+         chat_->ui_->widgetOTCShield->showOtcSetupTransaction();
+         return;
       case State::WaitBuyerSign:
-      case State::WaitSellerSeal:
-         // FIXME: Show new shields
+         chat_->ui_->widgetPullOwnOTCRequest->setPendingBuyerSign(peer->offer);
          pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          break;
-
+      case State::WaitSellerSeal:
+         chat_->ui_->widgetPullOwnOTCRequest->setPendingSellerSign(peer->offer);
+         pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
+         break;
       case State::WaitVerification:
-         // FIXME: Show something while we wait for PB response
-         break;
-
       case State::WaitSellerSign:
-         // FIXME: Show something while we wait for PB response
-         break;
-
+         chat_->ui_->widgetOTCShield->showOtcSetupTransaction();
+         return;
       case State::Blacklisted:
          chat_->ui_->widgetOTCShield->showContactIsOffline();
+         return;
+      default:
+         assert(false && " Did you forget to handle new otc::State state? ");
          break;
    }
 
@@ -409,4 +427,10 @@ Chat::ClientPartyPtr AbstractChatWidgetState::getParty(const std::string& partyI
 {
    Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
    return partyModel->getClientPartyById(partyId);
+}
+
+Chat::ClientPartyPtr AbstractChatWidgetState::getPartyByUserHash(const std::string& userHash) const
+{
+   Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+   return partyModel->getClientPartyByUserHash(userHash);
 }

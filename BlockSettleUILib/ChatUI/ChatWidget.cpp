@@ -53,7 +53,6 @@ ChatWidget::ChatWidget(QWidget* parent)
 
    //Init UI and other stuff
    ui_->frameContactActions->setVisible(false);
-   ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
    ui_->textEditMessages->viewport()->installEventFilter(this);
    ui_->input_textEdit->viewport()->installEventFilter(this);
@@ -173,6 +172,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(otcHelper_->client(), &OtcClient::sendPublicMessage, this, &ChatWidget::onSendOtcPublicMessage);
    connect(otcHelper_->client(), &OtcClient::peerUpdated, this, &ChatWidget::onOtcUpdated);
    connect(otcHelper_->client(), &OtcClient::publicUpdated, this, &ChatWidget::onOtcPublicUpdated);
+   connect(otcHelper_->client(), &OtcClient::peerError, this, &ChatWidget::onOTCPeerError);
 
    connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::requestCreated, this, &ChatWidget::onOtcRequestSubmit);
    connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::currentRequestPulled, this, &ChatWidget::onOtcPullOrRejectCurrent);
@@ -264,6 +264,11 @@ void ChatWidget::onOtcPublicUpdated()
 {
    stateCurrent_->onOtcPublicUpdated();
    ui_->treeViewUsers->onExpandGlobalOTC();
+}
+
+void ChatWidget::onOTCPeerError(const bs::network::otc::Peer *peer, const std::string &errorMsg)
+{
+   stateCurrent_->onOTCPeerError(peer, errorMsg);
 }
 
 void ChatWidget::onUpdateOTCShield()

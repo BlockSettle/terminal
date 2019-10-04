@@ -5,7 +5,7 @@
 
 struct ValidityFlagData
 {
-   std::mutex mutex;
+   std::recursive_mutex mutex;
    bool isValid{true};
 };
 
@@ -82,7 +82,7 @@ ValidityHandle ValidityFlag::handle() const
 void ValidityFlag::reset()
 {
    if (data_) {
-      std::lock_guard<std::mutex> lock(data_->mutex);
+      std::lock_guard<std::recursive_mutex> lock(data_->mutex);
       data_->isValid = false;
    }
 }
