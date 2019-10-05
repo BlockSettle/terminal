@@ -27,20 +27,18 @@ public:
    void setPendingBuyerSign(const bs::network::otc::Offer &offer);
    void setPendingSellerSign(const bs::network::otc::Offer &offer);
 
-   void registerOTCUpdatedTime(const bs::network::otc::Peer* peer, QDateTime timestamp);
+   void setPeer(const bs::network::otc::Peer &peer) override;
 
+   void resetTimer();
 signals:
    void currentRequestPulled();
    void requestPulled(const std::string& contactId, bs::network::otc::PeerType peerType);
-
-public slots:
-   void onLogout();
 
 protected slots:
    void onUpdateTimerData();
 
 protected:
-   void setupTimer(const std::string& contactId);
+   void setupTimer(const std::chrono::steady_clock::time_point& offerTimestamp);
    void setupNegotiationInterface(const QString& headerText);
    void setupSignAwaitingInterface(const QString& headerText);
    void setupOfferInfo(const bs::network::otc::Offer &offer);
@@ -49,14 +47,9 @@ private:
    std::unique_ptr<Ui::PullOwnOTCRequestWidget> ui_;
 
    QTimer pullTimer_;
-   QDateTime currentOfferEndTimestamp_;
-
-   struct PeerData
-   {
-      QDateTime arrivedTime_;
-      bs::network::otc::PeerType peerType_;
-   };
-   std::unordered_map<std::string, PeerData> timestamps_;
+   std::chrono::steady_clock::time_point currentOfferEndTimestamp_;
+   bs::network::otc::Side ourSide_;
+   int timeoutSec_{};
 };
 
 #endif // __PULL_OWN_OTC_REQUEST_WIDGET_H__

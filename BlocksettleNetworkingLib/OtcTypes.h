@@ -20,6 +20,12 @@ namespace bs {
             Test,
          };
 
+         enum class PeerErrorType {
+            Timeout,
+            Canceled,
+            Rejected
+         };
+
          enum class PeerType : int
          {
             Contact,

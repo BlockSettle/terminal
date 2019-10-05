@@ -9,9 +9,10 @@
 #include "OtcUtils.h"
 
 namespace {
-
    const int kMaxMessageNotifLength = 20;
-
+   const auto kTimeoutErrorWith = QObject::tr("OTC negotiation with %1 timed out");
+   const auto kCancelledErrorWith = QObject::tr("OTC negotiation with %1 was canceled");
+   const auto kRejectedErrorWith = QObject::tr("OTC order was rejected: %1");
 } // namespace
 
 using namespace bs::network;
@@ -216,7 +217,6 @@ void AbstractChatWidgetState::onProcessOtcPbMessage(const std::string& data)
 void AbstractChatWidgetState::onOtcUpdated(const otc::Peer *peer)
 {
    if (canReceiveOTCOperations() && chat_->currentPeer() == peer) {
-      chat_->ui_->widgetPullOwnOTCRequest->registerOTCUpdatedTime(peer, QDateTime::currentDateTime());
       onUpdateOTCShield();
    }
 }
@@ -240,7 +240,7 @@ void AbstractChatWidgetState::onUpdateOTCShield()
    applyRoomsFrameChange();
 }
 
-void AbstractChatWidgetState::onOTCPeerError(const bs::network::otc::Peer *peer, const std::string &errorMsg)
+void AbstractChatWidgetState::onOTCPeerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg)
 {
    if (!canReceiveOTCOperations()) {
       return;
@@ -249,11 +249,26 @@ void AbstractChatWidgetState::onOTCPeerError(const bs::network::otc::Peer *peer,
    const Chat::ClientPartyPtr clientPartyPtr = getPartyByUserHash(peer->contactId);
    if (!clientPartyPtr) {
       return;
+   }  
+
+   QString MessageBody;
+   switch (type)
+   {
+   case bs::network::otc::PeerErrorType::Timeout:
+      MessageBody = kTimeoutErrorWith.arg(QString::fromStdString(clientPartyPtr->displayName()));
+      break;
+   case bs::network::otc::PeerErrorType::Canceled:
+      MessageBody = kCancelledErrorWith.arg(QString::fromStdString(clientPartyPtr->displayName()));
+      break;
+   case bs::network::otc::PeerErrorType::Rejected:
+      assert(errorMsg);
+      MessageBody = kRejectedErrorWith.arg(QString::fromStdString(*errorMsg));
+      break;
+   default:
+      break;
    }
-      
    bs::ui::NotifyMessage notifyMsg;
-   notifyMsg.append(QString::fromStdString(clientPartyPtr->displayName()));
-   notifyMsg.append(QString::fromStdString(errorMsg));
+   notifyMsg.append(MessageBody);
 
    NotificationCenter::notify(bs::ui::NotifyType::OTCOrderError, notifyMsg);
 }
@@ -367,7 +382,6 @@ void AbstractChatWidgetState::updateOtc()
          if (peer->type == otc::PeerType::Contact) {
             pageNumber = OTCPages::OTCNegotiateRequestPage;
          } else if (peer->isOwnRequest) {
-            chat_->ui_->widgetPullOwnOTCRequest->registerOTCUpdatedTime(peer, QDateTime::currentDateTime());
             chat_->ui_->widgetPullOwnOTCRequest->setRequest(peer->contactId, peer->request);
             pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          } else if (peer->type == otc::PeerType::Request) {

@@ -96,9 +96,6 @@ namespace {
 
    const auto kStartOtcTimeout = std::chrono::seconds(10);
 
-   const auto kTimeoutError = QObject::tr("connection is timed out");
-   const auto kCancelledError = QObject::tr("deal is cancelled");
-
    bs::sync::PasswordDialogData toPasswordDialogData(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
    {
       double price = fromCents(deal.price);
@@ -1218,7 +1215,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
          }
 
          SPDLOG_LOGGER_ERROR(logger_, "OTC trade failed: {}", response.error_msg());
-         emit peerError(peer, response.error_msg());
+         emit peerError(peer, PeerErrorType::Rejected, &response.error_msg());
 
          resetPeerStateToIdle(peer);
          break;
@@ -1252,7 +1249,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             if (!handle.isValid() || peer->state != State::WaitBuyerSign) {
                return;
             }
-            emit peerError(peer, kTimeoutError.toStdString());
+            emit peerError(peer, PeerErrorType::Timeout, nullptr);
             resetPeerStateToIdle(peer);
          });
          break;
@@ -1296,7 +1293,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             if (!handle.isValid() || peer->state != State::WaitSellerSeal) {
                return;
             }
-            emit peerError(peer, kTimeoutError.toStdString());
+            emit peerError(peer, PeerErrorType::Timeout, nullptr);
             resetPeerStateToIdle(peer);
          });
          break;
@@ -1320,7 +1317,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
             return;
          }
-         emit peerError(peer, kCancelledError.toStdString());
+         emit peerError(peer, PeerErrorType::Canceled, nullptr);
          resetPeerStateToIdle(peer);
          break;
       }
@@ -1582,7 +1579,7 @@ void OtcClient::sendSellerAccepts(Peer *peer)
       }
       waitSettlementIds_.erase(it);
       SPDLOG_LOGGER_ERROR(logger_, "can't get settlementId from PB: timeout");
-      emit peerError(peer, kTimeoutError.toStdString());
+      emit peerError(peer, PeerErrorType::Timeout, nullptr);
       pullOrReject(peer);
    });
 }

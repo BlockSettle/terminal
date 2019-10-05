@@ -128,7 +128,7 @@ signals:
 
    void peerUpdated(const bs::network::otc::Peer *peer);
    // Used to update UI when there is some problems (for example deal verification failed)
-   void peerError(const bs::network::otc::Peer *peer, const std::string &errorMsg);
+   void peerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string *errorMsg);
 
    void publicUpdated();
 

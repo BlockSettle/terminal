@@ -266,9 +266,9 @@ void ChatWidget::onOtcPublicUpdated()
    ui_->treeViewUsers->onExpandGlobalOTC();
 }
 
-void ChatWidget::onOTCPeerError(const bs::network::otc::Peer *peer, const std::string &errorMsg)
+void ChatWidget::onOTCPeerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg)
 {
-   stateCurrent_->onOTCPeerError(peer, errorMsg);
+   stateCurrent_->onOTCPeerError(peer, type, errorMsg);
 }
 
 void ChatWidget::onUpdateOTCShield()
