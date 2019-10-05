@@ -166,6 +166,7 @@ private:
    void findMarketAndGroup(const bs::network::Order &order, Market *&market, Group *&group);
    void createGroupsIfNeeded(const bs::network::Order &order, Market *&market, Group *&group);
 
+   void reset();
    void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &msg);
 
    std::shared_ptr<AssetManager>    assetManager_;

@@ -34,9 +34,8 @@ QString OrderListModel::StatusGroup::toString(OrderListModel::StatusGroup::Type 
 OrderListModel::OrderListModel(const std::shared_ptr<AssetManager>& assetManager, QObject* parent)
    : QAbstractItemModel(parent)
    , assetManager_(assetManager)
-   , unsettled_(new StatusGroup(StatusGroup::toString(StatusGroup::UnSettled), 0))
-   , settled_(new StatusGroup(StatusGroup::toString(StatusGroup::Settled), 1))
 {
+   reset();
 }
 
 int OrderListModel::columnCount(const QModelIndex &) const
@@ -554,13 +553,22 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
    }
 }
 
+void OrderListModel::reset()
+{
+   beginResetModel();
+   groups_.clear();
+   unsettled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::UnSettled), 0);
+   settled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::Settled), 1);
+   endResetModel();
+}
+
 void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
 {
    // OrderListModel supposed to work correctly when orders states updated one by one.
    // We don't use this anymore (server sends all active orders every time) so just clear old caches.
    // Remove this if old behaviour is needed
-   groups_.clear();
-   // Use same fake orderId to old code works correctly
+   reset();
+   // Use same fake orderId so old code works correctly
    int orderId = 0;
 
    for (const auto &data : message.orders()) {
