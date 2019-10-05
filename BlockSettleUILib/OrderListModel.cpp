@@ -556,7 +556,13 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
 
 void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
 {
+   // OrderListModel supposed to work correctly when orders states updated one by one.
+   // We don't use this anymore (server sends all active orders every time) so just clear old caches.
+   // Remove this if old behaviour is needed
+   groups_.clear();
+   // Use same fake orderId to old code works correctly
    int orderId = 0;
+
    for (const auto &data : message.orders()) {
       bs::network::Order order;
 

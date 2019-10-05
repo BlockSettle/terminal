@@ -172,7 +172,6 @@ private:
    std::unordered_map<std::string, StatusGroup::Type> groups_;
    std::unique_ptr<StatusGroup> unsettled_;
    std::unique_ptr<StatusGroup> settled_;
-   std::unordered_map<std::string, bs::network::Order> orders_;
 };
 
 #endif // ORDERLISTMODEL_H
