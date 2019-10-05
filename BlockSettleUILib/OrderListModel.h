@@ -15,7 +15,7 @@ namespace Blocksettle {
    namespace Communication {
       namespace ProxyTerminalPb {
          class Response;
-         class Response_UpdateOrder;
+         class Response_UpdateOrders;
       }
    }
 }
@@ -166,7 +166,7 @@ private:
    void findMarketAndGroup(const bs::network::Order &order, Market *&market, Group *&group);
    void createGroupsIfNeeded(const bs::network::Order &order, Market *&market, Group *&group);
 
-   void processUpdateOrder(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrder &msg);
+   void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &msg);
 
    std::shared_ptr<AssetManager>    assetManager_;
    std::unordered_map<std::string, StatusGroup::Type> groups_;

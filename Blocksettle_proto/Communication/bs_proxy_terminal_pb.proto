@@ -138,10 +138,9 @@ message Response
 
     // Blotter
 
-    message UpdateOrder
+    message UpdateOrders
     {
-        string order_id = 1;
-        bs.types.Order order = 2;
+        repeated bs.types.Order orders = 2;
     }
 
     oneof data
@@ -153,6 +152,6 @@ message Response
         SignPayoutRequest     sign_payout          = 4;
         SignPayinRequest      sign_payin           = 5;
 
-        UpdateOrder           update_order         = 20;
+        UpdateOrders          update_orders        = 20;
     }
 }

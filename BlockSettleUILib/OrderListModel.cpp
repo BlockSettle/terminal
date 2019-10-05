@@ -330,8 +330,8 @@ QVariant OrderListModel::headerData(int section, Qt::Orientation orientation, in
 void OrderListModel::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
    switch (response.data_case()) {
-      case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrder:
-         processUpdateOrder(response.update_order());
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrders:
+         processUpdateOrders(response.update_orders());
          break;
       default:
          break;
@@ -554,49 +554,52 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
    }
 }
 
-void OrderListModel::processUpdateOrder(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrder &message)
+void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
 {
-   auto &order = orders_[message.order_id()];
-   const bs::types::Order &data = message.order();
+   int orderId = 0;
+   for (const auto &data : message.orders()) {
+      bs::network::Order order;
 
-   switch (data.status()) {
-      case bs::types::ORDER_STATUS_PENDING:
-         order.status = bs::network::Order::Pending;
-         break;
-      case bs::types::ORDER_STATUS_FILLED:
-         order.status = bs::network::Order::Filled;
-         break;
-      case bs::types::ORDER_STATUS_VOID:
-         order.status = bs::network::Order::Failed;
-         break;
-      default:
-         break;
+      switch (data.status()) {
+         case bs::types::ORDER_STATUS_PENDING:
+            order.status = bs::network::Order::Pending;
+            break;
+         case bs::types::ORDER_STATUS_FILLED:
+            order.status = bs::network::Order::Filled;
+            break;
+         case bs::types::ORDER_STATUS_VOID:
+            order.status = bs::network::Order::Failed;
+            break;
+         default:
+            break;
+      }
+
+      switch (data.asset_type()) {
+         case bs::types::ASSET_TYPE_SPOT_FX:
+            order.assetType = bs::network::Asset::SpotFX;
+            break;
+         case bs::types::ASSET_TYPE_SPOT_XBT:
+            order.assetType = bs::network::Asset::SpotXBT;
+            break;
+         case bs::types::ASSET_TYPE_PRIVATE_MARKET:
+            order.assetType = bs::network::Asset::PrivateMarket;
+            break;
+         default:
+            order.assetType = bs::network::Asset::Undefined;
+            break;
+      }
+
+      orderId += 1;
+      order.exchOrderId = QString::number(orderId);
+      order.side = bs::network::Side::Type(data.side());
+      order.pendingStatus = data.status_text();
+      order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());
+      order.product = data.product();
+      order.quantity = data.quantity();
+      order.price = data.price();
+
+      onOrderUpdated(order);
    }
-
-   switch (data.asset_type()) {
-      case bs::types::ASSET_TYPE_SPOT_FX:
-         order.assetType = bs::network::Asset::SpotFX;
-         break;
-      case bs::types::ASSET_TYPE_SPOT_XBT:
-         order.assetType = bs::network::Asset::SpotXBT;
-         break;
-      case bs::types::ASSET_TYPE_PRIVATE_MARKET:
-         order.assetType = bs::network::Asset::PrivateMarket;
-         break;
-      default:
-         order.assetType = bs::network::Asset::Undefined;
-         break;
-   }
-
-   order.exchOrderId = QString::fromStdString(message.order_id());
-   order.side = bs::network::Side::Type(data.side());
-   order.pendingStatus = data.status_text();
-   order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());
-   order.product = data.product();
-   order.quantity = data.quantity();
-   order.price = data.price();
-
-   onOrderUpdated(order);
 }
 
 void OrderListModel::onOrderUpdated(const bs::network::Order& order)
