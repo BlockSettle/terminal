@@ -31,8 +31,9 @@ message Order
    OrderStatus status = 2;
    string status_text = 3;
    int64 timestamp_ms = 4;
-   string product = 5; // XBT, EUR etc
-   Side side = 6;
-   double quantity = 7;
-   double price = 8;
+   string product = 5; // "XBT", "EUR" etc
+   string security = 6; // "XBT/EUR" etc
+   Side side = 7;
+   double quantity = 8;
+   double price = 9;
 }
