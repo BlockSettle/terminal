@@ -242,7 +242,9 @@ bool OtcClient::sendQuoteRequest(const QuoteRequest &request)
 
    ownRequest_ = std::make_unique<Peer>(ownContactId_, PeerType::Request);
    ownRequest_->request = request;
+   ownRequest_->request.timestamp = QDateTime::currentDateTime();
    ownRequest_->isOwnRequest = true;
+   scheduleCloseAfterTimeout(otc::publicRequestTimeout(), ownRequest_.get());
 
    Otc::PublicMessage msg;
    auto d = msg.mutable_request();

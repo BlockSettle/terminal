@@ -64,7 +64,7 @@ ChatWidget::ChatWidget(QWidget* parent)
       auto* widget = qobject_cast<OTCWindowsAdapterBase*>(sWidget->widget(index));
       if (widget) {
          widget->setChatOTCManager(otcWindowsManager_);
-         connect(this, &ChatWidget::chatRoomChanged, widget, &OTCWindowsAdapterBase::chatRoomChanged);
+         connect(this, &ChatWidget::chatRoomChanged, widget, &OTCWindowsAdapterBase::onChatRoomChanged);
       }
    }
    connect(otcWindowsManager_.get(), &OTCWindowsManager::syncInterfaceRequired, this, &ChatWidget::onUpdateOTCShield);
@@ -172,7 +172,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(otcHelper_->client(), &OtcClient::sendPublicMessage, this, &ChatWidget::onSendOtcPublicMessage);
    connect(otcHelper_->client(), &OtcClient::peerUpdated, this, &ChatWidget::onOtcUpdated);
    connect(otcHelper_->client(), &OtcClient::publicUpdated, this, &ChatWidget::onOtcPublicUpdated);
+   connect(otcHelper_->client(), &OtcClient::publicUpdated, otcRequestViewModel_, &OTCRequestViewModel::onRequestsUpdated);
    connect(otcHelper_->client(), &OtcClient::peerError, this, &ChatWidget::onOTCPeerError);
+   
 
    connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::requestCreated, this, &ChatWidget::onOtcRequestSubmit);
    connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::currentRequestPulled, this, &ChatWidget::onOtcPullOrRejectCurrent);

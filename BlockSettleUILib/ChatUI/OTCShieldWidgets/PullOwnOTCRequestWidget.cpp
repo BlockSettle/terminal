@@ -21,7 +21,7 @@ namespace {
 
 PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
    : OTCWindowsAdapterBase(parent)
-   , ui_{new Ui::PullOwnOTCRequestWidget()}
+   , ui_{ new Ui::PullOwnOTCRequestWidget() }
 {
    ui_->setupUi(this);
 

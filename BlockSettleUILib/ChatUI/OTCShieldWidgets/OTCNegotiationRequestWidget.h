@@ -38,6 +38,7 @@ signals:
 
 public slots:
    void onAboutToApply() override;
+   void onChatRoomChanged() override;
 
 protected slots:
    void onSyncInterface() override;
@@ -54,7 +55,6 @@ private slots:
    void onShowXBTInputsClicked();
    void onXbtInputsProcessed();
    void onChanged();
-   void onChatRoomChanged();
    void onNumCcySelected();
    void onUpdateIndicativePrice();
    void onMaxQuantityClicked();

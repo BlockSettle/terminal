@@ -41,11 +41,12 @@ public:
 
    virtual void setPeer(const bs::network::otc::Peer &);
 signals:
-   void chatRoomChanged();
+   
    void xbtInputsProcessed();
 
 public slots:
    virtual void onAboutToApply();
+   virtual void onChatRoomChanged();
 
 protected slots:
    virtual void onSyncInterface();

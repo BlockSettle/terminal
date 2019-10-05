@@ -7,10 +7,11 @@ using namespace bs::network;
 namespace {
 
    const int kMaxPeriodMinutes = 10;
+   const int kUpdateTimerInterval = 500;
 
    QString duration(QDateTime timestamp)
    {
-      int minutes = std::max(0, int(QDateTime::currentDateTime().secsTo(timestamp) / 60));
+      int minutes = std::max(0, int(timestamp.secsTo(QDateTime::currentDateTime()) / 60));
       if (minutes > kMaxPeriodMinutes) {
          return QObject::tr("> %1 min").arg(kMaxPeriodMinutes);
       }
@@ -23,7 +24,10 @@ OTCRequestViewModel::OTCRequestViewModel(OtcClient *otcClient, QObject* parent)
    : QAbstractTableModel(parent)
    , otcClient_(otcClient)
 {
-   connect(otcClient, &OtcClient::publicUpdated, this, &OTCRequestViewModel::onRequestsUpdated);
+   connect(&updateDurationTimer_, &QTimer::timeout, this, &OTCRequestViewModel::onUpdateDuration);
+
+   updateDurationTimer_.setInterval(kUpdateTimerInterval);
+   updateDurationTimer_.start();
 }
 
 int OTCRequestViewModel::rowCount(const QModelIndex &parent) const
@@ -92,4 +96,14 @@ void OTCRequestViewModel::onRequestsUpdated()
       request_.push_back({ peer->request, peer->isOwnRequest });
    }
    endResetModel();
+}
+
+void OTCRequestViewModel::onUpdateDuration()
+{
+   if (rowCount() == 0) {
+      return;
+   }
+
+   emit dataChanged(index(0, static_cast<int>(Columns::Duration)),
+      index(rowCount() - 1, static_cast<int>(Columns::Duration)), { Qt::DisplayRole });
 }

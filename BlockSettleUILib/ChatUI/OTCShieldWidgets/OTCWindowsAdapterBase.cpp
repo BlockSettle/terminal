@@ -58,6 +58,10 @@ void OTCWindowsAdapterBase::onAboutToApply()
 {
 }
 
+void OTCWindowsAdapterBase::onChatRoomChanged()
+{
+}
+
 void OTCWindowsAdapterBase::onSyncInterface()
 {
 }

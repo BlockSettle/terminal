@@ -29,7 +29,6 @@ public:
 
    void setPeer(const bs::network::otc::Peer &peer) override;
 
-   void resetTimer();
 signals:
    void currentRequestPulled();
    void requestPulled(const std::string& contactId, bs::network::otc::PeerType peerType);

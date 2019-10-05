@@ -35,8 +35,6 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
    ui_->pushButtonCancel->hide();
    ui_->pushButtonAccept->setText(tr("Submit"));
 
-   connect(this, &OTCWindowsAdapterBase::chatRoomChanged, this, &OTCNegotiationRequestWidget::onChatRoomChanged);
-
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onBuyClicked);
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateBalances);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onSellClicked);
