@@ -588,19 +588,16 @@ void OrderListModel::processUpdateOrders(const Blocksettle::Communication::Proxy
             break;
       }
 
-      switch (data.asset_type()) {
-         case bs::types::ASSET_TYPE_SPOT_FX:
-            order.assetType = bs::network::Asset::SpotFX;
-            break;
-         case bs::types::ASSET_TYPE_SPOT_XBT:
-            order.assetType = bs::network::Asset::SpotXBT;
-            break;
-         case bs::types::ASSET_TYPE_PRIVATE_MARKET:
-            order.assetType = bs::network::Asset::PrivateMarket;
-            break;
-         default:
-            order.assetType = bs::network::Asset::Undefined;
-            break;
+      const bool isXBT = (data.product() == "XBT") || (data.product_against() == "XBT");
+      const bool isCC = (assetManager_->getCCLotSize(data.product())) > 0
+         || (assetManager_->getCCLotSize(data.product_against()) > 0);
+
+      if (isCC) {
+         order.assetType = bs::network::Asset::PrivateMarket;
+      } else if (isXBT) {
+         order.assetType = bs::network::Asset::SpotXBT;
+      } else {
+         order.assetType = bs::network::Asset::SpotFX;
       }
 
       orderId += 1;

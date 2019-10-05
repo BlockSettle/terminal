@@ -27,7 +27,6 @@ enum OrderStatus
 
 message Order
 {
-   AssetType asset_type = 1;
    OrderStatus status = 2;
    string status_text = 3;
    int64 timestamp_ms = 4;
