@@ -46,11 +46,17 @@ message Response
         string email = 1;
     }
 
+    message ClientDisconnected
+    {
+        string email = 1;
+    }
+
     oneof data
     {
         // Messages
         Terminal terminal = 30;
         OnlineUsers online_users = 31;
         ClientConnected client_connected = 32;
+        ClientDisconnected client_disconnected = 33;
     }
 }
