@@ -602,7 +602,7 @@ void OrderListModel::processUpdateOrders(const Blocksettle::Communication::Proxy
       order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());
       order.product = data.product();
       order.quantity = data.quantity();
-      order.security = data.security();
+      order.security = data.product() + "/" + data.product_against();
       order.price = data.price();
 
       onOrderUpdated(order);
