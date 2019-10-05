@@ -344,8 +344,6 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
    {
       case bs::network::Order::New:
          group->rows_[static_cast<std::size_t>(index)]->status_ = tr("New");
-         break;
-
       case bs::network::Order::Pending:
          if (!order.pendingStatus.empty()) {
             auto statusString = QString::fromStdString(order.pendingStatus);
@@ -568,7 +566,7 @@ void OrderListModel::processUpdateOrders(const Blocksettle::Communication::Proxy
    // We don't use this anymore (server sends all active orders every time) so just clear old caches.
    // Remove this if old behaviour is needed
    reset();
-   // Use same fake orderId so old code works correctly
+   // Use some fake orderId so old code works correctly
    int orderId = 0;
 
    for (const auto &data : message.orders()) {
