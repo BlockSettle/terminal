@@ -555,17 +555,17 @@ QString AutheIDClient::getAutheIDClientRequestText(RequestType requestType)
    case ActivateOTP:
       return tr("Activate OTP");
    case CreateAuthLeaf:
-      return tr("Create auth leaf");
+      return tr("Create authentication leaf");
    case CreateSettlementLeaf:
       return tr("Create settlement leaf");
    case PromoteWallet:
-      return tr("Promote wallet to primary");
+      return tr("Promote to primary wallet");
    case EnableAutoSign:
       return tr("Enable auto signing");
    case RevokeAuthAddress:
-      return tr("Revoke auth address");
-   case ActivateCCToken:
-      return tr("Activate equity token");
+      return tr("Revoke authentication address");
+   case SubmitEquityToken:
+      return tr("Submit equity token");
 
    case SettlementTransaction:
       return tr("Sign transaction");

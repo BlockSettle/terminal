@@ -78,7 +78,7 @@ public:
       PromoteWallet,
       EnableAutoSign,
       RevokeAuthAddress,
-      ActivateCCToken,
+      SubmitEquityToken,
       // Private market and others with lower timeout
       SettlementTransaction,
 

@@ -233,7 +233,7 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() c
    dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
 
    dialogData.setValue(PasswordDialogData::ResponderAuthAddress, bs::Address::fromPubKey(dealerAuthKey_).display());
-   dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, false);
+   dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, dealerVerifState_ == AddressVerificationState::Verified);
 
 
    // tx details
@@ -244,6 +244,7 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() c
 
 void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState state)
 {
+   dealerVerifState_ = state;
    bs::sync::PasswordDialogData pd;
    pd.setValue(PasswordDialogData::ResponderAuthAddress, dealerAuthAddress_.display());
    pd.setValue(PasswordDialogData::ResponderAuthAddressVerified, state == AddressVerificationState::Verified);
