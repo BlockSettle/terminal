@@ -24,7 +24,7 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection>
       , [cbInited](const std::string &) { cbInited(); });
 }
 
-void bs::SettlementMonitor::onNewBlock(unsigned int)
+void bs::SettlementMonitor::onNewBlock(unsigned int, unsigned int)
 {
    checkNewEntries();
 }

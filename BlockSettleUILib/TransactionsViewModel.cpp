@@ -253,7 +253,7 @@ TransactionsViewModel::~TransactionsViewModel() noexcept
    *stopped_ = true;
 }
 
-void TransactionsViewModel::onNewBlock(unsigned int)
+void TransactionsViewModel::onNewBlock(unsigned int, unsigned int)
 {
    QMetaObject::invokeMethod(this, [this] {
       if (allWallets_) {

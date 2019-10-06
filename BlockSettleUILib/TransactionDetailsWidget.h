@@ -143,7 +143,7 @@ private:
       TxDetailsACT(TransactionDetailsWidget *parent)
          : parent_(parent) {}
       ~TxDetailsACT() override { cleanup(); }
-      void onNewBlock(unsigned int height) override {
+      void onNewBlock(unsigned int height, unsigned int) override {
          QMetaObject::invokeMethod(parent_, [this, height] { parent_->onNewBlock(height); });
       }
    private:

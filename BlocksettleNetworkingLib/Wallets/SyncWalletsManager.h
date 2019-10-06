@@ -162,7 +162,7 @@ namespace bs {
          void onZCReceived(const std::vector<bs::TXEntry> &) override;
          void onZCInvalidated(const std::vector<bs::TXEntry> &) override;
          void onTxBroadcastError(const std::string &txHash, const std::string &errMsg) override;
-         void onNewBlock(unsigned int) override;
+         void onNewBlock(unsigned int height, unsigned int branchHeight) override;
          void onStateChanged(ArmoryState) override;
 
       private slots:
