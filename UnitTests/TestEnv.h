@@ -165,11 +165,10 @@ public:
       ACTqueue::notifQueue_.push_back(std::move(dbns));
    }
 
-   void onNewBlock(unsigned int block, unsigned int branchHgt) override
+   void onNewBlock(unsigned int block, unsigned int) override
    {
       auto dbns = std::make_shared<DBNotificationStruct>(DBNS_NewBlock);
       dbns->block_ = block;
-      dbns->branchHeight_ = branchHgt;
 
       ACTqueue::notifQueue_.push_back(std::move(dbns));
    }
