@@ -33,7 +33,7 @@ public:
       , const std::chrono::milliseconds timeout = std::chrono::milliseconds{10000});
 
 private:
-   void onNewBlock(unsigned int) override {
+   void onNewBlock(unsigned int, unsigned int) override {
       receivedNewBlock_ = true;
    }
    void onZCReceived(const std::vector<bs::TXEntry> &zcs) override {

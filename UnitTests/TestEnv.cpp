@@ -273,10 +273,11 @@ void SingleUTWalletACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
    ACTqueue::notifQueue_.push_back(std::move(dbns));
 }
 
-void SingleUTWalletACT::onNewBlock(unsigned int block)
+void SingleUTWalletACT::onNewBlock(unsigned int block, unsigned int branchHgt)
 {
    auto dbns = std::make_shared<DBNotificationStruct>(DBNS_NewBlock);
    dbns->block_ = block;
+   dbns->branchHeight_ = branchHgt;
 
    ACTqueue::notifQueue_.push_back(std::move(dbns));
 }
