@@ -43,7 +43,7 @@ private:
       PublisherACT(ArmoryEventsPublisher *parent)
          : parent_(parent) {}
       ~PublisherACT() override { cleanup(); }
-      void onNewBlock(unsigned int height) override {
+      void onNewBlock(unsigned int height, unsigned int) override {
          parent_->onNewBlock(height);
       }
       void onZCReceived(const std::vector<bs::TXEntry> &zcs) override {

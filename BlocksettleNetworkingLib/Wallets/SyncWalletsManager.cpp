@@ -503,7 +503,7 @@ BTCNumericTypes::balance_type WalletsManager::getBalanceSum(
    return balance;
 }
 
-void WalletsManager::onNewBlock(unsigned int)
+void WalletsManager::onNewBlock(unsigned int, unsigned int)
 {
    QMetaObject::invokeMethod(this, [this] {emit blockchainEvent(); });
 }

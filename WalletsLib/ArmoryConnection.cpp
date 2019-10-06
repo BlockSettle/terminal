@@ -349,11 +349,6 @@ void ArmoryConnection::setTopBlock(unsigned int topBlock)
    topBlock_ = topBlock;
 }
 
-void ArmoryConnection::setBranchHeight(unsigned int branchHgt)
-{
-   branchHeight_ = branchHgt;    // not clear where can we use it for now - just saved
-}
-
 void ArmoryConnection::setState(ArmoryState state)
 {
    if (state_ != state) {
@@ -1229,11 +1224,12 @@ void ArmoryCallback::run(BdmNotification bdmNotif)
 
    case BDMAction_NewBlock:
       logger_->debug("[ArmoryCallback::run] BDMAction_NewBlock {}", bdmNotif.height_);
-      connection_->setBranchHeight(bdmNotif.branchHeight_);
       connection_->setTopBlock(bdmNotif.height_);
       connection_->setState(ArmoryState::Ready);
-      connection_->addToMaintQueue([height=bdmNotif.height_](ArmoryCallbackTarget *tgt) {
-         tgt->onNewBlock(height);
+      connection_->addToMaintQueue([height=bdmNotif.height_, branchHgt=bdmNotif.branchHeight_]
+         (ArmoryCallbackTarget *tgt)
+      {
+         tgt->onNewBlock(height, branchHgt);
       });
       break;
 

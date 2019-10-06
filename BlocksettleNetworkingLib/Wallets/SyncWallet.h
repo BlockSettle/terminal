@@ -290,7 +290,7 @@ namespace bs {
          virtual void onZCReceived(const std::vector<bs::TXEntry> &zcs) override {
             parent_->onZeroConfReceived(zcs);
          }
-         virtual void onNewBlock(unsigned int block) override {
+         virtual void onNewBlock(unsigned int block, unsigned int) override {
             parent_->onNewBlock(block);
          }
          void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) override;
