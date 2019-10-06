@@ -38,7 +38,6 @@ struct DBNotificationStruct
    std::vector<bs::TXEntry> zc_;
 
    unsigned int block_;
-   unsigned int branchHeight_;
 
    DBNotificationStruct(DBNotificationStruct_Enum type) :
       type_(type)
