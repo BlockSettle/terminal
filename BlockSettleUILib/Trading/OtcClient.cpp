@@ -52,7 +52,6 @@ struct OtcClientDeal
    int64_t amount{};
    int64_t fee{};
    int64_t price{};
-   bool sellFromOffline{false};
 
    bool success{false};
    std::string errorMsg;
@@ -731,7 +730,7 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
          return;
       }
 
-      if (deal->sellFromOffline) {
+      if (peer->sellFromOffline) {
          auto loadPath = params_.offlineLoadPathCb();
          if (loadPath.empty()) {
             SPDLOG_LOGGER_DEBUG(logger_, "got empty path to load signed offline request, cancel OTC deal");
@@ -1289,7 +1288,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
          if (deal->side == otc::Side::Sell) {
             assert(deal->payin.isValid());
 
-            if (deal->sellFromOffline) {
+            if (peer->sellFromOffline) {
                SPDLOG_LOGGER_DEBUG(logger_, "sell OTC from offline wallet...");
 
                auto savePath = params_.offlineSavePathCb(deal->hdWalletId);
@@ -1534,7 +1533,7 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
                         result.payinTxId = result.payin.txId(resolver);
                         auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, result.payinTxId, amount);
                         result.fee = int64_t(result.payin.fee);
-                        result.sellFromOffline = targetHdWallet->isOffline();
+                        peer->sellFromOffline = targetHdWallet->isOffline();
                         cb(std::move(result));
                      };
 
