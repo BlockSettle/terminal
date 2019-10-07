@@ -14,7 +14,6 @@ BitcoinFeeCache::BitcoinFeeCache(const std::shared_ptr<spdlog::logger> &logger
 //fee = ArmoryConnection::toFeePerByte(fee);
 bool BitcoinFeeCache::getFeePerByteEstimation(unsigned int blocksToWait, const feeCB& cb)
 {
-   auto blocks = blocksToWait;
    if (blocksToWait < 2) {
       blocksToWait = 2;
    } else if (blocksToWait > 144) {
