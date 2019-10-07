@@ -458,7 +458,7 @@ bool OtcClient::saveOfflineRequest(Peer *peer, const std::string &path)
 bool OtcClient::loadOfflineRequest(Peer *peer, const std::string &path)
 {
    if (!peer || !peer->isWaitingForOfflineSign()) {
-      SPDLOG_LOGGER_ERROR(logger_, "unexpected request to save offline sign request");
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected request to load offline sign request");
       return false;
    }
 
@@ -495,7 +495,7 @@ bool OtcClient::loadOfflineRequest(Peer *peer, const std::string &path)
 bool OtcClient::sendOfflineRequest(Peer *peer)
 {
    if (!peer || !peer->isWaitingForOfflineSign()) {
-      SPDLOG_LOGGER_ERROR(logger_, "unexpected request to save offline sign request");
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected request to send offline sign request");
       return false;
    }
 

@@ -208,7 +208,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
          appSettings->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
       }
 
-      // Current Peer could be destroyed while we wait from getSaveFileName return
+      // Current peer could be destroyed while we wait from QFileDialog::getSaveFileName return
       auto peer = currentPeer();
       bool result = otcHelper_->client()->saveOfflineRequest(peer, filePath.toStdString());
       if (!result) {
@@ -235,7 +235,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
          appSettings->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
       }
 
-      // Current Peer could be destroyed while we wait from getSaveFileName return
+      // Current peer could be destroyed while we wait from QFileDialog::getOpenFileName return
       auto peer = currentPeer();
       bool result = otcHelper_->client()->loadOfflineRequest(peer, filePath.toStdString());
       if (!result) {
