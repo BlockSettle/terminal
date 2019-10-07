@@ -130,7 +130,7 @@ public:
 
    void onRefresh(const std::vector<BinaryData> &ids, bool online) override;
    void onZCReceived(const std::vector<bs::TXEntry> &zcs) override;
-   void onNewBlock(unsigned int block) override;
+   void onNewBlock(unsigned int block, unsigned int branchHgt) override;
 };
 
 class UnitTestWalletACT : public bs::sync::WalletACT
@@ -165,7 +165,7 @@ public:
       ACTqueue::notifQueue_.push_back(std::move(dbns));
    }
 
-   void onNewBlock(unsigned int block) override
+   void onNewBlock(unsigned int block, unsigned int) override
    {
       auto dbns = std::make_shared<DBNotificationStruct>(DBNS_NewBlock);
       dbns->block_ = block;
