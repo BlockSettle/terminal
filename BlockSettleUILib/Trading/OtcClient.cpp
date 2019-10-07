@@ -1075,6 +1075,17 @@ void OtcClient::processClose(Peer *peer, const ContactMessage_Close &msg)
       }
 
       case State::Idle:
+         // Could happen if both sides press cancel at the same time
+         break;
+
+      case State::WaitVerification:
+      case State::WaitBuyerSign:
+      case State::WaitSellerSeal:
+      case State::WaitSellerSign:
+         // After sending verification details both sides should use PB only
+         SPDLOG_LOGGER_DEBUG(logger_, "ignoring unexpected close request");
+         break;
+
       case State::SentPayinInfo: {
          blockPeer("unexpected close", peer);
          break;
