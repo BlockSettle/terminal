@@ -706,7 +706,7 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
    }
    auto peer = deal->peer;
 
-   peer->activeSignRequest.clear();
+   peer->activeSettlementId.clear();
 
    if (result != bs::error::ErrorCode::NoError) {
       pullOrReject(peer);
@@ -1242,7 +1242,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             signRequestIds_[reqId] = deal->settlementId;
             deal->payoutReqId = reqId;
             verifyAuthAddresses(deal);
-            peer->activeSignRequest = deal->payout.serializeState();
+            peer->activeSettlementId = deal->settlementId;
          }
 
          changePeerState(peer, State::WaitBuyerSign);
@@ -1285,7 +1285,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
                signRequestIds_[reqId] = deal->settlementId;
                deal->payinReqId = reqId;
                verifyAuthAddresses(deal);
-               peer->activeSignRequest = deal->payin.serializeState();
+               peer->activeSettlementId = deal->settlementId;
             }
          }
 
@@ -1619,9 +1619,9 @@ void OtcClient::changePeerState(Peer *peer, bs::network::otc::State state)
 
 void OtcClient::resetPeerStateToIdle(Peer *peer)
 {
-   if (!peer->activeSignRequest.isNull()) {
-      signContainer_->CancelSignTx(peer->activeSignRequest);
-      peer->activeSignRequest.clear();
+   if (!peer->activeSettlementId.isNull()) {
+      signContainer_->CancelSignTx(peer->activeSettlementId);
+      peer->activeSettlementId.clear();
    }
 
    changePeerStateWithoutUpdate(peer, State::Idle);
