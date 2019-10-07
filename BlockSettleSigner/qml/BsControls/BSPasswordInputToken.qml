@@ -16,7 +16,7 @@ BSPasswordInput {
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
 
     title: qsTr("CREATE SUB-WALLET")
-    autheIDSignType: AutheIDClient.ActivateCCToken
+    autheIDSignType: AutheIDClient.SubmitEquityToken
 
     CustomHeader {
         text: qsTr("Wallet Details")
