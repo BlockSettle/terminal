@@ -279,9 +279,17 @@ function evalWorker(method, cppCallback, argList) {
     else                                  eval(method)()
 }
 
+function prepareDialog(dialog) {
+    if (isLiteMode()) {
+        prepareLiteModeDialog(dialog)
+    }
+    else {
+        prepareFullModeDialog(dialog)
+    }
+}
+
 function prepareLiteModeDialog(dialog) {
     if (!isLiteMode()) {
-        raiseWindow(mainWindow)
         return
     }
 
@@ -324,6 +332,17 @@ function prepareLiteModeDialog(dialog) {
     raiseWindow(mainWindow)
 }
 
+function prepareFullModeDialog(dialog) {
+    raiseWindow(mainWindow)
+
+    dialog.sizeChanged.connect(function(w, h){
+        let maxW = Math.max(w, mainWindow.width)
+        let maxh = Math.max(h, mainWindow.height)
+        if (maxW != mainWindow.width || maxH != mainWindow.height) {
+            mainWindow.resizeAnimated(maxW, maxh)
+        }
+    })
+}
 
 function createNewWalletDialog(data) {
     var newSeed = qmlFactory.createSeed(signerSettings.testNet)
@@ -412,7 +431,7 @@ function tryActivateAutoSign(walletInfo, showResult) {
     var passwordDialog = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
         , {"walletInfo": walletInfo});
 
-    prepareLiteModeDialog(passwordDialog)
+    prepareDialog(passwordDialog)
     passwordDialog.open()
     passwordDialog.init()
 
@@ -466,7 +485,7 @@ function createTxSignDialog(jsCallback, txInfo, passwordDialogData, walletInfo) 
                "passwordDialogData": passwordDialogData,
                "walletInfo": walletInfo
               })
-    prepareLiteModeDialog(dlg)
+    prepareDialog(dlg)
 
     dlg.bsAccepted.connect(function() {
         jsCallback(qmlFactory.errorCodeNoError(), walletInfo.rootId, dlg.passwordData)
@@ -499,7 +518,7 @@ function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, wa
         return
     }
 
-    prepareLiteModeDialog(dlg)
+    prepareDialog(dlg)
 
     dlg.bsAccepted.connect(function() {
         jsCallback(qmlFactory.errorCodeNoError(), walletInfo.rootId, dlg.passwordData)
@@ -552,7 +571,7 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
               })
     }
 
-    prepareLiteModeDialog(dlg)
+    prepareDialog(dlg)
 
     dlg.bsAccepted.connect(function() {
         jsCallback(qmlFactory.errorCodeNoError(), walletInfo.walletId, dlg.passwordData)
