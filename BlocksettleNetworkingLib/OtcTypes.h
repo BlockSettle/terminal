@@ -153,6 +153,9 @@ namespace bs {
             std::string contactId;
             PeerType type;
             bool isOwnRequest{};
+            // Will be true for both p2p and public requesters.
+            // Please note that updating price won't change this (through in such case responder would be waiting for the requester)
+            bool isOurSideSentOffer{};
 
             State state{State::Idle};
             // timestamp of the latest status change (it's always valid)

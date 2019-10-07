@@ -332,6 +332,7 @@ bool OtcClient::sendOffer(Peer *peer, const Offer &offer)
 
       peer->offer = offer;
       peer->ourAuthPubKey = ourPubKey;
+      peer->isOurSideSentOffer = true;
       changePeerState(peer, State::OfferSent);
       scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
 
