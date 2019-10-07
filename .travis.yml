@@ -1,0 +1,67 @@
+dist: trusty
+sudo: required
+
+os:
+  - osx
+  - linux
+
+osx_image: xcode9.4
+dist: bionic
+
+matrix:
+  allow_failures:
+    - os: osx
+
+branches:
+  only:
+  - travis_setup
+
+language: cpp
+
+env:
+  global:
+    - secure: ""
+
+before_install:
+  - chmod +x generate.py
+
+addons:
+  apt:
+    packages:
+    - python3
+    - python3-pip
+    - python3-setuptools
+    - cmake
+    - libmysqlclient-dev
+    - autoconf
+    - libtool
+    - yasm
+    - nasm
+    - g++
+    update: true
+
+  homebrew:
+    packages:
+    - python3
+    - cmake
+    - mysql-connector-c
+    - mysql-connector-c++
+    - automake
+    - libtool
+    - nasm
+    - yasm
+    - xz
+    - pkg-config
+    update: true
+
+install:
+  - sudo -H pip3 install --upgrade pip
+  - sudo -H pip3 install wget requests pathlib
+  - sudo apt build-dep qt5-default || true
+
+script:
+  - python3 generate.py
+
+cache:
+    directories:
+      - $HOME/build/scomilblocksettle/3rd
