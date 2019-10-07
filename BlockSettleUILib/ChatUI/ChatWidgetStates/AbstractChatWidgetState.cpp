@@ -382,7 +382,7 @@ void AbstractChatWidgetState::updateOtc()
          if (peer->type == otc::PeerType::Contact) {
             pageNumber = OTCPages::OTCNegotiateRequestPage;
          } else if (peer->isOwnRequest) {
-            chat_->ui_->widgetPullOwnOTCRequest->setRequest(peer->contactId, peer->request);
+            chat_->ui_->widgetPullOwnOTCRequest->setRequest(peer->request);
             pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          } else if (peer->type == otc::PeerType::Request) {
             chat_->ui_->widgetCreateOTCResponse->setRequest(peer->request);
@@ -390,14 +390,14 @@ void AbstractChatWidgetState::updateOtc()
          }
          break;
       case State::QuoteSent:
-         chat_->ui_->widgetPullOwnOTCRequest->setResponse(peer->contactId, peer->response);
+         chat_->ui_->widgetPullOwnOTCRequest->setResponse(peer->response);
          pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          break;
       case State::QuoteRecv:
          pageNumber = OTCPages::OTCNegotiateRequestPage;
          break;
       case State::OfferSent:
-         chat_->ui_->widgetPullOwnOTCRequest->setOffer(peer->contactId, peer->offer);
+         chat_->ui_->widgetPullOwnOTCRequest->setOffer(peer->offer);
          pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          break;
       case State::OfferRecv:

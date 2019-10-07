@@ -73,6 +73,8 @@ protected:
    QString getXBTRange(bs::network::otc::Range xbtRange);
    QString getCCRange(bs::network::otc::Range ccRange);
 
+   QString getSide(bs::network::otc::Side requestSide, bool isOwnRequest);
+
 protected:
    std::shared_ptr<OTCWindowsManager> otcManager_{};
 

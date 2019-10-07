@@ -18,6 +18,14 @@ namespace {
       return QObject::tr("%1 min").arg(minutes);
    }
 
+   QString side(bs::network::otc::Side requestSide, bool isOwnRequest) {
+      if (!isOwnRequest) {
+         requestSide = bs::network::otc::switchSide(requestSide);
+      }
+
+      return QString::fromStdString(otc::toString(requestSide));
+   }
+
 } // namespace
 
 OTCRequestViewModel::OTCRequestViewModel(OtcClient *otcClient, QObject* parent)
@@ -55,7 +63,7 @@ QVariant OTCRequestViewModel::data(const QModelIndex &index, int role) const
             case Columns::Security:    return QStringLiteral("EUR/XBT");
             case Columns::Type:        return QStringLiteral("OTC");
             case Columns::Product:     return QStringLiteral("XBT");
-            case Columns::Side:        return QString::fromStdString(otc::toString(request.ourSide));
+            case Columns::Side:        return side(request.ourSide, requestData.isOwnRequest_);
             case Columns::Quantity:    return QString::fromStdString(otc::toString(request.rangeType));
             case Columns::Duration:    return duration(request.timestamp);
          }

@@ -21,9 +21,9 @@ public:
    explicit PullOwnOTCRequestWidget(QWidget* parent = nullptr);
    ~PullOwnOTCRequestWidget() override;
 
-   void setOffer(const std::string& contactId, const bs::network::otc::Offer &offer);
-   void setRequest(const std::string& contactId, const bs::network::otc::QuoteRequest &request);
-   void setResponse(const std::string& contactId, const bs::network::otc::QuoteResponse &response);
+   void setOffer(const bs::network::otc::Offer &offer);
+   void setRequest(const bs::network::otc::QuoteRequest &request);
+   void setResponse(const bs::network::otc::QuoteResponse &response);
    void setPendingBuyerSign(const bs::network::otc::Offer &offer);
    void setPendingSellerSign(const bs::network::otc::Offer &offer);
 
@@ -38,7 +38,7 @@ protected slots:
 
 protected:
    void setupTimer(const std::chrono::steady_clock::time_point& offerTimestamp);
-   void setupNegotiationInterface(const QString& headerText);
+   void setupNegotiationInterface(const QString& headerText, bool isResponse = false);
    void setupSignAwaitingInterface(const QString& headerText);
    void setupOfferInfo(const bs::network::otc::Offer &offer);
 

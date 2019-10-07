@@ -33,14 +33,14 @@ PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
 
 PullOwnOTCRequestWidget::~PullOwnOTCRequestWidget() = default;
 
-void PullOwnOTCRequestWidget::setOffer(const std::string& contactId, const bs::network::otc::Offer &offer)
+void PullOwnOTCRequestWidget::setOffer(const bs::network::otc::Offer &offer)
 {
    setupNegotiationInterface(headerTextOTCRequest);
    setupOfferInfo(offer);
    timeoutSec_ = bs::network::otc::negotiationTimeout().count() / 1000;
 }
 
-void PullOwnOTCRequestWidget::setRequest(const std::string& contactId, const bs::network::otc::QuoteRequest &request)
+void PullOwnOTCRequestWidget::setRequest(const bs::network::otc::QuoteRequest &request)
 {
    setupNegotiationInterface(headerTextOTCRequest);
 
@@ -53,9 +53,9 @@ void PullOwnOTCRequestWidget::setRequest(const std::string& contactId, const bs:
    timeoutSec_ = bs::network::otc::publicRequestTimeout().count() / 1000;
 }
 
-void PullOwnOTCRequestWidget::setResponse(const std::string& contactId, const otc::QuoteResponse &response)
+void PullOwnOTCRequestWidget::setResponse(const otc::QuoteResponse &response)
 {
-   setupNegotiationInterface(headerTextOTCResponse);
+   setupNegotiationInterface(headerTextOTCResponse, true /* isResponse */);
 
    ourSide_ = response.ourSide;
    ui_->sideValue->setText(QString::fromStdString(otc::toString(response.ourSide)));
@@ -90,12 +90,12 @@ void PullOwnOTCRequestWidget::setPeer(const bs::network::otc::Peer &peer)
       ui_->labelTimeLeft->hide();
       ui_->horizontalWidgetSubmit->hide();
    }
+  
+   ui_->sideValue->setText(getSide(ourSide_, peer.isOwnRequest));
 
-   if (!timeoutSec_) {
-      return;
+   if (timeoutSec_) {
+      setupTimer(peer.stateTimestamp);
    }
-
-   setupTimer(peer.stateTimestamp);
 }
 
 void PullOwnOTCRequestWidget::onUpdateTimerData()
@@ -119,10 +119,10 @@ void PullOwnOTCRequestWidget::setupTimer(const std::chrono::steady_clock::time_p
    pullTimer_.start();
 }
 
-void PullOwnOTCRequestWidget::setupNegotiationInterface(const QString& headerText)
+void PullOwnOTCRequestWidget::setupNegotiationInterface(const QString& headerText, bool isResponse /* = false */)
 {
-   ui_->progressBarTimeLeft->show();
-   ui_->labelTimeLeft->show();
+   ui_->progressBarTimeLeft->setVisible(!isResponse);
+   ui_->labelTimeLeft->setVisible(!isResponse);
    ui_->horizontalWidgetSubmit->show();
    ui_->pullPushButton->setText(buttonTextPull);
    ui_->headerLabel->setText(headerText);
