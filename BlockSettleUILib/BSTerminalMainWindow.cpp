@@ -29,9 +29,9 @@
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
 #include "DialogManager.h"
+#include "FutureValue.h"
 #include "HeadlessContainer.h"
 #include "ImportKeyBox.h"
-#include "FutureValue.h"
 #include "LoginWindow.h"
 #include "MDAgreementDialog.h"
 #include "MarketDataProvider.h"
@@ -39,6 +39,7 @@
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
+#include "OrderListModel.h"
 #include "PubKeyLoader.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
@@ -595,6 +596,8 @@ void BSTerminalMainWindow::InitAssets()
    assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsMgr_, mdProvider_, celerConnection_);
    assetManager_->init();
 
+   orderListModel_ = std::make_unique<OrderListModel>(assetManager_);
+
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityDef, assetManager_.get(), &AssetManager::onCCSecurityReceived);
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsMgr_.get(), &bs::sync::WalletsManager::onCCSecurityInfo);
    connect(ccFileManager_.get(), &CCFileManager::Loaded, this, &BSTerminalMainWindow::onCCLoaded);
@@ -613,8 +616,6 @@ void BSTerminalMainWindow::InitPortfolioView()
    ui_->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_,
                              signContainer_, armory_, logMgr_->logger("ui"),
                              walletsMgr_);
-
-
 }
 
 void BSTerminalMainWindow::InitWalletsView()
@@ -1139,6 +1140,8 @@ void BSTerminalMainWindow::onLogin()
    connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
    connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
 
+   connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
+
    networkSettingsReceived(loginDialog.networkSettings());
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
@@ -1581,9 +1584,9 @@ void BSTerminalMainWindow::InitWidgets()
    auto dialogManager = std::make_shared<DialogManager>(this);
 
    ui_->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
-      , dialogManager, signContainer_, armory_, connectionManager_);
+      , dialogManager, signContainer_, armory_, connectionManager_, orderListModel_.get());
    ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
-      , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_, dealerUtxoAdapter_, autoSignQuoteProvider_);
+      , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_, dealerUtxoAdapter_, autoSignQuoteProvider_, orderListModel_.get());
 
    connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
    connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);

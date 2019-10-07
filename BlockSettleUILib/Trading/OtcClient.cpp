@@ -599,15 +599,8 @@ void OtcClient::processContactMessage(const std::string &contactId, const Binary
    processPeerMessage(peer, data);
 }
 
-void OtcClient::processPbMessage(const std::string &data)
+void OtcClient::processPbMessage(const ProxyTerminalPb::Response &response)
 {
-   ProxyTerminalPb::Response response;
-   bool result = response.ParseFromString(data);
-   if (!result) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't parse message from PB");
-      return;
-   }
-
    switch (response.data_case()) {
       case ProxyTerminalPb::Response::kStartOtc:
          processPbStartOtc(response.start_otc());

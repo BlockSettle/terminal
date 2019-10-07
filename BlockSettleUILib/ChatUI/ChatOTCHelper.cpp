@@ -97,9 +97,9 @@ void ChatOTCHelper::onLogout()
    connectedContacts_.clear();
 }
 
-void ChatOTCHelper::onProcessOtcPbMessage(const std::string& data)
+void ChatOTCHelper::onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
-   otcClient_->processPbMessage(data);
+   otcClient_->processPbMessage(response);
 }
 
 void ChatOTCHelper::onOtcRequestSubmit(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer)

@@ -34,6 +34,14 @@ namespace bs {
    }
 }
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Response;
+      }
+   }
+}
+
 class ChatWidget : public QWidget
 {
    Q_OBJECT
@@ -64,7 +72,7 @@ protected:
    bool eventFilter(QObject* sender, QEvent* event) override;
 
 public slots:
-   void onProcessOtcPbMessage(const std::string& data);
+   void onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
    void onSendOtcMessage(const std::string& contactId, const BinaryData& data);
    void onSendOtcPublicMessage(const BinaryData& data);
 
