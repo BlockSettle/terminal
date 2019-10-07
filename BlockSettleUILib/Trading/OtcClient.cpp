@@ -381,10 +381,21 @@ bool OtcClient::pullOrReject(Peer *peer)
          msg.mutable_close();
          send(peer, msg);
 
-         changePeerState(peer, State::Idle);
-
-         if (peer->type == PeerType::Request) {
-            updatePublicLists();
+         switch (peer->type) {
+            case PeerType::Contact:
+               resetPeerStateToIdle(peer);
+               break;
+            case PeerType::Request:
+               // Keep public request even if we reject it
+               resetPeerStateToIdle(peer);
+               // Need to call this as peer would be removed from "sent requests" list
+               updatePublicLists();
+               break;
+            case PeerType::Response:
+               // Remove peer from received responses if we reject it
+               responseMap_.erase(peer->contactId);
+               updatePublicLists();
+               break;
          }
 
          return true;
