@@ -19,7 +19,7 @@ namespace {
    const QString buttonTextCancel = QObject::tr("CANCEL");
 
    int getSeconds(std::chrono::milliseconds durationInMillisecs) {
-      return std::chrono::duration_cast<std::chrono::seconds>(durationInMillisecs).count();
+      return int(std::chrono::duration_cast<std::chrono::seconds>(durationInMillisecs).count());
    }
 }
 
@@ -32,9 +32,9 @@ PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
    connect(&pullTimer_, &QTimer::timeout, this, &PullOwnOTCRequestWidget::onUpdateTimerData);
    connect(ui_->pullPushButton, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::currentRequestPulled);
 
-   connect(ui_->pushButtonOfflineLoad, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::onSaveOffline);
-   connect(ui_->pushButtonOfflineSave, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::onLoadOffline);
-   connect(ui_->pushButtonOfflineBroadcast, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::onBroadcastOffline);
+   connect(ui_->pushButtonOfflineSave, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::saveOfflineClicked);
+   connect(ui_->pushButtonOfflineLoad, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::loadOfflineClicked);
+   connect(ui_->pushButtonOfflineBroadcast, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::broadcastOfflineClicked);
 
    pullTimer_.setInterval(kTimerRepeatTimeMSec);
 }
@@ -105,9 +105,7 @@ void PullOwnOTCRequestWidget::setPeer(const bs::network::otc::Peer &peer)
       setupTimer(peer.stateTimestamp);
    }
 
-   const bool showOfflineButtons = peer.sellFromOffline
-         && (peer.offer.ourSide == otc::Side::Sell)
-         && (peer.state == otc::State::WaitSellerSeal);
+   const bool showOfflineButtons = peer.isWaitingForOfflineSign();
    ui_->pushButtonOfflineSave->setVisible(showOfflineButtons);
    ui_->pushButtonOfflineLoad->setVisible(showOfflineButtons);
    ui_->pushButtonOfflineBroadcast->setVisible(showOfflineButtons);
@@ -125,21 +123,6 @@ void PullOwnOTCRequestWidget::onUpdateTimerData()
    if (diffSeconds.count() < 0) {
       pullTimer_.stop();
    }
-}
-
-void PullOwnOTCRequestWidget::onSaveOffline()
-{
-
-}
-
-void PullOwnOTCRequestWidget::onLoadOffline()
-{
-
-}
-
-void PullOwnOTCRequestWidget::onBroadcastOffline()
-{
-
 }
 
 void PullOwnOTCRequestWidget::setupTimer(const std::chrono::steady_clock::time_point& offerTimestamp)

@@ -180,6 +180,7 @@ namespace bs {
             Peer(const std::string &contactId, PeerType type);
 
             std::string toString() const;
+            bool isWaitingForOfflineSign() const;
          };
 
          using Peers = std::vector<Peer*>;
