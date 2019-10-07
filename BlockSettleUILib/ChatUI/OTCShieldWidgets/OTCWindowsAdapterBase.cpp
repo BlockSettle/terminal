@@ -58,6 +58,10 @@ void OTCWindowsAdapterBase::onAboutToApply()
 {
 }
 
+void OTCWindowsAdapterBase::onChatRoomChanged()
+{
+}
+
 void OTCWindowsAdapterBase::onSyncInterface()
 {
 }
@@ -180,4 +184,13 @@ QString OTCWindowsAdapterBase::getCCRange(bs::network::otc::Range ccRange)
    return QStringLiteral("%1 - %2")
       .arg(UiUtils::displayCurrencyAmount(bs::network::otc::fromCents(ccRange.lower)))
       .arg(UiUtils::displayCurrencyAmount(bs::network::otc::fromCents(ccRange.upper)));
+}
+
+QString OTCWindowsAdapterBase::getSide(bs::network::otc::Side requestSide, bool isOwnRequest)
+{
+   if (!isOwnRequest) {
+      requestSide = bs::network::otc::switchSide(requestSide);
+   }
+
+   return QString::fromStdString(bs::network::otc::toString(requestSide));
 }

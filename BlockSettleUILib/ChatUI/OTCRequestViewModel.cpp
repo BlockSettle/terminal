@@ -7,14 +7,23 @@ using namespace bs::network;
 namespace {
 
    const int kMaxPeriodMinutes = 10;
+   const int kUpdateTimerInterval = 500;
 
    QString duration(QDateTime timestamp)
    {
-      int minutes = std::max(0, int(QDateTime::currentDateTime().secsTo(timestamp) / 60));
+      int minutes = std::max(0, int(timestamp.secsTo(QDateTime::currentDateTime()) / 60));
       if (minutes > kMaxPeriodMinutes) {
          return QObject::tr("> %1 min").arg(kMaxPeriodMinutes);
       }
       return QObject::tr("%1 min").arg(minutes);
+   }
+
+   QString side(bs::network::otc::Side requestSide, bool isOwnRequest) {
+      if (!isOwnRequest) {
+         requestSide = bs::network::otc::switchSide(requestSide);
+      }
+
+      return QString::fromStdString(otc::toString(requestSide));
    }
 
 } // namespace
@@ -23,7 +32,10 @@ OTCRequestViewModel::OTCRequestViewModel(OtcClient *otcClient, QObject* parent)
    : QAbstractTableModel(parent)
    , otcClient_(otcClient)
 {
-   connect(otcClient, &OtcClient::publicUpdated, this, &OTCRequestViewModel::onRequestsUpdated);
+   connect(&updateDurationTimer_, &QTimer::timeout, this, &OTCRequestViewModel::onUpdateDuration);
+
+   updateDurationTimer_.setInterval(kUpdateTimerInterval);
+   updateDurationTimer_.start();
 }
 
 int OTCRequestViewModel::rowCount(const QModelIndex &parent) const
@@ -51,7 +63,7 @@ QVariant OTCRequestViewModel::data(const QModelIndex &index, int role) const
             case Columns::Security:    return QStringLiteral("EUR/XBT");
             case Columns::Type:        return QStringLiteral("OTC");
             case Columns::Product:     return QStringLiteral("XBT");
-            case Columns::Side:        return QString::fromStdString(otc::toString(request.ourSide));
+            case Columns::Side:        return side(request.ourSide, requestData.isOwnRequest_);
             case Columns::Quantity:    return QString::fromStdString(otc::toString(request.rangeType));
             case Columns::Duration:    return duration(request.timestamp);
          }
@@ -84,6 +96,17 @@ QVariant OTCRequestViewModel::headerData(int section, Qt::Orientation orientatio
    return QVariant{};
 }
 
+QModelIndex OTCRequestViewModel::getIndexByTimestamp(QDateTime timeStamp)
+{
+   for (int iReq = 0; iReq < request_.size(); ++iReq) {
+      if (timeStamp == request_[iReq].request_.timestamp) {
+         return index(iReq, 0);
+      }
+   }
+
+   return {};
+}
+
 void OTCRequestViewModel::onRequestsUpdated()
 {
    beginResetModel();
@@ -92,4 +115,15 @@ void OTCRequestViewModel::onRequestsUpdated()
       request_.push_back({ peer->request, peer->isOwnRequest });
    }
    endResetModel();
+   emit restoreSelectedIndex();
+}
+
+void OTCRequestViewModel::onUpdateDuration()
+{
+   if (rowCount() == 0) {
+      return;
+   }
+
+   emit dataChanged(index(0, static_cast<int>(Columns::Duration)),
+      index(rowCount() - 1, static_cast<int>(Columns::Duration)), { Qt::DisplayRole });
 }

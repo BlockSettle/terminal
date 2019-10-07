@@ -233,12 +233,12 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       break;
 
    case bs::ui::NotifyType::OTCOrderError:
-      if (msg.size() != 2) {
+      if (msg.size() != 1) {
          return;
       }
 
-      title = tr("OTC order failed");
-      text = tr("OTC order %1 was rejected with reason: %2").arg(msg[0].toString()).arg(msg[1].toString());
+      title = tr("OTC Failed");
+      text = msg[0].toString();
       icon = QSystemTrayIcon::Warning;
       break;
 

@@ -41,11 +41,12 @@ public:
 
    virtual void setPeer(const bs::network::otc::Peer &);
 signals:
-   void chatRoomChanged();
+   
    void xbtInputsProcessed();
 
 public slots:
    virtual void onAboutToApply();
+   virtual void onChatRoomChanged();
 
 protected slots:
    virtual void onSyncInterface();
@@ -71,6 +72,8 @@ protected:
 
    QString getXBTRange(bs::network::otc::Range xbtRange);
    QString getCCRange(bs::network::otc::Range ccRange);
+
+   QString getSide(bs::network::otc::Side requestSide, bool isOwnRequest);
 
 protected:
    std::shared_ptr<OTCWindowsManager> otcManager_{};

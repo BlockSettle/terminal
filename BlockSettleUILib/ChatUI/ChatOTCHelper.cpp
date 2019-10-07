@@ -79,6 +79,16 @@ void ChatOTCHelper::setCurrentUserId(const std::string& ownUserId)
    otcClient_->setOwnContactId(ownUserId);
 }
 
+void ChatOTCHelper::setGlobalOTCEntryTimeStamp(QDateTime timeStamp)
+{
+   selectedGlobalEntryTimeStamp_ = timeStamp;
+}
+
+QDateTime ChatOTCHelper::selectedGlobalOTCEntryTimeStamp() const
+{
+   return selectedGlobalEntryTimeStamp_;
+}
+
 void ChatOTCHelper::onLogout()
 {
    for (const auto &contactId : connectedContacts_) {

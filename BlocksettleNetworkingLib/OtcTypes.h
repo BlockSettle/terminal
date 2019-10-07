@@ -20,6 +20,13 @@ namespace bs {
             Test,
          };
 
+         enum class PeerErrorType {
+            NoError,
+            Timeout,
+            Canceled,
+            Rejected
+         };
+
          enum class PeerType : int
          {
             Contact,
@@ -149,7 +156,7 @@ namespace bs {
 
             State state{State::Idle};
             // timestamp of the latest status change (it's always valid)
-            QDateTime stateTimestamp;
+            std::chrono::steady_clock::time_point stateTimestamp{};
 
             QuoteRequest request;
             QuoteResponse response;
@@ -181,6 +188,8 @@ namespace bs {
 
          std::chrono::milliseconds payoutTimeout();
          std::chrono::milliseconds payinTimeout();
+         std::chrono::milliseconds negotiationTimeout();
+         std::chrono::milliseconds publicRequestTimeout();
       }
    }
 }

@@ -175,7 +175,7 @@ bool otc::isSubRange(otc::Range range, otc::Range subRange)
 otc::Peer::Peer(const std::string &contactId, otc::PeerType type)
    : contactId(contactId)
    , type(type)
-   , stateTimestamp(QDateTime::currentDateTime())
+   , stateTimestamp(std::chrono::steady_clock::now())
 {
 }
 
@@ -193,4 +193,14 @@ std::chrono::milliseconds otc::payinTimeout()
 {
    // payin timeout is higher because offline wallet could be used
    return std::chrono::seconds(300);
+}
+
+std::chrono::milliseconds otc::negotiationTimeout()
+{
+   return std::chrono::seconds(120);
+}
+
+std::chrono::milliseconds otc::publicRequestTimeout()
+{
+   return std::chrono::minutes(10);
 }

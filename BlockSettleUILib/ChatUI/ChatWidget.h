@@ -84,6 +84,7 @@ private slots:
    void onActivatePartyId(const QString& partyId);
    void onActivateGlobalPartyId();
    void onActivateCurrentPartyId();
+   void onActivateGlobalOTCTableRow();
    void onRegisterNewChangingRefresh();
    void onShowUserRoom(const QString& userHash);
    void onContactFriendRequest(const QString& userHash);
@@ -103,7 +104,7 @@ private slots:
 
    void onOtcUpdated(const bs::network::otc::Peer *peer);
    void onOtcPublicUpdated();
-   void onOTCPeerError(const bs::network::otc::Peer *peer, const std::string &errorMsg);
+   void onOTCPeerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg);
 
    void onOtcRequestSubmit();
    void onOtcResponseAccept();

@@ -64,7 +64,7 @@ ChatWidget::ChatWidget(QWidget* parent)
       auto* widget = qobject_cast<OTCWindowsAdapterBase*>(sWidget->widget(index));
       if (widget) {
          widget->setChatOTCManager(otcWindowsManager_);
-         connect(this, &ChatWidget::chatRoomChanged, widget, &OTCWindowsAdapterBase::chatRoomChanged);
+         connect(this, &ChatWidget::chatRoomChanged, widget, &OTCWindowsAdapterBase::onChatRoomChanged);
       }
    }
    connect(otcWindowsManager_.get(), &OTCWindowsManager::syncInterfaceRequired, this, &ChatWidget::onUpdateOTCShield);
@@ -166,13 +166,16 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    otcRequestViewModel_ = new OTCRequestViewModel(otcHelper_->client(), this);
    ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
    connect(ui_->treeViewOTCRequests->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWidget::onOtcRequestCurrentChanged);
+   connect(chatPartiesTreeModel_.get(), &ChatPartiesTreeModel::restoreSelectedIndex, this, &ChatWidget::onActivateGlobalOTCTableRow, Qt::QueuedConnection);
 
    connect(otcHelper_->client(), &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
    connect(otcHelper_->client(), &OtcClient::sendContactMessage, this, &ChatWidget::onSendOtcMessage);
    connect(otcHelper_->client(), &OtcClient::sendPublicMessage, this, &ChatWidget::onSendOtcPublicMessage);
    connect(otcHelper_->client(), &OtcClient::peerUpdated, this, &ChatWidget::onOtcUpdated);
    connect(otcHelper_->client(), &OtcClient::publicUpdated, this, &ChatWidget::onOtcPublicUpdated);
+   connect(otcHelper_->client(), &OtcClient::publicUpdated, otcRequestViewModel_, &OTCRequestViewModel::onRequestsUpdated);
    connect(otcHelper_->client(), &OtcClient::peerError, this, &ChatWidget::onOTCPeerError);
+   
 
    connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::requestCreated, this, &ChatWidget::onOtcRequestSubmit);
    connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::currentRequestPulled, this, &ChatWidget::onOtcPullOrRejectCurrent);
@@ -266,9 +269,9 @@ void ChatWidget::onOtcPublicUpdated()
    ui_->treeViewUsers->onExpandGlobalOTC();
 }
 
-void ChatWidget::onOTCPeerError(const bs::network::otc::Peer *peer, const std::string &errorMsg)
+void ChatWidget::onOTCPeerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg)
 {
-   stateCurrent_->onOTCPeerError(peer, errorMsg);
+   stateCurrent_->onOTCPeerError(peer, type, errorMsg);
 }
 
 void ChatWidget::onUpdateOTCShield()
@@ -490,6 +493,24 @@ void ChatWidget::onActivateCurrentPartyId()
    }
 }
 
+void ChatWidget::onActivateGlobalOTCTableRow()
+{
+   QDateTime timeStamp = otcHelper_->selectedGlobalOTCEntryTimeStamp();
+
+   if (!timeStamp.isValid()) {
+      return;
+   }
+
+   const QModelIndex currentRequest = otcRequestViewModel_->getIndexByTimestamp(timeStamp);
+
+   if (!currentRequest.isValid()) {
+      return;
+   }
+
+   ui_->treeViewOTCRequests->setCurrentIndex(currentRequest);
+   stateCurrent_->onUpdateOTCShield();
+}
+
 void ChatWidget::onRegisterNewChangingRefresh()
 {
    if (!isVisible() || !isActiveWindow()) {
@@ -619,4 +640,13 @@ void ChatWidget::onConfirmContactNewKeyData(const Chat::UserPublicKeyInfoList& u
 void ChatWidget::onOtcRequestCurrentChanged(const QModelIndex &current, const QModelIndex &previous)
 {
    onOtcPublicUpdated();
+
+   QDateTime selectedPeerTimeStamp;
+   if (currentPartyId_ == Chat::OtcRoomName) {
+      if (current.isValid() && current.row() >= 0 && current.row() < int(otcHelper_->client()->requests().size())) {
+         selectedPeerTimeStamp = otcHelper_->client()->requests().at(size_t(current.row()))->request.timestamp;
+      }
+   }
+
+   otcHelper_->setGlobalOTCEntryTimeStamp(selectedPeerTimeStamp);
 }

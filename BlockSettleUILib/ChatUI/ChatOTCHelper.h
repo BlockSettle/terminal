@@ -51,6 +51,9 @@ public:
 
    void setCurrentUserId(const std::string& ownUserId);
 
+   void setGlobalOTCEntryTimeStamp(QDateTime timeStamp);
+   QDateTime selectedGlobalOTCEntryTimeStamp() const;
+
 public slots:
    void onLogout();
    void onProcessOtcPbMessage(const std::string& data);
@@ -73,6 +76,7 @@ private:
    OtcClient* otcClient_{};
    std::set<std::string> connectedContacts_;
    std::shared_ptr<spdlog::logger> loggerPtr_;
+   QDateTime selectedGlobalEntryTimeStamp_{};
 };
 
 #endif // CHATOTCHELPER_H
