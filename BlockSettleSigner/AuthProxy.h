@@ -25,23 +25,26 @@ class AuthSignWalletObject : public QObject
    Q_OBJECT
    Q_PROPERTY(QString status READ status NOTIFY statusChanged)
 public:
-   AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &
-                        , const std::shared_ptr<ApplicationSettings> &
-                        , const std::shared_ptr<ConnectionManager> &
-                        , QObject *parent = nullptr);
+   AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<ConnectionManager> &);
 
-   AuthSignWalletObject(QObject *parent = nullptr) : QObject(parent) {}
+   AuthSignWalletObject() {}
    AuthSignWalletObject(const AuthSignWalletObject &other);
 
    void connectToServer();
 
    // used for wallet creation and signing
-   void signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo);
+   void signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo
+      , int expiration = AutheIDClient::kDefaultExpiration);
 
    // used for device removing
    void removeDevice(int index, bs::hd::WalletInfo *walletInfo);
 
    Q_INVOKABLE void cancel();
+
+   Q_INVOKABLE int defaultSettlementExpiration() { return AutheIDClient::kDefaultSettlementExpiration; }
+   Q_INVOKABLE int defaultExpiration() { return AutheIDClient::kDefaultExpiration; }
+   Q_INVOKABLE int networkDelayFix() { return 1; }
 
 signals:
    void statusChanged();

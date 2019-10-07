@@ -83,16 +83,16 @@ public:
    // Auth
    // used for signing
    Q_INVOKABLE AuthSignWalletObject *createAutheIDSignObject(AutheIDClient::RequestType requestType
-                                                             , bs::hd::WalletInfo *walletInfo);
+      , bs::hd::WalletInfo *walletInfo, int expiration = AutheIDClient::kDefaultExpiration);
 
    // used for add new eID device
    Q_INVOKABLE AuthSignWalletObject *createActivateEidObject(const QString &userId
-                                                             , bs::hd::WalletInfo *walletInfo);
+      , bs::hd::WalletInfo *walletInfo);
 
    // used for remove eID device
    // index: is encKeys index which should be deleted
-   Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index
-                                                             , bs::hd::WalletInfo *walletInfo);
+   Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index, bs::hd::WalletInfo *walletInfo);
+
    QString headlessPubKey() const;
 
    // service functions
