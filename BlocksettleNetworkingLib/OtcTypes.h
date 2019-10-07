@@ -170,7 +170,7 @@ namespace bs {
 
             ValidityFlag validityFlag;
 
-            BinaryData activeSignRequest;
+            BinaryData activeSettlementId;
 
             Peer(const std::string &contactId, PeerType type);
 
