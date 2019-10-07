@@ -40,7 +40,7 @@ CustomTitleDialogWindow {
     readonly property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     readonly property int addressRowHeight: 24
 
-    readonly property int duration: passwordDialogData.Duration / 1000.0 - 1 > 0 ? passwordDialogData.Duration / 1000.0 - 1 : authSign.kDefaultSettlementExpiration()
+    readonly property int duration: passwordDialogData.Duration / 1000.0 - authSign.networkDelayFix() > 0 ? passwordDialogData.Duration / 1000.0 - authSign.networkDelayFix() : authSign.defaultSettlementExpiration()
     property real timeLeft: duration
 
     readonly property real balanceDivider : qmlFactory.balanceDivider()
@@ -71,7 +71,7 @@ CustomTitleDialogWindow {
             return
         }
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo, timeLeft - 1)
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo, timeLeft - authSign.networkDelayFix())
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth

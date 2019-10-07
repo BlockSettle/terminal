@@ -26,7 +26,7 @@ CustomTitleDialogWindow {
     property alias passwordInput : passwordInput
     property string decryptHeaderText: qsTr("Decrypt Wallet")
 
-    readonly property int duration: authSign.kDefaultExpiration()
+    readonly property int duration: authSign.defaultExpiration()
     property real timeLeft: duration
 
     title: qsTr("Decrypt Wallet")
@@ -41,7 +41,7 @@ CustomTitleDialogWindow {
         btnAccept.visible = false
         btnReject.anchors.horizontalCenter = barFooter.horizontalCenter
 
-        authSign = qmlFactory.createAutheIDSignObject(autheIDSignType, walletInfo, timeLeft - 1)
+        authSign = qmlFactory.createAutheIDSignObject(autheIDSignType, walletInfo, timeLeft - authSign.networkDelayFix())
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth

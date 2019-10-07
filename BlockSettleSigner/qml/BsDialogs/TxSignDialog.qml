@@ -26,7 +26,7 @@ CustomTitleDialogWindow {
     property int addressRowHeight: 24
     property int recipientsAddrHeight: txInfo.allRecipients.length < 4 ? txInfo.allRecipients.length * addressRowHeight : addressRowHeight * 3
 
-    readonly property int duration: authSign.kDefaultExpiration()
+    readonly property int duration: authSign.defaultExpiration()
     property real timeLeft: duration
 
     id: root
@@ -42,7 +42,7 @@ CustomTitleDialogWindow {
         btnConfirm.visible = false
         btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo, timeLeft - 1)
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo, timeLeft - authSign.networkDelayFix())
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth

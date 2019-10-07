@@ -42,8 +42,9 @@ public:
 
    Q_INVOKABLE void cancel();
 
-   Q_INVOKABLE int kDefaultSettlementExpiration() { return AutheIDClient::kDefaultSettlementExpiration; }
-   Q_INVOKABLE int kDefaultExpiration() { return AutheIDClient::kDefaultExpiration; }
+   Q_INVOKABLE int defaultSettlementExpiration() { return AutheIDClient::kDefaultSettlementExpiration; }
+   Q_INVOKABLE int defaultExpiration() { return AutheIDClient::kDefaultExpiration; }
+   Q_INVOKABLE int networkDelayFix() { return 1; }
 
 signals:
    void statusChanged();
