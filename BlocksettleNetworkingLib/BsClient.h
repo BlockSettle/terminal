@@ -129,6 +129,7 @@ signals:
    void getLoginResultDone(AutheIDClient::ErrorType status, const std::string &celerLogin);
 
    void celerRecv(CelerAPI::CelerMessageType messageType, const std::string &data);
+   // Register Blocksettle::Communication::ProxyTerminalPb::Response with qRegisterMetaType() if queued connection is needed
    void processPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &message);
 
    void connected();
