@@ -16,6 +16,14 @@ enum class OTCPages : int
    OTCNegotiateResponsePage
 };
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Response;
+      }
+   }
+}
+
 class ChatWidget;
 class AbstractChatWidgetState
 {
@@ -53,7 +61,7 @@ public:
    // OTC
    void onSendOtcMessage(const std::string &partyId, const std::string& data);
    void onSendOtcPublicMessage(const std::string& data);
-   void onProcessOtcPbMessage(const std::string& data);
+   void onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
    void onOtcUpdated(const bs::network::otc::Peer *peer);
    void onOtcPublicUpdated();

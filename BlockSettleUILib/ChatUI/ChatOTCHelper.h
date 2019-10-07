@@ -27,6 +27,14 @@ namespace bs {
    }
 }
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Response;
+      }
+   }
+}
+
 class ApplicationSettings;
 class ArmoryConnection;
 class AuthAddressManager;
@@ -56,7 +64,7 @@ public:
 
 public slots:
    void onLogout();
-   void onProcessOtcPbMessage(const std::string& data);
+   void onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
    void onOtcRequestSubmit(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer);
    void onOtcPullOrReject(bs::network::otc::Peer *peer);

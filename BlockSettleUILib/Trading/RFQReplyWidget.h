@@ -28,17 +28,25 @@ namespace bs {
    class SettlementAddressEntry;
    class SecurityStatsCollector;
 }
+class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class BaseCelerClient;
+class ConnectionManager;
 class DialogManager;
 class MarketDataProvider;
+class OrderListModel;
 class QuoteProvider;
 class SignContainer;
-class ApplicationSettings;
-class ConnectionManager;
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Response;
+      }
+   }
+}
 
 class RFQReplyWidget : public TabWithShortcut
 {
@@ -60,7 +68,7 @@ public:
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<bs::DealerUtxoResAdapter> &
-      , const std::shared_ptr<AutoSignQuoteProvider> &);
+      , const std::shared_ptr<AutoSignQuoteProvider> &, OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -81,7 +89,7 @@ signals:
 public slots:
    void forceCheckCondition();
 
-   void onMessageFromPB(std::string data);
+   void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
 private slots:
    void onReplied(bs::network::QuoteNotification qn);

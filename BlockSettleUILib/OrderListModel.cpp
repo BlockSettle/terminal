@@ -1,9 +1,10 @@
-
 #include "OrderListModel.h"
+
 #include "AssetManager.h"
 #include "QuoteProvider.h"
 #include "UiUtils.h"
-#include "make_unique.h"
+
+#include "bs_proxy_terminal_pb.pb.h"
 
 
 QString OrderListModel::Header::toString(OrderListModel::Header::Index h)
@@ -30,14 +31,11 @@ QString OrderListModel::StatusGroup::toString(OrderListModel::StatusGroup::Type 
 }
 
 
-OrderListModel::OrderListModel(std::shared_ptr<QuoteProvider> quoteProvider, const std::shared_ptr<AssetManager>& assetManager, QObject* parent)
+OrderListModel::OrderListModel(const std::shared_ptr<AssetManager>& assetManager, QObject* parent)
    : QAbstractItemModel(parent)
-   , quoteProvider_(quoteProvider)
    , assetManager_(assetManager)
-   , unsettled_(new StatusGroup(StatusGroup::toString(StatusGroup::UnSettled), 0))
-   , settled_(new StatusGroup(StatusGroup::toString(StatusGroup::Settled), 1))
 {
-   connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &OrderListModel::onOrderUpdated);
+   reset();
 }
 
 int OrderListModel::columnCount(const QModelIndex &) const
@@ -328,6 +326,17 @@ QVariant OrderListModel::headerData(int section, Qt::Orientation orientation, in
    return Header::toString(static_cast<Header::Index>(section));
 }
 
+void OrderListModel::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
+{
+   switch (response.data_case()) {
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrders:
+         processUpdateOrders(response.update_orders());
+         break;
+      default:
+         break;
+   }
+}
+
 void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::Order& order,
    bool emitUpdate)
 {
@@ -336,7 +345,6 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
       case bs::network::Order::New:
          group->rows_[static_cast<std::size_t>(index)]->status_ = tr("New");
       case bs::network::Order::Pending:
-      {
          if (!order.pendingStatus.empty()) {
             auto statusString = QString::fromStdString(order.pendingStatus);
             group->rows_[static_cast<std::size_t>(index)]->status_ = statusString;
@@ -347,7 +355,6 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
             }
          }
          group->rows_[static_cast<std::size_t>(index)]->statusColor_ = QColor{0x63, 0xB0, 0xB2};
-      }
          break;
 
       case bs::network::Order::Filled:
@@ -358,10 +365,6 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
       case bs::network::Order::Failed:
          group->rows_[static_cast<std::size_t>(index)]->status_ = tr("Failed");
          group->rows_[static_cast<std::size_t>(index)]->statusColor_ = QColor{0xEC, 0x0A, 0x35};
-         break;
-
-      default:
-         group->rows_[static_cast<std::size_t>(index)]->status_ = tr("Unknown");
          break;
    }
 
@@ -383,9 +386,9 @@ OrderListModel::StatusGroup::Type OrderListModel::getStatusGroup(const bs::netwo
       case bs::network::Order::Filled:
       case bs::network::Order::Failed:
          return StatusGroup::Settled;
-
-      default: return StatusGroup::last;
    }
+
+   return StatusGroup::last;
 }
 
 std::pair<OrderListModel::Group*, int> OrderListModel::findItem(const bs::network::Order &order)
@@ -545,6 +548,67 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
          QString::fromStdString(order.security), &marketItem->idx_));
       groupItem = marketItem->rows_.back().get();
       endInsertRows();
+   }
+}
+
+void OrderListModel::reset()
+{
+   beginResetModel();
+   groups_.clear();
+   unsettled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::UnSettled), 0);
+   settled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::Settled), 1);
+   endResetModel();
+}
+
+void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
+{
+   // OrderListModel supposed to work correctly when orders states updated one by one.
+   // We don't use this anymore (server sends all active orders every time) so just clear old caches.
+   // Remove this if old behaviour is needed
+   reset();
+   // Use some fake orderId so old code works correctly
+   int orderId = 0;
+
+   for (const auto &data : message.orders()) {
+      bs::network::Order order;
+
+      switch (data.status()) {
+         case bs::types::ORDER_STATUS_PENDING:
+            order.status = bs::network::Order::Pending;
+            break;
+         case bs::types::ORDER_STATUS_FILLED:
+            order.status = bs::network::Order::Filled;
+            break;
+         case bs::types::ORDER_STATUS_VOID:
+            order.status = bs::network::Order::Failed;
+            break;
+         default:
+            break;
+      }
+
+      const bool isXBT = (data.product() == "XBT") || (data.product_against() == "XBT");
+      const bool isCC = (assetManager_->getCCLotSize(data.product())) > 0
+         || (assetManager_->getCCLotSize(data.product_against()) > 0);
+
+      if (isCC) {
+         order.assetType = bs::network::Asset::PrivateMarket;
+      } else if (isXBT) {
+         order.assetType = bs::network::Asset::SpotXBT;
+      } else {
+         order.assetType = bs::network::Asset::SpotFX;
+      }
+
+      orderId += 1;
+      order.exchOrderId = QString::number(orderId);
+      order.side = bs::network::Side::Type(data.side());
+      order.pendingStatus = data.status_text();
+      order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());
+      order.product = data.product();
+      order.quantity = data.quantity();
+      order.security = data.product() + "/" + data.product_against();
+      order.price = data.price();
+
+      onOrderUpdated(order);
    }
 }
 

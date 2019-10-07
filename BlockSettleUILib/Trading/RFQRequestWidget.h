@@ -21,6 +21,14 @@ namespace bs {
    }
 }
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Response;
+      }
+   }
+}
+
 class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
@@ -29,9 +37,9 @@ class BaseCelerClient;
 class ConnectionManager;
 class DialogManager;
 class MarketDataProvider;
+class OrderListModel;
 class QuoteProvider;
 class SignContainer;
-
 
 class RFQRequestWidget : public TabWithShortcut
 {
@@ -53,7 +61,7 @@ public:
          , const std::shared_ptr<SignContainer> &
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<ConnectionManager> &connectionManager
-   );
+         , OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -86,7 +94,7 @@ public slots:
    void onAskClicked(const MarketSelectedInfo& selectedInfo);
    void onDisableSelectedInfo();
 
-   void onMessageFromPB(std::string data);
+   void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
 private slots:
    void onConnectedToCeler();

@@ -11,30 +11,20 @@
 #include <vector>
 #include <deque>
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Response;
+         class Response_UpdateOrders;
+      }
+   }
+}
 
-class QuoteProvider;
 class AssetManager;
-
 
 class OrderListModel : public QAbstractItemModel
 {
     Q_OBJECT
-
-public:
-   OrderListModel(std::shared_ptr<QuoteProvider>, const std::shared_ptr<AssetManager> &, QObject* parent);
-   ~OrderListModel() noexcept override = default;
-
-public:
-   int columnCount(const QModelIndex &parent = QModelIndex()) const override;
-   QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-   QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
-   QModelIndex parent(const QModelIndex &index) const override;
-   int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-   QVariant headerData(int section, Qt::Orientation orientation,
-                       int role = Qt::DisplayRole) const override;
-
-public slots:
-   void onOrderUpdated(const bs::network::Order &);
 
 public:
    struct Header {
@@ -50,6 +40,19 @@ public:
       };
       static QString toString(Index);
    };
+
+   OrderListModel(const std::shared_ptr<AssetManager> &, QObject *parent = nullptr);
+   ~OrderListModel() noexcept override = default;
+
+   int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+   QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+   QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
+   QModelIndex parent(const QModelIndex &index) const override;
+   int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+   QVariant headerData(int section, Qt::Orientation orientation,
+                       int role = Qt::DisplayRole) const override;
+public slots:
+   void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
 private:
    enum class DataType {
@@ -153,6 +156,7 @@ private:
 
    static StatusGroup::Type getStatusGroup(const bs::network::Order &);
 
+   void onOrderUpdated(const bs::network::Order &);
    int findGroup(Market *market, Group *group) const;
    int findMarket(StatusGroup *statusGroup, Market *market) const;
    std::pair<Group*, int> findItem(const bs::network::Order &order);
@@ -162,8 +166,9 @@ private:
    void findMarketAndGroup(const bs::network::Order &order, Market *&market, Group *&group);
    void createGroupsIfNeeded(const bs::network::Order &order, Market *&market, Group *&group);
 
-private:
-   std::shared_ptr<QuoteProvider>   quoteProvider_;
+   void reset();
+   void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &msg);
+
    std::shared_ptr<AssetManager>    assetManager_;
    std::unordered_map<std::string, StatusGroup::Type> groups_;
    std::unique_ptr<StatusGroup> unsettled_;
