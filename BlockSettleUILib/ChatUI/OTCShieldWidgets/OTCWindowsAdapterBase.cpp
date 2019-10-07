@@ -1,7 +1,6 @@
 #include "OTCWindowsAdapterBase.h"
 #include "OTCWindowsManager.h"
 
-#include "OtcTypes.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
@@ -56,6 +55,10 @@ void OTCWindowsAdapterBase::setPeer(const bs::network::otc::Peer &)
 }
 
 void OTCWindowsAdapterBase::onAboutToApply()
+{
+}
+
+void OTCWindowsAdapterBase::onChatRoomChanged()
 {
 }
 
@@ -169,3 +172,25 @@ double OTCWindowsAdapterBase::updateIndicativePriceValue(QLabel *label, bool isB
    }
 }
 
+QString OTCWindowsAdapterBase::getXBTRange(bs::network::otc::Range xbtRange)
+{
+   return QStringLiteral("%1 - %2")
+      .arg(UiUtils::displayCurrencyAmount(xbtRange.lower))
+      .arg(UiUtils::displayCurrencyAmount(xbtRange.upper));
+}
+
+QString OTCWindowsAdapterBase::getCCRange(bs::network::otc::Range ccRange)
+{
+   return QStringLiteral("%1 - %2")
+      .arg(UiUtils::displayCurrencyAmount(bs::network::otc::fromCents(ccRange.lower)))
+      .arg(UiUtils::displayCurrencyAmount(bs::network::otc::fromCents(ccRange.upper)));
+}
+
+QString OTCWindowsAdapterBase::getSide(bs::network::otc::Side requestSide, bool isOwnRequest)
+{
+   if (!isOwnRequest) {
+      requestSide = bs::network::otc::switchSide(requestSide);
+   }
+
+   return QString::fromStdString(bs::network::otc::toString(requestSide));
+}

@@ -96,9 +96,6 @@ namespace {
 
    const auto kStartOtcTimeout = std::chrono::seconds(10);
 
-   const auto kTimeoutError = QObject::tr("connection is timed out");
-   const auto kCancelledError = QObject::tr("deal is cancelled");
-
    bs::sync::PasswordDialogData toPasswordDialogData(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
    {
       double price = fromCents(deal.price);
@@ -245,7 +242,9 @@ bool OtcClient::sendQuoteRequest(const QuoteRequest &request)
 
    ownRequest_ = std::make_unique<Peer>(ownContactId_, PeerType::Request);
    ownRequest_->request = request;
+   ownRequest_->request.timestamp = QDateTime::currentDateTime();
    ownRequest_->isOwnRequest = true;
+   scheduleCloseAfterTimeout(otc::publicRequestTimeout(), ownRequest_.get());
 
    Otc::PublicMessage msg;
    auto d = msg.mutable_request();
@@ -271,6 +270,7 @@ bool OtcClient::sendQuoteResponse(Peer *peer, const QuoteResponse &quoteResponse
    }
 
    changePeerState(peer, State::QuoteSent);
+   scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
    peer->response = quoteResponse;
 
    Otc::ContactMessage msg;
@@ -333,6 +333,7 @@ bool OtcClient::sendOffer(Peer *peer, const Offer &offer)
       peer->offer = offer;
       peer->ourAuthPubKey = ourPubKey;
       changePeerState(peer, State::OfferSent);
+      scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
 
       ContactMessage msg;
       if (offer.ourSide == otc::Side::Buy) {
@@ -517,6 +518,7 @@ bool OtcClient::updateOffer(Peer *peer, const Offer &offer)
       send(peer, msg);
 
       changePeerState(peer, State::OfferSent);
+      scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
    });
 
    return true;
@@ -823,6 +825,7 @@ void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers 
          peer->offer.amount = msg.offer().amount();
          peer->offer.price = msg.offer().price();
          changePeerState(peer, State::OfferRecv);
+         scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
          break;
 
       case State::QuoteSent:
@@ -830,6 +833,7 @@ void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers 
          peer->offer.amount = msg.offer().amount();
          peer->offer.price = msg.offer().price();
          changePeerState(peer, State::OfferRecv);
+         scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
          break;
 
       case State::QuoteRecv:
@@ -848,6 +852,7 @@ void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers 
 
          peer->offer.price = msg.offer().price();
          changePeerState(peer, State::OfferRecv);
+         scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
          break;
 
       case State::OfferRecv:
@@ -875,6 +880,7 @@ void OtcClient::processSellerOffers(Peer *peer, const ContactMessage_SellerOffer
          peer->offer.amount = msg.offer().amount();
          peer->offer.price = msg.offer().price();
          changePeerState(peer, State::OfferRecv);
+         scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
          break;
 
       case State::QuoteSent:
@@ -882,6 +888,7 @@ void OtcClient::processSellerOffers(Peer *peer, const ContactMessage_SellerOffer
          peer->offer.amount = msg.offer().amount();
          peer->offer.price = msg.offer().price();
          changePeerState(peer, State::OfferRecv);
+         scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
          break;
 
       case State::QuoteRecv:
@@ -900,6 +907,7 @@ void OtcClient::processSellerOffers(Peer *peer, const ContactMessage_SellerOffer
 
          peer->offer.price = msg.offer().price();
          changePeerState(peer, State::OfferRecv);
+         scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
          break;
 
       case State::OfferRecv:
@@ -1086,6 +1094,7 @@ void OtcClient::processQuoteResponse(Peer *peer, const ContactMessage_QuoteRespo
    }
 
    changePeerState(peer, State::QuoteRecv);
+   scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
    peer->response.ourSide = otc::switchSide(otc::Side(msg.sender_side()));
    copyRange(msg.price(), &peer->response.price);
    copyRange(msg.amount(), &peer->response.amount);
@@ -1208,7 +1217,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
          }
 
          SPDLOG_LOGGER_ERROR(logger_, "OTC trade failed: {}", response.error_msg());
-         emit peerError(peer, response.error_msg());
+         emit peerError(peer, PeerErrorType::Rejected, &response.error_msg());
 
          resetPeerStateToIdle(peer);
          break;
@@ -1242,7 +1251,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             if (!handle.isValid() || peer->state != State::WaitBuyerSign) {
                return;
             }
-            emit peerError(peer, kTimeoutError.toStdString());
+            emit peerError(peer, PeerErrorType::Timeout, nullptr);
             resetPeerStateToIdle(peer);
          });
          break;
@@ -1286,7 +1295,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             if (!handle.isValid() || peer->state != State::WaitSellerSeal) {
                return;
             }
-            emit peerError(peer, kTimeoutError.toStdString());
+            emit peerError(peer, PeerErrorType::Timeout, nullptr);
             resetPeerStateToIdle(peer);
          });
          break;
@@ -1310,7 +1319,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
             return;
          }
-         emit peerError(peer, kCancelledError.toStdString());
+         emit peerError(peer, PeerErrorType::Canceled, nullptr);
          resetPeerStateToIdle(peer);
          break;
       }
@@ -1572,7 +1581,7 @@ void OtcClient::sendSellerAccepts(Peer *peer)
       }
       waitSettlementIds_.erase(it);
       SPDLOG_LOGGER_ERROR(logger_, "can't get settlementId from PB: timeout");
-      emit peerError(peer, kTimeoutError.toStdString());
+      emit peerError(peer, PeerErrorType::Timeout, nullptr);
       pullOrReject(peer);
    });
 }
@@ -1599,7 +1608,7 @@ void OtcClient::changePeerStateWithoutUpdate(Peer *peer, State state)
    SPDLOG_LOGGER_DEBUG(logger_, "changing peer '{}' state from {} to {}"
       , peer->toString(), toString(peer->state), toString(state));
    peer->state = state;
-   peer->stateTimestamp = QDateTime::currentDateTime();
+   peer->stateTimestamp = std::chrono::steady_clock::now();
 }
 
 void OtcClient::changePeerState(Peer *peer, bs::network::otc::State state)
@@ -1620,6 +1629,21 @@ void OtcClient::resetPeerStateToIdle(Peer *peer)
    *peer = Peer(peer->contactId, peer->type);
    peer->request = std::move(request);
    emit peerUpdated(peer);
+}
+
+void OtcClient::scheduleCloseAfterTimeout(std::chrono::milliseconds timeout, Peer *peer)
+{
+   // Use PreciseTimer to prevent time out earlier than expected
+   QTimer::singleShot(timeout, Qt::PreciseTimer, this, [this, peer, oldState = peer->state, handle = peer->validityFlag.handle(), timeout] {
+      if (!handle.isValid() || peer->state != oldState) {
+         return;
+      }
+      // Prevent closing from some old state if peer had switched back and forth
+      auto diff = std::chrono::steady_clock::now() - peer->stateTimestamp;
+      if (diff >= timeout) {
+         pullOrReject(peer);
+      }
+   });
 }
 
 void OtcClient::trySendSignedTx(OtcClientDeal *deal)

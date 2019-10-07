@@ -55,7 +55,7 @@ public:
    std::pair<bs::Address, UTXO> getRevokeData(const bs::Address &authAddr);
 
 protected:
-   void onNewBlock(unsigned int) override
+   void onNewBlock(unsigned int, unsigned int) override
    {
       refreshUserAddresses();
    }

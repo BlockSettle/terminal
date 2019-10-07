@@ -346,6 +346,8 @@ TxIOPair& TxIOPair::operator=(const TxIOPair &rhs)
    this->isRBF_ = rhs.isRBF_;
    this->isZCChained_ = rhs.isZCChained_;
 
+   this->scrAddr_ = rhs.scrAddr_;
+
    return *this;
 }
 
@@ -371,6 +373,8 @@ TxIOPair& TxIOPair::operator=(TxIOPair&& toMove)
    this->isUTXO_ = toMove.isUTXO_;
    this->isRBF_ = toMove.isRBF_;
    this->isZCChained_ = toMove.isZCChained_;
+
+   this->scrAddr_ = move(toMove.scrAddr_);
 
    return *this;
 }

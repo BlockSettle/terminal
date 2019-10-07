@@ -75,7 +75,7 @@ namespace bs {
       virtual void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) = 0;
       virtual void onPayOutConfirmed(PayoutSigner::Type signedBy) = 0;
 
-      void onNewBlock(unsigned int) override;
+      void onNewBlock(unsigned int height, unsigned int branchHgt) override;
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
 
    private:

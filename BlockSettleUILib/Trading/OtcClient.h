@@ -128,7 +128,7 @@ signals:
 
    void peerUpdated(const bs::network::otc::Peer *peer);
    // Used to update UI when there is some problems (for example deal verification failed)
-   void peerError(const bs::network::otc::Peer *peer, const std::string &errorMsg);
+   void peerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string *errorMsg);
 
    void publicUpdated();
 
@@ -175,6 +175,7 @@ private:
    void changePeerStateWithoutUpdate(bs::network::otc::Peer *peer, bs::network::otc::State state);
    void changePeerState(bs::network::otc::Peer *peer, bs::network::otc::State state);
    void resetPeerStateToIdle(bs::network::otc::Peer *peer);
+   void scheduleCloseAfterTimeout(std::chrono::milliseconds timeout, bs::network::otc::Peer *peer);
 
    int genLocalUniqueId() { return ++latestUniqueId_; }
    void trySendSignedTx(OtcClientDeal *deal);

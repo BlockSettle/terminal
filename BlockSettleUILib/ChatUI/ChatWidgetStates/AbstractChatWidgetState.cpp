@@ -9,9 +9,10 @@
 #include "OtcUtils.h"
 
 namespace {
-
    const int kMaxMessageNotifLength = 20;
-
+   const auto kTimeoutErrorWith = QObject::tr("OTC negotiation with %1 timed out");
+   const auto kCancelledErrorWith = QObject::tr("OTC negotiation with %1 was canceled");
+   const auto kRejectedErrorWith = QObject::tr("OTC order was rejected: %1");
 } // namespace
 
 using namespace bs::network;
@@ -216,7 +217,6 @@ void AbstractChatWidgetState::onProcessOtcPbMessage(const std::string& data)
 void AbstractChatWidgetState::onOtcUpdated(const otc::Peer *peer)
 {
    if (canReceiveOTCOperations() && chat_->currentPeer() == peer) {
-      chat_->ui_->widgetPullOwnOTCRequest->registerOTCUpdatedTime(peer, QDateTime::currentDateTime());
       onUpdateOTCShield();
    }
 }
@@ -238,6 +238,39 @@ void AbstractChatWidgetState::onUpdateOTCShield()
    }
 
    applyRoomsFrameChange();
+}
+
+void AbstractChatWidgetState::onOTCPeerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg)
+{
+   if (!canReceiveOTCOperations()) {
+      return;
+   }
+      
+   const Chat::ClientPartyPtr clientPartyPtr = getPartyByUserHash(peer->contactId);
+   if (!clientPartyPtr) {
+      return;
+   }  
+
+   QString MessageBody;
+   switch (type)
+   {
+   case bs::network::otc::PeerErrorType::Timeout:
+      MessageBody = kTimeoutErrorWith.arg(QString::fromStdString(clientPartyPtr->displayName()));
+      break;
+   case bs::network::otc::PeerErrorType::Canceled:
+      MessageBody = kCancelledErrorWith.arg(QString::fromStdString(clientPartyPtr->displayName()));
+      break;
+   case bs::network::otc::PeerErrorType::Rejected:
+      assert(errorMsg);
+      MessageBody = kRejectedErrorWith.arg(QString::fromStdString(*errorMsg));
+      break;
+   default:
+      break;
+   }
+   bs::ui::NotifyMessage notifyMsg;
+   notifyMsg.append(MessageBody);
+
+   NotificationCenter::notify(bs::ui::NotifyType::OTCOrderError, notifyMsg);
 }
 
 void AbstractChatWidgetState::onOtcRequestSubmit()
@@ -364,8 +397,7 @@ void AbstractChatWidgetState::updateOtc()
          if (peer->type == otc::PeerType::Contact) {
             pageNumber = OTCPages::OTCNegotiateRequestPage;
          } else if (peer->isOwnRequest) {
-            chat_->ui_->widgetPullOwnOTCRequest->registerOTCUpdatedTime(peer, QDateTime::currentDateTime());
-            chat_->ui_->widgetPullOwnOTCRequest->setRequest(peer->contactId, peer->request);
+            chat_->ui_->widgetPullOwnOTCRequest->setRequest(peer->request);
             pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          } else if (peer->type == otc::PeerType::Request) {
             chat_->ui_->widgetCreateOTCResponse->setRequest(peer->request);
@@ -373,14 +405,14 @@ void AbstractChatWidgetState::updateOtc()
          }
          break;
       case State::QuoteSent:
-         chat_->ui_->widgetPullOwnOTCRequest->setResponse(peer->contactId, peer->response);
+         chat_->ui_->widgetPullOwnOTCRequest->setResponse(peer->response);
          pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          break;
       case State::QuoteRecv:
          pageNumber = OTCPages::OTCNegotiateRequestPage;
          break;
       case State::OfferSent:
-         chat_->ui_->widgetPullOwnOTCRequest->setOffer(peer->contactId, peer->offer);
+         chat_->ui_->widgetPullOwnOTCRequest->setOffer(peer->offer);
          pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          break;
       case State::OfferRecv:
@@ -389,25 +421,25 @@ void AbstractChatWidgetState::updateOtc()
          break;
       case State::SentPayinInfo:
       case State::WaitPayinInfo:
-         chat_->ui_->widgetOTCShield->showContactIsOffline();
-         break;
-
+         chat_->ui_->widgetOTCShield->showOtcSetupTransaction();
+         return;
       case State::WaitBuyerSign:
-      case State::WaitSellerSeal:
-         // FIXME: Show new shields
+         chat_->ui_->widgetPullOwnOTCRequest->setPendingBuyerSign(peer->offer);
          pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
          break;
-
+      case State::WaitSellerSeal:
+         chat_->ui_->widgetPullOwnOTCRequest->setPendingSellerSign(peer->offer);
+         pageNumber = OTCPages::OTCPullOwnOTCRequestPage;
+         break;
       case State::WaitVerification:
-         // FIXME: Show something while we wait for PB response
-         break;
-
       case State::WaitSellerSign:
-         // FIXME: Show something while we wait for PB response
-         break;
-
+         chat_->ui_->widgetOTCShield->showOtcSetupTransaction();
+         return;
       case State::Blacklisted:
          chat_->ui_->widgetOTCShield->showContactIsOffline();
+         return;
+      default:
+         assert(false && " Did you forget to handle new otc::State state? ");
          break;
    }
 
@@ -424,4 +456,10 @@ Chat::ClientPartyPtr AbstractChatWidgetState::getParty(const std::string& partyI
 {
    Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
    return partyModel->getClientPartyById(partyId);
+}
+
+Chat::ClientPartyPtr AbstractChatWidgetState::getPartyByUserHash(const std::string& userHash) const
+{
+   Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+   return partyModel->getClientPartyByUserHash(userHash);
 }

@@ -35,8 +35,6 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
    ui_->pushButtonCancel->hide();
    ui_->pushButtonAccept->setText(tr("Submit"));
 
-   connect(this, &OTCWindowsAdapterBase::chatRoomChanged, this, &OTCNegotiationRequestWidget::onChatRoomChanged);
-
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onBuyClicked);
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateBalances);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onSellClicked);
@@ -103,17 +101,22 @@ void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
       }
 
       case otc::PeerType::Request:
+         toggleSideButtons(peer.request.ourSide == otc::Side::Sell);
+         ui_->labelQuantityValue->setText(QString::fromStdString(otc::toString(peer.request.rangeType)));
+         break;
       case otc::PeerType::Response: {
          // For public OTC side is fixed, use it from original request details
-         toggleSideButtons(peer.request.ourSide == otc::Side::Sell);
-         ui_->rangeValue->setText(QString::fromStdString(otc::toString(peer.request.rangeType)));
+         toggleSideButtons(peer.response.ourSide == otc::Side::Sell);
+         ui_->labelQuantityValue->setText(getXBTRange(peer.response.amount));
+         ui_->labelBidValue->setText(getCCRange(peer.response.price));
          break;
       }
    }
 
    ui_->pushButtonBuy->setEnabled(isContact);
    ui_->pushButtonSell->setEnabled(isContact);
-   ui_->rangeWidget->setVisible(!isContact);
+   ui_->rangeQuantity->setVisible(!isContact);
+   ui_->rangeBid->setVisible(!isContact && peer.type == otc::PeerType::Response);
 
    onChanged();
 }

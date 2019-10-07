@@ -22,7 +22,7 @@ void ValidationAddressACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
 }
 
 ////
-void ValidationAddressACT::onNewBlock(unsigned int height)
+void ValidationAddressACT::onNewBlock(unsigned int height, unsigned int)
 {
    auto dbns = std::make_shared<DBNotificationStruct>(DBNS_NewBlock);
    dbns->block_ = height;

@@ -37,6 +37,7 @@ namespace bs {
          NewVersion,
          UpdateUnreadMessage,
          FriendRequest,
+         OTCOrderError,
          LogOut
       };
 

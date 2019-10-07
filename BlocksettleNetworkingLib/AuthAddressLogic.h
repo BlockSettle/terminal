@@ -37,7 +37,7 @@ struct DBNotificationStruct
 
    std::vector<bs::TXEntry> zc_;
 
-   unsigned block_;
+   unsigned int block_;
 
    DBNotificationStruct(DBNotificationStruct_Enum type) :
       type_(type)
@@ -155,7 +155,7 @@ public:
    ////
    void onRefresh(const std::vector<BinaryData> &, bool) override;
    void onZCReceived(const std::vector<bs::TXEntry> &zcs) override;
-   void onNewBlock(unsigned int) override;
+   void onNewBlock(unsigned int height, unsigned int branchHeight) override;
 
    ////
    virtual void start();

@@ -216,8 +216,8 @@ public:
    bool operator== (const ScrAddrObj& rhs) const
    { return (scrAddr_ == rhs.scrAddr_); }
 
-   void scanZC(const ScanAddressStruct&, std::function<bool(const BinaryDataRef)>,
-      int32_t);
+   std::map<BinaryData, TxIOPair> scanZC(
+      const ScanAddressStruct&, std::function<bool(const BinaryDataRef)>, int32_t);
    bool purgeZC(
       const std::map<BinaryData, BinaryDataRef>& invalidatedTxOutKeys,
       const std::map<BinaryData, BinaryData>& minedKeys);

@@ -20,6 +20,7 @@ public:
    void setRequest(const bs::network::otc::QuoteRequest &request);
 
    bs::network::otc::QuoteResponse response() const;
+   void setPeer(const bs::network::otc::Peer &peer) override;
 
 protected slots:
    void onUpdateBalances() override;

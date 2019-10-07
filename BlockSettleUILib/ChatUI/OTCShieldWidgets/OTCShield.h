@@ -18,6 +18,7 @@ public:
    void showCounterPartyIsntTradingParticipant();
    void showContactIsOffline();
    void showOtcAvailableOnlyForAcceptedContacts();
+   void showOtcSetupTransaction();
 
 public slots:
    bool onRequestCheckWalletSettings();

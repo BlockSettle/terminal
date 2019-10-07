@@ -10,6 +10,7 @@ namespace {
    const QString shieldCounterPartyIsntTradingParticipant = QObject::tr("Counter party isn't a Trading Participant");
    const QString shieldContactIsOffline = QObject::tr("Contact is offline");
    const QString shieldOtcAvailableOnlyForAcceptedContacts = QObject::tr("OTC available only for Accepted contacts");
+   const QString shieldOtcSetupTransactionData = QObject::tr("Setup OTC transaction data");
 
    const QString tradingKeyWord = QObject::tr("trading");
 }
@@ -55,6 +56,11 @@ void OTCShield::showContactIsOffline()
 void OTCShield::showOtcAvailableOnlyForAcceptedContacts()
 {
    showShield(shieldOtcAvailableOnlyForAcceptedContacts);
+}
+
+void OTCShield::showOtcSetupTransaction()
+{
+   showShield(shieldOtcSetupTransactionData);
 }
 
 bool OTCShield::onRequestCheckWalletSettings()

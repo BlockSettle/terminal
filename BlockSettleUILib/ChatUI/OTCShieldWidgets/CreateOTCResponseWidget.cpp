@@ -51,6 +51,11 @@ otc::QuoteResponse CreateOTCResponseWidget::response() const
    return response;
 }
 
+void CreateOTCResponseWidget::setPeer(const bs::network::otc::Peer &peer)
+{
+   ui_->sideValue->setText(getSide(ourSide_, peer.isOwnRequest));
+}
+
 void CreateOTCResponseWidget::onUpdateBalances()
 {
    QString totalBalance = tr("%1 %2")
