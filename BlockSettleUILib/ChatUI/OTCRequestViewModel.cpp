@@ -96,6 +96,17 @@ QVariant OTCRequestViewModel::headerData(int section, Qt::Orientation orientatio
    return QVariant{};
 }
 
+QModelIndex OTCRequestViewModel::getIndexByTimestamp(QDateTime timeStamp)
+{
+   for (int iReq = 0; iReq < request_.size(); ++iReq) {
+      if (timeStamp == request_[iReq].request_.timestamp) {
+         return index(iReq, 0);
+      }
+   }
+
+   return {};
+}
+
 void OTCRequestViewModel::onRequestsUpdated()
 {
    beginResetModel();
@@ -104,6 +115,7 @@ void OTCRequestViewModel::onRequestsUpdated()
       request_.push_back({ peer->request, peer->isOwnRequest });
    }
    endResetModel();
+   emit restoreSelectedIndex();
 }
 
 void OTCRequestViewModel::onUpdateDuration()

@@ -84,6 +84,7 @@ private slots:
    void onActivatePartyId(const QString& partyId);
    void onActivateGlobalPartyId();
    void onActivateCurrentPartyId();
+   void onActivateGlobalOTCTableRow();
    void onRegisterNewChangingRefresh();
    void onShowUserRoom(const QString& userHash);
    void onContactFriendRequest(const QString& userHash);

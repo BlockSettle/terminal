@@ -166,6 +166,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    otcRequestViewModel_ = new OTCRequestViewModel(otcHelper_->client(), this);
    ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
    connect(ui_->treeViewOTCRequests->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWidget::onOtcRequestCurrentChanged);
+   connect(chatPartiesTreeModel_.get(), &ChatPartiesTreeModel::restoreSelectedIndex, this, &ChatWidget::onActivateGlobalOTCTableRow, Qt::QueuedConnection);
 
    connect(otcHelper_->client(), &OtcClient::sendPbMessage, this, &ChatWidget::sendOtcPbMessage);
    connect(otcHelper_->client(), &OtcClient::sendContactMessage, this, &ChatWidget::onSendOtcMessage);
@@ -492,6 +493,24 @@ void ChatWidget::onActivateCurrentPartyId()
    }
 }
 
+void ChatWidget::onActivateGlobalOTCTableRow()
+{
+   const bs::network::otc::Peer* peer = otcHelper_->selectedGlobalOTCEntry();
+
+   if (!peer) {
+      return;
+   }
+
+   const QModelIndex currentRequest = otcRequestViewModel_->getIndexByTimestamp(peer->request.timestamp);
+
+   if (!currentRequest.isValid()) {
+      return;
+   }
+
+   ui_->treeViewOTCRequests->setCurrentIndex(currentRequest);
+   stateCurrent_->onUpdateOTCShield();
+}
+
 void ChatWidget::onRegisterNewChangingRefresh()
 {
    if (!isVisible() || !isActiveWindow()) {
@@ -621,4 +640,14 @@ void ChatWidget::onConfirmContactNewKeyData(const Chat::UserPublicKeyInfoList& u
 void ChatWidget::onOtcRequestCurrentChanged(const QModelIndex &current, const QModelIndex &previous)
 {
    onOtcPublicUpdated();
+
+   bs::network::otc::Peer* selectedPeer = nullptr;
+   if (currentPartyId_ == Chat::OtcRoomName) {
+      const auto &currentIndex = ui_->treeViewOTCRequests->currentIndex();
+      if (currentIndex.isValid() && currentIndex.row() >= 0 && currentIndex.row() < int(otcHelper_->client()->requests().size())) {
+         selectedPeer = otcHelper_->client()->requests().at(size_t(currentIndex.row()));
+      }
+   }
+
+   otcHelper_->setGlobalOTCEntry(selectedPeer);
 }

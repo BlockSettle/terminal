@@ -79,6 +79,16 @@ void ChatOTCHelper::setCurrentUserId(const std::string& ownUserId)
    otcClient_->setOwnContactId(ownUserId);
 }
 
+void ChatOTCHelper::setGlobalOTCEntry(bs::network::otc::Peer* peer)
+{
+   selectedGlobalEntry_ = peer;
+}
+
+bs::network::otc::Peer* ChatOTCHelper::selectedGlobalOTCEntry() const
+{
+   return selectedGlobalEntry_;
+}
+
 void ChatOTCHelper::onLogout()
 {
    for (const auto &contactId : connectedContacts_) {

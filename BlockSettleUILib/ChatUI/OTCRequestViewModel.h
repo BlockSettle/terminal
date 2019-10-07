@@ -26,11 +26,15 @@ public:
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
+   QModelIndex getIndexByTimestamp(QDateTime timeStamp);
 public slots:
    void onRequestsUpdated();
 
 private slots:
    void onUpdateDuration();
+
+signals:
+   void restoreSelectedIndex();
 
 private:
    enum class Columns
