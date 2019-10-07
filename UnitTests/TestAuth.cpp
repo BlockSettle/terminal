@@ -80,12 +80,16 @@ void TestValidationACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void TestAuth::mineBlocks(unsigned count)
+void TestAuth::mineBlocks(unsigned count, bool wait)
 {
    auto curHeight = envPtr_->armoryConnection()->topBlock();
    Recipient_P2PKH coinbaseRecipient(coinbaseScrAddr_, 50 * COIN);
    auto&& cbMap = envPtr_->armoryInstance()->mineNewBlock(&coinbaseRecipient, count);
    coinbaseHashes_.insert(cbMap.begin(), cbMap.end());
+
+   if (!wait)
+      return;
+
    envPtr_->blockMonitor()->waitForNewBlocks(curHeight + count);
 }
 
@@ -279,7 +283,7 @@ TEST_F(TestAuth, ValidationAddressManager)
       }
 
       //validation address should still be valid
-      EXPECT_GE(maw.update(), 2);
+      EXPECT_EQ(maw.update(), 2);
       EXPECT_TRUE(maw.isValid(validationAddr_));
 
       //validation address should have no eligible outpoints for vetting at this point
@@ -291,7 +295,7 @@ TEST_F(TestAuth, ValidationAddressManager)
       mineBlocks(1);
 
       //validation address should still be valid
-      EXPECT_GE(maw.update(), 2);
+      EXPECT_EQ(maw.update(), 2);
       EXPECT_TRUE(maw.isValid(validationAddr_));
 
       //validation address should have an eligible outpoint and no zc
@@ -301,7 +305,7 @@ TEST_F(TestAuth, ValidationAddressManager)
 
    //add a few blocks, check validation address is still valid
    mineBlocks(3);
-   EXPECT_EQ(maw.update(), 2);
+   EXPECT_EQ(maw.update(), 0);
    EXPECT_TRUE(maw.isValid(validationAddr_));
 
    //revoke validation address
@@ -417,8 +421,6 @@ TEST_F(TestAuth, BadUserAddress)
    xbtWallet_ = syncMgr_->getDefaultWallet();
    auto hdWallet = syncMgr_->getPrimaryWallet();
    hdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
-
-
    ASSERT_NE(authWallet_, nullptr);
 
    //register wallets
@@ -460,7 +462,8 @@ TEST_F(TestAuth, BadUserAddress)
 
    //send coins to userAddr1
    auto&& zcHash = sendTo(COIN, userAddr1);
-   while (true) {
+   while (true) 
+   {
       auto&& zcVec = UnitTestWalletACT::waitOnZC(true);
       if (zcVec.size() != 1)
          continue;
@@ -674,22 +677,34 @@ TEST_F(TestAuth, Revoke)
          txRevokeHash = AuthAddressLogic::revoke(vam, userAddr1
             , authSignWallet_->getResolver());
       }
+      
+      /*
+      User revoke burns validation utxo as fee.
 
+      Since auth address checks are a wallet agnostic process, 
+      auth addresses do not need to be registered for the stack
+      to run, and therefor are not. 
+      
+      As a result for the scope of these unit tests, no ZC 
+      impacting only user auth addresses will result in a 
+      notification. 
+
+      User revokes as implementedin AuthAddressLogic burn the 
+      validation UTXO as fee, therefor the test has no 
+      standardized way to wait on a signal notifying of this
+      revocation.
+      
+      We shall simply sleep the unit test thread an 
+      appropriate amount of time and expect the ZC was 
+      processed.
+
+      It is the responsibility of the user to register auth 
+      addresses for which he wants to receive ZC notifications. 
+      Typically, users and settlement monitors would register
+      counterparty addresses to monitor for revokes.
+      */
+      std::this_thread::sleep_for(std::chrono::seconds(2));
       vam.update();
-
-#if 0    //temporarily disabled - doesn't detect ZC for some reason
-      auto checked = true;
-      while (checked) {
-         auto&& zcVec = envPtr_->blockMonitor()->waitForZC();
-         for (auto& zc : zcVec) {
-            std::cout << zc.txHash.toHexStr(true) << "\n";
-            if (zc.txHash == txRevokeHash) {
-               checked = false;
-               break;
-            }
-         }
-      }
-#endif //0
 
       EXPECT_FALSE(AuthAddressLogic::isValid(vam, userAddr1));
    }
@@ -858,7 +873,8 @@ TEST_F(TestAuth, Concurrency)
 
    ASSERT_NE(authWallet_, nullptr);
 
-   auto vam = std::make_shared< ValidationAddressManager>(envPtr_->armoryConnection());
+   auto vam = std::make_shared<ValidationAddressManager>(envPtr_->armoryConnection());
+   vam->setCustomACT(actPtr_);
    vam->addValidationAddress(validationAddr_);
    vam->addValidationAddress(validationAddr2);
    vam->addValidationAddress(validationAddr3);
@@ -889,10 +905,7 @@ TEST_F(TestAuth, Concurrency)
    //once the addr is valid
    auto checkAddressValid = [vam](const bs::Address& addr)->void
    {
-      while (!AuthAddressLogic::isValid(*vam, addr)) {
-         std::this_thread::sleep_for(std::chrono::milliseconds(23));
-      }
-      std::cout << addr.display() << " valid\n";
+      while (!AuthAddressLogic::isValid(*vam, addr)); 
    };
    std::vector<std::thread> threads;
    for (auto& authAddr : authAddresses) {
@@ -908,8 +921,8 @@ TEST_F(TestAuth, Concurrency)
    try {
       actPtr_->waitOnZC(vam->vetUserAddress(
          authAddresses[0], resolverMam, validationAddr_));
-      actPtr_->waitOnZC(
-         vam->vetUserAddress(authAddresses[1], resolverMam, validationAddr2));
+      actPtr_->waitOnZC(vam->vetUserAddress(
+         authAddresses[1], resolverMam, validationAddr2));
       actPtr_->waitOnZC(vam->vetUserAddress(
          authAddresses[2], resolverMam, validationAddr3));
    }
@@ -918,7 +931,7 @@ TEST_F(TestAuth, Concurrency)
    }
 
    mineBlocks(1);
-   vam->update();
+   EXPECT_EQ(vam->update(), 6);
    
    try {
       actPtr_->waitOnZC(vam->vetUserAddress(
@@ -933,7 +946,7 @@ TEST_F(TestAuth, Concurrency)
    }
 
    mineBlocks(VALIDATION_CONF_COUNT);
-   vam->update();
+   EXPECT_EQ(vam->update(), 6);
 
    //wait on all verification threads and check addresses are valid
    for (auto& thr : threads) {
@@ -967,7 +980,7 @@ TEST_F(TestAuth, Concurrency)
    threads.push_back(std::thread(checkAddressRevoked, authAddresses[4]));
    threads.push_back(std::thread(checkAddressRevoked, authAddresses[5]));
 
-   //mine some blocks, shouldnt change anything
+   //mine some blocks, shouldnt affect state
    mineBlocks(1);
    mineBlocks(2);
    mineBlocks(1);
@@ -979,14 +992,16 @@ TEST_F(TestAuth, Concurrency)
 
    //revoke some addresses
    try {
-      const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
+      const bs::core::WalletPasswordScoped scopedPass(priWallet, passphrase_);
+      auto lock = authSignWallet_->lockDecryptedContainer();
       AuthAddressLogic::revoke(*vam, authAddresses[0], authSignWallet_->getResolver());
    }
-   catch (const std::exception &) {
+   catch (const std::exception &e) {
       ASSERT_FALSE(true);
    }
-   vam->revokeUserAddress(authAddresses[4], resolverMam);
-   vam->revokeValidationAddress(validationAddr3, resolverMam);
+   actPtr_->waitOnZC(vam->revokeUserAddress(authAddresses[4], resolverMam));
+   actPtr_->waitOnZC(vam->revokeValidationAddress(validationAddr3, resolverMam));
+   vam->update();
 
    //watcher threads should have returned by now
    for (auto& thr : threads) {
@@ -1002,10 +1017,230 @@ TEST_F(TestAuth, Concurrency)
    EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[5]));
    ASSERT_EQ(counterPtr->load(), 4);
 
-   //Mine a block, check nothing changed. Wait 2 sec to make sure 
-   //manager has processed the new block notification.
+   //Mine a block, check state hasn't changed.
    mineBlocks(1);
    vam->update();
+
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[0]));
+   EXPECT_TRUE(AuthAddressLogic::isValid(*vam, authAddresses[1]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[2]));
+   EXPECT_TRUE(AuthAddressLogic::isValid(*vam, authAddresses[3]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[4]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[5]));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+TEST_F(TestAuth, Concurrency_WithACT)
+{
+   /*
+   This test specifically let's the ValidationAddressManager handle db
+   notifications on its own. 
+   
+   vam->update() should never be called manually, the maintenance 
+   ValidationAdressManager event thread will be handling it.
+   */
+
+   ASSERT_FALSE(validationAddr_.isNull());
+
+   //we need a second validation auth address for this test
+   SecureBinaryData privKey2 =
+      READHEX("5555555555555555555555555555555555555555555555555555555555555555");
+   auto&& pubkey2 = CryptoECDSA().ComputePublicKey(privKey2, true);
+   auto&& scrAddr2 = BtcUtils::getHash160(pubkey2);
+   bs::Address validationAddr2(scrAddr2, AddressEntryType_P2WPKH);
+
+   SecureBinaryData privKey3 =
+      READHEX("6666666666666666666666666666666666666666666666666666666666666666");
+   auto&& pubkey3 = CryptoECDSA().ComputePublicKey(privKey3, true);
+   auto&& scrAddr3 = BtcUtils::getHash160(pubkey3);
+   bs::Address validationAddr3(scrAddr3, AddressEntryType_P2WPKH);
+
+   std::set<SecureBinaryData> authPrivKeys =
+   {
+      privKey2, privKey3, validationPrivKey_
+   };
+   auto resolverMam = std::make_shared<ResolverManyAddresses>(authPrivKeys);
+
+   {
+      //first UTXO, should remain untouched until validation address 
+      //is revoked
+      sendTo(50 * COIN, validationAddr2);
+      sendTo(50 * COIN, validationAddr3);
+      mineBlocks(1);
+
+      //actual spendable UTXO for vetting user auth addresses
+      sendTo(300 * COIN, validationAddr2);
+      sendTo(300 * COIN, validationAddr3);
+      mineBlocks(6);
+   }
+
+   //sync wallets
+   auto promSync = std::make_shared<std::promise<bool>>();
+   auto futSync = promSync->get_future();
+   const auto &cbSync = [this, promSync](int cur, int total) {
+      if (cur == total) {
+         promSync->set_value(true);
+      }
+   };
+   syncMgr_->syncWallets(cbSync);
+   futSync.wait();
+
+   authWallet_ = syncMgr_->getWalletById(authSignWallet_->walletId());
+   xbtWallet_ = syncMgr_->getDefaultWallet();
+
+   ASSERT_NE(authWallet_, nullptr);
+
+   auto vam = std::make_shared<ValidationAddressManager>(envPtr_->armoryConnection());
+   vam->addValidationAddress(validationAddr_);
+   vam->addValidationAddress(validationAddr2);
+   vam->addValidationAddress(validationAddr3);
+
+   /*validation leg*/
+
+   //get some user addresses to vet
+   auto getNewAuthAddress = [this](void)->bs::Address
+   {
+      auto promPtr = std::make_shared<std::promise<bs::Address>>();
+      auto fut = promPtr->get_future();
+      auto addrCb = [&promPtr](const bs::Address& addr)->void
+      {
+         promPtr->set_value(addr);
+      };
+      authWallet_->getNewExtAddress(addrCb);
+      return fut.get();
+   };
+
+   std::vector<bs::Address> authAddresses;
+   for (unsigned i = 0; i < 6; i++) {
+      authAddresses.push_back(getNewAuthAddress());
+   }
+   //go online
+   ASSERT_EQ(vam->goOnline(), 6);
+
+   //start verifications in side threads, they should return
+   //once the address is valid
+   auto checkAddressValid = [vam](const bs::Address& addr)->void
+   {
+      while (!AuthAddressLogic::isValid(*vam, addr));
+   };
+   std::vector<std::thread> threads;
+   for (auto& authAddr : authAddresses) {
+      threads.push_back(std::thread(checkAddressValid, authAddr));
+   }
+
+   //make sure addresses are invalid
+   for (auto& addr : authAddresses) {
+      EXPECT_FALSE(AuthAddressLogic::isValid(*vam, addr));
+   }
+
+   //vet all user auth addresses
+   try {
+      actPtr_->waitOnZC(vam->vetUserAddress(
+         authAddresses[0], resolverMam, validationAddr_));
+      actPtr_->waitOnZC(vam->vetUserAddress(
+         authAddresses[1], resolverMam, validationAddr2));
+      actPtr_->waitOnZC(vam->vetUserAddress(
+         authAddresses[2], resolverMam, validationAddr3));
+   }
+   catch (const AuthLogicException&) {
+      ASSERT_TRUE(false);
+   }
+
+   /*
+   Mine a block and sleep the main for 2 seconds to wait on the vam
+   processing the notification. This is a bandaid solution, it may be
+   worth the time to implement a ACT child class that passes the 
+   notifications through the unit test for proper waiting.
+   */
+   mineBlocks(1, false);
+   std::this_thread::sleep_for(std::chrono::seconds(2));
+
+   
+   try {
+      actPtr_->waitOnZC(vam->vetUserAddress(
+         authAddresses[3], resolverMam, validationAddr_));
+      actPtr_->waitOnZC(vam->vetUserAddress(
+         authAddresses[4], resolverMam, validationAddr2));
+      actPtr_->waitOnZC(vam->vetUserAddress(
+         authAddresses[5], resolverMam, validationAddr3));
+   }
+   catch (const AuthLogicException &) {
+      ASSERT_TRUE(false);
+   }
+
+   /*
+   No need to wait on vam process here, the thread joins will return
+   only once the addresses are valid.
+   */
+   mineBlocks(VALIDATION_CONF_COUNT, false);
+   for (auto& thr : threads) {
+      if (thr.joinable())
+         thr.join();
+   }
+
+   for (const auto &addr : authAddresses) {
+      EXPECT_TRUE(AuthAddressLogic::isValid(*vam, addr));
+   }
+
+   /*revocation leg*/
+
+   //revoke lambda
+   auto counterPtr = std::make_shared<std::atomic<unsigned>>();
+   counterPtr->store(0);
+   auto checkAddressRevoked = [&vam, counterPtr](const bs::Address& addr)->void
+   {
+      while (true) {
+         if (!AuthAddressLogic::isValid(*vam, addr)) {
+            counterPtr->fetch_add(1);
+            return;
+         }
+      }
+   };
+
+   //start revoke check threads
+   threads.clear();
+   threads.push_back(std::thread(checkAddressRevoked, authAddresses[0]));
+   threads.push_back(std::thread(checkAddressRevoked, authAddresses[2]));
+   threads.push_back(std::thread(checkAddressRevoked, authAddresses[4]));
+   threads.push_back(std::thread(checkAddressRevoked, authAddresses[5]));
+
+   //mine some blocks, shouldnt affect state
+   mineBlocks(1);
+   mineBlocks(2);
+   mineBlocks(1);
+
+   ASSERT_EQ(counterPtr->load(), 0);
+
+   const auto priWallet = envPtr_->walletsMgr()->getPrimaryWallet();
+
+   //revoke some addresses
+   try {
+      const bs::core::WalletPasswordScoped scopedPass(priWallet, passphrase_);
+      auto lock = authSignWallet_->lockDecryptedContainer();
+      AuthAddressLogic::revoke(*vam, authAddresses[0], authSignWallet_->getResolver());
+   }
+   catch (const std::exception &e) {
+      ASSERT_FALSE(true);
+   }
+   vam->revokeUserAddress(authAddresses[4], resolverMam);
+   vam->revokeValidationAddress(validationAddr3, resolverMam);
+
+   //join on watcher threads
+   for (auto& thr : threads) {
+      if (thr.joinable())
+         thr.join();
+   }
+
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[0]));
+   EXPECT_TRUE(AuthAddressLogic::isValid(*vam, authAddresses[1]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[2]));
+   EXPECT_TRUE(AuthAddressLogic::isValid(*vam, authAddresses[3]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[4]));
+   EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[5]));
+   ASSERT_EQ(counterPtr->load(), 4);
+
+   //Mine a block, check state hasn't changed.
+   mineBlocks(1, false);
    std::this_thread::sleep_for(std::chrono::seconds(2));
 
    EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[0]));
