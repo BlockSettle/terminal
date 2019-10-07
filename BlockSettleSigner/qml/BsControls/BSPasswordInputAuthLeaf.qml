@@ -2,6 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.4
 import QtQuick.Layouts 1.11
 
+import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.PasswordDialogData 1.0
 import com.blocksettle.WalletInfo 1.0
 
@@ -16,6 +17,9 @@ BSPasswordInput {
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
 
     title: passwordDialogData.Title
+
+    // not used at the moment
+    autheIDSignType: AutheIDClient.VerifyWalletKey
 
     CustomHeader {
         text: qsTr("Wallet Details")
