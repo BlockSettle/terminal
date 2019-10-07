@@ -160,6 +160,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
+   , OrderListModel *orderListModel
 )
 {
    logger_ = logger;
@@ -174,10 +175,9 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
 
    ui_->pageRFQTicket->init(authAddressManager, assetManager, quoteProvider, container, armory);
 
-   auto ordersModel = new OrderListModel(quoteProvider_, assetManager, ui_->treeViewOrders);
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   ui_->treeViewOrders->setModel(ordersModel);
-   ui_->treeViewOrders->initWithModel(ordersModel);
+   ui_->treeViewOrders->setModel(orderListModel);
+   ui_->treeViewOrders->initWithModel(orderListModel);
    connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, [](const std::string &quoteId) {
       NotificationCenter::notify(bs::ui::NotifyType::CelerOrder, {true, QString::fromStdString(quoteId)});
    });
@@ -350,16 +350,8 @@ void RFQRequestWidget::onDisableSelectedInfo()
    popShield();
 }
 
-void RFQRequestWidget::onMessageFromPB(std::string data)
+void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
-   Blocksettle::Communication::ProxyTerminalPb::Response response;
-   bool result = response.ParseFromString(data);
-   if (!result) {
-      logger_->error("[RFQRequestWidget::onMessageFromPB] failed to parse message: {}"
-                     , data);
-      return;
-   }
-
    switch (response.data_case()) {
       case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin:
          {
@@ -383,6 +375,8 @@ void RFQRequestWidget::onMessageFromPB(std::string data)
             // unsigned_payin_data - serialized payin. binary
             emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data());
          }
+         break;
+      default:
          break;
    }
 

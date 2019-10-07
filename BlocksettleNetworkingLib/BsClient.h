@@ -32,6 +32,15 @@ namespace Blocksettle {
    }
 }
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Request;
+         class Response;
+      }
+   }
+}
+
 struct BsClientParams
 {
    struct NewKey
@@ -120,7 +129,8 @@ signals:
    void getLoginResultDone(AutheIDClient::ErrorType status, const std::string &celerLogin);
 
    void celerRecv(CelerAPI::CelerMessageType messageType, const std::string &data);
-   void processPbMessage(std::string data);
+   // Register Blocksettle::Communication::ProxyTerminalPb::Response with qRegisterMetaType() if queued connection is needed
+   void processPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &message);
 
    void connected();
    void disconnected();

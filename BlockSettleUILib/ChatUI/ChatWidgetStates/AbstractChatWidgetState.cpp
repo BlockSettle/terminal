@@ -207,10 +207,10 @@ void AbstractChatWidgetState::onSendOtcPublicMessage(const std::string &data)
    }
 }
 
-void AbstractChatWidgetState::onProcessOtcPbMessage(const std::string& data)
+void AbstractChatWidgetState::onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
    if (canReceiveOTCOperations()) {
-      chat_->otcHelper_->onProcessOtcPbMessage(data);
+      chat_->otcHelper_->onProcessOtcPbMessage(response);
    }
 }
 
