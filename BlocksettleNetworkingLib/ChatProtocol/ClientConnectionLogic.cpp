@@ -179,7 +179,7 @@ void ClientConnectionLogic::prepareAndSendMessage(const ClientPartyPtr& clientPa
       return;
    }
 
-   if (clientPartyPtr->isPrivateStandard()) {
+   if (clientPartyPtr->isPrivateStandard() || clientPartyPtr->isPrivateOTC()) {
       prepareAndSendPrivateMessage(clientPartyPtr, data);
       return;
    }

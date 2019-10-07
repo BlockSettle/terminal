@@ -200,18 +200,23 @@ otc::Peer *ChatWidget::currentPeer() const
       return nullptr;
    }
 
+   const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
+   if (!clientPartyPtr) {
+      return nullptr;
+   }
+
    if (currentPartyId_ == Chat::OtcRoomName) {
       const auto &currentIndex = ui_->treeViewOTCRequests->currentIndex();
+      if (currentIndex.isValid() && clientPartyPtr->partyCreatorHash() == ownUserId_)
+      {
+         return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
+      }
+
       if (!currentIndex.isValid() || currentIndex.row() < 0 || currentIndex.row() >= int(otcHelper_->client()->requests().size())) {
          // Show by default own request (if available)
          return otcHelper_->client()->ownRequest();
       }
       return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
-   }
-
-   const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
-   if (!clientPartyPtr) {
-      return nullptr;
    }
 
    switch (partyTreeItem->peerType) {
