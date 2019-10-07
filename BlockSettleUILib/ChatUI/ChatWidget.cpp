@@ -495,13 +495,13 @@ void ChatWidget::onActivateCurrentPartyId()
 
 void ChatWidget::onActivateGlobalOTCTableRow()
 {
-   const bs::network::otc::Peer* peer = otcHelper_->selectedGlobalOTCEntry();
+   QDateTime timeStamp = otcHelper_->selectedGlobalOTCEntryTimeStamp();
 
-   if (!peer) {
+   if (!timeStamp.isValid()) {
       return;
    }
 
-   const QModelIndex currentRequest = otcRequestViewModel_->getIndexByTimestamp(peer->request.timestamp);
+   const QModelIndex currentRequest = otcRequestViewModel_->getIndexByTimestamp(timeStamp);
 
    if (!currentRequest.isValid()) {
       return;
@@ -641,13 +641,12 @@ void ChatWidget::onOtcRequestCurrentChanged(const QModelIndex &current, const QM
 {
    onOtcPublicUpdated();
 
-   bs::network::otc::Peer* selectedPeer = nullptr;
+   QDateTime selectedPeerTimeStamp;
    if (currentPartyId_ == Chat::OtcRoomName) {
-      const auto &currentIndex = ui_->treeViewOTCRequests->currentIndex();
-      if (currentIndex.isValid() && currentIndex.row() >= 0 && currentIndex.row() < int(otcHelper_->client()->requests().size())) {
-         selectedPeer = otcHelper_->client()->requests().at(size_t(currentIndex.row()));
+      if (current.isValid() && current.row() >= 0 && current.row() < int(otcHelper_->client()->requests().size())) {
+         selectedPeerTimeStamp = otcHelper_->client()->requests().at(size_t(current.row()))->request.timestamp;
       }
    }
 
-   otcHelper_->setGlobalOTCEntry(selectedPeer);
+   otcHelper_->setGlobalOTCEntryTimeStamp(selectedPeerTimeStamp);
 }

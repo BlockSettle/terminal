@@ -51,8 +51,8 @@ public:
 
    void setCurrentUserId(const std::string& ownUserId);
 
-   void setGlobalOTCEntry(bs::network::otc::Peer *peer);
-   bs::network::otc::Peer* selectedGlobalOTCEntry() const;
+   void setGlobalOTCEntryTimeStamp(QDateTime timeStamp);
+   QDateTime selectedGlobalOTCEntryTimeStamp() const;
 
 public slots:
    void onLogout();
@@ -76,7 +76,7 @@ private:
    OtcClient* otcClient_{};
    std::set<std::string> connectedContacts_;
    std::shared_ptr<spdlog::logger> loggerPtr_;
-   bs::network::otc::Peer* selectedGlobalEntry_{};
+   QDateTime selectedGlobalEntryTimeStamp_{};
 };
 
 #endif // CHATOTCHELPER_H

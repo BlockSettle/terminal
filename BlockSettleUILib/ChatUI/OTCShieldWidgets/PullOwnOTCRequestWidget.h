@@ -46,8 +46,8 @@ private:
    std::unique_ptr<Ui::PullOwnOTCRequestWidget> ui_;
 
    QTimer pullTimer_;
-   std::chrono::steady_clock::time_point currentOfferEndTimestamp_;
-   bs::network::otc::Side ourSide_;
+   std::chrono::steady_clock::time_point currentOfferEndTimestamp_{};
+   bs::network::otc::Side ourSide_ = bs::network::otc::Side::Unknown;
    int timeoutSec_{};
 };
 

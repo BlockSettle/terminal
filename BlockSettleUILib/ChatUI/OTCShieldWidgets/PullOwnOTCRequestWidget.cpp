@@ -17,6 +17,10 @@ namespace {
 
    const QString buttonTextPull = QObject::tr("PULL");
    const QString buttonTextCancel = QObject::tr("CANCEL");
+
+   int getSeconds(std::chrono::milliseconds durationInMillisecs) {
+      return std::chrono::duration_cast<std::chrono::seconds>(durationInMillisecs).count();
+   }
 }
 
 PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
@@ -37,7 +41,7 @@ void PullOwnOTCRequestWidget::setOffer(const bs::network::otc::Offer &offer)
 {
    setupNegotiationInterface(headerTextOTCRequest);
    setupOfferInfo(offer);
-   timeoutSec_ = bs::network::otc::negotiationTimeout().count() / 1000;
+   timeoutSec_ = getSeconds(bs::network::otc::negotiationTimeout());
 }
 
 void PullOwnOTCRequestWidget::setRequest(const bs::network::otc::QuoteRequest &request)
@@ -50,7 +54,7 @@ void PullOwnOTCRequestWidget::setRequest(const bs::network::otc::QuoteRequest &r
    ui_->priceValue->clear();
    ui_->priceWidget->hide();
 
-   timeoutSec_ = bs::network::otc::publicRequestTimeout().count() / 1000;
+   timeoutSec_ = getSeconds(bs::network::otc::publicRequestTimeout());
 }
 
 void PullOwnOTCRequestWidget::setResponse(const otc::QuoteResponse &response)
@@ -70,14 +74,14 @@ void PullOwnOTCRequestWidget::setPendingBuyerSign(const bs::network::otc::Offer 
 {
    setupSignAwaitingInterface(headerTextOTCPendingBuyerSign);
    setupOfferInfo(offer);
-   timeoutSec_ = bs::network::otc::payoutTimeout().count() / 1000;
+   timeoutSec_ = getSeconds(bs::network::otc::payoutTimeout());
 }
 
 void PullOwnOTCRequestWidget::setPendingSellerSign(const bs::network::otc::Offer &offer)
 {
    setupSignAwaitingInterface(headerTextOTCPendingSellerSign);
    setupOfferInfo(offer);
-   timeoutSec_ = bs::network::otc::payinTimeout().count() / 1000;
+   timeoutSec_ = getSeconds(bs::network::otc::payinTimeout());
 }
 
 void PullOwnOTCRequestWidget::setPeer(const bs::network::otc::Peer &peer)

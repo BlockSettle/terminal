@@ -21,6 +21,7 @@ namespace bs {
          };
 
          enum class PeerErrorType {
+            NoError,
             Timeout,
             Canceled,
             Rejected

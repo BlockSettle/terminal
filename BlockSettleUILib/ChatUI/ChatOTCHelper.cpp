@@ -79,14 +79,14 @@ void ChatOTCHelper::setCurrentUserId(const std::string& ownUserId)
    otcClient_->setOwnContactId(ownUserId);
 }
 
-void ChatOTCHelper::setGlobalOTCEntry(bs::network::otc::Peer* peer)
+void ChatOTCHelper::setGlobalOTCEntryTimeStamp(QDateTime timeStamp)
 {
-   selectedGlobalEntry_ = peer;
+   selectedGlobalEntryTimeStamp_ = timeStamp;
 }
 
-bs::network::otc::Peer* ChatOTCHelper::selectedGlobalOTCEntry() const
+QDateTime ChatOTCHelper::selectedGlobalOTCEntryTimeStamp() const
 {
-   return selectedGlobalEntry_;
+   return selectedGlobalEntryTimeStamp_;
 }
 
 void ChatOTCHelper::onLogout()
