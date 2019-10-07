@@ -68,7 +68,7 @@ public:
    virtual void onStateChanged(ArmoryState) {}
    virtual void onPrepareConnection(NetworkType, const std::string &host, const std::string &port) {}
    virtual void onRefresh(const std::vector<BinaryData> &, bool) {}
-   virtual void onNewBlock(unsigned int) {}
+   virtual void onNewBlock(unsigned int height, unsigned int branchHeight) {}
    virtual void onZCReceived(const std::vector<bs::TXEntry> &) {}
    virtual void onZCInvalidated(const std::vector<bs::TXEntry> &) {}
    virtual void onLoadProgress(BDMPhase, float, unsigned int, unsigned int) {}
@@ -125,7 +125,6 @@ public:
    bool broadcastZC(const BinaryData& rawTx);
 
    unsigned int topBlock() const { return topBlock_; }
-   unsigned int branchHeight() const { return branchHeight_; }
 
    using RegisterWalletCb = std::function<void(const std::string &regId)>;
    using WalletsHistoryCb = std::function<void(const std::vector<ClientClasses::LedgerEntry>&)>;
@@ -205,7 +204,6 @@ protected:
 private:
    void registerBDV(NetworkType);
    void setTopBlock(unsigned int topBlock);
-   void setBranchHeight(unsigned int branchHgt);
    void onRefresh(const std::vector<BinaryData> &);
    void onZCsReceived(const std::vector<std::shared_ptr<ClientClasses::LedgerEntry>> &);
    void onZCsInvalidated(const std::set<BinaryData> &);
@@ -228,7 +226,6 @@ protected:
    std::shared_ptr<ArmoryCallback>  cbRemote_;
    std::atomic<ArmoryState>         state_ { ArmoryState::Offline };
    std::atomic_uint                 topBlock_ { 0 };
-   unsigned int                     branchHeight_{ 0 };
    std::shared_ptr<BlockHeader>     getTxBlockHeader_;
 
    std::vector<SecureBinaryData> bsBIP150PubKeys_;

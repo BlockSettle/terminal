@@ -160,7 +160,7 @@ private slots:
    void onItemConfirmed(const TransactionPtr);
 
 private:
-   void onNewBlock(unsigned int) override;
+   void onNewBlock(unsigned int height, unsigned int branchHgt) override;
    void onStateChanged(ArmoryState) override;
    void onZCReceived(const std::vector<bs::TXEntry> &) override;
    void onZCInvalidated(const std::vector<bs::TXEntry> &) override;
