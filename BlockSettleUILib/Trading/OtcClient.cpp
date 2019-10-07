@@ -1289,18 +1289,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             assert(deal->payin.isValid());
 
             if (peer->sellFromOffline) {
-               SPDLOG_LOGGER_DEBUG(logger_, "sell OTC from offline wallet...");
 
-               auto savePath = params_.offlineSavePathCb(deal->hdWalletId);
-               if (savePath.empty()) {
-                  SPDLOG_LOGGER_DEBUG(logger_, "got empty path to save offline sign request, cancel OTC deal");
-                  // TODO: Cancel deal
-                  return;
-               }
-               deal->payin.offlineFilePath = std::move(savePath);
-               auto reqId = signContainer_->signTXRequest(deal->payin);
-               signRequestIds_[reqId] = deal->settlementId;
-               deal->payinReqId = reqId;
             } else {
                auto payinInfo = toPasswordDialogDataPayin(*deal, deal->payin);
                auto reqId = signContainer_->signSettlementTXRequest(deal->payin, payinInfo);

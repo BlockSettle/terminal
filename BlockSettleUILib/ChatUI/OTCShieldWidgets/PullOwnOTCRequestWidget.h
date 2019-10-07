@@ -35,6 +35,9 @@ signals:
 
 protected slots:
    void onUpdateTimerData();
+   void onSaveOffline();
+   void onLoadOffline();
+   void onBroadcastOffline();
 
 protected:
    void setupTimer(const std::chrono::steady_clock::time_point& offerTimestamp);
