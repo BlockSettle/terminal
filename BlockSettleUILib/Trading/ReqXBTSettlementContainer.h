@@ -113,6 +113,7 @@ private:
    BinaryData        userKey_;
    BinaryData        dealerAuthKey_;
    bs::Address       recvAddr_;
+   AddressVerificationState dealerVerifState_ = AddressVerificationState::VerificationFailed;
 
    std::string       comment_;
    const bool        clientSells_;
