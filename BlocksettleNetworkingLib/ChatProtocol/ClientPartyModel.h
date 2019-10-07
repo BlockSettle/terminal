@@ -55,14 +55,13 @@ namespace Chat
       ClientPartyPtrList getClientPartyListForRecipient(const IdPartyList& idPartyList, const std::string& recipientUserHash);
       ClientPartyPtrList getStandardPrivatePartyListForRecipient(const std::string& recipientUserHash);
       ClientPartyPtrList getOtcPrivatePartyListForRecipient(const std::string& recipientUserHash);
+      ClientPartyPtrList getClientPartyListByCreatorHash(const std::string& creatorHash);
 
       ClientPartyPtr getStandardPartyForUsers(const std::string& firstUserHash, const std::string& secondUserHash);
       ClientPartyPtr getOtcPartyForUsers(const std::string& firstUserHash, const std::string& secondUserHash);
-      ClientPartyPtr getClientPartyForRecipients(const ClientPartyPtrList& clientPartyPtrList, const std::string& firstUserHash, const std::string& secondUserHash);
+      ClientPartyPtrList getClientPartyForRecipients(const ClientPartyPtrList& clientPartyPtrList, const std::string& firstUserHash, const std::string& secondUserHash);
 
       ClientPartyPtr getClientPartyById(const std::string& party_id);
-      ClientPartyPtr getClientPartyByCreatorHash(const std::string& creatorHash);
-      ClientPartyPtr getClientPartyByUserHash(const std::string& userHash, const bool isPrivateOTC = false);
 
       const std::string& ownUserName() const { return ownUserName_; }
       void setOwnUserName(std::string val) { ownUserName_ = val; }
@@ -88,7 +87,8 @@ namespace Chat
       
    private:
       ClientPartyPtr castToClientPartyPtr(const PartyPtr& partyPtr);
-      ClientPartyPtr getClientPartyByHash(const std::function<bool(const ClientPartyPtr&)>& compareCb);
+      ClientPartyPtr getFirstClientPartyForPartySubType(const ClientPartyPtrList& clientPartyPtrList, 
+         const std::string& firstUserHash, const std::string& secondUserHash, const PartySubType& partySubType = PartySubType::STANDARD);
       std::string ownUserName_;
    };
 

@@ -102,59 +102,34 @@ ClientPartyPtrList ClientPartyModel::getOtcPrivatePartyListForRecipient(const st
    return getClientPartyListForRecipient(idPartyList, recipientUserHash);
 }
 
-ClientPartyPtr ClientPartyModel::getClientPartyForRecipients(const ClientPartyPtrList& clientPartyPtrList, const std::string& firstUserHash, const std::string& secondUserHash)
+ClientPartyPtrList ClientPartyModel::getClientPartyForRecipients(const ClientPartyPtrList& clientPartyPtrList, const std::string& firstUserHash, const std::string& secondUserHash)
 {
+   ClientPartyPtrList newClientPartyPtrList;
+
    for (const auto& clientPartyPtr : clientPartyPtrList)
    {
       if (clientPartyPtr->isUserInPartyWith(firstUserHash, secondUserHash))
       {
-         return clientPartyPtr;
+         newClientPartyPtrList.push_back(clientPartyPtr);
       }
    }
 
-   return nullptr;
+   return newClientPartyPtrList;
 }
 
 ClientPartyPtr ClientPartyModel::getStandardPartyForUsers(const std::string& firstUserHash, const std::string& secondUserHash)
 {
    Chat::ClientPartyPtrList clientPartyPtrList = getStandardPrivatePartyListForRecipient(secondUserHash);
 
-   return getClientPartyForRecipients(clientPartyPtrList, firstUserHash, secondUserHash);
+   return getFirstClientPartyForPartySubType(clientPartyPtrList, firstUserHash, secondUserHash, PartySubType::STANDARD);
 }
 
 ClientPartyPtr ClientPartyModel::getOtcPartyForUsers(const std::string& firstUserHash, const std::string& secondUserHash)
 {
    Chat::ClientPartyPtrList clientPartyPtrList = getOtcPrivatePartyListForRecipient(secondUserHash);
 
-   return getClientPartyForRecipients(clientPartyPtrList, firstUserHash, secondUserHash);
+   return getFirstClientPartyForPartySubType(clientPartyPtrList, firstUserHash, secondUserHash, PartySubType::OTC);
 }
-
-
-/*
-ClientPartyPtr ClientPartyModel::getClientPartyByUserName(const std::string& userName)
-{
-   const IdPartyList idPartyList = getIdPartyList();
-
-   for (const auto& partyId : idPartyList)
-   {
-      const ClientPartyPtr clientPartyPtr = getClientPartyById(partyId);
-
-      if (nullptr == clientPartyPtr)
-      {
-         continue;
-      }
-
-      if (clientPartyPtr->isUserBelongsToParty(userName))
-      {
-         return clientPartyPtr;
-      }
-   }
-
-   emit error(ClientPartyModelError::UserNameNotFound, userName);
-
-   return nullptr;
-}
-*/
 
 void ClientPartyModel::handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what, bool displayAsWarning)
 {
@@ -304,63 +279,30 @@ void ClientPartyModel::handleDisplayNameChanged()
    emit clientPartyDisplayNameChanged(clientParty->id());
 }
 
-ClientPartyPtr ClientPartyModel::getClientPartyByCreatorHash(const std::string& creatorHash)
-{
-   const std::function<bool(const ClientPartyPtr&)> compareCb = [creatorHash](const ClientPartyPtr& cp) {
-      return cp->partyCreatorHash() == creatorHash; 
-   };
-
-   const ClientPartyPtr clientPartyPtr = getClientPartyByHash(compareCb);
-
-   if (nullptr == clientPartyPtr)
-   {
-      emit error(ClientPartyModelError::PartyCreatorHashNotFound, creatorHash);
-   }
-
-   return clientPartyPtr;
-}
-
-ClientPartyPtr ClientPartyModel::getClientPartyByUserHash(const std::string& userHash, const bool isPrivateOTC)
-{
-   const std::function<bool(const ClientPartyPtr&)> compareCb = [userHash, isPrivateOTC](const ClientPartyPtr& cp) {
-      if (isPrivateOTC)
-      {
-         if (cp->isPrivateOTC() && cp->userHash() == userHash)
-         {
-            return true;
-         }
-         
-         return false;
-      }
-
-      // don't return private otc in standard search
-      if (cp->isPrivateOTC())
-      {
-         return false;
-      }
-
-      return cp->userHash() == userHash; 
-   };
-
-   const ClientPartyPtr clientPartyPtr = getClientPartyByHash(compareCb);
-
-   if (nullptr == clientPartyPtr)
-   {
-      emit error(ClientPartyModelError::UserHashNotFound, userHash);
-   }
-
-   return clientPartyPtr;
-}
-
-ClientPartyPtr ClientPartyModel::getClientPartyByHash(const std::function<bool(const ClientPartyPtr&)>& compareCb)
+ClientPartyPtrList ClientPartyModel::getClientPartyListByCreatorHash(const std::string& creatorHash)
 {
    const IdPartyList idPartyList = getIdPartyList();
+   ClientPartyPtrList clientPartyPtrList;
 
    for (const auto& partyId : idPartyList)
    {
       const ClientPartyPtr clientPartyPtr = getClientPartyById(partyId);
 
-      if (clientPartyPtr && compareCb(clientPartyPtr))
+      if (clientPartyPtr && clientPartyPtr->partyCreatorHash() == creatorHash)
+      {
+         clientPartyPtrList.push_back(clientPartyPtr);
+      }
+   }
+
+   return clientPartyPtrList;
+}
+
+ClientPartyPtr ClientPartyModel::getFirstClientPartyForPartySubType(const ClientPartyPtrList& clientPartyPtrList,
+   const std::string& firstUserHash, const std::string& secondUserHash, const PartySubType& partySubType)
+{
+   for (const auto& clientPartyPtr : clientPartyPtrList)
+   {
+      if (clientPartyPtr->partySubType() == partySubType && clientPartyPtr->isUserInPartyWith(firstUserHash, secondUserHash))
       {
          return clientPartyPtr;
       }
@@ -368,3 +310,4 @@ ClientPartyPtr ClientPartyModel::getClientPartyByHash(const std::function<bool(c
 
    return nullptr;
 }
+
