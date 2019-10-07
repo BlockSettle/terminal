@@ -196,7 +196,7 @@ std::string BsClient::requestTitleAuthAddr()
 // static
 std::string BsClient::requestDescAuthAddr(const bs::Address &address)
 {
-   return fmt::format("Submit auth address for verification: {}", address.display());
+   return fmt::format("{}", address.display());
 }
 
 // static
