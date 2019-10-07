@@ -28,10 +28,14 @@ namespace Chat
       QDateTime publicKeyTime() const { return publicKeyTime_; }
       void setPublicKeyTime(QDateTime val) { publicKeyTime_ = val; }
 
+      int celerType() const { return celerType_; }
+      void setCelerType(int celerType) { celerType_ = celerType; }
+
    private:
       std::string userHash_;
       BinaryData publicKey_;
       QDateTime publicKeyTime_;
+      int celerType_{};
    };
 
    using PartyRecipientPtr = std::shared_ptr<PartyRecipient>;
