@@ -1,7 +1,6 @@
 #include "AuthProxy.h"
 
 #include <spdlog/spdlog.h>
-#include <QApplication>
 #include <QFile>
 #include <QVariant>
 #include <QBuffer>

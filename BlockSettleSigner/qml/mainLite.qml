@@ -74,7 +74,7 @@ ApplicationWindow {
         var newDialog = JsHelper.customDialogRequest(dialogName, data)
         if (newDialog) {
             raiseWindow()
-            JsHelper.prepareLiteModeDialog(newDialog)
+            JsHelper.prepareDialog(newDialog)
         }
     }
 

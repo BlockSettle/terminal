@@ -263,7 +263,7 @@ CustomTitleDialogWindow {
             CustomLabel {
                 visible: walletInfo.encType === QPasswordData.Auth
                 Layout.fillWidth: true
-                text: qsTr("Auth Eid Email")
+                text: qsTr("Auth eID")
             }
 
             CustomLabel {
