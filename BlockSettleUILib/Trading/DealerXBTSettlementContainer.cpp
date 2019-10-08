@@ -66,7 +66,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
 
          thisPtr->logger_->info("Counterparty's address verification {} for {}"
             , to_string(state), address.display());
-         thisPtr->cptyAddressState_ = state;
+         thisPtr->requestorAddressState_ = state;
 
          if (state == AddressVerificationState::Verified) {
             // we verify only requester's auth address
@@ -135,7 +135,7 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue(PasswordDialogData::SettlementAddress, settlAddr_.display());
 
    dialogData.setValue(PasswordDialogData::RequesterAuthAddress, bs::Address::fromPubKey(reqAuthKey_).display());
-   dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, false);
+   dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, requestorAddressState_ == AddressVerificationState::Verified);
 
    dialogData.setValue(PasswordDialogData::ResponderAuthAddress, bs::Address::fromPubKey(authKey_).display());
    dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
