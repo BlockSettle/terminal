@@ -6,14 +6,16 @@ using namespace bs::network;
 
 namespace {
 
-   const int kMaxPeriodMinutes = 10;
+   const int kMinPeriodMinutes = 1;
    const int kUpdateTimerInterval = 500;
+   const int kTenMinutesInSeconds = 600;
 
    QString duration(QDateTime timestamp)
    {
-      int minutes = std::max(0, int(timestamp.secsTo(QDateTime::currentDateTime()) / 60));
-      if (minutes > kMaxPeriodMinutes) {
-         return QObject::tr("> %1 min").arg(kMaxPeriodMinutes);
+      QDateTime endTimeStamp = QDateTime::currentDateTime().addSecs(kTenMinutesInSeconds);
+      int minutes = std::min(10, static_cast<int>(QDateTime::currentDateTime().secsTo(endTimeStamp) / 60));
+      if (minutes < kMinPeriodMinutes) {
+         return QObject::tr("< %1 min").arg(kMinPeriodMinutes);
       }
       return QObject::tr("%1 min").arg(minutes);
    }

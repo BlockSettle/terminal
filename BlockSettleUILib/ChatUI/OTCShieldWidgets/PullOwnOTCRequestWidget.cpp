@@ -76,14 +76,14 @@ void PullOwnOTCRequestWidget::setResponse(const otc::QuoteResponse &response)
 
 void PullOwnOTCRequestWidget::setPendingBuyerSign(const bs::network::otc::Offer &offer)
 {
-   setupSignAwaitingInterface(headerTextOTCPendingBuyerSign);
+   setupSignAwaitingInterface(headerTextOTCPendingSellerSign);
    setupOfferInfo(offer);
    timeoutSec_ = getSeconds(bs::network::otc::payoutTimeout());
 }
 
 void PullOwnOTCRequestWidget::setPendingSellerSign(const bs::network::otc::Offer &offer)
 {
-   setupSignAwaitingInterface(headerTextOTCPendingSellerSign);
+   setupSignAwaitingInterface(headerTextOTCPendingBuyerSign);
    setupOfferInfo(offer);
    timeoutSec_ = getSeconds(bs::network::otc::payinTimeout());
 }
