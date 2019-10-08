@@ -80,7 +80,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signContainer_;
-   AddressVerificationState                     cptyAddressState_ = AddressVerificationState::InProgress;
+   AddressVerificationState                     requestorAddressState_ = AddressVerificationState::VerificationFailed;
    bs::Address settlAddr_;
 
    std::string settlementIdString_;
