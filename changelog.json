@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.23.3",
-   "release_date": "07 Oct 2019",
+   "latest_version": "0.23.4",
+   "release_date": "08 Oct 2019",
    "changes": [
+      {
+         "version_string": "0.23.4",
+         "previous_version": "0.23.3",
+         "release_date": "08 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+         ],
+         "bug_fixes": [
+            "Fix offline TX signing with multi-wallet inputs ( BST-2250 )",
+            "Fix deadlocks in RFQDealerReply (#1447)",
+            "UI fixes"
+         ],
+         "revision": "94e178d7",
+         "common_revision": "57923a55"
+      },
       {
          "version_string": "0.23.3",
          "previous_version": "0.23.2",
