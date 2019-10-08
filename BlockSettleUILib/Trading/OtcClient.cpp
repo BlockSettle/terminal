@@ -748,7 +748,7 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
       }
 
       ProxyTerminalPb::Request request;
-      auto d = request.mutable_seal_payin_valididy();
+      auto d = request.mutable_seal_payin_validity();
       d->set_settlement_id(deal->settlementId);
       emit sendPbMessage(request.SerializeAsString());
    }

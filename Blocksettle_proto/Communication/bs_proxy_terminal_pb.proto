@@ -46,7 +46,7 @@ message Request
         string chat_id_buyer = 11;
     }
 
-    message SealPayinValididy
+    message SealPayinValidity
     {
         string settlement_id = 1;
     }
@@ -88,7 +88,7 @@ message Request
     {
         StartOtc              start_otc            = 1;
         VerifyOtc             verify_otc           = 2;
-        SealPayinValididy     seal_payin_valididy  = 3;
+        SealPayinValidity     seal_payin_validity  = 3;
         ProcessTx             process_tx           = 4;
         Cancel                cancel               = 5;
 
