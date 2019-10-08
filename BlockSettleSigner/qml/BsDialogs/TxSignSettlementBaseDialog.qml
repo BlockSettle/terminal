@@ -51,6 +51,8 @@ CustomTitleDialogWindow {
     readonly property string minus_string: ""  // "- "
     readonly property string plus_string: ""   // "+ "
 
+    property string errorMessage
+
     id: root
     title: passwordDialogData.Title
     rejectable: true
@@ -339,7 +341,7 @@ CustomTitleDialogWindow {
                 }
 
                 CustomLabelValue {
-                    text: signingAllowed ? qsTr("%1 seconds left").arg(timeLeft.toFixed(0)) : qsTr("Authentication Address could not be verified")
+                    text: signingAllowed ? qsTr("%1 seconds left").arg(timeLeft.toFixed(0)) : errorMessage
                     Layout.fillWidth: true
                 }
             }

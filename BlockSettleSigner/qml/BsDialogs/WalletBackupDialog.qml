@@ -17,7 +17,9 @@ import "../js/helper.js" as JsHelper
 CustomTitleDialogWindow {
     id: root
 
-    property WalletInfo walletInfo: WalletInfo{}
+    property AuthSignWalletObject authSign: AuthSignWalletObject {}
+    property WalletInfo walletInfo: WalletInfo {}
+
     property string targetFile: qmlAppObj.getUrlPath(StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + backupFileName)
 
     property string backupFileExt: "." + (isPrintable ? "pdf" : "wdb")
