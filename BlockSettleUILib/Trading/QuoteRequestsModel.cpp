@@ -10,6 +10,7 @@
 #include "Colors.h"
 #include "CelerClient.h"
 #include "ApplicationSettings.h"
+#include "CommonTypes.h"
 
 
 QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
@@ -172,6 +173,10 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                return r->visible_;
             }
 
+            case static_cast<int>(Role::SortOrder) : {
+               return r->status_.timeleft_;
+            }
+
             default:
                return QVariant();
          }
@@ -255,6 +260,10 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                return true;
             }
 
+            case static_cast<int>(Role::SortOrder) : {
+               return g->security_;
+            }
+
             default :
                return QVariant();
          }
@@ -323,6 +332,21 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                      return Qt::AlignRight;
                } else {
                   return QVariant();
+               }
+            }
+
+            case static_cast<int>(Role::SortOrder) : {
+               if (m->security_ == QLatin1String(bs::network::Asset::toString(bs::network::Asset::Type::PrivateMarket))) {
+                  return 3;
+               }
+               else if (m->security_ == QLatin1String(bs::network::Asset::toString(bs::network::Asset::Type::SpotXBT))) {
+                  return 2;
+               }
+               else if (m->security_ == QLatin1String(bs::network::Asset::toString(bs::network::Asset::Type::SpotFX))) {
+                  return 1;
+               }
+               else if (m->security_ == groupNameSettlements_) {
+                  return 0;
                }
             }
 
