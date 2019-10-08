@@ -41,7 +41,7 @@ class QtSettings(Configurator):
     def config(self):
         command = []
 
-        modules_to_skip = ['doc', 'webchannel', 'webview', 'sensors', 'serialport',
+        modules_to_skip = ['doc','webengine', 'webchannel', 'webview', 'sensors', 'serialport',
                            'script', 'multimedia', 'wayland', 'location', 'webglplugin', 'gamepad',
                            'purchasing', 'canvas3d', 'speech', '3d', 'androidextras', 'canvas3d',
                            'connectivity', 'virtualkeyboard']
@@ -82,6 +82,7 @@ class QtSettings(Configurator):
         command.append('-sql-sqlite')
         command.append('-sql-mysql')
         command.append('-no-feature-vulkan')
+        command.append('-silent')
 
         command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
 
@@ -153,7 +154,7 @@ class QtSettings(Configurator):
         else:
             command.append('make')
             command.append('-j')
-            command.append(str(max(1, multiprocessing.cpu_count() - 1)))
+            command.append(str(max(1, multiprocessing.cpu_count() + 1)))
 
         result = subprocess.call(command)
         if result != 0:

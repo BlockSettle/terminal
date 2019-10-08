@@ -78,7 +78,7 @@ class OpenSslSettings(Configurator):
         else:
             command.append('make')
             command.append('-j')
-            command.append(str(max(1, multiprocessing.cpu_count() - 1)))
+            command.append(str(max(1, multiprocessing.cpu_count() + 1)))
 
         result = subprocess.call(command)
         if result != 0:
