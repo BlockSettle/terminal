@@ -14,6 +14,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncPlainWallet.h"
+#include "CheckRecipSigner.h"
 
 using std::make_unique;
 using namespace std::chrono_literals;
@@ -73,7 +74,7 @@ void TestSettlement::SetUp()
    mineBlocks(101);
 
    const auto logger = envPtr_->logger();
-   const auto amount = initialTransferAmount_ * COIN;
+   const auto amount = (initialTransferAmount_ + 10) * COIN;
 
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
    const bs::wallet::PasswordData pd{ passphrase_, { bs::wallet::EncryptionType::Password } };
@@ -154,23 +155,25 @@ void TestSettlement::SetUp()
 //   auto curHeight = envPtr_->armoryConnection()->topBlock();
    mineBlocks(6);
 
-//   auto promPtr = std::make_shared<std::promise<bool>>();
-//   auto fut = promPtr->get_future();
-//   auto ctrPtr = std::make_shared<std::atomic<unsigned>>(0);
+   auto promPtr = std::make_shared<std::promise<bool>>();
+   auto fut = promPtr->get_future();
+   auto ctrPtr = std::make_shared<std::atomic<unsigned>>(0);
+   auto wltCount = syncMgr_->getAllWallets().size() - 2;
 
-/*   auto balLBD = [promPtr, ctrPtr, wltCount](void)->void
+   auto balLBD = [promPtr, ctrPtr, wltCount](void)->void
    {
-      if (ctrPtr->fetch_add(1) == wltCount)
+      ctrPtr->fetch_add(1);
+      if (*ctrPtr == wltCount)
          promPtr->set_value(true);
    };
 
    for (const auto &wallet : syncMgr_->getAllWallets()) {
       wallet->updateBalances(balLBD);
-   }*/
+   }
 
    settlementId_ = CryptoPRNG::generateRandom(32);
 
-//   fut.wait();
+   fut.wait();
 }
 
 void TestSettlement::TearDown()
@@ -197,10 +200,17 @@ TEST_F(TestSettlement, Initial_balances)
       ASSERT_GE(syncWallet->getSpendableBalance(), initialTransferAmount_);
    }
 
-   const auto &cbFee = [](float feePerByte) {
-      EXPECT_GE(feePerByte, 5);
-   };
-   syncMgr_->estimatedFeePerByte(1, cbFee);
+   //auto promPtr = std::make_shared<std::promise<float>>();
+   //auto fut = promPtr->get_future();
+   //
+   //const auto &cbFee = [promPtr](float feePerByte) {
+   //   promPtr->set_value(feePerByte);
+   //};
+   //syncMgr_->estimatedFeePerByte(1, cbFee);
+
+   //fut.wait();
+
+   //EXPECT_GE(fut.get(), 5);
 }
 
 #if 0    //temporarily disabled
@@ -286,6 +296,8 @@ TEST_F(TestSettlement, SpotXBT_sell)
 
 TEST_F(TestSettlement, SpotXBT_buy)
 {
+   auto logger = StaticLogger::loggerPtr;
+
    const float feePerByte = 1.05;
    ASSERT_GE(authAddrs_.size(), 2);
    const auto settlWallet1 = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(settlLeafMap_[authAddrs_[0]]);
@@ -304,7 +316,7 @@ TEST_F(TestSettlement, SpotXBT_buy)
    ASSERT_FALSE(authKeys_[0].isNull());
    ASSERT_FALSE(authKeys_[1].isNull());
 
-   const bs::core::wallet::SettlementData settlDataBuy{ settlementId_, authKeys_[1]};
+   const bs::core::wallet::SettlementData settlDataBuy{ settlementId_, authKeys_[1], true };
    const bs::core::wallet::SettlementData settlDataSell{ settlementId_, authKeys_[0], false };
    const auto settlementAddr = hdWallet_[0]->getSettlementPayinAddress(settlDataBuy);
    ASSERT_FALSE(settlementAddr.isNull());
@@ -328,7 +340,8 @@ TEST_F(TestSettlement, SpotXBT_buy)
    {
       if (inputs.size() != 1) {
          promUtxo2->set_value({});
-      } else {
+      }
+      else {
          promUtxo2->set_value(inputs.front());
       }
    };
@@ -352,12 +365,85 @@ TEST_F(TestSettlement, SpotXBT_buy)
    if (dealerTxData.GetTransactionSummary().hasChange) {
       const auto changeAddr = xbtWallet_[1]->getNewChangeAddress();
       unsignedTxReq = dealerTxData.createUnsignedTransaction(false, changeAddr);
-   } else {
+   }
+   else {
       unsignedTxReq = dealerTxData.createUnsignedTransaction();
    }
    ASSERT_TRUE(unsignedTxReq.isValid());
-   const auto dealerPayInHash = unsignedTxReq.txId(xbtWallet_[1]->getPublicResolver());
+
+   auto payinResolver = xbtWallet_[1]->getPublicResolver();
+   const auto dealerPayInHash = unsignedTxReq.txId(payinResolver);
    EXPECT_FALSE(dealerPayInHash.isNull());
+
+   const auto serializedPayinRequest = unsignedTxReq.serializeState(payinResolver);
+
+   ASSERT_FALSE(serializedPayinRequest.isNull());
+
+   bs::CheckRecipSigner deserializedSigner{serializedPayinRequest , envPtr_->armoryConnection() };
+
+   auto inputs = deserializedSigner.getTxInsData();
+
+   auto spenders = deserializedSigner.spenders();
+   auto recipients = deserializedSigner.recipients();
+
+   logger->debug("Settlement address: {}", settlementAddr.display());
+   auto settlementAddressRecipient = settlementAddr.getRecipient(amount);
+   auto settlementRecipientScript = settlementAddressRecipient->getSerializedScript();
+
+   auto settAddressString = settlementAddr.display();
+
+   bool recipientFound = false;
+
+   // amount to settlement address ( single output )
+   for (const auto recipient : recipients) {
+      auto amount = recipient->getValue();
+      auto serializedRecipient = recipient->getSerializedScript();
+
+      BtcUtils::pprintScript(serializedRecipient);
+      std::cout << '\n';
+
+      if (serializedRecipient == settlementRecipientScript) {
+         recipientFound = true;
+         break;
+      }
+   }
+
+   for (const auto recipient : recipients) {
+      logger->debug("{} : {}", bs::CheckRecipSigner::getRecipientAddress(recipient).display(), recipient->getValue());
+   }
+
+   // fee amount
+   // get all inputs amount
+   uint64_t totalInputAmount = 0;
+   for (const auto& input : spenders) {
+      totalInputAmount += input->getValue();
+   }
+
+   // get all outputs amount
+   uint64_t totalOutputValue = 0;
+   for (const auto& output : recipients) {
+      totalOutputValue += output->getValue();
+   }
+
+   try {
+      Tx tx{ serializedPayinRequest };
+
+      // XXX check that payin is not rbf
+      ASSERT_FALSE(tx.isRBF());
+
+      auto txOutCount = tx.getNumTxOut();
+
+      for (unsigned i = 0; i < txOutCount; ++i) {
+         auto txOut = tx.getTxOutCopy(i);
+
+      }
+
+      auto txHash = tx.getThisHash();
+
+      StaticLogger::loggerPtr->debug("TX serialized");
+   } catch (...) {
+      StaticLogger::loggerPtr->error("Failed to serialize TX");
+   }
 
    // Requester's side
    StaticLogger::loggerPtr->debug("[{}] payin hash: {}", __func__, dealerPayInHash.toHexStr(true));
@@ -383,6 +469,10 @@ TEST_F(TestSettlement, SpotXBT_buy)
    ASSERT_FALSE(txPayIn.isNull());
    Tx txPayinObj(txPayIn);
    EXPECT_EQ(txPayinObj.getThisHash(), dealerPayInHash);
+
+   // get fee size. check against rate
+   const auto totalFee = totalInputAmount - totalOutputValue;
+   const auto estimatedFee = deserializedSigner.estimateFee(feePerByte);
 
    UnitTestWalletACT::clear();
    StaticLogger::loggerPtr->debug("[{}] payin TX: {}", __func__, txPayIn.toHexStr());
@@ -413,6 +503,9 @@ TEST_F(TestSettlement, SpotXBT_buy)
 
    Tx txPayoutObj(txPayOut);
    ASSERT_TRUE(txPayoutObj.isInitialized());
+   ASSERT_EQ(txPayoutObj.getNumTxIn(), 1);
+   ASSERT_EQ(txPayoutObj.getNumTxOut(), 1);
+
    StaticLogger::loggerPtr->debug("[{}] payout TX: {}", __func__, txPayOut.toHexStr());
    envPtr_->armoryInstance()->pushZC(txPayOut);
    const auto& zcVecPayout = UnitTestWalletACT::waitOnZC(true);
