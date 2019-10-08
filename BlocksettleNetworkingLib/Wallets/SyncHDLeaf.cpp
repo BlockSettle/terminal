@@ -180,9 +180,9 @@ std::vector<std::string> hd::Leaf::setUnconfirmedTarget()
 
 void hd::Leaf::postOnline()
 {
-   if (firstInit_)
+   if (firstInit_) {
       return;
-
+   }
    unconfTgtRegIds_ = setUnconfirmedTarget();
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
@@ -888,6 +888,14 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
       validationEnded_ = false;
       validationProc();
    }
+}
+
+std::vector<std::string> hd::CCLeaf::setUnconfirmedTarget()
+{
+   if (!btcWallet_) {
+      return {};
+   }
+   return { btcWallet_->setUnconfirmedTarget(kIntConfCount) };
 }
 
 void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
