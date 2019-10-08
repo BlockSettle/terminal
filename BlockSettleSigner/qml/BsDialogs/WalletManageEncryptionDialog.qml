@@ -17,6 +17,7 @@ import "../js/helper.js" as JsHelper
 CustomTitleDialogWindow {
     id: root
 
+    property AuthSignWalletObject authSign: AuthSignWalletObject {}
     property WalletInfo walletInfo : WalletInfo {}
     property QPasswordData newPasswordData: QPasswordData {}
     property QPasswordData oldPasswordData: QPasswordData {}
