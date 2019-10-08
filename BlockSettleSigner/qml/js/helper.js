@@ -292,6 +292,7 @@ function prepareLiteModeDialog(dialog) {
     if (!isLiteMode()) {
         return
     }
+    console.log("Prepare qml lite dialog")
 
     // close previous dialog
     if (currentDialog && typeof currentDialog.close !== "undefined") {
@@ -333,13 +334,23 @@ function prepareLiteModeDialog(dialog) {
 }
 
 function prepareFullModeDialog(dialog) {
+    if (isLiteMode()) {
+        return
+    }
+    console.log("Prepare qml full dialog")
     raiseWindow(mainWindow)
+
+    let maxW = Math.max(dialog.width, mainWindow.width)
+    let maxH = Math.max(dialog.height, mainWindow.height)
+    if (maxW !== mainWindow.width || maxH !== mainWindow.height) {
+        mainWindow.resizeAnimated(maxW, maxH)
+    }
 
     dialog.sizeChanged.connect(function(w, h){
         let maxW = Math.max(w, mainWindow.width)
-        let maxh = Math.max(h, mainWindow.height)
-        if (maxW != mainWindow.width || maxH != mainWindow.height) {
-            mainWindow.resizeAnimated(maxW, maxh)
+        let maxH = Math.max(h, mainWindow.height)
+        if (maxW !== mainWindow.width || maxH !== mainWindow.height) {
+            mainWindow.resizeAnimated(maxW, maxH)
         }
     })
 }
@@ -518,8 +529,6 @@ function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, wa
         return
     }
 
-    prepareDialog(dlg)
-
     dlg.bsAccepted.connect(function() {
         jsCallback(qmlFactory.errorCodeNoError(), walletInfo.rootId, dlg.passwordData)
     })
@@ -528,6 +537,8 @@ function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, wa
     })
     dlg.open()
     dlg.init()
+
+    prepareDialog(dlg)
 }
 
 function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo) {

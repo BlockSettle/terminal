@@ -180,7 +180,11 @@ ApplicationWindow {
     }
 
     function customDialogRequest(dialogName, data) {
-        JsHelper.customDialogRequest(dialogName, data)
+        var newDialog = JsHelper.customDialogRequest(dialogName, data)
+        if (newDialog) {
+            raiseWindow()
+            JsHelper.prepareDialog(newDialog)
+        }
     }
 
     function showError(text) {
