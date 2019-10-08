@@ -152,7 +152,12 @@ namespace bs {
          {
             std::string contactId;
             PeerType type;
-            bool isOwnRequest{};
+            bool isOwnRequest{false};
+            // Will be true for both p2p and public requesters.
+            // Please note that updating price won't change this (through in such case responder would be waiting for the requester)
+            bool isOurSideSentOffer{false};
+            // If set, show UI for offline sign
+            bool sellFromOffline{false};
 
             State state{State::Idle};
             // timestamp of the latest status change (it's always valid)
@@ -175,6 +180,7 @@ namespace bs {
             Peer(const std::string &contactId, PeerType type);
 
             std::string toString() const;
+            bool isWaitingForOfflineSign() const;
          };
 
          using Peers = std::vector<Peer*>;

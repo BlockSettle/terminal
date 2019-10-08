@@ -31,7 +31,10 @@ public:
 
 signals:
    void currentRequestPulled();
-   void requestPulled(const std::string& contactId, bs::network::otc::PeerType peerType);
+
+   void saveOfflineClicked();
+   void loadOfflineClicked();
+   void broadcastOfflineClicked();
 
 protected slots:
    void onUpdateTimerData();
