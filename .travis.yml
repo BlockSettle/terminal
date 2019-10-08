@@ -1,5 +1,4 @@
-dist: trusty
-sudo: required
+sudo: false
 
 os:
   - osx
@@ -38,7 +37,6 @@ addons:
     - yasm
     - nasm
     - g++
-    update: true
 
   homebrew:
     packages:
@@ -52,10 +50,8 @@ addons:
     - yasm
     - xz
     - pkg-config
-    update: true
 
 install:
-  - sudo -H pip3 install --upgrade pip
   - sudo -H pip3 install wget requests pathlib
   - sudo apt build-dep qt5-default || true
 
@@ -63,5 +59,6 @@ script:
   - python3 generate.py
 
 cache:
+    apt: true
     directories:
       - $HOME/build/scomilblocksettle/3rd
