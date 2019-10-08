@@ -331,6 +331,7 @@ void AbstractChatWidgetState::onOtcPullOrRejectCurrent()
          assert(false);
          return;
       }
+      chat_->ui_->treeViewOTCRequests->selectionModel()->clearCurrentIndex();
       chat_->otcHelper_->onOtcPullOrReject(peer);
    }
 }

@@ -206,7 +206,7 @@ otc::Peer *ChatWidget::currentPeer() const
    }
 
    if (currentPartyId_ == Chat::OtcRoomName) {
-      const auto &currentIndex = ui_->treeViewOTCRequests->currentIndex();
+      const auto &currentIndex = ui_->treeViewOTCRequests->selectionModel()->currentIndex();
       if (currentIndex.isValid() && clientPartyPtr->partyCreatorHash() == ownUserId_)
       {
          return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
