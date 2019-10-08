@@ -50,7 +50,7 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
       clientPartyPtr->setUserHash(partyPacket.display_name());
       clientPartyPtr->setPartyCreatorHash(partyPacket.party_creator_hash());
 
-      if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
+      if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type())
       {
          PartyRecipientsPtrList recipients;
          for (int i = 0; i < partyPacket.recipient_size(); i++)
@@ -68,7 +68,7 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
 
       clientPartyModelPtr_->insertParty(clientPartyPtr);
 
-      // Read and provide last 10 history messages for private parties
+      // Read and provide last 10 history messages only for standard private parties
       if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
       {
          clientDBServicePtr_->readHistoryMessages(partyPacket.party_id(), 10);

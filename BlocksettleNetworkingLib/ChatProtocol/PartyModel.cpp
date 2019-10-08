@@ -108,7 +108,7 @@ void PartyModel::clearModel()
 void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
 {
    // private party
-   if (partyPtr->isPrivateStandard())
+   if (partyPtr->isPrivate())
    {
       PrivateDirectMessagePartyPtr privatePartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
 
@@ -136,7 +136,7 @@ void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
    }
 
    // other party types
-   PartyPtr existingPartyPtr = getPrivatePartyById(partyPtr->id());
+   PartyPtr existingPartyPtr = getPartyById(partyPtr->id());
 
    // if not exist, insert new, otherwise do nothing
    if (nullptr == existingPartyPtr)
