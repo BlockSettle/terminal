@@ -175,7 +175,7 @@ private:
 ////
 struct ValidationAddressStruct
 {
-   //<tx hash, outpoint>
+   //<tx hash, <txoutid, outpoint>>
    std::map<BinaryData,
       std::map<unsigned, std::shared_ptr<AuthOutpoint>>> outpoints_;
 
