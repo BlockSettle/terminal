@@ -365,12 +365,12 @@ void ChatWidget::onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTe
 
 void ChatWidget::onSendOtcMessage(const std::string& contactId, const BinaryData& data)
 {
-   auto clientParty = chatClientServicePtr_->getClientPartyModelPtr()->getClientPartyByUserHash(contactId, true);
-   if (!clientParty || !clientParty->isPrivateOTC()) {
+   const auto clientPartyPtr = chatClientServicePtr_->getClientPartyModelPtr()->getOtcPartyForUsers(ownUserId_, contactId);
+   if (!clientPartyPtr) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "can't find valid private party to send OTC message");
       return;
    }
-   stateCurrent_->onSendOtcMessage(clientParty->id(), OtcUtils::serializeMessage(data));
+   stateCurrent_->onSendOtcMessage(clientPartyPtr->id(), OtcUtils::serializeMessage(data));
 }
 
 void ChatWidget::onSendOtcPublicMessage(const BinaryData &data)

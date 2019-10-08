@@ -21,7 +21,6 @@ namespace Chat
 {
    enum class ClientPartyLogicError
    {
-      NonexistentClientStatusChanged,
       PartyNotExist,
       DynamicPointerCast,
       QObjectCast

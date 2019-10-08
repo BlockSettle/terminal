@@ -52,6 +52,7 @@ namespace Chat
       IdPartyList getIdPrivatePartyList();
       IdPartyList getIdPrivatePartyListBySubType(const PartySubType& partySubType = PartySubType::STANDARD);
 
+      ClientPartyPtrList getClientPartyListFromIdPartyList(const IdPartyList& idPartyList);
       ClientPartyPtrList getClientPartyListForRecipient(const IdPartyList& idPartyList, const std::string& recipientUserHash);
       ClientPartyPtrList getStandardPrivatePartyListForRecipient(const std::string& recipientUserHash);
       ClientPartyPtrList getOtcPrivatePartyListForRecipient(const std::string& recipientUserHash);

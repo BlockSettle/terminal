@@ -351,8 +351,9 @@ void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& use
    {
       // update loaded user key
       const std::string userHash = userPkPtr->user_hash().toStdString();
-      ClientPartyPtr clientPartyPtr = clientPartyModelPtr()->getClientPartyByUserHash(userHash);
-      if (clientPartyPtr && clientPartyPtr->isPrivateStandard())
+      // update keys only for existing private parties
+      ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr()->getStandardPrivatePartyListForRecipient(userHash);
+      for (const auto& clientPartyPtr : clientPartyPtrList)
       {
          PartyRecipientPtr existingRecipient = clientPartyPtr->getRecipient(userHash);
 
@@ -388,9 +389,10 @@ void ChatClientLogic::DeclineNewPublicKeys(const UserPublicKeyInfoList& userPubl
    // remove all parties for declined user
    for (const auto& userPkPtr : userPublicKeyInfoList)
    {
-      ClientPartyPtr clientPartyPtr = clientPartyModelPtr()->getClientPartyByUserHash(userPkPtr->user_hash().toStdString());
+      const std::string userHash = userPkPtr->user_hash().toStdString();
+      ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr()->getStandardPrivatePartyListForRecipient(userHash);
 
-      if (clientPartyPtr && clientPartyPtr->isPrivateStandard())
+      for (const auto& clientPartyPtr : clientPartyPtrList)
       {
          DeletePrivateParty(clientPartyPtr->id());
       }

@@ -228,7 +228,7 @@ void ClientConnectionLogic::handlePartyMessagePacket(PartyMessagePacket& partyMe
    }
 
    // TODO: handle here state changes of the rest of message types
-   if (clientPartyPtr->isPrivateStandard())
+   if (clientPartyPtr->isPrivate())
    {
       incomingPrivatePartyMessage(partyMessagePacket);
       return;
@@ -544,11 +544,17 @@ void ClientConnectionLogic::prepareAndSendPrivateMessage(const ClientPartyPtr& c
 void ClientConnectionLogic::sessionKeysForUser(const Chat::SessionKeyDataPtr& sessionKeyDataPtr)
 {
    // read msg from db
-   std::string receiverUserName = sessionKeyDataPtr->userName();
-   ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
-   ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getStandardPartyForUsers(currentUserPtr()->userName(), receiverUserName);
+   const std::string receiverUserHash = sessionKeyDataPtr->userHash();
+   const ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
 
-   clientDBServicePtr_->readUnsentMessages(clientPartyPtr->id());
+   const IdPartyList idPartyList = clientPartyModelPtr->getIdPrivatePartyList();
+   const ClientPartyPtrList cppList = clientPartyModelPtr->getClientPartyListFromIdPartyList(idPartyList);
+   const ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr->getClientPartyForRecipients(cppList, currentUserPtr()->userName(), receiverUserHash);
+
+   for (const auto& clientPartyPtr : clientPartyPtrList)
+   {
+      clientDBServicePtr_->readUnsentMessages(clientPartyPtr->id());
+   }
 }
 
 void ClientConnectionLogic::sessionKeysForUserFailed(const std::string& userName)

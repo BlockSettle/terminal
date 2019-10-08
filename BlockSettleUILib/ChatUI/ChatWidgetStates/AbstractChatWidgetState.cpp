@@ -461,5 +461,5 @@ Chat::ClientPartyPtr AbstractChatWidgetState::getParty(const std::string& partyI
 Chat::ClientPartyPtr AbstractChatWidgetState::getPartyByUserHash(const std::string& userHash) const
 {
    Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
-   return partyModel->getClientPartyByUserHash(userHash);
+   return partyModel->getStandardPartyForUsers(chat_->ownUserId_, userHash);
 }

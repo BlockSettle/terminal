@@ -85,48 +85,43 @@ void ClientPartyLogic::onUserStatusChanged(const ChatUserPtr& currentUserPtr, co
    ClientPartyPtrList clientPartyPtrList = 
       clientPartyModelPtr_->getClientPartyListForRecipient(clientPartyModelPtr_->getIdPrivatePartyList(), statusChanged.user_name());
 
-   ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyForRecipients(clientPartyPtrList, currentUserPtr->userName(), statusChanged.user_name());
-
-   if (clientPartyPtr == nullptr)
+   for (const auto& clientPartyPtr : clientPartyPtrList)
    {
-      emit error(ClientPartyLogicError::NonexistentClientStatusChanged, statusChanged.user_name());
-      return;
-   }
+      clientPartyPtr->setClientStatus(statusChanged.client_status());
 
-   clientPartyPtr->setClientStatus(statusChanged.client_status());
-
-   if (ClientStatus::ONLINE != clientPartyPtr->clientStatus())
-   {
-      return;
-   }
-
-   // check if public key changed
-   if (statusChanged.has_public_key())
-   {
-      PartyRecipientPtr recipientPtr = clientPartyPtr->getRecipient(statusChanged.user_name());
-
-      if (recipientPtr)
+      if (ClientStatus::ONLINE != clientPartyPtr->clientStatus())
       {
-         const BinaryData public_key(statusChanged.public_key().value());
-         const QDateTime dt = QDateTime::fromMSecsSinceEpoch(statusChanged.timestamp_ms().value());
-         const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
-
-         userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userHash()));
-         userPkPtr->setOldPublicKeyHex(recipientPtr->publicKey());
-         userPkPtr->setOldPublicKeyTime(recipientPtr->publicKeyTime());
-         userPkPtr->setNewPublicKeyHex(public_key);
-         userPkPtr->setNewPublicKeyTime(dt);
-         UserPublicKeyInfoList userPkList;
-         userPkList.push_back(userPkPtr);
-
-         emit userPublicKeyChanged(userPkList);
+         return;
       }
 
-      return;
-   }
+      // check if public key changed
+      if (statusChanged.has_public_key())
+      {
+         PartyRecipientPtr recipientPtr = clientPartyPtr->getRecipient(statusChanged.user_name());
 
-   // if client status is online check if we have any unsent messages for this user
-   clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
+         if (recipientPtr)
+         {
+            const BinaryData public_key(statusChanged.public_key().value());
+            const QDateTime dt = QDateTime::fromMSecsSinceEpoch(statusChanged.timestamp_ms().value());
+            const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
+
+            userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userHash()));
+            userPkPtr->setOldPublicKeyHex(recipientPtr->publicKey());
+            userPkPtr->setOldPublicKeyTime(recipientPtr->publicKeyTime());
+            userPkPtr->setNewPublicKeyHex(public_key);
+            userPkPtr->setNewPublicKeyTime(dt);
+            UserPublicKeyInfoList userPkList;
+            userPkList.push_back(userPkPtr);
+
+            emit userPublicKeyChanged(userPkList);
+         }
+
+         return;
+      }
+
+      // if client status is online check if we have any unsent messages for this user
+      clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
+   }
 }
 
 void ClientPartyLogic::handleLocalErrors(const ClientPartyLogicError& errorCode, const std::string& what)
@@ -226,11 +221,11 @@ void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserP
    newClientPrivatePartyPtr->setRecipients(recipients);
 
    // check if already exist party in rejected state with this same user
-   ClientPartyPtr oldClientPartyPtr = clientPartyModelPtr_->getClientPartyByUserHash(newClientPrivatePartyPtr->partyCreatorHash());
-   if (nullptr != oldClientPartyPtr)
+   const ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr_->getStandardPrivatePartyListForRecipient(newClientPrivatePartyPtr->partyCreatorHash());
+   for (const auto& oldClientPartyPtr : clientPartyPtrList)
    {
       // exist one, checking party state
-      if (PartyState::REJECTED == oldClientPartyPtr->partyState() && oldClientPartyPtr->isPrivateStandard())
+      if (PartyState::REJECTED == oldClientPartyPtr->partyState())
       {
          emit deletePrivateParty(oldClientPartyPtr->id());
 

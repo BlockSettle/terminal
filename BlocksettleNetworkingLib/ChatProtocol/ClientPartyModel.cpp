@@ -61,6 +61,24 @@ IdPartyList ClientPartyModel::getIdPrivatePartyListBySubType(const PartySubType&
    return idPartyList;
 }
 
+ClientPartyPtrList ClientPartyModel::getClientPartyListFromIdPartyList(const IdPartyList& idPartyList)
+{
+   ClientPartyPtrList clientPartyPtrList;
+   for (const auto& id : idPartyList)
+   {
+      ClientPartyPtr clientPartyPtr = getClientPartyById(id);
+
+      if (nullptr == clientPartyPtr)
+      {
+         continue;
+      }
+
+      clientPartyPtrList.push_back(clientPartyPtr);
+   }
+
+   return clientPartyPtrList;
+}
+
 ClientPartyPtrList ClientPartyModel::getClientPartyListForRecipient(const IdPartyList& idPartyList, const std::string& recipientUserHash)
 {
    ClientPartyPtrList clientPartyPtrList;
