@@ -452,9 +452,6 @@ void ClientConnectionLogic::handlePrivatePartyRequest(const PrivatePartyRequest&
          // Save recipient keys in db
          saveRecipientsKeys(clientPartyPtr);
 
-         // if it's otc party, notify that is ready
-         emit clientPartyModelPtr->otcPrivatePartyReady(clientPartyPtr);
-
          return;
       }
 
@@ -684,6 +681,12 @@ void ClientConnectionLogic::handlePrivatePartyStateChanged(const PrivatePartySta
    }
 
    clientPartyPtr->setPartyState(privatePartyStateChanged.party_state());
+
+   if (PartyState::INITIALIZED == privatePartyStateChanged.party_state())
+   {
+      // if it's otc party, notify that is ready
+      emit clientPartyModelPtr->otcPrivatePartyReady(clientPartyPtr);
+   }
 }
 
 void ClientConnectionLogic::handleReplySearchUser(const ReplySearchUser& replySearchUser)

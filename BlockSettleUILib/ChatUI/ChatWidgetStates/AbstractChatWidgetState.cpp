@@ -305,8 +305,6 @@ void AbstractChatWidgetState::onOtcQuoteResponseSubmit()
 {
    if (canPerformOTCOperations()) {
       chat_->chatClientServicePtr_->RequestPrivatePartyOTC(chat_->currentPeer()->contactId);
-      // TODO: remove?
-      //chat_->otcHelper_->onOtcQuoteResponseSubmit(chat_->currentPeer(), chat_->ui_->widgetCreateOTCResponse->response());
    }
 }
 
@@ -331,6 +329,13 @@ void AbstractChatWidgetState::onOtcPullOrRejectCurrent()
          assert(false);
          return;
       }
+
+      Chat::ClientPartyModelPtr clientPartyModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+      Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getOtcPartyForUsers(chat_->ownUserId_, peer->contactId);
+      if (clientPartyPtr) {
+         chat_->chatClientServicePtr_->DeletePrivateParty(clientPartyPtr->id());
+      }
+
       chat_->ui_->treeViewOTCRequests->selectionModel()->clearCurrentIndex();
       chat_->otcHelper_->onOtcPullOrReject(peer);
    }
