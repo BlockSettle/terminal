@@ -71,7 +71,8 @@ public:
       QuotedRfqsCount,
       Visible,
       StatText,
-      CountOfRfqs
+      CountOfRfqs,
+      SortOrder
    };
 
    enum class DataType {
