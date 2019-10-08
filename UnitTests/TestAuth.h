@@ -107,7 +107,7 @@ protected:
    void SetUp() override;
    void TearDown() override;
 
-   void mineBlocks(unsigned);
+   void mineBlocks(unsigned, bool wait = true);
    BinaryData sendTo(uint64_t, bs::Address&);
    bs::Address getNewAddress(std::shared_ptr<bs::sync::Wallet> wltPtr, bool ext);
 
