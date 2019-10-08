@@ -1003,6 +1003,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
       d->set_auth_address_buyer(peer->ourAuthPubKey.toBinStr());
       d->set_auth_address_seller(peer->authPubKey.toBinStr());
       d->set_unsigned_tx(unsignedPayout.toBinStr());
+      d->set_payin_hash(peer->payinTxIdFromSeller.toBinStr());
       d->set_chat_id_buyer(ownContactId_);
       d->set_chat_id_seller(peer->contactId);
       emit sendPbMessage(request.SerializeAsString());
@@ -1037,6 +1038,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    d->set_auth_address_buyer(peer->authPubKey.toBinStr());
    d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
    d->set_unsigned_tx(deal->payin.serializeState().toBinStr());
+   d->set_payin_hash(deal->payinTxId.toBinStr());
    d->set_chat_id_buyer(ownContactId_);
    d->set_chat_id_seller(peer->contactId);
    emit sendPbMessage(request.SerializeAsString());
