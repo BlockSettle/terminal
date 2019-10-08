@@ -514,7 +514,7 @@ bool OtcClient::sendOfflineRequest(Peer *peer)
    SPDLOG_LOGGER_DEBUG(logger_, "send was succesfully signed, settlementId: {}", deal->settlementId);
 
    ProxyTerminalPb::Request request;
-   auto d = request.mutable_seal_payin_valididy();
+   auto d = request.mutable_seal_payin_validity();
    d->set_settlement_id(deal->settlementId);
    emit sendPbMessage(request.SerializeAsString());
    return true;
