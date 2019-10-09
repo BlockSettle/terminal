@@ -184,6 +184,11 @@ std::string otc::Peer::toString() const
    return contactId + "/" + otc::toString(type);
 }
 
+bool otc::Peer::isWaitingForOfflineSign() const
+{
+   return sellFromOffline && (offer.ourSide == otc::Side::Sell) && (state == otc::State::WaitSellerSeal);
+}
+
 std::chrono::milliseconds otc::payoutTimeout()
 {
    return std::chrono::seconds(30);

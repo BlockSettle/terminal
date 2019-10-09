@@ -143,17 +143,7 @@ void CheckRecipSigner::hasInputAddress(const bs::Address &addr, std::function<vo
 
 bool CheckRecipSigner::hasReceiver() const
 {
-   if (recipients_.empty()) {
-      return false;
-   }
-   uint64_t inputVal = 0, outputVal = 0;
-   for (const auto &spender : spenders_) {
-      inputVal += spender->getValue();
-   }
-   for (const auto &recip : recipients_) {
-      outputVal += recip->getValue();
-   }
-   return (inputVal == outputVal);
+   return !recipients_.empty();
 }
 
 uint64_t CheckRecipSigner::estimateFee(float feePerByte) const

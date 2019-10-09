@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package Blocksettle.Communication.ProxyTerminalPb;
 
+import "bs_types.proto";
+
 // Messages sent from terminal to PB and back.
 // `Request` is sent from terminal (PB is a server here).
 
@@ -39,12 +41,13 @@ message Request
 
         // Used to check fees and other details (UTXO for payin, settlement address etc)
         bytes unsigned_tx = 7;
+        bytes payin_hash = 8;
 
         string chat_id_seller = 10;
         string chat_id_buyer = 11;
     }
 
-    message SealPayinValididy
+    message SealPayinValidity
     {
         string settlement_id = 1;
     }
@@ -86,7 +89,7 @@ message Request
     {
         StartOtc              start_otc            = 1;
         VerifyOtc             verify_otc           = 2;
-        SealPayinValididy     seal_payin_valididy  = 3;
+        SealPayinValidity     seal_payin_validity  = 3;
         ProcessTx             process_tx           = 4;
         Cancel                cancel               = 5;
 
@@ -134,6 +137,13 @@ message Response
         bytes   unsigned_payin_data = 3;
     }
 
+    // Blotter
+
+    message UpdateOrders
+    {
+        repeated bs.types.Order orders = 2;
+    }
+
     oneof data
     {
         StartOtc              start_otc            = 1;
@@ -142,5 +152,7 @@ message Response
         UnsignedPayinRequest  send_unsigned_payin  = 3;
         SignPayoutRequest     sign_payout          = 4;
         SignPayinRequest      sign_payin           = 5;
+
+        UpdateOrders          update_orders        = 20;
     }
 }

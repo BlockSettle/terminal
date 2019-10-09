@@ -21,8 +21,8 @@ namespace Chat
       SessionKeyData(const std::string& userName);
       SessionKeyData(const std::string& userName, const BinaryData& localSessionPublicKey, const SecureBinaryData& localSessionPrivateKey);
 
-      std::string userName() const { return userName_; }
-      void setUserName(std::string val) { userName_ = val; }
+      std::string userHash() const { return userHash_; }
+      void setUserHash(std::string val) { userHash_ = val; }
 
       BinaryData remoteSessionPublicKey() const { return remoteSessionPublicKey_; }
       void setSessionRemotePublicKey(BinaryData val)
@@ -43,7 +43,7 @@ namespace Chat
       BinaryData nonce();
 
    private:
-      std::string userName_;
+      std::string userHash_;
       BinaryData localSessionPublicKey_;
       BinaryData remoteSessionPublicKey_;
       SecureBinaryData localSessionPrivateKey_;

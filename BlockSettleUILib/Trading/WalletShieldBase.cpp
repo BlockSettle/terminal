@@ -89,6 +89,7 @@ bool WalletShieldBase::checkWalletSettings(WalletShieldBase::ProductType product
          setShieldButtonAction([this]() {
             walletsManager_->createAuthLeaf(nullptr);
          });
+         return true;
       }
    } else if (!walletsManager_->getCCWallet(product.toStdString())) {
       showShieldCreateLeaf(product);

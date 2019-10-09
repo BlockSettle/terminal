@@ -8,14 +8,12 @@
 #include "CommonTypes.h"
 
 
-namespace spdlog
-{
+namespace spdlog {
    class logger;
 }
 
 namespace bs {
    class SettlementAddressEntry;
-
    namespace network {
       struct QuoteNotification;
    }
@@ -78,8 +76,8 @@ private slots:
    void onConnectedToCeler();
 
 private:
-   bool onBitcoinOrderSnapshot(const std::string& data, bool resync = false);
-   bool onFxOrderSnapshot(const std::string& data, bool resync = false) const;
+   bool onBitcoinOrderSnapshot(const std::string& data);
+   bool onFxOrderSnapshot(const std::string& data);
 
    bool onQuoteResponse(const std::string& data);
    bool onQuoteReject(const std::string& data);

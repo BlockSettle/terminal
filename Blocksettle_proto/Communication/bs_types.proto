@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package bs.types;
+
+enum AssetType
+{
+   ASSET_TYPE_UNKNOWN = 0;
+   ASSET_TYPE_SPOT_FX = 1;
+   ASSET_TYPE_SPOT_XBT = 2;
+   ASSET_TYPE_PRIVATE_MARKET = 3;
+}
+
+enum Side
+{
+    SIDE_INVALID = 0;
+    SIDE_BUY = 1;
+    SIDE_SELL = 2;
+}
+
+enum OrderStatus
+{
+   ORDER_STATUS_UNKNOWN = 0;
+   ORDER_STATUS_PENDING = 1;
+   ORDER_STATUS_FILLED = 2;
+   ORDER_STATUS_VOID = 3;
+}
+
+message Order
+{
+   OrderStatus status = 2;
+   string status_text = 3;
+   int64 timestamp_ms = 4;
+   string product = 5; // for example "XBT"
+   string product_against = 6; // for example "EUR"
+   Side side = 7;
+   double quantity = 8;
+   double price = 9;
+}

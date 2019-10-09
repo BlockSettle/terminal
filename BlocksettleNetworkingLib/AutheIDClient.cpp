@@ -565,7 +565,7 @@ QString AutheIDClient::getAutheIDClientRequestText(RequestType requestType)
    case RevokeAuthAddress:
       return tr("Revoke authentication address");
    case SubmitEquityToken:
-      return tr("Submit equity token");
+      return tr("Create Sub-Wallet");
 
    case SettlementTransaction:
       return tr("Sign transaction");

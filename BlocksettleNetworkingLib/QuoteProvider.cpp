@@ -90,28 +90,6 @@ void QuoteProvider::onConnectedToCeler()
 {
    const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    celerLoggedInTimestampUtcInMillis_ =  timestamp.count();
-
-   auto sequence = std::make_shared<CelerFindAllOrdersSequence>(logger_);
-   sequence->SetCallback([this](const CelerFindAllOrdersSequence::Messages &msgs) {
-      for (const auto &msg : msgs) {
-         switch (msg.type) {
-         case CelerAPI::FxOrderSnapshotDownstreamEventType:
-            onFxOrderSnapshot(msg.payload, true);
-            break;
-
-         case CelerAPI::BitcoinOrderSnapshotDownstreamEventType:
-            onBitcoinOrderSnapshot(msg.payload, true);
-            break;
-
-         default:
-            logger_->debug("[QuoteProvider::onConnectedToCeler] unknown msg type {}", msg.type);
-            break;
-         }
-      }
-   });
-   if (!celerClient_->ExecuteSequence(sequence)) {
-      logger_->error("[QuoteProvider::onConnectedToCeler] failed to execute CelerFindAllOrdersSequence");
-   }
 }
 
 bool QuoteProvider::onQuoteResponse(const std::string& data)
@@ -470,7 +448,7 @@ static bs::network::Order::Status mapFxOrderStatus(OrderStatus status)
    }
 }
 
-bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
+bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data)
 {
    BitcoinOrderSnapshotDownstreamEvent response;
 
@@ -503,7 +481,7 @@ bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
    order.status = mapBtcOrderStatus(response.orderstatus());
    order.pendingStatus = response.info();
 
-   if (!resync && response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_) {
+   if (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_) {
 
       switch(order.status)
       {
@@ -522,7 +500,7 @@ bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
    return true;
 }
 
-bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) const
+bool QuoteProvider::onFxOrderSnapshot(const std::string& data)
 {
    FxOrderSnapshotDownstreamEvent response;
 
@@ -534,7 +512,7 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
       logger_->debug("[QuoteProvider::FxOrderSnapshot] {}", response.DebugString());
    }
 
-   if (!resync && (response.orderstatus() == FILLED)) {
+   if (response.orderstatus() == FILLED) {
       if (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_) {
          emit quoteOrderFilled(response.quoteid());
       }
@@ -555,7 +533,7 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
 
    order.status = mapFxOrderStatus(response.orderstatus());
 
-   if (!resync && (order.status == Order::Failed)) {
+   if (order.status == Order::Failed) {
       if (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_) {
          emit orderFailed(response.quoteid(), response.info());
       }

@@ -207,10 +207,10 @@ void AbstractChatWidgetState::onSendOtcPublicMessage(const std::string &data)
    }
 }
 
-void AbstractChatWidgetState::onProcessOtcPbMessage(const std::string& data)
+void AbstractChatWidgetState::onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
    if (canReceiveOTCOperations()) {
-      chat_->otcHelper_->onProcessOtcPbMessage(data);
+      chat_->otcHelper_->onProcessOtcPbMessage(response);
    }
 }
 
@@ -305,8 +305,6 @@ void AbstractChatWidgetState::onOtcQuoteResponseSubmit()
 {
    if (canPerformOTCOperations()) {
       chat_->chatClientServicePtr_->RequestPrivatePartyOTC(chat_->currentPeer()->contactId);
-      // TODO: remove?
-      //chat_->otcHelper_->onOtcQuoteResponseSubmit(chat_->currentPeer(), chat_->ui_->widgetCreateOTCResponse->response());
    }
 }
 
@@ -331,6 +329,14 @@ void AbstractChatWidgetState::onOtcPullOrRejectCurrent()
          assert(false);
          return;
       }
+
+      Chat::ClientPartyModelPtr clientPartyModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+      Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getOtcPartyForUsers(chat_->ownUserId_, peer->contactId);
+      if (clientPartyPtr) {
+         chat_->chatClientServicePtr_->DeletePrivateParty(clientPartyPtr->id());
+      }
+
+      chat_->ui_->treeViewOTCRequests->selectionModel()->clearCurrentIndex();
       chat_->otcHelper_->onOtcPullOrReject(peer);
    }
 }
@@ -461,5 +467,5 @@ Chat::ClientPartyPtr AbstractChatWidgetState::getParty(const std::string& partyI
 Chat::ClientPartyPtr AbstractChatWidgetState::getPartyByUserHash(const std::string& userHash) const
 {
    Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
-   return partyModel->getClientPartyByUserHash(userHash);
+   return partyModel->getStandardPartyForUsers(chat_->ownUserId_, userHash);
 }

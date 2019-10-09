@@ -65,14 +65,6 @@ struct OtcClientDeal;
 
 struct OtcClientParams
 {
-   // Return path that will be used to save offline sign request.
-   // Must be set if offline wallet will be used for sell.
-   std::function<std::string(const std::string &walletId)> offlineSavePathCb;
-
-   // Return path that will be used to load signed offline request.
-   // Must be set if offline wallet will be used for sell.
-   std::function<std::string()> offlineLoadPathCb;
-
    bs::network::otc::Env env{};
 };
 
@@ -95,6 +87,9 @@ public:
    bs::network::otc::Peer *request(const std::string &contactId);
    bs::network::otc::Peer *response(const std::string &contactId);
 
+   // Calls one of above methods depending on type
+   bs::network::otc::Peer *peer(const std::string &contactId, bs::network::otc::PeerType type);
+
    void setOwnContactId(const std::string &contactId);
    const std::string &ownContactId() const;
 
@@ -104,6 +99,10 @@ public:
    bool acceptOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
    bool updateOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
    bool pullOrReject(bs::network::otc::Peer *peer);
+
+   bool saveOfflineRequest(bs::network::otc::Peer *peer, const std::string &path);
+   bool loadOfflineRequest(bs::network::otc::Peer *peer, const std::string &path);
+   bool sendOfflineRequest(bs::network::otc::Peer *peer);
 
    const bs::network::otc::Peers &requests() { return requests_; }
    const bs::network::otc::Peers &responses() { return responses_; }
@@ -117,7 +116,7 @@ public slots:
    void contactConnected(const std::string &contactId);
    void contactDisconnected(const std::string &contactId);
    void processContactMessage(const std::string &contactId, const BinaryData &data);
-   void processPbMessage(const std::string &data);
+   void processPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
    void processPublicMessage(QDateTime timestamp, const std::string &contactId, const BinaryData &data);
    void processPrivateMessage(QDateTime timestamp, const std::string &contactId, bool isResponse, const BinaryData &data);
 
