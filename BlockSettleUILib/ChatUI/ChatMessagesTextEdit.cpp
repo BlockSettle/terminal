@@ -86,8 +86,7 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
          else {
             Chat::ClientPartyPtr clientPartyPtr = partyModel_->getClientPartyById(partyId);
 
-            if (clientPartyPtr && clientPartyPtr->isPrivate())
-            {
+            if (clientPartyPtr && clientPartyPtr->isPrivate()) {
                return toHtmlUsername(clientPartyPtr->displayName(), clientPartyPtr->userHash());
             }
             return toHtmlUsername(senderHash, senderHash);

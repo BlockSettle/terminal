@@ -35,8 +35,6 @@ protected:
 
       chat_->ui_->input_textEdit->setText({});
       chat_->ui_->input_textEdit->setVisible(true);
-      // #new_logic : fix me, party should exist! set always true
-      //chat_->ui_->input_textEdit->setEnabled(clientPartyPtr != nullptr);
       chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->input_textEdit->setFocus();
 
