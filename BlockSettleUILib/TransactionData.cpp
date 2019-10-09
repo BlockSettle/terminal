@@ -777,6 +777,7 @@ void TransactionData::GetFallbackRecvAddress(std::function<void(const bs::Addres
 
    const auto &cbWrap = [this, cb = std::move(cb), handle = validityFlag_.handle()](const bs::Address &addr) {
       if (!handle.isValid()) {
+         SPDLOG_LOGGER_ERROR(logger_, "TransactionData was destoyed and callback is cancelled");
          return;
       }
       fallbackRecvAddress_ = addr;

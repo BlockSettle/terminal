@@ -1311,9 +1311,15 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
 
    switch (response.state()) {
       case ProxyTerminalPb::OTC_STATE_FAILED: {
-         if (peer->state != State::WaitVerification && peer->state != State::WaitBuyerSign && peer->state != State::WaitSellerSeal) {
-            SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
-            return;
+         switch (peer->state) {
+            case State::WaitVerification:
+            case State::WaitBuyerSign:
+            case State::WaitSellerSeal:
+            case State::WaitSellerSign:
+               break;
+            default:
+               SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
+               return;
          }
 
          SPDLOG_LOGGER_ERROR(logger_, "OTC trade failed: {}", response.error_msg());
@@ -1613,7 +1619,7 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
 
                   peer->settlementId = settlementId;
 
-                  auto recvAddrCb = [this, cb, settlementId, settlAddr, peer, targetHdWallet, feePerByte, amount, handle, logger](const bs::Address &outputAddr) {
+                  auto recvAddrCb = [this, cb, settlementId, settlAddr, peer, targetHdWallet, feePerByte, amount, handle, logger, transaction](const bs::Address &outputAddr) {
                      if (!handle.isValid()) {
                         SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
                         return;
