@@ -85,6 +85,8 @@ struct OtcClientDeal
 
 namespace {
 
+   const int kContactIdSize = 12;
+
    const int kSettlementIdHexSize = 64;
    const int kTxHashSize = 32;
    const int kPubKeySize = 33;
@@ -219,6 +221,10 @@ Peer *OtcClient::response(const std::string &contactId)
 
 Peer *OtcClient::peer(const std::string &contactId, PeerType type)
 {
+   if (contactId.size() != kContactIdSize) {
+      SPDLOG_LOGGER_DEBUG(logger_, "unexpected contact requested: {}");
+   }
+
    switch (type)
    {
       case bs::network::otc::PeerType::Contact:
@@ -228,6 +234,8 @@ Peer *OtcClient::peer(const std::string &contactId, PeerType type)
       case bs::network::otc::PeerType::Response:
          return response(contactId);
    }
+
+   assert(false);
    return nullptr;
 }
 
