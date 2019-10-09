@@ -120,7 +120,8 @@ void AuthAddressConfirmDialog::onSignFailed(AutheIDClient::ErrorType error)
    // explicitly stop timer before cancel on submission, user need time to read MessageBox text
    progressTimer_.stop();
 
-   BSMessageBox(BSMessageBox::critical, tr("Request sign failed")
+   BSMessageBox(BSMessageBox::critical, tr("Signing request failed")
+      , tr("Authentication Address error")
       , tr("The process of submitting an Authentication Address has been aborted."
            "Any reserved balance will be returned.")
       , this).exec();
