@@ -127,6 +127,7 @@ void ClientConnectionLogic::onConnected(void)
    Chat::WelcomeRequest welcomeRequest;
    welcomeRequest.set_user_name(currentUserPtr()->userName());
    welcomeRequest.set_client_public_key(currentUserPtr()->publicKey().toBinStr());
+   welcomeRequest.set_celer_type(currentUserPtr()->celerUserType());
 
    emit sendPacket(welcomeRequest);
 }
