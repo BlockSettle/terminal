@@ -83,7 +83,7 @@ protected:
          }
 
          Chat::PartyRecipientPtr recipientPtr = clientPartyPtr->getSecondRecipient(chat_->ownUserId_);
-         BaseCelerClient::CelerUserType counterPartyCelerType = static_cast<BaseCelerClient::CelerUserType>(recipientPtr->celerType());
+         CelerClient::CelerUserType counterPartyCelerType = recipientPtr->celerType();
          if (counterPartyCelerType != BaseCelerClient::Dealing
             || counterPartyCelerType != BaseCelerClient::Trading) {
             chat_->ui_->widgetOTCShield->showCounterPartyIsntTradingParticipant();

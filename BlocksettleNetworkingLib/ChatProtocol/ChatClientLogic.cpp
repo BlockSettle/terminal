@@ -107,7 +107,7 @@ void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, con
    clientDBServicePtr_->Init(loggerPtr, appSettingsPtr, currentUserPtr_, cryptManagerPtr_);
 }
 
-void ChatClientLogic::LoginToServer(const std::string& email, int celerType, const std::string& jwt, const ZmqBipNewKeyCb& cb)
+void ChatClientLogic::LoginToServer(const std::string& email, CelerClient::CelerUserType celerType, const std::string& jwt, const ZmqBipNewKeyCb& cb)
 {
    Q_UNUSED(celerType);
 
