@@ -1,7 +1,6 @@
 #include "ReqXBTSettlementContainer.h"
 
 #include <QApplication>
-#include <QPointer>
 
 #include <spdlog/spdlog.h>
 
@@ -132,16 +131,15 @@ void ReqXBTSettlementContainer::activate()
 {
    startTimer(kWaitTimeoutInSec);
 
-   QPointer<ReqXBTSettlementContainer> thisPtr = this;
    addrVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_
-      , [thisPtr](const bs::Address &address, AddressVerificationState state)
+      , [this, handle = validityFlag_.handle()](const bs::Address &address, AddressVerificationState state)
    {
-      QMetaObject::invokeMethod(qApp, [thisPtr, address, state] {
-         if (!thisPtr) {
+      QMetaObject::invokeMethod(qApp, [this, handle, address, state] {
+         if (!handle.isValid()) {
             return;
          }
-         thisPtr->dealerAuthAddress_ = address;
-         thisPtr->dealerVerifStateChanged(state);
+         dealerAuthAddress_ = address;
+         dealerVerifStateChanged(state);
       });
    });
 
@@ -170,18 +168,18 @@ void ReqXBTSettlementContainer::activate()
       return;
    }
 
-   settlLeaf->setSettlementID(settlementId_, [thisPtr](bool success)
+   settlLeaf->setSettlementID(settlementId_, [this, handle = validityFlag_.handle()](bool success)
    {
-      if (!thisPtr) {
+      if (!handle.isValid()) {
          return;
       }
 
       if (!success) {
-         SPDLOG_LOGGER_ERROR(thisPtr->logger_, "can't find settlement leaf for auth address '{}'"
-            , thisPtr->authAddr_.display());
+         SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf for auth address '{}'"
+            , authAddr_.display());
          return;
       }
-      thisPtr->activateProceed();
+      activateProceed();
    });
 }
 
@@ -256,40 +254,43 @@ void ReqXBTSettlementContainer::activateProceed()
 {
    const auto &cbSettlAddr = [this](const bs::Address &addr) {
       settlAddr_ = addr;
-      const auto &buyAuthKey = clientSells_ ? dealerAuthKey_ : userKey_;
-      const auto &sellAuthKey = clientSells_ ? userKey_ : dealerAuthKey_;
-
-      recvAddr_ = transactionData_->GetFallbackRecvAddress();
-
-      const auto recipient = transactionData_->RegisterNewRecipient();
-      transactionData_->UpdateRecipientAmount(recipient, amount_, transactionData_->maxSpendAmount());
-      transactionData_->UpdateRecipientAddress(recipient, settlAddr_);
-
-      const auto list = authAddrMgr_->GetVerifiedAddressList();
-      const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
-      userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
-      if (!userKeyOk_) {
-         logger_->warn("[ReqXBTSettlementContainer::activate] userAddr {} not found in verified addrs list ({})"
-            , userAddress.display(), list.size());
-         return;
-      }
-
-      if (clientSells_) {
-         if (!transactionData_->IsTransactionValid()) {
-            userKeyOk_ = false;
-            logger_->error("[ReqXBTSettlementContainer::activate] transaction data is invalid");
-            emit error(tr("Transaction data is invalid - sending of pay-in is prohibited"));
+      auto fallbackRecvAddressCb = [this, handle = validityFlag_.handle()](const bs::Address &addr) {
+         if (!handle.isValid()) {
             return;
          }
-      }
+         recvAddr_ = addr;
 
-      fee_ = transactionData_->GetTransactionSummary().totalFee;
+         const auto recipient = transactionData_->RegisterNewRecipient();
+         transactionData_->UpdateRecipientAmount(recipient, amount_, transactionData_->maxSpendAmount());
+         transactionData_->UpdateRecipientAddress(recipient, settlAddr_);
 
-      const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
-      addrVerificator_->addAddress(dealerAddrSW);
-      addrVerificator_->startAddressVerification();
+         const auto list = authAddrMgr_->GetVerifiedAddressList();
+         const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
+         userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
+         if (!userKeyOk_) {
+            logger_->warn("[ReqXBTSettlementContainer::activate] userAddr {} not found in verified addrs list ({})"
+               , userAddress.display(), list.size());
+            return;
+         }
 
-      acceptSpotXBT();
+         if (clientSells_) {
+            if (!transactionData_->IsTransactionValid()) {
+               userKeyOk_ = false;
+               logger_->error("[ReqXBTSettlementContainer::activate] transaction data is invalid");
+               emit error(tr("Transaction data is invalid - sending of pay-in is prohibited"));
+               return;
+            }
+         }
+
+         fee_ = transactionData_->GetTransactionSummary().totalFee;
+
+         const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
+         addrVerificator_->addAddress(dealerAddrSW);
+         addrVerificator_->startAddressVerification();
+
+         acceptSpotXBT();
+      };
+      transactionData_->GetFallbackRecvAddress(std::move(fallbackRecvAddressCb));
    };
 
    const auto priWallet = walletsMgr_->getPrimaryWallet();

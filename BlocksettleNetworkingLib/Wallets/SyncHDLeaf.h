@@ -89,8 +89,7 @@ namespace bs {
             virtual void merge(const std::shared_ptr<Wallet>) override;
             void scan(const std::function<void(bs::sync::SyncState)> &cb) override;
 
-            std::vector<std::string> setUnconfirmedTarget(void);
-
+            virtual std::vector<std::string> setUnconfirmedTarget(void);
             virtual void OnLeafRegistrationCompleted() {}
 
             std::shared_ptr<ResolverFeed> getPublicResolver() const override;
@@ -233,6 +232,7 @@ namespace bs {
             void restartValidation();
 
             void OnLeafRegistrationCompleted() override { restartValidation(); }
+            std::vector<std::string> setUnconfirmedTarget(void) override;
 
          protected:
             void onZeroConfReceived(const std::vector<bs::TXEntry> &) override;
