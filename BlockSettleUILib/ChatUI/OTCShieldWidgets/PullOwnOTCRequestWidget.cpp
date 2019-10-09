@@ -99,7 +99,9 @@ void PullOwnOTCRequestWidget::setPeer(const bs::network::otc::Peer &peer)
       ui_->horizontalWidgetSubmit->hide();
    }
   
-   ui_->sideValue->setText(getSide(ourSide_, peer.isOwnRequest));
+   if (peer.state != State::Idle) {
+      ui_->sideValue->setText(getSide(ourSide_, peer.isOurSideSentOffer));
+   }
 
    if (timeoutSec_) {
       setupTimer(peer.stateTimestamp);
