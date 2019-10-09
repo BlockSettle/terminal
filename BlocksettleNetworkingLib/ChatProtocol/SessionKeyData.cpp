@@ -13,13 +13,13 @@ namespace {
 using namespace Chat;
 
 SessionKeyData::SessionKeyData(const std::string& userName)
-   : userName_(userName)
+   : userHash_(userName)
 {
 
 }
 
 SessionKeyData::SessionKeyData(const std::string& userName, const BinaryData& localSessionPublicKey, const SecureBinaryData& localSessionPrivateKey)
-   : userName_(userName), localSessionPublicKey_(localSessionPublicKey), localSessionPrivateKey_(localSessionPrivateKey)
+   : userHash_(userName), localSessionPublicKey_(localSessionPublicKey), localSessionPrivateKey_(localSessionPrivateKey)
 {
 
 }

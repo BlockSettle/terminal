@@ -37,6 +37,7 @@ namespace Chat
       virtual bool isGlobalOTC() const { return (Chat::PartyType::GLOBAL == partyType() && Chat::PartySubType::OTC == partySubType()); }
       virtual bool isGlobal() const { return Chat::PartyType::GLOBAL == partyType(); }
       virtual bool isPrivateStandard() const { return (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == partyType() && Chat::PartySubType::STANDARD == partySubType()); }
+      virtual bool isPrivateOTC() const { return (Chat::PartyType::PRIVATE_DIRECT_MESSAGE == partyType() && Chat::PartySubType::OTC == partySubType()); }
       virtual bool isPrivate() const { return Chat::PartyType::PRIVATE_DIRECT_MESSAGE == partyType(); }
 
       const std::string& partyCreatorHash() const { return partyCreatorHash_; }

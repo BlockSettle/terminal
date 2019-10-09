@@ -63,6 +63,9 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorRoom());
    PartyTreeItem* party = static_cast<PartyTreeItem*>(index.internalPointer());
    Chat::ClientPartyPtr clientPartyPtr = party->data().value<Chat::ClientPartyPtr>();
+   if (!clientPartyPtr) {
+      return;
+   }
 
    itemOption.text = QString::fromStdString(clientPartyPtr->displayName());
    if (clientPartyPtr->isPrivateStandard()) {

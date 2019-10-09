@@ -99,6 +99,11 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
       return;
    }
 
+   if (clientPartyPtr->isPrivateOTC())
+   {
+      return;
+   }
+
    QMenu contextMenu;
    if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState()) {
       QAction* removeAction = contextMenu.addAction(contextMenuRemoveUser);
