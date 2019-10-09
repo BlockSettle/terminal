@@ -289,16 +289,7 @@ otc::Peer *ChatWidget::currentPeer() const
       return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
    }
 
-   switch (partyTreeItem->peerType) {
-      case otc::PeerType::Contact:     return otcHelper_->client()->contact(clientPartyPtr->userHash());
-      // #new_logic : ???
-      // We should use userHash here too, but for some reasons it's not set here
-      case otc::PeerType::Request:     return otcHelper_->client()->request(clientPartyPtr->id());
-      case otc::PeerType::Response:    return otcHelper_->client()->response(clientPartyPtr->id());
-   }
-
-   assert(false);
-   return nullptr;
+   return otcHelper_->client()->peer(clientPartyPtr->userHash(), partyTreeItem->peerType);
 }
 
 void acceptPartyRequest(const std::string& partyId) {}
