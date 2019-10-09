@@ -1,22 +1,25 @@
 #include "OTCRequestViewModel.h"
 
 #include "OtcClient.h"
+#include "OtcTypes.h"
 
 using namespace bs::network;
 
 namespace {
 
-   const int kMinPeriodMinutes = 1;
    const int kUpdateTimerInterval = 500;
-   const int kTenMinutesInSeconds = 600;
 
    QString duration(QDateTime timestamp)
    {
-      QDateTime endTimeStamp = QDateTime::currentDateTime().addSecs(kTenMinutesInSeconds);
-      int minutes = std::min(10, static_cast<int>(QDateTime::currentDateTime().secsTo(endTimeStamp) / 60));
-      if (minutes < kMinPeriodMinutes) {
-         return QObject::tr("< %1 min").arg(kMinPeriodMinutes);
-      }
+      QDateTime endTimeStamp = timestamp.addSecs(
+         std::chrono::duration_cast<std::chrono::seconds>(
+            bs::network::otc::publicRequestTimeout()).count());
+      const int oneMinuteInSec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::minutes(1)).count();
+      // We showing in one minute more since it's countdown
+      const int timeLeftMinute = static_cast<int>(QDateTime::currentDateTime().secsTo(endTimeStamp) / oneMinuteInSec) 
+         + std::chrono::minutes(1).count();
+      const int minutes = std::min(10, static_cast<int>(timeLeftMinute));
+
       return QObject::tr("%1 min").arg(minutes);
    }
 
