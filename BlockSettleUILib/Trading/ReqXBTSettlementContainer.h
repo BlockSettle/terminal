@@ -126,8 +126,6 @@ private:
    bs::Address       dealerAuthAddress_;
 
    bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
-
-   int64_t payinSignedTs_;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__
