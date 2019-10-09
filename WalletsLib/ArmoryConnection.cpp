@@ -1139,6 +1139,7 @@ void ArmoryConnection::onZCsReceived(const std::vector<std::shared_ptr<ClientCla
          for (const auto &hash : imm.second) {
             auto it = waitingEntries.find(hash);
             if (it != waitingEntries.end()) {
+               zcNotifiedEntries_[imm.first][hash] = it->second;
                immediates.push_back(it->second);
                waitingEntries.erase(it);
             }
@@ -1156,8 +1157,8 @@ void ArmoryConnection::onZCsReceived(const std::vector<std::shared_ptr<ClientCla
 void ArmoryConnection::onZCsInvalidated(const std::set<BinaryData> &ids)
 {
    std::lock_guard<std::mutex> lock(zcMutex_);
-
    std::vector<bs::TXEntry> zcInvEntries;
+
    for (auto &mergedWalletData : zcNotifiedEntries_) {
       auto &notifiedEntries = mergedWalletData.second;
       for (const BinaryData &id : ids) {
@@ -1170,6 +1171,7 @@ void ArmoryConnection::onZCsInvalidated(const std::set<BinaryData> &ids)
    }
 
    if (!zcInvEntries.empty()) {
+      logger_->debug("[{}] found {} ZC entries to invalidate", __func__, zcInvEntries.size());
       addToMaintQueue([zcInvEntries](ArmoryCallbackTarget *tgt) {
          tgt->onZCInvalidated(zcInvEntries);
       });
@@ -1239,7 +1241,8 @@ void ArmoryCallback::run(BdmNotification bdmNotif)
       break;
 
    case BDMAction_InvalidatedZC:
-      logger_->debug("[ArmoryCallback::run] BDMAction_InvalidateZC");
+      logger_->debug("[ArmoryCallback::run] BDMAction_InvalidateZC: {} entries"
+         , bdmNotif.invalidatedZc_.size());
       connection_->onZCsInvalidated(bdmNotif.invalidatedZc_);
       break;
 

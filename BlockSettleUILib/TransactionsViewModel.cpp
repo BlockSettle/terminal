@@ -488,7 +488,6 @@ void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entr
    {
       QMutexLocker locker(&updateMutex_);
       for (const auto &entry : entries) {
-         logger_->debug("[{}] entry {} is invalidated", __func__, entry.txHash.toHexStr(true));
          const auto key = mkTxKey(entry);
          const auto node = rootNode_->find(key);
          if (node && (node->parent() == rootNode_.get()) && !node->item()->confirmations) {
@@ -506,7 +505,6 @@ void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entr
       }
    }
    if (!delRows.empty()) {
-      logger_->debug("[{}] {} deleted row[s]", __func__, delRows.size());
       onDelRows(delRows);
    }
    if (!children.empty()) {
@@ -681,7 +679,6 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
       for (const auto &updItem : updItems) {
          const auto &itItem = currentItems_.find(updItem->id());
          if (itItem == currentItems_.end()) {
-            logger_->debug("[{}] unknown item {}", __func__, updItem->txEntry.txHash.toHexStr(true));
             continue;
          }
          const auto &item = itItem->second;
@@ -696,9 +693,6 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
          }
          if (newBlockNum != UINT32_MAX) {
             const auto confNum = armory_->getConfirmationsNumber(newBlockNum);
-            if (!item->confirmations) {
-               logger_->debug("[{}] first conf for {}: {}", __func__, item->txEntry.txHash.toHexStr(true), confNum);
-            }
             item->confirmations = confNum;
             item->txEntry.blockNum = newBlockNum;
             onItemConfirmed(item);
@@ -806,10 +800,6 @@ void TransactionsViewModel::ledgerToTxData(const std::map<int, std::vector<bs::T
    for (const auto &le : rawData) {
       const auto result = updateTransactionsPage(le.second);
       emit updateProgress(int(rawData.size()) + pageCnt++);
-      if (onNewBlock && logger_) {
-         logger_->debug("[{}] {}: added {} items, updated {} of {}", __func__
-            , le.first, result.first, result.second, le.second.size());
-      }
    }
    initialLoadCompleted_ = true;
 }
