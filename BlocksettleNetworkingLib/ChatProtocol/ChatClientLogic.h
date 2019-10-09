@@ -10,6 +10,7 @@
 #include "ChatProtocol/CryptManager.h"
 
 #include "DataConnectionListener.h"
+#include "CelerClient.h"
 
 #include <disable_warnings.h>
 #include "ZMQ_BIP15X_DataConnection.h"
@@ -60,7 +61,7 @@ namespace Chat
 
    public slots:
       void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
-      void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
+      void LoginToServer(const std::string& email, CelerClient::CelerUserType celerType, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
       void SendPartyMessage(const std::string& partyId, const std::string& data);
       void SetMessageSeen(const std::string& partyId, const std::string& messageId);

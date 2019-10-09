@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 
+#include "CelerClient.h"
 #include <disable_warnings.h>
 #include "BinaryData.h"
 #include <enable_warnings.h>
@@ -28,10 +29,14 @@ namespace Chat
       QDateTime publicKeyTime() const { return publicKeyTime_; }
       void setPublicKeyTime(QDateTime val) { publicKeyTime_ = val; }
 
+      CelerClient::CelerUserType celerType() const { return celerType_; }
+      void setCelerType(CelerClient::CelerUserType celerType) { celerType_ = celerType; }
+
    private:
       std::string userHash_;
       BinaryData publicKey_;
       QDateTime publicKeyTime_;
+      CelerClient::CelerUserType celerType_ = CelerClient::Undefined;
    };
 
    using PartyRecipientPtr = std::shared_ptr<PartyRecipient>;

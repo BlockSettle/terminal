@@ -5,7 +5,6 @@
 #include "ChatProtocol/ClientParty.h"
 #include "ui_ChatWidget.h"
 
-// #old_logic : delete this all widget and use class RFQShieldPage(maybe need redo it but based class should be the same)
 enum class OTCPages : int
 {
    OTCShield = 0,
