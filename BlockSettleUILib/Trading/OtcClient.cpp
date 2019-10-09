@@ -1605,22 +1605,34 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
 
                   peer->settlementId = settlementId;
 
-                  OtcClientDeal result;
-                  result.settlementId = settlementId;
-                  result.settlementAddr = settlAddr;
-                  result.ourAuthAddress = peer->offer.authAddress;
-                  result.cpPubKey = peer->authPubKey;
-                  result.amount = peer->offer.amount;
-                  result.price = peer->offer.price;
-                  result.hdWalletId = targetHdWallet->walletId();
-                  result.success = true;
-                  result.side = otc::Side::Buy;
-                  auto outputAddr = peer->offer.recvAddress.empty() ? transaction->GetFallbackRecvAddress() : bs::Address(peer->offer.recvAddress);
-                  auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer->payinTxIdFromSeller, amount);
-                  result.payout = bs::SettlementMonitor::createPayoutTXRequest(
-                     payinUTXO, outputAddr, feePerByte, armory_->topBlock());
-                  result.fee = int64_t(result.payout.fee);
-                  cb(std::move(result));
+                  auto recvAddrCb = [this, cb, settlementId, settlAddr, peer, targetHdWallet, feePerByte, amount, handle, logger](const bs::Address &outputAddr) {
+                     if (!handle.isValid()) {
+                        SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
+                        return;
+                     }
+
+                     OtcClientDeal result;
+                     result.settlementId = settlementId;
+                     result.settlementAddr = settlAddr;
+                     result.ourAuthAddress = peer->offer.authAddress;
+                     result.cpPubKey = peer->authPubKey;
+                     result.amount = peer->offer.amount;
+                     result.price = peer->offer.price;
+                     result.hdWalletId = targetHdWallet->walletId();
+                     result.success = true;
+                     result.side = otc::Side::Buy;
+                     auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer->payinTxIdFromSeller, amount);
+                     result.payout = bs::SettlementMonitor::createPayoutTXRequest(
+                        payinUTXO, outputAddr, feePerByte, armory_->topBlock());
+                     result.fee = int64_t(result.payout.fee);
+                     cb(std::move(result));
+                  };
+
+                  if (peer->offer.recvAddress.empty()) {
+                     transaction->GetFallbackRecvAddress(std::move(recvAddrCb));
+                  } else {
+                     recvAddrCb(bs::Address(peer->offer.recvAddress));
+                  }
                }, Qt::QueuedConnection);
             };
 
