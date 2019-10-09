@@ -52,6 +52,7 @@ namespace Chat
 
 }
 
+Q_DECLARE_METATYPE(CelerClient::CelerUserType)
 Q_DECLARE_METATYPE(Chat::ConnectionManagerPtr)
 Q_DECLARE_METATYPE(Chat::LoggerPtr)
 Q_DECLARE_METATYPE(ZmqBipNewKeyCb)
