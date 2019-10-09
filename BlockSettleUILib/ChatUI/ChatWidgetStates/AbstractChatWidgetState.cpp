@@ -313,7 +313,7 @@ void AbstractChatWidgetState::onOtcPrivatePartyReady(const Chat::ClientPartyPtr&
    if (canPerformOTCOperations() && clientPartyPtr->isPrivateOTC()) {
       Chat::PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(chat_->ownUserId_);
       for (const auto& recipient : recipients) {
-         if (recipient->userHash() == chat_->currentPeer()->contactId) {
+         if (chat_->currentPeer() && recipient->userHash() == chat_->currentPeer()->contactId) {
             // found user, send request
             chat_->otcHelper_->onOtcQuoteResponseSubmit(chat_->currentPeer(), chat_->ui_->widgetCreateOTCResponse->response());
          }

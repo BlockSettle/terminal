@@ -74,16 +74,11 @@ void ChatPartiesTreeModel::onGlobalOTCChanged()
    }
 
    auto fAddOtcParty = [this](const bs::network::otc::Peer* peer, std::unique_ptr<PartyTreeItem>& section, otc::PeerType peerType) {
-      // TODO: remove
-/*
-      Chat::ClientPartyPtr otcPartyPtr = std::make_shared<Chat::ClientParty>(peer->contactId,
-         Chat::PartyType::PRIVATE_DIRECT_MESSAGE,
-         Chat::PartySubType::OTC,
-         Chat::PartyState::INITIALIZED);
-      otcPartyPtr->setDisplayName(otcPartyPtr->id());
-*/
       Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
       Chat::ClientPartyPtr otcPartyPtr = clientPartyModelPtr->getOtcPartyForUsers(currentUser(), peer->contactId);
+      if (!otcPartyPtr) {
+         return;
+      }
       QVariant stored;
       stored.setValue(otcPartyPtr);
 
@@ -263,7 +258,11 @@ QVariant ChatPartiesTreeModel::data(const QModelIndex& index, int role) const
    }
    else if (item->modelType() == UI::ElementType::Party) {
       Q_ASSERT(item->data().canConvert<Chat::ClientPartyPtr>());
-      return QString::fromStdString(item->data().value<Chat::ClientPartyPtr>()->displayName());
+      Chat::ClientPartyPtr clientPartyPtr = item->data().value<Chat::ClientPartyPtr>();
+      if (!clientPartyPtr) {
+         return QVariant();
+      }
+      return QString::fromStdString(clientPartyPtr->displayName());
    }
 
    return {};

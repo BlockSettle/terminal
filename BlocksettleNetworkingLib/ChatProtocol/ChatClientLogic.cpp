@@ -66,6 +66,7 @@ void ChatClientLogic::initDbDone()
    connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
    connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::searchUserReply, this, &ChatClientLogic::searchUserReply);
    connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::properlyConnected, this, &ChatClientLogic::properlyConnected);
+   connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::deletePrivateParty, this, &ChatClientLogic::DeletePrivateParty);
 
    // close connection from callback
    connect(this, &ChatClientLogic::disconnected, this, &ChatClientLogic::onCloseConnection);
@@ -273,12 +274,6 @@ void ChatClientLogic::privatePartyAlreadyExist(const std::string& partyId)
    // check if it's otc private party
    const ClientPartyPtr clientPartyPtr = clientPartyModelPtr()->getClientPartyById(partyId);
 
-   if (clientPartyPtr->isPrivateOTC())
-   {
-      emit otcPrivatePartyReady(clientPartyPtr);
-      return;
-   }
-
    clientConnectionLogicPtr_->prepareRequestPrivateParty(partyId);
 }
 
@@ -311,7 +306,7 @@ void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
 
    // if party in rejected state then remove recipients public keys, we don't need them anymore
    ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyId);
-   if (clientPartyPtr && clientPartyPtr->isPrivateStandard())
+   if (clientPartyPtr && clientPartyPtr->isPrivate())
    {
       PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr_->userName());
       clientDBServicePtr_->deleteRecipientsKeys(recipients);

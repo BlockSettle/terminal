@@ -83,6 +83,7 @@ namespace Chat
       void error(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "", bool displayAsWarning = false);
       void properlyConnected();
       void searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
+      void deletePrivateParty(const std::string& partyId);
 
    private slots:
       void handleLocalErrors(const Chat::ClientConnectionLogicError& errorCode, const std::string& what = "", bool displayAsWarning = false);

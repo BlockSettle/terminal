@@ -130,6 +130,11 @@ QImage ChatMessagesTextEdit::statusImage(const std::string& partyId, int row)
    QImage statusImage = statusImageGreyUnsent_;
 
    Chat::ClientPartyPtr clientPartyPtr = partyModel_->getClientPartyById(message->partyId());
+   
+   if (!clientPartyPtr) {
+      return QImage();
+   }
+
    if (clientPartyPtr->isGlobalStandard()) {
       if ((message->partyMessageState() != Chat::PartyMessageState::UNSENT)) {
          statusImage = statusImageBlueSeen_;

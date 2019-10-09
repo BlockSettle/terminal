@@ -139,7 +139,17 @@ void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, con
    // check if private party exist
    if (isPrivatePartyForUserExist(currentUserPtr, remoteUserName, partySubType))
    {
-      return;
+      if (PartySubType::OTC == partySubType)
+      {
+         // delete old otc private party and create new one
+         ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getOtcPartyForUsers(currentUserPtr->userName(), remoteUserName);
+         emit deletePrivateParty(clientPartyPtr->id());
+      }
+      else
+      {
+         // standard private parties can be reused
+         return;
+      }
    }
 
    // party not exist, create new one

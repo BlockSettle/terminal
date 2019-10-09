@@ -179,7 +179,7 @@ void ClientConnectionLogic::prepareAndSendMessage(const ClientPartyPtr& clientPa
       return;
    }
 
-   if (clientPartyPtr->isPrivateStandard() || clientPartyPtr->isPrivateOTC()) {
+   if (clientPartyPtr->isPrivate()) {
       prepareAndSendPrivateMessage(clientPartyPtr, data);
       return;
    }
@@ -312,7 +312,7 @@ void ClientConnectionLogic::saveIncomingPartyMessageAndUpdateState(PartyMessageP
       return;
    }
 
-   if (partyPtr->isPrivateStandard())
+   if (partyPtr->isPrivate())
    {
       // for private we need to reply message state as RECEIVED
       // and then save in local db
@@ -341,7 +341,7 @@ void ClientConnectionLogic::saveIncomingPartyMessageAndUpdateState(PartyMessageP
 
 void ClientConnectionLogic::setMessageSeen(const ClientPartyPtr& clientPartyPtr, const std::string& messageId)
 {
-   if (!(clientPartyPtr->isPrivateStandard()))
+   if (!(clientPartyPtr->isPrivate()))
    {
       return;
    }
@@ -686,6 +686,12 @@ void ClientConnectionLogic::handlePrivatePartyStateChanged(const PrivatePartySta
    {
       // if it's otc party, notify that is ready
       emit clientPartyModelPtr->otcPrivatePartyReady(clientPartyPtr);
+   }
+
+   // if it's otc party with rejected state, then delete party
+   if (PartyState::REJECTED == clientPartyPtr->partyState() && clientPartyPtr->isPrivateOTC())
+   {
+      emit deletePrivateParty(clientPartyPtr->id());
    }
 }
 
