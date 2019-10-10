@@ -172,6 +172,18 @@ std::shared_ptr<bs::sync::Wallet> hd::Wallet::getLeaf(const std::string &id) con
    return itLeaf->second;
 }
 
+BTCNumericTypes::balance_type hd::Wallet::getTotalBalance() const
+{
+   BTCNumericTypes::balance_type result = 0;
+   const auto grp = getGroup(getXBTGroupType());
+   if (grp) {
+      for (const auto &leaf : grp->getAllLeaves()) {
+         result += leaf->getTotalBalance();
+      }
+   }
+   return result;
+}
+
 std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct, bool isExtOnly)
 {
    ct = static_cast<bs::hd::CoinType>(ct | bs::hd::hardFlag);
