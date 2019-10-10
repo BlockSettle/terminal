@@ -31,7 +31,7 @@ namespace Chat
       void setPrivateKey(SecureBinaryData val) { privateKey_ = val; }
 
       CelerClient::CelerUserType celerUserType() const { return celerUserType_; }
-      void setCelerUserType(CelerClient::CelerUserType val) { celerUserType_ = val; }
+      void setCelerUserType(const CelerClient::CelerUserType& val) { celerUserType_ = val; }
    signals:
       void userNameChanged(const std::string& displayName);
 
