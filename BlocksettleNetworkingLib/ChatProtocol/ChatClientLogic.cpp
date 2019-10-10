@@ -108,7 +108,7 @@ void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, con
    clientDBServicePtr_->Init(loggerPtr, appSettingsPtr, currentUserPtr_, cryptManagerPtr_);
 }
 
-void ChatClientLogic::LoginToServer(const std::string& email, CelerClient::CelerUserType celerType, const std::string& jwt, const ZmqBipNewKeyCb& cb)
+void ChatClientLogic::LoginToServer(const std::string& email, const CelerClient::CelerUserType& celerType, const std::string& jwt, const ZmqBipNewKeyCb& cb)
 {
    Q_UNUSED(celerType);
 
@@ -124,13 +124,16 @@ void ChatClientLogic::LoginToServer(const std::string& email, CelerClient::Celer
    connectionPtr_->setCBs(cb);
 
    currentUserPtr_->setUserName(userHasherPtr_->deriveKey(email));
+   currentUserPtr_->setCelerUserType(celerType);
    clientPartyModelPtr()->setOwnUserName(currentUserPtr_->userName());
+   clientPartyModelPtr()->setOwnCelerUserType(currentUserPtr_->celerUserType());
 
    if (!connectionPtr_->openConnection(this->getChatServerHost(), this->getChatServerPort(), this))
    {
       loggerPtr_->error("[ChatClientLogic::LoginToServer] failed to open ZMQ data connection");
       connectionPtr_.reset();
       clientPartyModelPtr()->setOwnUserName({});
+      clientPartyModelPtr()->setOwnCelerUserType(CelerClient::Undefined);
 
       emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed);
       emit clientLoggedOutFromServer();
