@@ -344,7 +344,9 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
    {
       case bs::network::Order::New:
          group->rows_[static_cast<std::size_t>(index)]->status_ = tr("New");
+         break;
       case bs::network::Order::Pending:
+         group->rows_[static_cast<std::size_t>(index)]->status_ = tr("Pending");
          if (!order.pendingStatus.empty()) {
             auto statusString = QString::fromStdString(order.pendingStatus);
             group->rows_[static_cast<std::size_t>(index)]->status_ = statusString;
@@ -630,7 +632,8 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    if (found.second < 0) {
       beginInsertRows(createIndex(findGroup(marketItem, groupItem), 0, &groupItem->idx_), 0, 0);
 
-      double value = order.quantity * order.price;
+      // As quantity is now could be negative need to invert value
+      double value = - order.quantity * order.price;
       if (order.security.substr(0, order.security.find('/')) != order.product) {
          value = order.quantity / order.price;
       }
