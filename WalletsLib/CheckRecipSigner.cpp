@@ -1,6 +1,7 @@
 #include "CheckRecipSigner.h"
 
 #include "ArmoryConnection.h"
+#include "CoinSelection.h"
 #include "FastLock.h"
 #include "NetworkConfig.h"
 
@@ -149,34 +150,35 @@ bool CheckRecipSigner::hasReceiver() const
 uint64_t CheckRecipSigner::estimateFee(float feePerByte) const
 {
    size_t txSize = 0;
-
-   if (!hasReceiver()) {
-      txSize += 35;
+   std::vector<UTXO> inputs;
+   inputs.reserve(spenders_.size());
+   for (const auto &spender : spenders_) {
+      inputs.emplace_back(std::move(spender->getUtxo()));
+   }
+   auto transactions = bs::Address::decorateUTXOsCopy(inputs);
+   std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipientsMap;
+   if (recipients_.empty()) {
+      recipientsMap[0] = std::make_shared<Recipient_OPRETURN>(BinaryData("fake recipient"));
    }
    else {
-      for (const auto &recip : recipients_) {
-         txSize += recip->getSize();
+      for (unsigned int i = 0; i < recipients_.size(); ++i) {
+         recipientsMap[i] = recipients_[i];
       }
    }
 
-   for (const auto &spender : spenders_) {
-      const auto &utxo = spender->getUtxo();
-      const auto scrType = BtcUtils::getTxOutScriptType(utxo.getRecipientScrAddr());
-      switch (scrType) {
-      case TXOUT_SCRIPT_STDHASH160:
-         txSize += 180;
-         break;
-      case TXOUT_SCRIPT_P2WPKH:
-         txSize += 45;
-         break;
-      case TXOUT_SCRIPT_NONSTANDARD:
-      case TXOUT_SCRIPT_P2SH:
-      default:
-         txSize += 90;
-         break;
-      }
-   }
+   try {
+      const PaymentStruct payment(recipientsMap, 0, 0, 0);
 
+      auto usedUTXOCopy{ transactions };
+      UtxoSelection selection{ usedUTXOCopy };
+      selection.computeSizeAndFee(payment);
+
+      const size_t nonWitSize = selection.size_ - selection.witnessSize_;
+      txSize = std::ceil(static_cast<float>(3 * nonWitSize + selection.size_) / 4.0f);
+      if (recipients_.empty()) { // subtract fake recipient size
+         txSize -= recipientsMap[0]->getSize();
+      }
+   } catch (...) {}
    return txSize * feePerByte;
 }
 

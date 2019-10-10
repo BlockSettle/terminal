@@ -225,34 +225,35 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
       }
 
       auto walletsToWait = std::make_shared<std::set<std::string>>();
+      auto rbfUtxos = std::make_shared<std::vector<UTXO>>();
       for (const auto &wallet : inputWallets) {
          walletsToWait->insert(wallet->walletId());
       }
       for (const auto &wallet : inputWallets) {
-         const auto cbRBFUtxos = [this, walletId = wallet->walletId(), walletsToWait
+         const auto cbRBFUtxos = [this, walletId = wallet->walletId(), walletsToWait, rbfUtxos
             , inputsGroup, utxoSelected, tx, totalVal]
             (const std::vector<UTXO> &utxos) mutable
          {
+            for (const auto &utxo : utxos) {
+               const auto itFind = std::find_if(utxoSelected.cbegin(), utxoSelected.cend()
+                  , [utxo](const std::pair<BinaryData, unsigned int> &sel)
+               {
+                  if ((sel.first == utxo.getTxHash()) && (sel.second == utxo.getTxOutIndex())) {
+                     return true;
+                  }
+                  return false;
+               });
+               if (itFind == utxoSelected.end()) {
+                  continue;
+               }
+               rbfUtxos->emplace_back(std::move(utxo));
+            }
+
             walletsToWait->erase(walletId);
             if (walletsToWait->empty()) {
-               const auto lbdSetInputs = [this, inputsGroup, utxoSelected, tx, totalVal, utxos]
+               const auto lbdSetInputs = [this, inputsGroup, utxoSelected, tx, totalVal, rbfUtxos]
                () mutable {
-                  std::vector<UTXO> rbfUtxos;
-                  for (const auto &utxo : utxos) {
-                     const auto itFind = std::find_if(utxoSelected.cbegin(), utxoSelected.cend()
-                        , [utxo](const std::pair<BinaryData, unsigned int> &sel)
-                     {
-                        if ((sel.first == utxo.getTxHash()) && (sel.second == utxo.getTxOutIndex())) {
-                           return true;
-                        }
-                        return false;
-                     });
-                     if (itFind == utxoSelected.end()) {
-                        continue;
-                     }
-                     rbfUtxos.emplace_back(std::move(utxo));
-                  }
-                  setFixedGroupInputs(inputsGroup, rbfUtxos);
+                  setFixedGroupInputs(inputsGroup, *rbfUtxos);
 
                   for (const auto &sel : utxoSelected) {
                      if (!transactionData_->getSelectedInputs()->SetUTXOSelection(sel.first, sel.second)) {

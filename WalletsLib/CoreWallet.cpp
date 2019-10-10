@@ -229,7 +229,7 @@ static UtxoSelection computeSizeAndFee(const std::vector<UTXO> &inUTXOs, const P
 
 static size_t getVirtSize(const UtxoSelection &inUTXOSel)
 {
-   size_t nonWitSize = inUTXOSel.size_ - inUTXOSel.witnessSize_;
+   const size_t nonWitSize = inUTXOSel.size_ - inUTXOSel.witnessSize_;
    return std::ceil(static_cast<float>(3 * nonWitSize + inUTXOSel.size_) / 4.0f);
 }
 
@@ -242,7 +242,7 @@ size_t wallet::TXSignRequest::estimateTxVirtSize() const
    }
 
    try {
-      PaymentStruct payment(recipientsMap, fee, 0, 0);
+      const PaymentStruct payment(recipientsMap, fee, 0, 0);
       return getVirtSize(computeSizeAndFee(transactions, payment));
    }
    catch (const std::exception &) {}
