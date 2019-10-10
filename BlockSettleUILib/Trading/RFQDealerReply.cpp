@@ -619,7 +619,6 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                   const auto txReq = wallet->createPartialTXRequest(*spendVal, inputs, changeAddress, feePerByte
                      , { recipient }, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
                   qn->transactionData = txReq.serializeState().toHexStr();
-                  logger_->debug("[cbFee] txData={}", qn->transactionData);
                   dealerUtxoAdapter_->reserve(txReq, qn->quoteRequestId);
                } catch (const std::exception &e) {
                   logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
