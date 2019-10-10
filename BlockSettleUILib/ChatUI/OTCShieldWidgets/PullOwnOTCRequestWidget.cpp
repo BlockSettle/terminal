@@ -76,14 +76,14 @@ void PullOwnOTCRequestWidget::setResponse(const otc::QuoteResponse &response)
 
 void PullOwnOTCRequestWidget::setPendingBuyerSign(const bs::network::otc::Offer &offer)
 {
-   setupSignAwaitingInterface(headerTextOTCPendingBuyerSign);
+   setupSignAwaitingInterface(headerTextOTCPendingSellerSign);
    setupOfferInfo(offer);
    timeoutSec_ = getSeconds(bs::network::otc::payoutTimeout());
 }
 
 void PullOwnOTCRequestWidget::setPendingSellerSign(const bs::network::otc::Offer &offer)
 {
-   setupSignAwaitingInterface(headerTextOTCPendingSellerSign);
+   setupSignAwaitingInterface(headerTextOTCPendingBuyerSign);
    setupOfferInfo(offer);
    timeoutSec_ = getSeconds(bs::network::otc::payinTimeout());
 }
@@ -99,7 +99,9 @@ void PullOwnOTCRequestWidget::setPeer(const bs::network::otc::Peer &peer)
       ui_->horizontalWidgetSubmit->hide();
    }
   
-   ui_->sideValue->setText(getSide(ourSide_, peer.isOwnRequest));
+   if (peer.state != State::Idle) {
+      ui_->sideValue->setText(getSide(ourSide_, peer.isOurSideSentOffer));
+   }
 
    if (timeoutSec_) {
       setupTimer(peer.stateTimestamp);
