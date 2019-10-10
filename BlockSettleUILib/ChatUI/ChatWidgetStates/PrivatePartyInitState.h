@@ -76,8 +76,6 @@ protected:
          }
       }
       else if (clientPartyPtr->isPrivate()) {
-         // FIXME: Revert when server is updated
-#if 0
          if (!checkIsTradingParticipant()) {
             return;
          }
@@ -89,7 +87,6 @@ protected:
             chat_->ui_->widgetOTCShield->showCounterPartyIsntTradingParticipant();
             return;
          }
-#endif
          // check other party
       }
 
