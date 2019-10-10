@@ -23,6 +23,11 @@ namespace Blocksettle {
    }
 }
 
+enum class StackedMessages {
+   TextEditMessage = 0,
+   OTCTable = 1
+};
+
 class ChatWidget;
 class AbstractChatWidgetState
 {
