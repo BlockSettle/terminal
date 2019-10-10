@@ -344,7 +344,9 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
    {
       case bs::network::Order::New:
          group->rows_[static_cast<std::size_t>(index)]->status_ = tr("New");
+         break;
       case bs::network::Order::Pending:
+         group->rows_[static_cast<std::size_t>(index)]->status_ = tr("Pending");
          if (!order.pendingStatus.empty()) {
             auto statusString = QString::fromStdString(order.pendingStatus);
             group->rows_[static_cast<std::size_t>(index)]->status_ = statusString;
