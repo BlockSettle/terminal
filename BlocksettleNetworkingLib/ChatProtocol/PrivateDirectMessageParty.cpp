@@ -14,22 +14,34 @@ PrivateDirectMessageParty::PrivateDirectMessageParty(const std::string& id, cons
 
 }
 
-bool PrivateDirectMessageParty::isUserBelongsToParty(const std::string& userName)
+bool PrivateDirectMessageParty::isUserBelongsToParty(const std::string& recipientUserHash)
 {
-   for (const auto& recipient : recipients_)
+   const auto& it = std::find_if(recipients_.begin(), recipients_.end(), [recipientUserHash](const auto& recipient)->bool {
+      return recipient->userHash() == recipientUserHash;
+   });
+
+   if (it == recipients_.end())
    {
-      if (recipient->userName() == userName)
-      {
-         return true;
-      }
+      return false;
+   }
+
+   return true;
+}
+
+bool PrivateDirectMessageParty::isUserInPartyWith(const std::string& firstUserHash, const std::string& secondUserHash)
+{
+   if (isUserBelongsToParty(firstUserHash) && isUserBelongsToParty(secondUserHash))
+   {
+      return true;
    }
 
    return false;
 }
 
-PartyRecipientPtr PrivateDirectMessageParty::getSecondRecipient(const std::string& firstRecipientUserName)
+// TODO: consider to remove this function
+PartyRecipientPtr PrivateDirectMessageParty::getSecondRecipient(const std::string& firstRecipientUserHash)
 {
-   PartyRecipientsPtrList recipients = getRecipientsExceptMe(firstRecipientUserName);
+   const PartyRecipientsPtrList recipients = getRecipientsExceptMe(firstRecipientUserHash);
 
    if (recipients.empty())
    {
@@ -39,13 +51,13 @@ PartyRecipientPtr PrivateDirectMessageParty::getSecondRecipient(const std::strin
    return recipients.back();
 }
 
-PartyRecipientsPtrList PrivateDirectMessageParty::getRecipientsExceptMe(const std::string& me)
+PartyRecipientsPtrList PrivateDirectMessageParty::getRecipientsExceptMe(const std::string& myUserHash)
 {
    PartyRecipientsPtrList recipients;
 
    std::copy_if(recipients_.begin(), recipients_.end(), std::back_inserter(recipients),
-      [me](const PartyRecipientPtr& existing) {
-         return existing->userName() != me;
+      [myUserHash](const PartyRecipientPtr& existing) {
+         return existing->userHash() != myUserHash;
       });
 
    return recipients;
@@ -53,7 +65,7 @@ PartyRecipientsPtrList PrivateDirectMessageParty::getRecipientsExceptMe(const st
 
 void PrivateDirectMessageParty::insertOrUpdateRecipient(const PartyRecipientPtr& partyRecipientPtr)
 {
-   PartyRecipientPtr recipientPtr = getRecipient(partyRecipientPtr->userName());
+   PartyRecipientPtr recipientPtr = getRecipient(partyRecipientPtr->userHash());
 
    if (nullptr == recipientPtr)
    {
@@ -66,11 +78,11 @@ void PrivateDirectMessageParty::insertOrUpdateRecipient(const PartyRecipientPtr&
    recipientPtr->setPublicKey(partyRecipientPtr->publicKey());
 }
 
-PartyRecipientPtr PrivateDirectMessageParty::getRecipient(const std::string& userName)
+PartyRecipientPtr PrivateDirectMessageParty::getRecipient(const std::string& recipientUserHash)
 {
    for (const auto& recipient : recipients_)
    {
-      if (recipient->userName() == userName)
+      if (recipient->userHash() == recipientUserHash)
       {
          return recipient;
       }

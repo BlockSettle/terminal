@@ -122,6 +122,8 @@ QString AutheIDClient::errorString(AutheIDClient::ErrorType error)
       return tr("Server error");
    case NetworkError:
       return tr("Network error");
+   case NoNewDeviceAvailable:
+      return tr("No new device available");
    }
 
    return tr("Unknown error");
@@ -281,6 +283,7 @@ void AutheIDClient::getDeviceKey(RequestType requestType, const std::string &ema
    cancel();
 
    email_ = email;
+   requestType_ = requestType;
 
    QString action = getAutheIDClientRequestText(requestType);
    bool newDevice = isAutheIDClientNewDeviceNeeded(requestType);
@@ -509,6 +512,13 @@ void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds
          if (payload.isEmpty() || !error.ParseFromArray(payload.data(), payload.size())) {
             logger_->error("AuthEid failed: network error {}({})", reply->error(), reply->errorString().toStdString());
             emit failed(ErrorType::ServerError);
+            return;
+         }
+
+         if (requestType_ == ActivateWalletNewDevice && error.error() == rp::INVALID_ARGUMENT) {
+            // Show more specific error
+            logger_->error("can't find new Auth eID device: {}", error.message());
+            emit failed(ErrorType::NoNewDeviceAvailable);
             return;
          }
 

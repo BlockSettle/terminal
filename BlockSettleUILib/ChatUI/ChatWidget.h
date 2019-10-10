@@ -122,6 +122,8 @@ private slots:
    void onOtcPullOrRejectCurrent();
    void onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type);
 
+   void onOtcPrivatePartyReady(const Chat::ClientPartyPtr& clientPartyPtr);
+
 signals:
    // OTC
    void sendOtcPbMessage(const std::string& data);

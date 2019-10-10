@@ -5,11 +5,13 @@
 #include <string>
 #include <QObject>
 #include <QTimer>
+
 #include "ArmoryConnection.h"
 #include "CommonTypes.h"
+#include "CoreWallet.h"
 #include "EncryptionUtils.h"
 #include "PasswordDialogData.h"
-#include "CoreWallet.h"
+#include "ValidityFlag.h"
 
 namespace bs {
 
@@ -56,6 +58,9 @@ namespace bs {
    protected slots:
       void startTimer(const unsigned int durationSeconds);
       void stopTimer();
+
+   protected:
+      ValidityFlag validityFlag_;
 
    private:
       QTimer   timer_;

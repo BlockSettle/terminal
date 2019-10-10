@@ -164,6 +164,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
 
+   // OTC
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::otcPrivatePartyReady, this, &ChatWidget::onOtcPrivatePartyReady, Qt::QueuedConnection);
+
    ui_->textEditMessages->onSetClientPartyModel(clientPartyModelPtr);
 
    otcRequestViewModel_ = new OTCRequestViewModel(otcHelper_->client(), this);
@@ -268,8 +271,17 @@ otc::Peer *ChatWidget::currentPeer() const
       return nullptr;
    }
 
+   const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
+   if (!clientPartyPtr) {
+      return nullptr;
+   }
+
    if (currentPartyId_ == Chat::OtcRoomName) {
-      const auto &currentIndex = ui_->treeViewOTCRequests->currentIndex();
+      const auto &currentIndex = ui_->treeViewOTCRequests->selectionModel()->currentIndex();
+      if (currentIndex.isValid() && clientPartyPtr->partyCreatorHash() == ownUserId_) {
+         return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
+      }
+
       if (!currentIndex.isValid() || currentIndex.row() < 0 || currentIndex.row() >= int(otcHelper_->client()->requests().size())) {
          // Show by default own request (if available)
          return otcHelper_->client()->ownRequest();
@@ -277,21 +289,7 @@ otc::Peer *ChatWidget::currentPeer() const
       return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
    }
 
-   const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
-   if (!clientPartyPtr) {
-      return nullptr;
-   }
-
-   switch (partyTreeItem->peerType) {
-      case otc::PeerType::Contact:     return otcHelper_->client()->contact(clientPartyPtr->userHash());
-      // #new_logic : ???
-      // We should use userHash here too, but for some reasons it's not set here
-      case otc::PeerType::Request:     return otcHelper_->client()->request(clientPartyPtr->id());
-      case otc::PeerType::Response:    return otcHelper_->client()->response(clientPartyPtr->id());
-   }
-
-   assert(false);
-   return nullptr;
+   return otcHelper_->client()->peer(clientPartyPtr->userHash(), partyTreeItem->peerType);
 }
 
 void acceptPartyRequest(const std::string& partyId) {}
@@ -428,12 +426,12 @@ void ChatWidget::onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTe
 
 void ChatWidget::onSendOtcMessage(const std::string& contactId, const BinaryData& data)
 {
-   auto clientParty = chatClientServicePtr_->getClientPartyModelPtr()->getClientPartyByUserHash(contactId);
-   if (!clientParty || !clientParty->isPrivateStandard()) {
+   const auto clientPartyPtr = chatClientServicePtr_->getClientPartyModelPtr()->getOtcPartyForUsers(ownUserId_, contactId);
+   if (!clientPartyPtr) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "can't find valid private party to send OTC message");
       return;
    }
-   stateCurrent_->onSendOtcMessage(clientParty->id(), OtcUtils::serializeMessage(data));
+   stateCurrent_->onSendOtcMessage(clientPartyPtr->id(), OtcUtils::serializeMessage(data));
 }
 
 void ChatWidget::onSendOtcPublicMessage(const BinaryData &data)
@@ -592,7 +590,8 @@ void ChatWidget::onRegisterNewChangingRefresh()
 void ChatWidget::onShowUserRoom(const QString& userHash)
 {
    const auto clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
-   Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getPartyByUserName(userHash.toStdString());
+
+   Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getStandardPartyForUsers(ownUserId_, userHash.toStdString());
 
    if (!clientPartyPtr) {
       return;
@@ -720,4 +719,9 @@ void ChatWidget::onOtcRequestCurrentChanged(const QModelIndex &current, const QM
    }
 
    otcHelper_->setGlobalOTCEntryTimeStamp(selectedPeerTimeStamp);
+}
+
+void ChatWidget::onOtcPrivatePartyReady(const Chat::ClientPartyPtr& clientPartyPtr)
+{
+   stateCurrent_->onOtcPrivatePartyReady(clientPartyPtr);
 }

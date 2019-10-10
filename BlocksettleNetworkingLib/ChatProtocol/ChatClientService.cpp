@@ -5,6 +5,7 @@ using namespace Chat;
 ChatClientService::ChatClientService(QObject* parent /*= nullptr*/)
    : ServiceThread<ChatClientLogic>(new ChatClientLogic, parent)
 {
+   qRegisterMetaType<CelerClient::CelerUserType>();
    qRegisterMetaType<Chat::ConnectionManagerPtr>();
    qRegisterMetaType<Chat::ApplicationSettingsPtr>();
    qRegisterMetaType<Chat::LoggerPtr>();
@@ -16,6 +17,7 @@ ChatClientService::ChatClientService(QObject* parent /*= nullptr*/)
    connect(this, &ChatClientService::LogoutFromServer, worker(), &ChatClientLogic::LogoutFromServer);
    connect(this, &ChatClientService::SendPartyMessage, worker(), &ChatClientLogic::SendPartyMessage);
    connect(this, &ChatClientService::RequestPrivateParty, worker(), &ChatClientLogic::RequestPrivateParty);
+   connect(this, &ChatClientService::RequestPrivatePartyOTC, worker(), &ChatClientLogic::RequestPrivatePartyOTC);
    connect(this, &ChatClientService::SetMessageSeen, worker(), &ChatClientLogic::SetMessageSeen);
    connect(this, &ChatClientService::RejectPrivateParty, worker(), &ChatClientLogic::RejectPrivateParty);
    connect(this, &ChatClientService::DeletePrivateParty, worker(), &ChatClientLogic::DeletePrivateParty);

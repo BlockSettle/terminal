@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 
+#include "CelerClient.h"
 #include <disable_warnings.h>
 #include "BinaryData.h"
 #include <enable_warnings.h>
@@ -17,10 +18,10 @@ namespace Chat
    class PartyRecipient
    {
    public:
-      PartyRecipient(const std::string& userName, const BinaryData& publicKey = BinaryData(), const QDateTime& publicKeyTime = QDateTime::currentDateTime());
+      PartyRecipient(const std::string& userHash, const BinaryData& publicKey = BinaryData(), const QDateTime& publicKeyTime = QDateTime::currentDateTime());
 
-      std::string userName() const { return userName_; }
-      void setUserName(std::string val) { userName_ = val; }
+      std::string userHash() const { return userHash_; }
+      void setUserHash(std::string val) { userHash_ = val; }
 
       BinaryData publicKey() const { return publicKey_; }
       void setPublicKey(BinaryData val) { publicKey_ = val; }
@@ -28,10 +29,14 @@ namespace Chat
       QDateTime publicKeyTime() const { return publicKeyTime_; }
       void setPublicKeyTime(QDateTime val) { publicKeyTime_ = val; }
 
+      CelerClient::CelerUserType celerType() const { return celerType_; }
+      void setCelerType(CelerClient::CelerUserType celerType) { celerType_ = celerType; }
+
    private:
-      std::string userName_;
+      std::string userHash_;
       BinaryData publicKey_;
       QDateTime publicKeyTime_;
+      CelerClient::CelerUserType celerType_ = CelerClient::Undefined;
    };
 
    using PartyRecipientPtr = std::shared_ptr<PartyRecipient>;

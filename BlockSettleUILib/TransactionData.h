@@ -5,9 +5,11 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+
 #include "Address.h"
 #include "CoreWallet.h"
 #include "UtxoReservation.h"
+#include "ValidityFlag.h"
 
 namespace spdlog {
    class logger;
@@ -108,7 +110,8 @@ public:
    void ClearAllRecipients();
 
    void SetFallbackRecvAddress(const bs::Address &addr) { fallbackRecvAddress_ = addr; }
-   bs::Address GetFallbackRecvAddress();
+   void GetFallbackRecvAddress(std::function<void(const bs::Address&)> cb);
+   const bs::Address &GetFallbackRecvAddressIfSet() const;
 
    bs::Address GetRecipientAddress(unsigned int recipientId) const;
    BTCNumericTypes::balance_type GetRecipientAmount(unsigned int recipientId) const;
@@ -191,6 +194,8 @@ private:
    bool transactionUpdateRequired_ = false;
 
    bool inputsLoaded_ = false;
+
+   ValidityFlag validityFlag_;
 };
 
 #endif // __TRANSACTION_DATA_H__

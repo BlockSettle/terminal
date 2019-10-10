@@ -85,6 +85,8 @@ struct OtcClientDeal
 
 namespace {
 
+   const int kContactIdSize = 12;
+
    const int kSettlementIdHexSize = 64;
    const int kTxHashSize = 32;
    const int kPubKeySize = 33;
@@ -219,6 +221,10 @@ Peer *OtcClient::response(const std::string &contactId)
 
 Peer *OtcClient::peer(const std::string &contactId, PeerType type)
 {
+   if (contactId.size() != kContactIdSize) {
+      SPDLOG_LOGGER_DEBUG(logger_, "unexpected contact requested: {}");
+   }
+
    switch (type)
    {
       case bs::network::otc::PeerType::Contact:
@@ -228,6 +234,8 @@ Peer *OtcClient::peer(const std::string &contactId, PeerType type)
       case bs::network::otc::PeerType::Response:
          return response(contactId);
    }
+
+   assert(false);
    return nullptr;
 }
 
@@ -388,7 +396,7 @@ bool OtcClient::pullOrReject(Peer *peer)
       case State::QuoteSent:
       case State::OfferSent:
       case State::OfferRecv: {
-         SPDLOG_LOGGER_DEBUG(logger_, "pull of reject offer from {}", peer->toString());
+         SPDLOG_LOGGER_DEBUG(logger_, "pull or reject offer from {}", peer->toString());
 
          ContactMessage msg;
          msg.mutable_close();
@@ -1303,9 +1311,15 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
 
    switch (response.state()) {
       case ProxyTerminalPb::OTC_STATE_FAILED: {
-         if (peer->state != State::WaitVerification && peer->state != State::WaitBuyerSign && peer->state != State::WaitSellerSeal) {
-            SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
-            return;
+         switch (peer->state) {
+            case State::WaitVerification:
+            case State::WaitBuyerSign:
+            case State::WaitSellerSeal:
+            case State::WaitSellerSign:
+               break;
+            default:
+               SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
+               return;
          }
 
          SPDLOG_LOGGER_ERROR(logger_, "OTC trade failed: {}", response.error_msg());
@@ -1605,22 +1619,34 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
 
                   peer->settlementId = settlementId;
 
-                  OtcClientDeal result;
-                  result.settlementId = settlementId;
-                  result.settlementAddr = settlAddr;
-                  result.ourAuthAddress = peer->offer.authAddress;
-                  result.cpPubKey = peer->authPubKey;
-                  result.amount = peer->offer.amount;
-                  result.price = peer->offer.price;
-                  result.hdWalletId = targetHdWallet->walletId();
-                  result.success = true;
-                  result.side = otc::Side::Buy;
-                  auto outputAddr = peer->offer.recvAddress.empty() ? transaction->GetFallbackRecvAddress() : bs::Address(peer->offer.recvAddress);
-                  auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer->payinTxIdFromSeller, amount);
-                  result.payout = bs::SettlementMonitor::createPayoutTXRequest(
-                     payinUTXO, outputAddr, feePerByte, armory_->topBlock());
-                  result.fee = int64_t(result.payout.fee);
-                  cb(std::move(result));
+                  auto recvAddrCb = [this, cb, settlementId, settlAddr, peer, targetHdWallet, feePerByte, amount, handle, logger, transaction](const bs::Address &outputAddr) {
+                     if (!handle.isValid()) {
+                        SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
+                        return;
+                     }
+
+                     OtcClientDeal result;
+                     result.settlementId = settlementId;
+                     result.settlementAddr = settlAddr;
+                     result.ourAuthAddress = peer->offer.authAddress;
+                     result.cpPubKey = peer->authPubKey;
+                     result.amount = peer->offer.amount;
+                     result.price = peer->offer.price;
+                     result.hdWalletId = targetHdWallet->walletId();
+                     result.success = true;
+                     result.side = otc::Side::Buy;
+                     auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer->payinTxIdFromSeller, amount);
+                     result.payout = bs::SettlementMonitor::createPayoutTXRequest(
+                        payinUTXO, outputAddr, feePerByte, armory_->topBlock());
+                     result.fee = int64_t(result.payout.fee);
+                     cb(std::move(result));
+                  };
+
+                  if (peer->offer.recvAddress.empty()) {
+                     transaction->GetFallbackRecvAddress(std::move(recvAddrCb));
+                  } else {
+                     recvAddrCb(bs::Address(peer->offer.recvAddress));
+                  }
                }, Qt::QueuedConnection);
             };
 

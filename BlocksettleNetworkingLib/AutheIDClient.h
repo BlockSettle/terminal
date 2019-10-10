@@ -102,6 +102,7 @@ public:
       NotAuthenticated,
       ServerError,
       NetworkError,
+      NoNewDeviceAvailable,
    };
    Q_ENUM(ErrorType)
 
@@ -207,6 +208,7 @@ private:
 
    const char *baseUrl_;
    std::string apiKey_;
+   RequestType requestType_{};
 };
 
 Q_DECLARE_METATYPE(AutheIDClient::RequestType)

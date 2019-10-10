@@ -64,7 +64,6 @@ public:
    DIALOG_KEY(LotSize)
    DIALOG_KEY(Market)
    DIALOG_KEY(NetworkFee)
-   DIALOG_KEY_BOOL(PayOutRevokeType)
    DIALOG_KEY_BOOL(PayOutType)
    DIALOG_KEY(Price)
    DIALOG_KEY(Product)

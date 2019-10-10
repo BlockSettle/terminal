@@ -399,19 +399,20 @@ void ClientDBLogic::readHistoryMessages(const std::string& partyId, const int li
 void ClientDBLogic::saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients)
 {
    const QString cmd = QStringLiteral("INSERT INTO user (user_hash, public_key, public_key_timestamp) "
-      "VALUES (:user_hash, :public_key, :public_key_timestamp);");
+      "VALUES (:user_hash, :public_key, :public_key_timestamp) ON CONFLICT(user_hash) DO UPDATE SET "
+      "user_hash=:user_hash, public_key=:public_key, public_key_timestamp=:public_key_timestamp;");
 
    for (const auto& recipient : recipients)
    {
       QSqlQuery query(getDb());
       query.prepare(cmd);
-      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userName()));
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userHash()));
       query.bindValue(QStringLiteral(":public_key"), QString::fromStdString(recipient->publicKey().toHexStr()));
       query.bindValue(QStringLiteral(":public_key_timestamp"), qint64(recipient->publicKeyTime().toMSecsSinceEpoch()));
 
       if (!checkExecute(query))
       {
-         emit error(ClientDBLogicError::InsertRecipientKey, recipient->userName());
+         emit error(ClientDBLogicError::InsertRecipientKey, recipient->userHash());
       }
    }
 }
@@ -424,11 +425,11 @@ void ClientDBLogic::deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& rec
    {
       QSqlQuery query(getDb());
       query.prepare(cmd);
-      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userName()));
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userHash()));
 
       if (!checkExecute(query))
       {
-         emit error(ClientDBLogicError::DeleteRecipientKey, recipient->userName());
+         emit error(ClientDBLogicError::DeleteRecipientKey, recipient->userHash());
       }
    }
 }
@@ -441,13 +442,13 @@ void ClientDBLogic::updateRecipientKeys(const Chat::PartyRecipientsPtrList& reci
    {
       QSqlQuery query(getDb());
       query.prepare(cmd);
-      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userName()));
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userHash()));
       query.bindValue(QStringLiteral(":public_key"), QString::fromStdString(recipient->publicKey().toHexStr()));
       query.bindValue(QStringLiteral(":public_key_timestamp"), qint64(recipient->publicKeyTime().toMSecsSinceEpoch()));
 
       if (!checkExecute(query))
       {
-         emit error(ClientDBLogicError::UpdateRecipientKey, recipient->userName());
+         emit error(ClientDBLogicError::UpdateRecipientKey, recipient->userHash());
       }
    }
 }
@@ -463,7 +464,7 @@ void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniq
 
       QSqlQuery query(getDb());
       query.prepare(cmd);
-      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipientPtr->userName()));
+      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipientPtr->userHash()));
 
       if (checkExecute(query))
       {
@@ -475,7 +476,7 @@ void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniq
             if (recipientPtr->publicKey() != oldPublicKey || recipientPtr->publicKeyTime() != oldPublicKeyTimestamp)
             {
                const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
-               userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userName()));
+               userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userHash()));
                userPkPtr->setOldPublicKeyHex(oldPublicKey);
                userPkPtr->setOldPublicKeyTime(oldPublicKeyTimestamp);
                userPkPtr->setNewPublicKeyHex(recipientPtr->publicKey());
@@ -486,7 +487,7 @@ void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniq
       }
       else
       {
-         emit error(ClientDBLogicError::CheckRecipientKey, recipientPtr->userName());
+         emit error(ClientDBLogicError::CheckRecipientKey, recipientPtr->userHash());
       }
    }
 

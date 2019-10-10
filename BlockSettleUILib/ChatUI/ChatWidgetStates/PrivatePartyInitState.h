@@ -35,8 +35,7 @@ protected:
 
       chat_->ui_->input_textEdit->setText({});
       chat_->ui_->input_textEdit->setVisible(true);
-      // #new_logic : fix me, party should exist! set always true
-      chat_->ui_->input_textEdit->setEnabled(clientPartyPtr != nullptr);
+      chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->input_textEdit->setFocus();
 
       restoreDraftMessage();
@@ -77,10 +76,20 @@ protected:
          }
       }
       else if (clientPartyPtr->isPrivate()) {
+         // FIXME: Revert when server is updated
+#if 0
          if (!checkIsTradingParticipant()) {
             return;
          }
 
+         Chat::PartyRecipientPtr recipientPtr = clientPartyPtr->getSecondRecipient(chat_->ownUserId_);
+         CelerClient::CelerUserType counterPartyCelerType = recipientPtr->celerType();
+         if (counterPartyCelerType != BaseCelerClient::Dealing
+            || counterPartyCelerType != BaseCelerClient::Trading) {
+            chat_->ui_->widgetOTCShield->showCounterPartyIsntTradingParticipant();
+            return;
+         }
+#endif
          // check other party
       }
 
