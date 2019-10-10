@@ -158,7 +158,12 @@ uint64_t CheckRecipSigner::estimateFee(float feePerByte) const
    auto transactions = bs::Address::decorateUTXOsCopy(inputs);
    std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipientsMap;
    if (recipients_.empty()) {
-      recipientsMap[0] = std::make_shared<Recipient_OPRETURN>(BinaryData("fake recipient"));
+      uint64_t inpSize = 0;
+      for (const auto &input : inputs) {
+         inpSize += input.getValue();
+      }
+      inpSize -= 300;   // subtract fake fee to eliminate change
+      recipientsMap[0] = std::make_shared<Recipient_P2WPKH>(CryptoPRNG::generateRandom(20), inpSize);
    }
    else {
       for (unsigned int i = 0; i < recipients_.size(); ++i) {
