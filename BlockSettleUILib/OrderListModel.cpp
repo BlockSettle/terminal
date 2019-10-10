@@ -348,6 +348,11 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
          if (!order.pendingStatus.empty()) {
             auto statusString = QString::fromStdString(order.pendingStatus);
             group->rows_[static_cast<std::size_t>(index)]->status_ = statusString;
+            if (statusString.startsWith(QLatin1String("Revoke"))) {
+               group->rows_[static_cast<std::size_t>(index)]->statusColor_ =
+                  QColor{0xf6, 0xa7, 0x24};
+               break;
+            }
          }
          group->rows_[static_cast<std::size_t>(index)]->statusColor_ = QColor{0x63, 0xB0, 0xB2};
          break;
