@@ -844,6 +844,7 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
       if (feePerByte > 0) {
          bs::CheckRecipSigner chkSigner(prevPart);
          fee += chkSigner.estimateFee(feePerByte);
+         fee -= 10 * feePerByte;    // subtract TX header size as it's counted twice
       }
    }
    signer.setFlags(SCRIPT_VERIFY_SEGWIT);
