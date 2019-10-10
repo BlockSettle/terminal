@@ -176,6 +176,10 @@ public:
    bool getUTXOsForAddress(const bs::Address &, const UTXOsCb &, bool withZC = false);
    bool getOutpointsFor(const std::vector<bs::Address> &, const std::function<void(const OutpointBatch &)> &
       , unsigned int height = 0, unsigned int zcIndex = 0);
+   bool getOutpointsForAddresses(const std::set<BinaryData> &, const std::function<void(const OutpointBatch &)> &
+      , unsigned int height = 0, unsigned int zcIndex = 0);
+   bool getSpentnessForOutputs(const std::map<BinaryData, std::set<unsigned>> &
+      , const std::function<void(const std::map<BinaryData, std::map<unsigned, BinaryData>> &)> &);
 
    using TxCb = std::function<void(const Tx&)>;
    using TXsCb = std::function<void(const std::vector<Tx>&)>;
@@ -217,9 +221,6 @@ public:
 
    // Converts BTC/kb (returned by armory) to sat/byte
    static float toFeePerByte(float fee);
-
-   std::shared_ptr<AsyncClient::BlockDataViewer> bdv(void) const { return bdv_; }
-
 
 protected:
    using CallbackQueueCb = std::function<void(ArmoryCallbackTarget *)>;

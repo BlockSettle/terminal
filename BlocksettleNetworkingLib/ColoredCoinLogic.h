@@ -311,9 +311,7 @@ public:
       ready_.store(false, std::memory_order_relaxed);
 
       auto&& wltIdSbd = CryptoPRNG::generateRandom(12);
-      walletObj_ = std::make_shared<AsyncClient::BtcWallet>(
-         connPtr_->bdv()->instantiateWallet(
-            wltIdSbd.toHexStr()));
+      walletObj_ = connPtr_->instantiateWallet(wltIdSbd.toHexStr());
    }
 
    ~ColoredCoinTracker(void)

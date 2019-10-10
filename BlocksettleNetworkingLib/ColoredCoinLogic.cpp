@@ -308,19 +308,13 @@ std::vector<Tx> ColoredCoinTracker::grabTxBatch(
 {
    auto txProm = std::make_shared<std::promise<std::vector<Tx>>>();
    auto txFut = txProm->get_future();
-   auto txLbd = [txProm](ReturnMessage<std::vector<Tx>> batch)->void
+   auto txLbd = [txProm](const std::vector<Tx> &batch)->void
    {
-      try
-      {
-         txProm->set_value(std::move(batch.get()));
-      }
-      catch (std::exception&)
-      {
-         txProm->set_exception(std::current_exception());
-      }
+         txProm->set_value(std::move(batch));
    };
-
-   connPtr_->bdv()->getTxBatchByHash(hashes, txLbd);
+   if (!connPtr_->getTXsByHash(hashes, txLbd)) {
+      return {};
+   }
    return txFut.get();
 }
 
@@ -386,19 +380,13 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
       std::promise<std::map<BinaryData, std::map<unsigned, BinaryData>>>>();
    auto spentnessFut = spentnessProm->get_future();
    auto spentnessLbd = [spentnessProm](
-      ReturnMessage<std::map<BinaryData, std::map<unsigned, BinaryData>>> batch)
+      const std::map<BinaryData, std::map<unsigned, BinaryData>> &batch)
    {
-      try
-      {
-         spentnessProm->set_value(batch.get());
-      }
-      catch (std::exception&)
-      {
-         spentnessProm->set_exception(std::current_exception());
-      }
+      spentnessProm->set_value(batch);
    };
-
-   connPtr_->bdv()->getSpentnessForOutputs(spentnessToTrack, spentnessLbd);
+   if (!connPtr_->getSpentnessForOutputs(spentnessToTrack, spentnessLbd)) {
+      throw ColoredCoinException("failed to get spentness");
+   }
    auto&& spentnessBatch = spentnessFut.get();
 
    //aggregate spender hashes
@@ -489,20 +477,14 @@ void ColoredCoinTracker::processRevocationBatch(
    //grab listed tx
    auto txProm = std::make_shared<std::promise<std::vector<Tx>>>();
    auto txFut = txProm->get_future();
-   auto txLbd = [txProm](ReturnMessage<std::vector<Tx>> batch)->void
+   auto txLbd = [txProm](const std::vector<Tx> &batch)->void
    {
-      try
-      {
-         txProm->set_value(std::move(batch.get()));
-      }
-      catch (std::exception&)
-      {
-         txProm->set_exception(std::current_exception());
-      }
+      txProm->set_value(std::move(batch));
    };
-
-   connPtr_->bdv()->getTxBatchByHash(hashes, txLbd);
-   auto txBatch = txFut.get();
+   std::vector<Tx> txBatch;
+   if (connPtr_->getTXsByHash(hashes, txLbd)) {
+      txBatch = txFut.get();
+   }
 
    //mark all output scrAddr as revoked
    for (auto& tx : txBatch)
@@ -554,25 +536,18 @@ std::set<BinaryData> ColoredCoinTracker::update()
 
    auto promPtr = std::make_shared<std::promise<OutpointBatch>>();
    auto fut = promPtr->get_future();
-   auto lbd = [promPtr](ReturnMessage<OutpointBatch> batch)
+   auto lbd = [promPtr](const OutpointBatch &batch)
    {
-      try
-      {
-         promPtr->set_value(batch.get());
-      }
-      catch (std::exception&)
-      {
-         //want to throw in the caller thread
-         promPtr->set_exception(std::current_exception());
-      }
+      promPtr->set_value(batch);
    };
 
    /*
    We don't want any zc data for this call so pass UINT32_MAX
    as the zc cutoff.
    */
-   connPtr_->bdv()->getOutpointsForAddresses(
-      addrSet, startHeight_, UINT32_MAX, lbd);
+   if (!connPtr_->getOutpointsForAddresses(addrSet, lbd, startHeight_, UINT32_MAX)) {
+      return {};
+   }
 
    auto&& outpointData = fut.get();
    std::set<BinaryData> txsToCheck;
@@ -711,25 +686,18 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
    //note: we dont deal with unconfirmed revocations
    auto promPtr = std::make_shared<std::promise<OutpointBatch>>();
    auto fut = promPtr->get_future();
-   auto lbd = [promPtr](ReturnMessage<OutpointBatch> batch)
+   auto lbd = [promPtr](const OutpointBatch &batch)
    {
-      try
-      {
-         promPtr->set_value(batch.get());
-      }
-      catch (std::exception& e)
-      {
-         //want to throw in the caller thread
-         promPtr->set_exception(std::current_exception());
-      }
+      promPtr->set_value(batch);
    };
 
    /*
    We don't want any confirmed data for this call so pass UINT32_MAX
    as the height cutoff.
    */
-   connPtr_->bdv()->getOutpointsForAddresses(
-      addrSet, UINT32_MAX, zcCutOff_, lbd);
+   if (!connPtr_->getOutpointsForAddresses(addrSet, lbd, UINT32_MAX, zcCutOff_)) {
+      return {};
+   }
 
    auto&& outpointData = fut.get();
    std::set<BinaryData> txsToCheck;
@@ -813,19 +781,13 @@ void ColoredCoinTracker::purgeZc()
 
    auto promPtr = std::make_shared<std::promise<std::vector<Tx>>>();
    auto fut = promPtr->get_future();
-   auto getTxBatchLbd = [promPtr](ReturnMessage<std::vector<Tx>> batch)->void
+   auto getTxBatchLbd = [promPtr](const std::vector<Tx> &batch)
    {
-      try
-      {
-         promPtr->set_value(std::move(batch.get()));
-      }
-      catch (std::exception&)
-      {
-         promPtr->set_exception(std::current_exception());
-      }
+      promPtr->set_value(std::move(batch));
    };
-
-   connPtr_->bdv()->getTxBatchByHash(txHashes, getTxBatchLbd);
+   if (!connPtr_->getTXsByHash(txHashes, getTxBatchLbd)) {
+      return;
+   }
    auto&& txBatch = fut.get();
 
    zcPtr = std::make_shared<ColoredCoinZCSnapshot>();
