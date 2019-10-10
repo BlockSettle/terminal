@@ -171,7 +171,7 @@ void DealerCCSettlementContainer::activate()
       emit genAddressVerified(true);
    }
 
-   startTimer(30);
+   startTimer(kWaitTimeoutInSec);
    startSigning();
 }
 

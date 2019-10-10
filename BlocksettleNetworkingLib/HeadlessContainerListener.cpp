@@ -817,45 +817,45 @@ bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const
 
    dialog.dialogData = dialogData;
 
-   seconds duration = seconds(dialogData.value<int>(bs::sync::PasswordDialogData::Duration));
+   milliseconds duration = milliseconds(dialogData.value<int>(bs::sync::PasswordDialogData::Duration));
    if (duration == 0s) {
       duration = kDefaultDuration;
    }
    dialog.dialogExpirationTime = std::chrono::steady_clock::now() + duration;
 
    dialog.callback = cb;
-   dialog.passwordRequest = [this, reqType, txReq](const Internal::PasswordDialogDataWrapper &dialogData){
+   dialog.passwordRequest = [this, reqType, txReq](const Internal::PasswordDialogDataWrapper &dlgData){
       if (callbacks_) {
          switch (reqType) {
          case headless::SignTxRequestType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignTx, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignTx, dlgData, txReq);
             break;
          case headless::SignPartialTXRequestType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignPartialTx, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignPartialTx, dlgData, txReq);
             break;
 
          case headless::SignSettlementTxRequestType:
          case headless::SignSettlementPayoutTxType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementTx, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementTx, dlgData, txReq);
             break;
          case headless::SignSettlementPartialTxType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementPartialTx, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementPartialTx, dlgData, txReq);
             break;
 
          case headless::CreateHDLeafRequestType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dialogData);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dlgData);
             break;
          case headless::CreateSettlWalletType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateSettlementLeaf, dialogData);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateSettlementLeaf, dlgData);
             break;
          case headless::SetUserIdType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dlgData, txReq);
             break;
          case headless::SignAuthAddrRevokeType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::RevokeAuthAddress, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::RevokeAuthAddress, dlgData, txReq);
             break;
          case headless::PromoteHDWalletRequestType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::PromoteHDWallet, dialogData);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::PromoteHDWallet, dlgData);
             break;
 
          default:
@@ -883,7 +883,7 @@ void HeadlessContainerListener::RunDeferredPwDialog()
       const auto &dialog = deferredPasswordRequests_.front();
 
       auto dialogData = dialog.dialogData;
-      seconds remainingDuration = std::chrono::duration_cast<seconds>(dialog.dialogExpirationTime - std::chrono::steady_clock::now());
+      milliseconds remainingDuration = std::chrono::duration_cast<milliseconds>(dialog.dialogExpirationTime - std::chrono::steady_clock::now());
 
       if (remainingDuration < seconds(3)) {
          // Don't display dialog if it will be expired soon or already expired

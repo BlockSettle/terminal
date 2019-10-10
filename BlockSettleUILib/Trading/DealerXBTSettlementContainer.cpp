@@ -227,7 +227,7 @@ bool DealerXBTSettlementContainer::cancel()
 
 void DealerXBTSettlementContainer::activate()
 {
-   startTimer(30);
+   startTimer(kWaitTimeoutInSec);
 
    const auto reqAuthAddrSW = bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH);
    addrVerificator_->addAddress(reqAuthAddrSW);
