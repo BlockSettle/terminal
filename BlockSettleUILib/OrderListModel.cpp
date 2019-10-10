@@ -348,11 +348,6 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
          if (!order.pendingStatus.empty()) {
             auto statusString = QString::fromStdString(order.pendingStatus);
             group->rows_[static_cast<std::size_t>(index)]->status_ = statusString;
-            if (statusString.startsWith(QLatin1String("Revoke"))) {
-               group->rows_[static_cast<std::size_t>(index)]->statusColor_ =
-                  QColor{0xf6, 0xa7, 0x24};
-               break;
-            }
          }
          group->rows_[static_cast<std::size_t>(index)]->statusColor_ = QColor{0x63, 0xB0, 0xB2};
          break;
@@ -630,7 +625,8 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    if (found.second < 0) {
       beginInsertRows(createIndex(findGroup(marketItem, groupItem), 0, &groupItem->idx_), 0, 0);
 
-      double value = order.quantity * order.price;
+      // As quantity is now could be negative need to invert value
+      double value = - order.quantity * order.price;
       if (order.security.substr(0, order.security.find('/')) != order.product) {
          value = order.quantity / order.price;
       }
