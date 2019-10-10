@@ -169,6 +169,13 @@ void BsClient::signAddress(const SignAddressReq &req)
    sendRequest(&request, std::chrono::seconds(10), std::move(timeoutCb), std::move(processCb));
 }
 
+void BsClient::cancelSign()
+{
+   Request request;
+   request.mutable_cancel_sign();
+   sendMessage(&request);
+}
+
 // static
 std::chrono::seconds BsClient::autheidLoginTimeout()
 {

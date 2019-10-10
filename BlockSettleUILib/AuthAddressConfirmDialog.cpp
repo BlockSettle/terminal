@@ -15,6 +15,7 @@ AuthAddressConfirmDialog::AuthAddressConfirmDialog(BsClient *bsClient, const bs:
   , ui_{new Ui::AuthAddressConfirmDialog()}
   , address_{address}
   , authManager_{authManager}
+  , bsClient_{bsClient}
 {
    ui_->setupUi(this);
 
@@ -71,7 +72,7 @@ void AuthAddressConfirmDialog::CancelSubmission()
 {
    progressTimer_.stop();
 
-   authManager_->CancelSubmitForVerification(address_);
+   authManager_->CancelSubmitForVerification(bsClient_.data(), address_);
 }
 
 void AuthAddressConfirmDialog::onAuthAddressSubmitCancelled(const QString &address)
