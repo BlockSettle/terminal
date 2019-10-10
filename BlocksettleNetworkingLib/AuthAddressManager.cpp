@@ -364,7 +364,7 @@ void AuthAddressManager::ConfirmSubmitForVerification(BsClient *bsClient, const 
    bsClient->signAddress(req);
 }
 
-bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)
+bool AuthAddressManager::CancelSubmitForVerification(BsClient *bsClient, const bs::Address &address)
 {
    CancelAuthAddressSubmitRequest request;
 
@@ -379,6 +379,10 @@ bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)
 
    logger_->debug("[AuthAddressManager::CancelSubmitForVerification] cancel submission of {}"
       , address.display());
+
+   if (bsClient) {
+      bsClient->cancelSign();
+   }
 
    return SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
 }

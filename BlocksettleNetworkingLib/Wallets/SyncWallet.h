@@ -199,6 +199,7 @@ namespace bs {
          }
 
          void setWCT(WalletCallbackTarget *wct);
+         WalletACT* peekACT(void) const { return act_.get(); }
 
       protected:
          virtual void onZeroConfReceived(const std::vector<bs::TXEntry>&);

@@ -792,53 +792,17 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, const TX
       return false;
    }
 
-   struct Data
-   {
-      std::mutex m;
-      std::set<BinaryData> hashSet;
-      std::vector<Tx> result;
-   };
-
-   auto data = std::make_shared<Data>();
-   data->hashSet = hashes;
-
-   const auto &cbAppendTx = [this, data, cb](const Tx &tx) {
-      if (!tx.isInitialized()) {
-         logger_->error("[ArmoryConnection::getTXsByHash (cbUpdateTx)] received uninitialized TX");
+   const auto cbWrap = [this, cb](ReturnMessage<std::vector<Tx>> msg) {
+      try {
+         const auto &txs = msg.get();
+         cb(txs);
       }
-
-      bool isEmpty;
-      {
-         std::lock_guard<std::mutex> lock(data->m);
-         const auto &txHash = tx.getThisHash();
-         data->hashSet.erase(txHash);
-         data->result.emplace_back(tx);
-         isEmpty = data->hashSet.empty();
-      }
-
-      if (isEmpty) {
-         if (cb) {
-            cb(data->result);
-         }
+      catch (const std::exception &e) {
+         logger_->error("[ArmoryConnection::getTXsByHash] failed to get: {}", e.what());
+         cb({});
       }
    };
-
-   for (const auto &hash : hashes) {
-      if (addGetTxCallback(hash, cbAppendTx)) {
-         continue;
-      }
-      bdv_->getTxByHash(hash, [this, hash](ReturnMessage<Tx> tx)->void {
-         try {
-            auto retTx = tx.get();
-            callGetTxCallbacks(hash, retTx);
-         }
-         catch (const std::exception &e) {
-            logger_->error("[ArmoryConnection::getTXsByHash (cbUpdateTx)] Return data error - "
-               "{} - Hash {}", e.what(), hash.toHexStr(true));
-            callGetTxCallbacks(hash, {});
-         }
-      });
-   }
+   bdv_->getTxBatchByHash(hashes, cbWrap);
    return true;
 }
 
