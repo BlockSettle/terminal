@@ -1231,7 +1231,9 @@ void OtcClient::processPublicClose(QDateTime timestamp, const std::string &conta
 void OtcClient::processPublicPrivateMessage(QDateTime timestamp, const std::string &contactId, const PublicMessage_PrivateMessage &msg)
 {
    // FIXME: Remove this and send messages directly
-   processPrivateMessage(timestamp, contactId, msg.is_response(), msg.data());
+   if (msg.receiver_id() == ownContactId()) {
+      processPrivateMessage(timestamp, contactId, msg.is_response(), msg.data());
+   }
 }
 
 void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &response)

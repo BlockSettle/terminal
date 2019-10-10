@@ -60,6 +60,8 @@ namespace bs {
             std::string name() const { return name_; }
             std::string description() const { return desc_; }
 
+            BTCNumericTypes::balance_type getTotalBalance() const;
+
             void setUserId(const BinaryData &usedId);
             bool deleteRemotely();
 

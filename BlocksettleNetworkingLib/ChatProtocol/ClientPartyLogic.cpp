@@ -94,11 +94,15 @@ void ClientPartyLogic::onUserStatusChanged(const ChatUserPtr& currentUserPtr, co
          return;
       }
 
+      PartyRecipientPtr recipientPtr = clientPartyPtr->getRecipient(statusChanged.user_name());
+      if (recipientPtr)
+      {
+         recipientPtr->setCelerType(static_cast<CelerClient::CelerUserType>(statusChanged.celer_type()));
+      }
+
       // check if public key changed
       if (statusChanged.has_public_key())
       {
-         PartyRecipientPtr recipientPtr = clientPartyPtr->getRecipient(statusChanged.user_name());
-
          if (recipientPtr)
          {
             const BinaryData public_key(statusChanged.public_key().value());
