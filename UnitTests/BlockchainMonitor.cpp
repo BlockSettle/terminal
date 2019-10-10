@@ -16,7 +16,7 @@ BlockchainMonitor::~BlockchainMonitor()
 
 uint32_t BlockchainMonitor::waitForNewBlocks(uint32_t targetHeight)
 {
-   while (!receivedNewBlock_ || (targetHeight && (armory_->topBlock() < targetHeight))) {
+   while (!receivedNewBlock_) {
       std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
    }
    receivedNewBlock_ = false;

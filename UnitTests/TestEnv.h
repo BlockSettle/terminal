@@ -228,6 +228,111 @@ public:
    }
 };
 
+struct UnitTestLocalACT : public bs::sync::WalletACT
+{
+   BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
+
+public:
+   UnitTestLocalACT(ArmoryConnection *armory, bs::sync::Wallet *leaf) :
+      bs::sync::WalletACT(leaf)
+   {
+      init(armory);
+   }
+   ~UnitTestLocalACT() override
+   {
+      cleanup();
+   }
+
+   void onRefresh(const std::vector<BinaryData> &ids, bool online) override
+   {
+      auto dbns = std::make_shared<DBNotificationStruct>(DBNS_Refresh);
+      dbns->ids_ = ids;
+      dbns->online_ = online;
+
+      notifQueue_.push_back(std::move(dbns));
+   }
+
+   void onZCReceived(const std::vector<bs::TXEntry> &zcs) override
+   {
+      auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
+      dbns->zc_ = zcs;
+
+      notifQueue_.push_back(std::move(dbns));
+   }
+
+   void onNewBlock(unsigned int block, unsigned branchHeight) override
+   {
+      auto dbns = std::make_shared<DBNotificationStruct>(DBNS_NewBlock);
+      dbns->block_ = block;
+      dbns->branchHeight_ = branchHeight;
+
+      notifQueue_.push_back(std::move(dbns));
+   }
+
+   std::shared_ptr<DBNotificationStruct> waitOnNotification(void)
+   {
+      return std::move(notifQueue_.pop_front());
+   }
+
+   void waitOnRefresh(const std::vector<std::string>& ids)
+   {
+      if (ids.size() == 0) {
+         throw std::runtime_error("empty registration id vector");
+      }
+      std::set<std::string> idSet;
+      idSet.insert(ids.begin(), ids.end());
+
+      while (true) {
+         const auto &notif = notifQueue_.pop_front();
+         if (notif->type_ != DBNS_Refresh) {
+            throw std::runtime_error("expected refresh notification");
+         }
+         for (auto& refreshId : notif->ids_) {
+            std::string idStr(refreshId.getCharPtr(), refreshId.getSize());
+            auto iter = idSet.find(idStr);
+            if (iter == idSet.end()) {
+               continue;
+            }
+            idSet.erase(iter);
+            if (idSet.size() == 0) {
+               return;
+            }
+         }
+      }
+   }
+
+   unsigned waitOnNewBlock()
+   {
+      auto&& notif = notifQueue_.pop_front();
+      if (notif->type_ != DBNS_NewBlock)
+         throw std::runtime_error("expected new block notification (got " + std::to_string(notif->type_) + ")");
+
+      return notif->block_;
+   }
+
+   std::vector<bs::TXEntry> waitOnZC(bool soft = false)
+   {
+      while (1)
+      {
+         auto&& notif = notifQueue_.pop_front();
+         if (notif->type_ != DBNS_ZC)
+         {
+            if (soft)
+               continue;
+
+            throw std::runtime_error("expected zc notification");
+         }
+
+         return notif->zc_;
+      }
+   }
+
+   std::shared_ptr<DBNotificationStruct> popNotif()
+   {
+      return notifQueue_.pop_front();
+   }
+};
+
 struct ArmoryInstance
 {
    /*in process supernode db running off of spoofed unit test network node*/
@@ -248,7 +353,10 @@ struct ArmoryInstance
    ~ArmoryInstance(void);
 
    std::map<unsigned, BinaryData> mineNewBlock(ScriptRecipient*, unsigned);
-   void pushZC(const BinaryData &, unsigned int blocksUntilMined = 0);
+   void pushZC(const BinaryData &, unsigned int blocksUntilMined = 0, bool stage = false);
+
+   void setReorgBranchPoint(const BinaryData&);
+   BinaryData getCurrentTopBlockHash(void) const;
 };
 
 class TestArmoryConnection : public ArmoryObject
