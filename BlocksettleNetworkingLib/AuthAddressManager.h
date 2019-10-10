@@ -87,7 +87,7 @@ public:
 
    virtual bool SubmitForVerification(const bs::Address &address);
    virtual void ConfirmSubmitForVerification(BsClient *bsClient, const bs::Address &address);
-   virtual bool CancelSubmitForVerification(const bs::Address &address);
+   virtual bool CancelSubmitForVerification(BsClient *bsClient, const bs::Address &address);
 
    virtual bool RevokeAddress(const bs::Address &address);
 

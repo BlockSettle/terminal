@@ -278,7 +278,7 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
       warnFunds.setWindowTitle(tr("Insufficient Funds"));
       warnFunds.exec();
 
-      authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
+      authAddressManager_->CancelSubmitForVerification(bsClient_.data(), lastSubmittedAddress_);
       lastSubmittedAddress_ = bs::Address{};
 
       return;
@@ -304,7 +304,7 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
    if (promptResult == QDialog::Accepted) {
       ConfirmAuthAddressSubmission();
    } else {
-      authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
+      authAddressManager_->CancelSubmitForVerification(bsClient_.data(), lastSubmittedAddress_);
       lastSubmittedAddress_ = bs::Address{};
    }
 }

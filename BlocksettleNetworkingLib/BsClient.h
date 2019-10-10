@@ -105,6 +105,7 @@ public:
    void celerSend(CelerAPI::CelerMessageType messageType, const std::string &data);
 
    void signAddress(const SignAddressReq &req);
+   void cancelSign();
 
    static std::chrono::seconds autheidLoginTimeout();
    static std::chrono::seconds autheidAuthAddressTimeout();

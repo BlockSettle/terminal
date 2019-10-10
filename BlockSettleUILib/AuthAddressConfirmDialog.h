@@ -6,6 +6,7 @@
 #include <QDialog>
 #include <QTimer>
 #include <QString>
+#include <QPointer>
 
 #include <chrono>
 
@@ -45,6 +46,8 @@ private:
 
    QTimer                                 progressTimer_;
    std::chrono::steady_clock::time_point  startTime_;
+
+   QPointer<BsClient> bsClient_;
 };
 
 #endif // AUTH_ADDRESS_CONFIRMATION_DIALOG_H__
