@@ -47,7 +47,11 @@ protected:
          return true;
       };
 
-      assert(clientPartyPtr);
+      if (!clientPartyPtr) {
+         updateOtc();
+         return;
+      }
+
       if (clientPartyPtr->isGlobal()) {
          if (clientPartyPtr->displayName() == Chat::GlobalRoomName) {
             chat_->ui_->widgetOTCShield->showOtcUnavailableGlobal();
