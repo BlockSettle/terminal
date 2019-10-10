@@ -430,6 +430,17 @@ bool OtcClient::pullOrReject(Peer *peer)
          d->set_settlement_id(deal->settlementId);
          emit sendPbMessage(request.SerializeAsString());
 
+         switch (peer->type) {
+         case PeerType::Request:
+            requestMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+         case PeerType::Response:
+            responseMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+         }
+
          return true;
       }
 
@@ -1415,7 +1426,21 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             return;
          }
          emit peerError(peer, PeerErrorType::Canceled, nullptr);
-         resetPeerStateToIdle(peer);
+         switch (peer->type) {
+         case PeerType::Contact:
+            resetPeerStateToIdle(peer);
+            break;
+         case PeerType::Request:
+            requestMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+            break;
+         case PeerType::Response:
+            responseMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+         }
+
          break;
       }
 
