@@ -53,6 +53,30 @@ namespace bs {
    };
 }
 
+enum DBNotificationStruct_Enum
+{
+   DBNS_Refresh,
+   DBNS_ZC,
+   DBNS_NewBlock
+};
+
+struct DBNotificationStruct
+{
+   const DBNotificationStruct_Enum type_;
+
+   std::vector<BinaryData> ids_;
+   bool online_;
+
+   std::vector<bs::TXEntry> zc_;
+
+   unsigned int block_;
+   unsigned int branchHeight_;
+
+   DBNotificationStruct(DBNotificationStruct_Enum type) :
+      type_(type)
+   {}
+};
+
 class ArmoryCallbackTarget
 {
 public:
@@ -193,6 +217,9 @@ public:
 
    // Converts BTC/kb (returned by armory) to sat/byte
    static float toFeePerByte(float fee);
+
+   std::shared_ptr<AsyncClient::BlockDataViewer> bdv(void) const { return bdv_; }
+
 
 protected:
    using CallbackQueueCb = std::function<void(ArmoryCallbackTarget *)>;
