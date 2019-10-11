@@ -433,8 +433,10 @@ void ChatWidget::onSendOtcMessage(const std::string& contactId, const BinaryData
    PartyTreeItem* party = chatProxyModel->getInternalData(index);
    assert(party);
 
+   bool const isOTCGlobalRoot = (chatProxyModel->getOTCGlobalRoot() == index);
+
    Chat::ClientPartyPtr clientPartyPtr = nullptr;
-   if (party->peerType == bs::network::otc::PeerType::Contact) {
+   if (party->peerType == bs::network::otc::PeerType::Contact && !isOTCGlobalRoot) {
       clientPartyPtr = chatClientServicePtr_->getClientPartyModelPtr()->getStandardPartyForUsers(ownUserId_, contactId);
    }
    else {
