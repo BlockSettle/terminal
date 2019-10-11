@@ -35,7 +35,8 @@ namespace Chat
       InsertRecipientKey,
       DeleteRecipientKey,
       UpdateRecipientKey,
-      CheckRecipientKey
+      CheckRecipientKey,
+      CleanUnusedParties
    };
 
    class ClientDBLogic : public DatabaseExecutor
@@ -61,6 +62,7 @@ namespace Chat
       void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);
       void checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniqueRecipientMap);
+      void clearUnusedParties();
 
    signals:
       void initDone();

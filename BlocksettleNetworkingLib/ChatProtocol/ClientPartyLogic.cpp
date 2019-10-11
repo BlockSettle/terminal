@@ -36,6 +36,7 @@ ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBSer
 void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& welcomeResponse)
 {
    clientPartyModelPtr_->clearModel();
+   clientDBServicePtr_->cleanUnusedParties();
 
    // all unique recipients
    UniqieRecipientMap uniqueRecipients;
