@@ -72,6 +72,11 @@ protected:
             return;
          }
 
+         if (clientPartyPtr->clientStatus() == Chat::ClientStatus::OFFLINE) {
+            chat_->ui_->widgetOTCShield->showContactIsOffline();
+            return;
+         }
+
          Chat::PartyRecipientPtr recipientPtr = clientPartyPtr->getSecondRecipient(chat_->ownUserId_);
          CelerClient::CelerUserType counterPartyCelerType = recipientPtr->celerType();
          if (counterPartyCelerType != BaseCelerClient::Dealing
