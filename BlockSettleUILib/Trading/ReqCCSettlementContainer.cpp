@@ -61,7 +61,6 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
    dialogData.setValue(PasswordDialogData::Market, "CC");
    dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
    dialogData.setValue(PasswordDialogData::LotSize, qint64(lotSize_));
-
    dialogData.remove(PasswordDialogData::SettlementId);
 
    if (side() == bs::network::Side::Sell) {
@@ -290,6 +289,7 @@ void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const 
    genAddrVerified_ = addressVerified;
 
    bs::sync::PasswordDialogData pd;
+   pd.setValue(PasswordDialogData::SettlementId, id());
    pd.setValue(PasswordDialogData::DeliveryUTXOVerified, addressVerified);
    pd.setValue(PasswordDialogData::SigningAllowed, addressVerified);
    signingContainer_->updateDialogData(pd);
