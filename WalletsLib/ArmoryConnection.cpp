@@ -837,19 +837,19 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, const TX
       logger_->warn("[ArmoryConnection::getTXsByHash] empty hash set");
       return false;
    }
-   if (!cb) {
-      logger_->warn("[ArmoryConnection::getTXsByHash] missing callback");
-      return false;
-   }
 
-   const auto cbWrap = [logger=logger_, cb](ReturnMessage<std::vector<Tx>> msg) {
+   const auto cbWrap = [logger=logger_, cb](ReturnMessage<std::vector<Tx>> msg)->void
+   {
       try {
-         const auto &txs = msg.get();
-         cb(txs);
+         if (cb) {
+            cb(std::move(msg.get()));
+         }
       }
       catch (const std::exception &e) {
          logger->error("[ArmoryConnection::getTXsByHash] failed to get: {}", e.what());
-         cb({});
+         if (cb) {
+            cb({});
+         }
       }
    };
    bdv_->getTxBatchByHash(hashes, cbWrap);
