@@ -11,6 +11,7 @@
 #include "ServerConnectionListener.h"
 #include "SignerDefs.h"
 #include "BSErrorCode.h"
+#include "PasswordDialogData.h"
 #include "PasswordDialogDataWrapper.h"
 
 #include "headless.pb.h"
@@ -59,16 +60,17 @@ public:
    virtual void ccNamesReceived(bool) = 0;
 };
 
-using VoidCb = std::function<void(void)>;
+using PasswordDialogFunc = std::function<void(const Internal::PasswordDialogDataWrapper &dialogData)>;
 using PasswordReceivedCb = std::function<void(bs::error::ErrorCode result, const SecureBinaryData &password)>;
 using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, SecureBinaryData> &)>;
 
 struct PasswordRequest
 {
-   VoidCb passwordRequest;
+   PasswordDialogFunc passwordRequest;
    PasswordReceivedCb callback;
    Blocksettle::Communication::Internal::PasswordDialogDataWrapper dialogData;
    std::chrono::steady_clock::time_point dialogRequestedTime{std::chrono::steady_clock::now()};
+   std::chrono::steady_clock::time_point dialogExpirationTime{std::chrono::steady_clock::now()};
 
    // dialogs sorted by final time point in ascending order
    // first dialog in vector should be executed firstly
