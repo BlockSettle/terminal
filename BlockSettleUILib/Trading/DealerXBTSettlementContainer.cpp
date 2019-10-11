@@ -262,11 +262,6 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       try {
          Tx tx{signedTX};
 
-         std::stringstream ss;
-         tx.pprintAlot(ss);
-         logger_->debug("[DealerXBTSettlementContainer::onTXSigned] info on signed payout:\n{}"
-                        , ss.str());
-
          auto txdata = tx.serialize();
          auto bctx = BCTX::parse(txdata);
 
@@ -289,12 +284,12 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
 
          if (signatureCount != 1) {
             logger_->error("[DealerXBTSettlementContainer::onTXSigned] signature count: {}", signatureCount);
-            failWithErrorText(tr("Failed to sign pay-in"));
+            failWithErrorText(tr("Failed to sign Pay-out"));
             return;
          }
       } catch (...) {
          logger_->error("[DealerXBTSettlementContainer::onTXSigned] failed to deserialize signed payout");
-         failWithErrorText(tr("Failed to sign pay-in"));
+         failWithErrorText(tr("Failed to sign Pay-out"));
          return;
       }
 
@@ -305,25 +300,12 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
    } else if (payinSignId_ && (payinSignId_ == id)) {
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          logger_->error("[DealerXBTSettlementContainer::onTXSigned] Failed to sign pay-in: {} ({})", (int)errCode, errMsg);
-         failWithErrorText(tr("Failed to sign pay-in"));
+         failWithErrorText(tr("Failed to sign Pay-in"));
          return;
       }
 
       transactionData_->getWallet()->setTransactionComment(signedTX, comment_);
 //      settlWallet_->setTransactionComment(signedTX, comment_);  //TODO: implement later
-
-      try {
-         Tx tx{signedTX};
-
-         std::stringstream ss;
-
-         tx.pprintAlot(ss);
-
-         logger_->debug("[DealerXBTSettlementContainer::onTXSigned] info on signed payin:\n{}"
-                        , ss.str());
-      } catch (...) {
-         logger_->error("[DealerXBTSettlementContainer::onTXSigned] failed to deserialize signed payin");
-      }
 
       emit sendSignedPayinToPB(settlementIdString_, signedTX);
       logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payin sent");

@@ -74,6 +74,8 @@ ReqXBTSettlementContainer::~ReqXBTSettlementContainer()
 unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHash, double qty
    , const bs::Address &recvAddr)
 {
+   usedPayinHash_ = payinHash;
+
    try {
       const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(
          bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, qty), recvAddr
@@ -338,14 +340,35 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       try {
          Tx tx{signedTX};
 
-         std::stringstream ss;
+         auto txdata = tx.serialize();
+         auto bctx = BCTX::parse(txdata);
 
-         tx.pprintAlot(ss);
+         auto utxo = bs::SettlementMonitor::getInputFromTX(settlAddr_, usedPayinHash_, amount_);
 
-         logger_->debug("[ReqXBTSettlementContainer::onTXSigned] info on signed payout:\n{}"
-                        , ss.str());
+         std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
+         utxoMap[utxo.getTxHash()][0] = utxo;
+
+         TransactionVerifier tsv(*bctx, utxoMap);
+
+         auto tsvFlags = tsv.getFlags();
+         tsvFlags |= SCRIPT_VERIFY_P2SH_SHA256 | SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT;
+         tsv.setFlags(tsvFlags);
+
+         auto verifierState = tsv.evaluateState();
+
+         auto inputState = verifierState.getSignedStateForInput(0);
+
+         auto signatureCount = inputState.getSigCount();
+
+         if (signatureCount != 1) {
+            logger_->error("[ReqXBTSettlementContainer::onTXSigned] signature count: {}", signatureCount);
+            cancelWithError(tr("Failed to sign Pay-out"));
+            return;
+         }
       } catch (...) {
          logger_->error("[ReqXBTSettlementContainer::onTXSigned] failed to deserialize signed payout");
+         cancelWithError(tr("Failed to sign Pay-out"));
+         return;
       }
 
       emit sendSignedPayoutToPB(settlementIdString_, signedTX);
