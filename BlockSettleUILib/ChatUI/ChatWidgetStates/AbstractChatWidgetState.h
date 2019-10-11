@@ -23,6 +23,11 @@ namespace Blocksettle {
    }
 }
 
+enum class StackedMessages {
+   TextEditMessage = 0,
+   OTCTable = 1
+};
+
 class ChatWidget;
 class AbstractChatWidgetState
 {
@@ -75,7 +80,6 @@ public:
    void onOtcQuoteResponseSubmit();
 
    void onOtcPullOrRejectCurrent();
-   void onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type);
 
    void onOtcPrivatePartyReady(const Chat::ClientPartyPtr& clientPartyPtr);
 

@@ -215,6 +215,7 @@ namespace bs {
             void init(bool force) override;
             void setPath(const bs::hd::Path &) override;
 
+            bool getSpendableTxOutList(const ArmoryConnection::UTXOsCb &, uint64_t val) override;
             bool getSpendableZCList(const ArmoryConnection::UTXOsCb &) const override;
             bool isBalanceAvailable() const override;
             BTCNumericTypes::balance_type getSpendableBalance() const override;

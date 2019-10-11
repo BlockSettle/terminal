@@ -50,9 +50,6 @@ void SettlementContainer::startTimer(const unsigned int durationSeconds)
          msTimeLeft_ = 0;
          emit timerExpired();
       }
-      else {
-         emit timerTick(msTimeLeft_, msDuration_);
-      }
    });
    timer_.start();
    emit timerStarted(msDuration_);

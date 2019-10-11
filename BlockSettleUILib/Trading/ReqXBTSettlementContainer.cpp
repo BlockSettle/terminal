@@ -18,8 +18,6 @@
 
 #include <sstream>
 
-static const unsigned int kWaitTimeoutInSec = 30;
-
 using namespace bs::sync;
 
 Q_DECLARE_METATYPE(AddressVerificationState)

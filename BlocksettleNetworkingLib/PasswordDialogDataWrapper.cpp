@@ -62,8 +62,7 @@ inline void PasswordDialogDataWrapper::insertImpl(const std::string &key, T valu
    Any any;
    any.PackFrom(msg);
 
-   const auto &p = MapPair<std::string, Any>(key, any);
-   mutable_valuesmap()->insert(p);
+   (*mutable_valuesmap())[key] = any;
 }
 
 ///

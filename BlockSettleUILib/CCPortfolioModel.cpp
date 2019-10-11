@@ -858,15 +858,13 @@ void CCPortfolioModel::reloadXBTWalletsList()
          displayedWallets = root_->GetXBTGroup()->GetWalletIds();
       }
 
-      for (const auto &wallet : walletsManager_->getAllWallets()) {
-         if (!wallet || (wallet->type() != bs::core::wallet::Type::Bitcoin)) {
-            continue;
-         }
+      for (int i = 0; i < walletsManager_->hdWalletsCount(); ++i) {
+         const auto hdWallet = walletsManager_->getHDWallet(i);
 
-         if (displayedWallets.find(wallet->walletId()) == displayedWallets.end()) {
-            walletsToAdd.push_back(walletInfo{wallet->name(), wallet->walletId()});
+         if (displayedWallets.find(hdWallet->walletId()) == displayedWallets.end()) {
+            walletsToAdd.push_back(walletInfo{hdWallet->name(), hdWallet->walletId()});
          } else {
-            displayedWallets.erase(wallet->walletId());
+            displayedWallets.erase(hdWallet->walletId());
          }
       }
 
@@ -907,15 +905,13 @@ void CCPortfolioModel::updateXBTBalance()
 
       auto parentIndex = createIndex(xbtGroup->getRow(), 0, static_cast<void*>(xbtGroup));
 
-      for (const auto &wallet : walletsManager_->getAllWallets()) {
-         if (!wallet || (wallet->type() != bs::core::wallet::Type::Bitcoin)) {
-            continue;
-         }
+      for (int i = 0; i < walletsManager_->hdWalletsCount(); ++i) {
+         const auto hdWallet = walletsManager_->getHDWallet(i);
 
-         const auto walletId = wallet->walletId();
+         const auto walletId = hdWallet->walletId();
          const auto xbtNode = xbtGroup->GetXBTNode(walletId);
          if (xbtNode != nullptr) {
-            const double balance = wallet->getTotalBalance();
+            const double balance = hdWallet->getTotalBalance();
             if (xbtNode->SetXBTAmount(balance)) {
                dataChanged(index(xbtNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
                   , index(xbtNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
