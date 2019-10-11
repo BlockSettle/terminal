@@ -90,6 +90,8 @@ private:
    void dealerVerifStateChanged(AddressVerificationState);
    void activateProceed();
 
+   void cancelWithError(const QString& errorMessage);
+
 private:
    std::shared_ptr<spdlog::logger>           logger_;
    std::shared_ptr<AuthAddressManager>       authAddrMgr_;
