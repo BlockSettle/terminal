@@ -6,6 +6,15 @@
 
 #include "bs_proxy_terminal_pb.pb.h"
 
+namespace {
+
+   const auto kNewOrderColor = QColor{0xFF, 0x7F, 0};
+   const auto kPendingColor = QColor{0x63, 0xB0, 0xB2};
+   const auto kRevokedColor = QColor{0xf6, 0xa7, 0x24};
+   const auto kSettledColor = QColor{0x22, 0xC0, 0x64};
+   const auto kFailedColor = QColor{0xEC, 0x0A, 0x35};
+
+} // namespace
 
 QString OrderListModel::Header::toString(OrderListModel::Header::Index h)
 {
@@ -347,12 +356,12 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
       case bs::network::Order::Pending: {
          const auto status = order.pendingStatus.empty() ? tr("Pending") : QString::fromStdString(order.pendingStatus);
 
-         auto color = QColor{0x63, 0xB0, 0xB2};
+         auto color = kPendingColor;
          if (status.toLower().startsWith(QStringLiteral("revoke"))) {
-             color = QColor{0xf6, 0xa7, 0x24};
+             color = kRevokedColor;
          } else if (status.toLower().startsWith(QStringLiteral("pay-in")) || order.pendingStatus.empty()) {
             // try to use different color for new orders
-            color = QColor{0xff, 0x7f, 0};
+            color = kNewOrderColor;
          }
 
          group->rows_[size_t(index)]->status_ = status;
@@ -362,12 +371,12 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
 
       case bs::network::Order::Filled:
          group->rows_[size_t(index)]->status_ = tr("Settled");
-         group->rows_[size_t(index)]->statusColor_ = QColor{0x22, 0xC0, 0x64};
+         group->rows_[size_t(index)]->statusColor_ = kSettledColor;
          break;
 
       case bs::network::Order::Failed:
          group->rows_[size_t(index)]->status_ = tr("Failed");
-         group->rows_[size_t(index)]->statusColor_ = QColor{0xEC, 0x0A, 0x35};
+         group->rows_[size_t(index)]->statusColor_ = kFailedColor;
          break;
    }
 
