@@ -426,7 +426,23 @@ void ChatWidget::onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTe
 
 void ChatWidget::onSendOtcMessage(const std::string& contactId, const BinaryData& data)
 {
-   const auto clientPartyPtr = chatClientServicePtr_->getClientPartyModelPtr()->getOtcPartyForUsers(ownUserId_, contactId);
+   ChatPartiesSortProxyModel* chatProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
+   assert(chatProxyModel);
+
+   QModelIndex index = chatProxyModel->getProxyIndexById(currentPartyId_);
+   PartyTreeItem* party = chatProxyModel->getInternalData(index);
+   assert(party);
+
+   bool const isOTCGlobalRoot = (chatProxyModel->getOTCGlobalRoot() == index);
+
+   Chat::ClientPartyPtr clientPartyPtr = nullptr;
+   if (party->peerType == bs::network::otc::PeerType::Contact && !isOTCGlobalRoot) {
+      clientPartyPtr = chatClientServicePtr_->getClientPartyModelPtr()->getStandardPartyForUsers(ownUserId_, contactId);
+   }
+   else {
+      clientPartyPtr = chatClientServicePtr_->getClientPartyModelPtr()->getOtcPartyForUsers(ownUserId_, contactId);
+   }
+    
    if (!clientPartyPtr) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "can't find valid private party to send OTC message");
       return;
@@ -638,11 +654,6 @@ void ChatWidget::onOtcQuoteResponseSubmit()
 void ChatWidget::onOtcPullOrRejectCurrent()
 {
    stateCurrent_->onOtcPullOrRejectCurrent();
-}
-
-void ChatWidget::onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type)
-{
-   stateCurrent_->onOtcPullOrReject(contactId, type);
 }
 
 void ChatWidget::onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)

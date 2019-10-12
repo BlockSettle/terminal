@@ -11,6 +11,15 @@ namespace {
 
    const std::string kSerializePrefix = "OTC:";
 
+   QString formatResponse(const Otc::ContactMessage::QuoteResponse &response)
+   {
+      return QStringLiteral("%1-%2 XBT %3-%4 EUR")
+         .arg(response.amount().lower())
+         .arg(response.amount().upper())
+         .arg(UiUtils::displayPriceXBT(fromCents(response.price().lower())))
+         .arg(UiUtils::displayPriceXBT(fromCents(response.price().upper())));
+   }
+
    QString formatOffer(const Otc::ContactMessage::Offer &offer)
    {
       return QStringLiteral("%1 XBT - %2 EUR")
@@ -66,6 +75,8 @@ QString OtcUtils::toReadableString(const QString &text)
    }
 
    switch (msg.data_case()) {
+      case Otc::ContactMessage::kQuoteResponse:
+         return QObject::tr("OTC RESPONSE - XBT/EUR - %1").arg(formatResponse(msg.quote_response()));
       case Otc::ContactMessage::kBuyerOffers:
          return QObject::tr("OTC REQUEST - XBT/EUR - BUY - %1").arg(formatOffer(msg.buyer_offers().offer()));
       case Otc::ContactMessage::kSellerOffers:

@@ -430,6 +430,17 @@ bool OtcClient::pullOrReject(Peer *peer)
          d->set_settlement_id(deal->settlementId);
          emit sendPbMessage(request.SerializeAsString());
 
+         switch (peer->type) {
+         case PeerType::Request:
+            requestMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+         case PeerType::Response:
+            responseMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+         }
+
          return true;
       }
 
@@ -706,18 +717,83 @@ void OtcClient::contactDisconnected(const std::string &contactId)
 
 void OtcClient::processContactMessage(const std::string &contactId, const BinaryData &data)
 {
-   Peer *peer = contact(contactId);
-   if (!peer) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", contactId);
+   ContactMessage message;
+   bool result = message.ParseFromArray(data.getPtr(), int(data.getSize()));
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't parse OTC message");
       return;
    }
 
-   if (peer->state == State::Blacklisted) {
-      SPDLOG_LOGGER_DEBUG(logger_, "ignoring message from blacklisted peer '{}'", contactId);
-      return;
+   Peer *peer{};
+   switch (message.contact_type()) {
+      case Otc::CONTACT_TYPE_PRIVATE:
+         peer = contact(contactId);
+         if (!peer) {
+            SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", contactId);
+            return;
+         }
+
+         if (peer->state == State::Blacklisted) {
+            SPDLOG_LOGGER_DEBUG(logger_, "ignoring message from blacklisted peer '{}'", contactId);
+            return;
+         }
+         break;
+
+      case Otc::CONTACT_TYPE_PUBLIC_REQUEST:
+         if (!ownRequest_) {
+            SPDLOG_LOGGER_ERROR(logger_, "response is not expected");
+            return;
+         }
+
+         peer = response(contactId);
+         if (!peer) {
+            auto result = responseMap_.emplace(contactId, Peer(contactId, PeerType::Response));
+            peer = &result.first->second;
+            emit publicUpdated();
+         }
+         break;
+
+      case Otc::CONTACT_TYPE_PUBLIC_RESPONSE:
+         peer = request(contactId);
+         if (!peer) {
+            SPDLOG_LOGGER_ERROR(logger_, "request is not expected");
+            return;
+         }
+         break;
+
+      default:
+         SPDLOG_LOGGER_ERROR(logger_, "unknown message type");
+         return;
    }
 
-   processPeerMessage(peer, data);
+   switch (message.data_case()) {
+      case ContactMessage::kBuyerOffers:
+         processBuyerOffers(peer, message.buyer_offers());
+         return;
+      case ContactMessage::kSellerOffers:
+         processSellerOffers(peer, message.seller_offers());
+         return;
+      case ContactMessage::kBuyerAccepts:
+         processBuyerAccepts(peer, message.buyer_accepts());
+         return;
+      case ContactMessage::kSellerAccepts:
+         processSellerAccepts(peer, message.seller_accepts());
+         return;
+      case ContactMessage::kBuyerAcks:
+         processBuyerAcks(peer, message.buyer_acks());
+         return;
+      case ContactMessage::kClose:
+         processClose(peer, message.close());
+         return;
+      case ContactMessage::kQuoteResponse:
+         processQuoteResponse(peer, message.quote_response());
+         return;
+      case ContactMessage::DATA_NOT_SET:
+         blockPeer("unknown or empty OTC message", peer);
+         return;
+   }
+
+   SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
 }
 
 void OtcClient::processPbMessage(const ProxyTerminalPb::Response &response)
@@ -759,43 +835,12 @@ void OtcClient::processPublicMessage(QDateTime timestamp, const std::string &con
       case Otc::PublicMessage::kClose:
          processPublicClose(timestamp, contactId, msg.close());
          return;
-      case Otc::PublicMessage::kPrivateMessage:
-         processPublicPrivateMessage(timestamp, contactId, msg.private_message());
-         return;
       case Otc::PublicMessage::DATA_NOT_SET:
          SPDLOG_LOGGER_ERROR(logger_, "invalid public request detected");
          return;
    }
 
    SPDLOG_LOGGER_CRITICAL(logger_, "unknown public message was detected!");
-}
-
-void OtcClient::processPrivateMessage(QDateTime timestamp, const std::string &contactId, bool isResponse, const BinaryData &data)
-{
-   if (isResponse) {
-      if (!ownRequest_) {
-         SPDLOG_LOGGER_ERROR(logger_, "response is not expected");
-         return;
-      }
-
-      auto peer = response(contactId);
-      if (!peer) {
-         auto result = responseMap_.emplace(contactId, Peer(contactId, PeerType::Response));
-         peer = &result.first->second;
-      }
-
-      processPeerMessage(peer, data);
-      emit publicUpdated();
-      return;
-   }
-
-   auto peer = request(contactId);
-   if (!peer) {
-      SPDLOG_LOGGER_ERROR(logger_, "request is not expected");
-      return;
-   }
-
-   processPeerMessage(peer, data);
 }
 
 void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason)
@@ -852,45 +897,6 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
       deal->signedTx = signedTX;
       trySendSignedTx(deal);
    }
-}
-
-void OtcClient::processPeerMessage(Peer *peer, const BinaryData &data)
-{
-   ContactMessage message;
-   bool result = message.ParseFromArray(data.getPtr(), int(data.getSize()));
-   if (!result) {
-      blockPeer("can't parse OTC message", peer);
-      return;
-   }
-
-   switch (message.data_case()) {
-      case ContactMessage::kBuyerOffers:
-         processBuyerOffers(peer, message.buyer_offers());
-         return;
-      case ContactMessage::kSellerOffers:
-         processSellerOffers(peer, message.seller_offers());
-         return;
-      case ContactMessage::kBuyerAccepts:
-         processBuyerAccepts(peer, message.buyer_accepts());
-         return;
-      case ContactMessage::kSellerAccepts:
-         processSellerAccepts(peer, message.seller_accepts());
-         return;
-      case ContactMessage::kBuyerAcks:
-         processBuyerAcks(peer, message.buyer_acks());
-         return;
-      case ContactMessage::kClose:
-         processClose(peer, message.close());
-         return;
-      case ContactMessage::kQuoteResponse:
-         processQuoteResponse(peer, message.quote_response());
-         return;
-      case ContactMessage::DATA_NOT_SET:
-         blockPeer("unknown or empty OTC message", peer);
-         return;
-   }
-
-   SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
 }
 
 void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers &msg)
@@ -1193,6 +1199,11 @@ void OtcClient::processQuoteResponse(Peer *peer, const ContactMessage_QuoteRespo
       return;
    }
 
+   if (peer->type != PeerType::Response) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected request");
+      return;
+   }
+
    changePeerState(peer, State::QuoteRecv);
    scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
    peer->response.ourSide = otc::switchSide(otc::Side(msg.sender_side()));
@@ -1226,14 +1237,6 @@ void OtcClient::processPublicClose(QDateTime timestamp, const std::string &conta
    requestMap_.erase(contactId);
 
    updatePublicLists();
-}
-
-void OtcClient::processPublicPrivateMessage(QDateTime timestamp, const std::string &contactId, const PublicMessage_PrivateMessage &msg)
-{
-   // FIXME: Remove this and send messages directly
-   if (msg.receiver_id() == ownContactId()) {
-      processPrivateMessage(timestamp, contactId, msg.is_response(), msg.data());
-   }
 }
 
 void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &response)
@@ -1417,7 +1420,21 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             return;
          }
          emit peerError(peer, PeerErrorType::Canceled, nullptr);
-         resetPeerStateToIdle(peer);
+         switch (peer->type) {
+         case PeerType::Contact:
+            resetPeerStateToIdle(peer);
+            break;
+         case PeerType::Request:
+            requestMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+            break;
+         case PeerType::Response:
+            responseMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+         }
+
          break;
       }
 
@@ -1472,24 +1489,11 @@ void OtcClient::blockPeer(const std::string &reason, Peer *peer)
    emit peerUpdated(peer);
 }
 
-void OtcClient::send(Peer *peer, const ContactMessage &msg)
+void OtcClient::send(Peer *peer, ContactMessage &msg)
 {
    assert(!peer->contactId.empty());
-   switch (peer->type) {
-      case PeerType::Contact:
-         emit sendContactMessage(peer->contactId, msg.SerializeAsString());
-         break;
-      case PeerType::Request:
-      case PeerType::Response: {
-         PublicMessage publicMessage;
-         auto d = publicMessage.mutable_private_message();
-         d->set_data(msg.SerializeAsString());
-         d->set_receiver_id(peer->contactId);
-         d->set_is_response(peer->type == PeerType::Request);
-         emit sendPublicMessage(publicMessage.SerializeAsString());
-         break;
-      }
-   }
+   msg.set_contact_type(Otc::ContactType(peer->type));
+   emit sendContactMessage(peer->contactId, msg.SerializeAsString());
 }
 
 void OtcClient::createRequests(const std::string &settlementId, Peer *peer, const OtcClientDealCb &cb)

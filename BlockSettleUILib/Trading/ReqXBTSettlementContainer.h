@@ -90,6 +90,8 @@ private:
    void dealerVerifStateChanged(AddressVerificationState);
    void activateProceed();
 
+   void cancelWithError(const QString& errorMessage);
+
 private:
    std::shared_ptr<spdlog::logger>           logger_;
    std::shared_ptr<AuthAddressManager>       authAddrMgr_;
@@ -126,6 +128,7 @@ private:
    bs::Address       dealerAuthAddress_;
 
    bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
+   BinaryData        usedPayinHash_;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__

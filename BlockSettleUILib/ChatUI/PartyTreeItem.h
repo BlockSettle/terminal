@@ -50,7 +50,6 @@ public:
    void decreaseUnseenCounter(int seenMessageCount);
    bool hasNewMessages() const;
 
-   // #new_logic : use Chat::ClientParty for this
    bs::network::otc::PeerType peerType{};
 
 private:

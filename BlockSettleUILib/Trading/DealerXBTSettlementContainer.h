@@ -68,6 +68,8 @@ private:
    bool startPayInSigning();
    bool startPayOutSigning(const BinaryData& payinHash);
 
+   void failWithErrorText(const QString& error);
+
 private:
    const bs::network::Order   order_;
    std::string    fxProd_;
@@ -91,6 +93,8 @@ private:
 
    unsigned int   payinSignId_ = 0;
    unsigned int   payoutSignId_ = 0;
+
+   BinaryData		usedPayinHash_;
 };
 
 #endif // __DEALER_XBT_SETTLEMENT_CONTAINER_H__

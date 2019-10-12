@@ -18,12 +18,19 @@ public:
    PasswordDialogDataWrapper(const PasswordDialogDataWrapper &other) : PasswordDialogData(static_cast<PasswordDialogData>(other)) {}
    PasswordDialogDataWrapper& operator= (const PasswordDialogData &other) { PasswordDialogData::operator=(other); return *this;}
 
+   template<typename T>
+   T value(const bs::sync::dialog::keys::Key &key) const noexcept
+   {
+      return value<T>(key.toString());
+   }
+
    void insert(const bs::sync::dialog::keys::Key &key, bool value);
    void insert(const bs::sync::dialog::keys::Key &key, const std::string &value);
    void insert(const bs::sync::dialog::keys::Key &key, int value);
    void insert(const bs::sync::dialog::keys::Key &key, double value);
    void insert(const bs::sync::dialog::keys::Key &key, const char *data, size_t size);
 
+private:
    template<typename T>
    T value(const std::string &key) const noexcept
    {
@@ -42,7 +49,6 @@ public:
       }
    }
 
-private:
    template<typename T>
    void insertImpl(const std::string &key, T value);
 

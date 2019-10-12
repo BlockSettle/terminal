@@ -78,8 +78,6 @@ public slots:
    void onMessageArrived(const Chat::MessagePtrList& messagePtr);
    void onPartyStateChanged(const Chat::ClientPartyPtr& clientPartyPtr);
 
-   void onPullOrRejectOnTimeout(const std::string& contactId, bs::network::otc::PeerType type);
-
 private:
    OtcClient* otcClient_{};
    std::set<std::string> connectedContacts_;

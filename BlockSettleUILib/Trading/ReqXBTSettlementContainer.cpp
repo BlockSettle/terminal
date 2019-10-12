@@ -18,8 +18,6 @@
 
 #include <sstream>
 
-static const unsigned int kWaitTimeoutInSec = 30;
-
 using namespace bs::sync;
 
 Q_DECLARE_METATYPE(AddressVerificationState)
@@ -74,6 +72,8 @@ ReqXBTSettlementContainer::~ReqXBTSettlementContainer()
 unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHash, double qty
    , const bs::Address &recvAddr)
 {
+   usedPayinHash_ = payinHash;
+
    try {
       const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(
          bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, qty), recvAddr
@@ -94,7 +94,7 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
    catch (const std::exception &e) {
       logger_->warn("[ReqXBTSettlementContainer::createPayoutTx] failed to create pay-out transaction based on {}: {}"
          , payinHash.toHexStr(), e.what());
-      emit error(tr("Pay-out transaction creation failure: %1").arg(QLatin1String(e.what())));
+      cancelWithError(tr("Pay-out transaction creation failure: %1").arg(QLatin1String(e.what())));
    }
    return 0;
 }
@@ -269,7 +269,7 @@ void ReqXBTSettlementContainer::activateProceed()
             if (!transactionData_->IsTransactionValid()) {
                userKeyOk_ = false;
                logger_->error("[ReqXBTSettlementContainer::activate] transaction data is invalid");
-               emit error(tr("Transaction data is invalid - sending of pay-in is prohibited"));
+               cancelWithError(tr("Transaction data is invalid - sending of pay-in is prohibited"));
                return;
             }
          }
@@ -289,6 +289,12 @@ void ReqXBTSettlementContainer::activateProceed()
    priWallet->getSettlementPayinAddress(settlementId_, dealerAuthKey_, cbSettlAddr, !clientSells_);
 }
 
+void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage)
+{
+   emit error(errorMessage);
+   cancel();
+}
+
 void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
    , bs::error::ErrorCode errCode, std::string errTxt)
 {
@@ -296,10 +302,9 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       payinSignId_ = 0;
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
-         emit error(tr("Failed to create Pay-In TX - re-type password and try again"));
+         cancelWithError(tr("Failed to create Pay-In TX - re-type password and try again"));
          logger_->error("[ReqXBTSettlementContainer::onTXSigned] Failed to create pay-in TX: {} ({})"
             , (int)errCode, errTxt);
-         emit retry();
          return;
       }
 
@@ -318,8 +323,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          logger_->warn("[ReqXBTSettlementContainer::onTXSigned] Pay-Out sign failure: {} ({})"
             , (int)errCode, errTxt);
-         emit error(tr("Pay-Out signing failed: %1").arg(QString::fromStdString(errTxt)));
-         emit retry();
+         cancelWithError(tr("Pay-Out signing failed: %1").arg(QString::fromStdString(errTxt)));
          return;
       }
 
@@ -334,14 +338,35 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       try {
          Tx tx{signedTX};
 
-         std::stringstream ss;
+         auto txdata = tx.serialize();
+         auto bctx = BCTX::parse(txdata);
 
-         tx.pprintAlot(ss);
+         auto utxo = bs::SettlementMonitor::getInputFromTX(settlAddr_, usedPayinHash_, amount_);
 
-         logger_->debug("[ReqXBTSettlementContainer::onTXSigned] info on signed payout:\n{}"
-                        , ss.str());
+         std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
+         utxoMap[utxo.getTxHash()][0] = utxo;
+
+         TransactionVerifier tsv(*bctx, utxoMap);
+
+         auto tsvFlags = tsv.getFlags();
+         tsvFlags |= SCRIPT_VERIFY_P2SH_SHA256 | SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT;
+         tsv.setFlags(tsvFlags);
+
+         auto verifierState = tsv.evaluateState();
+
+         auto inputState = verifierState.getSignedStateForInput(0);
+
+         auto signatureCount = inputState.getSigCount();
+
+         if (signatureCount != 1) {
+            logger_->error("[ReqXBTSettlementContainer::onTXSigned] signature count: {}", signatureCount);
+            cancelWithError(tr("Failed to sign Pay-out"));
+            return;
+         }
       } catch (...) {
          logger_->error("[ReqXBTSettlementContainer::onTXSigned] failed to deserialize signed payout");
+         cancelWithError(tr("Failed to sign Pay-out"));
+         return;
       }
 
       emit sendSignedPayoutToPB(settlementIdString_, signedTX);
