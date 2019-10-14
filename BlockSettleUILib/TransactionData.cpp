@@ -357,7 +357,7 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
          recipientsMap[recipId++] = recipPtr;
       }
       if (!recipient.isNull()) {
-         const auto recipPtr = recipient.getRecipient(0.001);  // spontaneous output amount, shouldn't be 0
+         const auto recipPtr = recipient.getRecipient(bs::XBTAmount{ 0.001 });  // spontaneous output amount, shouldn't be 0
          if (recipPtr) {
             recipientsMap[recipId++] = recipPtr;
          }
@@ -721,6 +721,16 @@ std::vector<unsigned int> TransactionData::GetRecipientIdList() const
    }
 
    return idList;
+}
+
+std::shared_ptr<ScriptRecipient> TransactionData::GetScriptRecipient(unsigned int recipientId) const
+{
+   const auto &itRecip = recipients_.find(recipientId);
+   if (itRecip == recipients_.end()) {
+      return nullptr;
+   }
+
+   return itRecip->second->GetScriptRecipient();
 }
 
 bs::Address TransactionData::GetRecipientAddress(unsigned int recipientId) const

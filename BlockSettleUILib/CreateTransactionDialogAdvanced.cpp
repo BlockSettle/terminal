@@ -773,8 +773,8 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
 
    size_t maxOutputSize = 0;
    for (const auto &recipId : transactionData_->allRecipientIds()) {
-      const auto recipAddr = transactionData_->GetRecipientAddress(recipId);
-      const auto recip = recipAddr.getRecipient(transactionData_->GetRecipientAmount(recipId));
+
+      const auto recip = transactionData_->GetScriptRecipient(recipId);
       if (!recip) {
          continue;
       }

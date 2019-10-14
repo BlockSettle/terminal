@@ -307,7 +307,7 @@ uint64_t bs::SettlementMonitor::getEstimatedFeeFor(UTXO input, const bs::Address
    CoinSelection coinSelection([&input](uint64_t) -> std::vector<UTXO> { return { input }; }
    , std::vector<AddressBookEntry>{}, inputAmount, topBlock);
 
-   const auto &scriptRecipient = recvAddr.getRecipient(inputAmount);
+   const auto &scriptRecipient = recvAddr.getRecipient(bs::XBTAmount{ inputAmount });
    return coinSelection.getFeeForMaxVal(scriptRecipient->getSize(), feePerByte, { input });
 }
 
@@ -328,17 +328,16 @@ bs::core::wallet::TXSignRequest bs::SettlementMonitor::createPayoutTXRequest(UTX
    }
 
    txReq.fee = fee;
-   txReq.recipients.emplace_back(recvAddr.getRecipient(value));
+   txReq.recipients.emplace_back(recvAddr.getRecipient(bs::XBTAmount{ value }));
    return txReq;
 }
 
 UTXO bs::SettlementMonitor::getInputFromTX(const bs::Address &addr
-   , const BinaryData &payinHash, const double amount)
+   , const BinaryData &payinHash, const bs::XBTAmount& amount)
 {
-   const uint64_t value = amount * BTCNumericTypes::BalanceDivider;
-   const uint32_t txHeight = UINT32_MAX;
+   constexpr uint32_t txHeight = UINT32_MAX;
 
-   return UTXO(value, txHeight, 0, 0, payinHash
+   return UTXO(amount.GetValue(), txHeight, 0, 0, payinHash
       , BtcUtils::getP2WSHOutputScript(addr.unprefixed()));
 }
 
