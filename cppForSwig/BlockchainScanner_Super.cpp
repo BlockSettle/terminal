@@ -93,13 +93,13 @@ void BlockchainScanner_Super::scan()
          try
          {
             shared_ptr<BlockHeader> currentHeader =
-               blockchain_->getHeaderByHeight(startHeight);
+               blockchain_->getHeaderByHeight(startHeight, 0xFF);
             blockFileIDs.insert(currentHeader->getBlockFileNum());
             tallySize = currentHeader->getBlockSize();
 
             while (tallySize < targetSize)
             {
-               currentHeader = blockchain_->getHeaderByHeight(++targetHeight);
+               currentHeader = blockchain_->getHeaderByHeight(++targetHeight, 0xFF);
                tallySize += currentHeader->getBlockSize();
                blockFileIDs.insert(currentHeader->getBlockFileNum());
             }
@@ -740,7 +740,7 @@ void BlockchainScanner_Super::commitSshBatch()
 {
    auto getGlobalOffsetForBlock = [&](unsigned height)->size_t
    {
-      auto header = blockchain_->getHeaderByHeight(height);
+      auto header = blockchain_->getHeaderByHeight(height, 0xFF);
       size_t val = header->getBlockFileNum();
       val *= 128 * 1024 * 1024;
       val += header->getOffset();
@@ -880,7 +880,7 @@ void BlockchainScanner_Super::scanSpentness()
    {
       //figure out batch range
       set<unsigned> blockFileIDs;
-      shared_ptr<BlockHeader> currentHeader = blockchain_->getHeaderByHeight(start);
+      shared_ptr<BlockHeader> currentHeader = blockchain_->getHeaderByHeight(start, 0xFF);
       blockFileIDs.insert(currentHeader->getBlockFileNum());
 
       size_t tallySize = currentHeader->getBlockSize();
@@ -890,7 +890,7 @@ void BlockchainScanner_Super::scanSpentness()
          if (nextHeight <= end || nextHeight == 0)
             break;
 
-         currentHeader = blockchain_->getHeaderByHeight(--nextHeight);
+         currentHeader = blockchain_->getHeaderByHeight(--nextHeight, 0xFF);
          tallySize += currentHeader->getBlockSize();
          blockFileIDs.insert(currentHeader->getBlockFileNum());
       }
@@ -1417,7 +1417,7 @@ shared_ptr<BlockData> BlockDataBatch::getBlockData(unsigned height)
    if (blockIter->second != nullptr)
       return blockIter->second;
 
-   auto blockheader = blockchain_->getHeaderByHeight(height);
+   auto blockheader = blockchain_->getHeaderByHeight(height, 0xFF);
    auto filenum = blockheader->getBlockFileNum();
    auto mapIter = fileMaps_.find(filenum);
    if (mapIter == fileMaps_.end())
