@@ -364,25 +364,25 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
             color = kNewOrderColor;
          }
 
-         group->rows_[size_t(index)]->status_ = status;
-         group->rows_[size_t(index)]->statusColor_ = color;
+         group->rows_[static_cast<std::size_t>(index)]->status_ = status;
+         group->rows_[static_cast<std::size_t>(index)]->statusColor_ = color;
          break;
       }
 
       case bs::network::Order::Filled:
-         group->rows_[size_t(index)]->status_ = tr("Settled");
-         group->rows_[size_t(index)]->statusColor_ = kSettledColor;
+         group->rows_[static_cast<std::size_t>(index)]->status_ = tr("Settled");
+         group->rows_[static_cast<std::size_t>(index)]->statusColor_ = kSettledColor;
          break;
 
       case bs::network::Order::Failed:
-         group->rows_[size_t(index)]->status_ = tr("Failed");
-         group->rows_[size_t(index)]->statusColor_ = kFailedColor;
+         group->rows_[static_cast<std::size_t>(index)]->status_ = tr("Failed");
+         group->rows_[static_cast<std::size_t>(index)]->statusColor_ = kFailedColor;
          break;
    }
 
    if (emitUpdate) {
       const auto idx = createIndex(index, Header::Status,
-         &group->rows_[size_t(index)]->idx_);
+         &group->rows_[static_cast<std::size_t>(index)]->idx_);
 
       emit dataChanged(idx, idx);
    }
