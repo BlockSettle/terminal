@@ -694,6 +694,9 @@
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="locale">
+                 <locale language="C" country="AnyCountry"/>
+                </property>
                 <property name="decimals">
                  <number>2</number>
                 </property>
@@ -874,6 +877,9 @@
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="locale">
+                 <locale language="C" country="AnyCountry"/>
+                </property>
                 <property name="decimals">
                  <number>2</number>
                 </property>
@@ -984,6 +990,9 @@
                   <width>16777215</width>
                   <height>16777215</height>
                  </size>
+                </property>
+                <property name="locale">
+                 <locale language="C" country="AnyCountry"/>
                 </property>
                 <property name="decimals">
                  <number>8</number>

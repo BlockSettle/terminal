@@ -21,6 +21,7 @@ protected:
       chat_->ui_->labelUserName->setText(QObject::tr("offline"));
    }
    void applyChatFrameChange() override {
+      chat_->ui_->stackedWidgetMessages->setCurrentIndex(static_cast<int>(StackedMessages::TextEditMessage));
       chat_->ui_->textEditMessages->onLogout();
 
       chat_->ui_->frameContactActions->setVisible(false);

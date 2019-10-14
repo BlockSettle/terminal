@@ -4,17 +4,12 @@
 #include <spdlog/logger.h>
 
 #include "AssetManager.h"
+#include "BSMessageBox.h"
 #include "QuoteProvider.h"
 #include "ReqCCSettlementContainer.h"
 #include "ReqXBTSettlementContainer.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
-
-enum StackWidgetId
-{
-   RequestingQuoteId,
-   SettlementTransactionId
-};
 
 RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const bs::network::RFQ& rfq
@@ -69,8 +64,6 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    ui_->pageRequestingQuote->populateDetails(rfq_, transactionData_);
 
    quoteProvider_->SubmitRFQ(rfq_);
-
-   ui_->stackedWidgetRFQ->setCurrentIndex(RequestingQuoteId);
 }
 
 RFQDialog::~RFQDialog() = default;
@@ -106,6 +99,11 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
    }
 }
 
+void RFQDialog::reportError(const QString& errorMessage)
+{
+   BSMessageBox(BSMessageBox::critical, tr("RFQ error"), errorMessage).exec();
+}
+
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
 {
    xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
@@ -118,6 +116,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       , this, &QDialog::close);
    connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::acceptQuote
       , this, &RFQDialog::onXBTQuoteAccept);
+   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::error
+      , this, &RFQDialog::reportError);
 
    connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendUnsignedPayinToPB
       , this, &RFQDialog::sendUnsignedPayinToPB);

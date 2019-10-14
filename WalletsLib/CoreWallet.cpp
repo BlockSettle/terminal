@@ -1,8 +1,9 @@
-#include <bech32/ref/c++/segwit_addr.h>
+#include "CoreWallet.h"
+
 #include "CheckRecipSigner.h"
 #include "CoinSelection.h"
 #include "Wallets.h"
-#include "CoreWallet.h"
+#include "XBTAmount.h"
 
 #define SAFE_NUM_CONFS        6
 #define ASSETMETA_PREFIX      0xAC
@@ -202,7 +203,7 @@ Signer wallet::TXSignRequest::getSigner(const std::shared_ptr<ResolverFeed> &res
    }
 
    if (change.value) {
-      const auto changeRecip = change.address.getRecipient(change.value);
+      const auto changeRecip = change.address.getRecipient(bs::XBTAmount{change.value});
       if (changeRecip) {
          signer.addRecipient(changeRecip);
       }
@@ -665,10 +666,10 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request,
          setAddressComment(request.change.address, wallet::Comment::toString(wallet::Comment::ChangeAddress));
          const auto addr = getAddressEntryForAddr(request.change.address);
          changeRecip = (addr != nullptr) ? addr->getRecipient(request.change.value)
-            : request.change.address.getRecipient(request.change.value);
+            : request.change.address.getRecipient(bs::XBTAmount{request.change.value});
       }
       else {
-         changeRecip = request.change.address.getRecipient(request.change.value);
+         changeRecip = request.change.address.getRecipient(bs::XBTAmount{request.change.value});
       }
       if (changeRecip == nullptr) {
          throw std::logic_error("invalid change recipient");

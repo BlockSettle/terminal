@@ -118,7 +118,6 @@ public slots:
    void processContactMessage(const std::string &contactId, const BinaryData &data);
    void processPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
    void processPublicMessage(QDateTime timestamp, const std::string &contactId, const BinaryData &data);
-   void processPrivateMessage(QDateTime timestamp, const std::string &contactId, bool isResponse, const BinaryData &data);
 
 signals:
    void sendContactMessage(const std::string &contactId, const BinaryData &data);
@@ -143,8 +142,6 @@ private:
       ValidityHandle handle;
    };
 
-   void processPeerMessage(bs::network::otc::Peer *peer, const BinaryData &data);
-
    void processQuoteResponse(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_QuoteResponse &msg);
    void processBuyerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_BuyerOffers &msg);
    void processSellerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_SellerOffers &msg);
@@ -155,7 +152,6 @@ private:
 
    void processPublicRequest(QDateTime timestamp, const std::string &contactId, const Blocksettle::Communication::Otc::PublicMessage_Request &msg);
    void processPublicClose(QDateTime timestamp, const std::string &contactId, const Blocksettle::Communication::Otc::PublicMessage_Close &msg);
-   void processPublicPrivateMessage(QDateTime timestamp, const std::string &contactId, const Blocksettle::Communication::Otc::PublicMessage_PrivateMessage &msg);
 
    void processPbStartOtc(const Blocksettle::Communication::ProxyTerminalPb::Response_StartOtc &response);
    void processPbUpdateOtcState(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOtcState &response);
@@ -164,7 +160,7 @@ private:
    bool verifyOffer(const bs::network::otc::Offer &offer) const;
    void blockPeer(const std::string &reason, bs::network::otc::Peer *peer);
 
-   void send(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage &msg);
+   void send(bs::network::otc::Peer *peer, Blocksettle::Communication::Otc::ContactMessage &msg);
 
    void createRequests(const std::string &settlementId, bs::network::otc::Peer *peer, const OtcClientDealCb &cb);
    void sendSellerAccepts(bs::network::otc::Peer *peer);

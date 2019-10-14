@@ -4,13 +4,6 @@
 #include "AbstractChatWidgetState.h"
 #include "BaseCelerClient.h"
 
-namespace {
-   enum class StackedMessages {
-      TextEditMessage = 0,
-      OTCTable = 1
-   };
-}
-
 class PrivatePartyInitState : public AbstractChatWidgetState {
 public:
    explicit PrivatePartyInitState(ChatWidget* chat) : AbstractChatWidgetState(chat) {}
@@ -22,8 +15,8 @@ protected:
    void applyChatFrameChange() override {
       Chat::ClientPartyPtr clientPartyPtr = getParty(chat_->currentPartyId_);
 
-      // #new_logic : fix me, party should exist!
-      if (clientPartyPtr && clientPartyPtr->isGlobalOTC()) {
+      assert(clientPartyPtr);
+      if (clientPartyPtr->isGlobalOTC()) {
          chat_->ui_->stackedWidgetMessages->setCurrentIndex(static_cast<int>(StackedMessages::OTCTable));
          return;
       }
@@ -54,7 +47,6 @@ protected:
          return true;
       };
 
-      // #new_logic : update ClientPartyModel to receive public OTC requests/responses (clientPartyPtr should be set)
       if (!clientPartyPtr) {
          updateOtc();
          return;
@@ -77,6 +69,11 @@ protected:
       }
       else if (clientPartyPtr->isPrivate()) {
          if (!checkIsTradingParticipant()) {
+            return;
+         }
+
+         if (clientPartyPtr->clientStatus() == Chat::ClientStatus::OFFLINE) {
+            chat_->ui_->widgetOTCShield->showContactIsOffline();
             return;
          }
 

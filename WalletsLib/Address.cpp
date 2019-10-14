@@ -377,7 +377,7 @@ BinaryData bs::Address::prefixed() const
       if (prefixed_.isNull()) {
          /***
          Nested address types are a bit mask on native address types, they cannot be switched
-         on as is. Prefixes precede human readable addresses, a false positive will lead to 
+         on as is. Prefixes precede human readable addresses, a false positive will lead to
          loss of coins as the address defines the output script to send the coins to. Any
          failure to produce a valid prefix should lead to a critical failure, hence the throws.
          ***/
@@ -431,7 +431,7 @@ BinaryData bs::Address::id() const
 bool bs::Address::operator==(const bs::Address &addr) const
 {
    /*
-   This is the correct comparator (as opposed to checking for 
+   This is the correct comparator (as opposed to checking for
    size first, as the carried data may or may not be prefixed
    in the first place, leading to false negative size checks.
    */
@@ -439,15 +439,17 @@ bool bs::Address::operator==(const bs::Address &addr) const
    return prefixed() == addr.prefixed();
 }
 
-std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(uint64_t value) const
+std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(const XBTAmount& amount) const
 {
+   const uint64_t value = amount.GetValue();
+
    try {
       auto type = getType() & ~ADDRESS_COMPRESSED_MASK;
       auto nestedType = type & ADDRESS_NESTED_MASK;
 
       if (nestedType == 0)
       {
-         switch (type) 
+         switch (type)
          {
          case AddressEntryType_P2PKH:
             return std::make_shared<Recipient_P2PKH>(unprefixed(), value);
@@ -496,11 +498,6 @@ BinaryData bs::Address::getWitnessScript() const
       witnessScr_ = script.getSliceCopy(9, script.getSize() - 9);
    }
    return witnessScr_;
-}
-
-std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(double amount) const
-{
-   return getRecipient((uint64_t)(amount * BTCNumericTypes::BalanceDivider));
 }
 
 size_t bs::Address::getInputSize() const

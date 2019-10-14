@@ -341,13 +341,6 @@ void AbstractChatWidgetState::onOtcPullOrRejectCurrent()
    }
 }
 
-void AbstractChatWidgetState::onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type)
-{
-   if (canPerformOTCOperations()) {
-      chat_->otcHelper_->onPullOrRejectOnTimeout(contactId, type);
-   }
-}
-
 void AbstractChatWidgetState::saveDraftMessage()
 {
    const auto draft = chat_->ui_->input_textEdit->toPlainText();

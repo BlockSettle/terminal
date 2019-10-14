@@ -204,7 +204,7 @@ map<BinaryData, LedgerEntry> LedgerEntry::computeLedgerMap(
       {
          blockNum = DBUtils::hgtxToHeight(txioVec.first.getSliceRef(0, 4));
          txIndex = READ_UINT16_BE(txioVec.first.getSliceRef(4, 2));
-         txTime = bc->getHeaderByHeight(blockNum)->getTimestamp();
+         txTime = bc->getHeaderByHeight(blockNum, 0xFF)->getTimestamp();
 
          txHash = db->getTxHashForLdbKey(txioVec.first);
       }

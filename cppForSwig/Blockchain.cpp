@@ -172,17 +172,28 @@ shared_ptr<BlockHeader> Blockchain::getGenesisBlock() const
    return iter->second;
 }
 
-const shared_ptr<BlockHeader> Blockchain::getHeaderByHeight(unsigned index) const
+const shared_ptr<BlockHeader> Blockchain::getHeaderByHeight(
+   unsigned index, uint8_t dupId) const
 {
+   /*
+   Returns header for height.
+   Passing a dupId above 0x7F will return the main chain header for this height.
+   Passing a dupId for a forked block will throw.
+   */
+
    auto headermap = headersByHeight_.get();
 
    auto headerIter = headermap->find(index);
    if (headerIter == headermap->end())
       throw std::range_error("Cannot get block at height " + to_string(index));
 
-   return (headerIter->second);
-}
+   if (dupId > 0x7F || headerIter->second->getDuplicateID() == dupId)
+      return (headerIter->second);
 
+   //if we get this far, we're looking for a block that isn't on the main chain
+   throw std::length_error("Cannot get block at height " + to_string(index) +
+      " and dup " + to_string(dupId));
+}
 
 bool Blockchain::hasHeaderByHeight(unsigned height) const
 {
@@ -234,7 +245,7 @@ const shared_ptr<BlockHeader> Blockchain::getHeaderPtrForTxRef(const TxRef &txr)
 
    uint32_t hgt = txr.getBlockHeight();
    uint8_t  dup = txr.getDuplicateID();
-   auto bh = getHeaderByHeight(hgt);
+   auto bh = getHeaderByHeight(hgt, dup);
    if(bh->getDuplicateID() != dup)
    {
       throw runtime_error("Requested txref not on main chain (BH dupID is diff)");

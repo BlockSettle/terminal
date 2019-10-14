@@ -60,7 +60,7 @@ void DatabaseBuilder::init()
       else
          rewindHeight = 1;
 
-      auto rewindBlock = blockchain_->getHeaderByHeight(rewindHeight);
+      auto rewindBlock = blockchain_->getHeaderByHeight(rewindHeight, 0xFF);
       topBlockOffset_.fileID_ = rewindBlock->getBlockFileNum();
       topBlockOffset_.offset_ = rewindBlock->getOffset();
 
@@ -166,7 +166,7 @@ void DatabaseBuilder::init()
       auto&& sdbi = db_->getStoredDBInfo(SUBSSH, 0);
 
       //get fileID for height
-      auto topHeader = blockchain_->getHeaderByHeight(sdbi.topBlkHgt_);
+      auto topHeader = blockchain_->getHeaderByHeight(sdbi.topBlkHgt_, 0xFF);
       int fileID = topHeader->getBlockFileNum();
       
       //rewind 5 blk files for the good measure
@@ -1118,7 +1118,7 @@ void DatabaseBuilder::verifyTransactions()
          BlockData bdata;
          shared_ptr<BlockHeader> blockheader;
 
-         blockheader = blockchain_->getHeaderByHeight(thisHeight);
+         blockheader = blockchain_->getHeaderByHeight(thisHeight, 0xFF);
 
          auto fileMap = getFileMap(blockheader->getBlockFileNum());
 

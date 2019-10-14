@@ -120,7 +120,6 @@ private slots:
    void onOtcQuoteRequestSubmit();
    void onOtcQuoteResponseSubmit();
    void onOtcPullOrRejectCurrent();
-   void onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type);
 
    void onOtcPrivatePartyReady(const Chat::ClientPartyPtr& clientPartyPtr);
 

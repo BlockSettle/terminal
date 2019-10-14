@@ -1784,7 +1784,7 @@ Tx LMDBBlockDatabase::getFullTxCopy(BinaryData ldbKey6B) const
    
    shared_ptr<BlockHeader> header;
    if (getDbType() != ARMORY_DB_SUPER || dup != 0x7F)
-      header = blockchainPtr_->getHeaderByHeight(height);
+      header = blockchainPtr_->getHeaderByHeight(height, dup);
    else
       header = blockchainPtr_->getHeaderById(height);
 
@@ -1870,7 +1870,7 @@ TxOut LMDBBlockDatabase::getTxOutCopy(
       uint16_t txid;
       DBUtils::readBlkDataKeyNoPrefix(brr_key, block, dup, txid);
 
-      auto header = blockchainPtr_->getHeaderByHeight(block);
+      auto header = blockchainPtr_->getHeaderByHeight(block, dup);
       auto&& key_super = DBUtils::getBlkDataKeyNoPrefix(
          header->getThisID(), 0xFF, txid, txOutIdx);
       brr = getValueReader(STXO, key_super);
@@ -1995,7 +1995,7 @@ BinaryData LMDBBlockDatabase::getTxHashForLdbKey(BinaryDataRef ldbKey6B) const
          {
             try
             {
-               auto header = blockchainPtr_->getHeaderByHeight(height);
+               auto header = blockchainPtr_->getHeaderByHeight(height, dup);
                block_id = header->getThisID();
             }
             catch (exception&)
@@ -2034,7 +2034,7 @@ bool LMDBBlockDatabase::getStoredHeader(
       if (blkFolder_.size() == 0)
          throw LmdbWrapperException("invalid blkFolder");
 
-      auto bh = blockchainPtr_->getHeaderByHeight(height);
+      auto bh = blockchainPtr_->getHeaderByHeight(height, dupId);
       if (bh->getDuplicateID() != dupId)
          throw LmdbWrapperException("invalid dupId");
 
@@ -2064,7 +2064,7 @@ BinaryData LMDBBlockDatabase::getRawBlock(uint32_t height, uint8_t dupId) const
    if (blkFolder_.size() == 0)
       throw LmdbWrapperException("invalid blkFolder");
 
-   auto bh = blockchainPtr_->getHeaderByHeight(height);
+   auto bh = blockchainPtr_->getHeaderByHeight(height, dupId);
    if (bh->getDuplicateID() != dupId)
       throw LmdbWrapperException("invalid dupId");
 
@@ -2370,7 +2370,7 @@ bool LMDBBlockDatabase::getStoredTxOut(
       {
          if (dup != 0x7F)
          {
-            header = blockchainPtr_->getHeaderByHeight(id);
+            header = blockchainPtr_->getHeaderByHeight(id, dup);
             bd_tempkey = move(DBUtils::getBlkDataKeyNoPrefix(
                header->getThisID(), 0xFF, txIdx, txoutid));
             bdr_key.setRef(bd_tempkey);
@@ -2381,10 +2381,51 @@ bool LMDBBlockDatabase::getStoredTxOut(
             bdr_key.setRef(DBkey);
          }
       }
-      catch (...)
+      catch (range_error&)
       {
          LOGWARN << "no header for id " << id;
          return false;
+      }
+      catch (length_error&)
+      {
+         //can't get height for this dupId, find block the block hash instead
+         auto&& hhTx = beginTransaction(HEADERS, LMDB::ReadWrite);
+         
+         StoredHeadHgtList hhl;
+         if (!getStoredHeadHgtList(hhl, id))
+         {
+            LOGWARN << "failed to grab hhl list for height " << id;
+            return false;
+         }
+
+         BinaryDataRef headerHashRef;
+         for (auto& dupHashPair : hhl.dupAndHashList_)
+         {
+            if (dupHashPair.first == dup)
+            {
+               headerHashRef = dupHashPair.second.getRef();
+               break;
+            }
+         }
+
+         if(headerHashRef.getSize() == 0)
+         {
+            LOGWARN << "missing dup " << id << " in hhl";
+            return false;
+         }
+
+         try
+         {
+            header = blockchainPtr_->getHeaderByHash(headerHashRef);
+            bd_tempkey = move(DBUtils::getBlkDataKeyNoPrefix(
+               header->getThisID(), 0xFF, txIdx, txoutid));
+            bdr_key.setRef(bd_tempkey);
+         }
+         catch (...)
+         {
+            LOGWARN << "failed to grab header at " << id << "|" << dup;
+            return false;
+         }
       }
 
       auto&& stxo_tx = beginTransaction(STXO, LMDB::ReadOnly);
@@ -2808,7 +2849,7 @@ uint32_t LMDBBlockDatabase::getStxoCountForTx(const BinaryData & dbKey6) const
          BinaryRefReader brr(dbKey6.getRef());
          DBUtils::readBlkDataKeyNoPrefix(brr, height, dup, txid);
 
-         auto header = blockchainPtr_->getHeaderByHeight(height);
+         auto header = blockchainPtr_->getHeaderByHeight(height, dup);
          auto id = header->getThisID();
 
          auto&& id_key = DBUtils::getBlkDataKeyNoPrefix(id, 0xFF, txid);

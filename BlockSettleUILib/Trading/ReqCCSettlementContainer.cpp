@@ -9,8 +9,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
 #include "UiUtils.h"
-
-static const unsigned int kWaitTimeoutInSec = 30;
+#include "XBTAmount.h"
 
 using namespace bs::sync;
 
@@ -177,7 +176,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
       logger_->debug("[{}] sell amount={}, spend value = {}", __func__, quantity(), spendVal);
       ccTxData_.walletIds = { wallet->walletId() };
       ccTxData_.prevStates = { dealerTx_ };
-      const auto recipient = bs::Address(dealerAddress_).getRecipient(spendVal);
+      const auto recipient = bs::Address(dealerAddress_).getRecipient(bs::XBTAmount{ spendVal });
       if (recipient) {
          ccTxData_.recipients.push_back(recipient);
       }
@@ -199,7 +198,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
          const uint64_t spendVal = amount() * BTCNumericTypes::BalanceDivider;
          const auto &cbTxOutList = [this, feePerByte, spendVal](std::vector<UTXO> utxos) {
             try {
-               const auto recipient = bs::Address(dealerAddress_).getRecipient(spendVal);
+               const auto recipient = bs::Address(dealerAddress_).getRecipient(bs::XBTAmount{ spendVal });
                if (!recipient) {
                   logger_->error("[{}] invalid recipient: {}", __func__, dealerAddress_);
                   return;
@@ -251,7 +250,7 @@ bool ReqCCSettlementContainer::startSigning()
 
          // notify RFQ dialog that signed half could be saved
          emit settlementAccepted();
-         //transactionData_->getWallet()->setTransactionComment(txSignedData(), txComment());
+         transactionData_->getWallet()->setTransactionComment(signedTX, txComment());
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
          emit settlementCancelled();

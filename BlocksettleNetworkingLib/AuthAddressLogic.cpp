@@ -564,7 +564,7 @@ BinaryData ValidationAddressManager::fundUserAddress(
    signer.addSpender(spenderPtr);
 
    //vetting output
-   signer.addRecipient(addr.getRecipient(kAuthValueThreshold));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{ kAuthValueThreshold }));
 
    const auto scrAddr = vettingUtxo.getRecipientScrAddr();
    const auto addrIter = validationAddresses_.find(scrAddr);
@@ -578,7 +578,7 @@ BinaryData ValidationAddressManager::fundUserAddress(
       throw AuthLogicException("insufficient spend volume");
    }
    else if (changeVal > 0) {
-      signer.addRecipient(addrIter->first.getRecipient((uint64_t)changeVal));
+      signer.addRecipient(addrIter->first.getRecipient(bs::XBTAmount{ static_cast<uint64_t>(changeVal) }));
    }
 
    //sign & serialize tx
@@ -597,7 +597,7 @@ BinaryData ValidationAddressManager::fundUserAddresses(
 
    //vetting outputs
    for (const auto &addr : addrs) {
-      signer.addRecipient(addr.getRecipient(kAuthValueThreshold));
+      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ kAuthValueThreshold }));
    }
 
    int64_t changeVal = 0;
@@ -620,7 +620,7 @@ BinaryData ValidationAddressManager::fundUserAddresses(
       throw AuthLogicException("attempting to spend more than allowed");
    }
    else if (changeVal > 0) {
-      signer.addRecipient(validationAddress.getRecipient((uint64_t)changeVal));
+      signer.addRecipient(validationAddress.getRecipient(bs::XBTAmount{ static_cast<uint64_t>(changeVal) }));
    }
 
    //sign & serialize tx
@@ -696,7 +696,8 @@ BinaryData ValidationAddressManager::revokeValidationAddress(
    signer.addSpender(spenderPtr);
 
    //revocation output, no need for change
-   signer.addRecipient(addr.getRecipient((uint64_t)(firstUtxo.getValue() - 1000)));
+   const uint64_t revokeAmount = firstUtxo.getValue() - 1000;
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{revokeAmount}));
 
    //sign & serialize tx
    signer.sign();
@@ -775,11 +776,11 @@ BinaryData ValidationAddressManager::revokeUserAddress(
    signer.addSpender(spenderPtr);
 
    //revocation output
-   signer.addRecipient(addr.getRecipient(kAuthValueThreshold));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{ kAuthValueThreshold }));
 
    //change
-   signer.addRecipient(validationAddr.getRecipient(
-      utxo.getValue() - kAuthValueThreshold - 1000));
+   const bs::XBTAmount changeAmount{ utxo.getValue() - kAuthValueThreshold - 1000 };
+   signer.addRecipient(validationAddr.getRecipient(changeAmount));
 
    //sign & serialize tx
    signer.sign();

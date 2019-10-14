@@ -63,6 +63,9 @@ private slots:
    void onGenAddressVerified(bool result);
 
 private:
+   std::string txComment();
+
+private:
    std::shared_ptr<spdlog::logger>     logger_;
    const bs::network::Order   order_;
    const std::string          quoteReqId_;

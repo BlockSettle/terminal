@@ -594,7 +594,7 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
          auto spendVal = std::make_shared<uint64_t>(0);
 
          const auto &cbFee = [this, qrn, transData, spendVal, wallet, cb, qn](float feePerByte) {
-            const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(*spendVal);
+            const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ *spendVal });
             std::vector<UTXO> inputs = dealerUtxoAdapter_->get(qn->quoteRequestId);
             if (inputs.empty() && ccCoinSel_) {
                inputs = ccCoinSel_->GetSelectedTransactions();

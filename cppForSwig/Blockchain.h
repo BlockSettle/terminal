@@ -69,7 +69,8 @@ public:
 
    std::shared_ptr<BlockHeader> top() const;
    std::shared_ptr<BlockHeader> getGenesisBlock() const;
-   const std::shared_ptr<BlockHeader> getHeaderByHeight(unsigned height) const;
+   const std::shared_ptr<BlockHeader> getHeaderByHeight(
+      unsigned height, uint8_t dupId) const;
    bool hasHeaderByHeight(unsigned height) const;
    
    const std::shared_ptr<BlockHeader> getHeaderByHash(HashString const & blkHash) const;
