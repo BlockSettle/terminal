@@ -48,11 +48,11 @@ void ClientDBLogic::Init(const Chat::LoggerPtr& loggerPtr, const Chat::Applicati
 
 QSqlDatabase ClientDBLogic::getDb()
 {
-   auto connectionName = QLatin1String("bs_chat_db_connection_") + QString::number(reinterpret_cast<quint64>(QThread::currentThread()), 16);
+   auto connectionName = QStringLiteral("bs_chat_db_connection_") + QString::number(reinterpret_cast<quint64>(QThread::currentThread()), 16);
 
    if (!QSqlDatabase::contains(connectionName))
    {
-      auto db = QSqlDatabase::addDatabase(QLatin1String("QSQLITE"), connectionName);
+      auto db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
 
       db.setDatabaseName(applicationSettingsPtr_->get<QString>(ApplicationSettings::chatDbFile));
 
@@ -105,19 +105,19 @@ void ClientDBLogic::saveMessage(const std::string& data)
       return;
    }
 
-   const QString cmd = QLatin1String("INSERT INTO party_message (party_table_id, message_id, timestamp, message_state, encryption_type, nonce, message_text, sender) "
+   const QString cmd = QStringLiteral("INSERT INTO party_message (party_table_id, message_id, timestamp, message_state, encryption_type, nonce, message_text, sender) "
       "VALUES (:party_table_id, :message_id, :timestamp, :message_state, :encryption_type, :nonce, :message_text, :sender)");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":party_table_id"), QString::fromStdString(tablePartyId));
-   query.bindValue(QLatin1String(":message_id"), QString::fromStdString(partyMessagePacket.message_id()));
-   query.bindValue(QLatin1String(":timestamp"), qint64(partyMessagePacket.timestamp_ms()));
-   query.bindValue(QLatin1String(":message_state"), partyMessagePacket.party_message_state());
-   query.bindValue(QLatin1String(":encryption_type"), partyMessagePacket.encryption());
-   query.bindValue(QLatin1String(":nonce"), QByteArray::fromStdString(partyMessagePacket.nonce()));
-   query.bindValue(QLatin1String(":message_text"), QString::fromStdString(encryptedMessage));
-   query.bindValue(QLatin1String(":sender"), QString::fromStdString(partyMessagePacket.sender_hash()));
+   query.bindValue(QStringLiteral(":party_table_id"), QString::fromStdString(tablePartyId));
+   query.bindValue(QStringLiteral(":message_id"), QString::fromStdString(partyMessagePacket.message_id()));
+   query.bindValue(QStringLiteral(":timestamp"), qint64(partyMessagePacket.timestamp_ms()));
+   query.bindValue(QStringLiteral(":message_state"), partyMessagePacket.party_message_state());
+   query.bindValue(QStringLiteral(":encryption_type"), partyMessagePacket.encryption());
+   query.bindValue(QStringLiteral(":nonce"), QByteArray::fromStdString(partyMessagePacket.nonce()));
+   query.bindValue(QStringLiteral(":message_text"), QString::fromStdString(encryptedMessage));
+   query.bindValue(QStringLiteral(":sender"), QString::fromStdString(partyMessagePacket.sender_hash()));
 
    if (!checkExecute(query))
    {
@@ -148,13 +148,13 @@ void ClientDBLogic::createNewParty(const std::string& partyId)
 
 bool ClientDBLogic::insertPartyId(const std::string& partyId, std::string& partyTableId)
 {
-   const QString cmd = QLatin1String("INSERT INTO party (party_id, party_display_name) VALUES (:party_id, :party_display_name);");
+   const QString cmd = QStringLiteral("INSERT INTO party (party_id, party_display_name) VALUES (:party_id, :party_display_name);");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":party_id"), QString::fromStdString(partyId));
+   query.bindValue(QStringLiteral(":party_id"), QString::fromStdString(partyId));
    // at beginning we using this same partyId as display name
-   query.bindValue(QLatin1String(":party_display_name"), QString::fromStdString(partyId));
+   query.bindValue(QStringLiteral(":party_display_name"), QString::fromStdString(partyId));
 
    if (!checkExecute(query))
    {
@@ -170,11 +170,11 @@ bool ClientDBLogic::insertPartyId(const std::string& partyId, std::string& party
 
 bool ClientDBLogic::getPartyIdFromDB(const std::string& partyId, std::string& partyTableId)
 {
-   const QString cmd = QLatin1String("SELECT party.id FROM party WHERE party.party_id = :party_id;");
+   const QString cmd = QStringLiteral("SELECT party.id FROM party WHERE party.party_id = :party_id;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":party_id"), QString::fromStdString(partyId));
+   query.bindValue(QStringLiteral(":party_id"), QString::fromStdString(partyId));
 
    if (checkExecute(query))
    {
@@ -193,12 +193,12 @@ bool ClientDBLogic::getPartyIdFromDB(const std::string& partyId, std::string& pa
 
 void ClientDBLogic::updateMessageState(const std::string& message_id, const int party_message_state)
 {
-   const QString cmd = QLatin1String("UPDATE party_message SET message_state = :message_state WHERE message_id = :message_id;");
+   const QString cmd = QStringLiteral("UPDATE party_message SET message_state = :message_state WHERE message_id = :message_id;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":message_state"), party_message_state);
-   query.bindValue(QLatin1String(":message_id"), QString::fromStdString(message_id));
+   query.bindValue(QStringLiteral(":message_state"), party_message_state);
+   query.bindValue(QStringLiteral(":message_id"), QString::fromStdString(message_id));
 
    if (!checkExecute(query))
    {
@@ -217,13 +217,13 @@ void ClientDBLogic::updateMessageState(const std::string& message_id, const int 
 
 bool ClientDBLogic::getPartyIdByMessageId(const std::string& messageId, std::string& partyId)
 {
-   const QString cmd = QLatin1String("SELECT party_id FROM party "
+   const QString cmd = QStringLiteral("SELECT party_id FROM party "
       "LEFT JOIN party_message ON party_message.party_table_id = party.id "
       "WHERE party_message.message_id = :message_id;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":message_id"), QString::fromStdString(messageId));
+   query.bindValue(QStringLiteral(":message_id"), QString::fromStdString(messageId));
 
    if (checkExecute(query))
    {
@@ -239,14 +239,14 @@ bool ClientDBLogic::getPartyIdByMessageId(const std::string& messageId, std::str
 
 void ClientDBLogic::readUnsentMessages(const std::string& partyId)
 {
-   const QString cmd = QLatin1String("SELECT party_id, message_id, timestamp, message_state, encryption_type, nonce, message_text FROM party_message "
+   const QString cmd = QStringLiteral("SELECT party_id, message_id, timestamp, message_state, encryption_type, nonce, message_text FROM party_message "
       "LEFT JOIN party on party.id = party_message.party_table_id "
       "WHERE party.party_id = :partyId AND message_state=:message_state;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":partyId"), QString::fromStdString(partyId));
-   query.bindValue(QLatin1String(":message_state"), static_cast<int>(PartyMessageState::UNSENT));
+   query.bindValue(QStringLiteral(":partyId"), QString::fromStdString(partyId));
+   query.bindValue(QStringLiteral(":message_state"), static_cast<int>(PartyMessageState::UNSENT));
 
    if (!checkExecute(query))
    {
@@ -274,11 +274,11 @@ void ClientDBLogic::readUnsentMessages(const std::string& partyId)
 
 void ClientDBLogic::deleteMessage(const std::string& messageId)
 {
-   const QString cmd = QLatin1String("DELETE FROM party_message WHERE message_id=:message_id;");
+   const QString cmd = QStringLiteral("DELETE FROM party_message WHERE message_id=:message_id;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":message_id"), QString::fromStdString(messageId));
+   query.bindValue(QStringLiteral(":message_id"), QString::fromStdString(messageId));
 
    if (!checkExecute(query))
    {
@@ -291,12 +291,12 @@ void ClientDBLogic::deleteMessage(const std::string& messageId)
 
 void ClientDBLogic::updateDisplayNameForParty(const std::string& partyId, const std::string& displayName)
 {
-   const QString cmd = QLatin1String("UPDATE party SET party_display_name=:displayName WHERE party_id=:partyId");
+   const QString cmd = QStringLiteral("UPDATE party SET party_display_name=:displayName WHERE party_id=:partyId");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":displayName"), QString::fromStdString(displayName));
-   query.bindValue(QLatin1String(":partyId"), QString::fromStdString(partyId));
+   query.bindValue(QStringLiteral(":displayName"), QString::fromStdString(displayName));
+   query.bindValue(QStringLiteral(":partyId"), QString::fromStdString(partyId));
 
    if (!checkExecute(query))
    {
@@ -309,11 +309,11 @@ void ClientDBLogic::updateDisplayNameForParty(const std::string& partyId, const 
 
 void ClientDBLogic::loadPartyDisplayName(const std::string& partyId)
 {
-   const QString cmd = QLatin1String("SELECT party_display_name FROM party WHERE party_id = :partyId;");
+   const QString cmd = QStringLiteral("SELECT party_display_name FROM party WHERE party_id = :partyId;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":partyId"), QString::fromStdString(partyId));
+   query.bindValue(QStringLiteral(":partyId"), QString::fromStdString(partyId));
 
    if (checkExecute(query))
    {
@@ -333,11 +333,11 @@ void ClientDBLogic::loadPartyDisplayName(const std::string& partyId)
 
 void ClientDBLogic::checkUnsentMessages(const std::string& partyId)
 {
-   const QString cmd = QLatin1String("SELECT message_state FROM party_message WHERE party_table_id=(SELECT id FROM party WHERE party_id=:partyId) AND message_state=0;");
+   const QString cmd = QStringLiteral("SELECT message_state FROM party_message WHERE party_table_id=(SELECT id FROM party WHERE party_id=:partyId) AND message_state=0;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":partyId"), QString::fromStdString(partyId));
+   query.bindValue(QStringLiteral(":partyId"), QString::fromStdString(partyId));
 
    if (!checkExecute(query))
    {
@@ -362,7 +362,7 @@ void ClientDBLogic::readHistoryMessages(const std::string& partyId, const int li
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
-   query.bindValue(QLatin1String(":partyId"), QString::fromStdString(partyId));
+   query.bindValue(QStringLiteral(":partyId"), QString::fromStdString(partyId));
 
    if (!checkExecute(query))
    {
@@ -499,4 +499,24 @@ void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniq
    {
       emit recipientKeysUnchanged();
    }
+}
+
+void ClientDBLogic::clearUnusedParties()
+{
+   // keep only parties which have history
+   const QString cmd = QStringLiteral(
+      "DELETE FROM party WHERE id IN "
+      "(SELECT id FROM party WHERE id NOT IN "
+      "(SELECT party_table_id FROM party_message));");
+
+   QSqlQuery query(getDb());
+   query.prepare(cmd);
+
+   if (!checkExecute(query))
+   {
+      emit error(ClientDBLogicError::CleanUnusedParties);
+      return;
+   }
+
+   return;
 }

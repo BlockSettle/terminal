@@ -180,7 +180,7 @@ unsigned ValidationAddressManager::goOnline()
    destroy this object and create a new one with the updated list.
    */
 
-   if (!connPtr_) {
+   if (!connPtr_ || !walletObj_) {
       return 0;
    }
 

@@ -63,12 +63,14 @@ ValidityFlag::~ValidityFlag()
 }
 
 ValidityFlag::ValidityFlag(ValidityFlag &&other)
-   : data_(std::move(other.data_))
 {
+   reset();
+   data_ = std::move(other.data_);
 }
 
 ValidityFlag &ValidityFlag::operator=(ValidityFlag &&other)
 {
+   reset();
    data_ = std::move(other.data_);
    return *this;
 }
