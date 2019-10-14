@@ -127,7 +127,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    unsigned blockCount = 6;
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
-   auto recipient = addrVec[10].getRecipient((uint64_t)(50 * COIN));
+   auto recipient = addrVec[10].getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    auto newTop = UnitTestWalletACT::waitOnNewBlock();
    ASSERT_EQ(curHeight + blockCount, newTop);
@@ -139,7 +139,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    ***/
 
    curHeight = envPtr_->armoryConnection()->topBlock();
-   recipient = addrVec[0].getRecipient((uint64_t)(50 * COIN));
+   recipient = addrVec[0].getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    newTop = UnitTestWalletACT::waitOnNewBlock();
    ASSERT_EQ(curHeight + blockCount, newTop);
@@ -179,7 +179,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    const auto &cbTxOutList = [this, leaf=leafPtr_, syncLeaf, addrVec, promPtr1]
    (std::vector<UTXO> inputs)->void
    {
-      const auto recipient = addrVec[11].getRecipient((uint64_t)(25 * COIN));
+      const auto recipient = addrVec[11].getRecipient(bs::XBTAmount{ (uint64_t)(25 * COIN) });
       const auto txReq = syncLeaf->createTXRequest(inputs, { recipient });
       BinaryData txWrongSigned;
       {
@@ -310,7 +310,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
       ASSERT_EQ(extVec.size(), 13);
       unsigned curHeight = envPtr_->armoryConnection()->topBlock();
-      auto recipient = extVec[12].getRecipient((uint64_t)(50 * COIN));
+      auto recipient = extVec[12].getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
       armoryInstance->mineNewBlock(recipient.get(), blockCount);
       auto newTop = UnitTestWalletACT::waitOnNewBlock();
       ASSERT_EQ(curHeight + blockCount, newTop);
@@ -357,7 +357,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
          std::vector<UTXO> utxos;
          utxos.push_back(inputs[0]);
 
-         const auto recipient = extVec[13].getRecipient((uint64_t)(25 * COIN));
+         const auto recipient = extVec[13].getRecipient(bs::XBTAmount{ (uint64_t)(25 * COIN) });
          const auto txReq = syncLeaf->createTXRequest(
             utxos, { recipient }, 0, false, intVec[41]);
 
@@ -683,7 +683,7 @@ TEST_F(TestWalletWithArmory, Comments)
    unsigned blockCount = 7;
 
    const auto &curHeight = envPtr_->armoryConnection()->topBlock();
-   auto recipient = addr.getRecipient((uint64_t)(50 * COIN));
+   auto recipient = addr.getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    auto newTop = UnitTestWalletACT::waitOnNewBlock();
    ASSERT_EQ(curHeight + blockCount, newTop);
@@ -701,7 +701,7 @@ TEST_F(TestWalletWithArmory, Comments)
          promPtr->set_value(false);
       }
       ASSERT_FALSE(inputs.empty());
-      const auto recip = addr.getRecipient((uint64_t)12000);
+      const auto recip = addr.getRecipient(bs::XBTAmount{ (uint64_t)12000 });
       const auto txReq = syncWallet->createTXRequest(inputs, { recip }, 345);
 
       BinaryData txData;
@@ -771,7 +771,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    unsigned blockCount = 6;
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
-   auto recipient = addr1.getRecipient((uint64_t)(50 * COIN));
+   auto recipient = addr1.getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    auto newTop = UnitTestWalletACT::waitOnNewBlock();
    ASSERT_EQ(curHeight + blockCount, newTop);
@@ -809,8 +809,8 @@ TEST_F(TestWalletWithArmory, ZCBalance)
       std::vector<UTXO> utxos;
       utxos.push_back(inputs[0]);
 
-      const auto recipient = addr2.getRecipient(amount);
-      const auto recipient2 = otherAddr.getRecipient(amount);
+      const auto recipient = addr2.getRecipient(bs::XBTAmount{ amount });
+      const auto recipient2 = otherAddr.getRecipient(bs::XBTAmount{ amount });
       const auto txReq = syncLeaf->createTXRequest(
          utxos, { recipient, recipient2 }, fee, false, changeAddr);
       BinaryData txSigned;
@@ -930,7 +930,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    unsigned blockCount = 6;
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
-   auto recipient = addr1.getRecipient((uint64_t)(50 * COIN));
+   auto recipient = addr1.getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    auto newTop = UnitTestWalletACT::waitOnNewBlock();
    ASSERT_EQ(curHeight + blockCount, newTop);
@@ -948,7 +948,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       [this, syncLeaf, addr2, changeAddr, amount1, fee, cbTX, promPtr1]
       (std::vector<UTXO> inputs1) 
    {
-      const auto recipient1 = addr2.getRecipient(amount1);
+      const auto recipient1 = addr2.getRecipient(bs::XBTAmount{ amount1 });
       ASSERT_NE(recipient1, nullptr);
       const auto txReq1 = syncLeaf->createTXRequest(
          inputs1, { recipient1 }, fee, false, changeAddr);
@@ -994,7 +994,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       (std::vector<UTXO> inputs2) 
    {
       const uint64_t amount2 = 0.04 * BTCNumericTypes::BalanceDivider;
-      const auto recipient2 = addr3.getRecipient(amount2);
+      const auto recipient2 = addr3.getRecipient(bs::XBTAmount{ amount2 });
       ASSERT_NE(recipient2, nullptr);
       const auto txReq2 = syncLeaf->createTXRequest(
          inputs2, { recipient2 }, fee, false, changeAddr);
@@ -1113,7 +1113,7 @@ TEST_F(TestWalletWithArmory, SignSettlement)
    unsigned blockCount = 6;
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
-   auto recipient = msAddress.getRecipient((uint64_t)(50 * COIN));
+   auto recipient = msAddress.getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    auto newTop = UnitTestWalletACT::waitOnNewBlock();
    ASSERT_EQ(curHeight + blockCount, newTop);
@@ -1136,8 +1136,8 @@ TEST_F(TestWalletWithArmory, SignSettlement)
       //create tx request
       const auto txReq = syncLeaf->createTXRequest(utxos,
          {
-            settlementRootAddress.getRecipient((uint64_t)(20 * COIN)),
-            msAddress.getRecipient((uint64_t)(30 * COIN))
+            settlementRootAddress.getRecipient(bs::XBTAmount{ (uint64_t)(20 * COIN) }),
+            msAddress.getRecipient(bs::XBTAmount{(uint64_t)(30 * COIN)})
          },
          0, false);
 
@@ -1209,7 +1209,7 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
    const auto armoryInstance = envPtr_->armoryInstance();
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
-   const auto recipient = addr.getRecipient((uint64_t)(5 * COIN));
+   const auto recipient = addr.getRecipient(bs::XBTAmount{ (uint64_t)(5 * COIN) });
    armoryInstance->mineNewBlock(recipient.get(), 6);
    auto newTop = UnitTestWalletACT::waitOnNewBlock();
    ASSERT_EQ(curHeight + 6, newTop);
@@ -1294,7 +1294,7 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
    const auto &cbTxOutList = [this, leaf = leafPtr_, syncLeaf, addr1, promTxOut]
       (std::vector<UTXO> inputs)->void
    {
-      const auto recipient = addr1.getRecipient((uint64_t)(5 * COIN));
+      const auto recipient = addr1.getRecipient(bs::XBTAmount{ (uint64_t)(5 * COIN) });
       const auto txReq = syncLeaf->createTXRequest(inputs, { recipient });
       BinaryData txSigned;
       {

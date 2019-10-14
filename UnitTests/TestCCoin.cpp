@@ -233,7 +233,7 @@ BinaryData TestCCoin::FundFromCoinbase(
       throw std::runtime_error("Not enough cb coins! Mine more blocks!");
 
    for (auto && addr : addresses) {
-      signer.addRecipient(addr.getRecipient(valuePerOne));
+      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ valuePerOne }));
    }
    signer.setFeed(coinbaseFeed_);
 
@@ -264,7 +264,7 @@ BinaryData TestCCoin::SimpleSendMany(const bs::Address & fromAddress, const std:
       {
          std::vector<std::shared_ptr<ScriptRecipient>> recipients;
          for(const auto & addr : toAddresses) {
-            recipients.push_back(addr.getRecipient(valuePerOne));
+            recipients.push_back(addr.getRecipient(bs::XBTAmount{ valuePerOne }));
          }
 
          const uint64_t requiredValue = valuePerOne * toAddresses.size();
@@ -335,15 +335,15 @@ Tx TestCCoin::CreateCJtx(
    }
 
    //CC recipients
-   cjSigner.addRecipient(structB.ccAddr_.getRecipient(structB.ccValue_));
+   cjSigner.addRecipient(structB.ccAddr_.getRecipient(bs::XBTAmount{ structB.ccValue_ }));
    if(ccValue - structB.ccValue_ > 0)
-      cjSigner.addRecipient(structA.ccAddr_.getRecipient(ccValue - structB.ccValue_));
+      cjSigner.addRecipient(structA.ccAddr_.getRecipient(bs::XBTAmount{ ccValue - structB.ccValue_ }));
 
    //XBT recipients
-   cjSigner.addRecipient(structA.xbtAddr_.getRecipient(structA.xbtValue_));
+   cjSigner.addRecipient(structA.xbtAddr_.getRecipient(bs::XBTAmount{ structA.xbtValue_ }));
 
    if(xbtValue - structA.xbtValue_ - fee > 0)
-      cjSigner.addRecipient(structB.xbtAddr_.getRecipient(xbtValue - structA.xbtValue_ - fee));
+      cjSigner.addRecipient(structB.xbtAddr_.getRecipient(bs::XBTAmount{ xbtValue - structA.xbtValue_ - fee }));
 
    {
       auto leaf = envPtr_->walletsMgr()->getHDRootForLeaf(sellerSignWallet->walletId());
@@ -922,7 +922,7 @@ TEST_F(TestCCoin, ZeroConfChain)
    {      
       Signer signer;
       signer.addSpender(spender);
-      signer.addRecipient(addr.getRecipient(value));
+      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ value }));
       
       auto script = spender->getOutputScript();
       auto changeAddr = BtcUtils::getScrAddrForScript(script);
@@ -1037,7 +1037,7 @@ TEST_F(TestCCoin, Reorg)
       for (auto& recipient : recipients)
       {
          total += recipient.second;
-         signer.addRecipient(recipient.first.getRecipient(recipient.second));
+         signer.addRecipient(recipient.first.getRecipient(bs::XBTAmount{ recipient.second }));
       }
 
       if (total > spender->getValue())
@@ -1399,7 +1399,7 @@ TEST_F(TestCCoin, Reorg_WithACT)
       for (auto& recipient : recipients)
       {
          total += recipient.second;
-         signer.addRecipient(recipient.first.getRecipient(recipient.second));
+         signer.addRecipient(recipient.first.getRecipient(bs::XBTAmount{ recipient.second }));
       }
 
       if (total > spender->getValue())
