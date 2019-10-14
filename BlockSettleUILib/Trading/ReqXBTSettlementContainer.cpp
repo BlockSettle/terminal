@@ -76,7 +76,7 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
 
    try {
       const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(
-         bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, qty), recvAddr
+         bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, bs::XBTAmount{ qty }), recvAddr
          , transactionData_->GetTransactionSummary().feePerByte, armory_->topBlock());
 
       bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(txReq);
@@ -341,7 +341,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
          auto txdata = tx.serialize();
          auto bctx = BCTX::parse(txdata);
 
-         auto utxo = bs::SettlementMonitor::getInputFromTX(settlAddr_, usedPayinHash_, amount_);
+         auto utxo = bs::SettlementMonitor::getInputFromTX(settlAddr_, usedPayinHash_, bs::XBTAmount{ amount_ });
 
          std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
          utxoMap[utxo.getTxHash()][0] = utxo;

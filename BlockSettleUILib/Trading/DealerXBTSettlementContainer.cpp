@@ -195,7 +195,7 @@ bool DealerXBTSettlementContainer::startPayOutSigning(const BinaryData& payinHas
 
       try {
          auto payOutTxRequest = bs::SettlementMonitor::createPayoutTXRequest(
-            bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, amount_), receivingAddress
+            bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, bs::XBTAmount{ amount_ }), receivingAddress
             , transactionData_->feePerByte(), armory_->topBlock());
 
          bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(payOutTxRequest);
@@ -265,7 +265,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
          auto txdata = tx.serialize();
          auto bctx = BCTX::parse(txdata);
 
-         auto utxo = bs::SettlementMonitor::getInputFromTX(settlAddr_, usedPayinHash_, amount_);
+         auto utxo = bs::SettlementMonitor::getInputFromTX(settlAddr_, usedPayinHash_, bs::XBTAmount{ amount_ });
 
          std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
          utxoMap[utxo.getTxHash()][0] = utxo;

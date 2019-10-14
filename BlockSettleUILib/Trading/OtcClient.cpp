@@ -678,7 +678,7 @@ uint64_t OtcClient::estimatePayinFeeWithoutChange(const std::vector<UTXO> &input
    // Use some fake settlement address as the only recipient
    auto recipient = bs::Address(CryptoPRNG::generateRandom(32), AddressEntryType_P2WSH);
    // Select some random amount
-   recipientsMap[0] = recipient.getRecipient(uint64_t(1000));
+   recipientsMap[0] = recipient.getRecipient(bs::XBTAmount{ uint64_t{1000} });
 
    auto inputsCopy = bs::Address::decorateUTXOsCopy(inputs);
    PaymentStruct payment(recipientsMap, 0, feePerByte, 0);
@@ -1610,7 +1610,7 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
                         result.side = otc::Side::Sell;
                         result.payin = transaction->createTXRequest();
                         result.payinTxId = result.payin.txId(resolver);
-                        auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, result.payinTxId, amount);
+                        auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, result.payinTxId, bs::XBTAmount{ amount });
                         result.fee = int64_t(result.payin.fee);
                         peer->sellFromOffline = targetHdWallet->isOffline();
                         cb(std::move(result));
@@ -1641,7 +1641,7 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
                      result.hdWalletId = targetHdWallet->walletId();
                      result.success = true;
                      result.side = otc::Side::Buy;
-                     auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer->payinTxIdFromSeller, amount);
+                     auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer->payinTxIdFromSeller, bs::XBTAmount{ amount });
                      result.payout = bs::SettlementMonitor::createPayoutTXRequest(
                         payinUTXO, outputAddr, feePerByte, armory_->topBlock());
                      result.fee = int64_t(result.payout.fee);

@@ -1,15 +1,15 @@
 #ifndef __TRANSACTION_DATA_H__
 #define __TRANSACTION_DATA_H__
 
-#include <functional>
-#include <memory>
-#include <string>
-#include <unordered_map>
-
 #include "Address.h"
 #include "CoreWallet.h"
 #include "UtxoReservation.h"
 #include "ValidityFlag.h"
+
+#include <functional>
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 namespace spdlog {
    class logger;
@@ -26,8 +26,9 @@ class CoinSelection;
 class RecipientContainer;
 class ScriptRecipient;
 class SelectedTransactionInputs;
-struct UtxoSelection;
+
 struct PaymentStruct;
+struct UtxoSelection;
 
 
 class TransactionData
@@ -114,6 +115,7 @@ public:
    const bs::Address &GetFallbackRecvAddressIfSet() const;
 
    bs::Address GetRecipientAddress(unsigned int recipientId) const;
+   std::shared_ptr<ScriptRecipient> GetScriptRecipient(unsigned int recipientId) const;
    BTCNumericTypes::balance_type GetRecipientAmount(unsigned int recipientId) const;
    BTCNumericTypes::balance_type  GetTotalRecipientsAmount() const;
    bool IsMaxAmount(unsigned int recipientId) const;
