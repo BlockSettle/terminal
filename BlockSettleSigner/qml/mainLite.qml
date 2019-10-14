@@ -26,40 +26,9 @@ ApplicationWindow {
 
     visible: false
     title: qsTr("BlockSettle Signer")
-//    width: 450
-//    height: 600
-//    minimumWidth: 450
-//    minimumHeight: 600
-//    onWidthChanged: {
-//        if (width > Screen.desktopAvailableWidth) {
-//            x = 0
-//            width = Screen.desktopAvailableWidth
-//        }
-//        emitSizeChanged()
-//    }
-//    onHeightChanged: {
-//        if (height > Screen.desktopAvailableHeight) {
-//            let frameSize = qmlFactory.frameSize(mainWindow)
-//            let h = frameSize.height > height ? frameSize.height - height : 0
-//            y = 0
-//            height = Screen.desktopAvailableHeight - h
-//        }
-//        emitSizeChanged()
-//    }
 
     property var currentDialog: ({})
-
-//    function emitSizeChanged() {
-//        sizeChangeTimer.start()
-//    }
-//    Timer {
-//        id: sizeChangeTimer
-//        interval: 5
-//        repeat: false
-//        running: false
-//        onTriggered: sizeChanged(mainWindow.width, mainWindow.height)
-//    }
-//    signal sizeChanged(int w, int h)
+    readonly property int resizeAnimationDuration: 25
 
     Component.onCompleted: {
         mainWindow.flags = Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint |
@@ -67,11 +36,12 @@ ApplicationWindow {
                 Qt.WindowTitleHint | Qt.WindowCloseButtonHint
         hide()
         qmlFactory.installEventFilterToObj(mainWindow)
+        qmlFactory.applyWindowFix(mainWindow)
+        JsHelper.initJSDialogs()
     }
 
-    background: Rectangle {
-        color: BSStyle.backgroundColor
-    }
+    color: BSStyle.backgroundColor
+
     overlay.modal: Rectangle {
         color: BSStyle.backgroundModalColor
     }
@@ -101,18 +71,63 @@ ApplicationWindow {
     }
 
     function customDialogRequest(dialogName, data) {
-        raiseWindow()
         var newDialog = JsHelper.customDialogRequest(dialogName, data)
-        JsHelper.prepareLiteModeDialog(newDialog)
+        if (newDialog) {
+            raiseWindow()
+            JsHelper.prepareDialog(newDialog)
+        }
     }
 
-    function invokeQmlMetod(method, cppCallback, argList) {
-        raiseWindow()
+    function invokeQmlMethod(method, cppCallback, argList) {
         JsHelper.evalWorker(method, cppCallback, argList)
     }
 
     function moveMainWindowToScreenCenter() {
         mainWindow.x = Screen.virtualX + (Screen.width - mainWindow.width) / 2
         mainWindow.y = Screen.virtualY + (Screen.height - mainWindow.height) / 2
+    }
+
+    function resizeAnimated(w,h) {
+        mwWidthAnimation.from = mainWindow.width
+        mwWidthAnimation.to = w
+        mwWidthAnimation.restart()
+
+        mwHeightAnimation.from = mainWindow.height
+        mwHeightAnimation.to = h
+        mwHeightAnimation.restart()
+
+        mwXAnimation.from = mainWindow.x
+        mwXAnimation.to = Screen.virtualX + (Screen.width - w) / 2
+        mwXAnimation.restart()
+
+        mwYAnimation.from = mainWindow.y
+        mwYAnimation.to = Screen.virtualY + (Screen.height - h) / 2
+        mwYAnimation.restart()
+    }
+
+    NumberAnimation {
+        id: mwWidthAnimation
+        target: mainWindow
+        property: "width"
+        duration: resizeAnimationDuration
+    }
+    NumberAnimation {
+        id: mwHeightAnimation
+        target: mainWindow
+        property: "height"
+        duration: resizeAnimationDuration
+    }
+
+    NumberAnimation {
+        id: mwXAnimation
+        target: mainWindow
+        property: "x"
+        duration: resizeAnimationDuration
+    }
+    NumberAnimation {
+        id: mwYAnimation
+        target: mainWindow
+        property: "y"
+        duration: resizeAnimationDuration
     }
 }

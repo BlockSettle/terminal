@@ -4,15 +4,21 @@
 #include <memory>
 #include <QObject>
 #include <QJSValue>
-#include "QWalletInfo.h"
-#include "QSeed.h"
-#include "QPasswordData.h"
+
+#include "BSErrorCode.h"
 #include "SignerDefs.h"
 
 namespace spdlog {
    class logger;
 }
 namespace bs {
+   namespace hd {
+      class WalletInfo;
+   }
+   namespace wallet {
+      class QPasswordData;
+      class QSeed;
+   }
    namespace sync {
       namespace hd {
          class Wallet;
@@ -31,6 +37,7 @@ class WalletsProxy : public QObject
    Q_PROPERTY(bool loaded READ walletsLoaded NOTIFY walletsChanged)
    Q_PROPERTY(QStringList walletNames READ walletNames NOTIFY walletsChanged)
    Q_PROPERTY(QString defaultBackupLocation READ defaultBackupLocation NOTIFY walletsChanged)
+   Q_PROPERTY(bool hasCCInfo READ hasCCInfo NOTIFY ccInfoChanged)
 
 public:
    WalletsProxy(const std::shared_ptr<spdlog::logger> &, SignerAdapter *);
@@ -42,17 +49,16 @@ public:
    Q_INVOKABLE void deleteWallet(const QString &walletId, const QJSValue &jsCallback);
 
    Q_INVOKABLE void changePassword(const QString &walletId
-      , bs::wallet::QPasswordData *oldPasswordData
-      , bs::wallet::QPasswordData *newPasswordData
+      , bs::wallet::QPasswordData *oldPasswordData, bs::wallet::QPasswordData *newPasswordData
       , const QJSValue &jsCallback);
 
    Q_INVOKABLE void addEidDevice(const QString &walletId
-      , bs::wallet::QPasswordData *oldPasswordData
-      , bs::wallet::QPasswordData *newPasswordData);
+      , bs::wallet::QPasswordData *oldPasswordData, bs::wallet::QPasswordData *newPasswordData
+      , const QJSValue &jsCallback);
 
    Q_INVOKABLE void removeEidDevice(const QString &walletId
       , bs::wallet::QPasswordData *oldPasswordData
-      , int removedIndex);
+      , int removedIndex, const QJSValue &jsCallback);
 
    Q_INVOKABLE QString getWoWalletFile(const QString &walletId) const;
    Q_INVOKABLE void importWoWallet(const QString &pathName, const QJSValue &jsCallback);
@@ -83,8 +89,8 @@ public:
    QString defaultBackupLocation() const;
 
 signals:
-   void walletError(const QString &walletId, const QString &errMsg) const;
    void walletsChanged();
+   void ccInfoChanged();
 
 private slots:
    void onWalletsChanged();
@@ -96,12 +102,16 @@ private:
    QStringList walletNames() const;
    Q_INVOKABLE QJSValue invokeJsCallBack(QJSValue jsCallback, QJSValueList args);
    std::shared_ptr<bs::sync::hd::Wallet> getWoSyncWallet(const bs::sync::WatchingOnlyWallet &) const;
+   bool hasCCInfo() const { return hasCCInfo_; }
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    SignerAdapter  *  adapter_{};
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    bool walletsSynchronized_ = false;
+   bool hasCCInfo_ = false;
+
+   std::function<void(bs::error::ErrorCode result)> createChangePwdResultCb(const QString &walletId, const QJSValue &jsCallback);
 };
 
 #endif // __WALLETS_PROXY_H__

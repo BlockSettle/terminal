@@ -1,10 +1,10 @@
 #include "QmlFactory.h"
 #include <QApplication>
+#include <QStyle>
 #include <QClipboard>
 #include <QQuickWindow>
 #include <QKeyEvent>
 #include <spdlog/spdlog.h>
-#include "AuthProxy.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "SignerAdapter.h"
 
@@ -78,21 +78,20 @@ WalletInfo *QmlFactory::createWalletInfoFromDigitalBackup(const QString &filenam
 }
 
 AuthSignWalletObject *QmlFactory::createAutheIDSignObject(AutheIDClient::RequestType requestType
-                                                          , WalletInfo *walletInfo)
+   , WalletInfo *walletInfo, int expiration)
 {
    logger_->debug("[QmlFactory] signing {}", walletInfo->walletId().toStdString());
-   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_, this);
+   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
    authObject->connectToServer();
-   authObject->signWallet(requestType, walletInfo);
+   authObject->signWallet(requestType, walletInfo, expiration);
    QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
    return authObject;
 }
 
-AuthSignWalletObject *QmlFactory::createActivateEidObject(const QString &userId
-                                                          , WalletInfo *walletInfo)
+AuthSignWalletObject *QmlFactory::createActivateEidObject(const QString &userId, WalletInfo *walletInfo)
 {
    logger_->debug("[QmlFactory] activate wallet {} for {}", walletInfo->walletId().toStdString(), userId.toStdString());
-   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_, this);
+   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
    walletInfo->setEncKeys(QStringList() << (userId + QStringLiteral("::")));
    authObject->connectToServer();
    authObject->signWallet(AutheIDClient::ActivateWallet, walletInfo);
@@ -100,11 +99,10 @@ AuthSignWalletObject *QmlFactory::createActivateEidObject(const QString &userId
    return authObject;
 }
 
-AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index
-                                                        , WalletInfo *walletInfo)
+AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index, WalletInfo *walletInfo)
 {
    logger_->debug("[QmlFactory] remove device for {}, device index: {}", walletInfo->walletId().toStdString(), index);
-   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_, this);
+   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
    authObject->connectToServer();
    authObject->removeDevice(index, walletInfo);
    QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
@@ -130,6 +128,11 @@ QRect QmlFactory::frameSize(QObject *window) const
    return QRect();
 }
 
+int QmlFactory::titleBarHeight()
+{
+   return QApplication::style()->pixelMetric(QStyle::PM_TitleBarHeight);
+}
+
 void QmlFactory::installEventFilterToObj(QObject *object)
 {
    if (!object) {
@@ -139,14 +142,30 @@ void QmlFactory::installEventFilterToObj(QObject *object)
    object->installEventFilter(this);
 }
 
+void QmlFactory::applyWindowFix(QQuickWindow *mw)
+{
+#ifdef Q_OS_WIN
+   SetClassLongPtr(HWND(mw->winId()), GCLP_HBRBACKGROUND, LONG_PTR(GetStockObject(NULL_BRUSH)));
+#endif
+}
+
 bool QmlFactory::eventFilter(QObject *object, QEvent *event)
 {
-   // Do not return true to allow propagate close event (it's needed for tx dialog close signal detection)
    if (event->type() == QEvent::Close) {
       emit closeEventReceived();
+      return true;
    }
 
    return false;
+}
+
+bool QmlFactory::isDebugBuild()
+{
+#ifndef NDEBUG
+   return true;
+#else
+   return false;
+#endif
 }
 
 QString QmlFactory::headlessPubKey() const

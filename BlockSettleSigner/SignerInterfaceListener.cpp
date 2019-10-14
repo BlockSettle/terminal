@@ -8,7 +8,6 @@
 #include <QApplication>
 #include "CelerClientConnection.h"
 #include "DataConnection.h"
-#include "DataConnectionListener.h"
 #include "HeadlessApp.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
@@ -18,6 +17,8 @@
 #include "SignerAdapterContainer.h"
 #include <memory>
 
+using namespace bs::sync;
+using namespace bs::signer;
 
 SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<QmlBridge> &qmlBridge
@@ -97,6 +98,9 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::DecryptWalletRequestType:
       onDecryptWalletRequested(packet.data());
       break;
+   case signer::UpdateDialogDataType:
+      onUpdateDialogData(packet.data(), packet.id());
+      break;
    case signer::CancelTxSignType:
       onCancelTx(packet.data(), packet.id());
       break;
@@ -122,6 +126,9 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::ImportWoWalletType:
       onCreateWO(packet.data(), packet.id());
       break;
+   case signer::ExportWoWalletType:
+      onExportWO(packet.data(), packet.id());
+      break;
    case signer::CreateWOType:
    case signer::GetDecryptedNodeType:
       onDecryptedKey(packet.data(), packet.id());
@@ -132,7 +139,7 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::ExecCustomDialogRequestType:
       onExecCustomDialog(packet.data(), packet.id());
       break;
-   case signer::ChangePasswordRequestType:
+   case signer::ChangePasswordType:
       onChangePassword(packet.data(), packet.id());
       break;
    case signer::CreateHDWalletType:
@@ -144,11 +151,14 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::WalletsListUpdatedType:
       parent_->walletsListUpdated();
       break;
+   case signer::UpdateWalletType:
+      onUpdateWallet(packet.data(), packet.id());
+      break;
    case signer::UpdateStatusType:
       onUpdateStatus(packet.data());
       break;
-   case signer::TerminalHandshakeFailedType:
-      onTerminalHandshakeFailed(packet.data());
+   case signer::TerminalEventType:
+      onTerminalEvent(packet.data());
       break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
@@ -171,10 +181,10 @@ void SignerInterfaceListener::onPeerConnected(const std::string &data, bool conn
    }
    const auto ip = QString::fromStdString(evt.ip_address());
    if (connected) {
-      emit parent_->peerConnected(ip);;
+      emit parent_->peerConnected(ip);
    }
    else {
-      emit parent_->peerDisconnected(ip);;
+      emit parent_->peerDisconnected(ip);
    }
 }
 
@@ -186,15 +196,20 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
       return;
    }
 
-   signer::SignTxRequest txRequest = request.signtxrequest();
+   headless::SignTxRequest txRequest = request.signtxrequest();
    bs::sync::PasswordDialogData *dialogData = new bs::sync::PasswordDialogData(request.passworddialogdata());
    QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
 
-   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest);
+   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest, parent_->walletsMgr_, logger_);
+   const auto settlementId = BinaryData::CreateFromHex(
+      dialogData->value(PasswordDialogData::SettlementId).toString().toStdString());
+   if (!settlementId.isNull()) {
+      txInfo->setTxId(QString::fromStdString(settlementId.toBinStr()));
+   }
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
    // wallet id may be stored either in tx or in dialog data
-   QString rootId = dialogData->value("WalletId").toString();
+   QString rootId = dialogData->value(PasswordDialogData::WalletId).toString();
    if (rootId.isEmpty()) {
       rootId = txInfo->walletId();
    }
@@ -208,29 +223,47 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
 
    QString notifyMsg = tr("Enter password for %1").arg(walletInfo->name());
 
-   switch (request.dialogtype()) {
-   case signer::SignTx:
-   case signer::SignPartialTx:
-      dialogData->setValue("Title", tr("Sign Transaction"));
-      requestPasswordForTx(request.dialogtype(), dialogData, txInfo, walletInfo);
-      break;
-   case signer::SignSettlementTx:
-   case signer::SignSettlementPartialTx:
-      requestPasswordForSettlementTx(request.dialogtype(), dialogData, txInfo, walletInfo);
-      break;
-   case signer::CreateAuthLeaf:
-      dialogData->setValue("Title", tr("Create Auth Leaf"));
-      requestPasswordForAuthLeaf(dialogData, walletInfo);
-      break;
-   case signer::CreateHDLeaf:
-      dialogData->setValue("Title", tr("Create Leaf"));
-      requestPasswordForToken(dialogData, walletInfo);
-      break;
-   default:
-      break;
+   if (dialogData->hasDialogType()) {
+      // Dialog type might be set explicitly set by caller
+      // Currently it using for CreateHDLeaf request which can display
+      // "RequestPasswordForToken" dialog and "RequestPasswordForAuthLeaf" depends of leaf
+      qmlBridge_->invokeQmlMethod(ui::createPasswordDialogForType, createQmlPasswordCallback()
+         , QVariant::fromValue(dialogData), QVariant::fromValue(walletInfo));
+   }
+   else {
+      switch (request.dialogtype()) {
+      case signer::SignTx:
+      case signer::SignPartialTx:
+         dialogData->setValue(PasswordDialogData::Title, tr("Sign Transaction"));
+         requestPasswordForTx(request.dialogtype(), dialogData, txInfo, walletInfo);
+         break;
+      case signer::SignSettlementTx:
+      case signer::SignSettlementPartialTx:
+         requestPasswordForSettlementTx(request.dialogtype(), dialogData, txInfo, walletInfo);
+         break;
+      case signer::CreateAuthLeaf:
+         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForAuthLeaf, dialogData, walletInfo);
+         break;
+      case signer::CreateHDLeaf:
+         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForToken, dialogData, walletInfo);
+         break;
+      case signer::CreateSettlementLeaf:
+         dialogData->setValue(PasswordDialogData::Title, tr("Create Authentication Address"));
+         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForSettlementLeaf, dialogData, walletInfo);
+         break;
+      case signer::RevokeAuthAddress:
+         dialogData->setValue(PasswordDialogData::Title, tr("Revoke Authentication Address"));
+         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForRevokeAuthAddress, dialogData, walletInfo);
+         break;
+      case signer::PromoteHDWallet:
+         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForPromoteHDWallet, dialogData, walletInfo);
+         break;
+      default:
+         break;
+      }
    }
 
-   emit qmlFactory_->showTrayNotify(dialogData->value("Title").toString(), notifyMsg);
+   emit qmlFactory_->showTrayNotify(dialogData->value(PasswordDialogData::Title).toString(), notifyMsg);
 }
 
 void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::RequestId reqId)
@@ -266,16 +299,31 @@ void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::Re
    }
 }
 
+void SignerInterfaceListener::onUpdateDialogData(const std::string &data, RequestId)
+{
+   headless::UpdateDialogDataRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+
+   bs::sync::PasswordDialogData *dialogData = new bs::sync::PasswordDialogData(request.passworddialogdata());
+   QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
+
+   qmlBridge_->invokeQmlMethod("updateDialogData", nullptr
+      , QVariant::fromValue(dialogData));
+}
+
 void SignerInterfaceListener::onCancelTx(const std::string &data, bs::signer::RequestId)
 {
-   signer::SignTxCancelRequest evt;
+   headless::CancelSignTx evt;
    if (!evt.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
 
    QMetaObject::invokeMethod(parent_, [this, evt] {
-      emit parent_->cancelTxSign(evt.tx_hash());
+      emit parent_->cancelTxSign(evt.tx_id());
    });
 }
 
@@ -320,7 +368,7 @@ void SignerInterfaceListener::onAutoSignActivated(const std::string &data, bs::s
 
 void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::SyncWalletInfoResponse response;
+   headless::SyncWalletInfoResponse response;
    if (!response.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
@@ -331,14 +379,8 @@ void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::sign
          , __func__, reqId);
       return;
    }
-   std::vector<bs::sync::WalletInfo> result;
-   for (int i = 0; i < response.wallets_size(); ++i) {
-      const auto wallet = response.wallets(i);
-      const auto format = (wallet.format() == signer::WalletFormatHD) ? bs::sync::WalletFormat::HD
-         : bs::sync::WalletFormat::Settlement;
-      result.push_back({ format, wallet.id(), wallet.name(), wallet.description()
-         , parent_->netType(), wallet.watching_only() });
-   }
+   std::vector<bs::sync::WalletInfo> result = bs::sync::WalletInfo::fromPbMessage(response);
+
    itCb->second(result);
    cbWalletInfo_.erase(itCb);
 }
@@ -362,7 +404,8 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer
       std::vector<bs::sync::HDWalletData::Leaf> leaves;
       for (int j = 0; j < group.leaves_size(); ++j) {
          const auto leaf = group.leaves(j);
-         leaves.push_back({ leaf.id(), leaf.index(), false, leaf.extra_data() });
+         leaves.push_back({ leaf.id(), bs::hd::Path::fromString(leaf.path())
+            , false, leaf.extra_data() });
       }
       result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), leaves });
    }
@@ -384,16 +427,7 @@ void SignerInterfaceListener::onSyncWallet(const std::string &data, bs::signer::
       return;
    }
    bs::sync::WalletData result;
-   for (int i = 0; i < response.encryption_types_size(); ++i) {
-      result.encryptionTypes.push_back(static_cast<bs::wallet::EncryptionType>(
-         response.encryption_types(i)));
-   }
-   for (int i = 0; i < response.encryption_keys_size(); ++i) {
-      result.encryptionKeys.push_back(response.encryption_keys(i));
-   }
-   result.encryptionRank = { response.key_rank_m(), response.key_rank_n() };
 
-   result.netType = static_cast<NetworkType>(response.net_type());
    result.highestExtIndex = response.highest_ext_index();
    result.highestIntIndex = response.highest_int_index();
 
@@ -433,7 +467,7 @@ void SignerInterfaceListener::onCreateWO(const std::string &data, bs::signer::Re
             addresses.push_back({ addr.index()
                , static_cast<AddressEntryType>(addr.aet()) });
          }
-         leaves.push_back({ leaf.id(), leaf.index(), leaf.public_key()
+         leaves.push_back({ leaf.id(), bs::hd::Path::fromString(leaf.path()), leaf.public_key()
             , leaf.chain_code(), addresses });
       }
       result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), leaves });
@@ -441,6 +475,23 @@ void SignerInterfaceListener::onCreateWO(const std::string &data, bs::signer::Re
    result.netType = parent_->netType();
    itCb->second(result);
    cbWO_.erase(itCb);
+}
+
+void SignerInterfaceListener::onExportWO(const std::string &data, RequestId reqId)
+{
+   signer::ExportWoWalletResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   const auto &itCb = cbExportWO_.find(reqId);
+   if (itCb == cbExportWO_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "failed to find callback for id {}", reqId);
+      return;
+   }
+
+   itCb->second(BinaryData(response.content()));
+   cbExportWO_.erase(itCb);
 }
 
 void SignerInterfaceListener::onDecryptedKey(const std::string &data, bs::signer::RequestId reqId)
@@ -486,7 +537,6 @@ void SignerInterfaceListener::onExecCustomDialog(const std::string &data, bs::si
    QVariantMap variantData;
    stream >> variantData;
 
-
    emit parent_->customDialogRequest(QString::fromStdString(evt.dialogname()), variantData);
 }
 
@@ -503,13 +553,13 @@ void SignerInterfaceListener::onChangePassword(const std::string &data, bs::sign
          , __func__, reqId);
       return;
    }
-   itCb->second(response.success());
+   itCb->second(static_cast<bs::error::ErrorCode>(response.errorcode()));
    cbChangePwReqs_.erase(itCb);
 }
 
 void SignerInterfaceListener::onCreateHDWallet(const std::string &data, bs::signer::RequestId reqId)
 {
-   headless::CreateHDWalletResponse response;
+   signer::CreateHDWalletResponse response;
    if (!response.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
@@ -541,6 +591,16 @@ void SignerInterfaceListener::onDeleteHDWallet(const std::string &data, bs::sign
    cbDeleteHDWalletReqs_.erase(itCb);
 }
 
+void SignerInterfaceListener::onUpdateWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::UpdateWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   parent_->updateWallet(request.wallet_id());
+}
+
 void SignerInterfaceListener::onUpdateStatus(const std::string &data)
 {
    signer::UpdateStatus evt;
@@ -553,15 +613,22 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
    emit parent_->signerPubKeyUpdated(evt.signer_pub_key());
 }
 
-void SignerInterfaceListener::onTerminalHandshakeFailed(const std::string &data)
+void SignerInterfaceListener::onTerminalEvent(const std::string &data)
 {
-   signer::TerminalHandshakeFailed evt;
+   logger_->debug("[{}]", __func__);
+   signer::TerminalEvent evt;
    if (!evt.ParseFromString(data)) {
       SPDLOG_LOGGER_ERROR(logger_, "failed to parse");
       return;
    }
 
-   emit parent_->terminalHandshakeFailed(evt.peeraddress());
+   logger_->debug("[{}] cc info received: {}", __func__, evt.cc_info_received());
+   if (!evt.peer_address().empty() && !evt.handshake_ok()) {
+      emit parent_->terminalHandshakeFailed(evt.peer_address());
+   }
+   else {
+      emit parent_->ccInfoReceived(evt.cc_info_received());
+   }
 }
 
 void SignerInterfaceListener::requestPasswordForTx(signer::PasswordDialogType reqType
@@ -571,7 +638,6 @@ void SignerInterfaceListener::requestPasswordForTx(signer::PasswordDialogType re
    QString prompt = (partial ? tr("Outgoing Partial Transaction") : tr("Outgoing Transaction"));
 
    qmlBridge_->invokeQmlMethod("createTxSignDialog", createQmlPasswordCallback()
-      , prompt
       , QVariant::fromValue(txInfo)
       , QVariant::fromValue(dialogData)
       , QVariant::fromValue(walletInfo));
@@ -583,26 +649,10 @@ void SignerInterfaceListener::requestPasswordForSettlementTx(signer::PasswordDia
    bool partial = (reqType == signer::SignSettlementPartialTx);
    QString prompt = (partial ? tr("Outgoing Partial Transaction") : tr("Outgoing Transaction"));
 
-   qmlBridge_->invokeQmlMethod("createSettlementTransactionDialog", createQmlPasswordCallback()
-      , prompt
+   qmlBridge_->invokeQmlMethod("createTxSignSettlementDialog", createQmlPasswordCallback()
       , QVariant::fromValue(txInfo)
       , QVariant::fromValue(dialogData)
       , QVariant::fromValue(walletInfo));
-}
-
-void SignerInterfaceListener::requestPasswordForAuthLeaf(bs::sync::PasswordDialogData *dialogData
-   , bs::hd::WalletInfo *walletInfo)
-{
-   dialogData->setValue("LeafDialogType", "RequestPasswordForAuthLeaf");
-   qmlBridge_->invokeQmlMethod("createPasswordDialogForLeaf", createQmlPasswordCallback()
-      , QVariant::fromValue(dialogData), QVariant::fromValue(walletInfo));
-}
-
-void SignerInterfaceListener::requestPasswordForToken(bs::sync::PasswordDialogData *dialogData, bs::hd::WalletInfo *walletInfo)
-{
-   dialogData->setValue("LeafDialogType", "RequestPasswordForToken");
-   qmlBridge_->invokeQmlMethod("createPasswordDialogForLeaf", createQmlPasswordCallback()
-      , QVariant::fromValue(dialogData), QVariant::fromValue(walletInfo));
 }
 
 void SignerInterfaceListener::shutdown()
@@ -629,6 +679,15 @@ QmlCallbackBase *SignerInterfaceListener::createQmlPasswordCallback()
       decryptEvent.set_errorcode(static_cast<uint32_t>(result));
       send(signer::PasswordReceivedType, decryptEvent.SerializeAsString());
    });
+}
+
+void SignerInterfaceListener::requestPasswordForDialogType(ui::PasswordInputDialogType dialogType
+   , bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo)
+{
+   dialogData->setValue(PasswordDialogData::DialogType
+      , bs::signer::ui::getPasswordInputDialogName(dialogType));
+   qmlBridge_->invokeQmlMethod(bs::signer::ui::createPasswordDialogForType, createQmlPasswordCallback()
+      , QVariant::fromValue(dialogData), QVariant::fromValue(walletInfo));
 }
 
 void SignerInterfaceListener::setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory)

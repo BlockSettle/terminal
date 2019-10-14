@@ -23,14 +23,6 @@ Item {
 
     property alias walletsView: walletsView_
     Connections {
-        target: walletsProxy
-        onWalletError: {
-            JsHelper.messageBoxCritical(qsTr("Error")
-                                        , qsTr("Unable to complete this action.")
-                                        , qsTr("%1").arg(errMsg))
-        }
-    }
-    Connections {
         target: walletsView_.model
         onModelReset: {
             // when model resetted selectionChanged signal is not emitted

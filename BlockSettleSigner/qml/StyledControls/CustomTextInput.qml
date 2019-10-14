@@ -6,7 +6,7 @@ import "../BsStyles"
 TextField {
     id: root
     horizontalAlignment: Text.AlignHLeft
-    font.pixelSize: 12
+    font.pixelSize: 11
     color: BSStyle.inputsFontColor
     padding: 0
     selectByMouse: true
@@ -22,11 +22,11 @@ TextField {
         border.color: BSStyle.inputsBorderColor
     }
 
-
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.RightButton
+        cursorShape: Qt.IBeamCursor
         onClicked: {
             if (mouse.button === Qt.RightButton) {
                 selectStart = root.selectionStart
@@ -44,7 +44,8 @@ TextField {
                 curPos = root.cursorPosition
                 contextMenu.popup()
                 root.cursorPosition = curPos
-                root.select(selectStart,selectEnd)            }
+                root.select(selectStart,selectEnd)
+            }
         }
 
         Menu {

@@ -12,29 +12,27 @@ import com.blocksettle.QPasswordData 1.0
 
 import "../StyledControls"
 import "../BsControls"
+import "../BsStyles"
 import "../js/helper.js" as JsHelper
 
 CustomTitleDialogWindow {
-    property string prompt
-    property WalletInfo walletInfo: WalletInfo{}
+    property WalletInfo walletInfo: WalletInfo {}
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
-    property QPasswordData passwordData: QPasswordData{}
-    property AuthSignWalletObject  authSign: AuthSignWalletObject{}
+    property QPasswordData passwordData: QPasswordData {}
+    property AuthSignWalletObject authSign: AuthSignWalletObject {}
 
-    property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
-    property bool   cancelledByUser: false
+    property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property int addressRowHeight: 24
-    property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
+    property int recipientsAddrHeight: txInfo.allRecipients.length < 4 ? txInfo.allRecipients.length * addressRowHeight : addressRowHeight * 3
+
+    readonly property int duration: authSign.defaultExpiration()
+    property real timeLeft: duration
 
     id: root
     title: qsTr("Sign Transaction")
     rejectable: true
     width: 500
-
-    function clickConfirmBtn() {
-        btnConfirm.clicked()
-    }
 
     function init() {
         if (walletInfo.encType !== QPasswordData.Auth) {
@@ -44,7 +42,7 @@ CustomTitleDialogWindow {
         btnConfirm.visible = false
         btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo)
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo, timeLeft - authSign.networkDelayFix())
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth
@@ -59,7 +57,6 @@ CustomTitleDialogWindow {
             mb.bsAccepted.connect(function() { rejectAnimated() })
         })
         authSign.userCancelled.connect(function() {
-            cancelledByUser = true
             rejectAnimated()
         })
     }
@@ -74,13 +71,18 @@ CustomTitleDialogWindow {
         }
     }
 
+    onBsRejected: {
+        if (authSign) {
+            authSign.cancel()
+        }
+    }
+
     cContentItem: ColumnLayout {
         spacing: 10
         Layout.alignment: Qt.AlignTop
 
         GridLayout {
             id: gridDashboard
-            //visible: txInfo.nbInputs
             columns: 2
             Layout.leftMargin: 10
             Layout.rightMargin: 10
@@ -95,7 +97,7 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("Sending Wallet")
+                text: qsTr("Wallet")
             }
             CustomLabelValue {
                 text: walletInfo.name
@@ -121,12 +123,12 @@ CustomTitleDialogWindow {
                 }
 
                 ListView {
-                    id: recvAddresses
+                    id: recipients
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignRight
-                    model: txInfo.recvAddresses
+                    model: txInfo.allRecipients
                     clip: true
-                    Layout.preferredHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
+                    Layout.preferredHeight: recipientsAddrHeight
 
                     flickableDirection: Flickable.VerticalFlick
                     boundsBehavior: Flickable.StopAtBounds
@@ -138,7 +140,7 @@ CustomTitleDialogWindow {
                         id: addressRect
                         color: "transparent"
                         height: 22
-                        width: recvAddresses.width
+                        width: recipients.width
 
                         CustomLabelValue {
                             id: labelTxWalletId
@@ -149,14 +151,13 @@ CustomTitleDialogWindow {
                             font: fixedFont
                         }
                     }
-
                 }
             }
 
 
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("Transaction Weight")
+                text: qsTr("Virtual Tx Size")
             }
             CustomLabelValue {
                 text: txInfo.txVirtSize
@@ -169,6 +170,15 @@ CustomTitleDialogWindow {
             }
             CustomLabelValue {
                 text: txInfo.inputAmount.toFixed(8)
+                Layout.alignment: Qt.AlignRight
+            }
+
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Transaction Amount")
+            }
+            CustomLabelValue {
+                text: txInfo.amount.toFixed(8)
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -192,7 +202,7 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 Layout.fillWidth: true
-                text: qsTr("Transaction Amount")
+                text: qsTr("Total Spent")
             }
             CustomLabelValue {
                 text: txInfo.total.toFixed(8)
@@ -220,16 +230,6 @@ CustomTitleDialogWindow {
             Layout.leftMargin: 10
             Layout.rightMargin: 10
 
-//            CustomLabel {
-//                visible: prompt.length
-//                Layout.minimumWidth: 110
-//                Layout.preferredWidth: 110
-//                Layout.maximumWidth: 110
-//                Layout.fillWidth: true
-//                text: prompt
-//                elide: Label.ElideRight
-//            }
-
             CustomLabel {
                 visible: walletInfo.encType === QPasswordData.Password
                 Layout.minimumWidth: 110
@@ -241,7 +241,7 @@ CustomTitleDialogWindow {
 
             CustomPasswordTextInput {
                 id: tfPassword
-                visible: true //walletInfo.encType === QPasswordData.Password
+                visible: walletInfo.encType === QPasswordData.Password
                 focus: true
                 //placeholderText: qsTr("Password")
                 Layout.fillWidth: true
@@ -252,11 +252,24 @@ CustomTitleDialogWindow {
                     if (btnConfirm.enabled) btnConfirm.onClicked()
                 }
             }
+        }
+
+        RowLayout {
+            spacing: 25
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
 
             CustomLabel {
-                id: labelAuth
                 visible: walletInfo.encType === QPasswordData.Auth
-                text: authSign.status
+                Layout.fillWidth: true
+                text: qsTr("Auth eID")
+            }
+
+            CustomLabel {
+                visible: walletInfo.encType === QPasswordData.Auth
+                Layout.alignment: Qt.AlignRight
+                text: walletInfo.email()
             }
         }
 
@@ -268,7 +281,6 @@ CustomTitleDialogWindow {
 
             Timer {
                 id: timer
-                property real timeLeft: 120
                 interval: 500
                 running: true
                 repeat: true
@@ -276,22 +288,10 @@ CustomTitleDialogWindow {
                     timeLeft -= 0.5
                     if (timeLeft <= 0) {
                         stop()
-                        // assume non signed tx is cancelled tx
-                        cancelledByUser = true
                         rejectAnimated()
                     }
                 }
                 signal expired()
-            }
-
-//            CustomLabel {
-//                text: qsTr("On completion just press [Enter] or [Return]")
-//                visible: walletInfo.encType !== QPasswordData.Auth
-//                Layout.fillWidth: true
-//            }
-            CustomLabelValue {
-                text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed((0)))
-                Layout.fillWidth: true
             }
 
             CustomProgressBar {
@@ -301,7 +301,12 @@ CustomTitleDialogWindow {
                 Layout.bottomMargin: 10
                 Layout.fillWidth: true
                 to: 120
-                value: timer.timeLeft
+                value: timeLeft
+            }
+
+            CustomLabelValue {
+                text: qsTr("%1 seconds left").arg(timeLeft.toFixed((0)))
+                Layout.fillWidth: true
             }
         }
     }
@@ -317,11 +322,7 @@ CustomTitleDialogWindow {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
-                    cancelledByUser = true
                     rejectAnimated()
-                    if (authSign) {
-                        authSign.cancel()
-                    }
                 }
             }
 
@@ -332,19 +333,12 @@ CustomTitleDialogWindow {
                 anchors.bottom: parent.bottom
                 enabled: tfPassword.text.length || acceptable
                 onClicked: {
-//                    if (walletInfo.encType === QPasswordData.Password) {
-                        passwordData.textPassword = tfPassword.text
-                        passwordData.encType = QPasswordData.Password
-                        acceptAnimated()
-/*                    }
-                    else if (walletInfo.encType === QPasswordData.Auth) {
-                    }
-                    else {
-                        passwordData.encType = QPasswordData.Unencrypted
-                        acceptAnimated()
-                    }*/
+                    passwordData.textPassword = tfPassword.text
+                    passwordData.encType = QPasswordData.Password
+                    acceptAnimated()
                 }
             }
         }
     }
+
 }

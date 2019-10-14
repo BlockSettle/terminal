@@ -2,6 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.4
 import QtQuick.Layouts 1.11
 
+import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.PasswordDialogData 1.0
 import com.blocksettle.WalletInfo 1.0
 
@@ -10,11 +11,15 @@ import "../BsStyles"
 
 BSPasswordInput {
     id: root
+    width: 450
 
     property WalletInfo walletInfo: WalletInfo{}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
 
-    title: passwordDialogData.value("Title")
+    title: passwordDialogData.Title
+
+    // not used at the moment
+    autheIDSignType: AutheIDClient.VerifyWalletKey
 
     CustomHeader {
         text: qsTr("Wallet Details")
@@ -85,11 +90,11 @@ BSPasswordInput {
             Layout.preferredWidth: 110
             Layout.maximumWidth: 110
             Layout.fillWidth: true
-            text: qsTr("Email")
+            text: qsTr("Authentication Address")
         }
         CustomLabel {
             Layout.fillWidth: true
-            text: passwordDialogData.value("Email")
+            text: passwordDialogData.AuthAddress
         }
     }
 }

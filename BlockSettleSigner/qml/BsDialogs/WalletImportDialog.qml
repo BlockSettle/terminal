@@ -18,6 +18,7 @@ CustomTitleDialogWindow {
     id: root
 
     property bool primaryWalletExists: walletsProxy.primaryWalletExists
+    property bool ccInfoLoaded: walletsProxy.hasCCInfo
     property string password
     property QSeed seed: QSeed{}
     property WalletInfo walletInfo: WalletInfo{}
@@ -43,7 +44,7 @@ CustomTitleDialogWindow {
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
     Component.onCompleted: {
-        if (!primaryWalletExists) {
+        if (!primaryWalletExists && ccInfoLoaded) {
             cbPrimary.checked = true
             tfName.text = qsTr("Primary Wallet");
         }
@@ -139,7 +140,7 @@ CustomTitleDialogWindow {
 
                             CustomRadioButton {
                                 id: rbPaperBackup
-                                Layout.leftMargin: inputLabelsWidth
+                                Layout.leftMargin: rootKeyInput.inputLabelsWidth
                                 text: qsTr("Paper Backup")
                                 checked: true
                             }
@@ -338,13 +339,20 @@ CustomTitleDialogWindow {
                         Layout.leftMargin: 10
                         Layout.rightMargin: 10
 
+                        CustomLabel {
+                            Layout.minimumWidth: inputLabelsWidth
+                            Layout.preferredWidth: inputLabelsWidth
+                            Layout.maximumWidth: inputLabelsWidth
+                            Layout.fillWidth: true
+                            text: qsTr("Primary Wallet")
+                        }
 
                         CustomCheckBox {
                             id: cbPrimary
                             Layout.fillWidth: true
-                            Layout.leftMargin: inputLabelsWidth + 5
-                            enabled: !primaryWalletExists
-                            checked: !primaryWalletExists
+                            //Layout.leftMargin: inputLabelsWidth + 5
+                            enabled: !primaryWalletExists && ccInfoLoaded
+                            checked: !primaryWalletExists && ccInfoLoaded
                             text: qsTr("Primary Wallet")
 
                             ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
@@ -366,42 +374,42 @@ CustomTitleDialogWindow {
                             }
                         }
                     }
-                    RowLayout {
-                        spacing: 5
-                        Layout.fillWidth: true
-                        Layout.leftMargin: 10
-                        Layout.rightMargin: 10
+//                    RowLayout {
+//                        spacing: 5
+//                        Layout.fillWidth: true
+//                        Layout.leftMargin: 10
+//                        Layout.rightMargin: 10
 
-                        CustomLabel {
-                            Layout.minimumWidth: inputLabelsWidth
-                            Layout.preferredWidth: inputLabelsWidth
-                            Layout.maximumWidth: inputLabelsWidth
-                            Layout.fillWidth: true
-                            text: qsTr("Private Market\nLeafs")
-                        }
-                        CustomLabel {
-                            Layout.fillWidth: true
-                            text: qsTr("Status")
-                        }
-                    }
-                    RowLayout {
-                        spacing: 5
-                        Layout.fillWidth: true
-                        Layout.leftMargin: 10
-                        Layout.rightMargin: 10
+//                        CustomLabel {
+//                            Layout.minimumWidth: inputLabelsWidth
+//                            Layout.preferredWidth: inputLabelsWidth
+//                            Layout.maximumWidth: inputLabelsWidth
+//                            Layout.fillWidth: true
+//                            text: qsTr("Private Market\nLeafs")
+//                        }
+//                        CustomLabel {
+//                            Layout.fillWidth: true
+//                            text: qsTr("Status")
+//                        }
+//                    }
+//                    RowLayout {
+//                        spacing: 5
+//                        Layout.fillWidth: true
+//                        Layout.leftMargin: 10
+//                        Layout.rightMargin: 10
 
-                        CustomLabel {
-                            Layout.minimumWidth: inputLabelsWidth
-                            Layout.preferredWidth: inputLabelsWidth
-                            Layout.maximumWidth: inputLabelsWidth
-                            Layout.fillWidth: true
-                            text: qsTr("Authentication\nStatus")
-                        }
-                        CustomLabel {
-                            Layout.fillWidth: true
-                            text: qsTr("Status")
-                        }
-                    }
+//                        CustomLabel {
+//                            Layout.minimumWidth: inputLabelsWidth
+//                            Layout.preferredWidth: inputLabelsWidth
+//                            Layout.maximumWidth: inputLabelsWidth
+//                            Layout.fillWidth: true
+//                            text: qsTr("Authentication\nStatus")
+//                        }
+//                        CustomLabel {
+//                            Layout.fillWidth: true
+//                            text: qsTr("Status")
+//                        }
+//                    }
 
                     CustomHeader {
                         id: headerText2
@@ -619,6 +627,7 @@ CustomTitleDialogWindow {
                         walletInfo.desc = tfDesc.text
                         walletInfo.walletId = seed.walletId
                         walletInfo.rootId = seed.walletId
+                        walletInfo.encType = QPasswordData.Password
 
                         var createCallback = function(success, errorMsg) {
                             if (success) {
@@ -637,7 +646,8 @@ CustomTitleDialogWindow {
                             passwordData.encKey = ""
                             passwordData.textPassword = newPasswordWithConfirm.password
 
-                            var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInputConfirm.qml").createObject(mainWindow);
+                            var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInputConfirm.qml").createObject(mainWindow,
+                               {"walletInfo": walletInfo})
                             checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
                             checkPasswordDialog.open()
                             checkPasswordDialog.bsAccepted.connect(function() {

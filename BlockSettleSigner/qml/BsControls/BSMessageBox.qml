@@ -72,6 +72,7 @@ CustomTitleDialogWindow {
                     text: customDetails
                     leftPadding: 15
                     rightPadding: 6
+                    bottomPadding: 15
                     //textFormat: Text.RichText
                     Layout.preferredWidth: root.width - image.width - leftPadding - rightPadding
                     onLinkActivated: Qt.openUrlExternally(link)

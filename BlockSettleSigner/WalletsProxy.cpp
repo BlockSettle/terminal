@@ -33,6 +33,10 @@ WalletsProxy::WalletsProxy(const std::shared_ptr<spdlog::logger> &logger
    : QObject(nullptr), logger_(logger), adapter_(adapter)
 {
    connect(adapter_, &SignerAdapter::ready, this, &WalletsProxy::setWalletsManager);
+   connect(adapter_, &SignerAdapter::ccInfoReceived, [this](bool result) {
+      hasCCInfo_ = result;
+      emit ccInfoChanged();
+   });
 }
 
 void WalletsProxy::setWalletsManager()
@@ -84,36 +88,24 @@ bool WalletsProxy::primaryWalletExists() const
 }
 
 void WalletsProxy::changePassword(const QString &walletId
-                                  , bs::wallet::QPasswordData *oldPasswordData
-                                  , bs::wallet::QPasswordData *newPasswordData
-                                  , const QJSValue &jsCallback)
+   , bs::wallet::QPasswordData *oldPasswordData, bs::wallet::QPasswordData *newPasswordData
+   , const QJSValue &jsCallback)
 {
    const auto wallet = getRootForId(walletId);
+   const auto &cbChangePwdResult = createChangePwdResultCb(walletId, jsCallback);
+
    if (!wallet) {
-      emit walletError(walletId, tr("Failed to change wallet password: wallet not found"));
+      cbChangePwdResult(bs::error::ErrorCode::WalletNotFound);
       return;
    }
 
-   const auto &cbChangePwdResult = [this, walletId, jsCallback](bool result) {
-      QJSValueList args;
-      args << QJSValue(result);
-
-      QMetaObject::invokeMethod(this, "invokeJsCallBack", Qt::QueuedConnection
-                                , Q_ARG(QJSValue, jsCallback)
-                                , Q_ARG(QJSValueList, args));
-
-      if (result) {
-         onWalletsChanged();
-      }
-   };
-
-   adapter_->changePassword(walletId.toStdString(), { *newPasswordData }, { 1, 1 }
-                          , oldPasswordData->password, false, false, false, cbChangePwdResult);
+   adapter_->changePassword(walletId.toStdString(), { *newPasswordData }
+      , *oldPasswordData, false, false, cbChangePwdResult);
 }
 
 void WalletsProxy::addEidDevice(const QString &walletId
-                                , bs::wallet::QPasswordData *oldPasswordData
-                                , bs::wallet::QPasswordData *newPasswordData)
+   , bs::wallet::QPasswordData *oldPasswordData, bs::wallet::QPasswordData *newPasswordData
+   , const QJSValue &jsCallback)
 {
    //   Add new device workflow:
    //   1. decrypt wallet by ActivateWalletOldDevice
@@ -126,28 +118,19 @@ void WalletsProxy::addEidDevice(const QString &walletId
    //    - removeOld, dryRun = false
 
    const auto wallet = getRootForId(walletId);
+   const auto &cbChangePwdResult = createChangePwdResultCb(walletId, jsCallback);
+
    if (!wallet) {
-      emit walletError(walletId, tr("Failed to change wallet password: wallet not found"));
+      cbChangePwdResult(bs::error::ErrorCode::WalletNotFound);
       return;
    }
 
-   //bs::hd::Wallet;
-   bs::wallet::KeyRank encryptionRank = wallet->encryptionRank();
-   encryptionRank.second++;
-
-   const auto &cbChangePwdResult = [this, walletId](bool result) {
-      if (result) {
-         emit walletsMgr_->walletChanged(walletId.toStdString());
-      }
-      else {
-         emit walletError(walletId, tr("Failed to add new device"));
-      }
-   };
    adapter_->changePassword(walletId.toStdString(), { *newPasswordData }
-      , encryptionRank, oldPasswordData->password, true, false, false, cbChangePwdResult);
+      , *oldPasswordData, true, false, cbChangePwdResult);
 }
 
-void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswordData *oldPasswordData, int removedIndex)
+void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswordData *oldPasswordData
+   , int removedIndex, const QJSValue &jsCallback)
 {
    //   Delete device workflow:
    //   1. decrypt wallet by DeactivateWalletDevice
@@ -159,49 +142,40 @@ void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswor
    //    - removeOld = true
 
    const auto wallet = getRootForId(walletId);
+   const auto &cbChangePwdResult = createChangePwdResultCb(walletId, jsCallback);
+
    if (!wallet) {
-      emit walletError(walletId, tr("Failed to change wallet password: wallet not found"));
+      cbChangePwdResult(bs::error::ErrorCode::WalletNotFound);
       return;
    }
 
    if (wallet->encryptionKeys().size() == 1) {
-      emit walletError(walletId, tr("Failed to remove last device"));
+      cbChangePwdResult(bs::error::ErrorCode::WalletFailedRemoveLastEidDevice);
       return;
    }
 
-   if (wallet->encryptionRank().second == 1) {
-      emit walletError(walletId, tr("Failed to remove last device"));
+   if (wallet->encryptionRank().n == 1) {
+      cbChangePwdResult(bs::error::ErrorCode::WalletFailedRemoveLastEidDevice);
       return;
    }
 
    if (removedIndex >= wallet->encryptionKeys().size() || removedIndex < 0) {
-      emit walletError(walletId, tr("Failed to remove invalid index"));
+      SPDLOG_LOGGER_ERROR(logger_, "Failed to remove eid device with invalid index: {} of {}", removedIndex, wallet->encryptionKeys().size());
+      cbChangePwdResult(bs::error::ErrorCode::InternalError);
       return;
    }
-
-   bs::wallet::KeyRank encryptionRank = wallet->encryptionRank();
-   encryptionRank.second--;
 
    // remove index from encKeys
    std::vector<bs::wallet::PasswordData> newPasswordData;
    for (int i = 0; i < wallet->encryptionKeys().size(); ++i) {
       if (removedIndex == i) continue;
       bs::wallet::QPasswordData pd;
-      pd.encType = bs::wallet::EncryptionType::Auth;
-      pd.encKey = wallet->encryptionKeys()[i];
+      pd.metaData = { bs::wallet::EncryptionType::Auth, wallet->encryptionKeys()[i] };
       newPasswordData.push_back(pd);
    }
 
-   const auto &cbChangePwdResult = [this, walletId](bool result) {
-      if (result) {
-         emit walletsMgr_->walletChanged(walletId.toStdString());
-      } else {
-         emit walletError(walletId, tr("Failed to delete device"));
-      }
-   };
-
-   adapter_->changePassword(walletId.toStdString(), newPasswordData, encryptionRank
-      , oldPasswordData->password, false, true, false, cbChangePwdResult);
+   adapter_->changePassword(walletId.toStdString(), newPasswordData
+      , *oldPasswordData, false, true, cbChangePwdResult);
 }
 
 QString WalletsProxy::getWoWalletFile(const QString &walletId) const
@@ -212,8 +186,55 @@ QString WalletsProxy::getWoWalletFile(const QString &walletId) const
 void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &filePath
    , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
-   logger_->debug("[{}] path={}", __func__, filePath.toStdString());
-   const auto &cbResult = [this, walletId, filePath, jsCallback, passwordData](const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
+   auto successCallback = [this, jsCallback, walletId, filePath] {
+      SPDLOG_LOGGER_DEBUG(logger_, "WO export succeed");
+      QMetaObject::invokeMethod(this, [this, jsCallback] {
+         QJSValueList args;
+         args << QJSValue(true) << QStringLiteral("");
+         invokeJsCallBack(jsCallback, args);
+      });
+   };
+
+   auto failCallback = [this, jsCallback, walletId, filePath](const std::string &errorMsg) {
+      SPDLOG_LOGGER_ERROR(logger_, "export failed: {}", errorMsg);
+      QMetaObject::invokeMethod(this, [this, jsCallback, walletId, filePath, errorMsg] {
+         QJSValueList args;
+         QString message = tr("Failed to save watching-only wallet for %1 to %2: %3")
+               .arg(walletId).arg(filePath).arg(QString::fromStdString(errorMsg));
+         args << QJSValue(false) << message;
+         invokeJsCallBack(jsCallback, args);
+      });
+   };
+
+   if (walletsMgr_->isWatchingOnly(walletId.toStdString())) {
+      SPDLOG_LOGGER_DEBUG(logger_, "copy WO from WO wallet to '{}'", filePath.toStdString());
+
+      adapter_->exportWoWallet(walletId.toStdString(), [walletId, successCallback, failCallback, filePath](const BinaryData &content) {
+         if (content.isNull()) {
+            failCallback("can't read WO file");
+            return;
+         }
+
+         QFile f(filePath);
+         bool result = f.open(QIODevice::WriteOnly);
+         if (!result) {
+            failCallback("can't open output file");
+            return;
+         }
+
+         auto size = f.write(reinterpret_cast<const char*>(content.getPtr()), int(content.getSize()));
+         if (size != int(content.getSize())) {
+            failCallback("write failed");
+            return;
+         }
+
+         successCallback();
+      });
+      return;
+   }
+
+   SPDLOG_LOGGER_DEBUG(logger_, "export WO from full wallet to '{}'", filePath.toStdString());
+   const auto &cbResult = [this, walletId, filePath, successCallback, failCallback, passwordData](const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
       std::shared_ptr<bs::core::hd::Wallet> newWallet;
       try {
          const auto hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
@@ -232,25 +253,25 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
 
          const bs::core::wallet::Seed seed(seedData, hdWallet->networkType());
          newWallet = std::make_shared<bs::core::hd::Wallet>(hdWallet->name(), hdWallet->description()
-            , seed, passwordData->password, tmpDir.path().toStdString());
+            , seed, *passwordData, tmpDir.path().toStdString());
 
          for (const auto &group : hdWallet->getGroups()) {
             auto newGroup = newWallet->createGroup(static_cast<bs::hd::CoinType>(group->index()));
             if (!newGroup) {
                throw std::runtime_error("failed to create group");
             }
-            auto lock = newWallet->lockForEncryption(passwordData->password);
+            const bs::core::WalletPasswordScoped lock(newWallet, passwordData->password);
             for (const auto &leaf : group->getLeaves()) {
                try {
-                  auto newLeaf = newGroup->createLeaf(leaf->index());
+                  auto newLeaf = newGroup->createLeaf(leaf->path());
                   if (!newLeaf) {
                      throw std::runtime_error("uncreatable");
                   }
-                  for (const auto &addr : leaf->getExtAddressList()) {
-                     newLeaf->getNewExtAddress(addr.getType());
+                  for (int i = int(leaf->getExtAddressCount()); i > 0; --i) {
+                     newLeaf->getNewExtAddress();
                   }
-                  for (const auto &addr : leaf->getIntAddressList()) {
-                     newLeaf->getNewIntAddress(addr.getType());
+                  for (int i = int(leaf->getIntAddressCount()); i > 0; --i) {
+                     newLeaf->getNewIntAddress();
                   }
                   logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
                      , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
@@ -297,23 +318,11 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
          if (newWallet) {
             newWallet->eraseFile();
          }
-
-         logger_->error("[WalletsProxy::exportWatchingOnly] {}", e.what());
-         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, filePath, errorMessage = e.what()] {
-            QJSValueList args;
-            QString message = tr("Failed to save watching-only wallet for %1 to %2: %3")
-                  .arg(walletId).arg(filePath).arg(QString::fromStdString(errorMessage));
-            args << QJSValue(false) << message;
-            invokeJsCallBack(jsCallback, args);
-         });
+         failCallback(e.what());
          return;
       }
 
-      QMetaObject::invokeMethod(this, [this, jsCallback] {
-         QJSValueList args;
-         args << QJSValue(true) << QStringLiteral("");
-         invokeJsCallBack(jsCallback, args);
-      });
+      successCallback();
    };
    adapter_->createWatchingOnlyWallet(walletId, passwordData->password, cbResult);
 }
@@ -323,12 +332,24 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
 {
    const auto wallet = getRootForId(walletId);
    if (!wallet) {
-      emit walletError(walletId, tr("Failed to backup private key: wallet not found"));
+      QMetaObject::invokeMethod(this, [this, jsCallback] {
+         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << QJSValue(tr("Wallet not found")));
+      });
       return false;
    }
+
    const auto &cbResult = [this, fileName, walletId, name=wallet->name(), desc=wallet->description(), isPrintable, jsCallback]
       (const SecureBinaryData &privKey, const SecureBinaryData &chainCode) {
       QString fn = fileName;
+
+      if (privKey.isNull()) {
+         logger_->error("[WalletsProxy] error decrypting private key");
+         const auto errText = tr("Failed to decrypt private key for wallet %1").arg(walletId);
+         QMetaObject::invokeMethod(this, [this, jsCallback, errText] {
+            invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << errText);
+         });
+         return;
+      }
 
       std::string privKeyString;
       EasyCoDec::Data seedData;
@@ -341,7 +362,10 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
          privKeyString = privKey.toBinStr();
       } catch (const std::exception &e) {
          logger_->error("[WalletsProxy] failed to encode private key: {}", e.what());
-         emit walletError(walletId, tr("Failed to encode private key for wallet %1").arg(walletId));
+         const auto errText = tr("Failed to encode private key for wallet %1").arg(walletId);
+         QMetaObject::invokeMethod(this, [this, jsCallback, errText] {
+            invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << errText);
+         });
          return;
       }
 
@@ -416,25 +440,30 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
    // sort reqs by wallets
    const auto &parsedReqsForWallets = std::make_shared<std::unordered_map<std::string, std::vector<bs::core::wallet::TXSignRequest>>>(); // <wallet_id, reqList>
-   const auto walletsMgr = adapter_->getWalletsManager();
+   //const auto walletsMgr = adapter_->getWalletsManager();
    for (const auto &req : parsedReqs) {
       if (!req.prevStates.empty()) {
          invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Transaction already signed"));
          return;
       }
-      const auto &wallet = walletsMgr->getWalletById(req.walletId);
-      if (!wallet) {
-         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to find wallet with ID %1").arg(QString::fromStdString(req.walletId)));
+      if (req.walletIds.empty()) {
+         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Missing wallet ID[s] in request"));
+         return;
+      }
+      const auto rootWallet = walletsMgr_->getHDRootForLeaf(req.walletIds.front());
+      if (!rootWallet) {
+         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to find root wallet for ID %1")
+            .arg(QString::fromStdString(req.walletIds.front())));
          return;
       }
 
-      parsedReqsForWallets->operator[](req.walletId).push_back(req);
+      parsedReqsForWallets->operator[](rootWallet->walletId()).push_back(req);
    }
 
    // sign reqs by wallets
    const auto &requestCbs = std::make_shared<std::vector<std::function<void()>>>();
 
-   for (const auto req : *parsedReqsForWallets) {
+   for (const auto &req : *parsedReqsForWallets) {
       const auto &walletCb = [this, fileName, jsCallback, requestCbs, walletId=req.first, reqs=req.second]() {
 
          const auto &cb = new bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>
@@ -497,16 +526,16 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
 
          // TODO: send to qml list of txInfo
-         bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(reqs[0]);
+         bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(reqs[0], walletsMgr_, logger_);
          QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
          bs::sync::PasswordDialogData *dialogData = new bs::sync::PasswordDialogData();
          QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
+         dialogData->setValue(bs::sync::PasswordDialogData::Title, tr("Sign Offline TX"));
 
          bs::hd::WalletInfo *walletInfo = adapter_->qmlFactory()->createWalletInfo(walletId);
 
          adapter_->qmlBridge()->invokeQmlMethod("createTxSignDialog", cb
-                                                , tr("Sign Offline TX")
                                                 , QVariant::fromValue(txInfo)
                                                 , QVariant::fromValue(dialogData)
                                                 , QVariant::fromValue(walletInfo));
@@ -548,21 +577,9 @@ QString WalletsProxy::defaultBackupLocation() const
       QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
-void WalletsProxy::createWallet(bool isPrimary
-                                , bs::wallet::QSeed *seed
-                                , bs::hd::WalletInfo *walletInfo
-                                , bs::wallet::QPasswordData *passwordData
-                                , const QJSValue &jsCallback)
+void WalletsProxy::createWallet(bool isPrimary, bs::wallet::QSeed *seed, bs::hd::WalletInfo *walletInfo
+   , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
-   if (!walletsMgr_) {
-      emit walletError({}, tr("Wallets manager is missing"));
-      return;
-   }
-   if (seed->networkType() == bs::wallet::QSeed::Invalid) {
-      emit walletError({}, tr("Failed to create wallet with invalid seed"));
-      return;
-   }
-
    auto cb = [this, jsCallback] (bs::error::ErrorCode errorCode) {
       QMetaObject::invokeMethod(this, [this, errorCode, jsCallback] {
          QJSValueList args;
@@ -572,8 +589,21 @@ void WalletsProxy::createWallet(bool isPrimary
       });
    };
 
+   if (!walletsMgr_) {
+      QMetaObject::invokeMethod(this, [this, jsCallback] {
+         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << QJSValue(tr("Internal error")));
+      });
+      return;
+   }
+   if (seed->networkType() == bs::wallet::QSeed::Invalid) {
+      QMetaObject::invokeMethod(this, [this, jsCallback] {
+         invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << QJSValue(tr("Failed to create wallet with invalid seed")));
+      });
+      return;
+   }
+
    adapter_->createWallet(walletInfo->name().toStdString(), walletInfo->desc().toStdString()
-      , *seed, isPrimary, { *passwordData }, { 1, 1 }, cb);
+      , *seed, isPrimary, *passwordData, cb);
 }
 
 void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallback)
@@ -591,11 +621,11 @@ void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallb
 std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sync::WatchingOnlyWallet &wo) const
 {
    try {
-      auto result = std::make_shared<bs::sync::hd::Wallet>(wo.id, wo.name, wo.description, logger_);
+      auto result = std::make_shared<bs::sync::hd::Wallet>(wo, nullptr, logger_);
       for (const auto &groupEntry : wo.groups) {
          auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type), false);
          for (const auto &leafEntry : groupEntry.leaves) {
-            group->createLeaf(leafEntry.index, leafEntry.id);
+            group->createLeaf(leafEntry.path, leafEntry.id);
          }
       }
       return result;
@@ -603,6 +633,21 @@ std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sy
       logger_->error("[WalletsProxy] WO-wallet creation failed: {}", e.what());
    }
    return nullptr;
+}
+
+std::function<void (bs::error::ErrorCode result)> WalletsProxy::createChangePwdResultCb(const QString &walletId, const QJSValue &jsCallback)
+{
+   return [this, walletId, jsCallback](bs::error::ErrorCode result) {
+        QMetaObject::invokeMethod(this, [this, jsCallback, result] {
+           invokeJsCallBack(jsCallback, QJSValueList()
+              << QJSValue(result == bs::error::ErrorCode::NoError)
+              << QJSValue(bs::error::ErrorCodeToString(result)));
+        });
+
+        if (result == bs::error::ErrorCode::NoError) {
+           onWalletsChanged();
+        }
+     };
 }
 
 void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsCallback)

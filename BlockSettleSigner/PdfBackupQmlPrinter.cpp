@@ -10,6 +10,8 @@
 #include <QFileDialog>
 #include <QDesktopServices>
 
+#include "PaperBackupWriter.h"
+
 //
 // QmlPdfBackup
 //
@@ -28,7 +30,7 @@ QmlPdfBackup::QmlPdfBackup(QQuickItem *parent)
 
 void QmlPdfBackup::onWidthChanged()
 {
-   emit preferedHeightChanged();
+   emit preferredHeightForWidthChanged();
 }
 
 void QmlPdfBackup::onSeedChanged()
@@ -79,7 +81,7 @@ void QmlPdfBackup::paint(QPainter *painter)
    pdf_->draw(*painter, windowWidth, windowHeight);
 }
 
-qreal QmlPdfBackup::preferedHeight() const
+qreal QmlPdfBackup::preferredHeightForWidth() const
 {
    return (width() * kTotalHeightInches / kTotalWidthInches);
 }

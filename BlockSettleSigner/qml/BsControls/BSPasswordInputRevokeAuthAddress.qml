@@ -11,12 +11,13 @@ import "../BsStyles"
 
 BSPasswordInput {
     id: root
+    width: 450
 
     property WalletInfo walletInfo: WalletInfo{}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
 
-    title: qsTr("CREATE SUB-WALLET")
-    autheIDSignType: AutheIDClient.SubmitEquityToken
+    title: passwordDialogData.Title
+    autheIDSignType: AutheIDClient.RevokeAuthAddress
 
     CustomHeader {
         text: qsTr("Wallet Details")
@@ -68,7 +69,7 @@ BSPasswordInput {
     }
 
     CustomHeader {
-        text: qsTr("PRIVATE MARKET PRODUCT")
+        text: qsTr("Revoke Details")
         Layout.fillWidth: true
         Layout.preferredHeight: 25
         Layout.topMargin: 5
@@ -87,11 +88,11 @@ BSPasswordInput {
             Layout.preferredWidth: 110
             Layout.maximumWidth: 110
             Layout.fillWidth: true
-            text: qsTr("Ticker")
+            text: qsTr("Address")
         }
         CustomLabel {
             Layout.fillWidth: true
-            text: passwordDialogData.Product
+            text: passwordDialogData.AuthAddress
         }
     }
 }

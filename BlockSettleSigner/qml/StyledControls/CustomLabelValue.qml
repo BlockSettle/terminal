@@ -3,10 +3,10 @@ import QtQuick.Controls 2.3
 import "../BsStyles"
 
 Label {
-    font.pixelSize: 12
+    font.pixelSize: 11
     color: "white"
     wrapMode: Text.WordWrap
-    padding: 5
+    topPadding: 5
+    bottomPadding: 5
     onLinkActivated: Qt.openUrlExternally(link)
 }
-

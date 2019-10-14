@@ -51,26 +51,29 @@ public:
 
    std::shared_ptr<bs::sync::WalletsManager> getWalletsManager();
    void reloadWallets(const QString &, const std::function<void()> &);
+   void updateWallet(const std::string &walletId);
 
    void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
 
    using ResultCb = std::function<void(bool, const std::string&)>;
    void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
-      , bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
-      , bs::wallet::KeyRank keyRank, const std::function<void(bs::error::ErrorCode)> &cb);
+      , bool primary, const bs::wallet::PasswordData &pwdData
+      , const std::function<void(bs::error::ErrorCode)> &cb);
 
    using CreateWoCb = std::function<void(const bs::sync::WatchingOnlyWallet &)>;
    void importWoWallet(const std::string &filename, const BinaryData &content, const CreateWoCb &cb);
+
+   using ExportWoCb = std::function<void(const BinaryData &content)>;
+   void exportWoWallet(const std::string &rootWalletId, const ExportWoCb &cb);
 
    void deleteWallet(const std::string &rootWalletId, const std::function<void(bool, const std::string&)> &cb);
 
    void syncSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &);
 
    void changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
-      , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
-      , bool addNew, bool removeOld, bool dryRun
-      , const std::function<void(bool)> &);
+      , const bs::wallet::PasswordData &oldPass, bool addNew, bool removeOld
+      , const std::function<void(bs::error::ErrorCode errorCode)> &);
 
    void signOfflineTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &);
@@ -105,7 +108,7 @@ signals:
    void headlessBindUpdated(bs::signer::BindStatus status) const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
-   void cancelTxSign(const BinaryData &txHash);
+   void cancelTxSign(const BinaryData &txId);
    void txSigned(const BinaryData &);
    void xbtSpent(const qint64 value, bool autoSign);
    void autoSignActivated(const std::string &walletId);
@@ -115,6 +118,7 @@ signals:
    void headlessPubKeyChanged(const QString &headlessPubKey) const;
    void terminalHandshakeFailed(const std::string &peerAddress);
    void signerPubKeyUpdated(const BinaryData &pubKey) const;
+   void ccInfoReceived(bool) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

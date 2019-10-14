@@ -34,6 +34,8 @@
 #include "QMLApp.h"
 #include "QmlBridge.h"
 
+#include "AppNap.h"
+
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
@@ -106,6 +108,10 @@ namespace bs {
                   return EXIT_FAILURE;
                }
 #endif   //NDEBUG
+
+               QMetaObject::invokeMethod(qApp, [] {
+                  QApplication::quit();
+               });
             });
          }
 
@@ -278,6 +284,9 @@ static int QMLApp(int argc, char **argv
       }
       qmlAppObj.SetRootObject(engine.rootObjects().at(0));
       qmlBridge->setRootQmlObj(engine.rootObjects().at(0));
+
+      bs::disableAppNap();
+
       return app.exec();
    } catch (const std::exception &e) {
       logger->critical("Failed to start signer: {}", e.what());

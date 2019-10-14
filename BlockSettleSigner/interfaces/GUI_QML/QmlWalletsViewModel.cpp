@@ -3,7 +3,6 @@
 #include <QTreeView>
 #include <QSortFilterProxyModel>
 #include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 
@@ -113,11 +112,6 @@ public:
    QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet, bool isWO
       , int row, QmlWalletNode *parent)
       : QmlWalletRootNode(vm, wallet->shortName(), wallet->description(), Type::Leaf, isWO, row, parent)
-      , wallet_(wallet)
-   { }
-   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::SettlementWallet> &wallet
-      , int row, QmlWalletNode *parent)
-      : QmlWalletRootNode(vm, "Settlement", "Settlement wallet", Type::Leaf, false, row, parent)
       , wallet_(wallet)
    { }
 
@@ -335,7 +329,7 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
          if (hdWallet->encryptionTypes().empty()) {
             return tr("No");
          }
-         else if (hdWallet->encryptionRank().second <= 1) {
+         else if (hdWallet->encryptionRank().m <= 1) {
             switch (hdWallet->encryptionTypes()[0]) {
             case bs::wallet::EncryptionType::Password:   return tr("Password");
             case bs::wallet::EncryptionType::Auth:   return tr("Auth eID");
@@ -343,7 +337,7 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
             }
          }
          else {
-            return tr("%1 of %2").arg(hdWallet->encryptionRank().first).arg(hdWallet->encryptionRank().second);
+            return tr("%1 of %2").arg(hdWallet->encryptionRank().m).arg(hdWallet->encryptionRank().n);
          }
       case RootWalletIdRole:  return hdWallet ? QString::fromStdString(hdWallet->walletId()) : QString();
       case IsHDRootRole:   return ((node->type() == QmlWalletNode::Type::WalletPrimary)

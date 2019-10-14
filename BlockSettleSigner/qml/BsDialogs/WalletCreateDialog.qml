@@ -20,6 +20,7 @@ CustomTitleDialogWindow {
     id: root
 
     property bool primaryWalletExists: walletsProxy.primaryWalletExists
+    property bool hasCCInfoLoaded: walletsProxy.hasCCInfo
 
     property int inputLabelsWidth: 110
 
@@ -33,7 +34,7 @@ CustomTitleDialogWindow {
     title: qsTr("Manage encryption")
 
     Component.onCompleted: {
-        if (!primaryWalletExists) {
+        if (!primaryWalletExists && hasCCInfoLoaded) {
             cbPrimary.checked = true
             tfName.text = qsTr("Primary Wallet");
         }
@@ -137,12 +138,21 @@ CustomTitleDialogWindow {
             Layout.leftMargin: 10
             Layout.rightMargin: 10
 
+            CustomLabel {
+                Layout.minimumWidth: inputLabelsWidth
+                Layout.preferredWidth: inputLabelsWidth
+                Layout.maximumWidth: inputLabelsWidth
+                Layout.fillWidth: true
+                text: qsTr("Primary Wallet")
+            }
+
             CustomCheckBox {
                 id: cbPrimary
                 Layout.fillWidth: true
-                Layout.leftMargin: inputLabelsWidth + 5
+                //Layout.leftMargin: inputLabelsWidth + 5
                 text: qsTr("Primary Wallet")
-                checked: !primaryWalletExists
+                checked: !primaryWalletExists && hasCCInfoLoaded
+                enabled: hasCCInfoLoaded
 
                 ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
                 ToolTip.delay: 150
@@ -161,42 +171,6 @@ CustomTitleDialogWindow {
                         tfName.text = walletsProxy.generateNextWalletName();
                     }
                 }
-            }
-        }
-        RowLayout {
-            spacing: 5
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-
-            CustomLabel {
-                Layout.minimumWidth: inputLabelsWidth
-                Layout.preferredWidth: inputLabelsWidth
-                Layout.maximumWidth: inputLabelsWidth
-                Layout.fillWidth: true
-                text: qsTr("Private Market\nLeafs")
-            }
-            CustomLabel {
-                Layout.fillWidth: true
-                text: qsTr("Status")
-            }
-        }
-        RowLayout {
-            spacing: 5
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-
-            CustomLabel {
-                Layout.minimumWidth: inputLabelsWidth
-                Layout.preferredWidth: inputLabelsWidth
-                Layout.maximumWidth: inputLabelsWidth
-                Layout.fillWidth: true
-                text: qsTr("Authentication\nStatus")
-            }
-            CustomLabel {
-                Layout.fillWidth: true
-                text: qsTr("Status")
             }
         }
 
@@ -326,6 +300,7 @@ CustomTitleDialogWindow {
                     walletInfo.desc = tfDesc.text
                     walletInfo.walletId = seed.walletId
                     walletInfo.rootId = seed.walletId
+                    walletInfo.encType = QPasswordData.Password
 
                     var createCallback = function(success, errorMsg) {
                         if (success) {
@@ -339,7 +314,8 @@ CustomTitleDialogWindow {
 
                     if (rbPassword.checked) {
                         // auth password
-                        var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInputConfirm.qml").createObject(mainWindow);
+                        var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInputConfirm.qml").createObject(mainWindow,
+                           {"walletInfo": walletInfo})
                         checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
                         checkPasswordDialog.open()
                         checkPasswordDialog.bsAccepted.connect(function(){

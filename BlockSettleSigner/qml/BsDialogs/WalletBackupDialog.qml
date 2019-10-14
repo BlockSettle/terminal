@@ -17,7 +17,9 @@ import "../js/helper.js" as JsHelper
 CustomTitleDialogWindow {
     id: root
 
-    property WalletInfo walletInfo: WalletInfo{}
+    property AuthSignWalletObject authSign: AuthSignWalletObject {}
+    property WalletInfo walletInfo: WalletInfo {}
+
     property string targetFile: qmlAppObj.getUrlPath(StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + backupFileName)
 
     property string backupFileExt: "." + (isPrintable ? "pdf" : "wdb")
@@ -35,6 +37,8 @@ CustomTitleDialogWindow {
     property bool fullBackupMode: tabBar.currentIndex === 0
     property bool woBackupAllowed: true
 
+    property bool isWoWallet: false
+
     width: 400
     height: 495
 
@@ -48,7 +52,7 @@ CustomTitleDialogWindow {
         // need to update object since bindings working only for basic types
         walletDetailsFrame.walletInfo = walletInfo
         if (walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)) {
-            fullBackupTabButton.enabled = false
+            isWoWallet = true
             tabBar.currentIndex = 1
         }
     }
@@ -77,7 +81,7 @@ CustomTitleDialogWindow {
                 text: "Full"
                 cText.font.capitalization: Font.MixedCase
                 implicitHeight: 35
-                enabled: !walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)
+                enabled: !isWoWallet
             }
             CustomTabButton {
                 id: woBackupTabButton
@@ -238,9 +242,15 @@ CustomTitleDialogWindow {
                         passwordData.textPassword = walletDetailsFrame.password
 
                         if (fullBackupMode) {
-                            walletsProxy.backupPrivateKey(walletInfo.walletId
+                            rc = walletsProxy.backupPrivateKey(walletInfo.walletId
                                , targetFile, isPrintable
                                , passwordData, exportCallback)
+                            if (! rc) {
+                                JsHelper.messageBox(BSMessageBox.Type.Critical
+                                    , qsTr("Error")
+                                    , qsTr("Wallet export failed")
+                                    , qsTr("Internal error"))
+                            }
                         }
                         else {
                             walletsProxy.exportWatchingOnly(walletInfo.walletId

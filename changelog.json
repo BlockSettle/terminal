@@ -1,7 +1,505 @@
 {
-   "latest_version": "0.20.0",
-   "release_date": "12 Aug 2019",
+   "latest_version": "0.23.7",
+   "release_date": "14 Oct 2019",
    "changes": [
+      {
+         "version_string": "0.23.7",
+         "previous_version": "0.23.6",
+         "release_date": "14 Oct 2019",
+         "release_type": "prod",
+         "improvements": [
+            "Password dialog timers"
+         ],
+         "bug_fixes": [
+            "Fix xbt amounts (#1479)"
+         ],
+         "revision": "13aee34b",
+         "common_revision": "ce6c0f34"
+      },
+      {
+         "version_string": "0.23.6",
+         "previous_version": "0.23.5",
+         "release_date": "10 Oct 2019",
+         "release_type": "dev",
+         "improvements": [],
+         "bug_fixes": [
+            "Fix for inputs from multiple wallets ( BST-2274 )",
+            "Fee estimate fixes",
+            "Update auth eID error"
+         ],
+         "revision": "59b7e944",
+         "common_revision": "e223b878"
+      },
+      {
+         "version_string": "0.23.5",
+         "previous_version": "0.23.4",
+         "release_date": "09 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Changed conf target for CC leaves to 1 (BST-2253)",
+            "Use non-blocking TransactionData::GetFallbackRecvAddress (#1451)"
+         ],
+         "bug_fixes": [
+            "Fix RBF inputs for concurrent ZCs and ZC invalidation ( BST-2269 )",
+            "Fix for auto-sign"
+         ],
+         "revision": "cd08091a",
+         "common_revision": "f1c89612"
+      },
+      {
+         "version_string": "0.23.4",
+         "previous_version": "0.23.3",
+         "release_date": "08 Oct 2019",
+         "release_type": "dev",
+         "improvements": [],
+         "bug_fixes": [
+            "Fix offline TX signing with multi-wallet inputs ( BST-2250 )",
+            "Fix deadlocks in RFQDealerReply (#1447)",
+            "UI fixes"
+         ],
+         "revision": "94e178d7",
+         "common_revision": "57923a55"
+      },
+      {
+         "version_string": "0.23.3",
+         "previous_version": "0.23.2",
+         "release_date": "07 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Populate trades blotter from genoa",
+            "Fix settlement sign closing if any side cancels for OTC",
+            "Remove unnecessary log (#1433)"
+         ],
+         "bug_fixes": [],
+         "revision": "06500c4d",
+         "common_revision": "e5ed47f3"
+      },
+      {
+         "version_string": "0.23.2",
+         "previous_version": "0.23.1",
+         "release_date": "03 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Ui fixes"
+         ],
+         "bug_fixes": [],
+         "revision": "ec036852",
+         "common_revision": "c451f833"
+      },
+      {
+         "version_string": "0.23.1",
+         "previous_version": "0.23.0",
+         "release_date": "03 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Allow cancel OTC sign request (#1415)",
+            "Detect PB timeouts from OtcClient",
+            "LedgerEntry addresses support"
+         ],
+         "bug_fixes": [
+            "Signer ui fixes",
+            "Fixed signing for multi-wallet inputs TX",
+            "Fix for auth revoke signing",
+            "Fix for otc settlement pw input dialog (#1416)",
+            "Small OTC fixes (#1420)"
+         ],
+         "revision": "4d9a3690",
+         "common_revision": "ed95d9fb"
+      },
+      {
+         "version_string": "0.23.0",
+         "previous_version": "0.22.6",
+         "release_date": "01 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Broadcast XBT transactions via PB"
+         ],
+         "bug_fixes": [
+            "Fix for TX list conf count after ZC is confirmed ( BST-2168 )"
+         ],
+         "revision": "691105a2",
+         "common_revision": "76393934"
+      },
+      {
+         "version_string": "0.22.6",
+         "previous_version": "0.22.5",
+         "release_date": "30 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Public OTC fixes"
+         ],
+         "bug_fixes": [
+            "Fix wrong auth address retrieval for requester"
+         ],
+         "revision": "033bc25f",
+         "common_revision": "2df9bf61"
+      },
+      {
+         "version_string": "0.22.5",
+         "previous_version": "0.22.4",
+         "release_date": "27 Sep 2019",
+         "release_type": "dev",
+         "improvements": [],
+         "bug_fixes": [
+            "Fix chat public keys",
+            "Fix Max button for OTC",
+            "Fix public OTC",
+            "Copy nested SW fix from RFQDealerReply to OTC (#1402)"
+         ],
+         "revision": "10d4b334",
+         "common_revision": "7fd4c77d"
+      },
+      {
+         "version_string": "0.22.4",
+         "previous_version": "0.22.3",
+         "release_date": "26 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Enable LTO for release builds",
+            "Auth eid wallet encryption ui fixes (#406)",
+            "PasswordDialogData refactoring (#405)",
+            "Share wallet logic between OTC and RFQ UI",
+            "TXId for unsigned TX for dealer's pay-in ( BST-2238 )",
+            "PasswordDialogData refactoring (#1392)",
+            "Public OTC (#1387)"
+         ],
+         "bug_fixes": [
+            "Fixes for P2P OTC"
+         ],
+         "revision": "435c4bec",
+         "common_revision": "48420287"
+      },
+      {
+         "version_string": "0.22.3",
+         "previous_version": "0.22.2",
+         "release_date": "25 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Disable AppNap on macOS"
+         ],
+         "bug_fixes": [
+            "Fix minor OTC bugs"
+         ],
+         "revision": "1e54c834",
+         "common_revision": "c9d33219"
+      },
+      {
+         "version_string": "0.22.2",
+         "previous_version": "0.22.1",
+         "release_date": "24 Sep 2019",
+         "release_type": "dev",
+         "improvements": [],
+         "bug_fixes": [
+            "Fix armory confirmations (#1389)",
+            "Fix wallets sync (#1386)"
+         ],
+         "revision": "4d3eeb0a",
+         "common_revision": "e872af5a"
+      },
+      {
+         "version_string": "0.22.1",
+         "previous_version": "0.22.0",
+         "release_date": "23 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Make release build with debug info",
+            "Fix for invalid topBlock values",
+            "Updated Armory code to the latest dev"
+         ],
+         "bug_fixes": [],
+         "revision": "6b5ee7cc",
+         "common_revision": "1223b749"
+      },
+      {
+         "version_string": "0.22.0",
+         "previous_version": "0.21.8",
+         "release_date": "21 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "1-of-N encryption"
+         ],
+         "bug_fixes": [],
+         "revision": "1f8daaa7",
+         "common_revision": "e1c63957"
+      },
+      {
+         "version_string": "0.21.8",
+         "previous_version": "0.21.7",
+         "release_date": "19 Sep 2019",
+         "release_type": "dev",
+         "improvements": [],
+         "bug_fixes": [
+            "Settlement dialogs fixes"
+         ],
+         "revision": "82612fcb",
+         "common_revision": "064e542c"
+      },
+      {
+         "version_string": "0.21.7",
+         "previous_version": "0.21.6",
+         "release_date": "18 Sep 2019",
+         "release_type": "dev",
+         "improvements": [],
+         "bug_fixes": [
+            "Fix crash on start"
+         ],
+         "revision": "9b1aa8b4",
+         "common_revision": "87cac8e7"
+      },
+      {
+         "version_string": "0.21.6",
+         "previous_version": "0.21.5",
+         "release_date": "18 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Balance update fixes (BST-2209)",
+            "Settlement dialogs fixes (#1344)"
+         ],
+         "bug_fixes": [],
+         "revision": "f121ad84",
+         "common_revision": "9964ffaa"
+      },
+      {
+         "version_string": "0.21.5",
+         "previous_version": "0.21.4",
+         "release_date": "18 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix signer UI resizing",
+            "Otc fixes 2 (#1365)"
+         ],
+         "bug_fixes": [],
+         "revision": "6adb4737",
+         "common_revision": "2ec1671e"
+      },
+      {
+         "version_string": "0.21.4",
+         "previous_version": "0.21.3",
+         "release_date": "17 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "P2P OTC updates (#1354)",
+            "Sync newly created address with signer immediately (BST-2244)"
+         ],
+         "bug_fixes": [],
+         "revision": "dd75eaee",
+         "common_revision": "67489ecf"
+      },
+      {
+         "version_string": "0.21.3",
+         "previous_version": "0.21.1",
+         "release_date": "12 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "multiple user revoke fixes (bst-2236)",
+            "Chat remove user (#1347)",
+            "Remove existing party with rejected state if new party request is received from this same user. (#1339)"
+         ],
+         "bug_fixes": [],
+         "revision": "1094fdb8",
+         "common_revision": "6eee3613"
+      },
+      {
+         "version_string": "0.21.1",
+         "previous_version": "0.21.0",
+         "release_date": "11 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "WalletNewSeedDialog.qml rework (#382)",
+            "Keep private messages after relogin (#1341)",
+            "Perform actual counterparty's auth address validation (BST-2223)"
+         ],
+         "bug_fixes": [
+            "Various fixes if RBF or CPFP inputs go from different leaves (BST-2235)",
+            "Don't allow chat display name to contains only whitespaces (#1342)",
+            "Fix max payin fees estimation (#1334)",
+            "Dealer reply fixes (#1331)",
+            "Fix reject sign awaiting in terminal when closing signer dialog"
+         ],
+         "revision": "4d9351b2",
+         "common_revision": "ff899991"
+      },
+      {
+         "version_string": "0.21.0",
+         "previous_version": "0.20.10",
+         "release_date": "09 Sep 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Auth Address Validation",
+            "Wallets selection updates (#1328)",
+            "Require settlement leaf existence before auth address submission (BST-2176)"
+         ],
+         "bug_fixes": [
+            "Small fix for WalletInfo class (#1316)"
+         ],
+         "revision": "b1eb573f",
+         "common_revision": "eae06ec5"
+      },
+      {
+         "version_string": "0.20.10",
+         "previous_version": "0.20.9",
+         "release_date": "29 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Show auth address in settlement window"
+         ],
+         "bug_fixes": [
+            "Fix wallet promotion procedure (BST-2172)",
+            "fix for settlement leaves creation at auth leaf creation",
+            "Fix CC fees"
+         ],
+         "revision": "50115148",
+         "common_revision": "fcacebbc"
+      },
+      {
+         "version_string": "0.20.9",
+         "previous_version": "0.20.8",
+         "release_date": "28 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Settlement leaves auto-creation (BST-2165)"
+         ],
+         "bug_fixes": [
+            "Fix race in CacheFile",
+            "Fix data race with InprocSigner"
+         ],
+         "revision": "4cdf52d9",
+         "common_revision": "b001fc16"
+      },
+      {
+         "version_string": "0.20.8",
+         "previous_version": "0.20.7",
+         "release_date": "27 Aug 2019",
+         "release_type": "dev",
+         "improvements": [],
+         "bug_fixes": [
+            "Fix shortcuts crash when chat widget selected",
+            "XBT Settlement/password dialogs fixes",
+            "headless password dialogs queue fixes (#1296)"
+         ],
+         "revision": "145358cb",
+         "common_revision": "1e07ae92"
+      },
+      {
+         "version_string": "0.20.7",
+         "previous_version": "0.20.6",
+         "release_date": "26 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Log connected signer client id in HEX",
+            "OTC fixes",
+            "Allow change address from different leaf (BST-2144)",
+            "Fix auth leaf auto-creation (BST-2163)",
+            "Create auth leaf at initial primary wallet creation (BST-2162)"
+         ],
+         "bug_fixes": [],
+         "revision": "1d608e2e",
+         "common_revision": "5a8631d7"
+      },
+      {
+         "version_string": "0.20.6",
+         "previous_version": "0.20.5",
+         "release_date": "23 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix for pay-out tx dialog",
+            "Fix for wrong password at wallet export ( BST-2146 )",
+            "Signer pw dialog updates",
+            "Avoid double password prompt for settlement leaf creation ( BST-2161 )",
+            "Update sync wallets after promotion ( BST-2160 )",
+            "Implement OTC p2p side",
+            "Fix for wallet password change ( BST-2153 )",
+            "Fix for crash on start",
+            "Signer pw dialog updates"
+         ],
+         "bug_fixes": [
+            "Sell XBT fixed",
+            "CC BUY fixed",
+            "Fix progress bar for quotes on dealing tab"
+         ],
+         "revision": "590b33ec",
+         "common_revision": "cce3d18f"
+      },
+      {
+         "version_string": "0.20.5",
+         "previous_version": "0.20.4",
+         "release_date": "21 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Add promote hd wallet sign dialog (#362)",
+            "improved wallet promotion in signer ( BST-2088 )",
+            "Add new dialog for HD wallet Promotion (#1277)",
+            "Do not prompt for password re-exporting WO wallet"
+         ],
+         "bug_fixes": [
+            "CCTokenEntryDialog fix (#1279)"
+         ],
+         "revision": "7124f1f1",
+         "common_revision": "8af26119"
+      },
+      {
+         "version_string": "0.20.4",
+         "previous_version": "0.20.3",
+         "release_date": "17 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Single leaf per address type",
+            "Hide settlement wallet from generate address dialog"
+         ],
+         "bug_fixes": [
+            "Auto-sign fixes (#1266)",
+            "Fix rare \"fee relay not met\" error",
+            "Fix CC buy RFQ",
+            "Fix payout fees estimation (#1264)",
+            "Fix WO to WO export"
+         ],
+         "revision": "e34669eb",
+         "common_revision": "fdd5b727"
+      },
+      {
+         "version_string": "0.20.3",
+         "previous_version": "0.20.2",
+         "release_date": "15 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix signed TX import",
+            "Fix wrong WO flag if replaced with full wallet",
+            "Do not allow WO to be primary ( BST-2065 )"
+         ],
+         "bug_fixes": [],
+         "revision": "261669bb",
+         "common_revision": "4c085e14"
+      },
+      {
+         "version_string": "0.20.2",
+         "previous_version": "0.20.1",
+         "release_date": "14 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Minor text fixes on shields",
+            "Update inputs sort order in Coin Control ( BST-2078 )"
+         ],
+         "bug_fixes": [
+            "Fix CC balance on start"
+         ],
+         "revision": "678bb5f5",
+         "common_revision": "7ed25556"
+      },
+      {
+         "version_string": "0.20.1",
+         "previous_version": "0.20.0",
+         "release_date": "13 Aug 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix light GUI signer quit",
+            "Revert \"Add shield to dealing tab (#1243)\"",
+            "Update wallet file names",
+            "Propagate the CC info flag to signer UI ( BST-2088 )"
+         ],
+         "bug_fixes": [],
+         "revision": "ad74f3ce",
+         "common_revision": "64b4dac1"
+      },
       {
          "version_string": "0.20.0",
          "previous_version": "0.19.11",

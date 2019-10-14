@@ -53,11 +53,17 @@ function raiseWindow(w) {
 }
 
 function hideWindow(w) {
+    if ( w.hasOwnProperty("currentDialog") &&
+            (typeof w.currentDialog.rejectAnimated === "function")) {
+        w.currentDialog.rejectAnimated();
+        return;
+    }
+
     w.hide()
 }
 
 function requesteIdAuth (requestType, walletInfo, onSuccess) {
-    var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo)
+    var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo, authSign.defaultExpiration() - authSign.networkDelayFix())
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
     authProgress.email = walletInfo.email()
@@ -227,10 +233,13 @@ function isSelectedWalletHdRoot(walletsView) {
 function customDialogRequest(dialogName, data) {
     // TODO: send initial values (qmlTitleVisible) in createObject params map
     let dlg = eval(dialogName)(data)
+    // NOTE: activateAutoSignDialog won't return dialog
     return dlg
 }
 
 function evalWorker(method, cppCallback, argList) {
+    console.log("helper.js evalWorker call: " + method)
+
     let jsCallback = function(cbArg0, cbArg1, cbArg2, cbArg3, cbArg4, cbArg5, cbArg6, cbArg7){
         let cbArgList = new Array(7)
 
@@ -243,7 +252,9 @@ function evalWorker(method, cppCallback, argList) {
         if (typeof cbArg6 !== 'undefined') cbArgList[6] = cbArg6
         if (typeof cbArg7 !== 'undefined') cbArgList[7] = cbArg7
 
-        cppCallback.exec(cbArgList)
+        if (cppCallback) {
+            cppCallback.exec(cbArgList)
+        }
     }
 
     let val0 = argList[0];
@@ -268,10 +279,20 @@ function evalWorker(method, cppCallback, argList) {
     else                                  eval(method)()
 }
 
+function prepareDialog(dialog) {
+    if (isLiteMode()) {
+        prepareLiteModeDialog(dialog)
+    }
+    else {
+        prepareFullModeDialog(dialog)
+    }
+}
+
 function prepareLiteModeDialog(dialog) {
     if (!isLiteMode()) {
         return
     }
+    console.log("Prepare qml lite dialog")
 
     // close previous dialog
     if (currentDialog && typeof currentDialog.close !== "undefined") {
@@ -284,10 +305,9 @@ function prepareLiteModeDialog(dialog) {
 //        dialog.qmlTitleVisible = false
 //    }
 
-    mainWindow.width = dialog.width
-    mainWindow.height = dialog.height
     mainWindow.moveMainWindowToScreenCenter()
-    //mainWindow.title = dialog.title
+    mainWindow.resizeAnimated(dialog.width, dialog.height)
+
     mainWindow.title = qsTr("BlockSettle Signer")
 
     dialog.dialogsChainFinished.connect(function(){ hide() })
@@ -296,26 +316,44 @@ function prepareLiteModeDialog(dialog) {
 //            nextDialog.qmlTitleVisible = false
 //        }
 
-        mainWindow.width = nextDialog.width
-        mainWindow.height = nextDialog.height
         mainWindow.moveMainWindowToScreenCenter()
+        mainWindow.resizeAnimated(nextDialog.width, nextDialog.height)
 
         nextDialog.sizeChanged.connect(function(w, h){
-            mainWindow.width = w
-            mainWindow.height = h
             mainWindow.moveMainWindowToScreenCenter()
+            mainWindow.resizeAnimated(w, h)
         })
     })
 
     dialog.sizeChanged.connect(function(w, h){
-        console.log("dialog.sizeChanged " + w + " " + h)
-        mainWindow.width = w
-        mainWindow.height = h
+        // console.log("helper.js dialog.sizeChanged " + w + " " + h)
         mainWindow.moveMainWindowToScreenCenter()
+        mainWindow.resizeAnimated(w, h)
     })
     raiseWindow(mainWindow)
 }
 
+function prepareFullModeDialog(dialog) {
+    if (isLiteMode()) {
+        return
+    }
+    console.log("Prepare qml full dialog")
+    raiseWindow(mainWindow)
+
+    let maxW = Math.max(dialog.width, mainWindow.width)
+    let maxH = Math.max(dialog.height, mainWindow.height)
+    if (maxW !== mainWindow.width || maxH !== mainWindow.height) {
+        mainWindow.resizeAnimated(maxW, maxH)
+    }
+
+    dialog.sizeChanged.connect(function(w, h){
+        let maxW = Math.max(w, mainWindow.width)
+        let maxH = Math.max(h, mainWindow.height)
+        if (maxW !== mainWindow.width || maxH !== mainWindow.height) {
+            mainWindow.resizeAnimated(maxW, maxH)
+        }
+    })
+}
 
 function createNewWalletDialog(data) {
     var newSeed = qmlFactory.createSeed(signerSettings.testNet)
@@ -379,90 +417,239 @@ function manageEncryptionDialog(data) {
 
 function activateAutoSignDialog(data) {
     var walletId = data["rootId"]
-    signerSettings.autoSignWallet = walletId
-    signerStatus.activateAutoSign(walletId)
+    var enable = data["enable"]
+    tryChangeAutoSign(enable, walletId, false)
 }
 
-function createTxSignDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
+function tryActivateAutoSign(walletInfo, showResult) {
+    var autoSignCallback = function(success, errorMsg) {
+        if (!showResult) {
+            return
+        }
+
+        if (success) {
+            JsHelper.messageBox(BSMessageBox.Type.Success
+                , qsTr("Wallet Auto Sign")
+                , qsTr("Auto Signing enabled for wallet %1").arg(walletInfo.rootId))
+        } else {
+            JsHelper.messageBox(BSMessageBox.Type.Critical
+                , qsTr("Wallet Auto Sign")
+                , qsTr("Failed to enable auto signing.")
+                , errorString)
+        }
+    }
+
+    var passwordDialog = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
+        , {"walletInfo": walletInfo});
+
+    prepareDialog(passwordDialog)
+    passwordDialog.open()
+    passwordDialog.init()
+
+    passwordDialog.bsAccepted.connect(function() {
+        var passwordData = qmlFactory.createPasswordData()
+        passwordData.encType = QPasswordData.Password
+        passwordData.encKey = ""
+        passwordData.textPassword = passwordDialog.enteredPassword
+
+        signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
+    })
+}
+
+function tryDeactivateAutoSign(walletInfo, showResult) {
+    var autoSignDisableCallback = function(success, errorMsg) {
+        if (!showResult) {
+            return
+        }
+
+        if (success) {
+            JsHelper.messageBox(BSMessageBox.Type.Success
+                , qsTr("Wallet Auto Sign")
+                , qsTr("Auto Signing disabled for wallet %1")
+                    .arg(walletInfo.rootId))
+        }
+        else {
+            JsHelper.messageBox(BSMessageBox.Type.Critical
+                , qsTr("Wallet Auto Sign")
+                , qsTr("Failed to disable auto signing.")
+                , errorString)
+        }
+    }
+
+    signerStatus.activateAutoSign(walletInfo.rootId, 0, false, autoSignDisableCallback)
+}
+
+function tryChangeAutoSign(newState, walletId, showResult) {
+    var walletInfo = qmlFactory.createWalletInfo(walletId)
+
+    if (newState) {
+        tryActivateAutoSign(walletInfo, showResult)
+    }
+    else {
+        tryDeactivateAutoSign(walletInfo, showResult)
+    }
+}
+
+function createTxSignDialog(jsCallback, txInfo, passwordDialogData, walletInfo) {
     var dlg = Qt.createComponent("../BsDialogs/TxSignDialog.qml").createObject(mainWindow
-            , {"prompt": prompt,
-               "txInfo": txInfo,
+            , {"txInfo": txInfo,
                "passwordDialogData": passwordDialogData,
                "walletInfo": walletInfo
               })
-    prepareLiteModeDialog(dlg)
+    prepareDialog(dlg)
 
-    // FIXME: use bs error codes enum in qml
     dlg.bsAccepted.connect(function() {
-        jsCallback(0, walletInfo.rootId, dlg.passwordData)
+        jsCallback(qmlFactory.errorCodeNoError(), walletInfo.rootId, dlg.passwordData)
     })
     dlg.bsRejected.connect(function() {
-        jsCallback(10, walletInfo.rootId, dlg.passwordData)
+        jsCallback(qmlFactory.errorCodeTxCanceled(), walletInfo.rootId, dlg.passwordData)
     })
     dlg.open()
     dlg.init()
 }
 
-function createSettlementTransactionDialog(jsCallback, prompt, txInfo, passwordDialogData, walletInfo) {
-    var dlg = Qt.createComponent("../BsDialogs/SettlementTransactionDialog.qml").createObject(mainWindow
-            , {"prompt": prompt,
-               "txInfo": txInfo,
-               "passwordDialogData": passwordDialogData,
+function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, walletInfo) {
+    var dlg = null
+    if (passwordDialogData.Market === "XBT") {
+        dlg = Qt.createComponent("../BsDialogs/TxSignSettlementXBTMarketDialog.qml").createObject(mainWindow
+           , {"txInfo": txInfo,
+              "passwordDialogData": passwordDialogData,
                "walletInfo": walletInfo
-              })
-    prepareLiteModeDialog(dlg)
+        })
+    }
+    else if (passwordDialogData.Market === "CC") {
+        dlg = Qt.createComponent("../BsDialogs/TxSignSettlementCCMarketDialog.qml").createObject(mainWindow
+           , {"txInfo": txInfo,
+              "passwordDialogData": passwordDialogData,
+               "walletInfo": walletInfo
+        })
+    }
+    else {
+        console.log("[helper.js] Error: passwordDialogData.Market) is not set, dialog not created")
+        return
+    }
 
-    // FIXME: use bs error codes enum in qml
     dlg.bsAccepted.connect(function() {
-        jsCallback(0, walletInfo.rootId, dlg.passwordData)
+        jsCallback(qmlFactory.errorCodeNoError(), walletInfo.rootId, dlg.passwordData)
     })
     dlg.bsRejected.connect(function() {
-        jsCallback(10, walletInfo.rootId, dlg.passwordData)
+        jsCallback(qmlFactory.errorCodeTxCanceled(), walletInfo.rootId, dlg.passwordData)
     })
     dlg.open()
     dlg.init()
+
+    prepareDialog(dlg)
 }
 
-function createPasswordDialogForLeaf(jsCallback, passwordDialogData, walletInfo) {
+function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo) {
+    console.log("helper.js createPasswordDialogForType, dialogType: " + passwordDialogData.DialogType
+       + ", walletId: " + walletInfo.walletId)
+
     if (walletInfo.walletId === "") {
-        jsCallback(10, walletInfo.walletId, {})
+        jsCallback(qmlFactory.errorCodeTxCanceled(), walletInfo.walletId, {})
     }
 
-    var dlg
+    let dlg = null;
 
-    if (walletInfo.encType === QPasswordData.Auth) {
-        dlg = requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
-            jsCallback(0, walletInfo.walletId, passwordData)
-        })
+    if (passwordDialogData.DialogType === "RequestPasswordForAuthLeaf") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputAuthLeaf.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
     }
-    else if (walletInfo.encType === QPasswordData.Password){
-        if (passwordDialogData.value("LeafDialogType") === "RequestPasswordForAuthLeaf") {
-            dlg = Qt.createComponent("../BsControls/BSPasswordInputAuthLeaf.qml").createObject(mainWindow
-                , {"walletInfo": walletInfo,
-                   "passwordDialogData": passwordDialogData
-                  })
-        }
-        else if (passwordDialogData.value("LeafDialogType") === "RequestPasswordForToken") {
-            dlg = Qt.createComponent("../BsControls/BSPasswordInputToken.qml").createObject(mainWindow
-                , {"walletInfo": walletInfo,
-                   "passwordDialogData": passwordDialogData
-                  })
-        }
-
-        dlg.open()
-        dlg.bsAccepted.connect(function() {
-            var passwordData = qmlFactory.createPasswordData()
-            passwordData.encType = QPasswordData.Password
-            passwordData.encKey = ""
-            passwordData.textPassword = dlg.enteredPassword
-
-            jsCallback(0, walletInfo.walletId, passwordData)
-        })
+    else if (passwordDialogData.DialogType === "RequestPasswordForToken") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputToken.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
+    }
+    else if (passwordDialogData.DialogType === "RequestPasswordForSettlementLeaf") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputSettlementLeaf.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
+    }
+    else if (passwordDialogData.DialogType === "RequestPasswordForRevokeAuthAddress") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputRevokeAuthAddress.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
+    }
+    else if (passwordDialogData.DialogType === "RequestPasswordForPromoteHDWallet") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputPromoteWallet.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
     }
 
-    prepareLiteModeDialog(dlg)
+    prepareDialog(dlg)
+
+    dlg.bsAccepted.connect(function() {
+        jsCallback(qmlFactory.errorCodeNoError(), walletInfo.walletId, dlg.passwordData)
+    })
+
+    dlg.bsRejected.connect(function() {
+        jsCallback(qmlFactory.errorCodeTxCanceled(), walletInfo.rootId, dlg.passwordData)
+    })
+
+    dlg.open()
+    dlg.init()
+}
+
+function updateDialogData(jsCallback, passwordDialogData) {
+    console.log("Updating password dialog " + currentDialog + ", updated keys: " + passwordDialogData.keys())
+    if (!currentDialog || typeof currentDialog.passwordDialogData === "undefined") {
+        return
+    }
+    currentDialog.passwordDialogData.merge(passwordDialogData)
 }
 
 function isLiteMode(){
     return mainWindow.isLiteMode
+}
+
+function truncString(string, maxLength) {
+    if (!string) return string
+    if (maxLength < 1) return string
+    if (string.length <= maxLength) return string
+    if (maxLength === 1) return string.substring(0,1) + '...'
+
+    var midpoint = Math.ceil(string.length / 2)
+    var toremove = string.length - maxLength
+    var lstrip = Math.ceil(toremove/2)
+    var rstrip = toremove - lstrip
+    return string.substring(0, midpoint-lstrip) + '...'  + string.substring(midpoint+rstrip)
+}
+
+String.prototype.truncString = function(maxLength){
+   return truncString(this, maxLength)
+}
+
+function initJSDialogs() {
+    let folderListObj = Qt.createQmlObject(
+        'import Qt.labs.folderlistmodel 2.12;FolderListModel { property bool isReady: status === FolderListModel.Ready; folder : "../BsDialogs/"; }'
+        , mainWindow);
+
+    folderListObj.statusChanged.connect(function() {
+        if (!folderListObj.isReady)
+            return
+        for (let i = 0; i < folderListObj.count; ++i) {
+            if (folderListObj.get(i, "fileSuffix") !== 'qml') {
+                continue;
+            }
+
+            let fileName = folderListObj.get(i, "fileName");
+            let childComp = Qt.createComponent("../BsDialogs/" + fileName);
+            let childObj = childComp.incubateObject(null);
+            if (childObj.status !== Component.Ready) {
+                childObj.onStatusChanged = function(status) {
+                    if (status === Component.Ready) {
+                        childObj.object.destroy();
+                    }
+                }
+            } else {
+                childObj.object.destroy();
+            }
+        }
+    })
 }

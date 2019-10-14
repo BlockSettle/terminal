@@ -3,13 +3,13 @@
 
 #include <QObject>
 #include <QQmlEngine>
+#include <QQuickWindow>
 
-#include "ApplicationSettings.h"
-#include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
 #include "AuthProxy.h"
-#include "ConnectionManager.h"
+
+#include "BSErrorCode.h"
 
 class SignerAdapter;
 namespace bs {
@@ -73,31 +73,44 @@ public:
    // WalletInfo
    Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo() const;
    Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const QString &walletId) const;
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const std::string &walletId) const { return createWalletInfo(QString::fromStdString(walletId)); }
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const std::string &walletId) const
+   {
+      return createWalletInfo(QString::fromStdString(walletId));
+   }
    Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(int index) const;
    Q_INVOKABLE bs::hd::WalletInfo *createWalletInfoFromDigitalBackup(const QString &filename) const;
 
    // Auth
    // used for signing
    Q_INVOKABLE AuthSignWalletObject *createAutheIDSignObject(AutheIDClient::RequestType requestType
-                                                             , bs::hd::WalletInfo *walletInfo);
+      , bs::hd::WalletInfo *walletInfo, int expiration = AutheIDClient::kDefaultExpiration);
 
    // used for add new eID device
    Q_INVOKABLE AuthSignWalletObject *createActivateEidObject(const QString &userId
-                                                             , bs::hd::WalletInfo *walletInfo);
+      , bs::hd::WalletInfo *walletInfo);
 
    // used for remove eID device
    // index: is encKeys index which should be deleted
-   Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index
-                                                             , bs::hd::WalletInfo *walletInfo);
+   Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index, bs::hd::WalletInfo *walletInfo);
+
    QString headlessPubKey() const;
 
    // service functions
+   Q_INVOKABLE double balanceDivider() const { return BTCNumericTypes::BalanceDivider; }
+
    Q_INVOKABLE void setClipboard(const QString &text) const;
    Q_INVOKABLE QString getClipboard() const;
    Q_INVOKABLE QRect frameSize(QObject *window) const;
+   Q_INVOKABLE int titleBarHeight();
    Q_INVOKABLE void installEventFilterToObj(QObject *object);
+   Q_INVOKABLE void applyWindowFix(QQuickWindow *mw);
    bool eventFilter(QObject *object, QEvent *event) override;
+
+   Q_INVOKABLE int errorCodeNoError()    {return static_cast<int>(bs::error::ErrorCode::NoError); }
+   Q_INVOKABLE int errorCodeTxCanceled() {return static_cast<int>(bs::error::ErrorCode::TxCanceled); }
+
+   Q_INVOKABLE bool isDebugBuild();
+
 
 signals:
    void closeEventReceived();

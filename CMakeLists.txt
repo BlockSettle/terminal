@@ -72,8 +72,8 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # set versions info
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
-SET(BS_VERSION_MINOR 20 )
-SET(BS_VERSION_PATCH 0 )
+SET(BS_VERSION_MINOR 23 )
+SET(BS_VERSION_PATCH 7 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
@@ -97,6 +97,12 @@ ENDIF()
 
 SET( PROJECT_BINARY_DIR ${BLOCK_SETTLE_ROOT}/build_terminal/${CMAKE_BUILD_TYPE} )
 SET( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
+
+include(GCCToolchain)
+include(LLVMToolchain)
+include(LTO)
+include(CompilerWarnings)
+include(CompilerColorDiagnostics)
 
 IF( WIN32 )
    # output libs to same path as binaries on windows just to make life easier
@@ -537,6 +543,7 @@ ELSE(WIN32)
          "-framework SystemConfiguration"
          "-framework QuartzCore"
          "-framework Metal"
+         "-framework IOSurface"
          ${ZLIB_LIBRARIES}
          ${CUPS_LIBRARIES})
 

@@ -2,6 +2,8 @@ import QtQuick 2.9
 import QtQuick.Controls 2.4
 import QtQuick.Layouts 1.11
 
+import com.blocksettle.AutheIDClient 1.0
+
 import "../StyledControls"
 import "../BsStyles"
 
@@ -15,7 +17,9 @@ BSPasswordInput {
     title: qsTr("Notice!")
     btnAccept.text: qsTr("Continue")
     btnAccept.enabled: passwordCorrect
+    autheIDSignType: AutheIDClient.CreateAuthLeaf
 
+    decryptHeaderText: qsTr("Check Password")
 
     CustomHeader {
         text: qsTr("Please take care of your assets!")

@@ -3,7 +3,7 @@
 set -o errexit  # exit on error
 set -o nounset  # trigger error when expanding unset variables
 
-binpath="../build_terminal/Release/bin"
+binpath="../build_terminal/RelWithDebInfo/bin"
 binary=$binpath/blocksettle
 scriptpath="../Scripts"
 
