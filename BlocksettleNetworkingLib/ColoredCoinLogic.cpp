@@ -1211,20 +1211,13 @@ void ColoredCoinTracker::purgeZc()
    }
    auto promPtr = std::make_shared<std::promise<std::vector<Tx>>>();
    auto fut = promPtr->get_future();
-   const auto &getTxBatchLbd = [promPtr](/*const std::vector<Tx> &batch*/ReturnMessage<std::vector<Tx>> batch)
+   const auto &getTxBatchLbd = [promPtr](const std::vector<Tx> &batch)
    {
-//      promPtr->set_value(batch);
-      try {
-         promPtr->set_value(std::move(batch.get()));
-      }
-      catch (...) {
-         promPtr->set_exception(std::current_exception());
-      }
+      promPtr->set_value(batch);
    };
-/*   if (!connPtr_->getTXsByHash(txHashes, getTxBatchLbd)) {
+   if (!connPtr_->getTXsByHash(txHashes, getTxBatchLbd)) {
       return;
-   }*/   //FIXME: getTXsByHash returns height=UINT32_MAX for some reason
-   connPtr_->bdv()->getTxBatchByHash(txHashes, getTxBatchLbd);
+   }
    const auto &txBatch = fut.get();
 
    zcPtr = std::make_shared<ColoredCoinZCSnapshot>();
@@ -1274,52 +1267,45 @@ void ColoredCoinTracker::purgeZc(const ResultCb &cb)
       txHashes.insert(hashPair.first);
    }
    const auto getTxBatchLbd = [this, cb, zcPtr, currentSs]
-      (/*const std::vector<Tx> &batch*/ReturnMessage<std::vector<Tx>> batch) mutable
+      (const std::vector<Tx> &txBatch) mutable
    {
-      //      promPtr->set_value(batch);
-      try {
-         const auto &txBatch = std::move(batch.get());
-         zcPtr = std::make_shared<ColoredCoinZCSnapshot>();
-         std::set<BinaryData> txsToCheck;
-         for (auto& tx : txBatch) {
-            if (tx.getTxHeight() != UINT32_MAX) {
+      zcPtr = std::make_shared<ColoredCoinZCSnapshot>();
+      std::set<BinaryData> txsToCheck;
+      for (auto& tx : txBatch) {
+         if (tx.getTxHeight() != UINT32_MAX) {
+            continue;
+         }
+         txsToCheck.insert(tx.getThisHash());
+
+         //parse tx for origin address outputs
+         for (unsigned i = 0; i < tx.getNumTxOut(); i++) {
+            auto&& txOut = tx.getTxOutCopy(i);
+            auto& scrAddr = txOut.getScrAddressStr();
+
+            if (originAddresses_.find(scrAddr) == originAddresses_.end()) {
                continue;
             }
-            txsToCheck.insert(tx.getThisHash());
-
-            //parse tx for origin address outputs
-            for (unsigned i = 0; i < tx.getNumTxOut(); i++) {
-               auto&& txOut = tx.getTxOutCopy(i);
-               auto& scrAddr = txOut.getScrAddressStr();
-
-               if (originAddresses_.find(scrAddr) == originAddresses_.end()) {
-                  continue;
-               }
-               addZcUtxo(currentSs, zcPtr,
-                  tx.getThisHash(), i, txOut.getValue(), scrAddr);
-            }
-         }
-
-         if (txsToCheck.size() > 0) {
-            //process unconfirmed settlements
-            processZcBatch(currentSs, zcPtr, txsToCheck);
-         }
-
-         //swap the new snapshot in
-         std::atomic_store_explicit(&zcSnapshot_, zcPtr, std::memory_order_release);
-         if (cb) {
-            cb(true);
-         }
-      } catch (...) {
-         if (cb) {
-            cb(false);
+            addZcUtxo(currentSs, zcPtr,
+               tx.getThisHash(), i, txOut.getValue(), scrAddr);
          }
       }
+
+      if (txsToCheck.size() > 0) {
+         //process unconfirmed settlements
+         processZcBatch(currentSs, zcPtr, txsToCheck);
+      }
+
+      //swap the new snapshot in
+      std::atomic_store_explicit(&zcSnapshot_, zcPtr, std::memory_order_release);
+      if (cb) {
+         cb(true);
+      }
    };
-   /*   if (!connPtr_->getTXsByHash(txHashes, getTxBatchLbd)) {
-         return;
-      }*/   //FIXME: getTXsByHash returns height=UINT32_MAX for some reason
-   connPtr_->bdv()->getTxBatchByHash(txHashes, getTxBatchLbd);
+   if (!connPtr_->getTXsByHash(txHashes, getTxBatchLbd)) {
+      if (cb) {
+         cb(false);
+      }
+   }
 }
 
 ////

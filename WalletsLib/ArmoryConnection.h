@@ -222,8 +222,6 @@ public:
    // Converts BTC/kb (returned by armory) to sat/byte
    static float toFeePerByte(float fee);
 
-   std::shared_ptr<AsyncClient::BlockDataViewer> bdv() const { return bdv_; } //FIXME: temporary
-
 protected:
    using CallbackQueueCb = std::function<void(ArmoryCallbackTarget *)>;
    void addToMaintQueue(const CallbackQueueCb &);
