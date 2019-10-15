@@ -1559,7 +1559,7 @@ bool ColoredCoinTracker::goOnline()
 
    //use default ACT if none is set
    if (actPtr_ == nullptr) {
-      actPtr_ = make_unique<ColoredCoinACT>(connPtr_.get());
+      actPtr_ = std::make_shared<ColoredCoinACT>(connPtr_.get());
    }
 
    //register CC addresses

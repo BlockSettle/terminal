@@ -169,6 +169,9 @@ private:
       return notifQueue_.pop_front();
    }
 
+protected:
+   virtual void onUpdate(std::shared_ptr<DBNotificationStruct>) {}
+
 public:
    ColoredCoinACT(ArmoryConnection *armory)
       : ArmoryCallbackTarget()
@@ -191,9 +194,6 @@ public:
    virtual void start();
    virtual void stop();
    virtual void setCCManager(ColoredCoinTracker* ccPtr) { ccPtr_ = ccPtr; }
-
-   ////
-   virtual void onUpdate(const std::shared_ptr<DBNotificationStruct> &) {}
 
 private:
    virtual void processNotification(void);
@@ -228,7 +228,7 @@ private:
 
 protected:
    std::shared_ptr<AsyncClient::BtcWallet> walletObj_;
-   std::unique_ptr<ColoredCoinACT>  actPtr_;
+   std::shared_ptr<ColoredCoinACT>  actPtr_;
 
 private:
    using ResultCb = std::function<void(bool)>;
