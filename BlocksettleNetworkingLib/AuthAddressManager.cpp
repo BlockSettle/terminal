@@ -768,6 +768,22 @@ std::vector<bs::Address> AuthAddressManager::GetVerifiedAddressList() const
    return list;
 }
 
+bool AuthAddressManager::IsAtLeastOneAwaitingVerification() const
+{
+   {
+      FastLock locker(lockList_);
+      for (const auto &address : addresses_) {
+         auto addrState = GetState(address);
+         if (addrState == AddressVerificationState::Submitted
+            || addrState == AddressVerificationState::PendingVerification
+            || addrState == AddressVerificationState::VerificationSubmitted) {
+            return true;
+         }
+      }
+   }
+   return false;
+}
+
 size_t AuthAddressManager::FromVerifiedIndex(size_t index) const
 {
    if (index < addresses_.size()) {

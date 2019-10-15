@@ -18,10 +18,17 @@ namespace {
       " can contain the paths required for correctly sorting your tokens and holding" \
       " your Authentication Address(es)");
 
+   const QString shieldAuthValidationProcessHeader = QObject::tr("Authentication Address Validation Process");
+   const QString shieldAuthValidationProcessText = QObject::tr("Your Authentication Address has been submitted.\n\n"
+      "BlockSettle validates the public key against the UserID and executes a transaction from it's Validation Address sometime within a 24h cycle.\n\n"
+      "Once executed the Authentication Address need 6 blockchain confirmations to be considered as valid"
+   );
+
    // Button texts
    const QString shieldButtonPromote = QObject::tr("Promote");
    const QString shieldButtonCreate = QObject::tr("Create");
    const QString shieldButtonGenerate = QObject::tr("Generate");
+   const QString shieldButtonView = QObject::tr("View");
 }
 
 WalletShieldBase::WalletShieldBase(QWidget *parent) :
@@ -76,7 +83,16 @@ bool WalletShieldBase::checkWalletSettings(WalletShieldBase::ProductType product
 
    if (productType == ProductType::SpotXBT) {
       if (walletsManager_->getAuthWallet()) {
-         if (authMgr_->GetVerifiedAddressList().empty()) {
+         const bool isNoVerifiedAddresses = authMgr_->GetVerifiedAddressList().empty();
+         if (isNoVerifiedAddresses && authMgr_->IsAtLeastOneAwaitingVerification())
+         {
+            showShieldAuthValidationProcess();
+            setShieldButtonAction([this]() {
+               emit authMgr_->AuthWalletCreated({});
+            });
+            return true;
+         }
+         else if (isNoVerifiedAddresses) {
             showShieldGenerateAuthAddress();
             setShieldButtonAction([this]() {
                emit authMgr_->AuthWalletCreated({});
@@ -85,7 +101,7 @@ bool WalletShieldBase::checkWalletSettings(WalletShieldBase::ProductType product
          }
       }
       else {
-         showShield(shieldCreateAuthLeaf, true, shieldButtonCreate);
+         showShield(shieldCreateAuthLeaf, shieldButtonCreate);
          setShieldButtonAction([this]() {
             walletsManager_->createAuthLeaf(nullptr);
          });
@@ -121,13 +137,17 @@ WalletShieldBase::ProductType WalletShieldBase::getProductGroup(const QString &p
 }
 
 void WalletShieldBase::showShield(const QString& labelText,
-   bool showButton /*= false*/, const QString& buttonText /*= QLatin1String()*/)
+  const QString& buttonText /*= QLatin1String()*/, const QString& headerText /*= QLatin1String()*/)
 {
    ui_->shieldText->setText(labelText);
 
-   ui_->shieldButton->setVisible(showButton);
-   ui_->shieldButton->setEnabled(showButton);
+   const bool isShowButton = !buttonText.isEmpty();
+   ui_->shieldButton->setVisible(isShowButton);
+   ui_->shieldButton->setEnabled(isShowButton);
    ui_->shieldButton->setText(buttonText);
+
+   ui_->shieldHeaderText->setVisible(!headerText.isEmpty());
+   ui_->shieldHeaderText->setText(headerText);
 
    QStackedWidget* stack = qobject_cast<QStackedWidget*>(parent());
 
@@ -142,20 +162,25 @@ void WalletShieldBase::showShield(const QString& labelText,
 
 void WalletShieldBase::showShieldPromoteToPrimaryWallet()
 {
-   showShield(shieldPromoteToPrimary.arg(tabType_), true, shieldButtonPromote);
+   showShield(shieldPromoteToPrimary.arg(tabType_), shieldButtonPromote);
 }
 
 void WalletShieldBase::showShieldCreateWallet()
 {
-   showShield(shieldCreateWallet.arg(tabType_), true, shieldButtonCreate);
+   showShield(shieldCreateWallet.arg(tabType_), shieldButtonCreate);
 }
 
 void WalletShieldBase::showShieldCreateLeaf(const QString& product)
 {
-   showShield(shieldCreateCCWallet.arg(product), true, shieldButtonCreate);
+   showShield(shieldCreateCCWallet.arg(product), shieldButtonCreate);
 }
 
 void WalletShieldBase::showShieldGenerateAuthAddress()
 {
-   showShield(shieldGenerateAuthAddress, true, shieldButtonGenerate);
+   showShield(shieldGenerateAuthAddress, shieldButtonGenerate);
+}
+
+void WalletShieldBase::showShieldAuthValidationProcess()
+{
+   showShield(shieldAuthValidationProcessText, shieldButtonView, shieldAuthValidationProcessHeader);
 }
