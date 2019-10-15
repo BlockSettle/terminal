@@ -48,7 +48,7 @@ void TestSettlement::sendTo(uint64_t value, bs::Address& addr)
 
    signer.addSpender(spendPtr);
 
-   signer.addRecipient(addr.getRecipient(value));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{ value }));
    signer.setFeed(coinbaseFeed_);
 
    //sign & send
@@ -387,7 +387,7 @@ TEST_F(TestSettlement, SpotXBT_buy)
    auto recipients = deserializedSigner.recipients();
 
    logger->debug("Settlement address: {}", settlementAddr.display());
-   auto settlementAddressRecipient = settlementAddr.getRecipient(amount);
+   auto settlementAddressRecipient = settlementAddr.getRecipient(bs::XBTAmount{ amount });
    auto settlementRecipientScript = settlementAddressRecipient->getSerializedScript();
 
    auto settAddressString = settlementAddr.display();
@@ -447,7 +447,8 @@ TEST_F(TestSettlement, SpotXBT_buy)
 
    // Requester's side
    StaticLogger::loggerPtr->debug("[{}] payin hash: {}", __func__, dealerPayInHash.toHexStr(true));
-   const auto payinInput = bs::SettlementMonitor::getInputFromTX(settlementAddr, dealerPayInHash, amount);
+   const auto payinInput = bs::SettlementMonitor::getInputFromTX(settlementAddr, dealerPayInHash
+      , bs::XBTAmount{ amount });
    const auto payoutTxReq = bs::SettlementMonitor::createPayoutTXRequest(payinInput
       , fundAddrs_[0], feePerByte, envPtr_->armoryConnection()->topBlock());
    ASSERT_TRUE(payoutTxReq.isValid());

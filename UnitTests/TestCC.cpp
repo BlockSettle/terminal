@@ -49,7 +49,7 @@ void TestCC::sendTo(uint64_t value, bs::Address& addr)
 
    signer.addSpender(spendPtr);
 
-   signer.addRecipient(addr.getRecipient(value));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{ value }));
    signer.setFeed(coinbaseFeed_);
 
    //sign & send
@@ -165,7 +165,7 @@ void TestCC::SetUp()
       {
          const auto fundingTxReq = xbtWallet_->createTXRequest(
             inputs, 
-            { addr.getRecipient(uint64_t(ccFundingAmount_ * ccLotSize_)) }, 
+            { addr.getRecipient(bs::XBTAmount{uint64_t(ccFundingAmount_ * ccLotSize_)}) },
             987, false, genesisAddr_);
 
          BinaryData fundingTx;
@@ -261,7 +261,7 @@ TEST_F(TestCC, TX_buy)
       [this, qtyCC, spendVal2, ccRecvAddr, feePerByte, &txHash](std::vector<UTXO> inputs1)
    {
       const uint64_t spendVal1 = qtyCC * ccLotSize_;
-      const auto recipient1 = ccRecvAddr.getRecipient(spendVal1);
+      const auto recipient1 = ccRecvAddr.getRecipient(bs::XBTAmount{ spendVal1 });
       ASSERT_NE(recipient1, nullptr);
 
       auto promChange1Addr = std::make_shared<std::promise<bs::Address>>();
@@ -276,7 +276,7 @@ TEST_F(TestCC, TX_buy)
       // requester uses dealer's TX
       const auto &cbTxOutList2 =
          [this, spendVal2, txReq1, feePerByte, &txHash](std::vector<UTXO> inputs2) {
-         const auto recipient2 = recvAddr_.getRecipient(spendVal2);
+         const auto recipient2 = recvAddr_.getRecipient(bs::XBTAmount{ spendVal2 });
          ASSERT_NE(recipient2, nullptr);
          auto promChange2Addr = std::make_shared<std::promise<bs::Address>>();
          auto futChange2Addr = promChange2Addr->get_future();
@@ -404,7 +404,7 @@ TEST_F(TestCC, TX_sell)
          [this, inputs1, spendVal1, spendVal2, txReq1, feePerByte, ccRecvAddr, &txHash]
          (std::vector<UTXO> inputs2) 
       {
-         const auto recipient2 = recvAddr_.getRecipient(spendVal2);
+         const auto recipient2 = recvAddr_.getRecipient(bs::XBTAmount{ spendVal2 });
          ASSERT_NE(recipient2, nullptr);
          auto promChange2Addr = std::make_shared<std::promise<bs::Address>>();
          auto futChange2Addr = promChange2Addr->get_future();
@@ -418,7 +418,7 @@ TEST_F(TestCC, TX_sell)
 
          // add receiving address on requester side
          bs::core::wallet::TXSignRequest txReq3;
-         const auto recipient1 = ccRecvAddr.getRecipient(spendVal1);
+         const auto recipient1 = ccRecvAddr.getRecipient(bs::XBTAmount{ spendVal1 });
          ASSERT_NE(recipient1, nullptr);
          txReq3.recipients.push_back(recipient1);
          txReq3.inputs = inputs1;

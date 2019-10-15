@@ -214,6 +214,7 @@ ArmoryInstance::ArmoryInstance()
       BlockDataManagerConfig::ephemeralPeers_, true);
 }
 
+////
 ArmoryInstance::~ArmoryInstance()
 {
    //shutdown server
@@ -243,14 +244,32 @@ std::map<unsigned, BinaryData> ArmoryInstance::mineNewBlock(
    return nodePtr_->mineNewBlock(theBDMt_->bdm(), count, rec);
 }
 
-void ArmoryInstance::pushZC(const BinaryData& zc, unsigned int blocksUntilMined)
+void ArmoryInstance::pushZC(const BinaryData& zc, unsigned int blocksUntilMined, bool stage)
 {
    std::vector<std::pair<BinaryData, unsigned int>> zcVec;
    zcVec.push_back({ zc, blocksUntilMined });
-   nodePtr_->pushZC(zcVec, false);
+   nodePtr_->pushZC(zcVec, stage);
 }
 
+void ArmoryInstance::setReorgBranchPoint(const BinaryData& hash)
+{
+   auto headerPtr = theBDMt_->bdm()->blockchain()->getHeaderByHash(hash);
+   if (headerPtr == nullptr)
+      throw std::runtime_error("null header ptr");
 
+   nodePtr_->setReorgBranchPoint(headerPtr);
+}
+
+BinaryData ArmoryInstance::getCurrentTopBlockHash() const
+{
+   auto headerPtr = theBDMt_->bdm()->blockchain()->top();
+   if (headerPtr == nullptr)
+      throw std::runtime_error("null header ptr");
+
+   return headerPtr->getThisHash();
+}
+
+////
 SingleUTWalletACT::~SingleUTWalletACT()
 {
    cleanup();
