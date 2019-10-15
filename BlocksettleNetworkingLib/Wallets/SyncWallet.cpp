@@ -686,7 +686,7 @@ void Wallet::init(bool force)
 bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walletId
    , const std::vector<UTXO> &inputs
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients
-   , const std::function<bs::Address(std::string &)> &cbChangeAddr
+   , const bs::Address &changeAddr
    , const uint64_t fee, bool isRBF, const uint64_t &origFee)
 {
    bs::core::wallet::TXSignRequest request;
@@ -720,19 +720,11 @@ bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walle
 
    const uint64_t changeAmount = inputAmount - (spendAmount + fee);
    if (changeAmount) {
-      if (cbChangeAddr) {
-         const auto changeAddress = cbChangeAddr(request.change.index);
-         if (!changeAddress.isNull()) {
-            request.change.value = changeAmount;
-            request.change.address = changeAddress;
-         }
-         else if (changeAmount >= fee) {
-            throw std::runtime_error("failed to get change address");
-         }
-      }
-      else {
+      if (changeAddr.isNull()) {
          throw std::logic_error("can't get change address for " + std::to_string(changeAmount));
       }
+      request.change.value = changeAmount;
+      request.change.address = changeAddr;
    }
 
    return request;
@@ -740,32 +732,12 @@ bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walle
 
 bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> &inputs
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const uint64_t fee
-   , bool isRBF, bs::Address changeAddress, const uint64_t& origFee)
+   , bool isRBF, const bs::Address &changeAddress, const uint64_t& origFee)
 {
-   const auto &cbNewChangeAddr = [this](std::string &index) -> bs::Address {
-      auto promPtr = std::make_shared<std::promise<bs::Address>>();
-      auto fut = promPtr->get_future();
-      const auto &cbAddr = [this, &index, promPtr](const bs::Address &addr) {
-         setAddressComment(addr, wallet::Comment::toString(wallet::Comment::ChangeAddress));
-         try {
-            index = getAddressIndex(addr);
-         }
-         catch (const std::exception &e) {
-            logger_->error("[sync::Wallet::createTXRequest] failed to get {} index: {}"
-               , addr.display(), e.what());
-         }
-         promPtr->set_value(addr);
-      };
-      getNewChangeAddress(cbAddr);
-      return fut.get();
-   };
-   const auto &cbChangeAddr = [changeAddress, cbNewChangeAddr](std::string &index) {
-      if (changeAddress.isNull()) {
-         return cbNewChangeAddr(index);
-      }
-      return changeAddress;
-   };
-   return wallet::createTXRequest(walletId(), inputs, recipients, cbChangeAddr
+   if (!changeAddress.isNull()) {
+      setAddressComment(changeAddress, wallet::Comment::toString(wallet::Comment::ChangeAddress));
+   }
+   return wallet::createTXRequest(walletId(), inputs, recipients, changeAddress
       , fee, isRBF, origFee);
 }
 

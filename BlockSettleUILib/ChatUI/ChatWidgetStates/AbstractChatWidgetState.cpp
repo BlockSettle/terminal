@@ -97,6 +97,7 @@ void AbstractChatWidgetState::onChangePartyStatus(const Chat::ClientPartyPtr& cl
 
    chat_->chatPartiesTreeModel_->onPartyStatusChanged(clientPartyPtr);
    chat_->otcHelper_->onPartyStateChanged(clientPartyPtr);
+   onUpdateOTCShield();
 }
 
 void AbstractChatWidgetState::onResetPartyModel()

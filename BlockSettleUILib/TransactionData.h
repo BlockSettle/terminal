@@ -120,9 +120,11 @@ public:
    BTCNumericTypes::balance_type  GetTotalRecipientsAmount() const;
    bool IsMaxAmount(unsigned int recipientId) const;
 
+   // If there is change then changeAddr must be set
    bs::core::wallet::TXSignRequest createUnsignedTransaction(bool isRBF = false, const bs::Address &changeAddr = {});
    bs::core::wallet::TXSignRequest getSignTxRequest() const;
 
+   // If there is change then changeAddr must be set
    bs::core::wallet::TXSignRequest createTXRequest(bool isRBF = false
                                              , const bs::Address &changeAddr = {}
                                              , const uint64_t& origFee = 0) const;
