@@ -90,11 +90,11 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
     authObject.failed.connect(function(errorText) {       
         console.log("QML requesteIdAuth: authObject.failed")
         var mb = messageBox(BSMessageBox.Type.Critical
-                                     , qsTr("Wallet")
-                                     , qsTr("eID request failed with error: \n") + errorText
-                                     , qsTr("Wallet Name: %1\nWallet ID: %2")
-                                     .arg(walletInfo.name)
-                                     .arg(walletInfo.rootId))
+           , qsTr("Wallet")
+           , errorText
+           , qsTr("Wallet Name: %1\nWallet ID: %2")
+               .arg(walletInfo.name)
+               .arg(walletInfo.rootId))
 
         authProgress.setNextChainDialog(mb)
         authProgress.rejectAnimated()
@@ -136,11 +136,11 @@ function removeEidDevice (index, walletInfo, onSuccess) {
     })
     authObject.failed.connect(function(errorText) {
         messageBox(BSMessageBox.Type.Critical
-                                     , qsTr("Wallet")
-                                     , qsTr("eID request failed with error: \n") + errorText
-                                     , qsTr("Wallet Name: %1\nWallet ID: %2")
-                                     .arg(walletInfo.name)
-                                     .arg(walletInfo.rootId))
+           , qsTr("Wallet")
+           , errorText
+           , qsTr("Wallet Name: %1\nWallet ID: %2")
+              .arg(walletInfo.name)
+              .arg(walletInfo.rootId))
 
         authProgress.rejectAnimated()
         authObject.destroy()
@@ -175,11 +175,11 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
     })
     authObject.failed.connect(function(errorText) {
         messageBox(BSMessageBox.Type.Critical
-                                     , qsTr("Wallet")
-                                     , qsTr("eID request failed with error: \n") + errorText
-                                     , qsTr("Wallet Name: %1\nWallet ID: %2")
-                                     .arg(walletInfo.name)
-                                     .arg(walletInfo.rootId))
+           , qsTr("Wallet")
+           , errorText
+           , qsTr("Wallet Name: %1\nWallet ID: %2")
+              .arg(walletInfo.name)
+              .arg(walletInfo.rootId))
 
         authProgress.rejectAnimated()
         authObject.destroy()
