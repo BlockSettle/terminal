@@ -1341,3 +1341,34 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
    EXPECT_EQ(ledgerEntries->size(), 8);   // we have one additional TX on addr at mining
    EXPECT_EQ(envPtr_->armoryConnection()->getConfirmationsNumber((*ledgerEntries)[1].getBlockNum()), 1);
 }
+
+TEST_F(TestWalletWithArmory, CallbackReturnTxCrash)
+{
+   auto addr = leafPtr_->getNewExtAddress();
+   ASSERT_FALSE(addr.isNull());
+
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   inprocSigner->Start();
+   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+      , envPtr_->appSettings(), envPtr_->armoryConnection());
+   syncMgr->setSignContainer(inprocSigner);
+   syncMgr->syncWallets();
+
+   auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
+
+   syncHdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
+   auto recipient = addr.getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
+   envPtr_->armoryInstance()->mineNewBlock(recipient.get(), 1);
+   UnitTestWalletACT::waitOnNewBlock();
+
+   auto promSync = std::make_shared<std::promise<bool>>();
+   auto futSync = promSync->get_future();
+   // request some unknown TX, CallbackReturn_Tx should not crash
+   envPtr_->armoryConnection()->getTxByHash(BinaryData::CreateFromHex("ed3e119ee826752bc49bf33e86eee1b079dcd7d3ee294a4586192fb0bb1f1002"), [promSync] (const Tx& tx) {
+      promSync->set_value(true);
+   });
+   futSync.wait();
+}
