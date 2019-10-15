@@ -107,7 +107,7 @@ private slots:
    void onContactRequestSendClicked(const std::string& partyId);
    void onContactRequestCancelClicked(const std::string& partyId);
 
-   void onNewPartyRequest(const std::string& userName);
+   void onNewPartyRequest(const std::string& userName, const std::string& initialMessage);
    void onRemovePartyRequest(const std::string& partyId);
 
    void onOtcUpdated(const bs::network::otc::Peer *peer);

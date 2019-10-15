@@ -264,9 +264,9 @@ void ChatClientLogic::RequestPrivatePartyOTC(const std::string& remoteUserName)
    clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName, Chat::PartySubType::OTC);
 }
 
-void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName)
+void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName, const std::string& initialMessage)
 {
-   clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName);
+   clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName, Chat::PartySubType::STANDARD, initialMessage);
 }
 
 void ChatClientLogic::privatePartyCreated(const std::string& partyId)
