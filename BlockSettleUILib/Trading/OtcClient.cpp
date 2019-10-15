@@ -1596,24 +1596,35 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
 
                         const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
 
-                        peer->settlementId = settlementId;
+                        auto changeCb = [cb, peer, transaction, settlAddr, settlementId, targetHdWallet, handle, amount, logger, resolver]
+                           (const bs::Address &changeAddr)
+                        {
+                           if (!handle.isValid()) {
+                              SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
+                              return;
+                           }
 
-                        OtcClientDeal result;
-                        result.settlementId = settlementId;
-                        result.settlementAddr = settlAddr;
-                        result.ourAuthAddress = peer->offer.authAddress;
-                        result.cpPubKey = peer->authPubKey;
-                        result.amount = peer->offer.amount;
-                        result.price = peer->offer.price;
-                        result.hdWalletId = targetHdWallet->walletId();
-                        result.success = true;
-                        result.side = otc::Side::Sell;
-                        result.payin = transaction->createTXRequest();
-                        result.payinTxId = result.payin.txId(resolver);
-                        auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, result.payinTxId, bs::XBTAmount{ amount });
-                        result.fee = int64_t(result.payin.fee);
-                        peer->sellFromOffline = targetHdWallet->isOffline();
-                        cb(std::move(result));
+                           peer->settlementId = settlementId;
+
+                           OtcClientDeal result;
+                           result.settlementId = settlementId;
+                           result.settlementAddr = settlAddr;
+                           result.ourAuthAddress = peer->offer.authAddress;
+                           result.cpPubKey = peer->authPubKey;
+                           result.amount = peer->offer.amount;
+                           result.price = peer->offer.price;
+                           result.hdWalletId = targetHdWallet->walletId();
+                           result.success = true;
+                           result.side = otc::Side::Sell;
+                           result.payin = transaction->createTXRequest(false, changeAddr);
+                           result.payinTxId = result.payin.txId(resolver);
+                           auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, result.payinTxId, bs::XBTAmount{ amount });
+                           result.fee = int64_t(result.payin.fee);
+                           peer->sellFromOffline = targetHdWallet->isOffline();
+                           cb(std::move(result));
+                        };
+
+                        transaction->GetFallbackRecvAddress(changeCb);
                      };
 
                      const auto addrMapping = walletsMgr_->getAddressToWalletsMapping(transaction->inputs());
