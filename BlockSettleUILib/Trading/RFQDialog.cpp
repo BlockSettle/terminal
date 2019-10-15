@@ -11,12 +11,6 @@
 #include "SignContainer.h"
 #include "UiUtils.h"
 
-enum StackWidgetId
-{
-   RequestingQuoteId,
-   SettlementTransactionId
-};
-
 RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const bs::network::RFQ& rfq
    , const std::shared_ptr<TransactionData>& transactionData
@@ -70,8 +64,6 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    ui_->pageRequestingQuote->populateDetails(rfq_, transactionData_);
 
    quoteProvider_->SubmitRFQ(rfq_);
-
-   ui_->stackedWidgetRFQ->setCurrentIndex(RequestingQuoteId);
 }
 
 RFQDialog::~RFQDialog() = default;

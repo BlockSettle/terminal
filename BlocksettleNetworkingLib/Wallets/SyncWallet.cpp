@@ -883,7 +883,7 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
       if (changeAddress.isNull()) {
          throw std::invalid_argument("Change address required, but missing");
       }
-      signer.addRecipient(changeAddress.getRecipient(changeVal));
+      signer.addRecipient(changeAddress.getRecipient(bs::XBTAmount{ changeVal }));
       request.change.value = changeVal;
       request.change.address = changeAddress;
       request.change.index = getAddressIndex(changeAddress);

@@ -5,16 +5,12 @@
 #include "BTCNumericTypes.h"
 #include "Wallets.h"
 
-
-constexpr double InvalidAmount = 0;
-
 RecipientContainer::RecipientContainer()
-   : amount_(InvalidAmount)
 {}
 
 bool RecipientContainer::IsReady() const
 {
-   return (amount_ != InvalidAmount) && !address_.isNull();
+   return !xbtAmount_.isZero() && !address_.isNull();
 }
 
 bool RecipientContainer::SetAddress(const bs::Address &address)
@@ -38,15 +34,20 @@ bs::Address RecipientContainer::GetAddress() const
 
 bool RecipientContainer::SetAmount(double amount, bool isMax)
 {
-   amount_ = amount;
+   xbtAmount_.SetValue(amount);
    isMax_ = isMax;
    return true;
 }
 
+double RecipientContainer::GetAmount() const
+{
+   return xbtAmount_.GetValueBitcoin();
+}
+
 std::shared_ptr<ScriptRecipient> RecipientContainer::GetScriptRecipient() const
 {
-   if (address_.isNull()) {
+   if (!IsReady()) {
       return nullptr;
    }
-   return address_.getRecipient(amount_);
+   return address_.getRecipient(xbtAmount_);
 }

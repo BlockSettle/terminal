@@ -733,7 +733,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       if (!command->has_height())
          throw runtime_error("invalid command for getHeaderByHeight");
 
-      auto header = blockchain().getHeaderByHeight(command->height());
+      auto header = blockchain().getHeaderByHeight(command->height(), 0xFF);
       auto& headerData = header->serialize();
 
       auto response = make_shared<::Codec_CommonTypes::BinaryData>();
@@ -967,7 +967,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       BinaryData bw;
       try
       {
-         auto block = this->blockchain().getHeaderByHeight(height);
+         auto block = this->blockchain().getHeaderByHeight(height, 0xFF);
          auto rawHeader = block->serialize();
          BinaryWriter bw(rawHeader.getSize() + 4);
          bw.put_uint32_t(height);

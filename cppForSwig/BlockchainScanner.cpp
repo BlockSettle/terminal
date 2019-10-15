@@ -39,7 +39,7 @@ int32_t BlockchainScanner::check_merkle(int32_t scanFrom)
    }
    catch (...)
    {
-      sdbiblock = blockchain_->getHeaderByHeight(0);
+      sdbiblock = blockchain_->getHeaderByHeight(0, 0);
    }
 
    if (sdbiblock->isMainBranch())
@@ -113,7 +113,7 @@ void BlockchainScanner::scan_nocheck(int32_t scanFrom)
          try
          {
             shared_ptr<BlockHeader> currentHeader =
-               blockchain_->getHeaderByHeight(startHeight);
+               blockchain_->getHeaderByHeight(startHeight, 0xFF);
             firstBlockFileID = currentHeader->getBlockFileNum();
 
             targetBlockFileID = 0;
@@ -123,7 +123,7 @@ void BlockchainScanner::scan_nocheck(int32_t scanFrom)
 
             while (tallySize < targetSize)
             {
-               currentHeader = blockchain_->getHeaderByHeight(++targetHeight);
+               currentHeader = blockchain_->getHeaderByHeight(++targetHeight, 0xFF);
                tallySize += currentHeader->getBlockSize();
 
                if (currentHeader->getBlockFileNum() < firstBlockFileID)
@@ -430,7 +430,7 @@ shared_ptr<BlockData> BlockchainScanner::getBlockData(
    ParserBatch* batch, unsigned height)
 {
    //grab block file map
-   auto blockheader = blockchain_->getHeaderByHeight(height);
+   auto blockheader = blockchain_->getHeaderByHeight(height, 0xFF);
    auto filenum = blockheader->getBlockFileNum();
    auto mapIter = batch->fileMaps_.find(filenum);
    if (mapIter == batch->fileMaps_.end())
@@ -700,7 +700,7 @@ void BlockchainScanner::writeBlockData()
 {
    auto getGlobalOffsetForBlock = [&](unsigned height)->size_t
    {
-      auto header = blockchain_->getHeaderByHeight(height);
+      auto header = blockchain_->getHeaderByHeight(height, 0xFF);
       size_t val = header->getBlockFileNum();
       val *= 128 * 1024 * 1024;
       val += header->getOffset();
@@ -998,7 +998,7 @@ void BlockchainScanner::updateSSH(bool force, int32_t startHeight)
       }
       catch (...)
       {
-         sdbiblock = blockchain_->getHeaderByHeight(0);
+         sdbiblock = blockchain_->getHeaderByHeight(0, 0);
       }
 
       if (sdbiblock->isMainBranch())

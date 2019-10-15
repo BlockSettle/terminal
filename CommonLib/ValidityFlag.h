@@ -80,6 +80,7 @@ public:
    ValidityFlag(const ValidityFlag&) = delete;
    ValidityFlag &operator=(const ValidityFlag&) = delete;
 
+   // This will reset old handles!
    ValidityFlag(ValidityFlag &&other);
    ValidityFlag &operator=(ValidityFlag &&other);
 
