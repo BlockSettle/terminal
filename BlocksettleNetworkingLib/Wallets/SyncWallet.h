@@ -57,10 +57,11 @@ namespace bs {
             }
          };
 
+         // if there is change then changeAddr must be set
          bs::core::wallet::TXSignRequest createTXRequest(const std::string &walletId
             , const std::vector<UTXO> &inputs
             , const std::vector<std::shared_ptr<ScriptRecipient>> &
-            , const std::function<bs::Address(std::string &index)> &cbChangeAddr = nullptr
+            , const bs::Address &changeAddr = {}
             , const uint64_t fee = 0, bool isRBF = false, const uint64_t& origFee = 0);
 
       }  // namepsace wallet
@@ -154,10 +155,11 @@ namespace bs {
          virtual QString displaySymbol() const { return QLatin1String("XBT"); }
          virtual bool isTxValid(const BinaryData &) const { return true; }
 
+         // changeAddress must be set if there is change
          virtual core::wallet::TXSignRequest createTXRequest(const std::vector<UTXO> &
             , const std::vector<std::shared_ptr<ScriptRecipient>> &
             , const uint64_t fee = 0, bool isRBF = false
-            , bs::Address changeAddress = {}, const uint64_t& origFee = 0);
+            , const bs::Address &changeAddress = {}, const uint64_t& origFee = 0);
          virtual core::wallet::TXSignRequest createPartialTXRequest(uint64_t spendVal
             , const std::vector<UTXO> &inputs = {}, bs::Address changeAddress = {}
             , float feePerByte = 0
