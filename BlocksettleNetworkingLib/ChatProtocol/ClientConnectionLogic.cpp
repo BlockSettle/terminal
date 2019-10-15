@@ -45,7 +45,7 @@ void ClientConnectionLogic::onDataReceived(const std::string& data)
       return;
    }
 
-   loggerPtr_->debug("[ClientConnectionLogic::onDataReceived] Data: {}", ProtobufUtils::toJsonReadable(any));
+   loggerPtr_->debug("[ClientConnectionLogic::onDataReceived] Data: {}", ProtobufUtils::toJsonCompact(any));
 
    WelcomeResponse welcomeResponse;
    if (ProtobufUtils::pbAnyToMessage<WelcomeResponse>(any, &welcomeResponse))
