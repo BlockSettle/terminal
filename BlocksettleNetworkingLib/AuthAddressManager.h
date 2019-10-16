@@ -96,6 +96,7 @@ public:
    virtual void OnDisconnectedFromCeler();
 
    virtual std::vector<bs::Address> GetVerifiedAddressList() const;
+   bool IsAtLeastOneAwaitingVerification() const;
    size_t FromVerifiedIndex(size_t index) const;
    const std::unordered_set<std::string> &GetBSAddresses() const;
 
