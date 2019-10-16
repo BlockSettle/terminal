@@ -178,7 +178,7 @@ public:
       return ACTqueue::notifQueue_.pop_front();
    }
 
-   static void waitOnRefresh(const std::vector<std::string>& ids)
+   static void waitOnRefresh(const std::vector<std::string>& ids, bool strict = true)
    {
       if (ids.size() == 0) {
          throw std::runtime_error("empty registration id vector");
@@ -189,7 +189,12 @@ public:
       while (true) {
          const auto &notif = ACTqueue::notifQueue_.pop_front();
          if (notif->type_ != DBNS_Refresh) {
-            throw std::runtime_error("expected refresh notification");
+            if (strict) {
+               throw std::runtime_error("expected refresh notification");
+            }
+            else {
+               continue;
+            }
          }
          for (auto& refreshId : notif->ids_) {
             std::string idStr(refreshId.getCharPtr(), refreshId.getSize());

@@ -76,7 +76,7 @@ public:
       : ColoredCoinACT(armory)
    {}
 
-   void onUpdate(std::shared_ptr<DBNotificationStruct>& notifPtr) override
+   void onUpdate(std::shared_ptr<DBNotificationStruct> notifPtr) override
    {
       updateQueue_.push_back(std::move(notifPtr));
    }
@@ -112,12 +112,37 @@ private:
 public:
    void setACT(std::shared_ptr<ColoredCoinACT> actPtr)
    {
-      actPtr_ = actPtr;
+      actPtr_ = std::move(actPtr);
    }
 
    void update_UT(void);
    void zcUpdate_UT(void);
    void reorg_UT(void);
+};
+
+class AsyncCCT : public ColoredCoinTracker
+{
+public:
+   AsyncCCT(uint64_t coinsPerShare, std::shared_ptr<ArmoryConnection> connPtr)
+      : ColoredCoinTracker(coinsPerShare, connPtr) {}
+
+   std::string registerAddresses(const std::vector<BinaryData> &addrs, bool isNew) const
+   {
+      return walletObj_->registerAddresses(addrs, isNew);
+   }
+
+   std::string registerAddresses(const std::set<BinaryData> &addrSet, bool isNew) const
+   {
+      std::vector<BinaryData> addrVec;
+      for (const auto &addr : addrSet) {
+         addrVec.emplace_back(addr);
+      }
+      return registerAddresses(addrVec, isNew);
+   }
+
+   void update(const AddrSetCb &cb) { ColoredCoinTracker::update(cb); }
+   void zcUpdate(const AddrSetCb &cb) { ColoredCoinTracker::zcUpdate(cb); }
+   void reorg() { ColoredCoinTracker::reorg(true); }
 };
 
 class TestCCoin : public ::testing::Test
@@ -192,6 +217,39 @@ public:
    void update(std::shared_ptr<ColoredCoinTracker>);
    void zcUpdate(std::shared_ptr<ColoredCoinTracker>);
    void reorg(std::shared_ptr<ColoredCoinTracker>);
+};
+
+
+class AsyncCCT_ACT : public SingleUTWalletACT
+{
+public:
+   AsyncCCT_ACT(ArmoryConnection *armory)
+      : SingleUTWalletACT(armory) {}
+
+   void onRefresh(const std::vector<BinaryData> &ids, bool online) override
+   {
+      std::vector<std::string> removedIds;
+      for (const auto &id : ids) {
+         const auto it = refreshCb_.find(id.toBinStr());
+         if (it != refreshCb_.end()) {
+            it->second();
+            removedIds.push_back(it->first);
+         }
+      }
+      for (const auto &id : removedIds) {
+         refreshCb_.erase(id);
+      }
+
+      SingleUTWalletACT::onRefresh(ids, online);
+   }
+
+   void addRefreshCb(const std::string &regId, const std::function<void()> &cb)
+   {
+      refreshCb_[regId] = cb;
+   }
+
+private:
+   std::map<std::string, std::function<void()>> refreshCb_;
 };
 
 #endif // __TEST_CCOIN_H__
