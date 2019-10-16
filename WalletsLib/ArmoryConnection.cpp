@@ -666,7 +666,7 @@ bool ArmoryConnection::getOutpointsFor(const std::vector<bs::Address> &addresses
 }
 
 bool ArmoryConnection::getOutpointsForAddresses(const std::set<BinaryData> &addrVec
-   , const std::function<void(const OutpointBatch &)> &cb
+   , const std::function<void(const OutpointBatch &, std::exception_ptr)> &cb
    , unsigned int height, unsigned int zcIndex)
 {
    if (!bdv_ || (state_ != ArmoryState::Ready)) {
@@ -679,13 +679,13 @@ bool ArmoryConnection::getOutpointsForAddresses(const std::set<BinaryData> &addr
       try {
          const auto batch = opBatch.get();
          if (cb) {
-            cb(batch);
+            cb(batch, nullptr);
          }
       } catch (const std::exception &e) {
          logger->error("[ArmoryConnection::getOutpointsFor] {} address[es] failed: {}"
             , addrVec.size(), e.what());
          if (cb) {
-            cb({});
+            cb({}, std::make_exception_ptr(e));
          }
       }
    };
@@ -694,7 +694,7 @@ bool ArmoryConnection::getOutpointsForAddresses(const std::set<BinaryData> &addr
 }
 
 bool ArmoryConnection::getSpentnessForOutputs(const std::map<BinaryData, std::set<unsigned>> &outputs
-   , const std::function<void(const std::map<BinaryData, std::map<unsigned, BinaryData>> &)> &cb)
+   , const std::function<void(const std::map<BinaryData, std::map<unsigned, BinaryData>> &, std::exception_ptr)> &cb)
 {
    if (!bdv_ || (state_ != ArmoryState::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -704,11 +704,11 @@ bool ArmoryConnection::getSpentnessForOutputs(const std::map<BinaryData, std::se
    {
       try {
          const auto &spentness = msg.get();
-         cb(spentness);
+         cb(spentness, nullptr);
       }
       catch (const std::exception &e) {
          logger->error("[ArmoryConnection::getSpentnessForOutputs] failed to get: {}", e.what());
-         cb({});
+         cb({}, std::make_exception_ptr(e));
       }
    };
    bdv_->getSpentnessForOutputs(outputs, cbWrap);
@@ -842,13 +842,13 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, const TX
    {
       try {
          if (cb) {
-            cb(std::move(msg.get()));
+            cb(std::move(msg.get()), nullptr);
          }
       }
       catch (const std::exception &e) {
          logger->error("[ArmoryConnection::getTXsByHash] failed to get: {}", e.what());
          if (cb) {
-            cb({});
+            cb({}, std::make_exception_ptr(e));
          }
       }
    };

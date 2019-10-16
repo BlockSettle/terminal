@@ -209,7 +209,13 @@ bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb 
       return true;
    }
 #endif   //0
-   const auto &cbWrap = [this, cb, result](const std::vector<Tx> &txs) {
+   const auto &cbWrap = [this, cb, result]
+      (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         cb({}, exPtr);
+         return;
+      }
       for (const auto &tx : txs) {
          if (tx.isInitialized()) {
             txCache_.put(tx.getThisHash(), tx);
@@ -217,10 +223,10 @@ bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb 
          result->push_back(tx);
       }
       if (needInvokeCb()) {
-         QMetaObject::invokeMethod(this, [cb, result] { cb(*result); });
+         QMetaObject::invokeMethod(this, [cb, result] { cb(*result, nullptr); });
       }
       else {
-         cb(*result);
+         cb(*result, nullptr);
       }
    };
    return ArmoryConnection::getTXsByHash(/*missedHashes*/hashes, cbWrap);

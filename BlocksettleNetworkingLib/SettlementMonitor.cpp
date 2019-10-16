@@ -164,10 +164,16 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
          txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
       }
 
-      const auto &cbTXs = [this, txOutIdx, cb, handle] (const std::vector<Tx> &txs) mutable
+      const auto &cbTXs = [this, txOutIdx, cb, handle]
+         (const std::vector<Tx> &txs, std::exception_ptr exPtr) mutable
       {
          ValidityGuard lock(handle);
          if (!handle.isValid()) {
+            return;
+         }
+
+         if (exPtr != nullptr) {
+            cb(false);
             return;
          }
 
@@ -363,8 +369,12 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
    result->value = value;
 
    const auto cbProcess = [result, settlAddr, buyAuthKey, sellAuthKey, tx, cb, logger]
-      (const std::vector<Tx> &txs)
+      (const std::vector<Tx> &txs, std::exception_ptr exPtr)
    {
+      if (exPtr != nullptr) {
+         cb(Failed);
+         return;
+      }
       for (const auto &prevTx : txs) {
          const auto &txHash = prevTx.getThisHash();
          for (const auto &txOutIdx : result->txOutIdx[txHash]) {
@@ -432,7 +442,7 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
       }
       armory->getTXsByHash(result->txHashSet, cbProcess);
    } else {
-      cbProcess({});
+      cbProcess({}, nullptr);
    }
 }
 

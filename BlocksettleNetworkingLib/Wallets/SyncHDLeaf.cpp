@@ -1071,66 +1071,7 @@ void hd::CCLeaf::validationProc()
 
 void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, const ArmoryConnection::UTXOsCb &cb)
 {
-#ifdef OLD_CC_VALIDATION
-   std::set<BinaryData> txHashes;
-   std::map<BinaryData, UTXO> utxoMap;
-   for (const auto &utxo : utxos) {
-      if (!validationStarted_) {
-         return;
-      }
-      const auto &hash = utxo.getTxHash();
-      txHashes.insert(hash);
-      utxoMap[hash] = utxo;
-   }
-   const auto &cbProcess = [this, utxoMap, cb, utxos](const std::vector<Tx> &txs) {
-      struct TxResultData {
-         Tx    tx;
-         UTXO  utxo;
-      };
-      struct Result {
-         uint64_t invalidBalance = 0;
-         std::map<BinaryData, TxResultData> txHashMap;
-      };
-      auto result = std::make_shared<Result>();
-
-      for (const auto &tx : txs) {
-         const auto &txHash = tx.getThisHash();
-         const auto &itUtxo = utxoMap.find(txHash);
-         if (itUtxo == utxoMap.end()) {
-            continue;
-         }
-         result->txHashMap[txHash] = { tx, itUtxo->second };
-      }
-
-      const auto txHashMap = result->txHashMap;
-      for (const auto &txPair : txHashMap) {
-         const auto &txHash = txPair.first;
-         const auto &txData = txPair.second;
-         const auto &cbResult = [this, txHash, txData, result, cb, utxos](bool contained) {
-            if (!contained) {
-               invalidTx_.insert(txData.utxo);
-               invalidTxHash_.insert(txHash);
-               result->invalidBalance += txData.utxo.getValue();
-            }
-            result->txHashMap.erase(txHash);
-            if (result->txHashMap.empty()) {
-               balanceCorrection_ += result->invalidBalance / BTCNumericTypes::BalanceDivider;
-               cb(filterUTXOs(utxos));
-            }
-         };
-         checker_->containsInputAddress(txData.tx, cbResult, ccResolver_->lotSizeFor(suffix_)
-            , txData.utxo.getValue());
-      }
-   };
-   if (txHashes.empty()) {
-      cb(utxos);
-   }
-   else {
-      armory_->getTXsByHash(txHashes, cbProcess);
-   }
-#else
    cb(filterUTXOs(utxos));
-#endif   //OLD_CC_VALIDATION
 }
 
 void hd::CCLeaf::init(bool force)

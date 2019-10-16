@@ -57,7 +57,13 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
             txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
          }
 
-         const auto &cbTXs = [this, item, txOutIndices](const std::vector<Tx> &txs) {
+         const auto &cbTXs = [this, item, txOutIndices]
+            (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+         {
+            if (exPtr != nullptr) {
+               ui_->labelComment->setText(tr("Failed to get TX details"));
+            }
+
             ui_->treeAddresses->addTopLevelItem(itemSender_);
             ui_->treeAddresses->addTopLevelItem(itemReceiver_);
 
@@ -125,7 +131,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
             adjustSize();
          };
          if (txHashSet.empty()) {
-            cbTXs({});
+            cbTXs({}, nullptr);
          }
          else {
             armory->getTXsByHash(txHashSet, cbTXs);

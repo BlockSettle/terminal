@@ -308,9 +308,14 @@ std::vector<Tx> ColoredCoinTracker::grabTxBatch(
 {
    auto txProm = std::make_shared<std::promise<std::vector<Tx>>>();
    auto txFut = txProm->get_future();
-   auto txLbd = [txProm](const std::vector<Tx> &batch)
+   auto txLbd = [txProm](const std::vector<Tx> &batch, std::exception_ptr exPtr)
    {
-      txProm->set_value(batch);
+      if (exPtr != nullptr) {
+         txProm->set_exception(exPtr);
+      }
+      else {
+         txProm->set_value(batch);
+      }
    };
    if (!connPtr_->getTXsByHash(hashes, txLbd)) {
       return {};
@@ -377,9 +382,14 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
       std::promise<std::map<BinaryData, std::map<unsigned, BinaryData>>>>();
    auto spentnessFut = spentnessProm->get_future();
    auto spentnessLbd = [spentnessProm](
-      const std::map<BinaryData, std::map<unsigned, BinaryData>> &batch)
+      const std::map<BinaryData, std::map<unsigned, BinaryData>> &batch, std::exception_ptr exPtr)
    {
-      spentnessProm->set_value(batch);
+      if (exPtr != nullptr) {
+         spentnessProm->set_exception(exPtr);
+      }
+      else {
+         spentnessProm->set_value(batch);
+      }
    };
    if (!connPtr_->getSpentnessForOutputs(spentnessToTrack, spentnessLbd)) {
       return {};
@@ -404,7 +414,16 @@ void ColoredCoinTracker::processTxBatch(const std::shared_ptr<ColoredCoinSnapsho
    , const std::set<BinaryData>& hashes
    , const ResultCb &cb)
 {
-   const auto txLbd = [this, ssPtr, cb](const std::vector<Tx> &txBatch) {
+   const auto txLbd = [this, ssPtr, cb]
+      (const std::vector<Tx> &txBatch, std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb(false);
+         }
+         return;
+      }
+
       std::shared_ptr<ColoredCoinZCSnapshot> zcPtr = nullptr;
       std::map<BinaryData, std::set<unsigned>> spentnessToTrack;
 
@@ -453,8 +472,15 @@ void ColoredCoinTracker::processTxBatch(const std::shared_ptr<ColoredCoinSnapsho
 
       //check new utxo list
       auto spentnessLbd = [this, ssPtr, cb](
-         const std::map<BinaryData, std::map<unsigned, BinaryData>> &spentnessBatch)
+         const std::map<BinaryData, std::map<unsigned, BinaryData>> &spentnessBatch
+         , std::exception_ptr exPtr)
       {
+         if (exPtr != nullptr) {
+            if (cb) {
+               cb(false);
+            }
+            return;
+         }
          //aggregate spender hashes
          std::set<BinaryData> spenderHashes;
          for (auto& spentness : spentnessBatch) {
@@ -569,7 +595,16 @@ void ColoredCoinTracker::processZcBatch(
    const std::set<BinaryData>& hashes, const ResultCb &cb)
 {
    //grab listed tx
-   const auto cbTxBatch = [this, cb, ssPtr, zcPtr](const std::vector<Tx> &txBatch) {
+   const auto cbTxBatch = [this, cb, ssPtr, zcPtr]
+      (const std::vector<Tx> &txBatch, std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb(false);
+         }
+         return;
+      }
+
       //process the zc transactions
       for (auto& tx : txBatch) {
          //parse the tx
@@ -637,9 +672,14 @@ void ColoredCoinTracker::processRevocationBatch(
    //grab listed tx
    auto txProm = std::make_shared<std::promise<std::vector<Tx>>>();
    auto txFut = txProm->get_future();
-   auto txLbd = [txProm](const std::vector<Tx> &batch)
+   auto txLbd = [txProm](const std::vector<Tx> &batch, std::exception_ptr exPtr)
    {
-      txProm->set_value(batch);
+      if (exPtr != nullptr) {
+         txProm->set_exception(exPtr);
+      }
+      else {
+         txProm->set_value(batch);
+      }
    };
    if (!connPtr_->getTXsByHash(hashes, txLbd)) {
       return;
@@ -673,8 +713,16 @@ void ColoredCoinTracker::processRevocationBatch(
       return;
    }
    //grab listed tx
-   const auto txLbd = [this, cb, ssPtr](const std::vector<Tx> &txBatch)
+   const auto txLbd = [this, cb, ssPtr]
+      (const std::vector<Tx> &txBatch, std::exception_ptr exPtr)
    {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb(false);
+         }
+         return;
+      }
+
       //mark all output scrAddr as revoked
       for (auto& tx : txBatch) {
          for (unsigned i = 0; i < tx.getNumTxOut(); i++) {
@@ -732,9 +780,14 @@ std::set<BinaryData> ColoredCoinTracker::update()
 
    auto promPtr = std::make_shared<std::promise<OutpointBatch>>();
    auto fut = promPtr->get_future();
-   auto lbd = [promPtr](const OutpointBatch &batch)
+   auto lbd = [promPtr](const OutpointBatch &batch, std::exception_ptr exPtr)
    {
-      promPtr->set_value(batch);
+      if (exPtr != nullptr) {
+         promPtr->set_exception(exPtr);
+      }
+      else {
+         promPtr->set_value(batch);
+      }
    };
 
    /*
@@ -870,8 +923,16 @@ void ColoredCoinTracker::update(const AddrSetCb &cb)
    addrSet.insert(originAddresses_.cbegin(), originAddresses_.cend());
    addrSet.insert(revocationAddresses_.cbegin(), revocationAddresses_.cend());
 
-   auto lbd = [this, ssPtr, addrSet, cb](const OutpointBatch &outpointData)
+   auto lbd = [this, ssPtr, addrSet, cb]
+      (const OutpointBatch &outpointData, std::exception_ptr exPtr)
    {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb({});
+         }
+         return;
+      }
+
       std::set<BinaryData> txsToCheck;
       std::set<BinaryData> revokesToCheck;
 
@@ -1023,9 +1084,14 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
    //note: we dont deal with unconfirmed revocations
    auto promPtr = std::make_shared<std::promise<OutpointBatch>>();
    auto fut = promPtr->get_future();
-   auto lbd = [promPtr](const OutpointBatch &batch)
+   auto lbd = [promPtr](const OutpointBatch &batch, std::exception_ptr exPtr)
    {
-      promPtr->set_value(batch);
+      if (exPtr != nullptr) {
+         promPtr->set_exception(exPtr);
+      }
+      else {
+         promPtr->set_value(batch);
+      }
    };
 
    /*
@@ -1125,8 +1191,15 @@ void ColoredCoinTracker::zcUpdate(const AddrSetCb &cb)
 
    //note: we dont deal with unconfirmed revocations
    auto lbd = [this, cb, currentSs, ssPtr, addrSet]
-      (const OutpointBatch &outpointData)
+      (const OutpointBatch &outpointData, std::exception_ptr exPtr)
    {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb({});
+         }
+         return;
+      }
+
       std::set<BinaryData> txsToCheck;
 
       //parse new outputs for origin addresses
@@ -1217,9 +1290,15 @@ void ColoredCoinTracker::purgeZc()
    }
    auto promPtr = std::make_shared<std::promise<std::vector<Tx>>>();
    auto fut = promPtr->get_future();
-   const auto &getTxBatchLbd = [promPtr](const std::vector<Tx> &batch)
+   const auto &getTxBatchLbd = [promPtr]
+      (const std::vector<Tx> &batch, std::exception_ptr exPtr)
    {
-      promPtr->set_value(batch);
+      if (exPtr != nullptr) {
+         promPtr->set_exception(exPtr);
+      }
+      else {
+         promPtr->set_value(batch);
+      }
    };
    if (!connPtr_->getTXsByHash(txHashes, getTxBatchLbd)) {
       return;
@@ -1273,8 +1352,15 @@ void ColoredCoinTracker::purgeZc(const ResultCb &cb)
       txHashes.insert(hashPair.first);
    }
    const auto getTxBatchLbd = [this, cb, zcPtr, currentSs]
-      (const std::vector<Tx> &txBatch) mutable
+      (const std::vector<Tx> &txBatch, std::exception_ptr exPtr) mutable
    {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb(false);
+         }
+         return;
+      }
+
       zcPtr = std::make_shared<ColoredCoinZCSnapshot>();
       std::set<BinaryData> txsToCheck;
       for (auto& tx : txBatch) {

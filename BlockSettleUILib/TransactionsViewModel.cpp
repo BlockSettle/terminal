@@ -892,7 +892,13 @@ void TransactionsViewItem::initialize(ArmoryConnection *armory
       }
    };
 
-   const auto cbTXs = [this, cbInit, userCB](const std::vector<Tx> &txs) {
+   const auto cbTXs = [this, cbInit, userCB]
+      (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         userCB(nullptr);
+         return;
+      }
       for (const auto &tx : txs) {
          const auto &txHash = tx.getThisHash();
          txIns[txHash] = tx;
