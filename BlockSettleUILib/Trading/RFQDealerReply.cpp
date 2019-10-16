@@ -31,6 +31,10 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+namespace {
+   const QString noBalanceAvailable = QLatin1String("-");
+}
+
 using namespace bs::ui;
 
 RFQDealerReply::RFQDealerReply(QWidget* parent)
@@ -407,6 +411,7 @@ void RFQDealerReply::onAuthAddrChanged(int index)
 
 void RFQDealerReply::updateSubmitButton()
 {
+   updateBalanceLabel();
    bool isQRNRepliable = (!currentQRN_.empty() && QuoteProvider::isRepliableStatus(currentQRN_.status));
    if ((currentQRN_.assetType != bs::network::Asset::SpotFX)
       && (!signingContainer_ || signingContainer_->isOffline())) {
@@ -468,14 +473,7 @@ bool RFQDealerReply::checkBalance() const
             - transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider));
       }
       else if ((currentQRN_.assetType == bs::network::Asset::PrivateMarket) && ccCoinSel_) {
-         uint64_t balance = 0;
-         for (const auto &utxo : dealerUtxoAdapter_->get(currentQRN_.quoteRequestId)) {
-            balance += utxo.getValue();
-         }
-         if (!balance) {
-            balance = ccCoinSel_->GetBalance();
-         }
-         return (amount <= ccCoinSel_->GetWallet()->getTxBalance(balance));
+         return (amount <= getPrivateMarketCoinBalance());
       }
       const auto product = (product_ == baseProduct_) ? product_ : currentQRN_.product;
       return assetManager_->checkBalance(product, amount);
@@ -1045,4 +1043,61 @@ void RFQDealerReply::onAutoSignStateChanged()
       ui_->comboBoxWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
    }
    ui_->comboBoxWallet->setEnabled(!autoSignQuoteProvider_->autoSignState());
+}
+
+void bs::ui::RFQDealerReply::updateBalanceLabel()
+{
+   const bool isXbt = (currentQRN_.assetType == bs::network::Asset::PrivateMarket && currentQRN_.side == bs::network::Side::Sell) ||
+      ((currentQRN_.assetType == bs::network::Asset::SpotXBT) && (currentQRN_.side == bs::network::Side::Buy));
+
+   QString totalBalance;
+   if (isXbt) {
+      if (!transactionData_) {
+         totalBalance = noBalanceAvailable;
+      }
+      else {
+         totalBalance = tr("%1 %2")
+            .arg(UiUtils::displayAmount(transactionData_->GetTransactionSummary().availableBalance))
+            .arg(QString::fromStdString(bs::network::XbtCurrency));
+      }
+   }
+   else if ((currentQRN_.side == bs::network::Side::Buy) && (currentQRN_.assetType == bs::network::Asset::PrivateMarket)) {
+      if (!ccCoinSel_) {
+         totalBalance = noBalanceAvailable;
+      }
+      else {
+         totalBalance = tr("%1 %2")
+            .arg(UiUtils::displayCurrencyAmount(getPrivateMarketCoinBalance()))
+            .arg(QString::fromStdString(baseProduct_));
+      }
+   }
+   else {
+      if (!assetManager_) {
+         totalBalance = noBalanceAvailable;
+      }
+      else {
+         totalBalance = tr("%1 %2")
+            .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(product_)))
+            .arg(QString::fromStdString(currentQRN_.side == bs::network::Side::Buy ? baseProduct_ : product_));
+      }
+   }
+
+   ui_->labelBalanceValue->setText(totalBalance);
+}
+
+BTCNumericTypes::balance_type bs::ui::RFQDealerReply::getPrivateMarketCoinBalance() const
+{
+   if (!ccCoinSel_) {
+      return 0;
+   }
+
+   uint64_t balance = 0;
+   for (const auto &utxo : dealerUtxoAdapter_->get(currentQRN_.quoteRequestId)) {
+      balance += utxo.getValue();
+   }
+   if (!balance) {
+      balance = ccCoinSel_->GetBalance();
+   }
+
+   return ccCoinSel_->GetWallet()->getTxBalance(balance);
 }
