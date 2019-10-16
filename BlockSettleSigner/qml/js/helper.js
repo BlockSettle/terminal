@@ -439,20 +439,15 @@ function tryActivateAutoSign(walletInfo, showResult) {
         }
     }
 
-    var passwordDialog = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
+    var dlg = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
         , {"walletInfo": walletInfo});
 
-    prepareDialog(passwordDialog)
-    passwordDialog.open()
-    passwordDialog.init()
+    prepareDialog(dlg)
+    dlg.open()
+    dlg.init()
 
-    passwordDialog.bsAccepted.connect(function() {
-        var passwordData = qmlFactory.createPasswordData()
-        passwordData.encType = QPasswordData.Password
-        passwordData.encKey = ""
-        passwordData.textPassword = passwordDialog.enteredPassword
-
-        signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
+    dlg.bsAccepted.connect(function() {
+        signerStatus.activateAutoSign(walletInfo.rootId, dlg.passwordData, true, autoSignCallback)
     })
 }
 
@@ -514,14 +509,14 @@ function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, wa
         dlg = Qt.createComponent("../BsDialogs/TxSignSettlementXBTMarketDialog.qml").createObject(mainWindow
            , {"txInfo": txInfo,
               "passwordDialogData": passwordDialogData,
-               "walletInfo": walletInfo
+              "walletInfo": walletInfo
         })
     }
     else if (passwordDialogData.Market === "CC") {
         dlg = Qt.createComponent("../BsDialogs/TxSignSettlementCCMarketDialog.qml").createObject(mainWindow
            , {"txInfo": txInfo,
               "passwordDialogData": passwordDialogData,
-               "walletInfo": walletInfo
+              "walletInfo": walletInfo
         })
     }
     else {
