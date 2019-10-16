@@ -71,7 +71,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
             // we verify only requester's auth address
             bs::sync::PasswordDialogData dialogData;
             dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
-            dialogData.setValue(PasswordDialogData::SettlementId, QString::fromStdString(id()));
+            dialogData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
             dialogData.setValue(PasswordDialogData::SigningAllowed, true);
 
             signContainer_->updateDialogData(dialogData);

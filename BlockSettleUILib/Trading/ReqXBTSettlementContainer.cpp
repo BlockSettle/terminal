@@ -236,6 +236,7 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
 {
    dealerVerifState_ = state;
    bs::sync::PasswordDialogData pd;
+   pd.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
    pd.setValue(PasswordDialogData::ResponderAuthAddress, dealerAuthAddress_.display());
    pd.setValue(PasswordDialogData::ResponderAuthAddressVerified, state == AddressVerificationState::Verified);
    pd.setValue(PasswordDialogData::SigningAllowed, state == AddressVerificationState::Verified);

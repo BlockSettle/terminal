@@ -583,6 +583,9 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       out: tx as Codec_CommonTypes::TxWithMetaData
       */
 
+
+      //TODO: consider decoupling txheight/index fetch into its own method
+
       if (!command->has_hash())
          throw runtime_error("invalid command for getTxByHash");
 
@@ -597,6 +600,8 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       if (!heightOnly)
       {
          retval = move(this->getTxByHash(txHashRef));
+         if (!retval.isInitialized())
+            throw runtime_error("failed to grab tx by hash");
       }
       else
       {

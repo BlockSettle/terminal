@@ -33,6 +33,9 @@ BinaryData ZeroConfContainer::getNewZCkey()
 Tx ZeroConfContainer::getTxByHash(const BinaryData& txHash) const
 {
    auto ss = getSnapshot();
+   if (ss == nullptr)
+      return Tx();
+
    auto& txhashmap = ss->txHashToDBKey_;
    const auto keyIter = txhashmap.find(txHash);
 
