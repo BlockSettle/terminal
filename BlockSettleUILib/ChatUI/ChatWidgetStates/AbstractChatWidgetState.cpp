@@ -170,13 +170,13 @@ void AbstractChatWidgetState::onRemovePartyRequest(const std::string& partyId)
    chat_->chatClientServicePtr_->DeletePrivateParty(partyId);
 }
 
-void AbstractChatWidgetState::onNewPartyRequest(const std::string& partyName)
+void AbstractChatWidgetState::onNewPartyRequest(const std::string& partyName, const std::string& initialMessage)
 {
    if (!canSendPartyRequest()) {
       return;
    }
 
-   chat_->chatClientServicePtr_->RequestPrivateParty(partyName);
+   chat_->chatClientServicePtr_->RequestPrivateParty(partyName, initialMessage);
 }
 
 void AbstractChatWidgetState::onUpdateDisplayName(const std::string& partyId, const std::string& contactName)

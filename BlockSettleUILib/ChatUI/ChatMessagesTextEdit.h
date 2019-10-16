@@ -85,9 +85,11 @@ public slots:
    void onMessageUpdate(const Chat::MessagePtrList& messagePtrList);
    void onUpdatePartyName(const std::string& partyId);
 
+   void onShowRequestPartyBox(const std::string& userHash);
+
 signals:
    void messageRead(const std::string& partyId, const std::string& messageId);
-   void newPartyRequest(const std::string& userName);
+   void newPartyRequest(const std::string& userName, const std::string& initialMessage);
    void removePartyRequest(const std::string& partyId);
    void switchPartyRequest(const QString& partyId);
 
