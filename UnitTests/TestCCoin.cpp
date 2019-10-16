@@ -525,6 +525,37 @@ TEST_F(TestCCoin, Initial_balances)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 }
 
+TEST_F(TestCCoin, Initial_balances_async)
+{
+   InitialFund();
+
+   EXPECT_EQ(rootWallet_->getAddrBalance(genesisAddr_)[0], COIN);
+
+   for (size_t i = 0; i < usersCount_; i++) {
+      EXPECT_EQ(userWallets_[i]->getAddrBalance(userCCAddresses_[i])[0], 100 * ccLotSize_);
+      EXPECT_EQ(userWallets_[i]->getAddrBalance(userFundAddresses_[i])[0], 50 * COIN);
+   }
+
+   auto act = make_unique<AsyncCCT_ACT>(envPtr_->armoryConnection().get());
+   auto cct = std::make_shared<ColoredCoinTracker>(ccLotSize_, envPtr_->armoryConnection());
+   cct->addOriginAddress(genesisAddr_);
+
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   const auto regPair = cct->goOnline([promOnline](bool result) {
+      promOnline->set_value(result);
+   });
+   act->addRefreshCb(regPair.first, regPair.second);
+   UnitTestWalletACT::waitOnRefresh({regPair.first}, false);
+   EXPECT_TRUE(futOnline.get());
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+
+   for (size_t i = 0; i < usersCount_; i++) {
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+   }
+}
+
 ////
 TEST_F(TestCCoin, Case_1CC_2CC)
 {
@@ -562,6 +593,72 @@ TEST_F(TestCCoin, Case_1CC_2CC)
    UpdateAllBalances();
 
    update(cct);
+
+   EXPECT_EQ(userWallets_[0]->getAddrBalance(userCCAddresses_[0])[0], (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(userWallets_[0]->getAddrBalance(userFundAddresses_[0])[0], 51 * COIN);
+
+   EXPECT_EQ(userWallets_[1]->getAddrBalance(userCCAddresses_[1])[0], (100 + amountCC) * ccLotSize_);
+   EXPECT_EQ(userWallets_[1]->getAddrBalance(userFundAddresses_[1])[0], 49 * COIN - 1000);
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
+}
+
+TEST_F(TestCCoin, Case_1CC_2CC_async)
+{
+   InitialFund();
+
+   auto act = make_unique<AsyncCCT_ACT>(envPtr_->armoryConnection().get());
+   auto cct = std::make_shared<AsyncCCT>(ccLotSize_, envPtr_->armoryConnection());
+   cct->addOriginAddress(genesisAddr_);
+
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   const auto regPair = cct->goOnline([promOnline](bool result) {
+      promOnline->set_value(result);
+   });
+   act->addRefreshCb(regPair.first, regPair.second);
+   UnitTestWalletACT::waitOnRefresh({ regPair.first }, false);
+   EXPECT_TRUE(futOnline.get());
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+
+   for (size_t i = 0; i < usersCount_; i++)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
+
+   EXPECT_EQ(utxosA.size(), 1);
+   EXPECT_EQ(utxosB.size(), 1);
+
+   const uint amountCC = 50;
+   CCoinSpender ccsA;
+   ccsA.ccAddr_ = userCCAddresses_[0];
+   ccsA.xbtAddr_ = userFundAddresses_[0];
+   ccsA.xbtValue_ = COIN;
+
+   CCoinSpender ccsB;
+   ccsB.ccAddr_ = userCCAddresses_[1];
+   ccsB.xbtAddr_ = userFundAddresses_[1];
+   ccsB.ccValue_ = amountCC * ccLotSize_;
+
+   auto tx = CreateCJtx(utxosA, utxosB, ccsA, ccsB);
+   EXPECT_EQ(tx.getNumTxIn(), 2);
+   EXPECT_EQ(tx.getNumTxOut(), 4);
+   MineBlocks(6);
+   UpdateAllBalances();
+
+   auto promUpdate = std::make_shared<std::promise<std::string>>();
+   auto futUpdate = promUpdate->get_future();
+   const auto &cbUpdate = [promUpdate, cct](const std::set<BinaryData> &addrs)
+   {
+      promUpdate->set_value(cct->registerAddresses(addrs, false));
+   };
+   cct->update(cbUpdate);
+   const auto updRegId = futUpdate.get();
+   UnitTestWalletACT::waitOnRefresh({ updRegId }, false);
 
    EXPECT_EQ(userWallets_[0]->getAddrBalance(userCCAddresses_[0])[0], (100 - amountCC) * ccLotSize_);
    EXPECT_EQ(userWallets_[0]->getAddrBalance(userFundAddresses_[0])[0], 51 * COIN);
@@ -632,6 +729,91 @@ TEST_F(TestCCoin, Case_MultiUnorderedCC_2CC)
    EXPECT_EQ(userWallets_[1]->getAddrBalance(userFundAddresses_[1])[0], 49 * COIN - 1000);
 
    update(cct);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 5 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
+}
+
+TEST_F(TestCCoin, Case_MultiUnorderedCC_2CC_async)
+{
+   InitialFund();
+
+   auto act = make_unique<AsyncCCT_ACT>(envPtr_->armoryConnection().get());
+   auto cct = std::make_shared<AsyncCCT>(ccLotSize_, envPtr_->armoryConnection());
+   cct->addOriginAddress(genesisAddr_);
+
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   const auto regPair = cct->goOnline([promOnline](bool result) {
+      promOnline->set_value(result);
+   });
+   act->addRefreshCb(regPair.first, regPair.second);
+   UnitTestWalletACT::waitOnRefresh({ regPair.first }, false);
+   EXPECT_TRUE(futOnline.get());
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+
+   for (size_t i = 0; i < usersCount_; i++)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   for (size_t i = 10; i < 100; i += 10)
+   {
+      SimpleSendMany(genesisAddr_, { userCCAddresses_[0] }, i * ccLotSize_);
+      MineBlocks(6);
+   }
+   UpdateAllBalances();
+
+   uint64_t newCcBalance = 450 * ccLotSize_ + 1000 * 9;
+
+   const auto lbdUpdate = [cct] {
+      auto promUpdate = std::make_shared<std::promise<std::string>>();
+      auto futUpdate = promUpdate->get_future();
+      const auto cb = [promUpdate, cct](const std::set<BinaryData> &addrs)
+      {
+         promUpdate->set_value(cct->registerAddresses(addrs, false));
+      };
+      cct->update(cb);
+      auto updRegId = futUpdate.get();
+      UnitTestWalletACT::waitOnRefresh({ updRegId }, false);
+   };
+   lbdUpdate();
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 550 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
+
+   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::swap(utxosA[0], utxosA[9]);
+   std::swap(utxosA[2], utxosA[7]);
+   std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
+
+   EXPECT_EQ(utxosA.size(), 10);
+   EXPECT_EQ(utxosB.size(), 1);
+
+   const uint amountCC = 545;
+   CCoinSpender ccsA;
+   ccsA.ccAddr_ = userCCAddresses_[0];
+   ccsA.xbtAddr_ = userFundAddresses_[0];
+   ccsA.xbtValue_ = COIN;
+
+   CCoinSpender ccsB;
+   ccsB.ccAddr_ = userCCAddresses_[1];
+   ccsB.xbtAddr_ = userFundAddresses_[1];
+   ccsB.ccValue_ = amountCC * ccLotSize_;
+
+   auto tx = CreateCJtx(utxosA, utxosB, ccsA, ccsB);
+   EXPECT_EQ(tx.getNumTxIn(), 11);
+   EXPECT_EQ(tx.getNumTxOut(), 4);
+   MineBlocks(6);
+   UpdateAllBalances();
+
+   EXPECT_EQ(userWallets_[0]->getAddrBalance(userCCAddresses_[0])[0], 5 * ccLotSize_);
+   EXPECT_EQ(userWallets_[0]->getAddrBalance(userFundAddresses_[0])[0], 51 * COIN);
+
+   EXPECT_EQ(userWallets_[1]->getAddrBalance(userCCAddresses_[1])[0], (100 + amountCC) * ccLotSize_);
+   EXPECT_EQ(userWallets_[1]->getAddrBalance(userFundAddresses_[1])[0], 49 * COIN - 1000);
+
+   lbdUpdate();
+
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 5 * ccLotSize_);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
@@ -768,6 +950,170 @@ TEST_F(TestCCoin, Revoke)
       EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 }
 
+TEST_F(TestCCoin, Revoke_async)
+{
+   InitialFund();
+   FundFromCoinbase({ revocationAddr_ }, 50 * COIN);
+   MineBlocks(6);
+
+   EXPECT_EQ(rootWallet_->getAddrBalance(genesisAddr_)[0], COIN);
+
+   for (size_t i = 0; i < usersCount_; ++i) {
+      EXPECT_EQ(userWallets_[i]->getAddrBalance(userCCAddresses_[i])[0], 100 * ccLotSize_);
+      EXPECT_EQ(userWallets_[i]->getAddrBalance(userFundAddresses_[i])[0], 50 * COIN);
+   }
+
+   auto act = make_unique<AsyncCCT_ACT>(envPtr_->armoryConnection().get());
+   auto cct = std::make_shared<AsyncCCT>(ccLotSize_, envPtr_->armoryConnection());
+   cct->addOriginAddress(genesisAddr_);
+   cct->addRevocationAddress(revocationAddr_);
+
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   const auto regPair = cct->goOnline([promOnline](bool result) {
+      promOnline->set_value(result);
+   });
+   act->addRefreshCb(regPair.first, regPair.second);
+   UnitTestWalletACT::waitOnRefresh({ regPair.first }, false);
+   EXPECT_TRUE(futOnline.get());
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+
+   for (size_t i = 0; i < usersCount_; i++)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   //send cc from addr9 to addr0
+   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[9]);
+   std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[0]);
+
+   const uint amountCC = 50;
+   CCoinSpender ccsA;
+   ccsA.ccAddr_ = userCCAddresses_[9];
+   ccsA.xbtAddr_ = userFundAddresses_[9];
+   ccsA.xbtValue_ = COIN;
+
+   CCoinSpender ccsB;
+   ccsB.ccAddr_ = userCCAddresses_[0];
+   ccsB.xbtAddr_ = userFundAddresses_[0];
+   ccsB.ccValue_ = amountCC * ccLotSize_;
+
+   auto tx = CreateCJtx(utxosA, utxosB, ccsA, ccsB);
+
+   //confirm the tx
+   MineBlocks(1);
+
+   const auto lbdUpdate = [cct] {
+      auto promUpdate = std::make_shared<std::promise<std::string>>();
+      auto futUpdate = promUpdate->get_future();
+      const auto cb = [promUpdate, cct](const std::set<BinaryData> &addrs)
+      {
+         promUpdate->set_value(cct->registerAddresses(addrs, false));
+      };
+      cct->update(cb);
+      auto updRegId = futUpdate.get();
+      UnitTestWalletACT::waitOnRefresh({ updRegId }, false);
+   };
+   lbdUpdate();
+
+   //check cc balances
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 150 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), 50 * ccLotSize_);
+
+   for (size_t i = 1; i < usersCount_ - 1; i++)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   //revoke addr9
+   revoke(userCCAddresses_[9]);
+
+   //confirm the tx
+   MineBlocks(1);
+
+   lbdUpdate();
+
+   //check address has no more cc
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 150 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), 0);
+
+   //check other addresses are untouched
+   for (size_t i = 1; i < usersCount_ - 1; i++)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   //send more coins to addr9
+   SimpleSendMany(genesisAddr_, { userCCAddresses_[9] }, 150 * ccLotSize_);
+   MineBlocks(6);
+
+   lbdUpdate();
+
+   //check it still has no cc value
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 150 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), 0);
+
+   //check other addresses are untouched
+   for (size_t i = 1; i < usersCount_ - 1; i++)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   //send cc from addr8 to addr1
+   std::vector<UTXO> utxosC = GetUTXOsFor(userCCAddresses_[8]);
+   std::vector<UTXO> utxosD = GetUTXOsFor(userFundAddresses_[1]);
+
+   const uint amountCC2 = 60;
+   CCoinSpender ccsC;
+   ccsC.ccAddr_ = userCCAddresses_[8];
+   ccsC.xbtAddr_ = userFundAddresses_[8];
+   ccsC.xbtValue_ = COIN;
+
+   CCoinSpender ccsD;
+   ccsD.ccAddr_ = userCCAddresses_[1];
+   ccsD.xbtAddr_ = userFundAddresses_[1];
+   ccsD.ccValue_ = amountCC2 * ccLotSize_;
+
+   auto tx2 = CreateCJtx(utxosC, utxosD, ccsC, ccsD);
+
+   //revoke addr8 within the same block
+   revoke(userCCAddresses_[8]);
+
+   //confirm the transactions
+   MineBlocks(1);
+
+   lbdUpdate();
+
+   //check balances
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 150 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 160 * ccLotSize_);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), 0);
+
+   //check other addresses are untouched
+   for (size_t i = 2; i < usersCount_ - 2; i++)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   //bootstrap fresh cct, check balances are valid (retroaction check)
+   auto cct2 = std::make_shared<AsyncCCT>(ccLotSize_, envPtr_->armoryConnection());
+   cct2->addOriginAddress(genesisAddr_);
+   cct2->addRevocationAddress(revocationAddr_);
+
+   auto promOnline2 = std::make_shared<std::promise<bool>>();
+   auto futOnline2 = promOnline2->get_future();
+   const auto regPair2 = cct2->goOnline([promOnline2](bool result) {
+      promOnline2->set_value(result);
+   });
+   act->addRefreshCb(regPair2.first, regPair2.second);
+   UnitTestWalletACT::waitOnRefresh({ regPair2.first }, false);
+   EXPECT_TRUE(futOnline2.get());
+
+   //check balances
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 150 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 160 * ccLotSize_);
+
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), 0);
+
+   //check other addresses are untouched
+   for (size_t i = 2; i < usersCount_ - 2; i++)
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+}
+
 ////
 TEST_F(TestCCoin, Case_MultiUnorderedCC_NoChange)
 {
@@ -825,6 +1171,90 @@ TEST_F(TestCCoin, Case_MultiUnorderedCC_NoChange)
    EXPECT_EQ(userWallets_[1]->getAddrBalance(userFundAddresses_[1])[0], 49 * COIN - 1000);
 
    update(cct);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
+}
+
+TEST_F(TestCCoin, Case_MultiUnorderedCC_NoChange_async)
+{
+   InitialFund();
+
+   auto act = make_unique<AsyncCCT_ACT>(envPtr_->armoryConnection().get());
+   auto cct = std::make_shared<AsyncCCT>(ccLotSize_, envPtr_->armoryConnection());
+   cct->addOriginAddress(genesisAddr_);
+
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   const auto regPair = cct->goOnline([promOnline](bool result) {
+      promOnline->set_value(result);
+   });
+   act->addRefreshCb(regPair.first, regPair.second);
+   UnitTestWalletACT::waitOnRefresh({ regPair.first }, false);
+   EXPECT_TRUE(futOnline.get());
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+
+   for (size_t i = 0; i < usersCount_; ++i)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   for (size_t i = 10; i < 100; i += 10) { // 10..90.. +100init = 550 total
+      SimpleSendMany(genesisAddr_, { userCCAddresses_[0] }, i * ccLotSize_);
+      MineBlocks(6);
+   }
+   UpdateAllBalances();
+
+   uint64_t newCcBalance = 450 * ccLotSize_ + 1000 * 9;
+
+   const auto lbdUpdate = [cct] {
+      auto promUpdate = std::make_shared<std::promise<std::string>>();
+      auto futUpdate = promUpdate->get_future();
+      const auto cb = [promUpdate, cct](const std::set<BinaryData> &addrs)
+      {
+         promUpdate->set_value(cct->registerAddresses(addrs, false));
+      };
+      cct->update(cb);
+      auto updRegId = futUpdate.get();
+      UnitTestWalletACT::waitOnRefresh({ updRegId }, false);
+   };
+   lbdUpdate();
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 550 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
+
+   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::swap(utxosA[0], utxosA[9]);
+   std::swap(utxosA[2], utxosA[7]);
+   std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
+
+   EXPECT_EQ(utxosA.size(), 10);
+   EXPECT_EQ(utxosB.size(), 1);
+
+   const uint amountCC = 550; // w/o change
+   CCoinSpender ccsA;
+   ccsA.ccAddr_ = userCCAddresses_[0];
+   ccsA.xbtAddr_ = userFundAddresses_[0];
+   ccsA.xbtValue_ = COIN;
+
+   CCoinSpender ccsB;
+   ccsB.ccAddr_ = userCCAddresses_[1];
+   ccsB.xbtAddr_ = userFundAddresses_[1];
+   ccsB.ccValue_ = amountCC * ccLotSize_;
+
+   auto tx = CreateCJtx(utxosA, utxosB, ccsA, ccsB);
+   EXPECT_EQ(tx.getNumTxIn(), 11);
+   EXPECT_EQ(tx.getNumTxOut(), 3);
+   MineBlocks(6);
+   UpdateAllBalances();
+
+   EXPECT_EQ(userWallets_[0]->getAddrBalance(userCCAddresses_[0])[0], 0);
+   EXPECT_EQ(userWallets_[0]->getAddrBalance(userFundAddresses_[0])[0], 51 * COIN);
+
+   EXPECT_EQ(userWallets_[1]->getAddrBalance(userCCAddresses_[1])[0], (100 + amountCC) * ccLotSize_);
+   EXPECT_EQ(userWallets_[1]->getAddrBalance(userFundAddresses_[1])[0], 49 * COIN - 1000);
+
+   lbdUpdate();
+
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
@@ -900,6 +1330,128 @@ TEST_F(TestCCoin, ZeroConf)
    EXPECT_EQ(userWallets_[1]->getAddrBalance(userFundAddresses_[1])[0], 49 * COIN - 1000);
 
    update(cct);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
+}
+
+TEST_F(TestCCoin, ZeroConf_async)
+{
+   InitialFund();
+
+   auto act = make_unique<AsyncCCT_ACT>(envPtr_->armoryConnection().get());
+   auto cct = std::make_shared<AsyncCCT>(ccLotSize_, envPtr_->armoryConnection());
+   cct->addOriginAddress(genesisAddr_);
+
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   const auto regPair = cct->goOnline([promOnline](bool result) {
+      promOnline->set_value(result);
+   });
+   act->addRefreshCb(regPair.first, regPair.second);
+   UnitTestWalletACT::waitOnRefresh({ regPair.first }, false);
+   EXPECT_TRUE(futOnline.get());
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+
+   for (size_t i = 0; i < usersCount_; ++i)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   for (size_t i = 10; i < 100; i += 10) { // 10..90.. +100init = 550 total
+      SimpleSendMany(genesisAddr_, { userCCAddresses_[0] }, i * ccLotSize_);
+
+      size_t i_dec = i / 10;
+      uint64_t ccbal = (i_dec * (i_dec + 1)) * 5 + 100;
+
+      auto promZcUpdate = std::make_shared<std::promise<std::string>>();
+      auto futZcUpdate = promZcUpdate->get_future();
+      const auto &cbZcUpdate = [promZcUpdate, cct](const std::set<BinaryData> &addrs)
+      {
+         promZcUpdate->set_value(cct->registerAddresses(addrs, false));
+      };
+      cct->zcUpdate(cbZcUpdate);
+      const auto zcUpdRegId = futZcUpdate.get();
+      UnitTestWalletACT::waitOnRefresh({ zcUpdRegId }, false);
+
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), ccbal * ccLotSize_);
+
+      MineBlocks(6);
+
+      auto promUpdate = std::make_shared<std::promise<std::string>>();
+      auto futUpdate = promUpdate->get_future();
+      const auto &cbUpdate = [promUpdate, cct](const std::set<BinaryData> &addrs)
+      {
+         promUpdate->set_value(cct->registerAddresses(addrs, false));
+      };
+      cct->update(cbUpdate);
+      const auto updRegId = futUpdate.get();
+      UnitTestWalletACT::waitOnRefresh({ updRegId }, false);
+
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), ccbal * ccLotSize_);
+   }
+
+   UpdateAllBalances();
+   uint64_t newCcBalance = 450 * ccLotSize_ + 1000 * 9;
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 550 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
+
+   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::swap(utxosA[0], utxosA[9]);
+   std::swap(utxosA[2], utxosA[7]);
+   std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
+
+   EXPECT_EQ(utxosA.size(), 10);
+   EXPECT_EQ(utxosB.size(), 1);
+
+   const uint amountCC = 550; // w/o change
+   CCoinSpender ccsA;
+   ccsA.ccAddr_ = userCCAddresses_[0];
+   ccsA.xbtAddr_ = userFundAddresses_[0];
+   ccsA.xbtValue_ = COIN;
+
+   CCoinSpender ccsB;
+   ccsB.ccAddr_ = userCCAddresses_[1];
+   ccsB.xbtAddr_ = userFundAddresses_[1];
+   ccsB.ccValue_ = amountCC * ccLotSize_;
+
+   auto tx = CreateCJtx(utxosA, utxosB, ccsA, ccsB);
+   EXPECT_EQ(tx.getNumTxIn(), 11);
+   EXPECT_EQ(tx.getNumTxOut(), 3);
+
+   auto promZcUpdate = std::make_shared<std::promise<std::string>>();
+   auto futZcUpdate = promZcUpdate->get_future();
+   const auto &cbZcUpdate = [promZcUpdate, cct](const std::set<BinaryData> &addrs)
+   {
+      promZcUpdate->set_value(cct->registerAddresses(addrs, false));
+   };
+   cct->zcUpdate(cbZcUpdate);
+   const auto zcUpdRegId = futZcUpdate.get();
+   UnitTestWalletACT::waitOnRefresh({ zcUpdRegId }, false);
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
+
+   MineBlocks(6);
+   UpdateAllBalances();
+
+   EXPECT_EQ(userWallets_[0]->getAddrBalance(userCCAddresses_[0])[0], 0);
+   EXPECT_EQ(userWallets_[0]->getAddrBalance(userFundAddresses_[0])[0], 51 * COIN);
+
+   EXPECT_EQ(userWallets_[1]->getAddrBalance(userCCAddresses_[1])[0], (100 + amountCC) * ccLotSize_);
+   EXPECT_EQ(userWallets_[1]->getAddrBalance(userFundAddresses_[1])[0], 49 * COIN - 1000);
+
+   auto promUpdate = std::make_shared<std::promise<std::string>>();
+   auto futUpdate = promUpdate->get_future();
+   const auto &cbUpdate = [promUpdate, cct](const std::set<BinaryData> &addrs)
+   {
+      promUpdate->set_value(cct->registerAddresses(addrs, false));
+   };
+   cct->update(cbUpdate);
+   const auto updRegId = futUpdate.get();
+   UnitTestWalletACT::waitOnRefresh({ updRegId }, false);
+
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
@@ -1009,6 +1561,143 @@ TEST_F(TestCCoin, ZeroConfChain)
       for (unsigned y = 0; y < 10; y++)
       {
          uint64_t ccbal = (y+1)*10 + 100;
+         EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[y].prefixed()), ccbal * ccLotSize_);
+      }
+   }
+}
+
+TEST_F(TestCCoin, ZeroConfChain_async)
+{
+   InitialFund();
+
+   auto act = make_unique<AsyncCCT_ACT>(envPtr_->armoryConnection().get());
+   auto cct = std::make_shared<AsyncCCT>(ccLotSize_, envPtr_->armoryConnection());
+   cct->addOriginAddress(genesisAddr_);
+
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   const auto regPair = cct->goOnline([promOnline](bool result) {
+      promOnline->set_value(result);
+   });
+   act->addRefreshCb(regPair.first, regPair.second);
+   UnitTestWalletACT::waitOnRefresh({ regPair.first }, false);
+   EXPECT_TRUE(futOnline.get());
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+
+   for (size_t i = 0; i < usersCount_; ++i)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   auto createTxLbd = [](uint64_t value, std::shared_ptr<ScriptSpender> spender, bs::Address& addr)->Tx
+   {
+      Signer signer;
+      signer.addSpender(spender);
+      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ value }));
+
+      auto script = spender->getOutputScript();
+      auto changeAddr = BtcUtils::getScrAddrForScript(script);
+      auto changeRec = std::make_shared<Recipient_P2WPKH>(
+         changeAddr.getSliceCopy(1, 20), spender->getValue() - value);
+      signer.addRecipient(changeRec);
+
+      signer.sign();
+      Tx tx(signer.serialize());
+      return tx;
+   };
+
+   UTXO utxo;
+   {
+      auto const wallet = syncMgr_->getWalletByAddress(genesisAddr_);
+
+      auto promPtr = std::make_shared<std::promise<std::vector<UTXO>>>();
+      auto fut = promPtr->get_future();
+      const auto &cbTxOutList = [promPtr](std::vector<UTXO> inputs)->void
+      {
+         promPtr->set_value(inputs);
+      };
+
+      wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+      auto utxos = fut.get();
+
+      EXPECT_EQ(utxos.size(), 1);
+      utxo = utxos[0];
+   }
+
+   auto const signWallet = envPtr_->walletsMgr()->getWalletByAddress(genesisAddr_);
+   auto const lockWallet = envPtr_->walletsMgr()->getHDRootForLeaf(signWallet->walletId());
+   for (size_t i = 0; i < 10; i++)
+   {
+      //create CC tx
+      auto y = (i + 1) * 10;
+      Tx zc;
+      {
+         auto spender = std::make_shared<ScriptSpender>(utxo);
+         spender->setFeed(signWallet->getResolver());
+         const bs::core::WalletPasswordScoped passScoped(lockWallet, passphrase_);
+         const auto&& lock = signWallet->lockDecryptedContainer();
+         zc = createTxLbd(y*ccLotSize_, spender, userCCAddresses_[i]);
+      }
+
+      //set block delay and broadcast 
+      EXPECT_TRUE(zc.isInitialized());
+      envPtr_->armoryInstance()->pushZC(zc.serialize(), i);
+
+      //wait on zc notification
+      std::vector<bs::Address> addresses = {
+         bs::Address(utxo.getRecipientScrAddr()),
+         userCCAddresses_[i]
+      };
+      waitOnZc(zc.getThisHash(), addresses);
+
+      //check balances
+      uint64_t ccbal = y + 100;
+
+      auto promZcUpdate = std::make_shared<std::promise<std::string>>();
+      auto futZcUpdate = promZcUpdate->get_future();
+      const auto &cbZcUpdate = [promZcUpdate, cct](const std::set<BinaryData> &addrs)
+      {
+         promZcUpdate->set_value(cct->registerAddresses(addrs, false));
+      };
+      cct->zcUpdate(cbZcUpdate);
+      const auto zcUpdRegId = futZcUpdate.get();
+      UnitTestWalletACT::waitOnRefresh({ zcUpdRegId }, false);
+
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), ccbal * ccLotSize_);
+
+      //update utxo with genesis address change for next zc in the chain
+      auto txOut = zc.getTxOutCopy(1);
+      UTXO zcUtxo;
+      zcUtxo.unserializeRaw(txOut.serialize());
+      zcUtxo.txHash_ = zc.getThisHash();
+      zcUtxo.txOutIndex_ = 1;
+
+      utxo = zcUtxo;
+   }
+
+   for (unsigned y = 0; y < 10; y++)
+   {
+      uint64_t ccbal = (y + 1) * 10 + 100;
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[y].prefixed()), ccbal * ccLotSize_);
+   }
+
+   //mine 10 blocks one at a time and check balances
+   for (unsigned i = 0; i < 10; i++)
+   {
+      MineBlocks(1);
+
+      auto promUpdate = std::make_shared<std::promise<std::string>>();
+      auto futUpdate = promUpdate->get_future();
+      const auto &cbUpdate = [promUpdate, cct](const std::set<BinaryData> &addrs)
+      {
+         promUpdate->set_value(cct->registerAddresses(addrs, false));
+      };
+      cct->update(cbUpdate);
+      const auto updRegId = futUpdate.get();
+      UnitTestWalletACT::waitOnRefresh({ updRegId }, false);
+
+      for (unsigned y = 0; y < 10; y++)
+      {
+         uint64_t ccbal = (y + 1) * 10 + 100;
          EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[y].prefixed()), ccbal * ccLotSize_);
       }
    }
@@ -1300,6 +1989,342 @@ TEST_F(TestCCoin, Reorg)
    reorg(cct);
    update(cct);
    zcUpdate(cct);
+
+   //check balances
+   for (unsigned i = 2; i < 6; i++)
+   {
+      auto y = i + 1 + 100;
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i]), y*ccLotSize_);
+
+      auto c = i + 4;
+      y = c + 1 + 100;
+
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[c]), y*ccLotSize_);
+   }
+}
+
+TEST_F(TestCCoin, Reorg_async)
+{
+   InitialFund();
+
+   auto act = make_unique<AsyncCCT_ACT>(envPtr_->armoryConnection().get());
+   auto cct = std::make_shared<AsyncCCT>(ccLotSize_, envPtr_->armoryConnection());
+   cct->addOriginAddress(genesisAddr_);
+
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   const auto regPair = cct->goOnline([promOnline](bool result) {
+      promOnline->set_value(result);
+   });
+   act->addRefreshCb(regPair.first, regPair.second);
+   UnitTestWalletACT::waitOnRefresh({ regPair.first }, false);
+   EXPECT_TRUE(futOnline.get());
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+
+   for (size_t i = 0; i < usersCount_; ++i)
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   auto createTxLbd = [](std::shared_ptr<ScriptSpender> spender,
+      const std::map<bs::Address, uint64_t>& recipients)->Tx
+   {
+      Signer signer;
+      signer.addSpender(spender);
+
+      uint64_t total = 0;
+      for (auto& recipient : recipients)
+      {
+         total += recipient.second;
+         signer.addRecipient(recipient.first.getRecipient(bs::XBTAmount{ recipient.second }));
+      }
+
+      if (total > spender->getValue())
+         throw std::runtime_error("spending more than the outpoint value");
+
+      auto script = spender->getOutputScript();
+      auto changeAddr = BtcUtils::getScrAddrForScript(script);
+      auto changeRec = std::make_shared<Recipient_P2WPKH>(
+         changeAddr.getSliceCopy(1, 20), spender->getValue() - total);
+      signer.addRecipient(changeRec);
+
+      signer.sign();
+      Tx tx(signer.serialize());
+      return tx;
+   };
+
+   UTXO utxoMain;
+   {
+      auto const wallet = syncMgr_->getWalletByAddress(genesisAddr_);
+
+      auto promPtr = std::make_shared<std::promise<std::vector<UTXO>>>();
+      auto fut = promPtr->get_future();
+      const auto &cbTxOutList = [promPtr](std::vector<UTXO> inputs)->void
+      {
+         promPtr->set_value(inputs);
+      };
+
+      wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+      auto utxos = fut.get();
+
+      EXPECT_EQ(utxos.size(), 1);
+      utxoMain = utxos[0];
+   }
+
+   auto signWalletMain = envPtr_->walletsMgr()->getWalletByAddress(genesisAddr_);
+   auto lockWalletMain = envPtr_->walletsMgr()->getHDRootForLeaf(signWalletMain->walletId());
+
+   auto signWalletA = envPtr_->walletsMgr()->getWalletByAddress(userCCAddresses_[0]);
+   auto lockWalletA = envPtr_->walletsMgr()->getHDRootForLeaf(signWalletA->walletId());
+
+   auto signWalletB = envPtr_->walletsMgr()->getWalletByAddress(userCCAddresses_[1]);
+   auto lockWalletB = envPtr_->walletsMgr()->getHDRootForLeaf(signWalletB->walletId());
+
+   UTXO utxoA, utxoB;
+   {
+      //zc for the branch point
+      auto spender = std::make_shared<ScriptSpender>(utxoMain);
+      spender->setFeed(signWalletMain->getResolver());
+      const bs::core::WalletPasswordScoped passScoped(lockWalletMain, passphrase_);
+
+      std::vector<bs::Address> addresses;
+      addresses.push_back(bs::Address(utxoMain.getRecipientScrAddr()));
+
+      auto lock = signWalletMain->lockDecryptedContainer();
+
+      std::map<bs::Address, uint64_t> recipients;
+      recipients.insert(std::make_pair(userCCAddresses_[0], 100 * ccLotSize_));
+      recipients.insert(std::make_pair(userCCAddresses_[1], 100 * ccLotSize_));
+      auto&& zc = createTxLbd(spender, recipients);
+
+      for (auto& recipient : recipients)
+         addresses.push_back(recipient.first);
+
+      {
+         auto txOut = zc.getTxOutCopy(0);
+         UTXO zcUtxo;
+         zcUtxo.unserializeRaw(txOut.serialize());
+         zcUtxo.txHash_ = zc.getThisHash();
+         zcUtxo.txOutIndex_ = 0;
+
+         utxoA = zcUtxo;
+      }
+
+      {
+         auto txOut = zc.getTxOutCopy(1);
+         UTXO zcUtxo;
+         zcUtxo.unserializeRaw(txOut.serialize());
+         zcUtxo.txHash_ = zc.getThisHash();
+         zcUtxo.txOutIndex_ = 1;
+
+         utxoB = zcUtxo;
+      }
+
+      {
+         auto txOut = zc.getTxOutCopy(2);
+         UTXO zcUtxo;
+         zcUtxo.unserializeRaw(txOut.serialize());
+         zcUtxo.txHash_ = zc.getThisHash();
+         zcUtxo.txOutIndex_ = 2;
+
+         utxoMain = zcUtxo;
+      }
+
+      //push it
+      envPtr_->armoryInstance()->pushZC(zc.serialize(), 0);
+
+      //wait on zc notification
+      waitOnZc(zc.getThisHash(), addresses);
+
+      //mine new block
+      MineBlocks(1);
+   }
+
+   auto&& branchPointHash = getCurrentTopBlockHash();
+   std::vector<BinaryData> vecMain, vecA, vecB;
+
+   for (size_t i = 2; i < 6; i++)
+   {
+      //common zc
+      auto y = (i + 1);
+      {
+         auto spender = std::make_shared<ScriptSpender>(utxoMain);
+         spender->setFeed(signWalletMain->getResolver());
+         const bs::core::WalletPasswordScoped passScoped(lockWalletMain, passphrase_);
+         auto lock = signWalletMain->lockDecryptedContainer();
+
+         std::map<bs::Address, uint64_t> recipients;
+         recipients.insert(std::make_pair(userCCAddresses_[i], y*ccLotSize_));
+         auto&& zc = createTxLbd(spender, recipients);
+         vecMain.push_back(zc.serialize());
+
+         auto txOut = zc.getTxOutCopy(1);
+         UTXO zcUtxo;
+         zcUtxo.unserializeRaw(txOut.serialize());
+         zcUtxo.txHash_ = zc.getThisHash();
+         zcUtxo.txOutIndex_ = 1;
+
+         utxoMain = zcUtxo;
+      }
+
+      auto c = i + 4;
+
+      //branch A
+      y = (c + 1);
+      {
+         auto spender = std::make_shared<ScriptSpender>(utxoA);
+         spender->setFeed(signWalletA->getResolver());
+         const bs::core::WalletPasswordScoped passScoped(lockWalletA, passphrase_);
+         auto lock = signWalletA->lockDecryptedContainer();
+
+         std::map<bs::Address, uint64_t> recipients;
+         recipients.insert(std::make_pair(userCCAddresses_[c], y*ccLotSize_));
+         auto&& zc = createTxLbd(spender, recipients);
+         vecA.push_back(zc.serialize());
+
+         auto txOut = zc.getTxOutCopy(1);
+         UTXO zcUtxo;
+         zcUtxo.unserializeRaw(txOut.serialize());
+         zcUtxo.txHash_ = zc.getThisHash();
+         zcUtxo.txOutIndex_ = 1;
+
+         utxoA = zcUtxo;
+      }
+
+      //branch B
+      y *= 2;
+      {
+         auto spender = std::make_shared<ScriptSpender>(utxoB);
+         spender->setFeed(signWalletB->getResolver());
+         const bs::core::WalletPasswordScoped passScoped(lockWalletB, passphrase_);
+         auto lock = signWalletB->lockDecryptedContainer();
+
+         std::map<bs::Address, uint64_t> recipients;
+         recipients.insert(std::make_pair(userCCAddresses_[c], y*ccLotSize_));
+         auto&& zc = createTxLbd(spender, recipients);
+         vecB.push_back(zc.serialize());
+
+         auto txOut = zc.getTxOutCopy(1);
+         UTXO zcUtxo;
+         zcUtxo.unserializeRaw(txOut.serialize());
+         zcUtxo.txHash_ = zc.getThisHash();
+         zcUtxo.txOutIndex_ = 1;
+
+         utxoB = zcUtxo;
+      }
+   }
+
+   //push common & branch A tx
+   for (unsigned i = 0; i < vecMain.size(); i++)
+   {
+      {
+         Tx zc;
+         zc.unserialize(vecMain[i]);
+         envPtr_->armoryInstance()->pushZC(vecMain[i], i);
+         waitOnZc(zc);
+      }
+
+      {
+         Tx zc;
+         zc.unserialize(vecA[i]);
+         envPtr_->armoryInstance()->pushZC(vecA[i], i);
+         waitOnZc(zc);
+      }
+   }
+
+   //mine 3 blocks (leave 1 zc for each group)
+   MineBlocks(3);
+
+   const auto lbdUpdate = [cct] {
+      auto promUpdate = std::make_shared<std::promise<std::string>>();
+      auto futUpdate = promUpdate->get_future();
+      const auto cb = [promUpdate, cct](const std::set<BinaryData> &addrs)
+      {
+         promUpdate->set_value(cct->registerAddresses(addrs, false));
+      };
+      cct->update(cb);
+      auto updRegId = futUpdate.get();
+      UnitTestWalletACT::waitOnRefresh({ updRegId }, false);
+   };
+
+   const auto lbdUpdateZc = [cct] {
+      auto promUpdateZc = std::make_shared<std::promise<std::string>>();
+      auto futUpdateZc = promUpdateZc->get_future();
+      const auto cb = [promUpdateZc, cct](const std::set<BinaryData> &addrs)
+      {
+         promUpdateZc->set_value(cct->registerAddresses(addrs, false));
+      };
+      cct->zcUpdate(cb);
+      auto zcUpdRegId = futUpdateZc.get();
+      UnitTestWalletACT::waitOnRefresh({ zcUpdRegId }, false);
+   };
+
+   lbdUpdate();
+   lbdUpdateZc();
+
+   auto&& branchATop = getCurrentTopBlockHash();
+
+   //check balances
+   for (unsigned i = 2; i < 6; i++)
+   {
+      auto y = i + 1 + 100;
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i]), y*ccLotSize_);
+
+      auto c = i + 4;
+      y = c + 1 + 100;
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[c]), y*ccLotSize_);
+   }
+
+   //reorg
+   setReorgBranchPoint(branchPointHash);
+
+   //push common & branch B tx
+   for (unsigned i = 0; i < vecMain.size(); i++)
+   {
+      {
+         Tx zc;
+         zc.unserialize(vecMain[i]);
+         envPtr_->armoryInstance()->pushZC(vecMain[i], i + 1, true);
+
+         //dont wait on staged zc
+      }
+
+      {
+         Tx zc;
+         zc.unserialize(vecB[i]);
+         envPtr_->armoryInstance()->pushZC(vecB[i], i + 1, true);
+
+         //dont wait on staged zc
+      }
+   }
+
+   //mine 4 blocks (leave 1 zc for each group, pass branch A by 1 block)
+   MineBlocks(4);
+   cct->reorg();
+
+   lbdUpdate();
+   lbdUpdateZc();
+
+   //check balances
+   for (unsigned i = 2; i < 6; i++)
+   {
+      auto y = i + 1 + 100;
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i]), y*ccLotSize_);
+
+      auto c = i + 4;
+      y = (c + 1) * 2 + 100;
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[c]), y*ccLotSize_);
+   }
+
+   //reorg back to main branch
+   setReorgBranchPoint(branchATop);
+   envPtr_->armoryInstance()->pushZC(*vecA.rbegin(), 0, true);
+
+   //mine 2 more blocks to go back on branch A
+   MineBlocks(2);
+   cct->reorg();
+
+   lbdUpdate();
+   lbdUpdateZc();
 
    //check balances
    for (unsigned i = 2; i < 6; i++)
