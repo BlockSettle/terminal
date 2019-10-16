@@ -1,9 +1,11 @@
 #include "AboutDialog.h"
 #include "ui_AboutDialog.h"
 
-#include "ChangeLogDialog.h"
+//#include "ChangeLogDialog.h"
 #include "NotificationCenter.h"
 #include "TerminalVersion.h"
+
+#include <QDesktopServices>
 
 std::string AboutDialog::terminalVersion_ = TERMINAL_VERSION_STRING;
 
@@ -63,6 +65,10 @@ void AboutDialog::changeLogReceived(const QString &reqVer, const QStringList &ch
 
 void AboutDialog::viewChangleLog()
 {
-   ChangeLogDialog dlg(verChecker_, this);
-   dlg.exec();
+   QDesktopServices::openUrl(QUrl(QStringLiteral("http://blocksettle.com/downloads/terminal")));
+
+   // FIXME:
+   // ChangeLogDialog no more used, cleanup it at some point
+//   ChangeLogDialog dlg(verChecker_, this);
+//   dlg.exec();
 }

@@ -380,11 +380,14 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
          break;
    }
 
+   const auto idx = createIndex(index, Header::Status,
+      &group->rows_[static_cast<std::size_t>(index)]->idx_);
    if (emitUpdate) {
-      const auto idx = createIndex(index, Header::Status,
-         &group->rows_[static_cast<std::size_t>(index)]->idx_);
-
       emit dataChanged(idx, idx);
+   }
+   if (!latestOrderTimestamp_.isValid() || order.dateTime > latestOrderTimestamp_) {
+      latestOrderTimestamp_ = order.dateTime;
+      emit newOrder(idx);
    }
 }
 

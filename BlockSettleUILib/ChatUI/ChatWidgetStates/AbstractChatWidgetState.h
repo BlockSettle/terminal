@@ -58,7 +58,7 @@ public:
    void onRejectPartyRequest(const std::string& partyId);
    void onSendPartyRequest(const std::string& partyId);
    void onRemovePartyRequest(const std::string& partyId);
-   void onNewPartyRequest(const std::string& partyName);
+   void onNewPartyRequest(const std::string& partyName, const std::string& initialMessage);
    void onUpdateDisplayName(const std::string& partyId, const std::string& contactName);
 
 

@@ -41,7 +41,8 @@ namespace Chat
 
       void handlePartiesFromWelcomePacket(const WelcomeResponse& msg);
 
-      void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType = Chat::PartySubType::STANDARD);
+      void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType = Chat::PartySubType::STANDARD,
+         const std::string& initialMessage = "");
       void createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const PrivatePartyRequest& privatePartyRequest);
 
    signals:

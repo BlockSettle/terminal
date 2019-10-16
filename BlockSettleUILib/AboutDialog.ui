@@ -857,7 +857,7 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
              </size>
             </property>
             <property name="text">
-             <string>Release notes</string>
+             <string>Download</string>
             </property>
             <property name="autoDefault">
              <bool>true</bool>

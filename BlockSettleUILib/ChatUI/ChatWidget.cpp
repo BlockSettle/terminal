@@ -317,9 +317,9 @@ void ChatWidget::onContactRequestCancelClicked(const std::string& partyId)
    stateCurrent_->onRemovePartyRequest(partyId);
 }
 
-void ChatWidget::onNewPartyRequest(const std::string& userName)
+void ChatWidget::onNewPartyRequest(const std::string& userName, const std::string& initialMessage)
 {
-   stateCurrent_->onNewPartyRequest(userName);
+   stateCurrent_->onNewPartyRequest(userName, initialMessage);
 }
 
 void ChatWidget::onRemovePartyRequest(const std::string& partyId)
@@ -618,7 +618,7 @@ void ChatWidget::onShowUserRoom(const QString& userHash)
 
 void ChatWidget::onContactFriendRequest(const QString& userHash)
 {
-   chatClientServicePtr_->RequestPrivateParty(userHash.toStdString());
+   ui_->textEditMessages->onShowRequestPartyBox(userHash.toStdString());
 }
 
 void ChatWidget::onSetDisplayName(const std::string& partyId, const std::string& contactName)
