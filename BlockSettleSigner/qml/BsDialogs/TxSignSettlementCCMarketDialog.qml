@@ -27,7 +27,7 @@ TxSignSettlementBaseDialog {
 
     function displayAmount(amount) {
         if (is_sell) {
-            return (amount * balanceDivider / lotSize).toFixed(0)
+            return Math.round((amount * balanceDivider / lotSize))
         } else {
             return amount.toFixed(8)
         }
@@ -35,9 +35,9 @@ TxSignSettlementBaseDialog {
 
     function getQuantity() {
         if (is_sell) {
-            return txInfo.amountCCSent() * balanceDivider / lotSize
+            return Math.round(txInfo.amountCCSent() * balanceDivider / lotSize)
         } else {
-            return txInfo.amountCCReceived(product) * balanceDivider / lotSize
+            return Math.round(txInfo.amountCCReceived(product) * balanceDivider / lotSize)
         }
     }
 
