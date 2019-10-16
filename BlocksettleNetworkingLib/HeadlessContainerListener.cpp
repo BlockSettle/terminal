@@ -488,7 +488,6 @@ bool HeadlessContainerListener::onUpdateDialogData(const std::string &clientId, 
              }
              (*it->dialogData.mutable_valuesmap())[pair.first] = pair.second;
          }
-         //it->dialogData.MergeFrom(request.passworddialogdata());
       }
 
       it++;
