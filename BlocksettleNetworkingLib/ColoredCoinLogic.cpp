@@ -487,6 +487,12 @@ void ColoredCoinTracker::processTxBatch(const std::shared_ptr<ColoredCoinSnapsho
          }
       }
    };
+   if (hashes.empty()) {
+      if (cb) {
+         cb(true);
+      }
+      return;
+   }
    //grab listed tx
    if (!connPtr_->getTXsByHash(hashes, txLbd)) {
       if (cb) {
@@ -1336,8 +1342,9 @@ std::vector<std::shared_ptr<CcOutpoint>> ColoredCoinTracker::getSpendableOutpoin
       if (iter != ssPtr->scrAddrCcSet_.end())
       {
          auto revokeIter = ssPtr->revokedAddresses_.find(scrAddr);
-         if (revokeIter != ssPtr->revokedAddresses_.end())
+         if (revokeIter != ssPtr->revokedAddresses_.end()) {
             return {};
+         }
 
          if (zcPtr != nullptr)
          {
