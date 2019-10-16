@@ -112,7 +112,7 @@ private:
 public:
    void setACT(std::shared_ptr<ColoredCoinACT> actPtr)
    {
-      actPtr_ = std::move(actPtr);
+      actPtr_ = actPtr;
    }
 
    void update_UT(void);
