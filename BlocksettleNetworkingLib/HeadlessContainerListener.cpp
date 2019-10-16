@@ -483,9 +483,6 @@ bool HeadlessContainerListener::onUpdateDialogData(const std::string &clientId, 
 
          for (auto & pair : request.passworddialogdata().valuesmap())
          {
-             if (it->dialogData.mutable_valuesmap()->contains(pair.first)) {
-                it->dialogData.mutable_valuesmap()->erase(pair.first);
-             }
              (*it->dialogData.mutable_valuesmap())[pair.first] = pair.second;
          }
       }
