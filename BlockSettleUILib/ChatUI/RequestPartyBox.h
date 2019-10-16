@@ -2,6 +2,7 @@
 #define REQUESTPARTY_H
 
 #include <QDialog>
+#include <memory>
 #include "ui_RequestPartyBox.h"
 
 class RequestPartyBox : public QDialog
