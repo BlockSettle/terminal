@@ -201,11 +201,6 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
    QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
 
    bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest, parent_->walletsMgr_, logger_);
-   const auto settlementId = BinaryData::CreateFromHex(
-      dialogData->value(PasswordDialogData::SettlementId).toString().toStdString());
-   if (!settlementId.isNull()) {
-      txInfo->setTxId(QString::fromStdString(settlementId.toBinStr()));
-   }
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
    // wallet id may be stored either in tx or in dialog data

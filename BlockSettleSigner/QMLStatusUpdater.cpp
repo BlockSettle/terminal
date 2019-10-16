@@ -39,9 +39,7 @@ void QMLStatusUpdater::clearConnections()
 }
 
 void QMLStatusUpdater::activateAutoSign(const QString &walletId
-                                        , bs::wallet::QPasswordData *passwordData
-                                        , bool activate
-                                        , QJSValue jsCallback)
+   , bs::wallet::QPasswordData *passwordData, bool activate, QJSValue jsCallback)
 {
    auto cb = [this, walletId, jsCallback] (bs::error::ErrorCode errorCode) {
       QJSValueList args;
