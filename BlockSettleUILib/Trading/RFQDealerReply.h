@@ -165,6 +165,7 @@ namespace bs {
          void validateGUI();
          void updateRespQuantity();
          void updateQuoteReqNotification(const network::QuoteReqNotification &);
+         void updateBalanceLabel();
          double getPrice() const;
          double getValue() const;
          double getAmount() const;
@@ -174,6 +175,7 @@ namespace bs {
          void getRecvAddress(const std::shared_ptr<bs::sync::Wallet> &wallet, std::function<void(bs::Address)> cb) const;
          void setBalanceOk(bool ok);
          bool checkBalance() const;
+         BTCNumericTypes::balance_type getPrivateMarketCoinBalance() const;
          QDoubleSpinBox *getActivePriceWidget() const;
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
          // xbtWallet - what XBT wallet to use for XBT/CC trades (selected from UI for manual trades, default wallet for AQ trades), empty for FX trades

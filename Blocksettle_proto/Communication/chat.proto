@@ -115,6 +115,7 @@ message PartyMessageStateUpdate
 message PrivatePartyRequest
 {
    PartyPacket party_packet = 1;
+   string initial_message = 2;
 }
 
 message RequestSessionKeyExchange

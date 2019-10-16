@@ -65,7 +65,7 @@ namespace Chat
       void LogoutFromServer();
       void SendPartyMessage(const std::string& partyId, const std::string& data);
       void SetMessageSeen(const std::string& partyId, const std::string& messageId);
-      void RequestPrivateParty(const std::string& userName);
+      void RequestPrivateParty(const std::string& userName, const std::string& initialMessage);
       void RequestPrivatePartyOTC(const std::string& remoteUserName);
       void RejectPrivateParty(const std::string& partyId);
       void DeletePrivateParty(const std::string& partyId);

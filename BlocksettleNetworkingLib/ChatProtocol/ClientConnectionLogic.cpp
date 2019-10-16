@@ -45,7 +45,7 @@ void ClientConnectionLogic::onDataReceived(const std::string& data)
       return;
    }
 
-   loggerPtr_->debug("[ClientConnectionLogic::onDataReceived] Data: {}", ProtobufUtils::toJsonReadable(any));
+   loggerPtr_->debug("[ClientConnectionLogic::onDataReceived] Data: {}", ProtobufUtils::toJsonCompact(any));
 
    WelcomeResponse welcomeResponse;
    if (ProtobufUtils::pbAnyToMessage<WelcomeResponse>(any, &welcomeResponse))
@@ -403,6 +403,8 @@ void ClientConnectionLogic::prepareRequestPrivateParty(const std::string& partyI
    partyPacket->set_party_state(clientPartyPtr->partyState());
    partyPacket->set_party_creator_hash(currentUserPtr()->userName());
 
+   privatePartyRequest.set_initial_message(clientPartyPtr->initialMessage());
+
    for (const PartyRecipientPtr& recipient : clientPartyPtr->recipients())
    {
       PartyRecipientPacket* partyRecipientPacket = partyPacket->add_recipient();
@@ -412,6 +414,14 @@ void ClientConnectionLogic::prepareRequestPrivateParty(const std::string& partyI
    }
 
    emit sendPacket(privatePartyRequest);
+
+   if (!clientPartyPtr->initialMessage().empty())
+   {
+      // send initial message
+      prepareAndSendPrivateMessage(clientPartyPtr, clientPartyPtr->initialMessage());
+      // clean
+      clientPartyPtr->setInitialMessage("");
+   }
 }
 
 void ClientConnectionLogic::handlePrivatePartyRequest(const PrivatePartyRequest& privatePartyRequest)

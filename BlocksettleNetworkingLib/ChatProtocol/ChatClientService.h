@@ -28,7 +28,7 @@ namespace Chat
       void LoginToServer(const std::string& email, const CelerClient::CelerUserType& celerType, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
       void SendPartyMessage(const std::string& partyId, const std::string& data);
-      void RequestPrivateParty(const std::string& userName);
+      void RequestPrivateParty(const std::string& userName, const std::string& initialMessage = "");
       void RequestPrivatePartyOTC(const std::string& remoteUserName);
       void SetMessageSeen(const std::string& partyId, const std::string& messageId);
       void RejectPrivateParty(const std::string& partyId);
