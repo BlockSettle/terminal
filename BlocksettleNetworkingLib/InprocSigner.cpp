@@ -111,9 +111,18 @@ bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSign
    return reqId;
 }
 
+bs::signer::RequestId InprocSigner::signSettlementTXRequest(const bs::core::wallet::TXSignRequest &txReq
+   , const bs::sync::PasswordDialogData &
+   , SignContainer::TXSignMode
+   , bool
+   , const std::function<void (bs::error::ErrorCode, const BinaryData &)> &)
+{
+   return signTXRequest(txReq);
+}
+
 bs::signer::RequestId InprocSigner::signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &)
 {
-   logger_->info("[{}] currently not supported", __func__);
+   logger_->error("[{}] currently not supported", __func__);
    return 0;
 }
 
