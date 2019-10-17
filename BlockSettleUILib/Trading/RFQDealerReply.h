@@ -164,6 +164,7 @@ namespace bs {
          void reset();
          void validateGUI();
          void updateRespQuantity();
+         void updateSpinboxes();
          void updateQuoteReqNotification(const network::QuoteReqNotification &);
          void updateBalanceLabel();
          double getPrice() const;

@@ -901,7 +901,7 @@ public:
 struct CallbackReturn_SpentnessData : public CallbackReturn_WebSocket
 {
 private:
-   const std::map<BinaryData, std::set<unsigned>>& outputs_;
+   const std::map<BinaryData, std::set<unsigned>> outputs_;
 
    std::function<void(
    ReturnMessage<std::map<BinaryData, std::map<unsigned, BinaryData>>>)>
