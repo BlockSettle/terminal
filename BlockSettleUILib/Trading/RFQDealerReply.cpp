@@ -248,20 +248,7 @@ void RFQDealerReply::reset()
    }
 
    updateRespQuantity();
-
-   if (!qFuzzyIsNull(indicBid_)) {
-      ui_->spinBoxBidPx->setValue(indicBid_);
-   }
-   else {
-      ui_->spinBoxBidPx->clear();
-   }
-
-   if (!qFuzzyIsNull(indicAsk_)) {
-      ui_->spinBoxOfferPx->setValue(indicAsk_);
-   }
-   else {
-      ui_->spinBoxOfferPx->clear();
-   }
+   updateSpinboxes();
 }
 
 void RFQDealerReply::quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn)
@@ -926,6 +913,8 @@ void RFQDealerReply::onBestQuotePrice(const QString reqId, double price, bool ow
          }
       }
    }
+
+   updateSpinboxes();
 }
 
 void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, double price)
@@ -1043,6 +1032,32 @@ void RFQDealerReply::onAutoSignStateChanged()
       ui_->comboBoxWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
    }
    ui_->comboBoxWallet->setEnabled(!autoSignQuoteProvider_->autoSignState());
+}
+
+void bs::ui::RFQDealerReply::updateSpinboxes()
+{
+   auto setSpinboxValue = [&](CustomDoubleSpinBox* spinBox, double value) {
+      if (qFuzzyIsNull(value)) {
+         spinBox->clear();
+         return;
+      }
+
+      if (!spinBox->isEnabled()) {
+         spinBox->setValue(value);
+         return;
+      }
+
+      auto bestQuotePrice = bestQPrices_.find(currentQRN_.quoteRequestId);
+      if (bestQuotePrice != bestQPrices_.end()) {
+         spinBox->setValue(bestQuotePrice->second + spinBox->singleStep());
+      }
+      else {
+         spinBox->setValue(value);
+      }
+   };
+
+   setSpinboxValue(ui_->spinBoxBidPx, indicBid_);
+   setSpinboxValue(ui_->spinBoxOfferPx, indicAsk_);
 }
 
 void bs::ui::RFQDealerReply::updateBalanceLabel()
