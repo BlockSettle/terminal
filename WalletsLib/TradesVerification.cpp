@@ -237,3 +237,45 @@ bs::TradesVerification::Result bs::TradesVerification::verifySignedPayout(const 
       return Result::error("undefined exception during payout processing");
    }
 }
+
+bs::TradesVerification::Result bs::TradesVerification::verifySignedPayin(const BinaryData &signedPayin, const BinaryData &payinHash, float feePerByte, uint64_t totalPayinFee)
+{
+   if (signedPayin.isNull()) {
+      return Result::error("no signed payin provided");
+   }
+
+   if (payinHash.isNull()) {
+      return Result::error("there is no saved payin hash");
+   }
+
+   try {
+      Tx payinTx(signedPayin);
+
+      if (payinTx.getThisHash() != payinHash) {
+         return Result::error(fmt::format("payin hash mismatch. Expected: {}. From signed payin: {}"
+            , payinHash.toHexStr(), payinTx.getThisHash().toHexStr()));
+      }
+
+      auto txSize = payinTx.getTxWeight();
+      if (txSize == 0) {
+         return Result::error("failed to get TX weight");
+      }
+
+      const uint64_t estimatedFee = feePerByte * txSize;
+      if (estimatedFee > totalPayinFee) {
+         return Result::error(fmt::format("fee too small: {} ({} s/b). Expected: {} ({} s/b)"
+            , totalPayinFee, static_cast<float>(totalPayinFee) / txSize, estimatedFee, feePerByte));
+      }
+
+      Result result;
+      result.success = true;
+      return result;
+
+   }
+   catch (const std::exception &e) {
+      return Result::error(fmt::format("exception during payin processing: {}", e.what()));
+   }
+   catch (...) {
+      return Result::error("undefined exception during payin processing");
+   }
+}

@@ -54,6 +54,8 @@ namespace bs {
          , const std::string &buyAuthKeyHex, const std::string &sellAuthKeyHex,  const BinaryData &payinHash
          , uint64_t tradeAmount, float feePerByte, const std::string &settlementId, const std::string &settlementAddress);
 
+      static Result verifySignedPayin(const BinaryData &signedPayin, const BinaryData &payinHash, float feePerByte, uint64_t totalPayinFee);
+
    };
 
 }
