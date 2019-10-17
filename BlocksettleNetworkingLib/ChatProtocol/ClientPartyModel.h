@@ -12,6 +12,7 @@
 #include "ChatProtocol/ClientParty.h"
 #include "ChatProtocol/Message.h"
 #include "ChatProtocol/UserPublicKeyInfo.h"
+#include "CelerClient.h"
 
 namespace spdlog
 {
@@ -49,15 +50,27 @@ namespace Chat
    public:
       ClientPartyModel(const LoggerPtr& loggerPtr, QObject* parent = nullptr);
       IdPartyList getIdPartyList() const;
-      ClientPartyPtr getPartyByUserName(const std::string& userName);
+      IdPartyList getIdPrivatePartyList();
+      IdPartyList getIdPrivatePartyListBySubType(const PartySubType& partySubType = PartySubType::STANDARD);
+
+      ClientPartyPtrList getClientPartyListFromIdPartyList(const IdPartyList& idPartyList);
+      ClientPartyPtrList getClientPartyListForRecipient(const IdPartyList& idPartyList, const std::string& recipientUserHash);
+      ClientPartyPtrList getStandardPrivatePartyListForRecipient(const std::string& recipientUserHash);
+      ClientPartyPtrList getOtcPrivatePartyListForRecipient(const std::string& recipientUserHash);
+      ClientPartyPtrList getClientPartyListByCreatorHash(const std::string& creatorHash);
+
+      ClientPartyPtr getStandardPartyForUsers(const std::string& firstUserHash, const std::string& secondUserHash);
+      ClientPartyPtr getOtcPartyForUsers(const std::string& firstUserHash, const std::string& secondUserHash);
+      ClientPartyPtrList getClientPartyForRecipients(const ClientPartyPtrList& clientPartyPtrList, const std::string& firstUserHash, const std::string& secondUserHash);
+
       ClientPartyPtr getClientPartyById(const std::string& party_id);
-      ClientPartyPtr getClientPartyByCreatorHash(const std::string& creatorHash);
-      ClientPartyPtr getClientPartyByUserHash(const std::string& userHash);
 
       const std::string& ownUserName() const { return ownUserName_; }
       void setOwnUserName(std::string val) { ownUserName_ = val; }
       PrivatePartyState deducePrivatePartyStateForUser(const std::string& userName);
 
+      CelerClient::CelerUserType ownCelerUserType() const { return ownCelerUserType_; }
+      void setOwnCelerUserType(CelerClient::CelerUserType val) { ownCelerUserType_ = val; }
    signals:
       void error(const Chat::ClientPartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false);
       void clientPartyStatusChanged(const ClientPartyPtr& clientPartyPtr);
@@ -66,6 +79,7 @@ namespace Chat
       void partyStateChanged(const std::string& partyId);
       void clientPartyDisplayNameChanged(const std::string& partyId);
       void userPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
+      void otcPrivatePartyReady(const ClientPartyPtr& clientPartyPtr);
 
    private slots:
       void handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false);
@@ -77,8 +91,10 @@ namespace Chat
       
    private:
       ClientPartyPtr castToClientPartyPtr(const PartyPtr& partyPtr);
-      ClientPartyPtr getClientPartyByHash(const std::function<bool(const ClientPartyPtr&)>& compareCb);
+      ClientPartyPtr getFirstClientPartyForPartySubType(const ClientPartyPtrList& clientPartyPtrList, 
+         const std::string& firstUserHash, const std::string& secondUserHash, const PartySubType& partySubType = PartySubType::STANDARD);
       std::string ownUserName_;
+      CelerClient::CelerUserType ownCelerUserType_ = CelerClient::Undefined;
    };
 
    using ClientPartyModelPtr = std::shared_ptr<ClientPartyModel>;

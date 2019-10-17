@@ -21,7 +21,6 @@ namespace Chat
 {
    enum class ClientPartyLogicError
    {
-      NonexistentClientStatusChanged,
       PartyNotExist,
       DynamicPointerCast,
       QObjectCast
@@ -42,7 +41,8 @@ namespace Chat
 
       void handlePartiesFromWelcomePacket(const WelcomeResponse& msg);
 
-      void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName);
+      void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType = Chat::PartySubType::STANDARD,
+         const std::string& initialMessage = "");
       void createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const PrivatePartyRequest& privatePartyRequest);
 
    signals:
@@ -53,9 +53,10 @@ namespace Chat
       void privatePartyAlreadyExist(const std::string& partyId);
       void deletePrivateParty(const std::string& partyId);
       void userPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
+      void acceptOTCPrivateParty(const std::string& partyId);
 
    public slots:
-      void onUserStatusChanged(const StatusChanged& statusChanged);
+      void onUserStatusChanged(const ChatUserPtr& currentUserPtr, const StatusChanged& statusChanged);
       void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
       void loggedOutFromServer();
       void updateModelAndRefreshPartyDisplayNames();
@@ -69,6 +70,7 @@ namespace Chat
       void onRecipientKeysUnchanged();
 
    private:
+      bool isPrivatePartyForUserExist(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType = Chat::PartySubType::STANDARD);
       LoggerPtr loggerPtr_;
       ClientPartyModelPtr clientPartyModelPtr_;
       ClientDBServicePtr clientDBServicePtr_;

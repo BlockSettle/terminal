@@ -224,23 +224,35 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
          }
       }
 
-      auto rbfUtxos = std::make_shared<std::vector<UTXO>>();
       auto walletsToWait = std::make_shared<std::set<std::string>>();
+      auto rbfUtxos = std::make_shared<std::vector<UTXO>>();
       for (const auto &wallet : inputWallets) {
          walletsToWait->insert(wallet->walletId());
       }
       for (const auto &wallet : inputWallets) {
-         const auto cbRBFUtxos = [this, rbfUtxos, walletId = wallet->walletId(), walletsToWait
+         const auto cbRBFUtxos = [this, walletId = wallet->walletId(), walletsToWait, rbfUtxos
             , inputsGroup, utxoSelected, tx, totalVal]
             (const std::vector<UTXO> &utxos) mutable
          {
-            rbfUtxos->insert(rbfUtxos->end(), utxos.cbegin(), utxos.cend());
+            for (const auto &utxo : utxos) {
+               const auto itFind = std::find_if(utxoSelected.cbegin(), utxoSelected.cend()
+                  , [utxo](const std::pair<BinaryData, unsigned int> &sel)
+               {
+                  if ((sel.first == utxo.getTxHash()) && (sel.second == utxo.getTxOutIndex())) {
+                     return true;
+                  }
+                  return false;
+               });
+               if (itFind == utxoSelected.end()) {
+                  continue;
+               }
+               rbfUtxos->emplace_back(std::move(utxo));
+            }
 
             walletsToWait->erase(walletId);
             if (walletsToWait->empty()) {
-
-               const auto lbdSetInputs = [this, inputsGroup, rbfUtxos, utxoSelected, tx
-                  , totalVal]() mutable {
+               const auto lbdSetInputs = [this, inputsGroup, utxoSelected, tx, totalVal, rbfUtxos]
+               () mutable {
                   setFixedGroupInputs(inputsGroup, *rbfUtxos);
 
                   for (const auto &sel : utxoSelected) {
@@ -761,8 +773,8 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
 
    size_t maxOutputSize = 0;
    for (const auto &recipId : transactionData_->allRecipientIds()) {
-      const auto recipAddr = transactionData_->GetRecipientAddress(recipId);
-      const auto recip = recipAddr.getRecipient(transactionData_->GetRecipientAmount(recipId));
+
+      const auto recip = transactionData_->GetScriptRecipient(recipId);
       if (!recip) {
          continue;
       }

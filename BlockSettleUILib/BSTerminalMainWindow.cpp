@@ -1147,9 +1147,6 @@ void BSTerminalMainWindow::onLogin()
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
 
    currentUserLogin_ = loginDialog.email();
-   std::string jwt;
-   //auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
-   chatClientServicePtr_->LoginToServer(currentUserLogin_.toStdString(), jwt, cbApproveChat_);
 
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
@@ -1204,6 +1201,9 @@ void BSTerminalMainWindow::onUserLoggedIn()
 
    ccFileManager_->LoadCCDefinitionsFromPub();
    ccFileManager_->ConnectToCelerClient(celerConnection_);
+
+   std::string jwt;
+   chatClientServicePtr_->LoginToServer(currentUserLogin_.toStdString(), celerConnection_->celerUserType(), jwt, cbApproveChat_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    const auto &deferredDialog = [this, userId] {

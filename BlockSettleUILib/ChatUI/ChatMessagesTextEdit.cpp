@@ -2,6 +2,7 @@
 
 #include "OtcUtils.h"
 #include "ProtobufUtils.h"
+#include "RequestPartyBox.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -84,12 +85,11 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
             return elideUserName(previousClientPartyPtr->displayName());
          }
          else {
-            Chat::ClientPartyPtr userParty = partyModel_->getPartyByUserName(senderHash);
+            Chat::ClientPartyPtr clientPartyPtr = partyModel_->getClientPartyById(partyId);
 
-            if (userParty) {
-               return toHtmlUsername(userParty->displayName(), userParty->userHash());
+            if (clientPartyPtr && clientPartyPtr->isPrivate()) {
+               return toHtmlUsername(clientPartyPtr->displayName(), clientPartyPtr->userHash());
             }
-
             return toHtmlUsername(senderHash, senderHash);
          }         
       }
@@ -130,6 +130,11 @@ QImage ChatMessagesTextEdit::statusImage(const std::string& partyId, int row)
    QImage statusImage = statusImageGreyUnsent_;
 
    Chat::ClientPartyPtr clientPartyPtr = partyModel_->getClientPartyById(message->partyId());
+   
+   if (!clientPartyPtr) {
+      return QImage();
+   }
+
    if (clientPartyPtr->isGlobalStandard()) {
       if ((message->partyMessageState() != Chat::PartyMessageState::UNSENT)) {
          statusImage = statusImageBlueSeen_;
@@ -233,16 +238,15 @@ void ChatMessagesTextEdit::onTextChanged()
 void ChatMessagesTextEdit::onUserUrlOpened(const QUrl &url)
 {
    std::string userId = url.path().toStdString();
-   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getPartyByUserName(userId);
+   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getStandardPartyForUsers(ownUserId_, userId);
 
    if (!clientPartyPtr) {
-      emit newPartyRequest(userId);
+      onShowRequestPartyBox(userId);
       return;
    }
 
    if (Chat::PartyState::REJECTED == clientPartyPtr->partyState()) {
-      emit removePartyRequest(clientPartyPtr->id());
-      emit newPartyRequest(clientPartyPtr->userHash());
+      onShowRequestPartyBox(clientPartyPtr->userHash());
       return;
    }
 
@@ -251,6 +255,26 @@ void ChatMessagesTextEdit::onUserUrlOpened(const QUrl &url)
    }
 
    emit switchPartyRequest(QString::fromStdString(clientPartyPtr->id()));
+}
+
+void ChatMessagesTextEdit::onShowRequestPartyBox(const std::string& userHash)
+{
+   std::string requestUserHash = userHash;
+   
+   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getStandardPartyForUsers(ownUserId_, requestUserHash);
+
+   QString requestNote = tr("You can enter initial message below:");
+   QString requestTitle = tr("Do you want to send friend request to %1 ?").arg(QString::fromStdString(requestUserHash));
+
+   RequestPartyBox rpBox(requestTitle, requestNote);
+   if (rpBox.exec() == QDialog::Accepted) {
+      if (clientPartyPtr && Chat::PartyState::REJECTED == clientPartyPtr->partyState()) {
+         emit removePartyRequest(clientPartyPtr->id());
+         requestUserHash = clientPartyPtr->userHash();
+      }
+
+      emit newPartyRequest(requestUserHash, rpBox.getCustomMessage().toStdString());
+   }
 }
 
 void ChatMessagesTextEdit::onSwitchToChat(const std::string& partyId)
@@ -440,24 +464,16 @@ void ChatMessagesTextEdit::showMessages(const std::string &partyId)
    }
 }
 
-// #old_logic
-//void ChatMessagesTextEdit::insertLoadMore()
-//{
-//   QTextCursor cursor(textCursor());
-//   cursor.movePosition(QTextCursor::Start);
-//   cursor.insertHtml(QString(QLatin1Literal("<a href=\"load_more\" style=\"color:%1\">Load More...</a>")).arg(internalStyle_.colorHyperlink().name()));
-//}
-
 std::unique_ptr<QMenu> ChatMessagesTextEdit::initUserContextMenu(const QString& userName)
 {
    std::unique_ptr<QMenu> userMenuPtr = std::make_unique<QMenu>(this);
 
-   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getPartyByUserName(userName.toStdString());
+   Chat::ClientPartyPtr clientPartyPtr = partyModel_->getStandardPartyForUsers(ownUserId_, userName.toStdString());
    if (!clientPartyPtr) {
       QAction* addAction = userMenuPtr->addAction(contextMenuAddUserMenu);
       addAction->setStatusTip(contextMenuAddUserMenuStatusTip);
       connect(addAction, &QAction::triggered, this, [this, userName_ = userName]() {
-         emit newPartyRequest(userName_.toStdString());
+         onShowRequestPartyBox(userName_.toStdString());
       });
    }
    else {

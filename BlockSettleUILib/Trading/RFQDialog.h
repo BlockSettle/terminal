@@ -77,6 +77,7 @@ private slots:
    void onSignTxRequested(QString orderId, QString reqId);
    void onSettlementOrder();
    void onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx);
+   void reportError(const QString& errorMessage);
 
 private:
    std::shared_ptr<bs::SettlementContainer> newCCcontainer();

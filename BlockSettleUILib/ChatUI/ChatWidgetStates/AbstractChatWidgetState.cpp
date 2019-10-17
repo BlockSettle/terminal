@@ -97,6 +97,7 @@ void AbstractChatWidgetState::onChangePartyStatus(const Chat::ClientPartyPtr& cl
 
    chat_->chatPartiesTreeModel_->onPartyStatusChanged(clientPartyPtr);
    chat_->otcHelper_->onPartyStateChanged(clientPartyPtr);
+   onUpdateOTCShield();
 }
 
 void AbstractChatWidgetState::onResetPartyModel()
@@ -169,13 +170,13 @@ void AbstractChatWidgetState::onRemovePartyRequest(const std::string& partyId)
    chat_->chatClientServicePtr_->DeletePrivateParty(partyId);
 }
 
-void AbstractChatWidgetState::onNewPartyRequest(const std::string& partyName)
+void AbstractChatWidgetState::onNewPartyRequest(const std::string& partyName, const std::string& initialMessage)
 {
    if (!canSendPartyRequest()) {
       return;
    }
 
-   chat_->chatClientServicePtr_->RequestPrivateParty(partyName);
+   chat_->chatClientServicePtr_->RequestPrivateParty(partyName, initialMessage);
 }
 
 void AbstractChatWidgetState::onUpdateDisplayName(const std::string& partyId, const std::string& contactName)
@@ -304,7 +305,20 @@ void AbstractChatWidgetState::onOtcQuoteRequestSubmit()
 void AbstractChatWidgetState::onOtcQuoteResponseSubmit()
 {
    if (canPerformOTCOperations()) {
-      chat_->otcHelper_->onOtcQuoteResponseSubmit(chat_->currentPeer(), chat_->ui_->widgetCreateOTCResponse->response());
+      chat_->chatClientServicePtr_->RequestPrivatePartyOTC(chat_->currentPeer()->contactId);
+   }
+}
+
+void AbstractChatWidgetState::onOtcPrivatePartyReady(const Chat::ClientPartyPtr& clientPartyPtr)
+{
+   if (canPerformOTCOperations() && clientPartyPtr->isPrivateOTC()) {
+      Chat::PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(chat_->ownUserId_);
+      for (const auto& recipient : recipients) {
+         if (chat_->currentPeer() && recipient->userHash() == chat_->currentPeer()->contactId) {
+            // found user, send request
+            chat_->otcHelper_->onOtcQuoteResponseSubmit(chat_->currentPeer(), chat_->ui_->widgetCreateOTCResponse->response());
+         }
+      }
    }
 }
 
@@ -316,14 +330,15 @@ void AbstractChatWidgetState::onOtcPullOrRejectCurrent()
          assert(false);
          return;
       }
-      chat_->otcHelper_->onOtcPullOrReject(peer);
-   }
-}
 
-void AbstractChatWidgetState::onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type)
-{
-   if (canPerformOTCOperations()) {
-      chat_->otcHelper_->onPullOrRejectOnTimeout(contactId, type);
+      Chat::ClientPartyModelPtr clientPartyModelPtr = chat_->chatClientServicePtr_->getClientPartyModelPtr();
+      Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getOtcPartyForUsers(chat_->ownUserId_, peer->contactId);
+      if (clientPartyPtr) {
+         chat_->chatClientServicePtr_->DeletePrivateParty(clientPartyPtr->id());
+      }
+
+      chat_->ui_->treeViewOTCRequests->selectionModel()->clearCurrentIndex();
+      chat_->otcHelper_->onOtcPullOrReject(peer);
    }
 }
 
@@ -446,5 +461,5 @@ Chat::ClientPartyPtr AbstractChatWidgetState::getParty(const std::string& partyI
 Chat::ClientPartyPtr AbstractChatWidgetState::getPartyByUserHash(const std::string& userHash) const
 {
    Chat::ClientPartyModelPtr partyModel = chat_->chatClientServicePtr_->getClientPartyModelPtr();
-   return partyModel->getClientPartyByUserHash(userHash);
+   return partyModel->getStandardPartyForUsers(chat_->ownUserId_, userHash);
 }

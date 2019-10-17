@@ -7,7 +7,7 @@ namespace {
    const QString shieldOtcUnavailableGlobal = QObject::tr("OTC unavailable in Global");
    const QString shieldOtcUnavailableSupport = QObject::tr("OTC unavailable in Support");
    const QString shieldOtcAvailableToTradingParticipants = QObject::tr("OTC available to Trading Participants");
-   const QString shieldCounterPartyIsntTradingParticipant = QObject::tr("Counter party isn't a Trading Participant");
+   const QString shieldCounterPartyIsntTradingParticipant = QObject::tr("Counterparty isn't a Trading Participant");
    const QString shieldContactIsOffline = QObject::tr("Contact is offline");
    const QString shieldOtcAvailableOnlyForAcceptedContacts = QObject::tr("OTC available only for Accepted contacts");
    const QString shieldOtcSetupTransactionData = QObject::tr("Setup OTC transaction data");

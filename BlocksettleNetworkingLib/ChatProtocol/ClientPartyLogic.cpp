@@ -36,6 +36,7 @@ ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBSer
 void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& welcomeResponse)
 {
    clientPartyModelPtr_->clearModel();
+   clientDBServicePtr_->cleanUnusedParties();
 
    // all unique recipients
    UniqieRecipientMap uniqueRecipients;
@@ -50,7 +51,7 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
       clientPartyPtr->setUserHash(partyPacket.display_name());
       clientPartyPtr->setPartyCreatorHash(partyPacket.party_creator_hash());
 
-      if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
+      if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type())
       {
          PartyRecipientsPtrList recipients;
          for (int i = 0; i < partyPacket.recipient_size(); i++)
@@ -60,7 +61,7 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
                std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key(), QDateTime::fromMSecsSinceEpoch(recipient.timestamp_ms()));
             recipients.push_back(recipientPtr);
 
-            uniqueRecipients[recipientPtr->userName()] = recipientPtr;
+            uniqueRecipients[recipientPtr->userHash()] = recipientPtr;
          }
 
          clientPartyPtr->setRecipients(recipients);
@@ -68,7 +69,7 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
 
       clientPartyModelPtr_->insertParty(clientPartyPtr);
 
-      // Read and provide last 10 history messages for private parties
+      // Read and provide last 10 history messages only for standard private parties
       if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
       {
          clientDBServicePtr_->readHistoryMessages(partyPacket.party_id(), 10);
@@ -79,56 +80,53 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
    clientDBServicePtr_->checkRecipientPublicKey(uniqueRecipients);
 }
 
-void ClientPartyLogic::onUserStatusChanged(const StatusChanged& statusChanged)
+void ClientPartyLogic::onUserStatusChanged(const ChatUserPtr& currentUserPtr, const StatusChanged& statusChanged)
 {
-   ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getPartyByUserName(statusChanged.user_name());
+   // status changed only for private parties
+   ClientPartyPtrList clientPartyPtrList = 
+      clientPartyModelPtr_->getClientPartyListForRecipient(clientPartyModelPtr_->getIdPrivatePartyList(), statusChanged.user_name());
 
-   if (clientPartyPtr == nullptr)
-   {
-      emit error(ClientPartyLogicError::NonexistentClientStatusChanged, statusChanged.user_name());
-      return;
-   }
-
-   // don't change status for other than private parties
-   if (PartyType::PRIVATE_DIRECT_MESSAGE != clientPartyPtr->partyType())
-   {
-      return;
-   }
-
-   clientPartyPtr->setClientStatus(statusChanged.client_status());
-
-   if (ClientStatus::ONLINE != clientPartyPtr->clientStatus())
-   {
-      return;
-   }
-
-   // check if public key changed
-   if (statusChanged.has_public_key())
+   for (const auto& clientPartyPtr : clientPartyPtrList)
    {
       PartyRecipientPtr recipientPtr = clientPartyPtr->getRecipient(statusChanged.user_name());
-
       if (recipientPtr)
       {
-         const BinaryData public_key(statusChanged.public_key().value());
-         const QDateTime dt = QDateTime::fromMSecsSinceEpoch(statusChanged.timestamp_ms().value());
-         const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
-
-         userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userName()));
-         userPkPtr->setOldPublicKeyHex(recipientPtr->publicKey());
-         userPkPtr->setOldPublicKeyTime(recipientPtr->publicKeyTime());
-         userPkPtr->setNewPublicKeyHex(public_key);
-         userPkPtr->setNewPublicKeyTime(dt);
-         UserPublicKeyInfoList userPkList;
-         userPkList.push_back(userPkPtr);
-
-         emit userPublicKeyChanged(userPkList);
+         recipientPtr->setCelerType(static_cast<CelerClient::CelerUserType>(statusChanged.celer_type()));
       }
 
-      return;
-   }
+      clientPartyPtr->setClientStatus(statusChanged.client_status());
 
-   // if client status is online check if we have any unsent messages for this user
-   clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
+      if (ClientStatus::ONLINE != clientPartyPtr->clientStatus())
+      {
+         return;
+      }
+
+      // check if public key changed
+      if (statusChanged.has_public_key())
+      {
+         if (recipientPtr)
+         {
+            const BinaryData public_key(statusChanged.public_key().value());
+            const QDateTime dt = QDateTime::fromMSecsSinceEpoch(statusChanged.timestamp_ms().value());
+            const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
+
+            userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userHash()));
+            userPkPtr->setOldPublicKeyHex(recipientPtr->publicKey());
+            userPkPtr->setOldPublicKeyTime(recipientPtr->publicKeyTime());
+            userPkPtr->setNewPublicKeyHex(public_key);
+            userPkPtr->setNewPublicKeyTime(dt);
+            UserPublicKeyInfoList userPkList;
+            userPkList.push_back(userPkPtr);
+
+            emit userPublicKeyChanged(userPkList);
+         }
+
+         return;
+      }
+
+      // if client status is online check if we have any unsent messages for this user
+      clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
+   }
 }
 
 void ClientPartyLogic::handleLocalErrors(const ClientPartyLogicError& errorCode, const std::string& what)
@@ -141,39 +139,27 @@ void ClientPartyLogic::handlePartyInserted(const Chat::PartyPtr& partyPtr)
    clientDBServicePtr_->createNewParty(partyPtr->id());
 }
 
-void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName)
+void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType, const std::string& initialMessage)
 {
    // check if private party exist
-   IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
-
-   for (const auto& partyId : idPartyList)
+   if (isPrivatePartyForUserExist(currentUserPtr, remoteUserName, partySubType))
    {
-      ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(partyId);
-      if (!clientPartyPtr)
+      if (PartySubType::OTC == partySubType)
       {
-         continue;
+         // delete old otc private party and create new one
+         ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getOtcPartyForUsers(currentUserPtr->userName(), remoteUserName);
+         emit deletePrivateParty(clientPartyPtr->id());
       }
-
-      if (clientPartyPtr->isPrivateStandard())
+      else
       {
-         continue;
-      }
-
-      PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
-      for (const auto& recipient : recipients)
-      {
-         if (recipient->userName() == remoteUserName)
-         {
-            // party already existed
-            emit privatePartyAlreadyExist(clientPartyPtr->id());
-            return;
-         }
+         // standard private parties can be reused
+         return;
       }
    }
 
    // party not exist, create new one
    ClientPartyPtr newClientPrivatePartyPtr =
-      std::make_shared<ClientParty>(QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString(), PartyType::PRIVATE_DIRECT_MESSAGE, PartySubType::STANDARD);
+      std::make_shared<ClientParty>(QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString(), PartyType::PRIVATE_DIRECT_MESSAGE, partySubType);
 
    newClientPrivatePartyPtr->setDisplayName(remoteUserName);
    newClientPrivatePartyPtr->setUserHash(remoteUserName);
@@ -183,6 +169,7 @@ void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, con
    recipients.push_back(std::make_shared<PartyRecipient>(currentUserPtr->userName()));
    recipients.push_back(std::make_shared<PartyRecipient>(remoteUserName));
    newClientPrivatePartyPtr->setRecipients(recipients);
+   newClientPrivatePartyPtr->setInitialMessage(initialMessage);
 
    // update model
    clientPartyModelPtr_->insertParty(newClientPrivatePartyPtr);
@@ -192,6 +179,33 @@ void ClientPartyLogic::createPrivateParty(const ChatUserPtr& currentUserPtr, con
    clientDBServicePtr_->createNewParty(newClientPrivatePartyPtr->id());
 
    emit privatePartyCreated(newClientPrivatePartyPtr->id());
+}
+
+bool ClientPartyLogic::isPrivatePartyForUserExist(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType)
+{
+   IdPartyList idPartyList = clientPartyModelPtr_->getIdPrivatePartyListBySubType(partySubType);
+
+   for (const auto& partyId : idPartyList)
+   {
+      ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(partyId);
+      if (!clientPartyPtr)
+      {
+         continue;
+      }
+
+      PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr->userName());
+      for (const auto& recipient : recipients)
+      {
+         if (recipient->userHash() == remoteUserName)
+         {
+            // party already existed
+            emit privatePartyAlreadyExist(clientPartyPtr->id());
+            return true;
+         }
+      }
+   }
+
+   return false;
 }
 
 void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserPtr& currentUserPtr, const PrivatePartyRequest& privatePartyRequest)
@@ -223,11 +237,11 @@ void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserP
    newClientPrivatePartyPtr->setRecipients(recipients);
 
    // check if already exist party in rejected state with this same user
-   ClientPartyPtr oldClientPartyPtr = clientPartyModelPtr_->getClientPartyByUserHash(newClientPrivatePartyPtr->partyCreatorHash());
-   if (nullptr != oldClientPartyPtr)
+   const ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr_->getStandardPrivatePartyListForRecipient(newClientPrivatePartyPtr->partyCreatorHash());
+   for (const auto& oldClientPartyPtr : clientPartyPtrList)
    {
       // exist one, checking party state
-      if (PartyState::REJECTED == oldClientPartyPtr->partyState() && oldClientPartyPtr->isPrivateStandard())
+      if (PartyState::REJECTED == oldClientPartyPtr->partyState())
       {
          emit deletePrivateParty(oldClientPartyPtr->id());
 
@@ -248,6 +262,12 @@ void ClientPartyLogic::createPrivatePartyFromPrivatePartyRequest(const ChatUserP
 
    // save party in db
    clientDBServicePtr_->createNewParty(newClientPrivatePartyPtr->id());
+
+   // auto accept private otc party
+   if (newClientPrivatePartyPtr->isPrivateOTC())
+   {
+       emit acceptOTCPrivateParty(newClientPrivatePartyPtr->id());
+   }
 
    // ! Do NOT emit here privatePartyCreated, it's connected with party request
 }
@@ -282,7 +302,7 @@ void ClientPartyLogic::partyDisplayNameLoaded(const std::string& partyId, const 
 // if logged out set offline for all private parties
 void ClientPartyLogic::loggedOutFromServer()
 {
-   IdPartyList idPartyList = clientPartyModelPtr_->getIdPartyList();
+   IdPartyList idPartyList = clientPartyModelPtr_->getIdPrivatePartyList();
    for (const auto& partyId : idPartyList)
    {
       ClientPartyPtr clientPartyPtr = clientPartyModelPtr_->getClientPartyById(partyId);
@@ -292,10 +312,7 @@ void ClientPartyLogic::loggedOutFromServer()
          continue;
       }
 
-      if (clientPartyPtr->isPrivateStandard())
-      {
-         clientPartyPtr->setClientStatus(ClientStatus::OFFLINE);
-      }
+      clientPartyPtr->setClientStatus(ClientStatus::OFFLINE);
    }
 }
 

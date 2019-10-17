@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <memory>
+#include <vector>
 
 #include "ChatProtocol/PrivateDirectMessageParty.h"
 
@@ -37,6 +38,9 @@ namespace Chat {
 
       void setPartyState(Chat::PartyState val);
 
+      std::string initialMessage() const { return initialMessage_; }
+      void setInitialMessage(std::string val) { initialMessage_ = val; }
+
    signals:
       void clientStatusChanged(const ClientStatus& clientStatus);
       void displayNameChanged();
@@ -46,9 +50,11 @@ namespace Chat {
       std::string displayName_;
       std::string userHash_;
       ClientStatus clientStatus_;
+      std::string initialMessage_;
    };
 
    using ClientPartyPtr = std::shared_ptr<ClientParty>;
+   using ClientPartyPtrList = std::vector<ClientPartyPtr>;
 
 } // namespace Chat
 

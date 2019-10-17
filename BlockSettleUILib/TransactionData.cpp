@@ -357,7 +357,7 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
          recipientsMap[recipId++] = recipPtr;
       }
       if (!recipient.isNull()) {
-         const auto recipPtr = recipient.getRecipient(0.001);  // spontaneous output amount, shouldn't be 0
+         const auto recipPtr = recipient.getRecipient(bs::XBTAmount{ 0.001 });  // spontaneous output amount, shouldn't be 0
          if (recipPtr) {
             recipientsMap[recipId++] = recipPtr;
          }
@@ -723,6 +723,16 @@ std::vector<unsigned int> TransactionData::GetRecipientIdList() const
    return idList;
 }
 
+std::shared_ptr<ScriptRecipient> TransactionData::GetScriptRecipient(unsigned int recipientId) const
+{
+   const auto &itRecip = recipients_.find(recipientId);
+   if (itRecip == recipients_.end()) {
+      return nullptr;
+   }
+
+   return itRecip->second->GetScriptRecipient();
+}
+
 bs::Address TransactionData::GetRecipientAddress(unsigned int recipientId) const
 {
    const auto &itRecip = recipients_.find(recipientId);
@@ -768,21 +778,26 @@ void TransactionData::setMaxSpendAmount(bool maxAmount)
 }
 
 
-bs::Address TransactionData::GetFallbackRecvAddress()
+void TransactionData::GetFallbackRecvAddress(std::function<void(const bs::Address&)> cb)
 {
-   if (!fallbackRecvAddress_.isNull()) {
-      return fallbackRecvAddress_;
+   if (!fallbackRecvAddress_.isNull() || !wallet_) {
+      cb(fallbackRecvAddress_);
+      return;
    }
-   if (wallet_ != nullptr) {
-      auto promAddr = std::make_shared<std::promise<bs::Address>>();
-      auto futAddr = promAddr->get_future();
-      const auto &cbAddr = [promAddr](const bs::Address &addr) {
-         promAddr->set_value(addr);
-      };
-      wallet_->getNewExtAddress(cbAddr);
-//      wallet_->registerWallet();  //TODO: register only when address callback is invoked
-      fallbackRecvAddress_ = futAddr.get();  //TODO: refactor this
-   }
+
+   const auto &cbWrap = [this, cb = std::move(cb), handle = validityFlag_.handle()](const bs::Address &addr) {
+      if (!handle.isValid()) {
+         SPDLOG_LOGGER_ERROR(logger_, "TransactionData was destoyed and callback is cancelled");
+         return;
+      }
+      fallbackRecvAddress_ = addr;
+      cb(fallbackRecvAddress_);
+   };
+   wallet_->getNewExtAddress(cbWrap);
+}
+
+const bs::Address &TransactionData::GetFallbackRecvAddressIfSet() const
+{
    return fallbackRecvAddress_;
 }
 

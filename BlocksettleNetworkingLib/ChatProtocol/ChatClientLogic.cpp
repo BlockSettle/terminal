@@ -44,6 +44,7 @@ void ChatClientLogic::initDbDone()
    connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::privatePartyAlreadyExist, this, &ChatClientLogic::privatePartyAlreadyExist);
    connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::deletePrivateParty, this, &ChatClientLogic::DeletePrivateParty);
    connect(this, &ChatClientLogic::clientLoggedOutFromServer, clientPartyLogicPtr_.get(), &ClientPartyLogic::loggedOutFromServer);
+   connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::acceptOTCPrivateParty, this, &ChatClientLogic::AcceptPrivateParty);
 
    sessionKeyHolderPtr_ = std::make_shared<SessionKeyHolder>(loggerPtr_, this);
    clientConnectionLogicPtr_ = std::make_shared<ClientConnectionLogic>(
@@ -65,9 +66,13 @@ void ChatClientLogic::initDbDone()
    connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::closeConnection, this, &ChatClientLogic::onCloseConnection);
    connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::searchUserReply, this, &ChatClientLogic::searchUserReply);
    connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::properlyConnected, this, &ChatClientLogic::properlyConnected);
+   connect(clientConnectionLogicPtr_.get(), &ClientConnectionLogic::deletePrivateParty, this, &ChatClientLogic::DeletePrivateParty);
 
    // close connection from callback
    connect(this, &ChatClientLogic::disconnected, this, &ChatClientLogic::onCloseConnection);
+
+   // OTC
+   connect(this, &ChatClientLogic::otcPrivatePartyReady, clientPartyLogicPtr_->clientPartyModelPtr().get(), &ClientPartyModel::otcPrivatePartyReady);
 
    emit initDone();
 }
@@ -103,8 +108,10 @@ void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, con
    clientDBServicePtr_->Init(loggerPtr, appSettingsPtr, currentUserPtr_, cryptManagerPtr_);
 }
 
-void ChatClientLogic::LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb)
+void ChatClientLogic::LoginToServer(const std::string& email, const CelerClient::CelerUserType& celerType, const std::string& jwt, const ZmqBipNewKeyCb& cb)
 {
+   Q_UNUSED(celerType);
+
    if (connectionPtr_) {
       loggerPtr_->error("[ChatClientLogic::LoginToServer] connecting with not purged connection");
 
@@ -117,13 +124,16 @@ void ChatClientLogic::LoginToServer(const std::string& email, const std::string&
    connectionPtr_->setCBs(cb);
 
    currentUserPtr_->setUserName(userHasherPtr_->deriveKey(email));
+   currentUserPtr_->setCelerUserType(celerType);
    clientPartyModelPtr()->setOwnUserName(currentUserPtr_->userName());
+   clientPartyModelPtr()->setOwnCelerUserType(currentUserPtr_->celerUserType());
 
    if (!connectionPtr_->openConnection(this->getChatServerHost(), this->getChatServerPort(), this))
    {
       loggerPtr_->error("[ChatClientLogic::LoginToServer] failed to open ZMQ data connection");
       connectionPtr_.reset();
       clientPartyModelPtr()->setOwnUserName({});
+      clientPartyModelPtr()->setOwnCelerUserType(CelerClient::Undefined);
 
       emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed);
       emit clientLoggedOutFromServer();
@@ -249,9 +259,14 @@ void ChatClientLogic::SetMessageSeen(const std::string& partyId, const std::stri
    clientConnectionLogicPtr_->setMessageSeen(clientPartyPtr, messageId);
 }
 
-void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName)
+void ChatClientLogic::RequestPrivatePartyOTC(const std::string& remoteUserName)
 {
-   clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName);
+   clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName, Chat::PartySubType::OTC);
+}
+
+void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName, const std::string& initialMessage)
+{
+   clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName, Chat::PartySubType::STANDARD, initialMessage);
 }
 
 void ChatClientLogic::privatePartyCreated(const std::string& partyId)
@@ -261,6 +276,9 @@ void ChatClientLogic::privatePartyCreated(const std::string& partyId)
 
 void ChatClientLogic::privatePartyAlreadyExist(const std::string& partyId)
 {
+   // check if it's otc private party
+   const ClientPartyPtr clientPartyPtr = clientPartyModelPtr()->getClientPartyById(partyId);
+
    clientConnectionLogicPtr_->prepareRequestPrivateParty(partyId);
 }
 
@@ -293,7 +311,7 @@ void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
 
    // if party in rejected state then remove recipients public keys, we don't need them anymore
    ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyId);
-   if (clientPartyPtr && clientPartyPtr->isPrivateStandard())
+   if (clientPartyPtr && clientPartyPtr->isPrivate())
    {
       PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr_->userName());
       clientDBServicePtr_->deleteRecipientsKeys(recipients);
@@ -333,8 +351,9 @@ void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& use
    {
       // update loaded user key
       const std::string userHash = userPkPtr->user_hash().toStdString();
-      ClientPartyPtr clientPartyPtr = clientPartyModelPtr()->getClientPartyByUserHash(userHash);
-      if (clientPartyPtr && clientPartyPtr->isPrivateStandard())
+      // update keys only for existing private parties
+      ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr()->getStandardPrivatePartyListForRecipient(userHash);
+      for (const auto& clientPartyPtr : clientPartyPtrList)
       {
          PartyRecipientPtr existingRecipient = clientPartyPtr->getRecipient(userHash);
 
@@ -346,7 +365,7 @@ void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& use
             recipientsToUpdate.push_back(existingRecipient);
 
             // force clear session keys
-            sessionKeyHolderPtr_->clearSessionForUser(existingRecipient->userName());
+            sessionKeyHolderPtr_->clearSessionForUser(existingRecipient->userHash());
 
             // save party id for handling later
             partiesToCheckUnsentMessages.push_back(clientPartyPtr->id());
@@ -370,9 +389,10 @@ void ChatClientLogic::DeclineNewPublicKeys(const UserPublicKeyInfoList& userPubl
    // remove all parties for declined user
    for (const auto& userPkPtr : userPublicKeyInfoList)
    {
-      ClientPartyPtr clientPartyPtr = clientPartyModelPtr()->getClientPartyByUserHash(userPkPtr->user_hash().toStdString());
+      const std::string userHash = userPkPtr->user_hash().toStdString();
+      ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr()->getStandardPrivatePartyListForRecipient(userHash);
 
-      if (clientPartyPtr && clientPartyPtr->isPrivateStandard())
+      for (const auto& clientPartyPtr : clientPartyPtrList)
       {
          DeletePrivateParty(clientPartyPtr->id());
       }

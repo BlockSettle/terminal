@@ -476,7 +476,7 @@ WalletGroup BlockDataViewer::getStandAloneWalletGroup(
 ////////////////////////////////////////////////////////////////////////////////
 uint32_t BlockDataViewer::getBlockTimeByHeight(uint32_t height) const
 {
-   auto bh = blockchain().getHeaderByHeight(height);
+   auto bh = blockchain().getHeaderByHeight(height, 0xFF);
 
    return bh->getTimestamp();
 }
@@ -572,7 +572,7 @@ uint32_t BlockDataViewer::getClosestBlockHeightForTime(uint32_t timestamp)
    //look for a block in the hint vicinity with a timestamp lower than ours
    while (blockHint > 0)
    {
-      auto block = blockchain().getHeaderByHeight(blockHint);
+      auto block = blockchain().getHeaderByHeight(blockHint, 0xFF);
       if (block->getTimestamp() < timestamp)
          break;
 
@@ -587,7 +587,7 @@ uint32_t BlockDataViewer::getClosestBlockHeightForTime(uint32_t timestamp)
    {
       //not looking for a really precise block, 
       //anything within the an hour of the timestamp is enough
-      auto block = blockchain().getHeaderByHeight(id);
+      auto block = blockchain().getHeaderByHeight(id, 0xFF);
       if (block->getTimestamp() + 3600 > timestamp)
          return block->getBlockHeight();
    }
@@ -823,7 +823,7 @@ BlockDataViewer::getAddressOutpoints(
       heightCutoff = topHeight;
    }
 
-   //zc outpoints, skip is zcCutoff is UINT32_MAX
+   //zc outpoints, skip if zcCutoff is UINT32_MAX
    if (zcCutoff != UINT32_MAX)
    {
       auto zcSnapshot = zc_->getSnapshot();

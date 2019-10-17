@@ -27,45 +27,7 @@ void ChatOTCHelper::init(bs::network::otc::Env env
    loggerPtr_ = loggerPtr;
 
    OtcClientParams params;
-
    params.env = env;
-
-   params.offlineLoadPathCb = [applicationSettings]() -> std::string {
-      QString signerOfflineDir = applicationSettings->get<QString>(ApplicationSettings::signerOfflineDir);
-
-      QString filePath = QFileDialog::getOpenFileName(nullptr, tr("Select Transaction file"), signerOfflineDir
-         , tr("TX files (*.bin)"));
-
-      if (!filePath.isEmpty()) {
-         // Update latest used directory if needed
-         QString newSignerOfflineDir = QFileInfo(filePath).absoluteDir().path();
-         if (signerOfflineDir != newSignerOfflineDir) {
-            applicationSettings->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
-         }
-      }
-
-      return filePath.toStdString();
-   };
-
-   params.offlineSavePathCb = [applicationSettings](const std::string &walletId) -> std::string {
-      QString signerOfflineDir = applicationSettings->get<QString>(ApplicationSettings::signerOfflineDir);
-
-      const qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();
-      const std::string fileName = fmt::format("{}_{}.bin", walletId, timestamp);
-
-      QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));
-      QString filePath = QFileDialog::getSaveFileName(nullptr, tr("Save Offline TX as..."), defaultFilePath);
-
-      if (!filePath.isEmpty()) {
-         QString newSignerOfflineDir = QFileInfo(filePath).absoluteDir().path();
-         if (signerOfflineDir != newSignerOfflineDir) {
-            applicationSettings->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
-         }
-      }
-
-      return filePath.toStdString();
-   };
-
    otcClient_ = new OtcClient(loggerPtr, walletsMgr, armory, signContainer, authAddressManager, std::move(params), this);
 }
 
@@ -228,27 +190,4 @@ void ChatOTCHelper::onPartyStateChanged(const Chat::ClientPartyPtr& clientPartyP
       otcClient_->contactDisconnected(contactId);
       connectedContacts_.erase(connIt);
    }
-}
-
-void ChatOTCHelper::onPullOrRejectOnTimeout(const std::string& contactId, bs::network::otc::PeerType type)
-{
-   bs::network::otc::Peer* peer = nullptr;
-   switch (type)
-   {
-   case bs::network::otc::PeerType::Contact:
-      peer = otcClient_->contact(contactId);
-      break;
-   case bs::network::otc::PeerType::Request:
-      peer = otcClient_->request(contactId);
-      break;
-   case bs::network::otc::PeerType::Response:
-      peer = otcClient_->response(contactId);
-      break;
-   }
-
-   if (!peer) {
-      return;
-   }
-
-   otcClient_->pullOrReject(peer);
 }

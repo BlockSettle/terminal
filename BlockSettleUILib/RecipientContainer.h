@@ -1,14 +1,15 @@
 #ifndef __RECIPIENT_CONTAINER_H__
 #define __RECIPIENT_CONTAINER_H__
 
+#include "Address.h"
+#include "XBTAmount.h"
+
 #include <string>
 #include <memory>
-#include "Address.h"
 
-
-class ScriptRecipient;
-class BinaryData;
 class AddressEntry;
+class BinaryData;
+class ScriptRecipient;
 
 class RecipientContainer
 {
@@ -29,15 +30,15 @@ public:
    void ResetAddress();
 
    bool SetAmount(double amount, bool isMax = false);
-   double GetAmount() const { return amount_; }
+   double GetAmount() const;
    bool IsMaxAmount() const { return isMax_; }
 
    std::shared_ptr<ScriptRecipient> GetScriptRecipient() const;
 
 private:
-   bs::Address address_;
-   double      amount_{};
-   bool        isMax_{};
+   bs::Address    address_;
+   bs::XBTAmount  xbtAmount_;
+   bool           isMax_{false};
 };
 
 #endif // __RECIPIENT_CONTAINER_H__

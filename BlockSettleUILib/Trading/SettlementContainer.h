@@ -5,11 +5,13 @@
 #include <string>
 #include <QObject>
 #include <QTimer>
+
 #include "ArmoryConnection.h"
 #include "CommonTypes.h"
+#include "CoreWallet.h"
 #include "EncryptionUtils.h"
 #include "PasswordDialogData.h"
-#include "CoreWallet.h"
+#include "ValidityFlag.h"
 
 namespace bs {
 
@@ -40,6 +42,7 @@ namespace bs {
       virtual bs::sync::PasswordDialogData toPasswordDialogData() const;
       virtual bs::sync::PasswordDialogData toPayOutTxDetailsPasswordDialogData(bs::core::wallet::TXSignRequest payOutReq) const;
 
+      static constexpr unsigned int kWaitTimeoutInSec = 30;
    signals:
       void error(QString);
 
@@ -49,13 +52,15 @@ namespace bs {
       void failed();
 
       void timerExpired();
-      void timerTick(int msCurrent, int msDuration);
       void timerStarted(int msDuration);
       void timerStopped();
 
    protected slots:
       void startTimer(const unsigned int durationSeconds);
       void stopTimer();
+
+   protected:
+      ValidityFlag validityFlag_;
 
    private:
       QTimer   timer_;

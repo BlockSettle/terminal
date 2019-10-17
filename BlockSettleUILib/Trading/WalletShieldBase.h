@@ -38,13 +38,15 @@ signals:
    void requestPrimaryWalletCreation();
 
 protected:
-   void showShield(const QString& labelText, bool showButton = false,
-      const QString& ButtonText = QLatin1String());
+   void showShield(const QString& labelText,
+      const QString& ButtonText = QLatin1String(), const QString& headerText = QLatin1String());
+
 
    void showShieldPromoteToPrimaryWallet();
    void showShieldCreateWallet();
    void showShieldCreateLeaf(const QString& product);
    void showShieldGenerateAuthAddress();
+   void showShieldAuthValidationProcess();
 
 protected:
    std::unique_ptr<Ui::WalletShieldPage> ui_;

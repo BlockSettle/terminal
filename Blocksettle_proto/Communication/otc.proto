@@ -28,6 +28,13 @@ message Range
     int64 upper = 2;
 }
 
+enum ContactType
+{
+    CONTACT_TYPE_PRIVATE = 0;
+    CONTACT_TYPE_PUBLIC_REQUEST = 1;
+    CONTACT_TYPE_PUBLIC_RESPONSE = 2;
+}
+
 message ContactMessage
 {
     message Offer
@@ -85,6 +92,8 @@ message ContactMessage
         Range price = 3;
     }
 
+    ContactType contact_type = 10;
+
     oneof data
     {
         BuyerOffers buyer_offers = 1;
@@ -109,17 +118,9 @@ message PublicMessage
     {
     }
 
-    message PrivateMessage
-    {
-        string receiver_id = 1;
-        bytes data = 2;
-        bool is_response = 3;
-    }
-
     oneof data
     {
         Request request = 1;
         Close close = 2;
-        PrivateMessage private_message = 3;
     }
 }

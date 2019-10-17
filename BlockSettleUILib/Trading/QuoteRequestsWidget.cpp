@@ -15,7 +15,6 @@
 #include <QProgressBar>
 #include <QPainter>
 
-
 namespace bs {
 
 void StatsCollector::saveState()
@@ -493,9 +492,10 @@ bool QuoteReqSortModel::lessThan(const QModelIndex &left, const QModelIndex &rig
       return (leftGrade < rightGrade);
    }
    const auto leftTL = sourceModel()->data(left,
-      static_cast<int>(QuoteRequestsModel::Role::TimeLeft));
+      static_cast<int>(QuoteRequestsModel::Role::SortOrder));
    const auto rightTL = sourceModel()->data(right,
-      static_cast<int>(QuoteRequestsModel::Role::TimeLeft));
+      static_cast<int>(QuoteRequestsModel::Role::SortOrder));
+
    return (leftTL < rightTL);
 }
 

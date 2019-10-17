@@ -54,6 +54,9 @@ public:
 public slots:
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
+signals:
+   void newOrder(const QModelIndex &index);
+
 private:
    enum class DataType {
       Data = 0,
@@ -173,6 +176,7 @@ private:
    std::unordered_map<std::string, StatusGroup::Type> groups_;
    std::unique_ptr<StatusGroup> unsettled_;
    std::unique_ptr<StatusGroup> settled_;
+   QDateTime latestOrderTimestamp_;
 };
 
 #endif // ORDERLISTMODEL_H

@@ -68,6 +68,8 @@ private:
    bool startPayInSigning();
    bool startPayOutSigning(const BinaryData& payinHash);
 
+   void failWithErrorText(const QString& error);
+
 private:
    const bs::network::Order   order_;
    std::string    fxProd_;
@@ -80,7 +82,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signContainer_;
-   AddressVerificationState                     cptyAddressState_ = AddressVerificationState::InProgress;
+   AddressVerificationState                     requestorAddressState_ = AddressVerificationState::VerificationFailed;
    bs::Address settlAddr_;
 
    std::string settlementIdString_;
@@ -91,6 +93,8 @@ private:
 
    unsigned int   payinSignId_ = 0;
    unsigned int   payoutSignId_ = 0;
+
+   BinaryData		usedPayinHash_;
 };
 
 #endif // __DEALER_XBT_SETTLEMENT_CONTAINER_H__

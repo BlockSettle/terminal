@@ -19,7 +19,7 @@ using namespace bs::error;
 using namespace bs::sync;
 using namespace std::chrono;
 
-constexpr std::chrono::seconds kDefaultDuration{60};
+constexpr std::chrono::seconds kDefaultDuration{120};
 
 HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
@@ -397,7 +397,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
             bs::core::wallet::TXMultiSignRequest multiReq;
             multiReq.recipients = txSignReq.recipients;
             if (txSignReq.change.value) {
-               multiReq.recipients.push_back(txSignReq.change.address.getRecipient(txSignReq.change.value));
+               multiReq.recipients.push_back(txSignReq.change.address.getRecipient(bs::XBTAmount{ txSignReq.change.value }));
             }
             if (!txSignReq.prevStates.empty()) {
                multiReq.prevState = txSignReq.prevStates.front();
@@ -466,14 +466,25 @@ bool HeadlessContainerListener::onUpdateDialogData(const std::string &clientId, 
       logger_->error("[{}] failed to parse request", __func__);
       return false;
    }
+   Internal::PasswordDialogDataWrapper updatedDialogData = request.passworddialogdata();
+   const auto &id = updatedDialogData.value<std::string>(PasswordDialogData::SettlementId);
+
+   logger_->debug("[{}] Requested dialog data update for settl id {}", __func__, id);
+
+   if (id.empty()) {
+      return true;
+   }
 
    // try to find dialog in queued dialogs deferredPasswordRequests_
    auto it = deferredPasswordRequests_.begin();
    while (it != deferredPasswordRequests_.end()) {
-      Internal::PasswordDialogDataWrapper otherDialogData = request.passworddialogdata();
-      const auto &id = otherDialogData.value<std::string>("SettlementId");
-      if (!id.empty() && it->dialogData.value<std::string>("SettlementId") == id) {
-         it->dialogData.MergeFrom(request.passworddialogdata());
+      if (it->dialogData.value<std::string>(PasswordDialogData::SettlementId) == id) {
+         logger_->debug("[{}] Updating dialog data for settl id {}", __func__, id);
+
+         for (auto & pair : request.passworddialogdata().valuesmap())
+         {
+             (*it->dialogData.mutable_valuesmap())[pair.first] = pair.second;
+         }
       }
 
       it++;
@@ -733,7 +744,7 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
       needPassword = !hdWallet->encryptionTypes().empty();
    }
 
-   auto autoSignCategory = static_cast<bs::signer::AutoSignCategory>(dialogData.value<int>("AutoSignCategory"));
+   auto autoSignCategory = static_cast<bs::signer::AutoSignCategory>(dialogData.value<int>(PasswordDialogData::AutoSignCategory));
    // currently only dealer can use autosign
    bool autoSignAllowed = (autoSignCategory == bs::signer::AutoSignCategory::SettlementDealer);
 
@@ -816,39 +827,46 @@ bool HeadlessContainerListener::RequestPassword(const std::string &rootId, const
    PasswordRequest dialog;
 
    dialog.dialogData = dialogData;
+
+   milliseconds duration = milliseconds(dialogData.value<int>(PasswordDialogData::Duration));
+   if (duration == 0s) {
+      duration = kDefaultDuration;
+   }
+   dialog.dialogExpirationTime = std::chrono::steady_clock::now() + duration;
+
    dialog.callback = cb;
-   dialog.passwordRequest = [this, reqType, dialogData, txReq](){
+   dialog.passwordRequest = [this, reqType, txReq](const Internal::PasswordDialogDataWrapper &dlgData){
       if (callbacks_) {
          switch (reqType) {
          case headless::SignTxRequestType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignTx, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignTx, dlgData, txReq);
             break;
          case headless::SignPartialTXRequestType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignPartialTx, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignPartialTx, dlgData, txReq);
             break;
 
          case headless::SignSettlementTxRequestType:
          case headless::SignSettlementPayoutTxType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementTx, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementTx, dlgData, txReq);
             break;
          case headless::SignSettlementPartialTxType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementPartialTx, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::SignSettlementPartialTx, dlgData, txReq);
             break;
 
          case headless::CreateHDLeafRequestType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dialogData);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateHDLeaf, dlgData);
             break;
          case headless::CreateSettlWalletType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateSettlementLeaf, dialogData);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateSettlementLeaf, dlgData);
             break;
          case headless::SetUserIdType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::CreateAuthLeaf, dlgData, txReq);
             break;
          case headless::SignAuthAddrRevokeType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::RevokeAuthAddress, dialogData, txReq);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::RevokeAuthAddress, dlgData, txReq);
             break;
          case headless::PromoteHDWalletRequestType:
-            callbacks_->decryptWalletRequest(signer::PasswordDialogType::PromoteHDWallet, dialogData);
+            callbacks_->decryptWalletRequest(signer::PasswordDialogType::PromoteHDWallet, dlgData);
             break;
 
          default:
@@ -873,7 +891,30 @@ void HeadlessContainerListener::RunDeferredPwDialog()
       deferredDialogRunning_ = true;
 
       std::sort(deferredPasswordRequests_.begin(), deferredPasswordRequests_.end());
-      deferredPasswordRequests_.front().passwordRequest(); // run stored lambda
+      const auto &dialog = deferredPasswordRequests_.front();
+
+      auto dialogData = dialog.dialogData;
+      milliseconds remainingDuration = std::chrono::duration_cast<milliseconds>(dialog.dialogExpirationTime - std::chrono::steady_clock::now());
+
+      if (remainingDuration < seconds(3)) {
+         // Don't display dialog if it will be expired soon or already expired
+         const PasswordReceivedCb &cb = std::move(deferredPasswordRequests_.front().callback);
+         if (cb) {
+            cb(bs::error::ErrorCode::TxCanceled, {});
+         }
+
+         // at this point password workflow finished for deferredPasswordRequests_.front() dialog
+         // now we can remove dialog
+         deferredPasswordRequests_.erase(deferredPasswordRequests_.begin());
+         deferredDialogRunning_ = false;
+
+         // execute next pw dialog
+         RunDeferredPwDialog();
+      }
+      else {
+         dialogData.insert(PasswordDialogData::Duration, static_cast<int>(remainingDuration.count()));
+         deferredPasswordRequests_.front().passwordRequest(dialogData); // run stored lambda
+      }
    }
 }
 
@@ -2007,18 +2048,7 @@ bool HeadlessContainerListener::onExecCustomDialog(const std::string &clientId, 
    return true;
 }
 
-bool PasswordRequest::operator <(const PasswordRequest &other) const {
-   seconds thisInterval, otherInterval;
-
-   thisInterval = seconds(dialogData.value<int>("Duration"));
-   if (thisInterval == 0s) {
-      thisInterval = kDefaultDuration;
-   }
-
-   otherInterval = seconds(other.dialogData.value<int>("Duration"));
-   if (otherInterval == 0s) {
-      otherInterval = kDefaultDuration;
-   }
-
-   return dialogRequestedTime + thisInterval < other.dialogRequestedTime + otherInterval;
+bool PasswordRequest::operator <(const PasswordRequest &other) const
+{
+   return dialogExpirationTime < other.dialogExpirationTime;
 }

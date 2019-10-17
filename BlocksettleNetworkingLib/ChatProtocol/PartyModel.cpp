@@ -25,7 +25,7 @@ void PartyModel::insertParty(const PartyPtr& partyPtr)
       partyMap_.erase(partyPtr->id());
 
       emit partyModelChanged();
-      emit error(PartyModelError::InsertExistingParty, partyPtr->id());
+      emit error(PartyModelError::InsertExistingParty, partyPtr->id(), true);
    }
 
    partyMap_[partyPtr->id()] = partyPtr;
@@ -60,7 +60,7 @@ PartyPtr PartyModel::getPartyById(const std::string& party_id)
       return it->second;
    }
 
-   emit error(PartyModelError::CouldNotFindParty, party_id);
+   emit error(PartyModelError::CouldNotFindParty, party_id, true);
 
    return nullptr;
 }
@@ -71,7 +71,7 @@ PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& 
 
    if (!partyPtr)
    {
-      emit error(PartyModelError::CouldNotFindParty, party_id);
+      emit error(PartyModelError::CouldNotFindParty, party_id, true);
       return nullptr;
    }
 
@@ -80,7 +80,7 @@ PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& 
    if (nullptr == privateDMPartyPtr)
    {
       // this should not happen
-      emit error(PartyModelError::PrivatePartyCasting, party_id);
+      emit error(PartyModelError::PrivatePartyCasting, party_id, true);
       return nullptr;
    }
 
@@ -108,13 +108,13 @@ void PartyModel::clearModel()
 void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
 {
    // private party
-   if (partyPtr->isPrivateStandard())
+   if (partyPtr->isPrivate())
    {
       PrivateDirectMessagePartyPtr privatePartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
 
       if (nullptr == privatePartyPtr)
       {
-         emit error(PartyModelError::DynamicPointerCast, partyPtr->id());
+         emit error(PartyModelError::DynamicPointerCast, partyPtr->id(), true);
          return;
       }
 
@@ -136,7 +136,7 @@ void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
    }
 
    // other party types
-   PartyPtr existingPartyPtr = getPrivatePartyById(partyPtr->id());
+   PartyPtr existingPartyPtr = getPartyById(partyPtr->id());
 
    // if not exist, insert new, otherwise do nothing
    if (nullptr == existingPartyPtr)

@@ -1,18 +1,21 @@
 #include "ChatWidget.h"
 
 #include <spdlog/spdlog.h>
-#include <QTreeView>
-#include <QFrame>
+
 #include <QAbstractScrollArea>
-#include <QUrl>
-#include <QTextDocument>
-#include <QTextOption>
-#include <QPen>
-#include <QTextFormat>
-#include <QTextCursor>
-#include <QTextEdit>
 #include <QApplication>
 #include <QClipboard>
+#include <QDir>
+#include <QFileDialog>
+#include <QFrame>
+#include <QPen>
+#include <QTextCursor>
+#include <QTextDocument>
+#include <QTextEdit>
+#include <QTextFormat>
+#include <QTextOption>
+#include <QTreeView>
+#include <QUrl>
 
 #include "BSChatInput.h"
 #include "BSMessageBox.h"
@@ -161,6 +164,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
 
+   // OTC
+   connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::otcPrivatePartyReady, this, &ChatWidget::onOtcPrivatePartyReady, Qt::QueuedConnection);
+
    ui_->textEditMessages->onSetClientPartyModel(clientPartyModelPtr);
 
    otcRequestViewModel_ = new OTCRequestViewModel(otcHelper_->client(), this);
@@ -179,12 +185,80 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::requestCreated, this, &ChatWidget::onOtcRequestSubmit);
    connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::currentRequestPulled, this, &ChatWidget::onOtcPullOrRejectCurrent);
-   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::requestPulled, this, &ChatWidget::onOtcPullOrReject);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseAccepted, this, &ChatWidget::onOtcResponseAccept);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseUpdated, this, &ChatWidget::onOtcResponseUpdate);
    connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::responseRejected, this, &ChatWidget::onOtcPullOrRejectCurrent);
    connect(ui_->widgetCreateOTCRequest, &CreateOTCRequestWidget::requestCreated, this, &ChatWidget::onOtcQuoteRequestSubmit);
    connect(ui_->widgetCreateOTCResponse, &CreateOTCResponseWidget::responseCreated, this, &ChatWidget::onOtcQuoteResponseSubmit);
+
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::saveOfflineClicked, this, [this, appSettings] {
+      auto oldPeer = currentPeer();
+      assert(oldPeer);
+
+      QString signerOfflineDir = appSettings->get<QString>(ApplicationSettings::signerOfflineDir);
+
+      const qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();
+      const std::string fileName = fmt::format("{}_{}.bin", oldPeer->offer.hdWalletId, timestamp);
+
+      QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));
+      QString filePath = QFileDialog::getSaveFileName(nullptr, tr("Save Offline TX as..."), defaultFilePath);
+      if (filePath.isEmpty()) {
+         return;
+      }
+
+      QString newSignerOfflineDir = QFileInfo(filePath).absoluteDir().path();
+      if (signerOfflineDir != newSignerOfflineDir) {
+         appSettings->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
+      }
+
+      // Current peer could be destroyed while we wait from QFileDialog::getSaveFileName return
+      auto peer = currentPeer();
+      bool result = otcHelper_->client()->saveOfflineRequest(peer, filePath.toStdString());
+      if (!result) {
+         BSMessageBox(BSMessageBox::critical, tr("Save sign request..."),
+            tr("Saving sign request failed")).exec();
+         return;
+      }
+   });
+
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::loadOfflineClicked, this, [this, appSettings] {
+      auto oldPeer = currentPeer();
+      assert(oldPeer);
+
+      QString signerOfflineDir = appSettings->get<QString>(ApplicationSettings::signerOfflineDir);
+
+      QString filePath = QFileDialog::getOpenFileName(nullptr, tr("Select Transaction file")
+         , signerOfflineDir, tr("TX files (*.bin)"));
+      if (filePath.isEmpty()) {
+         return;
+      }
+      // Update latest used directory if needed
+      QString newSignerOfflineDir = QFileInfo(filePath).absoluteDir().path();
+      if (signerOfflineDir != newSignerOfflineDir) {
+         appSettings->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
+      }
+
+      // Current peer could be destroyed while we wait from QFileDialog::getOpenFileName return
+      auto peer = currentPeer();
+      bool result = otcHelper_->client()->loadOfflineRequest(peer, filePath.toStdString());
+      if (!result) {
+         BSMessageBox(BSMessageBox::critical, tr("Load signed TX..."),
+            tr("Loading signed TX failed")).exec();
+         return;
+      }
+   });
+
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::broadcastOfflineClicked, this, [this] {
+      auto peer = currentPeer();
+      assert(peer);
+
+      bool result = otcHelper_->client()->sendOfflineRequest(peer);
+      if (!result) {
+         BSMessageBox(BSMessageBox::critical, tr("Send signed TX..."),
+            tr("Sending signed request failed")).exec();
+         return;
+      }
+   });
 
    ui_->widgetCreateOTCRequest->init(env);
 }
@@ -197,8 +271,17 @@ otc::Peer *ChatWidget::currentPeer() const
       return nullptr;
    }
 
+   const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
+   if (!clientPartyPtr) {
+      return nullptr;
+   }
+
    if (currentPartyId_ == Chat::OtcRoomName) {
-      const auto &currentIndex = ui_->treeViewOTCRequests->currentIndex();
+      const auto &currentIndex = ui_->treeViewOTCRequests->selectionModel()->currentIndex();
+      if (currentIndex.isValid() && clientPartyPtr->partyCreatorHash() == ownUserId_) {
+         return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
+      }
+
       if (!currentIndex.isValid() || currentIndex.row() < 0 || currentIndex.row() >= int(otcHelper_->client()->requests().size())) {
          // Show by default own request (if available)
          return otcHelper_->client()->ownRequest();
@@ -206,21 +289,7 @@ otc::Peer *ChatWidget::currentPeer() const
       return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
    }
 
-   const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
-   if (!clientPartyPtr) {
-      return nullptr;
-   }
-
-   switch (partyTreeItem->peerType) {
-      case otc::PeerType::Contact:     return otcHelper_->client()->contact(clientPartyPtr->userHash());
-      // #new_logic : ???
-      // We should use userHash here too, but for some reasons it's not set here
-      case otc::PeerType::Request:     return otcHelper_->client()->request(clientPartyPtr->id());
-      case otc::PeerType::Response:    return otcHelper_->client()->response(clientPartyPtr->id());
-   }
-
-   assert(false);
-   return nullptr;
+   return otcHelper_->client()->peer(clientPartyPtr->userHash(), partyTreeItem->peerType);
 }
 
 void acceptPartyRequest(const std::string& partyId) {}
@@ -248,9 +317,9 @@ void ChatWidget::onContactRequestCancelClicked(const std::string& partyId)
    stateCurrent_->onRemovePartyRequest(partyId);
 }
 
-void ChatWidget::onNewPartyRequest(const std::string& userName)
+void ChatWidget::onNewPartyRequest(const std::string& userName, const std::string& initialMessage)
 {
-   stateCurrent_->onNewPartyRequest(userName);
+   stateCurrent_->onNewPartyRequest(userName, initialMessage);
 }
 
 void ChatWidget::onRemovePartyRequest(const std::string& partyId)
@@ -357,12 +426,28 @@ void ChatWidget::onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTe
 
 void ChatWidget::onSendOtcMessage(const std::string& contactId, const BinaryData& data)
 {
-   auto clientParty = chatClientServicePtr_->getClientPartyModelPtr()->getClientPartyByUserHash(contactId);
-   if (!clientParty || !clientParty->isPrivateStandard()) {
+   ChatPartiesSortProxyModel* chatProxyModel = static_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
+   assert(chatProxyModel);
+
+   QModelIndex index = chatProxyModel->getProxyIndexById(currentPartyId_);
+   PartyTreeItem* party = chatProxyModel->getInternalData(index);
+   assert(party);
+
+   bool const isOTCGlobalRoot = (chatProxyModel->getOTCGlobalRoot() == index);
+
+   Chat::ClientPartyPtr clientPartyPtr = nullptr;
+   if (party->peerType == bs::network::otc::PeerType::Contact && !isOTCGlobalRoot) {
+      clientPartyPtr = chatClientServicePtr_->getClientPartyModelPtr()->getStandardPartyForUsers(ownUserId_, contactId);
+   }
+   else {
+      clientPartyPtr = chatClientServicePtr_->getClientPartyModelPtr()->getOtcPartyForUsers(ownUserId_, contactId);
+   }
+    
+   if (!clientPartyPtr) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "can't find valid private party to send OTC message");
       return;
    }
-   stateCurrent_->onSendOtcMessage(clientParty->id(), OtcUtils::serializeMessage(data));
+   stateCurrent_->onSendOtcMessage(clientPartyPtr->id(), OtcUtils::serializeMessage(data));
 }
 
 void ChatWidget::onSendOtcPublicMessage(const BinaryData &data)
@@ -521,7 +606,8 @@ void ChatWidget::onRegisterNewChangingRefresh()
 void ChatWidget::onShowUserRoom(const QString& userHash)
 {
    const auto clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
-   Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getPartyByUserName(userHash.toStdString());
+
+   Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getStandardPartyForUsers(ownUserId_, userHash.toStdString());
 
    if (!clientPartyPtr) {
       return;
@@ -532,7 +618,7 @@ void ChatWidget::onShowUserRoom(const QString& userHash)
 
 void ChatWidget::onContactFriendRequest(const QString& userHash)
 {
-   chatClientServicePtr_->RequestPrivateParty(userHash.toStdString());
+   ui_->textEditMessages->onShowRequestPartyBox(userHash.toStdString());
 }
 
 void ChatWidget::onSetDisplayName(const std::string& partyId, const std::string& contactName)
@@ -568,11 +654,6 @@ void ChatWidget::onOtcQuoteResponseSubmit()
 void ChatWidget::onOtcPullOrRejectCurrent()
 {
    stateCurrent_->onOtcPullOrRejectCurrent();
-}
-
-void ChatWidget::onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type)
-{
-   stateCurrent_->onOtcPullOrReject(contactId, type);
 }
 
 void ChatWidget::onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
@@ -649,4 +730,9 @@ void ChatWidget::onOtcRequestCurrentChanged(const QModelIndex &current, const QM
    }
 
    otcHelper_->setGlobalOTCEntryTimeStamp(selectedPeerTimeStamp);
+}
+
+void ChatWidget::onOtcPrivatePartyReady(const Chat::ClientPartyPtr& clientPartyPtr)
+{
+   stateCurrent_->onOtcPrivatePartyReady(clientPartyPtr);
 }

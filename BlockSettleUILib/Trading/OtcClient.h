@@ -65,14 +65,6 @@ struct OtcClientDeal;
 
 struct OtcClientParams
 {
-   // Return path that will be used to save offline sign request.
-   // Must be set if offline wallet will be used for sell.
-   std::function<std::string(const std::string &walletId)> offlineSavePathCb;
-
-   // Return path that will be used to load signed offline request.
-   // Must be set if offline wallet will be used for sell.
-   std::function<std::string()> offlineLoadPathCb;
-
    bs::network::otc::Env env{};
 };
 
@@ -95,6 +87,9 @@ public:
    bs::network::otc::Peer *request(const std::string &contactId);
    bs::network::otc::Peer *response(const std::string &contactId);
 
+   // Calls one of above methods depending on type
+   bs::network::otc::Peer *peer(const std::string &contactId, bs::network::otc::PeerType type);
+
    void setOwnContactId(const std::string &contactId);
    const std::string &ownContactId() const;
 
@@ -104,6 +99,10 @@ public:
    bool acceptOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
    bool updateOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
    bool pullOrReject(bs::network::otc::Peer *peer);
+
+   bool saveOfflineRequest(bs::network::otc::Peer *peer, const std::string &path);
+   bool loadOfflineRequest(bs::network::otc::Peer *peer, const std::string &path);
+   bool sendOfflineRequest(bs::network::otc::Peer *peer);
 
    const bs::network::otc::Peers &requests() { return requests_; }
    const bs::network::otc::Peers &responses() { return responses_; }
@@ -119,7 +118,6 @@ public slots:
    void processContactMessage(const std::string &contactId, const BinaryData &data);
    void processPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
    void processPublicMessage(QDateTime timestamp, const std::string &contactId, const BinaryData &data);
-   void processPrivateMessage(QDateTime timestamp, const std::string &contactId, bool isResponse, const BinaryData &data);
 
 signals:
    void sendContactMessage(const std::string &contactId, const BinaryData &data);
@@ -144,8 +142,6 @@ private:
       ValidityHandle handle;
    };
 
-   void processPeerMessage(bs::network::otc::Peer *peer, const BinaryData &data);
-
    void processQuoteResponse(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_QuoteResponse &msg);
    void processBuyerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_BuyerOffers &msg);
    void processSellerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_SellerOffers &msg);
@@ -156,7 +152,6 @@ private:
 
    void processPublicRequest(QDateTime timestamp, const std::string &contactId, const Blocksettle::Communication::Otc::PublicMessage_Request &msg);
    void processPublicClose(QDateTime timestamp, const std::string &contactId, const Blocksettle::Communication::Otc::PublicMessage_Close &msg);
-   void processPublicPrivateMessage(QDateTime timestamp, const std::string &contactId, const Blocksettle::Communication::Otc::PublicMessage_PrivateMessage &msg);
 
    void processPbStartOtc(const Blocksettle::Communication::ProxyTerminalPb::Response_StartOtc &response);
    void processPbUpdateOtcState(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOtcState &response);
@@ -165,7 +160,7 @@ private:
    bool verifyOffer(const bs::network::otc::Offer &offer) const;
    void blockPeer(const std::string &reason, bs::network::otc::Peer *peer);
 
-   void send(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage &msg);
+   void send(bs::network::otc::Peer *peer, Blocksettle::Communication::Otc::ContactMessage &msg);
 
    void createRequests(const std::string &settlementId, bs::network::otc::Peer *peer, const OtcClientDealCb &cb);
    void sendSellerAccepts(bs::network::otc::Peer *peer);

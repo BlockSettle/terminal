@@ -70,7 +70,7 @@ bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSign
             bs::core::wallet::TXMultiSignRequest multiReq;
             multiReq.recipients = txSignReq.recipients;
             if (txSignReq.change.value) {
-               multiReq.recipients.push_back(txSignReq.change.address.getRecipient(txSignReq.change.value));
+               multiReq.recipients.push_back(txSignReq.change.address.getRecipient(bs::XBTAmount{ txSignReq.change.value }));
             }
             if (!txSignReq.prevStates.empty()) {
                multiReq.prevState = txSignReq.prevStates.front();

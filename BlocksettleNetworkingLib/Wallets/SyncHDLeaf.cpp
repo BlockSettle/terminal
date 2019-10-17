@@ -180,9 +180,9 @@ std::vector<std::string> hd::Leaf::setUnconfirmedTarget()
 
 void hd::Leaf::postOnline()
 {
-   if (firstInit_)
+   if (firstInit_) {
       return;
-
+   }
    unconfTgtRegIds_ = setUnconfirmedTarget();
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
@@ -890,6 +890,31 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
+std::vector<std::string> hd::CCLeaf::setUnconfirmedTarget()
+{
+   if (!btcWallet_) {
+      return {};
+   }
+   return { btcWallet_->setUnconfirmedTarget(kIntConfCount) };
+}
+
+bool hd::CCLeaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t val)
+{
+   const ArmoryConnection::UTXOsCb &cbWrap = [this, cb](const std::vector<UTXO> &utxos) {
+      std::vector<UTXO> filteredUTXOs;
+      for (const auto &utxo : utxos) {
+         const auto nbConf = armory_->getConfirmationsNumber(utxo.getHeight());
+         if (nbConf >= kIntConfCount) {
+            filteredUTXOs.emplace_back(std::move(utxo));
+         }
+      }
+      if (cb) {
+         cb(filteredUTXOs);
+      }
+   };
+   return bs::sync::Wallet::getSpendableTxOutList(cbWrap, val);
+}
+
 void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 {
    if (!ZConly) {
@@ -908,7 +933,7 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
          };
          findInvalidUTXOs(utxos, cbUpdateSpendableBalance);
       };
-      hd::Leaf::getSpendableTxOutList(cbRefresh, UINT64_MAX);
+      getSpendableTxOutList(cbRefresh, UINT64_MAX);
    }
 
    const auto &cbRefreshZC = [this](const std::vector<UTXO> &utxos) {

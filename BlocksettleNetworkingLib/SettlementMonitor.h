@@ -61,7 +61,7 @@ namespace bs {
       static bs::core::wallet::TXSignRequest createPayoutTXRequest(UTXO
          , const bs::Address &recvAddr, float feePerByte, unsigned int topBlock);
       static UTXO getInputFromTX(const bs::Address &, const BinaryData &payinHash
-         , const double amount);
+         , const bs::XBTAmount& amount);
       static uint64_t getEstimatedFeeFor(UTXO input, const bs::Address &recvAddr
          , float feePerByte, unsigned int topBlock);
 

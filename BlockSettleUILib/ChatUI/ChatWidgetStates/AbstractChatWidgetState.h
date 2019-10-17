@@ -5,7 +5,6 @@
 #include "ChatProtocol/ClientParty.h"
 #include "ui_ChatWidget.h"
 
-// #old_logic : delete this all widget and use class RFQShieldPage(maybe need redo it but based class should be the same)
 enum class OTCPages : int
 {
    OTCShield = 0,
@@ -23,6 +22,11 @@ namespace Blocksettle {
       }
    }
 }
+
+enum class StackedMessages {
+   TextEditMessage = 0,
+   OTCTable = 1
+};
 
 class ChatWidget;
 class AbstractChatWidgetState
@@ -54,7 +58,7 @@ public:
    void onRejectPartyRequest(const std::string& partyId);
    void onSendPartyRequest(const std::string& partyId);
    void onRemovePartyRequest(const std::string& partyId);
-   void onNewPartyRequest(const std::string& partyName);
+   void onNewPartyRequest(const std::string& partyName, const std::string& initialMessage);
    void onUpdateDisplayName(const std::string& partyId, const std::string& contactName);
 
 
@@ -76,7 +80,8 @@ public:
    void onOtcQuoteResponseSubmit();
 
    void onOtcPullOrRejectCurrent();
-   void onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type);
+
+   void onOtcPrivatePartyReady(const Chat::ClientPartyPtr& clientPartyPtr);
 
 protected:
 

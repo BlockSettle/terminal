@@ -54,8 +54,6 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData()
    dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
    dialogData.setValue(PasswordDialogData::LotSize, qint64(lotSize_));
 
-   dialogData.remove(PasswordDialogData::SettlementId);
-
    if (side() == bs::network::Side::Sell) {
       dialogData.setValue(PasswordDialogData::Title, tr("Settlement Delivery"));
    }
@@ -105,6 +103,7 @@ bool DealerCCSettlementContainer::startSigning()
          if (result == bs::error::ErrorCode::NoError) {
             emit signTxRequest(orderId_, signedTX.toHexStr());
             emit completed();
+            wallet_->setTransactionComment(signedTX, txComment());
          }
          else if (result == bs::error::ErrorCode::TxCanceled) {
             // FIXME
@@ -171,7 +170,7 @@ void DealerCCSettlementContainer::activate()
       emit genAddressVerified(true);
    }
 
-   startTimer(30);
+   startTimer(kWaitTimeoutInSec);
    startSigning();
 }
 
@@ -189,6 +188,7 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
    }
 
    bs::sync::PasswordDialogData pd;
+   pd.setValue(PasswordDialogData::SettlementId, id());
    pd.setValue(PasswordDialogData::DeliveryUTXOVerified, addressVerified);
    pd.setValue(PasswordDialogData::SigningAllowed, addressVerified);
 
@@ -206,4 +206,10 @@ bool DealerCCSettlementContainer::cancel()
 QString DealerCCSettlementContainer::GetSigningWalletName() const
 {
    return walletName_;
+}
+
+std::string DealerCCSettlementContainer::txComment()
+{
+   return std::string(bs::network::Side::toString(order_.side))
+      + " " + order_.security + " @ " + std::to_string(order_.price);
 }

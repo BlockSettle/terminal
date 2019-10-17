@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
@@ -26,6 +26,62 @@
       </size>
      </property>
     </spacer>
+   </item>
+   <item>
+    <widget class="QWidget" name="headerWidget" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>10</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="shieldHeaderText">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>25</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Header Text</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="h5" stdset="0">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QLabel" name="shieldText">
@@ -119,6 +175,9 @@ your Authentication Address(es)</string>
     <spacer name="verticalSpacer_2">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Expanding</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>

@@ -10,6 +10,7 @@
 #include "ChatProtocol/CryptManager.h"
 
 #include "DataConnectionListener.h"
+#include "CelerClient.h"
 
 #include <disable_warnings.h>
 #include "ZMQ_BIP15X_DataConnection.h"
@@ -60,11 +61,12 @@ namespace Chat
 
    public slots:
       void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
-      void LoginToServer(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb& cb);
+      void LoginToServer(const std::string& email, const CelerClient::CelerUserType& celerType, const std::string& jwt, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
       void SendPartyMessage(const std::string& partyId, const std::string& data);
       void SetMessageSeen(const std::string& partyId, const std::string& messageId);
-      void RequestPrivateParty(const std::string& userName);
+      void RequestPrivateParty(const std::string& userName, const std::string& initialMessage);
+      void RequestPrivatePartyOTC(const std::string& remoteUserName);
       void RejectPrivateParty(const std::string& partyId);
       void DeletePrivateParty(const std::string& partyId);
       void AcceptPrivateParty(const std::string& partyId);
@@ -89,6 +91,7 @@ namespace Chat
       void initDone();
       void properlyConnected();
       void searchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
+      void otcPrivatePartyReady(const ClientPartyPtr& clientPartyPtr);
 
    private slots:
       void sendPacket(const google::protobuf::Message& message);

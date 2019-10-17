@@ -107,7 +107,7 @@ private slots:
    void onContactRequestSendClicked(const std::string& partyId);
    void onContactRequestCancelClicked(const std::string& partyId);
 
-   void onNewPartyRequest(const std::string& userName);
+   void onNewPartyRequest(const std::string& userName, const std::string& initialMessage);
    void onRemovePartyRequest(const std::string& partyId);
 
    void onOtcUpdated(const bs::network::otc::Peer *peer);
@@ -120,7 +120,8 @@ private slots:
    void onOtcQuoteRequestSubmit();
    void onOtcQuoteResponseSubmit();
    void onOtcPullOrRejectCurrent();
-   void onOtcPullOrReject(const std::string& contactId, bs::network::otc::PeerType type);
+
+   void onOtcPrivatePartyReady(const Chat::ClientPartyPtr& clientPartyPtr);
 
 signals:
    // OTC

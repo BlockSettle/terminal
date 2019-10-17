@@ -31,11 +31,12 @@ namespace Chat
       void setRecipients(PartyRecipientsPtrList val) { recipients_ = val; }
 
       void insertOrUpdateRecipient(const PartyRecipientPtr& partyRecipientPtr);
-      PartyRecipientPtr getRecipient(const std::string& userName);
+      PartyRecipientPtr getRecipient(const std::string& recipientUserHash);
 
-      bool isUserBelongsToParty(const std::string& userName);
-      PartyRecipientPtr getSecondRecipient(const std::string& firstRecipientUserName);
-      PartyRecipientsPtrList getRecipientsExceptMe(const std::string& me);
+      bool isUserBelongsToParty(const std::string& recipientUserHash);
+      bool isUserInPartyWith(const std::string& firstUserHash, const std::string& secondUserHash);
+      PartyRecipientPtr getSecondRecipient(const std::string& firstRecipientUserHash);
+      PartyRecipientsPtrList getRecipientsExceptMe(const std::string& myUserHash);
 
    private:
       PartyRecipientsPtrList recipients_;

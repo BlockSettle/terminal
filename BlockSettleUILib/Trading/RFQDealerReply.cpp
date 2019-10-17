@@ -31,6 +31,10 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+namespace {
+   const QString noBalanceAvailable = QLatin1String("-");
+}
+
 using namespace bs::ui;
 
 RFQDealerReply::RFQDealerReply(QWidget* parent)
@@ -244,20 +248,7 @@ void RFQDealerReply::reset()
    }
 
    updateRespQuantity();
-
-   if (!qFuzzyIsNull(indicBid_)) {
-      ui_->spinBoxBidPx->setValue(indicBid_);
-   }
-   else {
-      ui_->spinBoxBidPx->clear();
-   }
-
-   if (!qFuzzyIsNull(indicAsk_)) {
-      ui_->spinBoxOfferPx->setValue(indicAsk_);
-   }
-   else {
-      ui_->spinBoxOfferPx->clear();
-   }
+   updateSpinboxes();
 }
 
 void RFQDealerReply::quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn)
@@ -322,23 +313,21 @@ std::shared_ptr<bs::sync::Wallet> RFQDealerReply::getCCWallet(const bs::network:
    return getCCWallet(qrn.product);
 }
 
-bs::Address RFQDealerReply::getRecvAddress(const std::shared_ptr<bs::sync::Wallet> &wallet) const
+void RFQDealerReply::getRecvAddress(const std::shared_ptr<bs::sync::Wallet> &wallet, std::function<void(bs::Address)> cb) const
 {
    if (!wallet) {
-      return {};
+      cb({});
+      return;
    }
 
-   auto promAddr = std::make_shared<std::promise<bs::Address>>();
-   auto futAddr = promAddr->get_future();
-   const auto &cbAddr = [promAddr, wallet](const bs::Address &addr) {
-      promAddr->set_value(addr);
+   auto cbWrap = [wallet, cb = std::move(cb)](const bs::Address &addr) {
       if (wallet->type() != bs::core::wallet::Type::ColorCoin) {
          wallet->setAddressComment(addr, bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::SettlementPayOut));
       }
+      cb(addr);
    };
-   wallet->getNewIntAddress(cbAddr);
+   wallet->getNewIntAddress(cbWrap);
    //curWallet_->RegisterWallet();  //TODO: invoke at address callback
-   return futAddr.get();
 }
 
 void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &qrn)
@@ -409,6 +398,7 @@ void RFQDealerReply::onAuthAddrChanged(int index)
 
 void RFQDealerReply::updateSubmitButton()
 {
+   updateBalanceLabel();
    bool isQRNRepliable = (!currentQRN_.empty() && QuoteProvider::isRepliableStatus(currentQRN_.status));
    if ((currentQRN_.assetType != bs::network::Asset::SpotFX)
       && (!signingContainer_ || signingContainer_->isOffline())) {
@@ -470,14 +460,7 @@ bool RFQDealerReply::checkBalance() const
             - transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider));
       }
       else if ((currentQRN_.assetType == bs::network::Asset::PrivateMarket) && ccCoinSel_) {
-         uint64_t balance = 0;
-         for (const auto &utxo : dealerUtxoAdapter_->get(currentQRN_.quoteRequestId)) {
-            balance += utxo.getValue();
-         }
-         if (!balance) {
-            balance = ccCoinSel_->GetBalance();
-         }
-         return (amount <= ccCoinSel_->GetWallet()->getTxBalance(balance));
+         return (amount <= getPrivateMarketCoinBalance());
       }
       const auto product = (product_ == baseProduct_) ? product_ : currentQRN_.product;
       return assetManager_->checkBalance(product, amount);
@@ -572,7 +555,7 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
    , const bs::network::QuoteReqNotification &qrn, double price
    , std::function<void(bs::network::QuoteNotification)> cb
    , const std::shared_ptr<bs::sync::Wallet> &xbtWallet)
-{  //TODO: refactor to properly support asynchronicity of getChangeAddress
+{
    if (qFuzzyIsNull(price)) {
       cb({});
       return;
@@ -588,19 +571,15 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
       logger_->debug("[RFQDealerReply::submitReply] txData={}", txData);
       auto qn = std::make_shared<bs::network::QuoteNotification>(qrn, authKey_, price, txData);
 
-      if (qrn.assetType == bs::network::Asset::PrivateMarket) {
-         if (qrn.side == bs::network::Side::Sell) {
-            qn->receiptAddress = getRecvAddress(getCCWallet(qrn)).display();
-         } else {
-            qn->receiptAddress = getRecvAddress(xbtWallet).display();
-         }
+      auto addrCb = [this, cb, qn, qrn, price, transData, xbtWallet](const bs::Address &addr) {
+         qn->receiptAddress = addr.display();
          qn->reqAuthKey = qrn.requestorRecvAddress;
 
          auto wallet = transData->getSigningWallet();
          auto spendVal = std::make_shared<uint64_t>(0);
 
          const auto &cbFee = [this, qrn, transData, spendVal, wallet, cb, qn](float feePerByte) {
-            const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(*spendVal);
+            const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ *spendVal });
             std::vector<UTXO> inputs = dealerUtxoAdapter_->get(qn->quoteRequestId);
             if (inputs.empty() && ccCoinSel_) {
                inputs = ccCoinSel_->GetSelectedTransactions();
@@ -610,36 +589,33 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                   return;
                }
             }
-            try {
-               auto promAddr = std::make_shared<std::promise<bs::Address>>();
-               auto futAddr = promAddr->get_future();
-               const auto &cbAddr = [promAddr](const bs::Address &addr) {
-                  promAddr->set_value(addr);
-               };
-               wallet->getNewChangeAddress(cbAddr);
-               logger_->debug("[cbFee] {} input[s], fpb={}, recip={}, prevPart={}", inputs.size(), feePerByte
-                  , bs::Address(qrn.requestorRecvAddress).display(), qrn.requestorAuthPublicKey);
+
+            const auto &cbAddr = [this, inputs, feePerByte, qrn, qn, spendVal, wallet, recipient, transData, cb](const bs::Address &changeAddress) {
                try {
-                  Signer signer;
-                  signer.deserializeState(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
-                  logger_->debug("[cbFee] deserialized state");
+                  logger_->debug("[cbFee] {} input[s], fpb={}, recip={}, prevPart={}", inputs.size(), feePerByte
+                     , bs::Address(qrn.requestorRecvAddress).display(), qrn.requestorAuthPublicKey);
+                  try {
+                     Signer signer;
+                     signer.deserializeState(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
+                     logger_->debug("[cbFee] deserialized state");
+                  } catch (const std::exception &e) {
+                     logger_->error("[cbFee] state deser failed: {}", e.what());
+                  }
+                  const auto txReq = wallet->createPartialTXRequest(*spendVal, inputs, changeAddress, feePerByte
+                     , { recipient }, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
+                  qn->transactionData = txReq.serializeState().toHexStr();
+                  dealerUtxoAdapter_->reserve(txReq, qn->quoteRequestId);
                } catch (const std::exception &e) {
-                  logger_->error("[cbFee] state deser failed: {}", e.what());
+                  logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
+                  cb({});
+                  return;
                }
-               const auto txReq = wallet->createPartialTXRequest(*spendVal, inputs, futAddr.get(), feePerByte
-                  , { recipient }, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
-               qn->transactionData = txReq.serializeState().toHexStr();
-               logger_->debug("[cbFee] txData={}", qn->transactionData);
-               dealerUtxoAdapter_->reserve(txReq, qn->quoteRequestId);
-            } catch (const std::exception &e) {
-               logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
-               cb({});
-               return;
-            }
-            if (!transData->getSigningWallet()) {
-               transData->setSigningWallet(wallet);
-            }
-            cb(*qn);
+               if (!transData->getSigningWallet()) {
+                  transData->setSigningWallet(wallet);
+               }
+               cb(*qn);
+            };
+            wallet->getNewChangeAddress(cbAddr);
          };
 
          if (qrn.side == bs::network::Side::Buy) {
@@ -653,6 +629,14 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
             *spendVal = qrn.quantity * price * BTCNumericTypes::BalanceDivider;
             walletsManager_->estimatedFeePerByte(2, cbFee, this);
             return;
+         }
+      };
+
+      if (qrn.assetType == bs::network::Asset::PrivateMarket) {
+         if (qrn.side == bs::network::Side::Sell) {
+            getRecvAddress(getCCWallet(qrn), addrCb);
+         } else {
+            getRecvAddress(xbtWallet, addrCb);
          }
       }
       cb(*qn);
@@ -695,32 +679,31 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
          const auto &lbdUnsignedTx = [this, qrn, transData, lbdQuoteNotif, cb] {
             try {
                if (transData->IsTransactionValid()) {
-                  bs::core::wallet::TXSignRequest unsignedTxReq;
+                  auto unsignedTxReqCb = [this, transData, qrn, lbdQuoteNotif](const bs::core::wallet::TXSignRequest &unsignedTxReq) {
+                     const auto cbPreimage = [this, unsignedTxReq, qrn, lbdQuoteNotif]
+                        (const std::map<bs::Address, BinaryData> &preimages)
+                     {
+                        const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
+                        dealerUtxoAdapter_->reserve(unsignedTxReq, qrn.settlementId);
+
+                        const auto txData = unsignedTxReq.txId(resolver).toHexStr();
+                        lbdQuoteNotif(txData);
+                     };
+                     const auto addrMapping = walletsManager_->getAddressToWalletsMapping(transData->inputs());
+                     signingContainer_->getAddressPreimage(addrMapping, cbPreimage);
+                  };
                   if (transData->GetTransactionSummary().hasChange) {
-                     auto promAddr = std::make_shared<std::promise<bs::Address>>();
-                     auto futAddr = promAddr->get_future();
-                     const auto &cbAddr = [promAddr, transData](const bs::Address &addr) {
-                        promAddr->set_value(addr);
+                     auto cbAddr = [unsignedTxReqCb, transData](const bs::Address &addr) {
                         transData->getWallet()->setAddressComment(addr, bs::sync::wallet::Comment::toString(
                            bs::sync::wallet::Comment::ChangeAddress));
+                        auto unsignedTxReq = transData->createUnsignedTransaction(false, addr);
+                        unsignedTxReqCb(unsignedTxReq);
                      };
                      transData->getWallet()->getNewChangeAddress(cbAddr);
-                     unsignedTxReq = transData->createUnsignedTransaction(false, futAddr.get());
                   } else {
-                     unsignedTxReq = transData->createUnsignedTransaction();
+                     auto unsignedTxReq = transData->createUnsignedTransaction();
+                     unsignedTxReqCb(unsignedTxReq);
                   }
-
-                  const auto cbPreimage = [this, unsignedTxReq, qrn, lbdQuoteNotif]
-                     (const std::map<bs::Address, BinaryData> &preimages)
-                  {
-                     const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
-                     dealerUtxoAdapter_->reserve(unsignedTxReq, qrn.settlementId);
-
-                     const auto txData = unsignedTxReq.txId(resolver).toHexStr();
-                     lbdQuoteNotif(txData);
-                  };
-                  const auto addrMapping = walletsManager_->getAddressToWalletsMapping(transData->inputs());
-                  signingContainer_->getAddressPreimage(addrMapping, cbPreimage);
                } else {
                   logger_->warn("[RFQDealerReply::submit] pay-in transaction is invalid!");
                }
@@ -759,7 +742,10 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
          return;
       } else {
          settlLeaf->setSettlementID(settlementId, [](bool) {});
-         transData->SetFallbackRecvAddress(getRecvAddress(xbtWallet));
+         auto addrCb = [transData](const bs::Address &addr) {
+            transData->SetFallbackRecvAddress(addr);
+         };
+         getRecvAddress(xbtWallet, addrCb);
       }
    }
    lbdQuoteNotif({});
@@ -927,6 +913,8 @@ void RFQDealerReply::onBestQuotePrice(const QString reqId, double price, bool ow
          }
       }
    }
+
+   updateSpinboxes();
 }
 
 void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, double price)
@@ -1044,4 +1032,87 @@ void RFQDealerReply::onAutoSignStateChanged()
       ui_->comboBoxWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
    }
    ui_->comboBoxWallet->setEnabled(!autoSignQuoteProvider_->autoSignState());
+}
+
+void bs::ui::RFQDealerReply::updateSpinboxes()
+{
+   auto setSpinboxValue = [&](CustomDoubleSpinBox* spinBox, double value) {
+      if (qFuzzyIsNull(value)) {
+         spinBox->clear();
+         return;
+      }
+
+      if (!spinBox->isEnabled()) {
+         spinBox->setValue(value);
+         return;
+      }
+
+      auto bestQuotePrice = bestQPrices_.find(currentQRN_.quoteRequestId);
+      if (bestQuotePrice != bestQPrices_.end()) {
+         spinBox->setValue(bestQuotePrice->second + spinBox->singleStep());
+      }
+      else {
+         spinBox->setValue(value);
+      }
+   };
+
+   setSpinboxValue(ui_->spinBoxBidPx, indicBid_);
+   setSpinboxValue(ui_->spinBoxOfferPx, indicAsk_);
+}
+
+void bs::ui::RFQDealerReply::updateBalanceLabel()
+{
+   const bool isXbt = (currentQRN_.assetType == bs::network::Asset::PrivateMarket && currentQRN_.side == bs::network::Side::Sell) ||
+      ((currentQRN_.assetType == bs::network::Asset::SpotXBT) && (currentQRN_.side == bs::network::Side::Buy));
+
+   QString totalBalance;
+   if (isXbt) {
+      if (!transactionData_) {
+         totalBalance = noBalanceAvailable;
+      }
+      else {
+         totalBalance = tr("%1 %2")
+            .arg(UiUtils::displayAmount(transactionData_->GetTransactionSummary().availableBalance))
+            .arg(QString::fromStdString(bs::network::XbtCurrency));
+      }
+   }
+   else if ((currentQRN_.side == bs::network::Side::Buy) && (currentQRN_.assetType == bs::network::Asset::PrivateMarket)) {
+      if (!ccCoinSel_) {
+         totalBalance = noBalanceAvailable;
+      }
+      else {
+         totalBalance = tr("%1 %2")
+            .arg(UiUtils::displayCurrencyAmount(getPrivateMarketCoinBalance()))
+            .arg(QString::fromStdString(baseProduct_));
+      }
+   }
+   else {
+      if (!assetManager_) {
+         totalBalance = noBalanceAvailable;
+      }
+      else {
+         totalBalance = tr("%1 %2")
+            .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(product_)))
+            .arg(QString::fromStdString(currentQRN_.side == bs::network::Side::Buy ? baseProduct_ : product_));
+      }
+   }
+
+   ui_->labelBalanceValue->setText(totalBalance);
+}
+
+BTCNumericTypes::balance_type bs::ui::RFQDealerReply::getPrivateMarketCoinBalance() const
+{
+   if (!ccCoinSel_) {
+      return 0;
+   }
+
+   uint64_t balance = 0;
+   for (const auto &utxo : dealerUtxoAdapter_->get(currentQRN_.quoteRequestId)) {
+      balance += utxo.getValue();
+   }
+   if (!balance) {
+      balance = ccCoinSel_->GetBalance();
+   }
+
+   return ccCoinSel_->GetWallet()->getTxBalance(balance);
 }

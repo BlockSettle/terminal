@@ -583,6 +583,9 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       out: tx as Codec_CommonTypes::TxWithMetaData
       */
 
+
+      //TODO: consider decoupling txheight/index fetch into its own method
+
       if (!command->has_hash())
          throw runtime_error("invalid command for getTxByHash");
 
@@ -597,6 +600,8 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       if (!heightOnly)
       {
          retval = move(this->getTxByHash(txHashRef));
+         if (!retval.isInitialized())
+            throw runtime_error("failed to grab tx by hash");
       }
       else
       {
@@ -733,7 +738,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       if (!command->has_height())
          throw runtime_error("invalid command for getHeaderByHeight");
 
-      auto header = blockchain().getHeaderByHeight(command->height());
+      auto header = blockchain().getHeaderByHeight(command->height(), 0xFF);
       auto& headerData = header->serialize();
 
       auto response = make_shared<::Codec_CommonTypes::BinaryData>();
@@ -967,7 +972,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       BinaryData bw;
       try
       {
-         auto block = this->blockchain().getHeaderByHeight(height);
+         auto block = this->blockchain().getHeaderByHeight(height, 0xFF);
          auto rawHeader = block->serialize();
          BinaryWriter bw(rawHeader.getSize() + 4);
          bw.put_uint32_t(height);

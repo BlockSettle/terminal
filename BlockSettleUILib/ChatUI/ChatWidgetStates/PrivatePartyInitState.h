@@ -4,13 +4,6 @@
 #include "AbstractChatWidgetState.h"
 #include "BaseCelerClient.h"
 
-namespace {
-   enum class StackedMessages {
-      TextEditMessage = 0,
-      OTCTable = 1
-   };
-}
-
 class PrivatePartyInitState : public AbstractChatWidgetState {
 public:
    explicit PrivatePartyInitState(ChatWidget* chat) : AbstractChatWidgetState(chat) {}
@@ -22,8 +15,8 @@ protected:
    void applyChatFrameChange() override {
       Chat::ClientPartyPtr clientPartyPtr = getParty(chat_->currentPartyId_);
 
-      // #new_logic : fix me, party should exist!
-      if (clientPartyPtr && clientPartyPtr->isGlobalOTC()) {
+      assert(clientPartyPtr);
+      if (clientPartyPtr->isGlobalOTC()) {
          chat_->ui_->stackedWidgetMessages->setCurrentIndex(static_cast<int>(StackedMessages::OTCTable));
          return;
       }
@@ -35,8 +28,7 @@ protected:
 
       chat_->ui_->input_textEdit->setText({});
       chat_->ui_->input_textEdit->setVisible(true);
-      // #new_logic : fix me, party should exist! set always true
-      chat_->ui_->input_textEdit->setEnabled(clientPartyPtr != nullptr);
+      chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->input_textEdit->setFocus();
 
       restoreDraftMessage();
@@ -55,7 +47,6 @@ protected:
          return true;
       };
 
-      // #new_logic : update ClientPartyModel to receive public OTC requests/responses (clientPartyPtr should be set)
       if (!clientPartyPtr) {
          updateOtc();
          return;
@@ -81,6 +72,18 @@ protected:
             return;
          }
 
+         if (clientPartyPtr->clientStatus() == Chat::ClientStatus::OFFLINE) {
+            chat_->ui_->widgetOTCShield->showContactIsOffline();
+            return;
+         }
+
+         Chat::PartyRecipientPtr recipientPtr = clientPartyPtr->getSecondRecipient(chat_->ownUserId_);
+         CelerClient::CelerUserType counterPartyCelerType = recipientPtr->celerType();
+         if (counterPartyCelerType != BaseCelerClient::Dealing
+            && counterPartyCelerType != BaseCelerClient::Trading) {
+            chat_->ui_->widgetOTCShield->showCounterPartyIsntTradingParticipant();
+            return;
+         }
          // check other party
       }
 

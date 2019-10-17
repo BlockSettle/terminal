@@ -65,7 +65,7 @@ void AuthAddressDialog::showEvent(QShowEvent *evt)
    ui_->labelHint->clear();
 
    ui_->pushButtonCreate->setEnabled(authAddressManager_->HaveAuthWallet());
-   ui_->pushButtonCreate->setEnabled(!unsubmittedExist());
+   //ui_->pushButtonCreate->setEnabled(!unsubmittedExist());
 
    resizeTreeViewColumns();
 
@@ -88,7 +88,7 @@ void AuthAddressDialog::updateUnsubmittedState()
       }
       switch (authAddressManager_->GetState(authAddr)) {
       case AddressVerificationState::NotSubmitted:
-         ui_->labelHint->setText(tr("There are unsubmitted addresses - adding new ones is temporarily suspended"));
+         //ui_->labelHint->setText(tr("There are unsubmitted addresses - adding new ones is temporarily suspended"));
          [[clang::fallthrough]];
       case AddressVerificationState::InProgress:
       case AddressVerificationState::VerificationFailed:
@@ -150,7 +150,8 @@ void AuthAddressDialog::setBsClient(BsClient *bsClient)
 void AuthAddressDialog::onAddressListUpdated()
 {
    updateUnsubmittedState();
-   ui_->pushButtonCreate->setEnabled(!unsubmittedExist());
+   // BST-2237 - allow to create addreses in line
+   //ui_->pushButtonCreate->setEnabled(!unsubmittedExist());
 }
 
 void AuthAddressDialog::onAuthVerifyTxSent()
@@ -189,8 +190,10 @@ void AuthAddressDialog::resizeTreeViewColumns()
 
 void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QItemSelection &deselected)
 {
+   ui_->pushButtonCreate->setEnabled(true);
    ui_->pushButtonCreate->setFlat(true);
-   Q_UNUSED(deselected);
+
+   Q_UNUSED(deselected)
    if (!selected.indexes().isEmpty()) {
       const auto address = model_->getAddress(selected.indexes()[0]);
 
@@ -205,7 +208,6 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
          case AddressVerificationState::Submitted:
          case AddressVerificationState::Revoked:
          case AddressVerificationState::PendingVerification:
-            ui_->pushButtonCreate->setFlat(false);
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(false);
@@ -276,7 +278,7 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
       warnFunds.setWindowTitle(tr("Insufficient Funds"));
       warnFunds.exec();
 
-      authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
+      authAddressManager_->CancelSubmitForVerification(bsClient_.data(), lastSubmittedAddress_);
       lastSubmittedAddress_ = bs::Address{};
 
       return;
@@ -302,7 +304,7 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
    if (promptResult == QDialog::Accepted) {
       ConfirmAuthAddressSubmission();
    } else {
-      authAddressManager_->CancelSubmitForVerification(lastSubmittedAddress_);
+      authAddressManager_->CancelSubmitForVerification(bsClient_.data(), lastSubmittedAddress_);
       lastSubmittedAddress_ = bs::Address{};
    }
 }

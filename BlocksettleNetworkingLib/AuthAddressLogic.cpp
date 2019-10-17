@@ -180,7 +180,7 @@ unsigned ValidationAddressManager::goOnline()
    destroy this object and create a new one with the updated list.
    */
 
-   if (!connPtr_) {
+   if (!connPtr_ || !walletObj_) {
       return 0;
    }
 
@@ -266,11 +266,10 @@ unsigned ValidationAddressManager::update()
             /*
             Copy the existing struct over to the new one.
 
-            While all notification
-            based caller of update() come from the same thread, it is called by
-            goOnline() once, from a thread we don't control, therefor the copy
-            of the existing struct into the new one is preceded by an acquire
-            operation.
+            While all notification based callers of update() come from the 
+            same thread, it is called by goOnline() once, from a thread we 
+            do not control, therefor the copy of the existing struct into 
+            the new one is preceded by an acquire operation.
             */
             auto maStruct = std::atomic_load_explicit(
                &maIter->second, std::memory_order_acquire);
@@ -327,7 +326,7 @@ unsigned ValidationAddressManager::update()
       }
 
       //update cutoffs
-      topBlock_ = batch.heightCutoff_;
+      topBlock_ = batch.heightCutoff_ + 1;
       zcIndex_ = batch.zcIndexCutoff_;
 
       promPtr->set_value(opCount);
@@ -565,7 +564,7 @@ BinaryData ValidationAddressManager::fundUserAddress(
    signer.addSpender(spenderPtr);
 
    //vetting output
-   signer.addRecipient(addr.getRecipient(kAuthValueThreshold));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{ kAuthValueThreshold }));
 
    const auto scrAddr = vettingUtxo.getRecipientScrAddr();
    const auto addrIter = validationAddresses_.find(scrAddr);
@@ -579,7 +578,7 @@ BinaryData ValidationAddressManager::fundUserAddress(
       throw AuthLogicException("insufficient spend volume");
    }
    else if (changeVal > 0) {
-      signer.addRecipient(addrIter->first.getRecipient((uint64_t)changeVal));
+      signer.addRecipient(addrIter->first.getRecipient(bs::XBTAmount{ static_cast<uint64_t>(changeVal) }));
    }
 
    //sign & serialize tx
@@ -598,7 +597,7 @@ BinaryData ValidationAddressManager::fundUserAddresses(
 
    //vetting outputs
    for (const auto &addr : addrs) {
-      signer.addRecipient(addr.getRecipient(kAuthValueThreshold));
+      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ kAuthValueThreshold }));
    }
 
    int64_t changeVal = 0;
@@ -621,7 +620,7 @@ BinaryData ValidationAddressManager::fundUserAddresses(
       throw AuthLogicException("attempting to spend more than allowed");
    }
    else if (changeVal > 0) {
-      signer.addRecipient(validationAddress.getRecipient((uint64_t)changeVal));
+      signer.addRecipient(validationAddress.getRecipient(bs::XBTAmount{ static_cast<uint64_t>(changeVal) }));
    }
 
    //sign & serialize tx
@@ -697,7 +696,8 @@ BinaryData ValidationAddressManager::revokeValidationAddress(
    signer.addSpender(spenderPtr);
 
    //revocation output, no need for change
-   signer.addRecipient(addr.getRecipient((uint64_t)(firstUtxo.getValue() - 1000)));
+   const uint64_t revokeAmount = firstUtxo.getValue() - 1000;
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{revokeAmount}));
 
    //sign & serialize tx
    signer.sign();
@@ -776,11 +776,11 @@ BinaryData ValidationAddressManager::revokeUserAddress(
    signer.addSpender(spenderPtr);
 
    //revocation output
-   signer.addRecipient(addr.getRecipient(kAuthValueThreshold));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{ kAuthValueThreshold }));
 
    //change
-   signer.addRecipient(validationAddr.getRecipient(
-      utxo.getValue() - kAuthValueThreshold - 1000));
+   const bs::XBTAmount changeAmount{ utxo.getValue() - kAuthValueThreshold - 1000 };
+   signer.addRecipient(validationAddr.getRecipient(changeAmount));
 
    //sign & serialize tx
    signer.sign();
@@ -1033,22 +1033,9 @@ BinaryData AuthAddressLogic::revoke(const bs::Address &addr
    , const std::shared_ptr<ResolverFeed> &feedPtr
    , const bs::Address &validationAddr, const UTXO &revokeUtxo)
 {
-   //construct revocation utxo
+   //User side revoke: burn the validation UTXO as an OP_RETURN
    Signer signer;
-
-   /*
-   We should have passed the feed that can resolve private keys
-   for this auth address, i.e. the auth wallet's HD leaf resolver.
-   Obviously, the leaf should also be locked for decryption.
-   */
    signer.setFeed(feedPtr);
-
-   /*
-   We're only spending from the revoke utxo in this scenario. A more
-   realistic case is where another utxo is provided to cover for an
-   ample fee, as you want revocations to take places quickly. This
-   edge case needs to be addressed.
-   */
    signer.addSpender(std::make_shared<ScriptSpender>(revokeUtxo));
 
    const std::string opReturnMsg = "BlockSettle Terminal revoke";

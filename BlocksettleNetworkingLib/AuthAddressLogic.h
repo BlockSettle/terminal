@@ -21,29 +21,6 @@ public:
    {}
 };
 
-enum DBNotificationStruct_Enum
-{
-   DBNS_Refresh,
-   DBNS_ZC,
-   DBNS_NewBlock
-};
-
-struct DBNotificationStruct
-{
-   const DBNotificationStruct_Enum type_;
-
-   std::vector<BinaryData> ids_;
-   bool online_;
-
-   std::vector<bs::TXEntry> zc_;
-
-   unsigned int block_;
-
-   DBNotificationStruct(DBNotificationStruct_Enum type) :
-      type_(type)
-   {}
-};
-
 class ValidationAddressManager;
 
 struct AuthOutpoint
@@ -175,7 +152,7 @@ private:
 ////
 struct ValidationAddressStruct
 {
-   //<tx hash, outpoint>
+   //<tx hash, <txoutid, outpoint>>
    std::map<BinaryData,
       std::map<unsigned, std::shared_ptr<AuthOutpoint>>> outpoints_;
 

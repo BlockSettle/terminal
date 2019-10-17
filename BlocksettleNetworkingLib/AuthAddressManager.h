@@ -87,7 +87,7 @@ public:
 
    virtual bool SubmitForVerification(const bs::Address &address);
    virtual void ConfirmSubmitForVerification(BsClient *bsClient, const bs::Address &address);
-   virtual bool CancelSubmitForVerification(const bs::Address &address);
+   virtual bool CancelSubmitForVerification(BsClient *bsClient, const bs::Address &address);
 
    virtual bool RevokeAddress(const bs::Address &address);
 
@@ -96,6 +96,7 @@ public:
    virtual void OnDisconnectedFromCeler();
 
    virtual std::vector<bs::Address> GetVerifiedAddressList() const;
+   bool IsAtLeastOneAwaitingVerification() const;
    size_t FromVerifiedIndex(size_t index) const;
    const std::unordered_set<std::string> &GetBSAddresses() const;
 

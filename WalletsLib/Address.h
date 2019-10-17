@@ -7,7 +7,7 @@
 #include "BinaryData.h"
 #include "BTCNumericTypes.h"
 #include "TxClasses.h"
-
+#include "XBTAmount.h"
 
 namespace bs {
    class Address : public BinaryData
@@ -41,8 +41,8 @@ namespace bs {
       BinaryData id() const;
       BinaryData hash160() const;
       BinaryData getWitnessScript() const;
-      std::shared_ptr<ScriptRecipient> getRecipient(uint64_t amount) const;
-      std::shared_ptr<ScriptRecipient> getRecipient(double amount) const;
+
+      std::shared_ptr<ScriptRecipient> getRecipient(const XBTAmount& amount) const;
 
       size_t getInputSize() const;
       size_t getWitnessDataSize() const;  // returns UINT32_MAX if irrelevant

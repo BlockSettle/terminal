@@ -11,6 +11,8 @@
 #include "SecureBinaryData.h"
 #include <enable_warnings.h>
 
+#include "CelerClient.h"
+
 namespace Chat
 {
 
@@ -28,6 +30,8 @@ namespace Chat
       SecureBinaryData privateKey() const { return privateKey_; }
       void setPrivateKey(SecureBinaryData val) { privateKey_ = val; }
 
+      CelerClient::CelerUserType celerUserType() const { return celerUserType_; }
+      void setCelerUserType(const CelerClient::CelerUserType& val) { celerUserType_ = val; }
    signals:
       void userNameChanged(const std::string& displayName);
 
@@ -35,6 +39,7 @@ namespace Chat
       std::string userName_;
       BinaryData publicKey_;
       SecureBinaryData privateKey_;
+      CelerClient::CelerUserType celerUserType_ = CelerClient::Undefined;
    };
 
    using ChatUserPtr = std::shared_ptr<ChatUser>;

@@ -1,13 +1,15 @@
 #ifndef __TRANSACTION_DATA_H__
 #define __TRANSACTION_DATA_H__
 
+#include "Address.h"
+#include "CoreWallet.h"
+#include "UtxoReservation.h"
+#include "ValidityFlag.h"
+
 #include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include "Address.h"
-#include "CoreWallet.h"
-#include "UtxoReservation.h"
 
 namespace spdlog {
    class logger;
@@ -24,8 +26,9 @@ class CoinSelection;
 class RecipientContainer;
 class ScriptRecipient;
 class SelectedTransactionInputs;
-struct UtxoSelection;
+
 struct PaymentStruct;
+struct UtxoSelection;
 
 
 class TransactionData
@@ -108,16 +111,20 @@ public:
    void ClearAllRecipients();
 
    void SetFallbackRecvAddress(const bs::Address &addr) { fallbackRecvAddress_ = addr; }
-   bs::Address GetFallbackRecvAddress();
+   void GetFallbackRecvAddress(std::function<void(const bs::Address&)> cb);
+   const bs::Address &GetFallbackRecvAddressIfSet() const;
 
    bs::Address GetRecipientAddress(unsigned int recipientId) const;
+   std::shared_ptr<ScriptRecipient> GetScriptRecipient(unsigned int recipientId) const;
    BTCNumericTypes::balance_type GetRecipientAmount(unsigned int recipientId) const;
    BTCNumericTypes::balance_type  GetTotalRecipientsAmount() const;
    bool IsMaxAmount(unsigned int recipientId) const;
 
+   // If there is change then changeAddr must be set
    bs::core::wallet::TXSignRequest createUnsignedTransaction(bool isRBF = false, const bs::Address &changeAddr = {});
    bs::core::wallet::TXSignRequest getSignTxRequest() const;
 
+   // If there is change then changeAddr must be set
    bs::core::wallet::TXSignRequest createTXRequest(bool isRBF = false
                                              , const bs::Address &changeAddr = {}
                                              , const uint64_t& origFee = 0) const;
@@ -191,6 +198,8 @@ private:
    bool transactionUpdateRequired_ = false;
 
    bool inputsLoaded_ = false;
+
+   ValidityFlag validityFlag_;
 };
 
 #endif // __TRANSACTION_DATA_H__

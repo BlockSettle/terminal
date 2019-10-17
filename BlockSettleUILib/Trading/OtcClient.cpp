@@ -52,7 +52,6 @@ struct OtcClientDeal
    int64_t amount{};
    int64_t fee{};
    int64_t price{};
-   bool sellFromOffline{false};
 
    bool success{false};
    std::string errorMsg;
@@ -85,6 +84,8 @@ struct OtcClientDeal
 };
 
 namespace {
+
+   const int kContactIdSize = 12;
 
    const int kSettlementIdHexSize = 64;
    const int kTxHashSize = 32;
@@ -218,6 +219,26 @@ Peer *OtcClient::response(const std::string &contactId)
    return findPeer(responseMap_, contactId);
 }
 
+Peer *OtcClient::peer(const std::string &contactId, PeerType type)
+{
+   if (contactId.size() != kContactIdSize) {
+      SPDLOG_LOGGER_DEBUG(logger_, "unexpected contact requested: {}");
+   }
+
+   switch (type)
+   {
+      case bs::network::otc::PeerType::Contact:
+         return contact(contactId);
+      case bs::network::otc::PeerType::Request:
+         return request(contactId);
+      case bs::network::otc::PeerType::Response:
+         return response(contactId);
+   }
+
+   assert(false);
+   return nullptr;
+}
+
 void OtcClient::setOwnContactId(const std::string &contactId)
 {
    ownContactId_ = contactId;
@@ -332,6 +353,7 @@ bool OtcClient::sendOffer(Peer *peer, const Offer &offer)
 
       peer->offer = offer;
       peer->ourAuthPubKey = ourPubKey;
+      peer->isOurSideSentOffer = true;
       changePeerState(peer, State::OfferSent);
       scheduleCloseAfterTimeout(otc::negotiationTimeout(), peer);
 
@@ -374,16 +396,27 @@ bool OtcClient::pullOrReject(Peer *peer)
       case State::QuoteSent:
       case State::OfferSent:
       case State::OfferRecv: {
-         SPDLOG_LOGGER_DEBUG(logger_, "pull of reject offer from {}", peer->toString());
+         SPDLOG_LOGGER_DEBUG(logger_, "pull or reject offer from {}", peer->toString());
 
          ContactMessage msg;
          msg.mutable_close();
          send(peer, msg);
 
-         changePeerState(peer, State::Idle);
-
-         if (peer->type == PeerType::Request) {
-            updatePublicLists();
+         switch (peer->type) {
+            case PeerType::Contact:
+               resetPeerStateToIdle(peer);
+               break;
+            case PeerType::Request:
+               // Keep public request even if we reject it
+               resetPeerStateToIdle(peer);
+               // Need to call this as peer would be removed from "sent requests" list
+               updatePublicLists();
+               break;
+            case PeerType::Response:
+               // Remove peer from received responses if we reject it
+               responseMap_.erase(peer->contactId);
+               updatePublicLists();
+               break;
          }
 
          return true;
@@ -397,6 +430,17 @@ bool OtcClient::pullOrReject(Peer *peer)
          d->set_settlement_id(deal->settlementId);
          emit sendPbMessage(request.SerializeAsString());
 
+         switch (peer->type) {
+         case PeerType::Request:
+            requestMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+         case PeerType::Response:
+            responseMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+         }
+
          return true;
       }
 
@@ -405,6 +449,94 @@ bool OtcClient::pullOrReject(Peer *peer)
          return false;
       }
    }
+}
+
+bool OtcClient::saveOfflineRequest(Peer *peer, const std::string &path)
+{
+   if (!peer || !peer->isWaitingForOfflineSign()) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected request to save offline sign request");
+      return false;
+   }
+
+   auto it = deals_.find(peer->settlementId);
+   if (it == deals_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find active deal details");
+      return false;
+   }
+   auto deal = it->second.get();
+
+   SPDLOG_LOGGER_DEBUG(logger_, "save sign request from offline wallet to '{}'");
+
+   deal->payin.offlineFilePath = path;
+   auto reqId = signContainer_->signTXRequest(deal->payin);
+   signRequestIds_[reqId] = deal->settlementId;
+   deal->payinReqId = reqId;
+   return true;
+}
+
+bool OtcClient::loadOfflineRequest(Peer *peer, const std::string &path)
+{
+   if (!peer || !peer->isWaitingForOfflineSign()) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected request to load offline sign request");
+      return false;
+   }
+
+   auto it = deals_.find(peer->settlementId);
+   if (it == deals_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find active deal details");
+      return false;
+   }
+   auto deal = it->second.get();
+
+   QFile f(QString::fromStdString(path));
+   bool result = f.open(QIODevice::ReadOnly);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't open file ('{}') to load signed offline request", path);
+      return false;
+   }
+   auto results = ParseOfflineTXFile(f.readAll().toStdString());
+   if (results.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "loading signed offline request failed from '{}'", path);
+      return false;
+   }
+   if (results.size() != 1 || results.front().prevStates.size() != 1) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid signed offline request in '{}'", path);
+      return false;
+   }
+
+   // TODO: Verify that we have correct signed request
+
+   SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed (using offline wallet), settlementId: {}", deal->settlementId);
+   deal->signedTx = std::move(results.front().prevStates.front());
+   return true;
+}
+
+bool OtcClient::sendOfflineRequest(Peer *peer)
+{
+   if (!peer || !peer->isWaitingForOfflineSign()) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected request to send offline sign request");
+      return false;
+   }
+
+   auto it = deals_.find(peer->settlementId);
+   if (it == deals_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find active deal details");
+      return false;
+   }
+   auto deal = it->second.get();
+
+   if (deal->signedTx.isNull()) {
+      SPDLOG_LOGGER_ERROR(logger_, "offline sign request was not loaded yet");
+      return false;
+   }
+
+   SPDLOG_LOGGER_DEBUG(logger_, "send was succesfully signed, settlementId: {}", deal->settlementId);
+
+   ProxyTerminalPb::Request request;
+   auto d = request.mutable_seal_payin_validity();
+   d->set_settlement_id(deal->settlementId);
+   emit sendPbMessage(request.SerializeAsString());
+   return true;
 }
 
 bool OtcClient::acceptOffer(Peer *peer, const bs::network::otc::Offer &offer)
@@ -546,7 +678,7 @@ uint64_t OtcClient::estimatePayinFeeWithoutChange(const std::vector<UTXO> &input
    // Use some fake settlement address as the only recipient
    auto recipient = bs::Address(CryptoPRNG::generateRandom(32), AddressEntryType_P2WSH);
    // Select some random amount
-   recipientsMap[0] = recipient.getRecipient(uint64_t(1000));
+   recipientsMap[0] = recipient.getRecipient(bs::XBTAmount{ uint64_t{1000} });
 
    auto inputsCopy = bs::Address::decorateUTXOsCopy(inputs);
    PaymentStruct payment(recipientsMap, 0, feePerByte, 0);
@@ -585,18 +717,83 @@ void OtcClient::contactDisconnected(const std::string &contactId)
 
 void OtcClient::processContactMessage(const std::string &contactId, const BinaryData &data)
 {
-   Peer *peer = contact(contactId);
-   if (!peer) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", contactId);
+   ContactMessage message;
+   bool result = message.ParseFromArray(data.getPtr(), int(data.getSize()));
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't parse OTC message");
       return;
    }
 
-   if (peer->state == State::Blacklisted) {
-      SPDLOG_LOGGER_DEBUG(logger_, "ignoring message from blacklisted peer '{}'", contactId);
-      return;
+   Peer *peer{};
+   switch (message.contact_type()) {
+      case Otc::CONTACT_TYPE_PRIVATE:
+         peer = contact(contactId);
+         if (!peer) {
+            SPDLOG_LOGGER_ERROR(logger_, "can't find peer '{}'", contactId);
+            return;
+         }
+
+         if (peer->state == State::Blacklisted) {
+            SPDLOG_LOGGER_DEBUG(logger_, "ignoring message from blacklisted peer '{}'", contactId);
+            return;
+         }
+         break;
+
+      case Otc::CONTACT_TYPE_PUBLIC_REQUEST:
+         if (!ownRequest_) {
+            SPDLOG_LOGGER_ERROR(logger_, "response is not expected");
+            return;
+         }
+
+         peer = response(contactId);
+         if (!peer) {
+            auto result = responseMap_.emplace(contactId, Peer(contactId, PeerType::Response));
+            peer = &result.first->second;
+            emit publicUpdated();
+         }
+         break;
+
+      case Otc::CONTACT_TYPE_PUBLIC_RESPONSE:
+         peer = request(contactId);
+         if (!peer) {
+            SPDLOG_LOGGER_ERROR(logger_, "request is not expected");
+            return;
+         }
+         break;
+
+      default:
+         SPDLOG_LOGGER_ERROR(logger_, "unknown message type");
+         return;
    }
 
-   processPeerMessage(peer, data);
+   switch (message.data_case()) {
+      case ContactMessage::kBuyerOffers:
+         processBuyerOffers(peer, message.buyer_offers());
+         return;
+      case ContactMessage::kSellerOffers:
+         processSellerOffers(peer, message.seller_offers());
+         return;
+      case ContactMessage::kBuyerAccepts:
+         processBuyerAccepts(peer, message.buyer_accepts());
+         return;
+      case ContactMessage::kSellerAccepts:
+         processSellerAccepts(peer, message.seller_accepts());
+         return;
+      case ContactMessage::kBuyerAcks:
+         processBuyerAcks(peer, message.buyer_acks());
+         return;
+      case ContactMessage::kClose:
+         processClose(peer, message.close());
+         return;
+      case ContactMessage::kQuoteResponse:
+         processQuoteResponse(peer, message.quote_response());
+         return;
+      case ContactMessage::DATA_NOT_SET:
+         blockPeer("unknown or empty OTC message", peer);
+         return;
+   }
+
+   SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
 }
 
 void OtcClient::processPbMessage(const ProxyTerminalPb::Response &response)
@@ -638,43 +835,12 @@ void OtcClient::processPublicMessage(QDateTime timestamp, const std::string &con
       case Otc::PublicMessage::kClose:
          processPublicClose(timestamp, contactId, msg.close());
          return;
-      case Otc::PublicMessage::kPrivateMessage:
-         processPublicPrivateMessage(timestamp, contactId, msg.private_message());
-         return;
       case Otc::PublicMessage::DATA_NOT_SET:
          SPDLOG_LOGGER_ERROR(logger_, "invalid public request detected");
          return;
    }
 
    SPDLOG_LOGGER_CRITICAL(logger_, "unknown public message was detected!");
-}
-
-void OtcClient::processPrivateMessage(QDateTime timestamp, const std::string &contactId, bool isResponse, const BinaryData &data)
-{
-   if (isResponse) {
-      if (!ownRequest_) {
-         SPDLOG_LOGGER_ERROR(logger_, "response is not expected");
-         return;
-      }
-
-      auto peer = response(contactId);
-      if (!peer) {
-         auto result = responseMap_.emplace(contactId, Peer(contactId, PeerType::Response));
-         peer = &result.first->second;
-      }
-
-      processPeerMessage(peer, data);
-      emit publicUpdated();
-      return;
-   }
-
-   auto peer = request(contactId);
-   if (!peer) {
-      SPDLOG_LOGGER_ERROR(logger_, "request is not expected");
-      return;
-   }
-
-   processPeerMessage(peer, data);
 }
 
 void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason)
@@ -712,43 +878,16 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
          return;
       }
 
-      if (deal->sellFromOffline) {
-         auto loadPath = params_.offlineLoadPathCb();
-         if (loadPath.empty()) {
-            SPDLOG_LOGGER_DEBUG(logger_, "got empty path to load signed offline request, cancel OTC deal");
-            // TODO: Cancel deal
-            return;
-         }
-         QFile f(QString::fromStdString(loadPath));
-         bool result = f.open(QIODevice::ReadOnly);
-         if (!result) {
-            SPDLOG_LOGGER_ERROR(logger_, "can't open file ('{}') to load signed offline request", loadPath);
-            // TODO: Report error and cancel deal
-            return;
-         }
-         auto results = ParseOfflineTXFile(f.readAll().toStdString());
-         if (results.empty()) {
-            SPDLOG_LOGGER_ERROR(logger_, "loading signed offline request failed from '{}'", loadPath);
-            // TODO: Report error and cancel deal
-            return;
-         }
-         if (results.size() != 1 || results.front().prevStates.size() != 1) {
-            // TODO: Report error and cancel deal
-            SPDLOG_LOGGER_DEBUG(logger_, "invalid signed offline request in '{}'", loadPath);
-            return;
-         }
-
-         // TODO: Verify that we have correct signed request
-
-         SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed (using offline wallet), settlementId: {}", deal->settlementId);
-         deal->signedTx = std::move(results.front().prevStates.front());
-      } else {
-         SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed, settlementId: {}", deal->settlementId);
-         deal->signedTx = signedTX;
+      if (peer->sellFromOffline) {
+         // Wait for explicit call to loadOfflineRequest from user
+         return;
       }
 
+      SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed, settlementId: {}", deal->settlementId);
+      deal->signedTx = signedTX;
+
       ProxyTerminalPb::Request request;
-      auto d = request.mutable_seal_payin_valididy();
+      auto d = request.mutable_seal_payin_validity();
       d->set_settlement_id(deal->settlementId);
       emit sendPbMessage(request.SerializeAsString());
    }
@@ -758,45 +897,6 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
       deal->signedTx = signedTX;
       trySendSignedTx(deal);
    }
-}
-
-void OtcClient::processPeerMessage(Peer *peer, const BinaryData &data)
-{
-   ContactMessage message;
-   bool result = message.ParseFromArray(data.getPtr(), int(data.getSize()));
-   if (!result) {
-      blockPeer("can't parse OTC message", peer);
-      return;
-   }
-
-   switch (message.data_case()) {
-      case ContactMessage::kBuyerOffers:
-         processBuyerOffers(peer, message.buyer_offers());
-         return;
-      case ContactMessage::kSellerOffers:
-         processSellerOffers(peer, message.seller_offers());
-         return;
-      case ContactMessage::kBuyerAccepts:
-         processBuyerAccepts(peer, message.buyer_accepts());
-         return;
-      case ContactMessage::kSellerAccepts:
-         processSellerAccepts(peer, message.seller_accepts());
-         return;
-      case ContactMessage::kBuyerAcks:
-         processBuyerAcks(peer, message.buyer_acks());
-         return;
-      case ContactMessage::kClose:
-         processClose(peer, message.close());
-         return;
-      case ContactMessage::kQuoteResponse:
-         processQuoteResponse(peer, message.quote_response());
-         return;
-      case ContactMessage::DATA_NOT_SET:
-         blockPeer("unknown or empty OTC message", peer);
-         return;
-   }
-
-   SPDLOG_LOGGER_CRITICAL(logger_, "unknown response was detected!");
 }
 
 void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers &msg)
@@ -1003,6 +1103,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
       d->set_auth_address_buyer(peer->ourAuthPubKey.toBinStr());
       d->set_auth_address_seller(peer->authPubKey.toBinStr());
       d->set_unsigned_tx(unsignedPayout.toBinStr());
+      d->set_payin_hash(peer->payinTxIdFromSeller.toBinStr());
       d->set_chat_id_buyer(ownContactId_);
       d->set_chat_id_seller(peer->contactId);
       emit sendPbMessage(request.SerializeAsString());
@@ -1037,6 +1138,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    d->set_auth_address_buyer(peer->authPubKey.toBinStr());
    d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
    d->set_unsigned_tx(deal->payin.serializeState().toBinStr());
+   d->set_payin_hash(deal->payinTxId.toBinStr());
    d->set_chat_id_buyer(ownContactId_);
    d->set_chat_id_seller(peer->contactId);
    emit sendPbMessage(request.SerializeAsString());
@@ -1067,6 +1169,17 @@ void OtcClient::processClose(Peer *peer, const ContactMessage_Close &msg)
       }
 
       case State::Idle:
+         // Could happen if both sides press cancel at the same time
+         break;
+
+      case State::WaitVerification:
+      case State::WaitBuyerSign:
+      case State::WaitSellerSeal:
+      case State::WaitSellerSign:
+         // After sending verification details both sides should use PB only
+         SPDLOG_LOGGER_DEBUG(logger_, "ignoring unexpected close request");
+         break;
+
       case State::SentPayinInfo: {
          blockPeer("unexpected close", peer);
          break;
@@ -1083,6 +1196,11 @@ void OtcClient::processQuoteResponse(Peer *peer, const ContactMessage_QuoteRespo
 {
    if (!ownRequest_) {
       SPDLOG_LOGGER_ERROR(logger_, "own request is not available");
+      return;
+   }
+
+   if (peer->type != PeerType::Response) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected request");
       return;
    }
 
@@ -1119,12 +1237,6 @@ void OtcClient::processPublicClose(QDateTime timestamp, const std::string &conta
    requestMap_.erase(contactId);
 
    updatePublicLists();
-}
-
-void OtcClient::processPublicPrivateMessage(QDateTime timestamp, const std::string &contactId, const PublicMessage_PrivateMessage &msg)
-{
-   // FIXME: Remove this and send messages directly
-   processPrivateMessage(timestamp, contactId, msg.is_response(), msg.data());
 }
 
 void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &response)
@@ -1204,9 +1316,15 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
 
    switch (response.state()) {
       case ProxyTerminalPb::OTC_STATE_FAILED: {
-         if (peer->state != State::WaitVerification && peer->state != State::WaitBuyerSign && peer->state != State::WaitSellerSeal) {
-            SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
-            return;
+         switch (peer->state) {
+            case State::WaitVerification:
+            case State::WaitBuyerSign:
+            case State::WaitSellerSeal:
+            case State::WaitSellerSign:
+               break;
+            default:
+               SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
+               return;
          }
 
          SPDLOG_LOGGER_ERROR(logger_, "OTC trade failed: {}", response.error_msg());
@@ -1259,19 +1377,8 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
          if (deal->side == otc::Side::Sell) {
             assert(deal->payin.isValid());
 
-            if (deal->sellFromOffline) {
-               SPDLOG_LOGGER_DEBUG(logger_, "sell OTC from offline wallet...");
+            if (peer->sellFromOffline) {
 
-               auto savePath = params_.offlineSavePathCb(deal->hdWalletId);
-               if (savePath.empty()) {
-                  SPDLOG_LOGGER_DEBUG(logger_, "got empty path to save offline sign request, cancel OTC deal");
-                  // TODO: Cancel deal
-                  return;
-               }
-               deal->payin.offlineFilePath = std::move(savePath);
-               auto reqId = signContainer_->signTXRequest(deal->payin);
-               signRequestIds_[reqId] = deal->settlementId;
-               deal->payinReqId = reqId;
             } else {
                auto payinInfo = toPasswordDialogDataPayin(*deal, deal->payin);
                auto reqId = signContainer_->signSettlementTXRequest(deal->payin, payinInfo);
@@ -1313,7 +1420,21 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             return;
          }
          emit peerError(peer, PeerErrorType::Canceled, nullptr);
-         resetPeerStateToIdle(peer);
+         switch (peer->type) {
+         case PeerType::Contact:
+            resetPeerStateToIdle(peer);
+            break;
+         case PeerType::Request:
+            requestMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+            break;
+         case PeerType::Response:
+            responseMap_.erase(peer->contactId);
+            updatePublicLists();
+            break;
+         }
+
          break;
       }
 
@@ -1368,24 +1489,11 @@ void OtcClient::blockPeer(const std::string &reason, Peer *peer)
    emit peerUpdated(peer);
 }
 
-void OtcClient::send(Peer *peer, const ContactMessage &msg)
+void OtcClient::send(Peer *peer, ContactMessage &msg)
 {
    assert(!peer->contactId.empty());
-   switch (peer->type) {
-      case PeerType::Contact:
-         emit sendContactMessage(peer->contactId, msg.SerializeAsString());
-         break;
-      case PeerType::Request:
-      case PeerType::Response: {
-         PublicMessage publicMessage;
-         auto d = publicMessage.mutable_private_message();
-         d->set_data(msg.SerializeAsString());
-         d->set_receiver_id(peer->contactId);
-         d->set_is_response(peer->type == PeerType::Request);
-         emit sendPublicMessage(publicMessage.SerializeAsString());
-         break;
-      }
-   }
+   msg.set_contact_type(Otc::ContactType(peer->type));
+   emit sendContactMessage(peer->contactId, msg.SerializeAsString());
 }
 
 void OtcClient::createRequests(const std::string &settlementId, Peer *peer, const OtcClientDealCb &cb)
@@ -1488,24 +1596,35 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
 
                         const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
 
-                        peer->settlementId = settlementId;
+                        auto changeCb = [cb, peer, transaction, settlAddr, settlementId, targetHdWallet, handle, amount, logger, resolver]
+                           (const bs::Address &changeAddr)
+                        {
+                           if (!handle.isValid()) {
+                              SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
+                              return;
+                           }
 
-                        OtcClientDeal result;
-                        result.settlementId = settlementId;
-                        result.settlementAddr = settlAddr;
-                        result.ourAuthAddress = peer->offer.authAddress;
-                        result.cpPubKey = peer->authPubKey;
-                        result.amount = peer->offer.amount;
-                        result.price = peer->offer.price;
-                        result.hdWalletId = targetHdWallet->walletId();
-                        result.success = true;
-                        result.side = otc::Side::Sell;
-                        result.payin = transaction->createTXRequest();
-                        result.payinTxId = result.payin.txId(resolver);
-                        auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, result.payinTxId, amount);
-                        result.fee = int64_t(result.payin.fee);
-                        result.sellFromOffline = targetHdWallet->isOffline();
-                        cb(std::move(result));
+                           peer->settlementId = settlementId;
+
+                           OtcClientDeal result;
+                           result.settlementId = settlementId;
+                           result.settlementAddr = settlAddr;
+                           result.ourAuthAddress = peer->offer.authAddress;
+                           result.cpPubKey = peer->authPubKey;
+                           result.amount = peer->offer.amount;
+                           result.price = peer->offer.price;
+                           result.hdWalletId = targetHdWallet->walletId();
+                           result.success = true;
+                           result.side = otc::Side::Sell;
+                           result.payin = transaction->createTXRequest(false, changeAddr);
+                           result.payinTxId = result.payin.txId(resolver);
+                           auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, result.payinTxId, bs::XBTAmount{ amount });
+                           result.fee = int64_t(result.payin.fee);
+                           peer->sellFromOffline = targetHdWallet->isOffline();
+                           cb(std::move(result));
+                        };
+
+                        transaction->GetFallbackRecvAddress(changeCb);
                      };
 
                      const auto addrMapping = walletsMgr_->getAddressToWalletsMapping(transaction->inputs());
@@ -1517,22 +1636,34 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
 
                   peer->settlementId = settlementId;
 
-                  OtcClientDeal result;
-                  result.settlementId = settlementId;
-                  result.settlementAddr = settlAddr;
-                  result.ourAuthAddress = peer->offer.authAddress;
-                  result.cpPubKey = peer->authPubKey;
-                  result.amount = peer->offer.amount;
-                  result.price = peer->offer.price;
-                  result.hdWalletId = targetHdWallet->walletId();
-                  result.success = true;
-                  result.side = otc::Side::Buy;
-                  auto outputAddr = peer->offer.recvAddress.empty() ? transaction->GetFallbackRecvAddress() : bs::Address(peer->offer.recvAddress);
-                  auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer->payinTxIdFromSeller, amount);
-                  result.payout = bs::SettlementMonitor::createPayoutTXRequest(
-                     payinUTXO, outputAddr, feePerByte, armory_->topBlock());
-                  result.fee = int64_t(result.payout.fee);
-                  cb(std::move(result));
+                  auto recvAddrCb = [this, cb, settlementId, settlAddr, peer, targetHdWallet, feePerByte, amount, handle, logger, transaction](const bs::Address &outputAddr) {
+                     if (!handle.isValid()) {
+                        SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
+                        return;
+                     }
+
+                     OtcClientDeal result;
+                     result.settlementId = settlementId;
+                     result.settlementAddr = settlAddr;
+                     result.ourAuthAddress = peer->offer.authAddress;
+                     result.cpPubKey = peer->authPubKey;
+                     result.amount = peer->offer.amount;
+                     result.price = peer->offer.price;
+                     result.hdWalletId = targetHdWallet->walletId();
+                     result.success = true;
+                     result.side = otc::Side::Buy;
+                     auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer->payinTxIdFromSeller, bs::XBTAmount{ amount });
+                     result.payout = bs::SettlementMonitor::createPayoutTXRequest(
+                        payinUTXO, outputAddr, feePerByte, armory_->topBlock());
+                     result.fee = int64_t(result.payout.fee);
+                     cb(std::move(result));
+                  };
+
+                  if (peer->offer.recvAddress.empty()) {
+                     transaction->GetFallbackRecvAddress(std::move(recvAddrCb));
+                  } else {
+                     recvAddrCb(bs::Address(peer->offer.recvAddress));
+                  }
                }, Qt::QueuedConnection);
             };
 
