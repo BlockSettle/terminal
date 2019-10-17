@@ -373,7 +373,11 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
          }
          result->txHashSet.erase(txHash);
       }
-      auto result = TradesVerification::whichSignature(tx, value, settlAddr, buyAuthKey, sellAuthKey);
+      std::string errorMsg;
+      auto result = TradesVerification::whichSignature(tx, value, settlAddr, buyAuthKey, sellAuthKey, &errorMsg);
+      if (!errorMsg.empty()) {
+         SPDLOG_LOGGER_ERROR(logger, "signature detection failed, errorMsg: '{}'", errorMsg);
+      }
       cb(result);
    };
 
