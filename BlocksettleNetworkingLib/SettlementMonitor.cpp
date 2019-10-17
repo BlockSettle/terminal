@@ -1,6 +1,8 @@
 #include "SettlementMonitor.h"
-#include "FastLock.h"
+
 #include "CoinSelection.h"
+#include "FastLock.h"
+#include "TradesVerification.h"
 #include "Wallets/SyncWallet.h"
 
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection> &armory
@@ -212,7 +214,7 @@ void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEn
    if (payoutConfirmations_ != confirmationsNumber) {
       payoutConfirmations_ = confirmationsNumber;
 
-      const auto &cbPayoutType = [this, handle = validityFlag_.handle()](bs::PayoutSigner::Type poType) mutable {
+      const auto &cbPayoutType = [this, handle = validityFlag_.handle()](bs::PayoutSignatureType poType) mutable {
          ValidityGuard lock(handle);
          if (!handle.isValid()) {
             return;
@@ -341,77 +343,15 @@ UTXO bs::SettlementMonitor::getInputFromTX(const bs::Address &addr
       , BtcUtils::getP2WSHOutputScript(addr.unprefixed()));
 }
 
-
-
-bs::PayoutSigner::Type bs::PayoutSigner::WhichSignature(const Tx &tx
-   , uint64_t value, const Address &settlAddr, const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
-   , const std::shared_ptr<spdlog::logger> &logger)
-{
-   if (!tx.isInitialized() || buyAuthKey.isNull() || sellAuthKey.isNull()) {
-      return Failed;
-   }
-
-   constexpr uint32_t txIndex = 0;
-   constexpr uint32_t txOutIndex = 0;
-   constexpr int inputId = 0;
-
-   const TxIn in = tx.getTxInCopy(inputId);
-   const OutPoint op = in.getOutPoint();
-   const auto payinHash = op.getTxHash();
-
-   UTXO utxo(value, UINT32_MAX, txIndex, txOutIndex, payinHash
-      , BtcUtils::getP2WSHOutputScript(settlAddr.unprefixed()));
-
-   //serialize signed tx
-   auto txdata = tx.serialize();
-
-   auto bctx = BCTX::parse(txdata);
-
-   std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
-
-   utxoMap[utxo.getTxHash()][inputId] = utxo;
-
-   //setup verifier
-   try {
-      TransactionVerifier tsv(*bctx, utxoMap);
-
-      auto tsvFlags = tsv.getFlags();
-      tsvFlags |= SCRIPT_VERIFY_P2SH_SHA256 | SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT;
-      tsv.setFlags(tsvFlags);
-
-      auto verifierState = tsv.evaluateState();
-
-      auto inputState = verifierState.getSignedStateForInput(inputId);
-
-      if (inputState.getSigCount() == 0) {
-         logger->error("[bs::PayoutSigner::WhichSignature] no signatures received for TX: {}"
-            , tx.getThisHash().toHexStr());
-      }
-
-      if (inputState.isSignedForPubKey(buyAuthKey)) {
-         return SignedByBuyer;
-      }
-      if (inputState.isSignedForPubKey(sellAuthKey)) {
-         return SignedBySeller;
-      }
-      return SignatureUndefined;
-   } catch (const std::exception &e) {
-      logger->error("[PayoutSigner::WhichSignature] failed: {}", e.what());
-      return Failed;
-   } catch (...) {
-      logger->error("[PayoutSigner::WhichSignature] unknown error");
-      return Failed;
-   }
-}
-
 void bs::PayoutSigner::WhichSignature(const Tx& tx
    , const bs::Address &settlAddr
    , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
    , const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<ArmoryConnection> &armory, std::function<void(Type)> cb)
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , std::function<void(bs::PayoutSignatureType)> cb)
 {
    if (!tx.isInitialized() || buyAuthKey.isNull() || sellAuthKey.isNull()) {
-      cb(Failed);
+      cb(bs::PayoutSignatureType::Failed);
       return;
    }
 
@@ -433,11 +373,8 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
          }
          result->txHashSet.erase(txHash);
       }
-      if (!result->txHashSet.empty()) {
-         cb(Failed);
-      }
-
-      return WhichSignature(tx, value, settlAddr, buyAuthKey, sellAuthKey, logger);
+      auto result = TradesVerification::whichSignature(tx, value, settlAddr, buyAuthKey, sellAuthKey);
+      cb(result);
    };
 
    // needs to be a sum of inputs in this case
@@ -450,13 +387,17 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
 }
 
 void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntry &entry
-   , std::function<void(PayoutSigner::Type)> cb) const
+   , std::function<void(bs::PayoutSignatureType)> cb) const
 {
    const auto amount = entry.getValue();
    const uint64_t value = amount < 0 ? -amount : amount;
 
    const auto &cbTX = [this, value, cb](const Tx &tx) {
-      auto result = bs::PayoutSigner::WhichSignature(tx, value, settlAddress_, buyAuthKey_, sellAuthKey_, logger_);
+      std::string errorMsg;
+      auto result = TradesVerification::whichSignature(tx, value, settlAddress_, buyAuthKey_, sellAuthKey_, &errorMsg);
+      if (!errorMsg.empty()) {
+         SPDLOG_LOGGER_ERROR(logger_, "signature detection failed: {}", errorMsg);
+      }
       cb(result);
    };
 
@@ -511,7 +452,7 @@ void bs::SettlementMonitorCb::onPayInDetected(int confirmationsNumber, const Bin
    }
 }
 
-void bs::SettlementMonitorCb::onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy)
+void bs::SettlementMonitorCb::onPayOutDetected(int confirmationsNumber, bs::PayoutSignatureType signedBy)
 {
    if (onPayOutDetected_) {
       onPayOutDetected_(confirmationsNumber, signedBy);
@@ -521,7 +462,7 @@ void bs::SettlementMonitorCb::onPayOutDetected(int confirmationsNumber, PayoutSi
    }
 }
 
-void bs::SettlementMonitorCb::onPayOutConfirmed(PayoutSigner::Type signedBy)
+void bs::SettlementMonitorCb::onPayOutConfirmed(PayoutSignatureType signedBy)
 {
    if (onPayOutConfirmed_) {
       onPayOutConfirmed_(signedBy);
