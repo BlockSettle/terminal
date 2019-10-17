@@ -675,78 +675,88 @@ double RFQTicketXBT::getQuantity() const
 
 void RFQTicketXBT::submitButtonClicked()
 {
-   bs::network::RFQ rfq;
-   rfq.side = getSelectedSide();
+   auto rfq = std::make_shared<bs::network::RFQ>();
+   rfq->side = getSelectedSide();
 
-   rfq.security = ui_->labelSecurityId->text().toStdString();
-   rfq.product = getProduct().toStdString();
+   rfq->security = ui_->labelSecurityId->text().toStdString();
+   rfq->product = getProduct().toStdString();
 
-   if (rfq.security.empty() || rfq.product.empty()) {
+   if (rfq->security.empty() || rfq->product.empty()) {
       return;
    }
 
-   saveLastSideSelection(rfq.product, rfq.security, getSelectedSide());
+   saveLastSideSelection(rfq->product, rfq->security, getSelectedSide());
 
-   rfq.quantity = getQuantity();
+   rfq->quantity = getQuantity();
 
-   if (qFuzzyIsNull(rfq.quantity)) {
+   if (qFuzzyIsNull(rfq->quantity)) {
       return;
    }
-   if (existsRFQ(rfq)) {
+   if (existsRFQ(*rfq)) {
       return;
    }
-   putRFQ(rfq);
+   putRFQ(*rfq);
 
    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    // just in case if 2 customers submit RFQ in exactly same ms
-   rfq.requestId = "blocksettle:" + CryptoPRNG::generateRandom(8).toHexStr() +  std::to_string(timestamp.count());
+   rfq->requestId = "blocksettle:" + CryptoPRNG::generateRandom(8).toHexStr() +  std::to_string(timestamp.count());
 
   switch (currentGroupType_) {
    case ProductGroupType::GroupNotSelected:
-      rfq.assetType = bs::network::Asset::Undefined;
+      rfq->assetType = bs::network::Asset::Undefined;
       break;
    case ProductGroupType::FXGroupType:
-      rfq.assetType = bs::network::Asset::SpotFX;
+      rfq->assetType = bs::network::Asset::SpotFX;
       break;
    case ProductGroupType::XBTGroupType:
-      rfq.assetType = bs::network::Asset::SpotXBT;
+      rfq->assetType = bs::network::Asset::SpotXBT;
       break;
    case ProductGroupType::CCGroupType:
-      rfq.assetType = bs::network::Asset::PrivateMarket;
+      rfq->assetType = bs::network::Asset::PrivateMarket;
       break;
   }
 
-   if (rfq.assetType == bs::network::Asset::SpotXBT) {
-      rfq.requestorAuthPublicKey = authKey();
-      if (rfq.requestorAuthPublicKey.empty()) {
+   if (rfq->assetType == bs::network::Asset::SpotXBT) {
+      rfq->requestorAuthPublicKey = authKey();
+      if (rfq->requestorAuthPublicKey.empty()) {
          return;
       }
       transactionData_->SetFallbackRecvAddress(recvAddress());
 
-      if ((rfq.side == bs::network::Side::Sell) && (rfq.product == bs::network::XbtCurrency)) {
+      if ((rfq->side == bs::network::Side::Sell) && (rfq->product == bs::network::XbtCurrency)) {
          transactionData_->setMaxSpendAmount(maxAmount_);
-         transactionData_->ReserveUtxosFor(rfq.quantity, rfq.requestId);
+         transactionData_->ReserveUtxosFor(rfq->quantity, rfq->requestId);
       }
-   } else if (rfq.assetType == bs::network::Asset::PrivateMarket) {
-      rfq.receiptAddress = recvAddress().display();
+   } else if (rfq->assetType == bs::network::Asset::PrivateMarket) {
+      rfq->receiptAddress = recvAddress().display();
 
-      if (rfq.side == bs::network::Side::Sell) {
+      if (rfq->side == bs::network::Side::Sell) {
          const auto wallet = transactionData_->getSigningWallet();
-         const uint64_t spendVal = rfq.quantity * assetManager_->getCCLotSize(rfq.product);
+         const uint64_t spendVal = rfq->quantity * assetManager_->getCCLotSize(rfq->product);
          if (!ccCoinSel_) {
             BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
                , tr("CC coin selection is missing")).exec();
             return;
          }
-         const auto cbAddr = [this, spendVal, rfq, wallet]
-            (const bs::Address &addr) mutable
+
+         const auto inputs = ccCoinSel_->GetSelectedTransactions();
+         uint64_t inputVal = 0;
+         for (const auto &input : inputs) {
+            inputVal += input.getValue();
+         }
+         if (inputVal < spendVal) {
+            BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
+               , tr("Not enough inputs for spend value")).exec();
+            return;
+         }
+         const auto cbAddr = [this, spendVal, rfq, wallet, inputs]
+            (const bs::Address &addr)
          {
             try {
-               const auto inputs = ccCoinSel_->GetSelectedTransactions();
                const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, addr);
-               rfq.coinTxInput = txReq.serializeState().toHexStr();
-               utxoAdapter_->reserve(txReq, rfq.requestId);
-               emit submitRFQ(rfq);
+               rfq->coinTxInput = txReq.serializeState().toHexStr();
+               utxoAdapter_->reserve(txReq, rfq->requestId);
+               emit submitRFQ(*rfq);
             }
             catch (const std::exception &e) {
                auto dlg = new BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
@@ -755,12 +765,17 @@ void RFQTicketXBT::submitButtonClicked()
                QMetaObject::invokeMethod(this, [dlg] { dlg->exec(); });
             }
          };
-         wallet->getNewExtAddress(cbAddr);
+         if (inputVal == spendVal) {
+            cbAddr({});
+         }
+         else {
+            wallet->getNewExtAddress(cbAddr);
+         }
          return;
       }
    }
 
-   emit submitRFQ(rfq);
+   emit submitRFQ(*rfq);
 }
 
 std::shared_ptr<TransactionData> RFQTicketXBT::GetTransactionData() const
