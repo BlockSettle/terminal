@@ -1094,6 +1094,8 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
       msg.mutable_buyer_acks()->set_settlement_id(settlementId);
       send(peer, msg);
 
+      changePeerState(peer, otc::State::WaitVerification);
+
       ProxyTerminalPb::Request request;
       auto d = request.mutable_verify_otc();
       d->set_is_seller(false);
@@ -1107,8 +1109,6 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
       d->set_chat_id_buyer(ownContactId_);
       d->set_chat_id_seller(peer->contactId);
       emit sendPbMessage(request.SerializeAsString());
-
-      changePeerState(peer, otc::State::WaitVerification);
    });
 }
 
@@ -1129,6 +1129,8 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    const auto &deal = it->second;
    assert(deal->success);
 
+   changePeerState(peer, otc::State::WaitVerification);
+
    ProxyTerminalPb::Request request;
    auto d = request.mutable_verify_otc();
    d->set_is_seller(true);
@@ -1142,8 +1144,6 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    d->set_chat_id_seller(ownContactId_);
    d->set_chat_id_buyer(peer->contactId);
    emit sendPbMessage(request.SerializeAsString());
-
-   changePeerState(peer, otc::State::WaitVerification);
 }
 
 void OtcClient::processClose(Peer *peer, const ContactMessage_Close &msg)
