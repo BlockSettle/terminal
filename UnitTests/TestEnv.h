@@ -386,6 +386,14 @@ public:
       armoryInstance_->pushZC(rawTx);
       return true;
    }
+
+   bool estimateFee(unsigned int nbBlocks, const FloatCb &cb) override
+   {
+      std::thread([cb] {
+         cb(0.00001f);
+      }).detach();
+      return true;
+   }
 };
 
 class TestEnv
