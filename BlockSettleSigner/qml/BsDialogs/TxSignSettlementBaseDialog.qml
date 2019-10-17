@@ -51,6 +51,8 @@ CustomTitleDialogWindow {
     readonly property string minus_string: ""  // "- "
     readonly property string plus_string: ""   // "+ "
 
+    property string errorMessage
+
     id: root
     title: passwordDialogData.Title
     rejectable: true
@@ -81,7 +83,7 @@ CustomTitleDialogWindow {
         });
         authSign.failed.connect(function(errorText) {
             var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
-                , qsTr("Wallet"), qsTr("eID request failed with error: \n") + errorText
+                , qsTr("Wallet"), errorText
                 , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
             mb.bsAccepted.connect(function() { rejectAnimated() })
         })
@@ -339,7 +341,7 @@ CustomTitleDialogWindow {
                 }
 
                 CustomLabelValue {
-                    text: signingAllowed ? qsTr("%1 seconds left").arg(timeLeft.toFixed(0)) : qsTr("Authentication Address could not be verified")
+                    text: signingAllowed ? qsTr("%1 seconds left").arg(timeLeft.toFixed(0)) : errorMessage
                     Layout.fillWidth: true
                 }
             }

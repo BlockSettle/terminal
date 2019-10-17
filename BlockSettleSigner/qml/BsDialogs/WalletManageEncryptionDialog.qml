@@ -17,6 +17,7 @@ import "../js/helper.js" as JsHelper
 CustomTitleDialogWindow {
     id: root
 
+    property AuthSignWalletObject authSign: AuthSignWalletObject {}
     property WalletInfo walletInfo : WalletInfo {}
     property QPasswordData newPasswordData: QPasswordData {}
     property QPasswordData oldPasswordData: QPasswordData {}
@@ -281,30 +282,27 @@ CustomTitleDialogWindow {
                 Layout.rightMargin: 10
                 Layout.fillWidth: true
 
-//                CustomLabel {
-//                    text: "Auth eID disabled"
-//                    color: BSStyle.textColor
-//                    Layout.fillWidth: true
-//                    Layout.alignment: Qt.AlignTop
-//                    visible: walletInfo.encType === QPasswordData.Password
-//                    Layout.preferredWidth: root.width - 20
-//                    horizontalAlignment: Text.AlignHCenter
-//                    padding: 20
-//                    topPadding: 30
-//                }
+                CustomHeader {
+                    text: qsTr("Auth eID multi-sig (1-of-n)")
+                    textColor: walletInfo.encType === QPasswordData.Auth ? BSStyle.textColor : BSStyle.labelsTextDisabledColor
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 25
+                    Layout.topMargin: 5
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
+                }
 
                 CustomLabel {
                     Layout.preferredWidth: root.width - 20
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignLeft
                     padding: 20
                     wrapMode: Text.WordWrap
                     color: walletInfo.encType === QPasswordData.Auth ? BSStyle.labelsTextColor : BSStyle.labelsTextDisabledColor
 
-                    text: "Add the ability to sign transactions from your other Auth eID devices.\
-\n\n Only one signature from one device will be required to sign requests.\
-\n\n First you'll have to follow the Add Device instructions in your Auth eID app.\n When completed please proceed here.\
-\n\n Once you press Add Device your activated Auth eID will receive a signing request for adding device.\
-\n Once you sign the request a new signing request will be sent to your new device."
+                    text: "1. Ensure that you have more than one device connected to your Auth eID account
+2. Press ADD below
+3. Sign the multi-sig request with your current device
+4. Sign the request with each additional device you wish to add"
                 }
 
                 CustomHeader {
@@ -369,89 +367,6 @@ CustomTitleDialogWindow {
                     }
                 }
             }
-
-//            ColumnLayout {
-//                id: deleteTab
-
-//                spacing: 5
-//                Layout.topMargin: 15
-//                Layout.leftMargin: 10
-//                Layout.rightMargin: 10
-//                Layout.fillWidth: true
-
-//                CustomLabel {
-//                    text: "Auth eID disabled"
-//                    color: BSStyle.textColor
-//                    Layout.fillWidth: true
-//                    Layout.alignment: Qt.AlignTop
-//                    visible: walletInfo.encType !== QPasswordData.Auth
-//                    Layout.preferredWidth: root.width - 20
-//                    horizontalAlignment: Text.AlignHCenter
-//                    padding: 20
-//                    topPadding: 30
-//                }
-
-//                CustomHeader {
-//                    text: qsTr("Devices")
-//                    textColor: walletInfo.encType === QPasswordData.Auth ? BSStyle.textColor : BSStyle.labelsTextDisabledColor
-//                    Layout.fillWidth: true
-//                    Layout.preferredHeight: 25
-//                    Layout.topMargin: 5
-//                    Layout.leftMargin: 10
-//                    Layout.rightMargin: 10
-//                }
-
-//                ListView {
-//                    id: devicesView
-//                    Layout.fillWidth: true
-//                    Layout.fillHeight: true
-//                    Layout.leftMargin: 10
-//                    Layout.rightMargin: 10
-//                    height: 250
-//                    interactive: false
-
-//                    model: walletInfo.encKeys
-
-//                    delegate: RowLayout {
-//                        Layout.preferredWidth: devicesView.width
-//                        Layout.preferredHeight: 30
-
-//                        CustomLabel {
-//                            text: JsHelper.parseEncKeyToDeviceName(modelData)
-//                            Layout.fillWidth: true
-//                            Layout.preferredWidth: 250
-//                        }
-
-
-//                        Button {
-//                            Layout.alignment: Qt.AlignRight
-//                            background: Rectangle { color: "transparent" }
-//                            Image {
-//                                anchors.fill: parent
-//                                source: "qrc:/resources/cancel.png"
-//                            }
-//                            Layout.preferredWidth: 18
-//                            Layout.preferredHeight: 18
-
-//                            onClicked: {
-//                                // remove device
-//                                if (walletInfo.encKeys.length < 2) {
-//                                    JsHelper.messageBoxCritical("Wallet encryption", "Can't remove last device")
-//                                    return
-//                                }
-
-//                                JsHelper.removeEidDevice(index
-//                                    , walletInfo
-//                                    , function(oldPwEidData){
-//                                        var ok = walletsProxy.removeEidDevice(walletInfo.walletId, oldPwEidData , index)
-//                                        var mb = JsHelper.resultBox(BSResultBox.RemoveDevice, ok, walletInfo)
-//                                })
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-
         }
     }
 

@@ -22,10 +22,9 @@ TxSignSettlementBaseDialog {
     readonly property bool is_payOut: passwordDialogData.PayOutType
     readonly property bool is_payIn: !is_payOut
 
-    readonly property string onRevokeLabel: passwordDialogData.PayOutRevokeType ? qsTr(" On Revoke") : ""
-
     //signingAllowed: passwordDialogData.RequesterAuthAddressVerified && passwordDialogData.ResponderAuthAddressVerified
     signingAllowed: true
+    errorMessage: qsTr("Authentication Address could not be verified")
 
     function getInputValue() {
         if (is_payOut) {
@@ -162,7 +161,7 @@ TxSignSettlementBaseDialog {
         // Output Amount
         CustomLabel {
             Layout.fillWidth: true
-            text: qsTr("Output Amount ") + onRevokeLabel
+            text: qsTr("Output Amount ")
         }
         CustomLabelValue {
             text: plus_string + getTotalValue().toFixed(8) + inputProduct

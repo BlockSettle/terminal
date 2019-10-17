@@ -552,11 +552,19 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
 bool WalletsProxy::walletNameExists(const QString &name) const
 {
+   if (!walletsMgr_) {
+      return false;
+   }
+
    return walletsMgr_->walletNameExists(name.toStdString());
 }
 
 QString WalletsProxy::generateNextWalletName() const
 {
+   if (!walletsMgr_) {
+      return {};
+   }
+
    QString newWalletName;
    size_t nextNumber = walletsMgr_->hdWalletsCount() + 1;
    do {
@@ -568,6 +576,10 @@ QString WalletsProxy::generateNextWalletName() const
 
 bool WalletsProxy::isWatchingOnlyWallet(const QString &walletId) const
 {
+   if (!walletsMgr_) {
+      return false;
+   }
+
    return walletsMgr_->isWatchingOnly(walletId.toStdString());
 }
 
@@ -685,6 +697,10 @@ void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsC
 
 QStringList WalletsProxy::walletNames() const
 {
+   if (!walletsMgr_) {
+      return {};
+   }
+
    QStringList result;
    for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
       const auto &wallet = walletsMgr_->getHDWallet(i);
@@ -705,6 +721,10 @@ QJSValue WalletsProxy::invokeJsCallBack(QJSValue jsCallback, QJSValueList args)
 
 int WalletsProxy::indexOfWalletId(const QString &walletId) const
 {
+   if (!walletsMgr_) {
+      return 0;
+   }
+
    for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
       const auto &wallet = walletsMgr_->getHDWallet(i);
       if (wallet->walletId() == walletId.toStdString()) {
@@ -716,6 +736,10 @@ int WalletsProxy::indexOfWalletId(const QString &walletId) const
 
 QString WalletsProxy::walletIdForIndex(int index) const
 {
+   if (!walletsMgr_) {
+      return {};
+   }
+
    const auto &wallet = walletsMgr_->getHDWallet(index);
    if (wallet) {
       return QString::fromStdString(wallet->walletId());

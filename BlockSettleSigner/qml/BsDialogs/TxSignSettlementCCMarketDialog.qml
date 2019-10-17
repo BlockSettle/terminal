@@ -27,7 +27,7 @@ TxSignSettlementBaseDialog {
 
     function displayAmount(amount) {
         if (is_sell) {
-            return (amount * balanceDivider / lotSize).toFixed(0)
+            return Math.round((amount * balanceDivider / lotSize))
         } else {
             return amount.toFixed(8)
         }
@@ -35,15 +35,18 @@ TxSignSettlementBaseDialog {
 
     function getQuantity() {
         if (is_sell) {
-            return txInfo.amountCCSent() * balanceDivider / lotSize
+            return Math.round(txInfo.amountCCSent() * balanceDivider / lotSize)
         } else {
-            return txInfo.amountCCReceived(product) * balanceDivider / lotSize
+            return Math.round(txInfo.amountCCReceived(product) * balanceDivider / lotSize)
         }
     }
 
     readonly property string inputAmount: minus_string + displayAmount(txInfo.inputAmount) + inputProduct
     readonly property string changeAmount: plus_string + displayAmount(txInfo.changeAmount) + inputProduct
     readonly property string fee: minus_string + displayAmount(txInfo.fee) + inputProduct
+
+    signingAllowed: true
+    errorMessage: qsTr("Genesis Address could not be verified")
 
     Component.onCompleted: {
         quantity = getQuantity() + " " + product

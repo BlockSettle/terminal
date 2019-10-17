@@ -90,11 +90,11 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
     authObject.failed.connect(function(errorText) {       
         console.log("QML requesteIdAuth: authObject.failed")
         var mb = messageBox(BSMessageBox.Type.Critical
-                                     , qsTr("Wallet")
-                                     , qsTr("eID request failed with error: \n") + errorText
-                                     , qsTr("Wallet Name: %1\nWallet ID: %2")
-                                     .arg(walletInfo.name)
-                                     .arg(walletInfo.rootId))
+           , qsTr("Wallet")
+           , errorText
+           , qsTr("Wallet Name: %1\nWallet ID: %2")
+               .arg(walletInfo.name)
+               .arg(walletInfo.rootId))
 
         authProgress.setNextChainDialog(mb)
         authProgress.rejectAnimated()
@@ -136,11 +136,11 @@ function removeEidDevice (index, walletInfo, onSuccess) {
     })
     authObject.failed.connect(function(errorText) {
         messageBox(BSMessageBox.Type.Critical
-                                     , qsTr("Wallet")
-                                     , qsTr("eID request failed with error: \n") + errorText
-                                     , qsTr("Wallet Name: %1\nWallet ID: %2")
-                                     .arg(walletInfo.name)
-                                     .arg(walletInfo.rootId))
+           , qsTr("Wallet")
+           , errorText
+           , qsTr("Wallet Name: %1\nWallet ID: %2")
+              .arg(walletInfo.name)
+              .arg(walletInfo.rootId))
 
         authProgress.rejectAnimated()
         authObject.destroy()
@@ -175,11 +175,11 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
     })
     authObject.failed.connect(function(errorText) {
         messageBox(BSMessageBox.Type.Critical
-                                     , qsTr("Wallet")
-                                     , qsTr("eID request failed with error: \n") + errorText
-                                     , qsTr("Wallet Name: %1\nWallet ID: %2")
-                                     .arg(walletInfo.name)
-                                     .arg(walletInfo.rootId))
+           , qsTr("Wallet")
+           , errorText
+           , qsTr("Wallet Name: %1\nWallet ID: %2")
+              .arg(walletInfo.name)
+              .arg(walletInfo.rootId))
 
         authProgress.rejectAnimated()
         authObject.destroy()
@@ -279,11 +279,20 @@ function evalWorker(method, cppCallback, argList) {
     else                                  eval(method)()
 }
 
+function prepareDialog(dialog) {
+    if (isLiteMode()) {
+        prepareLiteModeDialog(dialog)
+    }
+    else {
+        prepareFullModeDialog(dialog)
+    }
+}
+
 function prepareLiteModeDialog(dialog) {
     if (!isLiteMode()) {
-        raiseWindow(mainWindow)
         return
     }
+    console.log("Prepare qml lite dialog")
 
     // close previous dialog
     if (currentDialog && typeof currentDialog.close !== "undefined") {
@@ -324,6 +333,27 @@ function prepareLiteModeDialog(dialog) {
     raiseWindow(mainWindow)
 }
 
+function prepareFullModeDialog(dialog) {
+    if (isLiteMode()) {
+        return
+    }
+    console.log("Prepare qml full dialog")
+    raiseWindow(mainWindow)
+
+    let maxW = Math.max(dialog.width, mainWindow.width)
+    let maxH = Math.max(dialog.height, mainWindow.height)
+    if (maxW !== mainWindow.width || maxH !== mainWindow.height) {
+        mainWindow.resizeAnimated(maxW, maxH)
+    }
+
+    dialog.sizeChanged.connect(function(w, h){
+        let maxW = Math.max(w, mainWindow.width)
+        let maxH = Math.max(h, mainWindow.height)
+        if (maxW !== mainWindow.width || maxH !== mainWindow.height) {
+            mainWindow.resizeAnimated(maxW, maxH)
+        }
+    })
+}
 
 function createNewWalletDialog(data) {
     var newSeed = qmlFactory.createSeed(signerSettings.testNet)
@@ -409,20 +439,15 @@ function tryActivateAutoSign(walletInfo, showResult) {
         }
     }
 
-    var passwordDialog = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
+    var dlg = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
         , {"walletInfo": walletInfo});
 
-    prepareLiteModeDialog(passwordDialog)
-    passwordDialog.open()
-    passwordDialog.init()
+    prepareDialog(dlg)
+    dlg.open()
+    dlg.init()
 
-    passwordDialog.bsAccepted.connect(function() {
-        var passwordData = qmlFactory.createPasswordData()
-        passwordData.encType = QPasswordData.Password
-        passwordData.encKey = ""
-        passwordData.textPassword = passwordDialog.enteredPassword
-
-        signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
+    dlg.bsAccepted.connect(function() {
+        signerStatus.activateAutoSign(walletInfo.rootId, dlg.passwordData, true, autoSignCallback)
     })
 }
 
@@ -466,7 +491,7 @@ function createTxSignDialog(jsCallback, txInfo, passwordDialogData, walletInfo) 
                "passwordDialogData": passwordDialogData,
                "walletInfo": walletInfo
               })
-    prepareLiteModeDialog(dlg)
+    prepareDialog(dlg)
 
     dlg.bsAccepted.connect(function() {
         jsCallback(qmlFactory.errorCodeNoError(), walletInfo.rootId, dlg.passwordData)
@@ -484,22 +509,20 @@ function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, wa
         dlg = Qt.createComponent("../BsDialogs/TxSignSettlementXBTMarketDialog.qml").createObject(mainWindow
            , {"txInfo": txInfo,
               "passwordDialogData": passwordDialogData,
-               "walletInfo": walletInfo
+              "walletInfo": walletInfo
         })
     }
     else if (passwordDialogData.Market === "CC") {
         dlg = Qt.createComponent("../BsDialogs/TxSignSettlementCCMarketDialog.qml").createObject(mainWindow
            , {"txInfo": txInfo,
               "passwordDialogData": passwordDialogData,
-               "walletInfo": walletInfo
+              "walletInfo": walletInfo
         })
     }
     else {
         console.log("[helper.js] Error: passwordDialogData.Market) is not set, dialog not created")
         return
     }
-
-    prepareLiteModeDialog(dlg)
 
     dlg.bsAccepted.connect(function() {
         jsCallback(qmlFactory.errorCodeNoError(), walletInfo.rootId, dlg.passwordData)
@@ -509,6 +532,8 @@ function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, wa
     })
     dlg.open()
     dlg.init()
+
+    prepareDialog(dlg)
 }
 
 function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo) {
@@ -552,7 +577,7 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
               })
     }
 
-    prepareLiteModeDialog(dlg)
+    prepareDialog(dlg)
 
     dlg.bsAccepted.connect(function() {
         jsCallback(qmlFactory.errorCodeNoError(), walletInfo.walletId, dlg.passwordData)

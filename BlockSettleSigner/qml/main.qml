@@ -26,6 +26,10 @@ ApplicationWindow {
     readonly property bool isLiteMode: false
     visible: true
     title: qsTr("BlockSettle Signer")
+
+    property var currentDialog: ({})
+    readonly property int resizeAnimationDuration: 25
+
     width: 800
     height: 600
     minimumWidth: 800
@@ -119,6 +123,50 @@ ApplicationWindow {
         }
     }
 
+    function resizeAnimated(w,h) {
+        mwWidthAnimation.from = mainWindow.width
+        mwWidthAnimation.to = w
+        mwWidthAnimation.restart()
+
+        mwHeightAnimation.from = mainWindow.height
+        mwHeightAnimation.to = h
+        mwHeightAnimation.restart()
+
+        mwXAnimation.from = mainWindow.x
+        mwXAnimation.to = Screen.virtualX + (Screen.width - w) / 2
+        mwXAnimation.restart()
+
+        mwYAnimation.from = mainWindow.y
+        mwYAnimation.to = Screen.virtualY + (Screen.height - h) / 2
+        mwYAnimation.restart()
+    }
+
+    NumberAnimation {
+        id: mwWidthAnimation
+        target: mainWindow
+        property: "width"
+        duration: resizeAnimationDuration
+    }
+    NumberAnimation {
+        id: mwHeightAnimation
+        target: mainWindow
+        property: "height"
+        duration: resizeAnimationDuration
+    }
+
+    NumberAnimation {
+        id: mwXAnimation
+        target: mainWindow
+        property: "x"
+        duration: resizeAnimationDuration
+    }
+    NumberAnimation {
+        id: mwYAnimation
+        target: mainWindow
+        property: "y"
+        duration: resizeAnimationDuration
+    }
+
     onClosing: {
         settingsPage.storeSettings();
         autoSignPage.storeSettings();
@@ -132,7 +180,11 @@ ApplicationWindow {
     }
 
     function customDialogRequest(dialogName, data) {
-        JsHelper.customDialogRequest(dialogName, data)
+        var newDialog = JsHelper.customDialogRequest(dialogName, data)
+        if (newDialog) {
+            raiseWindow()
+            JsHelper.prepareDialog(newDialog)
+        }
     }
 
     function showError(text) {

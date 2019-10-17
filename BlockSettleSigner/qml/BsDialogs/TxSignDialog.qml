@@ -52,7 +52,7 @@ CustomTitleDialogWindow {
         });
         authSign.failed.connect(function(errorText) {
             var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
-                , qsTr("Wallet"), qsTr("eID request failed with error: \n") + errorText
+                , qsTr("Wallet"), errorText
                 , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
             mb.bsAccepted.connect(function() { rejectAnimated() })
         })
@@ -263,7 +263,7 @@ CustomTitleDialogWindow {
             CustomLabel {
                 visible: walletInfo.encType === QPasswordData.Auth
                 Layout.fillWidth: true
-                text: qsTr("Auth Eid Email")
+                text: qsTr("Auth eID")
             }
 
             CustomLabel {

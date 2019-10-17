@@ -229,8 +229,11 @@ int HeadlessSettings::listenPort() const
 bs::signer::Limits HeadlessSettings::limits() const
 {
    bs::signer::Limits result;
-   result.autoSignSpendXBT = overrideAutoSignXbt_.isValid() ?
-      overrideAutoSignXbt_.getValue() : d_->limit_auto_sign_xbt();
+   if (overrideAutoSignXbt_.isValid()) {
+      result.autoSignSpendXBT = overrideAutoSignXbt_.getValue();
+   } else if (d_->limit_auto_sign_xbt() != 0) {
+      result.autoSignSpendXBT = d_->limit_auto_sign_xbt();
+   }
    return result;
 }
 
