@@ -55,7 +55,7 @@ public slots:
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
 signals:
-   void newOrder(const QModelIndex &index);
+   void newOrder(const QPersistentModelIndex &index);
 
 private:
    enum class DataType {

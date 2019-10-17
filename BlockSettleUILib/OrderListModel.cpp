@@ -382,12 +382,14 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
 
    const auto idx = createIndex(index, Header::Status,
       &group->rows_[static_cast<std::size_t>(index)]->idx_);
+   const auto persistentIdx = QPersistentModelIndex(idx);
+
    if (emitUpdate) {
       emit dataChanged(idx, idx);
    }
    if (!latestOrderTimestamp_.isValid() || order.dateTime > latestOrderTimestamp_) {
       latestOrderTimestamp_ = order.dateTime;
-      emit newOrder(idx);
+      emit newOrder(persistentIdx);
    }
 }
 
