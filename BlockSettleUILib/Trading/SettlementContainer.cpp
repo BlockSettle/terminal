@@ -13,7 +13,8 @@ sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
    bs::sync::PasswordDialogData info;
 
    info.setValue(PasswordDialogData::SettlementId, id());
-   info.setValue(PasswordDialogData::Duration, durationMs());
+   info.setValue(PasswordDialogData::DurationTotal, durationMs());
+   info.setValue(PasswordDialogData::DurationLeft, durationMs());
 
    info.setValue(PasswordDialogData::ProductGroup, tr(bs::network::Asset::toString(assetType())));
    info.setValue(PasswordDialogData::Security, security());
@@ -28,7 +29,8 @@ sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogDat
    bs::sync::PasswordDialogData dialogData = toPasswordDialogData();
 
    dialogData.setValue(PasswordDialogData::Title, tr("Settlement Pay-Out"));
-   dialogData.setValue(PasswordDialogData::Duration, 30000);
+   dialogData.setValue(PasswordDialogData::DurationTotal, 30000);
+   dialogData.setValue(PasswordDialogData::DurationLeft, 30000);
    dialogData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
 
    return dialogData;
