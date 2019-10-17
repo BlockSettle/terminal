@@ -342,8 +342,69 @@ UTXO bs::SettlementMonitor::getInputFromTX(const bs::Address &addr
 }
 
 
+
+bs::PayoutSigner::Type bs::PayoutSigner::WhichSignature(const Tx &tx
+   , uint64_t value, const Address &settlAddr, const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
+   , const std::shared_ptr<spdlog::logger> &logger)
+{
+   if (!tx.isInitialized() || buyAuthKey.isNull() || sellAuthKey.isNull()) {
+      return Failed;
+   }
+
+   constexpr uint32_t txIndex = 0;
+   constexpr uint32_t txOutIndex = 0;
+   constexpr int inputId = 0;
+
+   const TxIn in = tx.getTxInCopy(inputId);
+   const OutPoint op = in.getOutPoint();
+   const auto payinHash = op.getTxHash();
+
+   UTXO utxo(value, UINT32_MAX, txIndex, txOutIndex, payinHash
+      , BtcUtils::getP2WSHOutputScript(settlAddr.unprefixed()));
+
+   //serialize signed tx
+   auto txdata = tx.serialize();
+
+   auto bctx = BCTX::parse(txdata);
+
+   std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
+
+   utxoMap[utxo.getTxHash()][inputId] = utxo;
+
+   //setup verifier
+   try {
+      TransactionVerifier tsv(*bctx, utxoMap);
+
+      auto tsvFlags = tsv.getFlags();
+      tsvFlags |= SCRIPT_VERIFY_P2SH_SHA256 | SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT;
+      tsv.setFlags(tsvFlags);
+
+      auto verifierState = tsv.evaluateState();
+
+      auto inputState = verifierState.getSignedStateForInput(inputId);
+
+      if (inputState.getSigCount() == 0) {
+         logger->error("[bs::PayoutSigner::WhichSignature] no signatures received for TX: {}"
+            , tx.getThisHash().toHexStr());
+      }
+
+      if (inputState.isSignedForPubKey(buyAuthKey)) {
+         return SignedByBuyer;
+      }
+      if (inputState.isSignedForPubKey(sellAuthKey)) {
+         return SignedBySeller;
+      }
+      return SignatureUndefined;
+   } catch (const std::exception &e) {
+      logger->error("[PayoutSigner::WhichSignature] failed: {}", e.what());
+      return Failed;
+   } catch (...) {
+      logger->error("[PayoutSigner::WhichSignature] unknown error");
+      return Failed;
+   }
+}
+
 void bs::PayoutSigner::WhichSignature(const Tx& tx
-   , uint64_t value
    , const bs::Address &settlAddr
    , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
    , const std::shared_ptr<spdlog::logger> &logger
@@ -357,83 +418,35 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
    struct Result {
       std::set<BinaryData> txHashSet;
       std::map<BinaryData, std::set<uint32_t>>  txOutIdx;
-      uint64_t value;
    };
    auto result = std::make_shared<Result>();
-   result->value = value;
 
    const auto cbProcess = [result, settlAddr, buyAuthKey, sellAuthKey, tx, cb, logger]
       (const std::vector<Tx> &txs)
    {
+      uint64_t value = 0;
       for (const auto &prevTx : txs) {
          const auto &txHash = prevTx.getThisHash();
          for (const auto &txOutIdx : result->txOutIdx[txHash]) {
             TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
-            result->value += prevOut.getValue();
+            value += prevOut.getValue();
          }
          result->txHashSet.erase(txHash);
       }
-
-      constexpr uint32_t txIndex = 0;
-      constexpr uint32_t txOutIndex = 0;
-      constexpr int inputId = 0;
-
-      const TxIn in = tx.getTxInCopy(inputId);
-      const OutPoint op = in.getOutPoint();
-      const auto payinHash = op.getTxHash();
-
-      UTXO utxo(result->value, UINT32_MAX, txIndex, txOutIndex, payinHash
-         , BtcUtils::getP2WSHOutputScript(settlAddr.unprefixed()));
-
-      //serialize signed tx
-      auto txdata = tx.serialize();
-
-      auto bctx = BCTX::parse(txdata);
-
-      std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
-
-      utxoMap[utxo.getTxHash()][inputId] = utxo;
-
-      //setup verifier
-      try {
-         TransactionVerifier tsv(*bctx, utxoMap);
-
-         auto tsvFlags = tsv.getFlags();
-         tsvFlags |= SCRIPT_VERIFY_P2SH_SHA256 | SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT;
-         tsv.setFlags(tsvFlags);
-
-         auto verifierState = tsv.evaluateState();
-
-         auto inputState = verifierState.getSignedStateForInput(inputId);
-
-         if (inputState.getSigCount() == 0) {
-            logger->error("[bs::PayoutSigner::WhichSignature] no signatures received for TX: {}"
-               , tx.getThisHash().toHexStr());
-         }
-
-         if (inputState.isSignedForPubKey(buyAuthKey)) {
-            cb(SignedByBuyer);
-         } else if (inputState.isSignedForPubKey(sellAuthKey)) {
-            cb(SignedBySeller);
-         } else {
-            cb(SignatureUndefined);
-         }
-         return;
-      } catch (const std::exception &e) {
-         logger->error("[PayoutSigner::WhichSignature] failed: {}", e.what());
+      if (!result->txHashSet.empty()) {
+         cb(Failed);
       }
-      cb(Failed);
+
+      return WhichSignature(tx, value, settlAddr, buyAuthKey, sellAuthKey, logger);
    };
-   if (value == 0) {    // needs to be a sum of inputs in this case
-      for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
-         const OutPoint op = tx.getTxInCopy(i).getOutPoint();
-         result->txHashSet.insert(op.getTxHash());
-         result->txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
-      }
-      armory->getTXsByHash(result->txHashSet, cbProcess);
-   } else {
-      cbProcess({});
+
+   // needs to be a sum of inputs in this case
+   for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
+      const OutPoint op = tx.getTxInCopy(i).getOutPoint();
+      result->txHashSet.insert(op.getTxHash());
+      result->txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
    }
+   armory->getTXsByHash(result->txHashSet, cbProcess);
 }
 
 void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntry &entry
@@ -443,8 +456,8 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
    const uint64_t value = amount < 0 ? -amount : amount;
 
    const auto &cbTX = [this, value, cb](const Tx &tx) {
-      bs::PayoutSigner::WhichSignature(tx, value, settlAddress_, buyAuthKey_, sellAuthKey_
-         , logger_, armoryPtr_, cb);
+      auto result = bs::PayoutSigner::WhichSignature(tx, value, settlAddress_, buyAuthKey_, sellAuthKey_, logger_);
+      cb(result);
    };
 
    if (!armoryPtr_->getTxByHash(entry.getTxHash(), cbTX)) {

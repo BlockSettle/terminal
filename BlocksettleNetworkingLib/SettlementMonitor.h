@@ -32,12 +32,18 @@ namespace bs {
          }
       }
 
-      static void WhichSignature(const Tx &
+      static Type WhichSignature(const Tx &
          , uint64_t value
+         , const bs::Address &settlAddr
+         , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
+         , const std::shared_ptr<spdlog::logger> &);
+
+      static void WhichSignature(const Tx &
          , const bs::Address &settlAddr
          , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
          , const std::shared_ptr<spdlog::logger> &
          , const std::shared_ptr<ArmoryConnection> &, std::function<void(Type)>);
+
    };
 
    class SettlementMonitor : public ArmoryCallbackTarget
