@@ -14,6 +14,14 @@
 using namespace bs::network;
 using namespace Blocksettle::Communication;
 
+namespace {
+
+   const auto kPassword = SecureBinaryData("passphrase");
+
+   const auto kSettlementId = std::string("dc26c004d7b24f71cd5b348a254c292777586f5d9d00f60ac65dd7d5b06d0c2b");
+
+} // namespace
+
 class TestPeer
 {
 public:
@@ -23,7 +31,7 @@ public:
       bs::core::wallet::Seed seed(name, NetworkType::TestNet);
 
       bs::wallet::PasswordData pd;
-      pd.password = SecureBinaryData("passphrase");
+      pd.password = kPassword;
       pd.metaData.encType = bs::wallet::EncryptionType::Password;
 
       wallet_ = std::make_shared<bs::core::hd::Wallet>(name, "", seed, pd, env.armoryInstance()->homedir_);
@@ -34,7 +42,7 @@ public:
       authGroup->setSalt(CryptoPRNG::generateRandom(32));
 
       {
-         const bs::core::WalletPasswordScoped lock(wallet_, pd.password);
+         const bs::core::WalletPasswordScoped lock(wallet_, kPassword);
          auto authLeaf = authGroup->createLeaf(AddressEntryType_Default, 0);
          authAddress_ = authLeaf->getNewExtAddress();
 
@@ -108,16 +116,17 @@ public:
       auto processPbMessage = [this](TestPeer &peer, const std::string &data) {
          ProxyTerminalPb::Request request;
          ASSERT_TRUE(request.ParseFromString(data));
-         ProxyTerminalPb::Response response;
 
          switch (request.data_case()) {
             case ProxyTerminalPb::Request::kStartOtc: {
+               ProxyTerminalPb::Response response;
                auto d = response.mutable_start_otc();
                d->set_request_id(request.start_otc().request_id());
-               d->set_settlement_id("dc26c004d7b24f71cd5b348a254c292777586f5d9d00f60ac65dd7d5b06d0c2b");
+               d->set_settlement_id(kSettlementId);
                peer.otc_->processPbMessage(response);
                break;
             }
+
             case ProxyTerminalPb::Request::kVerifyOtc: {
                if (request.verify_otc().is_seller()) {
                   ASSERT_FALSE(verifySeller_.isValid());
@@ -139,10 +148,44 @@ public:
                   ASSERT_EQ(s.chat_id_seller(), b.chat_id_seller());
                   ASSERT_EQ(s.chat_id_buyer(), b.chat_id_buyer());
                   verifyDone_ = true;
+
+                  // TODO: Verify unsigned pay-in
+
+                  sendStateUpdate(ProxyTerminalPb::OTC_STATE_WAIT_BUYER_SIGN);
                }
 
                break;
             }
+
+            case ProxyTerminalPb::Request::kProcessTx: {
+               if (!payoutDone_) {
+                  payoutDone_ = true;
+                  ASSERT_EQ(&peer, &peer2_);
+
+                  // TODO: Verify pay-out
+
+                  sendStateUpdate(ProxyTerminalPb::OTC_STATE_WAIT_SELLER_SEAL);
+               } else if (!payinDone_) {
+                  payinDone_ = true;
+                  ASSERT_EQ(&peer, &peer1_);
+
+                  // TODO: Verify pay-in
+
+                  sendStateUpdate(ProxyTerminalPb::OTC_STATE_SUCCEED);
+                  quit_ = true;
+                  return;
+               }
+
+               break;
+            }
+
+            case ProxyTerminalPb::Request::kSealPayinValidity: {
+               ASSERT_FALSE(payinSealDone_);
+               payinSealDone_ = true;
+               sendStateUpdate(ProxyTerminalPb::OTC_STATE_WAIT_SELLER_SIGN);
+               break;
+            }
+
             default:
                ASSERT_TRUE(false);
          }
@@ -156,12 +199,27 @@ public:
       });
    }
 
+   void sendStateUpdate(ProxyTerminalPb::OtcState state)
+   {
+      ProxyTerminalPb::Response response;
+      auto d = response.mutable_update_otc_state();
+      d->set_settlement_id(kSettlementId);
+      d->set_state(state);
+      d->set_timestamp_ms(QDateTime::currentDateTime().toMSecsSinceEpoch());
+      peer1_.otc_->processPbMessage(response);
+      peer2_.otc_->processPbMessage(response);
+   }
+
    std::unique_ptr<TestEnv> env_;
    TestPeer peer1_;
    TestPeer peer2_;
    SettableField<ProxyTerminalPb::Request::VerifyOtc> verifySeller_;
    SettableField<ProxyTerminalPb::Request::VerifyOtc> verifyBuyer_;
-   bool verifyDone_{false};
+   bool verifyDone_{};
+   bool payoutDone_{};
+   bool payinSealDone_{};
+   bool payinDone_{};
+   std::atomic_bool quit_{false};
 };
 
 TEST_F(TestOtc, BasicTest)
@@ -188,6 +246,10 @@ TEST_F(TestOtc, BasicTest)
 
    auto balance = wallet->getSpendableBalance();
    ASSERT_TRUE(balance != 0);
+
+   // needed to be able sign pay-in and pay-out
+   const bs::core::WalletPasswordScoped lock1(peer1_.wallet_, kPassword);
+   const bs::core::WalletPasswordScoped lock2(peer2_.wallet_, kPassword);
 
    {
       bs::network::otc::Offer offer;
@@ -216,8 +278,12 @@ TEST_F(TestOtc, BasicTest)
    }
 
    auto time = std::chrono::steady_clock::now();
-   while (std::chrono::steady_clock::now() - time < std::chrono::seconds(1)) {
+   while (std::chrono::steady_clock::now() - time < std::chrono::seconds(5) && !quit_) {
       QApplication::processEvents();
    }
+
    ASSERT_TRUE(verifyDone_);
+   ASSERT_TRUE(payoutDone_);
+   ASSERT_TRUE(payinSealDone_);
+   ASSERT_TRUE(payinDone_);
 }

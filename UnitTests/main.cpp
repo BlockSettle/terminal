@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 #endif
 
    StaticLogger::loggerPtr = spdlog::basic_logger_mt("unit_tests", "unit_tests.log");
-   StaticLogger::loggerPtr->set_pattern("[%D %H:%M:%S.%e] [%l](%t): %v");
+   StaticLogger::loggerPtr->set_pattern("[%D %H:%M:%S.%e] [%l](%t) %s:%#:%!: %v");
    StaticLogger::loggerPtr->set_level(spdlog::level::debug);
    StaticLogger::loggerPtr->flush_on(spdlog::level::debug);
    StaticLogger::loggerPtr->info("Started BS unit tests");
