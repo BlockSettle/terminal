@@ -1407,10 +1407,11 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             return;
          }
 
+         changePeerState(peer, State::WaitSellerSign);
+
          if (deal->side == otc::Side::Sell) {
             trySendSignedTx(deal);
          }
-         changePeerState(peer, State::WaitSellerSign);
          break;
       }
 
@@ -1427,7 +1428,6 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
          case PeerType::Request:
             requestMap_.erase(peer->contactId);
             updatePublicLists();
-            break;
             break;
          case PeerType::Response:
             responseMap_.erase(peer->contactId);
