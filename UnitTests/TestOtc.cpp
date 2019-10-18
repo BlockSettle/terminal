@@ -257,7 +257,7 @@ TEST_F(TestOtc, BasicTest)
 
    const int blockCount = 6;
    auto curHeight = env_->armoryConnection()->topBlock();
-   auto addrRecip = peer1_.xbtAddress_.getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
+   auto addrRecip = peer1_.xbtAddress_.getRecipient(bs::XBTAmount{uint64_t(50 * COIN)});
    env_->armoryInstance()->mineNewBlock(addrRecip.get(), blockCount);
    env_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
 
