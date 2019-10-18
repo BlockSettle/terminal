@@ -319,7 +319,7 @@ std::vector<Tx> ColoredCoinTracker::grabTxBatch(
       }
    };
    if (!connPtr_->getTXsByHash(hashes, txLbd)) {
-      return {};
+      throw ColoredCoinException("invalid DB state/connection");
    }
    return txFut.get();
 }
@@ -393,7 +393,7 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
       }
    };
    if (!connPtr_->getSpentnessForOutputs(spentnessToTrack, spentnessLbd)) {
-      return {};
+      throw ColoredCoinException("invalid DB state/connection");
    }
    auto&& spentnessBatch = spentnessFut.get();
 
@@ -488,7 +488,7 @@ void ColoredCoinTracker::processRevocationBatch(
       }
    };
    if (!connPtr_->getTXsByHash(hashes, txLbd)) {
-      return;
+      throw ColoredCoinException("invalid DB state/connection");
    }
    const auto &txBatch = txFut.get();
 
@@ -556,7 +556,7 @@ std::set<BinaryData> ColoredCoinTracker::update()
    as the zc cutoff.
    */
    if (!connPtr_->getOutpointsForAddresses(addrSet, lbd, startHeight_, UINT32_MAX)) {
-      return {};
+      throw ColoredCoinException("invalid DB state/connection");
    }
 
    auto&& outpointData = fut.get();
@@ -704,7 +704,7 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
    as the height cutoff.
    */
    if (!connPtr_->getOutpointsForAddresses(addrSet, lbd, UINT32_MAX, zcCutOff_)) {
-      return {};
+      throw ColoredCoinException("invalid DB state/connection");
    }
 
    auto&& outpointData = fut.get();
@@ -794,7 +794,7 @@ void ColoredCoinTracker::purgeZc()
       }
    };
    if (!connPtr_->getTXsByHash(txHashes, getTxBatchLbd)) {
-      return;
+      throw ColoredCoinException("invalid DB state/connection");
    }
    const auto &txBatch = fut.get();
 
