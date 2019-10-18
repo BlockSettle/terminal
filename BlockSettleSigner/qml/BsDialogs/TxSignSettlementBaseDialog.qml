@@ -40,8 +40,8 @@ CustomTitleDialogWindow {
     readonly property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     readonly property int addressRowHeight: 24
 
-    readonly property int duration: passwordDialogData.Duration / 1000.0 - authSign.networkDelayFix() > 0 ? passwordDialogData.Duration / 1000.0 - authSign.networkDelayFix() : authSign.defaultSettlementExpiration()
-    property real timeLeft: duration
+    readonly property int duration: passwordDialogData.DurationTotal / 1000.0
+    property real timeLeft: passwordDialogData.DurationLeft / 1000.0 - authSign.networkDelayFix()
 
     readonly property real balanceDivider : qmlFactory.balanceDivider()
 
