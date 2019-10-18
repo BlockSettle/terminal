@@ -1,5 +1,5 @@
-#ifndef __TEST_CCOIN_H__
-#define __TEST_CCOIN_H__
+#ifndef TEST_CCOIN_ASYNC_H
+#define TEST_CCOIN_ASYNC_H
 
 #include <atomic>
 #include <memory>
@@ -9,7 +9,7 @@
 #include "Address.h"
 #include "BlockchainMonitor.h"
 #include "TestEnv.h"
-#include "ColoredCoinLogic.h"
+#include "CCLogicAsync.h"
 
 namespace bs {
    namespace core {
@@ -31,96 +31,34 @@ namespace bs {
    }
 }
 
-struct CCoinSpender
+
+class AsyncCCT : public ColoredCoinTrackerAsync
 {
-   bs::Address ccAddr_;
-   bs::Address xbtAddr_;
-
-   uint64_t ccValue_ = 0;
-   uint64_t xbtValue_ = 0;
-};
-
-class ColoredCoinTestACT : public ColoredCoinACT
-{
-private:
-   BlockingQueue<std::vector<BinaryData>> refreshQueue_;
-
 public:
-   ColoredCoinTestACT(ArmoryConnection *armory)
-      : ColoredCoinACT(armory)
-   {}
+   AsyncCCT(uint64_t coinsPerShare, std::shared_ptr<ArmoryConnection> connPtr)
+      : ColoredCoinTrackerAsync(coinsPerShare, connPtr) {}
 
-   virtual void onZCReceived(const std::vector<bs::TXEntry> &zcs) override {}
-   virtual void onNewBlock(unsigned, unsigned) override {}
-   virtual void onRefresh(const std::vector<BinaryData>& ids, bool online) override
+   std::string registerAddresses(const std::vector<BinaryData> &addrs, bool isNew) const
    {
-      ColoredCoinACT::onRefresh(ids, online);
-      
-      auto idsCopy = ids;
-      refreshQueue_.push_back(std::move(idsCopy));
+      return walletObj_->registerAddresses(addrs, isNew);
    }
 
-   std::vector<BinaryData> popRefreshNotif(void)
+   std::string registerAddresses(const std::set<BinaryData> &addrSet, bool isNew) const
    {
-      return refreshQueue_.pop_front();
-   }
-};
-
-class ColoredCoinTestACT_WithNotif : public ColoredCoinACT
-{
-private:
-   BlockingQueue<std::shared_ptr<DBNotificationStruct>> updateQueue_;
-
-public:
-   ColoredCoinTestACT_WithNotif(ArmoryConnection *armory)
-      : ColoredCoinACT(armory)
-   {}
-
-   void onUpdate(std::shared_ptr<DBNotificationStruct> notifPtr) override
-   {
-      updateQueue_.push_back(std::move(notifPtr));
-   }
-
-   void purgeUpdates(void)
-   {
-      updateQueue_.clear();
-   }
-
-   void waitOnNotif(DBNotificationStruct_Enum notif)
-   {
-      while (true)
-      {
-         try
-         {
-            auto notifPtr = updateQueue_.pop_front();
-            if (notifPtr->type_ == notif)
-               return;
-         }
-         catch (StopBlockingLoop&)
-         {
-            return;
-         }
+      std::vector<BinaryData> addrVec;
+      for (const auto &addr : addrSet) {
+         addrVec.emplace_back(addr);
       }
-   }
-};
-
-class ColoredCoinTracker_UT : protected ColoredCoinTracker
-{
-private:
-   void registerAddresses(std::set<BinaryData>&);
-
-public:
-   void setACT(std::shared_ptr<ColoredCoinACT> actPtr)
-   {
-      actPtr_ = actPtr;
+      return registerAddresses(addrVec, isNew);
    }
 
-   void update_UT(void);
-   void zcUpdate_UT(void);
-   void reorg_UT(void);
+   void update(const AddrSetCb &cb) { ColoredCoinTrackerAsync::update(cb); }
+   void zcUpdate(const AddrSetCb &cb) { ColoredCoinTrackerAsync::zcUpdate(cb); }
+   void reorg() { ColoredCoinTrackerAsync::reorg(true); }
 };
 
-class TestCCoin : public ::testing::Test
+
+class TestCCoinAsync : public ::testing::Test
 {
 public:
    using UTXOs = std::vector<UTXO>;
@@ -135,7 +73,6 @@ public:
    std::vector<std::shared_ptr<bs::sync::hd::Leaf>>   userWallets_;
 
    std::shared_ptr<bs::sync::WalletsManager> syncMgr_;
-   std::vector<UnitTestLocalACT*> localACTs_;
 
    bs::Address              genesisAddr_;
    bs::Address              revocationAddr_;
@@ -159,7 +96,7 @@ public:
    SecureBinaryData passphrase_;
 
 public:
-   explicit TestCCoin();
+   explicit TestCCoinAsync();
 
    void SetUp() override;
    void TearDown() override;
@@ -176,6 +113,15 @@ public:
    BinaryData FundFromCoinbase(const std::vector<bs::Address> & addresses, const uint64_t & valuePerOne);
    BinaryData SimpleSendMany(const bs::Address & fromAddress, const std::vector<bs::Address> & toAddresses, const uint64_t & valuePerOne);
 
+   struct CCoinSpender
+   {
+      bs::Address ccAddr_;
+      bs::Address xbtAddr_;
+
+      uint64_t ccValue_ = 0;
+      uint64_t xbtValue_ = 0;
+   };
+
    Tx CreateCJtx(
       const std::vector<UTXO> & ccSortedInputsUserA, 
       const std::vector<UTXO> & paymentSortedInputsUserB,
@@ -186,12 +132,39 @@ public:
 
    void waitOnZc(const Tx&);
    void waitOnZc(const BinaryData& hash, const std::vector<bs::Address>&);
-
-   ////
-   std::shared_ptr<ColoredCoinTracker> makeCct(void);
-   void update(std::shared_ptr<ColoredCoinTracker>);
-   void zcUpdate(std::shared_ptr<ColoredCoinTracker>);
-   void reorg(std::shared_ptr<ColoredCoinTracker>);
 };
 
-#endif // __TEST_CCOIN_H__
+
+class AsyncCCT_ACT : public SingleUTWalletACT
+{
+public:
+   AsyncCCT_ACT(ArmoryConnection *armory)
+      : SingleUTWalletACT(armory) {}
+
+   void onRefresh(const std::vector<BinaryData> &ids, bool online) override
+   {
+      std::vector<std::string> removedIds;
+      for (const auto &id : ids) {
+         const auto it = refreshCb_.find(id.toBinStr());
+         if (it != refreshCb_.end()) {
+            it->second();
+            removedIds.push_back(it->first);
+         }
+      }
+      for (const auto &id : removedIds) {
+         refreshCb_.erase(id);
+      }
+
+      SingleUTWalletACT::onRefresh(ids, online);
+   }
+
+   void addRefreshCb(const std::string &regId, const std::function<void()> &cb)
+   {
+      refreshCb_[regId] = cb;
+   }
+
+private:
+   std::map<std::string, std::function<void()>> refreshCb_;
+};
+
+#endif // TEST_CCOIN_ASYNC_H
