@@ -110,13 +110,6 @@ public:
       peer1_.init(*env_, "test1");
       peer2_.init(*env_, "test2");
 
-      QObject::connect(peer1_.otc_.get(), &OtcClient::sendContactMessage, [this](const std::string &contactId, const BinaryData &data) {
-         peer2_.otc_->processContactMessage(peer1_.name_, data);
-      });
-      QObject::connect(peer2_.otc_.get(), &OtcClient::sendContactMessage, [this](const std::string &contactId, const BinaryData &data) {
-         peer1_.otc_->processContactMessage(peer2_.name_, data);
-      });
-
       auto processPbMessage = [this](TestPeer &peer, const std::string &data) {
          ProxyTerminalPb::Request request;
          ASSERT_TRUE(request.ParseFromString(data));
@@ -216,12 +209,19 @@ public:
          }
       };
 
-      QObject::connect(peer1_.otc_.get(), &OtcClient::sendPbMessage, [this, processPbMessage](const std::string &data) {
+      QObject::connect(peer1_.otc_.get(), &OtcClient::sendContactMessage, qApp, [this](const std::string &contactId, const BinaryData &data) {
+         peer2_.otc_->processContactMessage(peer1_.name_, data);
+      }, Qt::QueuedConnection);
+      QObject::connect(peer2_.otc_.get(), &OtcClient::sendContactMessage, qApp, [this](const std::string &contactId, const BinaryData &data) {
+         peer1_.otc_->processContactMessage(peer2_.name_, data);
+      }, Qt::QueuedConnection);
+
+      QObject::connect(peer1_.otc_.get(), &OtcClient::sendPbMessage, qApp, [this, processPbMessage](const std::string &data) {
          processPbMessage(peer1_, data);
-      });
-      QObject::connect(peer2_.otc_.get(), &OtcClient::sendPbMessage, [this, processPbMessage](const std::string &data) {
+      }, Qt::QueuedConnection);
+      QObject::connect(peer2_.otc_.get(), &OtcClient::sendPbMessage, qApp, [this, processPbMessage](const std::string &data) {
          processPbMessage(peer2_, data);
-      });
+      }, Qt::QueuedConnection);
    }
 
    void sendStateUpdate(ProxyTerminalPb::OtcState state)
@@ -233,6 +233,74 @@ public:
       d->set_timestamp_ms(QDateTime::currentDateTime().toMSecsSinceEpoch());
       peer1_.otc_->processPbMessage(response);
       peer2_.otc_->processPbMessage(response);
+   }
+
+   void doOtcTest()
+   {
+      UnitTestWalletACT::clear();
+
+      peer1_.otc_->contactConnected(peer2_.name_);
+      peer2_.otc_->contactConnected(peer1_.name_);
+
+      const int blockCount = 6;
+      auto curHeight = env_->armoryConnection()->topBlock();
+      auto addrRecip = peer1_.xbtAddress_.getRecipient(bs::XBTAmount{uint64_t(1 * COIN)});
+      env_->armoryInstance()->mineNewBlock(addrRecip.get(), blockCount);
+      env_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+
+      auto wallet = peer1_.syncWalletMgr_->getDefaultWallet();
+      ASSERT_TRUE(wallet);
+
+      auto promSync = std::promise<bool>();
+      wallet->updateBalances([&promSync] {
+         promSync.set_value(true);
+      });
+      promSync.get_future().wait();
+
+      auto balance = wallet->getSpendableBalance();
+      ASSERT_TRUE(balance != 0);
+
+      // needed to be able sign pay-in and pay-out
+      const bs::core::WalletPasswordScoped lock1(peer1_.wallet_, kPassword);
+      const bs::core::WalletPasswordScoped lock2(peer2_.wallet_, kPassword);
+
+      {
+         bs::network::otc::Offer offer;
+         offer.price = 100;
+         offer.amount = 1000;
+         offer.ourSide = bs::network::otc::Side::Sell;
+         offer.hdWalletId = peer1_.wallet_->walletId();
+         offer.authAddress = peer1_.authAddress_.display();
+         peer1_.otc_->sendOffer(peer1_.otc_->contact(peer2_.name_), offer);
+         QApplication::processEvents();
+      }
+
+      auto remotePeer1 = peer2_.otc_->contact(peer1_.name_);
+      ASSERT_TRUE(remotePeer1);
+      ASSERT_TRUE(remotePeer1->state == otc::State::OfferRecv);
+
+      {
+         auto remotePeer1 = peer2_.otc_->contact(peer1_.name_);
+
+         bs::network::otc::Offer offer;
+         offer.price = 100;
+         offer.amount = 1000;
+         offer.ourSide = bs::network::otc::Side::Buy;
+         offer.hdWalletId = peer2_.wallet_->walletId();
+         offer.authAddress = peer2_.authAddress_.display();
+         peer2_.otc_->acceptOffer(remotePeer1, offer);
+         QApplication::processEvents();
+      }
+
+      auto time = std::chrono::steady_clock::now();
+      while (std::chrono::steady_clock::now() - time < std::chrono::seconds(5) && !quit_) {
+         QApplication::processEvents();
+      }
+
+      ASSERT_TRUE(verifyDone_);
+      ASSERT_TRUE(payoutDone_);
+      ASSERT_TRUE(payinSealDone_);
+      ASSERT_TRUE(payinDone_);
    }
 
    std::unique_ptr<TestEnv> env_;
@@ -250,66 +318,5 @@ public:
 
 TEST_F(TestOtc, BasicTest)
 {
-   UnitTestWalletACT::clear();
-
-   peer1_.otc_->contactConnected(peer2_.name_);
-   peer2_.otc_->contactConnected(peer1_.name_);
-
-   const int blockCount = 6;
-   auto curHeight = env_->armoryConnection()->topBlock();
-   auto addrRecip = peer1_.xbtAddress_.getRecipient(bs::XBTAmount{uint64_t(50 * COIN)});
-   env_->armoryInstance()->mineNewBlock(addrRecip.get(), blockCount);
-   env_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
-
-   auto wallet = peer1_.syncWalletMgr_->getDefaultWallet();
-   ASSERT_TRUE(wallet);
-
-   auto promSync = std::promise<bool>();
-   wallet->updateBalances([&promSync] {
-      promSync.set_value(true);
-   });
-   promSync.get_future().wait();
-
-   auto balance = wallet->getSpendableBalance();
-   ASSERT_TRUE(balance != 0);
-
-   // needed to be able sign pay-in and pay-out
-   const bs::core::WalletPasswordScoped lock1(peer1_.wallet_, kPassword);
-   const bs::core::WalletPasswordScoped lock2(peer2_.wallet_, kPassword);
-
-   {
-      bs::network::otc::Offer offer;
-      offer.price = 100;
-      offer.amount = 1000;
-      offer.ourSide = bs::network::otc::Side::Sell;
-      offer.hdWalletId = peer1_.wallet_->walletId();
-      offer.authAddress = peer1_.authAddress_.display();
-      peer1_.otc_->sendOffer(peer1_.otc_->contact(peer2_.name_), offer);
-   }
-
-   auto remotePeer1 = peer2_.otc_->contact(peer1_.name_);
-   ASSERT_TRUE(remotePeer1);
-   ASSERT_TRUE(remotePeer1->state == otc::State::OfferRecv);
-
-   {
-      auto remotePeer1 = peer2_.otc_->contact(peer1_.name_);
-
-      bs::network::otc::Offer offer;
-      offer.price = 100;
-      offer.amount = 1000;
-      offer.ourSide = bs::network::otc::Side::Buy;
-      offer.hdWalletId = peer2_.wallet_->walletId();
-      offer.authAddress = peer2_.authAddress_.display();
-      peer2_.otc_->acceptOffer(remotePeer1, offer);
-   }
-
-   auto time = std::chrono::steady_clock::now();
-   while (std::chrono::steady_clock::now() - time < std::chrono::seconds(5) && !quit_) {
-      QApplication::processEvents();
-   }
-
-   ASSERT_TRUE(verifyDone_);
-   ASSERT_TRUE(payoutDone_);
-   ASSERT_TRUE(payinSealDone_);
-   ASSERT_TRUE(payinDone_);
+   doOtcTest();
 }
