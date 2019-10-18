@@ -245,7 +245,7 @@ public:
 
    void mineRandomBlocks(unsigned count)
    {
-      mineNewBlocks(bs::Address("tb1qet0nfywkd44ra3t58x6kvjv5dmzhaa9tafv696"), count);
+      mineNewBlocks(bs::Address(CryptoPRNG::generateRandom(20), AddressEntryType_P2WPKH), count);
    }
 
    void doOtcTest(bool sellerOffers)
