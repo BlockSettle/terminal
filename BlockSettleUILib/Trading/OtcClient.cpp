@@ -140,7 +140,8 @@ namespace {
       auto dialogData = toPasswordDialogData(deal, signRequest);
       dialogData.setValue(PasswordDialogData::SettlementPayInVisible, true);
       dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-In"));
-      dialogData.setValue(PasswordDialogData::Duration, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payinTimeout()).count()));
+      dialogData.setValue(PasswordDialogData::DurationTotal, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payinTimeout()).count()));
+      dialogData.setValue(PasswordDialogData::DurationLeft, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payinTimeout()).count()));
       return dialogData;
    }
 
@@ -149,7 +150,8 @@ namespace {
       auto dialogData = toPasswordDialogData(deal, signRequest);
       dialogData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
       dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-Out"));
-      dialogData.setValue(PasswordDialogData::Duration, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payoutTimeout()).count()));
+      dialogData.setValue(PasswordDialogData::DurationTotal, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payoutTimeout()).count()));
+      dialogData.setValue(PasswordDialogData::DurationLeft, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payoutTimeout()).count()));
       return dialogData;
    }
 
