@@ -990,11 +990,6 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
    getSpendableZCList(cbRefreshZC);
 }
 
-void hd::CCLeaf::onRegistrationCompleted()
-{
-//   validationProc();
-}
-
 void hd::CCLeaf::onZeroConfReceived(const std::vector<bs::TXEntry> &zcs)
 {
    hd::Leaf::onZeroConfReceived(zcs);

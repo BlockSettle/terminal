@@ -236,7 +236,6 @@ namespace bs {
 
          protected:
             void onTrackerUpdated();
-            void onRegistrationCompleted() override;
 
             void onZeroConfReceived(const std::vector<bs::TXEntry> &zcs) override;
             void onNewBlock(unsigned int, unsigned int) override;
