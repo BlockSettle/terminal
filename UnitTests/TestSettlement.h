@@ -11,6 +11,7 @@
 #include "BlockchainMonitor.h"
 #include "SettlementMonitor.h"
 #include "TestEnv.h"
+#include "TradesVerification.h"
 
 
 namespace bs {
@@ -68,7 +69,7 @@ protected:
    std::map<bs::Address, std::shared_ptr<bs::core::hd::Leaf>>  settlLeafMap_;
    std::atomic_bool  receivedPayIn_{ false };
    std::atomic_bool  receivedPayOut_{ false };
-   bs::PayoutSigner::Type  poType_ = bs::PayoutSigner::Type::SignatureUndefined;
+   bs::PayoutSignatureType  poType_ = bs::PayoutSignatureType::Undefined;
 
 private:
    QMutex            mtxWalletId_;
