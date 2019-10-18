@@ -162,6 +162,12 @@ public:
                      s.unsigned_tx(), env_->armoryConnection()->testFeePerByte(), settlementAddress.display(), uint64_t(s.amount()));
                   ASSERT_TRUE(result.success);
 
+                  if (withoutChange_) {
+                     ASSERT_EQ(result.totalInputCount, 1);
+                  } else {
+                     ASSERT_EQ(result.totalInputCount, 2);
+                  }
+
                   totalFee_ = result.totalFee;
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_WAIT_BUYER_SIGN);
@@ -256,29 +262,40 @@ public:
       mineNewBlocks(bs::Address(CryptoPRNG::generateRandom(20), AddressEntryType_P2WPKH), count);
    }
 
-   void doOtcTest(bool sellerOffers, bool nativeAddr)
+   void doOtcTest(int testNum)
    {
+      sellerOffers_ = testNum & 0x0001;
+      nativeAddr_ = testNum & 0x0002;
+      manualInput_ = testNum & 0x0004;
+      withoutChange_ = testNum & 0x0008;
+
       peer1_.otc_->contactConnected(peer2_.name_);
       peer2_.otc_->contactConnected(peer1_.name_);
 
-      auto &sender = sellerOffers ? peer1_ : peer2_;
-      auto &receiver = sellerOffers ? peer2_ : peer1_;
+      auto &sender = sellerOffers_ ? peer1_ : peer2_;
+      auto &receiver = sellerOffers_ ? peer2_ : peer1_;
 
-      const auto &addr = nativeAddr ? peer1_.nativeAddr_ : peer1_.nestedAddr_;
+      const auto &addr = nativeAddr_ ? peer1_.nativeAddr_ : peer1_.nestedAddr_;
       auto wallet = peer1_.syncWalletMgr_->getWalletByAddress(addr);
       ASSERT_TRUE(wallet);
 
       mineNewBlocks(addr, 1);
       mineRandomBlocks(6);
 
-      auto promSync = std::promise<bool>();
-      wallet->updateBalances([&promSync] {
-         promSync.set_value(true);
-      });
-      promSync.get_future().wait();
+      auto utxosPromise = std::promise<std::vector<UTXO>>();
+      bool result = wallet->getSpendableTxOutList([&utxosPromise](const std::vector<UTXO> &utxos) {
+         utxosPromise.set_value(utxos);
+      }, UINT64_MAX);
+      ASSERT_TRUE(result);
+      auto utxos = utxosPromise.get_future().get();
+      ASSERT_FALSE(utxos.empty());
 
-      auto balance = wallet->getSpendableBalance();
-      ASSERT_TRUE(balance != 0);
+      int64_t totalInput = 0;
+      for (const auto &utxo : utxos) {
+         totalInput += int64_t(utxo.getValue());
+      }
+      auto payinFee = int64_t(OtcClient::estimatePayinFeeWithoutChange(utxos, TestArmoryConnection::testFeePerByte()));
+      const auto amount = withoutChange_ ? (totalInput - payinFee) : 1000;
 
       // needed to be able sign pay-in and pay-out
       const bs::core::WalletPasswordScoped lock1(peer1_.wallet_, kPassword);
@@ -287,10 +304,13 @@ public:
       {
          bs::network::otc::Offer offer;
          offer.price = 100;
-         offer.amount = 1000;
-         offer.ourSide = sellerOffers ? bs::network::otc::Side::Sell : bs::network::otc::Side::Buy;
+         offer.amount = amount;
+         offer.ourSide = sellerOffers_ ? bs::network::otc::Side::Sell : bs::network::otc::Side::Buy;
          offer.hdWalletId = sender.wallet_->walletId();
          offer.authAddress = sender.authAddress_.display();
+         if (sellerOffers_ && manualInput_) {
+            offer.inputs = utxos;
+         }
          sender.otc_->sendOffer(sender.otc_->contact(receiver.name_), offer);
          QApplication::processEvents();
       }
@@ -302,10 +322,13 @@ public:
       {
          bs::network::otc::Offer offer;
          offer.price = 100;
-         offer.amount = 1000;
-         offer.ourSide = sellerOffers ? bs::network::otc::Side::Buy : bs::network::otc::Side::Sell;
+         offer.amount = amount;
+         offer.ourSide = sellerOffers_ ? bs::network::otc::Side::Buy : bs::network::otc::Side::Sell;
          offer.hdWalletId = receiver.wallet_->walletId();
          offer.authAddress = receiver.authAddress_.display();
+         if (!sellerOffers_ && manualInput_) {
+            offer.inputs = utxos;
+         }
          receiver.otc_->acceptOffer(receiver.otc_->contact(sender.name_), offer);
          QApplication::processEvents();
       }
@@ -324,6 +347,12 @@ public:
    std::unique_ptr<TestEnv> env_;
    TestPeer peer1_;
    TestPeer peer2_;
+
+   bool sellerOffers_{};
+   bool nativeAddr_{};
+   bool manualInput_{};
+   bool withoutChange_{};
+
    SettableField<ProxyTerminalPb::Request::VerifyOtc> verifySeller_;
    SettableField<ProxyTerminalPb::Request::VerifyOtc> verifyBuyer_;
    uint64_t totalFee_{};
@@ -334,22 +363,19 @@ public:
    std::atomic_bool quit_{false};
 };
 
-TEST_F(TestOtc, SellNative)
-{
-   doOtcTest(true, true);
-}
-
-TEST_F(TestOtc, BuyNative)
-{
-   doOtcTest(false, true);
-}
-
-TEST_F(TestOtc, SellNested)
-{
-   doOtcTest(true, false);
-}
-
-TEST_F(TestOtc, BuyNested)
-{
-   doOtcTest(false, false);
-}
+TEST_F(TestOtc, Basic0) { doOtcTest(0); }
+TEST_F(TestOtc, Basic1) { doOtcTest(1); }
+TEST_F(TestOtc, Basic2) { doOtcTest(2); }
+TEST_F(TestOtc, Basic3) { doOtcTest(3); }
+TEST_F(TestOtc, Basic4) { doOtcTest(4); }
+TEST_F(TestOtc, Basic5) { doOtcTest(5); }
+TEST_F(TestOtc, Basic6) { doOtcTest(6); }
+TEST_F(TestOtc, Basic7) { doOtcTest(7); }
+TEST_F(TestOtc, Basic8) { doOtcTest(8); }
+TEST_F(TestOtc, Basic9) { doOtcTest(9); }
+TEST_F(TestOtc, Basic10) { doOtcTest(10); }
+TEST_F(TestOtc, Basic11) { doOtcTest(11); }
+TEST_F(TestOtc, Basic12) { doOtcTest(12); }
+TEST_F(TestOtc, Basic13) { doOtcTest(13); }
+TEST_F(TestOtc, Basic14) { doOtcTest(14); }
+TEST_F(TestOtc, Basic15) { doOtcTest(15); }
