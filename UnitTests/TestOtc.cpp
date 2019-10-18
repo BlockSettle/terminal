@@ -4,7 +4,9 @@
 #include "CoreWalletsManager.h"
 #include "InprocSigner.h"
 #include "SettableField.h"
+#include "StringUtils.h"
 #include "TestEnv.h"
+#include "TradesVerification.h"
 #include "Trading/OtcClient.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -100,6 +102,8 @@ class TestOtc : public ::testing::Test
 public:
    void SetUp() override
    {
+      UnitTestWalletACT::clear();
+
       env_ = std::make_unique<TestEnv>(StaticLogger::loggerPtr);
       env_->requireArmory();
 
@@ -149,7 +153,15 @@ public:
                   ASSERT_EQ(s.chat_id_buyer(), b.chat_id_buyer());
                   verifyDone_ = true;
 
-                  // TODO: Verify unsigned pay-in
+                  auto settlementAddress = bs::TradesVerification::constructSettlementAddress(BinaryData::CreateFromHex(s.settlement_id())
+                     , s.auth_address_buyer(), s.auth_address_seller());
+                  ASSERT_TRUE(settlementAddress.isValid());
+
+                  auto result = bs::TradesVerification::verifyUnsignedPayin(
+                     s.unsigned_tx(), env_->armoryConnection()->testFeePerByte(), settlementAddress.display(), uint64_t(s.amount()));
+                  ASSERT_TRUE(result.success);
+
+                  totalFee_ = result.totalFee;
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_WAIT_BUYER_SIGN);
                }
@@ -162,14 +174,27 @@ public:
                   payoutDone_ = true;
                   ASSERT_EQ(&peer, &peer2_);
 
-                  // TODO: Verify pay-out
+                  const auto &data = verifySeller_.getValue();
+
+                  auto settlementAddress = bs::TradesVerification::constructSettlementAddress(BinaryData::CreateFromHex(data.settlement_id())
+                     , data.auth_address_buyer(), data.auth_address_seller());
+                  ASSERT_TRUE(settlementAddress.isValid());
+
+                  auto result = bs::TradesVerification::verifySignedPayout(request.process_tx().signed_tx()
+                     , bs::toHex(data.auth_address_buyer()), bs::toHex(data.auth_address_seller()), data.payin_hash()
+                     , uint64_t(data.amount()), env_->armoryConnection()->testFeePerByte(), data.settlement_id(), settlementAddress.display());
+                  ASSERT_TRUE(result.success);
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_WAIT_SELLER_SEAL);
                } else if (!payinDone_) {
                   payinDone_ = true;
                   ASSERT_EQ(&peer, &peer1_);
 
-                  // TODO: Verify pay-in
+                  const auto &data = verifySeller_.getValue();
+
+                  auto result = bs::TradesVerification::verifySignedPayin(request.process_tx().signed_tx()
+                     , data.payin_hash(), env_->armoryConnection()->testFeePerByte(), totalFee_);
+                  ASSERT_TRUE(result.success);
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_SUCCEED);
                   quit_ = true;
@@ -215,6 +240,7 @@ public:
    TestPeer peer2_;
    SettableField<ProxyTerminalPb::Request::VerifyOtc> verifySeller_;
    SettableField<ProxyTerminalPb::Request::VerifyOtc> verifyBuyer_;
+   uint64_t totalFee_{};
    bool verifyDone_{};
    bool payoutDone_{};
    bool payinSealDone_{};
