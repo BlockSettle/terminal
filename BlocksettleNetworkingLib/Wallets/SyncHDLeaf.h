@@ -9,7 +9,7 @@
 #include <utility>
 
 #include "ArmoryConnection.h"
-#include "ColoredCoinLogic.h"
+#include "CCLogicAsync.h"
 #include "HDPath.h"
 #include "SyncWallet.h"
 
@@ -258,7 +258,7 @@ namespace bs {
             };
 
             std::shared_ptr<TxAddressChecker>   checker_;      //TODO: remove
-            std::unique_ptr<ColoredCoinTracker> tracker_;
+            std::unique_ptr<ColoredCoinTrackerAsync>  tracker_;   //Temporary to fix the build - will be removed later
             std::shared_ptr<CCDataResolver>     ccResolver_;
             std::atomic_bool validationStarted_{false};        //TODO: remove
             std::atomic_bool validationEnded_{false};          //TODO: remove
