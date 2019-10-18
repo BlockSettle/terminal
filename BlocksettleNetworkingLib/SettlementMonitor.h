@@ -14,30 +14,16 @@
 #include <QObject>
 
 namespace bs {
+
+   enum class PayoutSignatureType : int;
+
    struct PayoutSigner
    {
-      enum Type {
-         SignatureUndefined,
-         SignedByBuyer,
-         SignedBySeller,
-         Failed
-      };
-
-      static const char *toString(const Type t) {
-         switch (t) {
-         case SignedByBuyer:        return "buyer";
-         case SignedBySeller:       return "seller";
-         case SignatureUndefined:
-         default:                   return "undefined";
-         }
-      }
-
       static void WhichSignature(const Tx &
-         , uint64_t value
          , const bs::Address &settlAddr
          , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey
          , const std::shared_ptr<spdlog::logger> &
-         , const std::shared_ptr<ArmoryConnection> &, std::function<void(Type)>);
+         , const std::shared_ptr<ArmoryConnection> &, std::function<void(bs::PayoutSignatureType)>);
    };
 
    class SettlementMonitor : public ArmoryCallbackTarget
@@ -55,7 +41,7 @@ namespace bs {
       int getPayinConfirmations() const { return payinConfirmations_; }
       int getPayoutConfirmations() const { return payoutConfirmations_; }
 
-      PayoutSigner::Type getPayoutSignerSide() const { return payoutSignedBy_; }
+      PayoutSignatureType getPayoutSignerSide() const { return payoutSignedBy_; }
       void getPayinInput(const std::function<void(UTXO)> &, bool allowZC = true);
 
       static bs::core::wallet::TXSignRequest createPayoutTXRequest(UTXO
@@ -72,8 +58,8 @@ namespace bs {
       // if payin is already on chain before monitor started, payInDetected will
       // emited only once
       virtual void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) = 0;
-      virtual void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) = 0;
-      virtual void onPayOutConfirmed(PayoutSigner::Type signedBy) = 0;
+      virtual void onPayOutDetected(int confirmationsNumber, PayoutSignatureType signedBy) = 0;
+      virtual void onPayOutConfirmed(bs::PayoutSignatureType signedBy) = 0;
 
       void onNewBlock(unsigned int height, unsigned int branchHgt) override;
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
@@ -89,7 +75,7 @@ namespace bs {
       bool payinInBlockChain_ = false;
       bool payoutConfirmedFlag_ = false;
 
-      PayoutSigner::Type payoutSignedBy_ = PayoutSigner::Type::SignatureUndefined;
+      PayoutSignatureType payoutSignedBy_{};
 
    protected:
       std::shared_ptr<ArmoryConnection>   armoryPtr_;
@@ -103,7 +89,7 @@ namespace bs {
       void IsPayInTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
       void IsPayOutTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
 
-      void CheckPayoutSignature(const ClientClasses::LedgerEntry &, std::function<void(PayoutSigner::Type)>) const;
+      void CheckPayoutSignature(const ClientClasses::LedgerEntry &, std::function<void(PayoutSignatureType)>) const;
 
       void SendPayInNotification(const int confirmationsNumber, const BinaryData &txHash);
       void SendPayOutNotification(const ClientClasses::LedgerEntry &);
@@ -113,8 +99,8 @@ namespace bs {
    {
    public:
       using onPayInDetectedCB = std::function<void (int, const BinaryData &)>;
-      using onPayOutDetectedCB = std::function<void (int, PayoutSigner::Type )>;
-      using onPayOutConfirmedCB = std::function<void (PayoutSigner::Type )>;
+      using onPayOutDetectedCB = std::function<void (int, PayoutSignatureType)>;
+      using onPayOutConfirmedCB = std::function<void (PayoutSignatureType)>;
 
    public:
       SettlementMonitorCb(const std::shared_ptr<ArmoryConnection> &armory
@@ -138,8 +124,8 @@ namespace bs {
 
    protected:
       void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) override;
-      void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) override;
-      void onPayOutConfirmed(PayoutSigner::Type signedBy) override;
+      void onPayOutDetected(int confirmationsNumber, PayoutSignatureType signedBy) override;
+      void onPayOutConfirmed(PayoutSignatureType signedBy) override;
 
    private:
       onPayInDetectedCB    onPayInDetected_;
