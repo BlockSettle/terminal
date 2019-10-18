@@ -52,9 +52,16 @@ public:
          ASSERT_TRUE(settlementLeaf);
          ASSERT_TRUE(settlementLeaf->hasExtOnlyAddresses());
 
-         auto xbtLeaf = xbtGroup->createLeaf(AddressEntryType_P2WPKH, 0);
-         xbtAddress_ = xbtLeaf->getNewExtAddress();
-         ASSERT_TRUE(!xbtAddress_.isNull());
+         auto nativeLeaf = xbtGroup->createLeaf(AddressEntryType_P2WPKH, 0);
+         nativeAddr_ = nativeLeaf->getNewExtAddress();
+         ASSERT_FALSE(nativeAddr_.isNull());
+         ASSERT_EQ(nativeAddr_.getType(), AddressEntryType_P2WPKH);
+
+         auto nestedLeaf = xbtGroup->createLeaf(static_cast<AddressEntryType>(AddressEntryType_P2SH | AddressEntryType_P2WPKH), 0);
+         ASSERT_TRUE(nestedLeaf);
+         nestedAddr_ = nestedLeaf->getNewExtAddress();
+         ASSERT_FALSE(nestedAddr_.isNull());
+         ASSERT_EQ(nestedAddr_.getType(), static_cast<AddressEntryType>(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
       }
 
       env.walletsMgr()->addWallet(wallet_);
@@ -93,7 +100,8 @@ public:
    std::shared_ptr<InprocSigner> signer_;
    std::shared_ptr<OtcClient> otc_;
    bs::Address authAddress_;
-   bs::Address xbtAddress_;
+   bs::Address nativeAddr_;
+   bs::Address nestedAddr_;
 
 };
 
@@ -248,7 +256,7 @@ public:
       mineNewBlocks(bs::Address(CryptoPRNG::generateRandom(20), AddressEntryType_P2WPKH), count);
    }
 
-   void doOtcTest(bool sellerOffers)
+   void doOtcTest(bool sellerOffers, bool nativeAddr)
    {
       peer1_.otc_->contactConnected(peer2_.name_);
       peer2_.otc_->contactConnected(peer1_.name_);
@@ -256,11 +264,12 @@ public:
       auto &sender = sellerOffers ? peer1_ : peer2_;
       auto &receiver = sellerOffers ? peer2_ : peer1_;
 
-      mineNewBlocks(peer1_.xbtAddress_, 1);
-      mineRandomBlocks(6);
-
-      auto wallet = peer1_.syncWalletMgr_->getDefaultWallet();
+      const auto &addr = nativeAddr ? peer1_.nativeAddr_ : peer1_.nestedAddr_;
+      auto wallet = peer1_.syncWalletMgr_->getWalletByAddress(addr);
       ASSERT_TRUE(wallet);
+
+      mineNewBlocks(addr, 1);
+      mineRandomBlocks(6);
 
       auto promSync = std::promise<bool>();
       wallet->updateBalances([&promSync] {
@@ -325,12 +334,22 @@ public:
    std::atomic_bool quit_{false};
 };
 
-TEST_F(TestOtc, Sell)
+TEST_F(TestOtc, SellNative)
 {
-   doOtcTest(true);
+   doOtcTest(true, true);
 }
 
-TEST_F(TestOtc, Buy)
+TEST_F(TestOtc, BuyNative)
 {
-   doOtcTest(false);
+   doOtcTest(false, true);
+}
+
+TEST_F(TestOtc, SellNested)
+{
+   doOtcTest(true, false);
+}
+
+TEST_F(TestOtc, BuyNested)
+{
+   doOtcTest(false, false);
 }
