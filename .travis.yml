@@ -52,10 +52,10 @@ addons:
 
 install:
   - sudo -H pip3 install wget requests pathlib
-  - sudo apt build-dep qt5-default || true
+  - sudo apt build-dep -qq qt5-default || true
 
 script:
-  - python3 generate.py
+  - python3 generate.py | cut -c1-50
 
 cache:
     apt: true
