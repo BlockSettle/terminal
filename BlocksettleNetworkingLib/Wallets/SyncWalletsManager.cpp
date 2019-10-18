@@ -753,7 +753,7 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
    }
 
    const auto &cbProcess = [this, wallet, group, tx, txKey, txOutIndices, cb]
-      (const std::vector<Tx> &txs)
+      (const std::vector<Tx> &txs, std::exception_ptr)
    {
       bool ourOuts = false;
       bool otherOuts = false;

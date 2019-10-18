@@ -166,10 +166,16 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
          txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
       }
 
-      const auto &cbTXs = [this, txOutIdx, cb, handle] (const std::vector<Tx> &txs) mutable
+      const auto &cbTXs = [this, txOutIdx, cb, handle]
+         (const std::vector<Tx> &txs, std::exception_ptr exPtr) mutable
       {
          ValidityGuard lock(handle);
          if (!handle.isValid()) {
+            return;
+         }
+
+         if (exPtr != nullptr) {
+            cb(false);
             return;
          }
 
@@ -362,7 +368,7 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
    auto result = std::make_shared<Result>();
 
    const auto cbProcess = [result, settlAddr, buyAuthKey, sellAuthKey, tx, cb, logger]
-      (const std::vector<Tx> &txs)
+      (const std::vector<Tx> &txs, std::exception_ptr exPtr)
    {
       uint64_t value = 0;
       for (const auto &prevTx : txs) {

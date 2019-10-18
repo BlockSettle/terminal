@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "ArmoryConnection.h"
+#include "ColoredCoinLogic.h"
 #include "HDPath.h"
 #include "SyncWallet.h"
 
@@ -90,7 +91,6 @@ namespace bs {
             void scan(const std::function<void(bs::sync::SyncState)> &cb) override;
 
             virtual std::vector<std::string> setUnconfirmedTarget(void);
-            virtual void OnLeafRegistrationCompleted() {}
 
             std::shared_ptr<ResolverFeed> getPublicResolver() const override;
 
@@ -117,6 +117,8 @@ namespace bs {
             virtual void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr);
             void postOnline();
             bool isOwnId(const std::string &) const override;
+
+            virtual void onRegistrationCompleted() {};
 
          protected:
             const bs::hd::Path::Elem   addrTypeExternal = 0u;
@@ -230,13 +232,14 @@ namespace bs {
 
             void setArmory(const std::shared_ptr<ArmoryConnection> &) override;
 
-            void restartValidation();
-
-            void OnLeafRegistrationCompleted() override { restartValidation(); }
             std::vector<std::string> setUnconfirmedTarget(void) override;
 
          protected:
-            void onZeroConfReceived(const std::vector<bs::TXEntry> &) override;
+            void onTrackerUpdated();
+
+            void onZeroConfReceived(const std::vector<bs::TXEntry> &zcs) override;
+            void onNewBlock(unsigned int, unsigned int) override;
+            void onRefresh(const std::vector<BinaryData> &, bool) override;
 
          private:
             void validationProc();
@@ -250,18 +253,18 @@ namespace bs {
             class CCWalletACT : public WalletACT
             {
             public:
-               CCWalletACT(Wallet *leaf)
-                  : WalletACT(leaf) {}
+               CCWalletACT(Wallet *leaf) : WalletACT(leaf) {}
                void onStateChanged(ArmoryState) override;
             };
 
-            std::shared_ptr<TxAddressChecker>   checker_;
+            std::shared_ptr<TxAddressChecker>   checker_;      //TODO: remove
+            std::unique_ptr<ColoredCoinTracker> tracker_;
             std::shared_ptr<CCDataResolver>     ccResolver_;
-            std::atomic_bool validationStarted_{false};
-            std::atomic_bool validationEnded_{false};
+            std::atomic_bool validationStarted_{false};        //TODO: remove
+            std::atomic_bool validationEnded_{false};          //TODO: remove
             double         balanceCorrection_ = 0;
-            std::set<UTXO> invalidTx_;
-            std::set<BinaryData> invalidTxHash_;
+            std::set<BinaryData> validTxHash_;
+            std::map<std::string, std::function<void()>> refreshCb_;
          };
 
 

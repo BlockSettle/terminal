@@ -387,7 +387,7 @@ std::vector<std::string> hd::Leaf::registerWallet(
                return;
          }
          isRegistered_ = true;
-         OnLeafRegistrationCompleted();
+         onRegistrationCompleted();
       };
 
       std::unique_lock<std::mutex> lock(regMutex_);
@@ -855,10 +855,15 @@ hd::CCLeaf::~CCLeaf()
 
 void hd::CCLeaf::setCCDataResolver(const std::shared_ptr<CCDataResolver> &resolver)
 {
+   assert(resolver != nullptr);
    ccResolver_ = resolver;
    setPath(path_);
    const auto genAddr = ccResolver_->genesisAddrFor(suffix_);
-   checker_ = genAddr.isNull() ? nullptr : std::make_shared<TxAddressChecker>(genAddr, armory_);
+   if (!genAddr.isNull() && sync::Wallet::armory_) {
+      tracker_ = make_unique<ColoredCoinTracker>(ccResolver_->lotSizeFor(suffix_), sync::Wallet::armory_);
+      tracker_->addOriginAddress(genAddr);
+   }
+   checker_ = genAddr.isNull() ? nullptr : std::make_shared<TxAddressChecker>(genAddr, sync::Wallet::armory_);
 }
 
 void hd::CCLeaf::setPath(const bs::hd::Path &path)
@@ -875,7 +880,7 @@ void hd::CCLeaf::setPath(const bs::hd::Path &path)
 void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
    hd::Leaf::setArmory(armory);
-   if (armory_) {
+   if (sync::Wallet::armory_) {
       if (!act_) {
          act_ = make_unique<CCWalletACT>(this);
          act_->init(armory.get());
@@ -884,9 +889,13 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    if (checker_ && armory) {
       checker_->setArmory(armory);
    }
-   if (checker_ && !validationStarted_) {
-      validationEnded_ = false;
-      validationProc();
+   if (ccResolver_ && armory && !tracker_) {
+      const auto genAddr = ccResolver_->genesisAddrFor(suffix_);
+      if (!genAddr.isNull()) {
+         tracker_ = make_unique<ColoredCoinTracker>(ccResolver_->lotSizeFor(suffix_), sync::Wallet::armory_);
+         tracker_->addOriginAddress(genAddr);
+         validationProc();
+      }
    }
 }
 
@@ -902,8 +911,8 @@ bool hd::CCLeaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint
 {
    const ArmoryConnection::UTXOsCb &cbWrap = [this, cb](const std::vector<UTXO> &utxos) {
       std::vector<UTXO> filteredUTXOs;
-      for (const auto &utxo : utxos) {
-         const auto nbConf = armory_->getConfirmationsNumber(utxo.getHeight());
+      for (const auto &utxo : filterUTXOs(utxos)) {
+         const auto nbConf = sync::Wallet::armory_->getConfirmationsNumber(utxo.getHeight());
          if (nbConf >= kIntConfCount) {
             filteredUTXOs.emplace_back(std::move(utxo));
          }
@@ -915,29 +924,49 @@ bool hd::CCLeaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint
    return bs::sync::Wallet::getSpendableTxOutList(cbWrap, val);
 }
 
+void hd::CCLeaf::onTrackerUpdated()
+{
+   logger_->debug("[{}] {} started", __func__, walletId());
+   if (!tracker_) {
+      return;
+   }
+   validTxHash_.clear();
+   for (const auto &addr : getUsedAddressList()) {
+      const auto addrOPs = tracker_->getSpendableOutpointsForAddress(addr.id());
+      for (const auto &op : addrOPs) {
+         validTxHash_.insert(*(op->getTxHash()));
+      }
+   }
+   refreshInvalidUTXOs();
+/*   if (wct_) {
+      wct_->walletReset(walletId());
+   }*/
+   logger_->debug("[{}] {} ended: {}", __func__, walletId(), validTxHash_.size());
+}
+
 void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 {
-   if (!ZConly) {
-      const auto &cbRefresh = [this](std::vector<UTXO> utxos) {
-         const auto &cbUpdateSpendableBalance = [this](const std::vector<UTXO> &spendableUTXOs) {
-            std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
-            for (const auto &utxo : spendableUTXOs) {
-               const auto addr = utxo.getRecipientScrAddr();
-               auto &balanceVec = (balanceData_->addressBalanceMap)[addr];
-               if (balanceVec.empty()) {
-                  balanceVec = { 0, 0, 0 };
-               }
-               balanceVec[0] += utxo.getValue();
-               balanceVec[1] += utxo.getValue();
+   const auto &cbRefresh = [this](std::vector<UTXO> utxos) {
+      const auto &cbUpdateSpendableBalance = [this](const std::vector<UTXO> &spendableUTXOs) {
+         std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
+         for (const auto &utxo : spendableUTXOs) {
+            const auto addr = utxo.getRecipientScrAddr();
+            auto &balanceVec = (balanceData_->addressBalanceMap)[addr];
+            if (balanceVec.empty()) {
+               balanceVec = { 0, 0, 0 };
             }
-         };
-         findInvalidUTXOs(utxos, cbUpdateSpendableBalance);
+            balanceVec[0] += utxo.getValue();
+            balanceVec[1] += utxo.getValue();
+         }
+         if (wct_) {
+            wct_->balanceUpdated(walletId());
+         }
       };
-      getSpendableTxOutList(cbRefresh, UINT64_MAX);
-   }
+      findInvalidUTXOs(utxos, cbUpdateSpendableBalance);
+   };
 
-   const auto &cbRefreshZC = [this](const std::vector<UTXO> &utxos) {
-      const auto &cbUpdateZcBalance = [this](const std::vector<UTXO> &ZcUTXOs) {
+   const auto &cbRefreshZC = [this, ZConly, cbRefresh](const std::vector<UTXO> &utxos) {
+      const auto &cbUpdateZcBalance = [this, ZConly, cbRefresh](const std::vector<UTXO> &ZcUTXOs) {
          std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
          for (const auto &utxo : ZcUTXOs) {
             auto &balanceVec = balanceData_->addressBalanceMap[utxo.getRecipientScrAddr()];
@@ -947,178 +976,97 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
             balanceVec[2] += utxo.getValue();
             balanceVec[0] = balanceVec[1] + balanceVec[2];
          }
+         if (ZConly) {
+            if (wct_) {
+               wct_->balanceUpdated(walletId());
+            }
+         }
+         else {
+            getSpendableTxOutList(cbRefresh, UINT64_MAX);
+         }
       };
       findInvalidUTXOs(utxos, cbUpdateZcBalance);
    };
-   hd::Leaf::getSpendableZCList(cbRefreshZC);
+   getSpendableZCList(cbRefreshZC);
 }
 
-void hd::CCLeaf::restartValidation()
+void hd::CCLeaf::onZeroConfReceived(const std::vector<bs::TXEntry> &zcs)
 {
-   validationProc();
+   hd::Leaf::onZeroConfReceived(zcs);
+
+   if (tracker_) {
+      tracker_->onZeroConf([this](const std::string &regId) {
+         refreshCb_[regId] = [this] { onTrackerUpdated(); };
+      });
+   }
+}
+
+void hd::CCLeaf::onNewBlock(unsigned int height, unsigned int branchHeight)
+{
+   hd::Leaf::onNewBlock(height, branchHeight);
+
+   if (tracker_) {
+      tracker_->onNewBlock(branchHeight, [this](const std::string &regId) {
+         refreshCb_[regId] = [this] { onTrackerUpdated(); };
+      });
+   }
+}
+
+void hd::CCLeaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
+{
+   hd::Leaf::onRefresh(ids, online);
+
+   std::vector<std::string>   removedRefreshIds_;
+   for (const auto &id : ids) {
+      const auto &it = refreshCb_.find(id.toBinStr());
+      if (it != refreshCb_.end()) {
+         removedRefreshIds_.push_back(it->first);
+         if (it->second) {
+            it->second();
+         }
+      }
+   }
+   for (const auto &id : removedRefreshIds_) {
+      refreshCb_.erase(id);   // clean-up invoked ids
+   }
 }
 
 void hd::CCLeaf::validationProc()
 {
-   validationStarted_ = true;
-   if (!armory_ || (armory_->state() != ArmoryState::Ready) || !isRegistered_) {
-      validationStarted_ = false;
+   if (!sync::Wallet::armory_ || (sync::Wallet::armory_->state() != ArmoryState::Ready)
+      /*|| !isRegistered_*/) {
       return;
    }
+   validationStarted_ = true;
 
-   refreshInvalidUTXOs();
    hd::Leaf::init();
 
-   if (!validationStarted_) {
-      return;
-   }
-
-   if (!checker_) {  // special case for BS CC wallets
+   if (!tracker_) {  // special case for BS CC wallets
       validationEnded_ = true;
       return;
    }
 
-   auto onValidationCompletedCB = [this]()
-   {
+   const auto pair = tracker_->goOnline([this](bool result) {
+      logger_->debug("[CCLeaf::validationProc::goOnline] {} result={}", walletId(), result);
       validationEnded_ = true;
-      if (wct_) {
-         wct_->walletReset(walletId());
+      if (!result) {
+         logger_->warn("[CCLeaf::validationProc::goOnline] {} tracker failed to go online", walletId());
+         return;
       }
-   };
-
-   auto addressList = getUsedAddressList();
-   if (addressList.empty()) {
-      onValidationCompletedCB();
-      return;
+      onTrackerUpdated();
+   });
+   if (!pair.first.empty()) {
+      logger_->debug("[CCLeaf::validationProc] {} regId={}", walletId(), pair.first);
+      refreshCb_[pair.first] = pair.second;
    }
-
-   auto addressValidationState = std::make_shared<AddressValidationState>(onValidationCompletedCB);
-
-   addressValidationState->SetAddressList(addressList);
-
-   for (const auto &addr : addressList) {
-      const auto &cbLedger = [this, addr, addressValidationState]
-                              (const std::shared_ptr<AsyncClient::LedgerDelegate> &ledger) {
-         if (!validationStarted_ || !ccResolver_) {
-            return;
-         }
-
-         if (ledger == nullptr) {
-            logger_->error("[CCLeaf::validationProc::cbLedger] failed to get ledger for : {}"
-               , addr.display());
-            return;
-         }
-
-         const auto &cbPages = [this, addr, addressValidationState, ledger] (ReturnMessage<uint64_t> pages) {
-            try {
-               const auto pageCnt = pages.get();
-
-               addressValidationState->SetAddressPagesCount(addr, pageCnt);
-               for (uint32_t pageId = 0; pageId < pageCnt; ++pageId) {
-                  const auto &cbCheck = [this, addr, pageId, addressValidationState](const Tx &tx) {
-                     const auto &cbResult = [this, tx, addressValidationState, addr, pageId](bool contained) {
-                        if (!contained && tx.isInitialized()) {
-                           invalidTxHash_.insert(tx.getThisHash());
-                        }
-                        // if this is last TX for last page or last address  -
-                        // onValidationCompletedCB will be called from within addressValidationState
-                        addressValidationState->OnTxProcessed(addr, pageId);
-                     };
-
-                     checker_->containsInputAddress(tx, cbResult, ccResolver_->lotSizeFor(suffix_));
-                  };
-
-                  const auto &cbHistory = [this, addr, pageId, addressValidationState, cbCheck](ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)
-                  {
-                     try {
-                        const auto &le = entries.get();
-                        addressValidationState->SetAddressPageTxCount(addr, pageId, le.size());
-
-                        for (const auto &entry : le) {
-                           armory_->getTxByHash(entry.getTxHash(), cbCheck);
-                        }
-                     } catch (const std::exception &e) {
-                        if (logger_ != nullptr) {
-                           logger_->error("[hd::CCLeaf::validationProc] Return data " \
-                              "error - {}. Validation never be marked as completed for : {}", e.what()
-                              , walletId());
-                        }
-                     }
-                  };
-
-                  ledger->getHistoryPage(pageId, cbHistory);
-               }
-            }
-            catch (const std::exception &e) {
-               if (logger_) {
-                  logger_->error("[hd::CCLeaf::validationProc] cbPages failed: {}", e.what());
-               }
-            }
-         };
-         ledger->getPageCount(cbPages);
-      };
-      getLedgerDelegateForAddress(addr, cbLedger);
+   else {
+      logger_->warn("[CCLeaf::validationProc] {} failed to register tracker", walletId());
    }
 }
 
 void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, const ArmoryConnection::UTXOsCb &cb)
 {
-   std::set<BinaryData> txHashes;
-   std::map<BinaryData, UTXO> utxoMap;
-   for (const auto &utxo : utxos) {
-      if (!validationStarted_) {
-         return;
-      }
-      const auto &hash = utxo.getTxHash();
-      txHashes.insert(hash);
-      utxoMap[hash] = utxo;
-   }
-   const auto &cbProcess = [this, utxoMap, cb, utxos](const std::vector<Tx> &txs) {
-      struct TxResultData {
-         Tx    tx;
-         UTXO  utxo;
-      };
-      struct Result {
-         uint64_t invalidBalance = 0;
-         std::map<BinaryData, TxResultData> txHashMap;
-      };
-      auto result = std::make_shared<Result>();
-
-      for (const auto &tx : txs) {
-         const auto &txHash = tx.getThisHash();
-         const auto &itUtxo = utxoMap.find(txHash);
-         if (itUtxo == utxoMap.end()) {
-            continue;
-         }
-         result->txHashMap[txHash] = { tx, itUtxo->second };
-      }
-
-      const auto txHashMap = result->txHashMap;
-      for (const auto &txPair : txHashMap) {
-         const auto &txHash = txPair.first;
-         const auto &txData = txPair.second;
-         const auto &cbResult = [this, txHash, txData, result, cb, utxos](bool contained) {
-            if (!contained) {
-               invalidTx_.insert(txData.utxo);
-               invalidTxHash_.insert(txHash);
-               result->invalidBalance += txData.utxo.getValue();
-            }
-            result->txHashMap.erase(txHash);
-            if (result->txHashMap.empty()) {
-               balanceCorrection_ += result->invalidBalance / BTCNumericTypes::BalanceDivider;
-               cb(filterUTXOs(utxos));
-            }
-         };
-         checker_->containsInputAddress(txData.tx, cbResult, ccResolver_->lotSizeFor(suffix_)
-            , txData.utxo.getValue());
-      }
-   };
-   if (txHashes.empty()) {
-      cb(utxos);
-   }
-   else {
-      armory_->getTXsByHash(txHashes, cbProcess);
-   }
+   cb(filterUTXOs(utxos));
 }
 
 void hd::CCLeaf::init(bool force)
@@ -1126,7 +1074,7 @@ void hd::CCLeaf::init(bool force)
    if (force) {
       validationStarted_ = false;
    }
-   if (checker_ && !validationStarted_) {
+   if (tracker_ && !validationStarted_) {
       validationEnded_ = false;
       validationProc();
    }
@@ -1139,17 +1087,14 @@ void hd::CCLeaf::CCWalletACT::onStateChanged(ArmoryState state)
    }
 }
 
-void hd::CCLeaf::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
-{
-   hd::Leaf::onZeroConfReceived(entries);
-   refreshInvalidUTXOs(true);
-}
-
 std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
 {
+   if (!tracker_) {  // special case for BS CC wallet
+      return utxos;
+   }
    std::vector<UTXO> result;
    for (const auto &txOut : utxos) {
-      if (invalidTx_.find(txOut) == invalidTx_.end()) {
+      if (validTxHash_.find(txOut.getTxHash()) != validTxHash_.end()) {
          result.emplace_back(txOut);
       }
    }
@@ -1198,27 +1143,28 @@ BTCNumericTypes::balance_type hd::CCLeaf::getTotalBalance() const
 
 std::vector<uint64_t> hd::CCLeaf::getAddrBalance(const bs::Address &addr) const
 {
-   if (!ccResolver_ || (ccResolver_->lotSizeFor(suffix_) == 0)/* || !validationEnded_*/) {
+   if (!ccResolver_ || (ccResolver_->lotSizeFor(suffix_) == 0) || !tracker_) {
       return {};
    }
+   const auto ccLotSize = ccResolver_->lotSizeFor(suffix_);
 
-   /*doesnt seem thread safe, yet addressBalanceMap_ can be changed by other threads*/
-   auto inner = [addr, lotSizeInSatoshis= ccResolver_->lotSizeFor(suffix_), this]
-      (std::vector<uint64_t>& xbtBalances)->void {
-      for (auto &balance : xbtBalances) {
-         balance /= lotSizeInSatoshis;
+   if (!tracker_ || (ccLotSize == 0)) {
+      auto addrBalance = hd::Leaf::getAddrBalance(addr);
+      if (ccLotSize) {
+         for (auto &balance : addrBalance) {
+            balance /= ccLotSize;
+         }
       }
-   };
+      return addrBalance;
+   }
 
-   auto balVec = hd::Leaf::getAddrBalance(addr);
-   inner(balVec);
-
-   return balVec;
+   const uint64_t ccValue = tracker_->getCcValueForAddress(addr.id()) / ccLotSize;
+   return { ccValue, 0, ccValue };  //TODO: fix unconfirmed value when it will become available
 }
 
 bool hd::CCLeaf::isTxValid(const BinaryData &txHash) const
 {
-   return (invalidTxHash_.find(txHash) == invalidTxHash_.end());
+   return (validTxHash_.find(txHash) != validTxHash_.end());
 }
 
 BTCNumericTypes::balance_type hd::CCLeaf::getTxBalance(int64_t val) const
@@ -1228,7 +1174,7 @@ BTCNumericTypes::balance_type hd::CCLeaf::getTxBalance(int64_t val) const
    }
    const auto lotSize = ccResolver_->lotSizeFor(suffix_);
    if (lotSize == 0) {
-      return 0;
+      return val / BTCNumericTypes::BalanceDivider;
    }
    return (double)val / lotSize;
 }

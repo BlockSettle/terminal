@@ -144,8 +144,8 @@ const std::shared_ptr<BinaryData> ColoredCoinTracker::getScrAddrPtr(
 
 ////
 uint64_t ColoredCoinTracker::getCcOutputValue(
-   std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
-   std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
+   const std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
+   const std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
    const BinaryData& hash, unsigned txOutIndex, unsigned height) const
 {
    /*
@@ -226,8 +226,8 @@ uint64_t ColoredCoinTracker::getCcOutputValue(
    
 ////
 ParsedCcTx ColoredCoinTracker::processTx(
-   std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
-   std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
+   const std::shared_ptr<ColoredCoinSnapshot> &ssPtr,
+   const std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
    const Tx& tx) const
 {
    ParsedCcTx result;
@@ -308,19 +308,18 @@ std::vector<Tx> ColoredCoinTracker::grabTxBatch(
 {
    auto txProm = std::make_shared<std::promise<std::vector<Tx>>>();
    auto txFut = txProm->get_future();
-   auto txLbd = [txProm](ReturnMessage<std::vector<Tx>> batch)->void
+   auto txLbd = [txProm](const std::vector<Tx> &batch, std::exception_ptr exPtr)
    {
-      try
-      {
-         txProm->set_value(std::move(batch.get()));
+      if (exPtr != nullptr) {
+         txProm->set_exception(exPtr);
       }
-      catch (std::exception&)
-      {
-         txProm->set_exception(std::current_exception());
+      else {
+         txProm->set_value(batch);
       }
    };
-
-   connPtr_->bdv()->getTxBatchByHash(hashes, txLbd);
+   if (!connPtr_->getTXsByHash(hashes, txLbd)) {
+      return {};
+   }
    return txFut.get();
 }
 
@@ -336,41 +335,38 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
    std::map<BinaryData, std::set<unsigned>> spentnessToTrack;
 
    //process them
-   for (auto& tx : txBatch)
-   {
+   for (auto& tx : txBatch) {
       //parse the tx
       auto&& parsedTx = processTx(ssPtr, zcPtr, tx);
 
       //purge utxo set of all spent CC outputs
-      for (auto& input : parsedTx.outpoints_)
-      {
+      for (auto& input : parsedTx.outpoints_) {
          auto hashIter = ssPtr->utxoSet_.find(input.first);
-         if (hashIter == ssPtr->utxoSet_.end())
+         if (hashIter == ssPtr->utxoSet_.end()) {
             throw ColoredCoinException("missing outpoint hash");
-
+         }
          auto idIter = hashIter->second.find(input.second);
-         if (idIter == hashIter->second.end())
+         if (idIter == hashIter->second.end()) {
             throw ColoredCoinException("missing outpoint index");
-
+         }
          //remove from scrAddr to utxo map
          eraseScrAddrOp(ssPtr, idIter->second);
 
          //remove from utxo set
          hashIter->second.erase(idIter);
-         if (hashIter->second.size() == 0)
+         if (hashIter->second.size() == 0) {
             ssPtr->utxoSet_.erase(hashIter);
+         }
       }
 
-      if (parsedTx.isInitialized())
-      {
+      if (parsedTx.isInitialized()) {
          //This tx creates valid CC utxos, add them to the map and 
          //track the spender hashes if any
 
          auto spentnessIter = spentnessToTrack.insert(
             std::make_pair(parsedTx.txHash_, std::set<unsigned>())).first;
 
-         for (unsigned i = 0; i < parsedTx.outputs_.size(); i++)
-         {
+         for (unsigned i = 0; i < parsedTx.outputs_.size(); i++) {
             //add the utxo
             auto& output = parsedTx.outputs_[i];
             addUtxo(ssPtr, parsedTx.txHash_, i, output.first, output.second);
@@ -386,40 +382,155 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
       std::promise<std::map<BinaryData, std::map<unsigned, BinaryData>>>>();
    auto spentnessFut = spentnessProm->get_future();
    auto spentnessLbd = [spentnessProm](
-      ReturnMessage<std::map<BinaryData, std::map<unsigned, BinaryData>>> batch)
+      const std::map<BinaryData, std::map<unsigned, BinaryData>> &batch, std::exception_ptr exPtr)
    {
-      try
-      {
-         spentnessProm->set_value(batch.get());
+      if (exPtr != nullptr) {
+         spentnessProm->set_exception(exPtr);
       }
-      catch (std::exception&)
-      {
-         spentnessProm->set_exception(std::current_exception());
+      else {
+         spentnessProm->set_value(batch);
       }
    };
-
-   connPtr_->bdv()->getSpentnessForOutputs(spentnessToTrack, spentnessLbd);
+   if (!connPtr_->getSpentnessForOutputs(spentnessToTrack, spentnessLbd)) {
+      return {};
+   }
    auto&& spentnessBatch = spentnessFut.get();
 
    //aggregate spender hashes
    std::set<BinaryData> spenderHashes;
-   for (auto& spentness : spentnessBatch)
-   {
+   for (auto& spentness : spentnessBatch) {
       auto& spentnessMap = spentness.second;
-      for (auto& hashPair : spentnessMap)
-      {
-         if (hashPair.second.getSize() == 32)
+      for (auto& hashPair : spentnessMap) {
+         if (hashPair.second.getSize() == 32) {
             spenderHashes.insert(hashPair.second);
+         }
       }
    }
 
    return spenderHashes;
 }
 
+void ColoredCoinTracker::processTxBatch(const std::shared_ptr<ColoredCoinSnapshot> &ssPtr
+   , const std::set<BinaryData>& hashes
+   , const ResultCb &cb)
+{
+   const auto txLbd = [this, ssPtr, cb]
+      (const std::vector<Tx> &txBatch, std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb(false);
+         }
+         return;
+      }
+
+      std::shared_ptr<ColoredCoinZCSnapshot> zcPtr = nullptr;
+      std::map<BinaryData, std::set<unsigned>> spentnessToTrack;
+
+      //process them
+      for (auto& tx : txBatch) {
+         //parse the tx
+         auto&& parsedTx = processTx(ssPtr, zcPtr, tx);
+
+         //purge utxo set of all spent CC outputs
+         for (auto& input : parsedTx.outpoints_) {
+            auto hashIter = ssPtr->utxoSet_.find(input.first);
+            if (hashIter == ssPtr->utxoSet_.end()) {
+               throw ColoredCoinException("missing outpoint hash");
+            }
+            auto idIter = hashIter->second.find(input.second);
+            if (idIter == hashIter->second.end()) {
+               throw ColoredCoinException("missing outpoint index");
+            }
+            //remove from scrAddr to utxo map
+            eraseScrAddrOp(ssPtr, idIter->second);
+
+            //remove from utxo set
+            hashIter->second.erase(idIter);
+            if (hashIter->second.size() == 0) {
+               ssPtr->utxoSet_.erase(hashIter);
+            }
+         }
+
+         if (parsedTx.isInitialized()) {
+            //This tx creates valid CC utxos, add them to the map and 
+            //track the spender hashes if any
+
+            auto spentnessIter = spentnessToTrack.insert(
+               std::make_pair(parsedTx.txHash_, std::set<unsigned>())).first;
+
+            for (unsigned i = 0; i < parsedTx.outputs_.size(); i++) {
+               //add the utxo
+               auto& output = parsedTx.outputs_[i];
+               addUtxo(ssPtr, parsedTx.txHash_, i, output.first, output.second);
+
+               //add the index to the spentness fetch packet
+               spentnessIter->second.insert(i);
+            }
+         }
+      }
+
+      //check new utxo list
+      auto spentnessLbd = [this, ssPtr, cb](
+         const std::map<BinaryData, std::map<unsigned, BinaryData>> &spentnessBatch
+         , std::exception_ptr exPtr)
+      {
+         if (exPtr != nullptr) {
+            if (cb) {
+               cb(false);
+            }
+            return;
+         }
+         //aggregate spender hashes
+         std::set<BinaryData> spenderHashes;
+         for (auto& spentness : spentnessBatch) {
+            auto& spentnessMap = spentness.second;
+            for (auto& hashPair : spentnessMap) {
+               if (hashPair.second.getSize() == 32) {
+                  spenderHashes.insert(hashPair.second);
+               }
+            }
+         }
+
+         if (spenderHashes.empty()) {
+            if (cb) {
+               cb(true);
+            }
+         }
+         else {
+            processTxBatch(ssPtr, spenderHashes, cb);
+         }
+      };
+      if (spentnessToTrack.empty()) {
+         if (cb) {
+            cb(true);
+         }
+         return;
+      }
+      if (!connPtr_->getSpentnessForOutputs(spentnessToTrack, spentnessLbd)) {
+         if (cb) {
+            cb(false);
+         }
+      }
+   };
+   if (hashes.empty()) {
+      if (cb) {
+         cb(true);
+      }
+      return;
+   }
+   //grab listed tx
+   if (!connPtr_->getTXsByHash(hashes, txLbd)) {
+      if (cb) {
+         cb(false);
+      }
+   }
+}
+
 ////
 void ColoredCoinTracker::processZcBatch(
-   std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
-   std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
+   const std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
+   const std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
    const std::set<BinaryData>& hashes)
 {
    //grab listed tx
@@ -478,45 +589,160 @@ void ColoredCoinTracker::processZcBatch(
    }
 }
 
+void ColoredCoinTracker::processZcBatch(
+   const std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
+   const std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
+   const std::set<BinaryData>& hashes, const ResultCb &cb)
+{
+   //grab listed tx
+   const auto cbTxBatch = [this, cb, ssPtr, zcPtr]
+      (const std::vector<Tx> &txBatch, std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb(false);
+         }
+         return;
+      }
+
+      //process the zc transactions
+      for (auto& tx : txBatch) {
+         //parse the tx
+         auto&& parsedTx = processTx(ssPtr, zcPtr, tx);
+
+         //purge utxo set of all spent CC outputs
+         for (auto& input : parsedTx.outpoints_) {
+            auto hashIter = ssPtr->utxoSet_.find(input.first);
+            if (hashIter != ssPtr->utxoSet_.end()) {
+               auto idIter = hashIter->second.find(input.second);
+               if (idIter != hashIter->second.end()) {
+                  //spent confirmed output, mark it in zc snapshot
+                  auto spentIter = zcPtr->spentOutputs_.find(input.first);
+                  if (spentIter == zcPtr->spentOutputs_.end()) {
+                     spentIter = zcPtr->spentOutputs_.insert(
+                        std::make_pair(input.first, std::set<unsigned>())).first;
+                  }
+
+                  spentIter->second.insert(input.second);
+                  continue;
+               }
+            }
+
+            //not a confirmed output, remove from zc utxo set instead
+            auto zcHashIter = zcPtr->utxoSet_.find(input.first);
+            if (zcHashIter == zcPtr->utxoSet_.end()) {
+               continue;
+            }
+            zcHashIter->second.erase(input.second);
+            if (zcHashIter->second.size() == 0) {
+               zcPtr->utxoSet_.erase(zcHashIter);
+            }
+         }
+
+         if (parsedTx.isInitialized()) {
+            //This tx creates valid CC utxos, add them to the map and 
+            //track the spender hashes if any
+
+            for (unsigned i = 0; i < parsedTx.outputs_.size(); i++) {
+               //add the utxo
+               auto& output = parsedTx.outputs_[i];
+               addZcUtxo(ssPtr, zcPtr, parsedTx.txHash_, i, output.first, output.second);
+            }
+         }
+      }
+      if (cb) {
+         cb(true);
+      }
+   };
+   if (!connPtr_->getTXsByHash(hashes, cbTxBatch)) {
+      if (cb) {
+         cb(false);
+      }
+   }
+}
+
 ////
 void ColoredCoinTracker::processRevocationBatch(
-   std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
+   const std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
    const std::set<BinaryData>& hashes)
 {
-   if (hashes.size() == 0)
+   if (hashes.size() == 0) {
       return;
-
+   }
    //grab listed tx
    auto txProm = std::make_shared<std::promise<std::vector<Tx>>>();
    auto txFut = txProm->get_future();
-   auto txLbd = [txProm](ReturnMessage<std::vector<Tx>> batch)->void
+   auto txLbd = [txProm](const std::vector<Tx> &batch, std::exception_ptr exPtr)
    {
-      try
-      {
-         txProm->set_value(std::move(batch.get()));
+      if (exPtr != nullptr) {
+         txProm->set_exception(exPtr);
       }
-      catch (std::exception&)
-      {
-         txProm->set_exception(std::current_exception());
+      else {
+         txProm->set_value(batch);
       }
    };
-
-   connPtr_->bdv()->getTxBatchByHash(hashes, txLbd);
-   auto txBatch = txFut.get();
+   if (!connPtr_->getTXsByHash(hashes, txLbd)) {
+      return;
+   }
+   const auto &txBatch = txFut.get();
 
    //mark all output scrAddr as revoked
-   for (auto& tx : txBatch)
-   {
-      for (unsigned i = 0; i < tx.getNumTxOut(); i++)
-      {
+   for (auto& tx : txBatch) {
+      for (unsigned i = 0; i < tx.getNumTxOut(); i++) {
          auto&& txOut = tx.getTxOutCopy(i); //TODO: work with ref instead of copy
          auto&& scrAddr = txOut.getScrAddressRef();
 
          auto iter = revocationAddresses_.find(scrAddr);
-         if (iter != revocationAddresses_.end())
+         if (iter != revocationAddresses_.end()) {
             continue;
-            
+         }
          ssPtr->revokedAddresses_.insert(std::make_pair(scrAddr, tx.getTxHeight()));
+      }
+   }
+}
+
+void ColoredCoinTracker::processRevocationBatch(
+   const std::shared_ptr<ColoredCoinSnapshot>& ssPtr
+   , const std::set<BinaryData> &hashes
+   , const ResultCb &cb)
+{
+   if (hashes.empty()) {
+      if (cb) {
+         cb(true);
+      }
+      return;
+   }
+   //grab listed tx
+   const auto txLbd = [this, cb, ssPtr]
+      (const std::vector<Tx> &txBatch, std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb(false);
+         }
+         return;
+      }
+
+      //mark all output scrAddr as revoked
+      for (auto& tx : txBatch) {
+         for (unsigned i = 0; i < tx.getNumTxOut(); i++) {
+            auto&& txOut = tx.getTxOutCopy(i); //TODO: work with ref instead of copy
+            auto&& scrAddr = txOut.getScrAddressRef();
+
+            auto iter = revocationAddresses_.find(scrAddr);
+            if (iter != revocationAddresses_.end()) {
+               continue;
+            }
+            ssPtr->revokedAddresses_.insert(std::make_pair(scrAddr, tx.getTxHeight()));
+         }
+      }
+      if (cb) {
+         cb(true);
+      }
+   };
+   if (!connPtr_->getTXsByHash(hashes, txLbd)) {
+      if (cb) {
+         cb(false);
       }
    }
 }
@@ -554,16 +780,13 @@ std::set<BinaryData> ColoredCoinTracker::update()
 
    auto promPtr = std::make_shared<std::promise<OutpointBatch>>();
    auto fut = promPtr->get_future();
-   auto lbd = [promPtr](ReturnMessage<OutpointBatch> batch)
+   auto lbd = [promPtr](const OutpointBatch &batch, std::exception_ptr exPtr)
    {
-      try
-      {
-         promPtr->set_value(batch.get());
+      if (exPtr != nullptr) {
+         promPtr->set_exception(exPtr);
       }
-      catch (std::exception&)
-      {
-         //want to throw in the caller thread
-         promPtr->set_exception(std::current_exception());
+      else {
+         promPtr->set_value(batch);
       }
    };
 
@@ -571,8 +794,9 @@ std::set<BinaryData> ColoredCoinTracker::update()
    We don't want any zc data for this call so pass UINT32_MAX
    as the zc cutoff.
    */
-   connPtr_->bdv()->getOutpointsForAddresses(
-      addrSet, startHeight_, UINT32_MAX, lbd);
+   if (!connPtr_->getOutpointsForAddresses(addrSet, lbd, startHeight_, UINT32_MAX)) {
+      return {};
+   }
 
    auto&& outpointData = fut.get();
    std::set<BinaryData> txsToCheck;
@@ -585,14 +809,14 @@ std::set<BinaryData> ColoredCoinTracker::update()
    otherwise it will fail to tag user funding operations.
    */
 
-   for (auto& scrAddr : originAddresses_)
-   {
+   for (auto& scrAddr : originAddresses_) {
       auto iter = outpointData.outpoints_.find(scrAddr.prefixed());
-      if (iter == outpointData.outpoints_.end())
+      if (iter == outpointData.outpoints_.end()) {
          continue;
-
-      for (auto& op : iter->second)
+      }
+      for (auto& op : iter->second) {
          addUtxo(ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr.prefixed());
+      }
    }
 
    /*
@@ -605,25 +829,21 @@ std::set<BinaryData> ColoredCoinTracker::update()
    Revocation is not retroactive.
    */
 
-   for (auto& addrPair : outpointData.outpoints_)
-   {
-      for (auto& op : addrPair.second)
-      {
-         if (op.isSpent_)
-         {
+   for (auto& addrPair : outpointData.outpoints_) {
+      for (auto& op : addrPair.second) {
+         if (op.isSpent_) {
             /*
             An output from our list of tracked addresses has been
             spent. Does it affect this instrument?
             */
 
             //sanity check
-            if (op.spenderHash_.getSize() != 32)
+            if (op.spenderHash_.getSize() != 32) {
                throw ColoredCoinException("missing spender hash");
-
+            }
             //was the output from a revocation address?
             auto revokeIter = revocationAddresses_.find(addrPair.first);
-            if (revokeIter != revocationAddresses_.end())
-            {
+            if (revokeIter != revocationAddresses_.end()) {
                //check the spender for addresses to revoke
                revokesToCheck.insert(op.spenderHash_);
                continue;
@@ -631,13 +851,13 @@ std::set<BinaryData> ColoredCoinTracker::update()
             
             //or was it a valid CC?
             auto hashIter = ssPtr->utxoSet_.find(op.txHash_);
-            if (hashIter == ssPtr->utxoSet_.end())
+            if (hashIter == ssPtr->utxoSet_.end()) {
                continue;
-
+            }
             auto idIter = hashIter->second.find(op.txOutIndex_);
-            if (idIter == hashIter->second.end())
+            if (idIter == hashIter->second.end()) {
                continue;
-
+            }
             //mark the spender for CC settlement
             txsToCheck.insert(op.spenderHash_);
          }
@@ -648,10 +868,10 @@ std::set<BinaryData> ColoredCoinTracker::update()
    processRevocationBatch(ssPtr, revokesToCheck);
 
    //process settlements
-   while (true)
-   {
-      if (txsToCheck.size() == 0)
+   while (true) {
+      if (txsToCheck.size() == 0) {
          break;
+      }
       txsToCheck = std::move(processTxBatch(ssPtr, txsToCheck));
    }
    
@@ -660,8 +880,7 @@ std::set<BinaryData> ColoredCoinTracker::update()
 
    //track new addresses
    std::set<BinaryData> toReg;
-   for (auto& addr : ssPtr->scrAddrCcSet_)
-   {
+   for (auto& addr : ssPtr->scrAddrCcSet_) {
       if (addrSet.find(addr.first) == addrSet.end())
          toReg.insert(addr.first);
    }
@@ -673,10 +892,165 @@ std::set<BinaryData> ColoredCoinTracker::update()
    purgeZc();
 
    //register new addresses
-   if (toReg.size() == 0)
-      return {};
-
    return toReg;
+}
+
+void ColoredCoinTracker::update(const AddrSetCb &cb)
+{
+   //create new snapshot
+   auto ssPtr = std::make_shared<ColoredCoinSnapshot>();
+
+   {
+      /*
+      We need to copy the current snapshot into the new one to then
+      update it. We do not need the current snapshot past that point
+      and the new one is meant to replace it once it's ready. Therefor
+      we will perform the copy in a dedicated scope.
+      */
+      auto currentSs = snapshot();
+      if (currentSs != nullptr)
+         *ssPtr = *currentSs;
+   }
+
+   //track changeset for relevant addresses
+   std::set<BinaryData> addrSet;
+
+   //current set of live user addresses
+   for (auto& addrRef : ssPtr->scrAddrCcSet_) {
+      addrSet.insert(addrRef.first);
+   }
+   //origin and revocation addresses
+   addrSet.insert(originAddresses_.cbegin(), originAddresses_.cend());
+   addrSet.insert(revocationAddresses_.cbegin(), revocationAddresses_.cend());
+
+   auto lbd = [this, ssPtr, addrSet, cb]
+      (const OutpointBatch &outpointData, std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb({});
+         }
+         return;
+      }
+
+      std::set<BinaryData> txsToCheck;
+      std::set<BinaryData> revokesToCheck;
+
+      /*
+      All outputs that hit origin addresses become valid CC UTXOs, even
+      though they do not count towards actual CC balance. The tracker
+      operates on UTXOs, so it needs to know of all origin address UTXOs,
+      otherwise it will fail to tag user funding operations.
+      */
+      for (const auto &scrAddr : originAddresses_) {
+         auto iter = outpointData.outpoints_.find(scrAddr.prefixed());
+         if (iter == outpointData.outpoints_.end()) {
+            continue;
+         }
+         for (auto& op : iter->second) {
+            addUtxo(ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr.prefixed());
+         }
+      }
+
+      /*
+      Users cannot create new CC, only the origin address holder can.
+      Therefor all CC operations performed by users have to consume
+      existing CC UTXOs.
+
+      Also, any address that receives an outpoint originating from our
+      set of revocation addresses is revoked from that point on.
+      Revocation is not retroactive.
+      */
+      for (const auto& addrPair : outpointData.outpoints_) {
+         for (const auto& op : addrPair.second) {
+            if (op.isSpent_) {
+               /*
+               An output from our list of tracked addresses has been
+               spent. Does it affect this instrument?
+               */
+
+               //sanity check
+               if (op.spenderHash_.getSize() != 32) {
+                  throw ColoredCoinException("missing spender hash");
+               }
+               //was the output from a revocation address?
+               auto revokeIter = revocationAddresses_.find(addrPair.first);
+               if (revokeIter != revocationAddresses_.end()) {
+                  //check the spender for addresses to revoke
+                  revokesToCheck.insert(op.spenderHash_);
+                  continue;
+               }
+
+               //or was it a valid CC?
+               auto hashIter = ssPtr->utxoSet_.find(op.txHash_);
+               if (hashIter == ssPtr->utxoSet_.end()) {
+                  continue;
+               }
+               auto idIter = hashIter->second.find(op.txOutIndex_);
+               if (idIter == hashIter->second.end()) {
+                  continue;
+               }
+               //mark the spender for CC settlement
+               txsToCheck.insert(op.spenderHash_);
+            }
+         }
+      }
+
+      const auto revokeCb = [this, cb, ssPtr, txsToCheck, outpointData, addrSet]
+         (bool result)
+      {
+         //process settlements
+         const auto cbProcTxBatch = [this, ssPtr, cb, outpointData, addrSet](bool result)
+         {
+            if (!result) {
+               if (cb) {
+                  cb({});
+               }
+               return;
+            }
+
+            //update cutoff
+            startHeight_ = outpointData.heightCutoff_ + 1;
+
+            //track new addresses
+            std::set<BinaryData> toReg;
+            for (const auto &addr : ssPtr->scrAddrCcSet_) {
+               if (addrSet.find(addr.first) == addrSet.end()) {
+                  toReg.insert(addr.first);
+               }
+            }
+
+            //swap new snapshot in
+            std::atomic_store_explicit(&snapshot_, ssPtr, std::memory_order_release);
+
+            //purge zc container
+            purgeZc([cb, toReg](bool result) {
+               //register new addresses
+               if (cb) {
+                  if (result) {
+                     cb(toReg);
+                  }
+                  else {
+                     cb({});
+                  }
+               }
+            });
+         };
+         processTxBatch(ssPtr, txsToCheck, cbProcTxBatch);
+      };
+      //process revokes
+      processRevocationBatch(ssPtr, revokesToCheck, revokeCb);
+   };
+
+   /*
+   We don't want any zc data for this call so pass UINT32_MAX
+   as the zc cutoff.
+   */
+   if (!connPtr_->getOutpointsForAddresses(addrSet, lbd, startHeight_, UINT32_MAX)) {
+      if (cb) {
+         cb({});
+      }
+   }
 }
 
 ////
@@ -699,8 +1073,7 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
    addrSet.insert(originAddresses_.begin(), originAddresses_.end());
 
    //current set of live user addresses
-   if (currentSs != nullptr)
-   {
+   if (currentSs != nullptr) {
       for (auto& addrRef : currentSs->scrAddrCcSet_)
          addrSet.insert(addrRef.first);
    }
@@ -711,16 +1084,13 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
    //note: we dont deal with unconfirmed revocations
    auto promPtr = std::make_shared<std::promise<OutpointBatch>>();
    auto fut = promPtr->get_future();
-   auto lbd = [promPtr](ReturnMessage<OutpointBatch> batch)
+   auto lbd = [promPtr](const OutpointBatch &batch, std::exception_ptr exPtr)
    {
-      try
-      {
-         promPtr->set_value(batch.get());
+      if (exPtr != nullptr) {
+         promPtr->set_exception(exPtr);
       }
-      catch (std::exception& e)
-      {
-         //want to throw in the caller thread
-         promPtr->set_exception(std::current_exception());
+      else {
+         promPtr->set_value(batch);
       }
    };
 
@@ -728,30 +1098,28 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
    We don't want any confirmed data for this call so pass UINT32_MAX
    as the height cutoff.
    */
-   connPtr_->bdv()->getOutpointsForAddresses(
-      addrSet, UINT32_MAX, zcCutOff_, lbd);
+   if (!connPtr_->getOutpointsForAddresses(addrSet, lbd, UINT32_MAX, zcCutOff_)) {
+      return {};
+   }
 
    auto&& outpointData = fut.get();
    std::set<BinaryData> txsToCheck;
 
    //parse new outputs for origin addresses
-   for (auto& scrAddr : originAddresses_)
-   {
+   for (auto& scrAddr : originAddresses_) {
       auto iter = outpointData.outpoints_.find(scrAddr.prefixed());
-      if (iter == outpointData.outpoints_.end())
+      if (iter == outpointData.outpoints_.end()) {
          continue;
-
-      for (auto& op : iter->second)
+      }
+      for (auto& op : iter->second) {
          addZcUtxo(currentSs, ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr.prefixed());
+      }
    }
 
    //parse new spenders
-   for (auto& addrPair : outpointData.outpoints_)
-   {
-      for (auto& op : addrPair.second)
-      {
-         if (op.isSpent_)
-         {
+   for (auto& addrPair : outpointData.outpoints_) {
+      for (auto& op : addrPair.second) {
+         if (op.isSpent_) {
             /*
             An output from our list of tracked addresses has been
             spent. Does it affect this instrument?
@@ -781,85 +1149,255 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
 
    //track new addresses
    std::set<BinaryData> toReg;
-   for (auto& addr : ssPtr->scrAddrCcSet_)
-   {
-      if (addrSet.find(addr.first) == addrSet.end())
+   for (auto& addr : ssPtr->scrAddrCcSet_) {
+      if (addrSet.find(addr.first) == addrSet.end()) {
          toReg.insert(addr.first);
+      }
    }
 
    //swap the new snapshot in
    std::atomic_store_explicit(&zcSnapshot_, ssPtr, std::memory_order_release);
 
    //register new addresses
-   if (toReg.size() == 0)
-      return {};
-
    return toReg;
+}
+
+void ColoredCoinTracker::zcUpdate(const AddrSetCb &cb)
+{
+   //create new snapshot
+   auto ssPtr = std::make_shared<ColoredCoinZCSnapshot>();
+   auto currentSs = snapshot();
+
+   {
+      auto currentZcSs = zcSnapshot();
+      if (currentZcSs != nullptr)
+         *ssPtr = *currentZcSs;
+   }
+
+   //track changeset for relevant addresses
+   std::set<BinaryData> addrSet;
+
+   //origin addresses
+   addrSet.insert(originAddresses_.begin(), originAddresses_.end());
+
+   //current set of live user addresses
+   if (currentSs != nullptr) {
+      for (auto& addrRef : currentSs->scrAddrCcSet_)
+         addrSet.insert(addrRef.first);
+   }
+   for (auto& addrRef : ssPtr->scrAddrCcSet_) {
+      addrSet.insert(addrRef.first);
+   }
+
+   //note: we dont deal with unconfirmed revocations
+   auto lbd = [this, cb, currentSs, ssPtr, addrSet]
+      (const OutpointBatch &outpointData, std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb({});
+         }
+         return;
+      }
+
+      std::set<BinaryData> txsToCheck;
+
+      //parse new outputs for origin addresses
+      for (auto& scrAddr : originAddresses_) {
+         auto iter = outpointData.outpoints_.find(scrAddr.prefixed());
+         if (iter == outpointData.outpoints_.end()) {
+            continue;
+         }
+         for (auto& op : iter->second) {
+            addZcUtxo(currentSs, ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr.prefixed());
+         }
+      }
+
+      //parse new spenders
+      for (auto& addrPair : outpointData.outpoints_) {
+         for (auto& op : addrPair.second) {
+            if (op.isSpent_) {
+               /*
+               An output from our list of tracked addresses has been
+               spent. Does it affect this instrument?
+               */
+
+               //sanity check
+               if (op.spenderHash_.getSize() != 32)
+                  throw ColoredCoinException("missing spender hash");
+
+               //was it a valid CC?
+               auto ccVal = getCcOutputValue(
+                  currentSs, ssPtr, op.txHash_, op.txOutIndex_, op.txHeight_);
+               if (ccVal == 0 || ccVal == UINT64_MAX)
+                  continue;
+
+               //mark the spender for CC settlement check
+               txsToCheck.insert(op.spenderHash_);
+            }
+         }
+      }
+
+      //process unconfirmed settlements
+      processZcBatch(currentSs, ssPtr, txsToCheck, [this, cb, outpointData, ssPtr, addrSet]
+         (bool result)
+      {
+         //update zc cutoff
+         zcCutOff_ = outpointData.zcIndexCutoff_;
+
+         //track new addresses
+         std::set<BinaryData> toReg;
+         for (auto& addr : ssPtr->scrAddrCcSet_) {
+            if (addrSet.find(addr.first) == addrSet.end()) {
+               toReg.insert(addr.first);
+            }
+         }
+
+         //swap the new snapshot in
+         std::atomic_store_explicit(&zcSnapshot_, ssPtr, std::memory_order_release);
+
+         //register new addresses
+         if (cb) {
+            cb(toReg);
+         }
+      });
+   };
+
+   /*
+   We don't want any confirmed data for this call so pass UINT32_MAX
+   as the height cutoff.
+   */
+   if (!connPtr_->getOutpointsForAddresses(addrSet, lbd, UINT32_MAX, zcCutOff_)) {
+      if (cb) {
+         cb({});
+      }
+   }
 }
 
 ////
 void ColoredCoinTracker::purgeZc()
 {
    auto zcPtr = zcSnapshot();
-   if (zcPtr == nullptr)
+   if (zcPtr == nullptr) {
       return;
-
+   }
    auto currentSs = snapshot();
 
    //grab height for all our active zc
    std::set<BinaryData> txHashes;
-   for (auto& hashPair : zcPtr->utxoSet_)
+   for (auto& hashPair : zcPtr->utxoSet_) {
       txHashes.insert(hashPair.first);
-
+   }
    auto promPtr = std::make_shared<std::promise<std::vector<Tx>>>();
    auto fut = promPtr->get_future();
-   auto getTxBatchLbd = [promPtr](ReturnMessage<std::vector<Tx>> batch)->void
+   const auto &getTxBatchLbd = [promPtr]
+      (const std::vector<Tx> &batch, std::exception_ptr exPtr)
    {
-      try
-      {
-         promPtr->set_value(std::move(batch.get()));
+      if (exPtr != nullptr) {
+         promPtr->set_exception(exPtr);
       }
-      catch (std::exception&)
-      {
-         promPtr->set_exception(std::current_exception());
+      else {
+         promPtr->set_value(batch);
       }
    };
-
-   connPtr_->bdv()->getTxBatchByHash(txHashes, getTxBatchLbd);
-   auto&& txBatch = fut.get();
+   if (!connPtr_->getTXsByHash(txHashes, getTxBatchLbd)) {
+      return;
+   }
+   const auto &txBatch = fut.get();
 
    zcPtr = std::make_shared<ColoredCoinZCSnapshot>();
    std::set<BinaryData> txsToCheck;
-   for (auto& tx : txBatch)
-   {
-      if (tx.getTxHeight() != UINT32_MAX)
+   for (auto& tx : txBatch) {
+      if (tx.getTxHeight() != UINT32_MAX) {
          continue;
-
+      }
       txsToCheck.insert(tx.getThisHash());
 
       //parse tx for origin address outputs
-      for (unsigned i = 0; i < tx.getNumTxOut(); i++)
-      {
+      for (unsigned i = 0; i < tx.getNumTxOut(); i++) {
          auto&& txOut = tx.getTxOutCopy(i);
          auto& scrAddr = txOut.getScrAddressStr();
          
-         if (originAddresses_.find(scrAddr) == originAddresses_.end())
+         if (originAddresses_.find(scrAddr) == originAddresses_.end()) {
             continue;
-
+         }
          addZcUtxo(currentSs, zcPtr, 
             tx.getThisHash(), i, txOut.getValue(), scrAddr);
       }
    }
 
-   if(txsToCheck.size() > 0)
-   {
+   if (txsToCheck.size() > 0) {
       //process unconfirmed settlements
       processZcBatch(currentSs, zcPtr, txsToCheck);
-
    }
 
    //swap the new snapshot in
    std::atomic_store_explicit(&zcSnapshot_, zcPtr, std::memory_order_release);
+}
+
+void ColoredCoinTracker::purgeZc(const ResultCb &cb)
+{
+   auto zcPtr = zcSnapshot();
+   if (zcPtr == nullptr) {
+      if (cb) {
+         cb(true);
+      }
+      return;
+   }
+   auto currentSs = snapshot();
+
+   //grab height for all our active zc
+   std::set<BinaryData> txHashes;
+   for (auto& hashPair : zcPtr->utxoSet_) {
+      txHashes.insert(hashPair.first);
+   }
+   const auto getTxBatchLbd = [this, cb, zcPtr, currentSs]
+      (const std::vector<Tx> &txBatch, std::exception_ptr exPtr) mutable
+   {
+      if (exPtr != nullptr) {
+         if (cb) {
+            cb(false);
+         }
+         return;
+      }
+
+      zcPtr = std::make_shared<ColoredCoinZCSnapshot>();
+      std::set<BinaryData> txsToCheck;
+      for (auto& tx : txBatch) {
+         if (tx.getTxHeight() != UINT32_MAX) {
+            continue;
+         }
+         txsToCheck.insert(tx.getThisHash());
+
+         //parse tx for origin address outputs
+         for (unsigned i = 0; i < tx.getNumTxOut(); i++) {
+            auto&& txOut = tx.getTxOutCopy(i);
+            auto& scrAddr = txOut.getScrAddressStr();
+
+            if (originAddresses_.find(scrAddr) == originAddresses_.end()) {
+               continue;
+            }
+            addZcUtxo(currentSs, zcPtr,
+               tx.getThisHash(), i, txOut.getValue(), scrAddr);
+         }
+      }
+
+      if (txsToCheck.size() > 0) {
+         //process unconfirmed settlements
+         processZcBatch(currentSs, zcPtr, txsToCheck);
+      }
+
+      //swap the new snapshot in
+      std::atomic_store_explicit(&zcSnapshot_, zcPtr, std::memory_order_release);
+      if (cb) {
+         cb(true);
+      }
+   };
+   if (!connPtr_->getTXsByHash(txHashes, getTxBatchLbd)) {
+      if (cb) {
+         cb(false);
+      }
+   }
 }
 
 ////
@@ -890,8 +1428,9 @@ std::vector<std::shared_ptr<CcOutpoint>> ColoredCoinTracker::getSpendableOutpoin
       if (iter != ssPtr->scrAddrCcSet_.end())
       {
          auto revokeIter = ssPtr->revokedAddresses_.find(scrAddr);
-         if (revokeIter != ssPtr->revokedAddresses_.end())
+         if (revokeIter != ssPtr->revokedAddresses_.end()) {
             return {};
+         }
 
          if (zcPtr != nullptr)
          {
@@ -932,7 +1471,7 @@ std::vector<std::shared_ptr<CcOutpoint>> ColoredCoinTracker::getSpendableOutpoin
 
 //// 
 void ColoredCoinTracker::eraseScrAddrOp(
-   std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
+   const std::shared_ptr<ColoredCoinSnapshot> &ssPtr,
    const std::shared_ptr<CcOutpoint>& opPtr)
 {
    if (ssPtr == nullptr)
@@ -964,7 +1503,7 @@ void ColoredCoinTracker::addScrAddrOp(
 
 ////
 void ColoredCoinTracker::addUtxo(
-   std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
+   const std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
    const BinaryData& txHash, unsigned txOutIndex,
    uint64_t value, const BinaryData& scrAddr)
 {
@@ -1008,8 +1547,8 @@ void ColoredCoinTracker::addUtxo(
 
 ////
 void ColoredCoinTracker::addZcUtxo(
-   std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
-   std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
+   const std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
+   const std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
    const BinaryData& txHash, unsigned txOutIndex,
    uint64_t value, const BinaryData& scrAddr)
 {
@@ -1098,8 +1637,9 @@ bool ColoredCoinTracker::goOnline()
    //TODO: load from snapshot
 
    //use default ACT if none is set
-   if (actPtr_ == nullptr)
+   if (actPtr_ == nullptr) {
       actPtr_ = std::make_shared<ColoredCoinACT>(connPtr_.get());
+   }
 
    //register CC addresses
    std::vector<BinaryData> addrVec;
@@ -1164,11 +1704,120 @@ bool ColoredCoinTracker::goOnline()
    return true;
 }
 
+std::pair<std::string, std::function<void()>> ColoredCoinTracker::goOnline(
+   const std::function<void(bool)> &cb)
+{
+   if (ready_.load(std::memory_order_relaxed)) {
+      cb(true);
+      return {};
+   }
+
+   //TODO: load from snapshot
+
+   //register CC addresses
+   std::vector<BinaryData> addrVec;
+
+   for (auto& addr : originAddresses_) {
+      addrVec.push_back(addr.prefixed());
+   }
+   for (auto& addr : revocationAddresses_) {
+      addrVec.push_back(addr.prefixed());
+   }
+   const auto regID = walletObj_->registerAddresses(addrVec, false);
+   const auto lbdUpdate = [this, cb]
+   {
+      //update state
+      const auto cbUpdate = [this, cb](const std::set<BinaryData> &addresses)
+      {
+         auto addrSet = std::make_shared<std::set<BinaryData>>(addresses);
+         const auto cbUpdateZc = [this, cb, addrSet](const std::set<BinaryData> &zcAddrSet) {
+            addrSet->insert(zcAddrSet.cbegin(), zcAddrSet.cend());
+            std::vector<BinaryData> addrVec;
+            for (auto& addr : *addrSet) {
+               addrVec.emplace_back(addr);
+            }
+            //register set of addresses to track as a result of update routines
+            walletObj_->registerAddresses(addrVec, true);
+
+            ready_.store(true, std::memory_order_relaxed);
+            if (cb) {
+               cb(true);
+            }
+         };
+         zcUpdate(cbUpdateZc);
+      };
+      update(cbUpdate);
+   };
+   return { regID, lbdUpdate };
+}
+
+void ColoredCoinTracker::onZeroConf(const RefreshCb &cb)
+{
+   const auto cbUpdateZc = [wallet = walletObj_, cb]
+      (const std::set<BinaryData> &addrSet)
+   {
+      if (addrSet.size() > 0) {
+         std::vector<BinaryData> addrVec;
+         for (const auto &addr : addrSet) {
+            addrVec.emplace_back(addr);
+         }
+         const auto regID = wallet->registerAddresses(addrVec, true);
+         if (cb) {
+            cb(regID);
+         }
+      }
+   };
+   zcUpdate(cbUpdateZc);
+}
+
+void ColoredCoinTracker::onNewBlock(unsigned int branchHeight, const RefreshCb &cb)
+{
+   /* reorg() if the branch height is set, will reset the state
+   to either the branch point or entirely clear it. Regardless
+   of resulting effect, we know the next call to update will
+   yield a valid state. */
+   if (branchHeight != UINT32_MAX) {
+      reorg(true);
+   }
+
+   const auto cbUpdate = [this, wallet=walletObj_, branchHeight, cb]
+      (const std::set<BinaryData> &addresses)
+   {
+      auto addrSet = std::make_shared<std::set<BinaryData>>(addresses);
+      const auto cbUpdateZc = [wallet, addrSet, cb]
+         (const std::set<BinaryData> &addresses)
+      {
+         addrSet->insert(addresses.cbegin(), addresses.cend());
+
+         //now register the update() address set
+         if (addrSet->size() > 0) {
+            std::vector<BinaryData> addrVec;
+            for (const auto &addr : *addrSet) {
+               addrVec.emplace_back(addr);
+            }
+            const auto regID = wallet->registerAddresses(addrVec, true);
+            if (cb) {
+               cb(regID);
+            }
+         }
+      };
+      //reorg() nuked the ZC snapshot, have to run zcUpdate anew
+      if (branchHeight != UINT32_MAX) {
+         zcUpdate(cbUpdateZc);
+      } else {
+         cbUpdateZc({});
+      }
+   };
+   update(cbUpdate);
+}
+
 ////
 void ColoredCoinTracker::shutdown()
 {
    ready_.store(false, std::memory_order_relaxed);
-   actPtr_->stop();
+   if (actPtr_) {
+      actPtr_->stop();
+   }
 }
 
 ////
