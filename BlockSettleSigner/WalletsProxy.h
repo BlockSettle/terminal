@@ -28,7 +28,7 @@ namespace bs {
    }
 }
 class SignerAdapter;
-
+class SignAdapterContainer;
 
 class WalletsProxy : public QObject
 {
@@ -103,11 +103,13 @@ private:
    Q_INVOKABLE QJSValue invokeJsCallBack(QJSValue jsCallback, QJSValueList args);
    std::shared_ptr<bs::sync::hd::Wallet> getWoSyncWallet(const bs::sync::WatchingOnlyWallet &) const;
    bool hasCCInfo() const { return hasCCInfo_; }
+   std::shared_ptr<SignAdapterContainer> signContainer() const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    SignerAdapter  *  adapter_{};
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   std::shared_ptr<SignAdapterContainer> signContainer_;
    bool walletsSynchronized_ = false;
    bool hasCCInfo_ = false;
 

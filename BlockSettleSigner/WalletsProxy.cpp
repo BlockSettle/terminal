@@ -12,6 +12,7 @@
 #include "CoreHDWallet.h"
 #include "PaperBackupWriter.h"
 #include "SignerAdapter.h"
+#include "SignerAdapterContainer.h"
 #include "UiUtils.h"
 #include "WalletBackupFile.h"
 #include "WalletEncryption.h"
@@ -30,7 +31,7 @@ using namespace Blocksettle;
 
 WalletsProxy::WalletsProxy(const std::shared_ptr<spdlog::logger> &logger
    , SignerAdapter *adapter)
-   : QObject(nullptr), logger_(logger), adapter_(adapter)
+   : QObject(nullptr), logger_(logger), adapter_(adapter), signContainer_(adapter->signContainer())
 {
    connect(adapter_, &SignerAdapter::ready, this, &WalletsProxy::setWalletsManager);
    connect(adapter_, &SignerAdapter::ccInfoReceived, [this](bool result) {
@@ -633,7 +634,7 @@ void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallb
 std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sync::WatchingOnlyWallet &wo) const
 {
    try {
-      auto result = std::make_shared<bs::sync::hd::Wallet>(wo, walletsMgr_->signContainer().get(), logger_);
+      auto result = std::make_shared<bs::sync::hd::Wallet>(wo, signContainer().get(), logger_);
       result->setWCT(walletsMgr_.get());
       for (const auto &groupEntry : wo.groups) {
          auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type), false);
@@ -646,6 +647,11 @@ std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sy
       logger_->error("[WalletsProxy] WO-wallet creation failed: {}", e.what());
    }
    return nullptr;
+}
+
+std::shared_ptr<SignAdapterContainer> WalletsProxy::signContainer() const
+{
+   return signContainer_;
 }
 
 std::function<void (bs::error::ErrorCode result)> WalletsProxy::createChangePwdResultCb(const QString &walletId, const QJSValue &jsCallback)
