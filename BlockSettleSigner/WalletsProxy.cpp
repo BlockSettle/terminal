@@ -633,7 +633,8 @@ void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallb
 std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sync::WatchingOnlyWallet &wo) const
 {
    try {
-      auto result = std::make_shared<bs::sync::hd::Wallet>(wo, nullptr, logger_);
+      auto result = std::make_shared<bs::sync::hd::Wallet>(wo, walletsMgr_->signContainer().get(), logger_);
+      result->setWCT(walletsMgr_.get());
       for (const auto &groupEntry : wo.groups) {
          auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type), false);
          for (const auto &leafEntry : groupEntry.leaves) {
