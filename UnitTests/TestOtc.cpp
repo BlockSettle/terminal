@@ -102,11 +102,11 @@ class TestOtc : public ::testing::Test
 public:
    void SetUp() override
    {
-      UnitTestWalletACT::clear();
-
       env_ = std::make_unique<TestEnv>(StaticLogger::loggerPtr);
       env_->requireArmory();
 
+      // There is some problem in test env, init order matters (second peer sign fails with "unresolved spender").
+      // Let's always use same order then.
       peer1_.init(*env_, "test1");
       peer2_.init(*env_, "test2");
 
@@ -235,18 +235,29 @@ public:
       peer2_.otc_->processPbMessage(response);
    }
 
-   void doOtcTest()
+   void mineNewBlocks(const bs::Address &dst, unsigned count)
    {
-      UnitTestWalletACT::clear();
+      auto curHeight = env_->armoryConnection()->topBlock();
+      auto addrRecip = dst.getRecipient(bs::XBTAmount{uint64_t(1 * COIN)});
+      env_->armoryInstance()->mineNewBlock(addrRecip.get(), count);
+      env_->blockMonitor()->waitForNewBlocks(curHeight + count);
+   }
 
+   void mineRandomBlocks(unsigned count)
+   {
+      mineNewBlocks(bs::Address("tb1qet0nfywkd44ra3t58x6kvjv5dmzhaa9tafv696"), count);
+   }
+
+   void doOtcTest(bool sellerOffers)
+   {
       peer1_.otc_->contactConnected(peer2_.name_);
       peer2_.otc_->contactConnected(peer1_.name_);
 
-      const int blockCount = 6;
-      auto curHeight = env_->armoryConnection()->topBlock();
-      auto addrRecip = peer1_.xbtAddress_.getRecipient(bs::XBTAmount{uint64_t(1 * COIN)});
-      env_->armoryInstance()->mineNewBlock(addrRecip.get(), blockCount);
-      env_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+      auto &sender = sellerOffers ? peer1_ : peer2_;
+      auto &receiver = sellerOffers ? peer2_ : peer1_;
+
+      mineNewBlocks(peer1_.xbtAddress_, 1);
+      mineRandomBlocks(6);
 
       auto wallet = peer1_.syncWalletMgr_->getDefaultWallet();
       ASSERT_TRUE(wallet);
@@ -268,27 +279,25 @@ public:
          bs::network::otc::Offer offer;
          offer.price = 100;
          offer.amount = 1000;
-         offer.ourSide = bs::network::otc::Side::Sell;
-         offer.hdWalletId = peer1_.wallet_->walletId();
-         offer.authAddress = peer1_.authAddress_.display();
-         peer1_.otc_->sendOffer(peer1_.otc_->contact(peer2_.name_), offer);
+         offer.ourSide = sellerOffers ? bs::network::otc::Side::Sell : bs::network::otc::Side::Buy;
+         offer.hdWalletId = sender.wallet_->walletId();
+         offer.authAddress = sender.authAddress_.display();
+         sender.otc_->sendOffer(sender.otc_->contact(receiver.name_), offer);
          QApplication::processEvents();
       }
 
-      auto remotePeer1 = peer2_.otc_->contact(peer1_.name_);
-      ASSERT_TRUE(remotePeer1);
-      ASSERT_TRUE(remotePeer1->state == otc::State::OfferRecv);
+      auto remotePeer = receiver.otc_->contact(sender.name_);
+      ASSERT_TRUE(remotePeer);
+      ASSERT_TRUE(remotePeer->state == otc::State::OfferRecv);
 
       {
-         auto remotePeer1 = peer2_.otc_->contact(peer1_.name_);
-
          bs::network::otc::Offer offer;
          offer.price = 100;
          offer.amount = 1000;
-         offer.ourSide = bs::network::otc::Side::Buy;
-         offer.hdWalletId = peer2_.wallet_->walletId();
-         offer.authAddress = peer2_.authAddress_.display();
-         peer2_.otc_->acceptOffer(remotePeer1, offer);
+         offer.ourSide = sellerOffers ? bs::network::otc::Side::Buy : bs::network::otc::Side::Sell;
+         offer.hdWalletId = receiver.wallet_->walletId();
+         offer.authAddress = receiver.authAddress_.display();
+         receiver.otc_->acceptOffer(receiver.otc_->contact(sender.name_), offer);
          QApplication::processEvents();
       }
 
@@ -316,7 +325,12 @@ public:
    std::atomic_bool quit_{false};
 };
 
-TEST_F(TestOtc, BasicTest)
+TEST_F(TestOtc, Sell)
 {
-   doOtcTest();
+   doOtcTest(true);
+}
+
+TEST_F(TestOtc, Buy)
+{
+   doOtcTest(false);
 }
