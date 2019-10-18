@@ -231,7 +231,6 @@ protected:
    std::shared_ptr<ColoredCoinACT>  actPtr_;
 
 private:
-   using ResultCb = std::function<void(bool)>;
    ////
    std::vector<Tx> grabTxBatch(const std::set<BinaryData>&);
 
@@ -245,31 +244,17 @@ private:
       std::shared_ptr<ColoredCoinSnapshot>&,
       const std::set<BinaryData>&);
 
-   // executed recursively until there will be no hashes to process
-   void processTxBatch(const std::shared_ptr<ColoredCoinSnapshot> &
-      , const std::set<BinaryData>&, const ResultCb &);
-
    void processZcBatch(
       const std::shared_ptr<ColoredCoinSnapshot>&,
       const std::shared_ptr<ColoredCoinZCSnapshot>&,
       const std::set<BinaryData>&);
 
-   void processZcBatch(
-      const std::shared_ptr<ColoredCoinSnapshot>&,
-      const std::shared_ptr<ColoredCoinZCSnapshot>&,
-      const std::set<BinaryData>&, const ResultCb &);
-
    void processRevocationBatch(
       const std::shared_ptr<ColoredCoinSnapshot>&,
       const std::set<BinaryData>&);
-
-   void processRevocationBatch(
-      const std::shared_ptr<ColoredCoinSnapshot>&,
-      const std::set<BinaryData>&, const ResultCb &);
 
    ////
    void purgeZc(void);
-   void purgeZc(const ResultCb &);
 
    ////
    void addUtxo(
@@ -320,10 +305,6 @@ protected:
    std::set<BinaryData> zcUpdate(void);
    void reorg(bool hard);
 
-   using AddrSetCb = std::function<void(const std::set<BinaryData> &)>;
-   void update(const AddrSetCb &);
-   void zcUpdate(const AddrSetCb &);
-
 public:
    ColoredCoinTracker(uint64_t coinsPerShare,
       std::shared_ptr<ArmoryConnection> connPtr) :
@@ -346,13 +327,6 @@ public:
 
    ////
    bool goOnline(void);
-
-   // returned lambda should be invoked when returned regId is registered
-   std::pair<std::string, std::function<void()>> goOnline(const std::function<void(bool)> &);
-
-   using RefreshCb = std::function<void(const std::string &)>;
-   void onZeroConf(const RefreshCb &);
-   void onNewBlock(unsigned int branchHeight, const RefreshCb &);
 
    //in: hash, tx index, txout index
    uint64_t getCcOutputValue(const BinaryData&, unsigned, unsigned) const;

@@ -860,7 +860,7 @@ void hd::CCLeaf::setCCDataResolver(const std::shared_ptr<CCDataResolver> &resolv
    setPath(path_);
    const auto genAddr = ccResolver_->genesisAddrFor(suffix_);
    if (!genAddr.isNull() && sync::Wallet::armory_) {
-      tracker_ = make_unique<ColoredCoinTracker>(ccResolver_->lotSizeFor(suffix_), sync::Wallet::armory_);
+      tracker_ = make_unique<ColoredCoinTrackerAsync>(ccResolver_->lotSizeFor(suffix_), sync::Wallet::armory_);
       tracker_->addOriginAddress(genAddr);
    }
    checker_ = genAddr.isNull() ? nullptr : std::make_shared<TxAddressChecker>(genAddr, sync::Wallet::armory_);
@@ -892,7 +892,7 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    if (ccResolver_ && armory && !tracker_) {
       const auto genAddr = ccResolver_->genesisAddrFor(suffix_);
       if (!genAddr.isNull()) {
-         tracker_ = make_unique<ColoredCoinTracker>(ccResolver_->lotSizeFor(suffix_), sync::Wallet::armory_);
+         tracker_ = make_unique<ColoredCoinTrackerAsync>(ccResolver_->lotSizeFor(suffix_), sync::Wallet::armory_);
          tracker_->addOriginAddress(genAddr);
          validationProc();
       }
