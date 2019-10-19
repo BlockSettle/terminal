@@ -55,7 +55,7 @@ install:
   - sudo apt build-dep -qq qt5-default || true
 
 script:
-  - python3 generate.py | cut -c1-100 && cd $HOME/build/BlockSettle/terminal/terminal.release && make -j2
+  - python3 generate.py | cut -c1-10 && cd $HOME/build/BlockSettle/terminal/terminal.release && make -j4
 
 cache:
     apt: true
