@@ -34,13 +34,18 @@ namespace bs {
          // returns from verifyUnsignedPayin
          uint64_t totalFee{};
          uint64_t estimatedFee{};
+         int totalOutputCount{};
          std::vector<UTXO> utxos;
+         std::string changeAddr;
 
          // returns from verifySignedPayout
          std::string payoutTxHashHex;
 
          static Result error(std::string errorMsg);
       };
+
+      static bs::Address constructSettlementAddress(const BinaryData &settlementId
+         , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey);
 
       static PayoutSignatureType whichSignature(const Tx &tx
          , uint64_t value

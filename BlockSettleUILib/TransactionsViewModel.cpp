@@ -165,7 +165,7 @@ void TXNode::del(int index)
    }
 }
 
-void TXNode::forEach(const std::function<void(const std::shared_ptr<TransactionsViewItem> &)> &cb)
+void TXNode::forEach(const std::function<void(const TransactionPtr &)> &cb)
 {
    if (item_) {
       cb(item_);
@@ -560,8 +560,8 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
             continue;
          }
          currentItems_[item->id()] = item;
-         if (!oldestItem_.isSet() || (oldestItem_.txEntry.txTime >= item->txEntry.txTime)) {
-            oldestItem_ = *item;
+         if (!oldestItem_ || (oldestItem_->txEntry.txTime >= item->txEntry.txTime)) {
+            oldestItem_ = item;
          }
          newTxKeys->insert(item->id());
          newItems->insert({ item->id(), { item, new TXNode(item) } });
@@ -569,7 +569,8 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
    }
 
    const auto &cbInited = [this, newItems, updatedItems, newTxKeys, keysMutex]
-         (const TransactionsViewItem *itemPtr) {
+      (const TransactionPtr &itemPtr)
+   {
       if (!itemPtr || !itemPtr->initialized) {
          logger_->error("item is not inited");
          return;
@@ -834,56 +835,53 @@ void TransactionsViewModel::onDelRows(std::vector<int> rows)
    }
 }
 
-TransactionsViewItem TransactionsViewModel::getItem(const QModelIndex &index) const
+TransactionPtr TransactionsViewModel::getItem(const QModelIndex &index) const
 {
    const auto &node = getNode(index);
    if (!node) {
       return {};
    }
-   return *(node->item());
+   return node->item();
 }
 
-void TransactionsViewModel::updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
-   , const std::function<void(const TransactionsViewItem *itemPtr)> &cb)
+void TransactionsViewModel::updateTransactionDetails(const TransactionPtr &item
+   , const std::function<void(const TransactionPtr &)> &cb)
 {
-   const auto &cbInited = [this, cb](const TransactionsViewItem *itemPtr) {
+   const auto &cbInited = [cb](const TransactionPtr &item) {
       if (cb) {
-         cb(itemPtr);
-      }
-      else {
-         logger_->warn("[TransactionsViewModel::updateTransactionDetails] missing callback");
+         cb(item);
       }
    };
-   item->initialize(armory_, walletsManager_, cbInited);
+   TransactionsViewItem::initialize(item, armory_, walletsManager_, cbInited);
 }
 
 
-void TransactionsViewItem::initialize(ArmoryConnection *armory
+void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnection *armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , std::function<void(const TransactionsViewItem *)> userCB)
+   , std::function<void(const TransactionPtr &)> userCB)
 {
-   const auto cbCheckIfInitializationCompleted = [this, userCB] {
-      if (initialized) {
+   const auto cbCheckIfInitializationCompleted = [item, userCB] {
+      if (item->initialized) {
          return;
       }
-      if (!dirStr.isEmpty() && !mainAddress.isEmpty() && !amountStr.isEmpty()) {
-         initialized = true;
-         userCB(this);
+      if (!item->dirStr.isEmpty() && !item->mainAddress.isEmpty() && !item->amountStr.isEmpty()) {
+         item->initialized = true;
+         userCB(item);
       }
    };
 
-   const auto cbMainAddr = [this, cbCheckIfInitializationCompleted](QString mainAddr, int addrCount) {
-      mainAddress = mainAddr;
-      addressCount = addrCount;
+   const auto cbMainAddr = [item, cbCheckIfInitializationCompleted](QString mainAddr, int addrCount) {
+      item->mainAddress = mainAddr;
+      item->addressCount = addrCount;
       cbCheckIfInitializationCompleted();
    };
 
-   const auto cbInit = [this, walletsMgr, cbMainAddr, cbCheckIfInitializationCompleted, userCB] {
-      if (amountStr.isEmpty() && txHashesReceived) {
-         calcAmount(walletsMgr);
+   const auto cbInit = [item, walletsMgr, cbMainAddr, cbCheckIfInitializationCompleted, userCB] {
+      if (item->amountStr.isEmpty() && item->txHashesReceived) {
+         item->calcAmount(walletsMgr);
       }
-      if (mainAddress.isEmpty()) {
-         if (!walletsMgr->getTransactionMainAddress(tx, walletID.toStdString(), (amount > 0), cbMainAddr)) {
+      if (item->mainAddress.isEmpty()) {
+         if (!walletsMgr->getTransactionMainAddress(item->tx, item->walletID.toStdString(), (item->amount > 0), cbMainAddr)) {
             userCB(nullptr);
          }
       }
@@ -892,7 +890,7 @@ void TransactionsViewItem::initialize(ArmoryConnection *armory
       }
    };
 
-   const auto cbTXs = [this, cbInit, userCB]
+   const auto cbTXs = [item, cbInit, userCB]
       (const std::vector<Tx> &txs, std::exception_ptr exPtr)
    {
       if (exPtr != nullptr) {
@@ -901,94 +899,94 @@ void TransactionsViewItem::initialize(ArmoryConnection *armory
       }
       for (const auto &tx : txs) {
          const auto &txHash = tx.getThisHash();
-         txIns[txHash] = tx;
+         item->txIns[txHash] = tx;
       }
-      txHashesReceived = true;
+      item->txHashesReceived = true;
       cbInit();
    };
-   const auto &cbDir = [this, cbInit](bs::sync::Transaction::Direction dir, std::vector<bs::Address> inAddrs) {
-      direction = dir;
-      dirStr = QObject::tr(bs::sync::Transaction::toStringDir(dir));
+   const auto &cbDir = [item, cbInit](bs::sync::Transaction::Direction dir, std::vector<bs::Address> inAddrs) {
+      item->direction = dir;
+      item->dirStr = QObject::tr(bs::sync::Transaction::toStringDir(dir));
       if (dir == bs::sync::Transaction::Direction::Received) {
          if (inAddrs.size() == 1) {    // likely a settlement address
             switch (inAddrs[0].getType()) {
             case AddressEntryType_P2WSH:
             case AddressEntryType_P2SH:
             case AddressEntryType_Multisig:
-               parentId = inAddrs[0];
+               item->parentId = inAddrs[0];
                break;
             default: break;
             }
          }
       }
       else if (dir == bs::sync::Transaction::Direction::Sent) {
-         for (int i = 0; i < tx.getNumTxOut(); ++i) {
-            TxOut out = tx.getTxOutCopy((int)i);
+         for (int i = 0; i < item->tx.getNumTxOut(); ++i) {
+            TxOut out = item->tx.getTxOutCopy((int)i);
             bs::Address addr(out.getScrAddressStr());
             switch (addr.getType()) {
             case AddressEntryType_P2WSH:     // likely a settlement address
             case AddressEntryType_P2SH:
             case AddressEntryType_Multisig:
-               parentId = addr;
+               item->parentId = addr;
                break;
             default: break;
             }
-            if (!parentId.isNull()) {
+            if (!item->parentId.isNull()) {
                break;
             }
          }
       }
       else if (dir == bs::sync::Transaction::Direction::PayIn) {
-         for (int i = 0; i < tx.getNumTxOut(); ++i) {
-            TxOut out = tx.getTxOutCopy((int)i);
+         for (int i = 0; i < item->tx.getNumTxOut(); ++i) {
+            TxOut out = item->tx.getTxOutCopy((int)i);
             bs::Address addr(out.getScrAddressStr());
             switch (addr.getType()) {
             case AddressEntryType_P2WSH:
             case AddressEntryType_P2SH:
             case AddressEntryType_Multisig:
-               groupId = addr;
+               item->groupId = addr;
                break;
             default: break;
             }
-            if (!groupId.isNull()) {
+            if (!item->groupId.isNull()) {
                break;
             }
          }
       }
       else if (dir == bs::sync::Transaction::Direction::PayOut) {
          if (inAddrs.size() == 1) {
-            groupId = inAddrs[0];
+            item->groupId = inAddrs[0];
          }
       }
       cbInit();
    };
 
-   const auto cbTX = [this, armory, walletsMgr, cbTXs, cbInit, cbDir, cbMainAddr, userCB](const Tx &newTx) {
+   const auto cbTX = [item, armory, walletsMgr, cbTXs, cbInit, cbDir, cbMainAddr, userCB](const Tx &newTx) {
       if (!newTx.isInitialized()) {
          userCB(nullptr);
          return;
       }
-      if (comment.isEmpty()) {
-         comment = wallet ? QString::fromStdString(wallet->getTransactionComment(txEntry.txHash))
+      if (item->comment.isEmpty()) {
+         item->comment = item->wallet ? QString::fromStdString(item->wallet->getTransactionComment(item->txEntry.txHash))
             : QString();
-         const auto endLineIndex = comment.indexOf(QLatin1Char('\n'));
+         const auto endLineIndex = item->comment.indexOf(QLatin1Char('\n'));
          if (endLineIndex != -1) {
-            comment = comment.left(endLineIndex) + QLatin1String("...");
+            item->comment = item->comment.left(endLineIndex) + QLatin1String("...");
          }
       }
 
-      if (!tx.isInitialized()) {
-         tx = std::move(newTx);
+      if (!item->tx.isInitialized()) {
+         item->tx = std::move(newTx);
          std::set<BinaryData> txHashSet;
-         for (size_t i = 0; i < tx.getNumTxIn(); i++) {
-            TxIn in = tx.getTxInCopy(i);
+         for (size_t i = 0; i < item->tx.getNumTxIn(); i++) {
+            TxIn in = item->tx.getTxInCopy(i);
             OutPoint op = in.getOutPoint();
-            if (txIns.find(op.getTxHash()) == txIns.end()) {
+            if (item->txIns.find(op.getTxHash()) == item->txIns.end()) {
                txHashSet.insert(op.getTxHash());
             }
          }
          if (txHashSet.empty()) {
-            txHashesReceived = true;
+            item->txHashesReceived = true;
          }
          else {
             if (!armory->getTXsByHash(txHashSet, cbTXs)) {
@@ -997,28 +995,28 @@ void TransactionsViewItem::initialize(ArmoryConnection *armory
          }
       }
       else {
-         txHashesReceived = true;
+         item->txHashesReceived = true;
       }
 
-      if (dirStr.isEmpty()) {
-         if (!walletsMgr->getTransactionDirection(tx, walletID.toStdString(), cbDir)) {
+      if (item->dirStr.isEmpty()) {
+         if (!walletsMgr->getTransactionDirection(item->tx, item->walletID.toStdString(), cbDir)) {
             userCB(nullptr);
          }
       }
       else {
-         if (txHashesReceived) {
+         if (item->txHashesReceived) {
             cbInit();
          }
       }
    };
 
-   if (initialized) {
-      userCB(this);
+   if (item->initialized) {
+      userCB(item);
    } else {
-      if (tx.isInitialized()) {
-         cbTX(tx);
+      if (item->tx.isInitialized()) {
+         cbTX(item->tx);
       } else {
-         if (!armory->getTxByHash(txEntry.txHash, cbTX)) {
+         if (!armory->getTxByHash(item->txEntry.txHash, cbTX)) {
             userCB(nullptr);
          }
       }

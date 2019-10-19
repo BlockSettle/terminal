@@ -104,8 +104,8 @@ bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSign
       });
    }
    catch (const std::exception &e) {
-      QTimer::singleShot(1, [this, reqId, e] {
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::InternalError, e.what());
+      QTimer::singleShot(1, [this, reqId, reason = std::string(e.what())] {
+         emit TXSigned(reqId, {}, bs::error::ErrorCode::InternalError, reason);
       });
    }
    return reqId;
@@ -150,8 +150,8 @@ bs::signer::RequestId InprocSigner::signSettlementPayoutTXRequest(const bs::core
          cb(bs::error::ErrorCode::NoError, signedTx);
       }
    } catch (const std::exception &e) {
-      QTimer::singleShot(1, [this, reqId, e] {
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::InternalError, e.what());
+      QTimer::singleShot(1, [this, reqId, reason = std::string(e.what())] {
+         emit TXSigned(reqId, {}, bs::error::ErrorCode::InternalError, reason);
       });
       if (cb) {
          cb(bs::error::ErrorCode::InternalError, {});
@@ -528,7 +528,7 @@ void InprocSigner::syncAddressBatch(
    //resolve the path and address type for addrSet
    std::map<BinaryData, bs::hd::Path> parsedMap;
    try {
-      parsedMap = std::move(wallet->indexPath(addrSet));
+      parsedMap = wallet->indexPath(addrSet);
    }
    catch (const AccountException &) {
       //failure to find even one of the addresses means the wallet chain needs 
