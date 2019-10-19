@@ -242,6 +242,7 @@ void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const B
       return;
    }
 
+   hide();
    xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash);
 }
 
@@ -251,5 +252,6 @@ void RFQDialog::onSignedPayinRequested(const std::string& settlementId, const Bi
       return;
    }
 
+   hide();
    xbtSettlContainer_->onSignedPayinRequested(settlementId, unsignedPayin);
 }
