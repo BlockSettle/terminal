@@ -123,7 +123,11 @@ void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
 {
    if (filter_) {
       QModelIndex sourceIndex = filter_->mapToSource(index);
-      const auto txItem = model_->getItem(sourceIndex);
+      const auto &txItem = model_->getItem(sourceIndex);
+      if (!txItem) {
+         SPDLOG_LOGGER_ERROR(logger_, "item not found");
+         return;
+      }
 
       TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
       transactionDetailDialog.exec();
@@ -176,9 +180,13 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
 
 void PortfolioWidget::onCreateRBFDialog()
 {
-   auto txItem = model_->getItem(actionRBF_->data().toModelIndex());
+   const auto &txItem = model_->getItem(actionRBF_->data().toModelIndex());
+   if (!txItem) {
+      SPDLOG_LOGGER_ERROR(logger_, "item not found");
+      return;
+   }
 
-   const auto &cbDialog = [this] (const TransactionsViewItem *txItem) {
+   const auto &cbDialog = [this](const TransactionPtr &txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
             , walletsManager_, signContainer_, logger_, appSettings_, txItem->tx
@@ -191,19 +199,23 @@ void PortfolioWidget::onCreateRBFDialog()
       }
    };
 
-   if (txItem.initialized) {
-      cbDialog(&txItem);
+   if (txItem->initialized) {
+      cbDialog(txItem);
    }
    else {
-      txItem.initialize(armory_.get(), walletsManager_, cbDialog);
+      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
    }
 }
 
 void PortfolioWidget::onCreateCPFPDialog()
 {
-   auto txItem = model_->getItem(actionCPFP_->data().toModelIndex());
+   const auto &txItem = model_->getItem(actionCPFP_->data().toModelIndex());
+   if (!txItem) {
+      SPDLOG_LOGGER_ERROR(logger_, "item not found");
+      return;
+   }
 
-   const auto &cbDialog = [this] (const TransactionsViewItem *txItem) {
+   const auto &cbDialog = [this](const TransactionPtr &txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
             , walletsManager_, signContainer_, txItem->wallet, logger_, appSettings_
@@ -216,11 +228,11 @@ void PortfolioWidget::onCreateCPFPDialog()
       }
    };
 
-   if (txItem.initialized) {
-      cbDialog(&txItem);
+   if (txItem->initialized) {
+      cbDialog(txItem);
    }
    else {
-      txItem.initialize(armory_.get(), walletsManager_, cbDialog);
+      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
    }
 }
 

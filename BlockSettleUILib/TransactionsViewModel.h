@@ -26,6 +26,9 @@ namespace bs {
 }
 class SafeLedgerDelegate;
 
+struct TransactionsViewItem;
+using TransactionPtr = std::shared_ptr<TransactionsViewItem>;
+
 struct TransactionsViewItem
 {
    bs::TXEntry txEntry;
@@ -50,9 +53,9 @@ struct TransactionsViewItem
    BinaryData  groupId;
 
    bool isSet() const { return (!txEntry.txHash.isNull() && !walletID.isEmpty()); }
-   void initialize(ArmoryConnection *
+   static void initialize(const TransactionPtr &item, ArmoryConnection *
       , const std::shared_ptr<bs::sync::WalletsManager> &
-      , std::function<void(const TransactionsViewItem *)>);
+      , std::function<void(const TransactionPtr &)>);
    void calcAmount(const std::shared_ptr<bs::sync::WalletsManager> &);
    bool containsInputsFrom(const Tx &tx) const;
 
@@ -68,7 +71,6 @@ private:
    mutable std::string        id_;
 };
 typedef std::vector<TransactionsViewItem>    TransactionItems;
-typedef std::shared_ptr<TransactionsViewItem>   TransactionPtr;
 
 class TXNode
 {
@@ -93,7 +95,7 @@ public:
    unsigned int level() const;
    QVariant data(int, int) const;
 
-   void forEach(const std::function<void(const std::shared_ptr<TransactionsViewItem> &)> &);
+   void forEach(const std::function<void(const TransactionPtr &)> &);
 
 private:
    void init();
@@ -146,8 +148,8 @@ public:
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-   TransactionsViewItem getItem(const QModelIndex &) const;
-   TransactionsViewItem getOldestItem() const { return oldestItem_; }
+   TransactionPtr getItem(const QModelIndex &) const;
+   TransactionPtr getOldestItem() const { return oldestItem_; }
    TXNode *getNode(const QModelIndex &) const;
 
 private slots:
@@ -172,8 +174,8 @@ private:
       , bool onNewBlock=false);
    std::pair<size_t, size_t> updateTransactionsPage(const std::vector<bs::TXEntry> &);
    void updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &);
-   void updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
-      , const std::function<void(const TransactionsViewItem *itemPtr)> &cb);
+   void updateTransactionDetails(const TransactionPtr &item
+      , const std::function<void(const TransactionPtr &)> &cb);
    std::shared_ptr<TransactionsViewItem> itemFromTransaction(const bs::TXEntry &);
    std::shared_ptr<TransactionsViewItem> getTxEntry(const std::string &key);
 
@@ -207,8 +209,8 @@ public:
 
 private:
    std::unique_ptr<TXNode> rootNode_;
-   TransactionsViewItem oldestItem_;
-   std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>>  currentItems_;
+   TransactionPtr oldestItem_;
+   std::unordered_map<std::string, TransactionPtr> currentItems_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AsyncClient::LedgerDelegate> ledgerDelegate_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
