@@ -163,9 +163,16 @@ public:
                   ASSERT_TRUE(result.success);
 
                   if (withoutChange_) {
-                     ASSERT_EQ(result.totalInputCount, 1);
+                     ASSERT_EQ(result.totalOutputCount, 1);
                   } else {
-                     ASSERT_EQ(result.totalInputCount, 2);
+                     ASSERT_EQ(result.totalOutputCount, 2);
+
+                     // peer1_ is always sending XBT
+                     auto changeWallet = peer1_.syncWalletMgr_->getWalletByAddress(result.changeAddr);
+                     ASSERT_TRUE(changeWallet);
+
+                     bool isExternal = changeWallet->isExternalAddress(result.changeAddr);
+                     ASSERT_FALSE(isExternal);
                   }
 
                   totalFee_ = result.totalFee;
