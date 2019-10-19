@@ -77,6 +77,8 @@ void TestEnv::shutdown()
    armoryConnection_ = nullptr;
 
    QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).removeRecursively();
+
+   ACTqueue::notifQueue_.clear();
 }
 
 void TestEnv::requireArmory()

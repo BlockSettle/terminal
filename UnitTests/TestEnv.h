@@ -378,12 +378,25 @@ public:
       , armoryInstance_(armoryInstance)
    {}
 
+   static float testFeePerByte()
+   {
+      return 1.0f;
+   }
+
    bool pushZC(const BinaryData& rawTx) const override
    {
       if (armoryInstance_ == nullptr)
          return false;
 
       armoryInstance_->pushZC(rawTx);
+      return true;
+   }
+
+   bool estimateFee(unsigned int nbBlocks, const FloatCb &cb) override
+   {
+      std::thread([cb] {
+         cb(float(1000 * double(testFeePerByte()) / BTCNumericTypes::BalanceDivider));
+      }).detach();
       return true;
    }
 };

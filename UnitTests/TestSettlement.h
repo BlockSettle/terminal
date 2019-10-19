@@ -11,10 +11,10 @@
 #include "BlockchainMonitor.h"
 #include "SettlementMonitor.h"
 #include "TestEnv.h"
-#include "TradesVerification.h"
 
 
 namespace bs {
+   enum class PayoutSignatureType : int;
    namespace core {
       class Wallet;
       namespace hd {
@@ -69,7 +69,7 @@ protected:
    std::map<bs::Address, std::shared_ptr<bs::core::hd::Leaf>>  settlLeafMap_;
    std::atomic_bool  receivedPayIn_{ false };
    std::atomic_bool  receivedPayOut_{ false };
-   bs::PayoutSignatureType  poType_ = bs::PayoutSignatureType::Undefined;
+   bs::PayoutSignatureType poType_{};
 
 private:
    QMutex            mtxWalletId_;
