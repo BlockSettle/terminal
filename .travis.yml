@@ -60,4 +60,5 @@ script:
 cache:
     apt: true
     directories:
-      - $HOME/build/BlockSettle/3rd
+    - $HOME/build/BlockSettle/3rd/release
+    - $HOME/build/BlockSettle/3rd/release-shared
