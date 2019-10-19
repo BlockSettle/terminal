@@ -31,7 +31,7 @@ echo "Building on platform: $(lsb_release -a)"
 
 echo "Building App..."
 cd ${project_dir}
-if [ ! -d "$third_dir" ]
+if [ ! -d "${third_dir}/release/Qt5" ]
 then
    python3 generate.py | cut -c1-100
    exit 0
