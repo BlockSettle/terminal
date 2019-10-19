@@ -136,18 +136,22 @@ bs::TradesVerification::Result bs::TradesVerification::verifyUnsignedPayin(const
       uint64_t settlementAmount = 0;
       uint64_t totalOutputAmount = 0;
       uint64_t settlementOutputsCount = 0;
-      int totalInputCount = 0;
+      int totalOutputCount = 0;
+      std::string changeAddr;
 
       for (const auto& recipient : recipients) {
          uint64_t value = recipient->getValue();
 
          totalOutputAmount += value;
-         if (bs::CheckRecipSigner::getRecipientAddress(recipient).display() == settlementAddress) {
+         const auto &addr = bs::CheckRecipSigner::getRecipientAddress(recipient).display();
+         if (addr == settlementAddress) {
             settlementAmount += value;
             settlementOutputsCount += 1;
+         } else {
+            changeAddr = addr;
          }
 
-         totalInputCount += 1;
+         totalOutputCount += 1;
       }
 
       if (settlementOutputsCount != 1) {
@@ -182,7 +186,8 @@ bs::TradesVerification::Result bs::TradesVerification::verifyUnsignedPayin(const
       result.success = true;
       result.totalFee = totalInput - totalOutputAmount;
       result.estimatedFee = static_cast<uint64_t>(feePerByte * unsignedPayin.getSize());
-      result.totalInputCount = totalInputCount;
+      result.totalOutputCount = totalOutputCount;
+      result.changeAddr = changeAddr;
       for (const auto& spender : spenders) {
          result.utxos.push_back(spender->getUtxo());
       }
