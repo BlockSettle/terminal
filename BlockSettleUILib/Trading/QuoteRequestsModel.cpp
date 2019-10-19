@@ -295,22 +295,6 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
                      return m->security_;
                   }
 
-                  case Column::Product : {
-                     if (m->security_ == groupNameSettlements_ && settlCompleted_) {
-                        return QString::number(settlCompleted_);
-                     } else {
-                        return QVariant();
-                     }
-                  }
-
-                  case Column::Side : {
-                     if (m->security_ == groupNameSettlements_ && settlFailed_) {
-                        return QString::number(settlFailed_);
-                     } else {
-                        return QVariant();
-                     }
-                  }
-
                   default :
                      return QVariant();
                }
@@ -901,11 +885,9 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
 
    // Use queued connections to not destroy SettlementContainer inside callbacks
    connect(container.get(), &bs::SettlementContainer::failed, this, [this, id] {
-      ++settlFailed_;
       deleteSettlement(id);
    }, Qt::QueuedConnection);
    connect(container.get(), &bs::SettlementContainer::completed, this, [this, id] {
-      ++settlCompleted_;
       deleteSettlement(id);
    }, Qt::QueuedConnection);
    connect(container.get(), &bs::SettlementContainer::timerExpired, this, [this, id] {

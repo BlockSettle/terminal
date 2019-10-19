@@ -144,8 +144,6 @@ private:
    std::shared_ptr<BaseCelerClient>     celerClient_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::unordered_set<std::string>  pendingDeleteIds_;
-   unsigned int   settlCompleted_ = 0;
-   unsigned int   settlFailed_ = 0;
    int priceUpdateInterval_;
    bool showQuoted_;
 
