@@ -205,7 +205,7 @@ namespace bs {
 
       protected:
          virtual void onZeroConfReceived(const std::vector<bs::TXEntry>&);
-         virtual void onNewBlock(unsigned int);
+         virtual void onNewBlock(unsigned int, unsigned int);
          virtual void onRefresh(const std::vector<BinaryData> &ids, bool online);
 
          virtual std::vector<BinaryData> getAddrHashes() const = 0;
@@ -293,8 +293,8 @@ namespace bs {
          virtual void onZCReceived(const std::vector<bs::TXEntry> &zcs) override {
             parent_->onZeroConfReceived(zcs);
          }
-         virtual void onNewBlock(unsigned int block, unsigned int) override {
-            parent_->onNewBlock(block);
+         virtual void onNewBlock(unsigned int block, unsigned int bh) override {
+            parent_->onNewBlock(block, bh);
          }
          void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) override;
       protected:

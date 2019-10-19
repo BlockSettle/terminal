@@ -169,29 +169,31 @@ private:
       return notifQueue_.pop_front();
    }
 
+protected:
+   virtual void onUpdate(std::shared_ptr<DBNotificationStruct>) {}
+
 public:
    ColoredCoinACT(ArmoryConnection *armory)
       : ArmoryCallbackTarget()
    {
       init(armory);
    }
+   ColoredCoinACT() : ArmoryCallbackTarget() {}
+
    ~ColoredCoinACT() override
    {
       cleanup();
    }
 
    ////
-   virtual void onZCReceived(const std::vector<bs::TXEntry> &zcs) override;
-   virtual void onNewBlock(unsigned int, unsigned int) override;
-   virtual void onRefresh(const std::vector<BinaryData> &, bool) override;
+   void onZCReceived(const std::vector<bs::TXEntry> &zcs) override;
+   void onNewBlock(unsigned int, unsigned int) override;
+   void onRefresh(const std::vector<BinaryData> &, bool) override;
 
    ////
    virtual void start();
    virtual void stop();
    virtual void setCCManager(ColoredCoinTracker* ccPtr) { ccPtr_ = ccPtr; }
-
-   ////
-   virtual void onUpdate(std::shared_ptr<DBNotificationStruct>&) {}
 
 private:
    virtual void processNotification(void);
@@ -226,29 +228,29 @@ private:
 
 protected:
    std::shared_ptr<AsyncClient::BtcWallet> walletObj_;
-   std::shared_ptr<ColoredCoinACT> actPtr_;
+   std::shared_ptr<ColoredCoinACT>  actPtr_;
 
 private:
    ////
    std::vector<Tx> grabTxBatch(const std::set<BinaryData>&);
 
    ParsedCcTx processTx(
-      std::shared_ptr<ColoredCoinSnapshot>&,
-      std::shared_ptr<ColoredCoinZCSnapshot>&,
+      const std::shared_ptr<ColoredCoinSnapshot> &,
+      const std::shared_ptr<ColoredCoinZCSnapshot>&,
       const Tx&) const;
 
    ////
    std::set<BinaryData> processTxBatch(
       std::shared_ptr<ColoredCoinSnapshot>&,
       const std::set<BinaryData>&);
-   
+
    void processZcBatch(
-      std::shared_ptr<ColoredCoinSnapshot>&,
-      std::shared_ptr<ColoredCoinZCSnapshot>&,
+      const std::shared_ptr<ColoredCoinSnapshot>&,
+      const std::shared_ptr<ColoredCoinZCSnapshot>&,
       const std::set<BinaryData>&);
 
    void processRevocationBatch(
-      std::shared_ptr<ColoredCoinSnapshot>&,
+      const std::shared_ptr<ColoredCoinSnapshot>&,
       const std::set<BinaryData>&);
 
    ////
@@ -256,13 +258,13 @@ private:
 
    ////
    void addUtxo(
-      std::shared_ptr<ColoredCoinSnapshot>&,
+      const std::shared_ptr<ColoredCoinSnapshot>&,
       const BinaryData& txHash, unsigned txOutIndex,
       uint64_t value, const BinaryData& scrAddr);
 
    void addZcUtxo(
-      std::shared_ptr<ColoredCoinSnapshot>&,
-      std::shared_ptr<ColoredCoinZCSnapshot>&,
+      const std::shared_ptr<ColoredCoinSnapshot>&,
+      const std::shared_ptr<ColoredCoinZCSnapshot>&,
       const BinaryData& txHash, unsigned txOutIndex,
       uint64_t value, const BinaryData& scrAddr);
 
@@ -273,7 +275,7 @@ private:
 
    ////
    void eraseScrAddrOp(
-      std::shared_ptr<ColoredCoinSnapshot>&,
+      const std::shared_ptr<ColoredCoinSnapshot> &,
       const std::shared_ptr<CcOutpoint>&);
    
    void addScrAddrOp(
@@ -282,9 +284,9 @@ private:
 
    ////   
    uint64_t getCcOutputValue(
-      std::shared_ptr<ColoredCoinSnapshot>&, 
-      std::shared_ptr<ColoredCoinZCSnapshot>&,
-      const BinaryData&, unsigned, unsigned) const;
+      const std::shared_ptr<ColoredCoinSnapshot> &
+      , const std::shared_ptr<ColoredCoinZCSnapshot>&
+      , const BinaryData&, unsigned, unsigned) const;
 
    ////
    std::shared_ptr<ColoredCoinSnapshot> snapshot(void) const;
@@ -311,9 +313,7 @@ public:
       ready_.store(false, std::memory_order_relaxed);
 
       auto&& wltIdSbd = CryptoPRNG::generateRandom(12);
-      walletObj_ = std::make_shared<AsyncClient::BtcWallet>(
-         connPtr_->bdv()->instantiateWallet(
-            wltIdSbd.toHexStr()));
+      walletObj_ = connPtr_->instantiateWallet(wltIdSbd.toHexStr());
    }
 
    ~ColoredCoinTracker(void)

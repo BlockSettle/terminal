@@ -148,7 +148,9 @@ void TransactionDetailsWidget::processTxData(Tx tx)
 
    // Get each Tx object associated with the Tx's TxIn object. Needed to calc
    // the fees.
-   const auto &cbProcessTX = [this](const std::vector<Tx> &prevTxs) {
+   const auto &cbProcessTX = [this]
+      (const std::vector<Tx> &prevTxs, std::exception_ptr)
+   {
       for (const auto &prevTx : prevTxs) {
          BinaryTXID intPrevTXHash(prevTx.getThisHash(), false);
          prevTxMap_[intPrevTXHash] = prevTx;

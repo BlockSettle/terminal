@@ -187,6 +187,7 @@ bool ArmoryObject::getTxByHash(const BinaryData &hash, const TxCb &cb)
 bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb &cb)
 {
    auto result = std::make_shared<std::vector<Tx>>();
+#if 0    // TXs need to contain the actual height, caching by hash forbids this
    std::set<BinaryData> missedHashes;
    for (const auto &hash : hashes) {
       const auto tx = txCache_.get(hash);
@@ -207,7 +208,14 @@ bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb 
       }
       return true;
    }
-   const auto &cbWrap = [this, cb, result](const std::vector<Tx> &txs) {
+#endif   //0
+   const auto &cbWrap = [this, cb, result]
+      (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         cb({}, exPtr);
+         return;
+      }
       for (const auto &tx : txs) {
          if (tx.isInitialized()) {
             txCache_.put(tx.getThisHash(), tx);
@@ -215,13 +223,13 @@ bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb 
          result->push_back(tx);
       }
       if (needInvokeCb()) {
-         QMetaObject::invokeMethod(this, [cb, result] { cb(*result); });
+         QMetaObject::invokeMethod(this, [cb, result] { cb(*result, nullptr); });
       }
       else {
-         cb(*result);
+         cb(*result, nullptr);
       }
    };
-   return ArmoryConnection::getTXsByHash(missedHashes, cbWrap);
+   return ArmoryConnection::getTXsByHash(/*missedHashes*/hashes, cbWrap);
 }
 
 bool ArmoryObject::getRawHeaderForTxHash(const BinaryData& inHash, const BinaryDataCb &callback)

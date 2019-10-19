@@ -295,7 +295,8 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 {
    // The callback that handles previous Tx objects attached to the TxIn objects
    // and processes them. Once done, the UI can be changed.
-   const auto &cbCollectPrevTXs = [this](const std::vector<Tx> &prevTxs) {
+   const auto &cbCollectPrevTXs = [this](const std::vector<Tx> &prevTxs, std::exception_ptr)
+   {
       for (const auto &prevTx : prevTxs) {
          txMap_[prevTx.getThisHash()] = prevTx;
       }
@@ -305,7 +306,9 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 
    // Callback used to process Tx objects obtained from Armory. Used primarily
    // to obtain Tx entries for the TxIn objects we're checking.
-   const auto &cbCollectTXs = [this, cbCollectPrevTXs](const std::vector<Tx> &txs) {
+   const auto &cbCollectTXs = [this, cbCollectPrevTXs]
+      (const std::vector<Tx> &txs, std::exception_ptr)
+   {
       std::set<BinaryData> prevTxHashSet; // Prev Tx hashes for an addr (fee calc).
       for (const auto &tx : txs) {
          const auto &prevTxHash = tx.getThisHash();
@@ -333,7 +336,9 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 
    // Callback to process ledger entries (pages) from the ledger delegate. Gets
    // Tx entries from Armory.
-   const auto &cbLedger = [this, cbCollectTXs] (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) {
+   const auto &cbLedger = [this, cbCollectTXs]
+      (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)
+   {
       auto result = std::make_shared<std::vector<ClientClasses::LedgerEntry>>();
       try {
          *result = entries.get();
@@ -359,7 +364,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
          }
          if (txHashSet.empty()) {
             logger_->info("[AddressDetailsWidget::getTxData] address participates in no TXs");
-            cbCollectTXs({});
+            cbCollectTXs({}, nullptr);
          } else {
             armory_->getTXsByHash(txHashSet, cbCollectTXs);
          }

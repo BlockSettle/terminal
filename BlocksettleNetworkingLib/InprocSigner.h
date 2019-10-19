@@ -43,7 +43,7 @@ public:
       , const bs::sync::PasswordDialogData &
       , TXSignMode
       , bool
-      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &) override { return 0; }
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &) override;
 
    bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &
       , const bs::sync::PasswordDialogData &

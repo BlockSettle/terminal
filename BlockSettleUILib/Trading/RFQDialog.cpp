@@ -101,7 +101,6 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
 
 void RFQDialog::reportError(const QString& errorMessage)
 {
-   BSMessageBox(BSMessageBox::critical, tr("RFQ error"), errorMessage, this).exec();
 }
 
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()

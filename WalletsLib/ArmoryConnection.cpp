@@ -438,15 +438,15 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
       logger_->error("[ArmoryConnection::getWalletsHistory] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb]
-                        (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) {
+   const auto &cbWrap = [logger=logger_, cb](ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)
+   {
       try {
          if (cb) {
             cb(entries.get());
          }
       }
       catch(std::exception& e) {
-         logger_->error("[ArmoryConnection::getWalletsHistory (cbWrap)] Return data error - {}"
+         logger->error("[ArmoryConnection::getWalletsHistory (cbWrap)] Return data error - {}"
             , e.what());
       }
    };
@@ -488,7 +488,7 @@ bool ArmoryConnection::getWalletsLedgerDelegate(const LedgerDelegateCb &cb)
       logger_->error("[ArmoryConnection::getWalletsLedgerDelegate] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb](ReturnMessage<AsyncClient::LedgerDelegate> delegate) {
+   const auto &cbWrap = [logger=logger_, cb](ReturnMessage<AsyncClient::LedgerDelegate> delegate) {
       try {
          auto ld = std::make_shared< AsyncClient::LedgerDelegate>(delegate.get());
          if (cb) {
@@ -496,7 +496,7 @@ bool ArmoryConnection::getWalletsLedgerDelegate(const LedgerDelegateCb &cb)
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[ArmoryConnection::getWalletsLedgerDelegate (cbWrap)] Return data error "
+         logger->error("[ArmoryConnection::getWalletsLedgerDelegate (cbWrap)] Return data error "
             "- {}", e.what());
          if (cb) {
             cb(nullptr);
@@ -514,7 +514,7 @@ bool ArmoryConnection::getSpendableTxOutListForValue(const std::vector<std::stri
       logger_->error("[ArmoryConnection::getSpendableTxOutListForValue] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb](ReturnMessage<std::vector<UTXO>> retMsg) {
+   const auto &cbWrap = [logger=logger_, cb](ReturnMessage<std::vector<UTXO>> retMsg) {
       try {
          const auto &txOutList = retMsg.get();
          if (cb) {
@@ -522,7 +522,7 @@ bool ArmoryConnection::getSpendableTxOutListForValue(const std::vector<std::stri
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[ArmoryConnection::getSpendableTxOutListForValue] failed: {}", e.what());
+         logger->error("[ArmoryConnection::getSpendableTxOutListForValue] failed: {}", e.what());
          if (cb) {
             cb({});
          }
@@ -538,14 +538,14 @@ bool ArmoryConnection::getSpendableZCoutputs(const std::vector<std::string> &wal
       logger_->error("[ArmoryConnection::getSpendableZCoutputs] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb](ReturnMessage<std::vector<UTXO>> retMsg) {
+   const auto &cbWrap = [logger=logger_, cb](ReturnMessage<std::vector<UTXO>> retMsg) {
       try {
          const auto &txOutList = retMsg.get();
          if (cb) {
             cb(txOutList);
          }
       } catch (const std::exception &e) {
-         logger_->error("[ArmoryConnection::getSpendableZCoutputs] failed: {}", e.what());
+         logger->error("[ArmoryConnection::getSpendableZCoutputs] failed: {}", e.what());
          if (cb) {
             cb({});
          }
@@ -568,13 +568,13 @@ bool ArmoryConnection::getNodeStatus(const std::function<void(const std::shared_
       return false;
    }
 
-   const auto cbWrap = [this, userCB](ReturnMessage<std::shared_ptr<::ClientClasses::NodeStatusStruct>> reply)
+   const auto cbWrap = [logger=logger_, userCB](ReturnMessage<std::shared_ptr<::ClientClasses::NodeStatusStruct>> reply)
    {
       try {
          const auto nodeStatus = reply.get();
          userCB(nodeStatus);
       } catch (const std::exception &e) {
-         logger_->error("[ArmoryConnection::getNodeStatus] failed: {}", e.what());
+         logger->error("[ArmoryConnection::getNodeStatus] failed: {}", e.what());
          userCB({});
       }
    };
@@ -590,14 +590,14 @@ bool ArmoryConnection::getRBFoutputs(const std::vector<std::string> &walletIds, 
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb](ReturnMessage<std::vector<UTXO>> retMsg) {
+   const auto &cbWrap = [logger=logger_, cb](ReturnMessage<std::vector<UTXO>> retMsg) {
       try {
          const auto &txOutList = retMsg.get();
          if (cb) {
             cb(txOutList);
          }
       } catch (const std::exception &e) {
-         logger_->error("[ArmoryConnection::getRBFoutputs] failed: {}", e.what());
+         logger->error("[ArmoryConnection::getRBFoutputs] failed: {}", e.what());
          if (cb) {
             cb({});
          }
@@ -613,7 +613,7 @@ bool ArmoryConnection::getUTXOsForAddress(const bs::Address &addr, const UTXOsCb
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb, addr](ReturnMessage<std::vector<UTXO>> retMsg) {
+   const auto &cbWrap = [logger=logger_, cb, addr](ReturnMessage<std::vector<UTXO>> retMsg) {
       try {
          const auto &utxos = retMsg.get();
          if (cb) {
@@ -621,7 +621,7 @@ bool ArmoryConnection::getUTXOsForAddress(const bs::Address &addr, const UTXOsCb
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[ArmoryConnection::getUTXOsForAddress] {} failed: {}"
+         logger->error("[ArmoryConnection::getUTXOsForAddress] {} failed: {}"
             , addr.display(), e.what());
          if (cb) {
             cb({});
@@ -646,7 +646,7 @@ bool ArmoryConnection::getOutpointsFor(const std::vector<bs::Address> &addresses
       addrVec.insert(addr.prefixed());
    }
 
-   const auto cbWrap = [this, cb, addresses](ReturnMessage<OutpointBatch> opBatch)
+   const auto cbWrap = [logger=logger_, cb, addresses](ReturnMessage<OutpointBatch> opBatch)
    {
       try {
          const auto batch = opBatch.get();
@@ -654,7 +654,7 @@ bool ArmoryConnection::getOutpointsFor(const std::vector<bs::Address> &addresses
             cb(batch);
          }
       } catch (const std::exception &e) {
-         logger_->error("[ArmoryConnection::getOutpointsFor] {} address[es] failed: {}"
+         logger->error("[ArmoryConnection::getOutpointsFor] {} address[es] failed: {}"
             , addresses.size(), e.what());
          if (cb) {
             cb({});
@@ -665,6 +665,56 @@ bool ArmoryConnection::getOutpointsFor(const std::vector<bs::Address> &addresses
    return true;
 }
 
+bool ArmoryConnection::getOutpointsForAddresses(const std::set<BinaryData> &addrVec
+   , const std::function<void(const OutpointBatch &, std::exception_ptr)> &cb
+   , unsigned int height, unsigned int zcIndex)
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
+      return false;
+   }
+
+   const auto cbWrap = [logger=logger_, cb, addrVec](ReturnMessage<OutpointBatch> opBatch)
+   {
+      try {
+         const auto batch = opBatch.get();
+         if (cb) {
+            cb(batch, nullptr);
+         }
+      } catch (const std::exception &e) {
+         logger->error("[ArmoryConnection::getOutpointsFor] {} address[es] failed: {}"
+            , addrVec.size(), e.what());
+         if (cb) {
+            cb({}, std::make_exception_ptr(e));
+         }
+      }
+   };
+   bdv_->getOutpointsForAddresses(addrVec, height, zcIndex, cbWrap);
+   return true;
+}
+
+bool ArmoryConnection::getSpentnessForOutputs(const std::map<BinaryData, std::set<unsigned>> &outputs
+   , const std::function<void(const std::map<BinaryData, std::map<unsigned, BinaryData>> &, std::exception_ptr)> &cb)
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
+      return false;
+   }
+   const auto cbWrap = [logger = logger_, cb](ReturnMessage<std::map<BinaryData, std::map<unsigned, BinaryData>>> msg)
+   {
+      try {
+         const auto &spentness = msg.get();
+         cb(spentness, nullptr);
+      }
+      catch (const std::exception &e) {
+         logger->error("[ArmoryConnection::getSpentnessForOutputs] failed to get: {}", e.what());
+         cb({}, std::make_exception_ptr(e));
+      }
+   };
+   bdv_->getSpentnessForOutputs(outputs, cbWrap);
+   return true;
+}
+
 bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walletIDs
    , const std::function<void(const std::map<std::string, CombinedBalances> &)> &cb)
 {
@@ -672,7 +722,7 @@ bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walle
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, cb](ReturnMessage<std::map<std::string, CombinedBalances>> retMsg)
+   const auto &cbWrap = [logger=logger_, cb](ReturnMessage<std::map<std::string, CombinedBalances>> retMsg)
    {
       try {
          const auto balances = retMsg.get();
@@ -681,7 +731,7 @@ bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walle
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[ArmoryConnection::getCombinedBalances] failed to get result: {}", e.what());
+         logger->error("[ArmoryConnection::getCombinedBalances] failed to get result: {}", e.what());
       }
    };
    bdv_->getCombinedBalances(walletIDs, cbWrap);
@@ -695,7 +745,7 @@ bool ArmoryConnection::getCombinedTxNs(const std::vector<std::string> &walletIDs
       logger_->error("[ArmoryConnection::getCombinedTxNs] invalid state: {}", (int)state_.load());
       return false;
    }
-   const auto &cbWrap = [this, walletIDs, cb](ReturnMessage<std::map<std::string, CombinedCounts>> retMsg)
+   const auto &cbWrap = [logger=logger_, walletIDs, cb](ReturnMessage<std::map<std::string, CombinedCounts>> retMsg)
    {
       try {
          auto counts = retMsg.get();
@@ -708,7 +758,7 @@ bool ArmoryConnection::getCombinedTxNs(const std::vector<std::string> &walletIDs
             cb(counts);
          }
       } catch (const std::exception &e) {
-         logger_->error("[ArmoryConnection::getCombinedTxNs] failed to get result: {}", e.what());
+         logger->error("[ArmoryConnection::getCombinedTxNs] failed to get result: {}", e.what());
          if (cb) {
             cb({});
          }
@@ -787,19 +837,19 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, const TX
       logger_->warn("[ArmoryConnection::getTXsByHash] empty hash set");
       return false;
    }
-   if (!cb) {
-      logger_->warn("[ArmoryConnection::getTXsByHash] missing callback");
-      return false;
-   }
 
-   const auto cbWrap = [this, cb](ReturnMessage<std::vector<Tx>> msg) {
+   const auto cbWrap = [logger=logger_, cb](ReturnMessage<std::vector<Tx>> msg)->void
+   {
       try {
-         const auto &txs = msg.get();
-         cb(txs);
+         if (cb) {
+            cb(std::move(msg.get()), nullptr);
+         }
       }
       catch (const std::exception &e) {
-         logger_->error("[ArmoryConnection::getTXsByHash] failed to get: {}", e.what());
-         cb({});
+         logger->error("[ArmoryConnection::getTXsByHash] failed to get: {}", e.what());
+         if (cb) {
+            cb({}, std::make_exception_ptr(e));
+         }
       }
    };
    bdv_->getTxBatchByHash(hashes, cbWrap);
@@ -816,15 +866,14 @@ bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash, const Bin
    // For now, don't worry about chaining callbacks or Tx caches. Just dump
    // everything into the BDV. This may need to change in the future, making the
    // call more like getTxByHash().
-   const auto &cbWrap = [this, callback, inHash](ReturnMessage<BinaryData> bd) {
+   const auto &cbWrap = [logger=logger_, callback, inHash](ReturnMessage<BinaryData> bd) {
       try {
          if (callback) {
             callback(bd.get());
          }
       }
-      catch(std::exception& e) {
-         // Switch endian on print to RPC byte order
-         logger_->error("[ArmoryConnection::getTXsByHash (cbWrap)] Return data error - "
+      catch (const std::exception &e) {
+         logger->error("[ArmoryConnection::getTXsByHash (cbWrap)] Return data error - "
             "{} - hash {}", e.what(), inHash.toHexStr(true));
       }
    };
@@ -843,14 +892,14 @@ bool ArmoryConnection::getHeaderByHeight(const unsigned int inHeight, const Bina
    // For now, don't worry about chaining callbacks or Tx caches. Just dump
    // everything into the BDV. This may need to change in the future, making the
    // call more like getTxByHash().
-   const auto &cbWrap = [this, callback, inHeight](ReturnMessage<BinaryData> bd) {
+   const auto &cbWrap = [logger=logger_, callback, inHeight](ReturnMessage<BinaryData> bd) {
       try {
          if (callback) {
             callback(bd.get());
          }
       }
-      catch(std::exception& e) {
-         logger_->error("[getHeaderByHeight (cbWrap)] Return data error - {} - "
+      catch (const std::exception &e) {
+         logger->error("[getHeaderByHeight (cbWrap)] Return data error - {} - "
             "height {}", e.what(), inHeight);
       }
    };
@@ -882,13 +931,13 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, const FloatCb &cb)
          }
       }
    };
-   const auto &cbWrap = [this, cbProcess, cb, nbBlocks]
+   const auto &cbWrap = [logger=logger_, cbProcess, cb, nbBlocks]
                         (ReturnMessage<ClientClasses::FeeEstimateStruct> feeStruct) {
       try {
          cbProcess(feeStruct.get());
       }
       catch (const std::exception &e) {
-         logger_->error("[estimateFee (cbWrap)] Return data error - {} - {} "
+         logger->error("[estimateFee (cbWrap)] Return data error - {} - {} "
             "blocks", e.what(), nbBlocks);
          if (cb) {
             cb(std::numeric_limits<float>::infinity());
@@ -928,14 +977,14 @@ bool ArmoryConnection::getFeeSchedule(const FloatMapCb &cb)
       }
    };
 
-   const auto &cbWrap = [this, cbProcess]
-      (ReturnMessage<std::map<unsigned int,
-                              ClientClasses::FeeEstimateStruct>> feeStructMap) {
+   const auto &cbWrap = [logger=logger_, cbProcess]
+      (ReturnMessage<std::map<unsigned int, ClientClasses::FeeEstimateStruct>> feeStructMap)
+   {
       try {
          cbProcess(feeStructMap.get());
       }
       catch (const std::exception &e) {
-         logger_->error("[getFeeSchedule (cbProcess)] Return data error - {}"
+         logger->error("[getFeeSchedule (cbProcess)] Return data error - {}"
             , e.what());
       }
    };
