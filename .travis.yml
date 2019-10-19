@@ -21,7 +21,8 @@ env:
     - secure: ""
 
 before_install:
-  - chmod +x generate.py
+  - chmod +x Travis/build_linux.sh
+  - chmod +x Travis/build_osx.sh
 
 addons:
   apt:
@@ -55,7 +56,8 @@ install:
   - sudo apt build-dep -qq qt5-default || true
 
 script:
-  - python3 generate.py | cut -c1-10 && cd $HOME/build/BlockSettle/terminal/terminal.release && make -j4
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then Travis/build_linux.sh ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then Travis/build_osx.sh ; fi
 
 cache:
     apt: true
