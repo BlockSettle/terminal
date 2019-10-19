@@ -134,7 +134,7 @@ class ZeroMQSettings(Configurator):
         return 'vs' + vs_year
 
     def make_x(self):
-        command = ['make', '-j', str(multiprocessing.cpu_count())]
+        command = ['make', '-j4']
 
         result = subprocess.call(command)
         return result == 0

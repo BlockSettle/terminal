@@ -90,7 +90,7 @@ class ProtobufSettings(Configurator):
             return 'Debug'
 
     def make_x(self):
-        command = ['make', '-j', str(max(1, multiprocessing.cpu_count() + 1))]
+        command = ['make', '-j4']
 
         result = subprocess.call(command)
         return result == 0
