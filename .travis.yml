@@ -21,8 +21,7 @@ env:
     - secure: ""
 
 before_install:
-  - chmod +x Travis/build_linux.sh
-  - chmod +x Travis/build_osx.sh
+  - chmod +x Travis/build.sh
 
 addons:
   apt:
