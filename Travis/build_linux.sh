@@ -1,7 +1,5 @@
 #!/bin/bash
-echo "____________________________________"
-echo "............Build.................."
-echo "____________________________________"
+echo "Build script started ..."
 
 set -o errexit -o nounset
 
@@ -29,13 +27,14 @@ echo "Building on platform: $(lsb_release -a)"
 # Due 120 minutes limit build either 3rd party as first step or project as second step
 # When 3rd party build completed it will be cached by travis
 
-echo "Building App..."
 cd ${project_dir}
 if [ ! -d "${third_dir}/release/Qt5" ]
 then
+   echo "Building 3rd..."
    python3 generate.py | cut -c1-100
    exit 0
 else
+   echo "Building App..."
    cd ${project_dir}/terminal.release
    make -j2
    make clean
