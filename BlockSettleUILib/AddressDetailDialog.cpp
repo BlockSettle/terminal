@@ -31,7 +31,7 @@ public:
       }
       const auto &index = txModel->index(source_row, 0, source_parent);
       const auto &txItem = txModel->getItem(index);
-      return (txItem.isSet() && (txItem.txEntry.value > 0));
+      return (txItem && txItem->isSet() && (txItem->txEntry.value > 0));
    }
 };
 
@@ -48,7 +48,7 @@ public:
       }
       const auto &index = txModel->index(source_row, 0, source_parent);
       const auto &txItem = txModel->getItem(index);
-      return (txItem.isSet() && (txItem.txEntry.value < 0));
+      return (txItem && txItem->isSet() && (txItem->txEntry.value < 0));
    }
 };
 
