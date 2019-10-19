@@ -56,8 +56,7 @@ install:
   - sudo apt build-dep -qq qt5-default || true
 
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then Travis/build_linux.sh ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then Travis/build_osx.sh ; fi
+  - Travis/build.sh
 
 cache:
     apt: true
