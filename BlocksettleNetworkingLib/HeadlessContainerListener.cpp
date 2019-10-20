@@ -1667,11 +1667,27 @@ bs::error::ErrorCode HeadlessContainerListener::activateAutoSign(const std::stri
 {
    logger_->info("Activate AutoSign for {}", walletId);
 
-   const auto &wallet = walletId.empty() ? walletsMgr_->getPrimaryWallet() : walletsMgr_->getHDWalletById(walletId);
-   if (!wallet) {
+   const auto &hdWallet = walletId.empty() ? walletsMgr_->getPrimaryWallet() : walletsMgr_->getHDWalletById(walletId);
+   if (!hdWallet) {
       return ErrorCode::WalletNotFound;
    }
-   passwords_[wallet->walletId()] = password;
+
+   std::string seedStr, privKeyStr;
+
+   try {
+      const bs::core::WalletPasswordScoped lock(hdWallet, password);
+      const auto &seed = hdWallet->getDecryptedSeed();
+      if (seed.empty()) {
+         return ErrorCode::MissingPassword;
+      }
+   }
+   catch (...) {
+      logger_->error("[HeadlessContainerListener::activateAutoSign] wallet {} decryption error"
+         , walletId);
+      return ErrorCode::InvalidPassword;
+   }
+
+   passwords_[hdWallet->walletId()] = password;
 
    // multicast event
    AutoSignActivatedEvent(walletId, true);
