@@ -161,14 +161,19 @@ void ChatUserListTreeView::onExpandGlobalOTC()
       return;
    }
 
-   const QModelIndex otcIndex = proxyModel->getOTCGlobalRoot();
-   if (!otcIndex.isValid()) {
+   const QModelIndex otcGlobalIndex = proxyModel->getOTCGlobalRoot();
+   if (!otcGlobalIndex.isValid()) {
+      return;
+   }
+
+   const QModelIndex otcContainer = otcGlobalIndex.parent();
+   if (!otcContainer.isValid()) {
       return;
    }
 
    // Qt 5.13 -> change this two functions to expandRecursively
-   expand(otcIndex.child(0, 0));
-   expand(otcIndex.child(1, 0));
+   expand(otcContainer.child(1, 0));
+   expand(otcContainer.child(2, 0));
 }
 
 PartyTreeItem* ChatUserListTreeView::internalPartyTreeItem(const QModelIndex& index)
