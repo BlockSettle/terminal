@@ -1626,7 +1626,7 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
                            cb(std::move(result));
                         };
 
-                        transaction->GetFallbackRecvAddress(changeCb);
+                        transaction->getWallet()->getNewIntAddress(changeCb);
                      };
 
                      const auto addrMapping = walletsMgr_->getAddressToWalletsMapping(transaction->inputs());

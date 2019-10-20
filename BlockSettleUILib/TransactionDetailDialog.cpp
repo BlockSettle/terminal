@@ -17,7 +17,7 @@
 #include <limits>
 
 
-TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
+TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , const std::shared_ptr<ArmoryConnection> &armory, QWidget* parent)
  : QDialog(parent)
@@ -28,7 +28,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
    itemSender_ = new QTreeWidgetItem(QStringList(tr("Sender")));
    itemReceiver_ = new QTreeWidgetItem(QStringList(tr("Receiver")));
 
-   const auto &cbInit = [this, armory] (const TransactionsViewItem *item) {
+   const auto &cbInit = [this, armory](const TransactionPtr &item) {
       ui_->labelAmount->setText(item->amountStr);
       ui_->labelDirection->setText(tr(bs::sync::Transaction::toString(item->direction)));
       ui_->labelAddress->setText(item->mainAddress);
@@ -140,13 +140,13 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
 
       ui_->labelConfirmations->setText(QString::number(item->confirmations));
    };
-   tvi.initialize(armory.get(), walletsManager, cbInit);
+   TransactionsViewItem::initialize(tvi, armory.get(), walletsManager, cbInit);
 
    bool bigEndianHash = true;
-   ui_->labelHash->setText(QString::fromStdString(tvi.txEntry.txHash.toHexStr(bigEndianHash)));
-   ui_->labelTime->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(tvi.txEntry.txTime)));
+   ui_->labelHash->setText(QString::fromStdString(tvi->txEntry.txHash.toHexStr(bigEndianHash)));
+   ui_->labelTime->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(tvi->txEntry.txTime)));
 
-   ui_->labelWalletName->setText(tvi.walletName.isEmpty() ? tr("Unknown") : tvi.walletName);
+   ui_->labelWalletName->setText(tvi->walletName.isEmpty() ? tr("Unknown") : tvi->walletName);
 
    /* disabled the context menu for copy to clipboard functionality, it can be removed later
    ui_->treeAddresses->setContextMenuPolicy(Qt::CustomContextMenu);

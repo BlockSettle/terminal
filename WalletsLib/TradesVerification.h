@@ -34,8 +34,9 @@ namespace bs {
          // returns from verifyUnsignedPayin
          uint64_t totalFee{};
          uint64_t estimatedFee{};
-         int totalInputCount{};
+         int totalOutputCount{};
          std::vector<UTXO> utxos;
+         std::string changeAddr;
 
          // returns from verifySignedPayout
          std::string payoutTxHashHex;

@@ -337,7 +337,9 @@ void TransactionsWidget::onDataLoaded(int count)
       return;
    }
    const auto &item = transactionsModel_->getOldestItem();
-   ui_->dateEditStart->setDateTime(QDateTime::fromTime_t(item.txEntry.txTime));
+   if (item) {
+      ui_->dateEditStart->setDateTime(QDateTime::fromTime_t(item->txEntry.txTime));
+   }
 }
 
 void TransactionsWidget::onProgressInited(int start, int end)
@@ -493,7 +495,11 @@ void TransactionsWidget::onEnterKeyInTrxPressed(const QModelIndex &index)
 
 void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
 {
-   auto txItem = transactionsModel_->getItem(sortFilterModel_->mapToSource(index));
+   const auto &txItem = transactionsModel_->getItem(sortFilterModel_->mapToSource(index));
+   if (!txItem) {
+      SPDLOG_LOGGER_ERROR(logger_, "item not found");
+      return;
+   }
 
    TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
    transactionDetailDialog.exec();
@@ -511,8 +517,12 @@ void TransactionsWidget::updateResultCount()
 void TransactionsWidget::onCreateRBFDialog()
 {
    auto txItem = transactionsModel_->getItem(actionRBF_->data().toModelIndex());
+   if (!txItem) {
+      SPDLOG_LOGGER_ERROR(logger_, "item not found");
+      return;
+   }
 
-   const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
+   const auto &cbDialog = [this](const TransactionPtr &txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
             , walletsManager_, signContainer_, logger_, appSettings_, txItem->tx
@@ -525,19 +535,23 @@ void TransactionsWidget::onCreateRBFDialog()
       }
    };
 
-   if (txItem.initialized) {
-      cbDialog(&txItem);
+   if (txItem->initialized) {
+      cbDialog(txItem);
    }
    else {
-      txItem.initialize(armory_.get(), walletsManager_, cbDialog);
+      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
    }
 }
 
 void TransactionsWidget::onCreateCPFPDialog()
 {
    auto txItem = transactionsModel_->getItem(actionCPFP_->data().toModelIndex());
+   if (!txItem) {
+      SPDLOG_LOGGER_ERROR(logger_, "item not found");
+      return;
+   }
 
-   const auto &cbDialog = [this](const TransactionsViewItem *txItem) {
+   const auto &cbDialog = [this](const TransactionPtr &txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
             , walletsManager_, signContainer_, txItem->wallet
@@ -550,10 +564,10 @@ void TransactionsWidget::onCreateCPFPDialog()
       }
    };
 
-   if (txItem.initialized) {
-      cbDialog(&txItem);
+   if (txItem->initialized) {
+      cbDialog(txItem);
    }
    else {
-      txItem.initialize(armory_.get(), walletsManager_, cbDialog);
+      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
    }
 }
