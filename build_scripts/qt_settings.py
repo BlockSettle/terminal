@@ -153,7 +153,8 @@ class QtSettings(Configurator):
                 command.append('mode=static')
         else:
             command.append('make')
-            command.append('-j4')
+            command.append('-j')
+            command.append(str(max(1, multiprocessing.cpu_count())))
 
         result = subprocess.call(command)
         if result != 0:

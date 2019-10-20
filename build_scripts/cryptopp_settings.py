@@ -78,7 +78,7 @@ class CryptoppSettings(Configurator):
         return True
 
     def make_x(self):
-        command = ['make', '-j4']
+        command = ['make', '-j', str(multiprocessing.cpu_count())]
 
         result = subprocess.call(command)
         return result == 0

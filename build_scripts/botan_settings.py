@@ -65,7 +65,7 @@ class BotanSettings(Configurator):
                 else:
                     command.append('--msvc-runtime=MDd')
         else:
-            self._build_tool = ['make', '-j4']
+            self._build_tool = ['make', '-j', str(multiprocessing.cpu_count())]
             if self._project_settings.get_build_mode() == 'release':
                 pass
             else:
