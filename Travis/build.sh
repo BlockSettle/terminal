@@ -5,11 +5,11 @@ set -o errexit -o nounset
 
 unameOut="$(uname -s)"
 case "${unameOut}" in
-    Linux*)     machine=Linux;;
-    Darwin*)    machine=MacOS;;
-    CYGWIN*)    machine=Windows;;
-    MINGW*)     machine=Windows;;
-    *)          machine="UNKNOWN:${unameOut}"
+    Linux*)     MACHINE=Linux;;
+    Darwin*)    MACHINE=MacOS;;
+    CYGWIN*)    MACHINE=Windows;;
+    MINGW*)     MACHINE=Windows;;
+    *)          MACHINE="UNKNOWN:${unameOut}"
 esac
 
 
@@ -17,13 +17,18 @@ esac
 project_dir=$(pwd)
 script_dir=${project_dir}/Travis/
 third_dir=${project_dir}/../3rd/
-build_dir=${project_dir}/build_terminal/Release/bin/
+
+if [ ${MACHINE} = "Linux" ]; then
+   build_dir=${project_dir}/build_terminal/RelWithDebInfo/bin/
+else
+   build_dir=${project_dir}/build_terminal/Release/bin/
+fi
 
 echo "Project dir: ${project_dir}"
 echo "3rd Party dir: ${third_dir}"
 
 TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y.%m.%d_%H.%M.%S')-$(git log --format=%h -1)}
-APP_FILE_NAME=BlockSettle_${TRAVIS_TAG}_${machine}
+APP_FILE_NAME=BlockSettle_${TRAVIS_TAG}_${MACHINE}
 
 echo "Building for branch ${TRAVIS_BRANCH}"
 echo "Building TAG ${TRAVIS_TAG}"
@@ -31,25 +36,31 @@ echo "Building TAG ${TRAVIS_TAG}"
 ZIP_FILE_NAME=${APP_FILE_NAME}.tar.gz
 
 echo "Target file is ${ZIP_FILE_NAME}"
-echo "Building on platform: $(lsb_release -a)"
 
 # Build App
 # Due 120 minutes limit build either 3rd party as first step or project as second step
 # When 3rd party build completed it will be cached by travis
 
 cd ${project_dir}
-if [ ! -d "${third_dir}/release/Qt5" ]
-then
-   echo "Building 3rd..."
-   python3 generate.py | cut -c1-100
-   exit 0
-else
-   echo "Building App..."
-   python3 generate.py
-   cd ${project_dir}/terminal.release
-   make -j2
-   make clean
+
+TS_3RD_START=$(date +%s)
+echo "Build 3rd party started at ${TS_3RD_START}"
+
+python3 generate.py | cut -c1-100
+
+TS_3RD_FINISH=$(date +%s)
+echo "Build 3rd party finished at ${TS_3RD_FINISH}"
+
+if [ $((${TS_3RD_FINISH} - ${TS_3RD_START})) -gt "3600" ]; then
+    echo "Build 3rd party took more than one hour, exitting"
+    exit 0
 fi
+
+echo "Building App..."
+
+cd ${project_dir}/terminal.release
+make -j2
+make clean
 
 
 # Build and run tests here
