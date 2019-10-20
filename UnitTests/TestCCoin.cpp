@@ -918,6 +918,10 @@ TEST_F(TestCCoin, ZeroConfChain)
    for (size_t i = 0; i < usersCount_; ++i)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 
+   std::set<BinaryData> addrSet;
+   for (auto& addr : userCCAddresses_)
+      addrSet.insert(addr.prefixed());
+
    auto createTxLbd = [](uint64_t value, std::shared_ptr<ScriptSpender> spender, bs::Address& addr)->Tx
    {      
       Signer signer;
@@ -994,6 +998,9 @@ TEST_F(TestCCoin, ZeroConfChain)
       utxo = zcUtxo;
    }
 
+   EXPECT_EQ(cct->getConfirmedCcValueForAddresses(addrSet), 1000 * ccLotSize_);
+   EXPECT_EQ(cct->getUnconfirmedCcValueForAddresses(addrSet), 550 * ccLotSize_);
+
    for (unsigned y = 0; y < 10; y++)
    {
       uint64_t ccbal = (y + 1) * 10 + 100;
@@ -1012,6 +1019,9 @@ TEST_F(TestCCoin, ZeroConfChain)
          EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[y].prefixed()), ccbal * ccLotSize_);
       }
    }
+
+   EXPECT_EQ(cct->getConfirmedCcValueForAddresses(addrSet), 1550 * ccLotSize_);
+   EXPECT_EQ(cct->getUnconfirmedCcValueForAddresses(addrSet), 0);
 }
 
 ////
