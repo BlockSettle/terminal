@@ -10,10 +10,6 @@ matrix:
   allow_failures:
     - os: osx
 
-branches:
-  only:
-  - travis_setup
-
 language: cpp
 
 env:
