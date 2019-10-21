@@ -84,7 +84,7 @@ private slots:
    void onTimerExpired();
 
 private:
-   unsigned int createPayoutTx(const BinaryData& payinHash, double qty, const bs::Address &recvAddr);
+   void createPayoutTx(const BinaryData& payinHash, double qty, const bs::Address &recvAddr);
 
    void acceptSpotXBT();
    void dealerVerifStateChanged(AddressVerificationState);
