@@ -32,7 +32,18 @@
 #include "Wallets/SyncWalletsManager.h"
 
 namespace {
-   const QString noBalanceAvailable = QLatin1String("-");
+   const QString kNoBalanceAvailable = QLatin1String("-");
+
+   constexpr auto kBuySortOrder = bs::core::wallet::OutputSortOrder{
+      bs::core::wallet::OutputOrderType::Recipients,
+      bs::core::wallet::OutputOrderType::PrevState,
+      bs::core::wallet::OutputOrderType::Change
+   };
+   constexpr auto kSellSortOrder = bs::core::wallet::OutputSortOrder{
+      bs::core::wallet::OutputOrderType::PrevState,
+      bs::core::wallet::OutputOrderType::Recipients,
+      bs::core::wallet::OutputOrderType::Change
+   };
 }
 
 using namespace bs::ui;
@@ -590,7 +601,9 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                }
             }
 
-            const auto &cbAddr = [this, inputs, feePerByte, qrn, qn, spendVal, wallet, recipient, transData, cb](const bs::Address &changeAddress) {
+            const auto &cbAddr = [this, inputs, feePerByte, qrn, qn, spendVal, wallet, recipient, transData, cb]
+               (const bs::Address &changeAddress)
+            {
                try {
                   logger_->debug("[cbFee] {} input[s], fpb={}, recip={}, prevPart={}", inputs.size(), feePerByte
                      , bs::Address(qrn.requestorRecvAddress).display(), qrn.requestorAuthPublicKey);
@@ -601,8 +614,9 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                   } catch (const std::exception &e) {
                      logger_->error("[cbFee] state deser failed: {}", e.what());
                   }
+                  const auto outSortOrder = (qrn.side == bs::network::Side::Buy) ? kBuySortOrder : kSellSortOrder;
                   const auto txReq = wallet->createPartialTXRequest(*spendVal, inputs, changeAddress, feePerByte
-                     , { recipient }, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
+                     , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
                   qn->transactionData = txReq.serializeState().toHexStr();
                   dealerUtxoAdapter_->reserve(txReq, qn->quoteRequestId);
                } catch (const std::exception &e) {
@@ -615,6 +629,17 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                }
                cb(*qn);
             };
+
+            if (qFuzzyIsNull(feePerByte)) {
+               uint64_t inputsVal = 0;
+               for (const auto &input : inputs) {
+                  inputsVal += input.getValue();
+               }
+               if (inputsVal == *spendVal) {
+                  cbAddr({});
+                  return;
+               }
+            }
             wallet->getNewChangeAddress(cbAddr);
          };
 
@@ -1068,7 +1093,7 @@ void bs::ui::RFQDealerReply::updateBalanceLabel()
    QString totalBalance;
    if (isXbt) {
       if (!transactionData_) {
-         totalBalance = noBalanceAvailable;
+         totalBalance = kNoBalanceAvailable;
       }
       else {
          totalBalance = tr("%1 %2")
@@ -1078,7 +1103,7 @@ void bs::ui::RFQDealerReply::updateBalanceLabel()
    }
    else if ((currentQRN_.side == bs::network::Side::Buy) && (currentQRN_.assetType == bs::network::Asset::PrivateMarket)) {
       if (!ccCoinSel_) {
-         totalBalance = noBalanceAvailable;
+         totalBalance = kNoBalanceAvailable;
       }
       else {
          totalBalance = tr("%1 %2")
@@ -1088,7 +1113,7 @@ void bs::ui::RFQDealerReply::updateBalanceLabel()
    }
    else {
       if (!assetManager_) {
-         totalBalance = noBalanceAvailable;
+         totalBalance = kNoBalanceAvailable;
       }
       else {
          totalBalance = tr("%1 %2")

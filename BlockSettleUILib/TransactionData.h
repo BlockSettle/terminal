@@ -129,8 +129,9 @@ public:
                                              , const bs::Address &changeAddr = {}
                                              , const uint64_t& origFee = 0) const;
    bs::core::wallet::TXSignRequest createPartialTXRequest(uint64_t spendVal, float feePerByte
-      , const std::vector<std::shared_ptr<ScriptRecipient>> &, const BinaryData &prevData
-      , const std::vector<UTXO> &inputs = {});
+      , const std::vector<std::shared_ptr<ScriptRecipient>> &
+      , const bs::core::wallet::OutputSortOrder &outSortOrder
+      , const BinaryData &prevData, const std::vector<UTXO> &inputs = {});
 
    std::shared_ptr<SelectedTransactionInputs> getSelectedInputs() { return selectedInputs_; }
    TransactionSummary GetTransactionSummary() const;
