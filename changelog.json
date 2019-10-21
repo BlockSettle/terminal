@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.23.8",
-   "release_date": "17 Oct 2019",
+   "latest_version": "0.24.0",
+   "release_date": "18 Oct 2019",
    "changes": [
+      {
+         "version_string": "0.24.0",
+         "previous_version": "0.23.8",
+         "release_date": "18 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Updated CC logic"
+         ],
+         "bug_fixes": [
+            "Fix signer first time popup focus issue",
+            "Signer ui : Settlement duration bar fix"
+         ],
+         "revision": "83129b9f",
+         "common_revision": "29299dfc"
+      },
       {
          "version_string": "0.23.8",
          "previous_version": "0.23.7",

@@ -275,3 +275,8 @@ std::shared_ptr<QmlFactory> SignerAdapter::qmlFactory() const
 {
    return qmlFactory_;
 }
+
+std::shared_ptr<SignAdapterContainer> SignerAdapter::signContainer() const
+{
+   return signContainer_;
+}
