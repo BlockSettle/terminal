@@ -154,7 +154,7 @@ class QtSettings(Configurator):
         else:
             command.append('make')
             command.append('-j')
-            command.append(str(max(1, multiprocessing.cpu_count())))
+            command.append(str(multiprocessing.cpu_count()))
 
         result = subprocess.call(command)
         if result != 0:
