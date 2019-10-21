@@ -417,6 +417,9 @@ void ColoredCoinTracker::processZcBatch(
    const std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
    const std::set<BinaryData>& hashes)
 {
+   if (hashes.size() == 0)
+      return;
+
    //grab listed tx
    auto&& txBatch = grabTxBatch(hashes);
 
@@ -770,17 +773,21 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
 ////
 void ColoredCoinTracker::purgeZc()
 {
-   auto zcPtr = zcSnapshot();
-   if (zcPtr == nullptr) {
-      return;
-   }
    auto currentSs = snapshot();
 
    //grab height for all our active zc
    std::set<BinaryData> txHashes;
-   for (auto& hashPair : zcPtr->utxoSet_) {
-      txHashes.insert(hashPair.first);
+
+   {
+      //only need the zc snapshot to gather zc tx hashes
+      auto currentZcSs = zcSnapshot();
+      if (currentZcSs == nullptr)
+         return;
+
+      for (auto& hashPair : currentZcSs->utxoSet_)
+         txHashes.insert(hashPair.first);
    }
+
    auto promPtr = std::make_shared<std::promise<std::vector<Tx>>>();
    auto fut = promPtr->get_future();
    const auto &getTxBatchLbd = [promPtr]
@@ -793,12 +800,16 @@ void ColoredCoinTracker::purgeZc()
          promPtr->set_value(batch);
       }
    };
+
+   if (txHashes.size() == 0)
+      return;
+
    if (!connPtr_->getTXsByHash(txHashes, getTxBatchLbd)) {
       throw ColoredCoinException("invalid DB state/connection");
    }
    const auto &txBatch = fut.get();
 
-   zcPtr = std::make_shared<ColoredCoinZCSnapshot>();
+   auto zcPtr = std::make_shared<ColoredCoinZCSnapshot>();
    std::set<BinaryData> txsToCheck;
    for (auto& tx : txBatch) {
       if (tx.getTxHeight() != UINT32_MAX) {
@@ -842,14 +853,15 @@ uint64_t ColoredCoinTracker::getCcValueForAddress(const BinaryData& scrAddr) con
 }
 
 ////
-std::vector<std::shared_ptr<CcOutpoint>> ColoredCoinTracker::getSpendableOutpointsForAddress(
-   const BinaryData& scrAddr) const
+std::vector<std::shared_ptr<CcOutpoint>> 
+ColoredCoinTracker::getSpendableOutpointsForAddress(
+   const std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
+   const std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
+   const BinaryData& scrAddr, bool confirmedOnly) const
 {
    /*takes prefixed scrAddr*/
    std::vector<std::shared_ptr<CcOutpoint>> result;
 
-   auto ssPtr = snapshot();
-   auto zcPtr = zcSnapshot();
    if (ssPtr != nullptr) {
       auto iter = ssPtr->scrAddrCcSet_.find(scrAddr.getRef());
       if (iter != ssPtr->scrAddrCcSet_.end()) {
@@ -880,7 +892,7 @@ std::vector<std::shared_ptr<CcOutpoint>> ColoredCoinTracker::getSpendableOutpoin
       }
    }
 
-   if (zcPtr == nullptr) {
+   if (zcPtr == nullptr || confirmedOnly) {
       return result;
    }
    auto zcIter = zcPtr->scrAddrCcSet_.find(scrAddr.getRef());
@@ -891,6 +903,17 @@ std::vector<std::shared_ptr<CcOutpoint>> ColoredCoinTracker::getSpendableOutpoin
    }
 
    return result;
+}
+
+////
+std::vector<std::shared_ptr<CcOutpoint>> ColoredCoinTracker::getSpendableOutpointsForAddress(
+   const BinaryData& scrAddr) const
+{
+   /*takes prefixed scrAddr*/
+   auto ssPtr = snapshot();
+   auto zcPtr = zcSnapshot();
+
+   return getSpendableOutpointsForAddress(ssPtr, zcPtr, scrAddr, false);
 }
 
 //// 
@@ -1147,6 +1170,54 @@ void ColoredCoinTracker::waitOnRefresh(const std::string& id)
          break;
       }
    }
+}
+
+////
+uint64_t ColoredCoinTracker::getUnconfirmedCcValueForAddresses(
+   const std::set<BinaryData>& scrAddrSet) const
+{
+   uint64_t total = 0;
+   auto zcPtr = zcSnapshot();
+
+   for (auto& scrAddr : scrAddrSet)
+   {
+      auto opVec = getSpendableOutpointsForAddress(nullptr, zcPtr, scrAddr, false);
+
+      uint64_t scrAddrTotal = 0;
+      for (auto op : opVec)
+         scrAddrTotal += op->value();
+
+      total += scrAddrTotal;
+   }
+
+   return total;
+}
+
+////
+uint64_t ColoredCoinTracker::getConfirmedCcValueForAddresses(
+   const std::set<BinaryData>& scrAddrSet) const
+{
+   /*
+   This code has to grab ZC outpoints as well, as it substract ZC spends
+   from the total of confirmed CC balance.
+   */
+
+   uint64_t total = 0;
+   auto ssPtr = snapshot();
+   auto zcPtr = zcSnapshot();
+
+   for (auto& scrAddr : scrAddrSet)
+   {
+      auto opVec = getSpendableOutpointsForAddress(ssPtr, zcPtr, scrAddr, true);
+
+      uint64_t scrAddrTotal = 0;
+      for (auto op : opVec)
+         scrAddrTotal += op->value();
+      
+      total += scrAddrTotal;
+   }
+
+   return total;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

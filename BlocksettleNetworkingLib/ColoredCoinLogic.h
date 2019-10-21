@@ -289,6 +289,13 @@ private:
       , const BinaryData&, unsigned, unsigned) const;
 
    ////
+   std::vector<std::shared_ptr<CcOutpoint>> getSpendableOutpointsForAddress(
+      const std::shared_ptr<ColoredCoinSnapshot>&,
+      const std::shared_ptr<ColoredCoinZCSnapshot>&,
+      const BinaryData&, bool) const;
+
+
+   ////
    std::shared_ptr<ColoredCoinSnapshot> snapshot(void) const;
    std::shared_ptr<ColoredCoinZCSnapshot> zcSnapshot(void) const;
 
@@ -337,6 +344,10 @@ public:
    //in: prefixed address
    std::vector<std::shared_ptr<CcOutpoint>> getSpendableOutpointsForAddress(
       const BinaryData&) const;
+
+   //in: set of prefixed addresses
+   uint64_t getUnconfirmedCcValueForAddresses(const std::set<BinaryData>&) const;
+   uint64_t getConfirmedCcValueForAddresses(const std::set<BinaryData>&) const;
 };
 
 #endif
