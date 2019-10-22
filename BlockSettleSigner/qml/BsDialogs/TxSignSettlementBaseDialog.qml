@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.4
+import Qt.labs.platform 1.1
 
 import com.blocksettle.TXInfo 1.0
 import com.blocksettle.PasswordDialogData 1.0
@@ -37,7 +38,12 @@ CustomTitleDialogWindow {
     property alias settlementDetailsItem: settlementDetailsContainer.data
     property alias txDetailsItem: txDetailsContainer.data
 
-    readonly property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
+    readonly property bool acceptable: {
+        if (walletInfo.encType === QPasswordData.Password) return tfPassword.text.length > 0
+        else if (walletInfo.encType === QPasswordData.Unencrypted) return txInfo.isOfflineTxSigned
+        else return true
+    }
+
     readonly property int addressRowHeight: 24
 
     readonly property int duration: passwordDialogData.DurationTotal / 1000.0
@@ -363,13 +369,63 @@ CustomTitleDialogWindow {
                 }
             }
 
+            CustomButton {
+                id: btnExportTx
+                visible: walletInfo.encType === QPasswordData.Unencrypted
+                text: qsTr("SAVE TX")
+                anchors.right: btnImportTx.left
+                anchors.bottom: parent.bottom
+                onClicked: {
+                    exportTxDlg.open()
+                }
+
+                FileDialog {
+                    id: exportTxDlg
+                    title: "Save Unsigned Tx"
+
+                    currentFile: StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + txInfo.getSaveOfflineTxFileName()
+                    folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+                    fileMode: FileDialog.SaveFile
+                    nameFilters: [ "Key files (*.bin)", "All files (*)" ]
+
+                    onAccepted: {
+                        txInfo.saveToFile(qmlAppObj.getUrlPath(exportTxDlg.file))
+                    }
+                }
+            }
+
+            CustomButton {
+                id: btnImportTx
+                visible: walletInfo.encType === QPasswordData.Unencrypted
+                text: qsTr("LOAD SIGNED TX")
+                anchors.right: btnConfirm.left
+                anchors.bottom: parent.bottom
+                onClicked: {
+                    importTxDlg.open()
+                }
+
+                FileDialog {
+                    id: importTxDlg
+                    title: "Open Signed Tx"
+
+                    currentFile: StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + passwordDialogData.SettlementId + ".bin"
+                    folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+                    fileMode: FileDialog.OpenFile
+                    nameFilters: [ "Key files (*.bin)", "All files (*)" ]
+
+                    onAccepted: {
+                        txInfo.loadSignedTx(qmlAppObj.getUrlPath(importTxDlg.file))
+                    }
+                }
+            }
+
             CustomButtonPrimary {
                 id: btnConfirm
-                visible: walletInfo.encType === QPasswordData.Password
+                visible: walletInfo.encType !== QPasswordData.Auth
                 text: qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                enabled: (signingAllowed && (tfPassword.text.length || acceptable))
+                enabled: signingAllowed && acceptable
                 onClicked: {
                     if (walletInfo.encType === QPasswordData.Password) {
                         passwordData.textPassword = tfPassword.text

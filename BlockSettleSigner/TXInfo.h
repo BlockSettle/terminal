@@ -38,6 +38,8 @@ class TXInfo : public QObject
    Q_PROPERTY(QString txId READ txId WRITE setTxId NOTIFY dataChanged)
    Q_PROPERTY(QString walletId READ walletId NOTIFY dataChanged)
 
+   Q_PROPERTY(bool isOfflineTxSigned READ isOfflineTxSigned NOTIFY dataChanged)
+
 public:
    TXInfo() : QObject(), txReq_() {}
    TXInfo(const bs::core::wallet::TXSignRequest &txReq, const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
@@ -63,13 +65,17 @@ public:
    double inputAmount() const { return txReq_.inputAmount(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }
    QString txId() const { return txId_; }
    void setTxId(const QString &);
-   QString walletId() const { return QString::fromStdString(txReq_.walletIds.front()); }
+   QString walletId() const;
+   bool isOfflineTxSigned() { return txReqSigned_.isValid(); }
 
    Q_INVOKABLE double amountCCReceived(const QString &cc) const;
    Q_INVOKABLE double amountCCSent() const { return amount(); }
-
    Q_INVOKABLE double amountXBTReceived() const;
 
+   Q_INVOKABLE bool saveToFile(const QString &fileName) const;
+   Q_INVOKABLE bool loadSignedTx(const QString &fileName);
+
+   Q_INVOKABLE QString getSaveOfflineTxFileName();
 signals:
    void dataChanged();
 
@@ -79,6 +85,8 @@ private:
 
 private:
    const bs::core::wallet::TXSignRequest  txReq_;
+   bs::core::wallet::TXSignRequest  txReqSigned_;
+
    QString  txId_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_ = nullptr; // nullptr init required for default constructor

@@ -433,7 +433,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
       return;
    }
 
-   const auto &parsedReqs = ParseOfflineTXFile(data);
+   const auto &parsedReqs = bs::core::wallet::ParseOfflineTXFile(data);
    if (parsedReqs.empty()) {
       invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("File %1 contains no TX sign requests").arg(fileName));
       return;
