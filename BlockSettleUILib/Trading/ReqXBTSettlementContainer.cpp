@@ -9,6 +9,7 @@
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
 #include "QuoteProvider.h"
+#include "SelectedTransactionInputs.h"
 #include "SettlementMonitor.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
@@ -26,22 +27,26 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr
    , const std::shared_ptr<SignContainer> &signContainer
    , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<Wallet> &xbtWallet
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const bs::network::RFQ &rfq
    , const bs::network::Quote &quote
-   , const std::shared_ptr<TransactionData> &txData
-   , const bs::Address &authAddr)
+   , const bs::Address &authAddr
+   , const std::vector<UTXO> &utxosPayinFixed
+   , const bs::Address &recvAddr)
    : bs::SettlementContainer()
    , logger_(logger)
    , authAddrMgr_(authAddrMgr)
    , walletsMgr_(walletsMgr)
    , signContainer_(signContainer)
    , armory_(armory)
-   , transactionData_(txData)
+   , xbtWallet_(xbtWallet)
    , rfq_(rfq)
    , quote_(quote)
-   , clientSells_(!rfq.isXbtBuy())
+   , recvAddr_(recvAddr)
+   , clientSellsXbt_(!rfq.isXbtBuy())
    , authAddr_(authAddr)
+   , utxosPayinFixed_(utxosPayinFixed)
 {
    assert(authAddr.isValid());
 
@@ -61,17 +66,20 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
 
    comment_ = std::string(bs::network::Side::toString(bs::network::Side::invert(quote_.side))) + " "
       + quote_.security + " @ " + std::to_string(price());
-
 }
 
 ReqXBTSettlementContainer::~ReqXBTSettlementContainer()
 {
+   if (clientSellsXbt_) {
+      utxoAdapter_->unreserve(id());
+   }
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
 void ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHash, double qty
    , const bs::Address &recvAddr)
 {
+
    usedPayinHash_ = payinHash;
 
    armory_->estimateFee(2, [this, qty, payinHash, recvAddr, handle = validityFlag_.handle()](float fee) {
@@ -118,9 +126,6 @@ void ReqXBTSettlementContainer::acceptSpotXBT()
 bool ReqXBTSettlementContainer::cancel()
 {
    deactivate();
-   if (clientSells_) {
-      utxoAdapter_->unreserve(id());
-   }
    emit settlementCancelled();
    return true;
 }
@@ -133,6 +138,8 @@ void ReqXBTSettlementContainer::onTimerExpired()
 void ReqXBTSettlementContainer::activate()
 {
    startTimer(kWaitTimeoutInSec);
+
+   settlementIdHex_ = quote_.settlementId;
 
    addrVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_
       , [this, handle = validityFlag_.handle()](const bs::Address &address, AddressVerificationState state)
@@ -148,14 +155,13 @@ void ReqXBTSettlementContainer::activate()
 
    addrVerificator_->SetBSAddressList(authAddrMgr_->GetBSAddresses());
 
-   settlementIdString_ = quote_.settlementId;
    settlementId_ = BinaryData::CreateFromHex(quote_.settlementId);
    userKey_ = BinaryData::CreateFromHex(quote_.requestorAuthPublicKey);
    dealerAuthKey_ = BinaryData::CreateFromHex(quote_.dealerAuthPublicKey);
 
    const auto priWallet = walletsMgr_->getPrimaryWallet();
    if (!priWallet) {
-      logger_->error("[ReqXBTSettlementContainer::activate] missing primary wallet");
+      SPDLOG_LOGGER_ERROR(logger_, "missing primary wallet");
       return;
    }
 
@@ -171,8 +177,7 @@ void ReqXBTSettlementContainer::activate()
       return;
    }
 
-   settlLeaf->setSettlementID(settlementId_, [this, handle = validityFlag_.handle()](bool success)
-   {
+   settlLeaf->setSettlementID(settlementId_, [this, priWallet, handle = validityFlag_.handle()](bool success) {
       if (!handle.isValid()) {
          return;
       }
@@ -182,7 +187,14 @@ void ReqXBTSettlementContainer::activate()
             , authAddr_.display());
          return;
       }
-      activateProceed();
+
+      const auto &cbSettlAddr = [this](const bs::Address &addr) {
+         settlAddr_ = addr;
+
+         acceptSpotXBT();
+      };
+
+      priWallet->getSettlementPayinAddress(settlementId_, dealerAuthKey_, cbSettlAddr, !clientSellsXbt_);
    });
 }
 
@@ -254,53 +266,6 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
    signContainer_->updateDialogData(pd);
 }
 
-void ReqXBTSettlementContainer::activateProceed()
-{
-   const auto &cbSettlAddr = [this](const bs::Address &addr) {
-      settlAddr_ = addr;
-      auto fallbackRecvAddressCb = [this, handle = validityFlag_.handle()](const bs::Address &addr) {
-         if (!handle.isValid()) {
-            return;
-         }
-         recvAddr_ = addr;
-
-         const auto recipient = transactionData_->RegisterNewRecipient();
-         transactionData_->UpdateRecipientAmount(recipient, amount_, transactionData_->maxSpendAmount());
-         transactionData_->UpdateRecipientAddress(recipient, settlAddr_);
-
-         const auto list = authAddrMgr_->GetVerifiedAddressList();
-         const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
-         userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
-         if (!userKeyOk_) {
-            logger_->warn("[ReqXBTSettlementContainer::activate] userAddr {} not found in verified addrs list ({})"
-               , userAddress.display(), list.size());
-            return;
-         }
-
-         if (clientSells_) {
-            if (!transactionData_->IsTransactionValid()) {
-               userKeyOk_ = false;
-               logger_->error("[ReqXBTSettlementContainer::activate] transaction data is invalid");
-               cancelWithError(tr("Transaction data is invalid - sending of pay-in is prohibited"));
-               return;
-            }
-         }
-
-         fee_ = transactionData_->GetTransactionSummary().totalFee;
-
-         const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
-         addrVerificator_->addAddress(dealerAddrSW);
-         addrVerificator_->startAddressVerification();
-
-         acceptSpotXBT();
-      };
-      transactionData_->GetFallbackRecvAddress(std::move(fallbackRecvAddressCb));
-   };
-
-   const auto priWallet = walletsMgr_->getPrimaryWallet();
-   priWallet->getSettlementPayinAddress(settlementId_, dealerAuthKey_, cbSettlAddr, !clientSells_);
-}
-
 void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage)
 {
    emit error(errorMessage);
@@ -310,7 +275,7 @@ void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage)
 void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
    , bs::error::ErrorCode errCode, std::string errTxt)
 {
-   if (payinSignId_ && (payinSignId_ == id)) {
+   if (payinSignId_ != 0 && (payinSignId_ == id)) {
       payinSignId_ = 0;
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
@@ -320,16 +285,16 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
          return;
       }
 
-      emit sendSignedPayinToPB(settlementIdString_, signedTX);
+      emit sendSignedPayinToPB(settlementIdHex_, signedTX);
 
-      transactionData_->getWallet()->setTransactionComment(signedTX, comment_);
+      xbtWallet_->setTransactionComment(signedTX, comment_);
 //    walletsMgr_->getSettlementWallet()->setTransactionComment(signedTX, comment_);  //TODO: later
 
       // OK. if payin created - settletlement accepted for this RFQ
       deactivate();
       emit settlementAccepted();
 
-   } else if (payoutSignId_ && (payoutSignId_ == id)) {
+   } else if (payoutSignId_ != 0 && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
@@ -337,11 +302,6 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
             , (int)errCode, errTxt);
          cancelWithError(tr("Pay-Out signing failed: %1").arg(QString::fromStdString(errTxt)));
          return;
-      }
-
-      if (!clientSells_) {
-         transactionData_->getWallet()->setTransactionComment(signedTX, comment_);
-//         walletsMgr_->getSettlementWallet()->setTransactionComment(payoutData_, comment_); //TODO: later
       }
 
       logger_->debug("[ReqXBTSettlementContainer::onTXSigned] signed payout: {}"
@@ -381,7 +341,10 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
          return;
       }
 
-      emit sendSignedPayoutToPB(settlementIdString_, signedTX);
+      emit sendSignedPayoutToPB(settlementIdHex_, signedTX);
+
+      xbtWallet_->setTransactionComment(signedTX, comment_);
+//         walletsMgr_->getSettlementWallet()->setTransactionComment(payoutData_, comment_); //TODO: later
 
       // OK. if payout created - settletlement accepted for this RFQ
       deactivate();
@@ -391,13 +354,13 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
 
 void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& settlementId)
 {
-   if (settlementIdString_ != settlementId) {
+   if (settlementIdHex_ != settlementId) {
       logger_->error("[ReqXBTSettlementContainer::onUnsignedPayinRequested] invalid id : {} . {} expected"
-                     , settlementId, settlementIdString_);
+                     , settlementId, settlementIdHex_);
       return;
    }
 
-   if (!clientSells_) {
+   if (!clientSellsXbt_) {
       logger_->error("[ReqXBTSettlementContainer::onUnsignedPayinRequested] customer buy on thq rfq {}. should not create unsigned payin"
                      , settlementId);
       return;
@@ -406,70 +369,131 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
    logger_->debug("[ReqXBTSettlementContainer::onUnsignedPayinRequested] unsigned payin requested: {}"
                   , settlementId);
 
-   const auto &cbChangeAddr = [this](const bs::Address &changeAddr) {
-      unsignedPayinRequest_ = transactionData_->createUnsignedTransaction(false, changeAddr);
-
-      if (!unsignedPayinRequest_.isValid()) {
-         logger_->error("[ReqXBTSettlementContainer::onUnsignedPayinRequested cb] unsigned payin request is invalid: {}"
-                        , settlementIdString_);
+   armory_->estimateFee(2, [this, handle = validityFlag_.handle()](float fee) {
+      if (!handle.isValid()) {
+         return;
+      }
+      auto feePerByte = ArmoryConnection::toFeePerByte(fee);
+      if (feePerByte < 1.0f) {
+         SPDLOG_LOGGER_ERROR(logger_, "wrong fee: {} s/b", feePerByte);
+         cancelWithError(tr("Invalid fee"));
          return;
       }
 
-      const auto cbPreimage = [this](const std::map<bs::Address, BinaryData> &preimages)
-      {
-         const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
+      const auto changedCallback = nullptr;
+      const bool isSegWitInputsOnly = true;
+      const bool confirmedOnly = true;
+      auto transaction = std::make_shared<TransactionData>(changedCallback, logger_, isSegWitInputsOnly, confirmedOnly);
 
-         const auto unsignedTxId = unsignedPayinRequest_.txId(resolver);
+      transaction->setFeePerByte(feePerByte);
 
-         logger_->debug("[ReqXBTSettlementContainer::onUnsignedPayinRequested cbPreimage] unsigned tx id {}", unsignedTxId.toHexStr(true));
+      auto resetInputsCb = [this, transaction]{
+         QMetaObject::invokeMethod(qApp, [this, transaction] {
+            auto index = transaction->RegisterNewRecipient();
+            assert(index == 0);
+            transaction->UpdateRecipient(0, amount_, settlAddr_);
 
-         // XXX: make reservation on UTXO
-         emit sendUnsignedPayinToPB(settlementIdString_, unsignedPayinRequest_.serializeState(resolver), unsignedTxId);
+            const auto list = authAddrMgr_->GetVerifiedAddressList();
+            const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
+            userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
+            if (!userKeyOk_) {
+               SPDLOG_LOGGER_WARN(logger_, "userAddr {} not found in verified addrs list ({})"
+                  , userAddress.display(), list.size());
+               return;
+            }
+
+            if (!transaction->IsTransactionValid()) {
+               userKeyOk_ = false;
+               logger_->error("[ReqXBTSettlementContainer::activate] transaction data is invalid");
+               cancelWithError(tr("Transaction data is invalid - sending of pay-in is prohibited"));
+               return;
+            }
+
+            const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
+            addrVerificator_->addAddress(dealerAddrSW);
+            addrVerificator_->startAddressVerification();
+
+            const auto &cbChangeAddr = [this, transaction](const bs::Address &changeAddr) {
+               unsignedPayinRequest_ = transaction->createUnsignedTransaction(false, changeAddr);
+
+               if (!unsignedPayinRequest_.isValid()) {
+                  SPDLOG_LOGGER_ERROR(logger_, "unsigned payin request is invalid: {}", settlementIdHex_);
+                  return;
+               }
+
+               const auto cbPreimage = [this, transaction](const std::map<bs::Address, BinaryData> &preimages)
+               {
+                  const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
+
+                  const auto unsignedTxId = unsignedPayinRequest_.txId(resolver);
+
+                  SPDLOG_LOGGER_DEBUG(logger_, "unsigned tx id {}", unsignedTxId.toHexStr(true));
+
+                  utxoAdapter_->reserve(xbtWallet_->walletId(), id(), unsignedPayinRequest_.inputs);
+
+                  emit sendUnsignedPayinToPB(settlementIdHex_, unsignedPayinRequest_.serializeState(resolver), unsignedTxId);
+               };
+
+               std::map<std::string, std::vector<bs::Address>> addrMapping;
+               const auto wallet = transaction->getWallet();
+               const auto walletId = wallet->walletId();
+
+               for (const auto &utxo : transaction->inputs()) {
+                  const auto addr = bs::Address::fromUTXO(utxo);
+                  addrMapping[walletId].push_back(addr);
+               }
+
+               signContainer_->getAddressPreimage(addrMapping, cbPreimage);
+            };
+
+            xbtWallet_->getNewChangeAddress(cbChangeAddr);
+         });
       };
 
-      std::map<std::string, std::vector<bs::Address>> addrMapping;
-      const auto wallet = transactionData_->getWallet();
-      const auto walletId = wallet->walletId();
-
-      for (const auto &utxo : transactionData_->inputs()) {
-         const auto addr = bs::Address::fromUTXO(utxo);
-         addrMapping[walletId].push_back(addr);
+      if (utxosPayinFixed_.empty()) {
+         transaction->setWallet(xbtWallet_, armory_->topBlock(), false, resetInputsCb);
+      } else {
+         transaction->setWalletAndInputs(xbtWallet_, utxosPayinFixed_, armory_->topBlock());
+         transaction->getSelectedInputs()->SetUseAutoSel(true);
+         resetInputsCb();
       }
-
-      signContainer_->getAddressPreimage(addrMapping, cbPreimage);
-   };
-
-   if (transactionData_->GetTransactionSummary().hasChange) {
-      transactionData_->getWallet()->getNewChangeAddress(cbChangeAddr);
-   }
-   else {
-      cbChangeAddr({});
-   }
+   });
 }
 
 void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash)
 {
-   if (settlementIdString_ != settlementId) {
+   if (settlementIdHex_ != settlementId) {
       logger_->error("[ReqXBTSettlementContainer::onSignedPayoutRequested] invalid id : {} . {} expected"
-                     , settlementId, settlementIdString_);
+                     , settlementId, settlementIdHex_);
       return;
    }
 
    logger_->debug("[ReqXBTSettlementContainer::onSignedPayoutRequested] create payout for {} on {} for {}"
                   , settlementId, payinHash.toHexStr(), amount_);
 
-   createPayoutTx(payinHash, amount_, recvAddr_);
+   auto recvAddressCb = [this, payinHash, handle = validityFlag_.handle()](const bs::Address &addr) {
+      if (!handle.isValid()) {
+         return;
+      }
+      createPayoutTx(payinHash, amount_, addr);
+   };
+
+   if (recvAddr_.isNull()) {
+      xbtWallet_->getNewExtAddress(recvAddressCb);
+   } else {
+      recvAddressCb(recvAddr_);
+   }
 }
 
 void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin)
 {
-   if (settlementIdString_ != settlementId) {
+   if (settlementIdHex_ != settlementId) {
       logger_->error("[ReqXBTSettlementContainer::onSignedPayinRequested] invalid id : {} . {} expected"
-                     , settlementId, settlementIdString_);
+                     , settlementId, settlementIdHex_);
       return;
    }
 
-   if (!clientSells_) {
+   if (!clientSellsXbt_) {
       logger_->error("[ReqXBTSettlementContainer::onSignedPayinRequested] customer buy on thq rfq {}. should not sign payin"
                      , settlementId);
       return;
@@ -477,7 +501,7 @@ void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settle
 
    if (!unsignedPayinRequest_.isValid()) {
       logger_->error("[ReqXBTSettlementContainer::onSignedPayinRequested] unsigned payin request is invalid: {}"
-                     , settlementIdString_);
+                     , settlementIdHex_);
       return;
    }
 

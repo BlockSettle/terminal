@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QFile>
 #include <QTimer>
+
 #include <spdlog/spdlog.h>
 
 #include "AddressVerificator.h"
@@ -20,6 +21,7 @@
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+
 #include "bs_proxy_terminal_pb.pb.h"
 #include "otc.pb.h"
 
@@ -1533,7 +1535,7 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
          }
 
          if (feePerByte < 1) {
-            cb(OtcClientDeal::error("invalid fees"));
+            cb(OtcClientDeal::error("invalid feePerByte"));
             return;
          }
 
@@ -1683,7 +1685,7 @@ void OtcClient::createRequests(const std::string &settlementId, Peer *peer, cons
          const bool myKeyFirst = (peer->offer.ourSide == bs::network::otc::Side::Buy);
          primaryHdWallet->getSettlementPayinAddress(SecureBinaryData::CreateFromHex(settlementId), peer->authPubKey, cbSettlAddr, myKeyFirst);
       };
-      walletsMgr_->estimatedFeePerByte(2, cbFee, this);
+      walletsMgr_->estimatedFeePerByte(feeTargetBlockCount(), cbFee, this);
    });
 }
 
