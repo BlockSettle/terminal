@@ -273,6 +273,9 @@ void SubscriberConnection::listenFunction()
          }
       }
    }
+
+   // clean monitor states
+   zmq_socket_monitor(dataSocketCopy.get(), NULL, 0);
 }
 
 bool SubscriberConnection::recvData(const ZmqContext::sock_ptr& dataSocket)
