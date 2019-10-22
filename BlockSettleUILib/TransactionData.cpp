@@ -873,8 +873,10 @@ bs::core::wallet::TXSignRequest TransactionData::createTXRequest(bool isRBF
    return txReq;
 }
 
-bs::core::wallet::TXSignRequest TransactionData::createPartialTXRequest(uint64_t spendVal, float feePerByte
-   , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const BinaryData &prevData
+bs::core::wallet::TXSignRequest TransactionData::createPartialTXRequest(uint64_t spendVal
+   , float feePerByte, const std::vector<std::shared_ptr<ScriptRecipient>> &recipients
+   , const bs::core::wallet::OutputSortOrder &outSortOrder
+   , const BinaryData &prevData
    , const std::vector<UTXO> &utxos)
 {
    if (!wallet_) {
@@ -888,7 +890,7 @@ bs::core::wallet::TXSignRequest TransactionData::createPartialTXRequest(uint64_t
    };    //TODO: refactor this
    wallet_->getNewChangeAddress(cbAddr);
    auto txReq = wallet_->createPartialTXRequest(spendVal, utxos.empty() ? inputs() : utxos
-      , futAddr.get(), feePerByte, recipients, prevData);
+      , futAddr.get(), feePerByte, recipients, outSortOrder, prevData);
    txReq.populateUTXOs = true;
    return txReq;
 }

@@ -162,25 +162,29 @@ bool wallet::TXSignRequest::isValid() const noexcept
 
 Signer wallet::TXSignRequest::getSigner(const std::shared_ptr<ResolverFeed> &resolver) const
 {
+   bs::CheckRecipSigner prevStateSigner;
    bs::CheckRecipSigner signer;
 
    if (!prevStates.empty()) {
       for (const auto &prevState : prevStates) {
-         signer.deserializeState(prevState);
+         prevStateSigner.deserializeState(prevState);
+      }
+
+      signer.setFlags(prevStateSigner.getFlags());
+      for (const auto &spender : prevStateSigner.spenders()) {
+         signer.addSpender(spender);
       }
    }
    else {
       signer.setFlags(SCRIPT_VERIFY_SEGWIT);
 
-      for (const auto &utxo : inputs) {
+      for (const auto &utxo : inputs) {   // TODO: maybe this loop should always run, not only if prevStates are empty
          std::shared_ptr<ScriptSpender> spender;
          if (resolver) {
             spender = std::make_shared<ScriptSpender>(utxo, resolver);
-         }
-         else if (populateUTXOs) {
+         } else if (populateUTXOs) {
             spender = std::make_shared<ScriptSpender>(utxo.getTxHash(), utxo.getTxOutIndex(), utxo.getValue());
-         }
-         else {
+         } else {
             spender = std::make_shared<ScriptSpender>(utxo);
          }
          if (RBF) {
@@ -189,6 +193,7 @@ Signer wallet::TXSignRequest::getSigner(const std::shared_ptr<ResolverFeed> &res
          signer.addSpender(spender);
       }
    }
+
    if (populateUTXOs) {
       for (const auto &utxo : inputs) {
          try {
@@ -198,15 +203,41 @@ Signer wallet::TXSignRequest::getSigner(const std::shared_ptr<ResolverFeed> &res
       }
    }
 
-   for (const auto& recipient : recipients) {
-      signer.addRecipient(recipient);
+   for (const auto &orderType : outSortOrder) {
+      switch (orderType) {
+      case OutputOrderType::PrevState:
+         for (const auto &recip : prevStateSigner.recipients()) {
+            signer.addRecipient(recip);
+         }
+         break;
+
+      case OutputOrderType::Recipients:
+         for (const auto& recipient : recipients) {
+            signer.addRecipient(recipient);
+         }
+         break;
+
+      case OutputOrderType::Change:
+         if (!change.value) {
+            break;
+         }
+         {
+            const auto changeRecip = change.address.getRecipient(bs::XBTAmount{ change.value });
+            if (changeRecip) {
+               signer.addRecipient(changeRecip);
+            }
+            else {
+               throw std::runtime_error("failed to get change recipient for " + std::to_string(change.value));
+            }
+         }
+         break;
+
+      default:
+         throw std::invalid_argument("invalid output order type " + std::to_string((int)orderType));
+      }
    }
 
    if (change.value) {
-      const auto changeRecip = change.address.getRecipient(bs::XBTAmount{change.value});
-      if (changeRecip) {
-         signer.addRecipient(changeRecip);
-      }
    }
    signer.removeDupRecipients();
 

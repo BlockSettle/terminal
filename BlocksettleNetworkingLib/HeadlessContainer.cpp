@@ -377,7 +377,8 @@ bs::signer::RequestId HeadlessContainer::signSettlementTXRequest(const bs::core:
    return reqId;
 }
 
-bs::signer::RequestId HeadlessContainer::signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+bs::signer::RequestId HeadlessContainer::signSettlementPartialTXRequest(
+   const bs::core::wallet::TXSignRequest &txSignReq
    , const bs::sync::PasswordDialogData &dialogData
    , const SignTxCb &cb)
 {

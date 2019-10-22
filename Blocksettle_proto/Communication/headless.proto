@@ -101,6 +101,7 @@ message SignTxRequest
    bytes           unsignedState = 6;
    Change          change = 7;
    bool            populateUTXOs = 8;
+   repeated uint32 out_sort_order = 9;
    bool            keepDuplicatedRecipients = 11;
 }
 

@@ -107,6 +107,7 @@ bool DealerCCSettlementContainer::startSigning()
          }
          else if (result == bs::error::ErrorCode::TxCanceled) {
             // FIXME
+            // Not clear what's wrong here, and what should be fixed
             emit failed();
          }
          else {

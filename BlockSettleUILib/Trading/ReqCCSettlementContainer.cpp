@@ -183,6 +183,8 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
             , __func__, dealerAddress_, spendVal);
          return false;
       }
+      ccTxData_.outSortOrder = {bs::core::wallet::OutputOrderType::Change
+         , bs::core::wallet::OutputOrderType::PrevState, bs::core::wallet::OutputOrderType::Recipients };
       ccTxData_.populateUTXOs = true;
       ccTxData_.inputs = utxoAdapter_->get(id());
       logger_->debug("[{}] {} CC inputs reserved ({} recipients)"
@@ -201,8 +203,13 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   logger_->error("[{}] invalid recipient: {}", __func__, dealerAddress_);
                   return;
                }
-               ccTxData_ = transactionData_->createPartialTXRequest(spendVal, feePerByte, { recipient }
-               , dealerTx_, utxos);
+               const bs::core::wallet::OutputSortOrder outSortOrder{
+                  bs::core::wallet::OutputOrderType::PrevState,
+                  bs::core::wallet::OutputOrderType::Recipients,
+                  bs::core::wallet::OutputOrderType::Change
+               };
+               ccTxData_ = transactionData_->createPartialTXRequest(spendVal, feePerByte
+                  , { recipient }, outSortOrder, dealerTx_, utxos);
                logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
                utxoAdapter_->reserve(ccTxData_.walletIds.front(), id(), ccTxData_.inputs);
 
