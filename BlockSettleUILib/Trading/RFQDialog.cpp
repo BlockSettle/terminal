@@ -252,6 +252,10 @@ void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const B
       return;
    }
 
+   if (signContainer_->opMode() != SignContainer::OpMode::Remote) {
+      hide();
+   }
+   
    xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash);
 }
 
@@ -259,6 +263,10 @@ void RFQDialog::onSignedPayinRequested(const std::string& settlementId, const Bi
 {
    if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
       return;
+   }
+
+   if (signContainer_->opMode() != SignContainer::OpMode::Remote) {
+      hide();
    }
 
    xbtSettlContainer_->onSignedPayinRequested(settlementId, unsignedPayin);
