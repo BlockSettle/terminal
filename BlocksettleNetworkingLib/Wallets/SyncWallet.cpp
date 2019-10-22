@@ -745,6 +745,7 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
    , const std::vector<UTXO> &inputs, bs::Address changeAddress
    , float feePerByte
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients
+   , const bs::core::wallet::OutputSortOrder &outSortOrder
    , const BinaryData prevPart)
 {
    uint64_t inputAmount = 0;
@@ -808,57 +809,95 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
 
    bs::core::wallet::TXSignRequest request;
    request.walletIds = { walletId() };
-//   request.wallet = this;
    request.populateUTXOs = true;
+   request.outSortOrder = outSortOrder;
    Signer signer;
+   bs::CheckRecipSigner prevStateSigner;
    if (!prevPart.isNull()) {
-      signer.deserializeState(prevPart);
+      prevStateSigner.deserializeState(prevPart);
       if (feePerByte > 0) {
-         bs::CheckRecipSigner chkSigner(prevPart);
-         fee += chkSigner.estimateFee(feePerByte);
+         fee += prevStateSigner.estimateFee(feePerByte);
          fee -= 10 * feePerByte;    // subtract TX header size as it's counted twice
+      }
+      for (const auto &spender : prevStateSigner.spenders()) {
+         signer.addSpender(spender);
       }
    }
    signer.setFlags(SCRIPT_VERIFY_SEGWIT);
    request.fee = fee;
 
    inputAmount = 0;
-   for (const auto& utxo : utxos) {
+   for (const auto &spender : prevStateSigner.spenders()) {
+      inputAmount += spender->getValue();
+   }
+   for (const auto &utxo : utxos) {
       signer.addSpender(std::make_shared<ScriptSpender>(utxo.getTxHash(), utxo.getTxOutIndex(), utxo.getValue()));
       request.inputs.push_back(utxo);
       inputAmount += utxo.getValue();
-      if (inputAmount >= (spendVal + fee)) {
+/*      if (inputAmount >= (spendVal + fee)) {
          break;
-      }
+      }*/   // use all provided inputs now (will be uncommented if some logic depends on it)
    }
    if (!inputAmount) {
       throw std::logic_error("No inputs detected");
    }
 
+   const auto addRecipients = [&request, &signer]
+      (const std::vector<std::shared_ptr<ScriptRecipient>> &recipients)
+   {
+      for (const auto& recipient : recipients) {
+         request.recipients.push_back(recipient);
+         signer.addRecipient(recipient);
+      }
+   };
+
+   uint64_t spendAmount = 0;
+   for (const auto &recip : prevStateSigner.recipients()) {
+      spendAmount += recip->getValue();
+   }
    if (!recipients.empty()) {
-      uint64_t spendAmount = 0;
       for (const auto& recipient : recipients) {
          if (recipient == nullptr) {
             throw std::logic_error("Invalid recipient");
          }
          spendAmount += recipient->getValue();
-         signer.addRecipient(recipient);
-      }
-      if (spendAmount != spendVal) {
-         throw std::invalid_argument("Recipient[s] amount != spend value");
       }
    }
-   request.recipients = recipients;
 
-   if (inputAmount > (spendVal + fee)) {
-      const uint64_t changeVal = inputAmount - (spendVal + fee);
-      if (changeAddress.isNull()) {
-         throw std::invalid_argument("Change address required, but missing");
+   if (spendAmount != spendVal) {
+      throw std::invalid_argument("Recipient[s] amount != spend value");
+   }
+   if (inputAmount < (spendVal + fee)) {
+      throw std::overflow_error("Not enough inputs (" + std::to_string(inputAmount)
+         + ") to spend " + std::to_string(spendVal + fee));
+   }
+
+   for (const auto &outputType : outSortOrder) {
+      switch (outputType) {
+      case bs::core::wallet::OutputOrderType::Recipients:
+         addRecipients(recipients);
+         break;
+      case bs::core::wallet::OutputOrderType::PrevState:
+         addRecipients(prevStateSigner.recipients());
+         break;
+      case bs::core::wallet::OutputOrderType::Change:
+         if (inputAmount == (spendVal + fee)) {
+            break;
+         }
+         {
+            const uint64_t changeVal = inputAmount - (spendVal + fee);
+            if (changeAddress.isNull()) {
+               throw std::invalid_argument("Change address required, but missing");
+            }
+            signer.addRecipient(changeAddress.getRecipient(bs::XBTAmount{ changeVal }));
+            request.change.value = changeVal;
+            request.change.address = changeAddress;
+            request.change.index = getAddressIndex(changeAddress);
+         }
+         break;
+      default:
+         throw std::invalid_argument("Unsupported output type " + std::to_string((int)outputType));
       }
-      signer.addRecipient(changeAddress.getRecipient(bs::XBTAmount{ changeVal }));
-      request.change.value = changeVal;
-      request.change.address = changeAddress;
-      request.change.index = getAddressIndex(changeAddress);
    }
 
    request.prevStates.emplace_back(signer.serializeState());

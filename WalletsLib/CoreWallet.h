@@ -1,7 +1,7 @@
 #ifndef BS_CORE_WALLET_H
 #define BS_CORE_WALLET_H
 
-#include <atomic>
+#include <array>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -166,20 +166,29 @@ namespace bs {
             Settlement
          };
 
+         enum class OutputOrderType {
+            PrevState,
+            Recipients,
+            Change
+         };
+         using OutputSortOrder = std::array<OutputOrderType, 3>;
+
          struct TXSignRequest
          {
             std::vector<std::string>   walletIds;
             std::vector<UTXO>          inputs;
             std::vector<std::shared_ptr<ScriptRecipient>>   recipients;
+            OutputSortOrder   outSortOrder{ OutputOrderType::PrevState
+               , OutputOrderType::Recipients, OutputOrderType::Change };
             struct {
                bs::Address address;
                std::string index;
-               uint64_t    value = 0;
+               uint64_t    value{ 0 };
             }  change;
-            uint64_t    fee = 0;
-            bool        RBF = false;
+            uint64_t    fee{ 0 };
+            bool        RBF{ false };
             std::vector<BinaryData>       prevStates;
-            bool        populateUTXOs = false;
+            bool        populateUTXOs{ false };
             std::string comment;
 
             // Used when offline TX export is requested

@@ -98,7 +98,6 @@ public:
       , bs::error::ErrorCode result, const SecureBinaryData &password);
    bs::error::ErrorCode activateAutoSign(const std::string &walletId, const SecureBinaryData &password);
    bs::error::ErrorCode deactivateAutoSign(const std::string &walletId = {}, bs::error::ErrorCode reason = bs::error::ErrorCode::NoError);
-   //void addPendingAutoSignReq(const std::string &walletId);
    void walletsListUpdated();
 
    void resetConnection(ServerConnection *connection);

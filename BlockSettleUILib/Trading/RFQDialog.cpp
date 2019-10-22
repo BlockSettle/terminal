@@ -8,6 +8,7 @@
 #include "QuoteProvider.h"
 #include "ReqCCSettlementContainer.h"
 #include "ReqXBTSettlementContainer.h"
+#include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
 
@@ -23,12 +24,15 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
+   , const bs::Address &recvXbtAddr
    , const bs::Address &authAddr
    , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
    , logger_(logger)
    , rfq_(rfq)
+   , recvXbtAddr_(recvXbtAddr)
    , transactionData_(transactionData)
    , quoteProvider_(quoteProvider)
    , authAddressManager_(authAddressManager)
@@ -39,6 +43,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , celerClient_(celerClient)
    , appSettings_(appSettings)
    , connectionManager_(connectionManager)
+   , xbtWallet_(xbtWallet)
    , authAddr_(authAddr)
 {
    ui_->setupUi(this);
@@ -105,9 +110,14 @@ void RFQDialog::reportError(const QString& errorMessage)
 
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
 {
+   if (!xbtWallet_) {
+      SPDLOG_LOGGER_ERROR(logger_, "xbt wallet is not set");
+      return nullptr;
+   }
+
    xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
-      , authAddressManager_, signContainer_, armory_, walletsManager_
-      , rfq_, quote_, transactionData_, authAddr_);
+      , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
+      , rfq_, quote_, authAddr_, transactionData_->getSelectedInputs()->GetSelectedTransactions(), recvXbtAddr_);
 
    connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
       , this, &RFQDialog::onSettlementAccepted);
@@ -242,6 +252,10 @@ void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const B
       return;
    }
 
+   if (signContainer_->opMode() != SignContainer::OpMode::Remote) {
+      hide();
+   }
+   
    xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash);
 }
 
@@ -249,6 +263,10 @@ void RFQDialog::onSignedPayinRequested(const std::string& settlementId, const Bi
 {
    if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
       return;
+   }
+
+   if (signContainer_->opMode() != SignContainer::OpMode::Remote) {
+      hide();
    }
 
    xbtSettlContainer_->onSignedPayinRequested(settlementId, unsignedPayin);

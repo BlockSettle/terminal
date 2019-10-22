@@ -174,10 +174,6 @@ void RFQTicketXBT::onReservedUtxosChanged(const std::string &walletId, const std
 {
    if (ccCoinSel_ && (ccCoinSel_->GetWallet()->walletId() == walletId)) {
       ccCoinSel_->Reload(utxos);
-   } else if (transactionData_
-     && transactionData_->getWallet()
-     && (transactionData_->getWallet()->walletId() == walletId)) {
-      transactionData_->ReloadSelection(utxos);
    }
    updateBalances();
    updateSubmitButton();
@@ -725,7 +721,6 @@ void RFQTicketXBT::submitButtonClicked()
 
       if ((rfq->side == bs::network::Side::Sell) && (rfq->product == bs::network::XbtCurrency)) {
          transactionData_->setMaxSpendAmount(maxAmount_);
-         transactionData_->ReserveUtxosFor(rfq->quantity, rfq->requestId);
       }
    } else if (rfq->assetType == bs::network::Asset::PrivateMarket) {
       rfq->receiptAddress = recvAddress().display();
@@ -855,6 +850,14 @@ void RFQTicketXBT::disablePanel()
 
    // show help
    showHelp(tr("Login in order to send RFQ"));
+}
+
+std::shared_ptr<bs::sync::Wallet> RFQTicketXBT::xbtWallet() const
+{
+   if (curWallet_ && curWallet_->type() == bs::core::wallet::Type::Bitcoin) {
+      return curWallet_;
+   }
+   return nullptr;
 }
 
 void RFQTicketXBT::enablePanel()
