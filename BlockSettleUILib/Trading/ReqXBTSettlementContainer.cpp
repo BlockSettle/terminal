@@ -451,7 +451,8 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
       };
 
       if (utxosPayinFixed_.empty()) {
-         transaction->setWallet(xbtWallet_, armory_->topBlock(), false, resetInputsCb);
+         const bool resetInputs = false;
+         transaction->setWallet(xbtWallet_, armory_->topBlock(), resetInputs, resetInputsCb);
       } else {
          transaction->setWalletAndInputs(xbtWallet_, utxosPayinFixed_, armory_->topBlock());
          transaction->getSelectedInputs()->SetUseAutoSel(true);
