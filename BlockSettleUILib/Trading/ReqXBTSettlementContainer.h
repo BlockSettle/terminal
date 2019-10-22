@@ -34,12 +34,13 @@ public:
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const bs::network::RFQ &
       , const bs::network::Quote &
-      , const std::shared_ptr<TransactionData> &
       , const bs::Address &authAddr
-   );
+      , const std::vector<UTXO> &utxosPayinFixed
+      , const bs::Address &recvAddr);
    ~ReqXBTSettlementContainer() override;
 
    bool cancel() override;
@@ -59,8 +60,7 @@ public:
 
 
    std::string fxProduct() const { return fxProd_; }
-   uint64_t fee() const { return fee_; }
-   bool weSell() const { return clientSells_; }
+   bool weSell() const { return clientSellsXbt_; }
    bool userKeyOk() const { return userKeyOk_; }
 
 
@@ -88,7 +88,6 @@ private:
 
    void acceptSpotXBT();
    void dealerVerifStateChanged(AddressVerificationState);
-   void activateProceed();
 
    void cancelWithError(const QString& errorMessage);
 
@@ -98,7 +97,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<SignContainer>            signContainer_;
    std::shared_ptr<ArmoryConnection>         armory_;
-   std::shared_ptr<TransactionData>          transactionData_;
+   std::shared_ptr<bs::sync::Wallet>         xbtWallet_;
 
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
@@ -107,18 +106,17 @@ private:
    std::shared_ptr<AddressVerificator>             addrVerificator_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
-   double            amount_;
+   double            amount_{};
    std::string       fxProd_;
-   uint64_t          fee_;
    BinaryData        settlementId_;
-   std::string       settlementIdString_;
+   std::string       settlementIdHex_;
    BinaryData        userKey_;
    BinaryData        dealerAuthKey_;
    bs::Address       recvAddr_;
    AddressVerificationState dealerVerifState_ = AddressVerificationState::VerificationFailed;
 
    std::string       comment_;
-   const bool        clientSells_;
+   const bool        clientSellsXbt_;
    bool              userKeyOk_ = false;
 
    unsigned int      payinSignId_ = 0;
@@ -129,6 +127,7 @@ private:
 
    bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
    BinaryData        usedPayinHash_;
+   std::vector<UTXO> utxosPayinFixed_;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__

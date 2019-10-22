@@ -69,6 +69,8 @@ public:
 
    bs::Address selectedAuthAddress() const;
 
+   bs::Address recvAddress() const;
+
 public slots:
    void SetProductAndSide(const QString& productGroup, const QString& currencyPair
       , const QString& bidPrice, const QString& offerPrice, bs::network::Side::Type side);
@@ -81,6 +83,8 @@ public slots:
 
    void enablePanel();
    void disablePanel();
+
+   std::shared_ptr<bs::sync::Wallet> xbtWallet() const;
 
 private slots:
    void updateBalances();
@@ -154,7 +158,6 @@ private:
    bool checkBalance(double qty) const;
    bs::network::Side::Type getSelectedSide() const;
    std::string authKey() const { return authKey_; }
-   bs::Address recvAddress() const;
 
    void putRFQ(const bs::network::RFQ &);
    bool existsRFQ(const bs::network::RFQ &);
