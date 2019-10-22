@@ -164,6 +164,8 @@ namespace bs {
             , const std::vector<UTXO> &inputs = {}, bs::Address changeAddress = {}
             , float feePerByte = 0
             , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients = {}
+            , const bs::core::wallet::OutputSortOrder &outSortOrder = { bs::core::wallet::OutputOrderType::PrevState
+               , bs::core::wallet::OutputOrderType::Recipients, bs::core::wallet::OutputOrderType::Change }
             , const BinaryData prevPart = {});
 
          virtual bool deleteRemotely() { return false; } //stub

@@ -22,6 +22,11 @@ headless::SignTxRequest bs::signer::coreTxRequestToPb(const bs::core::wallet::TX
    for (const auto &recip : txSignReq.recipients) {
       request.add_recipients(recip->getSerializedScript().toBinStr());
    }
+
+   for (const auto &sortType : txSignReq.outSortOrder) {
+      request.add_out_sort_order(static_cast<uint32_t>(sortType));
+   }
+
    if (txSignReq.fee) {
       request.set_fee(txSignReq.fee);
    }
@@ -67,6 +72,12 @@ bs::core::wallet::TXSignRequest bs::signer::pbTxRequestToCore(const headless::Si
       const auto recip = ScriptRecipient::deserialize(serialized);
       txSignReq.recipients.push_back(recip);
       outputVal += recip->getValue();
+   }
+
+   if (request.out_sort_order_size() == 3) {
+      txSignReq.outSortOrder = { static_cast<bs::core::wallet::OutputOrderType>(request.out_sort_order(0))
+         , static_cast<bs::core::wallet::OutputOrderType>(request.out_sort_order(1))
+         , static_cast<bs::core::wallet::OutputOrderType>(request.out_sort_order(2)) };
    }
 
    if (request.has_change()) {

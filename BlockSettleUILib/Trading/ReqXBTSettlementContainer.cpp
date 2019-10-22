@@ -69,34 +69,45 @@ ReqXBTSettlementContainer::~ReqXBTSettlementContainer()
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
-unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHash, double qty
+void ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHash, double qty
    , const bs::Address &recvAddr)
 {
    usedPayinHash_ = payinHash;
 
-   try {
-      const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(
-         bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, bs::XBTAmount{ qty }), recvAddr
-         , transactionData_->GetTransactionSummary().feePerByte, armory_->topBlock());
+   armory_->estimateFee(2, [this, qty, payinHash, recvAddr, handle = validityFlag_.handle()](float fee) {
+      if (!handle.isValid()) {
+         return;
+      }
+      auto feePerByte = ArmoryConnection::toFeePerByte(fee);
+      if (feePerByte < 1.0f) {
+         SPDLOG_LOGGER_ERROR(logger_, "wrong fee: {} s/b", feePerByte);
+         cancelWithError(tr("Invalid fee"));
+         return;
+      }
 
-      bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(txReq);
-      dlgData.setValue(PasswordDialogData::Market, "XBT");
-      dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
-      dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
-      dlgData.setValue(PasswordDialogData::SigningAllowed, true);
+      try {
+         const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(
+            bs::SettlementMonitor::getInputFromTX(settlAddr_, payinHash, bs::XBTAmount{ qty }), recvAddr
+            , feePerByte, armory_->topBlock());
 
-      logger_->debug("[ReqXBTSettlementContainer::createPayoutTx] pay-out fee={}, qty={} ({}), payin hash={}"
-         , txReq.fee, qty, qty * BTCNumericTypes::BalanceDivider, payinHash.toHexStr(true));
+         bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(txReq);
+         dlgData.setValue(PasswordDialogData::Market, "XBT");
+         dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
+         dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
+         dlgData.setValue(PasswordDialogData::SigningAllowed, true);
 
-      return signContainer_->signSettlementPayoutTXRequest(txReq
-         , {settlementId_, dealerAuthKey_, true }, dlgData);
-   }
-   catch (const std::exception &e) {
-      logger_->warn("[ReqXBTSettlementContainer::createPayoutTx] failed to create pay-out transaction based on {}: {}"
-         , payinHash.toHexStr(), e.what());
-      cancelWithError(tr("Pay-out transaction creation failure: %1").arg(QLatin1String(e.what())));
-   }
-   return 0;
+         logger_->debug("[ReqXBTSettlementContainer::createPayoutTx] pay-out fee={}, qty={} ({}), payin hash={}"
+            , txReq.fee, qty, qty * BTCNumericTypes::BalanceDivider, payinHash.toHexStr(true));
+
+         payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(txReq
+            , {settlementId_, dealerAuthKey_, true }, dlgData);
+      }
+      catch (const std::exception &e) {
+         logger_->warn("[ReqXBTSettlementContainer::createPayoutTx] failed to create pay-out transaction based on {}: {}"
+            , payinHash.toHexStr(), e.what());
+         cancelWithError(tr("Pay-out transaction creation failure: %1").arg(QLatin1String(e.what())));
+      }
+   });
 }
 
 void ReqXBTSettlementContainer::acceptSpotXBT()
@@ -447,7 +458,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
    logger_->debug("[ReqXBTSettlementContainer::onSignedPayoutRequested] create payout for {} on {} for {}"
                   , settlementId, payinHash.toHexStr(), amount_);
 
-   payoutSignId_ = createPayoutTx(payinHash, amount_, recvAddr_);
+   createPayoutTx(payinHash, amount_, recvAddr_);
 }
 
 void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin)
