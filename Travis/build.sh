@@ -1,8 +1,6 @@
 #!/bin/bash
 echo "Build script started ..."
 
-set -o errexit -o nounset
-
 unameOut="$(uname -s)"
 case "${unameOut}" in
     Linux*)     MACHINE=Linux;;
@@ -17,6 +15,9 @@ if [ ${MACHINE} = "MacOS" ]; then
    echo 'export PATH="/usr/local/opt/qt/bin:$PATH"' >> ~/.bash_profile
    source ~/.bash_profile
 fi
+
+# should be after source ~/.bash_profile
+set -o errexit -o nounset
 
 # Hold on to current directory
 project_dir=$(pwd)
