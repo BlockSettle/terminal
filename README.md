@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/BlockSettle/terminal.svg?token=xR23srD2shnSBpysR3xE&branch=bs_dev)](https://travis-ci.com/BlockSettle/terminal)
+
 # Supported runtime platforms
 - Linux - [Ubuntu](https://www.ubuntu.com/) (16.04 LTS/18.04 LTS/18.10/19.04)
 - [macOS](https://www.apple.com/macos/) (10.12 or higher)

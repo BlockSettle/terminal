@@ -12,6 +12,11 @@ case "${unameOut}" in
     *)          MACHINE="UNKNOWN:${unameOut}"
 esac
 
+if [ ${MACHINE} = "MacOS" ]; then
+   echo 'export PATH="/usr/local/opt/mysql-client/bin:$PATH"' >> ~/.bash_profile
+   echo 'export PATH="/usr/local/opt/qt/bin:$PATH"' >> ~/.bash_profile
+   source ~/.bash_profile
+fi
 
 # Hold on to current directory
 project_dir=$(pwd)
