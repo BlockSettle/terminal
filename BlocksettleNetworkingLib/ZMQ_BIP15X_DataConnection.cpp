@@ -255,6 +255,8 @@ void ZmqBIP15XDataConnection::listenFunction()
       sendPendingData();
    }
 
+   zmq_socket_monitor(dataSocket_.get(), NULL, 0);
+
    if (isConnected_) {
       onDisconnected();
    }
