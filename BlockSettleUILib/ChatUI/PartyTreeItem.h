@@ -41,7 +41,6 @@ public:
    bool insertChildren(std::unique_ptr<PartyTreeItem>&& item);
    PartyTreeItem* parent();
    void removeAll();
-   void removeAllExceptFirst();
    int childNumber() const;
    bool setData(const QVariant& value);
 

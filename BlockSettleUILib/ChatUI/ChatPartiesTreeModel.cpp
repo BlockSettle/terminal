@@ -69,17 +69,12 @@ void ChatPartiesTreeModel::onGlobalOTCChanged()
    if (!otcGlobalModelIndex.isValid()) {
       return;
    }
-   QModelIndex otcGlobalContainer = otcGlobalModelIndex.parent();
-   if (!otcGlobalContainer.isValid()) {
-      return;
-   }
 
-   PartyTreeItem* otcParty = static_cast<PartyTreeItem*>(otcGlobalContainer.internalPointer());
+   PartyTreeItem* otcParty = static_cast<PartyTreeItem*>(otcGlobalModelIndex.internalPointer());
 
-   assert(otcParty->childCount() > 0);
-   if (otcParty->childCount() != 1) {
-      beginRemoveRows(otcGlobalContainer, 1, otcParty->childCount() - 1);
-      otcParty->removeAllExceptFirst();
+   if (otcParty->childCount() > 0) {
+      beginRemoveRows(otcGlobalModelIndex, 0, otcParty->childCount() - 1);
+      otcParty->removeAll();
       endRemoveRows();
    }
 
@@ -97,7 +92,7 @@ void ChatPartiesTreeModel::onGlobalOTCChanged()
       section->insertChildren(std::move(otcItem));
    };
 
-   beginInsertRows(otcGlobalContainer, 1, 2);
+   beginInsertRows(otcGlobalModelIndex, 0, 1);
 
    std::unique_ptr<PartyTreeItem> sentSection = std::make_unique<PartyTreeItem>(ChatModelNames::TabOTCSentRequest, UI::ElementType::Container, otcParty);
    for (const auto &peer : otcClient_->requests()) {

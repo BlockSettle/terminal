@@ -48,12 +48,6 @@ void PartyTreeItem::removeAll()
    childItems_.clear();
 }
 
-void PartyTreeItem::removeAllExceptFirst()
-{
-   assert(childItems_.size() >= 1);
-   childItems_.erase(childItems_.begin() + 1, childItems_.end());
-}
-
 int PartyTreeItem::childNumber() const
 {
    if (parentItem_) {

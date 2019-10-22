@@ -58,8 +58,8 @@ namespace ChatModelNames {
    const QString PrivatePartyGlobalOTCDisplayName = QObject::tr("Global");
 
    // OTC
-   const QString TabOTCSentRequest = QObject::tr("Send request");
-   const QString TabOTCReceivedResponse = QObject::tr("Received response");
+   const QString TabOTCSentRequest = QObject::tr("Submitted quotes");
+   const QString TabOTCReceivedResponse = QObject::tr("Received quotes");
 }
 
 #endif // CHATPARTYLISTMODEL_H
