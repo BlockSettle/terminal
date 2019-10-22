@@ -315,6 +315,8 @@ void ZmqDataConnection::listenFunction()
          }
       }
    }
+
+   zmq_socket_monitor(dataSocket_.get(), nullptr, ZMQ_EVENT_ALL);
 }
 
 bool ZmqDataConnection::recvData()
