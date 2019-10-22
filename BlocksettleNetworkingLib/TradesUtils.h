@@ -19,6 +19,7 @@ struct OtcClientDeal;
 
 namespace bs {
    class Address;
+   class UtxoReservation;
    namespace core {
       namespace wallet {
          struct TXSignRequest;
@@ -31,6 +32,7 @@ namespace bs {
          class SettlementLeaf;
       }
    }
+
 
    namespace tradeutils {
 
@@ -56,6 +58,13 @@ namespace bs {
          // Must be from the same hd wallet.
          // First wallet used to send XBT change if needed.
          std::vector<std::shared_ptr<bs::sync::Wallet>> inputXbtWallets;
+
+         // If set, automatic UTXO selection filters reserverd inputs.
+         // Fixed inputs are not filtered.
+         bs::UtxoReservation *utxoReservation{};
+
+         // walletId used for UTXO filtering
+         std::string utxoReservationWalletId;
       };
 
       struct PayoutArgs : public Args
@@ -96,8 +105,10 @@ namespace bs {
 
       uint64_t estimatePayinFeeWithoutChange(const std::vector<UTXO> &inputs, float feePerByte);
 
+      // Callback is called from background thread
       void createPayin(PayinArgs args, PayinResultCb cb);
 
+      // Callback is called from background thread
       void createPayout(PayoutArgs args, PayoutResultCb cb);
 
    } // namespace tradeutils

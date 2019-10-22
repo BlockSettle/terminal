@@ -13,6 +13,7 @@
 #include "SignContainer.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"
+#include "UtxoReservation.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -303,39 +304,43 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
    initTradesArgs(args, settlementId);
    args.fixedInputs = utxosPayinFixed_;
    args.inputXbtWallets.push_back(xbtWallet_);
+   args.utxoReservation = bs::UtxoReservation::instance();
+   args.utxoReservationWalletId = xbtWallet_->walletId();
 
    auto payinCb = bs::tradeutils::PayinResultCb([this, handle = validityFlag_.handle()]
       (bs::tradeutils::PayinResult result)
    {
-      if (!handle.isValid()) {
-         return;
-      }
+      QMetaObject::invokeMethod(qApp, [this, handle, result = std::move(result)] {
+         if (!handle.isValid()) {
+            return;
+         }
 
-      if (!result.success) {
-         SPDLOG_LOGGER_ERROR(logger_, "payin sign request creation failed: {}", result.errorMsg);
-         cancelWithError(tr("payin failed"));
-         return;
-      }
+         if (!result.success) {
+            SPDLOG_LOGGER_ERROR(logger_, "payin sign request creation failed: {}", result.errorMsg);
+            cancelWithError(tr("payin failed"));
+            return;
+         }
 
-      const auto list = authAddrMgr_->GetVerifiedAddressList();
-      const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
-      userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
-      if (!userKeyOk_) {
-         SPDLOG_LOGGER_WARN(logger_, "userAddr {} not found in verified addrs list ({})"
-            , userAddress.display(), list.size());
-         return;
-      }
+         const auto list = authAddrMgr_->GetVerifiedAddressList();
+         const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
+         userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
+         if (!userKeyOk_) {
+            SPDLOG_LOGGER_WARN(logger_, "userAddr {} not found in verified addrs list ({})"
+               , userAddress.display(), list.size());
+            return;
+         }
 
-      const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
-      addrVerificator_->addAddress(dealerAddrSW);
-      addrVerificator_->startAddressVerification();
+         const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
+         addrVerificator_->addAddress(dealerAddrSW);
+         addrVerificator_->startAddressVerification();
 
-      unsignedPayinRequest_ = std::move(result.signRequest);
-      SPDLOG_LOGGER_DEBUG(logger_, "unsigned tx id {}", result.payinTxId.toHexStr(true));
+         unsignedPayinRequest_ = std::move(result.signRequest);
+         SPDLOG_LOGGER_DEBUG(logger_, "unsigned tx id {}", result.payinTxId.toHexStr(true));
 
-      utxoAdapter_->reserve(xbtWallet_->walletId(), id(), unsignedPayinRequest_.inputs);
+         utxoAdapter_->reserve(xbtWallet_->walletId(), id(), unsignedPayinRequest_.inputs);
 
-      emit sendUnsignedPayinToPB(settlementIdHex_, unsignedPayinRequest_.serializeState(), result.payinTxId);
+         emit sendUnsignedPayinToPB(settlementIdHex_, unsignedPayinRequest_.serializeState(), result.payinTxId);
+      });
    });
 
    bs::tradeutils::createPayin(std::move(args), std::move(payinCb));
@@ -359,27 +364,29 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, payinHash, handle = validityFlag_.handle()]
       (bs::tradeutils::PayoutResult result)
    {
-      if (!handle.isValid()) {
-         return;
-      }
+      QMetaObject::invokeMethod(qApp, [this, payinHash, handle, result = std::move(result)] {
+         if (!handle.isValid()) {
+            return;
+         }
 
-      if (!result.success) {
-         SPDLOG_LOGGER_ERROR(logger_, "creating payout failed: {}", result.errorMsg);
-         cancelWithError(tr("payout failed"));
-         return;
-      }
+         if (!result.success) {
+            SPDLOG_LOGGER_ERROR(logger_, "creating payout failed: {}", result.errorMsg);
+            cancelWithError(tr("payout failed"));
+            return;
+         }
 
-      bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(result.signRequest);
-      dlgData.setValue(PasswordDialogData::Market, "XBT");
-      dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
-      dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
-      dlgData.setValue(PasswordDialogData::SigningAllowed, true);
+         bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(result.signRequest);
+         dlgData.setValue(PasswordDialogData::Market, "XBT");
+         dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
+         dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
+         dlgData.setValue(PasswordDialogData::SigningAllowed, true);
 
-      SPDLOG_LOGGER_DEBUG(logger_, "pay-out fee={}, qty={} ({}), payin hash={}"
-         , result.signRequest.fee, amount_, amount_ * BTCNumericTypes::BalanceDivider, payinHash.toHexStr(true));
+         SPDLOG_LOGGER_DEBUG(logger_, "pay-out fee={}, qty={} ({}), payin hash={}"
+            , result.signRequest.fee, amount_, amount_ * BTCNumericTypes::BalanceDivider, payinHash.toHexStr(true));
 
-      payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(result.signRequest
-         , {settlementId_, dealerAuthKey_, true}, dlgData);
+         payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(result.signRequest
+            , {settlementId_, dealerAuthKey_, true}, dlgData);
+      });
    });
    bs::tradeutils::createPayout(std::move(args), std::move(payoutCb));
 }

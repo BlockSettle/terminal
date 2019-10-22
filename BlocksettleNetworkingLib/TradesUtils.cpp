@@ -4,6 +4,7 @@
 
 #include "CoinSelection.h"
 #include "SettlementMonitor.h"
+#include "UtxoReservation.h"
 #include "Wallets/SyncHDGroup.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
@@ -167,7 +168,14 @@ void bs::tradeutils::createPayin(bs::tradeutils::PayinArgs args, bs::tradeutils:
             };
 
             if (args.fixedInputs.empty()) {
-               bs::sync::Wallet::getSpendableTxOutList(args.inputXbtWallets, inputsCb);
+               auto inputsCbWrap = [args, cb, inputsCb](std::vector<UTXO> utxos) {
+                  if (args.utxoReservation) {
+                     // Ignore filter return value as it fails if there were no reservations before
+                     args.utxoReservation->filter(args.utxoReservationWalletId, utxos);
+                  }
+                  inputsCb(utxos);
+               };
+               bs::sync::Wallet::getSpendableTxOutList(args.inputXbtWallets, inputsCbWrap);
             } else {
                inputsCb(args.fixedInputs);
             }
@@ -209,8 +217,7 @@ void bs::tradeutils::createPayout(bs::tradeutils::PayoutArgs args, bs::tradeutil
             return;
          }
 
-         auto cbSettlAddr = [args, cb, feePerByte](const bs::Address &settlAddr)
-         {
+         auto cbSettlAddr = [args, cb, feePerByte](const bs::Address &settlAddr) {
             auto recvAddrCb = [args, cb, feePerByte, settlAddr](const bs::Address &recvAddr) {
                if (settlAddr.isNull()) {
                   cb(PayoutResult::error("invalid settl addr"));
