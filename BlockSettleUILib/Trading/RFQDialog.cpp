@@ -258,7 +258,7 @@ void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const B
    if (signContainer_->opMode() != SignContainer::OpMode::Remote) {
       hide();
    }
-   
+
    xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash);
 }
 

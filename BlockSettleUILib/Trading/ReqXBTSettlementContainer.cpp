@@ -208,7 +208,7 @@ void ReqXBTSettlementContainer::initTradesArgs(bs::tradeutils::Args &args, const
 void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
    , bs::error::ErrorCode errCode, std::string errTxt)
 {
-   if (payinSignId_ != 0 && (payinSignId_ == id)) {
+   if ((payinSignId_ != 0) && (payinSignId_ == id)) {
       payinSignId_ = 0;
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
@@ -394,25 +394,21 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
 void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin)
 {
    if (settlementIdHex_ != settlementId) {
-      logger_->error("[ReqXBTSettlementContainer::onSignedPayinRequested] invalid id : {} . {} expected"
-                     , settlementId, settlementIdHex_);
+      SPDLOG_LOGGER_ERROR(logger_, "invalid id : {} . {} expected", settlementId, settlementIdHex_);
       return;
    }
 
    if (!clientSellsXbt_) {
-      logger_->error("[ReqXBTSettlementContainer::onSignedPayinRequested] customer buy on thq rfq {}. should not sign payin"
-                     , settlementId);
+      SPDLOG_LOGGER_ERROR(logger_, "customer buy on thq rfq {}. should not sign payin", settlementId);
       return;
    }
 
    if (!unsignedPayinRequest_.isValid()) {
-      logger_->error("[ReqXBTSettlementContainer::onSignedPayinRequested] unsigned payin request is invalid: {}"
-                     , settlementIdHex_);
+      SPDLOG_LOGGER_ERROR(logger_, "unsigned payin request is invalid: {}", settlementIdHex_);
       return;
    }
 
-   logger_->debug("[ReqXBTSettlementContainer::onSignedPayinRequested] signed payout requested {}"
-                  , settlementId);
+   SPDLOG_LOGGER_DEBUG(logger_, "signed payin requested {}", settlementId);
 
    // XXX check unsigned payin?
 
