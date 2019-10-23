@@ -276,16 +276,13 @@ otc::Peer *ChatWidget::currentPeer() const
       return nullptr;
    }
 
-   if (currentPartyId_ == Chat::OtcRoomName) {
+   if (clientPartyPtr->isGlobalOTC()) {
       const auto &currentIndex = ui_->treeViewOTCRequests->selectionModel()->currentIndex();
-      if (currentIndex.isValid() && clientPartyPtr->partyCreatorHash() == ownUserId_) {
-         return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
-      }
-
       if (!currentIndex.isValid() || currentIndex.row() < 0 || currentIndex.row() >= int(otcHelper_->client()->requests().size())) {
          // Show by default own request (if available)
          return otcHelper_->client()->ownRequest();
       }
+
       return otcHelper_->client()->requests().at(size_t(currentIndex.row()));
    }
 

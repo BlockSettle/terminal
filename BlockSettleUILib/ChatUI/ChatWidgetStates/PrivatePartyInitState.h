@@ -52,16 +52,16 @@ protected:
          return;
       }
 
-      if (clientPartyPtr->isGlobal()) {
+      if (clientPartyPtr->isGlobalOTC()) {
+         if (!checkIsTradingParticipant()) {
+            return;
+         }
+      }
+      else if (clientPartyPtr->isGlobal()) {
          if (clientPartyPtr->displayName() == Chat::GlobalRoomName) {
             chat_->ui_->widgetOTCShield->showOtcUnavailableGlobal();
             return;
          } 
-         else if (clientPartyPtr->displayName() == Chat::OtcRoomName) {
-            if (!checkIsTradingParticipant()) {
-               return;
-            }
-         }
          else if (clientPartyPtr->displayName() == Chat::SupportRoomName) {
             chat_->ui_->widgetOTCShield->showOtcUnavailableSupport();
             return;

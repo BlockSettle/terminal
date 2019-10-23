@@ -23,33 +23,37 @@ void ChatPartiesTreeModel::onPartyModelChanged()
    rootItem_->removeAll();
 
    std::unique_ptr<PartyTreeItem> globalSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabGlobal, UI::ElementType::Container, rootItem_);
+   std::unique_ptr<PartyTreeItem> otcGlobalSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabOTCIdentifier, UI::ElementType::Container, rootItem_);
    std::unique_ptr<PartyTreeItem> privateSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabPrivate, UI::ElementType::Container, rootItem_);
    std::unique_ptr<PartyTreeItem> requestSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabContactRequest, UI::ElementType::Container, rootItem_);
 
    Chat::IdPartyList idPartyList = clientPartyModelPtr->getIdPartyList();
 
+   auto insertChild = [](PartyTreeItem* section, QVariant stored) {
+      std::unique_ptr<PartyTreeItem> partyTreeItem = std::make_unique<PartyTreeItem>(stored, UI::ElementType::Party, section);
+      section->insertChildren(std::move(partyTreeItem));
+   };
+
    for (const auto& id : idPartyList) {
       Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(id);
 
-      if (clientPartyPtr->isGlobal()) {
-         QVariant stored;
-         stored.setValue(clientPartyPtr);
-         std::unique_ptr<PartyTreeItem> globalItem = std::make_unique<PartyTreeItem>(stored, UI::ElementType::Party, globalSection.get());
-         globalSection->insertChildren(std::move(globalItem));
+      QVariant stored;
+      stored.setValue(clientPartyPtr);
+
+      if (clientPartyPtr->isGlobalOTC()) {
+         insertChild(otcGlobalSection.get(), stored);
       }
-
-      if (clientPartyPtr->isPrivateStandard()) {
-         QVariant stored;
-         stored.setValue(clientPartyPtr);
-
+      else if (clientPartyPtr->isGlobal()) {
+         insertChild(globalSection.get(), stored);
+      }
+      else if (clientPartyPtr->isPrivateStandard()) {
          PartyTreeItem* parentSection = clientPartyPtr->partyState() == Chat::PartyState::INITIALIZED ? privateSection.get() : requestSection.get();
-
-         std::unique_ptr<PartyTreeItem> privateItem = std::make_unique<PartyTreeItem>(stored, UI::ElementType::Party, parentSection);
-         parentSection->insertChildren(std::move(privateItem));
+         insertChild(parentSection, stored);
       }
    }
 
    rootItem_->insertChildren(std::move(globalSection));
+   rootItem_->insertChildren(std::move(otcGlobalSection));
    rootItem_->insertChildren(std::move(privateSection));
    rootItem_->insertChildren(std::move(requestSection));
 
@@ -61,14 +65,15 @@ void ChatPartiesTreeModel::onPartyModelChanged()
 
 void ChatPartiesTreeModel::onGlobalOTCChanged()
 {
-   QModelIndex otcModelIndex = getOTCGlobalRoot();
-   if (!otcModelIndex.isValid()) {
+   QModelIndex otcGlobalModelIndex = getOTCGlobalRoot();
+   if (!otcGlobalModelIndex.isValid()) {
       return;
    }
-   PartyTreeItem* otcParty = static_cast<PartyTreeItem*>(otcModelIndex.internalPointer());
 
-   if (otcParty->childCount() != 0) {
-      beginRemoveRows(otcModelIndex, 0, otcParty->childCount() - 1);
+   PartyTreeItem* otcParty = static_cast<PartyTreeItem*>(otcGlobalModelIndex.internalPointer());
+
+   if (otcParty->childCount() > 0) {
+      beginRemoveRows(otcGlobalModelIndex, 0, otcParty->childCount() - 1);
       otcParty->removeAll();
       endRemoveRows();
    }
@@ -87,7 +92,7 @@ void ChatPartiesTreeModel::onGlobalOTCChanged()
       section->insertChildren(std::move(otcItem));
    };
 
-   beginInsertRows(otcModelIndex, 0, 1);
+   beginInsertRows(otcGlobalModelIndex, 0, 1);
 
    std::unique_ptr<PartyTreeItem> sentSection = std::make_unique<PartyTreeItem>(ChatModelNames::TabOTCSentRequest, UI::ElementType::Container, otcParty);
    for (const auto &peer : otcClient_->requests()) {
@@ -99,7 +104,6 @@ void ChatPartiesTreeModel::onGlobalOTCChanged()
    otcParty->insertChildren(std::move(sentSection));
 
    std::unique_ptr<PartyTreeItem> responseSection = std::make_unique<PartyTreeItem>(ChatModelNames::TabOTCReceivedResponse, UI::ElementType::Container, otcParty);
-
    for (const auto &peer : otcClient_->responses()) {
       fAddOtcParty(peer, responseSection, otc::PeerType::Response);
    }
@@ -221,7 +225,7 @@ QModelIndex ChatPartiesTreeModel::getOTCGlobalRoot() const
       auto* container = rootItem_->child(iContainer);
 
       Q_ASSERT(container->data().canConvert<QString>());
-      if (container->data().toString() != ChatModelNames::ContainerTabGlobal) {
+      if (container->data().toString() != ChatModelNames::ContainerTabOTCIdentifier) {
          continue;
       }
 
@@ -229,7 +233,7 @@ QModelIndex ChatPartiesTreeModel::getOTCGlobalRoot() const
          const PartyTreeItem* party = container->child(iParty);
          if (party->data().canConvert<Chat::ClientPartyPtr>()) {
             const Chat::ClientPartyPtr clientPtr = party->data().value<Chat::ClientPartyPtr>();
-            if (clientPtr->displayName() == Chat::OtcRoomName) {
+            if (clientPtr->isGlobalOTC()) {
                return index(iParty, 0, index(iContainer, 0));
             }
          }
@@ -254,6 +258,10 @@ QVariant ChatPartiesTreeModel::data(const QModelIndex& index, int role) const
    PartyTreeItem* item = getItem(index);
 
    if (item->modelType() == UI::ElementType::Container) {
+      if (item->data().toString() == ChatModelNames::ContainerTabOTCIdentifier) {
+         return { ChatModelNames::ContainerTabOTCDisplayName };
+      }
+
       return item->data();
    }
    else if (item->modelType() == UI::ElementType::Party) {
@@ -261,6 +269,10 @@ QVariant ChatPartiesTreeModel::data(const QModelIndex& index, int role) const
       Chat::ClientPartyPtr clientPartyPtr = item->data().value<Chat::ClientPartyPtr>();
       if (!clientPartyPtr) {
          return QVariant();
+      }
+
+      if (clientPartyPtr->isGlobalOTC()) {
+         return { ChatModelNames::PrivatePartyGlobalOTCDisplayName };
       }
       return QString::fromStdString(clientPartyPtr->displayName());
    }

@@ -52,9 +52,14 @@ namespace ChatModelNames {
    const QString ContainerTabPrivate = QObject::tr("Private");
    const QString ContainerTabContactRequest = QObject::tr("Contact request");
 
+   const QString ContainerTabOTCIdentifier = QObject::tr("C_OTC");
+   const QString ContainerTabOTCDisplayName = QObject::tr("OTC");
+
+   const QString PrivatePartyGlobalOTCDisplayName = QObject::tr("Global");
+
    // OTC
-   const QString TabOTCSentRequest = QObject::tr("Send request");
-   const QString TabOTCReceivedResponse = QObject::tr("Received response");
+   const QString TabOTCSentRequest = QObject::tr("Submitted quotes");
+   const QString TabOTCReceivedResponse = QObject::tr("Received quotes");
 }
 
 #endif // CHATPARTYLISTMODEL_H
