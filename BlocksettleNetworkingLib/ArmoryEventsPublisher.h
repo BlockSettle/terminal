@@ -30,7 +30,6 @@ public:
    bool connectToArmory(const std::shared_ptr<ArmoryConnection> &);
    void disconnectFromArmory();
 
-private:
    bool isConnectedToArmory() const;
 
 private:
