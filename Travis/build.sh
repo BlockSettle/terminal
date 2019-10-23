@@ -22,7 +22,7 @@ if [ ${MACHINE} = "MacOS" ]; then
 fi
 
 # should be after source ~/.bash_profile
-# set -o errexit -o nounset
+set -o errexit -o nounset
 
 if [ ${MACHINE} = "Linux" ]; then
    build_dir=${project_dir}/build_terminal/RelWithDebInfo/bin/
