@@ -1,7 +1,6 @@
 sudo: false
 
 os:
-  - linux
   - osx
 
 osx_image: xcode9.4
@@ -33,6 +32,7 @@ addons:
     - yasm
     - nasm
     - g++
+    update: true
 
   homebrew:
     packages:
@@ -46,6 +46,7 @@ addons:
     - yasm
     - xz
     - pkg-config
+    update: true
 
 install:
   - sudo -H pip3 install wget requests pathlib
