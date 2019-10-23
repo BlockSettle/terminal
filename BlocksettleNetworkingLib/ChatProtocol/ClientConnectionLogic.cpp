@@ -207,7 +207,7 @@ void ClientConnectionLogic::prepareAndSendPublicMessage(const ClientPartyPtr& cl
    partyMessagePacket.set_party_message_state(partyMessageState);
    partyMessagePacket.set_sender_hash(currentUserPtr()->userName());
 
-   clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
+   clientDBServicePtr_->saveMessage(clientPartyPtr, ProtobufUtils::pbMessageToString(partyMessagePacket));
 
    emit sendPacket(partyMessagePacket);
 }
@@ -294,9 +294,6 @@ void ClientConnectionLogic::incomingPrivatePartyMessage(PartyMessagePacket& part
 
 void ClientConnectionLogic::saveIncomingPartyMessageAndUpdateState(PartyMessagePacket& partyMessagePacket, const PartyMessageState& partyMessageState)
 {
-   //save message
-   clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
-
    ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
    PartyPtr partyPtr = clientPartyModelPtr->getPartyById(partyMessagePacket.party_id());
 
@@ -305,6 +302,9 @@ void ClientConnectionLogic::saveIncomingPartyMessageAndUpdateState(PartyMessageP
       emit error(ClientConnectionLogicError::CouldNotFindParty, partyMessagePacket.party_id(), true);
       return;
    }
+
+   //save message
+   clientDBServicePtr_->saveMessage(partyPtr, ProtobufUtils::pbMessageToString(partyMessagePacket));
 
    if (partyPtr->isGlobalStandard())
    {
@@ -539,7 +539,7 @@ void ClientConnectionLogic::prepareAndSendPrivateMessage(const ClientPartyPtr& c
    partyMessagePacket.set_sender_hash(currentUserPtr()->userName());
 
    // save in db
-   clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
+   clientDBServicePtr_->saveMessage(clientPartyPtr, ProtobufUtils::pbMessageToString(partyMessagePacket));
 
    // call session key handler
    PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr()->userName());
@@ -696,7 +696,16 @@ void ClientConnectionLogic::handlePrivatePartyStateChanged(const PrivatePartySta
    if (PartyState::INITIALIZED == privatePartyStateChanged.party_state())
    {
       // if it's otc party, notify that is ready
-      emit clientPartyModelPtr->otcPrivatePartyReady(clientPartyPtr);
+      if (clientPartyPtr->isPrivateOTC())
+      {
+         emit clientPartyModelPtr->otcPrivatePartyReady(clientPartyPtr);
+      }
+
+      // for private standard parties read history messages
+      if (clientPartyPtr->isPrivateStandard())
+      {
+         clientDBServicePtr_->readHistoryMessages(clientPartyPtr->id(), clientPartyPtr->userHash(), 10);
+      }
    }
 
    // if it's otc party with rejected state, then delete party

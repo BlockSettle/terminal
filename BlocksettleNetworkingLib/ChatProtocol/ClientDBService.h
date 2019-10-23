@@ -9,6 +9,7 @@
 #include "ChatProtocol/ChatUser.h"
 #include "ChatProtocol/CryptManager.h"
 #include "ChatProtocol/Message.h"
+#include "ChatProtocol/Party.h"
 
 namespace spdlog
 {
@@ -29,14 +30,14 @@ namespace Chat
       ////////// PROXY SIGNALS //////////
       void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, 
          const Chat::ChatUserPtr& chatUserPtr, const Chat::CryptManagerPtr& cryptManagerPtr);
-      void saveMessage(const std::string& data);
+      void saveMessage(const Chat::PartyPtr& partyPtr, const std::string& data);
       void updateMessageState(const std::string& message_id, const int party_message_state);
-      void createNewParty(const std::string& partyId);
+      void createNewParty(const Chat::PartyPtr& partyPtr);
       void readUnsentMessages(const std::string& partyId);
       void updateDisplayNameForParty(const std::string& partyId, const std::string& displayName);
       void loadPartyDisplayName(const std::string& partyId);
       void checkUnsentMessages(const std::string& partyId);
-      void readHistoryMessages(const std::string& partyId, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
+      void readHistoryMessages(const std::string& partyId, const std::string& userHash, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
       void saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);
@@ -61,5 +62,6 @@ namespace Chat
 Q_DECLARE_METATYPE(Chat::ApplicationSettingsPtr)
 Q_DECLARE_METATYPE(Chat::PartyRecipientsPtrList)
 Q_DECLARE_METATYPE(Chat::UniqieRecipientMap)
+Q_DECLARE_METATYPE(Chat::PartyPtr)
 
 #endif // CLIENTDBSERVICE_H

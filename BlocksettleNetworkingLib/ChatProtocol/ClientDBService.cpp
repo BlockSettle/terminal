@@ -9,6 +9,7 @@ ClientDBService::ClientDBService(QObject* parent /* = nullptr */)
    qRegisterMetaType<Chat::CryptManagerPtr>();
    qRegisterMetaType<Chat::PartyRecipientsPtrList>();
    qRegisterMetaType<Chat::UniqieRecipientMap>();
+   qRegisterMetaType<Chat::PartyPtr>();
 
    ////////// PROXY SIGNALS //////////
    connect(this, &ClientDBService::Init, worker(), &ClientDBLogic::Init);
