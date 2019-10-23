@@ -68,6 +68,8 @@ namespace bs {
       // being queried, remove the UTXOs from the vector.
       bool filter(const std::string &walletId, std::vector<UTXO> &utxos) const;
 
+      static UtxoReservation *instance();
+
    private:
       using UTXOs = std::vector<UTXO>;
       using IdList = std::unordered_set<std::string>;

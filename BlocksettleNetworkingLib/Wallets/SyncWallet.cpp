@@ -711,7 +711,7 @@ bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walle
       spendAmount += recipient->getValue();
    }
    if (inputAmount < spendAmount + fee) {
-      throw std::logic_error("input amount " + std::to_string(inputAmount) + " is less than spend + fee (" + std::to_string(spendAmount + fee) + ")");
+      throw std::logic_error(fmt::format("input amount {} is less than spend + fee ({})", inputAmount, spendAmount + fee));
    }
 
    request.recipients = recipients;

@@ -210,3 +210,8 @@ bool bs::UtxoReservation::filter(const std::string &walletId
    }
    return true;
 }
+
+UtxoReservation *UtxoReservation::instance()
+{
+   return utxoResInstance_.get();
+}

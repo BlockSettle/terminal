@@ -9,14 +9,11 @@
 #include "AddressVerificator.h"
 #include "AuthAddressManager.h"
 #include "BtcUtils.h"
-#include "CoinSelection.h"
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "OfflineSigner.h"
 #include "ProtobufUtils.h"
-#include "SelectedTransactionInputs.h"
-#include "SettlementMonitor.h"
-#include "TransactionData.h"
+#include "TradesUtils.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
@@ -665,31 +662,6 @@ Peer *OtcClient::ownRequest() const
    return ownRequest_.get();
 }
 
-unsigned OtcClient::feeTargetBlockCount()
-{
-   return 2;
-}
-
-uint64_t OtcClient::estimatePayinFeeWithoutChange(const std::vector<UTXO> &inputs, float feePerByte)
-{
-   // add workaround for computeSizeAndFee (it can't compute exact v-size before signing,
-   // sometimes causing "fee not met" error for 1 sat/byte)
-   if (feePerByte >= 1.0f && feePerByte < 1.01f) {
-      feePerByte = 1.01f;
-   }
-
-   std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
-   // Use some fake settlement address as the only recipient
-   auto recipient = bs::Address(CryptoPRNG::generateRandom(32), AddressEntryType_P2WSH);
-   // Select some random amount
-   recipientsMap[0] = recipient.getRecipient(bs::XBTAmount{ uint64_t{1000} });
-
-   auto inputsCopy = bs::Address::decorateUTXOsCopy(inputs);
-   PaymentStruct payment(recipientsMap, 0, feePerByte, 0);
-   uint64_t result = bs::Address::getFeeForMaxVal(inputsCopy, payment.size_, feePerByte);
-   return result;
-}
-
 void OtcClient::contactConnected(const std::string &contactId)
 {
    assert(!contact(contactId));
@@ -1065,7 +1037,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
    }
    peer->payinTxIdFromSeller = BinaryData(msg.payin_tx_id());
 
-   createRequests(settlementId, peer, [this, peer, settlementId, offer = peer->offer
+   createBuyerRequest(settlementId, peer, [this, peer, settlementId, offer = peer->offer
       , handle = peer->validityFlag.handle(), logger = logger_] (OtcClientDeal &&deal)
    {
       if (!handle.isValid()) {
@@ -1261,7 +1233,7 @@ void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &resp
       return;
    }
 
-   createRequests(settlementId, peer, [this, peer, settlementId, offer = peer->offer
+   createSellerRequest(settlementId, peer, [this, peer, settlementId, offer = peer->offer
       , handle = peer->validityFlag.handle(), logger = logger_](OtcClientDeal &&deal)
    {
       if (!handle.isValid()) {
@@ -1500,194 +1472,130 @@ void OtcClient::send(Peer *peer, ContactMessage &msg)
    emit sendContactMessage(peer->contactId, msg.SerializeAsString());
 }
 
-void OtcClient::createRequests(const std::string &settlementId, Peer *peer, const OtcClientDealCb &cb)
+void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer, const OtcClientDealCb &cb)
 {
    assert(peer->authPubKey.getSize() == kPubKeySize);
    assert(settlementId.size() == kSettlementIdHexSize);
-   if (peer->offer.ourSide == bs::network::otc::Side::Buy) {
-      assert(peer->payinTxIdFromSeller.getSize() == kTxHashSize);
-   }
    assert(!peer->offer.authAddress.empty());
+   assert(peer->offer.ourSide == bs::network::otc::Side::Sell);
 
-   auto leaf = findSettlementLeaf(peer->offer.authAddress);
-   if (!leaf) {
-      cb(OtcClientDeal::error("can't find settlement leaf"));
+   auto primaryHdWallet = walletsMgr_->getPrimaryWallet();
+   if (!primaryHdWallet) {
+      cb(OtcClientDeal::error("can't find primary wallet"));
       return;
    }
 
-   leaf->setSettlementID(SecureBinaryData::CreateFromHex(settlementId), [this, settlementId, peer, cb, handle = peer->validityFlag.handle()
-      , logger = logger_](bool result)
+   auto targetHdWallet = walletsMgr_->getHDWalletById(peer->offer.hdWalletId);
+   if (!targetHdWallet) {
+      cb(OtcClientDeal::error(fmt::format("can't find wallet: {}", peer->offer.hdWalletId)));
+      return;
+   }
+
+   auto leaves = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType())->getLeaves();
+   auto xbtWallets = std::vector<std::shared_ptr<bs::sync::Wallet>>(leaves.begin(), leaves.end());
+   if (xbtWallets.empty()) {
+      cb(OtcClientDeal::error("can't find XBT wallets"));
+      return;
+   }
+
+   bs::tradeutils::PayinArgs args;
+   initTradesArgs(args, peer, settlementId);
+   args.fixedInputs = peer->offer.inputs;
+   args.inputXbtWallets = xbtWallets;
+
+   auto payinCb = bs::tradeutils::PayinResultCb([this, cb, peer, settlementId, targetHdWallet, handle = peer->validityFlag.handle(), logger = logger_]
+      (bs::tradeutils::PayinResult payin)
    {
-      if (!handle.isValid()) {
-         SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
-         return;
-      }
-
-      if (!result) {
-         cb(OtcClientDeal::error("setSettlementID failed"));
-         return;
-      }
-
-      auto cbFee = [this, cb, peer, settlementId, handle, logger = logger_](float feePerByte) {
+      QMetaObject::invokeMethod(this, [cb, targetHdWallet, settlementId, handle, logger, peer, payin = std::move(payin)] {
          if (!handle.isValid()) {
             SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
             return;
          }
 
-         if (feePerByte < 1) {
-            cb(OtcClientDeal::error("invalid feePerByte"));
+         if (!payin.success) {
+            SPDLOG_LOGGER_ERROR(logger, "creating unsigned payin failed: {}", payin.errorMsg);
+            cb(OtcClientDeal::error("invalid pay-in transaction"));
             return;
          }
 
-         auto primaryHdWallet = walletsMgr_->getPrimaryWallet();
-         if (!primaryHdWallet) {
-            cb(OtcClientDeal::error("can't find primary wallet"));
-            return;
-         }
+         peer->settlementId = settlementId;
 
-         auto targetHdWallet = walletsMgr_->getHDWalletById(peer->offer.hdWalletId);
-         if (!targetHdWallet) {
-            cb(OtcClientDeal::error(fmt::format("can't find wallet: {}", peer->offer.hdWalletId)));
-            return;
-         }
-
-         auto cbSettlAddr = [this, cb, peer, feePerByte, settlementId, targetHdWallet, handle, logger = logger_]
-            (const bs::Address &settlAddr)
-         {
-            if (!handle.isValid()) {
-               SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
-               return;
-            }
-
-            if (settlAddr.isNull()) {
-               cb(OtcClientDeal::error("invalid settl addr"));
-               return;
-            }
-
-            const auto changedCallback = nullptr;
-            const bool isSegWitInputsOnly = true;
-            const bool confirmedOnly = true;
-            auto transaction = std::make_shared<TransactionData>(changedCallback, logger_, isSegWitInputsOnly, confirmedOnly);
-
-            auto resetInputsCb = [this, cb, peer, transaction, settlAddr, feePerByte, settlementId, targetHdWallet, handle]() {
-               // resetInputsCb will be destroyed when returns, create one more callback to hold variables
-               QMetaObject::invokeMethod(this, [this, cb, peer, transaction, settlAddr, feePerByte, settlementId, targetHdWallet, handle, logger = logger_] {
-                  if (!handle.isValid()) {
-                     SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
-                     return;
-                  }
-
-                  const double amount = peer->offer.amount / BTCNumericTypes::BalanceDivider;
-
-                  if (peer->offer.ourSide == bs::network::otc::Side::Sell) {
-                     // Seller
-                     auto index = transaction->RegisterNewRecipient();
-                     assert(index == 0);
-                     transaction->UpdateRecipient(0, amount, settlAddr);
-
-                     if (!transaction->IsTransactionValid()) {
-                        cb(OtcClientDeal::error("invalid pay-in transaction"));
-                        return;
-                     }
-
-                     const auto cbPreimage = [cb, peer, transaction, settlAddr, settlementId, targetHdWallet, handle, amount, logger = logger_]
-                        (const std::map<bs::Address, BinaryData> &preimages)
-                     {
-                        if (!handle.isValid()) {
-                           SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
-                           return;
-                        }
-
-                        const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
-
-                        auto changeCb = [cb, peer, transaction, settlAddr, settlementId, targetHdWallet, handle, amount, logger, resolver]
-                           (const bs::Address &changeAddr)
-                        {
-                           if (!handle.isValid()) {
-                              SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
-                              return;
-                           }
-
-                           peer->settlementId = settlementId;
-
-                           OtcClientDeal result;
-                           result.settlementId = settlementId;
-                           result.settlementAddr = settlAddr;
-                           result.ourAuthAddress = peer->offer.authAddress;
-                           result.cpPubKey = peer->authPubKey;
-                           result.amount = peer->offer.amount;
-                           result.price = peer->offer.price;
-                           result.hdWalletId = targetHdWallet->walletId();
-                           result.success = true;
-                           result.side = otc::Side::Sell;
-                           result.payin = transaction->createTXRequest(false, changeAddr);
-                           result.payinTxId = result.payin.txId(resolver);
-                           auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, result.payinTxId, bs::XBTAmount{amount});
-                           result.fee = int64_t(result.payin.fee);
-                           peer->sellFromOffline = targetHdWallet->isOffline();
-                           cb(std::move(result));
-                        };
-
-                        transaction->getWallet()->getNewIntAddress(changeCb);
-                     };
-
-                     const auto addrMapping = walletsMgr_->getAddressToWalletsMapping(transaction->inputs());
-                     signContainer_->getAddressPreimage(addrMapping, cbPreimage);
-                     return;
-                  }
-
-                  // Buyer
-
-                  peer->settlementId = settlementId;
-
-                  auto recvAddrCb = [this, cb, settlementId, settlAddr, peer, targetHdWallet, feePerByte, amount, handle, logger, transaction](const bs::Address &outputAddr) {
-                     if (!handle.isValid()) {
-                        SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
-                        return;
-                     }
-
-                     OtcClientDeal result;
-                     result.settlementId = settlementId;
-                     result.settlementAddr = settlAddr;
-                     result.ourAuthAddress = peer->offer.authAddress;
-                     result.cpPubKey = peer->authPubKey;
-                     result.amount = peer->offer.amount;
-                     result.price = peer->offer.price;
-                     result.hdWalletId = targetHdWallet->walletId();
-                     result.success = true;
-                     result.side = otc::Side::Buy;
-                     auto payinUTXO = bs::SettlementMonitor::getInputFromTX(settlAddr, peer->payinTxIdFromSeller, bs::XBTAmount{ amount });
-                     result.payout = bs::SettlementMonitor::createPayoutTXRequest(
-                        payinUTXO, outputAddr, feePerByte, armory_->topBlock());
-                     result.fee = int64_t(result.payout.fee);
-                     cb(std::move(result));
-                  };
-
-                  if (peer->offer.recvAddress.empty()) {
-                     transaction->GetFallbackRecvAddress(std::move(recvAddrCb));
-                  } else {
-                     recvAddrCb(bs::Address(peer->offer.recvAddress));
-                  }
-               }, Qt::QueuedConnection);
-            };
-
-            transaction->setFeePerByte(feePerByte);
-
-            if (peer->offer.inputs.empty()) {
-               transaction->setGroup(targetHdWallet->getGroup(targetHdWallet->getXBTGroupType()), armory_->topBlock(), false, resetInputsCb);
-            } else {
-               transaction->setGroupAndInputs(targetHdWallet->getGroup(targetHdWallet->getXBTGroupType()), peer->offer.inputs, armory_->topBlock());
-               transaction->getSelectedInputs()->SetUseAutoSel(true);
-               resetInputsCb();
-            }
-         };
-
-         const bool myKeyFirst = (peer->offer.ourSide == bs::network::otc::Side::Buy);
-         primaryHdWallet->getSettlementPayinAddress(SecureBinaryData::CreateFromHex(settlementId), peer->authPubKey, cbSettlAddr, myKeyFirst);
-      };
-      walletsMgr_->estimatedFeePerByte(feeTargetBlockCount(), cbFee, this);
+         OtcClientDeal result;
+         result.settlementId = settlementId;
+         result.settlementAddr = payin.settlementAddr;
+         result.ourAuthAddress = peer->offer.authAddress;
+         result.cpPubKey = peer->authPubKey;
+         result.amount = peer->offer.amount;
+         result.price = peer->offer.price;
+         result.hdWalletId = targetHdWallet->walletId();
+         result.success = true;
+         result.side = otc::Side::Sell;
+         result.payin = std::move(payin.signRequest);
+         result.payinTxId = std::move(payin.payinTxId);
+         result.fee = int64_t(result.payin.fee);
+         peer->sellFromOffline = targetHdWallet->isOffline();
+         cb(std::move(result));
+      });
    });
+
+   bs::tradeutils::createPayin(std::move(args), std::move(payinCb));
 }
+
+void OtcClient::createBuyerRequest(const std::string &settlementId, Peer *peer, const OtcClient::OtcClientDealCb &cb)
+{
+   assert(peer->authPubKey.getSize() == kPubKeySize);
+   assert(settlementId.size() == kSettlementIdHexSize);
+   assert(!peer->offer.authAddress.empty());
+   assert(peer->offer.ourSide == bs::network::otc::Side::Buy);
+   assert(peer->payinTxIdFromSeller.getSize() == kTxHashSize);
+
+   auto targetHdWallet = walletsMgr_->getHDWalletById(peer->offer.hdWalletId);
+   if (!targetHdWallet) {
+      cb(OtcClientDeal::error(fmt::format("can't find wallet: {}", peer->offer.hdWalletId)));
+      return;
+   }
+
+   auto leaves = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType())->getLeaves();
+   if (leaves.empty()) {
+      cb(OtcClientDeal::error("can't find XBT wallets"));
+      return;
+   }
+
+   bs::tradeutils::PayoutArgs args;
+   initTradesArgs(args, peer, settlementId);
+   args.payinTxId = peer->payinTxIdFromSeller;
+   args.recvAddr = peer->offer.recvAddress;
+   args.outputXbtWallet = leaves.front();
+
+   auto payoutCb = bs::tradeutils::PayoutResultCb([this, cb, peer, settlementId, targetHdWallet, handle = peer->validityFlag.handle(), logger = logger_]
+      (bs::tradeutils::PayoutResult payout)
+   {
+      QMetaObject::invokeMethod(this, [cb, targetHdWallet, settlementId, handle, peer, logger, payout = std::move(payout)] {
+         if (!handle.isValid()) {
+            SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
+            return;
+         }
+
+         peer->settlementId = settlementId;
+
+         OtcClientDeal result;
+         result.settlementId = settlementId;
+         result.settlementAddr = payout.settlementAddr;
+         result.ourAuthAddress = peer->offer.authAddress;
+         result.cpPubKey = peer->authPubKey;
+         result.amount = peer->offer.amount;
+         result.price = peer->offer.price;
+         result.hdWalletId = targetHdWallet->walletId();
+         result.success = true;
+         result.side = otc::Side::Buy;
+         result.payout = std::move(payout.signRequest);
+         result.fee = int64_t(result.payout.fee);
+         cb(std::move(result));
+      });
+   });
+
+   bs::tradeutils::createPayout(std::move(args), std::move(payoutCb));
+};
 
 void OtcClient::sendSellerAccepts(Peer *peer)
 {
@@ -1846,4 +1754,15 @@ void OtcClient::updatePublicLists()
    }
 
    emit publicUpdated();
+}
+
+void OtcClient::initTradesArgs(bs::tradeutils::Args &args, Peer *peer, const std::string &settlementId)
+{
+   args.amount = bs::XBTAmount(static_cast<uint64_t>(peer->offer.amount));
+   args.settlementId = BinaryData::CreateFromHex(settlementId);
+   args.walletsMgr = walletsMgr_;
+   args.ourAuthAddress = peer->offer.authAddress;
+   args.cpAuthPubKey = peer->authPubKey;
+   args.armory = armory_;
+   args.signContainer = signContainer_;
 }

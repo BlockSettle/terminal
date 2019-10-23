@@ -7,9 +7,9 @@
 #include "AuthAddressManager.h"
 #include "CoinControlDialog.h"
 #include "OTCWindowsManager.h"
-#include "OtcClient.h"
 #include "OtcTypes.h"
 #include "SelectedTransactionInputs.h"
+#include "TradesUtils.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -276,12 +276,12 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
                for (const auto &utxo : utxos) {
                   total += utxo.getValue();
                }
-               const uint64_t fee = OtcClient::estimatePayinFeeWithoutChange(utxos, feePerByte);
+               const uint64_t fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
                const double spendableQuantity = std::max(0.0, (total - fee) / BTCNumericTypes::BalanceDivider);
                ui_->quantitySpinBox->setValue(spendableQuantity);
             });
          };
-         otcManager_->getArmory()->estimateFee(OtcClient::feeTargetBlockCount(), feeCb);
+         otcManager_->getArmory()->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
       });
    };
 
