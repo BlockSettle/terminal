@@ -263,7 +263,7 @@ void RequestingQuoteWidget::onAccept()
    requestTimer_.stop();
    ui_->progressBar->hide();
    ui_->pushButtonAccept->setEnabled(false);
-   ui_->labelHint->setText(tr("Accepted - waiting for reply..."));
+   ui_->labelHint->setText(tr("Awaiting Settlement Pay-Out Execution"));
    ui_->labelHint->show();
 
    emit quoteAccepted(QString::fromStdString(rfq_.requestId), quote_);
