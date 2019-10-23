@@ -1,6 +1,11 @@
 #!/bin/bash
 echo "Build script started ..."
 
+# Hold on to current directory
+project_dir=$(pwd)
+script_dir=${project_dir}/Travis/
+third_dir=${project_dir}/../3rd/
+
 unameOut="$(uname -s)"
 case "${unameOut}" in
     Linux*)     MACHINE=Linux;;
@@ -17,12 +22,7 @@ if [ ${MACHINE} = "MacOS" ]; then
 fi
 
 # should be after source ~/.bash_profile
-set -o errexit -o nounset
-
-# Hold on to current directory
-project_dir=$(pwd)
-script_dir=${project_dir}/Travis/
-third_dir=${project_dir}/../3rd/
+# set -o errexit -o nounset
 
 if [ ${MACHINE} = "Linux" ]; then
    build_dir=${project_dir}/build_terminal/RelWithDebInfo/bin/
@@ -46,8 +46,6 @@ echo "Target file is ${ZIP_FILE_NAME}"
 # Build App
 # Due 120 minutes limit build either 3rd party as first step or project as second step
 # When 3rd party build completed it will be cached by travis
-
-cd ${project_dir}
 
 TS_3RD_START=$(date +%s)
 echo "Build 3rd party started at ${TS_3RD_START}"
