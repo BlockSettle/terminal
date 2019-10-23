@@ -18,20 +18,31 @@ namespace bs {
       class Wallet;
       class WalletsManager;
    }
+   namespace tradeutils {
+      struct Args;
+   }
 }
 class ArmoryConnection;
-class SignContainer;
+class AuthAddressManager;
 class QuoteProvider;
+class SignContainer;
 
 
 class DealerXBTSettlementContainer : public bs::SettlementContainer
 {
    Q_OBJECT
 public:
-   DealerXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
-      , const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<QuoteProvider> &
-      , const std::shared_ptr<TransactionData> &, const std::unordered_set<std::string> &bsAddresses
-      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &);
+   DealerXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &
+      , const bs::network::Order &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
+      , const std::shared_ptr<QuoteProvider> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<AuthAddressManager> &authAddrMgr
+      , const bs::Address &authAddr
+      , const std::vector<UTXO> &utxosPayinFixed
+      , const bs::Address &recvAddr);
    ~DealerXBTSettlementContainer() override;
 
    bool cancel() override;
@@ -49,8 +60,6 @@ public:
    double amount() const override { return amount_; }
    bs::sync::PasswordDialogData toPasswordDialogData() const override;
 
-   std::shared_ptr<bs::sync::Wallet> getWallet() const { return transactionData_->getWallet(); }
-
 public slots:
    void onUnsignedPayinRequested(const std::string& settlementId);
    void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
@@ -66,28 +75,34 @@ private slots:
 
 private:
    bool startPayInSigning();
-   bool startPayOutSigning(const BinaryData& payinHash);
 
    void failWithErrorText(const QString& error);
 
-private:
+   void initTradesArgs(bs::tradeutils::Args &args, const std::string &settlementId);
+
    const bs::network::Order   order_;
    std::string    fxProd_;
-   const bool     weSell_;
+   const bool     weSellXbt_;
    std::string    comment_;
    const double   amount_;
+
    std::shared_ptr<spdlog::logger>              logger_;
    std::shared_ptr<ArmoryConnection>            armory_;
-   std::shared_ptr<TransactionData>             transactionData_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
+   std::shared_ptr<bs::sync::Wallet>            xbtWallet_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signContainer_;
+   std::shared_ptr<AuthAddressManager>          authAddrMgr_;
+
+   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
+
    AddressVerificationState                     requestorAddressState_ = AddressVerificationState::VerificationFailed;
    bs::Address settlAddr_;
 
-   std::string settlementIdString_;
+   std::string settlementIdHex_;
    BinaryData  settlementId_;
-   BinaryData  authKey_, reqAuthKey_;
+   BinaryData  authKey_;
+   BinaryData  reqAuthKey_;
 
    bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
 
@@ -95,6 +110,10 @@ private:
    unsigned int   payoutSignId_ = 0;
 
    BinaryData		usedPayinHash_;
+
+   std::vector<UTXO> utxosPayinFixed_;
+   bs::Address       recvAddr_;
+   bs::Address       authAddr_;
 };
 
 #endif // __DEALER_XBT_SETTLEMENT_CONTAINER_H__

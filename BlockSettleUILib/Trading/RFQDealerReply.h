@@ -55,6 +55,7 @@ namespace bs {
    }
 
    namespace ui {
+
       class RFQDealerReply : public QWidget
       {
          Q_OBJECT
@@ -83,6 +84,10 @@ namespace bs {
 
          QPushButton* pullButton() const;
          QPushButton* quoteButton() const;
+
+         std::shared_ptr<bs::sync::Wallet> getSelectedXbtWallet() const;
+         bs::Address selectedAuthAddress() const;
+         std::vector<UTXO> selectedXbtInputs() const;
 
       signals:
          void submitQuoteNotif(network::QuoteNotification);
@@ -170,7 +175,6 @@ namespace bs {
          double getPrice() const;
          double getValue() const;
          double getAmount() const;
-         std::shared_ptr<bs::sync::Wallet> getSelectedXbtWallet() const;
          std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
          std::shared_ptr<bs::sync::Wallet> getCCWallet(const bs::network::QuoteReqNotification &qrn) const;
          void getRecvAddress(const std::shared_ptr<bs::sync::Wallet> &wallet, std::function<void(bs::Address)> cb) const;

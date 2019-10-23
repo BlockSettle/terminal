@@ -111,6 +111,22 @@ namespace bs {
       // Callback is called from background thread
       void createPayout(PayoutArgs args, PayoutResultCb cb);
 
+      struct PayoutVerifyArgs
+      {
+         BinaryData signedTx;
+         bs::Address settlAddr;
+         BinaryData usedPayinHash;
+         bs::XBTAmount amount;
+      };
+
+      struct PayoutVerifyResult
+      {
+         bool success{};
+         std::string errorMsg;
+      };
+
+      PayoutVerifyResult verifySignedPayout(PayoutVerifyArgs args);
+
    } // namespace tradeutils
 } // namespace bs
 

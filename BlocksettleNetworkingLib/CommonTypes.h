@@ -284,19 +284,19 @@ namespace bs {
          std::string receiptAddress;
          Asset::Type assetType;
          Side::Type  side;
-         int         validityInS;
+         int         validityInS{};
 
-         double      bidPx;
-         double      bidSz;
-         double      bidFwdPts;
-         double      bidContraQty;
+         double      bidPx{};
+         double      bidSz{};
+         double      bidFwdPts{};
+         double      bidContraQty{};
 
-         double      offerPx;
-         double      offerSz;
-         double      offerFwdPts;
-         double      offerContraQty;
+         double      offerPx{};
+         double      offerSz{};
+         double      offerFwdPts{};
+         double      offerContraQty{};
 
-         QuoteNotification() : validityInS(120), bidFwdPts(0), bidContraQty(0), offerFwdPts(0), offerContraQty(0) {}
+         QuoteNotification() : validityInS(120) {}
          QuoteNotification(const bs::network::QuoteReqNotification &qrn, const std::string &_authKey, double price
             , const std::string &txData);
       };

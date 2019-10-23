@@ -248,3 +248,44 @@ void bs::tradeutils::createPayout(bs::tradeutils::PayoutArgs args, bs::tradeutil
       args.armory->estimateFee(feeTargetBlockCount(), cbFee);
    });
 }
+
+bs::tradeutils::PayoutVerifyResult bs::tradeutils::verifySignedPayout(bs::tradeutils::PayoutVerifyArgs args)
+{
+   PayoutVerifyResult result;
+
+   try {
+      Tx tx(args.signedTx);
+
+      auto txdata = tx.serialize();
+      auto bctx = BCTX::parse(txdata);
+
+      auto utxo = bs::SettlementMonitor::getInputFromTX(args.settlAddr, args.usedPayinHash, args.amount);
+
+      std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
+      utxoMap[utxo.getTxHash()][0] = utxo;
+
+      TransactionVerifier tsv(*bctx, utxoMap);
+
+      auto tsvFlags = tsv.getFlags();
+      tsvFlags |= SCRIPT_VERIFY_P2SH_SHA256 | SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT;
+      tsv.setFlags(tsvFlags);
+
+      auto verifierState = tsv.evaluateState();
+
+      auto inputState = verifierState.getSignedStateForInput(0);
+
+      auto signatureCount = inputState.getSigCount();
+
+      if (signatureCount != 1) {
+         result.errorMsg = fmt::format("signature count: {}", signatureCount);
+         return result;
+      }
+
+      result.success = true;
+      return result;
+
+   } catch (const std::exception &e) {
+      result.errorMsg = fmt::format("failed: {}", e.what());
+      return result;
+   }
+}

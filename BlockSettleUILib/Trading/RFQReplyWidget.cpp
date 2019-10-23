@@ -16,6 +16,7 @@
 #include "QuoteProvider.h"
 #include "RFQBlotterTreeView.h"
 #include "RFQDialog.h"
+#include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -203,10 +204,13 @@ void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn)
       return;
    }
 
-   const auto &txData = ui_->pageRFQReply->getTransactionData(qn.quoteRequestId);
    if (qn.assetType == bs::network::Asset::SpotXBT) {
-      sentXbtTransactionData_[qn.settlementId] = txData;
+      auto &reply = sentXbtReplies_[qn.settlementId];
+      reply.xbtWallet = ui_->pageRFQReply->getSelectedXbtWallet();
+      reply.authAddr = ui_->pageRFQReply->selectedAuthAddress();
+      reply.utxosPayinFixed = ui_->pageRFQReply->selectedXbtInputs();
    } else if (qn.assetType == bs::network::Asset::PrivateMarket) {
+      const auto &txData = ui_->pageRFQReply->getTransactionData(qn.quoteRequestId);
       sentCCReplies_[qn.quoteRequestId] = SentCCReply{qn.receiptAddress, txData, qn.reqAuthKey};
    }
 }
@@ -247,34 +251,40 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             box.exec();
          }
       } else {
-         auto iTransactionData = sentXbtTransactionData_.find(order.settlementId);
-         if (iTransactionData == sentXbtTransactionData_.end()) {
-            logger_->debug("[RFQReplyWidget::onOrder] haven't seen QuoteNotif with settlId={}", order.settlementId);
-         } else {
-            try {
-               const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_, order, walletsManager_
-                  , quoteProvider_, iTransactionData->second, authAddressManager_->GetBSAddresses(), signingContainer_
-                  , armory_);
-               connect(settlContainer.get(), &bs::SettlementContainer::readyToActivate, this, &RFQReplyWidget::onReadyToActivate);
-               connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
+         auto it = sentXbtReplies_.find(order.settlementId);
+         if (it == sentXbtReplies_.end()) {
+            SPDLOG_LOGGER_ERROR(logger_, "haven't seen QuoteNotif with settlId={}", order.settlementId);
+            return;
+         }
+         try {
+            const auto &reply = it->second;
+            // Dealers can't select receiving address, use new
+            const auto recvXbtAddr = bs::Address();
+            const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_, order
+               , walletsManager_, reply.xbtWallet, quoteProvider_, signingContainer_, armory_, authAddressManager_
+               , reply.authAddr, reply.utxosPayinFixed, recvXbtAddr);
 
-               connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
-               connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);
-               connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayoutToPB, this, &RFQReplyWidget::sendSignedPayoutToPB);
+            connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
-               connect(this, &RFQReplyWidget::unsignedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onUnsignedPayinRequested);
-               connect(this, &RFQReplyWidget::signedPayoutRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayoutRequested);
-               connect(this, &RFQReplyWidget::signedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayinRequested);
+            connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
+            connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);
+            connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayoutToPB, this, &RFQReplyWidget::sendSignedPayoutToPB);
 
-               ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
-            } catch (const std::exception &e) {
-               logger_->error("[RFQReplyWidget::onOrder] settlement failed: {}", e.what());
-               BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
-                  , tr("Failed to start dealer's settlement")
-                  , QString::fromLatin1(e.what())
-                  , this);
-               box.exec();
-            }
+            connect(this, &RFQReplyWidget::unsignedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onUnsignedPayinRequested);
+            connect(this, &RFQReplyWidget::signedPayoutRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayoutRequested);
+            connect(this, &RFQReplyWidget::signedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayinRequested);
+
+            settlContainer->activate();
+
+            ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
+
+         } catch (const std::exception &e) {
+            SPDLOG_LOGGER_ERROR(logger_, "settlement failed: {}", e.what());
+            BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
+               , tr("Failed to start dealer's settlement")
+               , QString::fromLatin1(e.what())
+               , this);
+            box.exec();
          }
       }
    } else {
@@ -283,7 +293,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          sentCCReplies_.erase(quoteReqId);
          quoteProvider_->delQuoteReqId(quoteReqId);
       }
-      sentXbtTransactionData_.erase(order.settlementId);
+      sentXbtReplies_.erase(order.settlementId);
    }
 }
 
@@ -298,16 +308,6 @@ void RFQReplyWidget::onReadyToAutoSign()
 //      logger_->warn("[RFQReplyWidget::onReadyToAutoSign] failed to accept");
 //      return;
 //   }
-}
-
-void RFQReplyWidget::onReadyToActivate()
-{
-   const auto settlContainer = qobject_cast<bs::SettlementContainer *>(sender());
-   if (!settlContainer) {
-      logger_->error("[RFQReplyWidget::onReadyToActivate] failed to cast sender");
-      return;
-   }
-   settlContainer->activate();
 }
 
 void RFQReplyWidget::onConnectedToCeler()

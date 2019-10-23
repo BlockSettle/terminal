@@ -110,10 +110,6 @@ public:
 
    void ClearAllRecipients();
 
-   void SetFallbackRecvAddress(const bs::Address &addr) { fallbackRecvAddress_ = addr; }
-   void GetFallbackRecvAddress(std::function<void(const bs::Address&)> cb);
-   const bs::Address &GetFallbackRecvAddressIfSet() const;
-
    bs::Address GetRecipientAddress(unsigned int recipientId) const;
    std::shared_ptr<ScriptRecipient> GetScriptRecipient(unsigned int recipientId) const;
    BTCNumericTypes::balance_type GetRecipientAmount(unsigned int recipientId) const;
@@ -180,7 +176,6 @@ private:
    // recipients
    unsigned int nextId_;
    std::unordered_map<unsigned int, std::shared_ptr<RecipientContainer>> recipients_;
-   mutable bs::Address              fallbackRecvAddress_;
    std::shared_ptr<CoinSelection>   coinSelection_;
 
    mutable std::vector<UTXO>  usedUTXO_;
