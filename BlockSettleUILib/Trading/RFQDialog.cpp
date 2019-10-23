@@ -256,7 +256,8 @@ void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const B
    }
 
    if (signContainer_->opMode() != SignContainer::OpMode::Remote) {
-      hide();
+      // FIXME: causes failed asserts in BlockSettleUILib/DialogManager.cpp:186
+      //hide();
    }
 
    xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash);
@@ -269,7 +270,8 @@ void RFQDialog::onSignedPayinRequested(const std::string& settlementId, const Bi
    }
 
    if (signContainer_->opMode() != SignContainer::OpMode::Remote) {
-      hide();
+      // FIXME: causes failed asserts in BlockSettleUILib/DialogManager.cpp:186
+      //hide();
    }
 
    xbtSettlContainer_->onSignedPayinRequested(settlementId, unsignedPayin);
