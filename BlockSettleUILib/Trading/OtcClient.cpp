@@ -452,94 +452,6 @@ bool OtcClient::pullOrReject(Peer *peer)
    }
 }
 
-bool OtcClient::saveOfflineRequest(Peer *peer, const std::string &path)
-{
-   if (!peer || !peer->isWaitingForOfflineSign()) {
-      SPDLOG_LOGGER_ERROR(logger_, "unexpected request to save offline sign request");
-      return false;
-   }
-
-   auto it = deals_.find(peer->settlementId);
-   if (it == deals_.end()) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find active deal details");
-      return false;
-   }
-   auto deal = it->second.get();
-
-   SPDLOG_LOGGER_DEBUG(logger_, "save sign request from offline wallet to '{}'");
-
-   deal->payin.offlineFilePath = path;
-   auto reqId = signContainer_->signTXRequest(deal->payin);
-   signRequestIds_[reqId] = deal->settlementId;
-   deal->payinReqId = reqId;
-   return true;
-}
-
-bool OtcClient::loadOfflineRequest(Peer *peer, const std::string &path)
-{
-   if (!peer || !peer->isWaitingForOfflineSign()) {
-      SPDLOG_LOGGER_ERROR(logger_, "unexpected request to load offline sign request");
-      return false;
-   }
-
-   auto it = deals_.find(peer->settlementId);
-   if (it == deals_.end()) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find active deal details");
-      return false;
-   }
-   auto deal = it->second.get();
-
-   QFile f(QString::fromStdString(path));
-   bool result = f.open(QIODevice::ReadOnly);
-   if (!result) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't open file ('{}') to load signed offline request", path);
-      return false;
-   }
-   auto results = ParseOfflineTXFile(f.readAll().toStdString());
-   if (results.empty()) {
-      SPDLOG_LOGGER_ERROR(logger_, "loading signed offline request failed from '{}'", path);
-      return false;
-   }
-   if (results.size() != 1 || results.front().prevStates.size() != 1) {
-      SPDLOG_LOGGER_ERROR(logger_, "invalid signed offline request in '{}'", path);
-      return false;
-   }
-
-   // TODO: Verify that we have correct signed request
-
-   SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed (using offline wallet), settlementId: {}", deal->settlementId);
-   deal->signedTx = std::move(results.front().prevStates.front());
-   return true;
-}
-
-bool OtcClient::sendOfflineRequest(Peer *peer)
-{
-   if (!peer || !peer->isWaitingForOfflineSign()) {
-      SPDLOG_LOGGER_ERROR(logger_, "unexpected request to send offline sign request");
-      return false;
-   }
-
-   auto it = deals_.find(peer->settlementId);
-   if (it == deals_.end()) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find active deal details");
-      return false;
-   }
-   auto deal = it->second.get();
-
-   if (deal->signedTx.isNull()) {
-      SPDLOG_LOGGER_ERROR(logger_, "offline sign request was not loaded yet");
-      return false;
-   }
-
-   SPDLOG_LOGGER_DEBUG(logger_, "send was succesfully signed, settlementId: {}", deal->settlementId);
-
-   ProxyTerminalPb::Request request;
-   auto d = request.mutable_seal_payin_validity();
-   d->set_settlement_id(deal->settlementId);
-   emit sendPbMessage(request.SerializeAsString());
-   return true;
-}
-
 bool OtcClient::acceptOffer(Peer *peer, const bs::network::otc::Offer &offer)
 {
    SPDLOG_LOGGER_DEBUG(logger_, "accept offer from {} (price: {}, amount: {})", peer->toString(), offer.price, offer.amount);
@@ -851,11 +763,6 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
    if (deal->payinReqId == reqId) {
       if (peer->state != State::WaitSellerSeal) {
          SPDLOG_LOGGER_ERROR(logger_, "unexpected pay-in sign");
-         return;
-      }
-
-      if (peer->sellFromOffline) {
-         // Wait for explicit call to loadOfflineRequest from user
          return;
       }
 
@@ -1353,16 +1260,12 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
          if (deal->side == otc::Side::Sell) {
             assert(deal->payin.isValid());
 
-            if (peer->sellFromOffline) {
-
-            } else {
-               auto payinInfo = toPasswordDialogDataPayin(*deal, deal->payin);
-               auto reqId = signContainer_->signSettlementTXRequest(deal->payin, payinInfo);
-               signRequestIds_[reqId] = deal->settlementId;
-               deal->payinReqId = reqId;
-               verifyAuthAddresses(deal);
-               peer->activeSettlementId = deal->settlementId;
-            }
+            auto payinInfo = toPasswordDialogDataPayin(*deal, deal->payin);
+            auto reqId = signContainer_->signSettlementTXRequest(deal->payin, payinInfo);
+            signRequestIds_[reqId] = deal->settlementId;
+            deal->payinReqId = reqId;
+            verifyAuthAddresses(deal);
+            peer->activeSettlementId = deal->settlementId;
          }
 
          changePeerState(peer, State::WaitSellerSeal);
@@ -1533,7 +1436,6 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
          result.payin = std::move(payin.signRequest);
          result.payinTxId = std::move(payin.payinTxId);
          result.fee = int64_t(result.payin.fee);
-         peer->sellFromOffline = targetHdWallet->isOffline();
          cb(std::move(result));
       });
    });

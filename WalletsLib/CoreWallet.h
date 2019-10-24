@@ -191,9 +191,6 @@ namespace bs {
             bool        populateUTXOs{ false };
             std::string comment;
 
-            // Used when offline TX export is requested
-            std::string offlineFilePath;
-
             bool isValid() const noexcept;
             BinaryData serializeState(const std::shared_ptr<ResolverFeed> &resolver = nullptr) const {
                return getSigner(resolver).serializeState();

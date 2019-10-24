@@ -103,10 +103,6 @@ public:
    bool updateOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
    bool pullOrReject(bs::network::otc::Peer *peer);
 
-   bool saveOfflineRequest(bs::network::otc::Peer *peer, const std::string &path);
-   bool loadOfflineRequest(bs::network::otc::Peer *peer, const std::string &path);
-   bool sendOfflineRequest(bs::network::otc::Peer *peer);
-
    const bs::network::otc::Peers &requests() { return requests_; }
    const bs::network::otc::Peers &responses() { return responses_; }
    bs::network::otc::Peer *ownRequest() const;
