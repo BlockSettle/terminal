@@ -24,10 +24,10 @@ fi
 # should be after source ~/.bash_profile
 set -e -o nounset
 
-if [ ${MACHINE} = "Linux" ]; then
-   build_dir=${project_dir}/build_terminal/RelWithDebInfo/bin/
-else
+if [ ${MACHINE} = "Windows" ]; then
    build_dir=${project_dir}/build_terminal/Release/bin/
+else
+   build_dir=${project_dir}/build_terminal/RelWithDebInfo/bin/
 fi
 
 echo "Project dir: ${project_dir}"
@@ -73,13 +73,13 @@ make clean
 
 # Build and run tests here
 
-echo "Deploy..."
+#echo "Deploy..."
 
 # Package 
-echo "Packaging ..."
-ls -al ${build_dir}
-tar -czvf  ${script_dir}/${ZIP_FILE_NAME} ${build_dir}
-echo "Deploy is done"
+#echo "Packaging ..."
+#ls -al ${build_dir}
+#tar -czvf  ${script_dir}/${ZIP_FILE_NAME} ${build_dir}
+#echo "Deploy is done"
 
 # _________________________________________________________________
 #echo "Deploy to Releases"
