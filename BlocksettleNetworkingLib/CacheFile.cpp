@@ -2,11 +2,17 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include "CacheFile.h"
 
-// We need at least 150 MiB on the drive in order for LMDB to work. Add some
-// buffer because, while LMDB does bump the DB map size if half the size is hit
-// within a cycle, it's possible (albeit unlikely) that expansion can occur so
-// quickly that the storage is exhausted.
-#define DBMAPSIZE 150000000
+namespace {
+
+   // We need at least 150 MiB on the drive in order for LMDB to work. Add some
+   // buffer because, while LMDB does bump the DB map size if half the size is hit
+   // within a cycle, it's possible (albeit unlikely) that expansion can occur so
+   // quickly that the storage is exhausted.
+   //
+   // From LMDB docs: The size should be a multiple of the OS page size
+   const size_t kCacheFileMapSize = 150*1024*1024;
+
+} // namespace
 
 CacheFile::CacheFile(const std::string &filename, size_t nbElemLimit)
    : QObject(nullptr)
@@ -19,7 +25,7 @@ CacheFile::CacheFile(const std::string &filename, size_t nbElemLimit)
    if (!inMem_) {
       dbEnv_ = std::make_shared<LMDBEnv>();
       dbEnv_->open(filename);
-      dbEnv_->setMapSize(DBMAPSIZE);
+      dbEnv_->setMapSize(kCacheFileMapSize);
       db_ = new LMDB(dbEnv_.get(), "cache");
 
       threadPool_.setMaxThreadCount(1);
