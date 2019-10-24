@@ -62,7 +62,11 @@ fi
 
 echo "Building App..."
 
+# Workaround for MacOS Travis command 'cd'
+set +e
 cd ${project_dir}/terminal.release
+set -e
+
 make -j2
 make clean
 
