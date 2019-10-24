@@ -21,7 +21,7 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
    if (!prepare(dlg))
       return;
 
-   connect(dlg, &QDialog::finished, this, &DialogManager::onDialogFinished);
+   connect(dlg, &QDialog::destroyed, this, &DialogManager::onDialogFinished);
    dlg->setModal(false);
 
 #ifdef Q_OS_WIN
@@ -146,11 +146,11 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
 
 void DialogManager::onDialogFinished()
 {
-   QDialog *dialog = qobject_cast<QDialog *>(sender());
+   QObject* dialogObj = qobject_cast<QObject *>(sender());
 #ifndef QT_NO_DEBUG
-   Q_ASSERT(dialog);
+   Q_ASSERT(dialogObj);
 #endif
-   if (!dialog) {
+   if (!dialogObj) {
       return;
    }
 
@@ -158,7 +158,7 @@ void DialogManager::onDialogFinished()
    Q_ASSERT(activeDlgs_.size() > 0);
 #endif
    for (int i = 0; i < activeDlgs_.size(); ++i) {
-      if (activeDlgs_[i].data() == dialog) {
+      if (static_cast<QObject*>(activeDlgs_[i].data()) == dialogObj) {
          activeDlgs_.removeAt(i);
          break;
       }

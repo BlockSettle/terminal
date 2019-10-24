@@ -380,6 +380,18 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
       }
 
       const auto rootWallet = walletsMgr_->getHDWalletById(rootWalletId);
+
+      if (rootWallet->isWatchingOnly()) {
+         // when signing tx for watching-only wallet we receiving signed tx
+         // from signer ui instead of password
+         SignTXResponse(clientId, id, reqType, ErrorCode::NoError, pass);
+         onXbtSpent(amount, isAutoSignActive(rootWalletId));
+         if (callbacks_) {
+            callbacks_->xbtSpent(amount, false);
+         }
+         return;
+      }
+
       try {
          if (!rootWallet->encryptionTypes().empty() && pass.isNull()) {
             logger_->error("[HeadlessContainerListener] empty password for wallet {}", wallets.front()->name());
@@ -732,7 +744,7 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
       const auto &hdRoot = walletsMgr_->getHDRootForLeaf(walletId);
       if (hdRoot) {
          rootId = hdRoot->walletId();
-         needPassword = !hdRoot->encryptionTypes().empty();
+         needPassword = !hdRoot->encryptionTypes().empty() || hdRoot->isWatchingOnly();
       }
    }
    else {
@@ -741,7 +753,7 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
          logger_->error("[{}] failed to find wallet {}", __func__, walletId);
          return false;
       }
-      needPassword = !hdWallet->encryptionTypes().empty();
+      needPassword = !hdWallet->encryptionTypes().empty() || hdWallet->isWatchingOnly();
    }
 
    auto autoSignCategory = static_cast<bs::signer::AutoSignCategory>(dialogData.value<int>(PasswordDialogData::AutoSignCategory));

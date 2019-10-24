@@ -601,7 +601,6 @@ void TransactionData::clear()
    usedUTXO_.clear();
    reservedUTXO_.clear();
    summary_ = {};
-   fallbackRecvAddress_ = {};
 }
 
 std::vector<UTXO> TransactionData::inputs() const
@@ -775,30 +774,6 @@ void TransactionData::setMaxSpendAmount(bool maxAmount)
    if (maxAmount) {
       summary_.hasChange = false;
    }
-}
-
-
-void TransactionData::GetFallbackRecvAddress(std::function<void(const bs::Address&)> cb)
-{
-   if (!fallbackRecvAddress_.isNull() || !wallet_) {
-      cb(fallbackRecvAddress_);
-      return;
-   }
-
-   const auto &cbWrap = [this, cb = std::move(cb), handle = validityFlag_.handle()](const bs::Address &addr) {
-      if (!handle.isValid()) {
-         SPDLOG_LOGGER_ERROR(logger_, "TransactionData was destoyed and callback is cancelled");
-         return;
-      }
-      fallbackRecvAddress_ = addr;
-      cb(fallbackRecvAddress_);
-   };
-   wallet_->getNewExtAddress(cbWrap);
-}
-
-const bs::Address &TransactionData::GetFallbackRecvAddressIfSet() const
-{
-   return fallbackRecvAddress_;
 }
 
 std::vector<std::shared_ptr<ScriptRecipient>> TransactionData::GetRecipientList() const

@@ -20,37 +20,6 @@ message File
    repeated FileContainer	payload = 1;
 }
 
-
-message Address
-{
-   string	address = 1;
-   string	index = 2;
-}
-
-message Input
-{
-   bytes	utxo = 1;
-   Address	address = 2;
-}
-
-message Change
-{
-   uint64	value = 1;
-   Address	address = 2;
-}
-
-message TXRequest
-{
-   repeated string walletId = 1;
-   repeated Input  inputs = 2;
-   repeated bytes  recipients = 3;
-   uint64	   fee = 4;
-   bool            RBF = 5;
-   Change	   change = 6;
-   string	   comment = 7;
-}
-
-
 message SignedTX
 {
    bytes	transaction = 1;

@@ -348,14 +348,6 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    }
 
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
-   if (result == bs::error::ErrorCode::NoError && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {
-      // Offline signing
-      BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
-         , tr("Request was successfully exported")
-         , tr("Saved to %1").arg(QString::fromStdString(txReq_.offlineFilePath)), this).exec();
-      accept();
-      return;
-   }
    const auto wallet = walletsManager_->getWalletById(walletId);
 
    try {
@@ -450,34 +442,12 @@ bool CreateTransactionDialog::CreateTransaction()
       return false;
    }
 
-   std::string offlineFilePath;
    const auto hdWallet = walletsManager_->getHDWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
 
-   if (hdWallet->isOffline()) {
-      QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
-
-      const qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();
-      const std::string fileName = fmt::format("{}_{}.bin", hdWallet->walletId(), timestamp);
-
-      QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));
-      offlineFilePath = QFileDialog::getSaveFileName(this, tr("Save Offline TX as..."), defaultFilePath).toStdString();
-
-      if (offlineFilePath.empty()) {
-         return true;
-      }
-
-      QString newSignerOfflineDir = QFileInfo(QString::fromStdString(offlineFilePath)).absoluteDir().path();
-      if (signerOfflineDir != newSignerOfflineDir) {
-         applicationSettings_->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
-      }
-   }
-
-   startBroadcasting();
    try {
       txReq_ = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked
          , changeAddress, originalFee_);
       txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
-      txReq_.offlineFilePath = offlineFilePath;
 
       // We shouldn't hit this case since the request checks the incremental
       // relay fee requirement for RBF. But, in case we
@@ -500,9 +470,43 @@ bool CreateTransactionDialog::CreateTransaction()
          txReq_.fee = std::ceil(txReq_.fee * (originalFeePerByte_ / newFeePerByte));
       }
 
-      pendingTXSignId_ = signContainer_->signTXRequest(txReq_, SignContainer::TXSignMode::Full, true);
-      if (!pendingTXSignId_) {
-         throw std::logic_error("Signer failed to send request");
+      if (hdWallet->isOffline()) {
+         QString offlineFilePath;
+         QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
+
+         const qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();
+         const std::string fileName = fmt::format("{}_{}.bin", hdWallet->walletId(), timestamp);
+
+         QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));
+         offlineFilePath = QFileDialog::getSaveFileName(this, tr("Save Offline TX as..."), defaultFilePath);
+
+         if (offlineFilePath.isEmpty()) {
+            return true;
+         }
+
+         QString newSignerOfflineDir = QFileInfo(offlineFilePath).absoluteDir().path();
+         if (signerOfflineDir != newSignerOfflineDir) {
+            applicationSettings_->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
+         }
+
+         bs::error::ErrorCode result = bs::core::wallet::ExportTxToFile(txReq_, offlineFilePath);
+         if (result == bs::error::ErrorCode::NoError) {
+            BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
+               , tr("Request was successfully exported")
+               , tr("Saved to %1").arg(offlineFilePath), this).exec();
+         }
+         else {
+            BSMessageBox(BSMessageBox::warning, tr("Offline Transaction")
+               , tr("Failed to save offline Tx request")
+               , tr("Filename: %1").arg(offlineFilePath), this).exec();
+         }
+      }
+      else {
+         startBroadcasting();
+         pendingTXSignId_ = signContainer_->signTXRequest(txReq_, SignContainer::TXSignMode::Full, true);
+         if (!pendingTXSignId_) {
+            throw std::logic_error("Signer failed to send request");
+         }
       }
       return true;
    }
@@ -562,7 +566,7 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
       return {};
    }
 
-   auto transactions = ParseOfflineTXFile(data);
+   auto transactions = bs::core::wallet::ParseOfflineTXFile(data);
    if (transactions.size() != 1) {
       showError(title, tr("Invalid file %1 format").arg(reqFile));
       return {};

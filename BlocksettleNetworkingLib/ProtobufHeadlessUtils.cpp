@@ -62,7 +62,6 @@ bs::core::wallet::TXSignRequest bs::signer::pbTxRequestToCore(const headless::Si
       utxo.unserialize(request.inputs(i));
       if (utxo.isInitialized()) {
          txSignReq.inputs.push_back(utxo);
-         //inputVal += utxo.getValue();
       }
    }
 

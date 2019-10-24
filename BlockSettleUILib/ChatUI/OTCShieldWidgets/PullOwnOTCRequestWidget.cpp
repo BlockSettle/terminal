@@ -32,10 +32,6 @@ PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
    connect(&pullTimer_, &QTimer::timeout, this, &PullOwnOTCRequestWidget::onUpdateTimerData);
    connect(ui_->pullPushButton, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::currentRequestPulled);
 
-   connect(ui_->pushButtonOfflineSave, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::saveOfflineClicked);
-   connect(ui_->pushButtonOfflineLoad, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::loadOfflineClicked);
-   connect(ui_->pushButtonOfflineBroadcast, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::broadcastOfflineClicked);
-
    pullTimer_.setInterval(kTimerRepeatTimeMSec);
 }
 
@@ -106,11 +102,6 @@ void PullOwnOTCRequestWidget::setPeer(const bs::network::otc::Peer &peer)
    if (timeoutSec_) {
       setupTimer(peer.stateTimestamp);
    }
-
-   const bool showOfflineButtons = peer.isWaitingForOfflineSign();
-   ui_->pushButtonOfflineSave->setVisible(showOfflineButtons);
-   ui_->pushButtonOfflineLoad->setVisible(showOfflineButtons);
-   ui_->pushButtonOfflineBroadcast->setVisible(showOfflineButtons);
 }
 
 void PullOwnOTCRequestWidget::onUpdateTimerData()

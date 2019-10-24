@@ -177,9 +177,6 @@ public:
    bool isOffline() const override;
    void updatePeerKeys(const ZmqBIP15XPeers &peers);
 
-   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
-      , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) override;
-
 protected slots:
    void onAuthenticated();
    void onConnected();
@@ -192,9 +189,6 @@ private:
    // Recreates new ZmqBIP15XDataConnection because it can't gracefully handle server restart
    void RecreateConnection();
    void ScheduleRestart();
-
-   bs::signer::RequestId signOffline(const bs::core::wallet::TXSignRequest &txSignReq);
-   void txSignedAsync(bs::signer::RequestId id, const BinaryData &signedTX, bs::error::ErrorCode result, const std::string &errorReason = {});
 
 protected:
    const QString                              host_;

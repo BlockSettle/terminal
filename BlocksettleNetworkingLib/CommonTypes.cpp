@@ -48,7 +48,7 @@ QuoteNotification::QuoteNotification(const QuoteReqNotification &qrn, const std:
    , const std::string &txData)
    : authKey(_authKey), reqAuthKey(qrn.requestorAuthPublicKey), settlementId(qrn.settlementId), sessionToken(qrn.sessionToken)
    , quoteRequestId(qrn.quoteRequestId), security(qrn.security), product(qrn.product), account(qrn.account), transactionData(txData)
-   , assetType(qrn.assetType), validityInS(120), bidFwdPts(0), bidContraQty(0), offerFwdPts(0), offerContraQty(0)
+   , assetType(qrn.assetType), validityInS(120)
 {
    const auto &baseProduct = security.substr(0, security.find('/'));
    side = bs::network::Side::invert(qrn.side);

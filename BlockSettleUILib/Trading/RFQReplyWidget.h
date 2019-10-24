@@ -97,7 +97,6 @@ private slots:
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId);
    void onReadyToAutoSign();
-   void onReadyToActivate();
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
    void onEnterKeyPressed(const QModelIndex &index);
@@ -112,6 +111,13 @@ private:
 private:
    using transaction_data_ptr = std::shared_ptr<TransactionData>;
    using settl_addr_ptr = std::shared_ptr<bs::SettlementAddressEntry>;
+
+   struct SentXbtReply
+   {
+      std::shared_ptr<bs::sync::Wallet> xbtWallet;
+      bs::Address authAddr;
+      std::vector<UTXO> utxosPayinFixed;
+   };
 
    struct SentCCReply
    {
@@ -136,7 +142,7 @@ private:
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
    std::shared_ptr<bs::DealerUtxoResAdapter> dealerUtxoAdapter_;
 
-   std::unordered_map<std::string, transaction_data_ptr>   sentXbtTransactionData_;
+   std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;
    std::shared_ptr<bs::SecurityStatsCollector>     statsCollector_;
    std::unordered_map<std::string, std::string>    ccTxByOrder_;

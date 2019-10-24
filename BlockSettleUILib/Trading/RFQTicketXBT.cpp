@@ -717,8 +717,6 @@ void RFQTicketXBT::submitButtonClicked()
       if (rfq->requestorAuthPublicKey.empty()) {
          return;
       }
-      transactionData_->SetFallbackRecvAddress(recvAddress());
-
       if ((rfq->side == bs::network::Side::Sell) && (rfq->product == bs::network::XbtCurrency)) {
          transactionData_->setMaxSpendAmount(maxAmount_);
       }
