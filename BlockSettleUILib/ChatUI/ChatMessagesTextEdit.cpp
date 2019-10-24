@@ -389,15 +389,17 @@ void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
 
    // push new message if it doesn't exist in current chat
    auto& messagesList = messages_[messagePtr->partyId()];
-   QVector<Chat::MessagePtr>::const_iterator messageIt =
+   QVector<Chat::MessagePtr>::iterator messageIt =
    std::find_if(messagesList.begin(), messagesList.end(), [messagePtr](const Chat::MessagePtr& m)->bool
    {
       return m->messageId() == messagePtr->messageId();
    });
 
+   // remove duplicates by give message_id
    if (messageIt != messagesList.cend())
    {
-      deleteMessage(static_cast<int>(std::distance(messagesList.cbegin(), messageIt)));
+      deleteMessage(static_cast<int>(std::distance(messagesList.begin(), messageIt)));
+      messagesList.erase(messageIt);
    }
 
    messagesList.push_back(messagePtr);
