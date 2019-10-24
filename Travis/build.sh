@@ -22,7 +22,7 @@ if [ ${MACHINE} = "MacOS" ]; then
 fi
 
 # should be after source ~/.bash_profile
-set -o errexit -o nounset
+set -e -o nounset
 
 if [ ${MACHINE} = "Linux" ]; then
    build_dir=${project_dir}/build_terminal/RelWithDebInfo/bin/
@@ -67,7 +67,7 @@ set +e
 cd ${project_dir}/terminal.release
 set -e
 
-make -j2 2>&1 | cut -c1-50
+make -j2 2>/dev/null
 make clean
 
 
