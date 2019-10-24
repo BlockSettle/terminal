@@ -67,7 +67,7 @@ set +e
 cd ${project_dir}/terminal.release
 set -e
 
-make -j2
+make -j2 | cut -c1-50
 make clean
 
 
