@@ -43,6 +43,7 @@ namespace Chat
       void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);
       void checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniqueRecipientMap);
       void cleanUnusedParties();
+      void savePartyRecipients(const Chat::PartyPtr& partyPtr);
 
       ////////// RETURN SIGNALS //////////
       void initDone();

@@ -133,7 +133,7 @@ void ClientDBLogic::saveMessage(const Chat::PartyPtr& partyPtr, const std::strin
    if (partyPtr->isPrivate())
    {
       // For private parties save all recipients belongs to this party
-      savePartyRecipients(partyPtr, partyTableId);
+      savePartyRecipients(partyPtr);
    }
 
    // ! signaled by ClientPartyModel in gui
@@ -160,12 +160,19 @@ void ClientDBLogic::createNewParty(const Chat::PartyPtr& partyPtr)
    insertPartyId(partyPtr, idTableParty);
 }
 
-void ClientDBLogic::savePartyRecipients(const Chat::PartyPtr& partyPtr, const std::string& partyTableId)
+void ClientDBLogic::savePartyRecipients(const Chat::PartyPtr& partyPtr)
 {
    ClientPartyPtr clientPartyPtr = std::dynamic_pointer_cast<ClientParty>(partyPtr);
 
    if (nullptr == clientPartyPtr)
    {
+      return;
+   }
+
+   std::string partyTableId;
+   if (!getPartyTableIdFromDB(partyPtr, partyTableId))
+   {
+      emit error(ClientDBLogicError::GetTablePartyId, partyPtr->id());
       return;
    }
 
@@ -181,7 +188,10 @@ void ClientDBLogic::savePartyRecipients(const Chat::PartyPtr& partyPtr, const st
       std::string userTableId;
       if (!getUserTableId(recipient->userHash(), userTableId))
       {
-         continue;
+         // user not exist in db, save
+         insertNewUserHash(recipient->userHash());
+
+         getUserTableId(recipient->userHash(), userTableId);
       }
 
       QSqlQuery query(getDb());
@@ -222,7 +232,8 @@ bool ClientDBLogic::getUserTableId(const std::string& userHash, std::string& use
 bool ClientDBLogic::insertPartyId(const Chat::PartyPtr& partyPtr, std::string& partyTableId)
 {
    const QString cmd = QStringLiteral("INSERT INTO party (party_id, party_display_name, party_type, party_sub_type) "
-      "VALUES (:party_id, :party_display_name, :party_type, :party_sub_type);");
+      "VALUES (:party_id, :party_display_name, :party_type, :party_sub_type) ON CONFLICT(party_id) DO UPDATE SET "
+      "party_id=:party_id, party_display_name=:party_display_name, party_type=:party_type, party_sub_type=:party_sub_type;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
@@ -476,39 +487,49 @@ void ClientDBLogic::saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recip
 {
    for (const auto& recipient : recipients)
    {
-      std::string userTableId;
-      if (!getUserTableId(recipient->userHash(), userTableId))
-      {
-         // create new user
-         const QString cmd = QStringLiteral("INSERT INTO user (user_hash) VALUES (:user_hash);");
+      saveRecipientKey(recipient);
+   }
+}
 
-         QSqlQuery query(getDb());
-         query.prepare(cmd);
-         query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userHash()));
+void ClientDBLogic::insertNewUserHash(const std::string& userHash)
+{
+   // create new user
+   const QString cmd = QStringLiteral("INSERT INTO user (user_hash) VALUES (:user_hash);");
 
-         if (!checkExecute(query))
-         {
-            emit error(ClientDBLogicError::InsertUser, recipient->userHash());
-            continue;
-         }
+   QSqlQuery query(getDb());
+   query.prepare(cmd);
+   query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(userHash));
 
-         getUserTableId(recipient->userHash(), userTableId);
-      }
+   if (!checkExecute(query))
+   {
+      emit error(ClientDBLogicError::InsertUser, userHash);
+      return;
+   }
+}
 
-      const QString cmd = QStringLiteral("INSERT INTO user_key (user_table_id, public_key, public_key_timestamp) "
-         "VALUES (:user_table_id, :public_key, :public_key_timestamp) ON CONFLICT(user_table_id) DO UPDATE SET "
-         "user_table_id=:user_table_id, public_key=:public_key, public_key_timestamp=:public_key_timestamp;");
+void ClientDBLogic::saveRecipientKey(const Chat::PartyRecipientPtr& recipient)
+{
+   std::string userTableId;
+   if (!getUserTableId(recipient->userHash(), userTableId))
+   {
+      insertNewUserHash(recipient->userHash());
 
-      QSqlQuery query(getDb());
-      query.prepare(cmd);
-      query.bindValue(QStringLiteral(":user_table_id"), QString::fromStdString(userTableId));
-      query.bindValue(QStringLiteral(":public_key"), QString::fromStdString(recipient->publicKey().toHexStr()));
-      query.bindValue(QStringLiteral(":public_key_timestamp"), qint64(recipient->publicKeyTime().toMSecsSinceEpoch()));
+      getUserTableId(recipient->userHash(), userTableId);
+   }
 
-      if (!checkExecute(query))
-      {
-         emit error(ClientDBLogicError::InsertRecipientKey, recipient->userHash());
-      }
+   const QString cmd = QStringLiteral("INSERT INTO user_key (user_table_id, public_key, public_key_timestamp) "
+      "VALUES (:user_table_id, :public_key, :public_key_timestamp) ON CONFLICT(user_table_id) DO UPDATE SET "
+      "user_table_id=:user_table_id, public_key=:public_key, public_key_timestamp=:public_key_timestamp;");
+
+   QSqlQuery query(getDb());
+   query.prepare(cmd);
+   query.bindValue(QStringLiteral(":user_table_id"), QString::fromStdString(userTableId));
+   query.bindValue(QStringLiteral(":public_key"), QString::fromStdString(recipient->publicKey().toHexStr()));
+   query.bindValue(QStringLiteral(":public_key_timestamp"), qint64(recipient->publicKeyTime().toMSecsSinceEpoch()));
+
+   if (!checkExecute(query))
+   {
+      emit error(ClientDBLogicError::InsertRecipientKey, recipient->userHash());
    }
 }
 
@@ -531,21 +552,9 @@ void ClientDBLogic::deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& rec
 
 void ClientDBLogic::updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients)
 {
-   const QString cmd = QStringLiteral("UPDATE user_key SET public_key=:public_key, public_key_timestamp=:public_key_timestamp "
-      "WHERE user_table_id = (SELECT user_id FROM user WHERE user_hash=:user_hash);");
-
    for (const auto& recipient : recipients)
    {
-      QSqlQuery query(getDb());
-      query.prepare(cmd);
-      query.bindValue(QStringLiteral(":user_hash"), QString::fromStdString(recipient->userHash()));
-      query.bindValue(QStringLiteral(":public_key"), QString::fromStdString(recipient->publicKey().toHexStr()));
-      query.bindValue(QStringLiteral(":public_key_timestamp"), qint64(recipient->publicKeyTime().toMSecsSinceEpoch()));
-
-      if (!checkExecute(query))
-      {
-         emit error(ClientDBLogicError::UpdateRecipientKey, recipient->userHash());
-      }
+      saveRecipientKey(recipient);
    }
 }
 
@@ -581,6 +590,15 @@ void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniq
                userPkList.push_back(userPkPtr);
             }
          }
+         else
+         {
+            // key not exist, we assume that key was changed
+            const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
+            userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userHash()));
+            userPkPtr->setNewPublicKeyHex(recipientPtr->publicKey());
+            userPkPtr->setNewPublicKeyTime(recipientPtr->publicKeyTime());
+            userPkList.push_back(userPkPtr);
+         }
       }
       else
       {
@@ -588,14 +606,13 @@ void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniq
       }
    }
 
-   if (!userPkList.empty())
-   {
-      emit recipientKeysHasChanged(userPkList);
-   }
-   else
+   if (userPkList.empty())
    {
       emit recipientKeysUnchanged();
+      return;
    }
+
+   emit recipientKeysHasChanged(userPkList);
 }
 
 void ClientDBLogic::clearUnusedParties()

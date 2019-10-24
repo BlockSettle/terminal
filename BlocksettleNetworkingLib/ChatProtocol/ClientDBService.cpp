@@ -26,6 +26,7 @@ ClientDBService::ClientDBService(QObject* parent /* = nullptr */)
    connect(this, &ClientDBService::updateRecipientKeys, worker(), &ClientDBLogic::updateRecipientKeys);
    connect(this, &ClientDBService::checkRecipientPublicKey, worker(), &ClientDBLogic::checkRecipientPublicKey);
    connect(this, &ClientDBService::cleanUnusedParties, worker(), &ClientDBLogic::clearUnusedParties);
+   connect(this, &ClientDBService::savePartyRecipients, worker(), &ClientDBLogic::savePartyRecipients);
 
    ////////// RETURN SIGNALS //////////
    connect(worker(), &ClientDBLogic::initDone, this, &ClientDBService::initDone);

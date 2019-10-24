@@ -33,7 +33,7 @@ ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBSer
    connect(this, &ClientPartyLogic::userPublicKeyChanged, clientPartyModelPtr_.get(), &ClientPartyModel::userPublicKeyChanged, Qt::QueuedConnection);
 }
 
-void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& welcomeResponse)
+void ClientPartyLogic::handlePartiesFromWelcomePacket(const ChatUserPtr& currentUserPtr, const WelcomeResponse& welcomeResponse)
 {
    clientPartyModelPtr_->clearModel();
    clientDBServicePtr_->cleanUnusedParties();
@@ -61,7 +61,11 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
                std::make_shared<PartyRecipient>(recipient.user_name(), recipient.public_key(), QDateTime::fromMSecsSinceEpoch(recipient.timestamp_ms()));
             recipients.push_back(recipientPtr);
 
-            uniqueRecipients[recipientPtr->userHash()] = recipientPtr;
+            // choose all recipients except me
+            if (currentUserPtr->userName() != recipientPtr->userHash())
+            {
+               uniqueRecipients[recipientPtr->userHash()] = recipientPtr;
+            }
          }
 
          clientPartyPtr->setRecipients(recipients);
@@ -69,15 +73,20 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const WelcomeResponse& wel
 
       clientPartyModelPtr_->insertParty(clientPartyPtr);
 
-      // Read and provide last 10 history messages only for standard private parties
-      if (PartyType::PRIVATE_DIRECT_MESSAGE == partyPacket.party_type() && PartySubType::STANDARD == partyPacket.party_subtype())
-      {
-         clientDBServicePtr_->readHistoryMessages(partyPacket.party_id(), partyPacket.display_name(), 10);
-      }
+      // refresh party to user table
+      clientDBServicePtr_->savePartyRecipients(clientPartyPtr);
    }
 
    // check if any of recipients has changed public key
    clientDBServicePtr_->checkRecipientPublicKey(uniqueRecipients);
+
+   // update party to user table and check history messages
+   ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr_->getStandardPrivatePartyListForRecipient(currentUserPtr->userName());
+   for (ClientPartyPtr clientPartyPtr : clientPartyPtrList)
+   {
+      // Read and provide last 10 history messages only for standard private parties
+      clientDBServicePtr_->readHistoryMessages(clientPartyPtr->id(), clientPartyPtr->displayName(), 10);
+   }
 }
 
 void ClientPartyLogic::onUserStatusChanged(const ChatUserPtr& currentUserPtr, const StatusChanged& statusChanged)

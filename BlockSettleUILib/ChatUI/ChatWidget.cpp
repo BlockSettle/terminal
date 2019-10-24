@@ -467,9 +467,9 @@ void ChatWidget::onMessageRead(const std::string& partyId, const std::string& me
    stateCurrent_->onMessageRead(partyId, messageId);
 }
 
-void ChatWidget::onSendArrived(const Chat::MessagePtrList& messagePtr)
+void ChatWidget::onSendArrived(const Chat::MessagePtrList& messagePtrList)
 {
-   stateCurrent_->onProcessMessageArrived(messagePtr);
+   stateCurrent_->onProcessMessageArrived(messagePtrList);
 }
 
 void ChatWidget::onClientPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr)

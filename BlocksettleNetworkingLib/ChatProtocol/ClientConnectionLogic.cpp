@@ -150,7 +150,7 @@ void ClientConnectionLogic::handleWelcomeResponse(const WelcomeResponse& welcome
       return;
    }
 
-   clientPartyLogicPtr_->handlePartiesFromWelcomePacket(welcomeResponse);
+   clientPartyLogicPtr_->handlePartiesFromWelcomePacket(currentUserPtr(), welcomeResponse);
 }
 
 void ClientConnectionLogic::handleLogoutResponse(const LogoutResponse&)

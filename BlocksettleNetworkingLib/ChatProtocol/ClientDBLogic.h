@@ -35,7 +35,6 @@ namespace Chat
       CannotOpenDatabase,
       InsertRecipientKey,
       DeleteRecipientKey,
-      UpdateRecipientKey,
       CheckRecipientKey,
       CleanUnusedParties,
       CleanUnusedPartyToUser,
@@ -67,6 +66,7 @@ namespace Chat
       void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);
       void checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniqueRecipientMap);
       void clearUnusedParties();
+      void savePartyRecipients(const Chat::PartyPtr& partyPtr);
 
    signals:
       void initDone();
@@ -89,7 +89,8 @@ namespace Chat
       bool getPartyTableIdFromDB(const Chat::PartyPtr& partyPtr, std::string& partyTableId);
       bool insertPartyId(const Chat::PartyPtr& partyPtr, std::string& partyTableId);
       bool getUserTableId(const std::string& userHash, std::string& userTableId);
-      void savePartyRecipients(const Chat::PartyPtr& partyPtr, const std::string& partyTableId);
+      void saveRecipientKey(const Chat::PartyRecipientPtr& recipient);
+      void insertNewUserHash(const std::string& userHash);
       QSqlDatabase getDb();
 
       ApplicationSettingsPtr     applicationSettingsPtr_;

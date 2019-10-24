@@ -39,7 +39,7 @@ namespace Chat
       Chat::ClientPartyModelPtr clientPartyModelPtr() const { return clientPartyModelPtr_; }
       void setClientPartyModelPtr(Chat::ClientPartyModelPtr val) { clientPartyModelPtr_ = val; }
 
-      void handlePartiesFromWelcomePacket(const WelcomeResponse& msg);
+      void handlePartiesFromWelcomePacket(const ChatUserPtr& currentUserPtr, const WelcomeResponse& msg);
 
       void createPrivateParty(const ChatUserPtr& currentUserPtr, const std::string& remoteUserName, const Chat::PartySubType& partySubType = Chat::PartySubType::STANDARD,
          const std::string& initialMessage = "");

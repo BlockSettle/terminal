@@ -51,7 +51,7 @@ const static QMap <QString, TableStructure> clientTablesMap{
       {
          { //Table columns
             {party::kPartyTableId, QStringLiteral("INTEGER PRIMARY KEY AUTOINCREMENT")},
-            {party::kPartyId, QStringLiteral("TEXT NOT NULL")},
+            {party::kPartyId, QStringLiteral("TEXT NOT NULL UNIQUE")},
             {party::kPartyDisplayName, QStringLiteral("TEXT NOT NULL")},
             {party::kPartyType, QStringLiteral("INTEGER NOT NULL")},
             {party::kPartySubType, QStringLiteral("INTEGER NOT NULL")}
