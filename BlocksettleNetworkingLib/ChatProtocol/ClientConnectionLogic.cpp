@@ -228,6 +228,11 @@ void ClientConnectionLogic::handlePartyMessagePacket(PartyMessagePacket& partyMe
       return;
    }
 
+   // TODO: think about better way to display messages with correct timestamp
+   // if remote pc have different time then we have timestamp mess in view
+   // for now we're updating timestamp to local one
+   partyMessagePacket.set_timestamp_ms(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
+
    // TODO: handle here state changes of the rest of message types
    if (clientPartyPtr->isPrivate())
    {
