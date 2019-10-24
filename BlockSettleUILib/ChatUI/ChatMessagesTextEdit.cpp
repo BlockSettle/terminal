@@ -11,6 +11,7 @@
 #include <QScrollBar>
 
 #include <set>
+#include <iterator>
 
 namespace {
    // Translation
@@ -394,11 +395,12 @@ void ChatMessagesTextEdit::insertMessage(const Chat::MessagePtr& messagePtr)
       return m->messageId() == messagePtr->messageId();
    });
 
-   if (messageIt == messagesList.cend())
+   if (messageIt != messagesList.cend())
    {
-      messagesList.push_back(messagePtr);
+      deleteMessage(static_cast<int>(std::distance(messagesList.cbegin(), messageIt)));
    }
 
+   messagesList.push_back(messagePtr);
    if (messagePtr->partyId() == currentPartyId_) {
       showMessage(messagePtr->partyId(), messageIndex);
    }
@@ -434,13 +436,19 @@ void ChatMessagesTextEdit::insertMessageInDoc(QTextCursor& cursor, const std::st
 
 void ChatMessagesTextEdit::updateMessage(const std::string& partyId, int index)
 {
+   QTextCursor cursor = deleteMessage(index);
+   insertMessageInDoc(cursor, partyId, index);
+}
+
+QTextCursor ChatMessagesTextEdit::deleteMessage(int index)
+{
    QTextCursor cursor = textCursor();
    cursor.movePosition(QTextCursor::Start);
    cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, index * 2);
    cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 1);
    cursor.removeSelectedText();
 
-   insertMessageInDoc(cursor, partyId, index);
+   return cursor;
 }
 
 QString ChatMessagesTextEdit::elideUserName(const std::string& displayName)

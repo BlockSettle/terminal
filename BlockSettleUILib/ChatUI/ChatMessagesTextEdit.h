@@ -132,6 +132,7 @@ private:
    void notifyMessageChanged(Chat::MessagePtr message);
    void insertMessageInDoc(QTextCursor& cursor, const std::string& partyId, int index);
    void updateMessage(const std::string& partyId, int index);
+   QTextCursor deleteMessage(int index);
    QString elideUserName(const std::string& displayName);
 
 private:
