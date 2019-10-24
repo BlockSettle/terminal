@@ -115,7 +115,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       return nullptr;
    }
 
-   auto fixedInputs = transactionData_->getSelectedInputs()->UseAutoSel() ?
+   auto selectedInputs = transactionData_->getSelectedInputs();
+   auto fixedInputs = (!selectedInputs || transactionData_->getSelectedInputs()->UseAutoSel()) ?
       std::vector<UTXO>{} : transactionData_->getSelectedInputs()->GetSelectedTransactions();
 
    xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
