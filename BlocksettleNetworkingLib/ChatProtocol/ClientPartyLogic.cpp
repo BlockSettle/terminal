@@ -94,6 +94,8 @@ void ClientPartyLogic::onUserStatusChanged(const ChatUserPtr& currentUserPtr, co
          recipientPtr->setCelerType(static_cast<CelerClient::CelerUserType>(statusChanged.celer_type()));
       }
 
+      ClientStatus oldClientStatus = clientPartyPtr->clientStatus();
+
       clientPartyPtr->setClientStatus(statusChanged.client_status());
 
       if (ClientStatus::ONLINE != clientPartyPtr->clientStatus())
@@ -124,7 +126,13 @@ void ClientPartyLogic::onUserStatusChanged(const ChatUserPtr& currentUserPtr, co
          return;
       }
 
-      // if client status is online check if we have any unsent messages for this user
+      // if client status is online and different than previous status
+      // check if we have any unsent messages for this user
+      if (oldClientStatus == statusChanged.client_status())
+      {
+         continue;
+      }
+
       clientDBServicePtr_->checkUnsentMessages(clientPartyPtr->id());
    }
 }
