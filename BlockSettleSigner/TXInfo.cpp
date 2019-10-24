@@ -130,6 +130,15 @@ QString TXInfo::getSaveOfflineTxFileName()
      .arg(QDateTime::currentDateTime().toSecsSinceEpoch());
 }
 
+SecureBinaryData TXInfo::getSignedTx()
+{
+   if (txReqSigned_.prevStates.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "missing signed offline request prevStates[1]");
+      return {};
+   }
+   return txReqSigned_.prevStates.front();
+}
+
 QStringList TXInfo::inputs(bs::core::wallet::Type leafType) const
 {
    std::vector<UTXO> inputsList;

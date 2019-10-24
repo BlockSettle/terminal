@@ -76,6 +76,8 @@ public:
    Q_INVOKABLE bool loadSignedTx(const QString &fileName);
 
    Q_INVOKABLE QString getSaveOfflineTxFileName();
+   Q_INVOKABLE SecureBinaryData getSignedTx();
+
 signals:
    void dataChanged();
 

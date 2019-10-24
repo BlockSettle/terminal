@@ -436,6 +436,7 @@ CustomTitleDialogWindow {
                     }
                     else {
                         passwordData.encType = QPasswordData.Unencrypted
+                        passwordData.binaryPassword = txInfo.getSignedTx()
                         acceptAnimated()
                     }
                 }
