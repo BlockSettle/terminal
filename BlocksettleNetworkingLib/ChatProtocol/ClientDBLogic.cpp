@@ -107,7 +107,10 @@ void ClientDBLogic::saveMessage(const Chat::PartyPtr& partyPtr, const std::strin
    }
 
    const QString cmd = QStringLiteral("INSERT INTO party_message (party_table_id, message_id, timestamp, message_state, encryption_type, nonce, message_text, sender) "
-      "VALUES (:party_table_id, :message_id, :timestamp, :message_state, :encryption_type, :nonce, :message_text, :sender)");
+      "VALUES (:party_table_id, :message_id, :timestamp, :message_state, :encryption_type, :nonce, :message_text, :sender) "
+      "ON CONFLICT(message_id) DO UPDATE SET "
+      "party_table_id=:party_table_id, message_id=:message_id, timestamp=:timestamp, message_state=:message_state, "
+      "encryption_type=:encryption_type, nonce=:nonce, message_text=:message_text, sender=:sender;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
