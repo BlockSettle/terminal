@@ -180,7 +180,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    (std::vector<UTXO> inputs)->void
    {
       const auto recipient = addrVec[11].getRecipient(bs::XBTAmount{ (uint64_t)(25 * COIN) });
-      const auto txReq = syncLeaf->createTXRequest(inputs, { recipient });
+      const auto txReq = syncLeaf->createTXRequest(inputs, { recipient }, 0, false, addrVec[0]);
       BinaryData txWrongSigned;
       {
          const bs::core::WalletPasswordScoped lock(walletPtr_, SecureBinaryData{"wrongPass"});
