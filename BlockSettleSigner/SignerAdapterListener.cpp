@@ -626,7 +626,6 @@ bool SignerAdapterListener::onAutoSignRequest(const std::string &data, bs::signe
    signer::AutoSignActResponse response;
    response.set_errorcode(static_cast<uint32_t>(result));
    response.set_rootwalletid(request.rootwalletid());
-   response.set_autosignactive(request.activateautosign());
 
    sendData(signer::AutoSignActType, response.SerializeAsString(), reqId);
 
