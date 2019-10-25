@@ -168,8 +168,8 @@ QStringList TXInfo::counterPartyRecipients() const
 
    QStringList result;
    for (const auto &recip : recipientsList) {
-      const auto addr = bs::Address::fromRecipient(recip);
-      result.push_back(QString::fromStdString(addr.display()));
+      const auto addrStr = bs::Address::fromRecipient(recip);
+      result.push_back(QString::fromStdString(addrStr));
    }
 
    result.removeDuplicates();
@@ -186,8 +186,8 @@ QStringList TXInfo::allRecipients() const
 
    QStringList result;
    for (const auto &recip : recipientsList) {
-      const auto addr = bs::Address::fromRecipient(recip);
-      result.push_back(QString::fromStdString(addr.display()));
+      const auto addrStr = bs::Address::fromRecipient(recip);
+      result.push_back(QString::fromStdString(addrStr));
    }
 
    result.removeDuplicates();
