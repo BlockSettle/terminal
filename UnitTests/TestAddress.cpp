@@ -9,5 +9,5 @@ TEST(TestAddress, TestResolverSerialize)
    BinaryData script = resolver->getSerializedScript();
    auto resolver2 = ScriptRecipient::deserialize(script);
    auto addr2 = bs::Address::fromRecipient(resolver2);
-   ASSERT_EQ(addr.display(), addr2.display());
+   ASSERT_EQ(addr.display(), addr2);
 }

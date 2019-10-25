@@ -285,8 +285,10 @@ TEST_F(TestCC, TX_buy)
          };
          xbtWallet_->getNewChangeAddress(cbChange2Addr);
          const auto changeAddr2 = futChange2Addr.get();
+         const bs::core::wallet::OutputSortOrder &outSortOrder = { bs::core::wallet::OutputOrderType::PrevState
+               , bs::core::wallet::OutputOrderType::Recipients, bs::core::wallet::OutputOrderType::Change };
          auto txReq2 = xbtWallet_->createPartialTXRequest(spendVal2, inputs2, changeAddr2, feePerByte
-            , { recipient2 }, txReq1.serializeState());
+            , { recipient2 }, outSortOrder, txReq1.serializeState());
 
          bs::CheckRecipSigner checkSigner(envPtr_->armoryConnection());
          checkSigner.deserializeState(txReq1.serializeState());
@@ -413,8 +415,10 @@ TEST_F(TestCC, TX_sell)
          };
          xbtWallet_->getNewChangeAddress(cbChange2Addr);
          const auto changeAddr2 = futChange2Addr.get();
+         const bs::core::wallet::OutputSortOrder &outSortOrder = { bs::core::wallet::OutputOrderType::PrevState
+               , bs::core::wallet::OutputOrderType::Recipients, bs::core::wallet::OutputOrderType::Change };
          auto txReq2 = xbtWallet_->createPartialTXRequest(spendVal2, inputs2, changeAddr2, feePerByte
-            , { recipient2 }, txReq1.serializeState());
+            , { recipient2 }, outSortOrder, txReq1.serializeState());
 
          // add receiving address on requester side
          bs::core::wallet::TXSignRequest txReq3;

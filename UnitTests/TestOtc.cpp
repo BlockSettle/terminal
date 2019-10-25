@@ -301,7 +301,7 @@ public:
       for (const auto &utxo : utxos) {
          totalInput += int64_t(utxo.getValue());
       }
-      auto payinFee = int64_t(OtcClient::estimatePayinFeeWithoutChange(utxos, TestArmoryConnection::testFeePerByte()));
+      auto payinFee = 1000; //FIXME! int64_t(OtcClient::estimatePayinFeeWithoutChange(utxos, TestArmoryConnection::testFeePerByte()));
       const auto amount = withoutChange_ ? (totalInput - payinFee) : 1000;
 
       // needed to be able sign pay-in and pay-out
