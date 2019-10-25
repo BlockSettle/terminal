@@ -632,7 +632,6 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                      try {
                         Signer signer;
                         signer.deserializeState(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
-                        logger_->debug("[cbFee] deserialized state");
                      } catch (const std::exception &e) {
                         logger_->error("[cbFee] state deser failed: {}", e.what());
                      }

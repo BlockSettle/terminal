@@ -2,6 +2,7 @@
 
 #include "AddressValidationState.h"
 #include "CheckRecipSigner.h"
+#include "ColoredCoinLogic.h"
 #include "FastLock.h"
 #include "WalletSignerContainer.h"
 
@@ -848,22 +849,18 @@ hd::CCLeaf::CCLeaf(const std::string &walletId, const std::string &name, const s
    : hd::Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::ColorCoin, true)
 {}
 
-hd::CCLeaf::~CCLeaf()
-{
-   validationStarted_ = false;
-}
-
 void hd::CCLeaf::setCCDataResolver(const std::shared_ptr<CCDataResolver> &resolver)
 {
    assert(resolver != nullptr);
    ccResolver_ = resolver;
    setPath(path_);
-   const auto genAddr = ccResolver_->genesisAddrFor(suffix_);
-   if (!genAddr.isNull() && sync::Wallet::armory_) {
-      tracker_ = make_unique<ColoredCoinTrackerAsync>(ccResolver_->lotSizeFor(suffix_), sync::Wallet::armory_);
-      tracker_->addOriginAddress(genAddr);
-   }
-   checker_ = genAddr.isNull() ? nullptr : std::make_shared<TxAddressChecker>(genAddr, sync::Wallet::armory_);
+   lotSize_ = ccResolver_->lotSizeFor(suffix_);
+}
+
+void hd::CCLeaf::setCCTracker(const std::shared_ptr<ColoredCoinTracker> &tracker)
+{
+   assert(tracker != nullptr);
+   tracker_ = tracker;
 }
 
 void hd::CCLeaf::setPath(const bs::hd::Path &path)
@@ -886,17 +883,6 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
          act_->init(armory.get());
       }
    }
-   if (checker_ && armory) {
-      checker_->setArmory(armory);
-   }
-   if (ccResolver_ && armory && !tracker_) {
-      const auto genAddr = ccResolver_->genesisAddrFor(suffix_);
-      if (!genAddr.isNull()) {
-         tracker_ = make_unique<ColoredCoinTrackerAsync>(ccResolver_->lotSizeFor(suffix_), sync::Wallet::armory_);
-         tracker_->addOriginAddress(genAddr);
-         validationProc();
-      }
-   }
 }
 
 std::vector<std::string> hd::CCLeaf::setUnconfirmedTarget()
@@ -911,7 +897,10 @@ bool hd::CCLeaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint
 {
    const ArmoryConnection::UTXOsCb &cbWrap = [this, cb](const std::vector<UTXO> &utxos) {
       std::vector<UTXO> filteredUTXOs;
-      for (const auto &utxo : filterUTXOs(utxos)) {
+      for (const auto &utxo : utxos) {
+         if (!isTxValid(utxo.getTxHash())) {
+            continue;
+         }
          const auto nbConf = sync::Wallet::armory_->getConfirmationsNumber(utxo.getHeight());
          if (nbConf >= kIntConfCount) {
             filteredUTXOs.emplace_back(std::move(utxo));
@@ -924,162 +913,6 @@ bool hd::CCLeaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint
    return bs::sync::Wallet::getSpendableTxOutList(cbWrap, val);
 }
 
-void hd::CCLeaf::onTrackerUpdated()
-{
-   logger_->debug("[{}] {} started", __func__, walletId());
-   if (!tracker_) {
-      return;
-   }
-   validTxHash_.clear();
-   for (const auto &addr : getUsedAddressList()) {
-      const auto addrOPs = tracker_->getSpendableOutpointsForAddress(addr.id());
-      for (const auto &op : addrOPs) {
-         validTxHash_.insert(*(op->getTxHash()));
-      }
-   }
-   refreshInvalidUTXOs();
-/*   if (wct_) {
-      wct_->walletReset(walletId());
-   }*/
-   logger_->debug("[{}] {} ended: {}", __func__, walletId(), validTxHash_.size());
-}
-
-void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
-{
-   const auto &cbRefresh = [this](std::vector<UTXO> utxos) {
-      const auto &cbUpdateSpendableBalance = [this](const std::vector<UTXO> &spendableUTXOs) {
-         std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
-         for (const auto &utxo : spendableUTXOs) {
-            const auto addr = utxo.getRecipientScrAddr();
-            auto &balanceVec = (balanceData_->addressBalanceMap)[addr];
-            if (balanceVec.empty()) {
-               balanceVec = { 0, 0, 0 };
-            }
-            balanceVec[0] += utxo.getValue();
-            balanceVec[1] += utxo.getValue();
-         }
-         if (wct_) {
-            wct_->balanceUpdated(walletId());
-         }
-      };
-      findInvalidUTXOs(utxos, cbUpdateSpendableBalance);
-   };
-
-   const auto &cbRefreshZC = [this, ZConly, cbRefresh](const std::vector<UTXO> &utxos) {
-      const auto &cbUpdateZcBalance = [this, ZConly, cbRefresh](const std::vector<UTXO> &ZcUTXOs) {
-         std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
-         for (const auto &utxo : ZcUTXOs) {
-            auto &balanceVec = balanceData_->addressBalanceMap[utxo.getRecipientScrAddr()];
-            if (balanceVec.empty()) {
-               balanceVec = { 0, 0, 0 };
-            }
-            balanceVec[2] += utxo.getValue();
-            balanceVec[0] = balanceVec[1] + balanceVec[2];
-         }
-         if (ZConly) {
-            if (wct_) {
-               wct_->balanceUpdated(walletId());
-            }
-         }
-         else {
-            getSpendableTxOutList(cbRefresh, UINT64_MAX);
-         }
-      };
-      findInvalidUTXOs(utxos, cbUpdateZcBalance);
-   };
-   getSpendableZCList(cbRefreshZC);
-}
-
-void hd::CCLeaf::onZeroConfReceived(const std::vector<bs::TXEntry> &zcs)
-{
-   hd::Leaf::onZeroConfReceived(zcs);
-
-   if (tracker_) {
-      tracker_->onZeroConf([this](const std::string &regId) {
-         refreshCb_[regId] = [this] { onTrackerUpdated(); };
-      });
-   }
-}
-
-void hd::CCLeaf::onNewBlock(unsigned int height, unsigned int branchHeight)
-{
-   hd::Leaf::onNewBlock(height, branchHeight);
-
-   if (tracker_) {
-      tracker_->onNewBlock(branchHeight, [this](const std::string &regId) {
-         refreshCb_[regId] = [this] { onTrackerUpdated(); };
-      });
-   }
-}
-
-void hd::CCLeaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
-{
-   hd::Leaf::onRefresh(ids, online);
-
-   std::vector<std::string>   removedRefreshIds_;
-   for (const auto &id : ids) {
-      const auto &it = refreshCb_.find(id.toBinStr());
-      if (it != refreshCb_.end()) {
-         removedRefreshIds_.push_back(it->first);
-         if (it->second) {
-            it->second();
-         }
-      }
-   }
-   for (const auto &id : removedRefreshIds_) {
-      refreshCb_.erase(id);   // clean-up invoked ids
-   }
-}
-
-void hd::CCLeaf::validationProc()
-{
-   if (!sync::Wallet::armory_ || (sync::Wallet::armory_->state() != ArmoryState::Ready)
-      /*|| !isRegistered_*/) {
-      return;
-   }
-   validationStarted_ = true;
-
-   hd::Leaf::init();
-
-   if (!tracker_) {  // special case for BS CC wallets
-      validationEnded_ = true;
-      return;
-   }
-
-   const auto pair = tracker_->goOnline([this](bool result) {
-      logger_->debug("[CCLeaf::validationProc::goOnline] {} result={}", walletId(), result);
-      validationEnded_ = true;
-      if (!result) {
-         logger_->warn("[CCLeaf::validationProc::goOnline] {} tracker failed to go online", walletId());
-         return;
-      }
-      onTrackerUpdated();
-   });
-   if (!pair.first.empty()) {
-      logger_->debug("[CCLeaf::validationProc] {} regId={}", walletId(), pair.first);
-      refreshCb_[pair.first] = pair.second;
-   }
-   else {
-      logger_->warn("[CCLeaf::validationProc] {} failed to register tracker", walletId());
-   }
-}
-
-void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, const ArmoryConnection::UTXOsCb &cb)
-{
-   cb(filterUTXOs(utxos));
-}
-
-void hd::CCLeaf::init(bool force)
-{
-   if (force) {
-      validationStarted_ = false;
-   }
-   if (tracker_ && !validationStarted_) {
-      validationEnded_ = false;
-      validationProc();
-   }
-}
-
 void hd::CCLeaf::CCWalletACT::onStateChanged(ArmoryState state)
 {
    if (state == ArmoryState::Ready) {
@@ -1087,96 +920,82 @@ void hd::CCLeaf::CCWalletACT::onStateChanged(ArmoryState state)
    }
 }
 
-std::vector<UTXO> hd::CCLeaf::filterUTXOs(const std::vector<UTXO> &utxos) const
-{
-   if (!tracker_) {  // special case for BS CC wallet
-      return utxos;
-   }
-   std::vector<UTXO> result;
-   for (const auto &txOut : utxos) {
-      if (validTxHash_.find(txOut.getTxHash()) != validTxHash_.end()) {
-         result.emplace_back(txOut);
-      }
-   }
-   return result;
-}
-
 bool hd::CCLeaf::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const
 {
-   if (validationStarted_ && !validationEnded_) {
-      return false;
-   }
-   const auto &cbZCList = [this, cb](std::vector<UTXO> txOutList) {
-      cb(filterUTXOs(txOutList));
+   const auto &cbZCList = [this, cb](std::vector<UTXO> utxos) {
+      std::vector<UTXO> txOutList;
+      for (const auto &utxo : utxos) {
+         if (isTxValid(utxo.getTxHash())) {
+            txOutList.emplace_back(std::move(utxo));
+         }
+      }
+      cb(txOutList);
    };
    return hd::Leaf::getSpendableZCList(cbZCList);
 }
 
-bool hd::CCLeaf::isBalanceAvailable() const
+std::set<BinaryData> hd::CCLeaf::collectAddresses() const
 {
-   return validationEnded_ ? hd::Leaf::isBalanceAvailable() : false;
+   std::set<BinaryData> result;
+   for (const auto &addr : getUsedAddressList()) {
+      result.insert(addr.id());
+   }
+   return result;
 }
 
-BTCNumericTypes::balance_type hd::CCLeaf::correctBalance(BTCNumericTypes::balance_type balance, bool apply) const
+bool hd::CCLeaf::isBalanceAvailable() const
 {
-   if (!ccResolver_ || (ccResolver_->lotSizeFor(suffix_) == 0)) {
-      return 0;
-   }
-   const BTCNumericTypes::balance_type correction = apply ? balanceCorrection_ : 0;
-   return (balance - correction) * BTCNumericTypes::BalanceDivider / ccResolver_->lotSizeFor(suffix_);
+   return (tracker_ != nullptr) ? hd::Leaf::isBalanceAvailable() : false;
 }
 
 BTCNumericTypes::balance_type hd::CCLeaf::getSpendableBalance() const
 {
-   return correctBalance(hd::Leaf::getSpendableBalance());
+   if (!tracker_ || !lotSize_) {
+      return -1;
+   }
+   return tracker_->getConfirmedCcValueForAddresses(collectAddresses()) / lotSize_;
 }
 
 BTCNumericTypes::balance_type hd::CCLeaf::getUnconfirmedBalance() const
 {
-   return correctBalance(hd::Leaf::getUnconfirmedBalance(), false);
+   if (!tracker_ || !lotSize_) {
+      return -1;
+   }
+   return tracker_->getUnconfirmedCcValueForAddresses(collectAddresses()) / lotSize_;
 }
 
 BTCNumericTypes::balance_type hd::CCLeaf::getTotalBalance() const
 {
-   return correctBalance(hd::Leaf::getTotalBalance());
+   if (!tracker_ || !lotSize_) {
+      return -1;
+   }
+   return (getUnconfirmedBalance() + getSpendableBalance());
 }
 
 std::vector<uint64_t> hd::CCLeaf::getAddrBalance(const bs::Address &addr) const
 {
-   if (!ccResolver_ || (ccResolver_->lotSizeFor(suffix_) == 0) || !tracker_) {
+   if (!tracker_ || !lotSize_) {
       return {};
    }
-   const auto ccLotSize = ccResolver_->lotSizeFor(suffix_);
-
-   if (!tracker_ || (ccLotSize == 0)) {
-      auto addrBalance = hd::Leaf::getAddrBalance(addr);
-      if (ccLotSize) {
-         for (auto &balance : addrBalance) {
-            balance /= ccLotSize;
-         }
-      }
-      return addrBalance;
-   }
-
-   const uint64_t ccValue = tracker_->getCcValueForAddress(addr.id()) / ccLotSize;
-   return { ccValue, 0, ccValue };  //TODO: fix unconfirmed value when it will become available
+   return { tracker_->getCcValueForAddress(addr.id()) / lotSize_
+      , tracker_->getUnconfirmedCcValueForAddresses({ addr.id() } ) / lotSize_
+      , tracker_->getConfirmedCcValueForAddresses({ addr.id() }) / lotSize_ };
 }
 
 bool hd::CCLeaf::isTxValid(const BinaryData &txHash) const
 {
-   return (validTxHash_.find(txHash) != validTxHash_.end());
+   if (!tracker_) {
+      return false;
+   }
+   return tracker_->isTxHashExist(txHash);
 }
 
 BTCNumericTypes::balance_type hd::CCLeaf::getTxBalance(int64_t val) const
 {
-   if (!ccResolver_) {
-      return 0;
-   }
-   const auto lotSize = ccResolver_->lotSizeFor(suffix_);
-   if (lotSize == 0) {
+   if (lotSize_ == 0) {
       return val / BTCNumericTypes::BalanceDivider;
    }
-   return (double)val / lotSize;
+   return (double)val / lotSize_;
 }
 
 QString hd::CCLeaf::displayTxValue(int64_t val) const

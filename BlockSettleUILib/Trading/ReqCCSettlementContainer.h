@@ -94,7 +94,6 @@ private:
    bool           userKeyOk_ = false;
 
    BinaryData                 dealerTx_;
-   BinaryData                 requesterTx_;
    bs::core::wallet::TXSignRequest  ccTxData_;
    std::string                ccTxSigned_;
    bool                       genAddrVerified_ = false;
