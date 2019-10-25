@@ -1,6 +1,7 @@
 #include "CelerCreateOrderSequence.h"
 
 #include "NettyCommunication.pb.h"
+#include "ProtobufUtils.h"
 #include "UpstreamOrderProto.pb.h"
 
 #include <QDate>
@@ -67,7 +68,7 @@ CelerMessage CelerCreateOrderSequence::createOrder()
       request.set_requestorcointransactioninput(payoutTx_);
    }
 
-   logger_->debug("[CelerCreateOrderSequence::createOrder] {}", request.DebugString());
+   logger_->debug("[CelerCreateOrderSequence::createOrder] {}", ProtobufUtils::toJsonCompact(request));
 
    CelerMessage message;
    message.messageType = CelerAPI::CreateBitcoinOrderRequestType;

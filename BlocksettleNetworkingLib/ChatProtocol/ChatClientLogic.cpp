@@ -181,7 +181,7 @@ void ChatClientLogic::sendPacket(const google::protobuf::Message& message)
    google::protobuf::Any any;
    any.ParseFromString(packetString);
 
-   loggerPtr_->debug("[ChatClientLogic::sendPacket] send: {}", ProtobufUtils::toJsonReadable(any));
+   loggerPtr_->debug("[ChatClientLogic::sendPacket] send: {}", ProtobufUtils::toJsonCompact(any));
 
    if (!connectionPtr_->isActive())
    {
