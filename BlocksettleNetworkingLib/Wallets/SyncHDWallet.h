@@ -72,8 +72,8 @@ namespace bs {
             void setArmory(const std::shared_ptr<ArmoryConnection> &);
             void startRescan();
             void scan(const std::function<void(bs::sync::SyncState)> &);
-            bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
-               ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }
+
+            static bs::hd::CoinType getXBTGroupType();
 
             void merge(const Wallet&);
 
