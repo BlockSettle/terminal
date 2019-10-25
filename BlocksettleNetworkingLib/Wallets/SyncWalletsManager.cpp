@@ -1,6 +1,7 @@
 #include "SyncWalletsManager.h"
 
 #include "ApplicationSettings.h"
+#include "ColoredCoinLogic.h"
 #include "FastLock.h"
 #include "SyncHDWallet.h"
 
@@ -39,6 +40,8 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
 
 WalletsManager::~WalletsManager() noexcept
 {
+   validityFlag_.reset();
+
    for (const auto &hdWallet : hdWallets_) {
       hdWallet.second->setWCT(nullptr);
    }
@@ -196,6 +199,11 @@ void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
    auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(wallet);
    if (ccLeaf) {
       ccLeaf->setCCDataResolver(ccResolver_);
+
+      const auto itTracker = trackers_.find(ccLeaf->displaySymbol().toStdString());
+      if (itTracker != trackers_.end()) {
+         ccLeaf->setCCTracker(itTracker->second);
+      }
    }
    wallet->setUserId(userId_);
 
@@ -1162,10 +1170,36 @@ bool WalletsManager::isWatchingOnly(const std::string &walletId) const
    return false;
 }
 
+void WalletsManager::goOnline()
+{
+   for (const auto &cc : ccResolver_->securities()) {
+      const auto tracker = std::make_shared<ColoredCoinTracker>(ccResolver_->lotSizeFor(cc)
+         , armoryPtr_);
+      tracker->addOriginAddress(ccResolver_->genesisAddrFor(cc));
+      trackers_[cc] = tracker;
+      logger_->debug("[{}] added CC tracker for {}", __func__, cc);
+   }
+
+   std::thread([this, handle = validityFlag_.handle()]() mutable {
+      for (const auto &ccTracker : trackers_) {
+         ValidityGuard lock(handle);
+         if (!handle.isValid()) {
+            return;
+         }
+
+         if (!ccTracker.second->goOnline()) {
+            logger_->error("[WalletsManager::goOnline] failed for {}", ccTracker.first);
+         }
+      }
+   }).detach();
+}
+
 void WalletsManager::onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr)
 {
    const auto &cc = ccProd.toStdString();
-   ccResolver_->addData(cc, nbSatoshis, genesisAddr.toStdString(), ccDesc.toStdString());
+   logger_->debug("[{}] received info for {}", __func__, cc);
+   const bs::Address genAddr(genesisAddr.toStdString());
+   ccResolver_->addData(cc, nbSatoshis, genAddr, ccDesc.toStdString());
 }
 
 void WalletsManager::onCCInfoLoaded()

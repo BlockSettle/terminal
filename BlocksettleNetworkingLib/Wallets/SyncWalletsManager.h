@@ -17,13 +17,14 @@
 #include "BTCNumericTypes.h"
 #include "CoreWallet.h"
 #include "SyncWallet.h"
+#include "ValidityFlag.h"
 #include "WalletSignerContainer.h"
 
 namespace spdlog {
    class logger;
 }
-
 class ApplicationSettings;
+class ColoredCoinTracker;
 class WalletSignerContainer;
 
 namespace bs {
@@ -102,6 +103,8 @@ namespace bs {
 
          bool isArmoryReady() const;
          bool isReadyForTrading() const;
+
+         void goOnline();
 
          BTCNumericTypes::balance_type getSpendableBalance() const;
          BTCNumericTypes::balance_type getUnconfirmedBalance() const;
@@ -257,6 +260,8 @@ namespace bs {
          };
          std::shared_ptr<CCResolver>   ccResolver_;
 
+         std::map<std::string, std::shared_ptr<ColoredCoinTracker>>  trackers_;
+
          std::unordered_map<std::string, std::pair<Transaction::Direction, std::vector<bs::Address>>> txDirections_;
          mutable std::atomic_flag      txDirLock_ = ATOMIC_FLAG_INIT;
          std::unordered_map<std::string, std::pair<QString, int>> txDesc_;
@@ -276,7 +281,7 @@ namespace bs {
          std::thread                maintThread_;
          std::condition_variable    maintCV_;
          std::mutex                 maintMutex_;
-
+         ValidityFlag   validityFlag_;
       };
 
    }  //namespace sync

@@ -2,6 +2,7 @@
 #include "ui_AutoSignQuoteWidget.h"
 
 #include "AutoSignQuoteProvider.h"
+#include "BSErrorCodeStrings.h"
 #include "BSMessageBox.h"
 
 #include <QFileDialog>
@@ -71,9 +72,16 @@ void AutoSignQuoteWidget::onAutoQuoteToggled()
    validateGUI();
 }
 
-void AutoSignQuoteWidget::onAutoSignStateChanged(const std::string &walletId, bool active)
+void AutoSignQuoteWidget::onAutoSignStateChanged()
 {
-   ui_->checkBoxAutoSign->setChecked(active);
+   ui_->checkBoxAutoSign->setChecked(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError);
+   if (autoSignQuoteProvider_->autoSignState() != bs::error::ErrorCode::NoError
+       && autoSignQuoteProvider_->autoSignState() != bs::error::ErrorCode::AutoSignDisabled) {
+      BSMessageBox(BSMessageBox::warning, tr("Auto Signing")
+         , tr("Failed to enable Auto Signing")
+         , bs::error::ErrorCodeToString(autoSignQuoteProvider_->autoSignState())).exec();
+   }
+
    ui_->labelAutoSignWalletName->setText(autoSignQuoteProvider_->getAutoSignWalletName());
 }
 
@@ -146,7 +154,7 @@ void AutoSignQuoteWidget::onAutoSignToggled()
    } else {
       autoSignQuoteProvider_->disableAutoSign();
    }
-   ui_->checkBoxAutoSign->setChecked(autoSignQuoteProvider_->autoSignState());
+   ui_->checkBoxAutoSign->setChecked(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError);
 }
 
 void AutoSignQuoteWidget::validateGUI()

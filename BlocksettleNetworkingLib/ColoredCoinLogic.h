@@ -294,6 +294,8 @@ private:
       const std::shared_ptr<ColoredCoinZCSnapshot>&,
       const BinaryData&, bool) const;
 
+   std::set<BinaryData> collectOriginAddresses() const;
+   std::set<BinaryData> collectRevokeAddresses() const;
 
    ////
    std::shared_ptr<ColoredCoinSnapshot> snapshot(void) const;
@@ -344,6 +346,8 @@ public:
    //in: prefixed address
    std::vector<std::shared_ptr<CcOutpoint>> getSpendableOutpointsForAddress(
       const BinaryData&) const;
+
+   bool isTxHashExist(const BinaryData &) const;
 
    //in: set of prefixed addresses
    uint64_t getUnconfirmedCcValueForAddresses(const std::set<BinaryData>&) const;

@@ -161,7 +161,7 @@ private:
    void SyncAddrsResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bs::sync::SyncState);
    void setUserIdResponse(const std::string &clientId, unsigned int id
       , Blocksettle::Communication::headless::AuthWalletResponseType, const std::string &walletId = {});
-   void AutoSignActivatedEvent(const std::string &walletId, bool active);
+   void AutoSignActivatedEvent(bs::error::ErrorCode result, const std::string &walletId);
 
    bool RequestPasswordIfNeeded(const std::string &clientId, const std::string &walletId
       , const bs::core::wallet::TXSignRequest &

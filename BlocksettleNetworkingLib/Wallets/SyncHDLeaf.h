@@ -9,13 +9,13 @@
 #include <utility>
 
 #include "ArmoryConnection.h"
-#include "CCLogicAsync.h"
 #include "HDPath.h"
 #include "SyncWallet.h"
 
 namespace spdlog {
    class logger;
 }
+class ColoredCoinTracker;
 
 namespace bs {
    class TxAddressChecker;
@@ -208,13 +208,12 @@ namespace bs {
          public:
             CCLeaf(const std::string &walletId, const std::string &name, const std::string &desc
                , WalletSignerContainer *,const std::shared_ptr<spdlog::logger> &);
-            ~CCLeaf() override;
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::ColorCoin; }
             std::string shortName() const override { return suffix_; }
 
-            void setCCDataResolver(const std::shared_ptr<CCDataResolver> &resolver);
-            void init(bool force) override;
+            void setCCDataResolver(const std::shared_ptr<CCDataResolver> &);
+            void setCCTracker(const std::shared_ptr<ColoredCoinTracker> &);
             void setPath(const bs::hd::Path &) override;
 
             bool getSpendableTxOutList(const ArmoryConnection::UTXOsCb &, uint64_t val) override;
@@ -234,22 +233,10 @@ namespace bs {
 
             std::vector<std::string> setUnconfirmedTarget(void) override;
 
-         protected:
-            void onTrackerUpdated();
-
-            void onZeroConfReceived(const std::vector<bs::TXEntry> &zcs) override;
-            void onNewBlock(unsigned int, unsigned int) override;
-            void onRefresh(const std::vector<BinaryData> &, bool) override;
+         private:
+            std::set<BinaryData> collectAddresses() const;
 
          private:
-            void validationProc();
-            void findInvalidUTXOs(const std::vector<UTXO> &
-               , const ArmoryConnection::UTXOsCb &);
-            void refreshInvalidUTXOs(const bool& ZConly = false);
-            BTCNumericTypes::balance_type correctBalance(BTCNumericTypes::balance_type
-               , bool applyCorrection = true) const;
-            std::vector<UTXO> filterUTXOs(const std::vector<UTXO> &) const;
-
             class CCWalletACT : public WalletACT
             {
             public:
@@ -257,14 +244,9 @@ namespace bs {
                void onStateChanged(ArmoryState) override;
             };
 
-            std::shared_ptr<TxAddressChecker>   checker_;      //TODO: remove
-            std::unique_ptr<ColoredCoinTrackerAsync>  tracker_;   //Temporary to fix the build - will be removed later
             std::shared_ptr<CCDataResolver>     ccResolver_;
-            std::atomic_bool validationStarted_{false};        //TODO: remove
-            std::atomic_bool validationEnded_{false};          //TODO: remove
-            double         balanceCorrection_ = 0;
-            std::set<BinaryData> validTxHash_;
-            std::map<std::string, std::function<void()>> refreshCb_;
+            std::shared_ptr<ColoredCoinTracker> tracker_;
+            uint64_t lotSize_{ 0 };
          };
 
 

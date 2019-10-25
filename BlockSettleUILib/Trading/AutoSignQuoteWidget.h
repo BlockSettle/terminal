@@ -1,6 +1,8 @@
 #ifndef AUTOSIGNQUOTEWIDGET_H
 #define AUTOSIGNQUOTEWIDGET_H
 
+#include "BSErrorCode.h"
+
 #include <QWidget>
 #include <memory>
 
@@ -21,7 +23,7 @@ public:
    void init(const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider);
 
 public slots:
-   void onAutoSignStateChanged(const std::string &walletId, bool active);
+   void onAutoSignStateChanged();
    void onAutoSignQuoteAvailChanged();
 
    void onAqScriptLoaded();

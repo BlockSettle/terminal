@@ -48,7 +48,9 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    }
 
    dealerTx_ = BinaryData::CreateFromHex(quote_.dealerTransaction);
-   requesterTx_ = BinaryData::CreateFromHex(rfq_.coinTxInput);
+   if (dealerTx_.isNull()) {
+      throw std::invalid_argument("missing dealer's transaction");
+   }
 }
 
 ReqCCSettlementContainer::~ReqCCSettlementContainer()

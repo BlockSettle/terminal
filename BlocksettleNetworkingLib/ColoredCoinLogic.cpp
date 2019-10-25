@@ -510,6 +510,24 @@ void ColoredCoinTracker::processRevocationBatch(
    }
 }
 
+std::set<BinaryData> ColoredCoinTracker::collectOriginAddresses() const
+{
+   std::set<BinaryData> addrSet;
+   for (const auto &origAddr : originAddresses_) {
+      addrSet.insert(origAddr.prefixed());
+   }
+   return addrSet;
+}
+
+std::set<BinaryData> ColoredCoinTracker::collectRevokeAddresses() const
+{
+   std::set<BinaryData> addrSet;
+   for (const auto &revokeAddr : revocationAddresses_) {
+      addrSet.insert(revokeAddr.prefixed());
+   }
+   return addrSet;
+}
+
 ////
 std::set<BinaryData> ColoredCoinTracker::update()
 {
@@ -530,17 +548,15 @@ std::set<BinaryData> ColoredCoinTracker::update()
    }
 
    //track changeset for relevant addresses
-   std::set<BinaryData> addrSet;
+   auto &&addrSet = collectOriginAddresses();
 
-   //origin addresses
-   addrSet.insert(originAddresses_.begin(), originAddresses_.end());
+   const auto &revokeAddrs = collectRevokeAddresses();
+   addrSet.insert(revokeAddrs.cbegin(), revokeAddrs.cend());
 
    //current set of live user addresses
    for (auto& addrRef : ssPtr->scrAddrCcSet_) {
       addrSet.insert(addrRef.first);
    }
-   //revocation addresses
-   addrSet.insert(revocationAddresses_.begin(), revocationAddresses_.end());
 
    auto promPtr = std::make_shared<std::promise<OutpointBatch>>();
    auto fut = promPtr->get_future();
@@ -675,10 +691,7 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
    }
 
    //track changeset for relevant addresses
-   std::set<BinaryData> addrSet;
-
-   //origin addresses
-   addrSet.insert(originAddresses_.begin(), originAddresses_.end());
+   auto &&addrSet = collectOriginAddresses();
 
    //current set of live user addresses
    if (currentSs != nullptr) {
@@ -914,6 +927,20 @@ std::vector<std::shared_ptr<CcOutpoint>> ColoredCoinTracker::getSpendableOutpoin
    auto zcPtr = zcSnapshot();
 
    return getSpendableOutpointsForAddress(ssPtr, zcPtr, scrAddr, false);
+}
+
+bool ColoredCoinTracker::isTxHashExist(const BinaryData &txHash) const
+{
+   const auto ssPtr = snapshot();
+   if (ssPtr && (ssPtr->utxoSet_.find(txHash) != ssPtr->utxoSet_.end())) {
+      return true;
+   }
+
+   const auto zcPtr = zcSnapshot();
+   if (zcPtr && (zcPtr->utxoSet_.find(txHash) != zcPtr->utxoSet_.end())) {
+      return true;
+   }
+   return false;
 }
 
 //// 

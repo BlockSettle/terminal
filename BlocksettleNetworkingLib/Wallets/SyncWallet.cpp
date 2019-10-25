@@ -151,7 +151,8 @@ BTCNumericTypes::balance_type Wallet::getTotalBalance() const
 std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
 {
    if (!isBalanceAvailable()) {
-      throw std::runtime_error("uninitialized db connection");
+      SPDLOG_LOGGER_ERROR(logger_, "balance is not available for wallet {}", walletId());
+      return {};
    }
    std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
 
@@ -166,7 +167,8 @@ std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
 uint64_t Wallet::getAddrTxN(const bs::Address &addr) const
 {
    if (!isBalanceAvailable()) {
-      throw std::runtime_error("uninitialized db connection");
+      SPDLOG_LOGGER_ERROR(logger_, "balance is not available for wallet {}", walletId());
+      return {};
    }
    std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
 
@@ -851,22 +853,6 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
       }
    };
 
-   uint64_t spendAmount = 0;
-   for (const auto &recip : prevStateSigner.recipients()) {
-      spendAmount += recip->getValue();
-   }
-   if (!recipients.empty()) {
-      for (const auto& recipient : recipients) {
-         if (recipient == nullptr) {
-            throw std::logic_error("Invalid recipient");
-         }
-         spendAmount += recipient->getValue();
-      }
-   }
-
-   if (spendAmount != spendVal) {
-      throw std::invalid_argument("Recipient[s] amount != spend value");
-   }
    if (inputAmount < (spendVal + fee)) {
       throw std::overflow_error("Not enough inputs (" + std::to_string(inputAmount)
          + ") to spend " + std::to_string(spendVal + fee));
