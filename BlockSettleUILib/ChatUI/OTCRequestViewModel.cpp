@@ -1,6 +1,7 @@
 #include "OTCRequestViewModel.h"
 
 #include "OtcClient.h"
+#include "OtcTypes.h"
 
 using namespace bs::network;
 
@@ -115,6 +116,20 @@ void OTCRequestViewModel::onUpdateDuration()
 {
    if (rowCount() == 0) {
       return;
+   }
+
+   const qint64 timeout = QDateTime::currentDateTime().toSecsSinceEpoch() - std::chrono::duration_cast<std::chrono::seconds>(
+      bs::network::otc::publicRequestTimeout()).count();
+
+   auto it = std::remove_if(request_.begin(), request_.end(), [&](const OTCRequest& req) {
+      return req.request_.timestamp.toSecsSinceEpoch() < timeout;
+   });
+
+   if (it != request_.end()) {
+      const int startIndex = std::distance(request_.begin(), it);
+      beginRemoveRows({}, startIndex, request_.size() - 1);
+      request_.erase(it, request_.end());
+      endRemoveRows();
    }
 
    emit dataChanged(index(0, static_cast<int>(Columns::Duration)),
