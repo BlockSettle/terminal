@@ -137,7 +137,9 @@ signals:
 
    void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
    void PasswordChanged(const std::string &walletId, bool success);
-   void AutoSignStateChanged(const std::string &walletId, bool active);
+
+   // NoError mean turned on, AutoSignDisabled mean turned off, other codes mean error
+   void AutoSignStateChanged(bs::error::ErrorCode result, const std::string &walletId);
 
 protected:
    std::shared_ptr<spdlog::logger> logger_;

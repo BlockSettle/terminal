@@ -348,7 +348,6 @@ message AutoSignActResponse
 {
    uint32   errorCode = 1;
    string   rootWalletId = 2;
-   bool     autoSignActive = 3;
 }
 
 // Would be sent from headless process to the GUI when some status changes

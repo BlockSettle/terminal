@@ -28,6 +28,8 @@ namespace bs {
          // Change wallet error codes
          WalletFailedRemoveLastEidDevice,
 
+         // Other codes
+         AutoSignDisabled
       };
    }
 }

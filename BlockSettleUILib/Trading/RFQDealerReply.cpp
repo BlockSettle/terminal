@@ -966,10 +966,10 @@ void RFQDealerReply::onCelerDisconnected()
 
 void RFQDealerReply::onAutoSignStateChanged()
 {
-   if (autoSignQuoteProvider_->autoSignState()) {
+   if (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
       ui_->comboBoxWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
    }
-   ui_->comboBoxWallet->setEnabled(!autoSignQuoteProvider_->autoSignState());
+   ui_->comboBoxWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
 }
 
 void bs::ui::RFQDealerReply::updateSpinboxes()

@@ -119,10 +119,11 @@ bool AutoSignQuoteProvider::aqLoaded() const
    return aqLoaded_;
 }
 
-void AutoSignQuoteProvider::onAutoSignStateChanged(const std::string &walletId, bool active)
+void AutoSignQuoteProvider::onAutoSignStateChanged(bs::error::ErrorCode result, const std::string &walletId)
 {
-   autoSignState_ = active;
-   emit autoSignStateChanged(walletId, active);
+   autoSignState_ = result;
+   autoSignWalletId_ = QString::fromStdString(walletId);
+   emit autoSignStateChanged();
 }
 
 void AutoSignQuoteProvider::setAqLoaded(bool loaded)
@@ -194,7 +195,7 @@ UserScriptRunner *AutoSignQuoteProvider::autoQuoter() const
     return aq_;
 }
 
-bool AutoSignQuoteProvider::autoSignState() const
+bs::error::ErrorCode AutoSignQuoteProvider::autoSignState() const
 {
     return autoSignState_;
 }

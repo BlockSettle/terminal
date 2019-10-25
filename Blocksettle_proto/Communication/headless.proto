@@ -297,8 +297,8 @@ message DeleteHDWalletResponse
 
 message AutoSignActEvent
 {
-   string   rootWalletId = 1;
-   bool     autoSignActive = 2;
+   uint32   errorCode = 1;
+   string   rootWalletId = 2;
 }
 
 
