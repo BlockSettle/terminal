@@ -91,3 +91,8 @@ bool PartyTreeItem::hasNewMessages() const
 {
    return unseenCounter_ > 0;
 }
+
+int PartyTreeItem::unseenCount() const
+{
+   return unseenCounter_;
+}
