@@ -1,27 +1,12 @@
 #include "OTCRequestViewModel.h"
 
 #include "OtcClient.h"
-#include "OtcTypes.h"
 
 using namespace bs::network;
 
 namespace {
 
    const int kUpdateTimerInterval = 500;
-
-   QString duration(QDateTime timestamp)
-   {
-      QDateTime endTimeStamp = timestamp.addSecs(
-         std::chrono::duration_cast<std::chrono::seconds>(
-            bs::network::otc::publicRequestTimeout()).count());
-      const int oneMinuteInSec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::minutes(1)).count();
-      // We showing in one minute more since it's countdown
-      const int timeLeftMinute = static_cast<int>(QDateTime::currentDateTime().secsTo(endTimeStamp) / oneMinuteInSec) 
-         + std::chrono::minutes(1).count();
-      const int minutes = std::min(10, static_cast<int>(timeLeftMinute));
-
-      return QObject::tr("%1 min").arg(minutes);
-   }
 
    QString side(bs::network::otc::Side requestSide, bool isOwnRequest) {
       if (!isOwnRequest) {
@@ -70,13 +55,16 @@ QVariant OTCRequestViewModel::data(const QModelIndex &index, int role) const
             case Columns::Product:     return QStringLiteral("XBT");
             case Columns::Side:        return side(request.ourSide, requestData.isOwnRequest_);
             case Columns::Quantity:    return QString::fromStdString(otc::toString(request.rangeType));
-            case Columns::Duration:    return duration(request.timestamp);
+            case Columns::Duration:    return {}; // OTCRequestsProgressDelegate
          }
          assert(false);
          return {};
 
       case static_cast<int>(CustomRoles::OwnQuote):
          return { requestData.isOwnRequest_ };
+
+      case static_cast<int>(CustomRoles::RequestTimeStamp) :
+         return { request.timestamp };
 
       default:
          return {};

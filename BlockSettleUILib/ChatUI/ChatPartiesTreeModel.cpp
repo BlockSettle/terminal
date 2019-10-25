@@ -47,6 +47,10 @@ void ChatPartiesTreeModel::onPartyModelChanged()
          insertChild(globalSection.get(), stored);
       }
       else if (clientPartyPtr->isPrivateStandard()) {
+         if (clientPartyPtr->partyState() == Chat::PartyState::REJECTED) {
+            continue;
+         }
+
          PartyTreeItem* parentSection = clientPartyPtr->partyState() == Chat::PartyState::INITIALIZED ? privateSection.get() : requestSection.get();
          insertChild(parentSection, stored);
       }
