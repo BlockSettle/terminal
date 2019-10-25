@@ -274,9 +274,10 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(this, &RFQReplyWidget::signedPayoutRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayoutRequested);
             connect(this, &RFQReplyWidget::signedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayinRequested);
 
-            settlContainer->activate();
-
+            // Add before calling activate as this will hook some events
             ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
+
+            settlContainer->activate();
 
          } catch (const std::exception &e) {
             SPDLOG_LOGGER_ERROR(logger_, "settlement failed: {}", e.what());
