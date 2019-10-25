@@ -253,7 +253,8 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
       } else {
          auto it = sentXbtReplies_.find(order.settlementId);
          if (it == sentXbtReplies_.end()) {
-            SPDLOG_LOGGER_ERROR(logger_, "haven't seen QuoteNotif with settlId={}", order.settlementId);
+            // Looks like this is not error, not sure why we need this
+            SPDLOG_LOGGER_DEBUG(logger_, "haven't seen QuoteNotif with settlId={}", order.settlementId);
             return;
          }
          try {
