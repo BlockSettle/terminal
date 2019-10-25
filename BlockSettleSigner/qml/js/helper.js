@@ -241,6 +241,8 @@ function evalWorker(method, cppCallback, argList) {
     console.log("helper.js evalWorker call: " + method)
 
     let jsCallback = function(cbArg0, cbArg1, cbArg2, cbArg3, cbArg4, cbArg5, cbArg6, cbArg7){
+        console.log("helper.js evalWorker callback for: " + method)
+
         let cbArgList = new Array(7)
 
         if (typeof cbArg0 !== 'undefined') cbArgList[0] = cbArg0
@@ -252,7 +254,7 @@ function evalWorker(method, cppCallback, argList) {
         if (typeof cbArg6 !== 'undefined') cbArgList[6] = cbArg6
         if (typeof cbArg7 !== 'undefined') cbArgList[7] = cbArg7
 
-        if (cppCallback) {
+        if (typeof cppCallback === 'object' && cppCallback !== null) {
             cppCallback.exec(cbArgList)
         }
     }
