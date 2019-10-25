@@ -951,7 +951,7 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
             const auto purpose = ui_->radioButtonNewAddrNative->isChecked()
                ? bs::hd::Purpose::Native : bs::hd::Purpose::Nested;
             wallet = group->getLeaf(bs::hd::Path({ purpose
-               , walletsManager_->getPrimaryWallet()->getXBTGroupType(), 0 }));
+               , bs::sync::hd::Wallet::getXBTGroupType(), 0 }));
          }
          if (!wallet) {
             wallet = transactionData_->getWallet();
