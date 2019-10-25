@@ -10,9 +10,9 @@ OTCGlobalTable::OTCGlobalTable(QWidget* parent)
     : TreeViewWithEnterKey(parent)
 {
    setItemDelegateForColumn(
-      static_cast<int>(OTCRequestViewModel::Columns::Duration), new LeftOffsetDelegate(this));
+      static_cast<int>(OTCRequestViewModel::Columns::Duration), new OTCRequestsProgressDelegate(this));
    setItemDelegateForColumn(
-      static_cast<int>(OTCRequestViewModel::Columns::Security), new OTCRequestsProgressDelegate(this));
+      static_cast<int>(OTCRequestViewModel::Columns::Security), new LeftOffsetDelegate(this));
 }
 
 void OTCGlobalTable::drawRow(QPainter* painter,const QStyleOptionViewItem& option, const QModelIndex& index) const
