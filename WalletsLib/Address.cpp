@@ -196,7 +196,7 @@ std::string bs::Address::fromRecipient(const std::shared_ptr<ScriptRecipient> &r
       BinaryData result;
       result.append(AddressEntry::getPrefixByte(AddressEntryType_P2SH));
       result.append(brr_script.get_BinaryData(20));
-      return (BtcUtils::scrAddrToBase58(result)).toBinStr();
+      return (char *)(BtcUtils::scrAddrToBase58(result)).getPtr();
    }
 
    case 34:
@@ -204,7 +204,7 @@ std::string bs::Address::fromRecipient(const std::shared_ptr<ScriptRecipient> &r
       BinaryData result;
       result.append(AddressEntry::getPrefixByte(AddressEntryType_P2WSH));
       result.append(brr_script.get_BinaryData(32));
-      return (BtcUtils::scrAddrToBase58(result)).toBinStr();
+      return (char *)(BtcUtils::scrAddrToBase58(result)).getPtr();
    }
 
    default:    break;
