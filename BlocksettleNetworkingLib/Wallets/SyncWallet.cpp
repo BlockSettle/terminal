@@ -151,7 +151,8 @@ BTCNumericTypes::balance_type Wallet::getTotalBalance() const
 std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
 {
    if (!isBalanceAvailable()) {
-      throw std::runtime_error("uninitialized db connection");
+      SPDLOG_LOGGER_ERROR(logger_, "balance is not available for wallet {}", walletId());
+      return {};
    }
    std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
 
@@ -166,7 +167,8 @@ std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
 uint64_t Wallet::getAddrTxN(const bs::Address &addr) const
 {
    if (!isBalanceAvailable()) {
-      throw std::runtime_error("uninitialized db connection");
+      SPDLOG_LOGGER_ERROR(logger_, "balance is not available for wallet {}", walletId());
+      return {};
    }
    std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
 
