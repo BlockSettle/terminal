@@ -171,7 +171,7 @@ bs::Address bs::Address::fromUTXO(const UTXO &utxo)
    return fromTxOutScript(utxo.getScript());
 }
 
-bs::Address bs::Address::fromRecipient(const std::shared_ptr<ScriptRecipient> &recip)
+std::string bs::Address::fromRecipient(const std::shared_ptr<ScriptRecipient> &recip)
 {
    BinaryRefReader brr(recip->getSerializedScript());
    brr.get_uint64_t();  // skip value
@@ -186,16 +186,26 @@ bs::Address bs::Address::fromRecipient(const std::shared_ptr<ScriptRecipient> &r
    {
    case 25:
       brr_script.get_uint8_t();
-      return bs::Address(brr_script.get_BinaryData(20), AddressEntryType_P2PKH);
+      return bs::Address(brr_script.get_BinaryData(20), AddressEntryType_P2PKH).display();
 
    case 22:
-      return bs::Address(brr_script.get_BinaryData(20), AddressEntryType_P2WPKH);
+      return bs::Address(brr_script.get_BinaryData(20), AddressEntryType_P2WPKH).display();
 
    case 23:
-      return bs::Address(brr_script.get_BinaryData(20), AddressEntryType_P2SH);
+   {
+      BinaryData result;
+      result.append(AddressEntry::getPrefixByte(AddressEntryType_P2SH));
+      result.append(brr_script.get_BinaryData(20));
+      return (char *)(BtcUtils::scrAddrToBase58(result)).getPtr();
+   }
 
    case 34:
-      return bs::Address(brr_script.get_BinaryData(32), AddressEntryType_P2WSH);
+   {
+      BinaryData result;
+      result.append(AddressEntry::getPrefixByte(AddressEntryType_P2WSH));
+      result.append(brr_script.get_BinaryData(32));
+      return (char *)(BtcUtils::scrAddrToBase58(result)).getPtr();
+   }
 
    default:    break;
    }

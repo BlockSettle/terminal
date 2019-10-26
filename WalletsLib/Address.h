@@ -58,7 +58,7 @@ namespace bs {
       static bs::Address fromTxOutScript(const BinaryData &);
       static bs::Address fromTxOut(const TxOut &);
       static bs::Address fromUTXO(const UTXO &);
-      static bs::Address fromRecipient(const std::shared_ptr<ScriptRecipient> &);
+      static std::string fromRecipient(const std::shared_ptr<ScriptRecipient> &);
       static AddressEntryType guessAddressType(const BinaryData &addr);
 
       static size_t getPayoutWitnessDataSize();
