@@ -6,6 +6,7 @@
 #include "SettableField.h"
 #include "StringUtils.h"
 #include "TestEnv.h"
+#include "TradesUtils.h"
 #include "TradesVerification.h"
 #include "Trading/OtcClient.h"
 #include "Wallets/SyncHDWallet.h"
@@ -301,7 +302,7 @@ public:
       for (const auto &utxo : utxos) {
          totalInput += int64_t(utxo.getValue());
       }
-      auto payinFee = int64_t(OtcClient::estimatePayinFeeWithoutChange(utxos, TestArmoryConnection::testFeePerByte()));
+      auto payinFee = int64_t(bs::tradeutils::estimatePayinFeeWithoutChange(utxos, TestArmoryConnection::testFeePerByte()));
       const auto amount = withoutChange_ ? (totalInput - payinFee) : 1000;
 
       // needed to be able sign pay-in and pay-out
