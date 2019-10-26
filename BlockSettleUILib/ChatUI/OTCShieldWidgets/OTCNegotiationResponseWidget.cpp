@@ -5,6 +5,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "AuthAddressManager.h"
 #include "OtcClient.h"
+#include "AssetManager.h"
 #include "ui_OTCNegotiationCommonWidget.h"
 
 #include <QComboBox>
@@ -26,7 +27,7 @@ OTCNegotiationResponseWidget::OTCNegotiationResponseWidget(QWidget* parent)
       , this, &OTCNegotiationResponseWidget::onChanged);
 
    connect(ui_->comboBoxXBTWallets, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &OTCNegotiationResponseWidget::onCurrentWalletChanged);
-   connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &OTCNegotiationResponseWidget::onAcceptOrUpdateClicked);
+   connect(ui_->pushButtonAcceptResponse, &QPushButton::clicked, this, &OTCNegotiationResponseWidget::onAcceptOrUpdateClicked);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &OTCNegotiationResponseWidget::responseRejected);
    connect(ui_->priceUpdateButtonResponse, &QPushButton::clicked, this, &OTCNegotiationResponseWidget::onUpdateIndicativePrice);
    connect(ui_->toolButtonXBTInputs, &QPushButton::clicked, this, &OTCNegotiationResponseWidget::onShowXBTInputsClicked);
@@ -36,6 +37,8 @@ OTCNegotiationResponseWidget::OTCNegotiationResponseWidget(QWidget* parent)
    ui_->quantityMaxButton->hide();
    ui_->priceWidgetRequest->hide();
    ui_->quantitySpinBox->setEnabled(false);
+   ui_->pushButtonAcceptResponse->show();
+   ui_->pushButtonAcceptRequest->hide();
 
    onChanged();
 }
@@ -115,11 +118,27 @@ void OTCNegotiationResponseWidget::onUpdateBalances()
 
 void OTCNegotiationResponseWidget::onChanged()
 {
+   bool activateAcceptButton = true;
+   double price = ui_->priceSpinBoxResponse->value();
+   double quantity = ui_->quantitySpinBox->value();
+
+   if (receivedOffer_.ourSide == bs::network::otc::Side::Sell
+      && quantity > getXBTSpendableBalanceFromCombobox(ui_->comboBoxXBTWallets)) {
+      activateAcceptButton = false;
+   }
+   else if (receivedOffer_.ourSide == bs::network::otc::Side::Buy
+      && price * quantity
+      > getAssetManager()->getBalance(buyProduct_.toStdString())) {
+      activateAcceptButton = false;
+   }
+
+   ui_->pushButtonAcceptResponse->setEnabled(activateAcceptButton);
+
    if (receivedOffer_ == offer()) {
-      ui_->pushButtonAccept->setText(tr("Accept"));
+      ui_->pushButtonAcceptResponse->setText(tr("Accept"));
    }
    else {
-      ui_->pushButtonAccept->setText(tr("Update"));
+      ui_->pushButtonAcceptResponse->setText(tr("Update"));
    }
 }
 

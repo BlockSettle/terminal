@@ -33,13 +33,13 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
    ui_->priceSpinBoxRequest->setAccelerated(true);
 
    ui_->pushButtonCancel->hide();
-   ui_->pushButtonAccept->setText(tr("Submit"));
+   ui_->pushButtonAcceptRequest->setText(tr("Submit"));
 
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onBuyClicked);
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateBalances);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onSellClicked);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateBalances);
-   connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::requestCreated);
+   connect(ui_->pushButtonAcceptRequest, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::requestCreated);
    connect(ui_->toolButtonXBTInputs, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onShowXBTInputsClicked);
    connect(this, &OTCWindowsAdapterBase::xbtInputsProcessed, this, &OTCNegotiationRequestWidget::onXbtInputsProcessed);
    connect(ui_->pushButtonNumCcy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onNumCcySelected);
@@ -53,6 +53,8 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
 
    ui_->sideWidget->hide();
    ui_->priceLayoutResponse->hide();
+   ui_->pushButtonAcceptRequest->show();
+   ui_->pushButtonAcceptResponse->hide();
 
    ui_->quantitySpinBox->setSingleStep(kQuantityXBTSimpleStepAmount);
 
@@ -211,7 +213,7 @@ void OTCNegotiationRequestWidget::onShowXBTInputsClicked()
 
 void OTCNegotiationRequestWidget::onChanged()
 {
-   ui_->pushButtonAccept->setEnabled(ui_->priceSpinBoxRequest->value() > 0
+   ui_->pushButtonAcceptRequest->setEnabled(ui_->priceSpinBoxRequest->value() > 0
       && ui_->quantitySpinBox->value() > 0
       && !ui_->authenticationAddressComboBox->currentText().isEmpty()
    );
