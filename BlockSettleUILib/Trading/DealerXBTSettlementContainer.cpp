@@ -285,6 +285,8 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
       return;
    }
 
+   startTimer(kWaitTimeoutInSec);
+
    if (weSellXbt_) {
       SPDLOG_LOGGER_ERROR(logger_, "dealer is selling. Should not sign payout on {}", settlementIdHex_);
       return;
@@ -332,6 +334,8 @@ void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& set
       // ignore
       return;
    }
+
+   startTimer(kWaitTimeoutInSec);
 
    SPDLOG_LOGGER_DEBUG(logger_, "start sign payin: {}", settlementId);
 

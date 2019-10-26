@@ -20,25 +20,28 @@ namespace bs {
    }
    class SettlementContainer;
 }
+class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
+class BaseCelerClient;
 class CCSettlementTransactionWidget;
+class ConnectionManager;
 class QuoteProvider;
+class RFQRequestWidget;
 class ReqCCSettlementContainer;
 class ReqXBTSettlementContainer;
+class RfqStorage;
 class SignContainer;
 class XBTSettlementTransactionWidget;
-class BaseCelerClient;
-class ApplicationSettings;
-class ConnectionManager;
 
 class RFQDialog : public QDialog
 {
 Q_OBJECT
 
 public:
-   RFQDialog(const std::shared_ptr<spdlog::logger> &logger, const bs::network::RFQ& rfq
+   RFQDialog(const std::shared_ptr<spdlog::logger> &logger
+      , const bs::network::RFQ& rfq
       , const std::shared_ptr<TransactionData>& transactionData
       , const std::shared_ptr<QuoteProvider>& quoteProvider
       , const std::shared_ptr<AuthAddressManager>& authAddressManager
@@ -49,19 +52,15 @@ public:
       , const std::shared_ptr<BaseCelerClient> &celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &
+      , const std::shared_ptr<RfqStorage> &rfqStorage
       , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
       , const bs::Address &recvXbtAddr
       , const bs::Address &authAddr
-      , QWidget* parent = nullptr);
+      , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
 
 protected:
    void reject() override;
-
-signals:
-   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
-   void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
-   void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
 public slots:
    void onUnsignedPayinRequested(const std::string& settlementId);
@@ -102,6 +101,7 @@ private:
    std::shared_ptr<BaseCelerClient>             celerClient_;
    std::shared_ptr<ApplicationSettings>         appSettings_;
    std::shared_ptr<ConnectionManager>           connectionManager_;
+   std::shared_ptr<RfqStorage>                  rfqStorage_;
    std::shared_ptr<bs::sync::Wallet>            xbtWallet_;
 
    std::unordered_map<std::string, std::string> ccTxMap_;
@@ -110,10 +110,14 @@ private:
    std::shared_ptr<bs::SettlementContainer>     curContainer_;
    std::shared_ptr<ReqCCSettlementContainer>    ccSettlContainer_;
    std::shared_ptr<ReqXBTSettlementContainer>   xbtSettlContainer_;
+
    const bs::Address authAddr_;
 
    bool  cancelOnClose_ = true;
    bool isRejectStarted_ = false;
+
+   RFQRequestWidget *requestWidget_{};
+
 };
 
 #endif // __RFQ_DIALOG_H__

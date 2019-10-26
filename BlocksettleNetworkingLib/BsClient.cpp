@@ -63,6 +63,8 @@ void BsClient::sendPbMessage(std::string data)
 
 void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId)
 {
+   SPDLOG_LOGGER_DEBUG(logger_, "send unsigned payin {}", settlementId);
+
    ProxyTerminalPb::Request request;
 
    auto data = request.mutable_unsigned_payin();
@@ -75,6 +77,8 @@ void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryDa
 
 void BsClient::sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin)
 {
+   SPDLOG_LOGGER_DEBUG(logger_, "send signed payin {}", settlementId);
+
    ProxyTerminalPb::Request request;
 
    auto data = request.mutable_signed_payin();
@@ -86,6 +90,8 @@ void BsClient::sendSignedPayin(const std::string& settlementId, const BinaryData
 
 void BsClient::sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout)
 {
+   SPDLOG_LOGGER_DEBUG(logger_, "send signed payout {}", settlementId);
+
    ProxyTerminalPb::Request request;
 
    auto data = request.mutable_signed_payout();

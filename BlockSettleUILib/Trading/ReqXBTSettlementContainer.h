@@ -61,11 +61,6 @@ public:
    double amount() const override { return amount_; }
    bs::sync::PasswordDialogData toPasswordDialogData() const override;
 
-
-   std::string fxProduct() const { return fxProd_; }
-   bool weSell() const { return weSellXbt_; }
-   bool userKeyOk() const { return userKeyOk_; }
-
    void onUnsignedPayinRequested(const std::string& settlementId);
    void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
    void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
@@ -74,7 +69,6 @@ signals:
    void settlementCancelled();
    void settlementAccepted();
    void acceptQuote(std::string reqId, std::string hexPayoutTx);
-   void retry();
 
    void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& txId);
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
