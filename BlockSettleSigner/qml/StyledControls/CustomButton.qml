@@ -5,11 +5,11 @@ import "../BsStyles"
 Button {
     id: control
     property bool capitalize: true
+    property bool primary: false
     text: parent.text
     leftPadding: 15
     rightPadding: 15
     anchors.margins: 5
-
 
     contentItem: Text {
         text: control.text
@@ -26,10 +26,10 @@ Button {
         id: rect
         implicitWidth: 110
         implicitHeight: 35
-        opacity: control.enabled ? 1 : 0.3
+        opacity: primary ? 1 : (control.enabled ? 1 : 0.3)
         border.color: BSStyle.buttonsBorderColor
-        color: control.highlighted ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsMainColor
-        border.width: 1
+        color: primary ? BSStyle.buttonsPrimaryMainColor : (control.highlighted ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsMainColor)
+        border.width: primary ? 0 : 1
     }
 
     states: [
@@ -37,7 +37,8 @@ Button {
             name: ""
             PropertyChanges {
                 target: rect
-                color: control.highlighted ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsMainColor
+                opacity: primary ? 1 : (control.enabled ? 1 : 0.3)
+                color: primary ? BSStyle.buttonsPrimaryMainColor : (control.highlighted ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsMainColor)
             }
         },
         State {
@@ -45,7 +46,8 @@ Button {
             when: control.pressed
             PropertyChanges {
                 target: rect
-                color: control.highlighted ? BSStyle.buttonsPrimaryPressedColor : BSStyle.buttonsPressedColor
+                opacity: primary ? 0.7 : (control.enabled ? 1 : 0.3)
+                color: primary ? BSStyle.buttonsPrimaryMainColor : (control.highlighted ? BSStyle.buttonsPrimaryPressedColor : BSStyle.buttonsPressedColor)
             }
         },
         State {
@@ -53,7 +55,8 @@ Button {
             when: control.hovered
             PropertyChanges {
                 target: rect
-                color: control.highlighted ? BSStyle.buttonsPrimaryHoveredColor : BSStyle.buttonsHoveredColor
+                opacity: primary ? 0.85 : (control.enabled ? 1 : 0.3)
+                color: primary ? BSStyle.buttonsPrimaryMainColor : (control.highlighted ? BSStyle.buttonsPrimaryHoveredColor : BSStyle.buttonsHoveredColor)
             }
         },
         State {
@@ -61,7 +64,8 @@ Button {
             when: !control.enabled
             PropertyChanges {
                 target: rect
-                color: "gray"
+                opacity: primary ? 0.3 : (control.enabled ? 1 : 0.3)
+                color: primary ? BSStyle.buttonsPrimaryMainColor : "gray"
             }
         }
     ]

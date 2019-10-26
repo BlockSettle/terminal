@@ -285,8 +285,9 @@ CustomTitleDialogWindow {
                     JsHelper.openAbortBox(root, abortBoxType)
                 }
             }
-            CustomButtonPrimary {
+            CustomButton {
                 id: btnAccept
+                primary: true
                 text: qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom

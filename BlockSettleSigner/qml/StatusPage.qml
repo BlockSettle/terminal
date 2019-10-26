@@ -32,8 +32,9 @@ Item {
                     padding: 5
                     width: parent.width
 
-                    CustomButtonPrimary {
+                    CustomButton {
                         id: btnSignOfflineTx
+                        primary: true
                         text: qsTr("Sign Offline From File")
                         width: 200
                         onClicked: dlgOfflineFile.open()

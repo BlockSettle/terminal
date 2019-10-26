@@ -110,8 +110,9 @@ CustomTitleDialogWindow {
                 }
             }
 
-            CustomButtonPrimary {
+            CustomButton {
                 id: acceptButton_
+                primary: true
                 anchors.right: acceptButtonVisible && cancelButtonVisible ? parent.right: undefined
                 anchors.horizontalCenter: acceptButtonVisible && cancelButtonVisible ? undefined : parent.horizontalCenter
                 anchors.bottom: parent.bottom

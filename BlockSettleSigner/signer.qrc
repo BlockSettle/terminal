@@ -23,7 +23,6 @@
         <file>qml/BsControls/BSMessageBox.qml</file>
         <file>qml/StyledControls/CustomButton.qml</file>
         <file>qml/StyledControls/CustomButtonBar.qml</file>
-        <file>qml/StyledControls/CustomButtonPrimary.qml</file>
         <file>qml/StyledControls/CustomCheckBox.qml</file>
         <file>qml/StyledControls/CustomComboBox.qml</file>
         <file>qml/StyledControls/CustomContainer.qml</file>
