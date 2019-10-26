@@ -68,9 +68,9 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
    }
 
    itemOption.text = QString::fromStdString(clientPartyPtr->displayName());
-   if (clientPartyPtr->isPrivateStandard()) {
+   if (clientPartyPtr->isPrivateStandard() || clientPartyPtr->isPrivateOTC()) {
       if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState()) {
-         paintInitParty(clientPartyPtr, painter, itemOption);
+         paintInitParty(party, painter, itemOption);
       }
       else {
          paintRequestParty(clientPartyPtr, painter, itemOption);
@@ -92,14 +92,23 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
    }
 }
 
-void ChatClientUsersViewItemDelegate::paintInitParty(Chat::ClientPartyPtr& clientPartyPtr, QPainter* painter,
+void ChatClientUsersViewItemDelegate::paintInitParty(PartyTreeItem* partyTreeItem, QPainter* painter,
    QStyleOptionViewItem& itemOption) const
 {
+   Chat::ClientPartyPtr clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
+   // This should be always true as far as we checked it in previous flow function
+   assert(clientPartyPtr);
+
    switch (clientPartyPtr->clientStatus())
    {
       case Chat::ClientStatus::ONLINE:
       {
-         itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOnline());
+         QColor palleteColor = itemStyle_.colorContactOnline();
+         if (partyTreeItem->isOTCTooglingMode() && !partyTreeItem->activeOTCToogleState()) {
+            palleteColor = itemStyle_.colorContactOffline();
+         }
+
+         itemOption.palette.setColor(QPalette::Text, palleteColor);
       }
       break;
 

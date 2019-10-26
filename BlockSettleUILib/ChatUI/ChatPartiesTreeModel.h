@@ -29,21 +29,29 @@ signals:
 
 public slots:
    void onPartyModelChanged();
-   void onGlobalOTCChanged();
+   void onGlobalOTCChanged(QMap<std::string, ReusableItemData> reusableItemData = {});
    void onCleanModel();
    void onPartyStatusChanged(const Chat::ClientPartyPtr& clientPartyPtr);
-   void onIncreaseUnseenCounter(const std::string& partyId, int newMessageCount);
+   void onIncreaseUnseenCounter(const std::string& partyId, int newMessageCount, bool isUnseenOTCMessage = false);
    void onDecreaseUnseenCounter(const std::string& partyId, int seenMessageCount);
+
+private slots:
+   void onUpdateOTCAwaitingColor();
 
 private:
    PartyTreeItem* getItem(const QModelIndex& index) const;
-   void forAllPartiesInModel(std::function<void(const PartyTreeItem*)> applyFunc) const;
-   
+   void forAllPartiesInModel(PartyTreeItem* parent, std::function<void(const PartyTreeItem*)>&& applyFunc) const;
+   void forAllIndexesInModel(const QModelIndex& parent, std::function<void(const QModelIndex&)>&& applyFunc) const;
+   QMap<std::string, ReusableItemData> collectReusableData(PartyTreeItem* parent);
+   void resetOTCUnseen(const QModelIndex& parentIndex, bool isAddChildren = true, bool isClearAll = true);
 
    PartyTreeItem* rootItem_{};
 
    Chat::ChatClientServicePtr chatClientServicePtr_;
    OtcClient* otcClient_{};
+
+   QSet<QPersistentModelIndex> otcWatchIndx_;
+   QTimer otcWatchToogling_;
 };
 
 using ChatPartiesTreeModelPtr = std::shared_ptr<ChatPartiesTreeModel>;

@@ -96,3 +96,34 @@ int PartyTreeItem::unseenCount() const
 {
    return unseenCounter_;
 }
+
+void PartyTreeItem::enableOTCToggling(bool otcToogling)
+{
+   otcTooglingMode_ = otcToogling;
+}
+
+bool PartyTreeItem::isOTCTooglingMode() const
+{
+   return otcTooglingMode_;
+}
+
+void PartyTreeItem::changeOTCToogleState()
+{
+   currentOTCToogleState_ = !currentOTCToogleState_;
+}
+
+bool PartyTreeItem::activeOTCToogleState() const
+{
+   return currentOTCToogleState_;
+}
+
+void PartyTreeItem::applyReusableData(const ReusableItemData& data)
+{
+   unseenCounter_ = data.unseenCount_;
+   otcTooglingMode_ = data.otcTooglingMode_;
+}
+
+ReusableItemData PartyTreeItem::generateReusableData() const
+{
+   return { unseenCounter_ , otcTooglingMode_ };
+}
