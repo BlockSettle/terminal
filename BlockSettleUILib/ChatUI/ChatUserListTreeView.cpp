@@ -117,13 +117,6 @@ void ChatUserListTreeView::onCustomContextMenu(const QPoint & point)
       contextMenu.addAction(editAction);
    }
 
-   if (Chat::PartyState::REJECTED == clientPartyPtr->partyState()) {
-      QAction* removeAction = contextMenu.addAction(contextMenuRemoveRequest);
-      removeAction->setData(index);
-      connect(removeAction, &QAction::triggered, this, &ChatUserListTreeView::onRemoveFromContacts);
-      contextMenu.addAction(removeAction);
-   }
-
    if (Chat::PartyState::REQUESTED == clientPartyPtr->partyState()) {
       if (clientPartyPtr->partyCreatorHash() != currentUser()) {
          // receiver of party
@@ -262,11 +255,6 @@ void ChatUserListTreeView::updateDependUi(const QModelIndex& index)
          else {
             stringStatus = QLatin1String("-INCOMING");
          }
-         label_->setText(labelPattern.arg(stringStatus));
-      }
-
-      if (Chat::PartyState::REJECTED == clientPartyPtr->partyState()) {
-         stringStatus = QLatin1String("-REJECTED");
          label_->setText(labelPattern.arg(stringStatus));
       }
 

@@ -49,6 +49,7 @@ public:
    void increaseUnseenCounter(int newMessageCount);
    void decreaseUnseenCounter(int seenMessageCount);
    bool hasNewMessages() const;
+   int unseenCount() const;
 
    bs::network::otc::PeerType peerType{};
 

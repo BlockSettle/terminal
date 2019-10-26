@@ -17,6 +17,7 @@ protected:
 
       assert(clientPartyPtr);
       if (clientPartyPtr->isGlobalOTC()) {
+         chat_->ui_->treeViewOTCRequests->selectionModel()->reset();
          chat_->ui_->stackedWidgetMessages->setCurrentIndex(static_cast<int>(StackedMessages::OTCTable));
          return;
       }

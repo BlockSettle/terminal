@@ -3,13 +3,12 @@
 
 #include "ApplicationSettings.h"
 #include "QuoteRequestsModel.h"
+#include "ProgressViewDelegateBase.h"
 
 #include <QWidget>
 #include <QTimer>
 #include <QSortFilterProxyModel>
 #include <QStyledItemDelegate>
-#include <QApplication>
-#include <QProgressBar>
 
 #include <memory>
 #include <unordered_map>
@@ -85,23 +84,17 @@ namespace bs {
 }  // namespace bs
 
 
-class ProgressDelegate : public QStyledItemDelegate
+class RequestsProgressDelegate : public ProgressViewDelegateBase
 {
-   Q_OBJECT
-
 public:
-   explicit ProgressDelegate(QWidget *parent = nullptr)
-      : QStyledItemDelegate(parent)
-   {
-      pbar_.setStyleSheet(QLatin1String("QProgressBar { border: 1px solid #1c2835; "
-         "border-radius: 4px; background-color: rgba(0, 0, 0, 0); }"));
-      pbar_.hide();
-   }
-
-   void paint(QPainter *painter, const QStyleOptionViewItem &opt, const QModelIndex &index) const override;
-
-private:
-   QProgressBar pbar_;
+   explicit RequestsProgressDelegate(QWidget* parent = nullptr)
+      : ProgressViewDelegateBase(parent)
+   {}
+   ~RequestsProgressDelegate() override = default;
+protected:
+   bool isDrawProgressBar(const QModelIndex& index) const override;
+   int maxValue(const QModelIndex& index) const override;
+   int currentValue(const QModelIndex& index) const override;
 };
 
 

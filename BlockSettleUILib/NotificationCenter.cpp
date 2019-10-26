@@ -206,8 +206,13 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       newVersionMessage_ = true;
       break;
 
-   case bs::ui::NotifyType::UpdateUnreadMessage:
-      if (updateChatIconAndCheckChatTab() || msg.size() != 3) {
+   case bs::ui::NotifyType::UpdateUnreadMessage: {
+      if (msg.size() != 4) {
+         return;
+      }
+
+      const bool forceNotification = msg[3].toBool();
+      if (updateChatIconAndCheckChatTab() && !forceNotification) {
          return;
       }
 
@@ -218,11 +223,11 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       if (title.isEmpty() || text.isEmpty() || userId.isEmpty()) {
          return;
       }
-      
+
       newChatMessage_ = true;
       newChatId_ = userId;
       break;
-
+   }
    case bs::ui::NotifyType::FriendRequest:
       if (updateChatIconAndCheckChatTab() || msg.size() != 1) {
          return;

@@ -9,6 +9,7 @@ RequestPartyBox::RequestPartyBox(const QString& title, const QString& note, QWid
    resize(width(), 0);
 
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &RequestPartyBox::accept);
+   connect(ui_->plainTextEditMessage, &BSChatInput::sendMessage, this, &RequestPartyBox::accept);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &RequestPartyBox::reject);
 
    setWindowFlags(Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint);

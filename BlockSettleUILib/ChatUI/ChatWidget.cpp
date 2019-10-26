@@ -449,9 +449,6 @@ void ChatWidget::chatTransition(const Chat::ClientPartyPtr& clientPartyPtr)
          changeState<PrivatePartyRequestedIncomingState>(transitionChange);
       }
       break;
-   case Chat::PartyState::REJECTED:
-      changeState<PrivatePartyRejectedState>(transitionChange);
-      break;
    case Chat::PartyState::INITIALIZED:
       changeState<PrivatePartyInitState>(transitionChange);
       break;

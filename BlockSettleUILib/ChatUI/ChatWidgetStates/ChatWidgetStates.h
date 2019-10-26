@@ -7,6 +7,5 @@
 #include "PrivatePartyUninitState.h"
 #include "PrivatePartyRequestedOutgoingState.h"
 #include "PrivatePartyRequestedIncomingState.h"
-#include "PrivatePartyRejectedState.h"
 
 #endif // CHATWIDGETSTATES_H

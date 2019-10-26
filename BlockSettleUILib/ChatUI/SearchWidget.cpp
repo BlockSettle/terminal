@@ -203,6 +203,7 @@ void SearchWidget::onItemClicked(const QModelIndex &index)
    switch (status) 
    {
       case UserSearchModel::UserStatus::ContactUnknown:
+      case UserSearchModel::UserStatus::ContactRejected:
       {
          emit contactFriendRequest(id);
       }
