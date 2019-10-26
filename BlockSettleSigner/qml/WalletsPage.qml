@@ -60,7 +60,8 @@ Item {
                     height: childrenRect.height + 10
                     width: parent.width
 
-                    CustomButtonPrimary {
+                    CustomButton {
+                        primary: true
                         width: 150
                         text: qsTr("New")
                         onClicked: {
@@ -79,7 +80,8 @@ Item {
                         }
                     }
 
-                    CustomButtonPrimary {
+                    CustomButton {
+                        primary: true
                         width: 150
 
                         text: qsTr("Manage")
@@ -89,8 +91,8 @@ Item {
                         }
                     }
 
-                    CustomButtonPrimary {
-                        //Layout.fillWidth: true
+                    CustomButton {
+                        primary: true
                         width: 150
                         text: qsTr("Export")
                         enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
@@ -99,8 +101,8 @@ Item {
                         }
                     }
 
-                    CustomButtonPrimary {
-                        //Layout.fillWidth: true
+                    CustomButton {
+                        primary: true
                         width: 150
                         enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         text: qsTr("Delete")

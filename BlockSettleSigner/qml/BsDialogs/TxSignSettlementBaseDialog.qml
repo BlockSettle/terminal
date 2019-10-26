@@ -371,6 +371,7 @@ CustomTitleDialogWindow {
 
             CustomButton {
                 id: btnExportTx
+                primary: true
                 visible: walletInfo.encType === QPasswordData.Unencrypted
                 text: qsTr("SAVE TX")
                 anchors.right: btnImportTx.left
@@ -390,6 +391,8 @@ CustomTitleDialogWindow {
 
                     onAccepted: {
                         txInfo.saveToFile(qmlAppObj.getUrlPath(exportTxDlg.file))
+                        btnExportTx.primary = false
+                        btnImportTx.primary = true
                     }
                 }
             }
@@ -414,13 +417,18 @@ CustomTitleDialogWindow {
                     nameFilters: [ "Key files (*.bin)", "All files (*)" ]
 
                     onAccepted: {
-                        txInfo.loadSignedTx(qmlAppObj.getUrlPath(importTxDlg.file))
+                        result = txInfo.loadSignedTx(qmlAppObj.getUrlPath(importTxDlg.file))
+                        if (result) {
+                            btnImportTx.primary = false
+                            btnConfirm.primary = true
+                        }
                     }
                 }
             }
 
-            CustomButtonPrimary {
+            CustomButton {
                 id: btnConfirm
+                primary: walletInfo.encType ===  QPasswordData.Unencrypted ? false : true
                 visible: walletInfo.encType !== QPasswordData.Auth
                 text: qsTr("CONFIRM")
                 anchors.right: parent.right

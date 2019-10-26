@@ -210,8 +210,9 @@ CustomTitleDialogWindow {
                 }
             }
 
-            CustomButtonPrimary {
+            CustomButton {
                 id: btnAccept
+                primary: true
                 enabled: acceptable
                 text: qsTr("CONFIRM")
                 anchors.right: parent.right
