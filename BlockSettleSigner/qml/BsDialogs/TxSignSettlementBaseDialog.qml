@@ -47,7 +47,8 @@ CustomTitleDialogWindow {
     readonly property int addressRowHeight: 24
 
     readonly property int duration: passwordDialogData.DurationTotal / 1000.0
-    property real timeLeft: passwordDialogData.DurationLeft / 1000.0 - authSign.networkDelayFix()
+    property real timeLeft: passwordDialogData.DurationLeft / 1000.0
+    property int timestamp: passwordDialogData.DurationTimestamp
 
     readonly property real balanceDivider : qmlFactory.balanceDivider()
 
@@ -79,7 +80,7 @@ CustomTitleDialogWindow {
             return
         }
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo, timeLeft - authSign.networkDelayFix())
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo, duration, timestamp)
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth

@@ -42,7 +42,7 @@ CustomTitleDialogWindow {
         btnConfirm.visible = false
         btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo, timeLeft - authSign.networkDelayFix())
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo, timeLeft)
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth

@@ -55,7 +55,7 @@ void AuthSignWalletObject::connectToServer()
    });
 }
 
-void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo, int expiration)
+void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo, int expiration, int timestamp)
 {
    std::vector<std::string> knownDeviceIds;
    std::vector<std::string> userIds;
@@ -78,7 +78,7 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
          throw std::runtime_error("Auth eID email not found when signing");
       }
       autheIDClient_->getDeviceKey(requestType, userIds[0]
-         , walletInfo->rootId().toStdString(), knownDeviceIds, expiration);
+         , walletInfo->rootId().toStdString(), knownDeviceIds, expiration, timestamp);
    }
    catch (const std::exception &e) {
       logger_->error("AuthEidClient failed to sign wallet: {}", e.what());
