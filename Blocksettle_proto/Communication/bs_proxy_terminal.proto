@@ -93,7 +93,11 @@ message Response
     message GetLoginResult
     {
         AuthEidError error = 1;
+
         string celer_login = 2;
+
+        // bs::network::UserType as int
+        int32 user_type = 3;
     }
 
     message Celer
