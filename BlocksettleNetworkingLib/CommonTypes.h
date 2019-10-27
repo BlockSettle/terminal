@@ -21,6 +21,24 @@
 namespace bs {
    namespace network {
 
+      enum class UserType : int
+      {
+         // Invalid value
+         Undefined,
+
+         // Trading + XBT responses
+         Dealing,
+
+         // Market + XBT requests + OTC
+         Trading,
+
+         // Chat + private market trades
+         Market,
+
+         // Chat only access (account is not registered on Genoa)
+         Chat,
+      };
+
       struct Side {
          enum Type {
             Undefined,
