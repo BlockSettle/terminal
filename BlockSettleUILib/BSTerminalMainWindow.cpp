@@ -631,7 +631,7 @@ void BSTerminalMainWindow::InitChatView()
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, [this]() {
       //ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_, logMgr_->logger("chat"), walletsMgr_, armory_, signContainer_);
       ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_,
-         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_, celerConnection_);
+         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_);
    });
 
    chatClientServicePtr_->Init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
@@ -1122,6 +1122,8 @@ void BSTerminalMainWindow::onLogin()
       setWidgetsAuthorized(false);
       return;
    }
+
+   ui_->widgetChat->setUserType(loginDialog.result()->userType);
 
    bsClient_ = loginDialog.getClient();
    ccFileManager_->setBsClient(bsClient_.get());

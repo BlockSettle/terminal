@@ -41,6 +41,12 @@ namespace Blocksettle {
    }
 }
 
+namespace bs {
+   namespace network {
+      enum class UserType : int;
+   }
+}
+
 struct BsClientParams
 {
    struct NewKey
@@ -65,6 +71,7 @@ struct BsClientParams
 struct BsClientLoginResult
 {
    AutheIDClient::ErrorType status{};
+   bs::network::UserType userType{};
    std::string celerLogin;
    BinaryData chatTokenData;
    BinaryData chatTokenSign;
