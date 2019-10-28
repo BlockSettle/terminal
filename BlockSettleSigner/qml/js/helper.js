@@ -63,7 +63,7 @@ function hideWindow(w) {
 }
 
 function requesteIdAuth (requestType, walletInfo, onSuccess) {
-    var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo, authSign.defaultExpiration() - authSign.networkDelayFix())
+    var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo, authSign.defaultExpiration())
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
     authProgress.email = walletInfo.email()
