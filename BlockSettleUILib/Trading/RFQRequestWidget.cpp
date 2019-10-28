@@ -13,6 +13,7 @@
 #include "OrdersView.h"
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
+#include "RfqStorage.h"
 #include "SignContainer.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -32,6 +33,8 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    : TabWithShortcut(parent)
    , ui_(new Ui::RFQRequestWidget())
 {
+   rfqStorage_ = std::make_shared<RfqStorage>();
+
    ui_->setupUi(this);
    ui_->shieldPage->setTabType(QLatin1String("trade"));
 
@@ -232,13 +235,7 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
 
    RFQDialog* dialog = new RFQDialog(logger_, rfq, ui_->pageRFQTicket->GetTransactionData(), quoteProvider_
       , authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
-      , connectionManager_, xbtWallet, ui_->pageRFQTicket->recvAddress(), authAddr, this);
-
-   // connect to requests from PB
-   // just re-emit signal
-   connect(dialog, &RFQDialog::sendUnsignedPayinToPB, this, &RFQRequestWidget::sendUnsignedPayinToPB);
-   connect(dialog, &RFQDialog::sendSignedPayinToPB, this, &RFQRequestWidget::sendSignedPayinToPB);
-   connect(dialog, &RFQDialog::sendSignedPayoutToPB, this, &RFQRequestWidget::sendSignedPayoutToPB);
+      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvAddress(), authAddr, this);
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);

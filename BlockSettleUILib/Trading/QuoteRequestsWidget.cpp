@@ -103,7 +103,7 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger, const std
    connect(appSettings.get(), &ApplicationSettings::settingChanged, this, &QuoteRequestsWidget::onSettingChanged);
 
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(
-      static_cast<int>(QuoteRequestsModel::Column::Status), new ProgressDelegate(ui_->treeViewQuoteRequests));
+      static_cast<int>(QuoteRequestsModel::Column::Status), new RequestsProgressDelegate(ui_->treeViewQuoteRequests));
 
    auto *doNotDrawSelectionDelegate = new DoNotDrawSelectionDelegate(ui_->treeViewQuoteRequests);
    ui_->treeViewQuoteRequests->setItemDelegateForColumn(
@@ -499,21 +499,17 @@ bool QuoteReqSortModel::lessThan(const QModelIndex &left, const QModelIndex &rig
    return (leftTL < rightTL);
 }
 
-
-void ProgressDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt, const QModelIndex &index) const
+bool RequestsProgressDelegate::isDrawProgressBar(const QModelIndex& index) const
 {
-   if (index.data(static_cast<int>(QuoteRequestsModel::Role::ShowProgress)).toBool()) {
-      QStyleOptionProgressBar pOpt;
-      pOpt.maximum = index.data(static_cast<int>(QuoteRequestsModel::Role::Timeout)).toInt();
-      pOpt.minimum = 0;
-      pOpt.progress = index.data(static_cast<int>(QuoteRequestsModel::Role::TimeLeft)).toInt();
-      pOpt.rect = opt.rect;
+   return index.data(static_cast<int>(QuoteRequestsModel::Role::ShowProgress)).toBool();
+}
 
-      QApplication::style()->drawControl(QStyle::CE_ProgressBar, &pOpt, painter, &pbar_);
-   } else {
-      QStyleOptionViewItem changedOpt = opt;
-      changedOpt.state &= ~(QStyle::State_Selected);
+int RequestsProgressDelegate::maxValue(const QModelIndex& index) const
+{
+   return index.data(static_cast<int>(QuoteRequestsModel::Role::Timeout)).toInt();
+}
 
-      QStyledItemDelegate::paint(painter, changedOpt, index);
-   }
+int RequestsProgressDelegate::currentValue(const QModelIndex& index) const
+{
+   return index.data(static_cast<int>(QuoteRequestsModel::Role::TimeLeft)).toInt();
 }

@@ -18,6 +18,16 @@ void ChatPartiesTreeModel::onPartyModelChanged()
 {
    Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
    
+   // Save unseen state first
+   QMap<std::string, int> unseenCounts;
+   forAllPartiesInModel([&](const PartyTreeItem* party) {
+      const Chat::ClientPartyPtr clientPtr = party->data().value<Chat::ClientPartyPtr>();
+
+      if (party->unseenCount() != 0) {
+         unseenCounts.insert(clientPtr->id(), party->unseenCount());
+      }     
+   });
+
    beginResetModel();
 
    rootItem_->removeAll();
@@ -29,9 +39,11 @@ void ChatPartiesTreeModel::onPartyModelChanged()
 
    Chat::IdPartyList idPartyList = clientPartyModelPtr->getIdPartyList();
 
-   auto insertChild = [](PartyTreeItem* section, QVariant stored) {
+   auto insertChild = [](PartyTreeItem* section, QVariant stored) -> PartyTreeItem* {
       std::unique_ptr<PartyTreeItem> partyTreeItem = std::make_unique<PartyTreeItem>(stored, UI::ElementType::Party, section);
+      PartyTreeItem* pTreeItem = partyTreeItem.get();
       section->insertChildren(std::move(partyTreeItem));
+      return pTreeItem;
    };
 
    for (const auto& id : idPartyList) {
@@ -47,8 +59,18 @@ void ChatPartiesTreeModel::onPartyModelChanged()
          insertChild(globalSection.get(), stored);
       }
       else if (clientPartyPtr->isPrivateStandard()) {
+         if (clientPartyPtr->partyState() == Chat::PartyState::REJECTED) {
+            continue;
+         }
+
          PartyTreeItem* parentSection = clientPartyPtr->partyState() == Chat::PartyState::INITIALIZED ? privateSection.get() : requestSection.get();
-         insertChild(parentSection, stored);
+         PartyTreeItem* newChild = insertChild(parentSection, stored);
+
+         assert(newChild);
+         auto it = unseenCounts.find(clientPartyPtr->id());
+         if (it != unseenCounts.end()) {
+            newChild->increaseUnseenCounter(it.value());
+         }
       }
    }
 
@@ -217,6 +239,25 @@ PartyTreeItem* ChatPartiesTreeModel::getItem(const QModelIndex& index) const
    }
 
    return rootItem_;
+}
+
+void ChatPartiesTreeModel::forAllPartiesInModel(std::function<void(const PartyTreeItem*)> applyFunc) const
+{
+   QList<PartyTreeItem*> itemsToCheck;
+   itemsToCheck.push_back(rootItem_);
+
+   while (!itemsToCheck.isEmpty()) {
+      PartyTreeItem* item = itemsToCheck[0];
+      itemsToCheck.pop_front();
+
+      if (item->modelType() == UI::ElementType::Party) {
+         applyFunc(item);
+      }
+
+      for (int i = 0; i < item->childCount(); ++i) {
+         itemsToCheck.push_back(item->child(i));
+      }
+   }
 }
 
 QModelIndex ChatPartiesTreeModel::getOTCGlobalRoot() const

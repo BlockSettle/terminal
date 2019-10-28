@@ -1,5 +1,6 @@
 #include "CelerSubmitRFQSequence.h"
 
+#include "ProtobufUtils.h"
 #include "UpstreamQuoteProto.pb.h"
 
 #include <QDate>
@@ -69,7 +70,7 @@ CelerMessage CelerSubmitRFQSequence::submitRFQ()
    message.messageData = request.SerializeAsString();
 
    if (debugPrintRFQ_) {
-      logger_->debug("RFQ: {}", request.DebugString());
+      logger_->debug("RFQ: {}", ProtobufUtils::toJsonCompact(request));
    }
 
    return message;

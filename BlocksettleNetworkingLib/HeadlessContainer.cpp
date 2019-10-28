@@ -308,7 +308,7 @@ void HeadlessContainer::ProcessAutoSignActEvent(unsigned int id, const std::stri
       emit Error(id, "failed to parse");
       return;
    }
-   emit AutoSignStateChanged(event.rootwalletid(), event.autosignactive());
+   emit AutoSignStateChanged(static_cast<bs::error::ErrorCode>(event.errorcode()), event.rootwalletid());
 }
 
 void HeadlessContainer::ProcessSetUserId(const std::string &data)

@@ -137,7 +137,6 @@ private:
    friend class PrivatePartyUninitState;
    friend class PrivatePartyRequestedOutgoingState;
    friend class PrivatePartyRequestedIncomingState;
-   friend class PrivatePartyRejectedState;
 
    template <typename stateType, typename = typename std::enable_if<std::is_base_of<AbstractChatWidgetState, stateType>::value>::type>
       void changeState(std::function<void(void)>&& transitionChanges = []() {})

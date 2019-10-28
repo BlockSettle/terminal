@@ -671,6 +671,7 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
          parent_->isArmoryReady_ = true;
          parent_->CompleteDBConnection();
          parent_->CompleteUIOnlineView();
+         parent_->walletsMgr_->goOnline();
       });
       break;
    case ArmoryState::Connected:

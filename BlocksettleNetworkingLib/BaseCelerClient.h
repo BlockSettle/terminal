@@ -11,9 +11,10 @@
 #include <QObject>
 #include <QTimer>
 
-#include "DataConnectionListener.h"
 #include "CelerMessageMapper.h"
 #include "CelerProperty.h"
+#include "CommonTypes.h"
+#include "DataConnectionListener.h"
 #include "IdStringGenerator.h"
 
 class CommandSequence;
@@ -32,20 +33,14 @@ Q_OBJECT
 friend class CelerClientListener;
 
 public:
+   using CelerUserType = bs::network::UserType;
+
    enum CelerErrorCode
    {
       ResolveHostError,
       LoginError,
       ServerMaintainanceError,
       UndefinedError
-   };
-
-   enum CelerUserType
-   {
-      Undefined,
-      Dealing,
-      Trading,
-      Market
    };
 
    using message_handler = std::function<bool (const std::string&)>;

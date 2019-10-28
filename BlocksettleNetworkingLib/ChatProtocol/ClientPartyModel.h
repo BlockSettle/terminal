@@ -94,7 +94,7 @@ namespace Chat
       ClientPartyPtr getFirstClientPartyForPartySubType(const ClientPartyPtrList& clientPartyPtrList, 
          const std::string& firstUserHash, const std::string& secondUserHash, const PartySubType& partySubType = PartySubType::STANDARD);
       std::string ownUserName_;
-      CelerClient::CelerUserType ownCelerUserType_ = CelerClient::Undefined;
+      CelerClient::CelerUserType ownCelerUserType_ = bs::network::UserType::Undefined;
    };
 
    using ClientPartyModelPtr = std::shared_ptr<ClientPartyModel>;

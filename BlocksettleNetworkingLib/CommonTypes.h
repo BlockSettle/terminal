@@ -21,6 +21,24 @@
 namespace bs {
    namespace network {
 
+      enum class UserType : int
+      {
+         // Invalid value
+         Undefined,
+
+         // Trading + XBT responses
+         Dealing,
+
+         // Market + XBT requests + OTC
+         Trading,
+
+         // Chat + private market trades
+         Market,
+
+         // Chat only access (account is not registered on Genoa)
+         Chat,
+      };
+
       struct Side {
          enum Type {
             Undefined,
@@ -28,41 +46,11 @@ namespace bs {
             Sell
          };
 
-         static Type fromCeler(com::celertech::marketmerchant::api::enums::side::Side side) {
-            switch (side) {
-               case com::celertech::marketmerchant::api::enums::side::BUY:    return Buy;
-               case com::celertech::marketmerchant::api::enums::side::SELL:   return Sell;
-            }
-            return Undefined;
-         }
-         static com::celertech::marketmerchant::api::enums::side::Side toCeler(Type side) {
-            switch (side) {
-               case Buy:   return com::celertech::marketmerchant::api::enums::side::BUY;
-               case Sell:
-               default:    return com::celertech::marketmerchant::api::enums::side::SELL;
-            }
-         }
-         static const char *toString(Type side) {
-            switch (side) {
-               case Buy:   return QT_TR_NOOP("BUY");
-               case Sell:  return QT_TR_NOOP("SELL");
-               default:    return "unknown";
-            }
-         }
-         static const char *responseToString(Type side) {
-            switch (side) {
-            case Buy:   return QT_TR_NOOP("Offer");
-            case Sell:  return QT_TR_NOOP("Bid");
-            default:    return "";
-            }
-         }
-         static Type invert(Type side) {
-            switch (side) {
-               case Buy:   return Sell;
-               case Sell:  return Buy;
-               default:    return side;
-            }
-         }
+         static Type fromCeler(com::celertech::marketmerchant::api::enums::side::Side side);
+         static com::celertech::marketmerchant::api::enums::side::Side toCeler(Type side);
+         static const char *toString(Type side);
+         static const char *responseToString(Type side);
+         static Type invert(Type side);
       };
 
 
@@ -76,72 +64,15 @@ namespace bs {
             last
          };
 
-         static Type fromCelerProductType(com::celertech::marketdata::api::enums::producttype::ProductType pt) {
-            switch (pt) {
-            case com::celertech::marketdata::api::enums::producttype::SPOT:           return SpotFX;
-            case com::celertech::marketdata::api::enums::producttype::BITCOIN:        return SpotXBT;
-            case com::celertech::marketdata::api::enums::producttype::PRIVATE_SHARE:  return PrivateMarket;
-            default: return Undefined;
-            }
-         }
+         static Type fromCelerProductType(com::celertech::marketdata::api::enums::producttype::ProductType pt);
 
-         static Type fromCelerProductType(com::celertech::marketmerchant::api::enums::producttype::ProductType pt) {
-            switch (pt) {
-            case com::celertech::marketmerchant::api::enums::producttype::SPOT:           return SpotFX;
-            case com::celertech::marketmerchant::api::enums::producttype::BITCOIN:        return SpotXBT;
-            case com::celertech::marketmerchant::api::enums::producttype::PRIVATE_SHARE:  return PrivateMarket;
-            default: return Undefined;
-            }
-         }
-         static com::celertech::marketmerchant::api::enums::assettype::AssetType toCeler(Type at) {
-            switch (at) {
-               case SpotFX:         return com::celertech::marketmerchant::api::enums::assettype::FX;
-               case SpotXBT:        return com::celertech::marketmerchant::api::enums::assettype::CRYPTO;
-               case PrivateMarket:  return com::celertech::marketmerchant::api::enums::assettype::CRYPTO;
-               default:             return com::celertech::marketmerchant::api::enums::assettype::STRUCTURED_PRODUCT;
-            }
-         }
-         static com::celertech::marketdata::api::enums::assettype::AssetType toCelerMDAssetType(Type at) {
-            switch (at) {
-               case SpotFX:         return com::celertech::marketdata::api::enums::assettype::FX;
-               case SpotXBT:        // fall through
-               case PrivateMarket:  // fall through
-               default:
-                                    return com::celertech::marketdata::api::enums::assettype::CRYPTO;
-            }
-         }
-         static com::celertech::marketmerchant::api::enums::producttype::ProductType toCelerProductType(Type at) {
-            switch (at) {
-               case SpotFX:         return com::celertech::marketmerchant::api::enums::producttype::SPOT;
-               case SpotXBT:        return com::celertech::marketmerchant::api::enums::producttype::BITCOIN;
-               case PrivateMarket:  return com::celertech::marketmerchant::api::enums::producttype::PRIVATE_SHARE;
-               default:             return com::celertech::marketmerchant::api::enums::producttype::SPOT;
-            }
-         }
-         static com::celertech::marketdata::api::enums::producttype::ProductType toCelerMDProductType(Type at) {
-            switch (at) {
-               case SpotFX:         return com::celertech::marketdata::api::enums::producttype::SPOT;
-               case SpotXBT:        return com::celertech::marketdata::api::enums::producttype::BITCOIN;
-               case PrivateMarket:  return com::celertech::marketdata::api::enums::producttype::PRIVATE_SHARE;
-               default:             return com::celertech::marketdata::api::enums::producttype::SPOT;
-            }
-         }
-         static const char *toCelerSettlementType(Type at) {
-            switch (at) {
-            case SpotFX:         return "SPOT";
-            case SpotXBT:        return "XBT";
-            case PrivateMarket:  return "CC";
-            default:       return "";
-            }
-         }
-         static const char *toString(Type at) {
-            switch (at) {
-            case SpotFX:   return QT_TR_NOOP("Spot FX");
-            case SpotXBT:  return QT_TR_NOOP("Spot XBT");
-            case PrivateMarket:  return QT_TR_NOOP("Private Market");
-            default:       return "";
-            }
-         }
+         static Type fromCelerProductType(com::celertech::marketmerchant::api::enums::producttype::ProductType pt);
+         static com::celertech::marketmerchant::api::enums::assettype::AssetType toCeler(Type at);
+         static com::celertech::marketdata::api::enums::assettype::AssetType toCelerMDAssetType(Type at);
+         static com::celertech::marketmerchant::api::enums::producttype::ProductType toCelerProductType(Type at);
+         static com::celertech::marketdata::api::enums::producttype::ProductType toCelerMDProductType(Type at);
+         static const char *toCelerSettlementType(Type at);
+         static const char *toString(Type at);
       };
 
 

@@ -12,6 +12,7 @@
 #include "CelerSubmitRFQSequence.h"
 #include "CurrencyPair.h"
 #include "FastLock.h"
+#include "ProtobufUtils.h"
 
 #include "DownstreamQuoteProto.pb.h"
 #include "DownstreamOrderProto.pb.h"
@@ -101,7 +102,7 @@ bool QuoteProvider::onQuoteResponse(const std::string& data)
          return false;
    }
    if (debugTraffic_) {
-      logger_->debug("[QuoteProvider::onQuoteResponse]: {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onQuoteResponse]: {}", ProtobufUtils::toJsonCompact(response));
    }
 
    Quote quote;
@@ -177,7 +178,7 @@ bool QuoteProvider::onQuoteResponse(const std::string& data)
       if (response.legquotegroup_size() != 1) {
          logger_->error("[QuoteProvider::onQuoteResponse] invalid leg number: {}\n{}"
             , response.legquotegroup_size()
-            , response.DebugString());
+            , ProtobufUtils::toJsonCompact(response));
          return false;
       }
 
@@ -259,7 +260,7 @@ bool QuoteProvider::onQuoteReject(const std::string& data)
       return false;
    }
    if (debugTraffic_) {
-      logger_->debug("[QuoteProvider::onQuoteReject] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onQuoteReject] {}", ProtobufUtils::toJsonCompact(response));
    }
 
    QString text;
@@ -457,7 +458,7 @@ bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data)
          return false;
    }
    if (debugTraffic_) {
-      logger_->debug("[QuoteProvider::onBitcoinOrderSnapshot] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onBitcoinOrderSnapshot] {}", ProtobufUtils::toJsonCompact(response));
    }
 
    auto orderDate = QDateTime::fromMSecsSinceEpoch(response.createdtimestamputcinmillis());
@@ -553,7 +554,7 @@ bool QuoteProvider::onQuoteCancelled(const std::string& data)
    }
 
    if (debugTraffic_) {
-      logger_->debug("[QuoteProvider::onQuoteCancelled] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onQuoteCancelled] {}", ProtobufUtils::toJsonCompact(response));
    }
 
    cleanQuoteRequestCcy(response.quoterequestid());
@@ -575,7 +576,7 @@ bool QuoteProvider::onSignTxNotif(const std::string& data)
       return false;
    }
    if (debugTraffic_) {
-      logger_->debug("[QuoteProvider::onSignTxNotif] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onSignTxNotif] {}", ProtobufUtils::toJsonCompact(response));
    }
 
    emit signTxRequested(QString::fromStdString(response.orderid()), QString::fromStdString(response.quoterequestid()));
@@ -636,7 +637,7 @@ bool QuoteProvider::onQuoteReqNotification(const std::string& data)
    if (respgrp.quoterequestnotificationleggroup_size() != 1) {
       logger_->error("[QuoteProvider::onQuoteReqNotification] wrong leg group size: {}\n{}"
          , respgrp.quoterequestnotificationleggroup_size()
-         , response.DebugString());
+         , ProtobufUtils::toJsonCompact(response));
       return false;
    }
 
@@ -685,7 +686,7 @@ bool QuoteProvider::onQuoteReqNotification(const std::string& data)
    saveQuoteRequestCcy(qrn.quoteRequestId, qrn.product);
 
    if (debugTraffic_) {
-      logger_->debug("[QuoteProvider::onQuoteReqNotif] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onQuoteReqNotif] {}", ProtobufUtils::toJsonCompact(response));
    }
    emit quoteReqNotifReceived(qrn);
 
@@ -702,7 +703,7 @@ bool QuoteProvider::onQuoteNotifCancelled(const std::string& data)
 
    emit quoteNotifCancelled(QString::fromStdString(response.quoterequestid()));
    if (debugTraffic_) {
-      logger_->debug("[QuoteProvider::onQuoteNotifCancelled] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onQuoteNotifCancelled] {}", ProtobufUtils::toJsonCompact(response));
    }
    return true;
 }

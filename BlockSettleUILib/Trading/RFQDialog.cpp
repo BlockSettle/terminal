@@ -6,8 +6,10 @@
 #include "AssetManager.h"
 #include "BSMessageBox.h"
 #include "QuoteProvider.h"
+#include "RFQRequestWidget.h"
 #include "ReqCCSettlementContainer.h"
 #include "ReqXBTSettlementContainer.h"
+#include "RfqStorage.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
@@ -24,10 +26,11 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const std::shared_ptr<RfqStorage> &rfqStorage
    , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
    , const bs::Address &recvXbtAddr
    , const bs::Address &authAddr
-   , QWidget* parent)
+   , RFQRequestWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
    , logger_(logger)
@@ -43,8 +46,10 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , celerClient_(celerClient)
    , appSettings_(appSettings)
    , connectionManager_(connectionManager)
+   , rfqStorage_(rfqStorage)
    , xbtWallet_(xbtWallet)
    , authAddr_(authAddr)
+   , requestWidget_(parent)
 {
    ui_->setupUi(this);
 
@@ -100,12 +105,16 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
       } else {
          curContainer_ = newCCcontainer();
       }
-      curContainer_->activate();
+      if (curContainer_) {
+         rfqStorage_->addSettlementContainer(curContainer_);
+      }
    }
 }
 
 void RFQDialog::reportError(const QString& errorMessage)
 {
+   BSMessageBox(BSMessageBox::Type::critical, tr("RFQ error"), errorMessage, this)
+      .exec();
 }
 
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
@@ -115,44 +124,57 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       return nullptr;
    }
 
-   auto fixedInputs = transactionData_->getSelectedInputs()->UseAutoSel() ?
+   auto selectedInputs = transactionData_->getSelectedInputs();
+   auto fixedInputs = (!selectedInputs || transactionData_->getSelectedInputs()->UseAutoSel()) ?
       std::vector<UTXO>{} : transactionData_->getSelectedInputs()->GetSelectedTransactions();
 
-   xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
-      , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
-      , rfq_, quote_, authAddr_, fixedInputs, recvXbtAddr_);
+   try {
+      xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
+         , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
+         , rfq_, quote_, authAddr_, fixedInputs, recvXbtAddr_);
 
-   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
-      , this, &RFQDialog::onSettlementAccepted);
-   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementCancelled
-      , this, &QDialog::close);
-   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::acceptQuote
-      , this, &RFQDialog::onXBTQuoteAccept);
-   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::error
-      , this, &RFQDialog::reportError);
+      connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
+         , this, &RFQDialog::onSettlementAccepted);
+      connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementCancelled
+         , this, &QDialog::close);
+      connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::acceptQuote
+         , this, &RFQDialog::onXBTQuoteAccept);
+      connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::error
+         , this, &RFQDialog::reportError);
 
-   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendUnsignedPayinToPB
-      , this, &RFQDialog::sendUnsignedPayinToPB);
-   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayinToPB
-      , this, &RFQDialog::sendSignedPayinToPB);
-   connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayoutToPB
-      , this, &RFQDialog::sendSignedPayoutToPB);
-
+      // Use requestWidget_ as RFQDialog could be already destroyed before this moment
+      connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendUnsignedPayinToPB
+         , requestWidget_, &RFQRequestWidget::sendUnsignedPayinToPB);
+      connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayinToPB
+         , requestWidget_, &RFQRequestWidget::sendSignedPayinToPB);
+      connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayoutToPB
+         , requestWidget_, &RFQRequestWidget::sendSignedPayoutToPB);
+   }
+   catch (const std::exception &e) {
+      reportError(tr("Failed to create XBT settlement container: %1")
+         .arg(QString::fromLatin1(e.what())));
+   }
 
    return xbtSettlContainer_;
 }
 
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 {
-   ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-      , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, transactionData_);
+   try {
+      ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, transactionData_);
 
-   connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementAccepted
-      , this, &RFQDialog::onSettlementAccepted);
-   connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::sendOrder
-      , this, &RFQDialog::onSettlementOrder);
-   connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementCancelled
-      , this, &QDialog::close);
+      connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementAccepted
+         , this, &RFQDialog::onSettlementAccepted);
+      connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::sendOrder
+         , this, &RFQDialog::onSettlementOrder);
+      connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementCancelled
+         , this, &QDialog::close);
+   }
+   catch (const std::exception &e) {
+      reportError(tr("Failed to create CC settlement container: %1")
+         .arg(QString::fromLatin1(e.what())));
+   }
 
    return ccSettlContainer_;
 }

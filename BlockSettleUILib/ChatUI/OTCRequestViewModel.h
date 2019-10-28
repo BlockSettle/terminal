@@ -10,7 +10,8 @@ class OtcClient;
 
 enum class CustomRoles
 {
-   OwnQuote = Qt::UserRole + 1
+   OwnQuote = Qt::UserRole + 1,
+   RequestTimeStamp
 };
 
 class OTCRequestViewModel : public QAbstractTableModel
@@ -27,16 +28,7 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
    QModelIndex getIndexByTimestamp(QDateTime timeStamp);
-public slots:
-   void onRequestsUpdated();
 
-private slots:
-   void onUpdateDuration();
-
-signals:
-   void restoreSelectedIndex();
-
-private:
    enum class Columns
    {
       Security,
@@ -49,6 +41,16 @@ private:
       Latest = Duration,
    };
 
+public slots:
+   void onRequestsUpdated();
+
+private slots:
+   void onUpdateDuration();
+
+signals:
+   void restoreSelectedIndex();
+
+private:
    struct OTCRequest
    {
       bs::network::otc::QuoteRequest request_;

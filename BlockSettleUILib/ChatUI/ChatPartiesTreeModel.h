@@ -37,6 +37,7 @@ public slots:
 
 private:
    PartyTreeItem* getItem(const QModelIndex& index) const;
+   void forAllPartiesInModel(std::function<void(const PartyTreeItem*)> applyFunc) const;
    
 
    PartyTreeItem* rootItem_{};

@@ -72,14 +72,10 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
          notifyMsg.append(QString::fromStdString(messageTitle));
          notifyMsg.append(otcText.isEmpty() ? QString::fromStdString(messageText) : otcText);
          notifyMsg.append(QString::fromStdString(partyId));
+         notifyMsg.append(!otcText.isEmpty() && (partyId != chat_->currentPartyId_));
 
          NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
       }
-   }
-
-   // Update tree
-   if (bNewMessagesCounter > 0 && partyId != chat_->currentPartyId_) {
-      chat_->chatPartiesTreeModel_->onIncreaseUnseenCounter(partyId, bNewMessagesCounter);
    }
 
    chat_->ui_->textEditMessages->onMessageUpdate(messagePtrList);
@@ -87,6 +83,12 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
    if (canPerformOTCOperations()) {
       chat_->otcHelper_->onMessageArrived(messagePtrList);
    }
+
+   // Update tree
+   if (bNewMessagesCounter > 0 && partyId != chat_->currentPartyId_) {
+      chat_->chatPartiesTreeModel_->onIncreaseUnseenCounter(partyId, bNewMessagesCounter);
+   }
+
 }
 
 void AbstractChatWidgetState::onChangePartyStatus(const Chat::ClientPartyPtr& clientPartyPtr)

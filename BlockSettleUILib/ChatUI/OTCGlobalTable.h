@@ -1,8 +1,9 @@
 #ifndef __OTC_GLOBAL_TABLE_H__
 #define __OTC_GLOBAL_TABLE_H__
 
-#include "TreeViewWithEnterKey.h"
 #include "ChatUI/ChatUsersViewItemStyle.h"
+#include "TreeViewWithEnterKey.h"
+#include "ProgressViewDelegateBase.h"
 
 class OTCGlobalTable : public TreeViewWithEnterKey
 {
@@ -17,6 +18,31 @@ protected:
 
 private:
    ChatUsersViewItemStyle itemStyle_;
+};
+
+class OTCRequestsProgressDelegate : public ProgressViewDelegateBase
+{
+public:
+   explicit OTCRequestsProgressDelegate(QWidget* parent = nullptr)
+      : ProgressViewDelegateBase(parent)
+   {}
+   ~OTCRequestsProgressDelegate() override = default;
+protected:
+   bool isDrawProgressBar(const QModelIndex& index) const override;
+   int maxValue(const QModelIndex& index) const override;
+   int currentValue(const QModelIndex& index) const override;
+};
+
+class LeftOffsetDelegate : public QStyledItemDelegate
+{
+public:
+   explicit LeftOffsetDelegate(QWidget* parent = nullptr)
+      : QStyledItemDelegate(parent)
+   {}
+   ~LeftOffsetDelegate() override = default;
+
+   void paint(QPainter* painter, const QStyleOptionViewItem& opt,
+      const QModelIndex& index) const override;
 };
 
 #endif // __OTC_GLOBAL_TABLE_H__

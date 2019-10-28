@@ -1,6 +1,8 @@
 #ifndef AUTOSIGNQUOTEPROVIDER_H
 #define AUTOSIGNQUOTEPROVIDER_H
 
+#include "BSErrorCode.h"
+
 #include <QObject>
 #include <memory>
 
@@ -55,7 +57,8 @@ public:
    void setAQLastDir(const QString &path);
 
    // auto sign
-   bool autoSignState() const;
+   bs::error::ErrorCode autoSignState() const;
+   QString autoSignWalletId() const { return autoSignWalletId_; }
 
    void disableAutoSign();
    void tryEnableAutoSign();
@@ -72,12 +75,12 @@ signals:
    void aqScriptLoaded(const QString &filename);
    void aqScriptUnLoaded();
    void aqHistoryChanged();
-   void autoSignStateChanged(const std::string &walletId, bool active);
+   void autoSignStateChanged();
    void autoSignQuoteAvailabilityChanged();
 
 public slots:
    void onSignerStateUpdated();
-   void onAutoSignStateChanged(const std::string &walletId, bool active);
+   void onAutoSignStateChanged(bs::error::ErrorCode result, const std::string &walletId);
 
    void onAqScriptLoaded(const QString &filename);
    void onAqScriptFailed(const QString &filename, const QString &error);
@@ -86,7 +89,8 @@ public slots:
    void onDisconnectedFromCeler();
 
 private:
-   bool              autoSignState_{false};
+   bs::error::ErrorCode  autoSignState_{bs::error::ErrorCode::AutoSignDisabled};
+   QString autoSignWalletId_;
    UserScriptRunner *aq_{};
    bool              aqLoaded_{false};
    bool              celerConnected_{false};

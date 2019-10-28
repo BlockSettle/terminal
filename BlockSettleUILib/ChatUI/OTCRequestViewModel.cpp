@@ -9,20 +9,6 @@ namespace {
 
    const int kUpdateTimerInterval = 500;
 
-   QString duration(QDateTime timestamp)
-   {
-      QDateTime endTimeStamp = timestamp.addSecs(
-         std::chrono::duration_cast<std::chrono::seconds>(
-            bs::network::otc::publicRequestTimeout()).count());
-      const int oneMinuteInSec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::minutes(1)).count();
-      // We showing in one minute more since it's countdown
-      const int timeLeftMinute = static_cast<int>(QDateTime::currentDateTime().secsTo(endTimeStamp) / oneMinuteInSec) 
-         + std::chrono::minutes(1).count();
-      const int minutes = std::min(10, static_cast<int>(timeLeftMinute));
-
-      return QObject::tr("%1 min").arg(minutes);
-   }
-
    QString side(bs::network::otc::Side requestSide, bool isOwnRequest) {
       if (!isOwnRequest) {
          requestSide = bs::network::otc::switchSide(requestSide);
@@ -70,13 +56,16 @@ QVariant OTCRequestViewModel::data(const QModelIndex &index, int role) const
             case Columns::Product:     return QStringLiteral("XBT");
             case Columns::Side:        return side(request.ourSide, requestData.isOwnRequest_);
             case Columns::Quantity:    return QString::fromStdString(otc::toString(request.rangeType));
-            case Columns::Duration:    return duration(request.timestamp);
+            case Columns::Duration:    return {}; // OTCRequestsProgressDelegate
          }
          assert(false);
          return {};
 
       case static_cast<int>(CustomRoles::OwnQuote):
          return { requestData.isOwnRequest_ };
+
+      case static_cast<int>(CustomRoles::RequestTimeStamp) :
+         return { request.timestamp };
 
       default:
          return {};
@@ -127,6 +116,20 @@ void OTCRequestViewModel::onUpdateDuration()
 {
    if (rowCount() == 0) {
       return;
+   }
+
+   const qint64 timeout = QDateTime::currentDateTime().toSecsSinceEpoch() - std::chrono::duration_cast<std::chrono::seconds>(
+      bs::network::otc::publicRequestTimeout()).count();
+
+   auto it = std::remove_if(request_.begin(), request_.end(), [&](const OTCRequest& req) {
+      return req.request_.timestamp.toSecsSinceEpoch() < timeout;
+   });
+
+   if (it != request_.end()) {
+      const int startIndex = std::distance(request_.begin(), it);
+      beginRemoveRows({}, startIndex, request_.size() - 1);
+      request_.erase(it, request_.end());
+      endRemoveRows();
    }
 
    emit dataChanged(index(0, static_cast<int>(Columns::Duration)),

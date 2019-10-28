@@ -36,7 +36,7 @@ namespace Chat
       std::string userHash_;
       BinaryData publicKey_;
       QDateTime publicKeyTime_;
-      CelerClient::CelerUserType celerType_ = CelerClient::Undefined;
+      CelerClient::CelerUserType celerType_ = bs::network::UserType::Undefined;
    };
 
    using PartyRecipientPtr = std::shared_ptr<PartyRecipient>;

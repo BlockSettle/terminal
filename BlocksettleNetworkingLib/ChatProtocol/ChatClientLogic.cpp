@@ -133,7 +133,7 @@ void ChatClientLogic::LoginToServer(const std::string& email, const CelerClient:
       loggerPtr_->error("[ChatClientLogic::LoginToServer] failed to open ZMQ data connection");
       connectionPtr_.reset();
       clientPartyModelPtr()->setOwnUserName({});
-      clientPartyModelPtr()->setOwnCelerUserType(CelerClient::Undefined);
+      clientPartyModelPtr()->setOwnCelerUserType(bs::network::UserType::Undefined);
 
       emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed);
       emit clientLoggedOutFromServer();
@@ -181,7 +181,7 @@ void ChatClientLogic::sendPacket(const google::protobuf::Message& message)
    google::protobuf::Any any;
    any.ParseFromString(packetString);
 
-   loggerPtr_->debug("[ChatClientLogic::sendPacket] send: {}", ProtobufUtils::toJsonReadable(any));
+   loggerPtr_->debug("[ChatClientLogic::sendPacket] send: {}", ProtobufUtils::toJsonCompact(any));
 
    if (!connectionPtr_->isActive())
    {

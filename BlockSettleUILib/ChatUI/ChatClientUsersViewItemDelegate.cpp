@@ -126,7 +126,6 @@ void ChatClientUsersViewItemDelegate::paintInitParty(Chat::ClientPartyPtr& clien
 void ChatClientUsersViewItemDelegate::paintRequestParty(Chat::ClientPartyPtr& clientPartyPtr, QPainter* painter,
    QStyleOptionViewItem& itemOption) const
 {
-   // #new_logic : do not forget to add color for outgoing and incoming requests
    switch (clientPartyPtr->partyState()) {
    case Chat::PartyState::UNINITIALIZED:
       itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOutgoing());
@@ -138,9 +137,6 @@ void ChatClientUsersViewItemDelegate::paintRequestParty(Chat::ClientPartyPtr& cl
       else {
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactIncoming());
       }
-      break;
-   case Chat::PartyState::REJECTED:
-      itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactRejected());
       break;
    default:
       break;

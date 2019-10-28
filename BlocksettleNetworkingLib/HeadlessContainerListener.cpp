@@ -1629,11 +1629,11 @@ void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clien
    }
 }
 
-void HeadlessContainerListener::AutoSignActivatedEvent(const std::string &walletId, bool active)
+void HeadlessContainerListener::AutoSignActivatedEvent(bs::error::ErrorCode result, const std::string &walletId)
 {
    headless::AutoSignActEvent autoSignActEvent;
    autoSignActEvent.set_rootwalletid(walletId);
-   autoSignActEvent.set_autosignactive(active);
+   autoSignActEvent.set_errorcode(static_cast<uint>(result));
 
    headless::RequestPacket packet;
    packet.set_type(headless::AutoSignActType);
@@ -1681,6 +1681,7 @@ bs::error::ErrorCode HeadlessContainerListener::activateAutoSign(const std::stri
 
    const auto &hdWallet = walletId.empty() ? walletsMgr_->getPrimaryWallet() : walletsMgr_->getHDWalletById(walletId);
    if (!hdWallet) {
+      AutoSignActivatedEvent(ErrorCode::WalletNotFound, walletId);
       return ErrorCode::WalletNotFound;
    }
 
@@ -1690,19 +1691,21 @@ bs::error::ErrorCode HeadlessContainerListener::activateAutoSign(const std::stri
       const bs::core::WalletPasswordScoped lock(hdWallet, password);
       const auto &seed = hdWallet->getDecryptedSeed();
       if (seed.empty()) {
+         AutoSignActivatedEvent(ErrorCode::MissingPassword, walletId);
          return ErrorCode::MissingPassword;
       }
    }
    catch (...) {
       logger_->error("[HeadlessContainerListener::activateAutoSign] wallet {} decryption error"
          , walletId);
+      AutoSignActivatedEvent(ErrorCode::InvalidPassword, walletId);
       return ErrorCode::InvalidPassword;
    }
 
    passwords_[hdWallet->walletId()] = password;
 
    // multicast event
-   AutoSignActivatedEvent(walletId, true);
+   AutoSignActivatedEvent(ErrorCode::NoError, walletId);
 
    return ErrorCode::NoError;
 }
@@ -1720,9 +1723,9 @@ bs::error::ErrorCode HeadlessContainerListener::deactivateAutoSign(const std::st
    }
 
    // multicast event
-   AutoSignActivatedEvent(walletId, false);
+   AutoSignActivatedEvent(ErrorCode::AutoSignDisabled, walletId);
 
-   return ErrorCode::NoError;
+   return ErrorCode::AutoSignDisabled;
 }
 
 bool HeadlessContainerListener::isAutoSignActive(const std::string &walletId) const

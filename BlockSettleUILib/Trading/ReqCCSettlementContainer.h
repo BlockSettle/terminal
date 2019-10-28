@@ -32,7 +32,8 @@ public:
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const bs::network::RFQ &, const bs::network::Quote &
+      , const bs::network::RFQ &
+      , const bs::network::Quote &
       , const std::shared_ptr<TransactionData> &);
    ~ReqCCSettlementContainer() override;
 
@@ -94,7 +95,6 @@ private:
    bool           userKeyOk_ = false;
 
    BinaryData                 dealerTx_;
-   BinaryData                 requesterTx_;
    bs::core::wallet::TXSignRequest  ccTxData_;
    std::string                ccTxSigned_;
    bool                       genAddrVerified_ = false;
