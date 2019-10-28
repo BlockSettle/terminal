@@ -1,7 +1,10 @@
 #!/bin/bash
 echo "Build script started ..."
 
-set -o errexit -o nounset
+# Hold on to current directory
+project_dir=$(pwd)
+script_dir=${project_dir}/Travis/
+third_dir=${project_dir}/../3rd/
 
 unameOut="$(uname -s)"
 case "${unameOut}" in
@@ -12,16 +15,19 @@ case "${unameOut}" in
     *)          MACHINE="UNKNOWN:${unameOut}"
 esac
 
+if [ ${MACHINE} = "MacOS" ]; then
+   echo 'export PATH="/usr/local/opt/mysql-client/bin:$PATH"' >> ~/.bash_profile
+   echo 'export PATH="/usr/local/opt/qt/bin:$PATH"' >> ~/.bash_profile
+   source ~/.bash_profile
+fi
 
-# Hold on to current directory
-project_dir=$(pwd)
-script_dir=${project_dir}/Travis/
-third_dir=${project_dir}/../3rd/
+# should be after source ~/.bash_profile
+set -e -o nounset
 
-if [ ${MACHINE} = "Linux" ]; then
-   build_dir=${project_dir}/build_terminal/RelWithDebInfo/bin/
-else
+if [ ${MACHINE} = "Windows" ]; then
    build_dir=${project_dir}/build_terminal/Release/bin/
+else
+   build_dir=${project_dir}/build_terminal/RelWithDebInfo/bin/
 fi
 
 echo "Project dir: ${project_dir}"
@@ -41,8 +47,6 @@ echo "Target file is ${ZIP_FILE_NAME}"
 # Due 120 minutes limit build either 3rd party as first step or project as second step
 # When 3rd party build completed it will be cached by travis
 
-cd ${project_dir}
-
 TS_3RD_START=$(date +%s)
 echo "Build 3rd party started at ${TS_3RD_START}"
 
@@ -58,20 +62,24 @@ fi
 
 echo "Building App..."
 
+# Workaround for MacOS Travis command 'cd'
+set +e
 cd ${project_dir}/terminal.release
-make -j2
+set -e
+
+make -j2 2>/dev/null
 make clean
 
 
 # Build and run tests here
 
-echo "Deploy..."
+#echo "Deploy..."
 
 # Package 
-echo "Packaging ..."
-ls -al ${build_dir}
-tar -czvf  ${script_dir}/${ZIP_FILE_NAME} ${build_dir}
-echo "Deploy is done"
+#echo "Packaging ..."
+#ls -al ${build_dir}
+#tar -czvf  ${script_dir}/${ZIP_FILE_NAME} ${build_dir}
+#echo "Deploy is done"
 
 # _________________________________________________________________
 #echo "Deploy to Releases"

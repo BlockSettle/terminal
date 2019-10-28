@@ -2,8 +2,9 @@ sudo: false
 
 os:
   - linux
+  - osx
 
-osx_image: xcode9.4
+osx_image: xcode10.3
 dist: bionic
 
 matrix:
@@ -53,8 +54,14 @@ install:
 script:
   - Travis/build.sh
 
+before_cache:
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew cleanup; fi
+  # Cache only .git files under "/usr/local/Homebrew" so "brew update" does not take 5min every build
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then find /usr/local/Homebrew \! -regex ".+\.git.+" -delete; fi
+
 cache:
     apt: true
     directories:
+    - $HOME/Library/Caches/Homebrew
     - $HOME/build/BlockSettle/3rd/release
     - $HOME/build/BlockSettle/3rd/release-shared
