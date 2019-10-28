@@ -9,8 +9,8 @@
 #include "ChatProtocol/ClientDBService.h"
 #include "ChatProtocol/CryptManager.h"
 
+#include "CommonTypes.h"
 #include "DataConnectionListener.h"
-#include "CelerClient.h"
 
 #include <disable_warnings.h>
 #include "ZMQ_BIP15X_DataConnection.h"

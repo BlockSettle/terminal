@@ -133,7 +133,7 @@ void ChatClientLogic::LoginToServer(const std::string& email, const CelerClient:
       loggerPtr_->error("[ChatClientLogic::LoginToServer] failed to open ZMQ data connection");
       connectionPtr_.reset();
       clientPartyModelPtr()->setOwnUserName({});
-      clientPartyModelPtr()->setOwnCelerUserType(CelerClient::Undefined);
+      clientPartyModelPtr()->setOwnCelerUserType(bs::network::UserType::Undefined);
 
       emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed);
       emit clientLoggedOutFromServer();

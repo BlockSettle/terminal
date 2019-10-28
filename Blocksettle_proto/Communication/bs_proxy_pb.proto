@@ -15,10 +15,23 @@ message Request
         bytes data = 2;
     }
 
+    // Message would be sent after receiving ClientConnected
+    message UserInfo
+    {
+        // Copied as-is from ClientConnected message
+        bytes client_id = 1;
+
+        string email = 2;
+
+        // bs::network::UserType as int
+        int32 user_type = 3;
+    }
+
     oneof data
     {
         // Messages
         Terminal terminal = 30;
+        UserInfo user_info = 31;
     }
 }
 
@@ -44,6 +57,9 @@ message Response
     message ClientConnected
     {
         string email = 1;
+
+        // If set then PB should send user info back
+        bytes client_id = 2;
     }
 
     message ClientDisconnected
