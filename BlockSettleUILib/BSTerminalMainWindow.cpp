@@ -1118,7 +1118,7 @@ void BSTerminalMainWindow::onLogin()
 
    int rc = loginDialog.exec();
 
-   if (rc != QDialog::Accepted) {
+   if (rc != QDialog::Accepted && !loginDialog.result()) {
       setWidgetsAuthorized(false);
       return;
    }
@@ -1153,8 +1153,8 @@ void BSTerminalMainWindow::onLogin()
    setWidgetsAuthorized(true);
 
    // We don't use password here, BsProxy will manage authentication
-   SPDLOG_LOGGER_DEBUG(logMgr_->logger(), "got celer login: {}", loginDialog.celerLogin());
-   celerConnection_->LoginToServer(bsClient_.get(), loginDialog.celerLogin(), loginDialog.email().toStdString());
+   SPDLOG_LOGGER_DEBUG(logMgr_->logger(), "got celer login: {}", loginDialog.result()->celerLogin);
+   celerConnection_->LoginToServer(bsClient_.get(), loginDialog.result()->celerLogin, loginDialog.email().toStdString());
 
    ui_->widgetWallets->setUsername(currentUserLogin_);
    action_logout_->setVisible(false);

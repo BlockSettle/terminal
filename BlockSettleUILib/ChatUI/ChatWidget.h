@@ -63,8 +63,6 @@ public:
       , const std::shared_ptr<BaseCelerClient> &celerClient
    );
 
-   std::string login(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb&);
-
    bs::network::otc::Peer *currentPeer() const;
 
 protected:
