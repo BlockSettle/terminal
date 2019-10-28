@@ -200,12 +200,7 @@ std::string bs::Address::fromRecipient(const std::shared_ptr<ScriptRecipient> &r
    }
 
    case 34:
-   {
-      BinaryData result;
-      result.append(AddressEntry::getPrefixByte(AddressEntryType_P2WSH));
-      result.append(brr_script.get_BinaryData(32));
-      return (char *)(BtcUtils::scrAddrToBase58(result)).getPtr();
-   }
+      return BtcUtils::scrAddrToSegWitAddress(brr_script.get_BinaryData(32)).toBinStr();
 
    default:    break;
    }
