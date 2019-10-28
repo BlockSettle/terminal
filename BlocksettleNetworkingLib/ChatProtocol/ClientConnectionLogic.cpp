@@ -150,7 +150,7 @@ void ClientConnectionLogic::handleWelcomeResponse(const WelcomeResponse& welcome
       return;
    }
 
-   clientPartyLogicPtr_->handlePartiesFromWelcomePacket(welcomeResponse);
+   clientPartyLogicPtr_->handlePartiesFromWelcomePacket(currentUserPtr(), welcomeResponse);
 }
 
 void ClientConnectionLogic::handleLogoutResponse(const LogoutResponse&)
@@ -207,7 +207,7 @@ void ClientConnectionLogic::prepareAndSendPublicMessage(const ClientPartyPtr& cl
    partyMessagePacket.set_party_message_state(partyMessageState);
    partyMessagePacket.set_sender_hash(currentUserPtr()->userName());
 
-   clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
+   clientDBServicePtr_->saveMessage(clientPartyPtr, ProtobufUtils::pbMessageToString(partyMessagePacket));
 
    emit sendPacket(partyMessagePacket);
 }
@@ -227,6 +227,11 @@ void ClientConnectionLogic::handlePartyMessagePacket(PartyMessagePacket& partyMe
       SPDLOG_LOGGER_ERROR(loggerPtr_, "can't find party with id: {}", partyMessagePacket.party_id());
       return;
    }
+
+   // TODO: think about better way to display messages with correct timestamp
+   // if remote pc have different time then we have timestamp mess in view
+   // for now we're updating timestamp to local one
+   partyMessagePacket.set_timestamp_ms(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
 
    // TODO: handle here state changes of the rest of message types
    if (clientPartyPtr->isPrivate())
@@ -294,9 +299,6 @@ void ClientConnectionLogic::incomingPrivatePartyMessage(PartyMessagePacket& part
 
 void ClientConnectionLogic::saveIncomingPartyMessageAndUpdateState(PartyMessagePacket& partyMessagePacket, const PartyMessageState& partyMessageState)
 {
-   //save message
-   clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
-
    ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
    PartyPtr partyPtr = clientPartyModelPtr->getPartyById(partyMessagePacket.party_id());
 
@@ -305,6 +307,9 @@ void ClientConnectionLogic::saveIncomingPartyMessageAndUpdateState(PartyMessageP
       emit error(ClientConnectionLogicError::CouldNotFindParty, partyMessagePacket.party_id(), true);
       return;
    }
+
+   //save message
+   clientDBServicePtr_->saveMessage(partyPtr, ProtobufUtils::pbMessageToString(partyMessagePacket));
 
    if (partyPtr->isGlobalStandard())
    {
@@ -539,7 +544,7 @@ void ClientConnectionLogic::prepareAndSendPrivateMessage(const ClientPartyPtr& c
    partyMessagePacket.set_sender_hash(currentUserPtr()->userName());
 
    // save in db
-   clientDBServicePtr_->saveMessage(ProtobufUtils::pbMessageToString(partyMessagePacket));
+   clientDBServicePtr_->saveMessage(clientPartyPtr, ProtobufUtils::pbMessageToString(partyMessagePacket));
 
    // call session key handler
    PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr()->userName());
@@ -696,7 +701,16 @@ void ClientConnectionLogic::handlePrivatePartyStateChanged(const PrivatePartySta
    if (PartyState::INITIALIZED == privatePartyStateChanged.party_state())
    {
       // if it's otc party, notify that is ready
-      emit clientPartyModelPtr->otcPrivatePartyReady(clientPartyPtr);
+      if (clientPartyPtr->isPrivateOTC())
+      {
+         emit clientPartyModelPtr->otcPrivatePartyReady(clientPartyPtr);
+      }
+
+      // for private standard parties read history messages
+      if (clientPartyPtr->isPrivateStandard())
+      {
+         clientDBServicePtr_->readHistoryMessages(clientPartyPtr->id(), clientPartyPtr->userHash(), 10);
+      }
    }
 
    // if it's otc party with rejected state, then delete party
