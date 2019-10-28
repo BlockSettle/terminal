@@ -20,7 +20,7 @@ protected:
    void paintPartyContainer(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
    void paintParty(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
 
-   void paintInitParty(Chat::ClientPartyPtr& clientPartyPtr, QPainter* painter,
+   void paintInitParty(PartyTreeItem* partyTreeItem, QPainter* painter,
       QStyleOptionViewItem& itemOption) const;
    void paintRequestParty(Chat::ClientPartyPtr& clientPartyPtr, QPainter* painter,
       QStyleOptionViewItem& itemOption) const;

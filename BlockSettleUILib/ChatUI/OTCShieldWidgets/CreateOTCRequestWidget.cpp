@@ -22,10 +22,7 @@ CreateOTCRequestWidget::~CreateOTCRequestWidget() = default;
 
 void CreateOTCRequestWidget::init(otc::Env env)
 {
-   for (int i = int(otc::firstRangeValue(env)); i <= int(otc::lastRangeValue(env)); ++i) {
-      ui_->comboBoxRange->addItem(QString::fromStdString(otc::toString(otc::RangeType(i))), i);
-   }
-
+   env_ = static_cast<int>(env);
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &CreateOTCRequestWidget::onBuyClicked);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &CreateOTCRequestWidget::onSellClicked);
    connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &CreateOTCRequestWidget::requestCreated);
@@ -70,12 +67,55 @@ void CreateOTCRequestWidget::onUpdateBalances()
       totalBalance = tr("%1 %2")
          .arg(UiUtils::displayCurrencyAmount(getAssetManager()->getBalance(buyProduct_.toStdString())))
          .arg(buyProduct_);
+      updateXBTRange(false);
    }
    else {
+      const auto totalXBTBalance = getWalletManager()->getTotalBalance();
+
       totalBalance = tr("%1 %2")
-         .arg(UiUtils::displayAmount(getWalletManager()->getTotalBalance()))
+         .arg(UiUtils::displayAmount(totalXBTBalance))
          .arg(QString::fromStdString(bs::network::XbtCurrency));
+
+      updateXBTRange(true, totalXBTBalance);
    }
 
    ui_->labelBalanceValue->setText(totalBalance);
+}
+
+void CreateOTCRequestWidget::updateXBTRange(bool isSell, BTCNumericTypes::balance_type xbtBalance /*= 0.0*/)
+{
+   otc::RangeType selectedRangeType = static_cast<otc::RangeType>(ui_->comboBoxRange->currentData().toInt());
+
+   ui_->comboBoxRange->clear();
+
+   auto env = static_cast<bs::network::otc::Env>(env_);
+   auto lowestRangeType = otc::firstRangeValue(env);
+   ui_->comboBoxRange->addItem(QString::fromStdString(otc::toString(lowestRangeType)), static_cast<int>(lowestRangeType));
+
+   otc::Range lowestRange = otc::getRange(lowestRangeType);
+
+   if (isSell && lowestRange.lower > xbtBalance) {
+      ui_->comboBoxRange->setDisabled(true);
+      return;
+   }
+
+   ui_->comboBoxRange->setEnabled(true);
+
+   int selectedIndex = 0;
+   for (int i = static_cast<int>(lowestRangeType) + 1;
+      i <= static_cast<int>(otc::lastRangeValue(env)); ++i) {
+
+      auto rangeType = otc::RangeType(i);
+      if (isSell && otc::getRange(rangeType).lower > xbtBalance) {
+         break;
+      }
+
+      ui_->comboBoxRange->addItem(QString::fromStdString(otc::toString(rangeType)), i);
+
+      if (rangeType == selectedRangeType) {
+         selectedIndex = static_cast<int>(rangeType) - static_cast<int>(lowestRangeType);
+      }
+   }
+
+   ui_->comboBoxRange->setCurrentIndex(selectedIndex);
 }
