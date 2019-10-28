@@ -60,6 +60,7 @@ public:
    DIALOG_KEY(DialogType)
    DIALOG_KEY(DurationLeft)
    DIALOG_KEY(DurationTotal)
+   DIALOG_KEY(DurationTimestamp)
    DIALOG_KEY(InputAmount)
    DIALOG_KEY(InputsListVisible)
    DIALOG_KEY(LotSize)

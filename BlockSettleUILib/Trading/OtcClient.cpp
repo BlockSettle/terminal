@@ -131,6 +131,11 @@ namespace {
       dialogData.setValue(PasswordDialogData::ResponderAuthAddress, deal.responderAuthAddress().display());
       dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, !deal.isRequestor());
 
+      // Set timestamp that will be used by auth eid server to update timers.
+      // TODO: Use time from PB and use it for all counters.
+      const int timestamp = static_cast<int>(std::chrono::system_clock::now().time_since_epoch() / std::chrono::seconds(1));
+      dialogData.setValue(PasswordDialogData::DurationTimestamp, timestamp);
+
       return dialogData;
    }
 

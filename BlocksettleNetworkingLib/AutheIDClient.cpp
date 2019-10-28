@@ -278,7 +278,7 @@ void AutheIDClient::createCreateRequest(const std::string &payload, int expirati
 }
 
 void AutheIDClient::getDeviceKey(RequestType requestType, const std::string &email
-   , const std::string &walletId, const std::vector<std::string> &knownDeviceIds, int expiration)
+   , const std::string &walletId, const std::vector<std::string> &knownDeviceIds, int expiration, int timestamp)
 {
    cancel();
 
@@ -293,6 +293,7 @@ void AutheIDClient::getDeviceKey(RequestType requestType, const std::string &ema
    request.mutable_device_key()->set_key_id(walletId);
    request.set_timeout_seconds(expiration);
    request.set_ra_pub_key(authKeys_.second.data(), authKeys_.second.size());
+   request.set_timestamp_created(timestamp);
 
    request.set_title(action.toStdString() + "\nWallet ID:" + walletId);
    request.set_email(email_);
