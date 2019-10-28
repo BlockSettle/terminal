@@ -173,8 +173,9 @@ CustomDialog {
     cFooterItem: RowLayout {
         CustomButtonBar {
             Layout.fillWidth: true
-            CustomButtonPrimary {
+            CustomButton {
                 id: btnCancel
+                primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 text: qsTr("Ok")

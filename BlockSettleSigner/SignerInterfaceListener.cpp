@@ -349,12 +349,10 @@ void SignerInterfaceListener::onAutoSignActivated(const std::string &data, bs::s
 
    bs::error::ErrorCode result = static_cast<bs::error::ErrorCode>(response.errorcode());
    if (result == bs::error::ErrorCode::NoError) {
-      if (response.autosignactive()) {
-         emit parent_->autoSignActivated(response.rootwalletid());
-      }
-      else {
-         emit parent_->autoSignDeactivated(response.rootwalletid());
-      }
+      emit parent_->autoSignActivated(response.rootwalletid());
+   }
+   else if (result == bs::error::ErrorCode::AutoSignDisabled) {
+      emit parent_->autoSignDeactivated(response.rootwalletid());
    }
 
    itCb->second(result);

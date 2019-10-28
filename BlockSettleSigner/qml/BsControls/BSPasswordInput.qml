@@ -193,8 +193,9 @@ CustomTitleDialogWindow {
                 }
             }
 
-            CustomButtonPrimary {
+            CustomButton {
                 id: btnAccept
+                primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.margins: 5

@@ -170,8 +170,9 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
                 }
             }
 
-            CustomButtonPrimary {
+            CustomButton {
                 id: btnContinue
+                primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 text: qsTr("Continue")
