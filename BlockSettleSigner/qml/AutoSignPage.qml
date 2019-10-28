@@ -14,7 +14,6 @@ import "js/helper.js" as JsHelper
 
 Item {
     id: root
-    property int currentIndex: 0
     property bool autoSignAllowed: false
 
     Connections {
@@ -54,28 +53,26 @@ Item {
                     text: qsTr("Wallet")
                 }
 
-                Loader {
-                    active: walletsProxy.loaded
-                    sourceComponent:
-                        CustomComboBox {
-                        width: 150
-                        height: 25
-                        enabled: !signerStatus.autoSignActive && !signerStatus.offline
-                        model: walletsProxy.walletNames
-                        currentIndex: walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
-                        onActivated: {
-                            root.currentIndex = currentIndex
-                            let walletId = walletsProxy.walletIdForIndex(currentIndex)
-                            signerSettings.autoSignWallet = walletId
+                CustomComboBox {
+                    id: cbWallets
+                    Layout.preferredWidth: 150
+                    height: 25
+                    enabled: !signerStatus.autoSignActive && !signerStatus.offline
+                    model: walletsProxy.walletNames
+                    onActivated: {
+                        let walletId = walletsProxy.walletIdForIndex(currentIndex)
+                        signerSettings.autoSignWallet = walletId
+                        autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(currentIndex))
+                    }
 
-                            autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(currentIndex))
+                    Connections {
+                        target: walletsProxy
+                        onWalletsChanged: {
+                            cbWallets.currentIndex = walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
+                            autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(cbWallets.currentIndex))
                         }
                     }
-                    onActiveChanged: {
-                        autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)))
-                    }
                 }
-
             }
 
 
