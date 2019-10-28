@@ -96,10 +96,12 @@ void CreateOTCRequestWidget::updateXBTRange(bool isSell, BTCNumericTypes::balanc
 
    if (isSell && lowestRange.lower > xbtBalance) {
       ui_->comboBoxRange->setDisabled(true);
+      ui_->pushButtonSubmit->setDisabled(true);
       return;
    }
 
    ui_->comboBoxRange->setEnabled(true);
+   ui_->pushButtonSubmit->setEnabled(true);
 
    int selectedIndex = 0;
    for (int i = static_cast<int>(lowestRangeType) + 1;

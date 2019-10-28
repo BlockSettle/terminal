@@ -5,7 +5,7 @@
 using namespace bs::network;
 
 namespace {
-   const int kTogglingIntervalMs = 250;
+   const auto kTogglingIntervalMs = std::chrono::milliseconds(250);
 }
 
 ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& chatClientServicePtr, OtcClient *otcClient, QObject* parent)
