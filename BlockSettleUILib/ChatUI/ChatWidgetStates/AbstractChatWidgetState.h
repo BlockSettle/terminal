@@ -49,7 +49,7 @@ protected:
    // slots
 public:
    void onSendMessage();
-   void onProcessMessageArrived(const Chat::MessagePtrList& messagePtr);
+   void onProcessMessageArrived(const Chat::MessagePtrList& messagePtrList);
    void onChangePartyStatus(const Chat::ClientPartyPtr& clientPartyPtr);
    void onResetPartyModel();
    void onMessageRead(const std::string& partyId, const std::string& messageId);

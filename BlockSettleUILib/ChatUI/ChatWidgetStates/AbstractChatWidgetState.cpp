@@ -37,26 +37,27 @@ void AbstractChatWidgetState::onSendMessage()
    chat_->ui_->input_textEdit->clear();
 }
 
-void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList& messagePtr)
+void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList& messagePtrList)
 {
    if (!canReceiveMessage()) {
       return;
    }
 
-   if (messagePtr.empty()) {
+   if (messagePtrList.empty()) {
       return;
    }
 
    // Update all UI elements
    int bNewMessagesCounter = 0;
-   const std::string& partyId = messagePtr[0]->partyId();
+   const std::string& partyId = messagePtrList[0]->partyId();
 
    Chat::ClientPartyPtr clientPartyPtr = getParty(partyId);
 
-   // Tab notifier
    bool isAtLeastOneOTC = false;
-   for (int iMessage = 0; iMessage < messagePtr.size(); ++iMessage) {
-      Chat::MessagePtr message = messagePtr[iMessage];
+
+   // Tab notifier
+   for (int iMessage = 0; iMessage < messagePtrList.size(); ++iMessage) {
+      Chat::MessagePtr message = messagePtrList[iMessage];
       if (static_cast<Chat::PartyMessageState>(message->partyMessageState()) == Chat::PartyMessageState::SENT &&
          chat_->ownUserId_ != message->senderHash()) {
          ++bNewMessagesCounter;
@@ -82,10 +83,10 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
       }
    }
 
-   chat_->ui_->textEditMessages->onMessageUpdate(messagePtr);
+   chat_->ui_->textEditMessages->onMessageUpdate(messagePtrList);
 
    if (canPerformOTCOperations()) {
-      chat_->otcHelper_->onMessageArrived(messagePtr);
+      chat_->otcHelper_->onMessageArrived(messagePtrList);
    }
 
    // Update tree

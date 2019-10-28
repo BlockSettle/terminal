@@ -11,6 +11,7 @@
 #include "ChatProtocol/PartyRecipient.h"
 #include "ChatProtocol/SessionKeyHolder.h"
 #include "ChatProtocol/UserPublicKeyInfo.h"
+#include "ChatProtocol/Party.h"
 
 class QSqlDatabase;
 class ApplicationSettings;
@@ -34,9 +35,11 @@ namespace Chat
       CannotOpenDatabase,
       InsertRecipientKey,
       DeleteRecipientKey,
-      UpdateRecipientKey,
       CheckRecipientKey,
-      CleanUnusedParties
+      CleanUnusedParties,
+      CleanUnusedPartyToUser,
+      InsertPartyToUser,
+      InsertUser
    };
 
    class ClientDBLogic : public DatabaseExecutor
@@ -50,19 +53,20 @@ namespace Chat
       void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::ChatUserPtr& chatUserPtr,
          const Chat::CryptManagerPtr& cryptManagerPtr);
       void updateMessageState(const std::string& message_id, const int party_message_state);
-      void saveMessage(const std::string& data);
-      void createNewParty(const std::string& partyId);
+      void saveMessage(const Chat::PartyPtr& partyPtr, const std::string& data);
+      void createNewParty(const Chat::PartyPtr& partyPtr);
       void readUnsentMessages(const std::string& partyId);
       void deleteMessage(const std::string& messageId);
       void updateDisplayNameForParty(const std::string& partyId, const std::string& displayName);
       void loadPartyDisplayName(const std::string& partyId);
       void checkUnsentMessages(const std::string& partyId);
-      void readHistoryMessages(const std::string& partyId, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
+      void readHistoryMessages(const std::string& partyId, const std::string& userHash, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
       void saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);
       void checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniqueRecipientMap);
       void clearUnusedParties();
+      void savePartyRecipients(const Chat::PartyPtr& partyPtr);
 
    signals:
       void initDone();
@@ -82,8 +86,11 @@ namespace Chat
 
    private:
       bool getPartyIdByMessageId(const std::string& messageId, std::string& partyId);
-      bool getPartyIdFromDB(const std::string& partyId, std::string& partyTableId);
-      bool insertPartyId(const std::string& partyId, std::string& partyTableId);
+      bool getPartyTableIdFromDB(const Chat::PartyPtr& partyPtr, std::string& partyTableId);
+      bool insertPartyId(const Chat::PartyPtr& partyPtr, std::string& partyTableId);
+      bool getUserTableId(const std::string& userHash, std::string& userTableId);
+      void saveRecipientKey(const Chat::PartyRecipientPtr& recipient);
+      void insertNewUserHash(const std::string& userHash);
       QSqlDatabase getDb();
 
       ApplicationSettingsPtr     applicationSettingsPtr_;
