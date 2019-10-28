@@ -31,30 +31,27 @@ Item {
         ColumnLayout {
             width: parent.parent.width
 
-            GridLayout {
-                columns: 2
+            CustomHeader {
+                Layout.columnSpan: 2
+                text: qsTr("Controls")
+                enabled: !signerStatus.offline
+                height: 25
                 Layout.fillWidth: true
+                Layout.preferredHeight: 25
                 Layout.topMargin: 5
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
+            }
 
-                CustomHeader {
-                    Layout.columnSpan: 2
-                    text: qsTr("Controls")
-                    enabled: !signerStatus.offline
-                    height: 25
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                Layout.preferredHeight: 25
+                enabled: !signerStatus.offline
+                CustomLabel {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 25
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 25
-                    enabled: !signerStatus.offline
-                    CustomLabel {
-                        Layout.fillWidth: true
-                        text: qsTr("Wallet")
-                    }
+                    text: qsTr("Wallet")
                 }
 
                 Loader {
@@ -79,15 +76,19 @@ Item {
                     }
                 }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 25
+            }
 
-                    CustomLabel {
-                        Layout.fillWidth: true
-                        enabled: !signerStatus.offline
-                        text: qsTr("Auto-Sign")
-                    }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomLabel {
+                    Layout.fillWidth: true
+                    enabled: !signerStatus.offline
+                    text: qsTr("Auto-Sign")
                 }
 
                 CustomSwitch {
@@ -105,6 +106,7 @@ Item {
                     }
                 }
             }
+
 
             SettingsGrid {
                 id: gridLimits
