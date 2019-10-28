@@ -53,6 +53,8 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
 
    Chat::ClientPartyPtr clientPartyPtr = getParty(partyId);
 
+   bool isAtLeastOneOTC = false;
+
    // Tab notifier
    for (int iMessage = 0; iMessage < messagePtrList.size(); ++iMessage) {
       Chat::MessagePtr message = messagePtrList[iMessage];
@@ -63,18 +65,21 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
          const auto messageTitle = clientPartyPtr->displayName();
          auto messageText = message->messageText();
          const auto otcText = OtcUtils::toReadableString(QString::fromStdString(messageText));
+         const bool isOtc = !otcText.isEmpty();
 
-         if (otcText.isEmpty() && messageText.length() > kMaxMessageNotifLength) {
+         if (!isOtc && messageText.length() > kMaxMessageNotifLength) {
             messageText = messageText.substr(0, kMaxMessageNotifLength) + "...";
          }
 
          bs::ui::NotifyMessage notifyMsg;
          notifyMsg.append(QString::fromStdString(messageTitle));
-         notifyMsg.append(otcText.isEmpty() ? QString::fromStdString(messageText) : otcText);
+         notifyMsg.append(isOtc ? otcText : QString::fromStdString(messageText));
          notifyMsg.append(QString::fromStdString(partyId));
-         notifyMsg.append(!otcText.isEmpty() && (partyId != chat_->currentPartyId_));
+         notifyMsg.append(isOtc && (partyId != chat_->currentPartyId_));
 
          NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
+
+         isAtLeastOneOTC |= isOtc;
       }
    }
 
@@ -86,7 +91,7 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
 
    // Update tree
    if (bNewMessagesCounter > 0 && partyId != chat_->currentPartyId_) {
-      chat_->chatPartiesTreeModel_->onIncreaseUnseenCounter(partyId, bNewMessagesCounter);
+      chat_->chatPartiesTreeModel_->onIncreaseUnseenCounter(partyId, bNewMessagesCounter, isAtLeastOneOTC);
    }
 
 }

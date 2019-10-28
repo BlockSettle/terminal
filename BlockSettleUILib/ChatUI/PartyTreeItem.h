@@ -25,6 +25,12 @@ namespace UI {
    };
 }
 
+struct ReusableItemData
+{
+   int unseenCount_{};
+   bool otcTogglingMode_{};
+};
+
 class PartyTreeItem
 {
 public:
@@ -51,6 +57,15 @@ public:
    bool hasNewMessages() const;
    int unseenCount() const;
 
+   void enableOTCToggling(bool otcToggling);
+   bool isOTCTogglingMode() const;
+
+   void changeOTCToggleState();
+   bool activeOTCToggleState() const;
+
+   void applyReusableData(const ReusableItemData& data);
+   ReusableItemData generateReusableData() const;
+
    bs::network::otc::PeerType peerType{};
 
 private:
@@ -58,6 +73,10 @@ private:
    QVariant itemData_;
    PartyTreeItem* parentItem_;
    UI::ElementType modelType_;
-   int unseenCounter_ = 0;
+   int unseenCounter_{};
+
+   // OTC toggling
+   bool otcTogglingMode_{};
+   bool currentOTCToggleState_{};
 };
 #endif // PARTYTREEITEM_H

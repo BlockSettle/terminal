@@ -35,9 +35,12 @@ private slots:
    void onNumCcySelected();
 
 private:
+   void updateXBTRange(bool isSell, BTCNumericTypes::balance_type xbtBalance = 0.0);
+
    std::unique_ptr<Ui::CreateOTCRequestWidget> ui_;
 
    QString buyProduct_{ QLatin1String("EUR") };
+   int env_{};
 };
 
 #endif // __CREATE_OTC_REQUEST_WIDGET_H__

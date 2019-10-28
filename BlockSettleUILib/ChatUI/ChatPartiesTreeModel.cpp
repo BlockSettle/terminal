@@ -4,12 +4,20 @@
 
 using namespace bs::network;
 
+namespace {
+   const int kTogglingIntervalMs = 250;
+}
+
 ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& chatClientServicePtr, OtcClient *otcClient, QObject* parent)
    : QAbstractItemModel(parent)
    , chatClientServicePtr_(chatClientServicePtr)
    , otcClient_(otcClient)
 {
    rootItem_ = new PartyTreeItem({}, UI::ElementType::Root);
+
+   otcWatchToggling_.setInterval(kTogglingIntervalMs);
+   connect(&otcWatchToggling_, &QTimer::timeout, this, &ChatPartiesTreeModel::onUpdateOTCAwaitingColor);
+   otcWatchToggling_.start();
 }
 
 ChatPartiesTreeModel::~ChatPartiesTreeModel() = default;
@@ -19,18 +27,12 @@ void ChatPartiesTreeModel::onPartyModelChanged()
    Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
    
    // Save unseen state first
-   QMap<std::string, int> unseenCounts;
-   forAllPartiesInModel([&](const PartyTreeItem* party) {
-      const Chat::ClientPartyPtr clientPtr = party->data().value<Chat::ClientPartyPtr>();
-
-      if (party->unseenCount() != 0) {
-         unseenCounts.insert(clientPtr->id(), party->unseenCount());
-      }     
-   });
+   const auto reusableItemData = collectReusableData(rootItem_);
 
    beginResetModel();
 
    rootItem_->removeAll();
+   otcWatchIndx_.clear();
 
    std::unique_ptr<PartyTreeItem> globalSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabGlobal, UI::ElementType::Container, rootItem_);
    std::unique_ptr<PartyTreeItem> otcGlobalSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabOTCIdentifier, UI::ElementType::Container, rootItem_);
@@ -48,6 +50,7 @@ void ChatPartiesTreeModel::onPartyModelChanged()
 
    for (const auto& id : idPartyList) {
       Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(id);
+      assert(clientPartyPtr);
 
       QVariant stored;
       stored.setValue(clientPartyPtr);
@@ -67,9 +70,9 @@ void ChatPartiesTreeModel::onPartyModelChanged()
          PartyTreeItem* newChild = insertChild(parentSection, stored);
 
          assert(newChild);
-         auto it = unseenCounts.find(clientPartyPtr->id());
-         if (it != unseenCounts.end()) {
-            newChild->increaseUnseenCounter(it.value());
+         auto it = reusableItemData.find(clientPartyPtr->id());
+         if (it != reusableItemData.end()) {
+            newChild->applyReusableData(it.value());
          }
       }
    }
@@ -82,10 +85,14 @@ void ChatPartiesTreeModel::onPartyModelChanged()
    endResetModel();
    emit restoreSelectedIndex();
 
-   onGlobalOTCChanged();
+   if (!reusableItemData.isEmpty()) {
+      resetOTCUnseen({});
+   }
+
+   onGlobalOTCChanged(reusableItemData);
 }
 
-void ChatPartiesTreeModel::onGlobalOTCChanged()
+void ChatPartiesTreeModel::onGlobalOTCChanged(QMap<std::string, ReusableItemData> reusableItemData /* = {} */)
 {
    QModelIndex otcGlobalModelIndex = getOTCGlobalRoot();
    if (!otcGlobalModelIndex.isValid()) {
@@ -93,14 +100,18 @@ void ChatPartiesTreeModel::onGlobalOTCChanged()
    }
 
    PartyTreeItem* otcParty = static_cast<PartyTreeItem*>(otcGlobalModelIndex.internalPointer());
+   if (reusableItemData.isEmpty()) {
+      reusableItemData = collectReusableData(otcParty);
+   }
 
+   resetOTCUnseen(otcGlobalModelIndex, false, false);
    if (otcParty->childCount() > 0) {
       beginRemoveRows(otcGlobalModelIndex, 0, otcParty->childCount() - 1);
       otcParty->removeAll();
       endRemoveRows();
    }
 
-   auto fAddOtcParty = [this](const bs::network::otc::Peer* peer, std::unique_ptr<PartyTreeItem>& section, otc::PeerType peerType) {
+   auto fAddOtcParty = [this, &reusableItemData](const bs::network::otc::Peer* peer, std::unique_ptr<PartyTreeItem>& section, otc::PeerType peerType) {
       Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
       Chat::ClientPartyPtr otcPartyPtr = clientPartyModelPtr->getOtcPartyForUsers(currentUser(), peer->contactId);
       if (!otcPartyPtr) {
@@ -111,6 +122,12 @@ void ChatPartiesTreeModel::onGlobalOTCChanged()
 
       std::unique_ptr<PartyTreeItem> otcItem = std::make_unique<PartyTreeItem>(stored, UI::ElementType::Party, section.get());
       otcItem->peerType = peerType;
+
+      auto it = reusableItemData.find(otcPartyPtr->id());
+      if (it != reusableItemData.end()) {
+         otcItem->applyReusableData(it.value());
+      }
+
       section->insertChildren(std::move(otcItem));
    };
 
@@ -134,6 +151,9 @@ void ChatPartiesTreeModel::onGlobalOTCChanged()
 
    endInsertRows();
    emit restoreSelectedIndex();
+   if (!reusableItemData.isEmpty()) {
+      resetOTCUnseen(otcGlobalModelIndex, true, false);
+   }
 }
 
 void ChatPartiesTreeModel::onCleanModel()
@@ -152,7 +172,7 @@ void ChatPartiesTreeModel::onPartyStatusChanged(const Chat::ClientPartyPtr& clie
    }
 }
 
-void ChatPartiesTreeModel::onIncreaseUnseenCounter(const std::string& partyId, int newMessageCount)
+void ChatPartiesTreeModel::onIncreaseUnseenCounter(const std::string& partyId, int newMessageCount, bool isUnseenOTCMessage /* = false */)
 {
    const QModelIndex partyIndex = getPartyIndexById(partyId);
    if (!partyIndex.isValid()) {
@@ -162,6 +182,10 @@ void ChatPartiesTreeModel::onIncreaseUnseenCounter(const std::string& partyId, i
    PartyTreeItem* partyItem = static_cast<PartyTreeItem*>(partyIndex.internalPointer());
    partyItem->increaseUnseenCounter(newMessageCount);
 
+   if (isUnseenOTCMessage) {
+      otcWatchIndx_.insert({ partyIndex });
+      partyItem->enableOTCToggling(isUnseenOTCMessage);
+   }
 }
 
 void ChatPartiesTreeModel::onDecreaseUnseenCounter(const std::string& partyId, int seenMessageCount)
@@ -173,6 +197,28 @@ void ChatPartiesTreeModel::onDecreaseUnseenCounter(const std::string& partyId, i
 
    PartyTreeItem* partyItem = static_cast<PartyTreeItem*>(partyIndex.internalPointer());
    partyItem->decreaseUnseenCounter(seenMessageCount);
+   
+
+   if (partyItem->isOTCTogglingMode()) {
+      partyItem->enableOTCToggling(false);
+      otcWatchIndx_.remove({ partyIndex });
+   }
+}
+
+void ChatPartiesTreeModel::onUpdateOTCAwaitingColor()
+{
+   if (otcWatchIndx_.isEmpty()) {
+      return;
+   }
+
+   for (const auto& index : otcWatchIndx_) {
+      if (index.isValid()) {
+         PartyTreeItem* partyItem = static_cast<PartyTreeItem*>(index.internalPointer());
+         partyItem->changeOTCToggleState();
+
+         emit dataChanged(index, index, { Qt::DecorationRole });
+      }      
+   }
 }
 
 const QModelIndex ChatPartiesTreeModel::getPartyIndexById(const std::string& partyId, const QModelIndex parent) const
@@ -241,23 +287,99 @@ PartyTreeItem* ChatPartiesTreeModel::getItem(const QModelIndex& index) const
    return rootItem_;
 }
 
-void ChatPartiesTreeModel::forAllPartiesInModel(std::function<void(const PartyTreeItem*)> applyFunc) const
+void ChatPartiesTreeModel::forAllPartiesInModel(PartyTreeItem* parent,
+   std::function<void(const PartyTreeItem*)>&& applyFunc) const
 {
    QList<PartyTreeItem*> itemsToCheck;
-   itemsToCheck.push_back(rootItem_);
+   itemsToCheck.push_back(parent ? parent : rootItem_);
 
    while (!itemsToCheck.isEmpty()) {
       PartyTreeItem* item = itemsToCheck[0];
       itemsToCheck.pop_front();
 
-      if (item->modelType() == UI::ElementType::Party) {
-         applyFunc(item);
-      }
+      applyFunc(item);
 
       for (int i = 0; i < item->childCount(); ++i) {
          itemsToCheck.push_back(item->child(i));
       }
    }
+}
+
+void ChatPartiesTreeModel::forAllIndexesInModel(const QModelIndex& parentIndex,
+   std::function<void(const QModelIndex&)>&& applyFunc) const
+{
+   PartyTreeItem* item = nullptr;
+   if (!parentIndex.isValid()) {
+      item = rootItem_;
+   }
+   else {
+      item = static_cast<PartyTreeItem*>(parentIndex.internalPointer());
+   }
+
+   QList<QModelIndex> itemsToCheck;
+   if (parentIndex.isValid()) {
+      itemsToCheck.push_back(parentIndex);
+   }
+   else { // root item
+      for (int i = 0; i < rootItem_->childCount(); ++i) {
+         itemsToCheck.push_back(index(i, 0));
+      }
+   }
+
+   while (!itemsToCheck.isEmpty()) {
+      QModelIndex itemIndex = std::move(itemsToCheck[0]);
+      itemsToCheck.pop_front();
+
+      applyFunc(itemIndex);
+
+      item = static_cast<PartyTreeItem*>(itemIndex.internalPointer());
+      for (int i = 0; i < item->childCount(); ++i) {
+         itemsToCheck.push_back(index(i, 0, itemIndex));
+      }
+   }
+}
+
+QMap<std::string, ReusableItemData> ChatPartiesTreeModel::collectReusableData(PartyTreeItem* parent)
+{
+   QMap<std::string, ReusableItemData> reusableData;
+   forAllPartiesInModel(parent, [&](const PartyTreeItem* party) {
+      if (party->modelType() != UI::ElementType::Party) {
+         return;
+      }
+
+      const Chat::ClientPartyPtr clientPtr = party->data().value<Chat::ClientPartyPtr>();
+
+      if (party->unseenCount() != 0) {
+         reusableData.insert(clientPtr->id(), party->generateReusableData());
+      }
+   });
+
+   return reusableData;
+}
+
+void ChatPartiesTreeModel::resetOTCUnseen(const QModelIndex& parentIndex,
+   bool isAddChildren /*= true*/, bool isClearAll /*= true*/)
+{
+   if (isClearAll) {
+      otcWatchIndx_.clear();
+   }
+
+   forAllIndexesInModel(parentIndex, [&](const QModelIndex& index) {
+      PartyTreeItem* item = static_cast<PartyTreeItem*>(index.internalPointer());
+      if (item->modelType() != UI::ElementType::Party) {
+         return;
+      }
+
+      if (item->isOTCTogglingMode()) {
+         if (isAddChildren) {
+            otcWatchIndx_.insert({ index });
+         }
+         else {
+            otcWatchIndx_.remove({ index });
+         }
+         
+      }
+   });
 }
 
 QModelIndex ChatPartiesTreeModel::getOTCGlobalRoot() const

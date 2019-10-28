@@ -2,6 +2,7 @@
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ui_CreateOTCResponseWidget.h"
+#include "AssetManager.h"
 
 using namespace bs::network;
 
@@ -63,6 +64,8 @@ void CreateOTCResponseWidget::onUpdateBalances()
       .arg(QString::fromStdString(bs::network::XbtCurrency));
 
    ui_->labelBalanceValue->setText(totalBalance);
+
+   updateAcceptButton();
 }
 
 void CreateOTCResponseWidget::onMDUpdated()
@@ -73,6 +76,28 @@ void CreateOTCResponseWidget::onMDUpdated()
 void CreateOTCResponseWidget::updateAcceptButton()
 {
    // We cannot offer zero as price
-   const bool isEnabled = ui_->widgetAmountRange->GetUpperValue() != 0 && ui_->widgetPriceRange->GetUpperValue() != 0;
+   bool isEnabled = ui_->widgetAmountRange->GetUpperValue() != 0 && ui_->widgetPriceRange->GetUpperValue() != 0;
+
+   const auto totalXBTBalance = getWalletManager()->getTotalBalance();
+   const auto totalEurBalance = getAssetManager()->getBalance(buyProduct_.toStdString());
+
+   switch (ourSide_)
+   {
+   case bs::network::otc::Side::Buy: {
+      if (ui_->widgetPriceRange->GetLowerValue() * ui_->widgetAmountRange->GetLowerValue() > totalEurBalance) {
+         isEnabled = false;
+      }
+   }
+      break;
+   case bs::network::otc::Side::Sell: {
+      if (ui_->widgetAmountRange->GetLowerValue() > totalXBTBalance) {
+         isEnabled = false;
+      }
+   }
+      break;
+   default:
+      break;
+   }
+
    ui_->pushButtonSubmit->setEnabled(isEnabled);
 }
