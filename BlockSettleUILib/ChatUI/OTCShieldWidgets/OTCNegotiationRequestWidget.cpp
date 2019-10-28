@@ -101,14 +101,14 @@ void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
          toggleSideButtons(/*isSell*/ true);
          break;
       }
-
-      case otc::PeerType::Request:
-         toggleSideButtons(peer.request.ourSide == otc::Side::Sell);
-         ui_->labelQuantityValue->setText(QString::fromStdString(otc::toString(peer.request.rangeType)));
-         const auto range = otc::getRange(peer.request.rangeType);
-         ui_->quantitySpinBox->setMinimum(range.lower);
-         ui_->quantitySpinBox->setMaximum(range.upper);
-         break;
+      case otc::PeerType::Request: {
+            toggleSideButtons(peer.request.ourSide == otc::Side::Sell);
+            ui_->labelQuantityValue->setText(QString::fromStdString(otc::toString(peer.request.rangeType)));
+            const auto range = otc::getRange(peer.request.rangeType);
+            ui_->quantitySpinBox->setMinimum(range.lower);
+            ui_->quantitySpinBox->setMaximum(range.upper);
+            break;
+      }
       case otc::PeerType::Response: {
          // For public OTC side is fixed, use it from original request details
          toggleSideButtons(peer.response.ourSide == otc::Side::Sell);
