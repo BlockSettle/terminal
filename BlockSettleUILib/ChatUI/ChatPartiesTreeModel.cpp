@@ -15,7 +15,7 @@ ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& cha
 {
    rootItem_ = new PartyTreeItem({}, UI::ElementType::Root);
 
-   otcWatchToggling_.setInterval(kTogglingIntervalMs.count());
+   otcWatchToggling_.setInterval(kTogglingIntervalMs);
    connect(&otcWatchToggling_, &QTimer::timeout, this, &ChatPartiesTreeModel::onUpdateOTCAwaitingColor);
    otcWatchToggling_.start();
 }
