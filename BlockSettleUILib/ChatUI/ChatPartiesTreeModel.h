@@ -51,7 +51,7 @@ private:
    OtcClient* otcClient_{};
 
    QSet<QPersistentModelIndex> otcWatchIndx_;
-   QTimer otcWatchToogling_;
+   QTimer otcWatchToggling_;
 };
 
 using ChatPartiesTreeModelPtr = std::shared_ptr<ChatPartiesTreeModel>;

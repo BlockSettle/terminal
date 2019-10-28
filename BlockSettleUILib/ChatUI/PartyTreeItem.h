@@ -28,7 +28,7 @@ namespace UI {
 struct ReusableItemData
 {
    int unseenCount_{};
-   bool otcTooglingMode_{};
+   bool otcTogglingMode_{};
 };
 
 class PartyTreeItem
@@ -57,11 +57,11 @@ public:
    bool hasNewMessages() const;
    int unseenCount() const;
 
-   void enableOTCToggling(bool otcToogling);
-   bool isOTCTooglingMode() const;
+   void enableOTCToggling(bool otcToggling);
+   bool isOTCTogglingMode() const;
 
-   void changeOTCToogleState();
-   bool activeOTCToogleState() const;
+   void changeOTCToggleState();
+   bool activeOTCToggleState() const;
 
    void applyReusableData(const ReusableItemData& data);
    ReusableItemData generateReusableData() const;
@@ -75,8 +75,8 @@ private:
    UI::ElementType modelType_;
    int unseenCounter_{};
 
-   // OTC toogling
-   bool otcTooglingMode_{};
-   bool currentOTCToogleState_{};
+   // OTC toggling
+   bool otcTogglingMode_{};
+   bool currentOTCToggleState_{};
 };
 #endif // PARTYTREEITEM_H

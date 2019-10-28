@@ -97,33 +97,33 @@ int PartyTreeItem::unseenCount() const
    return unseenCounter_;
 }
 
-void PartyTreeItem::enableOTCToggling(bool otcToogling)
+void PartyTreeItem::enableOTCToggling(bool otcToggling)
 {
-   otcTooglingMode_ = otcToogling;
+   otcTogglingMode_ = otcToggling;
 }
 
-bool PartyTreeItem::isOTCTooglingMode() const
+bool PartyTreeItem::isOTCTogglingMode() const
 {
-   return otcTooglingMode_;
+   return otcTogglingMode_;
 }
 
-void PartyTreeItem::changeOTCToogleState()
+void PartyTreeItem::changeOTCToggleState()
 {
-   currentOTCToogleState_ = !currentOTCToogleState_;
+   currentOTCToggleState_ = !currentOTCToggleState_;
 }
 
-bool PartyTreeItem::activeOTCToogleState() const
+bool PartyTreeItem::activeOTCToggleState() const
 {
-   return currentOTCToogleState_;
+   return currentOTCToggleState_;
 }
 
 void PartyTreeItem::applyReusableData(const ReusableItemData& data)
 {
    unseenCounter_ = data.unseenCount_;
-   otcTooglingMode_ = data.otcTooglingMode_;
+   otcTogglingMode_ = data.otcTogglingMode_;
 }
 
 ReusableItemData PartyTreeItem::generateReusableData() const
 {
-   return { unseenCounter_ , otcTooglingMode_ };
+   return { unseenCounter_ , otcTogglingMode_ };
 }

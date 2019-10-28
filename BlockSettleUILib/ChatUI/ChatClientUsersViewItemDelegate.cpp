@@ -104,7 +104,7 @@ void ChatClientUsersViewItemDelegate::paintInitParty(PartyTreeItem* partyTreeIte
       case Chat::ClientStatus::ONLINE:
       {
          QColor palleteColor = itemStyle_.colorContactOnline();
-         if (partyTreeItem->isOTCTooglingMode() && !partyTreeItem->activeOTCToogleState()) {
+         if (partyTreeItem->isOTCTogglingMode() && !partyTreeItem->activeOTCToggleState()) {
             palleteColor = itemStyle_.colorContactOffline();
          }
 

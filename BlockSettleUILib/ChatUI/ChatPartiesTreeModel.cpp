@@ -5,7 +5,7 @@
 using namespace bs::network;
 
 namespace {
-   const int kTooglingIntervalMs = 250;
+   const int kTogglingIntervalMs = 250;
 }
 
 ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& chatClientServicePtr, OtcClient *otcClient, QObject* parent)
@@ -15,9 +15,9 @@ ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& cha
 {
    rootItem_ = new PartyTreeItem({}, UI::ElementType::Root);
 
-   otcWatchToogling_.setInterval(kTooglingIntervalMs);
-   connect(&otcWatchToogling_, &QTimer::timeout, this, &ChatPartiesTreeModel::onUpdateOTCAwaitingColor);
-   otcWatchToogling_.start();
+   otcWatchToggling_.setInterval(kTogglingIntervalMs);
+   connect(&otcWatchToggling_, &QTimer::timeout, this, &ChatPartiesTreeModel::onUpdateOTCAwaitingColor);
+   otcWatchToggling_.start();
 }
 
 ChatPartiesTreeModel::~ChatPartiesTreeModel() = default;
@@ -199,7 +199,7 @@ void ChatPartiesTreeModel::onDecreaseUnseenCounter(const std::string& partyId, i
    partyItem->decreaseUnseenCounter(seenMessageCount);
    
 
-   if (partyItem->isOTCTooglingMode()) {
+   if (partyItem->isOTCTogglingMode()) {
       partyItem->enableOTCToggling(false);
       otcWatchIndx_.remove({ partyIndex });
    }
@@ -214,7 +214,7 @@ void ChatPartiesTreeModel::onUpdateOTCAwaitingColor()
    for (const auto& index : otcWatchIndx_) {
       if (index.isValid()) {
          PartyTreeItem* partyItem = static_cast<PartyTreeItem*>(index.internalPointer());
-         partyItem->changeOTCToogleState();
+         partyItem->changeOTCToggleState();
 
          emit dataChanged(index, index, { Qt::DecorationRole });
       }      
@@ -370,7 +370,7 @@ void ChatPartiesTreeModel::resetOTCUnseen(const QModelIndex& parentIndex,
          return;
       }
 
-      if (item->isOTCTooglingMode()) {
+      if (item->isOTCTogglingMode()) {
          if (isAddChildren) {
             otcWatchIndx_.insert({ index });
          }
