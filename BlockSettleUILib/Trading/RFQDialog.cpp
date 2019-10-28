@@ -6,8 +6,10 @@
 #include "AssetManager.h"
 #include "BSMessageBox.h"
 #include "QuoteProvider.h"
+#include "RFQRequestWidget.h"
 #include "ReqCCSettlementContainer.h"
 #include "ReqXBTSettlementContainer.h"
+#include "RfqStorage.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
@@ -24,10 +26,11 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const std::shared_ptr<RfqStorage> &rfqStorage
    , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
    , const bs::Address &recvXbtAddr
    , const bs::Address &authAddr
-   , QWidget* parent)
+   , RFQRequestWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
    , logger_(logger)
@@ -43,8 +46,10 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , celerClient_(celerClient)
    , appSettings_(appSettings)
    , connectionManager_(connectionManager)
+   , rfqStorage_(rfqStorage)
    , xbtWallet_(xbtWallet)
    , authAddr_(authAddr)
+   , requestWidget_(parent)
 {
    ui_->setupUi(this);
 
@@ -100,7 +105,9 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
       } else {
          curContainer_ = newCCcontainer();
       }
-      curContainer_->activate();
+      if (curContainer_) {
+         rfqStorage_->addSettlementContainer(curContainer_);
+      }
    }
 }
 
@@ -135,12 +142,13 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::error
          , this, &RFQDialog::reportError);
 
+      // Use requestWidget_ as RFQDialog could be already destroyed before this moment
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendUnsignedPayinToPB
-         , this, &RFQDialog::sendUnsignedPayinToPB);
+         , requestWidget_, &RFQRequestWidget::sendUnsignedPayinToPB);
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayinToPB
-         , this, &RFQDialog::sendSignedPayinToPB);
+         , requestWidget_, &RFQRequestWidget::sendSignedPayinToPB);
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayoutToPB
-         , this, &RFQDialog::sendSignedPayoutToPB);
+         , requestWidget_, &RFQRequestWidget::sendSignedPayoutToPB);
    }
    catch (const std::exception &e) {
       reportError(tr("Failed to create XBT settlement container: %1")
@@ -270,8 +278,7 @@ void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const B
    }
 
    if (signContainer_->opMode() != SignContainer::OpMode::Remote) {
-      // FIXME: this destroys RFQDialog and cause failed request
-      //hide();
+      hide();
    }
 
    xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash);
@@ -284,8 +291,7 @@ void RFQDialog::onSignedPayinRequested(const std::string& settlementId, const Bi
    }
 
    if (signContainer_->opMode() != SignContainer::OpMode::Remote) {
-      // FIXME: this destroys RFQDialog and cause failed request
-      //hide();
+      hide();
    }
 
    xbtSettlContainer_->onSignedPayinRequested(settlementId, unsignedPayin);

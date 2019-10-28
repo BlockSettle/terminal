@@ -32,7 +32,8 @@ public:
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const bs::network::RFQ &, const bs::network::Quote &
+      , const bs::network::RFQ &
+      , const bs::network::Quote &
       , const std::shared_ptr<TransactionData> &);
    ~ReqCCSettlementContainer() override;
 

@@ -266,6 +266,9 @@ bool ReqCCSettlementContainer::startSigning()
          logger->warn("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
          emit error(tr("own TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
       }
+
+      // Call completed to remove from RfqStorage and cleanup memory
+      emit completed();
    };
 
    ccSignId_ = signingContainer_->signSettlementPartialTXRequest(ccTxData_, toPasswordDialogData(), cbTx);

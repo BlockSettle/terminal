@@ -133,13 +133,11 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() c
 
    // rfq details
    QString qtyProd = UiUtils::XbtCurrency;
-   QString fxProd = QString::fromStdString(fxProduct());
+   QString fxProd = QString::fromStdString(fxProd_);
 
    dialogData.setValue(PasswordDialogData::Title, tr("Settlement Pay-In"));
    dialogData.setValue(PasswordDialogData::Price, UiUtils::displayPriceXBT(price()));
    dialogData.setValue(PasswordDialogData::FxProduct, fxProd);
-
-
 
    bool isFxProd = (quote_.product != bs::network::XbtCurrency);
 
@@ -192,6 +190,9 @@ void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage)
 {
    emit error(errorMessage);
    cancel();
+
+   // Call failed to remove from RfqStorage and cleanup memory
+   emit failed();
 }
 
 void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
@@ -229,6 +230,9 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       // OK. if payout created - settletlement accepted for this RFQ
       deactivate();
       emit settlementAccepted();
+
+      // Call completed to remove from RfqStorage and cleanup memory
+      emit completed();
    }
 
    if ((payinSignId_ != 0) && (payinSignId_ == id)) {
@@ -249,6 +253,8 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       deactivate();
       emit settlementAccepted();
 
+      // Call completed to remove from RfqStorage and cleanup memory
+      emit completed();
    }
 }
 
@@ -322,6 +328,8 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
       return;
    }
 
+   startTimer(kWaitTimeoutInSec);
+
    SPDLOG_LOGGER_DEBUG(logger_, "create payout for {} on {} for {}", settlementId, payinHash.toHexStr(), amount_);
    usedPayinHash_ = payinHash;
 
@@ -369,6 +377,8 @@ void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settle
       SPDLOG_LOGGER_ERROR(logger_, "invalid id : {} . {} expected", settlementId, settlementIdHex_);
       return;
    }
+
+   startTimer(kWaitTimeoutInSec);
 
    if (!weSellXbt_) {
       SPDLOG_LOGGER_ERROR(logger_, "customer buy on thq rfq {}. should not sign payin", settlementId);
