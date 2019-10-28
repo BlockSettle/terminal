@@ -79,6 +79,9 @@ void OTCNegotiationResponseWidget::setPeer(const bs::network::otc::Peer &peer)
    if (peer.type == bs::network::otc::PeerType::Request) {
       ui_->labelQuantityValue->setText(getXBTRange(peer.response.amount));
       ui_->labelBidValue->setText(getCCRange(peer.response.price));
+
+      ui_->priceSpinBoxResponse->setMinimum(bs::network::otc::fromCents(peer.response.price.lower));
+      ui_->priceSpinBoxResponse->setMaximum(bs::network::otc::fromCents(peer.response.price.upper));
    }
 
    ui_->rangeQuantity->setVisible(!isContact);

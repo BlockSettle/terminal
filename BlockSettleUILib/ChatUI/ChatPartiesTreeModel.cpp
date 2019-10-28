@@ -50,6 +50,7 @@ void ChatPartiesTreeModel::onPartyModelChanged()
 
    for (const auto& id : idPartyList) {
       Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(id);
+      assert(clientPartyPtr);
 
       QVariant stored;
       stored.setValue(clientPartyPtr);

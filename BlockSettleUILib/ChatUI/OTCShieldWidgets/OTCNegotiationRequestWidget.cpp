@@ -105,12 +105,19 @@ void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
       case otc::PeerType::Request:
          toggleSideButtons(peer.request.ourSide == otc::Side::Sell);
          ui_->labelQuantityValue->setText(QString::fromStdString(otc::toString(peer.request.rangeType)));
+         const auto range = otc::getRange(peer.request.rangeType);
+         ui_->quantitySpinBox->setMinimum(range.lower);
+         ui_->quantitySpinBox->setMaximum(range.upper);
          break;
       case otc::PeerType::Response: {
          // For public OTC side is fixed, use it from original request details
          toggleSideButtons(peer.response.ourSide == otc::Side::Sell);
          ui_->labelQuantityValue->setText(getXBTRange(peer.response.amount));
          ui_->labelBidValue->setText(getCCRange(peer.response.price));
+         ui_->quantitySpinBox->setMinimum(peer.response.amount.lower);
+         ui_->quantitySpinBox->setMaximum(peer.response.amount.upper);
+         ui_->priceSpinBoxRequest->setMinimum(bs::network::otc::fromCents(peer.response.price.lower));
+         ui_->priceSpinBoxRequest->setMaximum(bs::network::otc::fromCents(peer.response.price.upper));
          break;
       }
    }

@@ -36,6 +36,7 @@ private:
    std::unique_ptr<Ui::CreateOTCResponseWidget> ui_;
 
    bs::network::otc::Side ourSide_{};
+   QString buyProduct_{ QLatin1String("EUR") };
 };
 
 #endif // __CREATE_OTC_RESPONSE_WIDGET_H__
