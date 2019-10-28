@@ -73,5 +73,6 @@
         <file>qml/BsDialogs/TxSignSettlementCCMarketDialog.qml</file>
         <file>qml/BsDialogs/TxSignSettlementXBTMarketDialog.qml</file>
         <file>qml/BsControls/BSPasswordInputRevokeAuthAddress.qml</file>
+        <file>qml/StyledControls/CustomTitleDialogWindowWithExpander.qml</file>
     </qresource>
 </RCC>

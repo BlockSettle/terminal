@@ -3,7 +3,6 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
 import com.blocksettle.WalletsProxy 1.0
-import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QmlFactory 1.0
 import com.blocksettle.QPasswordData 1.0
 import com.blocksettle.AutheIDClient 1.0
@@ -16,6 +15,7 @@ import "js/helper.js" as JsHelper
 Item {
     id: root
     property int currentIndex: 0
+    property bool autoSignAllowed: false
 
     Connections {
         target: signerStatus
@@ -68,8 +68,14 @@ Item {
                         currentIndex: walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
                         onActivated: {
                             root.currentIndex = currentIndex
-                            signerSettings.autoSignWallet = walletsProxy.walletIdForIndex(currentIndex)
+                            let walletId = walletsProxy.walletIdForIndex(currentIndex)
+                            signerSettings.autoSignWallet = walletId
+
+                            autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(currentIndex))
                         }
+                    }
+                    onActiveChanged: {
+                        autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)))
                     }
                 }
 
@@ -87,7 +93,7 @@ Item {
                 CustomSwitch {
                     id: autoSignSwitch
                     Layout.alignment: Qt.AlignRight
-                    enabled: !signerStatus.offline
+                    enabled: !signerStatus.offline && autoSignAllowed
                     checked: signerStatus.autoSignActive
                     onClicked: {
                         var newState = checked

@@ -20,3 +20,4 @@ CustomTextArea           1.0 CustomTextArea.qml
 CustomTextInput          1.0 CustomTextInput.qml
 CustomPasswordTextInput  1.0 CustomPasswordTextInput.qml
 CustomTitleDialogWindow  1.0 CustomTitleDialogWindow.qml
+CustomTitleDialogWindowWithExpander 1.0 CustomTitleDialogWindowWithExpander.qml
