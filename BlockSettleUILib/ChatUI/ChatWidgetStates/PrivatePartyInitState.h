@@ -39,8 +39,8 @@ protected:
 
       auto checkIsTradingParticipant = [&]() -> bool {
          const auto userCelerType = chat_->celerClient_->celerUserType();
-         if (BaseCelerClient::Dealing != userCelerType
-            && BaseCelerClient::Trading != userCelerType) {
+         if (bs::network::UserType::Dealing != userCelerType
+            && bs::network::UserType::Trading != userCelerType) {
             chat_->ui_->widgetOTCShield->showOtcAvailableToTradingParticipants();
             return false;
          }
@@ -80,8 +80,8 @@ protected:
 
          Chat::PartyRecipientPtr recipientPtr = clientPartyPtr->getSecondRecipient(chat_->ownUserId_);
          CelerClient::CelerUserType counterPartyCelerType = recipientPtr->celerType();
-         if (counterPartyCelerType != BaseCelerClient::Dealing
-            && counterPartyCelerType != BaseCelerClient::Trading) {
+         if (counterPartyCelerType != bs::network::UserType::Dealing
+            && counterPartyCelerType != bs::network::UserType::Trading) {
             chat_->ui_->widgetOTCShield->showCounterPartyIsntTradingParticipant();
             return;
          }
