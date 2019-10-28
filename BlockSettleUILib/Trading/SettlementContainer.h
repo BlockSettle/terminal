@@ -65,7 +65,7 @@ namespace bs {
       QTimer   timer_;
       int      msDuration_ = 0;
       int      msTimeLeft_ = 0;
-      std::chrono::steady_clock::time_point  startTime_;
+      std::chrono::steady_clock::time_point startTime_;
    };
 
 }  // namespace bs

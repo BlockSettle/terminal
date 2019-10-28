@@ -154,10 +154,15 @@ public:
       , const AuthKeys &authKeys, bool autheidTestEnv, QObject *parent = nullptr);
    ~AutheIDClient() override;
 
+   // If timestamp is set (unix time in seconds) then auth eid server will use correct timeout.
+   // timestamp must be valid value!
    void getDeviceKey(RequestType requestType, const std::string &email, const std::string &walletId
-      , const std::vector<std::string> &knownDeviceIds, int expiration = kDefaultExpiration);
+      , const std::vector<std::string> &knownDeviceIds, int expiration = kDefaultExpiration, int timestamp = 0);
+
    void sign(const SignRequest &request, bool autoRequestResult = true);
+
    void authenticate(const std::string &email, int expiration = kDefaultExpiration, bool autoRequestResult = true);
+
    void cancel();
 
    void requestResult();
