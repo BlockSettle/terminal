@@ -128,6 +128,8 @@ void ClientConnectionLogic::onConnected(void)
    welcomeRequest.set_user_name(currentUserPtr()->userName());
    welcomeRequest.set_client_public_key(currentUserPtr()->publicKey().toBinStr());
    welcomeRequest.set_celer_type(static_cast<int>(currentUserPtr()->celerUserType()));
+   welcomeRequest.set_chat_token_data(token_.toBinStr());
+   welcomeRequest.set_chat_token_sign(tokenSign_.toBinStr());
 
    emit sendPacket(welcomeRequest);
 }
@@ -739,6 +741,12 @@ void ClientConnectionLogic::searchUser(const std::string& userHash, const std::s
    requestSearchUser.set_search_text(userHash);
 
    emit sendPacket(requestSearchUser);
+}
+
+void ClientConnectionLogic::setToken(const BinaryData &token, const BinaryData &tokenSign)
+{
+   token_ = token;
+   tokenSign_ = tokenSign;
 }
 
 void ClientConnectionLogic::saveRecipientsKeys(const ClientPartyPtr& clientPartyPtr)

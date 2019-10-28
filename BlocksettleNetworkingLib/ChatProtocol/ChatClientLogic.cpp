@@ -121,6 +121,8 @@ void ChatClientLogic::LoginToServer(const std::string& email, bs::network::UserT
    connectionPtr_ = connectionManagerPtr_->CreateZMQBIP15XDataConnection();
    connectionPtr_->setCBs(cb);
 
+   clientConnectionLogicPtr_->setToken(token, tokenSign);
+
    currentUserPtr_->setUserName(userHasherPtr_->deriveKey(email));
    currentUserPtr_->setCelerUserType(celerType);
    clientPartyModelPtr()->setOwnUserName(currentUserPtr_->userName());
