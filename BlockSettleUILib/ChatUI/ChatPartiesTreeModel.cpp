@@ -5,7 +5,7 @@
 using namespace bs::network;
 
 namespace {
-   const int kTogglingIntervalMs = 250;
+   const auto kTogglingIntervalMs = std::chrono::milliseconds(250);
 }
 
 ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& chatClientServicePtr, OtcClient *otcClient, QObject* parent)
@@ -15,7 +15,7 @@ ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& cha
 {
    rootItem_ = new PartyTreeItem({}, UI::ElementType::Root);
 
-   otcWatchToggling_.setInterval(kTogglingIntervalMs);
+   otcWatchToggling_.setInterval(kTogglingIntervalMs.count());
    connect(&otcWatchToggling_, &QTimer::timeout, this, &ChatPartiesTreeModel::onUpdateOTCAwaitingColor);
    otcWatchToggling_.start();
 }
