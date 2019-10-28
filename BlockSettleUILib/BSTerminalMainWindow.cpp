@@ -629,14 +629,11 @@ void BSTerminalMainWindow::InitChatView()
    chatClientServicePtr_ = std::make_shared<Chat::ChatClientService>();
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, [this]() {
-      //ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_, logMgr_->logger("chat"), walletsMgr_, armory_, signContainer_);
       ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_,
          logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_);
    });
 
    chatClientServicePtr_->Init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
-
-   //ui_->widgetChat->setCelerClient(celerConnection_);
 
    connect(ui_->tabWidget, &QTabWidget::currentChanged, this, &BSTerminalMainWindow::onTabWidgetCurrentChanged);
    connect(ui_->widgetChat, &ChatWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
@@ -1123,7 +1120,11 @@ void BSTerminalMainWindow::onLogin()
       return;
    }
 
+   currentUserLogin_ = loginDialog.email();
+
    ui_->widgetChat->setUserType(loginDialog.result()->userType);
+   chatClientServicePtr_->LoginToServer(currentUserLogin_.toStdString(), loginDialog.result()->userType
+      , loginDialog.result()->chatTokenData, loginDialog.result()->chatTokenSign, cbApproveChat_);
 
    bsClient_ = loginDialog.getClient();
    ccFileManager_->setBsClient(bsClient_.get());
@@ -1148,8 +1149,6 @@ void BSTerminalMainWindow::onLogin()
    networkSettingsReceived(loginDialog.networkSettings());
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
-
-   currentUserLogin_ = loginDialog.email();
 
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
@@ -1204,9 +1203,6 @@ void BSTerminalMainWindow::onUserLoggedIn()
 
    ccFileManager_->LoadCCDefinitionsFromPub();
    ccFileManager_->ConnectToCelerClient(celerConnection_);
-
-   std::string jwt;
-   chatClientServicePtr_->LoginToServer(currentUserLogin_.toStdString(), celerConnection_->celerUserType(), jwt, cbApproveChat_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    const auto &deferredDialog = [this, userId] {
