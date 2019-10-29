@@ -16,7 +16,7 @@ import "../BsControls"
 import "../BsStyles"
 import "../js/helper.js" as JsHelper
 
-CustomTitleDialogWindow {
+CustomTitleDialogWindowWithExpander {
     property WalletInfo walletInfo: WalletInfo {}
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
@@ -24,6 +24,12 @@ CustomTitleDialogWindow {
     property AuthSignWalletObject authSign: AuthSignWalletObject {}
 
     property bool signingAllowed: passwordDialogData.SigningAllowed
+
+    // expanding
+    property bool isExpanded: false
+    onHeaderButtonClicked: isExpanded = !isExpanded
+
+    headerButtonText: isExpanded ? "Hide Details" : "More details"
 
     // rfq details
     readonly property string product: passwordDialogData.Product
@@ -143,10 +149,12 @@ CustomTitleDialogWindow {
 
             // Product Group
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Product Group")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: productGroup
                 Layout.alignment: Qt.AlignRight
             }
@@ -163,10 +171,12 @@ CustomTitleDialogWindow {
 
             // Product
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Product")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: product
                 Layout.alignment: Qt.AlignRight
             }
@@ -213,6 +223,38 @@ CustomTitleDialogWindow {
         }
 
         ColumnLayout {
+            visible: !isExpanded
+            Layout.alignment: Qt.AlignTop
+            Layout.margins: 0
+            spacing: 0
+            clip: true
+
+            CustomHeader {
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                text: qsTr("Counterparty Validation")
+                Layout.preferredHeight: 25
+            }
+
+            RowLayout {
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomLabel {
+                    Layout.fillWidth: true
+                    text: qsTr("Counterparty")
+                }
+                CustomLabelValue {
+                    text: signingAllowed ? qsTr("Valid") : qsTr("Not Valid")
+                    color: signingAllowed ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+                    Layout.alignment: Qt.AlignRight
+                }
+            }
+        }
+
+        ColumnLayout {
+            visible: isExpanded
             id: settlementDetailsContainer
             Layout.alignment: Qt.AlignTop
             Layout.margins: 0
@@ -221,6 +263,7 @@ CustomTitleDialogWindow {
         }
 
         ColumnLayout {
+            visible: isExpanded
             id: txDetailsContainer
             Layout.alignment: Qt.AlignTop
             Layout.margins: 0
