@@ -2,9 +2,9 @@
 #define PARTYMODEL_H
 
 #include <QObject>
-#include <memory.h>
 #include <unordered_map>
 #include <vector>
+#include <atomic>
 
 #include "ChatProtocol/Party.h"
 #include "ChatProtocol/PrivateDirectMessageParty.h"
@@ -59,6 +59,7 @@ namespace Chat
    protected:
       PartyMap partyMap_;
       LoggerPtr loggerPtr_;
+      std::atomic_flag partyMapLockerFlag_ = ATOMIC_FLAG_INIT;
    };
 
    using PartyModelPtr = std::shared_ptr<PartyModel>;

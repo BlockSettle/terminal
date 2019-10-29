@@ -1,4 +1,5 @@
 #include "PartyModel.h"
+#include "FastLock.h"
 
 #include <disable_warnings.h>
 #include <spdlog/logger.h>
@@ -16,6 +17,8 @@ PartyModel::PartyModel(const LoggerPtr& loggerPtr, QObject* parent /* = nullptr 
 
 void PartyModel::insertParty(const PartyPtr& partyPtr)
 {
+   FastLock locker(partyMapLockerFlag_);
+
    if (partyMap_.find(partyPtr->id()) != partyMap_.end())
    {
       PartyPtr oldPartyPtr = partyMap_[partyPtr->id()];
@@ -36,6 +39,8 @@ void PartyModel::insertParty(const PartyPtr& partyPtr)
 
 void PartyModel::removeParty(const PartyPtr& partyPtr)
 {
+   FastLock locker(partyMapLockerFlag_);
+
    if (partyMap_.find(partyPtr->id()) != partyMap_.end())
    {
       PartyPtr oldPartyPtr = partyMap_[partyPtr->id()];
@@ -53,6 +58,8 @@ void PartyModel::removeParty(const PartyPtr& partyPtr)
 
 PartyPtr PartyModel::getPartyById(const std::string& party_id)
 {
+   FastLock locker(partyMapLockerFlag_);
+
    const auto it = partyMap_.find(party_id);
 
    if (it != partyMap_.end())
@@ -96,6 +103,8 @@ void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const
 
 void PartyModel::clearModel()
 {
+   FastLock locker(partyMapLockerFlag_);
+
    for (const auto& element : partyMap_)
    {
       emit partyRemoved(element.second);
@@ -142,7 +151,6 @@ void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
    if (nullptr == existingPartyPtr)
    {
       insertParty(partyPtr);
-      return;
    }
 }
 
