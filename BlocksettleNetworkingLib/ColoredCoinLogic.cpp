@@ -221,7 +221,8 @@ uint64_t ColoredCoinTracker::getCcOutputValue(
 
 ////
 uint64_t ColoredCoinTracker::getCcOutputValue(
-   const BinaryData& hash, unsigned txOutIndex, unsigned height) const
+   const BinaryData& hash, unsigned int txOutIndex
+   , unsigned int height) const
 {
    auto ssPtr = snapshot();
    auto zcPtr = zcSnapshot();
@@ -943,7 +944,7 @@ bool ColoredCoinTracker::isTxHashExist(const BinaryData &txHash) const
    return false;
 }
 
-//// 
+////
 void ColoredCoinTracker::eraseScrAddrOp(
    const std::shared_ptr<ColoredCoinSnapshot> &ssPtr
    , const std::shared_ptr<CcOutpoint>& opPtr)
