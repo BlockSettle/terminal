@@ -61,8 +61,7 @@ namespace Chat
 
    public slots:
       void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
-      void LoginToServer(const std::string& email, bs::network::UserType celerType
-         , const BinaryData &token, const BinaryData &tokenSign, const ZmqBipNewKeyCb& cb);
+      void LoginToServer(const BinaryData &token, const BinaryData &tokenSign, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
       void SendPartyMessage(const std::string& partyId, const std::string& data);
       void SetMessageSeen(const std::string& partyId, const std::string& messageId);
@@ -111,7 +110,6 @@ namespace Chat
       ZmqBIP15XDataConnectionPtr connectionPtr_;
       LoggerPtr                  loggerPtr_;
       ApplicationSettingsPtr     applicationSettingsPtr_;
-      UserHasherPtr              userHasherPtr_;
       ChatUserPtr                currentUserPtr_;
       ClientConnectionLogicPtr   clientConnectionLogicPtr_;
       ClientPartyLogicPtr        clientPartyLogicPtr_;

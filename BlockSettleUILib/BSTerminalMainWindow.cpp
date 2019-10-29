@@ -1123,8 +1123,7 @@ void BSTerminalMainWindow::onLogin()
    currentUserLogin_ = loginDialog.email();
 
    ui_->widgetChat->setUserType(loginDialog.result()->userType);
-   chatClientServicePtr_->LoginToServer(currentUserLogin_.toStdString(), loginDialog.result()->userType
-      , loginDialog.result()->chatTokenData, loginDialog.result()->chatTokenSign, cbApproveChat_);
+   chatClientServicePtr_->LoginToServer(loginDialog.result()->chatTokenData, loginDialog.result()->chatTokenSign, cbApproveChat_);
 
    bsClient_ = loginDialog.getClient();
    ccFileManager_->setBsClient(bsClient_.get());

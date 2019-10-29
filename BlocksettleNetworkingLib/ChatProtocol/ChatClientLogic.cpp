@@ -13,6 +13,7 @@
 #include <spdlog/spdlog.h>
 #include <enable_warnings.h>
 
+#include "bs_types.pb.h"
 #include "chat.pb.h"
 
 using namespace Chat;
@@ -85,7 +86,6 @@ void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, con
       return;
    }
 
-   userHasherPtr_ = std::make_shared<UserHasher>();
    cryptManagerPtr_ = std::make_shared<CryptManager>(loggerPtr);
 
    connectionManagerPtr_ = connectionManagerPtr;
@@ -108,8 +108,15 @@ void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, con
    clientDBServicePtr_->Init(loggerPtr, appSettingsPtr, currentUserPtr_, cryptManagerPtr_);
 }
 
-void ChatClientLogic::LoginToServer(const std::string& email, bs::network::UserType celerType, const BinaryData &token, const BinaryData &tokenSign, const ZmqBipNewKeyCb& cb)
+void ChatClientLogic::LoginToServer(const BinaryData &token, const BinaryData &tokenSign, const ZmqBipNewKeyCb& cb)
 {
+   bs::types::ChatToken chatToken;
+   bool result = chatToken.ParseFromArray(token.getPtr(), static_cast<int>(token.getSize()));
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(loggerPtr_, "parsing ChatToken failed");
+      return;
+   }
+
    if (connectionPtr_) {
       loggerPtr_->error("[ChatClientLogic::LoginToServer] connecting with not purged connection");
 
@@ -123,8 +130,8 @@ void ChatClientLogic::LoginToServer(const std::string& email, bs::network::UserT
 
    clientConnectionLogicPtr_->setToken(token, tokenSign);
 
-   currentUserPtr_->setUserName(userHasherPtr_->deriveKey(email));
-   currentUserPtr_->setCelerUserType(celerType);
+   currentUserPtr_->setUserName(chatToken.chat_login());
+   currentUserPtr_->setCelerUserType(static_cast<bs::network::UserType>(chatToken.user_type()));
    clientPartyModelPtr()->setOwnUserName(currentUserPtr_->userName());
    clientPartyModelPtr()->setOwnCelerUserType(currentUserPtr_->celerUserType());
 
@@ -322,6 +329,10 @@ void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
 
 void ChatClientLogic::SearchUser(const std::string& userHash, const std::string& searchId)
 {
+   clientConnectionLogicPtr_->searchUser(userHash, searchId);
+
+   // TODO: Decide how we should search for known emails
+#if 0
    QRegularExpression re(kEmailRegex);
    if (!re.isValid())
    {
@@ -340,6 +351,7 @@ void ChatClientLogic::SearchUser(const std::string& userHash, const std::string&
    }
 
    clientConnectionLogicPtr_->searchUser(stringToSearch, searchId);
+#endif
 }
 
 void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
