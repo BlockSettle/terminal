@@ -41,7 +41,7 @@ message ChatToken
 {
    int64 timestamp_ms = 1;
 
-   string email = 2;
+   string chat_login = 2;
 
    // bs::network::UserType as int
    int32 user_type = 3;
