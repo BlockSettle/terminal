@@ -337,8 +337,8 @@ public:
    ////
    bool goOnline(void);
 
-   //in: hash, tx index, txout index
-   uint64_t getCcOutputValue(const BinaryData&, unsigned, unsigned) const;
+   uint64_t getCcOutputValue(const BinaryData &txHash
+      , unsigned int txOutIndex, unsigned int height) const;
 
    //in: prefixed address
    uint64_t getCcValueForAddress(const BinaryData&) const;
