@@ -75,7 +75,7 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
          notifyMsg.append(QString::fromStdString(messageTitle));
          notifyMsg.append(isOtc ? otcText : QString::fromStdString(messageText));
          notifyMsg.append(QString::fromStdString(partyId));
-         notifyMsg.append(isOtc && (partyId != chat_->currentPartyId_));
+         notifyMsg.append(isOtc);
 
          NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
 

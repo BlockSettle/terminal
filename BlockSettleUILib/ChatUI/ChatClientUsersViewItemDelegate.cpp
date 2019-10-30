@@ -79,7 +79,7 @@ void ChatClientUsersViewItemDelegate::paintParty(QPainter *painter, const QStyle
 
    QStyledItemDelegate::paint(painter, itemOption, index);
 
-   if (party->hasNewMessages()) {
+   if (party->hasNewMessages() && Chat::PartyState::REQUESTED != clientPartyPtr->partyState()) {
       painter->save();
       QFontMetrics fm(itemOption.font, painter->device());
       auto textRect = fm.boundingRect(itemOption.rect, 0, itemOption.text);
