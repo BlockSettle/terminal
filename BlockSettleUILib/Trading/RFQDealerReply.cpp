@@ -612,7 +612,7 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
             auto spendVal = std::make_shared<uint64_t>(0);
 
             const auto &cbFee = [this, qrn, transData, spendVal, wallet, cb, qn](float feePerByte) {
-               const auto recipient = bs::Address(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ *spendVal });
+               const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ *spendVal });
                std::vector<UTXO> inputs = dealerUtxoAdapter_->get(qn->quoteRequestId);
                if (inputs.empty() && ccCoinSel_) {
                   inputs = ccCoinSel_->GetSelectedTransactions();
@@ -628,7 +628,7 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                {
                   try {
                      logger_->debug("[cbFee] {} input[s], fpb={}, recip={}, prevPart={}", inputs.size(), feePerByte
-                        , bs::Address(qrn.requestorRecvAddress).display(), qrn.requestorAuthPublicKey);
+                        , bs::Address::fromAddressString(qrn.requestorRecvAddress).display(), qrn.requestorAuthPublicKey);
                      try {
                         Signer signer;
                         signer.deserializeState(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));

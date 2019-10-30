@@ -670,7 +670,7 @@ void CreateTransactionDialogAdvanced::preSetValue(const double value)
 void CreateTransactionDialogAdvanced::onAddressTextChanged(const QString& addressString)
 {
    try {
-      currentAddress_ = bs::Address(addressString.trimmed().toStdString());
+      currentAddress_ = bs::Address::fromAddressString(addressString.trimmed().toStdString());
       if (currentAddress_.format() == bs::Address::Format::Hex) {
          currentAddress_.clear();   // P2WSH unprefixed address can resemble TX hash,
       }                             // so we disable hex format completely
@@ -720,7 +720,7 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
 
 void CreateTransactionDialogAdvanced::onAddOutput()
 {
-   const bs::Address address(ui_->lineEditAddress->text().trimmed().toStdString());
+   const auto address = bs::Address::fromAddressString(ui_->lineEditAddress->text().trimmed().toStdString());
    const double maxValue = transactionData_->CalculateMaxAmount(address);
    bool maxAmount = std::abs(maxValue
       - transactionData_->GetTotalRecipientsAmount() - currentValue_) <= 0.00000001;
@@ -1263,7 +1263,7 @@ void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& chang
    ui_->radioButtonNewAddrNative->setEnabled(false);
    ui_->radioButtonNewAddrNested->setEnabled(false);
 
-   selectedChangeAddress_ = bs::Address{changeAddress.toStdString()};
+   selectedChangeAddress_ = bs::Address::fromAddressString(changeAddress.toStdString());
    showExistingChangeAddress(true);
 
    changeAddressFixed_ = true;

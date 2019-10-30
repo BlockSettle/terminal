@@ -228,7 +228,8 @@ void CCFileManager::ProcessSubmitAddrResponse(const std::string& responseString)
       return;
    }
 
-   bs::Address addr(response.prefixedaddress());
+   BinaryDataRef addrRef; addrRef.setRef(response.prefixedaddress());
+   auto addr = bs::Address::fromHash(addrRef);
 
    if (!response.success()) {
       if (response.has_errormessage()) {
@@ -339,9 +340,12 @@ void CCPubResolver::fillFrom(Blocksettle::Communication::GetCCGenesisAddressesRe
    clear();
    for (int i = 0; i < resp->ccsecurities_size(); i++) {
       const auto ccSecurity = resp->ccsecurities(i);
+      BinaryDataRef addrRef; addrRef.setRef(ccSecurity.genesisaddr());
+      auto addrObj = bs::Address::fromHash(addrRef);
+
       bs::network::CCSecurityDef ccSecDef = {
          ccSecurity.securityid(), ccSecurity.product(), ccSecurity.description(),
-         bs::Address(ccSecurity.genesisaddr()), ccSecurity.satoshisnb()
+         addrObj, ccSecurity.satoshisnb()
       };
       add(ccSecDef);
    }

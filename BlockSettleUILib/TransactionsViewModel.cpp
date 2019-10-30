@@ -922,7 +922,7 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
       else if (dir == bs::sync::Transaction::Direction::Sent) {
          for (int i = 0; i < item->tx.getNumTxOut(); ++i) {
             TxOut out = item->tx.getTxOutCopy((int)i);
-            bs::Address addr(out.getScrAddressStr());
+            auto addr = bs::Address::fromHash(out.getScrAddressStr());
             switch (addr.getType()) {
             case AddressEntryType_P2WSH:     // likely a settlement address
             case AddressEntryType_P2SH:
@@ -939,7 +939,7 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
       else if (dir == bs::sync::Transaction::Direction::PayIn) {
          for (int i = 0; i < item->tx.getNumTxOut(); ++i) {
             TxOut out = item->tx.getTxOutCopy((int)i);
-            bs::Address addr(out.getScrAddressStr());
+            auto addr = bs::Address::fromHash(out.getScrAddressStr());
             switch (addr.getType()) {
             case AddressEntryType_P2WSH:
             case AddressEntryType_P2SH:
@@ -1047,7 +1047,7 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
       for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
          const TxOut out = tx.getTxOutCopy(i);
          const auto addr = bs::Address::fromTxOut(out);
-         const auto addrWallet = walletsManager->getWalletByAddress(addr.id());
+         const auto addrWallet = walletsManager->getWalletByAddress(addr);
          if (txEntry.isChainedZC && !hasSpecialAddr && addrWallet) {
             hasSpecialAddr = isSpecialWallet(addrWallet);
          }
@@ -1069,10 +1069,10 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
             TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
 
             const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
-            const auto addrWallet = walletsManager->getWalletByAddress(addr.id());
+            const auto addrWallet = walletsManager->getWalletByAddress(addr);
 
             if (txEntry.isChainedZC && !hasSpecialAddr) {
-               hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr.id()));
+               hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr));
             }
 
             if (addrWallet == wallet) {

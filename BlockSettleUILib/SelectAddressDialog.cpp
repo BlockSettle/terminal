@@ -51,7 +51,7 @@ void SelectAddressDialog::init()
 
 bs::Address SelectAddressDialog::getAddress(const QModelIndex& index) const
 {
-   return bs::Address(model_->data(index, AddressListModel::AddressRole).toString().toStdString());
+   return bs::Address::fromAddressString(model_->data(index, AddressListModel::AddressRole).toString().toStdString());
 }
 
 void SelectAddressDialog::onSelectionChanged()

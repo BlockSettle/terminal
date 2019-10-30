@@ -80,7 +80,8 @@ bs::core::wallet::TXSignRequest bs::signer::pbTxRequestToCore(const headless::Si
    }
 
    if (request.has_change()) {
-      txSignReq.change.address = request.change().address();
+      BinaryDataRef addrRef; addrRef.setRef(request.change().address());
+      txSignReq.change.address = bs::Address::fromHash(addrRef);
       txSignReq.change.index = request.change().index();
       txSignReq.change.value = request.change().value();
    }

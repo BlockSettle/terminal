@@ -778,7 +778,7 @@ bs::Address hd::Wallet::getSettlementPayinAddress(
 {
    auto addrPtr = getAddressPtrForSettlement(
       sd.settlementId, sd.cpPublicKey, sd.ownKeyFirst);
-   return bs::Address(addrPtr->getPrefixedHash());
+   return bs::Address::fromHash(addrPtr->getPrefixedHash());
 }
 
 std::shared_ptr<AddressEntry_P2WSH> hd::Wallet::getAddressPtrForSettlement(

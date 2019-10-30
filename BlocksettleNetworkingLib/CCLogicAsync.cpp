@@ -2,12 +2,12 @@
 
 void ColoredCoinTrackerAsync::addOriginAddress(const bs::Address& addr)
 {
-   originAddresses_.insert(addr);
+   originAddresses_.insert(addr.prefixed());
 }
 
 void ColoredCoinTrackerAsync::addRevocationAddress(const bs::Address& addr)
 {
-   revocationAddresses_.insert(addr);
+   revocationAddresses_.insert(addr.prefixed());
 }
 
 std::shared_ptr<ColoredCoinSnapshot> ColoredCoinTrackerAsync::snapshot() const
@@ -477,12 +477,12 @@ void ColoredCoinTrackerAsync::update(const AddrSetCb &cb)
       otherwise it will fail to tag user funding operations.
       */
       for (const auto &scrAddr : originAddresses_) {
-         auto iter = outpointData.outpoints_.find(scrAddr.prefixed());
+         auto iter = outpointData.outpoints_.find(scrAddr);
          if (iter == outpointData.outpoints_.end()) {
             continue;
          }
          for (auto& op : iter->second) {
-            addUtxo(ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr.prefixed());
+            addUtxo(ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr);
          }
       }
 
@@ -631,12 +631,12 @@ void ColoredCoinTrackerAsync::zcUpdate(const AddrSetCb &cb)
 
       //parse new outputs for origin addresses
       for (auto& scrAddr : originAddresses_) {
-         auto iter = outpointData.outpoints_.find(scrAddr.prefixed());
+         auto iter = outpointData.outpoints_.find(scrAddr);
          if (iter == outpointData.outpoints_.end()) {
             continue;
          }
          for (auto& op : iter->second) {
-            addZcUtxo(currentSs, ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr.prefixed());
+            addZcUtxo(currentSs, ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr);
          }
       }
 
@@ -999,10 +999,10 @@ std::pair<std::string, std::function<void()>> ColoredCoinTrackerAsync::goOnline(
    std::vector<BinaryData> addrVec;
 
    for (const auto &addr : originAddresses_) {
-      addrVec.push_back(addr.prefixed());
+      addrVec.push_back(addr);
    }
    for (const auto &addr : revocationAddresses_) {
-      addrVec.push_back(addr.prefixed());
+      addrVec.push_back(addr);
    }
    const auto regID = walletObj_->registerAddresses(addrVec, false);
    const auto lbdUpdate = [this, cb]

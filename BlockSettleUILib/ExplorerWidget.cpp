@@ -114,18 +114,9 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
    bool strIsAddress = false;
    bs::Address bsAddress;
    try {
-      bsAddress = bs::Address(userStr.trimmed().toStdString()
-         , bs::Address::Format::Base58);
+      bsAddress = bs::Address::fromAddressString(userStr.trimmed().toStdString());
       strIsAddress = bsAddress.isValid();
    } catch (...) {}
-
-   if (!strIsAddress) {
-      try {
-         bsAddress = bs::Address(userStr.trimmed().toStdString()
-            , bs::Address::Format::Bech32);
-         strIsAddress = bsAddress.isValid();
-      } catch (...) {}
-   }
 
    // If address, process. If not, see if it's a 32 byte (64 char) hex string.
    // Idx 0 = Block (BlockDetailsWidget - Not used for now)
@@ -191,21 +182,10 @@ void ExplorerWidget::onAddressClicked(QString addressId)
    ui_->stackedWidget->setCurrentIndex(AddressPage);
 
    bs::Address bsAddress;
-   bool strIsBase58 = false;
    try {
-      bsAddress = bs::Address(addressId.trimmed().toStdString()
-         , bs::Address::Format::Base58);
-      strIsBase58 = bsAddress.isValid();
+      bsAddress = bs::Address::fromAddressString(addressId.trimmed().toStdString());
    } catch (...) {}
-
-   if (!strIsBase58) {
-      try {
-         bsAddress = bs::Address(addressId.trimmed().toStdString()
-            , bs::Address::Format::Bech32);
-         strIsBase58 = bsAddress.isValid();
-      } catch (...) {}
-   }
-
+   
    // There really should be an error case here, but for now, assume addr is
    // valid. (It would be very bad if Armory fed up bad addresses!)
    // TODO: Add a check for wallets that have already been loaded?

@@ -14,8 +14,8 @@
 class ColoredCoinTrackerAsync
 {
 private:
-   std::set<bs::Address> originAddresses_;
-   std::set<bs::Address> revocationAddresses_;
+   std::set<BinaryData> originAddresses_;
+   std::set<BinaryData> revocationAddresses_;
 
    std::shared_ptr<ArmoryConnection> connPtr_;
 

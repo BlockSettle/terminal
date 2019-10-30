@@ -133,7 +133,7 @@ void CreateTransactionDialogSimple::onAddressTextChanged(const QString &addressS
 {
    bool addrStateOk = true;
    try {
-      bs::Address address{ addressString.trimmed().toStdString() };
+      const auto address = bs::Address::fromAddressString(addressString.trimmed().toStdString());
       addrStateOk = address.isValid() && (address.format() != bs::Address::Format::Hex);
       if (addrStateOk) {
          transactionData_->UpdateRecipientAddress(recipientId_, address);

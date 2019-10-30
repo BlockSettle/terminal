@@ -95,7 +95,7 @@ void AddressVerificator::commandQueueThreadFunction()
 bool AddressVerificator::SetBSAddressList(const std::unordered_set<std::string>& addressList)
 {
    for (const auto &addr : addressList) {
-      const bs::Address bsAddr(addr);
+      const auto bsAddr = bs::Address::fromAddressString(addr);
       if (bsAddressList_.find(bsAddr) != bsAddressList_.end()) {
          logger_->warn("[{}] BS address {} already exists in the list"
             , __func__, bsAddr.display());

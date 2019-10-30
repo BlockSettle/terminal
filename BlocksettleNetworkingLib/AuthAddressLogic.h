@@ -205,7 +205,7 @@ private:
    std::shared_ptr<AsyncClient::BtcWallet> walletObj_;
    BlockingQueue<BinaryData> refreshQueue_;
 
-   std::map<bs::Address, std::shared_ptr<ValidationAddressStruct>> validationAddresses_;
+   std::map<BinaryData, std::shared_ptr<ValidationAddressStruct>> validationAddresses_;
    unsigned topBlock_ = 0;
    unsigned zcIndex_ = 0;
 
@@ -214,7 +214,7 @@ private:
 
 private:
    std::shared_ptr<ValidationAddressStruct>
-      getValidationAddress(const bs::Address&);
+      getValidationAddress(const BinaryData&);
 
    UTXO getVettingUtxo(const bs::Address &validationAddr
       , const std::vector<UTXO> &, size_t nbOutputs = 1) const;
@@ -222,7 +222,7 @@ private:
       , const std::vector<UTXO> &) const;
 
    const std::shared_ptr<ValidationAddressStruct>
-      getValidationAddress(const bs::Address&) const;
+      getValidationAddress(const BinaryData&) const;
 
    void waitOnRefresh(const std::string&);
 
@@ -255,6 +255,8 @@ public:
 
    //validation address logic
    bool isValid(const bs::Address&) const;
+   bool isValid(const BinaryData&) const;
+
    bool hasSpendableOutputs(const bs::Address&) const;
    bool hasZCOutputs(const bs::Address&) const;
 
@@ -262,18 +264,18 @@ public:
    bool getSpendableTxOutFor(const bs::Address &, const std::function<void(const UTXO &)> &, size_t nbOutputs = 1) const;
    bool getVettingUTXOsFor(const bs::Address &, const std::function<void(const std::vector<UTXO> &)> &) const;
 
-   const bs::Address& findValidationAddressForUTXO(const UTXO&) const;
-   const bs::Address& findValidationAddressForTxHash(const BinaryData&) const;
+   const BinaryData& findValidationAddressForUTXO(const UTXO&) const;
+   const BinaryData& findValidationAddressForTxHash(const BinaryData&) const;
 
    //tx generating methods
    BinaryData fundUserAddress(const bs::Address&, std::shared_ptr<ResolverFeed>,
-      const bs::Address& validationAddr = BinaryData()) const;
+      const bs::Address& validationAddr = bs::Address()) const;
    BinaryData fundUserAddress(const bs::Address&, std::shared_ptr<ResolverFeed>,
       const UTXO &) const;
    BinaryData fundUserAddresses(const std::vector<bs::Address> &, const bs::Address &validationAddress
       , std::shared_ptr<ResolverFeed>, const std::vector<UTXO> &, int64_t totalFee) const;
    BinaryData vetUserAddress(const bs::Address&, std::shared_ptr<ResolverFeed>,
-      const bs::Address& validationAddr = BinaryData()) const;
+      const bs::Address& validationAddr = bs::Address()) const;
    BinaryData revokeValidationAddress(
       const bs::Address&, std::shared_ptr<ResolverFeed>) const;
    BinaryData revokeUserAddress(

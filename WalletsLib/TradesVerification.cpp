@@ -48,7 +48,7 @@ bs::Address bs::TradesVerification::constructSettlementAddress(const BinaryData 
       //nest it
       const auto addrP2wsh = std::make_shared<AddressEntry_P2WSH>(addrMs);
 
-      return bs::Address(addrP2wsh->getPrefixedHash());
+      return bs::Address::fromHash(addrP2wsh->getPrefixedHash());
    } catch(...) {
       return {};
    }
@@ -262,7 +262,7 @@ bs::TradesVerification::Result bs::TradesVerification::verifySignedPayout(const 
 
       std::string errorMsg;
       const auto signedBy = whichSignature(payoutTx, tradeAmount
-         , bs::Address(settlementAddress), buySaltedKey, sellSaltedKey, &errorMsg);
+         , bs::Address::fromAddressString(settlementAddress), buySaltedKey, sellSaltedKey, &errorMsg);
       if (signedBy != bs::PayoutSignatureType::ByBuyer) {
          return Result::error(fmt::format("payout signature status: {}, errorMsg: '{}'"
             , toString(signedBy), errorMsg));

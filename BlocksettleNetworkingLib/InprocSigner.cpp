@@ -446,7 +446,7 @@ void InprocSigner::syncNewAddresses(const std::string &walletId
    for (const auto &in : inData) {
       std::string index;
       try {
-         const bs::Address addr(in);
+         const auto addr = bs::Address::fromAddressString(in);
          if (addr.isValid()) {
             index = wallet->getAddressIndex(addr);
          }

@@ -56,11 +56,11 @@ namespace bs {
       void removeDupRecipients();
 
       static bs::Address getRecipientAddress(const std::shared_ptr<ScriptRecipient> &recip) {
-         return bs::Address::fromTxOutScript(getRecipientScriptAddr(recip));
+         return bs::Address::fromScript(getRecipientOutputScript(recip));
       }
 
    private:
-      static BinaryData getRecipientScriptAddr(const std::shared_ptr<ScriptRecipient> &recip) {
+      static BinaryData getRecipientOutputScript(const std::shared_ptr<ScriptRecipient> &recip) {
          const auto &recipScr = recip->getSerializedScript();
          const auto scr = recipScr.getSliceRef(8, (uint32_t)recipScr.getSize() - 8);
          if (scr.getSize() != (size_t)(scr[0] + 1)) {

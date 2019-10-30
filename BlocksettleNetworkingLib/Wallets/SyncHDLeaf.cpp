@@ -639,17 +639,11 @@ void hd::Leaf::resumeScan(const std::string &refreshId)
 
 hd::Leaf::AddrPoolKey hd::Leaf::getAddressIndexForAddr(const BinaryData &addr) const
 {
-   bs::Address p2pk(addr, AddressEntryType_P2PKH);
-   bs::Address p2sh(addr, AddressEntryType_P2SH);
-   AddrPoolKey index;
-   for (const auto &bd : { p2pk.unprefixed(), p2sh.unprefixed() }) {
-      const auto itIndex = addrToIndex_.find(bd);
-      if (itIndex != addrToIndex_.end()) {
-         index = itIndex->second;
-         break;
-      }
+   const auto itIndex = addrToIndex_.find(addr);
+   if (itIndex != addrToIndex_.end()) {
+      return itIndex->second;
    }
-   return index;
+   return AddrPoolKey();
 }
 
 hd::Leaf::AddrPoolKey hd::Leaf::addressIndex(const bs::Address &addr) const
