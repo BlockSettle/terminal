@@ -29,7 +29,7 @@ CustomTitleDialogWindowWithExpander {
     property bool isExpanded: false
     onHeaderButtonClicked: isExpanded = !isExpanded
 
-    headerButtonText: isExpanded ? "Hide Details" : "More details"
+    headerButtonText: isExpanded ? "Hide Details" : "Details"
 
     // rfq details
     readonly property string product: passwordDialogData.Product
@@ -67,7 +67,7 @@ CustomTitleDialogWindowWithExpander {
     property string errorMessage
 
     id: root
-    title: passwordDialogData.Title
+    title: isExpanded ? passwordDialogData.Title : ""
     rejectable: true
     width: 500
 
@@ -143,7 +143,7 @@ CustomTitleDialogWindowWithExpander {
             CustomHeader {
                 Layout.fillWidth: true
                 Layout.columnSpan: 2
-                text: qsTr("RFQ Details")
+                text: qsTr("TRADE SUMMARY")
                 Layout.preferredHeight: 25
             }
 
@@ -280,7 +280,7 @@ CustomTitleDialogWindowWithExpander {
 
             CustomHeader {
                 Layout.fillWidth: true
-                text: qsTr("Decrypt Wallet")
+                text: qsTr("SIGN TRANSACTION")
                 Layout.preferredHeight: 25
             }
 

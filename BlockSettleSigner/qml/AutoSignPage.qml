@@ -99,6 +99,11 @@ Item {
                         // change state by received signal
                         checked = !newState
 
+                        if (signerSettings.autoSignWallet.length === 0) {
+                            let walletId = walletsProxy.walletIdForIndex(cbWallets.currentIndex)
+                            signerSettings.autoSignWallet = walletId
+                        }
+
                         JsHelper.tryChangeAutoSign(newState, signerSettings.autoSignWallet, true)
                     }
                 }

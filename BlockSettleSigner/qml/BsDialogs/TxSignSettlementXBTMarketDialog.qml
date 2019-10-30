@@ -108,12 +108,12 @@ TxSignSettlementBaseDialog {
 
         // Requester Authentication Address
         CustomLabel {
-            visible: passwordDialogData.hasRequesterAuthAddress()
+            visible: passwordDialogData.hasRequesterAuthAddress() && passwordDialogData.IsDealer
             Layout.fillWidth: true
-            text: qsTr("Requester Auth")
+            text: qsTr("Counterparty")
         }
         CustomLabelCopyableValue {
-            visible: passwordDialogData.hasRequesterAuthAddress()
+            visible: passwordDialogData.hasRequesterAuthAddress() && passwordDialogData.IsDealer
             text: passwordDialogData.RequesterAuthAddress
             Layout.alignment: Qt.AlignRight
             color: passwordDialogData.RequesterAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
@@ -121,12 +121,12 @@ TxSignSettlementBaseDialog {
 
         // Responder Authentication Address = dealer
         CustomLabel {
-            visible: passwordDialogData.hasResponderAuthAddress()
+            visible: passwordDialogData.hasResponderAuthAddress() && !passwordDialogData.IsDealer
             Layout.fillWidth: true
-            text: qsTr("Responder Auth")
+            text: qsTr("Counterparty")
         }
         CustomLabelCopyableValue {
-            visible: passwordDialogData.hasResponderAuthAddress()
+            visible: passwordDialogData.hasResponderAuthAddress() && !passwordDialogData.IsDealer
             text: passwordDialogData.ResponderAuthAddress
             Layout.alignment: Qt.AlignRight
             color: passwordDialogData.ResponderAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
