@@ -225,6 +225,8 @@ public:
    // Converts BTC/kb (returned by armory) to sat/byte
    static float toFeePerByte(float fee);
 
+   std::mutex &bdvMutex() const { return bdvMutex_; }
+
 protected:
    using CallbackQueueCb = std::function<void(ArmoryCallbackTarget *)>;
    void addToMaintQueue(const CallbackQueueCb &);
@@ -280,6 +282,7 @@ protected:
    std::map<std::string, std::map<BinaryData, bs::TXEntry>> zcNotifiedEntries_;
    std::map<std::string, std::map<BinaryData, bs::TXEntry>> zcWaitingEntries_;
    std::mutex zcMutex_;
+   mutable std::mutex   bdvMutex_;
 
    std::unordered_set<ArmoryCallbackTarget *>   activeTargets_;
    std::atomic_bool  actChanged_{ false };
