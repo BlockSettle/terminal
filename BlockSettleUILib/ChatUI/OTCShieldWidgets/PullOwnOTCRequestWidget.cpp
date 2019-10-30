@@ -53,6 +53,7 @@ void PullOwnOTCRequestWidget::setRequest(const bs::network::otc::QuoteRequest &r
    ui_->quantityValue->setText(QString::fromStdString(otc::toString(request.rangeType)));
    ui_->priceValue->clear();
    ui_->priceWidget->hide();
+   ui_->totalWidget->hide();
 
    timeoutSec_ = getSeconds(bs::network::otc::publicRequestTimeout());
 }
@@ -66,6 +67,7 @@ void PullOwnOTCRequestWidget::setResponse(const otc::QuoteResponse &response)
    ui_->quantityValue->setText(getXBTRange(response.amount));
    ui_->priceValue->setText(getCCRange(response.price));
    ui_->priceWidget->show();
+   ui_->totalWidget->hide();
 
    timeoutSec_ = 0;
 }
@@ -147,7 +149,13 @@ void PullOwnOTCRequestWidget::setupOfferInfo(const bs::network::otc::Offer &offe
 {
    ourSide_ = offer.ourSide;
    ui_->sideValue->setText(QString::fromStdString(otc::toString(offer.ourSide)));
-   ui_->quantityValue->setText(UiUtils::displayAmount(otc::satToBtc(offer.amount)));
-   ui_->priceValue->setText(UiUtils::displayCurrencyAmount(otc::fromCents(offer.price)));
+
+   auto price = bs::network::otc::fromCents(offer.price);
+   auto amount = bs::network::otc::satToBtc(offer.amount);
+   ui_->quantityValue->setText(UiUtils::displayAmount(amount));
+   ui_->priceValue->setText(UiUtils::displayCurrencyAmount(price));
+   ui_->totalWidget->show();
+   ui_->totalValue->setText(UiUtils::displayCurrencyAmount(price * amount));
+
    ui_->priceWidget->show();
 }
