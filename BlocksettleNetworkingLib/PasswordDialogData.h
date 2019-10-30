@@ -63,6 +63,7 @@ public:
    DIALOG_KEY(DurationTimestamp)
    DIALOG_KEY(InputAmount)
    DIALOG_KEY(InputsListVisible)
+   DIALOG_KEY_BOOL(IsDealer)
    DIALOG_KEY(LotSize)
    DIALOG_KEY(Market)
    DIALOG_KEY(NetworkFee)
