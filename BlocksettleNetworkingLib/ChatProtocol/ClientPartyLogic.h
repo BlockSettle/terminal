@@ -54,6 +54,7 @@ namespace Chat
       void deletePrivateParty(const std::string& partyId);
       void userPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
       void acceptOTCPrivateParty(const std::string& partyId);
+      void messageArrived(const MessagePtrList& messagePtrList);
 
    public slots:
       void onUserStatusChanged(const ChatUserPtr& currentUserPtr, const StatusChanged& statusChanged);
@@ -65,6 +66,7 @@ namespace Chat
       void handleLocalErrors(const Chat::ClientPartyLogicError& errorCode, const std::string& what);
       void handlePartyInserted(const Chat::PartyPtr& partyPtr);
       void clientPartyDisplayNameChanged(const std::string& partyId);
+      void handleMessageArrived(const Chat::MessagePtrList& messagePtr);
 
       void onRecipientKeysHasChanged(const Chat::UserPublicKeyInfoList& userPkList);
       void onRecipientKeysUnchanged();

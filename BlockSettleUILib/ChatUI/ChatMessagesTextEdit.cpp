@@ -85,14 +85,13 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, int row, c
          if (!previousClientPartyPtr->isGlobal()) {
             return elideUserName(previousClientPartyPtr->displayName());
          }
-         else {
-            Chat::ClientPartyPtr clientPartyPtr = partyModel_->getClientPartyById(partyId);
+         
+         const auto clientPartyPtr = partyModel_->getClientPartyById(partyId);
 
-            if (clientPartyPtr && clientPartyPtr->isPrivate()) {
-               return toHtmlUsername(clientPartyPtr->displayName(), clientPartyPtr->userHash());
-            }
-            return toHtmlUsername(senderHash, senderHash);
-         }         
+         if (clientPartyPtr && clientPartyPtr->isPrivate()) {
+            return toHtmlUsername(clientPartyPtr->displayName(), clientPartyPtr->userHash());
+         }
+         return toHtmlUsername(senderHash, senderHash);
       }
       case Column::Status:{
          return QString();

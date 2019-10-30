@@ -31,7 +31,7 @@ namespace Chat
       DeleteMessage,
       UpdatePartyDisplayName,
       CheckUnsentMessages,
-      ReadHistoryMessages,
+      ReadPrivateHistoryMessages,
       CannotOpenDatabase,
       InsertRecipientKey,
       DeleteRecipientKey,
@@ -60,7 +60,7 @@ namespace Chat
       void updateDisplayNameForParty(const std::string& partyId, const std::string& displayName);
       void loadPartyDisplayName(const std::string& partyId);
       void checkUnsentMessages(const std::string& partyId);
-      void readHistoryMessages(const std::string& partyId, const std::string& userHash, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
+      void readPrivateHistoryMessages(const std::string& partyId, const std::string& userHash, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
       void saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);

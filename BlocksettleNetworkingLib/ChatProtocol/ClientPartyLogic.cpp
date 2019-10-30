@@ -24,7 +24,8 @@ ClientPartyLogic::ClientPartyLogic(const LoggerPtr& loggerPtr, const ClientDBSer
    connect(clientDBServicePtr.get(), &ClientDBService::partyDisplayNameLoaded, this, &ClientPartyLogic::partyDisplayNameLoaded);
 
    connect(this, &ClientPartyLogic::error, this, &ClientPartyLogic::handleLocalErrors);
-   connect(clientDBServicePtr.get(), &ClientDBService::messageArrived, clientPartyModelPtr_.get(), &ClientPartyModel::messageArrived);
+   connect(clientDBServicePtr.get(), &ClientDBService::messageArrived, this, &ClientPartyLogic::handleMessageArrived);
+   connect(this, &ClientPartyLogic::messageArrived, clientPartyModelPtr_.get(), &ClientPartyModel::messageArrived);
    connect(clientDBServicePtr.get(), &ClientDBService::messageStateChanged, clientPartyModelPtr_.get(), &ClientPartyModel::messageStateChanged);
    connect(clientDBServicePtr_.get(), &ClientDBService::recipientKeysHasChanged, this, &ClientPartyLogic::onRecipientKeysHasChanged);
    connect(clientDBServicePtr_.get(), &ClientDBService::recipientKeysUnchanged, this, &ClientPartyLogic::onRecipientKeysUnchanged);
@@ -79,14 +80,6 @@ void ClientPartyLogic::handlePartiesFromWelcomePacket(const ChatUserPtr& current
 
    // check if any of recipients has changed public key
    clientDBServicePtr_->checkRecipientPublicKey(uniqueRecipients);
-
-   // update party to user table and check history messages
-   ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr_->getStandardPrivatePartyListForRecipient(currentUserPtr->userName());
-   for (ClientPartyPtr clientPartyPtr : clientPartyPtrList)
-   {
-      // Read and provide last 10 history messages only for standard private parties
-      clientDBServicePtr_->readHistoryMessages(clientPartyPtr->id(), clientPartyPtr->displayName(), 10);
-   }
 }
 
 void ClientPartyLogic::onUserStatusChanged(const ChatUserPtr& currentUserPtr, const StatusChanged& statusChanged)
@@ -354,4 +347,33 @@ void ClientPartyLogic::updateModelAndRefreshPartyDisplayNames()
       clientDBServicePtr_->loadPartyDisplayName(partyId);
    }
 
+}
+
+void ClientPartyLogic::handleMessageArrived(const Chat::MessagePtrList& messagePtrList)
+{
+   for (const auto& messagePtr : messagePtrList)
+   {
+      ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr()->getClientPartyListFromIdPartyList(
+         clientPartyModelPtr()->getIdPrivatePartyListBySubType());
+
+      for (const auto& clientPartyPtr : clientPartyPtrList)
+      {
+         if (!clientPartyPtr->isUserBelongsToParty(messagePtr->senderHash()))
+         {
+            continue;
+         }
+
+         if (clientPartyPtr->userHash() == clientPartyPtr->displayName())
+         {
+            // display name isn't changed
+            messagePtr->setDisplayName(messagePtr->senderHash());
+            continue;
+         }
+
+         // custom party/message display name for user
+         messagePtr->setDisplayName(clientPartyPtr->displayName());
+      }
+   }
+
+   emit messageArrived(messagePtrList);
 }

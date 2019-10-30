@@ -437,14 +437,19 @@ void ClientDBLogic::checkUnsentMessages(const std::string& partyId)
    }
 }
 
-void ClientDBLogic::readHistoryMessages(const std::string& partyId, const std::string& userHash, const int limit, const int offset)
+void ClientDBLogic::readPrivateHistoryMessages(const std::string& partyId, const std::string& userHash, const int limit, const int offset)
 {
+   // read all history messages for given userHash except OTC and Global parties
    const QString cmd =
       QStringLiteral(
          "SELECT message_id, timestamp, message_state, message_text, sender FROM party_message "
+         "LEFT JOIN party on party.id=party_message.party_table_id "
          "LEFT JOIN party_to_user ON party_to_user.party_table_id = party_message.party_table_id "
          "LEFT JOIN user ON user.user_id = party_to_user.user_table_id "
-         "WHERE user.user_hash = :user_hash ORDER BY timestamp DESC LIMIT %1 OFFSET %2; "
+         "WHERE user.user_hash = :user_hash "
+         "AND party.party_sub_type <> 1 " // NOT OTC
+         "AND party.party_type <> 0 " // NOT Global
+         "ORDER BY timestamp DESC LIMIT %1 OFFSET %2; "
       ).arg(limit).arg(offset);
 
    QSqlQuery query(getDb());
@@ -453,7 +458,7 @@ void ClientDBLogic::readHistoryMessages(const std::string& partyId, const std::s
 
    if (!checkExecute(query))
    {
-      emit error(ClientDBLogicError::ReadHistoryMessages, userHash);
+      emit error(ClientDBLogicError::ReadPrivateHistoryMessages, userHash);
       return;
    }
 

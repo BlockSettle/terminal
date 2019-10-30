@@ -39,6 +39,9 @@ namespace Chat
       const std::string& senderHash() const { return senderHash_; }
       void setSenderHash(const std::string& val) { senderHash_ = val; }
 
+      std::string displayName() const { return displayName_; }
+      void setDisplayName(const std::string& display_name) { displayName_ = display_name; }
+
    private:
       std::string partyId_;
       std::string messageId_;
@@ -46,6 +49,7 @@ namespace Chat
       PartyMessageState partyMessageState_;
       std::string messageText_;
       std::string senderHash_;
+      std::string displayName_;
    };
 
    using MessagePtr = std::shared_ptr<Message>;
