@@ -111,6 +111,11 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
    }
 }
 
+void RFQDialog::logError(const QString& errorMessage)
+{
+   logger_->error("[RFQDialog::logError] {}", errorMessage.toStdString());
+}
+
 void RFQDialog::reportError(const QString& errorMessage)
 {
    BSMessageBox(BSMessageBox::Type::critical, tr("RFQ error"), errorMessage, this)
@@ -140,7 +145,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::acceptQuote
          , this, &RFQDialog::onXBTQuoteAccept);
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::error
-         , this, &RFQDialog::reportError);
+         , this, &RFQDialog::logError);
 
       // Use requestWidget_ as RFQDialog could be already destroyed before this moment
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendUnsignedPayinToPB

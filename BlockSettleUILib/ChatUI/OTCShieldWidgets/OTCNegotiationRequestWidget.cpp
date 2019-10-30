@@ -99,6 +99,10 @@ void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
       case otc::PeerType::Contact: {
          // Reset side to sell by default for contacts
          toggleSideButtons(/*isSell*/ true);
+         ui_->quantitySpinBox->setMinimum(0);
+         ui_->priceSpinBoxRequest->setMinimum(0);
+         ui_->quantitySpinBox->setMaximum(std::numeric_limits<double>::max());
+         ui_->priceSpinBoxRequest->setMaximum(std::numeric_limits<double>::max());
          break;
       }
       case otc::PeerType::Request: {

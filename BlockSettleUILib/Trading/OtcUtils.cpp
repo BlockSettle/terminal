@@ -86,7 +86,7 @@ QString OtcUtils::toReadableString(const QString &text)
       case Otc::ContactMessage::kSellerAccepts:
          return QObject::tr("OTC ACCEPT - XBT/EUR - SELL - %1").arg(formatOffer(msg.seller_accepts().offer()));
       case Otc::ContactMessage::kBuyerAcks:
-         return QObject::tr("OTC ACKS");
+         return QObject::tr("Accept and Settled");
       case Otc::ContactMessage::kClose:
          return QObject::tr("OTC CANCEL");
       case Otc::ContactMessage::DATA_NOT_SET:
