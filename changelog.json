@@ -1,7 +1,19 @@
 {
-   "latest_version": "0.24.3",
+   "latest_version": "0.24.4",
    "release_date": "30 Oct 2019",
    "changes": [
+      {
+         "version_string": "0.24.4",
+         "previous_version": "0.24.3",
+         "release_date": "30 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Add new style for OTC widgets"
+         ],
+         "bug_fixes": [],
+         "revision": "794f5f35",
+         "common_revision": "837dafab"
+      },
       {
          "version_string": "0.24.3",
          "previous_version": "0.24.2",
