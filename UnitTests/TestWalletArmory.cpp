@@ -702,6 +702,19 @@ TEST_F(TestWalletWithArmory, Comments)
       }
       ASSERT_FALSE(inputs.empty());
       const auto recip = addr.getRecipient(bs::XBTAmount{ (uint64_t)12000 });
+
+      /*
+      This will fail if the inputs lead to the need for a change output:
+      createTXRequest will throw if it isn't provided an explicit change 
+      address (it won't generate one by default). The test in its current 
+      state calls for ~1BTC change. 
+
+      The test failure will be seen at the end, where the bool result is
+      tested for. This is because createTXRequest will throw, which will
+      be caught by the try/catch block wrapping the combined utxo 
+      callback at the ArmoryConnection level, which will fire the callback
+      anew with an empty UTXO vector, triggering this lambda's sanity check.
+      */
       const auto txReq = syncWallet->createTXRequest(inputs, { recip }, 345);
 
       BinaryData txData;
@@ -730,9 +743,10 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    EXPECT_EQ(leafPtr_->getUsedAddressCount(), 3);
 
    //add an extra address not part of the wallet
-   bs::Address otherAddr(
-      READHEX("0000000000000000000000000000000000000000"), 
-      AddressEntryType_P2PKH);
+   BinaryData prefixed;
+   prefixed.append(AddressEntry::getPrefixByte(AddressEntryType_P2PKH));
+   prefixed.append(CryptoPRNG::generateRandom(20));
+   auto otherAddr = bs::Address::fromHash(prefixed);
 
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
    inprocSigner->Start();

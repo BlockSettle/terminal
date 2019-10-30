@@ -177,7 +177,7 @@ void TestCCoinAsync::waitOnZc(const Tx& tx)
    for (unsigned i = 0; i < tx.getNumTxOut(); i++)
    {
       auto&& txOut = tx.getTxOutCopy(i);
-      addresses.push_back(bs::Address(txOut.getScrAddressStr()));
+      addresses.push_back(bs::Address::fromHash(txOut.getScrAddressStr()));
    }
 
    waitOnZc(tx.getThisHash(), addresses);
@@ -271,7 +271,7 @@ BinaryData TestCCoinAsync::SimpleSendMany(const bs::Address & fromAddress, const
          uint64_t inputsValue(0);
 
          for (auto &&input : inputs) {
-            if (bs::Address(input.getRecipientScrAddr()) == fromAddress) {
+            if (input.getRecipientScrAddr() == fromAddress.prefixed()) {
                valInputs.push_back(input);
                inputsValue += input.getValue();
                if (inputsValue >= requiredValue + fee)
@@ -413,7 +413,7 @@ std::vector<UTXO> TestCCoinAsync::GetUTXOsFor(const bs::Address & addr, bool sor
    {
       std::vector<UTXO> result;
       for (auto && input : inputs) {
-         if (bs::Address(input.getRecipientScrAddr()) == addr)
+         if (input.getRecipientScrAddr() == addr.prefixed())
             result.emplace_back(input);
       }
       if (sortedByValue)
@@ -1065,7 +1065,7 @@ TEST_F(TestCCoinAsync, ZeroConfChain)
 
       //wait on zc notification
       std::vector<bs::Address> addresses = {
-         bs::Address(utxo.getRecipientScrAddr()),
+         bs::Address::fromHash(utxo.getRecipientScrAddr()),
          userCCAddresses_[i]
       };
       waitOnZc(zc.getThisHash(), addresses);
@@ -1208,7 +1208,7 @@ TEST_F(TestCCoinAsync, Reorg)
       const bs::core::WalletPasswordScoped passScoped(lockWalletMain, passphrase_);
 
       std::vector<bs::Address> addresses;
-      addresses.push_back(bs::Address(utxoMain.getRecipientScrAddr()));
+      addresses.push_back(bs::Address::fromHash(utxoMain.getRecipientScrAddr()));
 
       auto lock = signWalletMain->lockDecryptedContainer();
 
