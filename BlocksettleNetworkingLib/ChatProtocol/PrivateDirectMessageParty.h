@@ -9,6 +9,8 @@
 #include <memory>
 #include <vector>
 
+#include "chat.pb.h"
+
 namespace Chat
 {
    class PrivateDirectMessageParty : public Party

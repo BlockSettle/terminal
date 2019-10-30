@@ -40,8 +40,6 @@ void ChatPartiesTreeModel::onPartyModelChanged()
    std::unique_ptr<PartyTreeItem> privateSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabPrivate, UI::ElementType::Container, rootItem_);
    std::unique_ptr<PartyTreeItem> requestSection = std::make_unique<PartyTreeItem>(ChatModelNames::ContainerTabContactRequest, UI::ElementType::Container, rootItem_);
 
-   Chat::IdPartyList idPartyList = clientPartyModelPtr->getIdPartyList();
-
    auto insertChild = [](PartyTreeItem* section, QVariant stored) -> PartyTreeItem* {
       std::unique_ptr<PartyTreeItem> partyTreeItem = std::make_unique<PartyTreeItem>(stored, UI::ElementType::Party, section);
       PartyTreeItem* pTreeItem = partyTreeItem.get();
@@ -49,8 +47,10 @@ void ChatPartiesTreeModel::onPartyModelChanged()
       return pTreeItem;
    };
 
-   for (const auto& id : idPartyList) {
-      Chat::ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(id);
+   const auto idPartyList = clientPartyModelPtr->getIdPartyList();
+   const auto clientPartyPtrList = clientPartyModelPtr->getClientPartyListFromIdPartyList(idPartyList);
+
+   for (const auto& clientPartyPtr : clientPartyPtrList) {
       assert(clientPartyPtr);
 
       QVariant stored;
