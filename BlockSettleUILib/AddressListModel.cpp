@@ -1,5 +1,8 @@
 #include "AddressListModel.h"
+
+#include <QApplication>
 #include <QColor>
+
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 
@@ -161,54 +164,55 @@ void AddressListModel::updateWalletData()
 
    for (size_t i = 0; i < addressRows_.size(); ++i) {
       // Callback for address's # of TXs.
-      const auto &cbTxN = [this, addrTxNs, i, nbTxNs](uint32_t txn) {
-         --(*nbTxNs);
-         if (i >= addressRows_.size()) {
-            return;
-         }
-         (*addrTxNs)[i] = txn;
-
-         // On the final address, set the TX count for all addresses and emit
-         // any required signals.
-         if (*nbTxNs <= 0) {
-            for (size_t j = 0;
-                 j < std::min(addressRows_.size(), addrTxNs->size());
-                 ++j) {
-               addressRows_[j].transactionCount = (*addrTxNs)[j];
+      const auto &cbTxN = [this, addrTxNs, i, nbTxNs](uint64_t txn) {
+         QMetaObject::invokeMethod(qApp, [this, handle = validityFlag_.handle(), i, nbTxNs, addrTxNs, txn] {
+            --(*nbTxNs);
+            if (i >= addressRows_.size()) {
+               return;
             }
-            QMetaObject::invokeMethod(this, [this] {
+            (*addrTxNs)[i] = txn;
+
+            // On the final address, set the TX count for all addresses and emit
+            // any required signals.
+            if (*nbTxNs <= 0) {
+               for (size_t j = 0; j < std::min(addressRows_.size(), addrTxNs->size()); ++j) {
+                  addressRows_[j].transactionCount = (*addrTxNs)[j];
+               }
                emit dataChanged(index(0, ColumnTxCount)
                   , index(addressRows_.size() - 1, ColumnTxCount));
-            });
-         }
+            }
+         });
       };
 
       // Callback for address's balance.
-      const auto &cbBalance = [this, addrBalances, i, nbBalances](std::vector<uint64_t> balances) {
-         --(*nbBalances);
-         if (i >= addressRows_.size()) {
-            return;
-         }
-         if (balances.size() == 3) {
-            (*addrBalances)[i] = balances[0];
-         }
-         else {
-            (*addrBalances)[i] = 0;
-         }
-
-         // On the final address, set the balance for all addresses and emit
-         // any required signals.
-         if (*nbBalances <= 0) {
-            for (size_t j = 0;
-                 j < std::min(addressRows_.size(), addrBalances->size());
-                 ++j) {
-               addressRows_[j].balance = (*addrBalances)[j];
+      const auto &cbBalance = [this, handle = validityFlag_.handle(), addrBalances, i, nbBalances](std::vector<uint64_t> balances) {
+         QMetaObject::invokeMethod(qApp, [this, handle, balances, addrBalances, i, nbBalances] {
+            if (!handle.isValid()) {
+               return;
             }
-            QMetaObject::invokeMethod(this, [this] {
+            --(*nbBalances);
+            if (i >= addressRows_.size()) {
+               return;
+            }
+            if (balances.size() == 3) {
+               (*addrBalances)[i] = balances[0];
+            }
+            else {
+               (*addrBalances)[i] = 0;
+            }
+
+            // On the final address, set the balance for all addresses and emit
+            // any required signals.
+            if (*nbBalances <= 0) {
+               for (size_t j = 0;
+                    j < std::min(addressRows_.size(), addrBalances->size());
+                    ++j) {
+                  addressRows_[j].balance = (*addrBalances)[j];
+               }
                emit dataChanged(index(0, ColumnBalance)
-                  , index(addressRows_.size() - 1, ColumnBalance));
-            });
-         }
+                  , index(static_cast<int>(addressRows_.size()) - 1, ColumnBalance));
+            }
+         });
       };
 
       // Get an address's balance & # of TXs from Armory via the wallet.
@@ -217,7 +221,7 @@ void AddressListModel::updateWalletData()
       if (!wallet) {
          return;
       }
-      wallet->onBalanceAvailable([this, wallet, address, cbTxN, cbBalance] {
+      wallet->onBalanceAvailable([wallet, address, cbTxN, cbBalance] {
          cbTxN(wallet->getAddrTxN(address));
          cbBalance(wallet->getAddrBalance(address));
       });
