@@ -31,12 +31,8 @@ signals:
    void responseUpdated();
    void responseRejected();
 
-public slots:
-   void onAboutToApply() override;
-
 protected slots:
    void onSyncInterface() override;
-   void onMDUpdated() override;
    void onUpdateBalances() override;
 
 private slots:
@@ -46,9 +42,6 @@ private slots:
    void onXbtInputsProcessed();
 
    void onCurrentWalletChanged();
-
-protected:
-   void updateIndicativePriceValue();
 
 private:
    std::unique_ptr<Ui::OTCNegotiationResponseWidget> ui_;

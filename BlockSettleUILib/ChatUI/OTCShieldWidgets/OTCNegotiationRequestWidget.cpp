@@ -19,6 +19,8 @@ using namespace bs::network;
 
 namespace {
    double kQuantityXBTSimpleStepAmount = 0.001;
+   const QString paymentWallet = QObject::tr("Payment Wallet");
+   const QString receivingWallet = QObject::tr("Receiving Wallet");
 }
 
 OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
@@ -38,7 +40,6 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
    connect(ui_->toolButtonXBTInputs, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onShowXBTInputsClicked);
    connect(this, &OTCWindowsAdapterBase::xbtInputsProcessed, this, &OTCNegotiationRequestWidget::onXbtInputsProcessed);
    connect(ui_->comboBoxXBTWallets, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &OTCNegotiationRequestWidget::onCurrentWalletChanged);
-   connect(ui_->priceUpdateButton, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateIndicativePrice);
    connect(ui_->quantityMaxButton, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onMaxQuantityClicked);
 
    connect(ui_->priceSpinBox, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &OTCNegotiationRequestWidget::onChanged);
@@ -133,11 +134,6 @@ void OTCNegotiationRequestWidget::onSyncInterface()
    ui_->widgetButtons->setEnabled(ui_->authenticationAddressComboBox->isEnabled());
 }
 
-void OTCNegotiationRequestWidget::onMDUpdated()
-{
-   updateIndicativePriceValue(ui_->indicativePriceValue, ui_->pushButtonBuy->isChecked());
-}
-
 void OTCNegotiationRequestWidget::onUpdateBalances()
 {
    QString totalBalance;
@@ -157,6 +153,7 @@ void OTCNegotiationRequestWidget::onUpdateBalances()
    }
 
    ui_->labelBalanceValue->setText(totalBalance);
+   onChanged();
 }
 
 std::shared_ptr<bs::sync::hd::Wallet> OTCNegotiationRequestWidget::getCurrentHDWallet() const
@@ -183,8 +180,8 @@ void OTCNegotiationRequestWidget::onSellClicked()
    ui_->receivingAddressComboBox->setVisible(false);
    ui_->receivingAddressLabel->setVisible(false);
    ui_->quantityMaxButton->setVisible(true);
-   ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(sellIndicativePrice_, productGroup_));
    ui_->quantitySpinBox->setValue(0.0);
+   ui_->labelWallet->setText(paymentWallet);
 
    onUpdateIndicativePrice();
    selectedUTXO_.clear();
@@ -198,8 +195,8 @@ void OTCNegotiationRequestWidget::onBuyClicked()
    ui_->receivingAddressComboBox->setVisible(true);
    ui_->receivingAddressLabel->setVisible(true);
    ui_->quantityMaxButton->setVisible(false);
-   ui_->indicativePriceValue->setText(UiUtils::displayPriceForAssetType(buyIndicativePrice_, productGroup_));
    ui_->quantitySpinBox->setValue(0.0);
+   ui_->labelWallet->setText(receivingWallet);
 
    onUpdateIndicativePrice();
    selectedUTXO_.clear();
@@ -213,10 +210,21 @@ void OTCNegotiationRequestWidget::onShowXBTInputsClicked()
 
 void OTCNegotiationRequestWidget::onChanged()
 {
-   ui_->pushButtonAcceptRequest->setEnabled(ui_->priceSpinBox->value() > 0
+   bool activateAcceptButton = ui_->priceSpinBox->value() > 0
       && ui_->quantitySpinBox->value() > 0
-      && !ui_->authenticationAddressComboBox->currentText().isEmpty()
-   );
+      && !ui_->authenticationAddressComboBox->currentText().isEmpty();
+
+   if (!activateAcceptButton) {
+      ui_->pushButtonAcceptRequest->setDisabled(true);
+      return;
+   }
+
+   if (ui_->pushButtonBuy->isChecked()) {
+      ui_->quantitySpinBox->setMaximum(
+         getAssetManager()->getBalance(buyProduct_.toStdString()) / ui_->priceSpinBox->value());
+   }
+
+   ui_->pushButtonAcceptRequest->setEnabled(true);
 }
 
 void OTCNegotiationRequestWidget::onChatRoomChanged()

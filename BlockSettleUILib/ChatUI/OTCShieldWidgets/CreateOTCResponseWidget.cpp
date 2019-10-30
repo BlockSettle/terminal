@@ -24,7 +24,7 @@ void CreateOTCResponseWidget::setRequest(const otc::QuoteRequest &request)
    // TODO: Use MD
    ourSide_ = request.ourSide;
 
-   double currentIndicativePrice = updateIndicativePriceValue(ui_->indicativePriceValue, ourSide_ != bs::network::otc::Side::Buy);
+   double currentIndicativePrice = ourSide_ != bs::network::otc::Side::Sell ? sellIndicativePrice_ : buyIndicativePrice_;
    int lowerBound = std::max(static_cast<int>(std::floor((currentIndicativePrice - 1000) / 1000) * 1000), 0);
    int upperBound = std::max(static_cast<int>(std::ceil((currentIndicativePrice + 1000) / 1000) * 1000), 1000);
    ui_->widgetPriceRange->SetRange(lowerBound, upperBound);
@@ -66,11 +66,6 @@ void CreateOTCResponseWidget::onUpdateBalances()
    ui_->labelBalanceValue->setText(totalBalance);
 
    updateAcceptButton();
-}
-
-void CreateOTCResponseWidget::onMDUpdated()
-{
-   updateIndicativePriceValue(ui_->indicativePriceValue, ourSide_ != bs::network::otc::Side::Buy);
 }
 
 void CreateOTCResponseWidget::updateAcceptButton()
