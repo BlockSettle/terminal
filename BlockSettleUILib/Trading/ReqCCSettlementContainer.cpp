@@ -185,8 +185,8 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
             , __func__, dealerAddress_, spendVal);
          return false;
       }
-      ccTxData_.outSortOrder = {bs::core::wallet::OutputOrderType::Change
-         , bs::core::wallet::OutputOrderType::PrevState, bs::core::wallet::OutputOrderType::Recipients };
+      ccTxData_.outSortOrder = {bs::core::wallet::OutputOrderType::Recipients
+         , bs::core::wallet::OutputOrderType::PrevState, bs::core::wallet::OutputOrderType::Change };
       ccTxData_.populateUTXOs = true;
       ccTxData_.inputs = utxoAdapter_->get(id());
       logger_->debug("[{}] {} CC inputs reserved ({} recipients)"
