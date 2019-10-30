@@ -17,21 +17,25 @@ PartyModel::PartyModel(const LoggerPtr& loggerPtr, QObject* parent /* = nullptr 
 
 void PartyModel::insertParty(const PartyPtr& partyPtr)
 {
-   FastLock locker(partyMapLockerFlag_);
+   PartyPtr oldPartyPtr{};
 
-   if (partyMap_.find(partyPtr->id()) != partyMap_.end())
    {
-      PartyPtr oldPartyPtr = partyMap_[partyPtr->id()];
+      FastLock locker(partyMapLockerFlag_);
+      const auto it = partyMap_.find(partyPtr->id());
+      if (it != partyMap_.end())
+      {
+         oldPartyPtr = partyMap_[partyPtr->id()];
+         partyMap_.erase(partyPtr->id());
+         emit error(PartyModelError::InsertExistingParty, partyPtr->id(), true);
+      }
 
-      emit partyRemoved(oldPartyPtr);
-
-      partyMap_.erase(partyPtr->id());
-
-      emit partyModelChanged();
-      emit error(PartyModelError::InsertExistingParty, partyPtr->id(), true);
+      partyMap_[partyPtr->id()] = partyPtr;
    }
 
-   partyMap_[partyPtr->id()] = partyPtr;
+   if (oldPartyPtr)
+   {
+      emit partyRemoved(oldPartyPtr);
+   }
 
    emit partyInserted(partyPtr);
    emit partyModelChanged();
@@ -39,32 +43,44 @@ void PartyModel::insertParty(const PartyPtr& partyPtr)
 
 void PartyModel::removeParty(const PartyPtr& partyPtr)
 {
-   FastLock locker(partyMapLockerFlag_);
+   PartyPtr oldPartyPtr{};
+   auto it = partyMap_.end();
+   auto isErased = false;
 
-   if (partyMap_.find(partyPtr->id()) != partyMap_.end())
    {
-      PartyPtr oldPartyPtr = partyMap_[partyPtr->id()];
-
-      emit partyRemoved(oldPartyPtr);
-
-      partyMap_.erase(partyPtr->id());
-
-      emit partyModelChanged();
-      return;
+      FastLock locker(partyMapLockerFlag_);
+      it = partyMap_.find(partyPtr->id());
+      if (it != partyMap_.end())
+      {
+         oldPartyPtr = partyMap_[partyPtr->id()];
+         partyMap_.erase(partyPtr->id());
+         isErased = true;
+      }
    }
 
-   emit error(PartyModelError::RemovingNonexistingParty, partyPtr->id(), true);
+   if (oldPartyPtr)
+   {
+      emit partyRemoved(oldPartyPtr);
+   }
+
+   if (isErased)
+   {
+      emit error(PartyModelError::RemovingNonexistingParty, partyPtr->id(), true);
+      emit partyModelChanged();
+   }
 }
 
 PartyPtr PartyModel::getPartyById(const std::string& party_id)
 {
-   FastLock locker(partyMapLockerFlag_);
-
-   const auto it = partyMap_.find(party_id);
-
-   if (it != partyMap_.end())
    {
-      return it->second;
+      FastLock locker(partyMapLockerFlag_);
+
+      const auto it = partyMap_.find(party_id);
+
+      if (it != partyMap_.end())
+      {
+         return it->second;
+      }      
    }
 
    emit error(PartyModelError::CouldNotFindParty, party_id, true);
@@ -103,15 +119,10 @@ void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const
 
 void PartyModel::clearModel()
 {
-   FastLock locker(partyMapLockerFlag_);
-
    for (const auto& element : partyMap_)
    {
-      emit partyRemoved(element.second);
+      removeParty(element.second);
    }
-
-   partyMap_.clear();
-   emit partyModelChanged();
 }
 
 void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
