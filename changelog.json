@@ -1,7 +1,19 @@
 {
-   "latest_version": "0.24.2",
-   "release_date": "28 Oct 2019",
+   "latest_version": "0.24.3",
+   "release_date": "30 Oct 2019",
    "changes": [
+      {
+         "version_string": "0.24.3",
+         "previous_version": "0.24.2",
+         "release_date": "30 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Expandable settlement dialogs (#436)"
+         ],
+         "bug_fixes": [],
+         "revision": "a4e6d230",
+         "common_revision": "0be07b10"
+      },
       {
          "version_string": "0.24.2",
          "previous_version": "0.24.1",
@@ -11,11 +23,11 @@
             "Update auth eid timers",
             "Update auth eid timers (#1537)",
             "Switched to synchronous CC logic objects (#1520)",
-            "Signing for otc settlements with watching-only wallet (#1517)",
+            "Signing for otc settlements with watching-only wallet (#1517)"
          ],
          "bug_fixes": [
             "Small fix for CacheFile (#1526)",
-            "Autosign fix (#1527)",
+            "Autosign fix (#1527)"
          ],
          "revision": "b5f44ee3",
          "common_revision": "17492ef7"
