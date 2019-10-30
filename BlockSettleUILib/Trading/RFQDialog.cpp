@@ -118,8 +118,10 @@ void RFQDialog::logError(const QString& errorMessage)
 
 void RFQDialog::reportError(const QString& errorMessage)
 {
-   BSMessageBox(BSMessageBox::Type::critical, tr("RFQ error"), errorMessage, this)
-      .exec();
+   // Error reporting disabled
+   // Please don't uncomment
+//   BSMessageBox(BSMessageBox::Type::critical, tr("RFQ error"), errorMessage, this)
+//      .exec();
 }
 
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
