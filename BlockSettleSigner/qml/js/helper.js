@@ -47,9 +47,9 @@ function messageBoxCritical(title, text, details) {
 function raiseWindow(w) {
     w.show()
     w.raise()
-    w.requestActivate()
     w.flags |= Qt.WindowStaysOnTopHint
     w.flags &= ~Qt.WindowStaysOnTopHint
+    w.requestActivate()
 }
 
 function hideWindow(w) {
