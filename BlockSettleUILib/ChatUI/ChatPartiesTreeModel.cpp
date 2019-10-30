@@ -15,9 +15,10 @@ ChatPartiesTreeModel::ChatPartiesTreeModel(const Chat::ChatClientServicePtr& cha
 {
    rootItem_ = new PartyTreeItem({}, UI::ElementType::Root);
 
-   otcWatchToggling_.setInterval(kTogglingIntervalMs);
-   connect(&otcWatchToggling_, &QTimer::timeout, this, &ChatPartiesTreeModel::onUpdateOTCAwaitingColor);
-   otcWatchToggling_.start();
+   // #flickeringOTC Flickering otc awaiting messages - disabled for now
+   //otcWatchToggling_.setInterval(kTogglingIntervalMs);
+   //connect(&otcWatchToggling_, &QTimer::timeout, this, &ChatPartiesTreeModel::onUpdateOTCAwaitingColor);
+   //otcWatchToggling_.start();
 }
 
 ChatPartiesTreeModel::~ChatPartiesTreeModel() = default;

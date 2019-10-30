@@ -104,7 +104,8 @@ void PartyTreeItem::enableOTCToggling(bool otcToggling)
 
 bool PartyTreeItem::isOTCTogglingMode() const
 {
-   return otcTogglingMode_;
+   // #flickeringOTC Flickering otc awaiting messages - disabled for now
+   return false; //  otcTogglingMode_;
 }
 
 void PartyTreeItem::changeOTCToggleState()
