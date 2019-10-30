@@ -23,11 +23,13 @@ CustomTitleDialogWindowWithExpander {
     property QPasswordData passwordData: QPasswordData {}
     property AuthSignWalletObject authSign: AuthSignWalletObject {}
 
-    property bool signingAllowed: passwordDialogData.SigningAllowed
+    // signingAllowed set in cc or xbt dialog
+    property bool signingAllowed: false
 
     // expanding
     property bool isExpanded: false
     onHeaderButtonClicked: isExpanded = !isExpanded
+    onIsExpandedChanged: sizeChanged()
 
     headerButtonText: isExpanded ? "Hide Details" : "Details"
 
@@ -77,8 +79,9 @@ CustomTitleDialogWindowWithExpander {
             btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
         }
 
-        // auth addr verification temporally disabled, eid auth init immediately
-        initAuth()
+        if (signingAllowed) {
+            initAuth()
+        }
     }
 
     function initAuth() {
@@ -123,10 +126,9 @@ CustomTitleDialogWindowWithExpander {
     }
 
     onSigningAllowedChanged: {
-        // auth addr verification temporally disabled
-//        if (signingAllowed) {
-//            initAuth()
-//        }
+        if (signingAllowed) {
+            initAuth()
+        }
     }
 
     cContentItem: ColumnLayout {
@@ -147,6 +149,30 @@ CustomTitleDialogWindowWithExpander {
                 Layout.preferredHeight: 25
             }
 
+            // [Simple view] Receive
+            CustomLabel {
+                visible: !isExpanded
+                Layout.fillWidth: true
+                text: qsTr("Receive")
+            }
+            CustomLabelValue {
+                visible: !isExpanded
+                text: is_sell ? totalValue : quantity
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // [Simple view] Deliver
+            CustomLabel {
+                visible: !isExpanded
+                Layout.fillWidth: true
+                text: qsTr("Deliver")
+            }
+            CustomLabelValue {
+                visible: !isExpanded
+                text: is_sell ? quantity : totalValue
+                Layout.alignment: Qt.AlignRight
+            }
+
             // Product Group
             CustomLabel {
                 visible: isExpanded
@@ -161,10 +187,12 @@ CustomTitleDialogWindowWithExpander {
 
             // Security ID
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Security ID")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: security
                 Layout.alignment: Qt.AlignRight
             }
@@ -183,20 +211,24 @@ CustomTitleDialogWindowWithExpander {
 
             // Side
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Side")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: side
                 Layout.alignment: Qt.AlignRight
             }
 
             // Quantity
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Quantity")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: quantity
                 Layout.alignment: Qt.AlignRight
             }
@@ -213,10 +245,12 @@ CustomTitleDialogWindowWithExpander {
 
             // Total Value
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Total Value")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: totalValue
                 Layout.alignment: Qt.AlignRight
             }
@@ -285,30 +319,34 @@ CustomTitleDialogWindowWithExpander {
             }
 
             RowLayout {
+                visible: isExpanded
                 spacing: 5
                 Layout.fillWidth: true
 
                 CustomLabel {
+                    visible: isExpanded
                     Layout.fillWidth: true
                     text: qsTr("Wallet name")
                 }
                 CustomLabel {
-                    //Layout.fillWidth: true
+                    visible: isExpanded
                     Layout.alignment: Qt.AlignRight
                     text: walletInfo.name
                 }
             }
 
             RowLayout {
+                visible: isExpanded
                 spacing: 5
                 Layout.fillWidth: true
 
                 CustomLabel {
+                    visible: isExpanded
                     Layout.fillWidth: true
                     text: qsTr("Wallet ID")
                 }
                 CustomLabel {
-                    //Layout.fillWidth: true
+                    visible: isExpanded
                     Layout.alignment: Qt.AlignRight
                     text: walletInfo.walletId
                 }

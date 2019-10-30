@@ -45,7 +45,7 @@ TxSignSettlementBaseDialog {
     readonly property string changeAmount: plus_string + displayAmount(txInfo.changeAmount) + inputProduct
     readonly property string fee: minus_string + displayAmount(txInfo.fee) + inputProduct
 
-    signingAllowed: true
+    signingAllowed: passwordDialogData.DeliveryUTXOVerified
     errorMessage: qsTr("Genesis Address could not be verified")
 
     Component.onCompleted: {
