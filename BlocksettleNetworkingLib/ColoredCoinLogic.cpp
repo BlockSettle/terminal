@@ -1409,6 +1409,10 @@ void ColoredCoinACT::processNotification()
             break;
          }
 
+         case DBNS_Offline:
+            //TODO: put some disconnection processing here
+            break;
+
          default:
             throw std::runtime_error("unexpected notification type");
          }
