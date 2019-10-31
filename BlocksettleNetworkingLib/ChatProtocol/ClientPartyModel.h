@@ -12,7 +12,6 @@
 #include "ChatProtocol/ClientParty.h"
 #include "ChatProtocol/Message.h"
 #include "ChatProtocol/UserPublicKeyInfo.h"
-#include "CelerClient.h"
 
 namespace spdlog
 {
@@ -49,7 +48,7 @@ namespace Chat
       Q_OBJECT
    public:
       ClientPartyModel(const LoggerPtr& loggerPtr, QObject* parent = nullptr);
-      IdPartyList getIdPartyList() const;
+      IdPartyList getIdPartyList();
       IdPartyList getIdPrivatePartyList();
       IdPartyList getIdPrivatePartyListBySubType(const PartySubType& partySubType = PartySubType::STANDARD);
 

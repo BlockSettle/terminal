@@ -78,7 +78,6 @@ private slots:
    void onSignTxRequested(QString orderId, QString reqId);
    void onSettlementOrder();
    void onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx);
-   void reportError(const QString& errorMessage);
    void logError(const QString& errorMessage);
 
 private:

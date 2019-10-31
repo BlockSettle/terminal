@@ -257,7 +257,13 @@ bool ReqCCSettlementContainer::startSigning()
 
          // notify RFQ dialog that signed half could be saved
          emit settlementAccepted();
-         transactionData_->getWallet()->setTransactionComment(signedTX, txComment());
+
+         auto hdWallet = walletsMgr_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
+         auto group = hdWallet ? hdWallet->getGroup(hdWallet->getXBTGroupType()) : nullptr;
+         auto leaves = group ? group->getAllLeaves() : std::vector<std::shared_ptr<bs::sync::Wallet>>();
+         for (const auto & leaf : leaves) {
+            leaf->setTransactionComment(signedTX, txComment());
+         }
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
          emit settlementCancelled();

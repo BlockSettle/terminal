@@ -14,6 +14,7 @@ namespace spdlog {
    class logger;
 }
 
+struct BsClientLoginResult;
 struct NetworkSettings;
 
 class ApplicationSettings;
@@ -38,13 +39,13 @@ public:
    };
 
    QString email() const;
-   const std::string &celerLogin() const { return celerLogin_; }
+   BsClientLoginResult *result() const { return result_.get(); }
    std::unique_ptr<BsClient> getClient();
    const NetworkSettings &networkSettings() const;
 
 private slots:
    void onStartLoginDone(AutheIDClient::ErrorType errorCode);
-   void onGetLoginResultDone(AutheIDClient::ErrorType errorCode, const std::string &celerLogin);
+   void onGetLoginResultDone(const BsClientLoginResult &result);
    void onTextChanged();
    void onAuthPressed();
    void onTimer();
@@ -56,6 +57,7 @@ protected:
 private:
    void setState(State state);
    void updateState();
+   void displayError(AutheIDClient::ErrorType errorCode);
 
    std::unique_ptr<Ui::LoginWindow>       ui_;
    std::shared_ptr<spdlog::logger>        logger_;
@@ -67,7 +69,7 @@ private:
    float       timeLeft_{};
    std::unique_ptr<BsClient> bsClient_;
    std::unique_ptr<NetworkSettingsLoader> networkSettingsLoader_;
-   std::string celerLogin_;
+   std::unique_ptr<BsClientLoginResult> result_;
 };
 
 #endif // __LOGIN_WINDOW_H__

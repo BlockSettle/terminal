@@ -116,12 +116,6 @@ void RFQDialog::logError(const QString& errorMessage)
    logger_->error("[RFQDialog::logError] {}", errorMessage.toStdString());
 }
 
-void RFQDialog::reportError(const QString& errorMessage)
-{
-   BSMessageBox(BSMessageBox::Type::critical, tr("RFQ error"), errorMessage, this)
-      .exec();
-}
-
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
 {
    if (!xbtWallet_) {
@@ -156,7 +150,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
          , requestWidget_, &RFQRequestWidget::sendSignedPayoutToPB);
    }
    catch (const std::exception &e) {
-      reportError(tr("Failed to create XBT settlement container: %1")
+      logError(tr("Failed to create XBT settlement container: %1")
          .arg(QString::fromLatin1(e.what())));
    }
 
@@ -177,7 +171,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
          , this, &QDialog::close);
    }
    catch (const std::exception &e) {
-      reportError(tr("Failed to create CC settlement container: %1")
+      logError(tr("Failed to create CC settlement container: %1")
          .arg(QString::fromLatin1(e.what())));
    }
 

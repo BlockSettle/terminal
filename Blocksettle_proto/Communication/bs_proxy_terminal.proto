@@ -98,6 +98,12 @@ message Response
 
         // bs::network::UserType as int
         int32 user_type = 3;
+
+        // serialized bs.types.ChatToken
+        bytes chat_token_data = 4;
+
+        // chat_token_data signed by proxy for later chat server verification
+        bytes chat_token_sign = 5;
     }
 
     message Celer

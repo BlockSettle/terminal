@@ -9,7 +9,7 @@
 #include "OTCWindowsAdapterBase.h"
 
 namespace Ui {
-   class OTCNegotiationCommonWidget;
+   class OTCNegotiationRequestWidget;
 };
 
 namespace bs {
@@ -42,7 +42,6 @@ public slots:
 
 protected slots:
    void onSyncInterface() override;
-   void onMDUpdated() override;
    void onUpdateBalances() override;
 
 protected:
@@ -55,7 +54,6 @@ private slots:
    void onShowXBTInputsClicked();
    void onXbtInputsProcessed();
    void onChanged();
-   void onNumCcySelected();
    void onUpdateIndicativePrice();
    void onMaxQuantityClicked();
    void onCurrentWalletChanged();
@@ -63,7 +61,7 @@ private slots:
 private:
    void toggleSideButtons(bool isSell);
 
-   std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
+   std::unique_ptr<Ui::OTCNegotiationRequestWidget> ui_;
 };
 
 #endif // __OTC_NEGOTIATION_REQUEST_WIDGET_H__

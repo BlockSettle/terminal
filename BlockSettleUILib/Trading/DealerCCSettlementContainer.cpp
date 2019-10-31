@@ -50,6 +50,7 @@ DealerCCSettlementContainer::~DealerCCSettlementContainer()
 bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+   dialogData.setValue(PasswordDialogData::IsDealer, true);
    dialogData.setValue(PasswordDialogData::Market, "CC");
    dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
    dialogData.setValue(PasswordDialogData::LotSize, qint64(lotSize_));
