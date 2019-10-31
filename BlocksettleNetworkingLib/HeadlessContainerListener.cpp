@@ -1939,11 +1939,17 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, hea
 
    //request each chain for the relevant address types
    bool update = false;
-   for (auto& mapping : mapByPath) {
-      for (auto& path : mapping.second) {
-         auto resultPair = wallet->synchronizeUsedAddressChain(path.toString());
-         update |= resultPair.second;
+   try {
+      for (auto& mapping : mapByPath) {
+         for (auto& path : mapping.second) {
+            auto resultPair = wallet->synchronizeUsedAddressChain(path.toString());
+            update |= resultPair.second;
+         }
       }
+   }
+   catch (const std::exception &e) {
+      logger_->error("[{}] failed to sync address[es] in {}: {}", __func__, wallet->walletId(), e.what());
+      return false;
    }
 
    if (update) {

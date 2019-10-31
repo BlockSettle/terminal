@@ -40,8 +40,7 @@ bs::sync::WalletData bs::sync::WalletData::fromPbMessage(const headless::SyncWal
    }
    for (int i = 0; i < response.addrpool_size(); ++i) {
       const auto addrInfo = response.addrpool(i);
-      BinaryDataRef addrRef; addrRef.setRef(addrInfo.address());
-      const auto addr = bs::Address::fromHash(addrRef);
+      const auto addr = bs::Address::fromAddressString(addrInfo.address());
       if (addr.isNull()) {
          continue;
       }

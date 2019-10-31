@@ -195,6 +195,7 @@ bs::Address bs::Address::fromTxOut(const TxOut &out)
    const auto binData = out.getScrAddressStr();
    switch (scrType) {
    case TXOUT_SCRIPT_P2WPKH:
+   case TXOUT_SCRIPT_P2SH:
       return bs::Address(binData.getSliceCopy(1, 20), mapTxOutScriptType(scrType));
 
    case TXOUT_SCRIPT_P2WSH:

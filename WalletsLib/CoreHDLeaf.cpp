@@ -595,9 +595,14 @@ std::pair<bs::Address, bool> hd::Leaf::synchronizeUsedAddressChain(
    }
 
    //sanity check: index and type should match request
+   // Temporarily disabled because for P2SH+P2WPKH getType() returns only P2SH
+#if 0
    if (result.first.getType() != addressType()) {
-      throw AccountException("did not get expected address entry type");
+      throw AccountException("did not get expected address entry type "
+         + std::to_string((int)addressType()) + " (got "
+         + std::to_string(int(result.first.getType())) + ")");
    }
+#endif //0
    auto resultIndex = addressIndex(result.first);
    if (resultIndex != addrIndex) {
       throw AccountException("did not get expected address index");
