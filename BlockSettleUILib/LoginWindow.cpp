@@ -101,10 +101,7 @@ void LoginWindow::onStartLoginDone(AutheIDClient::ErrorType errorCode)
 {
    if (errorCode != AutheIDClient::NoError) {
       setState(Idle);
-
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
-         , AutheIDClient::errorString(errorCode), this);
-      loginErrorBox.exec();
+      displayError(errorCode);
       return;
    }
 
@@ -113,23 +110,20 @@ void LoginWindow::onStartLoginDone(AutheIDClient::ErrorType errorCode)
    setState(WaitLoginResult);
 }
 
-void LoginWindow::onGetLoginResultDone(AutheIDClient::ErrorType errorCode, const std::string &celerLogin)
+void LoginWindow::onGetLoginResultDone(const BsClientLoginResult &result)
 {
-   if (errorCode == AutheIDClient::Cancelled || errorCode == AutheIDClient::Timeout) {
+   if (result.status == AutheIDClient::Cancelled || result.status == AutheIDClient::Timeout) {
       setState(Idle);
       return;
    }
 
-   if (errorCode != AutheIDClient::NoError) {
+   if (result.status != AutheIDClient::NoError) {
       setState(Idle);
-
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
-         , AutheIDClient::errorString(errorCode), this);
-      loginErrorBox.exec();
+      displayError(result.status);
       return;
    }
 
-   celerLogin_ = celerLogin;
+   result_ = std::make_unique<BsClientLoginResult>(std::move(result));
    QDialog::accept();
 }
 
@@ -172,6 +166,15 @@ void LoginWindow::updateState()
          ui_->stackedWidgetAuth->setCurrentWidget(ui_->pageCancel);
          ui_->lineEditUsername->setEnabled(false);
          break;
+   }
+}
+
+void LoginWindow::displayError(AutheIDClient::ErrorType errorCode)
+{
+   if (errorCode != AutheIDClient::ErrorType::NetworkError) {
+      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
+         , AutheIDClient::errorString(errorCode), this);
+      loginErrorBox.exec();
    }
 }
 

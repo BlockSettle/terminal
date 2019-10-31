@@ -1120,13 +1120,16 @@ bool ColoredCoinTracker::goOnline()
    for (auto& addr : revocationAddresses_) {
       addrVec.push_back(addr.prefixed());
    }
-   auto&& regID = walletObj_->registerAddresses(addrVec, false);
+   auto &&regID = walletObj_->registerAddresses(addrVec, false);
    while (true) {
       /*
       Wait on regID. We have to do this because we can't start
       the ACT notification thread yet.
       */
       auto&& notif = actPtr_->popNotification();
+      if ((notif->type_ == DBNS_Offline) && !notif->online_) {
+         return false;
+      }
       if (notif->type_ == DBNS_Refresh) {
          if (notif->ids_.size() == 1 &&
             notif->ids_[0] == regID) {
@@ -1149,6 +1152,9 @@ bool ColoredCoinTracker::goOnline()
 
    while (true) {
       auto&& notif = actPtr_->popNotification();
+      if ((notif->type_ == DBNS_Offline) && !notif->online_) {
+         return false;
+      }
       if (notif->type_ == DBNS_Refresh) {
          if (notif->ids_.size() == 1 &&
             notif->ids_[0] == regID) {
@@ -1275,6 +1281,16 @@ void ColoredCoinACT::onRefresh(const std::vector<BinaryData>& ids, bool online)
    dbns->online_ = online;
 
    notifQueue_.push_back(std::move(dbns));
+}
+
+void ColoredCoinACT::onStateChanged(ArmoryState state)
+{
+   if (state == ArmoryState::Offline) {
+      auto dbns = std::make_shared<DBNotificationStruct>(DBNS_Offline);
+      dbns->online_ = false;
+
+      notifQueue_.push_back(std::move(dbns));
+   }
 }
 
 ////

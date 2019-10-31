@@ -36,3 +36,13 @@ message Order
    double quantity = 8;
    double price = 9;
 }
+
+message ChatToken
+{
+   int64 timestamp_ms = 1;
+
+   string chat_login = 2;
+
+   // bs::network::UserType as int
+   int32 user_type = 3;
+}

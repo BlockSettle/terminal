@@ -629,14 +629,11 @@ void BSTerminalMainWindow::InitChatView()
    chatClientServicePtr_ = std::make_shared<Chat::ChatClientService>();
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, [this]() {
-      //ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_, logMgr_->logger("chat"), walletsMgr_, armory_, signContainer_);
       ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_,
-         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_, celerConnection_);
+         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_);
    });
 
    chatClientServicePtr_->Init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
-
-   //ui_->widgetChat->setCelerClient(celerConnection_);
 
    connect(ui_->tabWidget, &QTabWidget::currentChanged, this, &BSTerminalMainWindow::onTabWidgetCurrentChanged);
    connect(ui_->widgetChat, &ChatWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
@@ -1118,10 +1115,15 @@ void BSTerminalMainWindow::onLogin()
 
    int rc = loginDialog.exec();
 
-   if (rc != QDialog::Accepted) {
+   if (rc != QDialog::Accepted && !loginDialog.result()) {
       setWidgetsAuthorized(false);
       return;
    }
+
+   currentUserLogin_ = loginDialog.email();
+
+   ui_->widgetChat->setUserType(loginDialog.result()->userType);
+   chatClientServicePtr_->LoginToServer(loginDialog.result()->chatTokenData, loginDialog.result()->chatTokenSign, cbApproveChat_);
 
    bsClient_ = loginDialog.getClient();
    ccFileManager_->setBsClient(bsClient_.get());
@@ -1147,14 +1149,12 @@ void BSTerminalMainWindow::onLogin()
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
 
-   currentUserLogin_ = loginDialog.email();
-
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
 
    // We don't use password here, BsProxy will manage authentication
-   SPDLOG_LOGGER_DEBUG(logMgr_->logger(), "got celer login: {}", loginDialog.celerLogin());
-   celerConnection_->LoginToServer(bsClient_.get(), loginDialog.celerLogin(), loginDialog.email().toStdString());
+   SPDLOG_LOGGER_DEBUG(logMgr_->logger(), "got celer login: {}", loginDialog.result()->celerLogin);
+   celerConnection_->LoginToServer(bsClient_.get(), loginDialog.result()->celerLogin, loginDialog.email().toStdString());
 
    ui_->widgetWallets->setUsername(currentUserLogin_);
    action_logout_->setVisible(false);
@@ -1202,9 +1202,6 @@ void BSTerminalMainWindow::onUserLoggedIn()
 
    ccFileManager_->LoadCCDefinitionsFromPub();
    ccFileManager_->ConnectToCelerClient(celerConnection_);
-
-   std::string jwt;
-   chatClientServicePtr_->LoginToServer(currentUserLogin_.toStdString(), celerConnection_->celerUserType(), jwt, cbApproveChat_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    const auto &deferredDialog = [this, userId] {

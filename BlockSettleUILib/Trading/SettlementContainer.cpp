@@ -14,7 +14,7 @@ sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
 
    info.setValue(PasswordDialogData::SettlementId, id());
    info.setValue(PasswordDialogData::DurationLeft, durationMs());
-   info.setValue(PasswordDialogData::DurationTotal, kWaitTimeoutInSec * 1000);
+   info.setValue(PasswordDialogData::DurationTotal, (int)kWaitTimeoutInSec * 1000);
 
    // Set timestamp that will be used by auth eid server to update timers.
    // TODO: Use time from PB and use it for all counters.
@@ -34,8 +34,8 @@ sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogDat
    bs::sync::PasswordDialogData dialogData = toPasswordDialogData();
 
    dialogData.setValue(PasswordDialogData::Title, tr("Settlement Pay-Out"));
-   dialogData.setValue(PasswordDialogData::DurationLeft, kWaitTimeoutInSec * 1000);
-   dialogData.setValue(PasswordDialogData::DurationTotal, kWaitTimeoutInSec * 1000);
+   dialogData.setValue(PasswordDialogData::DurationLeft, (int)kWaitTimeoutInSec * 1000);
+   dialogData.setValue(PasswordDialogData::DurationTotal, (int)kWaitTimeoutInSec * 1000);
    dialogData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
 
    return dialogData;

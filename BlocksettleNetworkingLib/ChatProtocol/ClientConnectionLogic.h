@@ -65,6 +65,8 @@ namespace Chat
       void acceptPrivateParty(const std::string& partyId);
       void searchUser(const std::string& userHash, const std::string& searchId);
 
+      void setToken(const BinaryData &token, const BinaryData &tokenSign);
+
    public slots:
       void onDataReceived(const std::string&);
       void onConnected(void);
@@ -121,6 +123,8 @@ namespace Chat
       ClientDBServicePtr clientDBServicePtr_;
       SessionKeyHolderPtr sessionKeyHolderPtr_;
       CryptManagerPtr cryptManagerPtr_;
+      BinaryData token_;
+      BinaryData tokenSign_;
    };
 
    using ClientConnectionLogicPtr = std::shared_ptr<ClientConnectionLogic>;

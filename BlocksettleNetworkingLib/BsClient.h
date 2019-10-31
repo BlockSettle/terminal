@@ -41,6 +41,12 @@ namespace Blocksettle {
    }
 }
 
+namespace bs {
+   namespace network {
+      enum class UserType : int;
+   }
+}
+
 struct BsClientParams
 {
    struct NewKey
@@ -60,6 +66,15 @@ struct BsClientParams
    std::string oldServerKey;
 
    NewKeyCallback newServerKeyCallback;
+};
+
+struct BsClientLoginResult
+{
+   AutheIDClient::ErrorType status{};
+   bs::network::UserType userType{};
+   std::string celerLogin;
+   BinaryData chatTokenData;
+   BinaryData chatTokenSign;
 };
 
 class BsClient : public QObject, public DataConnectionListener
@@ -127,7 +142,7 @@ public slots:
 
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
-   void getLoginResultDone(AutheIDClient::ErrorType status, const std::string &celerLogin);
+   void getLoginResultDone(const BsClientLoginResult &result);
 
    void celerRecv(CelerAPI::CelerMessageType messageType, const std::string &data);
    // Register Blocksettle::Communication::ProxyTerminalPb::Response with qRegisterMetaType() if queued connection is needed

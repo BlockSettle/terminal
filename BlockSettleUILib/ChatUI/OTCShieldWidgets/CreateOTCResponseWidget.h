@@ -24,7 +24,6 @@ public:
 
 protected slots:
    void onUpdateBalances() override;
-   void onMDUpdated() override;
 
 private slots:
    void updateAcceptButton();
