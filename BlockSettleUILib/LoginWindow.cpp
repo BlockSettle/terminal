@@ -110,20 +110,20 @@ void LoginWindow::onStartLoginDone(AutheIDClient::ErrorType errorCode)
    setState(WaitLoginResult);
 }
 
-void LoginWindow::onGetLoginResultDone(AutheIDClient::ErrorType errorCode, const std::string &celerLogin)
+void LoginWindow::onGetLoginResultDone(const BsClientLoginResult &result)
 {
-   if (errorCode == AutheIDClient::Cancelled || errorCode == AutheIDClient::Timeout) {
+   if (result.status == AutheIDClient::Cancelled || result.status == AutheIDClient::Timeout) {
       setState(Idle);
       return;
    }
 
-   if (errorCode != AutheIDClient::NoError) {
+   if (result.status != AutheIDClient::NoError) {
       setState(Idle);
-      displayError(errorCode);
+      displayError(result.status);
       return;
    }
 
-   celerLogin_ = celerLogin;
+   result_ = std::make_unique<BsClientLoginResult>(std::move(result));
    QDialog::accept();
 }
 

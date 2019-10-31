@@ -203,7 +203,7 @@ unsigned ValidationAddressManager::goOnline()
    for (auto& addrPair : validationAddresses_) {
       addrVec.push_back(addrPair.first.prefixed());
    }
-   auto&& regID = walletObj_->registerAddresses(addrVec, false);
+   auto &&regID = walletObj_->registerAddresses(addrVec, false);
    waitOnRefresh(regID);
 
    auto aopCount = update();

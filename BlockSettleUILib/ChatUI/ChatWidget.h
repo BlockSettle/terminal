@@ -22,13 +22,15 @@ class ChatOTCHelper;
 class OTCWindowsManager;
 class MarketDataProvider;
 class AssetManager;
-class BaseCelerClient;
 
 namespace Ui {
    class ChatWidget;
 }
 
 namespace bs {
+   namespace network {
+      enum class UserType : int;
+   }
    namespace sync {
       class WalletsManager;
    }
@@ -60,12 +62,11 @@ public:
       , const std::shared_ptr<SignContainer> &signContainer
       , const std::shared_ptr<MarketDataProvider>& mdProvider
       , const std::shared_ptr<AssetManager>& assetManager
-      , const std::shared_ptr<BaseCelerClient> &celerClient
    );
 
-   std::string login(const std::string& email, const std::string& jwt, const ZmqBipNewKeyCb&);
-
    bs::network::otc::Peer *currentPeer() const;
+
+   void setUserType(bs::network::UserType userType);
 
 protected:
    void showEvent(QShowEvent* e) override;
@@ -161,7 +162,6 @@ private:
    OTCRequestViewModel* otcRequestViewModel_ = nullptr;
    QPointer<ChatOTCHelper> otcHelper_{};
    std::shared_ptr<spdlog::logger>  loggerPtr_;
-   std::shared_ptr<BaseCelerClient> celerClient_;
    std::shared_ptr<ChatPartiesTreeModel> chatPartiesTreeModel_;
    std::shared_ptr<OTCWindowsManager> otcWindowsManager_{};
 
@@ -169,6 +169,8 @@ private:
    std::string currentPartyId_;
    QMap<std::string, QString> draftMessages_;
    bool bNeedRefresh_ = false;
+
+   bs::network::UserType userType_{};
 };
 
 #endif // CHAT_WIDGET_H

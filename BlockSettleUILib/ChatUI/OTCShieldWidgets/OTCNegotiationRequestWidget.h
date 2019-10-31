@@ -42,7 +42,6 @@ public slots:
 
 protected slots:
    void onSyncInterface() override;
-   void onMDUpdated() override;
    void onUpdateBalances() override;
 
 protected:

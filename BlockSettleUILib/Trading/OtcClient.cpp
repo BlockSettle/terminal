@@ -1607,17 +1607,28 @@ void OtcClient::verifyAuthAddresses(OtcClientDeal *deal)
       return;
    }
 
-   deal->addressVerificator = std::make_unique<AddressVerificator>(logger_, armory_, [this, deal]
-      (const bs::Address &address, AddressVerificationState state)
+   auto verificatorCb = [this, logger = logger_, handle = deal->peerHandle, isRequester = deal->isRequestor(), settlementId = deal->settlementId]
+         (const bs::Address &address, AddressVerificationState state)
    {
-      SPDLOG_LOGGER_DEBUG(logger_, "counterparty's address verification {} for {}", to_string(state), address.display());
-      if (state == AddressVerificationState::Verified) {
+      QMetaObject::invokeMethod(qApp, [this, logger, handle, state, address, isRequester, settlementId] {
+         if (!handle.isValid()) {
+            SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
+            return;
+         }
+
+         SPDLOG_LOGGER_DEBUG(logger_, "counterparty's auth address ({}) status: {}", address.display(), to_string(state));
+         if (state != AddressVerificationState::Verified) {
+            return;
+         }
+
          bs::sync::PasswordDialogData dialogData;
-         dialogData.setValue(deal->isRequestor() ? PasswordDialogData::ResponderAuthAddressVerified : PasswordDialogData::RequesterAuthAddressVerified, true);
-         dialogData.setValue(PasswordDialogData::SettlementId, deal->settlementId);
+         dialogData.setValue(isRequester ? PasswordDialogData::ResponderAuthAddressVerified : PasswordDialogData::RequesterAuthAddressVerified, true);
+         dialogData.setValue(PasswordDialogData::SettlementId, settlementId);
          signContainer_->updateDialogData(dialogData);
-      }
-   });
+      });
+   };
+
+   deal->addressVerificator = std::make_unique<AddressVerificator>(logger_, armory_, verificatorCb);
 
    deal->addressVerificator->SetBSAddressList(authAddressManager_->GetBSAddresses());
    // Verify only peer's auth address
