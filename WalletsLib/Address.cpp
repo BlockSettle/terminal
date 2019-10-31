@@ -191,19 +191,7 @@ bs::Address bs::Address::fromRecipient(const std::shared_ptr<ScriptRecipient> &r
 
 bs::Address bs::Address::fromTxOut(const TxOut &out)
 {
-   const auto scrType = out.getScriptType();
-   const auto binData = out.getScrAddressStr();
-   switch (scrType) {
-   case TXOUT_SCRIPT_P2WPKH:
-   case TXOUT_SCRIPT_P2SH:
-      return bs::Address(binData.getSliceCopy(1, 20), mapTxOutScriptType(scrType));
-
-   case TXOUT_SCRIPT_P2WSH:
-      return bs::Address(binData.getSliceCopy(1, 32), mapTxOutScriptType(scrType));
-
-   default: break;
-   }
-   return bs::Address(binData, mapTxOutScriptType(scrType));
+   return bs::Address(out.getScrAddressStr());
 }
 
 bs::Address bs::Address::fromUTXO(const UTXO &utxo)
