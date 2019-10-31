@@ -152,17 +152,22 @@ CustomTitleDialogWindow {
                 //Layout.leftMargin: inputLabelsWidth + 5
                 text: qsTr("Primary Wallet")
                 checked: !primaryWalletExists && hasCCInfoLoaded
-                enabled: hasCCInfoLoaded
 
-                ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
+                ToolTip.text: { primaryWalletExists
+                                ? qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
+                                : qsTr("Log into the Terminal in order to create a Primary Wallet.") }
+
                 ToolTip.delay: 150
                 ToolTip.timeout: 5000
-                ToolTip.visible: cbPrimary.hovered && primaryWalletExists
+                ToolTip.visible: cbPrimary.hovered && (primaryWalletExists || !hasCCInfoLoaded)
 
                 // workaround on https://bugreports.qt.io/browse/QTBUG-30801
                 // enabled: !primaryWalletExists
                 onCheckedChanged: {
-                    if (primaryWalletExists) cbPrimary.checked = false;
+                    if (primaryWalletExists || !hasCCInfoLoaded) {
+                        cbPrimary.checked = false;
+                        return;
+                    }
 
                     if (!primaryWalletExists && (tfName.text === walletsProxy.generateNextWalletName() || tfName.text.length === 0)) {
                         tfName.text = qsTr("Primary Wallet");

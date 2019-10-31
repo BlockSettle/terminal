@@ -475,6 +475,7 @@ CustomTitleDialogWindowWithExpander {
                         txInfo.saveToFile(qmlAppObj.getUrlPath(exportTxDlg.file))
                         btnExportTx.primary = false
                         btnImportTx.primary = true
+                        btnImportTx.enabled = true
                     }
                 }
             }
@@ -482,6 +483,7 @@ CustomTitleDialogWindowWithExpander {
             CustomButton {
                 id: btnImportTx
                 visible: walletInfo.encType === QPasswordData.Unencrypted
+                enabled: false
                 text: qsTr("LOAD SIGNED TX")
                 anchors.right: btnConfirm.left
                 anchors.bottom: parent.bottom
