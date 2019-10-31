@@ -44,6 +44,8 @@ public:
    // Make sure to set it before BindConnection call.
    void setListenFrom(const std::vector<std::string> &fromAddresses);
 
+   void setThreadName(const std::string &name);
+
 protected:
    bool isActive() const;
 
@@ -120,6 +122,8 @@ private:
    std::string identity_;
    int sendTimeoutInMs_{ 5000 };
    std::vector<std::string> fromAddresses_;
+   std::string threadName_;
+
 };
 
 #endif // __ZEROMQ_SERVER_CONNECTION_H__
