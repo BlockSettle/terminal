@@ -42,21 +42,19 @@ TEST(TestCommon, CurrencyPair)
 TEST(TestCommon, Address)
 {
    const std::string b58Addr = "2NBoXxTwt1ruSkuCv5iJaSmZUccHNB2yPjB";
-   const bs::Address addr(b58Addr);
+   const auto addr = bs::Address::fromAddressString(b58Addr);
    ASSERT_FALSE(addr.isNull());
    EXPECT_EQ(addr.getSize(), 21);
    EXPECT_TRUE(addr.isValid());
-   EXPECT_EQ(addr.display(bs::Address::Format::Auto), b58Addr);
+   EXPECT_EQ(addr.display(), b58Addr);
    EXPECT_EQ(addr.getType(), AddressEntryType_P2SH);
-   EXPECT_EQ(addr.display(bs::Address::Bech32), "tb1qew8fxz85q4fvz2vx422qd8j3zj7w83t606230m");
-   EXPECT_EQ(addr.display(bs::Address::Hex), "c4cb8e9308f40552c12986aa94069e5114bce3c57a");
 
    const std::string bech32Addr = "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx";
    const auto pubKey = BinaryData::CreateFromHex("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798");
-   bs::Address bAddr1(BtcUtils::getHash160(pubKey), AddressEntryType_P2WPKH);
+   auto bAddr1 = bs::Address::fromPubKey(pubKey, AddressEntryType_P2WPKH);
    EXPECT_EQ(bAddr1.display(), bech32Addr);
-   EXPECT_EQ(bAddr1.getSize(), 20);
-   const bs::Address bAddr2(bech32Addr);
+   EXPECT_EQ(bAddr1.getSize(), 21);
+   const auto bAddr2 = bs::Address::fromAddressString(bech32Addr);
    EXPECT_EQ(bAddr2.getType(), AddressEntryType_P2WPKH);
    EXPECT_EQ(bAddr2, bAddr1);
    EXPECT_EQ(bAddr2.unprefixed(), BtcUtils::getHash160(pubKey));

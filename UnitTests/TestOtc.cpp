@@ -62,7 +62,7 @@ public:
          ASSERT_TRUE(nestedLeaf);
          nestedAddr_ = nestedLeaf->getNewExtAddress();
          ASSERT_FALSE(nestedAddr_.isNull());
-         ASSERT_EQ(nestedAddr_.getType(), static_cast<AddressEntryType>(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+         ASSERT_EQ(nestedAddr_.getType(), AddressEntryType_P2SH);
       }
 
       env.walletsMgr()->addWallet(wallet_);
@@ -169,10 +169,12 @@ public:
                      ASSERT_EQ(result.totalOutputCount, 2);
 
                      // peer1_ is always sending XBT
-                     auto changeWallet = peer1_.syncWalletMgr_->getWalletByAddress(result.changeAddr);
+                     auto changeWallet = peer1_.syncWalletMgr_->getWalletByAddress(
+                        bs::Address::fromAddressString(result.changeAddr));
                      ASSERT_TRUE(changeWallet);
 
-                     bool isExternal = changeWallet->isExternalAddress(result.changeAddr);
+                     bool isExternal = changeWallet->isExternalAddress(
+                        bs::Address::fromAddressString(result.changeAddr));
                      ASSERT_FALSE(isExternal);
                   }
 
@@ -267,7 +269,10 @@ public:
 
    void mineRandomBlocks(unsigned count)
    {
-      mineNewBlocks(bs::Address(CryptoPRNG::generateRandom(20), AddressEntryType_P2WPKH), count);
+      BinaryData prefixed;
+      prefixed.append(AddressEntry::getPrefixByte(AddressEntryType_P2WPKH));
+      prefixed.append(CryptoPRNG::generateRandom(20));
+      mineNewBlocks(bs::Address::fromHash(prefixed), count);
    }
 
    void doOtcTest(int testNum)
@@ -325,6 +330,9 @@ public:
 
       auto remotePeer = receiver.otc_->contact(sender.name_);
       ASSERT_TRUE(remotePeer);
+
+      /*This check can never succeed due do how OtcClient::sendOffer is written. 
+      The issue is commented thoroughly within that method's definition.*/
       ASSERT_TRUE(remotePeer->state == otc::State::OfferRecv);
 
       {
