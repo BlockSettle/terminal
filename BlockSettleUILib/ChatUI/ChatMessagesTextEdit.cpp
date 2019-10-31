@@ -77,7 +77,6 @@ QString ChatMessagesTextEdit::dataMessage(const std::string& partyId, const std:
       return QString();
    }
 
-   // To avoid lookup every time for the same party_id
    Chat::ClientPartyPtr previousClientPartyPtr = nullptr;
 
    switch (column) {
