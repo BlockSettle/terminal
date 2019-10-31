@@ -48,22 +48,22 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
    }
 
    // Update all UI elements
-   int bNewMessagesCounter = 0;
-   bool isAtLeastOneOTC = false;
 
    // Tab notifier
-   for (int iMessage = 0; iMessage < messagePtrList.size(); ++iMessage) {
-      Chat::MessagePtr message = messagePtrList[iMessage];
-      if (static_cast<Chat::PartyMessageState>(message->partyMessageState()) == Chat::PartyMessageState::SENT &&
+   for (const auto message : messagePtrList)
+   {
+      if (message->partyMessageState() == Chat::PartyMessageState::SENT &&
          chat_->ownUserId_ != message->senderHash()) {
-         ++bNewMessagesCounter;
 
-         Chat::ClientPartyPtr clientPartyPtr = getParty(message->partyId());
+         const auto clientPartyPtr = getParty(message->partyId());
+         if (!clientPartyPtr) {
+            continue;
+         }
 
          const auto messageTitle = clientPartyPtr->displayName();
          auto messageText = message->messageText();
          const auto otcText = OtcUtils::toReadableString(QString::fromStdString(messageText));
-         const bool isOtc = !otcText.isEmpty();
+         const auto isOtc = !otcText.isEmpty();
 
          if (!isOtc && messageText.length() > kMaxMessageNotifLength) {
             messageText = messageText.substr(0, kMaxMessageNotifLength) + "...";
@@ -76,13 +76,9 @@ void AbstractChatWidgetState::onProcessMessageArrived(const Chat::MessagePtrList
          notifyMsg.append(isOtc);
 
          NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
-
-         isAtLeastOneOTC |= isOtc;
-
          // Update tree
-         // TODO: check this part
-         if (bNewMessagesCounter > 0 && message->partyId() != chat_->currentPartyId_) {
-            chat_->chatPartiesTreeModel_->onIncreaseUnseenCounter(message->partyId(), bNewMessagesCounter, isAtLeastOneOTC);
+         if (message->partyId() != chat_->currentPartyId_) {
+            chat_->chatPartiesTreeModel_->onIncreaseUnseenCounter(message->partyId(), 1, isOtc);
          }
       }
    }
