@@ -1,3 +1,4 @@
+#include "FastLock.h"
 #include "ChatProtocol/ClientPartyModel.h"
 
 #include <disable_warnings.h>
@@ -17,8 +18,10 @@ ClientPartyModel::ClientPartyModel(const LoggerPtr& loggerPtr, QObject* parent /
    connect(this, &ClientPartyModel::partyRemoved, this, &ClientPartyModel::handlePartyRemoved);
 }
 
-IdPartyList ClientPartyModel::getIdPartyList() const
+IdPartyList ClientPartyModel::getIdPartyList()
 {
+   FastLock locker(partyMapLockerFlag_);
+
    IdPartyList idPartyList;
    for (const auto& element : partyMap_)
    {
@@ -30,6 +33,8 @@ IdPartyList ClientPartyModel::getIdPartyList() const
 
 IdPartyList ClientPartyModel::getIdPrivatePartyList()
 {
+   FastLock locker(partyMapLockerFlag_);
+
    IdPartyList idPartyList;
    for (const auto& element : partyMap_)
    {
@@ -44,6 +49,8 @@ IdPartyList ClientPartyModel::getIdPrivatePartyList()
 
 IdPartyList ClientPartyModel::getIdPrivatePartyListBySubType(const PartySubType& partySubType)
 {
+   FastLock locker(partyMapLockerFlag_);
+
    IdPartyList idPartyList;
    for (const auto& element : partyMap_)
    {

@@ -9,7 +9,7 @@
 #include "CommonTypes.h"
 
 namespace Ui {
-   class OTCNegotiationCommonWidget;
+   class OTCNegotiationResponseWidget;
 };
 
 class OTCNegotiationResponseWidget : public OTCWindowsAdapterBase
@@ -42,7 +42,6 @@ protected slots:
 private slots:
    void onChanged();
    void onAcceptOrUpdateClicked();
-   void onUpdateIndicativePrice();
    void onShowXBTInputsClicked();
    void onXbtInputsProcessed();
 
@@ -52,7 +51,7 @@ protected:
    void updateIndicativePriceValue();
 
 private:
-   std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
+   std::unique_ptr<Ui::OTCNegotiationResponseWidget> ui_;
    bs::network::otc::Offer receivedOffer_;
 };
 
