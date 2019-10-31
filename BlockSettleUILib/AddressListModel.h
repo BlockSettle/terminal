@@ -5,6 +5,7 @@
 #include <memory>
 #include <QAbstractTableModel>
 #include "CoreWallet.h"
+#include "ValidityFlag.h"
 
 namespace bs {
    namespace sync {
@@ -93,6 +94,7 @@ private:
 
    std::atomic_bool           processing_;
    bool filterBtcOnly_{false};
+   ValidityFlag validityFlag_;
 
 private:
    void updateWallet(const std::shared_ptr<bs::sync::Wallet> &);

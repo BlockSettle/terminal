@@ -86,6 +86,8 @@ DealerXBTSettlementContainer::~DealerXBTSettlementContainer()
 bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData() const
 {
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+
+   dialogData.setValue(PasswordDialogData::IsDealer, true);
    dialogData.setValue(PasswordDialogData::Market, "XBT");
    dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
 
@@ -317,6 +319,7 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
          settlAddr_ = result.settlementAddr;
 
          bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(result.signRequest);
+         dlgData.setValue(PasswordDialogData::IsDealer, true);
          dlgData.setValue(PasswordDialogData::Market, "XBT");
          dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
          dlgData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));

@@ -264,6 +264,7 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
       connThreadRunning_ = true;
       setState(ArmoryState::Connecting);
       stopServiceThreads();
+
       if (bdv_) {
          bdv_->unregisterFromDB();
          bdv_.reset();
@@ -288,7 +289,6 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
          bdv_ = AsyncClient::BlockDataViewer::getNewBDV(host, port
             , dataDir, true // enable ephemeralPeers, because we manage armory keys ourself
             , cbRemote_);
-
          if (!bdv_) {
             logger_->error("[setupConnection (connectRoutine)] failed to "
                "create BDV");
@@ -297,7 +297,6 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
          }
 
          bdv_->setCheckServerKeyPromptLambda(cbBIP151);
-
          connected = bdv_->connectToRemote();
          if (!connected) {
             logger_->warn("[ArmoryConnection::setupConnection] BDV connection failed");
@@ -399,15 +398,13 @@ std::string ArmoryConnection::registerWallet(const std::shared_ptr<AsyncClient::
    , const std::string &walletId, const std::string &mergedWalletId
    , const std::vector<BinaryData> &addrVec, const RegisterWalletCb &cb, bool asNew)
 {
-   if (!bdv_ || ((state_ != ArmoryState::Ready) && (state_ != ArmoryState::Connected))) {
+   if ((state_ != ArmoryState::Ready) && (state_ != ArmoryState::Connected)) {
       logger_->error("[ArmoryConnection::registerWallet] invalid state: {}", (int)state_.load());
       return {};
    }
 
+   const auto regId = wallet->registerAddresses(addrVec, asNew);
    std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
-
-   const auto &regId = wallet->registerAddresses(addrVec, asNew);
-
    registrationCallbacks_[regId] = cb;
 
    addMergedWalletId(walletId, mergedWalletId);
@@ -578,9 +575,7 @@ bool ArmoryConnection::getNodeStatus(const std::function<void(const std::shared_
          userCB({});
       }
    };
-
    bdv_->getNodeStatus(cbWrap);
-
    return true;
 }
 
@@ -904,7 +899,6 @@ bool ArmoryConnection::getHeaderByHeight(const unsigned int inHeight, const Bina
       }
    };
    bdv_->getHeaderByHeight(inHeight, cbWrap);
-
    return true;
 }
 

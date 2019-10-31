@@ -35,7 +35,7 @@ private slots:
    void onNumCcySelected();
 
 private:
-   void updateXBTRange(bool isSell, BTCNumericTypes::balance_type xbtBalance = 0.0);
+   void updateXBTRange(bool isSell, BTCNumericTypes::balance_type balance = 0.0);
 
    std::unique_ptr<Ui::CreateOTCRequestWidget> ui_;
 

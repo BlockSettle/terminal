@@ -68,8 +68,6 @@ protected:
    BTCNumericTypes::balance_type getXBTSpendableBalanceFromCombobox(QComboBox *walletsCombobox) const;
    std::shared_ptr<bs::sync::hd::Wallet> getCurrentHDWalletFromCombobox(QComboBox *walletsCombobox) const;
 
-   double updateIndicativePriceValue(QLabel *label, bool isBuySide);
-
    QString getXBTRange(bs::network::otc::Range xbtRange);
    QString getCCRange(bs::network::otc::Range ccRange);
 

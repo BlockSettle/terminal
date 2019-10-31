@@ -1099,7 +1099,7 @@
             <item>
              <widget class="QLabel" name="authenticationAddressLabel">
               <property name="text">
-               <string>Auth. Address</string>
+               <string>Authentication Address</string>
               </property>
              </widget>
             </item>
