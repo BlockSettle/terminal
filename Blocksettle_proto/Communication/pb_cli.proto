@@ -96,6 +96,7 @@ message PBStatusResponse
    required uint64 uptime_seconds   = 18;
 
    required bool ConnectedToMD      = 19;
+   required bool ConnectedToProxy   = 20;
 }
 
 message ErrorMessage
