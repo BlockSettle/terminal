@@ -29,7 +29,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , wallet_(wallet)
    , signingContainer_(container)
    , txReqData_(BinaryData::CreateFromHex(order.reqTransaction))
-   , ownRecvAddr_(ownRecvAddr)
+   , ownRecvAddr_(bs::Address::fromAddressString(ownRecvAddr))
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
 {

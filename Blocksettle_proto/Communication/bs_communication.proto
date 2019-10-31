@@ -135,7 +135,7 @@ message GetCCGenesisAddressesResponse
    message CCSecurityDefinition {
       required string securityId  = 1;
       required string product     = 2;
-      required bytes  genesisAddr = 3;
+      required string genesisAddr = 3;
       required uint64 satoshisNb  = 4;
       optional string description = 5;
    }

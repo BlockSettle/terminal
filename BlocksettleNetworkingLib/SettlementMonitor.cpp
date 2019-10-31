@@ -309,7 +309,7 @@ uint64_t bs::SettlementMonitor::getEstimatedFeeFor(UTXO input, const bs::Address
    }
    const auto inputAmount = input.getValue();
    if (input.txinRedeemSizeBytes_ == UINT32_MAX) {
-      const bs::Address scrAddr(input.getRecipientScrAddr());
+      const auto scrAddr = bs::Address::fromHash(input.getRecipientScrAddr());
       input.txinRedeemSizeBytes_ = (unsigned int)scrAddr.getInputSize();
    }
    CoinSelection coinSelection([&input](uint64_t) -> std::vector<UTXO> { return { input }; }

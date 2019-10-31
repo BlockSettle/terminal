@@ -113,7 +113,7 @@ void ReqCCSettlementContainer::activate()
          throw std::runtime_error("invalid lot size");
       }
       signer_.deserializeState(dealerTx_);
-      foundRecipAddr = signer_.findRecipAddress(bs::Address(rfq_.receiptAddress)
+      foundRecipAddr = signer_.findRecipAddress(bs::Address::fromAddressString(rfq_.receiptAddress)
          , [this, &amountValid](uint64_t value, uint64_t valReturn, uint64_t valInput) {
          if ((quote_.side == bs::network::Side::Sell) && qFuzzyCompare(quantity(), value / lotSize_)) {
             amountValid = valInput == (value + valReturn);
@@ -176,7 +176,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
       logger_->debug("[{}] sell amount={}, spend value = {}", __func__, quantity(), spendVal);
       ccTxData_.walletIds = { wallet->walletId() };
       ccTxData_.prevStates = { dealerTx_ };
-      const auto recipient = bs::Address(dealerAddress_).getRecipient(bs::XBTAmount{ spendVal });
+      const auto recipient = bs::Address::fromAddressString(dealerAddress_).getRecipient(bs::XBTAmount{ spendVal });
       if (recipient) {
          ccTxData_.recipients.push_back(recipient);
       }
@@ -200,7 +200,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
          const uint64_t spendVal = amount() * BTCNumericTypes::BalanceDivider;
          const auto &cbTxOutList = [this, feePerByte, spendVal](std::vector<UTXO> utxos) {
             try {
-               const auto recipient = bs::Address(dealerAddress_).getRecipient(bs::XBTAmount{ spendVal });
+               const auto recipient = bs::Address::fromAddressString(dealerAddress_).getRecipient(bs::XBTAmount{ spendVal });
                if (!recipient) {
                   logger_->error("[{}] invalid recipient: {}", __func__, dealerAddress_);
                   return;

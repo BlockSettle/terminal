@@ -58,7 +58,10 @@ uint64_t bs::tradeutils::estimatePayinFeeWithoutChange(const std::vector<UTXO> &
 
    std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
    // Use some fake settlement address as the only recipient
-   auto recipient = bs::Address(CryptoPRNG::generateRandom(32), AddressEntryType_P2WSH);
+   BinaryData prefixed;
+   prefixed.append(AddressEntry::getPrefixByte(AddressEntryType_P2WSH));
+   prefixed.append(CryptoPRNG::generateRandom(32));
+   auto recipient = bs::Address::fromHash(prefixed);
    // Select some random amount
    recipientsMap[0] = recipient.getRecipient(bs::XBTAmount{ uint64_t{1000} });
 

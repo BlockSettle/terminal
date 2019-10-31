@@ -210,8 +210,8 @@ class ColoredCoinTracker
    friend class ColoredCoinACT;
    
 private:
-   std::set<bs::Address> originAddresses_;
-   std::set<bs::Address> revocationAddresses_;
+   std::set<BinaryData> originAddresses_;
+   std::set<BinaryData> revocationAddresses_;
 
    std::shared_ptr<ArmoryConnection> connPtr_;
    BlockingQueue<BinaryData> refreshQueue_;

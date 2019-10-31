@@ -662,14 +662,17 @@ bool HeadlessContainerListener::onSignAuthAddrRevokeRequest(const std::string &c
       }
 
       ValidationAddressManager validationMgr(nullptr);
-      validationMgr.addValidationAddress(request.validation_address());
+      auto addrObj = bs::Address::fromAddressString(request.validation_address());
+      validationMgr.addValidationAddress(addrObj);
 
       try {
          {
             const bs::core::WalletPasswordScoped passLock(walletsMgr_->getPrimaryWallet(), pass);
             const auto lock = wallet->lockDecryptedContainer();
-            const auto tx = AuthAddressLogic::revoke(request.auth_address(), wallet->getResolver()
-               , request.validation_address(), utxo);
+            auto authAddr = bs::Address::fromAddressString(request.auth_address());
+            auto validationAddr = bs::Address::fromAddressString(request.validation_address());
+            const auto tx = AuthAddressLogic::revoke(authAddr, wallet->getResolver()
+               , validationAddr, utxo);
             SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
          }
       } catch (const std::exception &e) {
@@ -1357,7 +1360,9 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       sendData(packet.SerializeAsString(), clientId);
       return false;
    }
-   const auto settlLeaf = priWallet->getSettlementLeaf(request.auth_address());
+
+   auto authAddr = bs::Address::fromAddressString(request.auth_address());
+   const auto settlLeaf = priWallet->getSettlementLeaf(authAddr);
    if (settlLeaf) {
       headless::CreateSettlWalletResponse response;
       response.set_wallet_id(settlLeaf->walletId());
@@ -1367,19 +1372,19 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
       return true;
    }
 
-   auto &reqsForAddress = settlLeafReqs_[{clientId, request.auth_address() }];
+   auto &reqsForAddress = settlLeafReqs_[{clientId, authAddr }];
    reqsForAddress.push_back(packet.id());
    if (reqsForAddress.size() > 1) {
       return true;
    }
-   const auto &onPassword = [this, priWallet, clientId, request, id=packet.id()]
+   const auto &onPassword = [this, priWallet, clientId, authAddr, id=packet.id()]
       (bs::error::ErrorCode result, const SecureBinaryData &password) {
       headless::CreateSettlWalletResponse response;
       headless::RequestPacket packet;
       packet.set_id(id);
       packet.set_type(headless::CreateSettlWalletType);
 
-      const auto &itReqs = settlLeafReqs_.find({ clientId, request.auth_address() });
+      const auto &itReqs = settlLeafReqs_.find({ clientId, authAddr });
       if (itReqs == settlLeafReqs_.end()) {
          logger_->warn("[HeadlessContainerListener] failed to find list of requests");
          packet.set_data(response.SerializeAsString());
@@ -1410,10 +1415,10 @@ bool HeadlessContainerListener::onCreateSettlWallet(const std::string &clientId,
 
       {
          const bs::core::WalletPasswordScoped lock(priWallet, password);
-         const auto leaf = priWallet->createSettlementLeaf(request.auth_address());
+         const auto leaf = priWallet->createSettlementLeaf(authAddr);
          if (!leaf) {
             logger_->error("[HeadlessContainerListener] failed to create settlement leaf for {}"
-               , request.auth_address());
+               , authAddr.display());
             sendAllIds(response.SerializeAsString(), itReqs->second);
             return;
          }
@@ -1856,7 +1861,8 @@ bool HeadlessContainerListener::onSyncComment(const std::string &clientId, headl
    }
    bool rc = false;
    if (!request.address().empty()) {
-      rc = wallet->setAddressComment(request.address(), request.comment());
+      auto addrObj = bs::Address::fromAddressString(request.address());
+      rc = wallet->setAddressComment(addrObj, request.comment());
       logger_->debug("[{}] comment for address {} is set: {}", __func__, request.address(), rc);
    }
    else {
@@ -1933,11 +1939,17 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, hea
 
    //request each chain for the relevant address types
    bool update = false;
-   for (auto& mapping : mapByPath) {
-      for (auto& path : mapping.second) {
-         auto resultPair = wallet->synchronizeUsedAddressChain(path.toString());
-         update |= resultPair.second;
+   try {
+      for (auto& mapping : mapByPath) {
+         for (auto& path : mapping.second) {
+            auto resultPair = wallet->synchronizeUsedAddressChain(path.toString());
+            update |= resultPair.second;
+         }
       }
+   }
+   catch (const std::exception &e) {
+      logger_->error("[{}] failed to sync address[es] in {}: {}", __func__, wallet->walletId(), e.what());
+      return false;
    }
 
    if (update) {
@@ -2050,7 +2062,7 @@ bool HeadlessContainerListener::onAddrPreimage(const std::string &clientId, head
       resp->set_wallet_id(req.wallet_id());
 
       for (int j = 0; j < req.address_size(); ++j) {
-         const bs::Address addr = req.address(j);
+         const auto addr = bs::Address::fromAddressString(req.address(j));
          const auto addrEntry = wallet->getAddressEntryForAddr(addr);
          if (addrEntry) {
             auto piData = resp->add_preimages();

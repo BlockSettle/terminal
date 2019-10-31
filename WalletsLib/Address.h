@@ -12,19 +12,23 @@
 namespace bs {
    class Address : public BinaryData
    {
+   private:
+      Address(const BinaryDataRef& data, AddressEntryType aet);
+      Address(const BinaryDataRef& data);
+
    public:
       enum Format {
-         Auto,
+         Uninitialized,
          Base58,
          Hex,
          Bech32,
          Binary
       };
 
-      Address(AddressEntryType aet = AddressEntryType_Default) : BinaryData(), aet_(aet) {}
-      Address(const BinaryData &data, AddressEntryType aet = AddressEntryType_Default);
-      Address(const BinaryDataRef &data, AddressEntryType aet = AddressEntryType_Default);
-      Address(const std::string &data, const Format &f = Auto, AddressEntryType aet = AddressEntryType_Default);
+      Address(void) : BinaryData() 
+      {}
+
+      Address(const Address&) = default;
 
       bool operator==(const Address &) const;
       bool operator!=(const Address &addr) const { return !((*this) == addr); }
@@ -35,32 +39,28 @@ namespace bs {
       Format format() const { return format_; }
       bool isValid() const;
       void clear();
-      std::string display(Format format = Auto) const;
+      std::string display() const;
       BinaryData prefixed() const;
       BinaryData unprefixed() const;
       BinaryData id() const;
-      BinaryData hash160() const;
-      BinaryData getWitnessScript() const;
 
       std::shared_ptr<ScriptRecipient> getRecipient(const XBTAmount& amount) const;
 
       size_t getInputSize() const;
       size_t getWitnessDataSize() const;  // returns UINT32_MAX if irrelevant
 
-      static bs::Address fromPubKey(const BinaryData &data, AddressEntryType aet = AddressEntryType_Default) {
-         //does not work with MS scripts nor P2PK (does not operate on hashes), neither P2WSH (uses hash256)
-         return Address(BtcUtils::getHash160(data), aet);
-      }
-      static bs::Address fromPubKey(const std::string &data, AddressEntryType aet = AddressEntryType_Default) {
-         return fromPubKey(BinaryData::CreateFromHex(data), aet);
-      }
-      static bs::Address fromHash(const BinaryData &hash, AddressEntryType aet);
-      static bs::Address fromTxOutScript(const BinaryData &);
+      static bs::Address fromHash(
+         const BinaryData &hash);
+
+      static bs::Address fromPubKey(const BinaryData &data, AddressEntryType aet);
       static bs::Address fromTxOut(const TxOut &);
       static bs::Address fromUTXO(const UTXO &);
-      static std::string fromRecipient(const std::shared_ptr<ScriptRecipient> &);
-      static AddressEntryType guessAddressType(const BinaryData &addr);
-
+      static bs::Address fromRecipient(const std::shared_ptr<ScriptRecipient> &);
+      static bs::Address fromScript(const BinaryData&);
+      static bs::Address fromAddressString(const std::string&);
+      static bs::Address fromAddressEntry(const AddressEntry&);
+      static bs::Address fromMultisigScript(const BinaryData&, AddressEntryType);
+      
       static size_t getPayoutWitnessDataSize();
 
       static uint64_t getNativeSegwitDustAmount();
@@ -75,14 +75,10 @@ namespace bs {
       // See OtcClient::estimatePayinFeeWithoutChange for usage example.
       static uint64_t getFeeForMaxVal(const std::vector<UTXO> &utxos, size_t txOutSize, float feePerByte);
 
-   private:
-      Format               format_ = Format::Binary;
-      AddressEntryType     aet_;
-      mutable BinaryData   prefixed_ = {};
-      mutable BinaryData   witnessScr_ = {};
 
-      bool isProperHash() const;
-      BinaryData getWitnessH160() const;
+   private:
+      Format               format_ = Format::Uninitialized;
+      AddressEntryType     aet_ = AddressEntryType_Default;
    };
 
 }  //namespace bs

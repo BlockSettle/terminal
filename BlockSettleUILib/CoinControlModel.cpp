@@ -489,7 +489,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
 
       if (addressIt == addressNodes_.end()) {
          auto wallet = selectedInputs->GetWallet();
-         auto comment = wallet ? wallet->getAddressComment(input.getRecipientScrAddr()) : "";
+         auto comment = wallet ? wallet->getAddressComment(bs::Address::fromHash(input.getRecipientScrAddr())) : "";
          addressNode = new AddressNode(CoinControlNode::detectType(address), QString::fromStdString(address.display())
             , QString::fromStdString(comment), (int)addressNodes_.size(), root_.get());
          root_->appendChildrenNode(addressNode);
@@ -515,7 +515,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
          if (itAddr == cpfpNodes_.end()) {
             const int row = cpfpNodes_.size();
             addressNode = new AddressNode(CoinControlNode::Type::DoesNotMatter, QString::fromStdString(address.display())
-               , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(input.getRecipientScrAddr())), row, cpfp_.get());
+               , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(bs::Address::fromHash(input.getRecipientScrAddr()))), row, cpfp_.get());
             cpfp_->appendChildrenNode(addressNode);
             cpfpNodes_[addrStr] = addressNode;
          }

@@ -410,7 +410,7 @@ void AuthAddressManager::ProcessSubmitAuthAddressResponse(const std::string& res
       return;
    }
 
-   const bs::Address address(response.address());
+   auto&& address = bs::Address::fromAddressString(response.address());
    if (response.keysubmitted()) {
       if (response.requestconfirmation()) {
          emit AuthAddressConfirmationRequired(response.validationamount());
@@ -439,7 +439,7 @@ void AuthAddressManager::ProcessConfirmAuthAddressSubmit(const std::string &resp
       return;
    }
 
-   const bs::Address address(response.address());
+   auto&& address = bs::Address::fromAddressString(response.address());
    if (response.has_errormsg()) {
       emit AuthAddrSubmitError(QString::fromStdString(address.display()), QString::fromStdString(response.errormsg()));
    }
@@ -459,7 +459,7 @@ void AuthAddressManager::ProcessCancelAuthSubmitResponse(const std::string& resp
       return;
    }
 
-   const bs::Address address(response.address());
+   auto&& address = bs::Address::fromAddressString(response.address());
    if (response.has_errormsg()) {
 
    } else {
@@ -523,7 +523,7 @@ void AuthAddressManager::VerifyWalletAddressesFunction()
 
       auto defaultAuthAddrStr = settings_->get<QString>(ApplicationSettings::defaultAuthAddr);
       if (!defaultAuthAddrStr.isEmpty()) {
-         defaultAddr_ = bs::Address(defaultAuthAddrStr.toStdString());
+         defaultAddr_ = bs::Address::fromAddressString(defaultAuthAddrStr.toStdString());
       }
 
       if (defaultAddr_.isNull()) {

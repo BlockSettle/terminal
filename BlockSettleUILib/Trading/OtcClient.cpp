@@ -66,7 +66,7 @@ struct OtcClientDeal
       if (isSeller == weSell) {
          return ourAuthAddress;
       } else {
-         return bs::Address::fromPubKey(cpPubKey).display();
+         return bs::Address::fromPubKey(cpPubKey, AddressEntryType_P2WPKH);
       }
    }
 
@@ -320,6 +320,10 @@ bool OtcClient::sendOffer(Peer *peer, const Offer &offer)
       return false;
    }
 
+   /*
+   findSettlementLeaf can never find the settlement leaf as it is written. More
+   details in the declaration.
+   */
    auto settlementLeaf = findSettlementLeaf(offer.authAddress);
    if (!settlementLeaf) {
       SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf with address '{}'", offer.authAddress);
@@ -1345,11 +1349,12 @@ bool OtcClient::verifyOffer(const Offer &offer) const
    assert(offer.amount > 0);
    assert(offer.price > 0);
    assert(!offer.hdWalletId.empty());
-   assert(bs::Address(offer.authAddress).isValid());
+   assert(bs::Address::fromAddressString(offer.authAddress).isValid());
 
    if (!offer.recvAddress.empty()) {
-      assert(bs::Address(offer.recvAddress).isValid());
-      auto wallet = walletsMgr_->getWalletByAddress(offer.recvAddress);
+      auto offerRecvAddress = bs::Address::fromAddressString(offer.recvAddress);
+      assert(offerRecvAddress.isValid());
+      auto wallet = walletsMgr_->getWalletByAddress(offerRecvAddress);
 
       if (!wallet || wallet->type() != bs::core::wallet::Type::Bitcoin) {
          SPDLOG_LOGGER_CRITICAL(logger_, "invalid receiving address selected for OTC, selected address: {}", offer.recvAddress);
@@ -1431,7 +1436,7 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
          OtcClientDeal result;
          result.settlementId = settlementId;
          result.settlementAddr = payin.settlementAddr;
-         result.ourAuthAddress = peer->offer.authAddress;
+         result.ourAuthAddress = bs::Address::fromAddressString(peer->offer.authAddress);
          result.cpPubKey = peer->authPubKey;
          result.amount = peer->offer.amount;
          result.price = peer->offer.price;
@@ -1471,7 +1476,7 @@ void OtcClient::createBuyerRequest(const std::string &settlementId, Peer *peer, 
    bs::tradeutils::PayoutArgs args;
    initTradesArgs(args, peer, settlementId);
    args.payinTxId = peer->payinTxIdFromSeller;
-   args.recvAddr = peer->offer.recvAddress;
+   args.recvAddr = bs::Address::fromAddressString(peer->offer.recvAddress);
    args.outputXbtWallet = leaves.front();
 
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, cb, peer, settlementId, targetHdWallet, handle = peer->validityFlag.handle(), logger = logger_]
@@ -1488,7 +1493,7 @@ void OtcClient::createBuyerRequest(const std::string &settlementId, Peer *peer, 
          OtcClientDeal result;
          result.settlementId = settlementId;
          result.settlementAddr = payout.settlementAddr;
-         result.ourAuthAddress = peer->offer.authAddress;
+         result.ourAuthAddress = bs::Address::fromAddressString(peer->offer.authAddress);
          result.cpPubKey = peer->authPubKey;
          result.amount = peer->offer.amount;
          result.price = peer->offer.price;
@@ -1543,7 +1548,16 @@ std::shared_ptr<bs::sync::hd::SettlementLeaf> OtcClient::findSettlementLeaf(cons
       return nullptr;
    }
 
-   return group->getLeaf(bs::Address(ourAuthAddress));
+   /*
+   This will never succeed. getLeaf searches leaves address map for the specific address.
+   Settlement leaves do not carry auth addresses within their address map. Settlement
+   leaves are constructed from an auth address. 
+
+   Leaves are stored within groups by their path. Settlement leaves path are constructed
+   from the address path. Either getLeaf needs to be overloaded to search on that basis
+   for settlement groups, or another method needs to be added that actually does that.
+   */
+   return group->getLeaf(bs::Address::fromAddressString(ourAuthAddress));
 }
 
 void OtcClient::changePeerStateWithoutUpdate(Peer *peer, State state)
@@ -1679,7 +1693,7 @@ void OtcClient::initTradesArgs(bs::tradeutils::Args &args, Peer *peer, const std
    args.amount = bs::XBTAmount(static_cast<uint64_t>(peer->offer.amount));
    args.settlementId = BinaryData::CreateFromHex(settlementId);
    args.walletsMgr = walletsMgr_;
-   args.ourAuthAddress = peer->offer.authAddress;
+   args.ourAuthAddress = bs::Address::fromAddressString(peer->offer.authAddress);
    args.cpAuthPubKey = peer->authPubKey;
    args.armory = armory_;
    args.signContainer = signContainer_;

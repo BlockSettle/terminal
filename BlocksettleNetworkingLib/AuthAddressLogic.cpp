@@ -132,9 +132,9 @@ void ValidationAddressManager::setCustomACT(const
 ////
 std::shared_ptr<ValidationAddressStruct> 
 ValidationAddressManager::getValidationAddress(
-   const bs::Address& addr)
+   const BinaryData& addr)
 {
-   auto iter = validationAddresses_.find(addr.prefixed());
+   auto iter = validationAddresses_.find(addr);
    if (iter == validationAddresses_.end()) {
       return nullptr;
    }
@@ -147,9 +147,9 @@ ValidationAddressManager::getValidationAddress(
 ////
 const std::shared_ptr<ValidationAddressStruct>
 ValidationAddressManager::getValidationAddress(
-   const bs::Address& addr) const
+   const BinaryData& addr) const
 {
-   auto iter = validationAddresses_.find(addr.prefixed());
+   auto iter = validationAddresses_.find(addr);
    if (iter == validationAddresses_.end()) {
       return nullptr;
    }
@@ -162,7 +162,7 @@ ValidationAddressManager::getValidationAddress(
 ////
 void ValidationAddressManager::addValidationAddress(const bs::Address &addr)
 {
-   validationAddresses_.insert({ addr
+   validationAddresses_.insert({ addr.prefixed()
       , std::make_shared<ValidationAddressStruct>() });
 }
 
@@ -201,7 +201,7 @@ unsigned ValidationAddressManager::goOnline()
    std::vector<BinaryData> addrVec;
 
    for (auto& addrPair : validationAddresses_) {
-      addrVec.push_back(addrPair.first.prefixed());
+      addrVec.push_back(addrPair.first);
    }
    auto &&regID = walletObj_->registerAddresses(addrVec, false);
    waitOnRefresh(regID);
@@ -224,8 +224,8 @@ unsigned ValidationAddressManager::goOnline()
       }
 
       if (aopPtr == nullptr || aopPtr->isZc()) {
-         throw std::runtime_error("validation address " +
-            maPair.first.display() + " has no valid first outpoint");
+         throw std::runtime_error(
+            "validation address has no valid first outpoint");
       }
 
       maPair.second->firstOutpointHash_ = txHash;
@@ -240,7 +240,7 @@ unsigned ValidationAddressManager::goOnline()
 ////
 unsigned ValidationAddressManager::update()
 {
-   std::vector<bs::Address> addrVec;
+   std::vector<BinaryData> addrVec;
    for (auto& addrPair : validationAddresses_) {
       addrVec.push_back(addrPair.first);
    }
@@ -340,6 +340,11 @@ unsigned ValidationAddressManager::update()
 ////
 bool ValidationAddressManager::isValid(const bs::Address& addr) const
 {
+   return isValid(addr.prefixed());
+}
+
+bool ValidationAddressManager::isValid(const BinaryData& addr) const
+{
    auto maStructPtr = getValidationAddress(addr);
    if (maStructPtr == nullptr) {
       return false;
@@ -357,6 +362,7 @@ bool ValidationAddressManager::isValid(const bs::Address& addr) const
    return true;
 }
 
+////
 
 bool ValidationAddressManager::getOutpointBatch(const bs::Address &addr
    , const std::function<void(const OutpointBatch &)> &cb) const
@@ -578,7 +584,8 @@ BinaryData ValidationAddressManager::fundUserAddress(
       throw AuthLogicException("insufficient spend volume");
    }
    else if (changeVal > 0) {
-      signer.addRecipient(addrIter->first.getRecipient(bs::XBTAmount{ static_cast<uint64_t>(changeVal) }));
+      auto&& addrObj = bs::Address::fromHash(addrIter->first);
+      signer.addRecipient(addrObj.getRecipient(bs::XBTAmount{ static_cast<uint64_t>(changeVal) }));
    }
 
    //sign & serialize tx
@@ -727,7 +734,7 @@ BinaryData ValidationAddressManager::revokeUserAddress(
       throw AuthLogicException("invalid user auth address");
    }
    auto& validationAddr = findValidationAddressForTxHash(paths[0].txHash_);
-   if (!validationAddr.isValid()) {
+   if (validationAddr.isNull()) {
       throw AuthLogicException("invalidated validation address");
    }
    auto validationAddrPtr = getValidationAddress(validationAddr);
@@ -764,7 +771,7 @@ BinaryData ValidationAddressManager::revokeUserAddress(
       }
    };
 
-   connPtr_->getUTXOsForAddress(validationAddr.prefixed(), utxoLbd);
+   connPtr_->getUTXOsForAddress(validationAddr, utxoLbd);
    auto&& utxo = fut.get();
 
    //3: spend to the user address
@@ -779,8 +786,11 @@ BinaryData ValidationAddressManager::revokeUserAddress(
    signer.addRecipient(addr.getRecipient(bs::XBTAmount{ kAuthValueThreshold }));
 
    //change
-   const bs::XBTAmount changeAmount{ utxo.getValue() - kAuthValueThreshold - 1000 };
-   signer.addRecipient(validationAddr.getRecipient(changeAmount));
+   {
+      const bs::XBTAmount changeAmount{ utxo.getValue() - kAuthValueThreshold - 1000 };
+      auto addrObj = bs::Address::fromHash(validationAddr);
+      signer.addRecipient(addrObj.getRecipient(changeAmount));
+   }
 
    //sign & serialize tx
    signer.sign();
@@ -832,14 +842,14 @@ bool ValidationAddressManager::hasZCOutputs(const bs::Address& addr) const
 }
 
 ////
-const bs::Address& ValidationAddressManager::findValidationAddressForUTXO(
+const BinaryData& ValidationAddressManager::findValidationAddressForUTXO(
    const UTXO& utxo) const
 {
    return findValidationAddressForTxHash(utxo.getTxHash());
 }
 
 ////
-const bs::Address& ValidationAddressManager::findValidationAddressForTxHash(
+const BinaryData& ValidationAddressManager::findValidationAddressForTxHash(
    const BinaryData& txHash) const
 {
    for (auto& maPair : validationAddresses_) {
@@ -1013,7 +1023,8 @@ std::pair<bs::Address, UTXO> AuthAddressLogic::getRevokeData(
 
    //we're sending the coins back to the relevant validation address
    auto& validationAddr = vam.findValidationAddressForUTXO(revokeUtxo);
-   return { validationAddr, revokeUtxo };
+   auto addrObj = bs::Address::fromHash(validationAddr);
+   return { addrObj, revokeUtxo };
 }
 
 BinaryData AuthAddressLogic::revoke(const ValidationAddressManager& vam,

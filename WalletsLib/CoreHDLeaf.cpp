@@ -35,7 +35,7 @@ void hd::Leaf::init(
    auto&& addrMap = accountPtr_->getUsedAddressMap();
    for (auto& addrPair : addrMap)
    {
-      bs::Address bsAddr(addrPair.second->getHash(), addrPair.second->getType());
+      auto&& bsAddr = bs::Address::fromAddressEntry(*addrPair.second);
       usedAddresses_.emplace_back(bsAddr);
    }
 }
@@ -98,7 +98,7 @@ std::vector<bs::Address> hd::Leaf::getPooledAddressList() const
 
    std::vector<bs::Address> result;
    for (auto& hashPair : hashMap)
-      result.emplace_back(bs::Address(hashPair.first, hashPair.second.second));
+      result.emplace_back(bs::Address::fromHash(hashPair.first));
 
    return result;
 }
@@ -155,7 +155,7 @@ bs::Address hd::Leaf::newAddress()
    auto addrPtr = accountPtr_->getNewAddress(addressType());
 
    //this will not work with MS assets nor P2PK (the output script does not use a hash)
-   auto addr = Address(addrPtr->getHash(), addressType());
+   auto&& addr = bs::Address::fromAddressEntry(*addrPtr);
    usedAddresses_.push_back(addr);
    return addr;
 }
@@ -165,7 +165,7 @@ bs::Address hd::Leaf::newInternalAddress()
    auto addrPtr = accountPtr_->getNewChangeAddress(addressType());
 
    //this will not work with MS assets nor P2PK (the output script does not use a hash)
-   auto addr = Address(addrPtr->getHash(), addressType());
+   auto&& addr = bs::Address::fromAddressEntry(*addrPtr);
    usedAddresses_.push_back(addr);
    return addr;
 }
@@ -210,7 +210,7 @@ std::vector<bs::Address> hd::Leaf::extendAddressChain(unsigned count, bool extIn
    std::vector<bs::Address> result;
    for (auto& hashPair : diffMap)
    {
-      bs::Address addr(hashPair.first, hashPair.second.second);
+      auto&& addr = bs::Address::fromHash(hashPair.first);
       result.emplace_back(addr);
    }
 
@@ -226,7 +226,7 @@ bs::hd::Path::Elem hd::Leaf::getAddressIndexForAddr(const BinaryData &addr) cons
 
    throw std::runtime_error("deprecated 3");
 
-   Address addrObj(addr);
+   auto&& addrObj = bs::Address::fromHash(addr);
    auto path = getPathForAddress(addrObj);
    if (path.length() == 0)
       return UINT32_MAX;
@@ -298,7 +298,7 @@ bs::Address hd::Leaf::getAddressByIndex(unsigned int id, bool ext) const
       throw AccountException("type mismatch for instantiated address " + std::to_string(id));
    }
 
-   return bs::Address(addrPtr->getHash(), addressType());
+   return bs::Address::fromAddressEntry(*addrPtr);
 }
 
 bs::hd::Path::Elem hd::Leaf::getLastAddrPoolIndex() const
@@ -445,7 +445,7 @@ std::vector<bs::Address> hd::Leaf::getExtAddressList() const
    {
       for (auto& innerPair : addrPair.second)
       {
-         bs::Address bsAddr(innerPair.second, innerPair.first);
+         auto&& bsAddr = bs::Address::fromHash(innerPair.second);
          addrVec.emplace_back(bsAddr);
       }
    }
@@ -479,7 +479,7 @@ std::vector<bs::Address> hd::Leaf::getIntAddressList() const
    {
       for (auto& innerPair : addrPair.second)
       {
-         bs::Address bsAddr(innerPair.second, innerPair.first);
+         auto&& bsAddr = bs::Address::fromHash(innerPair.second);
          addrVec.emplace_back(bsAddr);
       }
    }
@@ -595,9 +595,14 @@ std::pair<bs::Address, bool> hd::Leaf::synchronizeUsedAddressChain(
    }
 
    //sanity check: index and type should match request
+   // Temporarily disabled because for P2SH+P2WPKH getType() returns only P2SH
+#if 0
    if (result.first.getType() != addressType()) {
-      throw AccountException("did not get expected address entry type");
+      throw AccountException("did not get expected address entry type "
+         + std::to_string((int)addressType()) + " (got "
+         + std::to_string(int(result.first.getType())) + ")");
    }
+#endif //0
    auto resultIndex = addressIndex(result.first);
    if (resultIndex != addrIndex) {
       throw AccountException("did not get expected address index");

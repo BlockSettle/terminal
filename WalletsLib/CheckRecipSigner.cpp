@@ -224,7 +224,7 @@ bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>
          txHashSet_.erase(txHash);
          for (const auto &txOutIdx : txOutIdx_[txHash]) {
             const TxOut prevOut = tx.getTxOutCopy(txOutIdx);
-            result->emplace_back(bs::Address{ prevOut.getScrAddressStr() });
+            result->emplace_back(bs::Address::fromHash(prevOut.getScrAddressStr()));
          }
          if (txHashSet_.empty()) {
             txOutIdx_.clear();

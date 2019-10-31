@@ -174,8 +174,8 @@ public:
       , const UTXOsCb &);
    bool getSpendableZCoutputs(const std::vector<std::string> &walletIds, const UTXOsCb &);
    bool getRBFoutputs(const std::vector<std::string> &walletIds, const UTXOsCb &);
-   bool getUTXOsForAddress(const bs::Address &, const UTXOsCb &, bool withZC = false);
-   bool getOutpointsFor(const std::vector<bs::Address> &, const std::function<void(const OutpointBatch &)> &
+   bool getUTXOsForAddress(const BinaryData&, const UTXOsCb &, bool withZC = false);
+   bool getOutpointsFor(const std::vector<BinaryData> &, const std::function<void(const OutpointBatch &)> &
       , unsigned int height = 0, unsigned int zcIndex = 0);
    bool getOutpointsForAddresses(const std::set<BinaryData> &
       , const std::function<void(const OutpointBatch &, std::exception_ptr)> &

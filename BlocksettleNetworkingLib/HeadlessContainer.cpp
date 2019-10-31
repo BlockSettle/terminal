@@ -938,7 +938,8 @@ void HeadlessContainer::ProcessAddrPreimageResponse(unsigned int id, const std::
       const auto resp = response.response(i);
       for (int j = 0; j < resp.preimages_size(); ++j) {
          const auto piData = resp.preimages(j);
-         result[piData.address()] = piData.preimage();
+         auto addrObj = bs::Address::fromAddressString(piData.address());
+         result[addrObj] = piData.preimage();
       }
    }
    const auto itCb = cbAddrPreimageMap_.find(id);
@@ -997,7 +998,8 @@ void HeadlessContainer::ProcessGetPayinAddr(unsigned int id, const std::string &
       emit Error(id, "no callback found for id " + std::to_string(id));
       return;
    }
-   itCb->second(response.success(), response.address());
+   auto addrObj = bs::Address::fromAddressString(response.address());
+   itCb->second(response.success(), addrObj);
    cbPayinAddrMap_.erase(itCb);
 }
 
@@ -1147,7 +1149,8 @@ void HeadlessContainer::ProcessExtAddrChain(unsigned int id, const std::string &
    std::vector<std::pair<bs::Address, std::string>> result;
    for (int i = 0; i < response.addresses_size(); ++i) {
       const auto &addr = response.addresses(i);
-      result.push_back({ addr.address(), addr.index() });
+      auto addrObj = bs::Address::fromAddressString(addr.address());
+      result.push_back({ addrObj, addr.index() });
    }
    itCb->second(result);
    cbExtAddrsMap_.erase(itCb);

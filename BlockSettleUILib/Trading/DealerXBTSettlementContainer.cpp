@@ -121,10 +121,12 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
    dialogData.setValue(PasswordDialogData::SettlementAddress, settlAddr_.display());
 
-   dialogData.setValue(PasswordDialogData::RequesterAuthAddress, bs::Address::fromPubKey(reqAuthKey_).display());
+   dialogData.setValue(PasswordDialogData::RequesterAuthAddress, 
+      bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH).display());
    dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, requestorAddressState_ == AddressVerificationState::Verified);
 
-   dialogData.setValue(PasswordDialogData::ResponderAuthAddress, bs::Address::fromPubKey(authKey_).display());
+   dialogData.setValue(PasswordDialogData::ResponderAuthAddress, 
+      bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH).display());
    dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
 
    // tx details

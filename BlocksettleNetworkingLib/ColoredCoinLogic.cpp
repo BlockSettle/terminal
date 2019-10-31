@@ -107,13 +107,13 @@ void CcOutpoint::setScrAddr(const std::shared_ptr<BinaryData>& scrAddr)
 ////////////////////////////////////////////////////////////////////////////////
 void ColoredCoinTracker::addOriginAddress(const bs::Address& addr)
 {
-   originAddresses_.insert(addr);
+   originAddresses_.insert(addr.prefixed());
 }
 
 ////
 void ColoredCoinTracker::addRevocationAddress(const bs::Address& addr)
 {
-   revocationAddresses_.insert(addr);
+   revocationAddresses_.insert(addr.prefixed());
 }
 
 ////
@@ -515,7 +515,7 @@ std::set<BinaryData> ColoredCoinTracker::collectOriginAddresses() const
 {
    std::set<BinaryData> addrSet;
    for (const auto &origAddr : originAddresses_) {
-      addrSet.insert(origAddr.prefixed());
+      addrSet.insert(origAddr);
    }
    return addrSet;
 }
@@ -524,7 +524,7 @@ std::set<BinaryData> ColoredCoinTracker::collectRevokeAddresses() const
 {
    std::set<BinaryData> addrSet;
    for (const auto &revokeAddr : revocationAddresses_) {
-      addrSet.insert(revokeAddr.prefixed());
+      addrSet.insert(revokeAddr);
    }
    return addrSet;
 }
@@ -591,12 +591,12 @@ std::set<BinaryData> ColoredCoinTracker::update()
    */
 
    for (auto& scrAddr : originAddresses_) {
-      auto iter = outpointData.outpoints_.find(scrAddr.prefixed());
+      auto iter = outpointData.outpoints_.find(scrAddr);
       if (iter == outpointData.outpoints_.end()) {
          continue;
       }
       for (auto& op : iter->second) {
-         addUtxo(ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr.prefixed());
+         addUtxo(ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr);
       }
    }
 
@@ -729,12 +729,12 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
 
    //parse new outputs for origin addresses
    for (auto& scrAddr : originAddresses_) {
-      auto iter = outpointData.outpoints_.find(scrAddr.prefixed());
+      auto iter = outpointData.outpoints_.find(scrAddr);
       if (iter == outpointData.outpoints_.end()) {
          continue;
       }
       for (auto& op : iter->second) {
-         addZcUtxo(currentSs, ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr.prefixed());
+         addZcUtxo(currentSs, ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr);
       }
    }
 
@@ -1115,10 +1115,10 @@ bool ColoredCoinTracker::goOnline()
    std::vector<BinaryData> addrVec;
 
    for (auto& addr : originAddresses_) {
-      addrVec.push_back(addr.prefixed());
+      addrVec.push_back(addr);
    }
    for (auto& addr : revocationAddresses_) {
-      addrVec.push_back(addr.prefixed());
+      addrVec.push_back(addr);
    }
    auto &&regID = walletObj_->registerAddresses(addrVec, false);
    while (true) {
