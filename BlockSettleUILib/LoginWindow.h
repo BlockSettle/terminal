@@ -57,6 +57,7 @@ protected:
 private:
    void setState(State state);
    void updateState();
+   void displayError(AutheIDClient::ErrorType errorCode);
 
    std::unique_ptr<Ui::LoginWindow>       ui_;
    std::shared_ptr<spdlog::logger>        logger_;

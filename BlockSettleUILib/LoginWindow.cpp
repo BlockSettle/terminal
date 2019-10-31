@@ -101,10 +101,7 @@ void LoginWindow::onStartLoginDone(AutheIDClient::ErrorType errorCode)
 {
    if (errorCode != AutheIDClient::NoError) {
       setState(Idle);
-
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
-         , AutheIDClient::errorString(errorCode), this);
-      loginErrorBox.exec();
+      displayError(errorCode);
       return;
    }
 
@@ -122,10 +119,7 @@ void LoginWindow::onGetLoginResultDone(const BsClientLoginResult &result)
 
    if (result.status != AutheIDClient::NoError) {
       setState(Idle);
-
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
-         , AutheIDClient::errorString(result.status), this);
-      loginErrorBox.exec();
+      displayError(result.status);
       return;
    }
 
@@ -172,6 +166,15 @@ void LoginWindow::updateState()
          ui_->stackedWidgetAuth->setCurrentWidget(ui_->pageCancel);
          ui_->lineEditUsername->setEnabled(false);
          break;
+   }
+}
+
+void LoginWindow::displayError(AutheIDClient::ErrorType errorCode)
+{
+   if (errorCode != AutheIDClient::ErrorType::NetworkError) {
+      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
+         , AutheIDClient::errorString(errorCode), this);
+      loginErrorBox.exec();
    }
 }
 
