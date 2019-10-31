@@ -1,6 +1,5 @@
 #include "DatabaseExecutor.h"
 
-#include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QThread>
@@ -21,9 +20,9 @@ void DatabaseExecutor::setLogger(const LoggerPtr& loggerPtr)
    loggerPtr_ = loggerPtr;
 }
 
-bool DatabaseExecutor::PrepareAndExecute(const QString& queryCmd, QSqlQuery& query, const QSqlDatabase& db)
+bool DatabaseExecutor::PrepareAndExecute(const QString& queryCmd, QSqlQuery& query, const QSqlDatabase& db) const
 {
-   QSqlQuery q(db);
+   const QSqlQuery q(db);
    query = q;
 
    if (!query.prepare(QLatin1String(queryCmd.toLatin1())))
@@ -42,7 +41,7 @@ bool DatabaseExecutor::PrepareAndExecute(const QString& queryCmd, QSqlQuery& que
    return true;
 }
 
-bool DatabaseExecutor::checkExecute(QSqlQuery& query)
+bool DatabaseExecutor::checkExecute(QSqlQuery& query) const
 {
    if (!query.exec())
    {

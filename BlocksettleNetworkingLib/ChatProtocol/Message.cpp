@@ -1,11 +1,12 @@
+#include <utility>
 #include "ChatProtocol/Message.h"
 
 using namespace Chat;
 
-Message::Message(const std::string& partyId, const std::string& messageId, const QDateTime& timestamp,
-   const PartyMessageState& partyMessageState, const std::string& messageText, const std::string& sender_hash)
-   : partyId_(partyId), messageId_(messageId), timestamp_(timestamp), partyMessageState_(partyMessageState),
-   messageText_(messageText), senderHash_(sender_hash)
+Message::Message(std::string partyId, std::string messageId, QDateTime timestamp,
+   const PartyMessageState& partyMessageState, std::string messageText, std::string sender_hash)
+   : partyId_(std::move(partyId)), messageId_(std::move(messageId)), timestamp_(std::move(timestamp)), partyMessageState_(partyMessageState),
+   messageText_(std::move(messageText)), senderHash_(std::move(sender_hash))
 {
 }
 

@@ -2,9 +2,9 @@
 
 #include <disable_warnings.h>
 #include <botan/bigint.h>
-#include <botan/base64.h>
 #include <botan/auto_rng.h>
 #include <enable_warnings.h>
+#include <utility>
 
 namespace {
    constexpr size_t kDefaultNonceSize = 24;
@@ -12,14 +12,19 @@ namespace {
 
 using namespace Chat;
 
-SessionKeyData::SessionKeyData(const std::string& userName)
-   : userHash_(userName)
+SessionKeyData::SessionKeyData(std::string userName)
+   : userHash_(std::move(userName))
 {
 
 }
 
-SessionKeyData::SessionKeyData(const std::string& userName, const BinaryData& localSessionPublicKey, const SecureBinaryData& localSessionPrivateKey)
-   : userHash_(userName), localSessionPublicKey_(localSessionPublicKey), localSessionPrivateKey_(localSessionPrivateKey)
+SessionKeyData::SessionKeyData(
+   std::string userName, 
+   BinaryData localSessionPublicKey,
+   SecureBinaryData localSessionPrivateKey)
+   : userHash_(std::move(userName)), 
+   localSessionPublicKey_(std::move(localSessionPublicKey)), 
+   localSessionPrivateKey_(std::move(localSessionPrivateKey))
 {
 
 }
@@ -37,7 +42,7 @@ BinaryData SessionKeyData::nonce()
    // increment nonce 
    Botan::BigInt bigIntNonce;
    bigIntNonce.binary_decode(nonce_);
-   bigIntNonce++;
+   ++bigIntNonce;
    nonce_ = Botan::BigInt::encode_locked(bigIntNonce);
    return BinaryData(nonce_.data(), nonce_.size());
 }

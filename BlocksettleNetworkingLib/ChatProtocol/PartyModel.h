@@ -14,13 +14,13 @@ namespace spdlog
    class logger;
 }
 
-namespace {
-   static const std::string ErrorDescription = "Error";
-   static const std::string WarningDescription = "Warning";
-}
-
 namespace Chat
 {
+   namespace ErrorType {
+      const std::string ErrorDescription = "Error";
+      const std::string WarningDescription = "Warning";
+   }
+
    using PartyMap = std::unordered_map<std::string, PartyPtr>;
    using LoggerPtr = std::shared_ptr<spdlog::logger>;
    using IdPartyList = std::vector<std::string>;
@@ -38,7 +38,7 @@ namespace Chat
    {
       Q_OBJECT
    public:
-      PartyModel(const LoggerPtr& loggerPtr, QObject* parent = nullptr);
+      PartyModel(LoggerPtr loggerPtr, QObject* parent = nullptr);
 
       void insertParty(const PartyPtr& partyPtr);
       void removeParty(const PartyPtr& partyPtr);
@@ -54,7 +54,7 @@ namespace Chat
       void partyModelChanged();
 
    private slots:
-      void handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false);
+      void handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what = "", bool displayAsWarning = false) const;
 
    protected:
       PartyMap partyMap_;

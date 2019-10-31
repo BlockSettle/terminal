@@ -14,12 +14,16 @@ namespace Chat
    class Message
    {
    public:
-      Message(const std::string& partyId, const std::string& messageId, const QDateTime& timestamp,
-         const PartyMessageState& partyMessageState, const std::string& messageText, const std::string& sender_hash);
+      Message(std::string partyId, std::string messageId, QDateTime timestamp,
+         const PartyMessageState& partyMessageState, std::string messageText, std::string sender_hash);
 
       Message(const Message& m2);
 
       Message& operator=(const Message& rhs);
+
+      ~Message() = default;
+      Message(Message&&) = default;
+      Message& operator=(Message&&) = default;
 
       const std::string& partyId() const { return partyId_; }
       void setPartyId(const std::string& val) { partyId_ = val; }

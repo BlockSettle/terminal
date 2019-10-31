@@ -1,12 +1,10 @@
 #include <QRegularExpression>
-#include <QRegularExpressionMatch>
 #include <google/protobuf/any.pb.h>
 
 #include "ChatProtocol/ChatClientLogic.h"
 
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
-#include "UserHasher.h"
 #include "ProtobufUtils.h"
 
 #include <disable_warnings.h>
@@ -28,11 +26,6 @@ ChatClientLogic::ChatClientLogic()
    qRegisterMetaType<Chat::ChatUserPtr>();
 
    connect(this, &ChatClientLogic::chatClientError, this, &ChatClientLogic::handleLocalErrors);
-}
-
-ChatClientLogic::~ChatClientLogic()
-{
-
 }
 
 void ChatClientLogic::initDbDone()
@@ -111,7 +104,7 @@ void ChatClientLogic::Init(const ConnectionManagerPtr& connectionManagerPtr, con
 void ChatClientLogic::LoginToServer(const BinaryData &token, const BinaryData &tokenSign, const ZmqBipNewKeyCb& cb)
 {
    bs::types::ChatToken chatToken;
-   bool result = chatToken.ParseFromArray(token.getPtr(), static_cast<int>(token.getSize()));
+   const auto result = chatToken.ParseFromArray(token.getPtr(), static_cast<int>(token.getSize()));
    if (!result) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "parsing ChatToken failed");
       return;
@@ -144,7 +137,6 @@ void ChatClientLogic::LoginToServer(const BinaryData &token, const BinaryData &t
 
       emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed);
       emit clientLoggedOutFromServer();
-      return;
    }
 }
 
@@ -163,19 +155,19 @@ void ChatClientLogic::OnDataReceived(const std::string& data)
    emit dataReceived(data);
 }
 
-void ChatClientLogic::OnConnected(void)
+void ChatClientLogic::OnConnected()
 {
    emit connected();
 }
 
-void ChatClientLogic::OnDisconnected(void)
+void ChatClientLogic::OnDisconnected()
 {
    emit disconnected();
 }
 
 void ChatClientLogic::OnError(DataConnectionListener::DataConnectionError dataConnectionError)
 {
-   QString errorString = QStringLiteral("DataConnectionError: %1").arg(dataConnectionError);
+   const QString errorString = QStringLiteral("DataConnectionError: %1").arg(dataConnectionError);
    emit chatClientError(ChatClientLogicError::ZmqDataConnectionFailed, errorString.toStdString());
    emit error(dataConnectionError);
    OnDisconnected();
@@ -183,7 +175,7 @@ void ChatClientLogic::OnError(DataConnectionListener::DataConnectionError dataCo
 
 void ChatClientLogic::sendPacket(const google::protobuf::Message& message)
 {
-   auto packetString = ProtobufUtils::pbMessageToString(message);
+   const auto packetString = ProtobufUtils::pbMessageToString(message);
 
    google::protobuf::Any any;
    any.ParseFromString(packetString);
@@ -220,7 +212,7 @@ void ChatClientLogic::LogoutFromServer()
       return;
    }
 
-   LogoutRequest logoutRequest;
+   const LogoutRequest logoutRequest;
    sendPacket(logoutRequest);
 }
 
@@ -237,7 +229,7 @@ void ChatClientLogic::onCloseConnection()
 
 void ChatClientLogic::SendPartyMessage(const std::string& partyId, const std::string& data)
 {
-   ClientPartyPtr clientPartyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
+   const auto clientPartyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
 
    if (nullptr == clientPartyPtr)
    {
@@ -248,14 +240,14 @@ void ChatClientLogic::SendPartyMessage(const std::string& partyId, const std::st
    clientConnectionLogicPtr_->prepareAndSendMessage(clientPartyPtr, data);
 }
 
-void ChatClientLogic::handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what)
+void ChatClientLogic::handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what) const
 {
-   loggerPtr_->debug("[ChatClientLogic::handleLocalErrors] Error: {}, what: {}", (int)errorCode, what);
+   loggerPtr_->debug("[ChatClientLogic::handleLocalErrors] Error: {}, what: {}", int(errorCode), what);
 }
 
 void ChatClientLogic::SetMessageSeen(const std::string& partyId, const std::string& messageId)
 {
-   ClientPartyPtr clientPartyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
+   const auto clientPartyPtr = clientPartyLogicPtr_->clientPartyModelPtr()->getClientPartyById(partyId);
 
    if (nullptr == clientPartyPtr)
    {
@@ -266,35 +258,35 @@ void ChatClientLogic::SetMessageSeen(const std::string& partyId, const std::stri
    clientConnectionLogicPtr_->setMessageSeen(clientPartyPtr, messageId);
 }
 
-void ChatClientLogic::RequestPrivatePartyOTC(const std::string& remoteUserName)
+void ChatClientLogic::RequestPrivatePartyOTC(const std::string& remoteUserName) const
 {
-   clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName, Chat::PartySubType::OTC);
+   clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName, OTC);
 }
 
-void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName, const std::string& initialMessage)
+void ChatClientLogic::RequestPrivateParty(const std::string& remoteUserName, const std::string& initialMessage) const
 {
-   clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName, Chat::PartySubType::STANDARD, initialMessage);
+   clientPartyLogicPtr_->createPrivateParty(currentUserPtr_, remoteUserName, STANDARD, initialMessage);
 }
 
-void ChatClientLogic::privatePartyCreated(const std::string& partyId)
+void ChatClientLogic::privatePartyCreated(const std::string& partyId) const
 {
    clientConnectionLogicPtr_->prepareRequestPrivateParty(partyId);
 }
 
-void ChatClientLogic::privatePartyAlreadyExist(const std::string& partyId)
+void ChatClientLogic::privatePartyAlreadyExist(const std::string& partyId) const
 {
    // check if it's otc private party
-   const ClientPartyPtr clientPartyPtr = clientPartyModelPtr()->getClientPartyById(partyId);
+   const auto clientPartyPtr = clientPartyModelPtr()->getClientPartyById(partyId);
 
    clientConnectionLogicPtr_->prepareRequestPrivateParty(partyId);
 }
 
-void ChatClientLogic::RejectPrivateParty(const std::string& partyId)
+void ChatClientLogic::RejectPrivateParty(const std::string& partyId) const
 {
    clientConnectionLogicPtr_->rejectPrivateParty(partyId);
 }
 
-void ChatClientLogic::AcceptPrivateParty(const std::string& partyId)
+void ChatClientLogic::AcceptPrivateParty(const std::string& partyId) const
 {
    clientConnectionLogicPtr_->acceptPrivateParty(partyId);
 }
@@ -305,8 +297,8 @@ void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
    clientConnectionLogicPtr_->rejectPrivateParty(partyId);
 
    // then delete local
-   ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
-   PartyPtr partyPtr = clientPartyModelPtr->getPartyById(partyId);
+   auto clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+   const auto partyPtr = clientPartyModelPtr->getPartyById(partyId);
 
    if (nullptr == partyPtr)
    {
@@ -317,17 +309,17 @@ void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
    // TODO: remove party and all messages
 
    // if party in rejected state then remove recipients public keys, we don't need them anymore
-   ClientPartyPtr clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyId);
+   auto clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyId);
    if (clientPartyPtr && clientPartyPtr->isPrivate())
    {
-      PartyRecipientsPtrList recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr_->userName());
+      const auto recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr_->userName());
       clientDBServicePtr_->deleteRecipientsKeys(recipients);
    }
 
    clientPartyModelPtr->removeParty(partyPtr);
 }
 
-void ChatClientLogic::SearchUser(const std::string& userHash, const std::string& searchId)
+void ChatClientLogic::SearchUser(const std::string& userHash, const std::string& searchId) const
 {
    clientConnectionLogicPtr_->searchUser(userHash, searchId);
 
@@ -354,7 +346,7 @@ void ChatClientLogic::SearchUser(const std::string& userHash, const std::string&
 #endif
 }
 
-void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList)
+void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList) const
 {
    PartyRecipientsPtrList recipientsToUpdate;
    std::vector<std::string> partiesToCheckUnsentMessages;
@@ -362,12 +354,12 @@ void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& use
    for (const auto& userPkPtr : userPublicKeyInfoList)
    {
       // update loaded user key
-      const std::string userHash = userPkPtr->user_hash().toStdString();
+      const auto userHash = userPkPtr->user_hash().toStdString();
       // update keys only for existing private parties
-      ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr()->getStandardPrivatePartyListForRecipient(userHash);
+      auto clientPartyPtrList = clientPartyModelPtr()->getStandardPrivatePartyListForRecipient(userHash);
       for (const auto& clientPartyPtr : clientPartyPtrList)
       {
-         PartyRecipientPtr existingRecipient = clientPartyPtr->getRecipient(userHash);
+         auto existingRecipient = clientPartyPtr->getRecipient(userHash);
 
          if (existingRecipient)
          {
@@ -402,7 +394,7 @@ void ChatClientLogic::DeclineNewPublicKeys(const UserPublicKeyInfoList& userPubl
    for (const auto& userPkPtr : userPublicKeyInfoList)
    {
       const std::string userHash = userPkPtr->user_hash().toStdString();
-      ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr()->getStandardPrivatePartyListForRecipient(userHash);
+      auto clientPartyPtrList = clientPartyModelPtr()->getStandardPrivatePartyListForRecipient(userHash);
 
       for (const auto& clientPartyPtr : clientPartyPtrList)
       {

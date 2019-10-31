@@ -20,28 +20,18 @@ bool PrivateDirectMessageParty::isUserBelongsToParty(const std::string& recipien
       return recipient->userHash() == recipientUserHash;
    });
 
-   if (it == recipients_.end())
-   {
-      return false;
-   }
-
-   return true;
+   return it != recipients_.end();
 }
 
 bool PrivateDirectMessageParty::isUserInPartyWith(const std::string& firstUserHash, const std::string& secondUserHash)
 {
-   if (isUserBelongsToParty(firstUserHash) && isUserBelongsToParty(secondUserHash))
-   {
-      return true;
-   }
-
-   return false;
+   return isUserBelongsToParty(firstUserHash) && isUserBelongsToParty(secondUserHash);
 }
 
 // TODO: consider to remove this function
 PartyRecipientPtr PrivateDirectMessageParty::getSecondRecipient(const std::string& firstRecipientUserHash)
 {
-   const PartyRecipientsPtrList recipients = getRecipientsExceptMe(firstRecipientUserHash);
+   const auto recipients = getRecipientsExceptMe(firstRecipientUserHash);
 
    if (recipients.empty())
    {
@@ -65,7 +55,7 @@ PartyRecipientsPtrList PrivateDirectMessageParty::getRecipientsExceptMe(const st
 
 void PrivateDirectMessageParty::insertOrUpdateRecipient(const PartyRecipientPtr& partyRecipientPtr)
 {
-   PartyRecipientPtr recipientPtr = getRecipient(partyRecipientPtr->userHash());
+   auto recipientPtr = getRecipient(partyRecipientPtr->userHash());
 
    if (nullptr == recipientPtr)
    {

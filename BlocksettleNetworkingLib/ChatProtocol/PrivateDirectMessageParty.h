@@ -17,20 +17,20 @@ namespace Chat
    {
    public:
       PrivateDirectMessageParty(
-         const PartyType& partyType = PartyType::PRIVATE_DIRECT_MESSAGE, 
-         const PartySubType& partySubType = PartySubType::STANDARD, 
-         const PartyState& partyState = PartyState::UNINITIALIZED
+         const PartyType& partyType = PRIVATE_DIRECT_MESSAGE, 
+         const PartySubType& partySubType = STANDARD, 
+         const PartyState& partyState = UNINITIALIZED
       );
 
       PrivateDirectMessageParty(
          const std::string& id, 
-         const PartyType& partyType = PartyType::PRIVATE_DIRECT_MESSAGE, 
-         const PartySubType& partySubType = PartySubType::STANDARD, 
-         const PartyState& partyState = PartyState::UNINITIALIZED
+         const PartyType& partyType = PRIVATE_DIRECT_MESSAGE, 
+         const PartySubType& partySubType = STANDARD, 
+         const PartyState& partyState = UNINITIALIZED
       );
 
       PartyRecipientsPtrList recipients() const { return recipients_; }
-      void setRecipients(PartyRecipientsPtrList val) { recipients_ = val; }
+      void setRecipients(const PartyRecipientsPtrList& val) { recipients_ = val; }
 
       void insertOrUpdateRecipient(const PartyRecipientPtr& partyRecipientPtr);
       PartyRecipientPtr getRecipient(const std::string& recipientUserHash);

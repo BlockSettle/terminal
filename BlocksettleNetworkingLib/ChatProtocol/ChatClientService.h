@@ -20,7 +20,7 @@ namespace Chat
    public:
       explicit ChatClientService(QObject* parent = nullptr);
 
-      ClientPartyModelPtr getClientPartyModelPtr();
+      ClientPartyModelPtr getClientPartyModelPtr() const;
 
    signals:
       ////////// PROXY SIGNALS //////////

@@ -1,8 +1,9 @@
 #include "PartyRecipient.h"
+#include <utility>
 
 using namespace Chat;
 
-Chat::PartyRecipient::PartyRecipient(const std::string& userHash, const BinaryData& publicKey, const QDateTime& publicKeyTime)
-   : userHash_(userHash), publicKey_(publicKey), publicKeyTime_(publicKeyTime)
+PartyRecipient::PartyRecipient(std::string userHash, BinaryData publicKey, QDateTime publicKeyTime)
+   : userHash_(std::move(userHash)), publicKey_(std::move(publicKey)), publicKeyTime_(std::move(publicKeyTime))
 {
 }
