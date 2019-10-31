@@ -203,11 +203,7 @@ unsigned ValidationAddressManager::goOnline()
    for (auto& addrPair : validationAddresses_) {
       addrVec.push_back(addrPair.first.prefixed());
    }
-   std::string regID;
-   {
-      std::unique_lock<std::mutex> lock(connPtr_->bdvMutex());
-      regID = walletObj_->registerAddresses(addrVec, false);
-   }
+   auto &&regID = walletObj_->registerAddresses(addrVec, false);
    waitOnRefresh(regID);
 
    auto aopCount = update();

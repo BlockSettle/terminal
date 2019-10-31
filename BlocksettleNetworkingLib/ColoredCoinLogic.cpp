@@ -1120,11 +1120,7 @@ bool ColoredCoinTracker::goOnline()
    for (auto& addr : revocationAddresses_) {
       addrVec.push_back(addr.prefixed());
    }
-   std::string regID;
-   {
-      std::unique_lock<std::mutex> lock(connPtr_->bdvMutex());
-      regID = walletObj_->registerAddresses(addrVec, false);
-   }
+   auto &&regID = walletObj_->registerAddresses(addrVec, false);
    while (true) {
       /*
       Wait on regID. We have to do this because we can't start

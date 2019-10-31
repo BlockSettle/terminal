@@ -264,12 +264,10 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
       connThreadRunning_ = true;
       setState(ArmoryState::Connecting);
       stopServiceThreads();
-      {
-         std::unique_lock<std::mutex> lock(bdvMutex_);
-         if (bdv_) {
-            bdv_->unregisterFromDB();
-            bdv_.reset();
-         }
+
+      if (bdv_) {
+         bdv_->unregisterFromDB();
+         bdv_.reset();
       }
       if (cbRemote_) {
          cbRemote_.reset();
@@ -288,12 +286,9 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
          // Get Armory BDV (gateway to the remote ArmoryDB instance). Must set
          // up BIP 150 keys before connecting. BIP 150/151 is transparent to us
          // otherwise. If it fails, the connection will fail.
-         {
-            std::unique_lock<std::mutex> lock(bdvMutex_);
-            bdv_ = AsyncClient::BlockDataViewer::getNewBDV(host, port
-               , dataDir, true // enable ephemeralPeers, because we manage armory keys ourself
-               , cbRemote_);
-         }
+         bdv_ = AsyncClient::BlockDataViewer::getNewBDV(host, port
+            , dataDir, true // enable ephemeralPeers, because we manage armory keys ourself
+            , cbRemote_);
          if (!bdv_) {
             logger_->error("[setupConnection (connectRoutine)] failed to "
                "create BDV");
@@ -301,11 +296,8 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
             continue;
          }
 
-         {
-            std::unique_lock<std::mutex> lock(bdvMutex_);
-            bdv_->setCheckServerKeyPromptLambda(cbBIP151);
-            connected = bdv_->connectToRemote();
-         }
+         bdv_->setCheckServerKeyPromptLambda(cbBIP151);
+         connected = bdv_->connectToRemote();
          if (!connected) {
             logger_->warn("[ArmoryConnection::setupConnection] BDV connection failed");
             std::this_thread::sleep_for(std::chrono::seconds(30));
@@ -327,7 +319,6 @@ bool ArmoryConnection::goOnline()
                      , static_cast<int>(state_.load()));
       return false;
    }
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->goOnline();
    isOnline_ = true;
    return true;
@@ -349,7 +340,6 @@ void ArmoryConnection::registerBDV(NetworkType netType)
    default:
       throw std::runtime_error("unknown network type");
    }
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->registerWithDB(magicBytes);
 }
 
@@ -400,7 +390,6 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
 
    SPDLOG_LOGGER_DEBUG(logger_, "broadcast new TX: {}", rawTx.toHexStr());
 
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->broadcastZC(rawTx);
    return true;
 }
@@ -414,11 +403,7 @@ std::string ArmoryConnection::registerWallet(const std::shared_ptr<AsyncClient::
       return {};
    }
 
-   std::string regId;
-   {
-      std::unique_lock<std::mutex> lock(bdvMutex_);
-      regId = wallet->registerAddresses(addrVec, asNew);
-   }
+   const auto regId = wallet->registerAddresses(addrVec, asNew);
    std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
    registrationCallbacks_[regId] = cb;
 
@@ -463,7 +448,6 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
       }
    };
 
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getHistoryForWalletSelection(walletIDs, "ascending", cbWrap);
    return true;
 }
@@ -491,7 +475,6 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
          });
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getLedgerDelegateForScrAddr(walletId, addr.id(), cbWrap);
    return true;
 }
@@ -517,7 +500,6 @@ bool ArmoryConnection::getWalletsLedgerDelegate(const LedgerDelegateCb &cb)
          }
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getLedgerDelegateForWallets(cbWrap);
    return true;
 }
@@ -543,7 +525,6 @@ bool ArmoryConnection::getSpendableTxOutListForValue(const std::vector<std::stri
          }
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getCombinedSpendableTxOutListForValue(walletIds, val, cbWrap);
    return true;
 }
@@ -568,7 +549,6 @@ bool ArmoryConnection::getSpendableZCoutputs(const std::vector<std::string> &wal
       }
    };
 
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getCombinedSpendableZcOutputs(walletIds, cbWrap);
    return true;
 }
@@ -595,10 +575,7 @@ bool ArmoryConnection::getNodeStatus(const std::function<void(const std::shared_
          userCB({});
       }
    };
-
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getNodeStatus(cbWrap);
-
    return true;
 }
 
@@ -621,7 +598,6 @@ bool ArmoryConnection::getRBFoutputs(const std::vector<std::string> &walletIds, 
          }
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getCombinedRBFTxOuts(walletIds, cbWrap);
    return true;
 }
@@ -647,7 +623,6 @@ bool ArmoryConnection::getUTXOsForAddress(const bs::Address &addr, const UTXOsCb
          }
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getUTXOsForAddress(addr.id(), withZC, cbWrap);
    return true;
 }
@@ -681,7 +656,6 @@ bool ArmoryConnection::getOutpointsFor(const std::vector<bs::Address> &addresses
          }
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getOutpointsForAddresses(addrVec, height, zcIndex, cbWrap);
    return true;
 }
@@ -710,7 +684,6 @@ bool ArmoryConnection::getOutpointsForAddresses(const std::set<BinaryData> &addr
          }
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getOutpointsForAddresses(addrVec, height, zcIndex, cbWrap);
    return true;
 }
@@ -733,7 +706,6 @@ bool ArmoryConnection::getSpentnessForOutputs(const std::map<BinaryData, std::se
          cb({}, std::make_exception_ptr(e));
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getSpentnessForOutputs(outputs, cbWrap);
    return true;
 }
@@ -757,7 +729,6 @@ bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walle
          logger->error("[ArmoryConnection::getCombinedBalances] failed to get result: {}", e.what());
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getCombinedBalances(walletIDs, cbWrap);
    return true;
 }
@@ -788,7 +759,6 @@ bool ArmoryConnection::getCombinedTxNs(const std::vector<std::string> &walletIDs
          }
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getCombinedAddrTxnCounts(walletIDs, cbWrap);
    return true;
 }
@@ -848,7 +818,6 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, const TxCb &cb)
          callGetTxCallbacks(hash, {});
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getTxByHash(hash, cbUpdateCache);
    return true;
 }
@@ -878,7 +847,6 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, const TX
          }
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getTxBatchByHash(hashes, cbWrap);
    return true;
 }
@@ -904,7 +872,6 @@ bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash, const Bin
             "{} - hash {}", e.what(), inHash.toHexStr(true));
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getRawHeaderForTxHash(inHash, cbWrap);
 
    return true;
@@ -931,9 +898,7 @@ bool ArmoryConnection::getHeaderByHeight(const unsigned int inHeight, const Bina
             "height {}", e.what(), inHeight);
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getHeaderByHeight(inHeight, cbWrap);
-
    return true;
 }
 
@@ -973,7 +938,6 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, const FloatCb &cb)
          }
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->estimateFee(nbBlocks, FEE_STRAT_ECONOMICAL, cbWrap);
    return true;
 }
@@ -1018,7 +982,6 @@ bool ArmoryConnection::getFeeSchedule(const FloatMapCb &cb)
             , e.what());
       }
    };
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->getFeeSchedule(FEE_STRAT_ECONOMICAL, cbWrap);
    return true;
 }
@@ -1030,7 +993,6 @@ bool ArmoryConnection::pushZC(const BinaryData& rawTx) const
       return false;
    }
 
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    bdv_->broadcastZC(rawTx);
    return true;
 }
@@ -1229,7 +1191,6 @@ std::shared_ptr<AsyncClient::BtcWallet> ArmoryConnection::instantiateWallet(cons
       logger_->error("[{}] can't instantiate", __func__);
       return nullptr;
    }
-   std::unique_lock<std::mutex> lock(bdvMutex_);
    return std::make_shared<AsyncClient::BtcWallet>(bdv_->instantiateWallet(walletId));
 }
 
