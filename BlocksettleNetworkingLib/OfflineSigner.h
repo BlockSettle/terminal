@@ -12,6 +12,8 @@ namespace wallet {
 
 std::vector<TXSignRequest> ParseOfflineTXFile(const std::string &data);
 bs::error::ErrorCode ExportTxToFile(const TXSignRequest &txSignReq, const QString &fileNamePath);
+bs::error::ErrorCode ExportSignedTxToFile(const BinaryData &signedTx, const QString &fileNamePath
+   , const std::string &comment = {});
 
 }
 }

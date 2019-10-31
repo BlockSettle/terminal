@@ -9,6 +9,7 @@
 
 using namespace Blocksettle;
 using namespace Blocksettle::Communication;
+using namespace bs::error;
 
 std::vector<bs::core::wallet::TXSignRequest> bs::core::wallet::ParseOfflineTXFile(const std::string &data)
 {
@@ -45,10 +46,10 @@ std::vector<bs::core::wallet::TXSignRequest> bs::core::wallet::ParseOfflineTXFil
    return result;
 }
 
-bs::error::ErrorCode bs::core::wallet::ExportTxToFile(const bs::core::wallet::TXSignRequest &txSignReq, const QString &fileNamePath)
+ErrorCode bs::core::wallet::ExportTxToFile(const bs::core::wallet::TXSignRequest &txSignReq, const QString &fileNamePath)
 {
    if (!txSignReq.isValid()) {
-      return bs::error::ErrorCode::TxInvalidRequest;
+      return ErrorCode::TxInvalidRequest;
    }
 
    headless::SignTxRequest request = bs::signer::coreTxRequestToPb(txSignReq);
@@ -61,14 +62,42 @@ bs::error::ErrorCode bs::core::wallet::ExportTxToFile(const bs::core::wallet::TX
    QFile f(fileNamePath);
 
    if (!f.open(QIODevice::WriteOnly)) {
-      return bs::error::ErrorCode::TxFailedToOpenRequestFile;
+      return ErrorCode::TxFailedToOpenRequestFile;
    }
 
    const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
    if (f.write(data) == data.size()) {
-      return bs::error::ErrorCode::NoError;
+      return ErrorCode::NoError;
    }
    else {
-      return bs::error::ErrorCode::TxFailedToWriteRequestFile;
+      return ErrorCode::TxFailedToWriteRequestFile;
+   }
+}
+
+ErrorCode bs::core::wallet::ExportSignedTxToFile(const BinaryData &signedTx, const QString &fileNamePath, const std::string &comment)
+{
+   QFile f(fileNamePath);
+   if (f.exists()) {
+      return ErrorCode::TxRequestFileExist;
+   }
+   if (!f.open(QIODevice::WriteOnly)) {
+      return ErrorCode::TxFailedToOpenRequestFile;
+   }
+
+   Storage::Signer::SignedTX response;
+   response.set_transaction(signedTx.toBinStr());
+   response.set_comment(comment);
+
+   Storage::Signer::File fileContainer;
+   auto container = fileContainer.add_payload();
+   container->set_type(Storage::Signer::SignedTXFileType);
+   container->set_data(response.SerializeAsString());
+
+   const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
+   if (f.write(data) == data.size()) {
+      return ErrorCode::NoError;
+   }
+   else {
+      return ErrorCode::TxFailedToWriteRequestFile;
    }
 }
