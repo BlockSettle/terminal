@@ -211,7 +211,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   bs::core::wallet::OutputOrderType::Change
                };
                ccTxData_ = transactionData_->createPartialTXRequest(spendVal, feePerByte
-                  , { recipient }, outSortOrder, dealerTx_, utxos);
+                  , { recipient }, outSortOrder, dealerTx_, utxos, false);
                logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
                utxoAdapter_->reserve(ccTxData_.walletIds.front(), id(), ccTxData_.inputs);
 
