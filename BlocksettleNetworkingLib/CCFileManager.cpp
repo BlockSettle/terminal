@@ -340,12 +340,10 @@ void CCPubResolver::fillFrom(Blocksettle::Communication::GetCCGenesisAddressesRe
    clear();
    for (int i = 0; i < resp->ccsecurities_size(); i++) {
       const auto ccSecurity = resp->ccsecurities(i);
-      BinaryDataRef addrRef; addrRef.setRef(ccSecurity.genesisaddr());
-      auto addrObj = bs::Address::fromHash(addrRef);
 
       bs::network::CCSecurityDef ccSecDef = {
          ccSecurity.securityid(), ccSecurity.product(), ccSecurity.description(),
-         addrObj, ccSecurity.satoshisnb()
+         bs::Address::fromAddressString(ccSecurity.genesisaddr()), ccSecurity.satoshisnb()
       };
       add(ccSecDef);
    }
