@@ -57,7 +57,8 @@ enum DBNotificationStruct_Enum
 {
    DBNS_Refresh,
    DBNS_ZC,
-   DBNS_NewBlock
+   DBNS_NewBlock,
+   DBNS_Offline
 };
 
 struct DBNotificationStruct
