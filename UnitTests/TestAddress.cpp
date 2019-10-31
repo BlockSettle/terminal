@@ -491,7 +491,7 @@ TEST(TestAddress, FromRecipient)
    {
       //p2pkh
       auto addr = bs::Address::fromPubKey(pubkey, AddressEntryType_P2PKH);
-      auto recipient = addr.getRecipient(bs::XBTAmount(COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -503,7 +503,7 @@ TEST(TestAddress, FromRecipient)
    {
       //p2wpkh
       auto addr = bs::Address::fromPubKey(pubkey, AddressEntryType_P2WPKH);
-      auto recipient = addr.getRecipient(bs::XBTAmount(COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -518,7 +518,7 @@ TEST(TestAddress, FromRecipient)
       prefixed.append(AddressEntry::getPrefixByte(AddressEntryType_P2SH));
       prefixed.append(CryptoPRNG::generateRandom(20));
       auto addr = bs::Address::fromHash(prefixed);
-      auto recipient = addr.getRecipient(bs::XBTAmount(COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -531,7 +531,7 @@ TEST(TestAddress, FromRecipient)
       //p2sh - p2pk
       auto addr = bs::Address::fromPubKey(pubkey,
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2PK));
-      auto recipient = addr.getRecipient(bs::XBTAmount(COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -544,7 +544,7 @@ TEST(TestAddress, FromRecipient)
       //p2sh - p2pkh
       auto addr = bs::Address::fromPubKey(pubkey,
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2PKH));
-      auto recipient = addr.getRecipient(bs::XBTAmount(COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -557,7 +557,7 @@ TEST(TestAddress, FromRecipient)
       //p2sh - p2wpkh
       auto addr = bs::Address::fromPubKey(pubkey,
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
-      auto recipient = addr.getRecipient(bs::XBTAmount(COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -580,7 +580,7 @@ TEST(TestAddress, FromRecipient)
 
       //p2wsh | multisig
       auto addr = bs::Address::fromMultisigScript(msScript, AddressEntryType_P2WSH);
-      auto recipient = addr.getRecipient(bs::XBTAmount(COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -606,10 +606,10 @@ TEST(TestAddress, P2SH_ImplicitDetection)
    auto addr = bs::Address::fromHash(scriptHash);
 
    //check prefixed and unprefixed hash match original
-   auto& unprefixed = addr.unprefixed();
+   const auto& unprefixed = addr.unprefixed();
    EXPECT_EQ(unprefixed, scriptHash.getSliceCopy(1, 20));
 
-   auto& prefixed = addr.prefixed();
+   const auto& prefixed = addr.prefixed();
    ASSERT_EQ(prefixed.getSize(), 21);
    EXPECT_EQ(prefixed, scriptHash);
    EXPECT_EQ(prefixed.getPtr()[0], NetworkConfig::getScriptHashPrefix());
@@ -643,10 +643,10 @@ TEST(TestAddress, P2SH_ExplicitDetection)
       auto&& scriptHash = BtcUtils::getHash160(p2pk_script);
 
       //check prefixed and unprefixed hash match hashed p2pk script
-      auto& unprefixed = addr.unprefixed();
+      const auto& unprefixed = addr.unprefixed();
       EXPECT_EQ(unprefixed, scriptHash);
 
-      auto& prefixed = addr.prefixed();
+      const auto& prefixed = addr.prefixed();
       ASSERT_EQ(prefixed.getSize(), 21);
       EXPECT_EQ(prefixed.getSliceCopy(1, 20), scriptHash);
       EXPECT_EQ(prefixed.getPtr()[0], NetworkConfig::getScriptHashPrefix());
@@ -661,10 +661,10 @@ TEST(TestAddress, P2SH_ExplicitDetection)
       auto&& scriptHash = BtcUtils::getHash160(p2pkh_script);
 
       //check prefixed and unprefixed hash match hashed p2pkh script
-      auto& unprefixed = addr.unprefixed();
+      const auto& unprefixed = addr.unprefixed();
       EXPECT_EQ(unprefixed, scriptHash);
 
-      auto& prefixed = addr.prefixed();
+      const auto& prefixed = addr.prefixed();
       ASSERT_EQ(prefixed.getSize(), 21);
       EXPECT_EQ(prefixed.getSliceCopy(1, 20), scriptHash);
       EXPECT_EQ(prefixed.getPtr()[0], NetworkConfig::getScriptHashPrefix());
@@ -679,10 +679,10 @@ TEST(TestAddress, P2SH_ExplicitDetection)
       auto&& scriptHash = BtcUtils::getHash160(p2wpkh_script);
 
       //check prefixed and unprefixed hash match hashed p2wpkh script
-      auto& unprefixed = addr.unprefixed();
+      const auto& unprefixed = addr.unprefixed();
       EXPECT_EQ(unprefixed, scriptHash);
 
-      auto& prefixed = addr.prefixed();
+      const auto& prefixed = addr.prefixed();
       ASSERT_EQ(prefixed.getSize(), 21);
       EXPECT_EQ(prefixed.getSliceCopy(1, 20), scriptHash);
       EXPECT_EQ(prefixed.getPtr()[0], NetworkConfig::getScriptHashPrefix());
@@ -700,10 +700,10 @@ TEST(TestAddress, P2WSH_ImplicitDetection)
    auto addr = bs::Address::fromHash(scriptHash);
 
    //check prefixed and unprefixed hash match original
-   auto& unprefixed = addr.unprefixed();
+   const auto& unprefixed = addr.unprefixed();
    EXPECT_EQ(unprefixed, scriptHash.getSliceCopy(1, 32));
 
-   auto& prefixed = addr.prefixed();
+   const auto& prefixed = addr.prefixed();
    ASSERT_EQ(prefixed.getSize(), 33);
    EXPECT_EQ(prefixed, scriptHash);
    EXPECT_EQ(prefixed.getPtr()[0], SCRIPT_PREFIX_P2WSH);
@@ -732,10 +732,10 @@ TEST(TestAddress, P2WSH_ExplicitDetection)
       auto&& scriptHash = BtcUtils::BtcUtils::getSha256(p2pkh_script);
 
       //check prefixed and unprefixed hash match hashed p2wsh script
-      auto& unprefixed = addr.unprefixed();
+      const auto& unprefixed = addr.unprefixed();
       EXPECT_EQ(unprefixed, scriptHash);
 
-      auto& prefixed = addr.prefixed();
+      const auto& prefixed = addr.prefixed();
       ASSERT_EQ(prefixed.getSize(), 33);
       EXPECT_EQ(prefixed.getSliceCopy(1, 32), scriptHash);
       EXPECT_EQ(prefixed.getPtr()[0], SCRIPT_PREFIX_P2WSH);
@@ -760,10 +760,10 @@ TEST(TestAddress, P2WSH_ExplicitDetection)
       auto&& scriptHash = BtcUtils::BtcUtils::getSha256(msScript);
 
       //check prefixed and unprefixed hash match hashed p2wsh script
-      auto& unprefixed = addr.unprefixed();
+      const auto& unprefixed = addr.unprefixed();
       EXPECT_EQ(unprefixed, scriptHash);
 
-      auto& prefixed = addr.prefixed();
+      const auto& prefixed = addr.prefixed();
       ASSERT_EQ(prefixed.getSize(), 33);
       EXPECT_EQ(prefixed.getSliceCopy(1, 32), scriptHash);
       EXPECT_EQ(prefixed.getPtr()[0], SCRIPT_PREFIX_P2WSH);
