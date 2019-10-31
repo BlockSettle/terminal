@@ -65,7 +65,7 @@ public:
    std::vector<UTXO> GetSelectedTransactions() const;
    std::vector<UTXO> GetAllTransactions() const;
 
-   std::shared_ptr<bs::sync::Wallet> GetWallet() const 
+   std::shared_ptr<bs::sync::Wallet> GetWallet() const
    {
       return wallets_.empty() ? nullptr : wallets_.front();
    }
