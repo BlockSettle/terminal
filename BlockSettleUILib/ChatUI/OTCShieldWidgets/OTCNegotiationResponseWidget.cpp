@@ -11,6 +11,11 @@
 #include <QComboBox>
 #include <QPushButton>
 
+namespace {
+   const QString paymentWallet = QObject::tr("Payment Wallet");
+   const QString receivingWallet = QObject::tr("Receiving Wallet");
+}
+
 OTCNegotiationResponseWidget::OTCNegotiationResponseWidget(QWidget* parent)
    : OTCWindowsAdapterBase{ parent }
    , ui_{ new Ui::OTCNegotiationResponseWidget{} }
@@ -44,9 +49,9 @@ void OTCNegotiationResponseWidget::setOffer(const bs::network::otc::Offer &offer
    auto price = bs::network::otc::fromCents(offer.price);
    auto amount = bs::network::otc::satToBtc(offer.amount);
    const QString offerAndCurrency = QLatin1String("%1 %2");
-   const bool isBuy = offer.ourSide == bs::network::otc::Side::Sell;
+   const bool isSell = offer.ourSide == bs::network::otc::Side::Sell;
 
-   if (isBuy) {
+   if (isSell) {
       ui_->recieveValue->setText(offerAndCurrency.arg(UiUtils::displayCurrencyAmount(price * amount)).arg(buyProduct_));
       ui_->deliverValue->setText(offerAndCurrency.arg(amount).arg(sellProduct_));
    }
@@ -61,13 +66,13 @@ void OTCNegotiationResponseWidget::setOffer(const bs::network::otc::Offer &offer
    ui_->quantitySpinBox->setValue(amount);
    ui_->quantitySpinBox->setDisabled(true);
    ui_->bidSpinBox->setValue(price);
-   ui_->bidSpinBox->setEnabled(!isBuy);
+   ui_->bidSpinBox->setEnabled(!isSell);
    ui_->offerSpinBox->setValue(price);
-   ui_->offerSpinBox->setEnabled(isBuy);
-   ui_->receivingAddressWdgt->setVisible(isBuy);
+   ui_->offerSpinBox->setEnabled(isSell);
+   ui_->receivingAddressWdgt->setVisible(!isSell);
+   ui_->labelWallet->setText(isSell ? paymentWallet : receivingWallet);
 
 
-   updateIndicativePriceValue();
    onChanged();
 }
 
@@ -109,11 +114,6 @@ void OTCNegotiationResponseWidget::setPeer(const bs::network::otc::Peer &peer)
    ui_->rangeBid->setVisible(!isContact);
 }
 
-void OTCNegotiationResponseWidget::onAboutToApply()
-{
-   updateIndicativePriceValue();
-}
-
 void OTCNegotiationResponseWidget::onSyncInterface()
 {
    int index = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWallets, getWalletManager());
@@ -122,11 +122,6 @@ void OTCNegotiationResponseWidget::onSyncInterface()
 
    UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, getAuthManager());
    ui_->widgetButtons->setEnabled(ui_->authenticationAddressComboBox->isEnabled());
-}
-
-void OTCNegotiationResponseWidget::onMDUpdated()
-{
-   updateIndicativePriceValue();
 }
 
 void OTCNegotiationResponseWidget::onUpdateBalances()
@@ -198,9 +193,4 @@ void OTCNegotiationResponseWidget::onCurrentWalletChanged()
    UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets));
    selectedUTXO_.clear();
    onUpdateBalances();
-}
-
-void OTCNegotiationResponseWidget::updateIndicativePriceValue()
-{
-   OTCWindowsAdapterBase::updateIndicativePriceValue(ui_->indicativePriceValue, receivedOffer_.ourSide == bs::network::otc::Side::Buy);
 }

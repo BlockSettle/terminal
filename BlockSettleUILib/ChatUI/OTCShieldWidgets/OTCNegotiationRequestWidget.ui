@@ -180,47 +180,6 @@
          </layout>
         </item>
         <item>
-         <widget class="QWidget" name="indicativePriceWidget" native="true">
-          <layout class="QHBoxLayout" name="indicativePriceLayout">
-           <property name="spacing">
-            <number>5</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="indicativePriceLabel">
-             <property name="text">
-              <string>Indicative Price</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="indicativePriceValue">
-             <property name="text">
-              <string>-</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-             <property name="whiteLabel" stdset="0">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
          <widget class="QWidget" name="rangeQuantity" native="true">
           <layout class="QHBoxLayout" name="sideLayout_2">
            <property name="spacing">
@@ -308,7 +267,7 @@
      <item>
       <widget class="QGroupBox" name="groupBoxOTCDetails">
        <property name="title">
-        <string>OTC DETAILS</string>
+        <string>OTC ENTRY</string>
        </property>
        <property name="wellGroupBoxWithButtonBar" stdset="0">
         <bool>true</bool>
@@ -597,25 +556,6 @@
                 </property>
                 <property name="value">
                  <double>10000.000000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item alignment="Qt::AlignVCenter">
-               <widget class="QPushButton" name="priceUpdateButton">
-                <property name="minimumSize">
-                 <size>
-                  <width>100</width>
-                  <height>21</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>21</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>&amp;Update</string>
                 </property>
                </widget>
               </item>
@@ -922,7 +862,7 @@
           <item>
            <widget class="QLabel" name="authenticationAddressLabel">
             <property name="text">
-             <string>Auth. Address</string>
+             <string>Authentication Address</string>
             </property>
            </widget>
           </item>

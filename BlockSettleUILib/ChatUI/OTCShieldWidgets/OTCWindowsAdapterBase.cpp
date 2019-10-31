@@ -160,18 +160,6 @@ std::shared_ptr<bs::sync::hd::Wallet> OTCWindowsAdapterBase::getCurrentHDWalletF
    return getWalletManager()->getHDWalletById(walletId);
 }
 
-double OTCWindowsAdapterBase::updateIndicativePriceValue(QLabel *label, bool isBuySide)
-{
-   if (isBuySide) {
-      label->setText(UiUtils::displayPriceForAssetType(buyIndicativePrice_, productGroup_));
-      return buyIndicativePrice_;
-   }
-   else {
-      label->setText(UiUtils::displayPriceForAssetType(sellIndicativePrice_, productGroup_));
-      return sellIndicativePrice_;
-   }
-}
-
 QString OTCWindowsAdapterBase::getXBTRange(bs::network::otc::Range xbtRange)
 {
    return QStringLiteral("%1 - %2")

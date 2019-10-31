@@ -64,10 +64,12 @@ void CreateOTCRequestWidget::onUpdateBalances()
 {
    QString totalBalance;
    if (ui_->pushButtonBuy->isChecked()) {
+      const auto totalAssetBalance = getAssetManager()->getBalance(buyProduct_.toStdString());
+
       totalBalance = tr("%1 %2")
-         .arg(UiUtils::displayCurrencyAmount(getAssetManager()->getBalance(buyProduct_.toStdString())))
+         .arg(UiUtils::displayCurrencyAmount(totalAssetBalance))
          .arg(buyProduct_);
-      updateXBTRange(false);
+      updateXBTRange(false, totalAssetBalance);
    }
    else {
       const auto totalXBTBalance = getWalletManager()->getTotalBalance();
@@ -82,7 +84,7 @@ void CreateOTCRequestWidget::onUpdateBalances()
    ui_->labelBalanceValue->setText(totalBalance);
 }
 
-void CreateOTCRequestWidget::updateXBTRange(bool isSell, BTCNumericTypes::balance_type xbtBalance /*= 0.0*/)
+void CreateOTCRequestWidget::updateXBTRange(bool isSell, BTCNumericTypes::balance_type balance /*= 0.0*/)
 {
    otc::RangeType selectedRangeType = static_cast<otc::RangeType>(ui_->comboBoxRange->currentData().toInt());
 
@@ -94,7 +96,11 @@ void CreateOTCRequestWidget::updateXBTRange(bool isSell, BTCNumericTypes::balanc
 
    otc::Range lowestRange = otc::getRange(lowestRangeType);
 
-   if (isSell && lowestRange.lower > xbtBalance) {
+   auto checkLowestPossible = [&](int64_t lowestPrice) -> bool {
+      return (isSell && lowestPrice > balance) || (!isSell && lowestPrice > balance / buyIndicativePrice_);
+   };
+
+   if (checkLowestPossible(lowestRange.lower)) {
       ui_->comboBoxRange->setDisabled(true);
       ui_->pushButtonSubmit->setDisabled(true);
       return;
@@ -108,7 +114,7 @@ void CreateOTCRequestWidget::updateXBTRange(bool isSell, BTCNumericTypes::balanc
       i <= static_cast<int>(otc::lastRangeValue(env)); ++i) {
 
       auto rangeType = otc::RangeType(i);
-      if (isSell && otc::getRange(rangeType).lower > xbtBalance) {
+      if (checkLowestPossible(otc::getRange(rangeType).lower)) {
          break;
       }
 
