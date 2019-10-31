@@ -220,7 +220,9 @@ void RFQTicketXBT::setCurrentCCWallet(const std::shared_ptr<bs::sync::Wallet>& n
 {
    if (newCCWallet != nullptr) {
       ccWallet_ = newCCWallet;
-      ccCoinSel_ = std::make_shared<SelectedTransactionInputs>(ccWallet_, true, true);
+      ccCoinSel_ = std::make_shared<SelectedTransactionInputs>(ccWallet_, true, true, [this](){
+         emit update();
+      });
    } else {
       ccWallet_ = nullptr;
       ccCoinSel_ = nullptr;
