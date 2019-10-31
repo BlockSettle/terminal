@@ -115,7 +115,9 @@ void BsClient::getLoginResult()
 
    // Add some time to be able get timeout error from the server
    sendRequest(&request, autheidLoginTimeout() + std::chrono::seconds(3), [this] {
-      emit getLoginResultDone(AutheIDClient::NetworkError, {});
+      BsClientLoginResult result;
+      result.status = AutheIDClient::NetworkError;
+      emit getLoginResultDone(result);
    });
 }
 
@@ -331,7 +333,13 @@ void BsClient::processStartLogin(const Response_StartLogin &response)
 
 void BsClient::processGetLoginResult(const Response_GetLoginResult &response)
 {
-   emit getLoginResultDone(AutheIDClient::ErrorType(response.error().error_code()), response.celer_login());
+   BsClientLoginResult result;
+   result.status = static_cast<AutheIDClient::ErrorType>(response.error().error_code());
+   result.userType = static_cast<bs::network::UserType>(response.user_type());
+   result.celerLogin = response.celer_login();
+   result.chatTokenData = response.chat_token_data();
+   result.chatTokenSign = response.chat_token_sign();
+   emit getLoginResultDone(result);
 }
 
 void BsClient::processCeler(const Response_Celer &response)

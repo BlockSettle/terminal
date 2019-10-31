@@ -67,6 +67,12 @@ message WelcomeRequest
    string user_name = 1;
    bytes client_public_key = 2;
    int32 celer_type = 3;
+
+   // serialized bs.types.ChatToken
+   bytes chat_token_data = 4;
+
+   // chat_token_data signed by proxy for later chat server verification
+   bytes chat_token_sign = 5;
 }
 
 message WelcomeResponse

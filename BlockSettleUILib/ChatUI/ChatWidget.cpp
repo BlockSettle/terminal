@@ -30,7 +30,6 @@
 #include "AuthAddressManager.h"
 #include "MarketDataProvider.h"
 #include "AssetManager.h"
-#include "BaseCelerClient.h"
 #include "ui_ChatWidget.h"
 
 using namespace bs::network;
@@ -90,11 +89,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    , const std::shared_ptr<ArmoryConnection>& armory
    , const std::shared_ptr<SignContainer>& signContainer
    , const std::shared_ptr<MarketDataProvider>& mdProvider
-   , const std::shared_ptr<AssetManager>& assetManager
-   , const std::shared_ptr<BaseCelerClient> &celerClient)
+   , const std::shared_ptr<AssetManager>& assetManager)
 {
    loggerPtr_ = loggerPtr;
-   celerClient_ = celerClient;
 
    bool isProd = appSettings->get<int>(ApplicationSettings::envConfiguration) == ApplicationSettings::PROD;
    auto env = isProd ? otc::Env::Prod : otc::Env::Test;
@@ -218,6 +215,11 @@ otc::Peer *ChatWidget::currentPeer() const
    }
 
    return otcHelper_->client()->peer(clientPartyPtr->userHash(), partyTreeItem->peerType);
+}
+
+void ChatWidget::setUserType(UserType userType)
+{
+   userType_ = userType;
 }
 
 void acceptPartyRequest(const std::string& partyId) {}

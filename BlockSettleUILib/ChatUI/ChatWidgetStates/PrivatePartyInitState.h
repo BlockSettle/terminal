@@ -2,7 +2,7 @@
 #define PRIVATEPARTYINITSTATE_H
 
 #include "AbstractChatWidgetState.h"
-#include "BaseCelerClient.h"
+#include "ChatUI/ChatWidget.h"
 
 class PrivatePartyInitState : public AbstractChatWidgetState {
 public:
@@ -38,7 +38,7 @@ protected:
       Chat::ClientPartyPtr clientPartyPtr = getParty(chat_->currentPartyId_);
 
       auto checkIsTradingParticipant = [&]() -> bool {
-         const auto userCelerType = chat_->celerClient_->celerUserType();
+         const auto userCelerType = chat_->userType_;
          if (bs::network::UserType::Dealing != userCelerType
             && bs::network::UserType::Trading != userCelerType) {
             chat_->ui_->widgetOTCShield->showOtcAvailableToTradingParticipants();

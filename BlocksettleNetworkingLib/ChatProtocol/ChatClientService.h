@@ -25,7 +25,7 @@ namespace Chat
    signals:
       ////////// PROXY SIGNALS //////////
       void Init(const Chat::ConnectionManagerPtr& connectionManagerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::LoggerPtr& loggerPtr);
-      void LoginToServer(const std::string& email, const CelerClient::CelerUserType& celerType, const std::string& jwt, const ZmqBipNewKeyCb& cb);
+      void LoginToServer(const BinaryData& token, const BinaryData& tokenSign, const ZmqBipNewKeyCb& cb);
       void LogoutFromServer();
       void SendPartyMessage(const std::string& partyId, const std::string& data);
       void RequestPrivateParty(const std::string& userName, const std::string& initialMessage = "");
