@@ -237,8 +237,6 @@ Signer wallet::TXSignRequest::getSigner(const std::shared_ptr<ResolverFeed> &res
       }
    }
 
-   if (change.value) {
-   }
    signer.removeDupRecipients();
 
    if (resolver) {
@@ -659,8 +657,21 @@ std::vector<std::pair<BinaryData, std::string>> Wallet::getAllTxComments() const
 Signer Wallet::getSigner(const wallet::TXSignRequest &request,
                              bool keepDuplicatedRecipients)
 {
-   bs::CheckRecipSigner signer;
-   signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+   bs::CheckRecipSigner signer, prevStateSigner;
+
+   if (!request.prevStates.empty()) {
+      for (const auto &prevState : request.prevStates) {
+         prevStateSigner.deserializeState(prevState);
+      }
+
+      signer.setFlags(prevStateSigner.getFlags());
+      for (const auto &spender : prevStateSigner.spenders()) {
+         signer.addSpender(spender);
+      }
+   }
+   else {
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+   }
 
    if (!request.prevStates.empty()) {
       for (const auto &prevState : request.prevStates) {
@@ -686,31 +697,57 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request,
       }
    }
 
-   for (const auto &recipient : request.recipients) {
-      signer.addRecipient(recipient);
-   }
+   for (const auto &orderType : request.outSortOrder) {
+      switch (orderType) {
+      case wallet::OutputOrderType::PrevState:
+         for (const auto &recip : prevStateSigner.recipients()) {
+            signer.addRecipient(recip);
+         }
+         break;
 
-   if (request.change.value && !request.populateUTXOs) {
-      std::shared_ptr<ScriptRecipient> changeRecip;
-      //check change address belongs to wallet
-      if (containsAddress(request.change.address)) {
-         setAddressComment(request.change.address, wallet::Comment::toString(wallet::Comment::ChangeAddress));
-         const auto addr = getAddressEntryForAddr(request.change.address);
-         changeRecip = (addr != nullptr) ? addr->getRecipient(request.change.value)
-            : request.change.address.getRecipient(bs::XBTAmount{request.change.value});
+      case wallet::OutputOrderType::Recipients:
+         for (const auto& recipient : request.recipients) {
+            signer.addRecipient(recipient);
+         }
+         break;
+
+      case wallet::OutputOrderType::Change:
+         if (!request.change.value || request.populateUTXOs) {
+            break;
+         }
+         {
+            const auto changeRecip = request.change.address
+               .getRecipient(bs::XBTAmount{ request.change.value });
+            if (changeRecip) {
+               signer.addRecipient(changeRecip);
+            } else {
+               throw std::runtime_error("failed to get change recipient for "
+                  + std::to_string(request.change.value));
+            }
+         }
+         break;
+
+      default:
+         throw std::invalid_argument("invalid output order type " + std::to_string((int)orderType));
       }
-      else {
-         changeRecip = request.change.address.getRecipient(bs::XBTAmount{request.change.value});
-      }
-      if (changeRecip == nullptr) {
-         throw std::logic_error("invalid change recipient");
-      }
-      signer.addRecipient(changeRecip);
    }
 
    if (!keepDuplicatedRecipients) {
       signer.removeDupRecipients();
    }
+
+#ifndef NDEBUG
+   for (const auto &spender : signer.spenders()) {
+      logger_->debug("[{}] {} spender: {} @ {}", __func__
+         , walletId(), spender->getValue()
+         , bs::Address::fromUTXO(spender->getUtxo()).display());
+   }
+   for (const auto &recip : signer.recipients()) {
+      logger_->debug("[{}] {} recipient: {} @ {}", __func__
+         , walletId(), recip->getValue()
+         , bs::Address::fromRecipient(recip));
+   }
+#endif //NDEBUG
 
    signer.setFeed(getResolver());
    return signer;

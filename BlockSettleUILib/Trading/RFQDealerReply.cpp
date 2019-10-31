@@ -637,7 +637,7 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                      }
                      const auto outSortOrder = (qrn.side == bs::network::Side::Buy) ? kBuySortOrder : kSellSortOrder;
                      const auto txReq = wallet->createPartialTXRequest(*spendVal, inputs, changeAddress, feePerByte
-                        , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
+                        , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
                      qn->transactionData = txReq.serializeState().toHexStr();
                      dealerUtxoAdapter_->reserve(txReq, qn->quoteRequestId);
                   } catch (const std::exception &e) {

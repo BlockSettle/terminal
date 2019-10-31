@@ -748,9 +748,8 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
    , float feePerByte
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients
    , const bs::core::wallet::OutputSortOrder &outSortOrder
-   , const BinaryData prevPart)
+   , const BinaryData prevPart, bool feeCalcUsePrevPart)
 {
-   uint64_t inputAmount = 0;
    uint64_t fee = 0;
    auto utxos = inputs;
    if (utxos.empty()) {
@@ -772,11 +771,6 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
          utxo.txinRedeemSizeBytes_ = (unsigned int)scrAddr.getInputSize();
          utxo.witnessDataSizeBytes_ = unsigned(scrAddr.getWitnessDataSize());
          utxo.isInputSW_ = (scrAddr.getWitnessDataSize() != UINT32_MAX);
-         inputAmount += utxo.getValue();
-      }
-
-      if (!inputAmount) {
-         throw std::invalid_argument("Couldn't find address entries for UTXOs");
       }
 
       const auto coinSelection = std::make_shared<CoinSelection>([utxos](uint64_t) { return utxos; }
@@ -787,11 +781,10 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
          const auto selection = coinSelection->getUtxoSelectionForRecipients(payment, utxos);
          fee = selection.fee_;
          utxos = selection.utxoVec_;
-         inputAmount = selection.value_;
       }
       catch (...) {}
    }
-   else {
+/*   else {    // use all supplied inputs
       size_t nbUtxos = 0;
       for (auto &utxo : utxos) {
          inputAmount += utxo.getValue();
@@ -803,7 +796,7 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
       if (nbUtxos < utxos.size()) {
          utxos.erase(utxos.begin() + nbUtxos, utxos.end());
       }
-   }
+   }*/
 
    if (utxos.empty()) {
       throw std::logic_error("No UTXOs");
@@ -828,9 +821,11 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
    signer.setFlags(SCRIPT_VERIFY_SEGWIT);
    request.fee = fee;
 
-   inputAmount = 0;
-   for (const auto &spender : prevStateSigner.spenders()) {
-      inputAmount += spender->getValue();
+   uint64_t inputAmount = 0;
+   if (feeCalcUsePrevPart) {
+      for (const auto &spender : prevStateSigner.spenders()) {
+         inputAmount += spender->getValue();
+      }
    }
    for (const auto &utxo : utxos) {
       signer.addSpender(std::make_shared<ScriptSpender>(utxo.getTxHash(), utxo.getTxOutIndex(), utxo.getValue()));

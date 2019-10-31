@@ -146,7 +146,7 @@ void DealerCCSettlementContainer::activate()
          }
          else if ((order_.side == bs::network::Side::Sell) &&
          (value == static_cast<uint64_t>(order_.quantity * order_.price * BTCNumericTypes::BalanceDivider))) {
-            amountValid_ = valInput > (value + valReturn);
+            amountValid_ = true; //valInput > (value + valReturn);
          }
       });
    }
@@ -157,7 +157,8 @@ void DealerCCSettlementContainer::activate()
    }
 
    if (!foundRecipAddr_ || !amountValid_) {
-      logger_->warn("[DealerCCSettlementContainer::activate] requester's TX verification failed");
+      logger_->warn("[DealerCCSettlementContainer::activate] requester's TX verification failed: {}/{}"
+         , foundRecipAddr_, amountValid_);
       wallet_ = nullptr;
       emit genAddressVerified(false);
    }

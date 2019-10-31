@@ -1192,6 +1192,7 @@ void WalletsManager::goOnline()
             logger_->error("[WalletsManager::goOnline] failed for {}", ccTracker.first);
          }
       }
+      QMetaObject::invokeMethod(this, &WalletsManager::walletsReady);
    }).detach();
 }
 
