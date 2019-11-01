@@ -594,11 +594,15 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
 }
 
 function updateDialogData(jsCallback, passwordDialogData) {
-    console.log("Updating password dialog " + currentDialog + ", updated keys: " + passwordDialogData.keys())
+    console.log("Trying to update password dialog " + currentDialog + ", Settl Id: " + passwordDialogData.SettlementId)
     if (!currentDialog || typeof currentDialog.passwordDialogData === "undefined") {
         return
     }
-    currentDialog.passwordDialogData.merge(passwordDialogData)
+
+    if (passwordDialogData.SettlementId === currentDialog.passwordDialogData.SettlementId) {
+        console.log("Updating password dialog, updated keys: " + passwordDialogData.keys())
+        currentDialog.passwordDialogData.merge(passwordDialogData)
+    }
 }
 
 function isLiteMode(){
