@@ -76,6 +76,8 @@ struct ZmqBIP15XDataConnectionParams
 
    std::chrono::milliseconds connectionTimeout{std::chrono::seconds(10)};
 
+   std::string threadName{"ZmqBipClient"};
+
    ZmqBIP15XDataConnectionParams();
 
    void setLocalHeartbeatInterval();
@@ -198,6 +200,7 @@ private:
    bool                             serverSendsHeartbeat_{};
    std::chrono::steady_clock::time_point lastHeartbeatSend_{};
    std::chrono::steady_clock::time_point lastHeartbeatReply_{};
+
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__
