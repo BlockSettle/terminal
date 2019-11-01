@@ -39,7 +39,9 @@ private:
 
 private:
    const bool     cbInMainThread_;
+#ifdef USE_LOCAL_TX_CACHE
    TxCacheFile    txCache_;
+#endif
    std::shared_ptr<QProcess>  armoryProcess_;
 };
 

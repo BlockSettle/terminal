@@ -239,7 +239,7 @@ void ExplorerWidget::setTransaction(QString txId)
 {
    ui_->stackedWidget->setCurrentIndex(TxPage);
    // Pass the Tx hash to the Tx widget and populate the fields.
-   BinaryTXID terminalTXID(READHEX(txId.toStdString()), true);
+   const TxHash terminalTXID(txId);
    ui_->Transaction->populateTransactionWidget(terminalTXID);
 }
 

@@ -26,7 +26,10 @@ namespace {
 ArmoryObject::ArmoryObject(const std::shared_ptr<spdlog::logger> &logger
    , const std::string &txCacheFN, bool cbInMainThread)
    : ArmoryConnection(logger)
-   , cbInMainThread_(cbInMainThread), txCache_(txCacheFN)
+   , cbInMainThread_(cbInMainThread)
+#ifdef USE_LOCAL_TX_CACHE
+   , txCache_(txCacheFN)
+#endif
 {}
 
 bool ArmoryObject::startLocalArmoryProcess(const ArmorySettings &settings)
@@ -157,7 +160,8 @@ bool ArmoryObject::getWalletsLedgerDelegate(const LedgerDelegateCb &cb)
 }
 
 bool ArmoryObject::getTxByHash(const BinaryData &hash, const TxCb &cb)
-{
+{      // don't use local cache to have actual height in TX
+#ifdef USE_LOCAL_TX_CACHE
    const auto tx = txCache_.get(hash);
    if (tx.isInitialized()) {
       if (needInvokeCb()) {
@@ -169,8 +173,11 @@ bool ArmoryObject::getTxByHash(const BinaryData &hash, const TxCb &cb)
       }
       return true;
    }
+#endif   //USE_LOCAL_TX_CACHE
    const auto &cbWrap = [this, cb, hash](Tx tx) {
+#ifdef USE_LOCAL_TX_CACHE
       txCache_.put(hash, tx);
+#endif
       if (!cb) {
          return;
       }
@@ -187,7 +194,7 @@ bool ArmoryObject::getTxByHash(const BinaryData &hash, const TxCb &cb)
 bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb &cb)
 {
    auto result = std::make_shared<std::vector<Tx>>();
-#if 0    // TXs need to contain the actual height, caching by hash forbids this
+#ifdef USE_LOCAL_TX_CACHE  // TXs need to contain the actual height, caching by hash forbids this
    std::set<BinaryData> missedHashes;
    for (const auto &hash : hashes) {
       const auto tx = txCache_.get(hash);
@@ -208,7 +215,7 @@ bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb 
       }
       return true;
    }
-#endif   //0
+#endif   //USE_LOCAL_TX_CACHE
    const auto &cbWrap = [this, cb, result]
       (const std::vector<Tx> &txs, std::exception_ptr exPtr)
    {
@@ -217,9 +224,11 @@ bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb 
          return;
       }
       for (const auto &tx : txs) {
+#ifdef USE_LOCAL_TX_CACHE
          if (tx.isInitialized()) {
             txCache_.put(tx.getThisHash(), tx);
          }
+#endif   // USE_LOCAL_TX_CACHE
          result->push_back(tx);
       }
       if (needInvokeCb()) {

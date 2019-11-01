@@ -807,7 +807,7 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, const TxCb &cb)
    if (addGetTxCallback(hash, cb)) {
       return true;
    }
-   const auto &cbUpdateCache = [this, hash](ReturnMessage<Tx> tx)->void {
+   const auto &cbWrap = [this, hash](ReturnMessage<Tx> tx)->void {
       try {
          auto retTx = tx.get();
          callGetTxCallbacks(hash, retTx);
@@ -818,7 +818,7 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, const TxCb &cb)
          callGetTxCallbacks(hash, {});
       }
    };
-   bdv_->getTxByHash(hash, cbUpdateCache);
+   bdv_->getTxByHash(hash, cbWrap);
    return true;
 }
 
