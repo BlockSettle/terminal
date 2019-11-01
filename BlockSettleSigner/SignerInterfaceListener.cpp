@@ -426,7 +426,8 @@ void SignerInterfaceListener::onSyncWallet(const std::string &data, bs::signer::
 
    for (int i = 0; i < response.addresses_size(); ++i) {
       const auto addr = response.addresses(i);
-      result.addresses.push_back({ addr.index(), addr.address(), {} });
+      result.addresses.push_back({ addr.index()
+         , bs::Address::fromAddressString(addr.address()), {} });
    }
    itCb->second(result);
    cbWalletData_.erase(itCb);
