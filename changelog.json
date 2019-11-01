@@ -1,7 +1,19 @@
 {
-   "latest_version": "0.24.6",
+   "latest_version": "0.24.7",
    "release_date": "01 Nov 2019",
    "changes": [
+      {
+         "version_string": "0.24.7",
+         "previous_version": "0.24.6",
+         "release_date": "01 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Expandable Armory settings"
+         ],
+         "bug_fixes": [],
+         "revision": "930b6cf9",
+         "common_revision": "f9554007"
+      },
       {
          "version_string": "0.24.6",
          "previous_version": "0.24.5",
