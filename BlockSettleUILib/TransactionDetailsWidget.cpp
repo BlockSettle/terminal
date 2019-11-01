@@ -12,48 +12,6 @@
 
 Q_DECLARE_METATYPE(Tx);
 
-BinaryData BinaryTXID::getRPCTXID()
-{
-   BinaryData retVal;
-   if (txidIsRPC_ == true) {
-      retVal = txid_;
-   }
-   else {
-      retVal = txid_.swapEndian();
-   }
-
-   return retVal;
-}
-
-BinaryData BinaryTXID::getInternalTXID()
-{
-   BinaryData retVal;
-   if (txidIsRPC_ == false) {
-      retVal = txid_;
-   }
-   else {
-      retVal = txid_.swapEndian();
-   }
-
-   return retVal;
-}
-
-bool BinaryTXID::operator==(const BinaryTXID& inTXID) const
-{
-   return (txidIsRPC_ == inTXID.getTXIDIsRPC()) &&
-          (txid_ == inTXID.getRawTXID());
-}
-
-bool BinaryTXID::operator<(const BinaryTXID& inTXID) const
-{
-   return txid_ < inTXID.getRawTXID();
-}
-
-bool BinaryTXID::operator>(const BinaryTXID& inTXID) const
-{
-   return txid_ > inTXID.getRawTXID();
-}
-
 
 TransactionDetailsWidget::TransactionDetailsWidget(QWidget *parent) :
     QWidget(parent),
@@ -102,8 +60,8 @@ void TransactionDetailsWidget::init(
 
 // This function uses getTxByHash() to retrieve info about transaction. The
 // incoming TXID must be in RPC order, not internal order.
-void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
-                                                         const bool& firstPass)
+void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
+   , const bool &firstPass)
 {
    if (!armoryPtr_) {
       if (logger_) {
@@ -117,11 +75,12 @@ void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
       clear();
    }
    // get the transaction data from armory
-   std::string txidStr = rpcTXID.getRPCTXID().toHexStr();
-   const auto &cbTX = [this, txidStr](const Tx &tx) {
+   const auto txidStr = rpcTXID.getRPCTXID();
+   const auto cbTX = [this, txidStr](const Tx &tx) {
       if (!tx.isInitialized()) {
          if (logger_) {
-            logger_->error("[{}] TXID {} is not initialized.", __func__, txidStr);
+            logger_->error("[TransactionDetailsWidget::cbTx] TXID {} is not initialized."
+               , txidStr);
          }
          ui_->tranID->setText(tr("%1 (load failed)").arg(QString::fromStdString(txidStr)));
          emit finished();
@@ -131,11 +90,15 @@ void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
       processTxData(tx);
    };
 
-   // The TXID passed to Armory *must* be in internal order!
-   if (!armoryPtr_->getTxByHash(rpcTXID.getInternalTXID(), cbTX)) {
-      if (logger_) {
-         logger_->error("[{}] - Failed to get TXID {}.", __func__, txidStr);
+   if (firstPass || !curTx_.isInitialized() || (curTx_.getThisHash() != rpcTXID)) {
+      if (!armoryPtr_->getTxByHash(rpcTXID, cbTX)) {
+         if (logger_) {
+            logger_->error("[{}] - Failed to get TXID {}.", __func__, txidStr);
+         }
       }
+   }
+   else {
+      cbTX(curTx_);
    }
 }
 
@@ -146,14 +109,18 @@ void TransactionDetailsWidget::processTxData(Tx tx)
    curTx_ = tx;
    ui_->tranID->setText(QString::fromStdString(curTx_.getThisHash().toHexStr(true)));
 
+   const auto txHeight = curTx_.getTxHeight();
+   ui_->nbConf->setVisible(txHeight != UINT32_MAX);
+   ui_->labelNbConf->setVisible(txHeight != UINT32_MAX);
+   ui_->nbConf->setText(QString::number(armoryPtr_->getConfirmationsNumber(txHeight)));
+
    // Get each Tx object associated with the Tx's TxIn object. Needed to calc
    // the fees.
    const auto &cbProcessTX = [this]
       (const std::vector<Tx> &prevTxs, std::exception_ptr)
    {
       for (const auto &prevTx : prevTxs) {
-         BinaryTXID intPrevTXHash(prevTx.getThisHash(), false);
-         prevTxMap_[intPrevTXHash] = prevTx;
+         prevTxMap_[prevTx.getThisHash()] = prevTx;
       }
 
       // We're ready to display all the transaction-related data in the UI.
@@ -166,10 +133,10 @@ void TransactionDetailsWidget::processTxData(Tx tx)
    for (size_t i = 0; i < tx.getNumTxIn(); i++) {
       TxIn in = tx.getTxInCopy(i);
       OutPoint op = in.getOutPoint();
-      BinaryTXID intPrevTXID(op.getTxHash(), false);
+      const TxHash intPrevTXID(op.getTxHash());
       const auto &itTX = prevTxMap_.find(intPrevTXID);
       if (itTX == prevTxMap_.end()) {
-         prevTxHashSet.insert(intPrevTXID.getInternalTXID());
+         prevTxHashSet.insert(intPrevTXID);
       }
    }
 
@@ -216,8 +183,7 @@ void TransactionDetailsWidget::setTxGUIValues()
    for (size_t r = 0; r < curTx_.getNumTxIn(); ++r) {
       TxIn in = curTx_.getTxInCopy(r);
       OutPoint op = in.getOutPoint();
-      BinaryTXID intPrevTXID(op.getTxHash(), false);
-      const auto &prevTx = prevTxMap_[intPrevTXID];
+      const auto &prevTx = prevTxMap_[op.getTxHash()];
       if (prevTx.isInitialized()) {
          TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
          totIn += prevOut.getValue();
@@ -255,7 +221,7 @@ void TransactionDetailsWidget::setTxGUIValues()
 void TransactionDetailsWidget::onNewBlock(unsigned int)
 {
    if (curTx_.isInitialized()) {
-      populateTransactionWidget({ curTx_.getThisHash(), true }, false);
+      populateTransactionWidget(curTx_.getThisHash(), false);
    }
 }
 
@@ -323,12 +289,11 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
 {
    tree->clear();
 
-   std::map<BinaryTXID, unsigned int> hashCounts;
+   std::map<TxHash, unsigned int> hashCounts;
    for (size_t i = 0; i < curTx_.getNumTxIn(); i++) {
       TxOut prevOut;
       const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
-      const BinaryTXID txID(op.getTxHash(), false);
-      hashCounts[txID]++;
+      hashCounts[op.getTxHash()]++;
    }
 
    // here's the code to add data to the Input tree.
@@ -336,7 +301,7 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
       TxOut prevOut;
       const TxIn in = curTx_.getTxInCopy(i);
       const OutPoint op = in.getOutPoint();
-      const BinaryTXID intPrevTXID(op.getTxHash(), false);
+      const TxHash intPrevTXID(op.getTxHash());
       const auto &prevTx = prevTxMap_[intPrevTXID];
       if (prevTx.isInitialized()) {
          prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
@@ -409,8 +374,14 @@ void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
 {
    const bool specialAddr = address.startsWith(QLatin1Char('<'));
    const bool isOutput = (tree == ui_->treeOutput);
-   auto &itemsMap = isOutput ? outputItems_ : inputItems_;
-   auto item = itemsMap[address];
+   QTreeWidgetItem *item = nullptr;
+   for (int i = 0; i < tree->topLevelItemCount(); ++i) {
+      const auto tlItem = tree->topLevelItem(i);
+      if (tlItem->data(0, Qt::DisplayRole).toString() == address) {
+         item = tlItem;
+         break;
+      }
+   }
    if (!item || specialAddr) {
       QStringList items;
       const auto amountStr = UiUtils::displayAmount(amount);
@@ -420,12 +391,13 @@ void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
       item->setData(1, Qt::UserRole, (qulonglong)amount);
       tree->addTopLevelItem(item);
       item->setExpanded(true);
-      if (!specialAddr) {
-         itemsMap[address] = item;
-      }
    }
    else {
-      uint64_t prevAmount = item->data(1, Qt::UserRole).toULongLong();
+      const auto itemData = item->data(1, Qt::UserRole);
+      if (!itemData.isValid() || itemData.isNull()) {
+         return;
+      }
+      uint64_t prevAmount = itemData.toULongLong();
       prevAmount += amount;
       item->setData(1, Qt::UserRole, (qulonglong)prevAmount);
       item->setData(1, Qt::DisplayRole, UiUtils::displayAmount(prevAmount));
@@ -442,7 +414,9 @@ void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
          txHashItem->setData(0, Qt::UserRole, QString::fromStdString(txHash.toHexStr(true)));
       }
       txHashItem->setData(1, Qt::UserRole, (qulonglong)amount);
-      item->addChild(txHashItem);
+      if (item) {
+         item->addChild(txHashItem);
+      }
    }
 }
 
@@ -467,8 +441,6 @@ void TransactionDetailsWidget::clear()
 {
    prevTxMap_.clear();
    curTx_ = Tx();
-   inputItems_.clear();
-   outputItems_.clear();
 
    ui_->tranID->clear();
    ui_->tranNumInputs->clear();

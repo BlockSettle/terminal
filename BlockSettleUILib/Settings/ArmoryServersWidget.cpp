@@ -92,7 +92,8 @@ void ArmoryServersWidget::adaptForStartupDialog()
 {
    ui_->widgetControlButtons->hide();
    ui_->tableViewArmory->hideColumn(4);
-
+   ui_->widget->layout()->setContentsMargins(0,0,0,0);
+   onExpandToggled();
    isStartupDialog_ = true;
 }
 
@@ -210,7 +211,22 @@ void ArmoryServersWidget::onSave()
 
 void ArmoryServersWidget::onConnect()
 {
-//   emit reconnectArmory();
+   //   emit reconnectArmory();
+}
+
+void ArmoryServersWidget::onExpandToggled()
+{
+   isExpanded_ = !isExpanded_;
+   ui_->widgetConfigure->setVisible(isExpanded_);
+
+   ui_->tableViewArmory->setColumnHidden(0, !isExpanded_);
+   ui_->tableViewArmory->setColumnHidden(2, !isExpanded_);
+   ui_->tableViewArmory->setColumnHidden(3, !isExpanded_);
+   ui_->tableViewArmory->setColumnHidden(4, !isExpanded_);
+   ui_->tableViewArmory->setColumnHidden(5, !isExpanded_);
+
+   ui_->tableViewArmory->setRowHidden(2, !isExpanded_);
+   ui_->tableViewArmory->setRowHidden(3, !isExpanded_);
 }
 
 void ArmoryServersWidget::setupServerFromSelected(bool needUpdate)
@@ -238,4 +254,9 @@ void ArmoryServersWidget::resetForm()
    ui_->spinBoxPort->setValue(0);
    ui_->spinBoxPort->setSpecialValueText(tr(" "));
    ui_->lineEditKey->clear();
+}
+
+bool ArmoryServersWidget::isExpanded() const
+{
+   return isExpanded_;
 }

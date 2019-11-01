@@ -38,38 +38,22 @@ class QTreeWidget;
 // dealing with internal or RPC order. Not 100% robust for now (this assumes
 // little endian is used) but it'll suffice until we require more robust data
 // handling.
-class BinaryTXID {
+class TxHash : public BinaryData {
 public:
-   BinaryTXID(const bool isTXIDRPC = false) :
-      txid_(), txidIsRPC_(isTXIDRPC) {}
-   BinaryTXID(const BinaryData &txidData, const bool isTXIDRPC = false) :
-      txid_(txidData), txidIsRPC_(isTXIDRPC) {}
-   BinaryTXID(const BinaryDataRef &txidData, const bool isTXIDRPC = false) :
-      txid_(txidData), txidIsRPC_(isTXIDRPC) {}
-   BinaryTXID(const QByteArray &txidData, const bool isTXIDRPC = false) :
-      txid_((uint8_t*)(txidData.data()), txidData.size()),
-      txidIsRPC_(isTXIDRPC) {}
-   BinaryTXID(const QString &txidData, const bool isTXIDRPC = false) :
-      txid_(READHEX(txidData.toStdString())), txidIsRPC_(isTXIDRPC) {}
-   BinaryTXID(const std::string &txidData, const bool isTXIDRPC = false) :
-      txid_(READHEX(txidData.data())), txidIsRPC_(isTXIDRPC) {}
+   TxHash(const BinaryData &bd) : BinaryData(bd) {}
+/*   TxHash(const QByteArray &txidData) :
+      BinaryData((uint8_t*)(txidData.data()), txidData.size()) {}*/
+   TxHash(const QString &txidData) : BinaryData(READHEX(txidData.toStdString()))
+   {  // imply hex data is always in RPC format
+      swapEndian();
+   }
+   TxHash(const std::string &txidData) : BinaryData(READHEX(txidData.data()))
+   {  // imply hex data is always in RPC format
+      swapEndian();
+   }
 
    // Make two separate functs just to make internal vs. RPC clearer to devs.
-   BinaryData getRPCTXID();
-   BinaryData getInternalTXID();
-
-   bool getTXIDIsRPC() const { return txidIsRPC_; }
-   const BinaryData& getRawTXID() const { return txid_; }
-   bool operator==(const BinaryData& inTXID) const { return txid_ == inTXID; }
-   bool operator!=(const BinaryData& inTXID) const { return txid_ != inTXID; }
-   bool operator==(const BinaryTXID& inTXID) const;
-   bool operator!=(const BinaryTXID& inTXID) const { return !((*this) == inTXID); }
-   bool operator<(const BinaryTXID& inTXID) const;
-   bool operator>(const BinaryTXID& inTXID) const;
-
-private:
-   BinaryData txid_;
-   bool txidIsRPC_;
+   std::string getRPCTXID() const { return toHexStr(true); }
 };
 
 class TransactionDetailsWidget : public QWidget
@@ -85,7 +69,7 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::sync::CCDataResolver> &);
 
-   void populateTransactionWidget(BinaryTXID rpcTXID,
+   void populateTransactionWidget(const TxHash &rpcTXID,
       const bool& firstPass = true);
 
     enum TxTreeColumns {
@@ -132,10 +116,7 @@ private:
    Tx curTx_; // The Tx being analyzed in the widget.
 
    // Data captured from Armory callbacks.
-   std::map<BinaryTXID, Tx> prevTxMap_; // Prev Tx hash / Prev Tx map.
-
-   QMap<QString, QTreeWidgetItem *> inputItems_;
-   QMap<QString, QTreeWidgetItem *> outputItems_;
+   std::map<TxHash, Tx> prevTxMap_; // Prev Tx hash / Prev Tx map.
 
    class TxDetailsACT : public ArmoryCallbackTarget
    {
