@@ -5,15 +5,12 @@
 #include "ChatProtocol/ClientPartyModel.h"
 
 #include <QDateTime>
-#include <QImage>
-#include <QMap>
 #include <QMenu>
 #include <QTextBrowser>
 #include <QTextTable>
 #include <QVector>
 
 #include <memory>
-#include <tuple>
 
 namespace Chat {
    class MessageData;
@@ -73,7 +70,7 @@ public:
    ~ChatMessagesTextEdit() noexcept override = default;
 
 public:
-   QString getFormattedTextFromSelection();
+   QString getFormattedTextFromSelection() const;
 
 public slots:
    void onSetColumnsWidth(int time, int icon, int user, int message);
@@ -81,7 +78,8 @@ public slots:
    void onSetClientPartyModel(const Chat::ClientPartyModelPtr& partyModel);
    void onSwitchToChat(const std::string& partyId);
    void onLogout();
-   const Chat::MessagePtr onMessageStatusChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
+   Chat::MessagePtr onMessageStatusChanged(const std::string& partyId, const std::string& message_id,
+                                           const int party_message_state);
    void onMessageUpdate(const Chat::MessagePtrList& messagePtrList);
    void onUpdatePartyName(const std::string& partyId);
 
@@ -103,17 +101,17 @@ protected:
    };
 
    QString data(const std::string& partyId, const std::string& messageId, const Column &column);
-   QString dataMessage(const std::string& partyId, const std::string& messageId, const Column &column);
-   QImage statusImage(const std::string& partyId, const std::string& messageId);
+   QString dataMessage(const std::string& partyId, const std::string& messageId, const Column &column) const;
+   QImage statusImage(const std::string& partyId, const std::string& messageId) const;
 
    void contextMenuEvent(QContextMenuEvent* e) override;
 
 private slots:
    void onUrlActivated(const QUrl &link);
-   void onCopyActionTriggered();
-   void onCopyLinkLocationActionTriggered();
+   void onCopyActionTriggered() const;
+   void onCopyLinkLocationActionTriggered() const;
    void onSelectAllActionTriggered();
-   void onTextChanged();
+   void onTextChanged() const;
    void onUserUrlOpened(const QUrl &url);
 
 private:
@@ -122,19 +120,19 @@ private:
    std::unique_ptr<QMenu> initUserContextMenu(const QString& userName);
 
    // #new_logic
-   QString toHtmlUsername(const std::string& username, const std::string& userId);
-   QString toHtmlText(const QString &text);
-   QString toHtmlInvalid(const QString &text);
+   QString toHtmlUsername(const std::string& username, const std::string& userId) const;
+   QString toHtmlText(const QString &text) const;
+   QString toHtmlInvalid(const QString &text) const;
 
    void insertMessage(const Chat::MessagePtr& messagePtr);
    void showMessage(const std::string& partyId, const std::string& messageId);
    void showMessages(const std::string& partyId);
    Chat::MessagePtr findMessage(const std::string& partyId, const std::string& messageId);
-   void notifyMessageChanged(Chat::MessagePtr message);
+   void notifyMessageChanged(const Chat::MessagePtr& message);
    void insertMessageInDoc(QTextCursor& cursor, const std::string& partyId, const std::string& messageId);
    void updateMessage(const std::string& partyId, const std::string& messageId);
-   QTextCursor deleteMessage(int index);
-   QString elideUserName(const std::string& displayName);
+   QTextCursor deleteMessage(int index) const;
+   QString elideUserName(const std::string& displayName) const;
 
    Chat::ClientPartyModelPtr partyModel_;
 
