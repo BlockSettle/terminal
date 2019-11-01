@@ -477,35 +477,22 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
             else {
                const auto &cbSigned = [this, fileName, jsCallback, requestCbs, walletId, reqs] (bs::error::ErrorCode result, const BinaryData &signedTX) {
                   if (result != bs::error::ErrorCode::NoError) {
-                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to sign request, error code: %1, file: %2")
-                                      .arg(static_cast<int>(result))
-                                      .arg(fileName));
+                     invokeJsCallBack(jsCallback, QJSValueList()
+                        << QJSValue(false)
+                        << tr("Failed to sign request, error code: %1, file: %2")
+                           .arg(static_cast<int>(result))
+                           .arg(fileName));
                      return;
                   }
                   QFileInfo fi(fileName);
                   QString outputFN = fi.path() + QLatin1String("/") + fi.baseName() + QLatin1String("_signed.bin");
-                  QFile f(outputFN);
-                  if (f.exists()) {
-                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("File %1 already exists").arg(outputFN));
-                     return;
-                  }
-                  if (!f.open(QIODevice::WriteOnly)) {
-                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to open %1 for writing").arg(outputFN));
-                     return;
-                  }
 
-                  Storage::Signer::SignedTX response;
-                  response.set_transaction(signedTX.toBinStr());
-                  response.set_comment(reqs[0].comment);
+                  bs::error::ErrorCode exportResult = bs::core::wallet::ExportSignedTxToFile(signedTX, outputFN, reqs[0].comment);
 
-                  Storage::Signer::File fileContainer;
-                  auto container = fileContainer.add_payload();
-                  container->set_type(Storage::Signer::SignedTXFileType);
-                  container->set_data(response.SerializeAsString());
-
-                  const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
-                  if (f.write(data) != data.size()) {
-                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to write TX response data to %1").arg(outputFN));
+                  if (exportResult != bs::error::ErrorCode::NoError) {
+                     invokeJsCallBack(jsCallback, QJSValueList()
+                        << QJSValue(false)
+                        << tr("%1\n%2").arg(bs::error::ErrorCodeToString(exportResult)).arg(outputFN));
                      return;
                   }
 
@@ -537,9 +524,9 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
          bs::hd::WalletInfo *walletInfo = adapter_->qmlFactory()->createWalletInfo(walletId);
 
          adapter_->qmlBridge()->invokeQmlMethod("createTxSignDialog", cb
-                                                , QVariant::fromValue(txInfo)
-                                                , QVariant::fromValue(dialogData)
-                                                , QVariant::fromValue(walletInfo));
+            , QVariant::fromValue(txInfo)
+            , QVariant::fromValue(dialogData)
+            , QVariant::fromValue(walletInfo));
       };
 
       requestCbs->push_back(walletCb);
