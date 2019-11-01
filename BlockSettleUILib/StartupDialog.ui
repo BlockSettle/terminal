@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>682</width>
+    <width>800</width>
     <height>595</height>
    </rect>
   </property>
@@ -81,7 +81,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <property name="spacing">
-           <number>9</number>
+           <number>0</number>
           </property>
           <property name="leftMargin">
            <number>0</number>
@@ -96,7 +96,17 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="QLabel" name="label">
+           <widget class="QLabel" name="labelSimple">
+            <property name="text">
+             <string>The BlockSettle Terminal requires an ArmoryDB supernode in order to connect to the Bitcoin Blockchain.Users may connect to a cluster of supernodes hosted by BlockSettle (standard) or configure below to connect via own infrastructure (advanced).</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelExpanded">
             <property name="text">
              <string>By default, the network settings will connect your Terminal to a Bitcoin &quot;supernode&quot; hosted by BlockSettle. Should you wish to connect to Bitcoin infrastructure of your own choosing (BlockSettle encourages users to rely on their own infrastructure for network access), you may configure the IP address of your &quot;ArmoryDB&quot; instance under the network settings. If you are interested in running your own network node, please consult the &quot;Running a Bitcoin Node&quot; document for further instructions on setting up ArmoryDB.</string>
             </property>
@@ -121,7 +131,7 @@
               <number>0</number>
              </property>
              <property name="topMargin">
-              <number>0</number>
+              <number>9</number>
              </property>
              <property name="rightMargin">
               <number>0</number>
@@ -176,6 +186,19 @@
       <property name="bottomMargin">
        <number>7</number>
       </property>
+      <item>
+       <widget class="QPushButton" name="pushButtonConfigure">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Configure</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <spacer name="horizontalSpacer_2">
         <property name="orientation">
