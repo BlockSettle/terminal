@@ -1476,7 +1476,9 @@ void OtcClient::createBuyerRequest(const std::string &settlementId, Peer *peer, 
    bs::tradeutils::PayoutArgs args;
    initTradesArgs(args, peer, settlementId);
    args.payinTxId = peer->payinTxIdFromSeller;
-   args.recvAddr = bs::Address::fromAddressString(peer->offer.recvAddress);
+   if (!peer->offer.recvAddress.empty()) {
+      args.recvAddr = bs::Address::fromAddressString(peer->offer.recvAddress);
+   }
    args.outputXbtWallet = leaves.front();
 
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, cb, peer, settlementId, targetHdWallet, handle = peer->validityFlag.handle(), logger = logger_]
