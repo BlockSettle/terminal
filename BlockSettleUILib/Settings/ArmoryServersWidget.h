@@ -24,6 +24,8 @@ public:
    void adaptForStartupDialog();
    void setRowSelected(int row);
 
+   bool isExpanded() const;
+
 public slots:
    void onAddServer();
    void onDeleteServer();
@@ -31,6 +33,8 @@ public slots:
    void onSelect();
    void onSave();
    void onConnect();
+
+   void onExpandToggled();
 
 signals:
    void reconnectArmory();
@@ -48,7 +52,8 @@ private:
    std::shared_ptr<ApplicationSettings> appSettings_;
 
    ArmoryServersViewModel *armoryServersModel_;
-   bool isStartupDialog_;
+   bool isStartupDialog_ = false;
+   bool isExpanded_ = true;
 };
 
 #endif // ARMORYSERVERSWIDGET_H

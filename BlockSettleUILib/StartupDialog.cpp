@@ -17,6 +17,7 @@ StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
   , showLicense_(showLicense)
 {
    ui_->setupUi(this);
+   ui_->labelExpanded->hide();
 
    connect(ui_->pushButtonBack, &QPushButton::clicked, this, &StartupDialog::onBack);
    connect(ui_->pushButtonNext, &QPushButton::clicked, this, &StartupDialog::onNext);
@@ -40,6 +41,12 @@ void StartupDialog::init(const std::shared_ptr<ApplicationSettings> &appSettings
    armoryServersWidget_->adaptForStartupDialog();
    ui_->widgetManageArmory->layout()->addWidget(armoryServersWidget_);
    armoryServersWidget_->show();
+   connect(ui_->pushButtonConfigure, &QPushButton::clicked, [this](){
+      armoryServersWidget_->onExpandToggled();
+      ui_->pushButtonConfigure->hide();
+      ui_->labelExpanded->show();
+      ui_->labelSimple->hide();
+   });
 }
 
 StartupDialog::~StartupDialog() = default;
@@ -72,8 +79,12 @@ void StartupDialog::updateStatus()
 
    if (currentPage == Pages::LicenseAgreement) {
       setWindowTitle(tr("License Agreement"));
+      ui_->pushButtonConfigure->hide();
    } else {
       setWindowTitle(tr("Bitcoin Network Connection"));
+      if (!armoryServersWidget_->isExpanded()) {
+         ui_->pushButtonConfigure->show();
+      }
    }
 
    if (!showLicense_) {

@@ -1,7 +1,7 @@
 ************************************************************
 
 BlockSettle -- Bitcoin Wallet and Order Management Software
-Copyright (C) 2015 -, BlockSettle AB
+Copyright (C) 2016 -, BlockSettle AB
 Copyright (C) 2016 -, goatpig
 
 Portion of the code is BlockSettle AB’s property, licensed under GNU Affero GPL Version 3
