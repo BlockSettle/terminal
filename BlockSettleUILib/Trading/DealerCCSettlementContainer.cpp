@@ -53,7 +53,7 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData()
    dialogData.setValue(PasswordDialogData::IsDealer, true);
    dialogData.setValue(PasswordDialogData::Market, "CC");
    dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
-   dialogData.setValue(PasswordDialogData::LotSize, qint64(lotSize_));
+   dialogData.setValue(PasswordDialogData::LotSize, static_cast<int>(lotSize_));
 
    if (side() == bs::network::Side::Sell) {
       dialogData.setValue(PasswordDialogData::Title, tr("Settlement Delivery"));

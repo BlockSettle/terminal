@@ -221,36 +221,45 @@ QVariant bs::sync::PasswordDialogData::value(const bs::sync::dialog::keys::Key &
    return values_.value(key.toQString());
 }
 
-void bs::sync::PasswordDialogData::setValue(const QString &key, const QVariant &value)
+void bs::sync::PasswordDialogData::setValue(const bs::sync::dialog::keys::Key &key, const QString &value)
 {
-   values_.insert(key, value);
-   emit dataChanged();
-}
-
-void bs::sync::PasswordDialogData::setValue(const bs::sync::dialog::keys::Key &key, const QVariant &value)
-{
-   setValue(key.toQString(), value);
+   setValueImpl(key, value);
 }
 
 void bs::sync::PasswordDialogData::setValue(const bs::sync::dialog::keys::Key &key, const char *value)
 {
-   setValue(key, QString::fromLatin1(value));
+   setValueImpl(key, QString::fromLatin1(value));
 }
 
 void bs::sync::PasswordDialogData::setValue(const bs::sync::dialog::keys::Key &key, const std::string &value)
 {
-   setValue(key, QString::fromStdString(value));
+   setValueImpl(key, QString::fromStdString(value));
 }
 
-void bs::sync::PasswordDialogData::remove(const QString &key)
+void bs::sync::PasswordDialogData::setValue(const dialog::keys::Key &key, int32_t value)
+{
+   setValueImpl(key, value);
+}
+
+void bs::sync::PasswordDialogData::setValue(const dialog::keys::Key &key, double value)
+{
+   setValueImpl(key, value);
+}
+
+void bs::sync::PasswordDialogData::remove(const bs::sync::dialog::keys::Key &key)
+{
+   removeImpl(key.toQString());
+}
+
+void bs::sync::PasswordDialogData::removeImpl(const QString &key)
 {
    values_.remove(key);
    emit dataChanged();
 }
 
-void bs::sync::PasswordDialogData::remove(const bs::sync::dialog::keys::Key &key)
+void bs::sync::PasswordDialogData::setValueImpl(const bs::sync::dialog::keys::Key &key, const QVariant &value)
 {
-   remove(key.toQString());
+   values_.insert(key.toQString(), value);
    emit dataChanged();
 }
 
