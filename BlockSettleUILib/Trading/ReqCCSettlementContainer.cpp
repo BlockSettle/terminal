@@ -63,7 +63,7 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
    bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
    dialogData.setValue(PasswordDialogData::Market, "CC");
    dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
-   dialogData.setValue(PasswordDialogData::LotSize, qint64(lotSize_));
+   dialogData.setValue(PasswordDialogData::LotSize, static_cast<int>(lotSize_));
 
    if (side() == bs::network::Side::Sell) {
       dialogData.setValue(PasswordDialogData::Title, tr("Settlement Delivery"));
