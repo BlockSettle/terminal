@@ -821,7 +821,7 @@ double RFQTicketXBT::estimatedXbtPayinFee() const
    }
 
    BinaryData prefixed;
-   prefixed.append(AddressEntryType_P2WSH);
+   prefixed.append(AddressEntry::getPrefixByte(AddressEntryType_P2WSH));
    prefixed.append(CryptoPRNG::generateRandom(32));
    const auto balance = transactionData_->GetTransactionSummary().availableBalance;
    const auto maxVal = transactionData_->CalculateMaxAmount(
