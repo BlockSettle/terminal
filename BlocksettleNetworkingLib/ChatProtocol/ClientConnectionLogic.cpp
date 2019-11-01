@@ -50,7 +50,6 @@ void ClientConnectionLogic::onDataReceived(const std::string& data)
    if (ProtobufUtils::pbAnyToMessage<WelcomeResponse>(any, &welcomeResponse))
    {
       handleWelcomeResponse(welcomeResponse);
-      emit properlyConnected();
       return;
    }
 
@@ -152,6 +151,17 @@ void ClientConnectionLogic::handleWelcomeResponse(const WelcomeResponse& welcome
    }
 
    clientPartyLogicPtr_->handlePartiesFromWelcomePacket(currentUserPtr(), welcomeResponse);
+
+   emit properlyConnected();
+
+   // update party to user table and check history messages
+   ClientPartyModelPtr clientPartyModelPtr = clientPartyLogicPtr_->clientPartyModelPtr();
+   ClientPartyPtrList clientPartyPtrList = clientPartyModelPtr->getStandardPrivatePartyListForRecipient(currentUserPtr()->userName());
+   for (ClientPartyPtr clientPartyPtr : clientPartyPtrList)
+   {
+      // Read and provide last 10 history messages only for standard private parties
+      clientDBServicePtr_->readHistoryMessages(clientPartyPtr->id(), clientPartyPtr->userHash(), 10);
+   }
 }
 
 void ClientConnectionLogic::handleLogoutResponse(const LogoutResponse&)

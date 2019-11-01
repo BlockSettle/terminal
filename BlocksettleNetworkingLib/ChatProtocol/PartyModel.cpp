@@ -44,6 +44,11 @@ void PartyModel::insertParty(const PartyPtr& partyPtr)
 
 void PartyModel::removeParty(const PartyPtr& partyPtr)
 {
+   if (!partyPtr)
+   {
+      return;
+   }
+
    PartyPtr oldPartyPtr{};
    auto isErased = false;
 
@@ -61,12 +66,12 @@ void PartyModel::removeParty(const PartyPtr& partyPtr)
    if (oldPartyPtr)
    {
       emit partyRemoved(oldPartyPtr);
+      emit partyModelChanged();
    }
 
-   if (isErased)
+   if (!isErased)
    {
       emit error(PartyModelError::RemovingNonexistingParty, partyPtr->id(), true);
-      emit partyModelChanged();
    }
 }
 
@@ -119,9 +124,20 @@ void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const
 
 void PartyModel::clearModel()
 {
-   for (const auto& element : partyMap_)
+   // copy party id's to new list
+   std::vector<std::string> partyIds;
+   partyIds.reserve(partyMap_.size());
+   std::transform(partyMap_.begin(), partyMap_.end(), std::back_inserter(partyIds),
+      [](decltype(partyMap_)::value_type const& pair)
    {
-      removeParty(element.second);
+      return pair.first;
+   });
+
+   // then remove one by one
+   for (const auto& element : partyIds)
+   {
+      const auto& partyPtr = getPartyById(element);
+      removeParty(partyPtr);
    }
 }
 
