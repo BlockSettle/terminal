@@ -37,7 +37,7 @@ public:
       pd.password = kPassword;
       pd.metaData.encType = bs::wallet::EncryptionType::Password;
 
-      wallet_ = std::make_shared<bs::core::hd::Wallet>(name, "", seed, pd, env.armoryInstance()->homedir_);
+      wallet_ = std::make_shared<bs::core::hd::Wallet>(name, "", seed, pd, env.armoryInstance()->homedir_, StaticLogger::loggerPtr);
       auto group = wallet_->createGroup(bs::hd::CoinType::BlockSettle_Auth);
       auto xbtGroup = wallet_->createGroup(wallet_->getXBTGroupType());
 
