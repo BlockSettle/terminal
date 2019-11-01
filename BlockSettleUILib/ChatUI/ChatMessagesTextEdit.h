@@ -102,9 +102,9 @@ protected:
       last
    };
 
-   QString data(const std::string& partyId, int row, const Column &column);
-   QString dataMessage(const std::string& partyId, int row, const Column &column);
-   QImage statusImage(const std::string& partyId, int row);
+   QString data(const std::string& partyId, const std::string& messageId, const Column &column);
+   QString dataMessage(const std::string& partyId, const std::string& messageId, const Column &column);
+   QImage statusImage(const std::string& partyId, const std::string& messageId);
 
    void contextMenuEvent(QContextMenuEvent* e) override;
 
@@ -117,6 +117,7 @@ private slots:
    void onUserUrlOpened(const QUrl &url);
 
 private:
+   Chat::MessagePtr getMessage(const std::string& partyId, const std::string& messageId) const;
    void setupHighlightPalette();
    std::unique_ptr<QMenu> initUserContextMenu(const QString& userName);
 
@@ -126,16 +127,15 @@ private:
    QString toHtmlInvalid(const QString &text);
 
    void insertMessage(const Chat::MessagePtr& messagePtr);
-   void showMessage(const std::string& partyId, int messageIndex);
+   void showMessage(const std::string& partyId, const std::string& messageId);
    void showMessages(const std::string& partyId);
    Chat::MessagePtr findMessage(const std::string& partyId, const std::string& messageId);
    void notifyMessageChanged(Chat::MessagePtr message);
-   void insertMessageInDoc(QTextCursor& cursor, const std::string& partyId, int index);
-   void updateMessage(const std::string& partyId, int index);
+   void insertMessageInDoc(QTextCursor& cursor, const std::string& partyId, const std::string& messageId);
+   void updateMessage(const std::string& partyId, const std::string& messageId);
    QTextCursor deleteMessage(int index);
    QString elideUserName(const std::string& displayName);
 
-private:
    Chat::ClientPartyModelPtr partyModel_;
 
    std::string currentPartyId_;

@@ -20,7 +20,7 @@ ClientDBService::ClientDBService(QObject* parent /* = nullptr */)
    connect(this, &ClientDBService::updateDisplayNameForParty, worker(), &ClientDBLogic::updateDisplayNameForParty);
    connect(this, &ClientDBService::loadPartyDisplayName, worker(), &ClientDBLogic::loadPartyDisplayName);
    connect(this, &ClientDBService::checkUnsentMessages, worker(), &ClientDBLogic::checkUnsentMessages);
-   connect(this, &ClientDBService::readHistoryMessages, worker(), &ClientDBLogic::readHistoryMessages);
+   connect(this, &ClientDBService::readHistoryMessages, worker(), &ClientDBLogic::readPrivateHistoryMessages);
    connect(this, &ClientDBService::saveRecipientsKeys, worker(), &ClientDBLogic::saveRecipientsKeys);
    connect(this, &ClientDBService::deleteRecipientsKeys, worker(), &ClientDBLogic::deleteRecipientsKeys);
    connect(this, &ClientDBService::updateRecipientKeys, worker(), &ClientDBLogic::updateRecipientKeys);
