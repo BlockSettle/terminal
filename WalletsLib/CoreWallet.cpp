@@ -745,7 +745,7 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request,
    for (const auto &recip : signer.recipients()) {
       logger_->debug("[{}] {} recipient: {} @ {}", __func__
          , walletId(), recip->getValue()
-         , bs::Address::fromRecipient(recip));
+         , bs::Address::fromRecipient(recip).display());
    }
 #endif //NDEBUG
 
