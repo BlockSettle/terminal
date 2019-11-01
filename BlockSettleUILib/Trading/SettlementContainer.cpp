@@ -34,8 +34,8 @@ sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogDat
    bs::sync::PasswordDialogData dialogData = toPasswordDialogData();
 
    dialogData.setValue(PasswordDialogData::Title, tr("Settlement Pay-Out"));
-   dialogData.setValue(PasswordDialogData::DurationLeft, (int)kWaitTimeoutInSec * 1000);
-   dialogData.setValue(PasswordDialogData::DurationTotal, (int)kWaitTimeoutInSec * 1000);
+   dialogData.setValue(PasswordDialogData::DurationLeft, static_cast<int>(kWaitTimeoutInSec * 1000));
+   dialogData.setValue(PasswordDialogData::DurationTotal, static_cast<int>(kWaitTimeoutInSec * 1000));
    dialogData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
 
    return dialogData;

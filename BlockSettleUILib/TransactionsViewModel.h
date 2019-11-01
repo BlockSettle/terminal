@@ -5,7 +5,6 @@
 #include <unordered_set>
 #include <QAbstractItemModel>
 #include <QMutex>
-#include <QThreadPool>
 #include <QColor>
 #include <QFont>
 #include <QMetaType>

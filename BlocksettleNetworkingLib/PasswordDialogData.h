@@ -110,9 +110,13 @@ public:
 
    Q_INVOKABLE QVariant value(const bs::sync::dialog::keys::Key &key) const;
 
-   void setValue(const bs::sync::dialog::keys::Key &key, const QVariant &value);
+   // Let's do not use raw QVariant here as we don't handle all types (i.e. uint32_t which caused problems earlier)
+   // JS don't have 64 int type so let's limit to int32_t only
+   void setValue(const bs::sync::dialog::keys::Key &key, const QString &value);
    void setValue(const bs::sync::dialog::keys::Key &key, const char *value);
    void setValue(const bs::sync::dialog::keys::Key &key, const std::string &value);
+   void setValue(const bs::sync::dialog::keys::Key &key, int32_t value);
+   void setValue(const bs::sync::dialog::keys::Key &key, double value);
 
    void remove(const bs::sync::dialog::keys::Key &key);
 
@@ -122,8 +126,8 @@ signals:
    void dataChanged();
 
 private:
-   void remove(const QString &key);
-   void setValue(const QString &key, const QVariant &value);
+   void removeImpl(const QString &key);
+   void setValueImpl(const bs::sync::dialog::keys::Key &key, const QVariant &value);
    void setValues(const QVariantMap &values);
 
 private:
