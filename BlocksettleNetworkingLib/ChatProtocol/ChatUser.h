@@ -22,16 +22,16 @@ namespace Chat
    public:
       ChatUser(QObject *parent = nullptr);
       std::string userName() const;
-      void setUserName(const std::string& displayName);
+      void setUserName(const std::string& userName);
 
       BinaryData publicKey() const { return publicKey_; }
-      void setPublicKey(BinaryData val) { publicKey_ = val; }
+      void setPublicKey(const BinaryData& val) { publicKey_ = val; }
 
       SecureBinaryData privateKey() const { return privateKey_; }
-      void setPrivateKey(SecureBinaryData val) { privateKey_ = val; }
+      void setPrivateKey(const SecureBinaryData& val) { privateKey_ = val; }
 
       bs::network::UserType celerUserType() const { return celerUserType_; }
-      void setCelerUserType(bs::network::UserType val) { celerUserType_ = val; }
+      void setCelerUserType(const bs::network::UserType& val) { celerUserType_ = val; }
    signals:
       void userNameChanged(const std::string& displayName);
 

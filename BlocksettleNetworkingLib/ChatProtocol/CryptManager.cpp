@@ -1,5 +1,6 @@
 #include <QtConcurrent/QtConcurrent>
 #include <QFuture>
+#include <utility>
 
 #include "ChatProtocol/CryptManager.h"
 #include "Encryption/IES_Encryption.h"
@@ -16,22 +17,23 @@
 
 using namespace Chat;
 
-CryptManager::CryptManager(const Chat::LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
-   : QObject(parent), loggerPtr_(loggerPtr)
+CryptManager::CryptManager(LoggerPtr loggerPtr, QObject* parent /* = nullptr */)
+   : QObject(parent), loggerPtr_(std::move(loggerPtr))
 {
 
 }
 
-std::string CryptManager::validateUtf8(const Botan::SecureVector<uint8_t>& data)
+std::string CryptManager::validateUtf8(const Botan::SecureVector<uint8_t>& data) const
 {
-   std::string result = QString::fromUtf8(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size())).toStdString();
+   auto result = QString::fromUtf8(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size())).toStdString();
    if (result.size() != data.size()) {
       throw std::runtime_error("invalid utf text detected - different size");
    }
 
-   const bool isEqual = std::equal(data.begin(), data.end(), result.begin(), [](uint8_t left, uint8_t right) -> bool {
+   const auto isEqual = std::equal(data.begin(), data.end(), result.begin(), [](uint8_t left, uint8_t right) -> bool {
       return left == right;
    });
+
    if (!isEqual) {
       throw std::runtime_error("invalid utf text detected - incorrect data");
    }
@@ -41,7 +43,7 @@ std::string CryptManager::validateUtf8(const Botan::SecureVector<uint8_t>& data)
 
 QFuture<std::string> CryptManager::encryptMessageIES(const std::string& message, const BinaryData& ownPublicKey)
 {
-   auto encryptMessageWorker = [this, ownPublicKey](std::string message)
+   const auto encryptMessageWorker = [this, ownPublicKey](const std::string& message)
    {
       auto cipher = Encryption::IES_Encryption::create(loggerPtr_);
 
@@ -58,7 +60,7 @@ QFuture<std::string> CryptManager::encryptMessageIES(const std::string& message,
          loggerPtr_->error("Can't encrypt message: {}", e.what());
       }
 
-      std::string encryptedMessage = Botan::base64_encode(output);
+      auto encryptedMessage = base64_encode(output);
 
       return encryptedMessage;
    };
@@ -68,7 +70,7 @@ QFuture<std::string> CryptManager::encryptMessageIES(const std::string& message,
 
 QFuture<std::string> CryptManager::decryptMessageIES(const std::string& message, const SecureBinaryData& ownPrivateKey)
 {
-   auto decryptMessageWorker = [this, ownPrivateKey](std::string message)
+   const auto decryptMessageWorker = [this, ownPrivateKey](const std::string& message)
    {
       auto decipher = Encryption::IES_Decryption::create(loggerPtr_);
 
@@ -109,14 +111,14 @@ std::string CryptManager::jsonAssociatedData(const std::string& partyId, const B
    QJsonObject data;
    data[QLatin1String("partyId")] = QString::fromStdString(partyId);
    data[QLatin1String("nonce")] = QString::fromStdString(nonce.toHexStr());
-   QJsonDocument jsonDocument(data);
+   const QJsonDocument jsonDocument(data);
    return jsonDocument.toJson(QJsonDocument::Compact).toStdString();
 }
 
 QFuture<std::string> CryptManager::encryptMessageAEAD(const std::string& message, const std::string& associatedData,
    const SecureBinaryData& localPrivateKey, const BinaryData& nonce, const BinaryData& remotePublicKey)
 {
-   auto encryptMessageWorker = [this, associatedData, localPrivateKey, nonce, remotePublicKey](std::string message)
+   const auto encryptMessageWorker = [this, associatedData, localPrivateKey, nonce, remotePublicKey](const std::string& message)
    {
       auto cipher = Encryption::AEAD_Encryption::create(loggerPtr_);
 
@@ -138,7 +140,7 @@ QFuture<std::string> CryptManager::encryptMessageAEAD(const std::string& message
          loggerPtr_->error("Can't encrypt message: {}", e.what());
       }
 
-      std::string encryptedMessage = Botan::base64_encode(output);
+      auto encryptedMessage = base64_encode(output);
 
       return encryptedMessage;
    };
@@ -149,7 +151,7 @@ QFuture<std::string> CryptManager::encryptMessageAEAD(const std::string& message
 QFuture<std::string> CryptManager::decryptMessageAEAD(const std::string& message, const std::string& associatedData,
    const SecureBinaryData& localPrivateKey, const BinaryData& nonce, const BinaryData& remotePublicKey)
 {
-   auto decryptMessageWorker = [this, associatedData, localPrivateKey, nonce, remotePublicKey](std::string message)
+   const auto decryptMessageWorker = [this, associatedData, localPrivateKey, nonce, remotePublicKey](const std::string& message)
    {
       auto decipher = Encryption::AEAD_Decryption::create(loggerPtr_);
 
@@ -167,7 +169,7 @@ QFuture<std::string> CryptManager::decryptMessageAEAD(const std::string& message
       decipher->setPrivateKey(localPrivateKey);
       decipher->setPublicKey(remotePublicKey);
 
-      const Botan::SecureVector<uint8_t>& nonceVector = Botan::SecureVector<uint8_t>(nonce.getPtr(), nonce.getPtr() + nonce.getSize());
+      const auto& nonceVector = Botan::SecureVector<uint8_t>(nonce.getPtr(), nonce.getPtr() + nonce.getSize());
       decipher->setNonce(nonceVector);
 
       loggerPtr_->info("[CryptManager::decryptMessageAEAD] jsonAssociatedData: {}", associatedData);

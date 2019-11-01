@@ -72,7 +72,7 @@ const static QMap <QString, TableStructure> clientTablesMap{
             {partyMessage::kSender, QStringLiteral("TEXT")}
          },
          { //Foreign keys
-            {partyMessage::kPartyTableId, party::kTableName, party::kPartyTableId}
+            {partyMessage::kPartyTableId, party::kTableName, party::kPartyTableId, {}}
          }
       }
    },
@@ -92,7 +92,7 @@ const static QMap <QString, TableStructure> clientTablesMap{
             {userKey::kPublicKeyTimestamp, QStringLiteral("INTEGER NOT NULL")}         
          },
          { //Foreign key
-            {userKey::kUserTableId, user::kTableName, user::kUserTableId}
+            {userKey::kUserTableId, user::kTableName, user::kUserTableId, {}}
          }
       }
    },
@@ -104,8 +104,8 @@ const static QMap <QString, TableStructure> clientTablesMap{
             {partyToUser::kUserTableId, QStringLiteral("INTEGER NOT NULL")},
          },
          { //Foreign keys
-            {partyToUser::kPartyTableId, party::kTableName, party::kPartyTableId},
-            {partyToUser::kUserTableId, user::kTableName, user::kUserTableId}
+            {partyToUser::kPartyTableId, party::kTableName, party::kPartyTableId, {}},
+            {partyToUser::kUserTableId, user::kTableName, user::kUserTableId, {}}
          }
       }
    }

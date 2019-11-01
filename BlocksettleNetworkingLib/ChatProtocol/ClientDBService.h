@@ -31,13 +31,13 @@ namespace Chat
       void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, 
          const Chat::ChatUserPtr& chatUserPtr, const Chat::CryptManagerPtr& cryptManagerPtr);
       void saveMessage(const Chat::PartyPtr& partyPtr, const std::string& data);
-      void updateMessageState(const std::string& message_id, const int party_message_state);
+      void updateMessageState(const std::string& message_id, int party_message_state);
       void createNewParty(const Chat::PartyPtr& partyPtr);
       void readUnsentMessages(const std::string& partyId);
       void updateDisplayNameForParty(const std::string& partyId, const std::string& displayName);
       void loadPartyDisplayName(const std::string& partyId);
       void checkUnsentMessages(const std::string& partyId);
-      void readHistoryMessages(const std::string& partyId, const std::string& userHash, const int limit = std::numeric_limits<int>::max(), const int offset = 0);
+      void readHistoryMessages(const std::string& partyId, const std::string& userHash, int limit = std::numeric_limits<int>::max(), int offset = 0);
       void saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients);
       void updateRecipientKeys(const Chat::PartyRecipientsPtrList& recipients);
@@ -48,9 +48,9 @@ namespace Chat
       ////////// RETURN SIGNALS //////////
       void initDone();
       void messageArrived(const Chat::MessagePtrList& messagePtr);
-      void messageStateChanged(const std::string& partyId, const std::string& message_id, const int party_message_state);
-      void messageLoaded(const std::string& partyId, const std::string& messageId, const qint64 timestamp,
-         const std::string& message, const int encryptionType, const std::string& nonce, const int party_message_state);
+      void messageStateChanged(const std::string& partyId, const std::string& message_id, int party_message_state);
+      void messageLoaded(const std::string& partyId, const std::string& messageId, qint64 timestamp,
+         const std::string& message, int encryptionType, const std::string& nonce, int party_message_state);
       void partyDisplayNameLoaded(const std::string& partyId, const std::string& displayName);
       void unsentMessagesFound(const std::string& partyId);
       void recipientKeysHasChanged(const Chat::UserPublicKeyInfoList& userPkList);

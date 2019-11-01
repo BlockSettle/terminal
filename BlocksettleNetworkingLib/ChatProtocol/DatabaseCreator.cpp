@@ -34,7 +34,7 @@ void DatabaseCreator::rebuildDatabase()
 bool DatabaseCreator::createMissingTables()
 {
    QStringList existingTables;
-   bool result = true;
+   auto result = true;
 
    try {
       existingTables = db_.tables();
@@ -65,7 +65,7 @@ bool DatabaseCreator::createMissingTables()
          loggerPtr_->debug("[DatabaseCreator::createMissingTables] creating table {}", reqTable.toStdString());
 
          QSqlQuery createQuery;
-         const bool rc = ExecuteQuery(createCmd, createQuery);
+         const auto rc = ExecuteQuery(createCmd, createQuery);
 
          if (!rc)
          {
@@ -88,17 +88,17 @@ bool DatabaseCreator::createMissingTables()
 
 QString DatabaseCreator::buildCreateCmd(const QString& tableName, const TableStructure& structure)
 {
-   QString cmd = QLatin1String("CREATE TABLE IF NOT EXISTS %1 (%2);");
+   const QString cmd = QLatin1String("CREATE TABLE IF NOT EXISTS %1 (%2);");
 
    QStringList queryParts;
 
-   for (const TableColumnDescription& colDescription : structure.tableColumns)
+   for (const auto& colDescription : structure.tableColumns)
    {
       QStringList column{ colDescription.columnName, colDescription.columnType };
       queryParts << column.join(QLatin1Char(' '));
    }
 
-   for (const TableForeignKey& foreignKey : structure.foreignKeys)
+   for (const auto& foreignKey : structure.foreignKeys)
    {
       QStringList parts{
          QStringLiteral("FOREIGN KEY (%1)").arg(foreignKey.columnKey),
@@ -111,7 +111,7 @@ QString DatabaseCreator::buildCreateCmd(const QString& tableName, const TableStr
       queryParts << parts.join(QLatin1Char(' '));
    }
 
-   for (const TableUniqueCondition& uniqueCondition : structure.uniqueConditions)
+   for (const auto& uniqueCondition : structure.uniqueConditions)
    {
       queryParts << QStringLiteral("UNIQUE (%1, %2)")
          .arg(uniqueCondition.firstColumn)
@@ -123,9 +123,9 @@ QString DatabaseCreator::buildCreateCmd(const QString& tableName, const TableStr
       .arg(queryParts.join(QLatin1String(", ")));
 }
 
-bool DatabaseCreator::checkColumns(const QString& tableName)
+bool DatabaseCreator::checkColumns(const QString& tableName) const
 {
-   QString cmd = QStringLiteral("DESCRIBE `%1`").arg(tableName);
+   auto cmd = QStringLiteral("DESCRIBE `%1`").arg(tableName);
 
    QStringList tableColumns;
    QSqlQuery infoQuery;
@@ -144,7 +144,6 @@ bool DatabaseCreator::checkColumns(const QString& tableName)
       if (!ExecuteQuery(cmd, infoQuery))
       {
          throw std::runtime_error("Can't get table info (table: " + tableName.toStdString() + ")");
-         return false;
       }
 
       while (infoQuery.next())
@@ -153,9 +152,9 @@ bool DatabaseCreator::checkColumns(const QString& tableName)
       }
    }
 
-   const TableStructure& tableStruct = tablesMap_.value(tableName);
+   const auto& tableStruct = tablesMap_.value(tableName);
 
-   for (const TableColumnDescription& columnItem : tableStruct.tableColumns)
+   for (const auto& columnItem : tableStruct.tableColumns)
    {
       loggerPtr_->debug("[DatabaseCreator::checkColumns] Check column: {}", columnItem.columnName.toStdString());
 
@@ -175,7 +174,6 @@ bool DatabaseCreator::checkColumns(const QString& tableName)
          {
             loggerPtr_->debug("[DatabaseCreator::checkColumns] Can't alter table (table: {})", columnItem.columnName.toStdString());
             throw std::runtime_error("Can't alter table (table: " + tableName.toStdString() + ")");
-            return false;
          }
       }
       else
@@ -187,9 +185,9 @@ bool DatabaseCreator::checkColumns(const QString& tableName)
    return true;
 }
 
-bool DatabaseCreator::ExecuteQuery(const QString& queryCmd, QSqlQuery& query)
+bool DatabaseCreator::ExecuteQuery(const QString& queryCmd, QSqlQuery& query) const
 {
-   QSqlQuery q(db_);
+   const QSqlQuery q(db_);
    query = q;
 
    if (!query.prepare(QLatin1String(queryCmd.toLatin1())))

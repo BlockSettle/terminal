@@ -7,6 +7,7 @@
 
 #include <spdlog/spdlog.h>
 #include <enable_warnings.h>
+#include <utility>
 
 #include "Encryption/IES_Encryption.h"
 #include "Encryption/IES_Decryption.h"
@@ -16,7 +17,8 @@ const Botan::EC_Group kDomain("secp256k1");
 
 using namespace Chat;
 
-SessionKeyHolder::SessionKeyHolder(const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */) : loggerPtr_(loggerPtr), QObject(parent)
+SessionKeyHolder::SessionKeyHolder(LoggerPtr loggerPtr, QObject* parent /* = nullptr */) 
+: QObject(parent), loggerPtr_(std::move(loggerPtr))
 {
    connect(this, &SessionKeyHolder::error, this, &SessionKeyHolder::handleLocalErrors);
 }
@@ -30,7 +32,7 @@ void SessionKeyHolder::requestSessionKeysForUser(const std::string& userName, co
       return;
    }
 
-   SessionKeyDataPtr sessionKeyDataPtr = sessionKeyDataForUser(userName);
+   const auto sessionKeyDataPtr = sessionKeyDataForUser(userName);
 
    if (sessionKeyDataPtr->isInitialized())
    {
@@ -40,7 +42,7 @@ void SessionKeyHolder::requestSessionKeysForUser(const std::string& userName, co
    }
 
    // not found, request new exchange
-   BinaryData encodedPublicKey = iesEncryptLocalSessionPublicKey(sessionKeyDataPtr, remotePublicKey);
+   const auto encodedPublicKey = iesEncryptLocalSessionPublicKey(sessionKeyDataPtr, remotePublicKey);
 
    if (encodedPublicKey.getSize() == 0)
    {
@@ -77,7 +79,7 @@ SessionKeyDataPtr SessionKeyHolder::sessionKeyDataForUser(const std::string& use
    if (it == sessionKeyDataList_.end())
    {
       // not found, create new one
-      SessionKeyDataPtr sessionKeyDataPtr = std::make_shared<SessionKeyData>(userName);
+      auto sessionKeyDataPtr = std::make_shared<SessionKeyData>(userName);
       generateLocalKeys(sessionKeyDataPtr);
       sessionKeyDataList_.emplace(userName, sessionKeyDataPtr);
       return sessionKeyDataPtr;
@@ -89,30 +91,30 @@ SessionKeyDataPtr SessionKeyHolder::sessionKeyDataForUser(const std::string& use
 void SessionKeyHolder::generateLocalKeys(const SessionKeyDataPtr& sessionKeyDataPtr)
 {
    Botan::AutoSeeded_RNG rnd;
-   Botan::SecureVector<uint8_t> privateKey = rnd.random_vec(kPrivateKeySize);
+   auto privateKey = rnd.random_vec(kPrivateKeySize);
 
    Botan::BigInt privateKeyValue;
    privateKeyValue.binary_decode(privateKey);
-   Botan::ECDH_PrivateKey privateKeyEC(rnd, kDomain, privateKeyValue);
+   const Botan::ECDH_PrivateKey privateKeyEC(rnd, kDomain, privateKeyValue);
    privateKeyValue.clear();
 
-   std::vector<uint8_t> publicKey = privateKeyEC.public_point().encode(Botan::PointGFp::COMPRESSED);
+   auto publicKey = privateKeyEC.public_point().encode(Botan::PointGFp::COMPRESSED);
 
-   SecureBinaryData localPrivateKey(privateKey.data(), privateKey.size());
-   BinaryData localPublicKey(publicKey.data(), publicKey.size());
+   const SecureBinaryData localPrivateKey(privateKey.data(), privateKey.size());
+   const BinaryData localPublicKey(publicKey.data(), publicKey.size());
 
    sessionKeyDataPtr->setLocalSessionPrivateKey(localPrivateKey);
    sessionKeyDataPtr->setLocalSessionPublicKey(localPublicKey);
 }
 
-void SessionKeyHolder::handleLocalErrors(const Chat::SessionKeyHolderError& errorCode, const std::string& what)
+void SessionKeyHolder::handleLocalErrors(const Chat::SessionKeyHolderError& errorCode, const std::string& what) const
 {
    loggerPtr_->debug("[SessionKeyHolder::handleLocalErrors] Error: {}, what: {}", static_cast<int>(errorCode), what);
 }
 
 BinaryData SessionKeyHolder::iesDecryptData(const BinaryData& encodedData, const SecureBinaryData& privateKey)
 {
-   std::unique_ptr<Encryption::IES_Decryption> dec = Encryption::IES_Decryption::create(loggerPtr_);
+   auto dec = Encryption::IES_Decryption::create(loggerPtr_);
    dec->setPrivateKey(privateKey);
    dec->setData(encodedData.toBinStr());
 
@@ -125,18 +127,18 @@ BinaryData SessionKeyHolder::iesDecryptData(const BinaryData& encodedData, const
       return BinaryData();
    }
 
-   BinaryData decodedBinaryData = BinaryData::CreateFromHex(QString::fromUtf8((char*)decodedData.data(), (int)decodedData.size()).toStdString());
+   auto decodedBinaryData = BinaryData::CreateFromHex(QString::fromUtf8(reinterpret_cast<char*>(decodedData.data()), static_cast<int>(decodedData.size())).toStdString());
 
    return decodedBinaryData;
 }
 
 void SessionKeyHolder::onIncomingRequestSessionKeyExchange(const std::string& userName, const BinaryData& incomingEncodedPublicKey, const SecureBinaryData& ownPrivateKey)
 {
-   SessionKeyDataPtr sessionKeyDataPtr = sessionKeyDataForUser(userName);
+   auto sessionKeyDataPtr = sessionKeyDataForUser(userName);
    sessionKeyDataPtr->setInitialized(false);
 
    // decrypt by ies received public key
-   BinaryData sessionRemotePublicKey = iesDecryptData(incomingEncodedPublicKey, ownPrivateKey);
+   const auto sessionRemotePublicKey = iesDecryptData(incomingEncodedPublicKey, ownPrivateKey);
 
    if (sessionRemotePublicKey.getSize() == 0)
    {
@@ -148,7 +150,7 @@ void SessionKeyHolder::onIncomingRequestSessionKeyExchange(const std::string& us
    sessionKeyDataPtr->setSessionRemotePublicKey(sessionRemotePublicKey);
 
    // reply session key exchange
-   BinaryData encodedPublicKey = iesEncryptLocalSessionPublicKey(sessionKeyDataPtr, sessionRemotePublicKey);
+   const auto encodedPublicKey = iesEncryptLocalSessionPublicKey(sessionKeyDataPtr, sessionRemotePublicKey);
 
    if (encodedPublicKey.getSize() == 0)
    {
@@ -162,11 +164,11 @@ void SessionKeyHolder::onIncomingRequestSessionKeyExchange(const std::string& us
 
 void SessionKeyHolder::onIncomingReplySessionKeyExchange(const std::string& userName, const BinaryData& incomingEncodedPublicKey)
 {
-   SessionKeyDataPtr sessionKeyDataPtr = sessionKeyDataForUser(userName);
+   auto sessionKeyDataPtr = sessionKeyDataForUser(userName);
    sessionKeyDataPtr->setInitialized(false);
 
    // decrypt by ies received public key
-   BinaryData sessionRemotePublicKey = iesDecryptData(incomingEncodedPublicKey, sessionKeyDataPtr->localSessionPrivateKey());
+   const auto sessionRemotePublicKey = iesDecryptData(incomingEncodedPublicKey, sessionKeyDataPtr->localSessionPrivateKey());
 
    if (sessionRemotePublicKey.getSize() == 0)
    {

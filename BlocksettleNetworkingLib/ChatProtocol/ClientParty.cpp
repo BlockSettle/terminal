@@ -2,31 +2,31 @@
 
 using namespace Chat;
 
-const char *Chat::GlobalRoomName = "Global";
-const char *Chat::OtcRoomName = "OTC";
-const char *Chat::SupportRoomName = "Support";
+const char* Chat::GlobalRoomName = "Global";
+const char* Chat::OtcRoomName = "OTC";
+const char* Chat::SupportRoomName = "Support";
 
 ClientParty::ClientParty(
    const std::string& id, const PartyType& partyType, const PartySubType& partySubType,
    const PartyState& partyState, QObject* parent)
-   : QObject(parent), PrivateDirectMessageParty(id, partyType, partySubType, partyState), clientStatus_(ClientStatus::OFFLINE)
+   : QObject(parent), PrivateDirectMessageParty(id, partyType, partySubType, partyState), clientStatus_(OFFLINE)
 {
 }
 
-void ClientParty::setClientStatus(ClientStatus val)
+void ClientParty::setClientStatus(const ClientStatus& val)
 {
    clientStatus_ = val;
 
    emit clientStatusChanged(clientStatus_);
 }
 
-void ClientParty::setDisplayName(std::string val)
+void ClientParty::setDisplayName(const std::string& val)
 {
    displayName_ = val;
    emit displayNameChanged();
 }
 
-void ClientParty::setPartyState(Chat::PartyState val)
+void ClientParty::setPartyState(const PartyState& val)
 {
    Party::setPartyState(val);
    emit partyStateChanged(id());

@@ -1,8 +1,6 @@
 #ifndef PARTYRECIPIENT_H
 #define PARTYRECIPIENT_H
 
-#include <QDateTime>
-
 #include <unordered_map>
 #include <memory>
 #include <vector>
@@ -18,19 +16,19 @@ namespace Chat
    class PartyRecipient
    {
    public:
-      PartyRecipient(const std::string& userHash, const BinaryData& publicKey = BinaryData(), const QDateTime& publicKeyTime = QDateTime::currentDateTime());
+      PartyRecipient(std::string userHash, BinaryData publicKey = BinaryData(), QDateTime publicKeyTime = QDateTime::currentDateTime());
 
       std::string userHash() const { return userHash_; }
-      void setUserHash(std::string val) { userHash_ = val; }
+      void setUserHash(const std::string& val) { userHash_ = val; }
 
       BinaryData publicKey() const { return publicKey_; }
-      void setPublicKey(BinaryData val) { publicKey_ = val; }
+      void setPublicKey(const BinaryData& val) { publicKey_ = val; }
 
       QDateTime publicKeyTime() const { return publicKeyTime_; }
-      void setPublicKeyTime(QDateTime val) { publicKeyTime_ = val; }
+      void setPublicKeyTime(const QDateTime& val) { publicKeyTime_ = val; }
 
       CelerClient::CelerUserType celerType() const { return celerType_; }
-      void setCelerType(CelerClient::CelerUserType celerType) { celerType_ = celerType; }
+      void setCelerType(const CelerClient::CelerUserType& celerType) { celerType_ = celerType; }
 
    private:
       std::string userHash_;

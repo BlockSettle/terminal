@@ -1,8 +1,6 @@
 #include <QThread>
-#include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
-#include <QDateTime>
 #include <QMetaObject>
 
 #include "ChatProtocol/ClientDBLogic.h"
@@ -49,7 +47,7 @@ void ClientDBLogic::Init(const Chat::LoggerPtr& loggerPtr, const Chat::Applicati
 
 QSqlDatabase ClientDBLogic::getDb()
 {
-   auto connectionName = QStringLiteral("bs_chat_db_connection_") + QString::number(reinterpret_cast<quint64>(QThread::currentThread()), 16);
+   const auto connectionName = QStringLiteral("bs_chat_db_connection_") + QString::number(reinterpret_cast<quint64>(QThread::currentThread()), 16);
 
    if (!QSqlDatabase::contains(connectionName))
    {
@@ -81,7 +79,7 @@ void ClientDBLogic::rebuildError()
    emit error(ClientDBLogicError::InitDatabase);
 }
 
-void ClientDBLogic::handleLocalErrors(const Chat::ClientDBLogicError& errorCode, const std::string& what /* = "" */)
+void ClientDBLogic::handleLocalErrors(const Chat::ClientDBLogicError& errorCode, const std::string& what /* = "" */) const
 {
    loggerPtr_->debug("[ClientDBLogic::handleLocalErrors] Error {}, what: {}", static_cast<int>(errorCode), what);
 }
@@ -95,8 +93,8 @@ void ClientDBLogic::saveMessage(const Chat::PartyPtr& partyPtr, const std::strin
       return;
    }
 
-   QFuture<std::string> future = cryptManagerPtr_->encryptMessageIES(partyMessagePacket.message(), currentChatUserPtr_->publicKey());
-   std::string encryptedMessage = future.result();
+   const auto future = cryptManagerPtr_->encryptMessageIES(partyMessagePacket.message(), currentChatUserPtr_->publicKey());
+   const auto encryptedMessage = future.result();
 
    std::string partyTableId;
 
@@ -106,7 +104,7 @@ void ClientDBLogic::saveMessage(const Chat::PartyPtr& partyPtr, const std::strin
       return;
    }
 
-   const QString cmd = QStringLiteral("INSERT INTO party_message (party_table_id, message_id, timestamp, message_state, encryption_type, nonce, message_text, sender) "
+   const auto cmd = QStringLiteral("INSERT INTO party_message (party_table_id, message_id, timestamp, message_state, encryption_type, nonce, message_text, sender) "
       "VALUES (:party_table_id, :message_id, :timestamp, :message_state, :encryption_type, :nonce, :message_text, :sender) "
       "ON CONFLICT(message_id) DO UPDATE SET "
       "party_table_id=:party_table_id, message_id=:message_id, timestamp=:timestamp, message_state=:message_state, "
@@ -137,7 +135,7 @@ void ClientDBLogic::saveMessage(const Chat::PartyPtr& partyPtr, const std::strin
    }
 
    // ! signaled by ClientPartyModel in gui
-   MessagePtr messagePtr = std::make_shared<Message>(partyMessagePacket.party_id(), partyMessagePacket.message_id(),
+   const auto messagePtr = std::make_shared<Message>(partyMessagePacket.party_id(), partyMessagePacket.message_id(),
       QDateTime::fromMSecsSinceEpoch(partyMessagePacket.timestamp_ms()), partyMessagePacket.party_message_state(), partyMessagePacket.message(),
       partyMessagePacket.sender_hash());
 
@@ -162,7 +160,7 @@ void ClientDBLogic::createNewParty(const Chat::PartyPtr& partyPtr)
 
 void ClientDBLogic::savePartyRecipients(const Chat::PartyPtr& partyPtr)
 {
-   ClientPartyPtr clientPartyPtr = std::dynamic_pointer_cast<ClientParty>(partyPtr);
+   const auto clientPartyPtr = std::dynamic_pointer_cast<ClientParty>(partyPtr);
 
    if (nullptr == clientPartyPtr)
    {
@@ -176,12 +174,12 @@ void ClientDBLogic::savePartyRecipients(const Chat::PartyPtr& partyPtr)
       return;
    }
 
-   const QString cmd = QStringLiteral("INSERT INTO party_to_user (party_table_id, user_table_id) "
+   const auto cmd = QStringLiteral("INSERT INTO party_to_user (party_table_id, user_table_id) "
       "SELECT * FROM "
       "(SELECT :party_table_id, :user_table_id) AS tmp "
       "WHERE NOT EXISTS ( SELECT id FROM party_to_user WHERE party_table_id=:party_table_id AND user_table_id=:user_table_id ) LIMIT 1;");
 
-   PartyRecipientsPtrList recipients = clientPartyPtr->recipients();
+   auto recipients = clientPartyPtr->recipients();
 
    for (const auto& recipient : recipients)
    {
@@ -202,14 +200,13 @@ void ClientDBLogic::savePartyRecipients(const Chat::PartyPtr& partyPtr)
       if (!checkExecute(query))
       {
          emit error(ClientDBLogicError::InsertPartyToUser, partyPtr->id());
-         continue;
       }
    }
 }
 
 bool ClientDBLogic::getUserTableId(const std::string& userHash, std::string& userTableId)
 {
-   const QString cmd = QStringLiteral("SELECT user_id FROM user WHERE user_hash = :user_hash;");
+   const auto cmd = QStringLiteral("SELECT user_id FROM user WHERE user_hash = :user_hash;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
@@ -219,7 +216,7 @@ bool ClientDBLogic::getUserTableId(const std::string& userHash, std::string& use
    {
       if (query.first())
       {
-         int id = query.value(0).toULongLong();
+         const int id = query.value(0).toULongLong();
 
          userTableId = QStringLiteral("%1").arg(id).toStdString();
          return true;
@@ -231,7 +228,7 @@ bool ClientDBLogic::getUserTableId(const std::string& userHash, std::string& use
 
 bool ClientDBLogic::insertPartyId(const Chat::PartyPtr& partyPtr, std::string& partyTableId)
 {
-   const QString cmd = QStringLiteral("INSERT INTO party (party_id, party_display_name, party_type, party_sub_type) "
+   const auto cmd = QStringLiteral("INSERT INTO party (party_id, party_display_name, party_type, party_sub_type) "
       "VALUES (:party_id, :party_display_name, :party_type, :party_sub_type) ON CONFLICT(party_id) DO UPDATE SET "
       "party_id=:party_id, party_display_name=:party_display_name, party_type=:party_type, party_sub_type=:party_sub_type;");
 
@@ -249,7 +246,7 @@ bool ClientDBLogic::insertPartyId(const Chat::PartyPtr& partyPtr, std::string& p
       return false;
    }
 
-   auto id = query.lastInsertId().toULongLong();
+   const auto id = query.lastInsertId().toULongLong();
 
    partyTableId = QStringLiteral("%1").arg(id).toStdString();
    return true;
@@ -257,7 +254,7 @@ bool ClientDBLogic::insertPartyId(const Chat::PartyPtr& partyPtr, std::string& p
 
 bool ClientDBLogic::getPartyTableIdFromDB(const Chat::PartyPtr& partyPtr, std::string& partyTableId)
 {
-   const QString cmd = QStringLiteral("SELECT party.id FROM party WHERE party.party_id = :party_id;");
+   const auto cmd = QStringLiteral("SELECT party.id FROM party WHERE party.party_id = :party_id;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
@@ -267,7 +264,7 @@ bool ClientDBLogic::getPartyTableIdFromDB(const Chat::PartyPtr& partyPtr, std::s
    {
       if (query.first())
       {
-         int id = query.value(0).toULongLong();
+         const int id = query.value(0).toULongLong();
 
          partyTableId = QStringLiteral("%1").arg(id).toStdString();
          return true;
@@ -279,7 +276,7 @@ bool ClientDBLogic::getPartyTableIdFromDB(const Chat::PartyPtr& partyPtr, std::s
 
 void ClientDBLogic::updateMessageState(const std::string& message_id, const int party_message_state)
 {
-   const QString cmd = QStringLiteral("UPDATE party_message SET message_state = :message_state WHERE message_id = :message_id;");
+   const auto cmd = QStringLiteral("UPDATE party_message SET message_state = :message_state WHERE message_id = :message_id;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
@@ -303,7 +300,7 @@ void ClientDBLogic::updateMessageState(const std::string& message_id, const int 
 
 bool ClientDBLogic::getPartyIdByMessageId(const std::string& messageId, std::string& partyId)
 {
-   const QString cmd = QStringLiteral("SELECT party_id FROM party "
+   const auto cmd = QStringLiteral("SELECT party_id FROM party "
       "LEFT JOIN party_message ON party_message.party_table_id = party.id "
       "WHERE party_message.message_id = :message_id;");
 
@@ -325,14 +322,14 @@ bool ClientDBLogic::getPartyIdByMessageId(const std::string& messageId, std::str
 
 void ClientDBLogic::readUnsentMessages(const std::string& partyId)
 {
-   const QString cmd = QStringLiteral("SELECT party_id, message_id, timestamp, message_state, encryption_type, nonce, message_text FROM party_message "
+   const auto cmd = QStringLiteral("SELECT party_id, message_id, timestamp, message_state, encryption_type, nonce, message_text FROM party_message "
       "LEFT JOIN party on party.id = party_message.party_table_id "
       "WHERE party.party_id = :partyId AND message_state=:message_state;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
    query.bindValue(QStringLiteral(":partyId"), QString::fromStdString(partyId));
-   query.bindValue(QStringLiteral(":message_state"), static_cast<int>(PartyMessageState::UNSENT));
+   query.bindValue(QStringLiteral(":message_state"), static_cast<int>(UNSENT));
 
    if (!checkExecute(query))
    {
@@ -350,17 +347,17 @@ void ClientDBLogic::readUnsentMessages(const std::string& partyId)
       partyMessagePacket.set_nonce(query.value(5).toString().toStdString());
       partyMessagePacket.set_message(query.value(6).toString().toStdString());
 
-      QFuture<std::string> future = cryptManagerPtr_->decryptMessageIES(partyMessagePacket.message(), currentChatUserPtr_->privateKey());
-      std::string decryptedMessage = future.result();
+      auto future = cryptManagerPtr_->decryptMessageIES(partyMessagePacket.message(), currentChatUserPtr_->privateKey());
+      auto decryptedMessage = future.result();
 
       emit messageLoaded(partyMessagePacket.party_id(), partyMessagePacket.message_id(), partyMessagePacket.timestamp_ms(),
-         decryptedMessage, EncryptionType::UNENCRYPTED, partyMessagePacket.nonce(), partyMessagePacket.party_message_state());
+         decryptedMessage, UNENCRYPTED, partyMessagePacket.nonce(), partyMessagePacket.party_message_state());
    }
 }
 
 void ClientDBLogic::deleteMessage(const std::string& messageId)
 {
-   const QString cmd = QStringLiteral("DELETE FROM party_message WHERE message_id=:message_id;");
+   const auto cmd = QStringLiteral("DELETE FROM party_message WHERE message_id=:message_id;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
@@ -369,15 +366,12 @@ void ClientDBLogic::deleteMessage(const std::string& messageId)
    if (!checkExecute(query))
    {
       emit error(ClientDBLogicError::DeleteMessage, messageId);
-      return;
    }
-
-   return;
 }
 
 void ClientDBLogic::updateDisplayNameForParty(const std::string& partyId, const std::string& displayName)
 {
-   const QString cmd = QStringLiteral("UPDATE party SET party_display_name=:displayName WHERE party_id=:partyId");
+   const auto cmd = QStringLiteral("UPDATE party SET party_display_name=:displayName WHERE party_id=:partyId");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
@@ -387,15 +381,12 @@ void ClientDBLogic::updateDisplayNameForParty(const std::string& partyId, const 
    if (!checkExecute(query))
    {
       emit error(ClientDBLogicError::UpdatePartyDisplayName, partyId);
-      return;
    }
-
-   return;
 }
 
 void ClientDBLogic::loadPartyDisplayName(const std::string& partyId)
 {
-   const QString cmd = QStringLiteral("SELECT party_display_name FROM party WHERE party_id = :partyId;");
+   const auto cmd = QStringLiteral("SELECT party_display_name FROM party WHERE party_id = :partyId;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
@@ -405,7 +396,7 @@ void ClientDBLogic::loadPartyDisplayName(const std::string& partyId)
    {
       if (query.first())
       {
-         std::string displayName = query.value(0).toString().toStdString();
+         const auto displayName = query.value(0).toString().toStdString();
 
          if (displayName == partyId)
          {
@@ -419,7 +410,7 @@ void ClientDBLogic::loadPartyDisplayName(const std::string& partyId)
 
 void ClientDBLogic::checkUnsentMessages(const std::string& partyId)
 {
-   const QString cmd = QStringLiteral("SELECT message_state FROM party_message WHERE party_table_id=(SELECT id FROM party WHERE party_id=:partyId) AND message_state=0;");
+   const auto cmd = QStringLiteral("SELECT message_state FROM party_message WHERE party_table_id=(SELECT id FROM party WHERE party_id=:partyId) AND message_state=0;");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
@@ -440,7 +431,7 @@ void ClientDBLogic::checkUnsentMessages(const std::string& partyId)
 void ClientDBLogic::readPrivateHistoryMessages(const std::string& partyId, const std::string& userHash, const int limit, const int offset)
 {
    // read all history messages for given userHash except OTC and Global parties
-   const QString cmd =
+   const auto cmd =
       QStringLiteral(
          "SELECT message_id, timestamp, message_state, message_text, sender FROM party_message "
          "LEFT JOIN party on party.id=party_message.party_table_id "
@@ -466,16 +457,16 @@ void ClientDBLogic::readPrivateHistoryMessages(const std::string& partyId, const
 
    while (query.next())
    {
-      std::string messageId = query.value(0).toString().toStdString();
-      qint64 timestamp = query.value(1).toULongLong();
-      PartyMessageState partyMessageState = static_cast<PartyMessageState>(query.value(2).toInt());
-      std::string message = query.value(3).toString().toStdString();
-      std::string senderId = query.value(4).toString().toStdString();
+      auto messageId = query.value(0).toString().toStdString();
+      const qint64 timestamp = query.value(1).toULongLong();
+      auto partyMessageState = static_cast<PartyMessageState>(query.value(2).toInt());
+      auto message = query.value(3).toString().toStdString();
+      auto senderId = query.value(4).toString().toStdString();
 
-      QFuture<std::string> future = cryptManagerPtr_->decryptMessageIES(message, currentChatUserPtr_->privateKey());
-      std::string decryptedMessage = future.result();
+      auto future = cryptManagerPtr_->decryptMessageIES(message, currentChatUserPtr_->privateKey());
+      auto decryptedMessage = future.result();
 
-      MessagePtr messagePtr = std::make_shared<Message>(partyId, messageId, QDateTime::fromMSecsSinceEpoch(timestamp), partyMessageState, decryptedMessage, senderId);
+      auto messagePtr = std::make_shared<Message>(partyId, messageId, QDateTime::fromMSecsSinceEpoch(timestamp), partyMessageState, decryptedMessage, senderId);
 
       messagePtrList.push_back(messagePtr);
    }
@@ -499,7 +490,7 @@ void ClientDBLogic::saveRecipientsKeys(const Chat::PartyRecipientsPtrList& recip
 void ClientDBLogic::insertNewUserHash(const std::string& userHash)
 {
    // create new user
-   const QString cmd = QStringLiteral("INSERT INTO user (user_hash) VALUES (:user_hash);");
+   const auto cmd = QStringLiteral("INSERT INTO user (user_hash) VALUES (:user_hash);");
 
    QSqlQuery query(getDb());
    query.prepare(cmd);
@@ -508,7 +499,6 @@ void ClientDBLogic::insertNewUserHash(const std::string& userHash)
    if (!checkExecute(query))
    {
       emit error(ClientDBLogicError::InsertUser, userHash);
-      return;
    }
 }
 
@@ -522,7 +512,7 @@ void ClientDBLogic::saveRecipientKey(const Chat::PartyRecipientPtr& recipient)
       getUserTableId(recipient->userHash(), userTableId);
    }
 
-   const QString cmd = QStringLiteral("INSERT INTO user_key (user_table_id, public_key, public_key_timestamp) "
+   const auto cmd = QStringLiteral("INSERT INTO user_key (user_table_id, public_key, public_key_timestamp) "
       "VALUES (:user_table_id, :public_key, :public_key_timestamp) ON CONFLICT(user_table_id) DO UPDATE SET "
       "user_table_id=:user_table_id, public_key=:public_key, public_key_timestamp=:public_key_timestamp;");
 
@@ -540,7 +530,7 @@ void ClientDBLogic::saveRecipientKey(const Chat::PartyRecipientPtr& recipient)
 
 void ClientDBLogic::deleteRecipientsKeys(const Chat::PartyRecipientsPtrList& recipients)
 {
-   const QString cmd = QStringLiteral("DELETE FROM user_key WHERE user_table_id = (SELECT user_id from user WHERE user_hash=:user_hash);");
+   const auto cmd = QStringLiteral("DELETE FROM user_key WHERE user_table_id = (SELECT user_id from user WHERE user_hash=:user_hash);");
 
    for (const auto& recipient : recipients)
    {
@@ -565,13 +555,13 @@ void ClientDBLogic::updateRecipientKeys(const Chat::PartyRecipientsPtrList& reci
 
 void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniqueRecipientMap)
 {
-   const QString cmd = QStringLiteral("SELECT public_key, public_key_timestamp FROM user_key "
+   const auto cmd = QStringLiteral("SELECT public_key, public_key_timestamp FROM user_key "
       "WHERE user_table_id = (SELECT user_id FROM user WHERE user_hash=:user_hash);");
    UserPublicKeyInfoList userPkList;
 
    for (const auto& uniqueRecipient : uniqueRecipientMap)
    {
-      PartyRecipientPtr recipientPtr = uniqueRecipient.second;
+      const auto recipientPtr = uniqueRecipient.second;
 
       QSqlQuery query(getDb());
       query.prepare(cmd);
@@ -581,12 +571,12 @@ void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniq
       {
          if (query.first())
          {
-            BinaryData oldPublicKey = BinaryData::CreateFromHex(query.value(0).toString().toStdString());
-            QDateTime oldPublicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(query.value(1).toULongLong());
+            auto oldPublicKey = BinaryData::CreateFromHex(query.value(0).toString().toStdString());
+            auto oldPublicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(query.value(1).toULongLong());
 
             if (recipientPtr->publicKey() != oldPublicKey || recipientPtr->publicKeyTime() != oldPublicKeyTimestamp)
             {
-               const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
+               const auto userPkPtr = std::make_shared<UserPublicKeyInfo>();
                userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userHash()));
                userPkPtr->setOldPublicKeyHex(oldPublicKey);
                userPkPtr->setOldPublicKeyTime(oldPublicKeyTimestamp);
@@ -598,7 +588,7 @@ void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniq
          else
          {
             // key not exist, we assume that key was changed
-            const UserPublicKeyInfoPtr userPkPtr = std::make_shared<UserPublicKeyInfo>();
+            const auto userPkPtr = std::make_shared<UserPublicKeyInfo>();
             userPkPtr->setUser_hash(QString::fromStdString(recipientPtr->userHash()));
             userPkPtr->setNewPublicKeyHex(recipientPtr->publicKey());
             userPkPtr->setNewPublicKeyTime(recipientPtr->publicKeyTime());
@@ -623,7 +613,7 @@ void ClientDBLogic::checkRecipientPublicKey(const Chat::UniqieRecipientMap& uniq
 void ClientDBLogic::clearUnusedParties()
 {
    // keep only parties which have history
-   const QString cmd = QStringLiteral(
+   const auto cmd = QStringLiteral(
       "DELETE FROM party WHERE id IN "
       "(SELECT id FROM party WHERE id NOT IN "
       "(SELECT party_table_id FROM party_message));");
@@ -638,7 +628,7 @@ void ClientDBLogic::clearUnusedParties()
    }
 
    // clean party_to_user
-   const QString cmdPtu = QStringLiteral(
+   const auto cmdPtu = QStringLiteral(
       "DELETE FROM party_to_user WHERE party_table_id NOT IN "
       "(SELECT id FROM party);"
    );
@@ -649,8 +639,5 @@ void ClientDBLogic::clearUnusedParties()
    if (!checkExecute(queryPtu))
    {
       emit error(ClientDBLogicError::CleanUnusedParties);
-      return;
    }
-
-   return;
 }

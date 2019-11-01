@@ -27,7 +27,7 @@ namespace Chat
    {
       Q_OBJECT
    public:
-      SessionKeyHolder(const LoggerPtr& loggerPtr, QObject* parent = nullptr);
+      SessionKeyHolder(LoggerPtr loggerPtr, QObject* parent = nullptr);
 
    public slots:
       void requestSessionKeysForUser(const std::string& userName, const BinaryData& remotePublicKey);
@@ -44,12 +44,12 @@ namespace Chat
       void replySessionKeyExchange(const std::string& userName, const BinaryData& encodedLocalSessionPublicKey);
 
    private slots:
-      void handleLocalErrors(const Chat::SessionKeyHolderError& errorCode, const std::string& what = "");
+      void handleLocalErrors(const Chat::SessionKeyHolderError& errorCode, const std::string& what = "") const;
 
    private:
       BinaryData iesEncryptLocalSessionPublicKey(const Chat::SessionKeyDataPtr& sessionKeyDataPtr, const BinaryData& remotePublicKey) const;
       BinaryData iesDecryptData(const BinaryData& encodedData, const SecureBinaryData& privateKey);
-      void generateLocalKeys(const Chat::SessionKeyDataPtr& sessionKeyDataPtr);
+      static void generateLocalKeys(const Chat::SessionKeyDataPtr& sessionKeyDataPtr);
 
       LoggerPtr loggerPtr_;
       std::unordered_map<std::string, SessionKeyDataPtr> sessionKeyDataList_;
