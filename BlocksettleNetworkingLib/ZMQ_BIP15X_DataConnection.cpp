@@ -1,15 +1,17 @@
 #include "ZMQ_BIP15X_DataConnection.h"
 
 #include <chrono>
-#include "FastLock.h"
-#include "MessageHolder.h"
-#include "EncryptionUtils.h"
-#include "SystemFileUtils.h"
+
 #include "BIP150_151.h"
+#include "EncryptionUtils.h"
+#include "FastLock.h"
+#include "FutureValue.h"
+#include "MessageHolder.h"
+#include "SystemFileUtils.h"
+#include "ThreadName.h"
+#include "ZMQ_BIP15X_Msg.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 #include "ZmqHelperFunctions.h"
-#include "ZMQ_BIP15X_Msg.h"
-#include "FutureValue.h"
 
 using namespace std;
 
@@ -158,6 +160,8 @@ void ZmqBIP15XDataConnection::rekeyIfNeeded(size_t dataSize)
 
 void ZmqBIP15XDataConnection::listenFunction()
 {
+   bs::setCurrentThreadName(params_.threadName);
+
    zmq_pollitem_t  poll_items[3];
    memset(&poll_items, 0, sizeof(poll_items));
 

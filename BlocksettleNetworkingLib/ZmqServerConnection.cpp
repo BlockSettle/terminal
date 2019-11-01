@@ -3,6 +3,7 @@
 
 #include "FastLock.h"
 #include "MessageHolder.h"
+#include "ThreadName.h"
 
 #include <spdlog/spdlog.h>
 #include <zmq.h>
@@ -23,6 +24,7 @@ ZmqServerConnection::ZmqServerConnection(
    , monSocket_(ZmqContext::CreateNullSocket())
    , threadMasterSocket_(ZmqContext::CreateNullSocket())
    , threadSlaveSocket_(ZmqContext::CreateNullSocket())
+   , threadName_("ZmqSrv")
 {
    assert(logger_ != nullptr);
    assert(context_ != nullptr);
@@ -184,6 +186,8 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
 
 void ZmqServerConnection::listenFunction()
 {
+   bs::setCurrentThreadName(threadName_);
+
    zmq_pollitem_t  poll_items[3];
 
    poll_items[ZmqServerConnection::ControlSocketIndex].socket = threadSlaveSocket_.get();
@@ -458,6 +462,11 @@ bool ZmqServerConnection::SetZMQTransport(ZMQTransport transport)
 void ZmqServerConnection::setListenFrom(const std::vector<std::string> &fromAddresses)
 {
    fromAddresses_ = fromAddresses;
+}
+
+void ZmqServerConnection::setThreadName(const std::string &name)
+{
+   threadName_ = name;
 }
 
 bool ZmqServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr &dataSocket)
