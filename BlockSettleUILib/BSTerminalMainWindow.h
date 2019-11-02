@@ -242,6 +242,7 @@ private:
 
    ZmqBipNewKeyCb   cbApprovePuB_ = nullptr;
    ZmqBipNewKeyCb   cbApproveChat_ = nullptr;
+   ZmqBipNewKeyCb   cbApproveProxy_ = nullptr;
 
    std::queue<std::function<void(void)>> deferredDialogs_;
    bool deferredDialogRunning_ = false;

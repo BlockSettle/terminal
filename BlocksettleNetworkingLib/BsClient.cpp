@@ -21,15 +21,7 @@ BsClient::BsClient(const std::shared_ptr<spdlog::logger> &logger
    zmqBipParams.ephemeralPeers = true;
    connection_ = std::make_unique<ZmqBIP15XDataConnection>(logger, zmqBipParams);
 
-   connection_->setCBs([this](const std::string &oldKey, const std::string &newKey
-      , const std::string& srvAddrPort, const std::shared_ptr<FutureValue<bool>> &prompt)
-   {
-      BsClientParams::NewKey d;
-      d.oldKey = oldKey;
-      d.newKey = newKey;
-      d.prompt = prompt;
-      params_.newServerKeyCallback(d);
-   });
+   connection_->setCBs(params_.newServerKeyCallback);
 
    // This should not ever fail
    bool result = connection_->openConnection(params_.connectAddress, std::to_string(params_.connectPort), this);
