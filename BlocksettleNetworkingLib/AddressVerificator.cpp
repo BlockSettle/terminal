@@ -9,22 +9,10 @@
 #include <cassert>
 #include <spdlog/spdlog.h>
 
-enum class BSValidationAddressState
-{
-   NotRegistered,
-   InProgress,
-   Active,
-   Revoked,
-   Error
-};
-
-static constexpr int MaxAadressValidationErrorCount = 3;
-static constexpr int MaxBSAddressValidationErrorCount = 3;
-
 struct AddressVerificationData
 {
    bs::Address                   address;
-   AddressVerificationState      currentState;
+   AddressVerificationState      currentState{};
 };
 
 AddressVerificator::AddressVerificator(const std::shared_ptr<spdlog::logger>& logger
@@ -32,26 +20,25 @@ AddressVerificator::AddressVerificator(const std::shared_ptr<spdlog::logger>& lo
    : ArmoryCallbackTarget()
    , logger_(logger)
    , validationMgr_(new ValidationAddressManager(armory))
-   , userCallback_(callback)
+   , userCallback_(std::move(callback))
    , stopExecution_(false)
 {
-   init(armory.get());
    startCommandQueue();
+   init(armory.get());
 }
 
 AddressVerificator::~AddressVerificator() noexcept
 {
-   stopCommandQueue();
    cleanup();
+   stopCommandQueue();
 }
 
-bool AddressVerificator::startCommandQueue()
+void AddressVerificator::startCommandQueue()
 {
    commandQueueThread_ = std::thread(&AddressVerificator::commandQueueThreadFunction, this);
-   return true;
 }
 
-bool AddressVerificator::stopCommandQueue()
+void AddressVerificator::stopCommandQueue()
 {
    {
       std::unique_lock<std::mutex> locker(dataMutex_);
@@ -62,7 +49,6 @@ bool AddressVerificator::stopCommandQueue()
    if (commandQueueThread_.joinable()) {
       commandQueueThread_.join();
    }
-   return true;
 }
 
 void AddressVerificator::commandQueueThreadFunction()
@@ -116,31 +102,34 @@ bool AddressVerificator::addAddress(const bs::Address &address)
       }
       return false;
    }
+   std::lock_guard<std::mutex> lock(userAddressesMutex_);
    userAddresses_.emplace(address);
    return true;
 }
 
-bool AddressVerificator::startAddressVerification()
+void AddressVerificator::startAddressVerification()
 {
-   if (bsAddressList_.empty()) {
-      logger_->error("[{}] no BS address[es] set - cannot start validation", __func__);
-      return false;
-   }
-   try {
-      if (validationMgr_->goOnline() == 0) {
-         return false;
+   assert(!bsAddressList_.empty());
+
+   AddCommandToQueue([this] {
+      try {
+         auto rc = validationMgr_->goOnline();
+         if (rc == 0) {
+            SPDLOG_LOGGER_ERROR(logger_, "goOnline failed");
+            return;
+         }
+         refreshUserAddresses();
       }
-      refreshUserAddresses();
-   }
-   catch (const std::exception &e) {
-      logger_->error("[{}] failure: {}", __func__, e.what());
-      return false;
-   }
-   return true;
+      catch (const std::exception &e) {
+         logger_->error("[{}] failure: {}", __func__, e.what());
+         return;
+      }
+   });
 }
 
 void AddressVerificator::refreshUserAddresses()
 {
+   std::lock_guard<std::mutex> lock(userAddressesMutex_);
    logger_->debug("[{}] updating {} user address[es]", __func__, userAddresses_.size());
    for (const auto &addr : userAddresses_) {
       AddCommandToQueue(CreateAddressValidationCommand(addr));
@@ -152,14 +141,6 @@ void AddressVerificator::AddCommandToQueue(ExecutionCommand&& command)
    std::unique_lock<std::mutex> locker(dataMutex_);
    commandsQueue_.emplace(std::move(command));
    dataAvailable_.notify_all();
-}
-
-void AddressVerificator::AddCommandToWaitingUpdateQueue(const std::string &key, ExecutionCommand&& command)
-{
-   FastLock locker(waitingForUpdateQueueFlag_);
-   if (waitingForUpdateQueue_.find(key) == waitingForUpdateQueue_.end()) {
-      waitingForUpdateQueue_.emplace(key, std::move(command));
-   }
 }
 
 AddressVerificator::ExecutionCommand AddressVerificator::CreateAddressValidationCommand(const bs::Address &address)
