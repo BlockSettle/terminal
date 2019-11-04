@@ -175,7 +175,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) },
       { armoryServers,                    SettingDef(QLatin1String("ArmoryServers")) },
       { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys"), QStringList()
-         << QLatin1String("03b53d2d32c11968de5f48b4617a639810cbb161769913adef74effa692c87dbcc")       // mainnet Armory cluster key
+         << QLatin1String("02b4abf18a3ea48550e77a7e017394d3f31df276123922cf9c73568d31eca59e93")       // mainnet Armory cluster key
          << QLatin1String("02ed6116a7844cae8a1dc4d5fb27922594b79cc41df081d84d2f36983757904de5")) },   // testnet Armory cluster key
       { twoWaySignerAuth,        SettingDef(QLatin1String("TwoWaySignerAuth"), true) },
       { proxyServerPubKey,       SettingDef(QLatin1String("ProxyServerPubKey"), QString()) },

@@ -210,6 +210,9 @@
         <file>resources/PublicKeys/chat_prod.key</file>
         <file>resources/PublicKeys/chat_uat.key</file>
         <file>resources/PublicKeys/chat_staging.key</file>
+        <file>resources/PublicKeys/proxy_prod.key</file>
+        <file>resources/PublicKeys/proxy_uat.key</file>
+        <file>resources/PublicKeys/proxy_staging.key</file>
         <file>resources/eye.png</file>
     </qresource>
 </RCC>
