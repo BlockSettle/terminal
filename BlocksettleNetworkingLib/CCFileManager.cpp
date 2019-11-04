@@ -228,8 +228,7 @@ void CCFileManager::ProcessSubmitAddrResponse(const std::string& responseString)
       return;
    }
 
-   BinaryDataRef addrRef; addrRef.setRef(response.prefixedaddress());
-   auto addr = bs::Address::fromHash(addrRef);
+   auto addr = bs::Address::fromAddressString(response.prefixedaddress());
 
    if (!response.success()) {
       if (response.has_errormessage()) {
