@@ -9,13 +9,14 @@
 #include <QString>
 #include "Address.h"
 #include "ArmoryConnection.h"
-#include "AsyncClient.h"
 #include "Assets.h"
+#include "AsyncClient.h"
 #include "BtcDefinitions.h"
 #include "ClientClasses.h"
 #include "CoreWallet.h"
 #include "LedgerEntry.h"
 #include "UtxoReservation.h"
+#include "ValidityFlag.h"
 #include "WalletEncryption.h"
 
 namespace spdlog {
@@ -250,6 +251,8 @@ namespace bs {
 
          std::unique_ptr<WalletACT>   act_;
          WalletCallbackTarget       * wct_ = nullptr;
+
+         ValidityFlag validityFlag_;
 
       private:
          std::string regId_;
