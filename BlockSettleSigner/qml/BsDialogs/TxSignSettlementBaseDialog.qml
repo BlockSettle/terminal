@@ -28,7 +28,10 @@ CustomTitleDialogWindowWithExpander {
 
     // expanding
     property bool isExpanded: false
-    onHeaderButtonClicked: isExpanded = !isExpanded
+    onHeaderButtonClicked: {
+        isExpanded = !isExpanded
+        signerSettings.defaultSettlDialogExpandedState = isExpanded
+    }
 
     headerButtonText: isExpanded ? "Hide Details" : "Details"
 
@@ -117,6 +120,10 @@ CustomTitleDialogWindowWithExpander {
                 root.rejectAnimated()
             }
         })
+    }
+
+    Component.onCompleted: {
+        isExpanded = signerSettings.defaultSettlDialogExpandedState
     }
 
     Connections {

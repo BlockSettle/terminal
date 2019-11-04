@@ -33,6 +33,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(bool hideEidInfoBox READ hideEidInfoBox WRITE setHideEidInfoBox NOTIFY hideEidInfoBoxChanged)
    Q_PROPERTY(QStringList trustedTerminals READ trustedTerminals WRITE setTrustedTerminals NOTIFY trustedTerminalsChanged)
    Q_PROPERTY(bool twoWaySignerAuth READ twoWaySignerAuth WRITE setTwoWaySignerAuth NOTIFY twoWaySignerAuthChanged)
+   Q_PROPERTY(bool defaultSettlDialogExpandedState READ defaultSettlDialogExpandedState WRITE setDefaultSettlDialogExpandedState NOTIFY defaultSettlDialogExpandedStateChanged)
 
 public:
    SignerSettings();
@@ -74,6 +75,7 @@ public:
    QString dirDocuments() const;
    bs::signer::ui::RunMode runMode() const { return runMode_; }
    bool closeHeadless() const { return true; }
+   bool defaultSettlDialogExpandedState() { return defaultSettlDialogExpandedState_; }
 
    void setOffline(bool val);
    void setTestNet(bool val);
@@ -90,7 +92,7 @@ public:
    void setHideEidInfoBox(bool val);
    void setTrustedTerminals(const QStringList &val);
    void setTwoWaySignerAuth(bool val);
-
+   void setDefaultSettlDialogExpandedState(bool state);
    using Settings = Blocksettle::Communication::signer::Settings;
    const std::unique_ptr<Settings> &get() const { return d_; }
 
@@ -115,6 +117,7 @@ signals:
    void trustedTerminalsChanged();
    void twoWaySignerAuthChanged();
    void changed(int);
+   void defaultSettlDialogExpandedStateChanged();
 
 private:
    void settingChanged(int setting);
@@ -128,6 +131,9 @@ private:
    int signerPort_{};
    bs::signer::ui::RunMode runMode_{};
    std::unique_ptr<Settings> d_;
+
+   // Temporary session settings
+   bool defaultSettlDialogExpandedState_ = false;
 };
 
 
