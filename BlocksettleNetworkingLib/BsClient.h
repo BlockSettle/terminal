@@ -49,14 +49,8 @@ namespace bs {
 
 struct BsClientParams
 {
-   struct NewKey
-   {
-      std::string oldKey;
-      std::string newKey;
-      std::shared_ptr<FutureValue<bool>> prompt;
-   };
-
-   using NewKeyCallback = std::function<void(const NewKey &newKey)>;
+   using NewKeyCallback = std::function<void(const std::string &oldKey, const std::string &newKey
+      , const std::string& srvAddrPort, const std::shared_ptr<FutureValue<bool>> &prompt)>;
 
    std::shared_ptr<ZmqContext> context;
 

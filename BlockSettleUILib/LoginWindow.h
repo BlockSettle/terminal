@@ -28,7 +28,8 @@ Q_OBJECT
 public:
    LoginWindow(const std::shared_ptr<spdlog::logger> &logger
       , std::shared_ptr<ApplicationSettings> &settings
-      , const ZmqBipNewKeyCb &cbApprove
+      , ZmqBipNewKeyCb *cbApprovePub
+      , ZmqBipNewKeyCb *cbApproveProxy
       , QWidget* parent = nullptr);
    ~LoginWindow() override;
 
@@ -62,7 +63,8 @@ private:
    std::unique_ptr<Ui::LoginWindow>       ui_;
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ApplicationSettings>   settings_;
-   ZmqBipNewKeyCb                         cbApprove_;
+   ZmqBipNewKeyCb                         *cbApprovePub_{};
+   ZmqBipNewKeyCb                         *cbApproveProxy_{};
 
    State       state_{State::Idle};
    QTimer      timer_;
