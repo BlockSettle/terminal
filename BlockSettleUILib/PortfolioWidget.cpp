@@ -217,8 +217,15 @@ void PortfolioWidget::onCreateCPFPDialog()
 
    const auto &cbDialog = [this](const TransactionPtr &txItem) {
       try {
+         std::shared_ptr<bs::sync::Wallet> wallet;
+         for (const auto &w : txItem->wallets) {
+            if (w->type() == bs::core::wallet::Type::Bitcoin) {
+               wallet = w;
+               break;
+            }
+         }
          auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
-            , walletsManager_, signContainer_, txItem->wallet, logger_, appSettings_
+            , walletsManager_, signContainer_, wallet, logger_, appSettings_
             , txItem->tx, this);
          dlg->exec();
       }

@@ -129,6 +129,9 @@ namespace bs {
          std::map<std::string, std::vector<bs::Address>> getAddressToWalletsMapping(const std::vector<UTXO> &) const;
          static std::shared_ptr<ResolverFeed> getPublicResolver(const std::map<bs::Address, BinaryData> &);
 
+         bool mergeableEntries(const bs::TXEntry &, const bs::TXEntry &) const;
+         std::vector<bs::TXEntry> mergeEntries(const std::vector<bs::TXEntry> &) const;
+
       signals:
          void CCLeafCreated(const std::string& ccName);
          void CCLeafCreateFailed(const std::string& ccName, bs::error::ErrorCode result);
@@ -230,7 +233,6 @@ namespace bs {
          mutable QMutex                      mtxWallets_;
          std::set<std::string>               readyWallets_;
          bool     isReady_ = false;
-         std::set<BinaryData>                walletsId_;
          std::set<std::string>               hdWalletsId_;
          WalletPtr                           authAddressWallet_;
          BinaryData                          userId_;

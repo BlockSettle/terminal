@@ -117,8 +117,8 @@ void ArmoryEventsSubscriber::ProcessZCEvent(const std::string& eventData)
       entries.reserve(message.zc_entries_size());
       for (int i = 0; i < message.zc_entries_size(); ++i) {
          const auto entry = message.zc_entries(i);
-         entries.push_back({entry.tx_hash(), entry.wallet_id(), entry.value(), entry.block_num()
-            , entry.time(), entry.rbf(), entry.chained_zc()});
+         entries.push_back({ entry.tx_hash(), { entry.wallet_id() }, entry.value()
+            , entry.block_num(), entry.time(), entry.rbf(), entry.chained_zc() });
       }
       onZCEvent_(entries);
    } else {
