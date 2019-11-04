@@ -90,9 +90,13 @@ bs::network::otc::Offer OTCNegotiationResponseWidget::offer() const
 
    result.hdWalletId = ui_->comboBoxXBTWallets->currentData(UiUtils::WalletIdRole).toString().toStdString();
    result.authAddress = ui_->authenticationAddressComboBox->currentText().toStdString();
+
    if (ui_->receivingAddressComboBox->currentIndex() != 0) {
       result.recvAddress = ui_->receivingAddressComboBox->currentText().toStdString();
    }
+
+   result.inputs = selectedUTXOs();
+
    return result;
 }
 

@@ -54,7 +54,7 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
 
 OTCNegotiationRequestWidget::~OTCNegotiationRequestWidget() = default;
 
-bs::network::otc::Offer OTCNegotiationRequestWidget::offer()
+bs::network::otc::Offer OTCNegotiationRequestWidget::offer() const
 {
    bs::network::otc::Offer result;
    const bool isSell = ui_->pushButtonSell->isChecked();
@@ -70,7 +70,6 @@ bs::network::otc::Offer OTCNegotiationRequestWidget::offer()
    }
 
    result.inputs = selectedUTXOs();
-   clearSelectedInputs();
 
    return result;
 }

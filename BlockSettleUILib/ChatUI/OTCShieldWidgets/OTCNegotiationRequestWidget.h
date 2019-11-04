@@ -29,7 +29,7 @@ public:
    OTCNegotiationRequestWidget(QWidget* parent = nullptr);
    ~OTCNegotiationRequestWidget() override;
 
-   bs::network::otc::Offer offer();
+   bs::network::otc::Offer offer() const;
 
    void setPeer(const bs::network::otc::Peer &peer) override;
 
