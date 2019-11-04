@@ -337,6 +337,7 @@ UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
 
    , logger_(logger)
 {
+   thread_->setObjectName(QStringLiteral("AQScriptRunner"));
    script_->moveToThread(thread_);
 
    connect(script_, &UserScriptHandler::aqScriptLoaded, this, &UserScriptRunner::aqScriptLoaded);
