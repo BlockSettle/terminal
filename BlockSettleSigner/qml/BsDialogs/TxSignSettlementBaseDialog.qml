@@ -21,7 +21,7 @@ CustomTitleDialogWindowWithExpander {
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
     property QPasswordData passwordData: QPasswordData {}
-    property AuthSignWalletObject authSign: AuthSignWalletObject {}
+    property AuthSignWalletObject authSign: null
 
     // signingAllowed set in cc or xbt dialog
     property bool signingAllowed: false
@@ -29,7 +29,6 @@ CustomTitleDialogWindowWithExpander {
     // expanding
     property bool isExpanded: false
     onHeaderButtonClicked: isExpanded = !isExpanded
-    onIsExpandedChanged: sizeChanged()
 
     headerButtonText: isExpanded ? "Hide Details" : "Details"
 
@@ -89,22 +88,34 @@ CustomTitleDialogWindowWithExpander {
             return
         }
 
+        // auth eid initiated after addresses validated and signingAllowed === true
+        // it may occur immediately when sign requested or when update PasswordDialogData received
+        if (authSign !== null) {
+            return
+        }
+
         authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo, duration, timestamp)
 
         authSign.succeeded.connect(function(encKey, password) {
-            passwordData.encType = QPasswordData.Auth
-            passwordData.encKey = encKey
-            passwordData.binaryPassword = password
-            acceptAnimated()
+            if (root) {
+                passwordData.encType = QPasswordData.Auth
+                passwordData.encKey = encKey
+                passwordData.binaryPassword = password
+                root.acceptAnimated()
+            }
         });
         authSign.failed.connect(function(errorText) {
-            var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
-                , qsTr("Wallet"), errorText
-                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
-            mb.bsAccepted.connect(function() { rejectAnimated() })
+            if (root) {
+                var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
+                    , qsTr("Wallet"), errorText
+                    , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
+                mb.bsAccepted.connect(function() { root.rejectAnimated() })
+            }
         })
         authSign.userCancelled.connect(function() {
-            rejectAnimated()
+            if (root) {
+                root.rejectAnimated()
+            }
         })
     }
 
@@ -371,6 +382,7 @@ CustomTitleDialogWindowWithExpander {
             }
 
             RowLayout {
+                visible: walletInfo.encType === QPasswordData.Password
                 spacing: 25
                 Layout.fillWidth: true
 

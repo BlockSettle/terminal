@@ -47,8 +47,8 @@ CustomDialog {
 
             Button {
                 id: btnExpand
+                width: 100
                 anchors.right: rect.right
-                anchors.left: rect.right - 50
                 anchors.top: rect.top
                 anchors.bottom: rect.bottom
 
@@ -59,7 +59,7 @@ CustomDialog {
                     font.underline: true
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
-                    elide: Text.ElideRight
+                    elide: Text.ElideNone
                 }
 
                 background: Rectangle {
