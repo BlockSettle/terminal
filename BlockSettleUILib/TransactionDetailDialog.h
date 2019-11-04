@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "TransactionsViewModel.h"
+#include "ValidityFlag.h"
 
 namespace Ui {
     class TransactionDetailDialog;
@@ -48,6 +49,8 @@ private:
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
    QTreeWidgetItem   *itemSender_ = nullptr;
    QTreeWidgetItem   *itemReceiver_ = nullptr;
+   ValidityFlag validityFlag_;
+
 };
 
 #endif // __TRANSACTION_DETAIL_DIALOG_H__
