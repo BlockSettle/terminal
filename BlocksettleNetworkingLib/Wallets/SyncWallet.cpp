@@ -42,8 +42,14 @@ const std::string& Wallet::walletIdInt(void) const
 
 void Wallet::synchronize(const std::function<void()> &cbDone)
 {
-   const auto &cbProcess = [this, cbDone] (bs::sync::WalletData data)
+   const auto &cbProcess = [this, cbDone, handle = validityFlag_.handle()]
+      (bs::sync::WalletData data) mutable
    {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
+         return;
+      }
+
       usedAddresses_.clear();
       for (const auto &addr : data.addresses) {
          addAddress(addr.address, addr.index, false);
@@ -267,8 +273,12 @@ bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t
       return false;
    }
 
-   const auto &cbTxOutList = [this, val, cb]
-      (const std::vector<UTXO> &txOutList) {
+   const auto &cbTxOutList = [this, val, cb, handle = validityFlag_.handle()]
+      (const std::vector<UTXO> &txOutList) mutable {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
+         return;
+      }
       std::vector<UTXO> txOutListCopy = txOutList;
       if (utxoAdapter_) {
          utxoAdapter_->filter(txOutListCopy);
@@ -449,8 +459,13 @@ bool Wallet::getHistoryPage(const std::shared_ptr<AsyncClient::BtcWallet> &btcWa
    if (!isBalanceAvailable()) {
       return false;
    }
-   const auto &cb = [this, id, onlyNew, clientCb]
-                    (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries)->void {
+   const auto &cb = [this, id, onlyNew, clientCb, handle = validityFlag_.handle()]
+                    (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) mutable -> void {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
+         return;
+      }
+
       try {
          auto le = entries.get();
          if (!onlyNew) {
@@ -527,12 +542,20 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 {
    init(true);
 
-   const auto &cbTX = [this, balanceData = balanceData_](const Tx &tx) {
+   const auto &cbTX = [this, balanceData = balanceData_, handle = validityFlag_.handle()](const Tx &tx) mutable {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
+         return;
+      }
       for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
          const TxIn in = tx.getTxInCopy(i);
          const OutPoint op = in.getOutPoint();
 
-         const auto &cbPrevTX = [this, balanceData, idx=op.getTxOutIndex()](const Tx &prevTx) {
+         const auto &cbPrevTX = [this, balanceData, idx=op.getTxOutIndex(), handle](const Tx &prevTx) mutable {
+            ValidityGuard lock(handle);
+            if (!handle.isValid()) {
+               return;
+            }
             if (!prevTx.isInitialized()) {
                return;
             }
@@ -560,11 +583,19 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
    for (const auto &entry : entries) {
       armory_->getTxByHash(entry.txHash, cbTX);
    }
-   updateBalances([this] {    // TxNs are not updated for ZCs
-      trackChainAddressUse([this](bs::sync::SyncState st) {
+   updateBalances([this, handle = validityFlag_.handle()]() mutable {    // TxNs are not updated for ZCs
+      trackChainAddressUse([this, handle](bs::sync::SyncState st) mutable {
+         ValidityGuard lock(handle);
+         if (!handle.isValid()) {
+            return;
+         }
          logger_->debug("{}: new live address found: {}", walletId(), (int)st);
          if (st == bs::sync::SyncState::Success) {
-            synchronize([this] {
+            synchronize([this, handle]() mutable {
+               ValidityGuard lock(handle);
+               if (!handle.isValid()) {
+                  return;
+               }
                logger_->debug("[Wallet::onZeroConfReceived] synchronized after addresses are tracked");
                if (wct_) {
                   wct_->addressAdded(walletId());
@@ -589,7 +620,12 @@ void Wallet::onBalanceAvailable(const std::function<void()> &cb) const
       return;
    }
 
-   const auto thrBalAvail = [this, cb] {
+   const auto thrBalAvail = [this, cb, handle = validityFlag_.handle()]() mutable {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
+         return;
+      }
+
       while (balThreadRunning_) {
          std::unique_lock<std::mutex> lock(balThrMutex_);
          balThrCV_.wait_for(lock, std::chrono::milliseconds{ 100 });
@@ -625,13 +661,23 @@ void Wallet::onRefresh(const std::vector<BinaryData> &ids, bool online)
          regId_.clear();
          init();
 
-         const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
+         const auto &cbTrackAddrChain = [this, handle = validityFlag_.handle()]
+            (bs::sync::SyncState st) mutable
+         {
+            ValidityGuard lock(handle);
+            if (!handle.isValid()) {
+               return;
+            }
             if (wct_) {
                wct_->walletReady(walletId());
             }
          };
          bs::sync::Wallet::init();
-         getAddressTxnCounts([this, cbTrackAddrChain] {
+         getAddressTxnCounts([this, cbTrackAddrChain, handle = validityFlag_.handle()]() mutable {
+            ValidityGuard lock(handle);
+            if (!handle.isValid()) {
+               return;
+            }
             trackChainAddressUse(cbTrackAddrChain);
          });
       }
@@ -643,8 +689,11 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConn
    setArmory(armory);
 
    if (armory_) {
-      const auto &cbRegister = [this](const std::string &)
-      {
+      const auto &cbRegister = [this, handle = validityFlag_.handle()](const std::string &) mutable {
+         ValidityGuard lock(handle);
+         if (!handle.isValid()) {
+            return;
+         }
          logger_->debug("[bs::sync::Wallet::registerWallet] Wallet ready: {}", walletId());
          isRegistered_ = true;
       };
@@ -670,8 +719,12 @@ void Wallet::unregisterWallet()
 void Wallet::init(bool force)
 {
    if (!firstInit_ || force) {
-      auto cbCounter = std::make_shared<std::atomic_int>(2);
-      const auto &cbBalTxN = [this, cbCounter] {
+      auto cbCounter = std::make_shared<int>(2);
+      const auto &cbBalTxN = [this, cbCounter, handle = validityFlag_.handle()]() mutable {
+         ValidityGuard lock(handle);
+         if (!handle.isValid()) {
+            return;
+         }
          (*cbCounter)--;
          if ((*cbCounter <= 0)) {
             if (wct_) {
