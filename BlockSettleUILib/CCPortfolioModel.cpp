@@ -837,7 +837,7 @@ void CCPortfolioModel::onCCPriceChanged(const std::string& currency)
 
 void CCPortfolioModel::reloadXBTWalletsList()
 {
-   if (walletsManager_->hdWalletsCount() == 0) {
+   if (walletsManager_->hdWallets().empty()) {
       if (root_->HaveXBTGroup()) {
          beginResetModel();
          root_->RemoveXBTGroup();
@@ -858,9 +858,7 @@ void CCPortfolioModel::reloadXBTWalletsList()
          displayedWallets = root_->GetXBTGroup()->GetWalletIds();
       }
 
-      for (int i = 0; i < walletsManager_->hdWalletsCount(); ++i) {
-         const auto hdWallet = walletsManager_->getHDWallet(i);
-
+      for (const auto &hdWallet : walletsManager_->hdWallets()) {
          if (displayedWallets.find(hdWallet->walletId()) == displayedWallets.end()) {
             walletsToAdd.push_back(walletInfo{hdWallet->name(), hdWallet->walletId()});
          } else {
@@ -905,9 +903,7 @@ void CCPortfolioModel::updateXBTBalance()
 
       auto parentIndex = createIndex(xbtGroup->getRow(), 0, static_cast<void*>(xbtGroup));
 
-      for (int i = 0; i < walletsManager_->hdWalletsCount(); ++i) {
-         const auto hdWallet = walletsManager_->getHDWallet(i);
-
+      for (const auto &hdWallet : walletsManager_->hdWallets()) {
          const auto walletId = hdWallet->walletId();
          const auto xbtNode = xbtGroup->GetXBTNode(walletId);
          if (xbtNode != nullptr) {
@@ -934,7 +930,7 @@ void CCPortfolioModel::updateXBTBalance()
 
 void CCPortfolioModel::reloadCCWallets()
 {
-   if (walletsManager_->hdWalletsCount() == 0) {
+   if (walletsManager_->hdWallets().empty()) {
       if (root_->HaveCCGroup()) {
          beginResetModel();
          root_->RemoveCCGroup();

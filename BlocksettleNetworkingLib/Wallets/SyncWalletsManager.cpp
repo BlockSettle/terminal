@@ -43,7 +43,7 @@ WalletsManager::~WalletsManager() noexcept
    validityFlag_.reset();
 
    for (const auto &hdWallet : hdWallets_) {
-      hdWallet.second->setWCT(nullptr);
+      hdWallet->setWCT(nullptr);
    }
    {
       std::unique_lock<std::mutex> lock(maintMutex_);
@@ -73,7 +73,6 @@ void WalletsManager::reset()
    walletNames_.clear();
    readyWallets_.clear();
    isReady_ = false;
-   hdWalletsId_.clear();
    authAddressWallet_.reset();
 
    emit walletChanged("");
@@ -252,22 +251,14 @@ void WalletsManager::saveWallet(const HDWalletPtr &wallet)
    if (!userId_.isNull()) {
       wallet->setUserId(userId_);
    }
-   auto insertIter = hdWalletsId_.insert(wallet->walletId());
+   const auto existingHdWallet = getHDWalletById(wallet->walletId());
 
-   //integer id signifying the wallet's insertion order
-   if (!insertIter.second) {
-      //wallet already exist in container, merge content instead
-      auto wltIter = hdWallets_.find(wallet->walletId());
-      if (wltIter == hdWallets_.end()) {
-         throw std::runtime_error("have wallet id but no ptr");
-      }
-      wltIter->second->merge(*wallet);
+   if (existingHdWallet) {    // merge if HD wallet already exists
+      existingHdWallet->merge(*wallet);
    }
-
-   //map::insert will not replace the wallet
-   wallet->containerId_ = hdWallets_.size();
-   hdWallets_.insert(make_pair(wallet->walletId(), wallet));
-   walletNames_.insert(wallet->name());
+   else {
+      hdWallets_.push_back(wallet);
+   }
 
    for (const auto &leaf : wallet->getLeaves()) {
       addWallet(leaf, true);
@@ -280,7 +271,7 @@ void WalletsManager::walletCreated(const std::string &walletId)
    return;
    const auto &lbdMaint = [this, walletId] {
       for (const auto &hdWallet : hdWallets_) {
-         const auto leaf = hdWallet.second->getLeaf(walletId);
+         const auto leaf = hdWallet->getLeaf(walletId);
          if (leaf == nullptr) {
             continue;
          }
@@ -308,8 +299,8 @@ void WalletsManager::walletDestroyed(const std::string &walletId)
 WalletsManager::HDWalletPtr WalletsManager::getPrimaryWallet() const
 {
    for (const auto &wallet : hdWallets_) {
-      if (wallet.second->isPrimary()) {
-         return wallet.second;
+      if (wallet->isPrimary()) {
+         return wallet;
       }
    }
    return nullptr;
@@ -361,7 +352,7 @@ void WalletsManager::setUserId(const BinaryData &userId)
 {
    userId_ = userId;
    for (const auto &hdWallet : hdWallets_) {
-      hdWallet.second->setUserId(userId);
+      hdWallet->setUserId(userId);
    }
    auto primaryWallet = getPrimaryWallet();
    if (signContainer_) {
@@ -369,20 +360,13 @@ void WalletsManager::setUserId(const BinaryData &userId)
    }
 }
 
-const WalletsManager::HDWalletPtr WalletsManager::getHDWallet(unsigned id) const
-{
-   for (auto& wltPair : hdWallets_) {
-      if (wltPair.second->containerId_ == id)
-         return wltPair.second;
-   }
-   return nullptr;
-}
-
 const WalletsManager::HDWalletPtr WalletsManager::getHDWalletById(const std::string& walletId) const
 {
-   auto it = hdWallets_.find(walletId);
+   auto it = std::find_if(hdWallets_.cbegin(), hdWallets_.cend(), [walletId](const HDWalletPtr &hdWallet) {
+      return (hdWallet->walletId() == walletId);
+   });
    if (it != hdWallets_.end()) {
-      return it->second;
+      return *it;
    }
    return nullptr;
 }
@@ -390,9 +374,9 @@ const WalletsManager::HDWalletPtr WalletsManager::getHDWalletById(const std::str
 const WalletsManager::HDWalletPtr WalletsManager::getHDRootForLeaf(const std::string& walletId) const
 {
    for (const auto &hdWallet : hdWallets_) {
-      for (const auto &leaf : hdWallet.second->getLeaves()) {
+      for (const auto &leaf : hdWallet->getLeaves()) {
          if (leaf->hasId(walletId)) {
-            return hdWallet.second;
+            return hdWallet;
          }
       }
    }
@@ -586,9 +570,9 @@ bool WalletsManager::deleteWallet(WalletPtr wallet)
    logger_->info("[WalletsManager::{}] - Removing wallet {} ({})...", __func__
       , wallet->name(), wallet->walletId());
    for (auto hdWallet : hdWallets_) {
-      const auto leaves = hdWallet.second->getLeaves();
+      const auto leaves = hdWallet->getLeaves();
       if (std::find(leaves.begin(), leaves.end(), wallet) != leaves.end()) {
-         for (auto group : hdWallet.second->getGroups()) {
+         for (auto group : hdWallet->getGroups()) {
             if (group->deleteLeaf(wallet)) {
                isHDLeaf = true;
                signContainer_->DeleteHDLeaf(wallet->walletId());
@@ -618,8 +602,8 @@ bool WalletsManager::deleteWallet(WalletPtr wallet)
 
 bool WalletsManager::deleteWallet(HDWalletPtr wallet)
 {
-   const auto it = hdWallets_.find(wallet->walletId());
-   if (it == hdWallets_.end()) {
+   const auto itHdWallet = std::find(hdWallets_.cbegin(), hdWallets_.cend(), wallet);
+   if (itHdWallet == hdWallets_.end()) {
       logger_->warn("[WalletsManager::{}] - Unknown HD wallet {} ({})", __func__
          , wallet->name(), wallet->walletId());
       return false;
@@ -635,17 +619,9 @@ bool WalletsManager::deleteWallet(HDWalletPtr wallet)
    }
    blockSignals(prevState);
 
-   const auto itId = std::find(hdWalletsId_.begin(), hdWalletsId_.end(), wallet->walletId());
-   if (itId != hdWalletsId_.end()) {
-      hdWalletsId_.erase(itId);
-   }
-   hdWallets_.erase(wallet->walletId());
+   hdWallets_.erase(itHdWallet);
    walletNames_.erase(wallet->name());
-   for (const auto &hdWallet : hdWallets_) {
-      if (hdWallet.second->containerId_ > wallet->containerId_) {
-         hdWallet.second->containerId_--;
-      }
-   }
+
    const bool result = wallet->deleteRemotely();
    logger_->info("[WalletsManager::{}] - Wallet {} ({}) removed: {}", __func__
       , wallet->name(), wallet->walletId(), result);
@@ -1012,10 +988,14 @@ void WalletsManager::onWalletsListUpdated()
          hdWallets[info.id] = info;
       }
       for (const auto &hdWallet : hdWallets) {
-         if (hdWalletsId_.find(hdWallet.first) == hdWalletsId_.end()) {
+         const auto &itHdWallet = std::find_if(hdWallets_.cbegin(), hdWallets_.cend()
+            , [walletId=hdWallet.first](const HDWalletPtr &wallet) {
+               return (wallet->walletId() == walletId);
+         });
+         if (itHdWallet == hdWallets_.end()) {
             syncWallet(hdWallet.second, [this, hdWalletId=hdWallet.first]
             {
-               const auto hdWallet = hdWallets_[hdWalletId];
+               const auto hdWallet = getHDWalletById(hdWalletId);
                if (hdWallet) {
                   hdWallet->registerWallet(armoryPtr_);
                   QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletAdded(hdWallet->walletId()); });
@@ -1024,7 +1004,7 @@ void WalletsManager::onWalletsListUpdated()
             newWallets_.insert(hdWallet.first);
          }
          else {
-            const auto wallet = hdWallets_[hdWallet.first];
+            const auto wallet = *itHdWallet;
             const auto &cbSyncHD = [this, wallet](bs::sync::HDWalletData hdData) {
                bool walletUpdated = false;
                if (hdData.groups.size() != wallet->getGroups().size()) {
@@ -1065,10 +1045,14 @@ void WalletsManager::onWalletsListUpdated()
             signContainer_->syncHDWallet(wallet->walletId(), cbSyncHD);
          }
       }
-      const auto hdWalledsId = hdWalletsId_;
-      for (const auto &hdWalletId : hdWalledsId) {
+      std::vector<std::string> hdWalletsId;
+      hdWalletsId.reserve(hdWallets_.size());
+      for (const auto &hdWallet : hdWallets_) {
+         hdWalletsId.push_back(hdWallet->walletId());
+      }
+      for (const auto &hdWalletId : hdWalletsId) {
          if (hdWallets.find(hdWalletId) == hdWallets.end()) {
-            deleteWallet(hdWallets_[hdWalletId]);
+            deleteWallet(getHDWalletById(hdWalletId));
          }
       }
    };
@@ -1208,7 +1192,7 @@ void WalletsManager::onCCInfoLoaded()
       }
    }
    for (const auto &hdWallet : hdWallets_) {
-      for (const auto &leaf : hdWallet.second->getLeaves()) {
+      for (const auto &leaf : hdWallet->getLeaves()) {
          if (leaf->type() == bs::core::wallet::Type::ColorCoin) {
             leaf->init();
          }
