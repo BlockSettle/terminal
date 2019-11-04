@@ -191,6 +191,6 @@ void OTCNegotiationResponseWidget::onXbtInputsProcessed()
 void OTCNegotiationResponseWidget::onCurrentWalletChanged()
 {
    UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets));
-   selectedUTXO_.clear();
+   clearSelectedInputs();
    onUpdateBalances();
 }
