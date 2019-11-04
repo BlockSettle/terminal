@@ -61,8 +61,7 @@ bool IdenticalTimersQueue::ActivateTimer(const std::shared_ptr<SingleShotTimer>&
 
 bool IdenticalTimersQueue::StopTimer(const std::shared_ptr<SingleShotTimer>& timer)
 {
-   timer->onDeactivateExternal();
-   return true;
+   return timer->onDeactivateExternal();
 }
 
 void IdenticalTimersQueue::waitingThreadRoutine()
