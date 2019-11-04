@@ -939,7 +939,7 @@ std::set<BinaryData> hd::CCLeaf::collectAddresses() const
 
 bool hd::CCLeaf::isBalanceAvailable() const
 {
-   return (tracker_ != nullptr) ? hd::Leaf::isBalanceAvailable() : false;
+   return lotSize_ ? hd::Leaf::isBalanceAvailable() : false;
 }
 
 BTCNumericTypes::balance_type hd::CCLeaf::getSpendableBalance() const
@@ -979,7 +979,7 @@ std::vector<uint64_t> hd::CCLeaf::getAddrBalance(const bs::Address &addr) const
 bool hd::CCLeaf::isTxValid(const BinaryData &txHash) const
 {
    if (!tracker_) {
-      return false;
+      return true;
    }
    return tracker_->isTxHashExist(txHash);
 }
