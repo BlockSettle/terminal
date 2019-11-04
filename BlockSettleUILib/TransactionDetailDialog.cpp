@@ -30,7 +30,7 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
 
    const auto &cbInit = [this, armory, handle = validityFlag_.handle()](const TransactionPtr &item) mutable {
       ValidityGuard guard(handle);
-      if (handle.isValid()) {
+      if (!handle.isValid()) {
          return;
       }
       ui_->labelAmount->setText(item->amountStr);
