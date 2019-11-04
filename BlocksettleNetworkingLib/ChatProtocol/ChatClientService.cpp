@@ -36,7 +36,7 @@ ChatClientService::ChatClientService(QObject* parent /*= nullptr*/)
    connect(worker(), &ChatClientLogic::searchUserReply, this, &ChatClientService::searchUserReply);
 }
 
-ClientPartyModelPtr ChatClientService::getClientPartyModelPtr()
+ClientPartyModelPtr ChatClientService::getClientPartyModelPtr() const
 {
    return worker()->clientPartyModelPtr();
 }

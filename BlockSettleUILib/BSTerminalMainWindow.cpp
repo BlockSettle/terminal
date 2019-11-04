@@ -107,6 +107,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       , this, applicationSettings_);
    cbApproveChat_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Chat
       , this, applicationSettings_);
+   cbApproveProxy_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Proxy
+      , this, applicationSettings_);
 
    initConnections();
    initArmory();
@@ -1111,7 +1113,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
-   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, cbApprovePuB_, this);
+   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, &cbApprovePuB_, &cbApproveProxy_, this);
 
    int rc = loginDialog.exec();
 

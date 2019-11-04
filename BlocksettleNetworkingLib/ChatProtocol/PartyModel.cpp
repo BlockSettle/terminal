@@ -4,13 +4,14 @@
 #include <disable_warnings.h>
 #include <spdlog/logger.h>
 #include <enable_warnings.h>
+#include <utility>
 
 #include "ChatProtocol/PrivateDirectMessageParty.h"
 
 using namespace Chat;
 
-PartyModel::PartyModel(const LoggerPtr& loggerPtr, QObject* parent /* = nullptr */)
-   : QObject(parent), loggerPtr_(loggerPtr)
+PartyModel::PartyModel(LoggerPtr loggerPtr, QObject* parent /* = nullptr */)
+   : QObject(parent), loggerPtr_(std::move(loggerPtr))
 {
    connect(this, &PartyModel::error, this, &PartyModel::handleLocalErrors);
 }
@@ -49,12 +50,11 @@ void PartyModel::removeParty(const PartyPtr& partyPtr)
    }
 
    PartyPtr oldPartyPtr{};
-   auto it = partyMap_.end();
    auto isErased = false;
 
    {
       FastLock locker(partyMapLockerFlag_);
-      it = partyMap_.find(partyPtr->id());
+      const auto it = partyMap_.find(partyPtr->id());
       if (it != partyMap_.end())
       {
          oldPartyPtr = partyMap_[partyPtr->id()];
@@ -95,7 +95,7 @@ PartyPtr PartyModel::getPartyById(const std::string& party_id)
 
 PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& party_id)
 {
-   PartyPtr partyPtr = getPartyById(party_id);
+   const auto partyPtr = getPartyById(party_id);
 
    if (!partyPtr)
    {
@@ -103,7 +103,7 @@ PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& 
       return nullptr;
    }
 
-   PrivateDirectMessagePartyPtr privateDMPartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
+   auto privateDMPartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
 
    if (nullptr == privateDMPartyPtr)
    {
@@ -115,11 +115,11 @@ PrivateDirectMessagePartyPtr PartyModel::getPrivatePartyById(const std::string& 
    return privateDMPartyPtr;
 }
 
-void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what, bool displayAsWarning)
+void PartyModel::handleLocalErrors(const Chat::PartyModelError& errorCode, const std::string& what, bool displayAsWarning) const
 {
-   const std::string displayAs = displayAsWarning ? WarningDescription : ErrorDescription;
+   const auto displayAs = displayAsWarning ? ErrorType::WarningDescription : ErrorType::ErrorDescription;
 
-   loggerPtr_->debug("[PartyModel::handleLocalErrors] {}: {}, what: {}", displayAs, (int)errorCode, what);
+   loggerPtr_->debug("[PartyModel::handleLocalErrors] {}: {}, what: {}", displayAs, static_cast<int>(errorCode), what);
 }
 
 void PartyModel::clearModel()
@@ -146,7 +146,7 @@ void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
    // private party
    if (partyPtr->isPrivate())
    {
-      PrivateDirectMessagePartyPtr privatePartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
+      const auto privatePartyPtr = std::dynamic_pointer_cast<PrivateDirectMessageParty>(partyPtr);
 
       if (nullptr == privatePartyPtr)
       {
@@ -154,7 +154,7 @@ void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
          return;
       }
 
-      PrivateDirectMessagePartyPtr existingPartyPtr = getPrivatePartyById(partyPtr->id());
+      auto existingPartyPtr = getPrivatePartyById(partyPtr->id());
 
       // party not exist, insert
       if (nullptr == existingPartyPtr)
@@ -172,7 +172,7 @@ void PartyModel::insertOrUpdateParty(const PartyPtr& partyPtr)
    }
 
    // other party types
-   PartyPtr existingPartyPtr = getPartyById(partyPtr->id());
+   const auto existingPartyPtr = getPartyById(partyPtr->id());
 
    // if not exist, insert new, otherwise do nothing
    if (nullptr == existingPartyPtr)

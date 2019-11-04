@@ -22,24 +22,24 @@ namespace Chat {
       ClientParty(
          const std::string& id, 
          const PartyType& partyType, 
-         const PartySubType& partySubType = PartySubType::STANDARD, 
-         const PartyState& partyState = PartyState::UNINITIALIZED, 
+         const PartySubType& partySubType = STANDARD, 
+         const PartyState& partyState = UNINITIALIZED, 
          QObject* parent = nullptr
       );
 
       std::string displayName() const { return displayName_; }
-      void setDisplayName(std::string val);
+      void setDisplayName(const std::string& val);
 
       ClientStatus clientStatus() const { return clientStatus_; }
-      void setClientStatus(ClientStatus val);
+      void setClientStatus(const ClientStatus& val);
 
       std::string userHash() const { return userHash_; }
-      void setUserHash(std::string val) { userHash_ = val; }
+      void setUserHash(const std::string& val) { userHash_ = val; }
 
-      void setPartyState(Chat::PartyState val);
+      void setPartyState(const PartyState& val) override;
 
       std::string initialMessage() const { return initialMessage_; }
-      void setInitialMessage(std::string val) { initialMessage_ = val; }
+      void setInitialMessage(const std::string& val) { initialMessage_ = val; }
 
    signals:
       void clientStatusChanged(const ClientStatus& clientStatus);

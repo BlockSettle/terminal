@@ -73,7 +73,7 @@ ClientPartyPtrList ClientPartyModel::getClientPartyListFromIdPartyList(const IdP
    ClientPartyPtrList clientPartyPtrList;
    for (const auto& id : idPartyList)
    {
-      ClientPartyPtr clientPartyPtr = getClientPartyById(id);
+      auto clientPartyPtr = getClientPartyById(id);
 
       if (nullptr == clientPartyPtr)
       {
@@ -92,7 +92,7 @@ ClientPartyPtrList ClientPartyModel::getClientPartyListForRecipient(const IdPart
 
    for (const auto& partyId : idPartyList)
    {
-      const ClientPartyPtr clientPartyPtr = getClientPartyById(partyId);
+      const auto clientPartyPtr = getClientPartyById(partyId);
 
       if (nullptr == clientPartyPtr)
       {
@@ -115,14 +115,14 @@ ClientPartyPtrList ClientPartyModel::getClientPartyListForRecipient(const IdPart
 
 ClientPartyPtrList ClientPartyModel::getStandardPrivatePartyListForRecipient(const std::string& recipientUserHash)
 {
-   const IdPartyList idPartyList = getIdPrivatePartyListBySubType();
+   const auto idPartyList = getIdPrivatePartyListBySubType();
    
    return getClientPartyListForRecipient(idPartyList, recipientUserHash);
 }
 
 ClientPartyPtrList ClientPartyModel::getOtcPrivatePartyListForRecipient(const std::string& recipientUserHash)
 {
-   const IdPartyList idPartyList = getIdPrivatePartyListBySubType(PartySubType::OTC);
+   const auto idPartyList = getIdPrivatePartyListBySubType(OTC);
 
    return getClientPartyListForRecipient(idPartyList, recipientUserHash);
 }
@@ -144,28 +144,28 @@ ClientPartyPtrList ClientPartyModel::getClientPartyForRecipients(const ClientPar
 
 ClientPartyPtr ClientPartyModel::getStandardPartyForUsers(const std::string& firstUserHash, const std::string& secondUserHash)
 {
-   Chat::ClientPartyPtrList clientPartyPtrList = getStandardPrivatePartyListForRecipient(secondUserHash);
+   const auto clientPartyPtrList = getStandardPrivatePartyListForRecipient(secondUserHash);
 
-   return getFirstClientPartyForPartySubType(clientPartyPtrList, firstUserHash, secondUserHash, PartySubType::STANDARD);
+   return getFirstClientPartyForPartySubType(clientPartyPtrList, firstUserHash, secondUserHash, STANDARD);
 }
 
 ClientPartyPtr ClientPartyModel::getOtcPartyForUsers(const std::string& firstUserHash, const std::string& secondUserHash)
 {
-   Chat::ClientPartyPtrList clientPartyPtrList = getOtcPrivatePartyListForRecipient(secondUserHash);
+   const auto clientPartyPtrList = getOtcPrivatePartyListForRecipient(secondUserHash);
 
-   return getFirstClientPartyForPartySubType(clientPartyPtrList, firstUserHash, secondUserHash, PartySubType::OTC);
+   return getFirstClientPartyForPartySubType(clientPartyPtrList, firstUserHash, secondUserHash, OTC);
 }
 
-void ClientPartyModel::handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what, bool displayAsWarning)
+void ClientPartyModel::handleLocalErrors(const Chat::ClientPartyModelError& errorCode, const std::string& what, bool displayAsWarning) const
 {
-   const std::string displayAs = displayAsWarning ? WarningDescription : ErrorDescription;
+   const auto displayAs = displayAsWarning ? ErrorType::WarningDescription : ErrorType::ErrorDescription;
 
-   loggerPtr_->debug("[ClientPartyModel::handleLocalErrors] {}: {}, what: {}", displayAs, (int)errorCode, what);
+   loggerPtr_->debug("[ClientPartyModel::handleLocalErrors] {}: {}, what: {}", displayAs, int(errorCode), what);
 }
 
 void ClientPartyModel::handlePartyInserted(const PartyPtr& partyPtr)
 {
-   const ClientPartyPtr clientPartyPtr = getClientPartyById(partyPtr->id());
+   const auto clientPartyPtr = getClientPartyById(partyPtr->id());
 
    if (nullptr == clientPartyPtr)
    {
@@ -179,7 +179,7 @@ void ClientPartyModel::handlePartyInserted(const PartyPtr& partyPtr)
 
 void ClientPartyModel::handlePartyRemoved(const PartyPtr& partyPtr)
 {
-   const ClientPartyPtr clientPartyPtr = getClientPartyById(partyPtr->id());
+   const auto clientPartyPtr = getClientPartyById(partyPtr->id());
 
    if (nullptr == clientPartyPtr)
    {
@@ -193,7 +193,7 @@ void ClientPartyModel::handlePartyRemoved(const PartyPtr& partyPtr)
 
 void ClientPartyModel::handlePartyStatusChanged(const ClientStatus&)
 {
-   ClientParty* clientParty = qobject_cast<ClientParty*>(sender());
+   const auto clientParty = qobject_cast<ClientParty*>(sender());
 
    if (!clientParty)
    {
@@ -201,7 +201,7 @@ void ClientPartyModel::handlePartyStatusChanged(const ClientStatus&)
       return;
    }
 
-   const ClientPartyPtr clientPartyPtr = getClientPartyById(clientParty->id());
+   const auto clientPartyPtr = getClientPartyById(clientParty->id());
 
    if (!clientPartyPtr)
    {
@@ -213,7 +213,7 @@ void ClientPartyModel::handlePartyStatusChanged(const ClientStatus&)
 
 ClientPartyPtr ClientPartyModel::castToClientPartyPtr(const PartyPtr& partyPtr)
 {
-   const ClientPartyPtr clientPartyPtr = std::dynamic_pointer_cast<ClientParty>(partyPtr);
+   const auto clientPartyPtr = std::dynamic_pointer_cast<ClientParty>(partyPtr);
 
    if (!clientPartyPtr)
    {
@@ -226,7 +226,7 @@ ClientPartyPtr ClientPartyModel::castToClientPartyPtr(const PartyPtr& partyPtr)
 
 ClientPartyPtr ClientPartyModel::getClientPartyById(const std::string& party_id)
 {
-   const PartyPtr partyPtr = getPartyById(party_id);
+   const auto partyPtr = getPartyById(party_id);
 
    if (nullptr == partyPtr)
    {
@@ -234,7 +234,7 @@ ClientPartyPtr ClientPartyModel::getClientPartyById(const std::string& party_id)
       return nullptr;
    }
 
-   const ClientPartyPtr clientPartyPtr = castToClientPartyPtr(partyPtr);
+   const auto clientPartyPtr = castToClientPartyPtr(partyPtr);
 
    return clientPartyPtr;
 }
@@ -247,7 +247,7 @@ void ClientPartyModel::handlePartyStateChanged(const std::string& partyId)
 
 PrivatePartyState ClientPartyModel::deducePrivatePartyStateForUser(const std::string& userName)
 {
-   const ClientPartyPtrList clientPartyPtrList = getStandardPrivatePartyListForRecipient(userName);
+   const auto clientPartyPtrList = getStandardPrivatePartyListForRecipient(userName);
 
    if (clientPartyPtrList.empty())
    {
@@ -261,26 +261,24 @@ PrivatePartyState ClientPartyModel::deducePrivatePartyStateForUser(const std::st
          continue;
       }
 
-      const PartyState partyState = clientPartyPtr->partyState();
+      const auto partyState = clientPartyPtr->partyState();
 
-      if (PartyState::UNINITIALIZED == partyState)
+      if (UNINITIALIZED == partyState)
       {
          return PrivatePartyState::Uninitialized;
       }
 
-      if (PartyState::REQUESTED == partyState)
+      if (REQUESTED == partyState)
       {
          if (userName == ownUserName_)
          {
             return PrivatePartyState::RequestedOutgoing;
          }
-         else
-         {
-            return PrivatePartyState::RequestedIncoming;
-         }
+
+         return PrivatePartyState::RequestedIncoming;
       }
 
-      if (PartyState::REJECTED == partyState || ownUserName_ == userName)
+      if (REJECTED == partyState || ownUserName_ == userName)
       {
          return PrivatePartyState::Rejected;
       }
@@ -293,7 +291,7 @@ PrivatePartyState ClientPartyModel::deducePrivatePartyStateForUser(const std::st
 
 void ClientPartyModel::handleDisplayNameChanged()
 {
-   ClientParty* clientParty = qobject_cast<ClientParty*>(sender());
+   auto* clientParty = qobject_cast<ClientParty*>(sender());
 
    if (!clientParty)
    {
@@ -306,12 +304,12 @@ void ClientPartyModel::handleDisplayNameChanged()
 
 ClientPartyPtrList ClientPartyModel::getClientPartyListByCreatorHash(const std::string& creatorHash)
 {
-   const IdPartyList idPartyList = getIdPartyList();
+   const auto idPartyList = getIdPartyList();
    ClientPartyPtrList clientPartyPtrList;
 
    for (const auto& partyId : idPartyList)
    {
-      const ClientPartyPtr clientPartyPtr = getClientPartyById(partyId);
+      const auto clientPartyPtr = getClientPartyById(partyId);
 
       if (clientPartyPtr && clientPartyPtr->partyCreatorHash() == creatorHash)
       {

@@ -56,10 +56,10 @@ namespace Chat
       TablesMap tablesMap_;
 
    private:
-      QString buildCreateCmd(const QString& tableName, const TableStructure& structure);
+      static QString buildCreateCmd(const QString& tableName, const TableStructure& structure);
       bool createMissingTables();
-      bool checkColumns(const QString& tableName);
-      bool ExecuteQuery(const QString& queryCmd, QSqlQuery& query);
+      bool checkColumns(const QString& tableName) const;
+      bool ExecuteQuery(const QString& queryCmd, QSqlQuery& query) const;
 
       QSqlDatabase db_;
       LoggerPtr loggerPtr_;

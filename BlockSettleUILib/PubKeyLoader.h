@@ -19,9 +19,9 @@ public:
    PubKeyLoader& operator = (PubKeyLoader&&) = delete;
 
    enum class KeyType {
-      Undefined,
-      PublicBridge,
-      Chat
+      PublicBridge = 1,
+      Chat,
+      Proxy,
    };
 
    BinaryData loadKey(const KeyType) const;

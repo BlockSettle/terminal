@@ -26,8 +26,8 @@ namespace Chat
    protected:
       void setLogger(const LoggerPtr& loggerPtr);
 
-      bool PrepareAndExecute(const QString& queryCmd, QSqlQuery& query, const QSqlDatabase& db);
-      bool checkExecute(QSqlQuery& query);
+      bool PrepareAndExecute(const QString& queryCmd, QSqlQuery& query, const QSqlDatabase& db) const;
+      bool checkExecute(QSqlQuery& query) const;
 
       LoggerPtr loggerPtr_;
    };

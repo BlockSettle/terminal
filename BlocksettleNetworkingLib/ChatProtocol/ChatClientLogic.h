@@ -1,8 +1,6 @@
 #ifndef CHATCLIENTLOGIC_H
 #define CHATCLIENTLOGIC_H
 
-#include <google/protobuf/message.h>
-
 #include "ChatProtocol/ChatUser.h"
 #include "ChatProtocol/ClientConnectionLogic.h"
 #include "ChatProtocol/ClientPartyLogic.h"
@@ -44,18 +42,23 @@ namespace Chat
       PartyNotExist
    };
 
-   class ChatClientLogic : public QObject, public DataConnectionListener
+   class ChatClientLogic final : public QObject, public DataConnectionListener
    {
       Q_OBJECT
 
    public:
       ChatClientLogic();
-      ~ChatClientLogic() override;
+      ~ChatClientLogic() override = default;
+
+      ChatClientLogic(const ChatClientLogic&) = delete;
+      ChatClientLogic& operator=(const ChatClientLogic&) = delete;
+      ChatClientLogic(ChatClientLogic&&) = delete;
+      ChatClientLogic& operator=(ChatClientLogic&&) = delete;
 
       void OnDataReceived(const std::string&) override;
-      void OnConnected(void) override;
-      void OnDisconnected(void) override;
-      void OnError(DataConnectionListener::DataConnectionError) override;
+      void OnConnected() override;
+      void OnDisconnected() override;
+      void OnError(DataConnectionError) override;
 
       ClientPartyModelPtr clientPartyModelPtr() const { return clientPartyLogicPtr_->clientPartyModelPtr(); }
 
@@ -65,19 +68,19 @@ namespace Chat
       void LogoutFromServer();
       void SendPartyMessage(const std::string& partyId, const std::string& data);
       void SetMessageSeen(const std::string& partyId, const std::string& messageId);
-      void RequestPrivateParty(const std::string& userName, const std::string& initialMessage);
-      void RequestPrivatePartyOTC(const std::string& remoteUserName);
-      void RejectPrivateParty(const std::string& partyId);
+      void RequestPrivateParty(const std::string& userName, const std::string& initialMessage) const;
+      void RequestPrivatePartyOTC(const std::string& remoteUserName) const;
+      void RejectPrivateParty(const std::string& partyId) const;
       void DeletePrivateParty(const std::string& partyId);
-      void AcceptPrivateParty(const std::string& partyId);
-      void SearchUser(const std::string& userHash, const std::string& searchId);
-      void AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
+      void AcceptPrivateParty(const std::string& partyId) const;
+      void SearchUser(const std::string& userHash, const std::string& searchId) const;
+      void AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList) const;
       void DeclineNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
 
    signals:
       void dataReceived(const std::string&);
-      void connected(void);
-      void disconnected(void);
+      void connected();
+      void disconnected();
       void error(DataConnectionListener::DataConnectionError);
 
       void messagePacketSent(const std::string& messageId);
@@ -96,13 +99,13 @@ namespace Chat
    private slots:
       void sendPacket(const google::protobuf::Message& message);
       void onCloseConnection();
-      void handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what);
+      void handleLocalErrors(const ChatClientLogicError& errorCode, const std::string& what) const;
       void initDbDone();
-      void privatePartyCreated(const std::string& partyId);
-      void privatePartyAlreadyExist(const std::string& partyId);
+      void privatePartyCreated(const std::string& partyId) const;
+      void privatePartyAlreadyExist(const std::string& partyId) const;
 
    private:
-      void setClientPartyLogicPtr(ClientPartyLogicPtr val) { clientPartyLogicPtr_ = val; }
+      void setClientPartyLogicPtr(const ClientPartyLogicPtr& val) { clientPartyLogicPtr_ = val; }
       std::string getChatServerHost() const;
       std::string getChatServerPort() const;
 

@@ -126,6 +126,7 @@ public:
       ChartTimeframe,
       ChartCandleCount,
       LastAqDir,
+      proxyServerPubKey,
       _last
    };
 

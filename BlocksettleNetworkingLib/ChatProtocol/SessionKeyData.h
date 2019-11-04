@@ -18,14 +18,14 @@ namespace Chat
    class SessionKeyData
    {
    public:
-      SessionKeyData(const std::string& userName);
-      SessionKeyData(const std::string& userName, const BinaryData& localSessionPublicKey, const SecureBinaryData& localSessionPrivateKey);
+      SessionKeyData(std::string userName);
+      SessionKeyData(std::string userName, BinaryData localSessionPublicKey, SecureBinaryData localSessionPrivateKey);
 
       std::string userHash() const { return userHash_; }
-      void setUserHash(std::string val) { userHash_ = val; }
+      void setUserHash(const std::string& val) { userHash_ = val; }
 
       BinaryData remoteSessionPublicKey() const { return remoteSessionPublicKey_; }
-      void setSessionRemotePublicKey(BinaryData val)
+      void setSessionRemotePublicKey(const BinaryData& val)
       {
          remoteSessionPublicKey_ = val;
          initialized_ = true;
@@ -35,10 +35,10 @@ namespace Chat
       void setInitialized(const bool val) { initialized_ = val; }
 
       BinaryData localSessionPublicKey() const { return localSessionPublicKey_; }
-      void setLocalSessionPublicKey(BinaryData val) { localSessionPublicKey_ = val; }
+      void setLocalSessionPublicKey(const BinaryData& val) { localSessionPublicKey_ = val; }
 
       SecureBinaryData localSessionPrivateKey() const { return localSessionPrivateKey_; }
-      void setLocalSessionPrivateKey(SecureBinaryData val) { localSessionPrivateKey_ = val; }
+      void setLocalSessionPrivateKey(const SecureBinaryData& val) { localSessionPrivateKey_ = val; }
 
       BinaryData nonce();
 
