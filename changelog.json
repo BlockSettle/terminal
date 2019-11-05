@@ -1,7 +1,27 @@
 {
-   "latest_version": "0.24.7",
-   "release_date": "01 Nov 2019",
+   "latest_version": "0.24.8",
+   "release_date": "05 Nov 2019",
    "changes": [
+      {
+         "version_string": "0.24.8",
+         "previous_version": "0.24.7",
+         "release_date": "05 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "TX conf count in explorer",
+            "Verify proxy key"
+         ],
+         "bug_fixes": [
+            "AddressVerificator fixes (#1558)",
+            "Fix CC leaves and UTXOs loading in PB",
+            "Fix OTC crash",
+            "Fix token submit crash",
+            "Otc utxo selection fixes",
+            "TX entry merging re-worked (BST-2285)"
+         ],
+         "revision": "006c8af8",
+         "common_revision": "3c65fceb"
+      },
       {
          "version_string": "0.24.7",
          "previous_version": "0.24.6",
