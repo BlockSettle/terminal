@@ -13,6 +13,7 @@
 #include <QFontDatabase>
 #include <QQmlContext>
 #include <QQuickWindow>
+#include <QtPlatformHeaders/QWindowsWindowFunctions>
 
 #include <btc/ecc.h>
 #include <iostream>
@@ -252,6 +253,7 @@ static int QMLApp(int argc, char **argv
    logger->info("Starting BS Signer UI with args: {}", app.arguments().join(QLatin1Char(' ')).toStdString());
    QQmlApplicationEngine engine;
    QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
+   QWindowsWindowFunctions::setWindowActivationBehavior(QWindowsWindowFunctions::AlwaysActivateWindow);
    const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
    engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
 

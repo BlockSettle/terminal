@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.4
+import Qt.labs.platform 1.1
 
 import com.blocksettle.TXInfo 1.0
 import com.blocksettle.PasswordDialogData 1.0
@@ -15,14 +16,24 @@ import "../BsControls"
 import "../BsStyles"
 import "../js/helper.js" as JsHelper
 
-CustomTitleDialogWindow {
+CustomTitleDialogWindowWithExpander {
     property WalletInfo walletInfo: WalletInfo {}
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
     property QPasswordData passwordData: QPasswordData {}
-    property AuthSignWalletObject authSign: AuthSignWalletObject {}
+    property AuthSignWalletObject authSign: null
 
-    property bool signingAllowed: passwordDialogData.SigningAllowed
+    // signingAllowed set in cc or xbt dialog
+    property bool signingAllowed: false
+
+    // expanding
+    property bool isExpanded: false
+    onHeaderButtonClicked: {
+        isExpanded = !isExpanded
+        signerSettings.defaultSettlDialogExpandedState = isExpanded
+    }
+
+    headerButtonText: isExpanded ? "Hide Details" : "Details"
 
     // rfq details
     readonly property string product: passwordDialogData.Product
@@ -37,11 +48,17 @@ CustomTitleDialogWindow {
     property alias settlementDetailsItem: settlementDetailsContainer.data
     property alias txDetailsItem: txDetailsContainer.data
 
-    readonly property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
+    readonly property bool acceptable: {
+        if (walletInfo.encType === QPasswordData.Password) return tfPassword.text.length > 0
+        else if (walletInfo.encType === QPasswordData.Unencrypted) return txInfo.isOfflineTxSigned
+        else return true
+    }
+
     readonly property int addressRowHeight: 24
 
-    readonly property int duration: passwordDialogData.Duration / 1000.0 - authSign.networkDelayFix() > 0 ? passwordDialogData.Duration / 1000.0 - authSign.networkDelayFix() : authSign.defaultSettlementExpiration()
-    property real timeLeft: duration
+    readonly property int duration: passwordDialogData.DurationTotal / 1000.0
+    property real timeLeft: passwordDialogData.DurationLeft / 1000.0
+    property int timestamp: passwordDialogData.DurationTimestamp
 
     readonly property real balanceDivider : qmlFactory.balanceDivider()
 
@@ -54,7 +71,7 @@ CustomTitleDialogWindow {
     property string errorMessage
 
     id: root
-    title: passwordDialogData.Title
+    title: isExpanded ? passwordDialogData.Title : ""
     rejectable: true
     width: 500
 
@@ -64,8 +81,9 @@ CustomTitleDialogWindow {
             btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
         }
 
-        // auth addr verification temporally disabled, eid auth init immediately
-        initAuth()
+        if (signingAllowed) {
+            initAuth()
+        }
     }
 
     function initAuth() {
@@ -73,23 +91,39 @@ CustomTitleDialogWindow {
             return
         }
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo, timeLeft - authSign.networkDelayFix())
+        // auth eid initiated after addresses validated and signingAllowed === true
+        // it may occur immediately when sign requested or when update PasswordDialogData received
+        if (authSign !== null) {
+            return
+        }
+
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo, duration, timestamp)
 
         authSign.succeeded.connect(function(encKey, password) {
-            passwordData.encType = QPasswordData.Auth
-            passwordData.encKey = encKey
-            passwordData.binaryPassword = password
-            acceptAnimated()
+            if (root) {
+                passwordData.encType = QPasswordData.Auth
+                passwordData.encKey = encKey
+                passwordData.binaryPassword = password
+                root.acceptAnimated()
+            }
         });
         authSign.failed.connect(function(errorText) {
-            var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
-                , qsTr("Wallet"), qsTr("eID request failed with error: \n") + errorText
-                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
-            mb.bsAccepted.connect(function() { rejectAnimated() })
+            if (root) {
+                var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
+                    , qsTr("Wallet"), errorText
+                    , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
+                mb.bsAccepted.connect(function() { root.rejectAnimated() })
+            }
         })
         authSign.userCancelled.connect(function() {
-            rejectAnimated()
+            if (root) {
+                root.rejectAnimated()
+            }
         })
+    }
+
+    Component.onCompleted: {
+        isExpanded = signerSettings.defaultSettlDialogExpandedState
     }
 
     Connections {
@@ -110,10 +144,9 @@ CustomTitleDialogWindow {
     }
 
     onSigningAllowedChanged: {
-        // auth addr verification temporally disabled
-//        if (signingAllowed) {
-//            initAuth()
-//        }
+        if (signingAllowed) {
+            initAuth()
+        }
     }
 
     cContentItem: ColumnLayout {
@@ -130,56 +163,90 @@ CustomTitleDialogWindow {
             CustomHeader {
                 Layout.fillWidth: true
                 Layout.columnSpan: 2
-                text: qsTr("RFQ Details")
+                text: qsTr("TRADE SUMMARY")
                 Layout.preferredHeight: 25
+            }
+
+            // [Simple view] Receive
+            CustomLabel {
+                visible: !isExpanded
+                Layout.fillWidth: true
+                text: qsTr("Receive")
+            }
+            CustomLabelValue {
+                visible: !isExpanded
+                text: is_sell ? totalValue : quantity
+                Layout.alignment: Qt.AlignRight
+            }
+
+            // [Simple view] Deliver
+            CustomLabel {
+                visible: !isExpanded
+                Layout.fillWidth: true
+                text: qsTr("Deliver")
+            }
+            CustomLabelValue {
+                visible: !isExpanded
+                text: is_sell ? quantity : totalValue
+                Layout.alignment: Qt.AlignRight
             }
 
             // Product Group
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Product Group")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: productGroup
                 Layout.alignment: Qt.AlignRight
             }
 
             // Security ID
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Security ID")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: security
                 Layout.alignment: Qt.AlignRight
             }
 
             // Product
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Product")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: product
                 Layout.alignment: Qt.AlignRight
             }
 
             // Side
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Side")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: side
                 Layout.alignment: Qt.AlignRight
             }
 
             // Quantity
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Quantity")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: quantity
                 Layout.alignment: Qt.AlignRight
             }
@@ -196,16 +263,50 @@ CustomTitleDialogWindow {
 
             // Total Value
             CustomLabel {
+                visible: isExpanded
                 Layout.fillWidth: true
                 text: qsTr("Total Value")
             }
             CustomLabelValue {
+                visible: isExpanded
                 text: totalValue
                 Layout.alignment: Qt.AlignRight
             }
         }
 
         ColumnLayout {
+            visible: !isExpanded
+            Layout.alignment: Qt.AlignTop
+            Layout.margins: 0
+            spacing: 0
+            clip: true
+
+            CustomHeader {
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                text: qsTr("Counterparty Validation")
+                Layout.preferredHeight: 25
+            }
+
+            RowLayout {
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomLabel {
+                    Layout.fillWidth: true
+                    text: qsTr("Counterparty")
+                }
+                CustomLabelValue {
+                    text: signingAllowed ? qsTr("Valid") : qsTr("Not Valid")
+                    color: signingAllowed ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+                    Layout.alignment: Qt.AlignRight
+                }
+            }
+        }
+
+        ColumnLayout {
+            visible: isExpanded
             id: settlementDetailsContainer
             Layout.alignment: Qt.AlignTop
             Layout.margins: 0
@@ -214,6 +315,7 @@ CustomTitleDialogWindow {
         }
 
         ColumnLayout {
+            visible: isExpanded
             id: txDetailsContainer
             Layout.alignment: Qt.AlignTop
             Layout.margins: 0
@@ -230,35 +332,39 @@ CustomTitleDialogWindow {
 
             CustomHeader {
                 Layout.fillWidth: true
-                text: qsTr("Decrypt Wallet")
+                text: qsTr("SIGN TRANSACTION")
                 Layout.preferredHeight: 25
             }
 
             RowLayout {
+                visible: isExpanded
                 spacing: 5
                 Layout.fillWidth: true
 
                 CustomLabel {
+                    visible: isExpanded
                     Layout.fillWidth: true
                     text: qsTr("Wallet name")
                 }
                 CustomLabel {
-                    //Layout.fillWidth: true
+                    visible: isExpanded
                     Layout.alignment: Qt.AlignRight
                     text: walletInfo.name
                 }
             }
 
             RowLayout {
+                visible: isExpanded
                 spacing: 5
                 Layout.fillWidth: true
 
                 CustomLabel {
+                    visible: isExpanded
                     Layout.fillWidth: true
                     text: qsTr("Wallet ID")
                 }
                 CustomLabel {
-                    //Layout.fillWidth: true
+                    visible: isExpanded
                     Layout.alignment: Qt.AlignRight
                     text: walletInfo.walletId
                 }
@@ -283,6 +389,7 @@ CustomTitleDialogWindow {
             }
 
             RowLayout {
+                visible: walletInfo.encType === QPasswordData.Password
                 spacing: 25
                 Layout.fillWidth: true
 
@@ -363,13 +470,73 @@ CustomTitleDialogWindow {
                 }
             }
 
-            CustomButtonPrimary {
+            CustomButton {
+                id: btnExportTx
+                primary: true
+                visible: walletInfo.encType === QPasswordData.Unencrypted
+                text: qsTr("SAVE TX")
+                anchors.right: btnImportTx.left
+                anchors.bottom: parent.bottom
+                onClicked: {
+                    exportTxDlg.open()
+                }
+
+                FileDialog {
+                    id: exportTxDlg
+                    title: "Save Unsigned Tx"
+
+                    currentFile: StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + txInfo.getSaveOfflineTxFileName()
+                    folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+                    fileMode: FileDialog.SaveFile
+                    nameFilters: [ "Key files (*.bin)", "All files (*)" ]
+
+                    onAccepted: {
+                        txInfo.saveToFile(qmlAppObj.getUrlPath(exportTxDlg.file))
+                        btnExportTx.primary = false
+                        btnImportTx.primary = true
+                        btnImportTx.enabled = true
+                    }
+                }
+            }
+
+            CustomButton {
+                id: btnImportTx
+                visible: walletInfo.encType === QPasswordData.Unencrypted
+                enabled: false
+                text: qsTr("LOAD SIGNED TX")
+                anchors.right: btnConfirm.left
+                anchors.bottom: parent.bottom
+                onClicked: {
+                    importTxDlg.open()
+                }
+
+                FileDialog {
+                    id: importTxDlg
+                    title: "Open Signed Tx"
+
+                    currentFile: StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + passwordDialogData.SettlementId + ".bin"
+                    folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+                    fileMode: FileDialog.OpenFile
+                    nameFilters: [ "Key files (*.bin)", "All files (*)" ]
+
+                    onAccepted: {
+                        result = txInfo.loadSignedTx(qmlAppObj.getUrlPath(importTxDlg.file))
+                        if (result) {
+                            btnImportTx.primary = false
+                            btnConfirm.primary = true
+                        }
+                    }
+                }
+            }
+
+            CustomButton {
                 id: btnConfirm
-                visible: walletInfo.encType === QPasswordData.Password
+                primary: walletInfo.encType ===  QPasswordData.Unencrypted ? false : true
+                visible: walletInfo.encType !== QPasswordData.Auth
                 text: qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                enabled: (signingAllowed && (tfPassword.text.length || acceptable))
+                enabled: signingAllowed && acceptable
                 onClicked: {
                     if (walletInfo.encType === QPasswordData.Password) {
                         passwordData.textPassword = tfPassword.text
@@ -380,6 +547,7 @@ CustomTitleDialogWindow {
                     }
                     else {
                         passwordData.encType = QPasswordData.Unencrypted
+                        passwordData.binaryPassword = txInfo.getSignedTx()
                         acceptAnimated()
                     }
                 }

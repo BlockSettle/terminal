@@ -201,11 +201,6 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
    QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
 
    bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest, parent_->walletsMgr_, logger_);
-   const auto settlementId = BinaryData::CreateFromHex(
-      dialogData->value(PasswordDialogData::SettlementId).toString().toStdString());
-   if (!settlementId.isNull()) {
-      txInfo->setTxId(QString::fromStdString(settlementId.toBinStr()));
-   }
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
    // wallet id may be stored either in tx or in dialog data
@@ -354,12 +349,10 @@ void SignerInterfaceListener::onAutoSignActivated(const std::string &data, bs::s
 
    bs::error::ErrorCode result = static_cast<bs::error::ErrorCode>(response.errorcode());
    if (result == bs::error::ErrorCode::NoError) {
-      if (response.autosignactive()) {
-         emit parent_->autoSignActivated(response.rootwalletid());
-      }
-      else {
-         emit parent_->autoSignDeactivated(response.rootwalletid());
-      }
+      emit parent_->autoSignActivated(response.rootwalletid());
+   }
+   else if (result == bs::error::ErrorCode::AutoSignDisabled) {
+      emit parent_->autoSignDeactivated(response.rootwalletid());
    }
 
    itCb->second(result);
@@ -433,7 +426,8 @@ void SignerInterfaceListener::onSyncWallet(const std::string &data, bs::signer::
 
    for (int i = 0; i < response.addresses_size(); ++i) {
       const auto addr = response.addresses(i);
-      result.addresses.push_back({ addr.index(), addr.address(), {} });
+      result.addresses.push_back({ addr.index()
+         , bs::Address::fromAddressString(addr.address()), {} });
    }
    itCb->second(result);
    cbWalletData_.erase(itCb);

@@ -3,7 +3,6 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
 import com.blocksettle.WalletsProxy 1.0
-import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QmlFactory 1.0
 import com.blocksettle.QPasswordData 1.0
 import com.blocksettle.AutheIDClient 1.0
@@ -15,7 +14,7 @@ import "js/helper.js" as JsHelper
 
 Item {
     id: root
-    property int currentIndex: 0
+    property bool autoSignAllowed: false
 
     Connections {
         target: signerStatus
@@ -31,63 +30,68 @@ Item {
         ColumnLayout {
             width: parent.parent.width
 
-            GridLayout {
-                columns: 2
+            CustomHeader {
+                Layout.columnSpan: 2
+                text: qsTr("Controls")
+                enabled: !signerStatus.offline
+                height: 25
                 Layout.fillWidth: true
+                Layout.preferredHeight: 25
                 Layout.topMargin: 5
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
+            }
 
-                CustomHeader {
-                    Layout.columnSpan: 2
-                    text: qsTr("Controls")
-                    enabled: !signerStatus.offline
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                Layout.preferredHeight: 25
+                enabled: !signerStatus.offline
+                CustomLabel {
+                    Layout.fillWidth: true
+                    text: qsTr("Wallet")
+                }
+
+                CustomComboBox {
+                    id: cbWallets
+                    Layout.preferredWidth: 150
                     height: 25
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 25
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 25
-                    enabled: !signerStatus.offline
-                    CustomLabel {
-                        Layout.fillWidth: true
-                        text: qsTr("Wallet")
+                    enabled: !signerStatus.autoSignActive && !signerStatus.offline
+                    model: walletsProxy.walletNames
+                    onActivated: {
+                        let walletId = walletsProxy.walletIdForIndex(currentIndex)
+                        signerSettings.autoSignWallet = walletId
+                        autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(currentIndex))
                     }
-                }
 
-                Loader {
-                    active: walletsProxy.loaded
-                    sourceComponent:
-                        CustomComboBox {
-                        width: 150
-                        height: 25
-                        enabled: !signerStatus.autoSignActive && !signerStatus.offline
-                        model: walletsProxy.walletNames
-                        currentIndex: walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
-                        onActivated: {
-                            root.currentIndex = currentIndex
-                            signerSettings.autoSignWallet = walletsProxy.walletIdForIndex(currentIndex)
+                    Connections {
+                        target: walletsProxy
+                        onWalletsChanged: {
+                            cbWallets.currentIndex = walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
+                            autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(cbWallets.currentIndex))
                         }
                     }
                 }
+            }
 
-                RowLayout {
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+
+                CustomLabel {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 25
-
-                    CustomLabel {
-                        Layout.fillWidth: true
-                        enabled: !signerStatus.offline
-                        text: qsTr("Auto-Sign")
-                    }
+                    enabled: !signerStatus.offline
+                    text: qsTr("Auto-Sign")
                 }
 
                 CustomSwitch {
                     id: autoSignSwitch
                     Layout.alignment: Qt.AlignRight
-                    enabled: !signerStatus.offline
+                    enabled: !signerStatus.offline && autoSignAllowed
                     checked: signerStatus.autoSignActive
                     onClicked: {
                         var newState = checked
@@ -95,10 +99,16 @@ Item {
                         // change state by received signal
                         checked = !newState
 
+                        if (signerSettings.autoSignWallet.length === 0) {
+                            let walletId = walletsProxy.walletIdForIndex(cbWallets.currentIndex)
+                            signerSettings.autoSignWallet = walletId
+                        }
+
                         JsHelper.tryChangeAutoSign(newState, signerSettings.autoSignWallet, true)
                     }
                 }
             }
+
 
             SettingsGrid {
                 id: gridLimits

@@ -1,0 +1,67 @@
+sudo: false
+
+os:
+  - linux
+  - osx
+
+osx_image: xcode10.3
+dist: bionic
+
+matrix:
+  allow_failures:
+    - os: osx
+
+language: cpp
+
+env:
+  global:
+    - secure: ""
+
+before_install:
+  - chmod +x Travis/build.sh
+
+addons:
+  apt:
+    packages:
+    - python3
+    - python3-pip
+    - python3-setuptools
+    - cmake
+    - libmysqlclient-dev
+    - autoconf
+    - libtool
+    - yasm
+    - nasm
+    - g++
+
+  homebrew:
+    packages:
+    - python3
+    - cmake
+    - mysql-connector-c
+    - mysql-connector-c++
+    - automake
+    - libtool
+    - nasm
+    - yasm
+    - xz
+    - pkg-config
+
+install:
+  - sudo -H pip3 install wget requests pathlib
+  - sudo apt build-dep -qq qt5-default || true
+
+script:
+  - Travis/build.sh
+
+before_cache:
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew cleanup; fi
+  # Cache only .git files under "/usr/local/Homebrew" so "brew update" does not take 5min every build
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then find /usr/local/Homebrew \! -regex ".+\.git.+" -delete; fi
+
+cache:
+    apt: true
+    directories:
+    - $HOME/Library/Caches/Homebrew
+    - $HOME/build/BlockSettle/3rd/release
+    - $HOME/build/BlockSettle/3rd/release-shared

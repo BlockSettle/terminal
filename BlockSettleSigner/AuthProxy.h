@@ -35,7 +35,7 @@ public:
 
    // used for wallet creation and signing
    void signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo
-      , int expiration = AutheIDClient::kDefaultExpiration);
+      , int expiration = AutheIDClient::kDefaultExpiration, int timestamp = 0);
 
    // used for device removing
    void removeDevice(int index, bs::hd::WalletInfo *walletInfo);
@@ -44,7 +44,6 @@ public:
 
    Q_INVOKABLE int defaultSettlementExpiration() { return AutheIDClient::kDefaultSettlementExpiration; }
    Q_INVOKABLE int defaultExpiration() { return AutheIDClient::kDefaultExpiration; }
-   Q_INVOKABLE int networkDelayFix() { return 1; }
 
 signals:
    void statusChanged();

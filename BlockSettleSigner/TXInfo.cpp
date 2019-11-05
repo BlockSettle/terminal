@@ -1,8 +1,11 @@
 #include "TXInfo.h"
 
 #include "CheckRecipSigner.h"
+#include "OfflineSigner.h"
 #include "Wallets/SyncHDWallet.h"
 #include "QWalletInfo.h"
+
+#include <QFile>
 
 using namespace bs::wallet;
 using namespace Blocksettle::Communication;
@@ -64,6 +67,14 @@ void TXInfo::setTxId(const QString &txId)
    emit dataChanged();
 }
 
+QString TXInfo::walletId() const
+{
+   if (txReq_.walletIds.empty()) {
+      return {};
+   }
+   return QString::fromStdString(txReq_.walletIds.front());
+}
+
 double TXInfo::amountCCReceived(const QString &cc) const
 {
    ContainsAddressCb &containsCCAddressCb = [this, cc](const bs::Address &address){
@@ -80,6 +91,52 @@ double TXInfo::amountXBTReceived() const
    // check all wallets and addresses
 
    return txReq_.amountReceived(containsAnyOurXbtAddressCb_) / BTCNumericTypes::BalanceDivider;
+}
+
+bool TXInfo::saveToFile(const QString &fileName) const
+{
+   return bs::core::wallet::ExportTxToFile(txReq_, fileName) == bs::error::ErrorCode::NoError;
+}
+
+bool TXInfo::loadSignedTx(const QString &fileName)
+{
+   QFile f(fileName);
+   bool result = f.open(QIODevice::ReadOnly);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't open file ('{}') to load signed offline request", fileName.toStdString());
+      return false;
+   }
+   auto loadedTxs = bs::core::wallet::ParseOfflineTXFile(f.readAll().toStdString());
+   if (loadedTxs.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "loading signed offline request failed from '{}'", fileName.toStdString());
+      return false;
+   }
+   if (loadedTxs.size() != 1 || loadedTxs.front().prevStates.size() != 1) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid signed offline request in '{}'", fileName.toStdString());
+      return false;
+   }
+
+   txReqSigned_ = loadedTxs.front();
+   // FIXME: check if txReqSigned_ originally is txReq_
+
+   emit dataChanged();
+   return true;
+}
+
+QString TXInfo::getSaveOfflineTxFileName()
+{
+   return QStringLiteral("%1_%2.bin")
+     .arg(walletId())
+     .arg(QDateTime::currentDateTime().toSecsSinceEpoch());
+}
+
+SecureBinaryData TXInfo::getSignedTx()
+{
+   if (txReqSigned_.prevStates.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "missing signed offline request prevStates[1]");
+      return {};
+   }
+   return txReqSigned_.prevStates.front();
 }
 
 QStringList TXInfo::inputs(bs::core::wallet::Type leafType) const
@@ -111,8 +168,8 @@ QStringList TXInfo::counterPartyRecipients() const
 
    QStringList result;
    for (const auto &recip : recipientsList) {
-      const auto addr = bs::Address::fromRecipient(recip);
-      result.push_back(QString::fromStdString(addr.display()));
+      const auto addrStr = bs::Address::fromRecipient(recip);
+      result.push_back(QString::fromStdString(addrStr.display()));
    }
 
    result.removeDuplicates();
@@ -129,8 +186,8 @@ QStringList TXInfo::allRecipients() const
 
    QStringList result;
    for (const auto &recip : recipientsList) {
-      const auto addr = bs::Address::fromRecipient(recip);
-      result.push_back(QString::fromStdString(addr.display()));
+      const auto addrStr = bs::Address::fromRecipient(recip);
+      result.push_back(QString::fromStdString(addrStr.display()));
    }
 
    result.removeDuplicates();

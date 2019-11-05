@@ -1,7 +1,154 @@
 {
-   "latest_version": "0.23.7",
-   "release_date": "14 Oct 2019",
+   "latest_version": "0.24.8",
+   "release_date": "05 Nov 2019",
    "changes": [
+      {
+         "version_string": "0.24.8",
+         "previous_version": "0.24.7",
+         "release_date": "05 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "TX conf count in explorer",
+            "Verify proxy key"
+         ],
+         "bug_fixes": [
+            "AddressVerificator fixes (#1558)",
+            "Fix CC leaves and UTXOs loading in PB",
+            "Fix OTC crash",
+            "Fix token submit crash",
+            "Otc utxo selection fixes",
+            "TX entry merging re-worked (BST-2285)"
+         ],
+         "revision": "006c8af8",
+         "common_revision": "3c65fceb"
+      },
+      {
+         "version_string": "0.24.7",
+         "previous_version": "0.24.6",
+         "release_date": "01 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Expandable Armory settings"
+         ],
+         "bug_fixes": [],
+         "revision": "930b6cf9",
+         "common_revision": "f9554007"
+      },
+      {
+         "version_string": "0.24.6",
+         "previous_version": "0.24.5",
+         "release_date": "01 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Proper contact name changes",
+            "Final CC logic fixes"
+         ],
+         "bug_fixes": [],
+         "revision": "aa5f8566",
+         "common_revision": "6e67426b"
+      },
+      {
+         "version_string": "0.24.5",
+         "previous_version": "0.24.4",
+         "release_date": "31 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Switch to chat login verification using proxy"
+         ],
+         "bug_fixes": [
+            "Fix some shutdown crashes"
+         ],
+         "revision": "fa49bf51",
+         "common_revision": "332dffbb"
+      },
+      {
+         "version_string": "0.24.4",
+         "previous_version": "0.24.3",
+         "release_date": "30 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Add new style for OTC widgets"
+         ],
+         "bug_fixes": [],
+         "revision": "794f5f35",
+         "common_revision": "837dafab"
+      },
+      {
+         "version_string": "0.24.3",
+         "previous_version": "0.24.2",
+         "release_date": "30 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Expandable settlement dialogs (#436)"
+         ],
+         "bug_fixes": [],
+         "revision": "a4e6d230",
+         "common_revision": "0be07b10"
+      },
+      {
+         "version_string": "0.24.2",
+         "previous_version": "0.24.1",
+         "release_date": "28 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Update auth eid timers",
+            "Update auth eid timers (#1537)",
+            "Switched to synchronous CC logic objects (#1520)",
+            "Signing for otc settlements with watching-only wallet (#1517)"
+         ],
+         "bug_fixes": [
+            "Small fix for CacheFile (#1526)",
+            "Autosign fix (#1527)"
+         ],
+         "revision": "b5f44ee3",
+         "common_revision": "17492ef7"
+      },
+      {
+         "version_string": "0.24.1",
+         "previous_version": "0.24.0",
+         "release_date": "23 Oct 2019",
+         "release_type": "dev",
+         "improvements": [],
+         "bug_fixes": [
+            "Fix import WO wallet",
+            "Auto sign wrong password fix (#1506)"
+         ],
+         "revision": "ceef96a6",
+         "common_revision": "989fce1c"
+      },
+      {
+         "version_string": "0.24.0",
+         "previous_version": "0.23.8",
+         "release_date": "18 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Updated CC logic"
+         ],
+         "bug_fixes": [
+            "Fix signer first time popup focus issue",
+            "Signer ui : Settlement duration bar fix"
+         ],
+         "revision": "83129b9f",
+         "common_revision": "29299dfc"
+      },
+      {
+         "version_string": "0.23.8",
+         "previous_version": "0.23.7",
+         "release_date": "17 Oct 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Remove protobuf.so from DEB file",
+            "Fix general ui bugs (#1497)",
+            "Signer/multiple settlements password requests (#1495)",
+            "Download instead of Changelog in AboutDialog",
+            "Update colours for trades in blotter"
+         ],
+         "bug_fixes": [
+            "Fix deadlock in Wallet::createTXRequest (#1487)"
+         ],
+         "revision": "77316711",
+         "common_revision": "664e0a52"
+      },
       {
          "version_string": "0.23.7",
          "previous_version": "0.23.6",

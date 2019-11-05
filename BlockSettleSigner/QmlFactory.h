@@ -83,7 +83,7 @@ public:
    // Auth
    // used for signing
    Q_INVOKABLE AuthSignWalletObject *createAutheIDSignObject(AutheIDClient::RequestType requestType
-      , bs::hd::WalletInfo *walletInfo, int expiration = AutheIDClient::kDefaultExpiration);
+      , bs::hd::WalletInfo *walletInfo, int expiration = AutheIDClient::kDefaultExpiration, int timestamp = 0);
 
    // used for add new eID device
    Q_INVOKABLE AuthSignWalletObject *createActivateEidObject(const QString &userId

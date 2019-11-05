@@ -116,44 +116,53 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
+    Rectangle {
+        color: "transparent"
+        height: 25
+
         Layout.fillWidth: true
-        Layout.leftMargin: 10
-        Layout.rightMargin: 10
+        Layout.leftMargin: inputLabelsWidth + 15
+        Layout.rightMargin: 15
+
         CustomLabel {
             id: lblResult
             visible: acceptableLines && privateRootKeyToCheck.length
             topPadding: 1
             bottomPadding: 1
-            Layout.fillWidth: true
-            Layout.leftMargin: inputLabelsWidth + 5
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            width: keyLine1.width / 2
+            height: 22
             text: privateRootKey === privateRootKeyToCheck ? qsTr("Key is correct") : qsTr("Wrong key")
             color: privateRootKey === privateRootKeyToCheck ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
 
         CustomLabel {
             id: lblResultLine1
-            opacity: keyLine1.validator.statusMsg === "" ? 0.0 : 1.0
+            width: keyLine1.width / 2
+            height: 22
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
             visible: !acceptableLines || !privateRootKeyToCheck.length
             topPadding: 1
             bottomPadding: 1
-            Layout.fillWidth: true
-            Layout.leftMargin: inputLabelsWidth + 5
             text: keyLine1.validator.statusMsg
             color: keyLine1.acceptableInput ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
         CustomLabel {
+            width: keyLine1.width / 2
+            height: 22
             id: lblResultLine2
-            opacity: keyLine2.validator.statusMsg === "" ? 0.0 : 1.0
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            horizontalAlignment: Text.AlignRight
+
             visible: !acceptableLines || !privateRootKeyToCheck.length
             topPadding: 1
             bottomPadding: 1
-            Layout.fillWidth: true
-            Layout.leftMargin: 2
             text: keyLinesIdentical ? identicalLinesErrorMsg : keyLine2.validator.statusMsg
             color: keyLine1.text === keyLine2.text || !keyLine2.acceptableInput ?
                        BSStyle.inputsInvalidColor : BSStyle.inputsValidColor
         }
     }
-
 }

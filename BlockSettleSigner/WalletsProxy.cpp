@@ -12,6 +12,7 @@
 #include "CoreHDWallet.h"
 #include "PaperBackupWriter.h"
 #include "SignerAdapter.h"
+#include "SignerAdapterContainer.h"
 #include "UiUtils.h"
 #include "WalletBackupFile.h"
 #include "WalletEncryption.h"
@@ -30,7 +31,7 @@ using namespace Blocksettle;
 
 WalletsProxy::WalletsProxy(const std::shared_ptr<spdlog::logger> &logger
    , SignerAdapter *adapter)
-   : QObject(nullptr), logger_(logger), adapter_(adapter)
+   : QObject(nullptr), logger_(logger), adapter_(adapter), signContainer_(adapter->signContainer())
 {
    connect(adapter_, &SignerAdapter::ready, this, &WalletsProxy::setWalletsManager);
    connect(adapter_, &SignerAdapter::ccInfoReceived, [this](bool result) {
@@ -432,7 +433,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
       return;
    }
 
-   const auto &parsedReqs = ParseOfflineTXFile(data);
+   const auto &parsedReqs = bs::core::wallet::ParseOfflineTXFile(data);
    if (parsedReqs.empty()) {
       invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("File %1 contains no TX sign requests").arg(fileName));
       return;
@@ -476,35 +477,22 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
             else {
                const auto &cbSigned = [this, fileName, jsCallback, requestCbs, walletId, reqs] (bs::error::ErrorCode result, const BinaryData &signedTX) {
                   if (result != bs::error::ErrorCode::NoError) {
-                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to sign request, error code: %1, file: %2")
-                                      .arg(static_cast<int>(result))
-                                      .arg(fileName));
+                     invokeJsCallBack(jsCallback, QJSValueList()
+                        << QJSValue(false)
+                        << tr("Failed to sign request, error code: %1, file: %2")
+                           .arg(static_cast<int>(result))
+                           .arg(fileName));
                      return;
                   }
                   QFileInfo fi(fileName);
                   QString outputFN = fi.path() + QLatin1String("/") + fi.baseName() + QLatin1String("_signed.bin");
-                  QFile f(outputFN);
-                  if (f.exists()) {
-                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("File %1 already exists").arg(outputFN));
-                     return;
-                  }
-                  if (!f.open(QIODevice::WriteOnly)) {
-                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to open %1 for writing").arg(outputFN));
-                     return;
-                  }
 
-                  Storage::Signer::SignedTX response;
-                  response.set_transaction(signedTX.toBinStr());
-                  response.set_comment(reqs[0].comment);
+                  bs::error::ErrorCode exportResult = bs::core::wallet::ExportSignedTxToFile(signedTX, outputFN, reqs[0].comment);
 
-                  Storage::Signer::File fileContainer;
-                  auto container = fileContainer.add_payload();
-                  container->set_type(Storage::Signer::SignedTXFileType);
-                  container->set_data(response.SerializeAsString());
-
-                  const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
-                  if (f.write(data) != data.size()) {
-                     invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Failed to write TX response data to %1").arg(outputFN));
+                  if (exportResult != bs::error::ErrorCode::NoError) {
+                     invokeJsCallBack(jsCallback, QJSValueList()
+                        << QJSValue(false)
+                        << tr("%1\n%2").arg(bs::error::ErrorCodeToString(exportResult)).arg(outputFN));
                      return;
                   }
 
@@ -536,9 +524,9 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
          bs::hd::WalletInfo *walletInfo = adapter_->qmlFactory()->createWalletInfo(walletId);
 
          adapter_->qmlBridge()->invokeQmlMethod("createTxSignDialog", cb
-                                                , QVariant::fromValue(txInfo)
-                                                , QVariant::fromValue(dialogData)
-                                                , QVariant::fromValue(walletInfo));
+            , QVariant::fromValue(txInfo)
+            , QVariant::fromValue(dialogData)
+            , QVariant::fromValue(walletInfo));
       };
 
       requestCbs->push_back(walletCb);
@@ -552,11 +540,19 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
 bool WalletsProxy::walletNameExists(const QString &name) const
 {
+   if (!walletsMgr_) {
+      return false;
+   }
+
    return walletsMgr_->walletNameExists(name.toStdString());
 }
 
 QString WalletsProxy::generateNextWalletName() const
 {
+   if (!walletsMgr_) {
+      return {};
+   }
+
    QString newWalletName;
    size_t nextNumber = walletsMgr_->hdWalletsCount() + 1;
    do {
@@ -568,6 +564,10 @@ QString WalletsProxy::generateNextWalletName() const
 
 bool WalletsProxy::isWatchingOnlyWallet(const QString &walletId) const
 {
+   if (!walletsMgr_) {
+      return false;
+   }
+
    return walletsMgr_->isWatchingOnly(walletId.toStdString());
 }
 
@@ -621,7 +621,8 @@ void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallb
 std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sync::WatchingOnlyWallet &wo) const
 {
    try {
-      auto result = std::make_shared<bs::sync::hd::Wallet>(wo, nullptr, logger_);
+      auto result = std::make_shared<bs::sync::hd::Wallet>(wo, signContainer().get(), logger_);
+      result->setWCT(walletsMgr_.get());
       for (const auto &groupEntry : wo.groups) {
          auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type), false);
          for (const auto &leafEntry : groupEntry.leaves) {
@@ -633,6 +634,11 @@ std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sy
       logger_->error("[WalletsProxy] WO-wallet creation failed: {}", e.what());
    }
    return nullptr;
+}
+
+std::shared_ptr<SignAdapterContainer> WalletsProxy::signContainer() const
+{
+   return signContainer_;
 }
 
 std::function<void (bs::error::ErrorCode result)> WalletsProxy::createChangePwdResultCb(const QString &walletId, const QJSValue &jsCallback)
@@ -685,6 +691,10 @@ void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsC
 
 QStringList WalletsProxy::walletNames() const
 {
+   if (!walletsMgr_) {
+      return {};
+   }
+
    QStringList result;
    for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
       const auto &wallet = walletsMgr_->getHDWallet(i);
@@ -705,6 +715,10 @@ QJSValue WalletsProxy::invokeJsCallBack(QJSValue jsCallback, QJSValueList args)
 
 int WalletsProxy::indexOfWalletId(const QString &walletId) const
 {
+   if (!walletsMgr_) {
+      return 0;
+   }
+
    for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
       const auto &wallet = walletsMgr_->getHDWallet(i);
       if (wallet->walletId() == walletId.toStdString()) {
@@ -716,6 +730,10 @@ int WalletsProxy::indexOfWalletId(const QString &walletId) const
 
 QString WalletsProxy::walletIdForIndex(int index) const
 {
+   if (!walletsMgr_) {
+      return {};
+   }
+
    const auto &wallet = walletsMgr_->getHDWallet(index);
    if (wallet) {
       return QString::fromStdString(wallet->walletId());

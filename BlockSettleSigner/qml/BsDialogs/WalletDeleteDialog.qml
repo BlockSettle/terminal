@@ -89,8 +89,9 @@ CustomTitleDialogWindow {
                 }
             }
 
-            CustomButtonPrimary {
+            CustomButton {
                 text: qsTr("CONFIRM")
+                primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: chkConfirm.checked

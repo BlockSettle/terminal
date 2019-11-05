@@ -18,7 +18,7 @@ CustomTitleDialogWindow {
     id: root
 
     property bool primaryWalletExists: walletsProxy.primaryWalletExists
-    property bool ccInfoLoaded: walletsProxy.hasCCInfo
+    property bool hasCCInfoLoaded: walletsProxy.hasCCInfo
     property string password
     property QSeed seed: QSeed{}
     property WalletInfo walletInfo: WalletInfo{}
@@ -44,7 +44,7 @@ CustomTitleDialogWindow {
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
     Component.onCompleted: {
-        if (!primaryWalletExists && ccInfoLoaded) {
+        if (!primaryWalletExists && hasCCInfoLoaded) {
             cbPrimary.checked = true
             tfName.text = qsTr("Primary Wallet");
         }
@@ -350,20 +350,24 @@ CustomTitleDialogWindow {
                         CustomCheckBox {
                             id: cbPrimary
                             Layout.fillWidth: true
-                            //Layout.leftMargin: inputLabelsWidth + 5
-                            enabled: !primaryWalletExists && ccInfoLoaded
-                            checked: !primaryWalletExists && ccInfoLoaded
+                            checked: !primaryWalletExists && hasCCInfoLoaded
                             text: qsTr("Primary Wallet")
 
-                            ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
+                            ToolTip.text: { primaryWalletExists
+                                            ? qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
+                                            : qsTr("Log into the Terminal in order to create a Primary Wallet.") }
+
                             ToolTip.delay: 150
                             ToolTip.timeout: 5000
-                            ToolTip.visible: cbPrimary.hovered && primaryWalletExists
+                            ToolTip.visible: cbPrimary.hovered && (primaryWalletExists || !hasCCInfoLoaded)
 
                             // workaround on https://bugreports.qt.io/browse/QTBUG-30801
                             // enabled: !primaryWalletExists
                             onCheckedChanged: {
-                                if (primaryWalletExists) cbPrimary.checked = false;
+                                if (primaryWalletExists || !hasCCInfoLoaded) {
+                                    cbPrimary.checked = false;
+                                    return;
+                                }
 
                                 if (!primaryWalletExists && (tfName.text === walletsProxy.generateNextWalletName() || tfName.text.length === 0)) {
                                     tfName.text = qsTr("Primary Wallet");
@@ -584,8 +588,9 @@ CustomTitleDialogWindow {
                 }
             }
 
-            CustomButtonPrimary {
+            CustomButton {
                 id: btnAccept
+                primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 text: qsTr("Import")

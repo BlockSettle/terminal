@@ -78,12 +78,12 @@ WalletInfo *QmlFactory::createWalletInfoFromDigitalBackup(const QString &filenam
 }
 
 AuthSignWalletObject *QmlFactory::createAutheIDSignObject(AutheIDClient::RequestType requestType
-   , WalletInfo *walletInfo, int expiration)
+   , WalletInfo *walletInfo, int expiration, int timestamp)
 {
    logger_->debug("[QmlFactory] signing {}", walletInfo->walletId().toStdString());
    AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
    authObject->connectToServer();
-   authObject->signWallet(requestType, walletInfo, expiration);
+   authObject->signWallet(requestType, walletInfo, expiration, timestamp);
    QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
    return authObject;
 }

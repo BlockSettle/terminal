@@ -7,16 +7,9 @@ binpath="../build_terminal/RelWithDebInfo/bin"
 binary=$binpath/blocksettle
 scriptpath="../Scripts"
 
-libprotobuf="${DEV_3RD_ROOT=../../3rd}/release/Protobuf/lib"
-
 if [ ! -x $binary ]; then
     echo "Release terminal binary $binary doesn't exist!"
     exit
-fi
-
-if [ ! -d $libprotobuf ]; then
-   echo "Protobuf library dir is missing at $libprotobuf!"
-   exit
 fi
 
 mkdir -p Ubuntu/usr/bin
@@ -29,8 +22,6 @@ cp $binpath/blocksettle Ubuntu/usr/bin/
 cp $binpath/blocksettle_signer Ubuntu/usr/bin/
 cp $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle/scripts/
 cp $scriptpath/RFQBot.qml Ubuntu/usr/share/blocksettle/scripts/
-cp -P $libprotobuf/libprotobuf.so* Ubuntu/lib/x86_64-linux-gnu/
-cp $libprotobuf/libprotobuf.la Ubuntu/lib/x86_64-linux-gnu/
 
 dpkg -b Ubuntu bsterminal.deb
 echo "deb package generated"

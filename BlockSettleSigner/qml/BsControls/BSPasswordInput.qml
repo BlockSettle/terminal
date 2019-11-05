@@ -41,7 +41,7 @@ CustomTitleDialogWindow {
         btnAccept.visible = false
         btnReject.anchors.horizontalCenter = barFooter.horizontalCenter
 
-        authSign = qmlFactory.createAutheIDSignObject(autheIDSignType, walletInfo, timeLeft - authSign.networkDelayFix())
+        authSign = qmlFactory.createAutheIDSignObject(autheIDSignType, walletInfo, timeLeft)
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth
@@ -51,7 +51,7 @@ CustomTitleDialogWindow {
         });
         authSign.failed.connect(function(errorText) {
             var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
-                , qsTr("Wallet"), qsTr("eID request failed with error: \n") + errorText
+                , qsTr("Wallet"), errorText
                 , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
             mb.bsAccepted.connect(function() { rejectAnimated() })
         })
@@ -193,8 +193,9 @@ CustomTitleDialogWindow {
                 }
             }
 
-            CustomButtonPrimary {
+            CustomButton {
                 id: btnAccept
+                primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.margins: 5

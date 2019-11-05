@@ -2,7 +2,6 @@ module CustomControls
 
 CustomButton             1.0 CustomButton.qml
 CustomButtonBar          1.0 CustomButtonBar.qml
-CustomButtonPrimary      1.0 CustomButtonPrimary.qml
 CustomCheckBox           1.0 CustomCheckBox.qml
 CustomComboBox           1.0 CustomComboBox.qml
 CustomContainer          1.0 CustomContainer.qml
@@ -21,3 +20,4 @@ CustomTextArea           1.0 CustomTextArea.qml
 CustomTextInput          1.0 CustomTextInput.qml
 CustomPasswordTextInput  1.0 CustomPasswordTextInput.qml
 CustomTitleDialogWindow  1.0 CustomTitleDialogWindow.qml
+CustomTitleDialogWindowWithExpander 1.0 CustomTitleDialogWindowWithExpander.qml

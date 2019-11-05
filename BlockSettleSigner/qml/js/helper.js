@@ -47,9 +47,9 @@ function messageBoxCritical(title, text, details) {
 function raiseWindow(w) {
     w.show()
     w.raise()
-    w.requestActivate()
     w.flags |= Qt.WindowStaysOnTopHint
     w.flags &= ~Qt.WindowStaysOnTopHint
+    w.requestActivate()
 }
 
 function hideWindow(w) {
@@ -63,7 +63,7 @@ function hideWindow(w) {
 }
 
 function requesteIdAuth (requestType, walletInfo, onSuccess) {
-    var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo, authSign.defaultExpiration() - authSign.networkDelayFix())
+    var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo, authSign.defaultExpiration())
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
     authProgress.email = walletInfo.email()
@@ -90,11 +90,11 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
     authObject.failed.connect(function(errorText) {       
         console.log("QML requesteIdAuth: authObject.failed")
         var mb = messageBox(BSMessageBox.Type.Critical
-                                     , qsTr("Wallet")
-                                     , qsTr("eID request failed with error: \n") + errorText
-                                     , qsTr("Wallet Name: %1\nWallet ID: %2")
-                                     .arg(walletInfo.name)
-                                     .arg(walletInfo.rootId))
+           , qsTr("Wallet")
+           , errorText
+           , qsTr("Wallet Name: %1\nWallet ID: %2")
+               .arg(walletInfo.name)
+               .arg(walletInfo.rootId))
 
         authProgress.setNextChainDialog(mb)
         authProgress.rejectAnimated()
@@ -136,11 +136,11 @@ function removeEidDevice (index, walletInfo, onSuccess) {
     })
     authObject.failed.connect(function(errorText) {
         messageBox(BSMessageBox.Type.Critical
-                                     , qsTr("Wallet")
-                                     , qsTr("eID request failed with error: \n") + errorText
-                                     , qsTr("Wallet Name: %1\nWallet ID: %2")
-                                     .arg(walletInfo.name)
-                                     .arg(walletInfo.rootId))
+           , qsTr("Wallet")
+           , errorText
+           , qsTr("Wallet Name: %1\nWallet ID: %2")
+              .arg(walletInfo.name)
+              .arg(walletInfo.rootId))
 
         authProgress.rejectAnimated()
         authObject.destroy()
@@ -175,11 +175,11 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
     })
     authObject.failed.connect(function(errorText) {
         messageBox(BSMessageBox.Type.Critical
-                                     , qsTr("Wallet")
-                                     , qsTr("eID request failed with error: \n") + errorText
-                                     , qsTr("Wallet Name: %1\nWallet ID: %2")
-                                     .arg(walletInfo.name)
-                                     .arg(walletInfo.rootId))
+           , qsTr("Wallet")
+           , errorText
+           , qsTr("Wallet Name: %1\nWallet ID: %2")
+              .arg(walletInfo.name)
+              .arg(walletInfo.rootId))
 
         authProgress.rejectAnimated()
         authObject.destroy()
@@ -241,6 +241,8 @@ function evalWorker(method, cppCallback, argList) {
     console.log("helper.js evalWorker call: " + method)
 
     let jsCallback = function(cbArg0, cbArg1, cbArg2, cbArg3, cbArg4, cbArg5, cbArg6, cbArg7){
+        console.log("helper.js evalWorker callback for: " + method)
+
         let cbArgList = new Array(7)
 
         if (typeof cbArg0 !== 'undefined') cbArgList[0] = cbArg0
@@ -252,7 +254,7 @@ function evalWorker(method, cppCallback, argList) {
         if (typeof cbArg6 !== 'undefined') cbArgList[6] = cbArg6
         if (typeof cbArg7 !== 'undefined') cbArgList[7] = cbArg7
 
-        if (cppCallback) {
+        if (typeof cppCallback === 'object' && cppCallback !== null) {
             cppCallback.exec(cbArgList)
         }
     }
@@ -439,20 +441,15 @@ function tryActivateAutoSign(walletInfo, showResult) {
         }
     }
 
-    var passwordDialog = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
+    var dlg = Qt.createComponent("../BsControls/BSPasswordInputAutoSignDialog.qml").createObject(mainWindow
         , {"walletInfo": walletInfo});
 
-    prepareDialog(passwordDialog)
-    passwordDialog.open()
-    passwordDialog.init()
+    prepareDialog(dlg)
+    dlg.open()
+    dlg.init()
 
-    passwordDialog.bsAccepted.connect(function() {
-        var passwordData = qmlFactory.createPasswordData()
-        passwordData.encType = QPasswordData.Password
-        passwordData.encKey = ""
-        passwordData.textPassword = passwordDialog.enteredPassword
-
-        signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
+    dlg.bsAccepted.connect(function() {
+        signerStatus.activateAutoSign(walletInfo.rootId, dlg.passwordData, true, autoSignCallback)
     })
 }
 
@@ -514,14 +511,14 @@ function createTxSignSettlementDialog(jsCallback, txInfo, passwordDialogData, wa
         dlg = Qt.createComponent("../BsDialogs/TxSignSettlementXBTMarketDialog.qml").createObject(mainWindow
            , {"txInfo": txInfo,
               "passwordDialogData": passwordDialogData,
-               "walletInfo": walletInfo
+              "walletInfo": walletInfo
         })
     }
     else if (passwordDialogData.Market === "CC") {
         dlg = Qt.createComponent("../BsDialogs/TxSignSettlementCCMarketDialog.qml").createObject(mainWindow
            , {"txInfo": txInfo,
               "passwordDialogData": passwordDialogData,
-               "walletInfo": walletInfo
+              "walletInfo": walletInfo
         })
     }
     else {
@@ -597,11 +594,15 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
 }
 
 function updateDialogData(jsCallback, passwordDialogData) {
-    console.log("Updating password dialog " + currentDialog + ", updated keys: " + passwordDialogData.keys())
+    console.log("Trying to update password dialog " + currentDialog + ", Settl Id: " + passwordDialogData.SettlementId)
     if (!currentDialog || typeof currentDialog.passwordDialogData === "undefined") {
         return
     }
-    currentDialog.passwordDialogData.merge(passwordDialogData)
+
+    if (passwordDialogData.SettlementId === currentDialog.passwordDialogData.SettlementId) {
+        console.log("Updating password dialog, updated keys: " + passwordDialogData.keys())
+        currentDialog.passwordDialogData.merge(passwordDialogData)
+    }
 }
 
 function isLiteMode(){

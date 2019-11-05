@@ -23,7 +23,6 @@
         <file>qml/BsControls/BSMessageBox.qml</file>
         <file>qml/StyledControls/CustomButton.qml</file>
         <file>qml/StyledControls/CustomButtonBar.qml</file>
-        <file>qml/StyledControls/CustomButtonPrimary.qml</file>
         <file>qml/StyledControls/CustomCheckBox.qml</file>
         <file>qml/StyledControls/CustomComboBox.qml</file>
         <file>qml/StyledControls/CustomContainer.qml</file>
@@ -74,5 +73,6 @@
         <file>qml/BsDialogs/TxSignSettlementCCMarketDialog.qml</file>
         <file>qml/BsDialogs/TxSignSettlementXBTMarketDialog.qml</file>
         <file>qml/BsControls/BSPasswordInputRevokeAuthAddress.qml</file>
+        <file>qml/StyledControls/CustomTitleDialogWindowWithExpander.qml</file>
     </qresource>
 </RCC>
