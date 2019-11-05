@@ -85,10 +85,10 @@ public:
       });
       promSync.get_future().wait();
 
-      const auto regIDs = syncWalletMgr_->registerWallets();
       for (const auto &hdWallet : syncWalletMgr_->hdWallets()) {
          hdWallet->setCustomACT<UnitTestWalletACT>(env.armoryConnection());
       }
+      const auto regIDs = syncWalletMgr_->registerWallets();
       UnitTestWalletACT::waitOnRefresh(regIDs);
 
       OtcClientParams params;
