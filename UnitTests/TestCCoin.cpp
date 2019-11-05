@@ -161,7 +161,7 @@ void TestCCoin::UpdateBalances(std::shared_ptr<bs::sync::hd::Leaf> wallet)
    };
 
    //async, has to wait
-   wallet->updateBalances(cbBalance);
+   EXPECT_TRUE(wallet->updateBalances(cbBalance));
    fut.wait();
 }
 
@@ -519,11 +519,11 @@ TEST_F(TestCCoin, Initial_balances)
 
    for (size_t i = 0; i < usersCount_; i++) {
       const auto &ccBalance = userWallets_[i]->getAddrBalance(userCCAddresses_[i]);
-      ASSERT_FALSE(ccBalance.empty());
-      EXPECT_EQ(ccBalance[0], 100 * ccLotSize_);
+      ASSERT_FALSE(ccBalance.empty()) << i << " wallet " << userWallets_[i]->walletId();
+      EXPECT_EQ(ccBalance[0], 100 * ccLotSize_) << i << " wallet " << userWallets_[i]->walletId();
       const auto &fundBalance = userWallets_[i]->getAddrBalance(userFundAddresses_[i]);
-      ASSERT_FALSE(fundBalance.empty());
-      EXPECT_EQ(fundBalance[0], 50 * COIN);
+      ASSERT_FALSE(fundBalance.empty()) << i << " wallet " << userWallets_[i]->walletId();
+      EXPECT_EQ(fundBalance[0], 50 * COIN) << i << " wallet " << userWallets_[i]->walletId();
    }
 
    auto&& cct = makeCct();
