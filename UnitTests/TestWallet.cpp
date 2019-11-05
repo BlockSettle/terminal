@@ -1820,7 +1820,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
          promUtxo->set_value(inputs.front());
       }
    };
-   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+   ASSERT_TRUE(syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX));
    const auto input = futUtxo.get();
    ASSERT_TRUE(input.isInitialized());
 
