@@ -64,7 +64,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
    syncMgr->setSignContainer(inprocSigner);
-   
+
    auto promSync = std::make_shared<std::promise<bool>>();
    auto futSync = promSync->get_future();
    const auto &cbSync = [this, promSync](int cur, int total) {
