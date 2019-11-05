@@ -88,15 +88,13 @@ void OTCWindowsAdapterBase::onUpdateBalances()
 
 void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 {
-   allUTXOs_.clear();
-   selectedUTXO_.clear();
-
-   auto cb = [parentWidget = QPointer<OTCWindowsAdapterBase>(this)](const std::vector<UTXO> &utxos) {
-      if (!parentWidget) {
+   auto cb = [handle = validityFlag_.handle(), this](const std::vector<UTXO> &utxos) mutable {
+      ValidityGuard guard(handle);
+      if (!handle.isValid()) {
          return;
       }
-      parentWidget->allUTXOs_ = utxos;
-      QMetaObject::invokeMethod(parentWidget, &OTCWindowsAdapterBase::onShowXBTInputReady);
+      allUTXOs_ = utxos;
+      QMetaObject::invokeMethod(this, &OTCWindowsAdapterBase::onShowXBTInputReady);
    };
 
    const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
@@ -107,8 +105,20 @@ void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 
 void OTCWindowsAdapterBase::onShowXBTInputReady()
 {
+   const bool useAutoSel = selectedUTXO_.empty();
+
    auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs_);
-   CoinControlDialog dialog(inputs, false, this);
+
+   // Set this to false is needed otherwise current selection would be cleared
+   inputs->SetUseAutoSel(useAutoSel);
+
+   if (!useAutoSel) {
+      for (const auto &utxo : selectedUTXO_) {
+         inputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
+      }
+   }
+
+   CoinControlDialog dialog(inputs, true, this);
    int rc = dialog.exec();
    if (rc == QDialog::Accepted) {
       selectedUTXO_ = dialog.selectedInputs();
@@ -181,4 +191,9 @@ QString OTCWindowsAdapterBase::getSide(bs::network::otc::Side requestSide, bool 
    }
 
    return QString::fromStdString(bs::network::otc::toString(requestSide));
+}
+
+void OTCWindowsAdapterBase::clearSelectedInputs()
+{
+   selectedUTXO_.clear();
 }

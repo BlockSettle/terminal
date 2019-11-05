@@ -54,7 +54,7 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
 
 OTCNegotiationRequestWidget::~OTCNegotiationRequestWidget() = default;
 
-bs::network::otc::Offer OTCNegotiationRequestWidget::offer()
+bs::network::otc::Offer OTCNegotiationRequestWidget::offer() const
 {
    bs::network::otc::Offer result;
    const bool isSell = ui_->pushButtonSell->isChecked();
@@ -69,12 +69,10 @@ bs::network::otc::Offer OTCNegotiationRequestWidget::offer()
       result.recvAddress = ui_->receivingAddressComboBox->currentText().toStdString();
    }
 
-   result.inputs = selectedUTXO_;
-   selectedUTXO_.clear();
+   result.inputs = selectedUTXOs();
 
    return result;
 }
-
 
 void OTCNegotiationRequestWidget::onAboutToApply()
 {
@@ -184,7 +182,7 @@ void OTCNegotiationRequestWidget::onSellClicked()
    ui_->labelWallet->setText(paymentWallet);
 
    onUpdateIndicativePrice();
-   selectedUTXO_.clear();
+   clearSelectedInputs();
 }
 
 void OTCNegotiationRequestWidget::onBuyClicked()
@@ -199,7 +197,7 @@ void OTCNegotiationRequestWidget::onBuyClicked()
    ui_->labelWallet->setText(receivingWallet);
 
    onUpdateIndicativePrice();
-   selectedUTXO_.clear();
+   clearSelectedInputs();
 }
 
 void OTCNegotiationRequestWidget::onShowXBTInputsClicked()
@@ -229,13 +227,13 @@ void OTCNegotiationRequestWidget::onChanged()
 
 void OTCNegotiationRequestWidget::onChatRoomChanged()
 {
-   selectedUTXO_.clear();
+   clearSelectedInputs();
 }
 
 void OTCNegotiationRequestWidget::onCurrentWalletChanged()
 {
    UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWallet());
-   selectedUTXO_.clear();
+   clearSelectedInputs();
    onUpdateBalances();
 }
 
@@ -289,8 +287,8 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
       });
    };
 
-   if (!selectedUTXO_.empty()) {
-      cb(selectedUTXO_);
+   if (!selectedUTXOs().empty()) {
+      cb(selectedUTXOs());
       return;
    }
 
