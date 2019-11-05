@@ -412,8 +412,7 @@ void TransactionsWidget::walletsChanged()
    ui_->walletBox->clear();
    ui_->walletBox->addItem(tr("All Wallets"));
    int index = 1;
-   for (unsigned int i = 0; i < walletsManager_->hdWalletsCount(); i++) {
-      const auto &hdWallet = walletsManager_->getHDWallet(i);
+   for (const auto &hdWallet : walletsManager_->hdWallets()) {
       ui_->walletBox->addItem(QString::fromStdString(hdWallet->name()));
       QStringList allLeafIds = walletLeavesIds(hdWallet);
 

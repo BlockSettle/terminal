@@ -477,15 +477,17 @@ void WalletsWidget::scrollChanged()
 void WalletsWidget::onWalletsSynchronized()
 {
    if (walletsManager_->hasPrimaryWallet()) {
-      for (size_t i = 0; i < walletsManager_->hdWalletsCount(); ++i) {
-         const auto hdWallet = walletsManager_->getHDWallet(i);
+      int i = 0;
+      for (const auto &hdWallet : walletsManager_->hdWallets()) {
          if (hdWallet->isPrimary()) {
-            ui_->treeViewWallets->selectionModel()->select(walletsModel_->index(i, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            ui_->treeViewWallets->selectionModel()->select(walletsModel_->index(i, 0)
+               , QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
             break;
          }
+         i++;
       }
    }
-   else if (walletsManager_->hdWalletsCount() > 0){
+   else if (!walletsManager_->hdWallets().size() > 0){
       ui_->treeViewWallets->selectionModel()->select(walletsModel_->index(0, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
    }
 }

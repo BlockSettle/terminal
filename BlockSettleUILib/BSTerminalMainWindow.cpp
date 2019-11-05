@@ -545,7 +545,7 @@ void BSTerminalMainWindow::acceptMDAgreement()
 void BSTerminalMainWindow::updateControlEnabledState()
 {
    if (action_send_) {
-      action_send_->setEnabled(walletsMgr_->hdWalletsCount() > 0
+      action_send_->setEnabled(!walletsMgr_->hdWallets().empty()
          && armory_->isOnline() && signContainer_ && signContainer_->isReady());
    }
 }
@@ -691,7 +691,7 @@ void BSTerminalMainWindow::MainWinACT::onRefresh(const std::vector<BinaryData> &
 {
    if (!parent_->initialWalletCreateDialogShown_ && parent_->walletsMgr_
       && parent_->walletsMgr_->isWalletsReady()
-      && (parent_->walletsMgr_->hdWalletsCount() == 0)) {
+      && parent_->walletsMgr_->hdWallets().empty()) {
 
       const auto &deferredDialog = [this]{
          parent_->createWallet(true, [] {});
@@ -864,8 +864,9 @@ void BSTerminalMainWindow::connectSigner()
 bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb
    , bool reportSuccess)
 {
-   if (primary && (walletsMgr_->hdWalletsCount() > 0)) {
-      auto wallet = walletsMgr_->getHDWallet(0);
+   const auto &hdWallets = walletsMgr_->hdWallets();
+   if (primary && !hdWallets.empty()) {
+      auto wallet = hdWallets[0];
       if (wallet->isPrimary()) {
          if (cb) {
             cb();

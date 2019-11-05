@@ -144,8 +144,7 @@ int UiUtils::fillWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::
       // Let's add primary HD wallet first if exists
       addHdWallet(primaryWallet);
    }
-   for (int i = 0; i < int(walletsManager->hdWalletsCount()); ++i) {
-      const auto &hdWallet = walletsManager->getHDWallet(unsigned(i));
+   for (const auto &hdWallet: walletsManager->hdWallets()) {
       if (hdWallet != primaryWallet) {
          addHdWallet(hdWallet);
       }
@@ -181,20 +180,21 @@ int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& wall
 
 int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
-   if ((walletsManager == nullptr) || (walletsManager->hdWalletsCount() == 0)) {
+   if ((walletsManager == nullptr) || walletsManager->hdWallets().empty()) {
       return -1;
    }
    int selected = 0;
    const auto &priWallet = walletsManager->getPrimaryWallet();
    auto b = comboBox->blockSignals(true);
    comboBox->clear();
-   for (size_t i = 0; i < walletsManager->hdWalletsCount(); i++) {
-      const auto &hdWallet = walletsManager->getHDWallet(i);
+   size_t i = 0;
+   for (const auto &hdWallet : walletsManager->hdWallets()) {
       if (hdWallet == priWallet) {
          selected = i;
       }
       comboBox->addItem(QString::fromStdString(hdWallet->name()));
       comboBox->setItemData(i, QString::fromStdString(hdWallet->walletId()), UiUtils::WalletIdRole);
+      i++;
    }
    comboBox->blockSignals(b);
    QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, selected));
