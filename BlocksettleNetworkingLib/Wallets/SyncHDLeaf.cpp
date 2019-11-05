@@ -110,15 +110,21 @@ bool hd::Leaf::isOwnId(const std::string &wId) const
 
 void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
 {
-   const auto &cbRegisterExt = [this, online] {
+   const auto &cbRegistered = [this] {
+      isRegistered_ = true;
+      onRegistrationCompleted();
+   };
+   const auto &cbRegisterExt = [this, online, cbRegistered] {
       if (isExtOnly_ || (regIdExt_.empty() && regIdInt_.empty())) {
+         cbRegistered();
          if (online) {
             postOnline();
          }
       }
    };
-   const auto &cbRegisterInt = [this, online] {
+   const auto &cbRegisterInt = [this, online, cbRegistered] {
       if (regIdExt_.empty() && regIdInt_.empty()) {
+         cbRegistered();
          if (online) {
             postOnline();
          }
@@ -139,6 +145,16 @@ void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
          } else if (id == regIdInt_) {
             regIdInt_.clear();
             cbRegisterInt();
+         }
+      }
+   }
+
+   if (!refreshCallbacks_.empty()) {
+      for (const auto &id : ids) {
+         const auto &it = refreshCallbacks_.find(id.toBinStr());
+         if (it != refreshCallbacks_.end()) {
+            it->second();
+            refreshCallbacks_.erase(it);
          }
       }
    }
@@ -380,27 +396,15 @@ std::vector<std::string> hd::Leaf::registerWallet(
       const auto addrsExt = getAddrHashesExt();
       const auto addrsInt = isExtOnly_ ? std::vector<BinaryData>{} : getAddrHashesInt();
       std::vector<std::string> regIds;
-      auto notifCount = std::make_shared<unsigned>(0);
-      const auto &cbRegistered = [this, notifCount](const std::string &)
-      {
-         if (!isExtOnly_) {
-            if ((*notifCount)++ == 0)
-               return;
-         }
-         isRegistered_ = true;
-         onRegistrationCompleted();
-      };
 
       std::unique_lock<std::mutex> lock(regMutex_);
       btcWallet_ = armory_->instantiateWallet(walletId());
-      regIdExt_ = armory_->registerWallet(btcWallet_
-         , walletId(), addrsExt, cbRegistered, asNew);
+      regIdExt_ = btcWallet_->registerAddresses(addrsExt, asNew);
       regIds.push_back(regIdExt_);
 
       if (!isExtOnly_) {
          btcWalletInt_ = armory_->instantiateWallet(walletIdInt());
-         regIdInt_ = armory_->registerWallet(btcWalletInt_
-            , walletIdInt(), addrsInt, cbRegistered, asNew);
+         regIdInt_ = btcWalletInt_->registerAddresses(addrsInt, asNew);
          regIds.push_back(regIdInt_);
       }
       logger_->debug("[sync::hd::Leaf::registerWallet] registered {}+{} addresses in {}, {} regIds {} {}"
@@ -509,19 +513,14 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
          for (auto& addrPair : addrVec) {
             addrHashes.push_back(addrPair.first.prefixed());
          }
-         auto cbRegistered = [cb](const std::string &regId)
-         {
-            if (cb)
-               cb();
-         };
 
          if (extInt) {
-            armory_->registerWallet(btcWallet_
-               , walletId(), addrHashes, cbRegistered, true);
+            const auto regId = btcWallet_->registerAddresses(addrHashes, true);
+            refreshCallbacks_[regId] = cb;
          }
          else {
-            armory_->registerWallet(btcWalletInt_
-               , walletIdInt(), addrHashes, cbRegistered, true);
+            const auto regId = btcWalletInt_->registerAddresses(addrHashes, true);
+            refreshCallbacks_[regId] = cb;
          }
          return;
       }
@@ -563,7 +562,7 @@ void hd::Leaf::scan(const std::function<void(bs::sync::SyncState)> &cb)
       for (auto& addrPair : addrVec) {
          addrHashes.push_back(addrPair.first.prefixed());
       }
-      scanRegId_ = armory_->registerWallet(scanWallet_, scanWallet_->walletID(), addrHashes, nullptr);
+      scanRegId_ = scanWallet_->registerAddresses(addrHashes, false);
       cbScanMap_[scanRegId_] = cb;
    };
 

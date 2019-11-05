@@ -659,6 +659,8 @@ void Wallet::onRefresh(const std::vector<BinaryData> &ids, bool online)
    for (const auto &id : ids) {
       if (id == regId_) {
          regId_.clear();
+         logger_->debug("[bs::sync::Wallet::registerWallet] wallet {} registered", walletId());
+         isRegistered_ = true;
          init();
 
          const auto &cbTrackAddrChain = [this, handle = validityFlag_.handle()]
@@ -689,18 +691,8 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConn
    setArmory(armory);
 
    if (armory_) {
-      const auto &cbRegister = [this, handle = validityFlag_.handle()](const std::string &) mutable {
-         ValidityGuard lock(handle);
-         if (!handle.isValid()) {
-            return;
-         }
-         logger_->debug("[bs::sync::Wallet::registerWallet] Wallet ready: {}", walletId());
-         isRegistered_ = true;
-      };
-
       const auto wallet = armory_->instantiateWallet(walletId());
-      regId_ = armory_->registerWallet(wallet
-         , walletId(), getAddrHashes(), cbRegister, asNew);
+      regId_ = wallet->registerAddresses(getAddrHashes(), asNew);
       logger_->debug("[bs::sync::Wallet::registerWallet] register wallet {}, {} addresses = {}"
          , walletId(), getAddrHashes().size(), regId_);
       return { regId_ };

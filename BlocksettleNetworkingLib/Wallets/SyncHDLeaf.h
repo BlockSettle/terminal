@@ -147,6 +147,8 @@ namespace bs {
             std::map<AddrPoolKey, bs::Address>  addressPool_;
             std::map<bs::Address, AddrPoolKey>  poolByAddr_;
 
+            std::unordered_map<std::string, std::function<void()>>   refreshCallbacks_;
+
          private:
             std::vector<bs::Address>                     intAddresses_;
             std::vector<bs::Address>                     extAddresses_;
