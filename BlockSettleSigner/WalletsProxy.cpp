@@ -554,7 +554,7 @@ QString WalletsProxy::generateNextWalletName() const
    }
 
    QString newWalletName;
-   size_t nextNumber = walletsMgr_->hdWalletsCount() + 1;
+   size_t nextNumber = walletsMgr_->hdWallets().size() + 1;
    do {
       newWalletName = tr("Wallet #%1").arg(nextNumber);
       nextNumber++;
@@ -696,8 +696,7 @@ QStringList WalletsProxy::walletNames() const
    }
 
    QStringList result;
-   for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
-      const auto &wallet = walletsMgr_->getHDWallet(i);
+   for (const auto &wallet : walletsMgr_->hdWallets()) {
       result.push_back(QString::fromStdString(wallet->name()));
    }
    return result;
@@ -719,11 +718,12 @@ int WalletsProxy::indexOfWalletId(const QString &walletId) const
       return 0;
    }
 
-   for (unsigned int i = 0; i < walletsMgr_->hdWalletsCount(); i++) {
-      const auto &wallet = walletsMgr_->getHDWallet(i);
+   size_t i = 0;
+   for (const auto &wallet : walletsMgr_->hdWallets()) {
       if (wallet->walletId() == walletId.toStdString()) {
          return i;
       }
+      i++;
    }
    return 0;
 }
@@ -734,9 +734,9 @@ QString WalletsProxy::walletIdForIndex(int index) const
       return {};
    }
 
-   const auto &wallet = walletsMgr_->getHDWallet(index);
-   if (wallet) {
-      return QString::fromStdString(wallet->walletId());
+   const auto &hdWallets = walletsMgr_->hdWallets();
+   if ((index < 0) || (index >= hdWallets.size())) {
+      return {};
    }
-   return {};
+   return QString::fromStdString(hdWallets[index]->walletId());
 }

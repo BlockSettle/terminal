@@ -65,7 +65,11 @@ WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) const
 
 bs::hd::WalletInfo *QmlFactory::createWalletInfo(int index) const
 {
-   const auto &wallet = walletsMgr_->getHDWallet(index);
+   const auto &hdWallets = walletsMgr_->hdWallets();
+   if ((index < 0) || (index >= hdWallets.size())) {
+      return nullptr;
+   }
+   const auto &wallet = hdWallets[index];
    auto wi = new bs::hd::WalletInfo(walletsMgr_, wallet);
    QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
    return wi;
