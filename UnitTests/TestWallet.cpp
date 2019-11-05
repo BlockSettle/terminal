@@ -431,7 +431,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
       auto usedAddrList = leafPtrNative->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
       for (auto& addr : usedAddrList) {
-         usedAddrHash.insert(addr.unprefixed());
+         usedAddrHash.insert(addr.prefixed());
       }
 
       grabbedAddrHash.insert(extAddrVecNative.begin(), extAddrVecNative.end());
@@ -463,7 +463,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
       auto usedAddrList = leafPtr->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
       for (auto& addr : usedAddrList) {
-         usedAddrHash.insert(addr.unprefixed());
+         usedAddrHash.insert(addr.prefixed());
       }
       //test it vs grabbed addresses
       EXPECT_EQ(usedAddrHash.size(), 10);
@@ -488,7 +488,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
       auto woAddrList = leafPtr->getUsedAddressList();
       std::set<BinaryData> woAddrHash;
       for (auto& addr : woAddrList)
-         woAddrHash.insert(addr.unprefixed());
+         woAddrHash.insert(addr.prefixed());
 
       //test it vs grabbed addresses
       EXPECT_EQ(woAddrHash.size(), 10);
@@ -527,7 +527,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
       auto usedAddrList = leafPtr->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
       for (auto& addr : usedAddrList)
-         usedAddrHash.insert(addr.unprefixed());
+         usedAddrHash.insert(addr.prefixed());
 
       //test it vs grabbed addresses
       EXPECT_EQ(usedAddrHash.size(), 10);
@@ -898,7 +898,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       auto usedAddrList = leafPtr->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
       for (auto& addr : usedAddrList)
-         usedAddrHash.insert(addr.unprefixed());
+         usedAddrHash.insert(addr.prefixed());
 
       grabbedAddrHash.insert(extAddrVec.begin(), extAddrVec.end());
 
@@ -936,7 +936,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       auto usedAddrList = leafPtr->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
       for (auto& addr : usedAddrList)
-         usedAddrHash.insert(addr.unprefixed());
+         usedAddrHash.insert(addr.prefixed());
 
       //test it vs grabbed addresses
       EXPECT_EQ(usedAddrHash.size(), 5);
@@ -957,7 +957,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
          auto pubKey = ext_node.movePublicKey();
          auto saltedKey = CryptoECDSA::PubKeyScalarMultiply(pubKey, salt);
          auto addr_hash = BtcUtils::getHash160(saltedKey);
-         EXPECT_EQ(addr_hash, newAddr);
+         EXPECT_EQ(addr_hash, newAddr.unprefixed());
 
          extAddrVec.push_back(newAddr);
          grabbedAddrHash.insert(newAddr);
@@ -988,7 +988,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       auto woAddrList = leafPtr->getUsedAddressList();
       std::set<BinaryData> woAddrHash;
       for (auto& addr : woAddrList)
-         woAddrHash.insert(addr.unprefixed());
+         woAddrHash.insert(addr.prefixed());
 
       //test it vs grabbed addresses
       EXPECT_EQ(woAddrHash.size(), 6);
@@ -1035,7 +1035,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       auto usedAddrList = leafWO->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
       for (auto& addr : usedAddrList)
-         usedAddrHash.insert(addr.unprefixed());
+         usedAddrHash.insert(addr.prefixed());
 
       //test it vs grabbed addresses
       EXPECT_EQ(usedAddrHash.size(), 6);
@@ -1056,7 +1056,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
          auto pubKey = ext_node.movePublicKey();
          auto saltedKey = CryptoECDSA::PubKeyScalarMultiply(pubKey, salt);
          auto addr_hash = BtcUtils::getHash160(saltedKey);
-         EXPECT_EQ(addr_hash, newAddr);
+         EXPECT_EQ(addr_hash, newAddr.unprefixed());
       }
    }
 }
@@ -1152,7 +1152,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
       auto usedAddrList = leafPtr->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
       for (auto& addr : usedAddrList)
-         usedAddrHash.insert(addr.unprefixed());
+         usedAddrHash.insert(addr.prefixed());
 
       grabbedAddrHash.insert(addrVec.begin(), addrVec.end());
 
@@ -1182,7 +1182,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
       auto usedAddrList = settlLeaf->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
       for (auto& addr : usedAddrList)
-         usedAddrHash.insert(addr.unprefixed());
+         usedAddrHash.insert(addr.prefixed());
 
       EXPECT_EQ(usedAddrHash.size(), 7);
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
@@ -1225,7 +1225,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
       auto usedAddrList = settlLeaf->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
       for (auto& addr : usedAddrList)
-         usedAddrHash.insert(addr.unprefixed());
+         usedAddrHash.insert(addr.prefixed());
 
       EXPECT_EQ(usedAddrHash.size(), 10);
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
@@ -1267,7 +1267,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
       auto usedAddrList = settlLeaf->getUsedAddressList();
       std::set<BinaryData> usedAddrHash;
       for (auto& addr : usedAddrList)
-         usedAddrHash.insert(addr.unprefixed());
+         usedAddrHash.insert(addr.prefixed());
 
       EXPECT_EQ(usedAddrHash.size(), 13);
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
@@ -1742,7 +1742,7 @@ TEST_F(TestWallet, TxIdNativeSegwit)
 
    request.change.value = 298894;
    request.fee = 158;
-   request.change.address = bs::Address("tb1q0yk8wytvdqhc4r3cm2kyjuj9l0l06dylncdlr0");
+   request.change.address = bs::Address::fromAddressString("tb1q0yk8wytvdqhc4r3cm2kyjuj9l0l06dylncdlr0");
 
    ASSERT_NO_THROW(request.txId());
 }
@@ -1832,7 +1832,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
 
    request.change.value = 19899729;
    request.fee = 271;
-   request.change.address = bs::Address("2MykWqWBJGBeuyPGv73CisrokXKeGKNXU2C");
+   request.change.address = bs::Address::fromAddressString("2MykWqWBJGBeuyPGv73CisrokXKeGKNXU2C");
 
    const auto resolver = coreLeaf->getPublicResolver();
 

@@ -178,7 +178,7 @@ void TestCCoin::waitOnZc(const Tx& tx)
    for (unsigned i = 0; i < tx.getNumTxOut(); i++)
    {
       auto&& txOut = tx.getTxOutCopy(i);
-      addresses.push_back(bs::Address(txOut.getScrAddressStr()));
+      addresses.push_back(bs::Address::fromHash(txOut.getScrAddressStr()));
    }
 
    waitOnZc(tx.getThisHash(), addresses);
@@ -272,7 +272,7 @@ BinaryData TestCCoin::SimpleSendMany(const bs::Address & fromAddress, const std:
          uint64_t inputsValue(0);
 
          for (auto &&input : inputs) {
-            if (bs::Address(input.getRecipientScrAddr()) == fromAddress) {
+            if (input.getRecipientScrAddr() == fromAddress.prefixed()) {
                valInputs.push_back(input);
                inputsValue += input.getValue();
                if (inputsValue >= requiredValue + fee)
@@ -393,10 +393,14 @@ void TestCCoin::InitialFund()
    // fund "common" user addresses
    FundFromCoinbase( {userFundAddresses_}, 50 * COIN);
 
+   ASSERT_NE(rootWallet_, nullptr);
+
    MineBlocks(6);
    UpdateBalances(rootWallet_);
 
-   EXPECT_EQ(rootWallet_->getAddrBalance(genesisAddr_)[0], required);
+   const auto &addrBalance = rootWallet_->getAddrBalance(genesisAddr_);
+   ASSERT_FALSE(addrBalance.empty());
+   EXPECT_EQ(addrBalance[0], required);
 
    // fund "CC" user addresses from genesis
    SimpleSendMany(genesisAddr_, userCCAddresses_, 100 * ccLotSize_);
@@ -414,7 +418,7 @@ std::vector<UTXO> TestCCoin::GetUTXOsFor(const bs::Address & addr, bool sortedBy
    {
       std::vector<UTXO> result;
       for (auto && input : inputs) {
-         if (bs::Address(input.getRecipientScrAddr()) == addr)
+         if (input.getRecipientScrAddr() == addr.prefixed())
             result.emplace_back(input);
       }
       if (sortedByValue)
@@ -509,11 +513,17 @@ TEST_F(TestCCoin, Initial_balances)
 {
    InitialFund();
 
-   EXPECT_EQ(rootWallet_->getAddrBalance(genesisAddr_)[0], COIN);
+   const auto &gaBalance = rootWallet_->getAddrBalance(genesisAddr_);
+   ASSERT_FALSE(gaBalance.empty());
+   EXPECT_EQ(gaBalance[0], COIN);
 
    for (size_t i = 0; i < usersCount_; i++) {
-      EXPECT_EQ(userWallets_[i]->getAddrBalance(userCCAddresses_[i])[0], 100 * ccLotSize_);
-      EXPECT_EQ(userWallets_[i]->getAddrBalance(userFundAddresses_[i])[0], 50 * COIN);
+      const auto &ccBalance = userWallets_[i]->getAddrBalance(userCCAddresses_[i]);
+      ASSERT_FALSE(ccBalance.empty());
+      EXPECT_EQ(ccBalance[0], 100 * ccLotSize_);
+      const auto &fundBalance = userWallets_[i]->getAddrBalance(userFundAddresses_[i]);
+      ASSERT_FALSE(fundBalance.empty());
+      EXPECT_EQ(fundBalance[0], 50 * COIN);
    }
 
    auto&& cct = makeCct();
@@ -587,8 +597,8 @@ TEST_F(TestCCoin, Case_MultiUnorderedCC_2CC)
    for (size_t i = 0; i < usersCount_; i++)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 
-   for(size_t i = 10; i < 100; i+=10) 
-   { 
+   for(size_t i = 10; i < 100; i+=10)
+   {
       SimpleSendMany(genesisAddr_, { userCCAddresses_[0] },  i * ccLotSize_);
       MineBlocks(6);
    }
@@ -978,7 +988,7 @@ TEST_F(TestCCoin, ZeroConfChain)
 
       //wait on zc notification
       std::vector<bs::Address> addresses = {
-         bs::Address(utxo.getRecipientScrAddr()), 
+         bs::Address::fromHash(utxo.getRecipientScrAddr()), 
          userCCAddresses_[i]
       };
       waitOnZc(zc.getThisHash(), addresses);
@@ -1099,7 +1109,7 @@ TEST_F(TestCCoin, Reorg)
       const bs::core::WalletPasswordScoped passScoped(lockWalletMain, passphrase_);
 
       std::vector<bs::Address> addresses;
-      addresses.push_back(bs::Address(utxoMain.getRecipientScrAddr()));
+      addresses.push_back(bs::Address::fromHash(utxoMain.getRecipientScrAddr()));
 
       auto lock = signWalletMain->lockDecryptedContainer();
 

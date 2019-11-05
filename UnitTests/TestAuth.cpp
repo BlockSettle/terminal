@@ -158,7 +158,7 @@ void TestAuth::SetUp()
    validationFeed_ =
       std::make_shared<ResolverOneAddress>(validationPrivKey_, validationPubKey_);
 
-   validationAddr_ = bs::Address(validationScrAddr_, AddressEntryType_P2WPKH);
+   validationAddr_ = bs::Address::fromPubKey(validationPubKey_, AddressEntryType_P2WPKH);
 
    envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
    envPtr_->requireAssets();
@@ -271,7 +271,10 @@ TEST_F(TestAuth, ValidationAddressManager)
 
    for (unsigned i = 0; i < 5; i++) {
       //generate user address
-      bs::Address userAddr(CryptoPRNG::generateRandom(20), AddressEntryType_P2WPKH);
+      BinaryData prefixed;
+      prefixed.append(AddressEntry::getPrefixByte(AddressEntryType_P2WPKH));
+      prefixed.append(CryptoPRNG::generateRandom(20));
+      auto userAddr = bs::Address::fromHash(prefixed);
 
       //vet it
       try {
@@ -539,8 +542,7 @@ TEST_F(TestAuth, Revoke)
    SecureBinaryData privKey2 =
       READHEX("5555555555555555555555555555555555555555555555555555555555555555");
    auto&& pubkey2 = CryptoECDSA().ComputePublicKey(privKey2, true);
-   auto&& scrAddr2 = BtcUtils::getHash160(pubkey2);
-   bs::Address validationAddr2(scrAddr2, AddressEntryType_P2WPKH);
+   auto validationAddr2 = bs::Address::fromPubKey(pubkey2, AddressEntryType_P2WPKH);
    
    auto&& validationFeed2 =
       std::make_shared<ResolverOneAddress>(privKey2, pubkey2);
@@ -829,14 +831,12 @@ TEST_F(TestAuth, Concurrency)
    SecureBinaryData privKey2 =
       READHEX("5555555555555555555555555555555555555555555555555555555555555555");
    auto&& pubkey2 = CryptoECDSA().ComputePublicKey(privKey2, true);
-   auto&& scrAddr2 = BtcUtils::getHash160(pubkey2);
-   bs::Address validationAddr2(scrAddr2, AddressEntryType_P2WPKH);
+   auto validationAddr2 = bs::Address::fromPubKey(pubkey2, AddressEntryType_P2WPKH);
 
    SecureBinaryData privKey3 =
       READHEX("6666666666666666666666666666666666666666666666666666666666666666");
    auto&& pubkey3 = CryptoECDSA().ComputePublicKey(privKey3, true);
-   auto&& scrAddr3 = BtcUtils::getHash160(pubkey3);
-   bs::Address validationAddr3(scrAddr3, AddressEntryType_P2WPKH);
+   auto validationAddr3 = bs::Address::fromPubKey(pubkey3, AddressEntryType_P2WPKH);
 
    std::set<SecureBinaryData> authPrivKeys =
    {
@@ -1046,14 +1046,12 @@ TEST_F(TestAuth, Concurrency_WithACT)
    SecureBinaryData privKey2 =
       READHEX("5555555555555555555555555555555555555555555555555555555555555555");
    auto&& pubkey2 = CryptoECDSA().ComputePublicKey(privKey2, true);
-   auto&& scrAddr2 = BtcUtils::getHash160(pubkey2);
-   bs::Address validationAddr2(scrAddr2, AddressEntryType_P2WPKH);
+   auto validationAddr2 = bs::Address::fromPubKey(pubkey2, AddressEntryType_P2WPKH);
 
    SecureBinaryData privKey3 =
       READHEX("6666666666666666666666666666666666666666666666666666666666666666");
    auto&& pubkey3 = CryptoECDSA().ComputePublicKey(privKey3, true);
-   auto&& scrAddr3 = BtcUtils::getHash160(pubkey3);
-   bs::Address validationAddr3(scrAddr3, AddressEntryType_P2WPKH);
+   auto validationAddr3 = bs::Address::fromPubKey(pubkey3, AddressEntryType_P2WPKH);
 
    std::set<SecureBinaryData> authPrivKeys =
    {

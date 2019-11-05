@@ -372,10 +372,10 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
          envPtr_->armoryInstance()->pushZC(txSigned);
 
          auto&& zcVec = UnitTestWalletACT::waitOnZC();
-         if (zcVec.size() != 1) {
+         if (zcVec.size() != 2) {
             promPtr1->set_value(false);
          }
-         ASSERT_EQ(zcVec.size(), 1);
+         ASSERT_EQ(zcVec.size(), 2);
          EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
 
          promPtr1->set_value(true);
@@ -466,6 +466,10 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
       UnitTestWalletACT::waitOnRefresh(regIDs);
 
+      auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
+      auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
+      ASSERT_TRUE(syncLeaf != nullptr);
+
       auto trackProm = std::make_shared<std::promise<bool>>();
       auto trackFut = trackProm->get_future();
       auto trackLbd = [trackProm](bool result)->void
@@ -477,10 +481,6 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       //synchronize address chain use
       syncMgr->trackAddressChainUse(trackLbd);
       trackFut.wait();
-
-      auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
-      auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
-      ASSERT_TRUE(syncLeaf != nullptr);
 
       //check wallet has 100 assets per account
       ASSERT_EQ(syncLeaf->getAddressPoolSize(), 200);
@@ -661,6 +661,9 @@ TEST_F(TestWalletWithArmory, Comments)
    auto addr = leafPtr_->getNewExtAddress();
    ASSERT_FALSE(addr.isNull());
 
+   auto changeAddr = leafPtr_->getNewChangeAddress();
+   ASSERT_FALSE(changeAddr.isNull());
+
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
@@ -669,18 +672,21 @@ TEST_F(TestWalletWithArmory, Comments)
    syncMgr->syncWallets();
 
    auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
-   auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
    
    syncHdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
    auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
    UnitTestWalletACT::waitOnRefresh(regIDs);
+
+   auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
+   ASSERT_EQ(syncWallet->getUsedAddressCount(), 2);
+   EXPECT_EQ(syncWallet->getUsedAddressList()[0], addr);
 
    EXPECT_TRUE(syncWallet->setAddressComment(addr, addrComment));
    EXPECT_EQ(leafPtr_->getAddressComment(addr), addrComment);
 
    //mine some coins to our wallet
    auto armoryInstance = envPtr_->armoryInstance();
-   unsigned blockCount = 7;
+   unsigned blockCount = 6;
 
    const auto &curHeight = envPtr_->armoryConnection()->topBlock();
    auto recipient = addr.getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
@@ -689,37 +695,30 @@ TEST_F(TestWalletWithArmory, Comments)
    ASSERT_EQ(curHeight + blockCount, newTop);
 
    //create tx from those fresh utxos, set a comment by tx hash and check it
-   auto promPtr = std::make_shared<std::promise<bool>>();
+   auto promPtr = std::make_shared<std::promise<std::vector<UTXO>>>();
    auto fut = promPtr->get_future();
-
-   auto wallet = leafPtr_;
-   auto passphrase = passphrase_;
-   auto cbTxOutList = [wallet, hdWallet=walletPtr_, syncWallet, addr, txComment, promPtr, passphrase]
-      (std::vector<UTXO> inputs)->void
+   auto cbTxOutList = [promPtr] (std::vector<UTXO> inputs)
    {
-      if (inputs.empty()) {
-         promPtr->set_value(false);
-      }
-      ASSERT_FALSE(inputs.empty());
-      const auto recip = addr.getRecipient(bs::XBTAmount{ (uint64_t)12000 });
-      const auto txReq = syncWallet->createTXRequest(inputs, { recip }, 345);
-
-      BinaryData txData;
-      {
-         const bs::core::WalletPasswordScoped lock(hdWallet, passphrase);
-         txData = wallet->signTXRequest(txReq);
-      }
-
-      ASSERT_FALSE(txData.isNull());
-      EXPECT_TRUE(syncWallet->setTransactionComment(txData, txComment));
-      Tx tx(txData);
-      EXPECT_TRUE(tx.isInitialized());
-      EXPECT_EQ(wallet->getTransactionComment(tx.getThisHash()), txComment);
-      promPtr->set_value(true);
+      promPtr->set_value(inputs);
    };
-
    EXPECT_TRUE(syncWallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX));
-   EXPECT_TRUE(fut.get());
+   const auto inputs = fut.get();
+   ASSERT_FALSE(inputs.empty());
+   const auto recip = addr.getRecipient(bs::XBTAmount{ (uint64_t)12000 });
+
+   const auto txReq = syncWallet->createTXRequest(inputs, { recip }, 345
+      , false, changeAddr);
+   BinaryData txData;
+   {
+      const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
+      txData = leafPtr_->signTXRequest(txReq);
+   }
+
+   ASSERT_FALSE(txData.isNull());
+   EXPECT_TRUE(syncWallet->setTransactionComment(txData, txComment));
+   Tx tx(txData);
+   EXPECT_TRUE(tx.isInitialized());
+   EXPECT_EQ(leafPtr_->getTransactionComment(tx.getThisHash()), txComment);
 }
 
 TEST_F(TestWalletWithArmory, ZCBalance)
@@ -730,9 +729,10 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    EXPECT_EQ(leafPtr_->getUsedAddressCount(), 3);
 
    //add an extra address not part of the wallet
-   bs::Address otherAddr(
-      READHEX("0000000000000000000000000000000000000000"), 
-      AddressEntryType_P2PKH);
+   BinaryData prefixed;
+   prefixed.append(AddressEntry::getPrefixByte(AddressEntryType_P2PKH));
+   prefixed.append(CryptoPRNG::generateRandom(20));
+   auto otherAddr = bs::Address::fromHash(prefixed);
 
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
    inprocSigner->Start();
@@ -792,45 +792,38 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    //spend these coins
    const uint64_t amount = 5.0 * BTCNumericTypes::BalanceDivider;
    const uint64_t fee = 0.0001 * BTCNumericTypes::BalanceDivider;
-   auto promPtr1 = std::make_shared<std::promise<bool>>();
+
+   auto promPtr1 = std::make_shared<std::promise<std::vector<UTXO>>>();
    auto fut1 = promPtr1->get_future();
-
-   const auto &cbTxOutList = 
-      [this, hdWallet=walletPtr_, leaf=leafPtr_, syncLeaf, changeAddr, addr2, otherAddr,
-       amount, fee, pass=passphrase_, promPtr1]
-      (std::vector<UTXO> inputs)->void
+   const auto &cbTxOutList = [promPtr1] (std::vector<UTXO> inputs)->void
    {
-      if (inputs.empty()) {
-         promPtr1->set_value(false);
-      }
-      ASSERT_GE(inputs.size(), 1);
-
-      //pick a single input
-      std::vector<UTXO> utxos;
-      utxos.push_back(inputs[0]);
-
-      const auto recipient = addr2.getRecipient(bs::XBTAmount{ amount });
-      const auto recipient2 = otherAddr.getRecipient(bs::XBTAmount{ amount });
-      const auto txReq = syncLeaf->createTXRequest(
-         utxos, { recipient, recipient2 }, fee, false, changeAddr);
-      BinaryData txSigned;
-      {
-         const bs::core::WalletPasswordScoped lock(hdWallet, pass);
-         txSigned = leaf->signTXRequest(txReq);
-         ASSERT_FALSE(txSigned.isNull());
-      }
-
-      Tx txObj(txSigned);
-      envPtr_->armoryInstance()->pushZC(txSigned);
-
-      auto&& zcVec = UnitTestWalletACT::waitOnZC();
-      promPtr1->set_value(zcVec.size() == 1);
-      EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
+      promPtr1->set_value(inputs);
    };
-   
    //async, has to wait
    syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
-   ASSERT_TRUE(fut1.get());
+   const auto inputs = fut1.get();
+   ASSERT_GE(inputs.size(), 1);
+
+   //pick a single input
+   std::vector<UTXO> utxos;
+   utxos.push_back(inputs[0]);
+
+   recipient = addr2.getRecipient(bs::XBTAmount{ amount });
+   const auto recipient2 = otherAddr.getRecipient(bs::XBTAmount{ amount });
+   const auto txReq = syncLeaf->createTXRequest(
+      utxos, { recipient, recipient2 }, fee, false, changeAddr);
+   BinaryData txSigned;
+   {
+      const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
+      txSigned = leafPtr_->signTXRequest(txReq);
+      ASSERT_FALSE(txSigned.isNull());
+   }
+
+   Tx txObj(txSigned);
+   envPtr_->armoryInstance()->pushZC(txSigned);
+
+   auto&& zcVec = UnitTestWalletACT::waitOnZC();
+   EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
 
    //update balance
    auto promPtr2 = std::make_shared<std::promise<bool>>();
@@ -899,8 +892,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
       double(350 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
    EXPECT_EQ(syncLeaf->getSpendableBalance(),
       double(350 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider - syncLeaf->getUnconfirmedBalance());
-   EXPECT_EQ(syncLeaf->getUnconfirmedBalance(), 
-      double(5 * COIN) / BTCNumericTypes::BalanceDivider);
+   EXPECT_EQ(syncLeaf->getUnconfirmedBalance(), amount / BTCNumericTypes::BalanceDivider);
 }
 
 TEST_F(TestWalletWithArmory, SimpleTX_bech32)
@@ -942,34 +934,34 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       ASSERT_TRUE(result);
    };
 
-   auto promPtr1 = std::make_shared<std::promise<bool>>();
+   auto promPtr1 = std::make_shared<std::promise<std::vector<UTXO>>>();
    auto fut1 = promPtr1->get_future();
-   const auto &cbTxOutList1 = 
-      [this, syncLeaf, addr2, changeAddr, amount1, fee, cbTX, promPtr1]
-      (std::vector<UTXO> inputs1) 
+   const auto &cbTxOutList1 = [promPtr1](std::vector<UTXO> inputs)
    {
-      const auto recipient1 = addr2.getRecipient(bs::XBTAmount{ amount1 });
-      ASSERT_NE(recipient1, nullptr);
-      const auto txReq1 = syncLeaf->createTXRequest(
-         inputs1, { recipient1 }, fee, false, changeAddr);
-
-      BinaryData txSigned1;
-      {
-         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
-         txSigned1 = leafPtr_->signTXRequest(txReq1);
-         ASSERT_FALSE(txSigned1.isNull());
-      }
-
-      envPtr_->armoryInstance()->pushZC(txSigned1);
-      Tx txObj(txSigned1);
-
-      auto&& zcVec = UnitTestWalletACT::waitOnZC();
-      promPtr1->set_value(zcVec.size() == 1);
-      EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
+      promPtr1->set_value(inputs);
    };
    
    syncLeaf->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
-   ASSERT_TRUE(fut1.get());
+   const auto inputs1 = fut1.get();
+   ASSERT_FALSE(inputs1.empty());
+
+   const auto recipient1 = addr2.getRecipient(bs::XBTAmount{ amount1 });
+   ASSERT_NE(recipient1, nullptr);
+   const auto txReq1 = syncLeaf->createTXRequest(
+      inputs1, { recipient1 }, fee, false, changeAddr);
+
+   BinaryData txSigned1;
+   {
+      const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
+      txSigned1 = leafPtr_->signTXRequest(txReq1);
+      ASSERT_FALSE(txSigned1.isNull());
+   }
+
+   envPtr_->armoryInstance()->pushZC(txSigned1);
+   Tx txObj(txSigned1);
+
+   auto&& zcVec = UnitTestWalletACT::waitOnZC();
+   EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
 
    curHeight = envPtr_->armoryConnection()->topBlock();
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
@@ -987,35 +979,35 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    fut2.wait();
    EXPECT_EQ(syncLeaf->getAddrBalance(addr2)[0], amount1);
 
-   auto promPtr3 = std::make_shared<std::promise<bool>>();
+   auto promPtr3 = std::make_shared<std::promise<std::vector<UTXO>>>();
    auto fut3 = promPtr3->get_future();
-   const auto &cbTxOutList2 = 
-      [this, syncLeaf, addr3, fee, changeAddr, cbTX, promPtr3]
-      (std::vector<UTXO> inputs2) 
+   const auto &cbTxOutList2 = [promPtr3](std::vector<UTXO> inputs)
    {
-      const uint64_t amount2 = 0.04 * BTCNumericTypes::BalanceDivider;
-      const auto recipient2 = addr3.getRecipient(bs::XBTAmount{ amount2 });
-      ASSERT_NE(recipient2, nullptr);
-      const auto txReq2 = syncLeaf->createTXRequest(
-         inputs2, { recipient2 }, fee, false, changeAddr);
-
-      BinaryData txSigned2;
-      {
-         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
-         txSigned2 = leafPtr_->signTXRequest(txReq2);
-         ASSERT_FALSE(txSigned2.isNull());
-      }
-
-      envPtr_->armoryInstance()->pushZC(txSigned2);
-      Tx txObj(txSigned2);
-
-      auto&& zcVec = UnitTestWalletACT::waitOnZC();
-      promPtr3->set_value(zcVec.size() == 1);
-      EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
-
+      promPtr3->set_value(inputs);
    };
+
    syncLeaf->getSpendableTxOutList(cbTxOutList2, UINT64_MAX);
-   ASSERT_TRUE(fut3.get());
+   const auto inputs2 = fut3.get();
+   ASSERT_FALSE(inputs2.empty());
+
+   const uint64_t amount2 = 0.04 * BTCNumericTypes::BalanceDivider;
+   const auto recipient2 = addr3.getRecipient(bs::XBTAmount{ amount2 });
+   ASSERT_NE(recipient2, nullptr);
+   const auto txReq2 = syncLeaf->createTXRequest(
+      inputs2, { recipient2 }, fee, false, changeAddr);
+
+   BinaryData txSigned2;
+   {
+      const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
+      txSigned2 = leafPtr_->signTXRequest(txReq2);
+      ASSERT_FALSE(txSigned2.isNull());
+   }
+
+   envPtr_->armoryInstance()->pushZC(txSigned2);
+   Tx txObj2(txSigned2);
+
+   auto&& zcVec2 = UnitTestWalletACT::waitOnZC();
+   EXPECT_EQ(zcVec2[0].txHash, txObj2.getThisHash());
 }
 
 TEST_F(TestWalletWithArmory, SignSettlement)
