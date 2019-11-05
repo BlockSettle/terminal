@@ -2,7 +2,7 @@
 
 #include <spdlog/spdlog.h>
 #include <QIcon>
-#include "AboutDialog.h"
+#include "InfoDialogs/AboutDialog.h"
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
 #include "BsClient.h"

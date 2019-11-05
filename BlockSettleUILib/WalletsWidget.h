@@ -68,6 +68,9 @@ public:
 
    void shortcutActivated(ShortcutType s) override;
 
+public slots:
+   void onNewWallet();
+
 private:
    void InitWalletsView(const std::string& defaultWalletId);
 
@@ -88,13 +91,12 @@ private slots:
    void showAddressProperties(const QModelIndex& index);
    void updateAddresses();
    void onAddressContextMenu(const QPoint &);
-   void onWalletContextMenu(const QPoint &);
-   void onNewWallet();
+   //void onWalletContextMenu(const QPoint &);
    void onCopyAddress();
    void onEditAddrComment();
    void onRevokeSettlement();
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result);
-   void onDeleteWallet();
+   //void onDeleteWallet();
    void onFilterSettingsChanged();
    void onEnterKeyInAddressesPressed(const QModelIndex &index);
    void onEnterKeyInWalletsPressed(const QModelIndex &index);
@@ -122,7 +124,7 @@ private:
    QAction  *  actCopyAddr_ = nullptr;
    QAction  *  actEditComment_ = nullptr;
    QAction  *  actRevokeSettl_ = nullptr;
-   QAction  *  actDeleteWallet_ = nullptr;
+   //QAction  *  actDeleteWallet_ = nullptr;
    bs::Address curAddress_;
    std::shared_ptr<bs::sync::Wallet>   curWallet_;
    unsigned int   revokeReqId_ = 0;

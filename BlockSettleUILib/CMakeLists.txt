@@ -6,6 +6,7 @@ configure_file(TerminalVersion.h.in TerminalVersion.h)
 
 FILE(GLOB SOURCES
    *.cpp
+   InfoDialogs/*.cpp
    ManageEncryption/*.cpp
    Settings/*.cpp
    Trading/*.cpp
@@ -15,6 +16,7 @@ FILE(GLOB SOURCES
 )
 FILE(GLOB HEADERS
    *.h
+   InfoDialogs/*.h
    ManageEncryption/*.h
    Settings/*.h
    Trading/*.h
@@ -24,6 +26,7 @@ FILE(GLOB HEADERS
 )
 FILE(GLOB UI_FILES
    *.ui
+   InfoDialogs/*.ui
    ManageEncryption/*.ui
    Settings/*.ui
    Trading/*.ui

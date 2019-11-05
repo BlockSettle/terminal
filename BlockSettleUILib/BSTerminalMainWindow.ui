@@ -200,7 +200,7 @@
      <x>0</x>
      <y>0</y>
      <width>997</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -208,6 +208,10 @@
      <string>&amp;File</string>
     </property>
     <addaction name="actionSettings"/>
+    <addaction name="separator"/>
+    <addaction name="actionCreateNewWallet"/>
+    <addaction name="separator"/>
+    <addaction name="actionAbout"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -223,10 +227,8 @@
     <property name="title">
      <string>&amp;Help</string>
     </property>
-    <addaction name="actionAboutBlockSettle"/>
-    <addaction name="actionAboutTerminal"/>
-    <addaction name="actionContactBlockSettle"/>
-    <addaction name="actionVersion"/>
+    <addaction name="actionGuides"/>
+    <addaction name="actionContact"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuBlockSettle"/>
@@ -342,7 +344,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;Create New Wallet</string>
+    <string>&amp;Create Wallet</string>
+   </property>
+   <property name="toolTip">
+    <string>Create Wallet</string>
    </property>
   </action>
   <action name="actionImportOrRestoreWallet">
@@ -393,9 +398,9 @@
     <string>Simulfund &amp;Review &amp;&amp; Sign</string>
    </property>
   </action>
-  <action name="actionAboutBlockSettle">
+  <action name="actionGuides">
    <property name="text">
-    <string>&amp;About BlockSettle</string>
+    <string>&amp;Guides</string>
    </property>
   </action>
   <action name="actionVerifySignedPackage">
@@ -532,14 +537,9 @@
     <string>Account Management</string>
    </property>
   </action>
-  <action name="actionAboutTerminal">
+  <action name="actionContact">
    <property name="text">
-    <string>About the &amp;Terminal</string>
-   </property>
-  </action>
-  <action name="actionContactBlockSettle">
-   <property name="text">
-    <string>&amp;Contact BlockSettlle</string>
+    <string>&amp;Contact</string>
    </property>
   </action>
   <action name="actionVersion">
@@ -561,6 +561,11 @@
    </property>
    <property name="menuRole">
     <enum>QAction::PreferencesRole</enum>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
    </property>
   </action>
  </widget>
