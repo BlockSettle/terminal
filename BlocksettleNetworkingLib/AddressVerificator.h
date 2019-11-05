@@ -50,7 +50,7 @@ public:
    bool SetBSAddressList(const std::unordered_set<std::string>& addressList);
 
    bool addAddress(const bs::Address &address);
-   bool startAddressVerification();
+   void startAddressVerification();
 
    std::pair<bs::Address, UTXO> getRevokeData(const bs::Address &authAddr);
 
@@ -66,14 +66,13 @@ protected:
    }
 
 private:
-   bool startCommandQueue();
-   bool stopCommandQueue();
+   void startCommandQueue();
+   void stopCommandQueue();
    void commandQueueThreadFunction();
 
    void refreshUserAddresses();
 
    void AddCommandToQueue(ExecutionCommand&& command);
-   void AddCommandToWaitingUpdateQueue(const std::string &key, ExecutionCommand&& command);
 
    ExecutionCommand CreateAddressValidationCommand(const bs::Address &address);
    ExecutionCommand CreateAddressValidationCommand(const std::shared_ptr<AddressVerificationData>& state);
@@ -90,9 +89,6 @@ private:
    //bsAddressList_ - list received from public bridge
    std::set<BinaryData>       bsAddressList_;
 
-   std::unordered_map<std::string, ExecutionCommand>  waitingForUpdateQueue_;
-   std::atomic_flag                 waitingForUpdateQueueFlag_ = ATOMIC_FLAG_INIT;
-
    // command queue
    std::thread                   commandQueueThread_;
    std::queue<ExecutionCommand>  commandsQueue_;
@@ -100,7 +96,8 @@ private:
    mutable std::mutex            dataMutex_;
    std::atomic_bool              stopExecution_;
 
-   std::set<bs::Address>   userAddresses_;
+   std::mutex                    userAddressesMutex_;
+   std::set<bs::Address>         userAddresses_;
 };
 
 #endif // __AUTH_ADDRESS_VERIFICATOR_H__
