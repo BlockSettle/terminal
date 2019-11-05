@@ -1,7 +1,4 @@
 #include "TestCC.h"
-#include <QDebug>
-#include <spdlog/spdlog.h>
-#include "ApplicationSettings.h"
 #include "CheckRecipSigner.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
@@ -11,10 +8,9 @@
 #include "Wallets/SyncWalletsManager.h"
 
 /***
-unit tests to add:
-- CC valid and false parenthood across multiple transactions
-- CC tx with CC change, check parenthood isn't broken
-- invalid CC output order in tx, check parenthood is invalid
+All tests here are disabled. Use TestCCoin instead with new CC logic.
+This file is kept just for reference - until anyone needs it and
+maintains its compilability.
 ***/
 
 TestCC::TestCC()
@@ -214,7 +210,7 @@ void TestCC::TearDown()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-TEST_F(TestCC, Initial_balance)
+TEST_F(TestCC, DISABLED_Initial_balance)
 {
    ASSERT_NE(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
    ASSERT_NE(ccWallet_, nullptr);
@@ -241,7 +237,7 @@ TEST_F(TestCC, Initial_balance)
    EXPECT_DOUBLE_EQ(xbtWallet_->getTotalBalance(), totalD);
 }
 
-TEST_F(TestCC, TX_buy)
+TEST_F(TestCC, DISABLED_TX_buy)
 {
    const float feePerByte = 7.5;
    const double qtyCC = 100;
@@ -372,7 +368,7 @@ TEST_F(TestCC, TX_buy)
    EXPECT_EQ(balances[0], spendVal2);
 }
 
-TEST_F(TestCC, TX_sell)
+TEST_F(TestCC, DISABLED_TX_sell)
 {
    const float feePerByte = 8.5;
    const double qtyCC = 100;

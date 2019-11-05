@@ -145,8 +145,7 @@ void TestSettlement::SetUp()
    UnitTestWalletACT::clear();
    const auto regIDs = syncMgr_->registerWallets();
 
-   for (int i = 0; i < syncMgr_->hdWalletsCount(); ++i) {
-      auto hdWallet = syncMgr_->getHDWallet(i);
+   for (const auto &hdWallet : syncMgr_->hdWallets()) {
       hdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
    }
 
