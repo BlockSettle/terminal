@@ -36,7 +36,7 @@ struct TransactionsViewItem
    QString mainAddress;
    int addressCount;
    bs::sync::Transaction::Direction direction = bs::sync::Transaction::Unknown;
-   std::shared_ptr<bs::sync::Wallet> wallet = nullptr;
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets;
    QString dirStr;
    QString walletName;
    QString walletID;
@@ -61,13 +61,11 @@ struct TransactionsViewItem
    bool isRBFeligible() const;
    bool isCPFPeligible() const;
 
-   std::string id() const;
    bs::Address filterAddress;
 
 private:
    bool     txHashesReceived{ false };
    std::map<BinaryData, Tx>   txIns;
-   mutable std::string        id_;
 };
 typedef std::vector<TransactionsViewItem>    TransactionItems;
 
@@ -84,7 +82,7 @@ public:
    TXNode *child(int index) const;
    QList<TXNode *> children() const { return children_; }
    TXNode *parent() const { return parent_; }
-   TXNode *find(const std::string &id) const;
+   TXNode *find(const bs::TXEntry &) const;
 
    void clear(bool del = true);
    void setData(const TransactionsViewItem &data) { *item_ = data; }
@@ -135,7 +133,7 @@ public:
    TransactionsViewModel& operator = (TransactionsViewModel&&) = delete;
 
    void loadAllWallets(bool onNewBlock=false);
-   size_t itemsCount() const { return currentItems_.size(); }
+   size_t itemsCount() const { return rootNode_->nbChildren(); }
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -155,7 +153,7 @@ private slots:
    void updatePage();
    void refresh();
    void onWalletDeleted(std::string walletId);
-   void onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &);
+   void onNewItems(const std::vector<std::pair<TransactionPtr, TXNode *>> &);
    void onDelRows(std::vector<int> rows);
 
    void onItemConfirmed(const TransactionPtr);
@@ -176,7 +174,6 @@ private:
    void updateTransactionDetails(const TransactionPtr &item
       , const std::function<void(const TransactionPtr &)> &cb);
    std::shared_ptr<TransactionsViewItem> itemFromTransaction(const bs::TXEntry &);
-   std::shared_ptr<TransactionsViewItem> getTxEntry(const std::string &key);
 
 signals:
    void dataLoaded(int count);
@@ -209,7 +206,6 @@ public:
 private:
    std::unique_ptr<TXNode> rootNode_;
    TransactionPtr oldestItem_;
-   std::unordered_map<std::string, TransactionPtr> currentItems_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AsyncClient::LedgerDelegate> ledgerDelegate_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;

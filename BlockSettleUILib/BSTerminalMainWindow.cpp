@@ -1308,17 +1308,24 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> &entries)
    if (entries.empty()) {
       return;
    }
-   for (const auto &entry : entries) {
-      const auto &cbTx = [this, id = entry.walletId, txTime = entry.txTime, value = entry.value](const Tx &tx) {
-         const auto wallet = walletsMgr_->getWalletById(id);
+   for (const auto &entry : walletsMgr_->mergeEntries(entries)) {
+      const auto &cbTx = [this, entry] (const Tx &tx)
+      {
+         std::shared_ptr<bs::sync::Wallet> wallet;
+         for (const auto &walletId : entry.walletIds) {
+            wallet = walletsMgr_->getWalletById(walletId);
+            if (wallet) {
+               break;
+            }
+         }
          if (!wallet) {
             return;
          }
 
          auto txInfo = std::make_shared<TxInfo>();
          txInfo->tx = tx;
-         txInfo->txTime = txTime;
-         txInfo->value = value;
+         txInfo->txTime = entry.txTime;
+         txInfo->value = entry.value;
          txInfo->wallet = wallet;
 
          const auto &cbDir = [this, txInfo] (bs::sync::Transaction::Direction dir, const std::vector<bs::Address> &) {
@@ -1335,8 +1342,8 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> &entries)
             }
          };
 
-         walletsMgr_->getTransactionDirection(tx, id, cbDir);
-         walletsMgr_->getTransactionMainAddress(tx, id, (value > 0), cbMainAddr);
+         walletsMgr_->getTransactionDirection(tx, wallet->walletId(), cbDir);
+         walletsMgr_->getTransactionMainAddress(tx, wallet->walletId(), (entry.value > 0), cbMainAddr);
       };
       armory_->getTxByHash(entry.txHash, cbTx);
    }

@@ -73,7 +73,6 @@ void WalletsManager::reset()
    walletNames_.clear();
    readyWallets_.clear();
    isReady_ = false;
-   walletsId_.clear();
    hdWalletsId_.clear();
    authAddressWallet_.reset();
 
@@ -209,15 +208,7 @@ void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
 
    {
       QMutexLocker lock(&mtxWallets_);
-      auto insertIter = walletsId_.insert(wallet->walletId());
-      if (!insertIter.second) {
-         auto wltIter = wallets_.find(wallet->walletId());
-         if (wltIter == wallets_.end()) {
-            throw std::runtime_error("have id but lack leaf ptr");
-         }
-      } else {
-         wallets_[wallet->walletId()] = wallet;
-      }
+      wallets_[wallet->walletId()] = wallet;
    }
 
    if (isHDLeaf && (wallet->type() == bs::core::wallet::Type::Authentication)) {
@@ -399,8 +390,10 @@ const WalletsManager::HDWalletPtr WalletsManager::getHDWalletById(const std::str
 const WalletsManager::HDWalletPtr WalletsManager::getHDRootForLeaf(const std::string& walletId) const
 {
    for (const auto &hdWallet : hdWallets_) {
-      if (hdWallet.second->getLeaf(walletId)) {
-         return hdWallet.second;
+      for (const auto &leaf : hdWallet.second->getLeaves()) {
+         if (leaf->hasId(walletId)) {
+            return hdWallet.second;
+         }
       }
    }
    return nullptr;
@@ -444,7 +437,7 @@ WalletsManager::GroupPtr WalletsManager::getGroupByWalletId(const std::string& w
       if (hdWallet) {
          for (const auto &group : hdWallet->getGroups()) {
             for (const auto &leaf : group->getLeaves()) {
-               if (leaf->walletId() == walletId) {
+               if (leaf->hasId(walletId)) {
                   groupsByWalletId_[walletId] = group;
                   return group;
                }
@@ -584,10 +577,6 @@ void WalletsManager::eraseWallet(const WalletPtr &wallet)
       return;
    }
    QMutexLocker lock(&mtxWallets_);
-   const auto itId = std::find(walletsId_.begin(), walletsId_.end(), wallet->walletId());
-   if (itId != walletsId_.end()) {
-      walletsId_.erase(itId);
-   }
    wallets_.erase(wallet->walletId());
 }
 
@@ -979,11 +968,9 @@ void WalletsManager::createSettlementLeaf(const bs::Address &authAddr
             return;
          }
          for (const auto &settlLeaf : group->getLeaves()) {
-            {
-               QMutexLocker lock(&mtxWallets_);
-               if (walletsId_.find(settlLeaf->walletId()) != walletsId_.end()) {
-                  continue;
-               }
+            if (getWalletById(settlLeaf->walletId()) != nullptr) {
+               logger_->warn("[WalletsManager::createSettlementLeaf] leaf {} already exists", settlLeaf->walletId());
+               continue;
             }
             addWallet(settlLeaf, true);
             emit walletAdded(settlLeaf->walletId());
@@ -1242,18 +1229,18 @@ void WalletsManager::onZCReceived(const std::vector<bs::TXEntry> &entries)
    std::vector<bs::TXEntry> ourZCentries;
 
    for (const auto &entry : entries) {
-      auto wallet = getWalletById(entry.walletId);
-      if (wallet != nullptr) {
-         logger_->debug("[WalletsManager::{}] - ZC entry in wallet {}", __func__
+      for (const auto &walletId : entry.walletIds) {
+         const auto wallet = getWalletById(walletId);
+         if (!wallet) {
+            continue;
+         }
+         logger_->debug("[WalletsManager::onZCReceived] - ZC entry in wallet {}"
             , wallet->name());
 
          // We have an affected wallet. Update it!
          ourZCentries.push_back(entry);
          //wallet->updateBalances();
-      } // if
-      else {
-         logger_->debug("[WalletsManager::{}] - get ZC but wallet not found: {}"
-            , __func__, entry.walletId);
+         break;
       }
    } // for
 
@@ -1812,4 +1799,70 @@ std::shared_ptr<ResolverFeed> WalletsManager::getPublicResolver(const std::map<b
       std::map<BinaryData, BinaryData>   preimageMap_;
    };
    return std::make_shared<PublicResolver>(piMap);
+}
+
+bool WalletsManager::mergeableEntries(const bs::TXEntry &entry1, const bs::TXEntry &entry2) const
+{
+   if (entry1.txHash != entry2.txHash) {
+      return false;
+   }
+   if (entry1.walletIds == entry2.walletIds) {
+      return true;
+   }
+   WalletPtr wallet1;
+   for (const auto &walletId : entry1.walletIds) {
+      wallet1 = getWalletById(walletId);
+      if (wallet1) {
+         break;
+      }
+   }
+   
+   WalletPtr wallet2;
+   for (const auto &walletId : entry2.walletIds) {
+      wallet2 = getWalletById(walletId);
+      if (wallet2) {
+         break;
+      }
+   }
+
+   if (!wallet1 || !wallet2) {
+      return false;
+   }
+   if (wallet1 == wallet2) {
+      return true;
+   }
+
+   if ((wallet1->type() == bs::core::wallet::Type::Bitcoin)
+      && (wallet2->type() == wallet1->type())) {
+      const auto rootWallet1 = getHDRootForLeaf(wallet1->walletId());
+      const auto rootWallet2 = getHDRootForLeaf(wallet2->walletId());
+      if (rootWallet1 == rootWallet2) {
+         return true;
+      }
+   }
+   return false;
+}
+
+std::vector<bs::TXEntry> WalletsManager::mergeEntries(const std::vector<bs::TXEntry> &entries) const
+{
+   std::vector<bs::TXEntry> mergedEntries;
+   mergedEntries.reserve(entries.size());
+   for (const auto &entry : entries) {
+      if (mergedEntries.empty()) {
+         mergedEntries.push_back(entry);
+         continue;
+      }
+      bool entryMerged = false;
+      for (auto &mergedEntry : mergedEntries) {
+         if (mergeableEntries(mergedEntry, entry)) {
+            entryMerged = true;
+            mergedEntry.merge(entry);
+            break;
+         }
+      }
+      if (!entryMerged) {
+         mergedEntries.push_back(entry);
+      }
+   }
+   return mergedEntries;
 }

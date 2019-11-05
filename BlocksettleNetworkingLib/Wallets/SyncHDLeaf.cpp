@@ -394,13 +394,13 @@ std::vector<std::string> hd::Leaf::registerWallet(
       std::unique_lock<std::mutex> lock(regMutex_);
       btcWallet_ = armory_->instantiateWallet(walletId());
       regIdExt_ = armory_->registerWallet(btcWallet_
-         , walletId(), walletId(), addrsExt, cbRegistered, asNew);
+         , walletId(), addrsExt, cbRegistered, asNew);
       regIds.push_back(regIdExt_);
 
       if (!isExtOnly_) {
          btcWalletInt_ = armory_->instantiateWallet(walletIdInt());
          regIdInt_ = armory_->registerWallet(btcWalletInt_
-            , walletIdInt(), walletId(), addrsInt, cbRegistered, asNew);
+            , walletIdInt(), addrsInt, cbRegistered, asNew);
          regIds.push_back(regIdInt_);
       }
       logger_->debug("[sync::hd::Leaf::registerWallet] registered {}+{} addresses in {}, {} regIds {} {}"
@@ -517,11 +517,11 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
 
          if (extInt) {
             armory_->registerWallet(btcWallet_
-               , walletId(), walletId(), addrHashes, cbRegistered, true);
+               , walletId(), addrHashes, cbRegistered, true);
          }
          else {
             armory_->registerWallet(btcWalletInt_
-               , walletIdInt(), walletId(), addrHashes, cbRegistered, true);
+               , walletIdInt(), addrHashes, cbRegistered, true);
          }
          return;
       }
@@ -563,7 +563,7 @@ void hd::Leaf::scan(const std::function<void(bs::sync::SyncState)> &cb)
       for (auto& addrPair : addrVec) {
          addrHashes.push_back(addrPair.first.prefixed());
       }
-      scanRegId_ = armory_->registerWallet(scanWallet_, scanWallet_->walletID(), scanWallet_->walletID(), addrHashes, nullptr);
+      scanRegId_ = armory_->registerWallet(scanWallet_, scanWallet_->walletID(), addrHashes, nullptr);
       cbScanMap_[scanRegId_] = cb;
    };
 

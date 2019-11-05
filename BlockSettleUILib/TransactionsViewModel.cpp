@@ -86,7 +86,7 @@ QVariant TXNode::data(int column, int role) const
          return QVariant();
       }
    } else if (role == TransactionsViewModel::WalletRole) {
-      return qVariantFromValue(static_cast<void*>(item_->wallet.get()));
+      return qVariantFromValue(static_cast<void*>(item_->wallets.empty() ? nullptr : item_->wallets[0].get()));
    } else if (role == TransactionsViewModel::SortRole) {
       switch (col) {
       case TransactionsViewModel::Columns::Date:        return item_->txEntry.txTime;
@@ -175,14 +175,31 @@ void TXNode::forEach(const std::function<void(const TransactionPtr &)> &cb)
    }
 }
 
-TXNode *TXNode::find(const std::string &id) const
+TXNode *TXNode::find(const bs::TXEntry &entry) const
 {
-   if (item_ && (item_->id() == id)) {
-      return const_cast<TXNode*>(this);
+   if (item_ && (item_->txEntry.txHash == entry.txHash)) {
+      if (item_->txEntry.walletIds == entry.walletIds) {
+         return const_cast<TXNode*>(this);
+      }
+      if (entry.walletIds.size() < item_->txEntry.walletIds.size()) {
+         for (const auto &walletId : entry.walletIds) {
+            if (item_->txEntry.walletIds.find(walletId) != item_->txEntry.walletIds.end()) {
+               return const_cast<TXNode*>(this);
+            }
+         }
+      }
+      else {
+         for (const auto &walletId : item_->txEntry.walletIds) {
+            if (entry.walletIds.find(walletId) != entry.walletIds.end()) {
+               return const_cast<TXNode*>(this);
+            }
+         }
+      }
    }
    for (const auto &child : children_) {
-      if (child->item()->id() == id) {
-         return child;
+      const auto found = child->find(entry);
+      if (found != nullptr) {
+         return found;
       }
    }
    return nullptr;
@@ -413,7 +430,6 @@ void TransactionsViewModel::clear()
    {
       QMutexLocker locker(&updateMutex_);
       rootNode_->clear();
-      currentItems_.clear();
       oldestItem_ = {};
    }
    endResetModel();
@@ -437,43 +453,30 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction
    auto item = std::make_shared<TransactionsViewItem>();
    item->txEntry = entry;
    item->displayDateTime = UiUtils::displayDateTime(entry.txTime);
-   item->wallet = walletsManager_->getWalletById(entry.walletId);
-   item->filterAddress = filterAddress_;
-   if (!item->wallet && defaultWallet_) {
-      item->wallet = defaultWallet_;
+   for (const auto &walletId : entry.walletIds) {
+      const auto wallet = walletsManager_->getWalletById(walletId);
+      if (wallet) {
+         item->wallets.push_back(wallet);
+      }
    }
-   if (item->wallet) {
-      item->walletID = QString::fromStdString(item->wallet->walletId());
+   item->filterAddress = filterAddress_;
+   if (item->wallets.empty() && defaultWallet_) {
+      item->wallets.push_back(defaultWallet_);
+   }
+   if (!item->wallets.empty()) {
+      item->walletID = QString::fromStdString(item->wallets[0]->walletId());
    }
    else {
-      item->walletID = QString::fromStdString(entry.walletId);
+      item->walletID = QString::fromStdString(*entry.walletIds.cbegin());
    }
 
    item->confirmations = armory_->getConfirmationsNumber(entry.blockNum);
-   if (item->wallet) {
-      item->walletName = QString::fromStdString(item->wallet->name());
+   if (!item->wallets.empty()) {
+      item->walletName = QString::fromStdString(item->wallets[0]->name());
    }
-   item->isValid = item->wallet ? item->wallet->isTxValid(entry.txHash) : false;
+   item->isValid = item->wallets.empty() ? false : item->wallets[0]->isTxValid(entry.txHash);
    item->initialized = false;
    return item;
-}
-
-static std::string mkTxKey(const BinaryData &txHash, const std::string &id)
-{
-   return txHash.toBinStr() + id;
-}
-static std::string mkTxKey(const bs::TXEntry &item)
-{
-   return mkTxKey(item.txHash, item.walletId);
-}
-
-std::shared_ptr<TransactionsViewItem> TransactionsViewModel::getTxEntry(const std::string &key)
-{
-   const auto itEntry = currentItems_.find(key);
-   if (itEntry == currentItems_.end()) {
-      return nullptr;
-   }
-   return itEntry->second;
 }
 
 void TransactionsViewModel::onZCReceived(const std::vector<bs::TXEntry> &entries)
@@ -488,14 +491,11 @@ void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entr
    {
       QMutexLocker locker(&updateMutex_);
       for (const auto &entry : entries) {
-         const auto key = mkTxKey(entry);
-         const auto node = rootNode_->find(key);
+         const auto node = rootNode_->find(entry);
          if (node && (node->parent() == rootNode_.get()) && !node->item()->confirmations) {
             delRows.push_back(node->row());
-            currentItems_.erase(key);
             if (node->hasChildren()) { // handle race condition when node being deleted has confirmed children
                for (const auto &child : node->children()) {
-                  currentItems_.erase(mkTxKey(child->item()->txEntry));
                   if (child->item()->confirmations) {
                      children.push_back(child->item()->txEntry);
                   }
@@ -524,7 +524,8 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
       }
    }
    if ((!child->confirmations && child->txEntry.isRBF && !parent->confirmations && parent->txEntry.isRBF)
-       && (child->txEntry.txHash != parent->txEntry.txHash) && (child->txEntry.walletId == parent->txEntry.walletId)) {
+      && (child->txEntry.txHash != parent->txEntry.txHash)
+      && (child->txEntry.walletIds == parent->txEntry.walletIds)) {
       std::set<BinaryData> childInputs, parentInputs;
       for (int i = 0; i < int(child->tx.getNumTxIn()); i++) {
          childInputs.insert(child->tx.getTxInCopy(i).serialize());
@@ -541,30 +542,69 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
 
 std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const std::vector<bs::TXEntry> &page)
 {
-   auto newItems = std::make_shared<std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>>>();
+   struct ItemKey {
+      BinaryData  txHash;
+      std::set<std::string>   walletIds;
+      bool operator<(const ItemKey &ik) const {
+         if (txHash != ik.txHash) {
+            return (txHash < ik.txHash);
+         }
+         return (walletIds < ik.walletIds);
+      }
+   };
+   auto newItems = std::make_shared<std::vector<std::pair<TransactionPtr, TXNode *>>>();
    auto updatedItems = std::make_shared<std::vector<TransactionPtr>>();
-   auto newTxKeys = std::make_shared<std::unordered_set<std::string>>();
+   auto newTxKeys = std::make_shared<std::set<ItemKey>>();
    auto keysMutex = std::make_shared<QMutex>();
+
+   const auto mergedPage = allWallets_ ? walletsManager_->mergeEntries(page) : page;
+
+   const auto lbdAddNew = [this, newItems, newTxKeys](const TransactionPtr &item)
+   {
+      if (!oldestItem_ || (oldestItem_->txEntry.txTime >= item->txEntry.txTime)) {
+         oldestItem_ = item;
+      }
+      newTxKeys->insert({ item->txEntry.txHash, item->txEntry.walletIds });
+      newItems->push_back({ item, new TXNode(item) } );
+   };
+
+   const auto mergeItem = [this, updatedItems](const TransactionPtr &item) -> bool
+   {
+      for (const auto &node : rootNode_->children()) {
+         if (!node) {
+            continue;
+         }
+         if (walletsManager_->mergeableEntries(node->item()->txEntry, item->txEntry)) {
+            item->txEntry.merge(node->item()->txEntry);
+            updatedItems->push_back(item);
+            return true;
+         }
+      }
+      return false;
+   };
 
    {
       QMutexLocker locker(&updateMutex_);
-      for (const auto &entry : page) {
+      for (const auto &entry : mergedPage) {
          const auto item = itemFromTransaction(entry);
-         if (!item->wallet) {
+         if (item->wallets.empty()) {
             continue;
          }
-         auto txEntry = getTxEntry(item->id());
-         if (txEntry) {
-            txEntry->txEntry.merge(item->txEntry);
-            updatedItems->push_back(txEntry);
-            continue;
+
+         const auto node = rootNode_->find(item->txEntry);
+         if (node) {
+            updatedItems->push_back(item);
          }
-         currentItems_[item->id()] = item;
-         if (!oldestItem_ || (oldestItem_->txEntry.txTime >= item->txEntry.txTime)) {
-            oldestItem_ = item;
+         else {
+            if (allWallets_) {
+               if (!mergeItem(item)) {
+                  lbdAddNew(item);
+               }
+            }
+            else {
+               lbdAddNew(item);
+            }
          }
-         newTxKeys->insert(item->id());
-         newItems->insert({ item->id(), { item, new TXNode(item) } });
       }
    }
 
@@ -581,7 +621,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       }
       {
          QMutexLocker locker(keysMutex.get());
-         newTxKeys->erase(itemPtr->id());
+         newTxKeys->erase({ itemPtr->txEntry.txHash, itemPtr->txEntry.walletIds });
       }
       if (newTxKeys->empty()) {
 #if 0
@@ -656,7 +696,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
    const auto newItemsCopy = *newItems;
    if (!newItemsCopy.empty()) {
       for (auto item : newItemsCopy) {
-         updateTransactionDetails(item.second.first, cbInited);
+         updateTransactionDetails(item.first, cbInited);
       }
    }
    else {
@@ -671,35 +711,36 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
 
 void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &updItems)
 {
-   {
-      if (!rootNode_->hasChildren()) {
-         logger_->debug("[{}] root node doesn't have children", __func__);
-         return;
-      }
+   if (!rootNode_->hasChildren()) {
+      logger_->debug("[{}] root node doesn't have children", __func__);
+      return;
+   }
 
-      for (const auto &updItem : updItems) {
-         const auto &itItem = currentItems_.find(updItem->id());
-         if (itItem == currentItems_.end()) {
-            continue;
-         }
-         const auto &item = itItem->second;
-         const auto newBlockNum = updItem->txEntry.blockNum;
-         if (item->wallet) {
-            item->isValid = item->wallet->isTxValid(updItem->txEntry.txHash);
-         }
-         if (item->txEntry.value != updItem->txEntry.value) {
-            item->txEntry = updItem->txEntry;
-            item->amountStr.clear();
-            item->calcAmount(walletsManager_);
-         }
-         if (newBlockNum != UINT32_MAX) {
-            const auto confNum = armory_->getConfirmationsNumber(newBlockNum);
-            item->confirmations = confNum;
-            item->txEntry.blockNum = newBlockNum;
+   for (const auto &updItem : updItems) {
+      const auto node = rootNode_->find(updItem->txEntry);
+      if (!node) {
+         continue;
+      }
+      const auto &item = node->item();
+      if (!updItem->wallets.empty()) {
+         item->isValid = updItem->wallets[0]->isTxValid(updItem->txEntry.txHash);
+      }
+      if (item->txEntry.value != updItem->txEntry.value) {
+         item->wallets = updItem->wallets;
+         item->walletID = updItem->walletID;
+         item->txEntry = updItem->txEntry;
+         item->amountStr.clear();
+         item->calcAmount(walletsManager_);
+      }
+      const auto newBlockNum = updItem->txEntry.blockNum;
+      if (newBlockNum != UINT32_MAX) {
+         const auto confNum = armory_->getConfirmationsNumber(newBlockNum);
+         item->confirmations = confNum;
+         item->txEntry.blockNum = newBlockNum;
             onItemConfirmed(item);
-         }
       }
    }
+
    emit dataChanged(index(0, static_cast<int>(Columns::Amount))
    , index(rootNode_->nbChildren() - 1, static_cast<int>(Columns::Status)));
 }
@@ -707,7 +748,7 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
 void TransactionsViewModel::onItemConfirmed(const TransactionPtr item)
 {
    if (item->txEntry.isRBF && (item->confirmations == 1)) {
-      const auto node = rootNode_->find(item->id());
+      const auto node = rootNode_->find(item->txEntry);
       if (node && node->hasChildren()) {
          beginRemoveRows(index(node->row(), 0), 0, node->nbChildren() - 1);
          node->clear();
@@ -805,14 +846,14 @@ void TransactionsViewModel::ledgerToTxData(const std::map<int, std::vector<bs::T
    initialLoadCompleted_ = true;
 }
 
-void TransactionsViewModel::onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &newItems)
+void TransactionsViewModel::onNewItems(const std::vector<std::pair<TransactionPtr, TXNode *>> &newItems)
 {
    const int curLastIdx = rootNode_->nbChildren();
    beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + newItems.size() - 1);
    {
       QMutexLocker locker(&updateMutex_);
       for (const auto &newItem : newItems) {
-         rootNode_->add(newItem.second.second);
+         rootNode_->add(newItem.second);
       }
    }
    endInsertRows();
@@ -967,8 +1008,8 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
          return;
       }
       if (item->comment.isEmpty()) {
-         item->comment = item->wallet ? QString::fromStdString(item->wallet->getTransactionComment(item->txEntry.txHash))
-            : QString();
+         item->comment = item->wallets.empty() ? QString()
+            : QString::fromStdString(item->wallets[0]->getTransactionComment(item->txEntry.txHash));
          const auto endLineIndex = item->comment.indexOf(QLatin1Char('\n'));
          if (endLineIndex != -1) {
             item->comment = item->comment.left(endLineIndex) + QLatin1String("...");
@@ -1039,11 +1080,12 @@ static bool isSpecialWallet(const std::shared_ptr<bs::sync::Wallet> &wallet)
 
 void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
-   if (wallet && tx.isInitialized()) {
+   if (!wallets.empty() && tx.isInitialized()) {
       bool hasSpecialAddr = false;
       int64_t totalVal = 0;
       int64_t addressVal = 0;
 
+      std::shared_ptr<bs::sync::Wallet> totalValWallet;
       for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
          const TxOut out = tx.getTxOutCopy(i);
          const auto addr = bs::Address::fromTxOut(out);
@@ -1052,8 +1094,12 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
             hasSpecialAddr = isSpecialWallet(addrWallet);
          }
 
-         if (addrWallet == wallet) {
-            totalVal += out.getValue();
+         for (const auto &wallet : wallets) {
+            if (addrWallet == wallet) {
+               totalVal += out.getValue();
+               totalValWallet = wallet;
+               break;
+            }
          }
 
          if (filterAddress.isValid() && addr == filterAddress) {
@@ -1061,6 +1107,7 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
          }
       }
 
+      std::shared_ptr<bs::sync::Wallet> addrValWallet;
       for (size_t i = 0; i < tx.getNumTxIn(); i++) {
          TxIn in = tx.getTxInCopy(i);
          OutPoint op = in.getOutPoint();
@@ -1075,8 +1122,12 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
                hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr));
             }
 
-            if (addrWallet == wallet) {
-               totalVal -= prevOut.getValue();
+            for (const auto &wallet : wallets) {
+               if (addrWallet == wallet) {
+                  totalVal -= prevOut.getValue();
+                  addrValWallet;
+                  break;
+               }
             }
 
             if (filterAddress.isValid() && filterAddress == addr) {
@@ -1084,15 +1135,19 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
             }
          }
       }
-      if (!filterAddress.isValid()) {
-         amount = wallet->getTxBalance(totalVal);
-         amountStr = wallet->displayTxValue(totalVal);
+      if (!filterAddress.isValid() && totalValWallet) {
+         amount = totalValWallet->getTxBalance(totalVal);
+         amountStr = totalValWallet->displayTxValue(totalVal);
+      } else if (addrValWallet) {
+         amount = addrValWallet->getTxBalance(addressVal);
+         amountStr = addrValWallet->displayTxValue(addressVal);
       } else {
-         amount = wallet->getTxBalance(addressVal);
-         amountStr = wallet->displayTxValue(addressVal);
+         amount = addressVal / BTCNumericTypes::BalanceDivider;
+         amountStr = UiUtils::displayAmount(amount);
       }
 
-      if (txEntry.isChainedZC && (wallet->type() == bs::core::wallet::Type::Bitcoin) && !hasSpecialAddr) {
+      if (txEntry.isChainedZC && !wallets.empty()
+         && (wallets[0]->type() == bs::core::wallet::Type::Bitcoin) && !hasSpecialAddr) {
          isCPFP = true;
       }
    }
@@ -1119,25 +1174,17 @@ bool TransactionsViewItem::containsInputsFrom(const Tx &inTx) const
    return false;
 }
 
-std::string TransactionsViewItem::id() const
-{
-   if (id_.empty()) {
-      id_ = mkTxKey(txEntry.txHash, walletID.toStdString());
-   }
-   return id_;
-}
-
 bool TransactionsViewItem::isRBFeligible() const
 {
    return ((confirmations == 0) && txEntry.isRBF
-      && (wallet != nullptr && wallet->type() != bs::core::wallet::Type::Settlement)
+      && (!wallets.empty() && wallets[0]->type() != bs::core::wallet::Type::Settlement)
       && (direction == bs::sync::Transaction::Direction::Internal
          || direction == bs::sync::Transaction::Direction::Sent));
 }
 
 bool TransactionsViewItem::isCPFPeligible() const
 {
-   return ((confirmations == 0) && (wallet != nullptr && wallet->type() != bs::core::wallet::Type::Settlement)
+   return ((confirmations == 0) && (!wallets.empty() && wallets[0]->type() != bs::core::wallet::Type::Settlement)
       && (direction == bs::sync::Transaction::Direction::Internal
          || direction == bs::sync::Transaction::Direction::Received));
 }

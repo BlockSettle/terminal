@@ -700,7 +700,7 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConn
 
       const auto wallet = armory_->instantiateWallet(walletId());
       regId_ = armory_->registerWallet(wallet
-         , walletId(), walletId(), getAddrHashes(), cbRegister, asNew);
+         , walletId(), getAddrHashes(), cbRegister, asNew);
       logger_->debug("[bs::sync::Wallet::registerWallet] register wallet {}, {} addresses = {}"
          , walletId(), getAddrHashes().size(), regId_);
       return { regId_ };

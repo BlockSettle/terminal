@@ -137,8 +137,6 @@ void ArmoryConnection::maintenanceThreadFunc()
          break;
       }
 
-      processDelayedZC();
-
       decltype(actQueue_) tempQueue;
       decltype(runQueue_) tempRunQueue;
       {
@@ -162,21 +160,6 @@ void ArmoryConnection::maintenanceThreadFunc()
          }
       }
    }
-}
-
-void ArmoryConnection::addMergedWalletId(const std::string &walletId, const std::string &mergedWalletId)
-{
-   std::unique_lock<std::mutex> lock(zcMutex_);
-   zcMergedWalletIds_[walletId] = mergedWalletId;
-}
-
-const std::string &ArmoryConnection::getMergedWalletId(const std::string &walletId)
-{
-   auto it = zcMergedWalletIds_.find(walletId);
-   if (it == zcMergedWalletIds_.end()) {
-      return walletId;
-   }
-   return it->second;
 }
 
 void ArmoryConnection::addToMaintQueue(const CallbackQueueCb &cb)
@@ -395,8 +378,8 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
 }
 
 std::string ArmoryConnection::registerWallet(const std::shared_ptr<AsyncClient::BtcWallet> &wallet
-   , const std::string &walletId, const std::string &mergedWalletId
-   , const std::vector<BinaryData> &addrVec, const RegisterWalletCb &cb, bool asNew)
+   , const std::string &walletId, const std::vector<BinaryData> &addrVec
+   , const RegisterWalletCb &cb, bool asNew)
 {
    if ((state_ != ArmoryState::Ready) && (state_ != ArmoryState::Connected)) {
       logger_->error("[ArmoryConnection::registerWallet] invalid state: {}", (int)state_.load());
@@ -406,8 +389,6 @@ std::string ArmoryConnection::registerWallet(const std::shared_ptr<AsyncClient::
    const auto regId = wallet->registerAddresses(addrVec, asNew);
    std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
    registrationCallbacks_[regId] = cb;
-
-   addMergedWalletId(walletId, mergedWalletId);
 
    return regId;
 
@@ -1073,111 +1054,38 @@ void ArmoryConnection::onRefresh(const std::vector<BinaryData>& ids)
    });
 }
 
-void ArmoryConnection::processDelayedZC()
-{
-   const auto currentTime = std::chrono::steady_clock::now();
-
-   std::unique_lock<std::mutex> lock(zcMutex_);
-
-   for (auto &waitingEntriesData : zcWaitingEntries_) {
-      auto &waitingEntries = waitingEntriesData.second;
-      auto &notifiedEntries = zcNotifiedEntries_[waitingEntriesData.first];
-
-      auto it = waitingEntries.begin();
-      while (it != waitingEntries.end()) {
-         auto &waitingEntry = it->second;
-         const auto timeDiff = currentTime - waitingEntry.recvTime;
-         if (timeDiff < std::chrono::milliseconds(300)) { // can be tuned later
-            ++it;
-            continue;
-         }
-
-         bs::TXEntry newEntry;
-         auto itOld = notifiedEntries.find(waitingEntry.txHash);
-         if (itOld != notifiedEntries.end()) {
-            auto oldEntry = std::move(itOld->second);
-            notifiedEntries.erase(itOld);
-            addToMaintQueue([oldEntry](ArmoryCallbackTarget *tgt) {
-               tgt->onZCInvalidated({oldEntry});
-            });
-
-            newEntry = std::move(oldEntry);
-            newEntry.merge(waitingEntry);
-         } else {
-            newEntry = std::move(waitingEntry);
-         }
-
-         notifiedEntries.emplace(newEntry.txHash, newEntry);
-         addToMaintQueue([newEntry, this](ArmoryCallbackTarget *tgt) {
-            tgt->onZCReceived({newEntry});
-         });
-
-         it = waitingEntries.erase(it);
-      }
-   }
-}
-
 void ArmoryConnection::onZCsReceived(const std::vector<std::shared_ptr<ClientClasses::LedgerEntry>> &entries)
 {
-   auto newEntries = bs::TXEntry::fromLedgerEntries(entries);
-   std::vector<bs::TXEntry> immediates;
-   std::map<std::string, std::set<BinaryData>> immediateHashes;
+   const auto newEntries = bs::TXEntry::fromLedgerEntries(entries);
 
    {
       std::unique_lock<std::mutex> lock(zcMutex_);
-      for (auto &newEntry : newEntries) {
-         std::string mergedWalletId = getMergedWalletId(newEntry.walletId);
-         auto &waitingEntries = zcWaitingEntries_[mergedWalletId];
-         newEntry.walletId = mergedWalletId;
-
-         auto it = waitingEntries.find(newEntry.txHash);
-         if (it != waitingEntries.end()) {
-            auto mergedEntry = it->second;
-            mergedEntry.merge(newEntry);
-            it->second = mergedEntry;
-         } else {
-            waitingEntries[newEntry.txHash] = newEntry;
-            immediateHashes[mergedWalletId].insert(newEntry.txHash);
-         }
-      }
-
-      for (const auto &imm : immediateHashes) {
-         auto &waitingEntries = zcWaitingEntries_[imm.first];
-         for (const auto &hash : imm.second) {
-            auto it = waitingEntries.find(hash);
-            if (it != waitingEntries.end()) {
-               zcNotifiedEntries_[imm.first][hash] = it->second;
-               immediates.push_back(it->second);
-               waitingEntries.erase(it);
-            }
-         }
+      for (const auto &newEntry : newEntries) {
+         zcNotifiedEntries_[newEntry.txHash] = newEntry;
       }
    }
 
-   if (!immediates.empty()) {
-      addToMaintQueue([immediates](ArmoryCallbackTarget *tgt) {
-         tgt->onZCReceived(immediates);
-      });
-   }
+   addToMaintQueue([newEntries](ArmoryCallbackTarget *tgt) {
+      tgt->onZCReceived(newEntries);
+   });
 }
 
 void ArmoryConnection::onZCsInvalidated(const std::set<BinaryData> &ids)
 {
-   std::lock_guard<std::mutex> lock(zcMutex_);
    std::vector<bs::TXEntry> zcInvEntries;
+   std::lock_guard<std::mutex> lock(zcMutex_);
 
-   for (auto &mergedWalletData : zcNotifiedEntries_) {
-      auto &notifiedEntries = mergedWalletData.second;
-      for (const BinaryData &id : ids) {
-         const auto &itEntry = notifiedEntries.find(id);
-         if (itEntry != notifiedEntries.end()) {
-            zcInvEntries.emplace_back(std::move(itEntry->second));
-            notifiedEntries.erase(itEntry);
-         }
+   for (const BinaryData &id : ids) {
+      const auto &itEntry = zcNotifiedEntries_.find(id);
+      if (itEntry != zcNotifiedEntries_.end()) {
+         zcInvEntries.emplace_back(std::move(itEntry->second));
       }
    }
 
    if (!zcInvEntries.empty()) {
+      for (const auto &invEntry : zcInvEntries) {
+         zcNotifiedEntries_.erase(invEntry.txHash);
+      }
       logger_->debug("[{}] found {} ZC entries to invalidate", __func__, zcInvEntries.size());
       addToMaintQueue([zcInvEntries](ArmoryCallbackTarget *tgt) {
          tgt->onZCInvalidated(zcInvEntries);
@@ -1314,6 +1222,7 @@ void ArmoryCallback::resetConnection()
 
 void bs::TXEntry::merge(const bs::TXEntry &other)
 {
+   walletIds.insert(other.walletIds.cbegin(), other.walletIds.cend());
    value += other.value;
    blockNum = other.blockNum;
    addresses.insert(addresses.end(), other.addresses.cbegin(), other.addresses.cend());
@@ -1322,9 +1231,9 @@ void bs::TXEntry::merge(const bs::TXEntry &other)
 
 bs::TXEntry bs::TXEntry::fromLedgerEntry(const ClientClasses::LedgerEntry &entry)
 {
-   bs::TXEntry result{ entry.getTxHash(), entry.getID(), entry.getValue(), entry.getBlockNum()
-         , entry.getTxTime(), entry.isOptInRBF(), entry.isChainedZC(), false
-         , std::chrono::steady_clock::now() };
+   bs::TXEntry result{ entry.getTxHash(), { entry.getID() }, entry.getValue()
+      , entry.getBlockNum(), entry.getTxTime(), entry.isOptInRBF()
+      , entry.isChainedZC(), false, std::chrono::steady_clock::now() };
    for (const auto &addr : entry.getScrAddrList()) {
       result.addresses.push_back(bs::Address::fromHash(addr));
    }

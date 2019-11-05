@@ -21,7 +21,7 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection>
 
    const auto walletId = addr.display();
    rtWallet_ = armory_->instantiateWallet(walletId);
-   const auto regId = armory_->registerWallet(rtWallet_, walletId, walletId
+   const auto regId = armory_->registerWallet(rtWallet_, walletId
       , { addr.id() }
       , [cbInited](const std::string &) { cbInited(); });
 }

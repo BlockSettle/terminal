@@ -35,7 +35,7 @@ enum class ArmoryState : uint8_t {
 namespace bs {
    struct TXEntry {
       BinaryData  txHash;
-      std::string walletId;
+      std::set<std::string>   walletIds;
       int64_t     value;
       uint32_t    blockNum;
       uint32_t    txTime;
@@ -158,9 +158,8 @@ public:
 
    // For ZC notifications walletId would be replaced with mergedWalletId (and notifications are merged)
    virtual std::string registerWallet(const std::shared_ptr<AsyncClient::BtcWallet> &
-      , const std::string &walletId, const std::string &mergedWalletId
-      , const std::vector<BinaryData> &addrVec, const RegisterWalletCb&
-      , bool asNew = false);
+      , const std::string &walletId, const std::vector<BinaryData> &addrVec
+      , const RegisterWalletCb&, bool asNew = false);
    virtual bool getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb&);
    virtual bool getCombinedBalances(const std::vector<std::string> &walletIDs
       , const std::function<void(const std::map<std::string, CombinedBalances> &)> &);
@@ -244,12 +243,7 @@ private:
    bool addGetTxCallback(const BinaryData &hash, const TxCb &);  // returns true if hash exists
    void callGetTxCallbacks(const BinaryData &hash, const Tx &);
 
-   void processDelayedZC();
    void maintenanceThreadFunc();
-
-   void addMergedWalletId(const std::string &walletId, const std::string &mergedWalletId);
-   // zcMutex_ must be locked
-   const std::string &getMergedWalletId(const std::string &walletId);
 
 protected:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -274,11 +268,7 @@ protected:
    std::mutex  cbMutex_;
    std::map<BinaryData, std::vector<TxCb>>   txCallbacks_;
 
-   // Maps walletId to mergedWalletId
-   std::map<std::string, std::string> zcMergedWalletIds_;
-   // Stores ZC event maps for the mergedWalletId
-   std::map<std::string, std::map<BinaryData, bs::TXEntry>> zcNotifiedEntries_;
-   std::map<std::string, std::map<BinaryData, bs::TXEntry>> zcWaitingEntries_;
+   std::map<BinaryData, bs::TXEntry>   zcNotifiedEntries_;
    std::mutex zcMutex_;
 
    std::unordered_set<ArmoryCallbackTarget *>   activeTargets_;

@@ -67,12 +67,12 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
             ui_->treeAddresses->addTopLevelItem(itemSender_);
             ui_->treeAddresses->addTopLevelItem(itemReceiver_);
 
-            const auto &wallet = item->wallet;
             uint64_t value = 0;
             bool initialized = true;
 
             std::set<bs::sync::WalletsManager::WalletPtr> inputWallets;
 
+            const std::shared_ptr<bs::sync::Wallet> wallet = item->wallets.empty() ? nullptr : *item->wallets.cbegin();
             const bool isInternalTx = item->direction == bs::sync::Transaction::Internal;
             for (const auto &prevTx : txs) {
                if (!prevTx.isInitialized()) {
@@ -88,7 +88,6 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
                      value += prevOut.getValue();
                      const bool isOutput = false;
                      addAddress(wallet, prevOut, isOutput, isInternalTx, prevTx.getThisHash(), nullptr);
-
                      const auto addr = bs::Address::fromTxOut(prevOut);
                      const auto addressWallet = walletsManager_->getWalletByAddress(addr);
                      if (addressWallet) {
