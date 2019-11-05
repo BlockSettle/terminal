@@ -90,9 +90,13 @@ bs::network::otc::Offer OTCNegotiationResponseWidget::offer() const
 
    result.hdWalletId = ui_->comboBoxXBTWallets->currentData(UiUtils::WalletIdRole).toString().toStdString();
    result.authAddress = ui_->authenticationAddressComboBox->currentText().toStdString();
+
    if (ui_->receivingAddressComboBox->currentIndex() != 0) {
       result.recvAddress = ui_->receivingAddressComboBox->currentText().toStdString();
    }
+
+   result.inputs = selectedUTXOs();
+
    return result;
 }
 
@@ -156,6 +160,17 @@ void OTCNegotiationResponseWidget::onChanged()
       activateAcceptButton = false;
    }
 
+   if (receivedOffer_.ourSide == bs::network::otc::Side::Buy && !selectedUTXOs().empty()) {
+      uint64_t totalSelected = 0;
+      for (const auto &utxo : selectedUTXOs()) {
+         totalSelected += utxo.getValue();
+      }
+      // This does not take into account pay-in fee
+      if (totalSelected < static_cast<uint64_t>(receivedOffer_.amount)) {
+         activateAcceptButton = false;
+      }
+   }
+
    ui_->pushButtonAccept->setEnabled(activateAcceptButton);
 
    if (receivedOffer_ == offer()) {
@@ -186,11 +201,14 @@ void OTCNegotiationResponseWidget::onXbtInputsProcessed()
 {
    onUpdateBalances();
    ui_->toolButtonXBTInputs->setEnabled(true);
+
+   // Check selected amount and update accept button enabled state
+   onChanged();
 }
 
 void OTCNegotiationResponseWidget::onCurrentWalletChanged()
 {
    UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets));
-   selectedUTXO_.clear();
+   clearSelectedInputs();
    onUpdateBalances();
 }

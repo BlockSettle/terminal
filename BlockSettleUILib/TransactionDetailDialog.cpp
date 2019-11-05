@@ -28,7 +28,11 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
    itemSender_ = new QTreeWidgetItem(QStringList(tr("Sender")));
    itemReceiver_ = new QTreeWidgetItem(QStringList(tr("Receiver")));
 
-   const auto &cbInit = [this, armory](const TransactionPtr &item) {
+   const auto &cbInit = [this, armory, handle = validityFlag_.handle()](const TransactionPtr &item) mutable {
+      ValidityGuard guard(handle);
+      if (!handle.isValid()) {
+         return;
+      }
       ui_->labelAmount->setText(item->amountStr);
       ui_->labelDirection->setText(tr(bs::sync::Transaction::toString(item->direction)));
       ui_->labelAddress->setText(item->mainAddress);
@@ -57,9 +61,14 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
             txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
          }
 
-         const auto &cbTXs = [this, item, txOutIndices]
-            (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+         auto cbTXs = [this, item, txOutIndices, handle]
+            (const std::vector<Tx> &txs, std::exception_ptr exPtr) mutable
          {
+            ValidityGuard guard(handle);
+            if (!handle.isValid()) {
+               return;
+            }
+
             if (exPtr != nullptr) {
                ui_->labelComment->setText(tr("Failed to get TX details"));
             }

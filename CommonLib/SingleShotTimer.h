@@ -31,7 +31,7 @@ public:
 private:
    // should be acessed by IdenticalTimersQueue only
    bool onActivateExternal(std::chrono::steady_clock::time_point expireTime);
-   void onDeactivateExternal();
+   bool onDeactivateExternal();
    bool onExpireExternal();
 
 private:

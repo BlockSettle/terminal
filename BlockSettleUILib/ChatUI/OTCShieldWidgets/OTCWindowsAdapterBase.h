@@ -2,9 +2,10 @@
 #define __OTCWINDOWSMANAGER_H__
 
 #include <memory>
-#include "QWidget"
 #include "CommonTypes.h"
 #include "OtcTypes.h"
+#include "QWidget"
+#include "ValidityFlag.h"
 
 class QComboBox;
 class OTCWindowsManager;
@@ -73,11 +74,11 @@ protected:
 
    QString getSide(bs::network::otc::Side requestSide, bool isOwnRequest);
 
+   const std::vector<UTXO> &selectedUTXOs() const { return selectedUTXO_; }
+   void clearSelectedInputs();
+
 protected:
    std::shared_ptr<OTCWindowsManager> otcManager_{};
-
-   std::vector<UTXO> allUTXOs_;
-   std::vector<UTXO> selectedUTXO_;
 
    bs::network::Asset::Type productGroup_ = bs::network::Asset::SpotXBT;
    // #new_logic : fix security & product checking
@@ -86,6 +87,13 @@ protected:
    QString buyProduct_{ QLatin1String("EUR") };
    double sellIndicativePrice_{};
    double buyIndicativePrice_{};
+
+   ValidityFlag validityFlag_;
+
+private:
+   std::vector<UTXO> allUTXOs_;
+   std::vector<UTXO> selectedUTXO_;
+
 };
 
 #endif // __OTCWINDOWSMANAGER_H__
