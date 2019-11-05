@@ -214,48 +214,44 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
          walletIDs.push_back(walletIdInt());
       } catch (std::exception&) {}
 
-      const auto onCombinedBalances = [balanceData = balanceData_]
+      const auto onCombinedBalances = [balanceData = balanceData_, walletId=walletId()]
          (const std::map<std::string, CombinedBalances> &balanceMap)
       {
-         bool ourUpdate = false;
          BTCNumericTypes::balance_type total = 0, spendable = 0, unconfirmed = 0;
          uint64_t addrCount = 0;
-         for (const auto &wltBal : balanceMap) {
-            ourUpdate = true;
+         {
+            std::unique_lock<std::mutex> lock(balanceData->addrMapsMtx);
+            for (const auto &wltBal : balanceMap) {
+               total += static_cast<BTCNumericTypes::balance_type>(
+                  wltBal.second.walletBalanceAndCount_[0]) / BTCNumericTypes::BalanceDivider;
+               /*      spendable += static_cast<BTCNumericTypes::balance_type>(
+                        wltBal.second.walletBalanceAndCount_[1]) / BTCNumericTypes::BalanceDivider;*/
+               unconfirmed += static_cast<BTCNumericTypes::balance_type>(
+                  wltBal.second.walletBalanceAndCount_[2]) / BTCNumericTypes::BalanceDivider;
 
-            total += static_cast<BTCNumericTypes::balance_type>(
-               wltBal.second.walletBalanceAndCount_[0]) / BTCNumericTypes::BalanceDivider;
-            /*      spendable += static_cast<BTCNumericTypes::balance_type>(
-                     wltBal.second.walletBalanceAndCount_[1]) / BTCNumericTypes::BalanceDivider;*/
-            unconfirmed += static_cast<BTCNumericTypes::balance_type>(
-               wltBal.second.walletBalanceAndCount_[2]) / BTCNumericTypes::BalanceDivider;
+               //wallet txn count
+               addrCount += wltBal.second.walletBalanceAndCount_[3];
 
-            //wallet txn count
-            addrCount += wltBal.second.walletBalanceAndCount_[3];
-
-            { //address balances
-               std::unique_lock<std::mutex> lock(balanceData->addrMapsMtx);
+               //address balances
                updateMap<std::map<BinaryData, std::vector<uint64_t>>>(
                   wltBal.second.addressBalances_, balanceData->addressBalanceMap);
             }
+            spendable = total - unconfirmed;
          }
-         spendable = total - unconfirmed;
 
-         if (ourUpdate) {
-            balanceData->totalBalance = total;
-            balanceData->spendableBalance = spendable;
-            balanceData->unconfirmedBalance = unconfirmed;
-            balanceData->addrCount = addrCount;
+         balanceData->totalBalance = total;
+         balanceData->spendableBalance = spendable;
+         balanceData->unconfirmedBalance = unconfirmed;
+         balanceData->addrCount = addrCount;
 
-            std::vector<std::function<void(void)>> cbCopy;
-            {
-               std::unique_lock<std::mutex> lock(balanceData->cbMutex);
-               cbCopy.swap(balanceData->cbBalances);
-            }
-            for (const auto &cb : cbCopy) {
-               if (cb) {
-                  cb();
-               }
+         std::vector<std::function<void(void)>> cbCopy;
+         {
+            std::unique_lock<std::mutex> lock(balanceData->cbMutex);
+            cbCopy.swap(balanceData->cbBalances);
+         }
+         for (const auto &cb : cbCopy) {
+            if (cb) {
+               cb();
             }
          }
       };
@@ -524,7 +520,7 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
       Do not set callback target if it is already initialized. This
       allows for unit tests to set a custom ACT.
       */
-      if(act_ == nullptr) {
+      if (act_ == nullptr) {
          act_ = make_unique<WalletACT>(this);
          act_->init(armory_.get());
       }
@@ -540,6 +536,9 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 
 void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 {
+   if (skipPostOnline_) {
+      return;
+   }
    init(true);
 
    const auto &cbTX = [this, balanceData = balanceData_, handle = validityFlag_.handle()](const Tx &tx) mutable {
@@ -608,7 +607,9 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 
 void Wallet::onNewBlock(unsigned int, unsigned int)
 {
-   init(true);
+   if (!skipPostOnline_) {
+      init(true);
+   }
 }
 
 void Wallet::onBalanceAvailable(const std::function<void()> &cb) const

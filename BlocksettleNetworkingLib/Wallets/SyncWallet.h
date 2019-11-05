@@ -201,6 +201,7 @@ namespace bs {
             const std::shared_ptr<ArmoryConnection> &armory)
          {
             act_ = std::make_unique<U>(armory.get(), this);
+            skipPostOnline_ = true;
          }
 
          void setWCT(WalletCallbackTarget *wct);
@@ -264,6 +265,7 @@ namespace bs {
 
       protected:
          bool firstInit_ = false;
+         bool skipPostOnline_ = false;
          std::atomic_bool isRegistered_{false};
 
          struct BalanceData {

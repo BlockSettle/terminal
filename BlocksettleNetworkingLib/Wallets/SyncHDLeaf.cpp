@@ -197,9 +197,10 @@ std::vector<std::string> hd::Leaf::setUnconfirmedTarget()
 
 void hd::Leaf::postOnline()
 {
-   if (firstInit_) {
+   if (skipPostOnline_ || firstInit_) {
       return;
    }
+
    unconfTgtRegIds_ = setUnconfirmedTarget();
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
