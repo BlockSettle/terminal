@@ -65,9 +65,11 @@ public:
          ASSERT_EQ(nestedAddr_.getType(), AddressEntryType_P2SH);
       }
 
-      env.walletsMgr()->addWallet(wallet_);
+      walletsMgr_ = std::make_shared<bs::core::WalletsManager>(StaticLogger::loggerPtr, 0);
 
-      signer_ = std::make_shared<InprocSigner>(env.walletsMgr(), env.logger(), "", NetworkType::TestNet);
+      walletsMgr_->addWallet(wallet_);
+
+      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger(), "", NetworkType::TestNet);
       signer_->Start();
 
       syncWalletMgr_ = std::make_shared<bs::sync::WalletsManager>(env.logger()
@@ -96,6 +98,7 @@ public:
 
    std::string name_;
    std::shared_ptr<bs::core::hd::Wallet> wallet_;
+   std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
    std::shared_ptr<bs::sync::WalletsManager> syncWalletMgr_;
    std::shared_ptr<InprocSigner> signer_;
    std::shared_ptr<OtcClient> otc_;
@@ -113,8 +116,6 @@ public:
       env_ = std::make_unique<TestEnv>(StaticLogger::loggerPtr);
       env_->requireArmory();
 
-      // There is some problem in test env, init order matters (second peer sign fails with "unresolved spender").
-      // Let's always use same order then.
       peer1_.init(*env_, "test1");
       peer2_.init(*env_, "test2");
 
