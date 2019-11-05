@@ -29,20 +29,27 @@ bool SingleShotTimer::onActivateExternal(std::chrono::steady_clock::time_point e
    return true;
 }
 
-void SingleShotTimer::onDeactivateExternal()
+bool SingleShotTimer::onDeactivateExternal()
 {
-   isActive_ = false;
+   bool expected = true;
+   constexpr bool desired = false;
+
+   if (!std::atomic_compare_exchange_strong(&isActive_, &expected, desired)) {
+      // already stopped
+      return false;
+   }
+
+   return true;
 }
 
 bool SingleShotTimer::onExpireExternal()
 {
-   if (!isActive_) {
+   if (!onDeactivateExternal()) {
       logger_->error("[SingleShotTimer::onExpireExternal] {} timer is not active to expire!"
          , timerName_);
       return false;
    }
 
-   isActive_ = false;
    expireCallback_();
 
    return true;
