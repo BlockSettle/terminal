@@ -84,8 +84,7 @@ public:
       promSync.get_future().wait();
 
       const auto regIDs = syncWalletMgr_->registerWallets();
-      for (int i = 0; i < int(syncWalletMgr_->hdWalletsCount()); ++i) {
-         auto hdWallet = syncWalletMgr_->getHDWallet(unsigned(i));
+      for (const auto &hdWallet : syncWalletMgr_->hdWallets()) {
          hdWallet->setCustomACT<UnitTestWalletACT>(env.armoryConnection());
       }
       UnitTestWalletACT::waitOnRefresh(regIDs);
