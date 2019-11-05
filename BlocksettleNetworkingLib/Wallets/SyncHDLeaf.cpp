@@ -131,30 +131,32 @@ void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
       }
    };
 
-   std::unique_lock<std::mutex> lock(regMutex_);
-   if (!regIdExt_.empty() || !regIdInt_.empty()) {
-      for (const auto &id : ids) {
-         if (id.isNull()) {
-            continue;
-         }
-         logger_->debug("[sync::hd::Leaf::onRefresh] {}: id={}, extId={}, intId={}", walletId()
-            , id.toBinStr(), regIdExt_, regIdInt_);
-         if (id == regIdExt_) {
-            regIdExt_.clear();
-            cbRegisterExt();
-         } else if (id == regIdInt_) {
-            regIdInt_.clear();
-            cbRegisterInt();
+   {
+      std::unique_lock<std::mutex> lock(regMutex_);
+      if (!regIdExt_.empty() || !regIdInt_.empty()) {
+         for (const auto &id : ids) {
+            if (id.isNull()) {
+               continue;
+            }
+            logger_->debug("[sync::hd::Leaf::onRefresh] {}: id={}, extId={}, intId={}", walletId()
+               , id.toBinStr(), regIdExt_, regIdInt_);
+            if (id == regIdExt_) {
+               regIdExt_.clear();
+               cbRegisterExt();
+            } else if (id == regIdInt_) {
+               regIdInt_.clear();
+               cbRegisterInt();
+            }
          }
       }
-   }
 
-   if (!refreshCallbacks_.empty()) {
-      for (const auto &id : ids) {
-         const auto &it = refreshCallbacks_.find(id.toBinStr());
-         if (it != refreshCallbacks_.end()) {
-            it->second();
-            refreshCallbacks_.erase(it);
+      if (!refreshCallbacks_.empty()) {
+         for (const auto &id : ids) {
+            const auto &it = refreshCallbacks_.find(id.toBinStr());
+            if (it != refreshCallbacks_.end()) {
+               it->second();
+               refreshCallbacks_.erase(it);
+            }
          }
       }
    }
@@ -516,10 +518,12 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
          }
 
          if (extInt) {
+            std::unique_lock<std::mutex> lock(regMutex_);
             const auto regId = btcWallet_->registerAddresses(addrHashes, true);
             refreshCallbacks_[regId] = cb;
          }
          else {
+            std::unique_lock<std::mutex> lock(regMutex_);
             const auto regId = btcWalletInt_->registerAddresses(addrHashes, true);
             refreshCallbacks_[regId] = cb;
          }
