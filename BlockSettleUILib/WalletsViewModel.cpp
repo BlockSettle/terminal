@@ -513,8 +513,7 @@ void WalletsViewModel::onHDWalletError(unsigned int id, std::string)
 
 void WalletsViewModel::onSignerAuthenticated()
 {
-   for (unsigned int i = 0; i < walletsManager_->hdWalletsCount(); i++) {
-      const auto &hdWallet = walletsManager_->getHDWallet(i);
+   for (const auto &hdWallet : walletsManager_->hdWallets()) {
       if (!hdWallet) {
          continue;
       }
@@ -551,11 +550,9 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
       }
    }
 
-   const auto hdCount = walletsManager_->hdWalletsCount();
    beginResetModel();
    rootNode_->clear();
-   for (unsigned int i = 0; i < hdCount; i++) {
-      const auto &hdWallet = walletsManager_->getHDWallet(i);
+   for (const auto &hdWallet : walletsManager_->hdWallets()) {
       if (!hdWallet) {
          continue;
       }

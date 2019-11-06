@@ -87,8 +87,7 @@ namespace bs {
          void createSettlementLeaf(const bs::Address &authAddr
             , const std::function<void(const SecureBinaryData &)> &);
 
-         size_t hdWalletsCount() const { return hdWalletsId_.size(); }
-         const HDWalletPtr getHDWallet(unsigned) const;
+         std::vector<HDWalletPtr> hdWallets() const { return hdWallets_; }
          const HDWalletPtr getHDWalletById(const std::string &walletId) const;
          const HDWalletPtr getHDRootForLeaf(const std::string &walletId) const;
          bool walletNameExists(const std::string &walletName) const;
@@ -224,7 +223,7 @@ namespace bs {
          std::shared_ptr<ArmoryConnection>      armoryPtr_;
 
          using wallet_container_type = std::unordered_map<std::string, WalletPtr>;
-         using hd_wallet_container_type = std::unordered_map<std::string, HDWalletPtr>;
+         using hd_wallet_container_type = std::vector<HDWalletPtr>;
 
          hd_wallet_container_type            hdWallets_;
 //         std::shared_ptr<hd::DummyWallet>    hdDummyWallet_;
@@ -233,7 +232,6 @@ namespace bs {
          mutable QMutex                      mtxWallets_;
          std::set<std::string>               readyWallets_;
          bool     isReady_ = false;
-         std::set<std::string>               hdWalletsId_;
          WalletPtr                           authAddressWallet_;
          BinaryData                          userId_;
          std::set<std::string>               newWallets_;

@@ -124,9 +124,6 @@ namespace bs {
 
          private:
             std::unordered_set<std::string>  scannedLeaves_;
-
-         public:
-            unsigned containerId_ = UINT32_MAX;
          };
 
 

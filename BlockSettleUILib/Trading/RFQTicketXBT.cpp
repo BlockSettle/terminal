@@ -349,7 +349,7 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
 
 void RFQTicketXBT::walletsLoaded()
 {
-   if (!signingContainer_ || !walletsManager_ || !walletsManager_->hdWalletsCount()) {
+   if (!signingContainer_ || !walletsManager_ || walletsManager_->hdWallets().empty()) {
       return;
    }
 

@@ -737,15 +737,17 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request,
    }
 
 #ifndef NDEBUG
-   for (const auto &spender : signer.spenders()) {
-      logger_->debug("[{}] {} spender: {} @ {}", __func__
-         , walletId(), spender->getValue()
-         , bs::Address::fromUTXO(spender->getUtxo()).display());
-   }
-   for (const auto &recip : signer.recipients()) {
-      logger_->debug("[{}] {} recipient: {} @ {}", __func__
-         , walletId(), recip->getValue()
-         , bs::Address::fromRecipient(recip).display());
+   if (logger_) {
+      for (const auto &spender : signer.spenders()) {
+         logger_->debug("[{}] {} spender: {} @ {}", __func__
+            , walletId(), spender->getValue()
+            , bs::Address::fromUTXO(spender->getUtxo()).display());
+      }
+      for (const auto &recip : signer.recipients()) {
+         logger_->debug("[{}] {} recipient: {} @ {}", __func__
+            , walletId(), recip->getValue()
+            , bs::Address::fromRecipient(recip).display());
+      }
    }
 #endif //NDEBUG
 
