@@ -176,7 +176,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    armory_ = armory;
    connectionManager_ = connectionManager;
 
-   ui_->pageRFQTicket->init(authAddressManager, assetManager, quoteProvider, container, armory);
+   ui_->pageRFQTicket->init(logger, authAddressManager, assetManager, quoteProvider, container, armory);
 
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);

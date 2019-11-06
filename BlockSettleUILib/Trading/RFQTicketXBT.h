@@ -17,6 +17,9 @@ class QPushButton;
 class QLineEdit;
 QT_END_NAMESPACE
 
+namespace spdlog {
+   class logger;
+}
 namespace Ui {
     class RFQTicketXBT;
 }
@@ -36,7 +39,6 @@ class AuthAddressManager;
 class CCAmountValidator;
 class FXAmountValidator;
 class QuoteProvider;
-class SelectedTransactionInputs;
 class SignContainer;
 class XbtAmountValidator;
 
@@ -46,10 +48,11 @@ class RFQTicketXBT : public QWidget
 Q_OBJECT
 
 public:
-   RFQTicketXBT(QWidget* parent = nullptr );
+   RFQTicketXBT(QWidget* parent = nullptr);
    ~RFQTicketXBT() override;
 
-   void init(const std::shared_ptr<AuthAddressManager> &
+   void init(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<AssetManager> &assetManager
       , const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<SignContainer> &
@@ -190,6 +193,7 @@ private:
 private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;
 
+   std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
 
@@ -207,7 +211,6 @@ private:
    unsigned int      leafCreateReqId_ = 0;
 
    std::unordered_map<std::string, double>      rfqMap_;
-   std::shared_ptr<SelectedTransactionInputs>   ccCoinSel_;
    std::shared_ptr<bs::RequesterUtxoResAdapter> utxoAdapter_;
 
    std::unordered_map<std::string, bs::network::Side::Type>         lastSideSelection_;
@@ -228,6 +231,7 @@ private:
    QString currentOfferPrice_;
 
    bool maxAmount_ = false;
+
 };
 
 #endif // __RFQ_TICKET_XBT_H__

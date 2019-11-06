@@ -149,10 +149,11 @@ void RFQTicketXBT::resetTicket()
    updatePanel();
 }
 
-void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressManager
+void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory)
 {
+   logger_ = logger;
    authAddressManager_ = authAddressManager;
    assetManager_ = assetManager;
    signingContainer_ = container;
@@ -172,9 +173,6 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
 
 void RFQTicketXBT::onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &utxos)
 {
-   if (ccCoinSel_ && (ccCoinSel_->GetWallet()->walletId() == walletId)) {
-      ccCoinSel_->Reload(utxos);
-   }
    updateBalances();
    updateSubmitButton();
 }
@@ -218,15 +216,7 @@ void RFQTicketXBT::updatePanel()
 
 void RFQTicketXBT::setCurrentCCWallet(const std::shared_ptr<bs::sync::Wallet>& newCCWallet)
 {
-   if (newCCWallet != nullptr) {
-      ccWallet_ = newCCWallet;
-      ccCoinSel_ = std::make_shared<SelectedTransactionInputs>(ccWallet_, true, true, [this](){
-         emit update();
-      });
-   } else {
-      ccWallet_ = nullptr;
-      ccCoinSel_ = nullptr;
-   }
+   ccWallet_ = newCCWallet;
 }
 
 void RFQTicketXBT::onHDLeafCreated(const std::string& ccName)
@@ -304,7 +294,7 @@ RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
       balance.productType = ProductGroupType::XBTGroupType;
    } else {
       if (currentGroupType_ == ProductGroupType::CCGroupType) {
-         balance.amount = ccCoinSel_ ? ccCoinSel_->GetWallet()->getTxBalance(ccCoinSel_->GetBalance()) : 0;
+         balance.amount = ccWallet_ ? ccWallet_->getSpendableBalance() : 0;
          balance.product = productToSpend;
          balance.productType = ProductGroupType::CCGroupType;
       } else {
@@ -728,43 +718,49 @@ void RFQTicketXBT::submitButtonClicked()
       if (rfq->side == bs::network::Side::Sell) {
          const auto wallet = transactionData_->getSigningWallet();
          const uint64_t spendVal = rfq->quantity * assetManager_->getCCLotSize(rfq->product);
-         if (!ccCoinSel_) {
-            BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
-               , tr("CC coin selection is missing")).exec();
+         if (!ccWallet_) {
+            SPDLOG_LOGGER_ERROR(logger_, "ccWallet is not set");
             return;
          }
 
-         const auto inputs = ccCoinSel_->GetSelectedTransactions();
-         uint64_t inputVal = 0;
-         for (const auto &input : inputs) {
-            inputVal += input.getValue();
-         }
-         if (inputVal < spendVal) {
-            BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
-               , tr("Not enough inputs for spend value")).exec();
-            return;
-         }
-         const auto cbAddr = [this, spendVal, rfq, wallet, inputs]
-            (const bs::Address &addr)
+         const auto ccInputsCb = [this, spendVal, wallet, rfq]
+            (const std::vector<UTXO> &inputs) mutable
          {
-            try {
-               const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, addr);
-               rfq->coinTxInput = txReq.serializeState().toHexStr();
-               utxoAdapter_->reserve(txReq, rfq->requestId);
-               emit submitRFQ(*rfq);
-            }
-            catch (const std::exception &e) {
-               auto dlg = new BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
-                  , QString::fromLatin1(e.what()), this);
-               dlg->setWindowTitle(tr("RFQ Failure"));
-               QMetaObject::invokeMethod(this, [dlg] { dlg->exec(); });
-            }
+            QMetaObject::invokeMethod(this, [this, spendVal, wallet, rfq, inputs] {
+               uint64_t inputVal = 0;
+               for (const auto &input : inputs) {
+                  inputVal += input.getValue();
+               }
+               if (inputVal < spendVal) {
+                  BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
+                     , tr("Not enough inputs for spend value")).exec();
+                  return;
+               }
+
+               const auto cbAddr = [this, spendVal, rfq, wallet, inputs](const bs::Address &addr) {
+                  try {
+                     const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, addr);
+                     rfq->coinTxInput = txReq.serializeState().toHexStr();
+                     utxoAdapter_->reserve(txReq, rfq->requestId);
+                     emit submitRFQ(*rfq);
+                  }
+                  catch (const std::exception &e) {
+                     BSMessageBox(BSMessageBox::critical, tr("RFQ Failure")
+                        , QString::fromLatin1(e.what()), this).exec();
+                     return;
+                  }
+               };
+               if (inputVal == spendVal) {
+                  cbAddr({});
+               }
+               else {
+                  wallet->getNewExtAddress(cbAddr);
+               }
+            });
          };
-         if (inputVal == spendVal) {
-            cbAddr({});
-         }
-         else {
-            wallet->getNewExtAddress(cbAddr);
+         bool result = ccWallet_->getSpendableTxOutList(ccInputsCb, spendVal);
+         if (!result) {
+            SPDLOG_LOGGER_ERROR(logger_, "can't spendable TX list");
          }
          return;
       }
