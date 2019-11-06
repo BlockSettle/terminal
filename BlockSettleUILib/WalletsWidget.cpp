@@ -153,8 +153,8 @@ WalletsWidget::WalletsWidget(QWidget* parent)
    actRevokeSettl_ = new QAction(tr("&Revoke Settlement"));
    connect(actRevokeSettl_, &QAction::triggered, this, &WalletsWidget::onRevokeSettlement);
 
-   actDeleteWallet_ = new QAction(tr("&Delete Permanently"));
-   connect(actDeleteWallet_, &QAction::triggered, this, &WalletsWidget::onDeleteWallet);
+//   actDeleteWallet_ = new QAction(tr("&Delete Permanently"));
+//   connect(actDeleteWallet_, &QAction::triggered, this, &WalletsWidget::onDeleteWallet);
 
    connect(ui_->treeViewAddresses, &TreeViewWithEnterKey::enterKeyPressed,
            this, &WalletsWidget::onEnterKeyInAddressesPressed);
@@ -237,7 +237,7 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui_->treeViewAddresses->setContextMenuPolicy(Qt::CustomContextMenu);
    ui_->treeViewWallets->setContextMenuPolicy(Qt::CustomContextMenu);
    connect(ui_->treeViewAddresses, &QTreeView::customContextMenuRequested, this, &WalletsWidget::onAddressContextMenu);
-   connect(ui_->treeViewWallets, &QTreeView::customContextMenuRequested, this, &WalletsWidget::onWalletContextMenu);
+   //connect(ui_->treeViewWallets, &QTreeView::customContextMenuRequested, this, &WalletsWidget::onWalletContextMenu);
 
    addressModel_ = new AddressListModel(walletsManager_, this);
    addressSortFilterModel_ = new AddressSortFilterModel(this);
@@ -384,19 +384,20 @@ void WalletsWidget::onShowContextMenu(QMenu *menu, QPoint where)
    menu->exec(where);
 }
 
-void WalletsWidget::onWalletContextMenu(const QPoint &p)
-{
-   const auto node = walletsModel_->getNode(ui_->treeViewWallets->indexAt(p));
-   if (!node || node->hasChildren() || !node->parent() || (node->parent()->type() != WalletNode::Type::Root)) {
-      return;
-   }
+   // Not used
+//void WalletsWidget::onWalletContextMenu(const QPoint &p)
+//{
+//   const auto node = walletsModel_->getNode(ui_->treeViewWallets->indexAt(p));
+//   if (!node || node->hasChildren() || !node->parent() || (node->parent()->type() != WalletNode::Type::Root)) {
+//      return;
+//   }
 
-   QMenu contextMenu;
-   actDeleteWallet_->setData(QString::fromStdString(node->id()));
-   contextMenu.addAction(actDeleteWallet_);
+//   QMenu contextMenu;
+//   actDeleteWallet_->setData(QString::fromStdString(node->id()));
+//   contextMenu.addAction(actDeleteWallet_);
 
-   contextMenu.exec(ui_->treeViewWallets->mapToGlobal(p));
-}
+//   contextMenu.exec(ui_->treeViewWallets->mapToGlobal(p));
+//}
 
 void WalletsWidget::updateAddresses()
 {
@@ -691,12 +692,13 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::
    }
 }
 
-void WalletsWidget::onDeleteWallet()
-{
-   const auto action = qobject_cast<QAction *>(sender());
-   const auto walletId = action ? action->data().toString() : QString();
-   if (walletId.isEmpty()) {
-      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
-      return;
-   }
-}
+   // Not used
+//void WalletsWidget::onDeleteWallet()
+//{
+//   const auto action = qobject_cast<QAction *>(sender());
+//   const auto walletId = action ? action->data().toString() : QString();
+//   if (walletId.isEmpty()) {
+//      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
+//      return;
+//   }
+//}

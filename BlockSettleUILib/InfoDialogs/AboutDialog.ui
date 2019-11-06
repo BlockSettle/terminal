@@ -38,7 +38,7 @@
       <enum>QTabWidget::North</enum>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>2</number>
      </property>
      <property name="elideMode">
       <enum>Qt::ElideLeft</enum>
@@ -105,7 +105,7 @@
              <string/>
             </property>
             <property name="pixmap">
-             <pixmap resource="armory.qrc">:/ICON_ABOUT</pixmap>
+             <pixmap resource="../armory.qrc">:/ICON_ABOUT</pixmap>
             </property>
             <property name="scaledContents">
              <bool>false</bool>
@@ -213,7 +213,7 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
              <string/>
             </property>
             <property name="pixmap">
-             <pixmap resource="armory.qrc">:/ICON_SYSTEM</pixmap>
+             <pixmap resource="../armory.qrc">:/ICON_SYSTEM</pixmap>
             </property>
             <property name="scaledContents">
              <bool>false</bool>
@@ -270,304 +270,6 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
           </size>
          </property>
         </spacer>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab_3">
-      <attribute name="title">
-       <string> Contact </string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_5">
-       <property name="spacing">
-        <number>5</number>
-       </property>
-       <property name="topMargin">
-        <number>20</number>
-       </property>
-       <property name="rightMargin">
-        <number>20</number>
-       </property>
-       <item>
-        <widget class="QWidget" name="horizontalWidget_4" native="true">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>70</height>
-          </size>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_7">
-          <property name="spacing">
-           <number>15</number>
-          </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QWidget" name="verticalWidget_2" native="true">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout_4">
-             <property name="spacing">
-              <number>15</number>
-             </property>
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item alignment="Qt::AlignHCenter">
-              <widget class="QWidget" name="horizontalWidget_6" native="true">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <layout class="QHBoxLayout" name="horizontalLayout_10">
-                <property name="spacing">
-                 <number>0</number>
-                </property>
-                <property name="leftMargin">
-                 <number>0</number>
-                </property>
-                <property name="topMargin">
-                 <number>0</number>
-                </property>
-                <property name="rightMargin">
-                 <number>0</number>
-                </property>
-                <property name="bottomMargin">
-                 <number>0</number>
-                </property>
-                <item>
-                 <widget class="QLabel" name="label_7">
-                  <property name="minimumSize">
-                   <size>
-                    <width>64</width>
-                    <height>64</height>
-                   </size>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="pixmap">
-                   <pixmap resource="armory.qrc">:/ICON_CONTACT</pixmap>
-                  </property>
-                  <property name="scaledContents">
-                   <bool>false</bool>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignCenter</set>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="label_11">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Contact Us&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="textFormat">
-                <enum>Qt::RichText</enum>
-               </property>
-               <property name="whiteLabel" stdset="0">
-                <bool>true</bool>
-               </property>
-               <property name="headerRow" stdset="0">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="label_4">
-               <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Customer Support:&lt;br/&gt;Contact BlockSettle through our&lt;br/&gt;&lt;a href=&quot;http://pubb.blocksettle.com/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;Client Portal&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;Technical Support:&lt;br/&gt;&lt;a href=&quot;mailto:support@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;support@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;Compliance:&lt;br/&gt;&lt;a href=&quot;mailto:compliance@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;compliance@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="textFormat">
-                <enum>Qt::RichText</enum>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-               </property>
-               <property name="openExternalLinks">
-                <bool>true</bool>
-               </property>
-               <property name="textInteractionFlags">
-                <set>Qt::LinksAccessibleByMouse</set>
-               </property>
-               <property name="whiteLabel" stdset="0">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
-           <widget class="QWidget" name="verticalWidget" native="true">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout_8">
-             <property name="spacing">
-              <number>15</number>
-             </property>
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item alignment="Qt::AlignHCenter">
-              <widget class="QWidget" name="horizontalWidget_5" native="true">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <layout class="QHBoxLayout" name="horizontalLayout_11">
-                <property name="spacing">
-                 <number>0</number>
-                </property>
-                <property name="leftMargin">
-                 <number>0</number>
-                </property>
-                <property name="topMargin">
-                 <number>0</number>
-                </property>
-                <property name="rightMargin">
-                 <number>0</number>
-                </property>
-                <property name="bottomMargin">
-                 <number>0</number>
-                </property>
-                <item>
-                 <widget class="QLabel" name="label_9">
-                  <property name="minimumSize">
-                   <size>
-                    <width>64</width>
-                    <height>64</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>64</width>
-                    <height>64</height>
-                   </size>
-                  </property>
-                  <property name="sizeIncrement">
-                   <size>
-                    <width>0</width>
-                    <height>0</height>
-                   </size>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="pixmap">
-                   <pixmap resource="armory.qrc">:/ICON_LOCATION</pixmap>
-                  </property>
-                  <property name="scaledContents">
-                   <bool>false</bool>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignCenter</set>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="label_10">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Main Office&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="margin">
-                <number>0</number>
-               </property>
-               <property name="indent">
-                <number>0</number>
-               </property>
-               <property name="whiteLabel" stdset="0">
-                <bool>true</bool>
-               </property>
-               <property name="headerRow" stdset="0">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="label_8">
-               <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Storgatan 5&lt;br/&gt;211 41 Malmö&lt;br/&gt;Sweden&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="textFormat">
-                <enum>Qt::RichText</enum>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-               </property>
-               <property name="whiteLabel" stdset="0">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </widget>
        </item>
       </layout>
      </widget>
@@ -664,7 +366,7 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
              <string/>
             </property>
             <property name="pixmap">
-             <pixmap resource="armory.qrc">:/resources/logo@1.5x.png</pixmap>
+             <pixmap resource="../armory.qrc">:/resources/logo@1.5x.png</pixmap>
             </property>
             <property name="scaledContents">
              <bool>true</bool>
@@ -960,7 +662,7 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
   </layout>
  </widget>
  <resources>
-  <include location="armory.qrc"/>
+  <include location="../armory.qrc"/>
  </resources>
  <connections>
   <connection>

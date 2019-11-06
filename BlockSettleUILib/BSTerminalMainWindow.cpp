@@ -12,7 +12,8 @@
 #include <spdlog/spdlog.h>
 #include <thread>
 
-#include "AboutDialog.h"
+#include "InfoDialogs/AboutDialog.h"
+#include "InfoDialogs/SupportDialog.h"
 #include "ArmoryServersProvider.h"
 #include "AssetManager.h"
 #include "AuthAddressDialog.h"
@@ -33,7 +34,7 @@
 #include "HeadlessContainer.h"
 #include "ImportKeyBox.h"
 #include "LoginWindow.h"
-#include "MDAgreementDialog.h"
+#include "InfoDialogs/MDAgreementDialog.h"
 #include "MarketDataProvider.h"
 #include "NetworkSettingsLoader.h"
 #include "NewAddressDialog.h"
@@ -46,7 +47,7 @@
 #include "SelectWalletDialog.h"
 #include "Settings/ConfigDialog.h"
 #include "SignersProvider.h"
-#include "StartupDialog.h"
+#include "InfoDialogs/StartupDialog.h"
 #include "StatusBarView.h"
 #include "SystemFileUtils.h"
 #include "TabWithShortcut.h"
@@ -141,17 +142,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    connectArmory();
 
    InitChartsView();
-   aboutDlg_ = std::make_shared<AboutDialog>(applicationSettings_->get<QString>(ApplicationSettings::ChangeLog_Base_Url), this);
-   auto aboutDlgCb = [this] (int tab) {
-      return [this, tab]() {
-         aboutDlg_->setTab(tab);
-         aboutDlg_->show();
-      };
-   };
-   connect(ui_->actionAboutBlockSettle, &QAction::triggered, aboutDlgCb(0));
-   connect(ui_->actionAboutTerminal, &QAction::triggered, aboutDlgCb(1));
-   connect(ui_->actionContactBlockSettle, &QAction::triggered, aboutDlgCb(2));
-   connect(ui_->actionVersion, &QAction::triggered, aboutDlgCb(3));
 
    ui_->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
@@ -1039,23 +1029,43 @@ void BSTerminalMainWindow::setupMenu()
    action_login_->setMenuRole(QAction::ApplicationSpecificRole);
    action_logout_->setMenuRole(QAction::ApplicationSpecificRole);
 
+
    ui_->menuFile->insertAction(ui_->actionSettings, action_login_);
    ui_->menuFile->insertAction(ui_->actionSettings, action_logout_);
 
    ui_->menuFile->insertSeparator(action_login_);
    ui_->menuFile->insertSeparator(ui_->actionSettings);
 
-   connect(ui_->actionCreateNewWallet, &QAction::triggered, this, [ww = ui_->widgetWallets]{ ww->CreateNewWallet(); });
+   AboutDialog *aboutDlg = new AboutDialog(applicationSettings_->get<QString>(ApplicationSettings::ChangeLog_Base_Url), this);
+   auto aboutDlgCb = [aboutDlg] (int tab) {
+      return [aboutDlg, tab]() {
+         aboutDlg->setTab(tab);
+         aboutDlg->show();
+      };
+   };
+
+   SupportDialog *supportDlg = new SupportDialog(this);
+   auto supportDlgCb = [supportDlg] (int tab) {
+      return [supportDlg, tab]() {
+         supportDlg->setTab(tab);
+         supportDlg->show();
+      };
+   };
+
+   connect(ui_->actionCreateNewWallet, &QAction::triggered, this, [ww = ui_->widgetWallets]{ ww->onNewWallet(); });
    connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
    connect(ui_->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
    connect(ui_->actionAccountInformation, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
    connect(ui_->actionEnterColorCoinToken, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
+   connect(ui_->actionAbout, &QAction::triggered, aboutDlgCb(0));
+   connect(ui_->actionVersion, &QAction::triggered, aboutDlgCb(3));
+   connect(ui_->actionGuides, &QAction::triggered, supportDlgCb(0));
+   connect(ui_->actionContact, &QAction::triggered, supportDlgCb(1));
 
    onUserLoggedOut();
 
 #ifndef Q_OS_MAC
    ui_->horizontalFrame->hide();
-
    ui_->menubar->setCornerWidget(ui_->pushButtonUser);
 #endif
 }

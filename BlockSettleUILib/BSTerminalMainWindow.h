@@ -160,7 +160,6 @@ private:
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
-   std::shared_ptr<AboutDialog>              aboutDlg_;
    std::shared_ptr<SignContainer>            signContainer_;
    std::shared_ptr<bs::DealerUtxoResAdapter> dealerUtxoAdapter_;
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;

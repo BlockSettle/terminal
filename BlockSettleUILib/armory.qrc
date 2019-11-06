@@ -214,5 +214,11 @@
         <file>resources/PublicKeys/proxy_uat.key</file>
         <file>resources/PublicKeys/proxy_staging.key</file>
         <file>resources/eye.png</file>
+        <file>resources/getstarted-manual.png</file>
+        <file>resources/getstarted-manual@2x.png</file>
+        <file>resources/getstarted-trading.png</file>
+        <file>resources/getstarted-trading@2x.png</file>
+        <file>resources/getstarted-wallet.png</file>
+        <file>resources/getstarted-wallet@2x.png</file>
     </qresource>
 </RCC>
