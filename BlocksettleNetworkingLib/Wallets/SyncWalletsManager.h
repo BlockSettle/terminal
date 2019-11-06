@@ -33,9 +33,10 @@ namespace bs {
    }
    namespace sync {
       namespace hd {
+         class CCLeaf;
+         class DummyWallet;
          class Group;
          class Wallet;
-         class DummyWallet;
       }
       class Wallet;
 
@@ -215,6 +216,7 @@ namespace bs {
             , const std::string &walletId);
 
          void processPromoteHDWallet(bs::error::ErrorCode result, const std::string& walletId);
+         void updateTracker(const std::shared_ptr<bs::sync::hd::CCLeaf> &ccLeaf);
 
       private:
          std::shared_ptr<WalletSignerContainer>         signContainer_;
