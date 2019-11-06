@@ -197,11 +197,7 @@ void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
    auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(wallet);
    if (ccLeaf) {
       ccLeaf->setCCDataResolver(ccResolver_);
-
-      const auto itTracker = trackers_.find(ccLeaf->displaySymbol().toStdString());
-      if (itTracker != trackers_.end()) {
-         ccLeaf->setCCTracker(itTracker->second);
-      }
+      updateTracker(ccLeaf);
    }
    wallet->setUserId(userId_);
 
@@ -1152,6 +1148,13 @@ void WalletsManager::goOnline()
       logger_->debug("[{}] added CC tracker for {}", __func__, cc);
    }
 
+   for (const auto &wallet : getAllWallets()) {
+      auto ccLeaf = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(wallet);
+      if (ccLeaf) {
+         updateTracker(ccLeaf);
+      }
+   }
+
    std::thread([this, handle = validityFlag_.handle()]() mutable {
       for (const auto &ccTracker : trackers_) {
          ValidityGuard lock(handle);
@@ -1673,6 +1676,14 @@ void WalletsManager::processPromoteHDWallet(bs::error::ErrorCode result, const s
       logger_->error("[WalletsManager::ProcessPromoteWalletID] Wallet {} promotion failed: {}"
                      , walletId, static_cast<int>(result));
       emit walletPromotionFailed(walletId, result);
+   }
+}
+
+void WalletsManager::updateTracker(const std::shared_ptr<hd::CCLeaf> &ccLeaf)
+{
+   const auto itTracker = trackers_.find(ccLeaf->displaySymbol().toStdString());
+   if (itTracker != trackers_.end()) {
+      ccLeaf->setCCTracker(itTracker->second);
    }
 }
 
