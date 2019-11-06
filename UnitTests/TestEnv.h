@@ -150,6 +150,8 @@ public:
 
    void onRefresh(const std::vector<BinaryData> &ids, bool online) override
    {
+      bs::sync::WalletACT::onRefresh(ids, online);
+
       auto dbns = std::make_shared<DBNotificationStruct>(DBNS_Refresh);
       dbns->ids_ = ids;
       dbns->online_ = online;
@@ -159,14 +161,18 @@ public:
 
    void onZCReceived(const std::vector<bs::TXEntry> &zcs) override
    {
+      bs::sync::WalletACT::onZCReceived(zcs);
+
       auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
       dbns->zc_ = zcs;
 
       ACTqueue::notifQueue_.push_back(std::move(dbns));
    }
 
-   void onNewBlock(unsigned int block, unsigned int) override
+   void onNewBlock(unsigned int block, unsigned int bh) override
    {
+      bs::sync::WalletACT::onNewBlock(block, bh);
+
       auto dbns = std::make_shared<DBNotificationStruct>(DBNS_NewBlock);
       dbns->block_ = block;
 
@@ -210,13 +216,19 @@ public:
       }
    }
 
-   static unsigned waitOnNewBlock()
+   static unsigned waitOnNewBlock(bool strict = false)
    {
-      auto&& notif = ACTqueue::notifQueue_.pop_front();
-      if(notif->type_ != DBNS_NewBlock)
-         throw std::runtime_error("expected new block notification (got " + std::to_string(notif->type_) + ")");
-      
-      return notif->block_;
+      while (true) {
+         auto&& notif = ACTqueue::notifQueue_.pop_front();
+         if (notif->type_ != DBNS_NewBlock) {
+            if (strict) {
+               throw std::runtime_error("expected new block notification (got " + std::to_string(notif->type_) + ")");
+            } else {
+               continue;
+            }
+         }
+         return notif->block_;
+      }
    }
 
    static std::vector<bs::TXEntry> waitOnZC(bool soft = false);
@@ -250,6 +262,8 @@ public:
 
    void onRefresh(const std::vector<BinaryData> &ids, bool online) override
    {
+      bs::sync::WalletACT::onRefresh(ids, online);
+
       auto dbns = std::make_shared<DBNotificationStruct>(DBNS_Refresh);
       dbns->ids_ = ids;
       dbns->online_ = online;
@@ -259,6 +273,8 @@ public:
 
    void onZCReceived(const std::vector<bs::TXEntry> &zcs) override
    {
+      bs::sync::WalletACT::onZCReceived(zcs);
+
       auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
       dbns->zc_ = zcs;
 
@@ -267,6 +283,8 @@ public:
 
    void onNewBlock(unsigned int block, unsigned branchHeight) override
    {
+      bs::sync::WalletACT::onNewBlock(block, branchHeight);
+
       auto dbns = std::make_shared<DBNotificationStruct>(DBNS_NewBlock);
       dbns->block_ = block;
       dbns->branchHeight_ = branchHeight;

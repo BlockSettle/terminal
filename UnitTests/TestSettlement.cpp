@@ -143,12 +143,12 @@ void TestSettlement::SetUp()
    futSync.wait();
 
    UnitTestWalletACT::clear();
-   const auto regIDs = syncMgr_->registerWallets();
 
    for (const auto &hdWallet : syncMgr_->hdWallets()) {
       hdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
    }
 
+   const auto regIDs = syncMgr_->registerWallets();
    UnitTestWalletACT::waitOnRefresh(regIDs);
 
 //   auto curHeight = envPtr_->armoryConnection()->topBlock();
