@@ -7,11 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>526</width>
-    <height>402</height>
+    <height>400</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>About</string>
+   <string>Support</string>
   </property>
   <property name="classicTabs" stdset="0">
    <bool>false</bool>
@@ -56,7 +56,13 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>50</height>
+           <height>40</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>40</height>
           </size>
          </property>
          <property name="buttonBar" stdset="0">
@@ -66,7 +72,7 @@
           <item>
            <widget class="QLabel" name="label_10">
             <property name="text">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;BlockSettle Guides&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;BlockSettle Guides&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </widget>
           </item>
@@ -83,24 +89,86 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_5">
           <item>
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;_____________________________________________&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Additional guides and documentation can be found under the Resources &lt;br/&gt;on the BlockSettle Webpage&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <widget class="QWidget" name="widget_7" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>81</height>
+             </size>
             </property>
-            <property name="textFormat">
-             <enum>Qt::RichText</enum>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QLabel" name="label_5">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Additional guides and documentation can be found under the Resources &lt;br/&gt;on the BlockSettle Webpage&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <property name="textFormat">
+                <enum>Qt::RichText</enum>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="openExternalLinks">
+                <bool>true</bool>
+               </property>
+               <property name="textInteractionFlags">
+                <set>Qt::LinksAccessibleByMouse</set>
+               </property>
+               <property name="whiteLabel" stdset="0">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>43</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="Line" name="line">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>1</height>
+             </size>
             </property>
-            <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>1</height>
+             </size>
             </property>
-            <property name="openExternalLinks">
-             <bool>true</bool>
-            </property>
-            <property name="textInteractionFlags">
-             <set>Qt::LinksAccessibleByMouse</set>
-            </property>
-            <property name="whiteLabel" stdset="0">
-             <bool>false</bool>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -116,14 +184,8 @@
              <property name="verticalSpacing">
               <number>20</number>
              </property>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label">
-               <property name="minimumSize">
-                <size>
-                 <width>150</width>
-                 <height>0</height>
-                </size>
-               </property>
+             <item row="1" column="1">
+              <widget class="QLabel" name="label_8">
                <property name="maximumSize">
                 <size>
                  <width>150</width>
@@ -131,65 +193,25 @@
                 </size>
                </property>
                <property name="text">
-                <string/>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;a href=&quot;https://blocksettle.com&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#247dac;&quot;&gt;Getting Started with Trading&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
-               <property name="pixmap">
-                <pixmap resource="../armory.qrc">:/resources/getstarted-wallet@2x.png</pixmap>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignCenter</set>
+               <property name="wordWrap">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
              <item row="0" column="1">
-              <widget class="QLabel" name="label_2">
-               <property name="minimumSize">
+              <spacer name="verticalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
                 <size>
-                 <width>150</width>
-                 <height>0</height>
+                 <width>20</width>
+                 <height>40</height>
                 </size>
                </property>
-               <property name="maximumSize">
-                <size>
-                 <width>150</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-               <property name="pixmap">
-                <pixmap resource="../armory.qrc">:/resources/getstarted-trading@2x.png</pixmap>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="2">
-              <widget class="QLabel" name="label_3">
-               <property name="minimumSize">
-                <size>
-                 <width>150</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>150</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-               <property name="pixmap">
-                <pixmap resource="../armory.qrc">:/resources/getstarted-manual@2x.png</pixmap>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignCenter</set>
-               </property>
-              </widget>
+              </spacer>
              </item>
              <item row="1" column="0">
               <widget class="QLabel" name="label_6">
@@ -200,23 +222,7 @@
                 </size>
                </property>
                <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;a href=&quot;https://blocksettle.com&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#ffffff;&quot;&gt;Getting Started with your BlockSettle Wallet&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="wordWrap">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QLabel" name="label_8">
-               <property name="maximumSize">
-                <size>
-                 <width>150</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;a href=&quot;https://blocksettle.com&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#ffffff;&quot;&gt;Getting Started with Trading&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;a href=&quot;https://blocksettle.com&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#247dac;&quot;&gt;Getting Started with your BlockSettle Wallet&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -232,31 +238,31 @@
                 </size>
                </property>
                <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;a href=&quot;https://blocksettle.com&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#ffffff;&quot;&gt;Getting Started Manual&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;a href=&quot;https://blocksettle.com&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#247dac;&quot;&gt;Getting Started Manual&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
                </property>
               </widget>
              </item>
+             <item row="2" column="1">
+              <spacer name="verticalSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>40</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
             </layout>
            </widget>
           </item>
          </layout>
         </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>
@@ -282,7 +288,13 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>50</height>
+           <height>40</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>40</height>
           </size>
          </property>
          <property name="buttonBar" stdset="0">
@@ -292,7 +304,7 @@
           <item>
            <widget class="QLabel" name="label_11">
             <property name="text">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;BlockSettle Support&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;BlockSettle Support&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </widget>
           </item>
@@ -335,7 +347,7 @@
              <item>
               <widget class="QLabel" name="label_4">
                <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Contact us&lt;br/&gt;_____________________________________________&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Customer Support:&lt;/span&gt;&lt;br/&gt;Contact BlockSettle through our &lt;a href=&quot;http://pubb.blocksettle.com/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;Client Portal&lt;/span&gt;&lt;/a&gt; (Participants only)&lt;br/&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Technical Support:&lt;/span&gt;&lt;br/&gt;&lt;a href=&quot;mailto:support@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;support@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Compliance:&lt;/span&gt;&lt;br/&gt;&lt;a href=&quot;mailto:compliance@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;compliance@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;OTC Chat in the Terminal &lt;br/&gt;_____________________________________________&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Ask the Community in the public chat room &lt;br/&gt;(Login to chat requires &lt;a href=&quot;https://blocksettle.com/auth-eid&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#007af4;&quot;&gt;Auth eID&lt;/span&gt;&lt;/a&gt;)&lt;/p&gt;&lt;p&gt;Someone from the BlockSettle team or the BlockSettle community will be happy to help.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;Contact us&lt;br/&gt;_____________________________________________&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Customer Support:&lt;/span&gt;&lt;br/&gt;Contact BlockSettle through our &lt;a href=&quot;http://pubb.blocksettle.com/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;Client Portal&lt;/span&gt;&lt;/a&gt; (Participants only)&lt;br/&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Technical Support:&lt;/span&gt;&lt;br/&gt;&lt;a href=&quot;mailto:support@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;support@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Compliance:&lt;/span&gt;&lt;br/&gt;&lt;a href=&quot;mailto:compliance@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;compliance@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;OTC Chat in the Terminal &lt;br/&gt;_____________________________________________&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Ask the Community in the public chat room &lt;br/&gt;(Login to chat requires &lt;a href=&quot;https://blocksettle.com/auth-eid&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#007af4;&quot;&gt;Auth eID&lt;/span&gt;&lt;/a&gt;)&lt;/p&gt;&lt;p&gt;Someone from the BlockSettle team or the BlockSettle community will be happy to help.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="textFormat">
                 <enum>Qt::RichText</enum>
