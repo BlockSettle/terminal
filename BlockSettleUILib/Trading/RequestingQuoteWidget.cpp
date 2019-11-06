@@ -139,16 +139,13 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
       return true;
    }
 
-   if (transactionData_ && (rfq_.side == bs::network::Side::Buy) && (rfq_.assetType != bs::network::Asset::SpotFX)) {
+   if (rfq_.side == bs::network::Side::Buy && rfq_.assetType != bs::network::Asset::SpotFX) {
       double amount = 0;
       if (rfq_.assetType == bs::network::Asset::PrivateMarket) {
          amount = rfq_.quantity * quote_.price;
       }
       else if (rfq_.product != bs::network::XbtCurrency) {
          amount = rfq_.quantity / quote_.price;
-      }
-      if (!qFuzzyIsNull(amount)) {
-         transactionData_->ReserveUtxosFor(amount, rfq_.requestId);
       }
    }
 
@@ -234,10 +231,9 @@ void RequestingQuoteWidget::onCelerDisconnected()
    onCancel();
 }
 
-void RequestingQuoteWidget::populateDetails(const bs::network::RFQ& rfq, const std::shared_ptr<TransactionData> &transactionData)
+void RequestingQuoteWidget::populateDetails(const bs::network::RFQ& rfq)
 {
    rfq_ = rfq;
-   transactionData_ = transactionData;
 
    ui_->labelProductGroup->setText(tr(bs::network::Asset::toString(rfq.assetType)));
    ui_->labelSecurityId->setText(QString::fromStdString(rfq.security));

@@ -71,7 +71,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, this, &RFQDialog::onOrderFilled);
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQDialog::onSignTxRequested);
 
-   ui_->pageRequestingQuote->populateDetails(rfq_, transactionData_);
+   ui_->pageRequestingQuote->populateDetails(rfq_);
 
    quoteProvider_->SubmitRFQ(rfq_);
 }
@@ -124,8 +124,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    }
 
    auto selectedInputs = transactionData_->getSelectedInputs();
-   auto fixedInputs = (!selectedInputs || transactionData_->getSelectedInputs()->UseAutoSel()) ?
-      std::vector<UTXO>{} : transactionData_->getSelectedInputs()->GetSelectedTransactions();
+   auto fixedInputs = (!selectedInputs || selectedInputs->UseAutoSel()) ?
+      std::vector<UTXO>{} : selectedInputs->GetSelectedTransactions();
 
    try {
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_

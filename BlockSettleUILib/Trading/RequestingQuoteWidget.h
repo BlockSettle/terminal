@@ -30,7 +30,7 @@ public:
 
    void SetCelerClient(std::shared_ptr<BaseCelerClient> celerClient);
 
-   void populateDetails(const bs::network::RFQ& rfq, const std::shared_ptr<TransactionData> &);
+   void populateDetails(const bs::network::RFQ& rfq);
 
 public slots:
    void ticker();
@@ -71,7 +71,6 @@ private:
    bs::network::Quote         quote_;
    std::shared_ptr<AssetManager> assetManager_;
    bool                       balanceOk_ = true;
-   std::shared_ptr<TransactionData>                transactionData_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
    std::shared_ptr<BaseCelerClient>                    celerClient_;
 
