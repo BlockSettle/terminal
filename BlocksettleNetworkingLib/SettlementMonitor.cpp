@@ -49,11 +49,11 @@ void bs::SettlementMonitor::onRefresh(const std::vector<BinaryData>& ids, bool)
    }
 }
 
+void bs::SettlementMonitor::HandleEmptyHistoryPage()
+{}
+
 void bs::SettlementMonitor::checkNewEntries()
 {
-   logger_->debug("[SettlementMonitor::checkNewEntries] checking entries for {}"
-      , settlAddress_.display());
-
    const auto &cbHistory = [this, handle = validityFlag_.handle()]
       (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) mutable -> void
    {
@@ -65,40 +65,36 @@ void bs::SettlementMonitor::checkNewEntries()
       try {
          auto le = entries.get();
          if (le.empty()) {
+            HandleEmptyHistoryPage();
             return;
-         } else {
-            logger_->debug("[SettlementMonitor::checkNewEntries] get {} entries for {}"
-               , le.size(), settlAddress_.display());
          }
 
          for (const auto &entry : le) {
-            const auto &cbPayOut = [this, entry, handle](bool ack) mutable {
+            const auto &cbPayOut = [this, entry, handle](bool isPayout) mutable {
                std::lock_guard<ValidityHandle> lock(handle);
                if (!handle.isValid()) {
                   return;
                }
 
-               if (ack) {
+               if (isPayout) {
                   SendPayOutNotification(entry);
-               }
-               else {
+               } else {
                   logger_->error("[SettlementMonitor::checkNewEntries] not "
                                  "payin or payout transaction detected for "
                                  "settlement address {}", settlAddress_.display());
                }
             };
-            const auto &cbPayIn = [this, entry, cbPayOut, handle](bool ack) mutable
+            const auto &cbPayIn = [this, entry, cbPayOut, handle](bool isPayin) mutable
             {
                std::lock_guard<ValidityHandle> lock(handle);
                if (!handle.isValid()) {
                   return;
                }
 
-               if (ack) {
+               if (isPayin) {
                   SendPayInNotification(armoryPtr_->getConfirmationsNumber(entry),
                                         entry.getTxHash());
-               }
-               else {
+               } else {
                   IsPayOutTransaction(entry, cbPayOut);
                }
             };
