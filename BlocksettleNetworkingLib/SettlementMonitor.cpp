@@ -21,9 +21,9 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<ArmoryConnection>
 
    const auto walletId = addr.display();
    rtWallet_ = armory_->instantiateWallet(walletId);
-   const auto regId = armory_->registerWallet(rtWallet_, walletId
-      , { addr.id() }
-      , [cbInited](const std::string &) { cbInited(); });
+
+   const auto regId = rtWallet_->registerAddresses({ addr.prefixed() }, false);
+   refreshCallbacks_[regId] = cbInited;
 }
 
 void bs::SettlementMonitor::onNewBlock(unsigned int, unsigned int)
@@ -34,6 +34,19 @@ void bs::SettlementMonitor::onNewBlock(unsigned int, unsigned int)
 void bs::SettlementMonitor::onZCReceived(const std::vector<bs::TXEntry> &)
 {
    checkNewEntries();
+}
+
+void bs::SettlementMonitor::onRefresh(const std::vector<BinaryData>& ids, bool)
+{
+   if (!refreshCallbacks_.empty()) {
+      for (const auto &id : ids) {
+         const auto &it = refreshCallbacks_.find(id.toBinStr());
+         if (it != refreshCallbacks_.end()) {
+            it->second();
+            refreshCallbacks_.erase(it);
+         }
+      }
+   }
 }
 
 void bs::SettlementMonitor::checkNewEntries()

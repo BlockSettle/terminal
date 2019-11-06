@@ -151,15 +151,11 @@ public:
 
    unsigned int topBlock() const { return topBlock_; }
 
-   using RegisterWalletCb = std::function<void(const std::string &regId)>;
    using WalletsHistoryCb = std::function<void(const std::vector<ClientClasses::LedgerEntry>&)>;
    using LedgerDelegateCb = std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>;
    using UTXOsCb = std::function<void(const std::vector<UTXO> &)>;
 
    // For ZC notifications walletId would be replaced with mergedWalletId (and notifications are merged)
-   virtual std::string registerWallet(const std::shared_ptr<AsyncClient::BtcWallet> &
-      , const std::string &walletId, const std::vector<BinaryData> &addrVec
-      , const RegisterWalletCb&, bool asNew = false);
    virtual bool getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb&);
    virtual bool getCombinedBalances(const std::vector<std::string> &walletIDs
       , const std::function<void(const std::map<std::string, CombinedBalances> &)> &);
@@ -260,10 +256,6 @@ protected:
    std::atomic_bool  maintThreadRunning_{ false };
 
    std::atomic_bool              isOnline_;
-
-   using refreshCB = std::function<void(const std::string &)>;
-   std::unordered_map<std::string, refreshCB>   registrationCallbacks_;
-   std::mutex                                   registrationCallbacksMutex_;
 
    std::mutex  cbMutex_;
    std::map<BinaryData, std::vector<TxCb>>   txCallbacks_;
