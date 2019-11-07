@@ -79,7 +79,6 @@ RFQTicketXBT::RFQTicketXBT(QWidget* parent)
 
 RFQTicketXBT::~RFQTicketXBT()
 {
-   bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
 void RFQTicketXBT::setTransactionData()
@@ -168,21 +167,10 @@ void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std
    signingContainer_ = container;
    armory_ = armory;
 
-   utxoAdapter_ = std::make_shared<bs::RequesterUtxoResAdapter>(nullptr, this);
-   connect(quoteProvider.get(), &QuoteProvider::orderUpdated, utxoAdapter_.get(), &bs::OrderUtxoResAdapter::onOrder);
-   connect(utxoAdapter_.get(), &bs::OrderUtxoResAdapter::reservedUtxosChanged, this, &RFQTicketXBT::onReservedUtxosChanged, Qt::QueuedConnection);
-   bs::UtxoReservation::addAdapter(utxoAdapter_);
-
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
    }
 
-   updateSubmitButton();
-}
-
-void RFQTicketXBT::onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &utxos)
-{
-   updateBalances();
    updateSubmitButton();
 }
 
@@ -541,6 +529,11 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
    }
 }
 
+void RFQTicketXBT::setSubmitRFQ(RFQTicketXBT::SubmitRFQCb submitRFQCb)
+{
+   submitRFQCb_ = std::move(submitRFQCb);
+}
+
 bs::Address RFQTicketXBT::recvAddress() const
 {
    const auto index = ui_->receivingAddressComboBox->currentIndex();
@@ -750,8 +743,8 @@ void RFQTicketXBT::submitButtonClicked()
                   try {
                      const auto txReq = wallet->createPartialTXRequest(spendVal, ccInputs, addr);
                      rfq->coinTxInput = txReq.serializeState().toHexStr();
-                     utxoAdapter_->reserve(txReq, rfq->requestId);
-                     emit submitRFQ(*rfq);
+                     auto reservationToken = bs::UtxoReservationToken::makeNewReservation(logger_, txReq, rfq->requestId);
+                     submitRFQCb_(*rfq, std::move(reservationToken));
                   }
                   catch (const std::exception &e) {
                      BSMessageBox(BSMessageBox::critical, tr("RFQ Failure")
@@ -775,7 +768,7 @@ void RFQTicketXBT::submitButtonClicked()
       }
    }
 
-   emit submitRFQ(*rfq);
+   submitRFQCb_(*rfq, bs::UtxoReservationToken{});
 }
 
 QPushButton* RFQTicketXBT::submitButton() const

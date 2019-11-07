@@ -13,11 +13,15 @@
 using namespace bs::sync;
 
 ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AssetManager> &assetMgr
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const bs::network::RFQ &rfq, const bs::network::Quote &quote
-   , const std::shared_ptr<Wallet> &xbtWallet, const std::vector<UTXO> &manualXbtInputs)
+   , const bs::network::RFQ &rfq
+   , const bs::network::Quote &quote
+   , const std::shared_ptr<Wallet> &xbtWallet
+   , const std::vector<UTXO> &manualXbtInputs
+   , bs::UtxoReservationToken resToken)
    : bs::SettlementContainer(), logger_(logger), signingContainer_(container)
    , xbtWallet_(xbtWallet)
    , assetMgr_(assetMgr)
@@ -29,14 +33,12 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , signer_(armory)
    , lotSize_(assetMgr_->getCCLotSize(product()))
    , manualXbtInputs_(manualXbtInputs)
+   , resToken_(std::move(resToken))
 {
    ccWallet_ = walletsMgr->getCCWallet(rfq.product);
    if (!ccWallet_) {
       throw std::logic_error("can't find CC wallet");
    }
-
-   utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
-   bs::UtxoReservation::addAdapter(utxoAdapter_);
 
    connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &ReqCCSettlementContainer::onWalletInfo);
    connect(this, &ReqCCSettlementContainer::genAddressVerified, this
@@ -53,10 +55,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    }
 }
 
-ReqCCSettlementContainer::~ReqCCSettlementContainer()
-{
-   bs::UtxoReservation::delAdapter(utxoAdapter_);
-}
+ReqCCSettlementContainer::~ReqCCSettlementContainer() = default;
 
 bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() const
 {
@@ -182,7 +181,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
       ccTxData_.outSortOrder = {bs::core::wallet::OutputOrderType::Recipients
          , bs::core::wallet::OutputOrderType::PrevState, bs::core::wallet::OutputOrderType::Change };
       ccTxData_.populateUTXOs = true;
-      ccTxData_.inputs = utxoAdapter_->get(id());
+      ccTxData_.inputs = bs::UtxoReservation::instance()->get(resToken_.reserveId());
       logger_->debug("[{}] {} CC inputs reserved ({} recipients)"
          , __func__, ccTxData_.inputs.size(), ccTxData_.recipients.size());
 
@@ -213,7 +212,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   ccTxData_.populateUTXOs = true;
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
-                  utxoAdapter_->reserve(ccTxData_.walletIds.front(), id(), ccTxData_.inputs);
+                  resToken_ = bs::UtxoReservationToken::makeNewReservation(logger_, ccTxData_, id());
 
                   startSigning();
                }
@@ -315,7 +314,7 @@ void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const 
 bool ReqCCSettlementContainer::cancel()
 {
    deactivate();
-   utxoAdapter_->unreserve(id());
+   resToken_.release();
    emit settlementCancelled();
    signingContainer_->CancelSignTx(id());
    return true;

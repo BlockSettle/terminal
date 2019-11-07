@@ -7,7 +7,7 @@
 #include "CommonTypes.h"
 #include "CoreWallet.h"
 #include "QWalletInfo.h"
-#include "UtxoReservation.h"
+#include "UtxoReservationToken.h"
 
 namespace spdlog {
    class logger;
@@ -34,7 +34,8 @@ public:
       , const bs::network::RFQ &
       , const bs::network::Quote &
       , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
-      , const std::vector<UTXO> &manualXbtInputs);
+      , const std::vector<UTXO> &manualXbtInputs
+      , bs::UtxoReservationToken resToken);
    ~ReqCCSettlementContainer() override;
 
    bool cancel() override;
@@ -100,9 +101,10 @@ private:
    std::string                ccTxSigned_;
    bool                       genAddrVerified_ = false;
 
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
    bs::hd::WalletInfo walletInfo_;
    std::vector<UTXO> manualXbtInputs_;
+
+   bs::UtxoReservationToken resToken_;
 
 };
 

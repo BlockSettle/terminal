@@ -29,6 +29,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const bs::Address &recvXbtAddr
    , const bs::Address &authAddr
    , const std::vector<UTXO> &fixedXbtInputs
+   , bs::UtxoReservationToken utxoRes
    , RFQRequestWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
@@ -49,6 +50,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , authAddr_(authAddr)
    , fixedXbtInputs_(fixedXbtInputs)
    , requestWidget_(parent)
+   , utxoRes_(std::move(utxoRes))
 {
    ui_->setupUi(this);
 
@@ -163,7 +165,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 {
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_);
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, std::move(utxoRes_));
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementAccepted
          , this, &RFQDialog::onSettlementAccepted);

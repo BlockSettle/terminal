@@ -4,12 +4,14 @@
 #include <QFont>
 #include <QWidget>
 
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 #include "BSErrorCode.h"
 #include "CommonTypes.h"
+#include "UtxoReservationToken.h"
 
 QT_BEGIN_NAMESPACE
 class QPushButton;
@@ -71,8 +73,10 @@ public:
    QPushButton* denomCcyButton() const;
 
    bs::Address selectedAuthAddress() const;
-
    bs::Address recvAddress() const;
+
+   using SubmitRFQCb = std::function<void(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)>;
+   void setSubmitRFQ(SubmitRFQCb submitRFQCb);
 
 public slots:
    void SetProductAndSide(const QString& productGroup, const QString& currencyPair
@@ -104,8 +108,6 @@ private slots:
    void walletSelectedRecv(int index);
    void walletSelectedSend(int index);
 
-   void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
-
    void updateSubmitButton();
    void submitButtonClicked();
 
@@ -120,7 +122,6 @@ private slots:
    void onAuthAddrChanged(int);
 
 signals:
-   void submitRFQ(const bs::network::RFQ& rfq);
    void update();
 
 protected:
@@ -211,7 +212,6 @@ private:
    unsigned int      leafCreateReqId_ = 0;
 
    std::unordered_map<std::string, double>      rfqMap_;
-   std::shared_ptr<bs::RequesterUtxoResAdapter> utxoAdapter_;
 
    std::unordered_map<std::string, bs::network::Side::Type>         lastSideSelection_;
 
@@ -231,6 +231,8 @@ private:
    QString currentOfferPrice_;
 
    bool maxAmount_ = false;
+
+   SubmitRFQCb submitRFQCb_;
 
 };
 

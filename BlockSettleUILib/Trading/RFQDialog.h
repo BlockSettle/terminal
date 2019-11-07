@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "CommonTypes.h"
+#include "UtxoReservationToken.h"
 
 namespace Ui {
    class RFQDialog;
@@ -56,6 +57,7 @@ public:
       , const bs::Address &recvXbtAddr
       , const bs::Address &authAddr
       , const std::vector<UTXO> &fixedXbtInputs
+      , bs::UtxoReservationToken utxoRes
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
 
@@ -117,6 +119,8 @@ private:
    bool isRejectStarted_ = false;
 
    RFQRequestWidget *requestWidget_{};
+
+   bs::UtxoReservationToken utxoRes_;
 
 };
 
