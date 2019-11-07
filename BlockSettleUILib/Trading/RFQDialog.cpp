@@ -114,6 +114,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
       }
       if (curContainer_) {
          rfqStorage_->addSettlementContainer(curContainer_);
+         curContainer_->activate();
       }
    }
 }
@@ -140,7 +141,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
          , rfq_, quote_, authAddr_, fixedInputs, recvXbtAddr_);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
-         , this, &RFQDialog::onSettlementAccepted);
+         , this, &RFQDialog::onXBTSettlementAccepted);
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementCancelled
          , this, &QDialog::close);
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::acceptQuote
@@ -170,10 +171,10 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
          , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, transactionData_);
 
-      connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementAccepted
-         , this, &RFQDialog::onSettlementAccepted);
+      connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
+         , this, &RFQDialog::onCCTxSigned);
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::sendOrder
-         , this, &RFQDialog::onSettlementOrder);
+         , this, &RFQDialog::onCCQuoteAccepted);
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementCancelled
          , this, &QDialog::close);
    }
@@ -183,6 +184,12 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
    }
 
    return ccSettlContainer_;
+}
+
+void RFQDialog::onCCTxSigned()
+{
+   quoteProvider_->SignTxRequest(ccOrderId_, ccSettlContainer_->txSignedData());
+   close();
 }
 
 void RFQDialog::reject()
@@ -218,31 +225,17 @@ void RFQDialog::onQuoteReceived(const bs::network::Quote& quote)
    ui_->pageRequestingQuote->onQuoteReceived(quote);
 }
 
-void RFQDialog::onSettlementAccepted()
+void RFQDialog::onXBTSettlementAccepted()
 {
-   if (ccSettlContainer_) {
-      // KLUDGE
-      // since CC settlement/sign is a mess now, there is a trick to save "sign request" for RFQ
-      // but it is actually fine, except the fact that we might force user to sign before submitting order ( accepting quote )
-      const auto itCCOrder = ccReqIdToOrder_.find(QString::fromStdString(rfq_.requestId));
-      if (itCCOrder != ccReqIdToOrder_.end()) {
-         quoteProvider_->SignTxRequest(itCCOrder->second, ccSettlContainer_->txSignedData());
-         ccReqIdToOrder_.erase(QString::fromStdString(rfq_.requestId));
-         close();
-      } else {
-         ccTxMap_[rfq_.requestId] = ccSettlContainer_->txSignedData();
-      }
-   } else if (xbtSettlContainer_) {
+   if (xbtSettlContainer_) {
       close();
    } else {
-      // spotFX
-      close();
+      logger_->error("[RFQDialog::onXBTSettlementAccepted] XBT settlement accepted with empty container");
    }
 }
 
-void RFQDialog::onSettlementOrder()
+void RFQDialog::onCCQuoteAccepted()
 {
-   logger_->debug("[RFQDialog::onSettlementOrder]");
    if (ccSettlContainer_) {
       quoteProvider_->AcceptQuote(QString::fromStdString(rfq_.requestId), quote_
          , ccSettlContainer_->txData());
@@ -251,17 +244,18 @@ void RFQDialog::onSettlementOrder()
 
 void RFQDialog::onSignTxRequested(QString orderId, QString reqId)
 {
-   const auto itCCtx = ccTxMap_.find(reqId.toStdString());
-   if (itCCtx == ccTxMap_.end()) {
-      // KLUDGE
-      logger_->debug("[RFQDialog::onSignTxRequested] signTX for reqId={} requested before signing", reqId.toStdString());
-      ccReqIdToOrder_[reqId] = orderId;
-      hide();
+   if (QString::fromStdString(rfq_.requestId) != reqId) {
+      logger_->debug("[RFQDialog::onSignTxRequested] not our request. ignore");
       return;
    }
-   quoteProvider_->SignTxRequest(orderId, itCCtx->second);
-   ccTxMap_.erase(reqId.toStdString());
-   close();
+
+   if (ccSettlContainer_ == nullptr) {
+      logger_->error("[RFQDialog::onSignTxRequested] could not sign with missing container");
+      return;
+   }
+
+   ccOrderId_ = orderId;
+   ccSettlContainer_->startSigning();
 }
 
 void RFQDialog::onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx)

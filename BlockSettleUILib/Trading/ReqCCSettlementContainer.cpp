@@ -193,7 +193,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
          , __func__, ccTxData_.inputs.size(), ccTxData_.recipients.size());
 
       // KLUDGE - in current implementation, we should sign first to have sell/buy process aligned
-      startSigning();
+      AcceptQuote();
    }
    else {
       const auto &cbFee = [this](float feePerByte) {
@@ -215,7 +215,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
                utxoAdapter_->reserve(ccTxData_.walletIds.front(), id(), ccTxData_.inputs);
 
-               startSigning();
+               AcceptQuote();
             }
             catch (const std::exception &e) {
                logger_->error("[{}] Failed to create partial CC TX to {}: {}"
@@ -233,18 +233,21 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
    return true;
 }
 
-bool ReqCCSettlementContainer::startSigning()
+void ReqCCSettlementContainer::AcceptQuote()
 {
    if (side() == bs::network::Side::Sell) {
       if (!ccTxData_.isValid()) {
-         logger_->error("[CCSettlementTransactionWidget::createCCSignedTXdata] CC TX half wasn't created properly");
+         logger_->error("[CCSettlementTransactionWidget::AcceptQuote] CC TX half wasn't created properly");
          emit error(tr("Failed to create TX half"));
-         return false;
+         return;
       }
    }
 
    emit sendOrder();
+}
 
+bool ReqCCSettlementContainer::startSigning()
+{
    QPointer<ReqCCSettlementContainer> context(this);
    const auto &cbTx = [this, context, logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
       if (!context) {
@@ -256,7 +259,7 @@ bool ReqCCSettlementContainer::startSigning()
          ccTxSigned_ = signedTX.toHexStr();
 
          // notify RFQ dialog that signed half could be saved
-         emit settlementAccepted();
+         emit txSigned();
 
          auto hdWallet = walletsMgr_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
          auto group = hdWallet ? hdWallet->getGroup(hdWallet->getXBTGroupType()) : nullptr;
