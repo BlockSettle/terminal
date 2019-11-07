@@ -39,7 +39,6 @@ class AutoSignQuoteProvider;
 class QuoteProvider;
 class SelectedTransactionInputs;
 class SignContainer;
-class TransactionData;
 class CustomDoubleSpinBox;
 class MarketDataProvider;
 class ConnectionManager;

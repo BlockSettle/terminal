@@ -11,7 +11,6 @@
 #include <mutex>
 
 #include "UserScript.h"
-#include "TransactionData.h"
 #include "QuoteProvider.h"
 
 QT_BEGIN_NAMESPACE

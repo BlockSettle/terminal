@@ -23,7 +23,6 @@
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
-#include "TransactionData.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "UserScriptRunner.h"

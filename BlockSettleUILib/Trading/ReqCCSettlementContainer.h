@@ -20,7 +20,6 @@ namespace bs {
 class ArmoryConnection;
 class AssetManager;
 class SignContainer;
-class TransactionData;
 
 
 class ReqCCSettlementContainer : public bs::SettlementContainer
