@@ -96,7 +96,6 @@ private slots:
    void onOrder(const bs::network::Order &o);
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId);
-   void onReadyToAutoSign();
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
    void onEnterKeyPressed(const QModelIndex &index);

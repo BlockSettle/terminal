@@ -239,7 +239,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
                , sr.recipientAddress, sr.txData->getWallet(), signingContainer_, armory_);
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
-            connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
             connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this
                     , [settlContainer, quoteId = order.quoteId](const std::string& failedQuoteId, const std::string& reason){
@@ -272,8 +271,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                , walletsManager_, reply.xbtWallet, quoteProvider_, signingContainer_, armory_, authAddressManager_
                , reply.authAddr, reply.utxosPayinFixed, recvXbtAddr);
 
-            connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
-
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayoutToPB, this, &RFQReplyWidget::sendSignedPayoutToPB);
@@ -304,19 +301,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
       }
       sentXbtReplies_.erase(order.settlementId);
    }
-}
-
-void RFQReplyWidget::onReadyToAutoSign()
-{
-   const auto settlContainer = qobject_cast<bs::SettlementContainer *>(sender());
-   if (!settlContainer) {
-      logger_->error("[RFQReplyWidget::onReadyToAutoSign] failed to cast sender");
-      return;
-   }
-//   if (!settlContainer->accept()) {
-//      logger_->warn("[RFQReplyWidget::onReadyToAutoSign] failed to accept");
-//      return;
-//   }
 }
 
 void RFQReplyWidget::onConnectedToCeler()

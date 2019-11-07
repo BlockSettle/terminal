@@ -180,11 +180,7 @@ void DealerCCSettlementContainer::activate()
 void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 {
    genAddrVerified_ = addressVerified;
-   if (addressVerified) {
-      //Accept offer to send your own signed half of the CoinJoin transaction
-      emit readyToAccept();
-   }
-   else {
+   if (!addressVerified) {
       logger_->warn("[DealerCCSettlementContainer::onGenAddressVerified] counterparty's TX is unverified");
       emit error(tr("Failed to verify counterparty's transaction"));
       wallet_ = nullptr;
