@@ -438,23 +438,33 @@ bool RFQDealerReply::checkBalance() const
       return false;
    }
 
-   if (isXbtSpend()) {
-      auto amount = getXbtBalance();
-      bool balanceOk = amount.GetValueBitcoin() > getAmount();
-      return balanceOk;
-   }
+   // FIXME: Balance check should account for fee?
 
    if ((currentQRN_.side == bs::network::Side::Buy) != (product_ == baseProduct_)) {
       const auto amount = getAmount();
+      if (currentQRN_.assetType == bs::network::Asset::SpotXBT) {
+         return amount <= getXbtBalance().GetValueBitcoin();
+      } else if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
+         return amount <= getPrivateMarketCoinBalance();
+      }
       const auto product = (product_ == baseProduct_) ? product_ : currentQRN_.product;
       return assetManager_->checkBalance(product, amount);
    } else if ((currentQRN_.side == bs::network::Side::Buy) && (product_ == baseProduct_)) {
       return assetManager_->checkBalance(currentQRN_.product, currentQRN_.quantity);
    }
 
+   if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
+      return currentQRN_.quantity * getPrice() <= getXbtBalance().GetValueBitcoin();
+   }
+
    const double value = getValue();
    if (qFuzzyIsNull(value)) {
       return true;
+   }
+   const bool isXbt = (currentQRN_.assetType == bs::network::Asset::PrivateMarket) ||
+      ((currentQRN_.assetType == bs::network::Asset::SpotXBT) && (product_ == baseProduct_));
+   if (isXbt) {
+      return value <= getXbtBalance().GetValueBitcoin();
    }
    return assetManager_->checkBalance(product_, value);
 }
