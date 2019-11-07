@@ -90,6 +90,13 @@ void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& rea
    if (rfq_.assetType == bs::network::Asset::SpotFX) {
       ui_->pageRequestingQuote->onOrderFailed(quoteId, reason);
    }
+   if (xbtSettlContainer_) {
+      xbtSettlContainer_->cancel();
+   }
+   if (ccSettlContainer_) {
+      ccSettlContainer_->cancel();
+   }
+   close();
 }
 
 void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Quote &quote)
@@ -253,6 +260,7 @@ void RFQDialog::onSignTxRequested(QString orderId, QString reqId)
       // KLUDGE
       logger_->debug("[RFQDialog::onSignTxRequested] signTX for reqId={} requested before signing", reqId.toStdString());
       ccReqIdToOrder_[reqId] = orderId;
+      hide();
       return;
    }
    quoteProvider_->SignTxRequest(orderId, itCCtx->second);
