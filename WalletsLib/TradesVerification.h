@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-class BinaryData;
-class Tx;
-class UTXO;
+class  BinaryData;
+class  Tx;
+class  UTXO;
 
 namespace bs {
 

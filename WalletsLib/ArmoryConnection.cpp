@@ -377,39 +377,6 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
    return true;
 }
 
-std::string ArmoryConnection::registerWallet(const std::shared_ptr<AsyncClient::BtcWallet> &wallet
-   , const std::string &walletId, const std::vector<BinaryData> &addrVec
-   , const RegisterWalletCb &cb, bool asNew)
-{
-   if ((state_ != ArmoryState::Ready) && (state_ != ArmoryState::Connected)) {
-      logger_->error("[ArmoryConnection::registerWallet] invalid state: {}", (int)state_.load());
-      return {};
-   }
-
-   const auto regId = wallet->registerAddresses(addrVec, asNew);
-   std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
-   registrationCallbacks_[regId] = cb;
-
-   return regId;
-
-   /***
-   This triggering of the registration callback does not work in any case. The code 
-   needs to wait on the DB refresh signal, as it isn't guaranteed to happen right 
-   away, (think fullnode, in home setups). Even with a supernode, the server may
-   not process the registration request as soon as it receives it (busy with another
-   task). That delay is enough to introduce false positives.
-   ***/
-
-   /*if (!isOnline_) {
-      preOnlineRegIds_[regId] = cb;
-   }
-   else {
-      if (cb) {
-         cb(regId);
-      }
-   }*/
-}
-
 bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb &cb)
 {
    if (!bdv_ || (state_ != ArmoryState::Ready)) {
@@ -1009,46 +976,17 @@ bool ArmoryConnection::isTransactionConfirmed(const ClientClasses::LedgerEntry &
 
 void ArmoryConnection::onRefresh(const std::vector<BinaryData>& ids)
 {
-   logger_->debug("[ArmoryConnection::onRefresh] {} ids", ids.size());
-
-
-   std::vector< std::pair<std::string, refreshCB> > cbList;
-   cbList.reserve(ids.size());
-
-   {
-      std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
-      if (!registrationCallbacks_.empty())
-      {
-         for (const auto &id : ids)
-         {
-            const auto regIdIt = registrationCallbacks_.find(id.toBinStr());
-            if (regIdIt != registrationCallbacks_.end()) {
-               logger_->debug("[ArmoryConnection::onRefresh] found preOnline registration id: {}"
-                  , id.toBinStr());
-
-               cbList.emplace_back(std::make_pair(regIdIt->first, regIdIt->second));
-               registrationCallbacks_.erase(regIdIt);
-            }
-         }
-      }
-   }
-
-   //return as soon as possible from this callback, this isn't meant
-   //to cascade operations from
-   for (const auto& it : cbList) {
-      if (it.second) {
-         it.second(it.first);
-      }
-   }
-
    const bool online = (state_ == ArmoryState::Ready);
+#ifndef NDEBUG
    if (logger_->level() <= spdlog::level::debug) {
       std::string idString;
       for (const auto &id : ids) {
          idString += id.toBinStr() + " ";
       }
-      logger_->debug("[ArmoryConnection::onRefresh] online={} {}", online, idString);
+      logger_->debug("[ArmoryConnection::onRefresh] online={} {}[{}]"
+         , online, idString, ids.size());
    }
+#endif   //NDEBUG
    addToMaintQueue([ids, online](ArmoryCallbackTarget *tgt) {
       tgt->onRefresh(ids, online);
    });

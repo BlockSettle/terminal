@@ -61,8 +61,11 @@ namespace bs {
       virtual void onPayOutDetected(int confirmationsNumber, PayoutSignatureType signedBy) = 0;
       virtual void onPayOutConfirmed(bs::PayoutSignatureType signedBy) = 0;
 
+      virtual void HandleEmptyHistoryPage();
+
       void onNewBlock(unsigned int height, unsigned int branchHgt) override;
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
+      void onRefresh(const std::vector<BinaryData>& ids, bool) override;
 
    private:
       std::atomic_flag                          walletLock_ = ATOMIC_FLAG_INIT;
@@ -84,6 +87,7 @@ namespace bs {
       SecureBinaryData                    buyAuthKey_;
       SecureBinaryData                    sellAuthKey_;
       ValidityFlag validityFlag_;
+      std::unordered_map<std::string, std::function<void()>>   refreshCallbacks_;
 
    protected:
       void IsPayInTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;

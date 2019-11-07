@@ -2,7 +2,12 @@
 
 #include "ArmoryConnection.h"
 
+#include <QtGlobal>
+
 static constexpr auto kCacheValueExpireTimeout = std::chrono::hours(1);
+// 200 s/b
+static constexpr float kFallbackFeeAmount = 0.000002;
+
 
 BitcoinFeeCache::BitcoinFeeCache(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory)
@@ -67,11 +72,15 @@ void BitcoinFeeCache::setFeeEstimationValue(const unsigned int blocksToWait, flo
    {
       std::lock_guard<std::mutex> lock(cacheMutex_);
 
-      FeeEstimationCache currentValue;
-      currentValue.feeEstimation = fee;
-      currentValue.estimationTimestamp = std::chrono::system_clock::now();
+      if (qFuzzyIsNull(fee)) {
+         fee = kFallbackFeeAmount;
+      } else {
+         FeeEstimationCache currentValue;
+         currentValue.feeEstimation = fee;
+         currentValue.estimationTimestamp = std::chrono::system_clock::now();
 
-      estimationsCache_[blocksToWait] = currentValue;
+         estimationsCache_[blocksToWait] = currentValue;
+      }
 
       auto cbIt = pendingCB_.find(blocksToWait);
       if (cbIt != pendingCB_.end()) {
