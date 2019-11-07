@@ -22,7 +22,6 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    : bs::SettlementContainer()
    , logger_(logger)
    , order_(order)
-   , quoteReqId_(quoteReqId)
    , lotSize_(lotSize)
    , genesisAddr_(genAddr)
    , delivery_(order.side == bs::network::Side::Sell)
@@ -174,7 +173,6 @@ void DealerCCSettlementContainer::activate()
    }
 
    startTimer(kWaitTimeoutInSec);
-   startSigning();
 }
 
 void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)

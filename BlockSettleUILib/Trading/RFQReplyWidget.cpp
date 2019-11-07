@@ -249,6 +249,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
 
             ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
             settlContainer->activate();
+
          } catch (const std::exception &e) {
             BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
                , tr("Failed to start dealer's CC settlement")
@@ -343,29 +344,17 @@ void RFQReplyWidget::onSelected(const QString& productGroup, const bs::network::
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)
 {
-   const auto it = ccTxByOrder_.find(orderId.toStdString());
-   if (it != ccTxByOrder_.end()) {
-      logger_->debug("[RFQReplyWidget::saveTxData] TX data already requested for order {}", orderId.toStdString());
-      quoteProvider_->SignTxRequest(orderId, txData);
-      ccTxByOrder_.erase(orderId.toStdString());
-   }
-   else {
-      logger_->debug("[RFQReplyWidget::saveTxData] saving TX data[{}] for order {}", txData.length(), orderId.toStdString());
-      ccTxByOrder_[orderId.toStdString()] = txData;
-   }
+   quoteProvider_->SignTxRequest(orderId, txData);
 }
 
 void RFQReplyWidget::onSignTxRequested(QString orderId, QString reqId)
 {
    Q_UNUSED(reqId);
-   const auto it = ccTxByOrder_.find(orderId.toStdString());
-   if (it == ccTxByOrder_.end()) {
-      logger_->debug("[RFQReplyWidget::onSignTxRequested] no TX data for order {}, yet", orderId.toStdString());
-      ccTxByOrder_[orderId.toStdString()] = std::string{};
-      return;
+
+   if (!ui_->widgetQuoteRequests->StartCCSignOnOrder(orderId)) {
+      logger_->error("[RFQReplyWidget::onSignTxRequested] failed to initiate sign on CC order: {}"
+                     , orderId.toStdString());
    }
-   quoteProvider_->SignTxRequest(orderId, it->second);
-   ccTxByOrder_.erase(orderId.toStdString());
 }
 
 

@@ -1,16 +1,18 @@
 #include "QuoteRequestsModel.h"
 
-#include <chrono>
+#include "ApplicationSettings.h"
 #include "AssetManager.h"
+#include "CelerClient.h"
 #include "CelerSubmitQuoteNotifSequence.h"
+#include "Colors.h"
+#include "CommonTypes.h"
 #include "CurrencyPair.h"
+#include "DealerCCSettlementContainer.h"
 #include "QuoteRequestsWidget.h"
 #include "SettlementContainer.h"
 #include "UiUtils.h"
-#include "Colors.h"
-#include "CelerClient.h"
-#include "ApplicationSettings.h"
-#include "CommonTypes.h"
+
+#include <chrono>
 
 
 QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
@@ -876,6 +878,21 @@ void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNoti
    else {
       setStatus(qrn.quoteRequestId, qrn.status);
    }
+}
+
+bool QuoteRequestsModel::StartCCSignOnOrder(const QString& orderId)
+{
+   auto it = settlContainers_.find(orderId.toStdString());
+   if (it == settlContainers_.end()) {
+      return false;
+   }
+
+   std::shared_ptr< DealerCCSettlementContainer> container = std::dynamic_pointer_cast<DealerCCSettlementContainer>(it->second);
+   if (container != nullptr) {
+      return container->startSigning();
+   }
+
+   return false;
 }
 
 void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &container)

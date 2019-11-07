@@ -144,7 +144,6 @@ private:
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;
    std::shared_ptr<bs::SecurityStatsCollector>     statsCollector_;
-   std::unordered_map<std::string, std::string>    ccTxByOrder_;
 };
 
 #endif // __RFQ_REPLY_WIDGET_H__
