@@ -6,7 +6,6 @@
 #include <memory>
 
 #include "CommonTypes.h"
-#include "TransactionData.h"
 
 namespace Ui {
    class RFQDialog;
@@ -16,6 +15,7 @@ namespace spdlog {
 }
 namespace bs {
    namespace sync {
+      class Wallet;
       class WalletsManager;
    }
    class SettlementContainer;
@@ -42,7 +42,6 @@ Q_OBJECT
 public:
    RFQDialog(const std::shared_ptr<spdlog::logger> &logger
       , const bs::network::RFQ& rfq
-      , const std::shared_ptr<TransactionData>& transactionData
       , const std::shared_ptr<QuoteProvider>& quoteProvider
       , const std::shared_ptr<AuthAddressManager>& authAddressManager
       , const std::shared_ptr<AssetManager>& assetManager
@@ -56,6 +55,7 @@ public:
       , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
       , const bs::Address &recvXbtAddr
       , const bs::Address &authAddr
+      , const std::vector<UTXO> &fixedXbtInputs
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
 
@@ -91,7 +91,6 @@ private:
    bs::network::Quote                  quote_;
    bs::Address recvXbtAddr_;
 
-   std::shared_ptr<TransactionData>             transactionData_;
    std::shared_ptr<QuoteProvider>               quoteProvider_;
    std::shared_ptr<AuthAddressManager>          authAddressManager_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
@@ -112,6 +111,7 @@ private:
    std::shared_ptr<ReqXBTSettlementContainer>   xbtSettlContainer_;
 
    const bs::Address authAddr_;
+   const std::vector<UTXO> fixedXbtInputs_;
 
    bool  cancelOnClose_ = true;
    bool isRejectStarted_ = false;

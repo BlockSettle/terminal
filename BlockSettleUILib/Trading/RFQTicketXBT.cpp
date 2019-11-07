@@ -19,6 +19,7 @@
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
+#include "TransactionData.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "UtxoReserveAdapters.h"
@@ -147,6 +148,14 @@ void RFQTicketXBT::resetTicket()
    HideRFQControls();
 
    updatePanel();
+}
+
+std::vector<UTXO> RFQTicketXBT::fixedXbtInputs() const
+{
+   if (!transactionData_ || !transactionData_->getSelectedInputs() || transactionData_->getSelectedInputs()->UseAutoSel()) {
+      return {};
+   }
+   return transactionData_->getSelectedInputs()->GetSelectedTransactions();
 }
 
 void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager> &authAddressManager
@@ -767,11 +776,6 @@ void RFQTicketXBT::submitButtonClicked()
    }
 
    emit submitRFQ(*rfq);
-}
-
-std::shared_ptr<TransactionData> RFQTicketXBT::GetTransactionData() const
-{
-   return transactionData_;
 }
 
 QPushButton* RFQTicketXBT::submitButton() const

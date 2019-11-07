@@ -10,7 +10,6 @@
 
 #include "BSErrorCode.h"
 #include "CommonTypes.h"
-#include "TransactionData.h"
 
 QT_BEGIN_NAMESPACE
 class QPushButton;
@@ -40,6 +39,7 @@ class CCAmountValidator;
 class FXAmountValidator;
 class QuoteProvider;
 class SignContainer;
+class TransactionData;
 class XbtAmountValidator;
 
 
@@ -61,7 +61,7 @@ public:
 
    void resetTicket();
 
-   std::shared_ptr<TransactionData> GetTransactionData() const;
+   std::vector<UTXO> fixedXbtInputs() const;
 
    QPushButton* submitButton() const;
    QLineEdit* lineEditAmount() const;

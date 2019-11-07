@@ -232,10 +232,11 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
    auto authAddr = ui_->pageRFQTicket->selectedAuthAddress();
 
    auto xbtWallet = ui_->pageRFQTicket->xbtWallet();
+   auto fixedXbtInputs = ui_->pageRFQTicket->fixedXbtInputs();
 
-   RFQDialog* dialog = new RFQDialog(logger_, rfq, ui_->pageRFQTicket->GetTransactionData(), quoteProvider_
+   RFQDialog* dialog = new RFQDialog(logger_, rfq, quoteProvider_
       , authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
-      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvAddress(), authAddr, this);
+      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvAddress(), authAddr, fixedXbtInputs, this);
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);
