@@ -18,7 +18,7 @@
 #include "CoinControlDialog.h"
 #include "CoinControlWidget.h"
 #include "CurrencyPair.h"
-#include "CustomComboBox.h"
+#include "CustomControls/CustomComboBox.h"
 #include "FastLock.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"

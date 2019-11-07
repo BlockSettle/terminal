@@ -6,6 +6,7 @@ configure_file(TerminalVersion.h.in TerminalVersion.h)
 
 FILE(GLOB SOURCES
    *.cpp
+   CustomControls/*.cpp
    InfoDialogs/*.cpp
    ManageEncryption/*.cpp
    Settings/*.cpp
@@ -16,6 +17,7 @@ FILE(GLOB SOURCES
 )
 FILE(GLOB HEADERS
    *.h
+   CustomControls/*.h
    InfoDialogs/*.h
    ManageEncryption/*.h
    Settings/*.h
@@ -26,6 +28,7 @@ FILE(GLOB HEADERS
 )
 FILE(GLOB UI_FILES
    *.ui
+   CustomControls/*.ui
    InfoDialogs/*.ui
    ManageEncryption/*.ui
    Settings/*.ui

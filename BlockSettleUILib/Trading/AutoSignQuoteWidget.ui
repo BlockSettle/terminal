@@ -375,12 +375,12 @@
   <customwidget>
    <class>ToggleSwitch</class>
    <extends>QSlider</extends>
-   <header>ToggleSwitch.h</header>
+   <header>CustomControls/ToggleSwitch.h</header>
   </customwidget>
   <customwidget>
    <class>CustomComboBox</class>
    <extends>QComboBox</extends>
-   <header>CustomComboBox.h</header>
+   <header>CustomControls/CustomComboBox.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -1,7 +1,7 @@
 #ifndef __CC_AMOUNT_VALIDATOR_H__
 #define __CC_AMOUNT_VALIDATOR_H__
 
-#include "CustomDoubleValidator.h"
+#include "CustomControls/CustomDoubleValidator.h"
 
 class CCAmountValidator : public CustomDoubleValidator
 {

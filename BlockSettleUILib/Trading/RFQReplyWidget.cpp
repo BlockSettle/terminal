@@ -6,7 +6,7 @@
 #include "BSMessageBox.h"
 #include "CelerClient.h"
 #include "CelerSubmitQuoteNotifSequence.h"
-#include "CustomDoubleSpinBox.h"
+#include "CustomControls/CustomDoubleSpinBox.h"
 #include "DealerCCSettlementContainer.h"
 #include "DealerXBTSettlementContainer.h"
 #include "DialogManager.h"
