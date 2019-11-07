@@ -847,25 +847,3 @@ bs::core::wallet::TXSignRequest TransactionData::createTXRequest(bool isRBF
    }
    return txReq;
 }
-
-bs::core::wallet::TXSignRequest TransactionData::createPartialTXRequest(uint64_t spendVal
-   , float feePerByte, const std::vector<std::shared_ptr<ScriptRecipient>> &recipients
-   , const bs::core::wallet::OutputSortOrder &outSortOrder
-   , const BinaryData &prevData
-   , const std::vector<UTXO> &utxos, bool calcFeeFromPrevData)
-{
-   if (!wallet_) {
-      return {};
-   }
-
-   auto promAddr = std::make_shared<std::promise<bs::Address>>();
-   auto futAddr = promAddr->get_future();
-   const auto &cbAddr = [promAddr](const bs::Address &addr) {
-      promAddr->set_value(addr);
-   };    //TODO: refactor this
-   wallet_->getNewChangeAddress(cbAddr);
-   auto txReq = wallet_->createPartialTXRequest(spendVal, utxos.empty() ? inputs() : utxos
-      , futAddr.get(), feePerByte, recipients, outSortOrder, prevData, calcFeeFromPrevData);
-   txReq.populateUTXOs = true;
-   return txReq;
-}

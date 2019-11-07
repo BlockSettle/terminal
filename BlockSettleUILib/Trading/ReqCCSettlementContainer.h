@@ -34,7 +34,8 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const bs::network::RFQ &
       , const bs::network::Quote &
-      , const std::shared_ptr<TransactionData> &);
+      , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
+      , const std::vector<UTXO> &manualXbtInputs);
    ~ReqCCSettlementContainer() override;
 
    bool cancel() override;
@@ -80,7 +81,8 @@ private:
 private:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<SignContainer>      signingContainer_;
-   std::shared_ptr<TransactionData>    transactionData_;
+   std::shared_ptr<bs::sync::Wallet>   xbtWallet_;
+   std::shared_ptr<bs::sync::Wallet>   ccWallet_;
    std::shared_ptr<AssetManager>       assetMgr_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    bs::network::RFQ           rfq_;
@@ -101,6 +103,8 @@ private:
 
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
    bs::hd::WalletInfo walletInfo_;
+   std::vector<UTXO> manualXbtInputs_;
+
 };
 
 #endif // __REQ_CC_SETTLEMENT_CONTAINER_H__

@@ -159,9 +159,13 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
 
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 {
+   auto selectedInputs = transactionData_->getSelectedInputs();
+   auto fixedInputs = (!selectedInputs || selectedInputs->UseAutoSel()) ?
+      std::vector<UTXO>{} : selectedInputs->GetSelectedTransactions();
+
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, transactionData_);
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedInputs);
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementAccepted
          , this, &RFQDialog::onSettlementAccepted);

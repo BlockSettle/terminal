@@ -142,7 +142,6 @@ namespace bs {
          std::shared_ptr<TransactionData> transactionData_;
          unsigned int   payInRecipId_{UINT_MAX};
          bool dealerSellXBT_{false};
-         std::shared_ptr<SelectedTransactionInputs>   ccCoinSel_;
 
          double   indicBid_{};
          double   indicAsk_{};

@@ -724,11 +724,11 @@ void RFQTicketXBT::submitButtonClicked()
          }
 
          const auto ccInputsCb = [this, spendVal, wallet, rfq]
-            (const std::vector<UTXO> &inputs) mutable
+            (const std::vector<UTXO> &ccInputs) mutable
          {
-            QMetaObject::invokeMethod(this, [this, spendVal, wallet, rfq, inputs] {
+            QMetaObject::invokeMethod(this, [this, spendVal, wallet, rfq, ccInputs] {
                uint64_t inputVal = 0;
-               for (const auto &input : inputs) {
+               for (const auto &input : ccInputs) {
                   inputVal += input.getValue();
                }
                if (inputVal < spendVal) {
@@ -737,9 +737,9 @@ void RFQTicketXBT::submitButtonClicked()
                   return;
                }
 
-               const auto cbAddr = [this, spendVal, rfq, wallet, inputs](const bs::Address &addr) {
+               const auto cbAddr = [this, spendVal, rfq, wallet, ccInputs](const bs::Address &addr) {
                   try {
-                     const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, addr);
+                     const auto txReq = wallet->createPartialTXRequest(spendVal, ccInputs, addr);
                      rfq->coinTxInput = txReq.serializeState().toHexStr();
                      utxoAdapter_->reserve(txReq, rfq->requestId);
                      emit submitRFQ(*rfq);
