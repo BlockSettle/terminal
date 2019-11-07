@@ -210,16 +210,26 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
                                          const BinaryData& txHash,
                                          const WalletsSet *inputWallets)
 {
-   const auto addr = bs::Address::fromTxOut(out);
-   const auto addressWallet = walletsManager_->getWalletByAddress(addr);
-   const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
+   QString addressType;
+   QString displayedAddress;
+   bs::sync::WalletsManager::WalletPtr addressWallet;
+   bool isChange = false;
+   try {
+      const auto addr = bs::Address::fromTxOut(out);
+      addressWallet = walletsManager_->getWalletByAddress(addr);
+      const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
 
-   // Do not try mark outputs as change for internal tx (or there would be only input and change, without output)
-   const bool isChange = isOutput && !isInternalTx && !isSettlement
+      // Do not try mark outputs as change for internal tx (or there would be only input and change, without output)
+      isChange = isOutput && !isInternalTx && !isSettlement
          && (inputWallets->find(addressWallet) != inputWallets->end());
 
-   const QString addressType = isChange ? tr("Change") : (isOutput ? tr("Output") : tr("Input"));
-   const auto displayedAddress = QString::fromStdString(addr.display());
+      addressType = isChange ? tr("Change") : (isOutput ? tr("Output") : tr("Input"));
+      const auto displayedAddress = QString::fromStdString(addr.display());
+   }
+   catch (const std::exception &) {    // Likely OP_RETURN
+      addressType = tr("Unknown");
+      displayedAddress = tr("empty");
+   }
 
    // Inputs should be negative, outputs positive, and change positive
    QString valueStr = isOutput ? QString() : QLatin1String("-");
