@@ -686,7 +686,7 @@
   <customwidget>
    <class>CustomLabel</class>
    <extends>QLabel</extends>
-   <header>CustomLabel.h</header>
+   <header>CustomControls/CustomLabel.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

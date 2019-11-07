@@ -1544,7 +1544,7 @@
   <customwidget>
    <class>CustomDoubleSpinBox</class>
    <extends>QDoubleSpinBox</extends>
-   <header>CustomDoubleSpinBox.h</header>
+   <header>CustomControls/CustomDoubleSpinBox.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

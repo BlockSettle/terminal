@@ -7,7 +7,7 @@
 #include "BTCNumericTypes.h"
 #include "BtcUtils.h"
 #include "CoinControlModel.h"
-#include "QtAwesome.h"
+#include "CustomControls/QtAwesome.h"
 #include "SignContainer.h"
 #include "TxClasses.h"
 #include "Wallets/SyncHDWallet.h"
