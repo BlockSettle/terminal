@@ -224,7 +224,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
          && (inputWallets->find(addressWallet) != inputWallets->end());
 
       addressType = isChange ? tr("Change") : (isOutput ? tr("Output") : tr("Input"));
-      const auto displayedAddress = QString::fromStdString(addr.display());
+      displayedAddress = QString::fromStdString(addr.display());
    }
    catch (const std::exception &) {    // Likely OP_RETURN
       addressType = tr("Unknown");
