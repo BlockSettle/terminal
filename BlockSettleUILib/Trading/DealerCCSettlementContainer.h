@@ -25,8 +25,11 @@ class DealerCCSettlementContainer : public bs::SettlementContainer
    Q_OBJECT
 public:
    DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
-      , const std::string &quoteReqId, uint64_t lotSize, const bs::Address &genAddr, const std::string &ownRecvAddr
-      , const std::shared_ptr<bs::sync::Wallet> &, const std::shared_ptr<SignContainer> &
+      , const std::string &quoteReqId, uint64_t lotSize
+      , const bs::Address &genAddr
+      , const std::string &ownRecvAddr
+      , const std::shared_ptr<bs::sync::Wallet> &
+      , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &);
    ~DealerCCSettlementContainer() override;
 
@@ -48,10 +51,6 @@ public:
 
    bool foundRecipAddr() const { return foundRecipAddr_; }
    bool isAmountValid() const { return amountValid_; }
-
-   QString GetSigningWalletName() const;
-
-   std::shared_ptr<bs::sync::Wallet> GetSigningWallet() const { return wallet_; }
 
    bool isDelivery() const { return delivery_; }
 
@@ -86,7 +85,6 @@ private:
    bs::CheckRecipSigner signer_;
    bs::core::wallet::TXSignRequest txReq_;
 
-   QString walletName_;
 };
 
 #endif // __DEALER_CC_SETTLEMENT_CONTAINER_H__

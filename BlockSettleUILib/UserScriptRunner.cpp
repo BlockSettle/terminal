@@ -100,9 +100,6 @@ void UserScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifi
          }
          aqObjs_.erase(qrn.quoteRequestId);
          bestQPrices_.erase(qrn.quoteRequestId);
-
-         std::lock_guard<std::mutex> lock(mutex_);
-         aqTxData_.erase(qrn.quoteRequestId);
       }
    }
 }
@@ -268,10 +265,6 @@ void UserScriptHandler::onAQPull(const QString &reqId)
       return;
    }
    emit pullQuoteNotif(QString::fromStdString(itQRN->second.quoteRequestId), QString::fromStdString(itQRN->second.sessionToken));
-   if (itQRN->second.assetType != bs::network::Asset::SpotFX) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      aqTxData_.erase(itQRN->second.quoteRequestId);
-   }
 }
 
 void UserScriptHandler::aqTick()
@@ -299,25 +292,6 @@ void UserScriptHandler::aqTick()
       onQuoteReqCancelled(expReqId, true);
    }
 }
-
-std::shared_ptr<TransactionData> UserScriptHandler::getTransactionData(const std::string &reqId) const
-{
-   std::lock_guard<std::mutex> lock(mutex_);
-
-   const auto itAQtxD = aqTxData_.find(reqId);
-   if (itAQtxD == aqTxData_.end()) {
-      return nullptr;
-   }
-   return itAQtxD->second;
-}
-
-void UserScriptHandler::setTxData(const std::string &id, std::shared_ptr<TransactionData> txData)
-{
-   std::lock_guard<std::mutex> lock(mutex_);
-
-   aqTxData_[id] = txData;
-}
-
 
 //
 // UserScriptRunner
@@ -370,14 +344,4 @@ void UserScriptRunner::disableAQ()
 {
    logger_->info("Unload AQ script");
    emit deinitAQ(true);
-}
-
-std::shared_ptr<TransactionData> UserScriptRunner::getTransactionData(const std::string &reqId) const
-{
-   return script_->getTransactionData(reqId);
-}
-
-void UserScriptRunner::setTxData(const std::string &id, std::shared_ptr<TransactionData> txData)
-{
-   script_->setTxData(id, txData);
 }

@@ -77,8 +77,6 @@ namespace bs {
 
          void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
-         std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
-
          CustomDoubleSpinBox* bidSpinBox() const;
          CustomDoubleSpinBox* offerSpinBox() const;
 
@@ -139,7 +137,6 @@ namespace bs {
 
          std::unordered_map<std::string, double>   sentNotifs_;
          network::QuoteReqNotification    currentQRN_;
-         std::shared_ptr<TransactionData> transactionData_;
          unsigned int   payInRecipId_{UINT_MAX};
          bool dealerSellXBT_{false};
 
@@ -164,6 +161,8 @@ namespace bs {
          };
          std::unordered_map<std::string, MDInfo>  mdInfo_;
 
+         std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
+
       private:
          void reset();
          void validateGUI();
@@ -179,15 +178,16 @@ namespace bs {
          void getRecvAddress(const std::shared_ptr<bs::sync::Wallet> &wallet, std::function<void(bs::Address)> cb) const;
          void setBalanceOk(bool ok);
          bool checkBalance() const;
+         XBTAmount getXbtBalance() const;
          BTCNumericTypes::balance_type getPrivateMarketCoinBalance() const;
          QDoubleSpinBox *getActivePriceWidget() const;
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
          // xbtWallet - what XBT wallet to use for XBT/CC trades (selected from UI for manual trades, default wallet for AQ trades), empty for FX trades
-         void submitReply(const std::shared_ptr<TransactionData> transData
-            , const network::QuoteReqNotification &qrn, double price
+         void submitReply(const network::QuoteReqNotification &qrn, double price
             , std::function<void(bs::network::QuoteNotification)>
             , const std::shared_ptr<bs::sync::Wallet> &xbtWallet);
          void updateWalletsList(bool skipWatchingOnly);
+         bool isXbtSpend() const;
       };
 
    }  //namespace ui

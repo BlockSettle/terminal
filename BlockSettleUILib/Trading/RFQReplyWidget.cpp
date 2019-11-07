@@ -210,8 +210,11 @@ void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn)
       reply.authAddr = ui_->pageRFQReply->selectedAuthAddress();
       reply.utxosPayinFixed = ui_->pageRFQReply->selectedXbtInputs();
    } else if (qn.assetType == bs::network::Asset::PrivateMarket) {
-      const auto &txData = ui_->pageRFQReply->getTransactionData(qn.quoteRequestId);
-      sentCCReplies_[qn.quoteRequestId] = SentCCReply{qn.receiptAddress, txData, qn.reqAuthKey};
+      auto &reply = sentCCReplies_[qn.quoteRequestId];
+      reply.recipientAddress = qn.receiptAddress;
+      reply.requestorAuthAddress = qn.reqAuthKey;
+      reply.spendWallet = (qn.side == bs::network::Side::Buy) ?
+         ui_->pageRFQReply->getSelectedXbtWallet() : walletsManager_->getCCWallet(qn.product);
    }
 }
 
@@ -237,7 +240,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          try {
             const auto settlContainer = std::make_shared<DealerCCSettlementContainer>(logger_, order, quoteReqId
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
-               , sr.recipientAddress, sr.txData->getWallet(), signingContainer_, armory_);
+               , sr.recipientAddress, sr.spendWallet, signingContainer_, armory_);
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
             connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 

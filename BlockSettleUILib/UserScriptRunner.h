@@ -56,10 +56,6 @@ public:
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
-   std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
-
-   void setTxData(const std::string &id, std::shared_ptr<TransactionData> txData);
-
 private slots:
    void onQuoteReqNotification(const bs::network::QuoteReqNotification &qrn);
    void onQuoteReqCancelled(const QString &reqId, bool userCancelled);
@@ -85,7 +81,6 @@ private:
 
    std::unordered_map<std::string, QObject*> aqObjs_;
    std::unordered_map<std::string, bs::network::QuoteReqNotification> aqQuoteReqs_;
-   std::unordered_map<std::string, std::shared_ptr<TransactionData>> aqTxData_;
    std::unordered_map<std::string, double>   bestQPrices_;
 
    struct MDInfo {
@@ -97,7 +92,6 @@ private:
 
    bool aqEnabled_;
    QTimer *aqTimer_;
-   mutable std::mutex mutex_;
 }; // class UserScriptHandler
 
 
@@ -130,10 +124,6 @@ public:
    ~UserScriptRunner() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
-
-   std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
-
-   void setTxData(const std::string &id, std::shared_ptr<TransactionData> txData);
 
 public slots:
    void enableAQ(const QString &fileName);

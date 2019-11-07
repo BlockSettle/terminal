@@ -122,8 +122,8 @@ private:
    struct SentCCReply
    {
       std::string                      recipientAddress;
-      std::shared_ptr<TransactionData> txData;
       std::string                      requestorAuthAddress;
+      std::shared_ptr<bs::sync::Wallet> spendWallet;
    };
 
 private:

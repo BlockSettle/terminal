@@ -15,10 +15,13 @@
 using namespace bs::sync;
 
 DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
-      , const bs::network::Order &order, const std::string &quoteReqId, uint64_t lotSize
-      , const bs::Address &genAddr, const std::string &ownRecvAddr
-      , const std::shared_ptr<bs::sync::Wallet> &wallet, const std::shared_ptr<SignContainer> &container
-      , const std::shared_ptr<ArmoryConnection> &armory)
+   , const bs::network::Order &order
+   , const std::string &quoteReqId, uint64_t lotSize
+   , const bs::Address &genAddr
+   , const std::string &ownRecvAddr
+   , const std::shared_ptr<bs::sync::Wallet> &wallet
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory)
    : bs::SettlementContainer()
    , logger_(logger)
    , order_(order)
@@ -33,13 +36,15 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
 {
+   if (lotSize == 0) {
+      throw std::logic_error("invalid lotSize");
+   }
+
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
       , &DealerCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
 
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
-
-   walletName_ = QString::fromStdString(wallet_->name());
 }
 
 DealerCCSettlementContainer::~DealerCCSettlementContainer()
@@ -137,10 +142,6 @@ void DealerCCSettlementContainer::activate()
    try {
       signer_.deserializeState(txReqData_);
       foundRecipAddr_ = signer_.findRecipAddress(ownRecvAddr_, [this](uint64_t value, uint64_t valReturn, uint64_t valInput) {
-         // Fix SIGFPE crash
-         if (lotSize_ == 0) {
-            return;
-         }
          if ((order_.side == bs::network::Side::Buy) && qFuzzyCompare(order_.quantity, value / lotSize_)) {
             amountValid_ = true; //valInput == (value + valReturn);
          }
@@ -204,11 +205,6 @@ bool DealerCCSettlementContainer::cancel()
    signingContainer_->CancelSignTx(id());
    cancelled_ = true;
    return true;
-}
-
-QString DealerCCSettlementContainer::GetSigningWalletName() const
-{
-   return walletName_;
 }
 
 std::string DealerCCSettlementContainer::txComment()

@@ -13,7 +13,6 @@ namespace Ui {
     class RequestingQuoteWidget;
 }
 class AssetManager;
-class TransactionData;
 class BaseCelerClient;
 
 class RequestingQuoteWidget : public QWidget
