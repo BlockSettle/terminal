@@ -154,7 +154,7 @@ private slots:
    void updatePage();
    void refresh();
    void onWalletDeleted(std::string walletId);
-   void onNewItems(const std::vector<std::pair<TransactionPtr, TXNode *>> &);
+   void onNewItems(const std::vector<TXNode *> &);
    void onDelRows(std::vector<int> rows);
 
    void onItemConfirmed(const TransactionPtr);

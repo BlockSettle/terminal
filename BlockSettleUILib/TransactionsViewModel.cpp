@@ -578,7 +578,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          return (walletIds < ik.walletIds);
       }
    };
-   auto newItems = std::make_shared<std::vector<std::pair<TransactionPtr, TXNode *>>>();
+   auto newItems = std::make_shared<std::vector<TXNode *>>();
    auto updatedItems = std::make_shared<std::vector<TransactionPtr>>();
    auto newTxKeys = std::make_shared<std::set<ItemKey>>();
 
@@ -590,7 +590,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          oldestItem_ = item;
       }
       newTxKeys->insert({ item->txEntry.txHash, item->txEntry.walletIds });
-      newItems->push_back({ item, new TXNode(item) } );
+      newItems->push_back(new TXNode(item));
    };
 
    const auto mergeItem = [this, updatedItems](const TransactionPtr &item) -> bool
@@ -718,8 +718,8 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
 
    const auto newItemsCopy = *newItems;
    if (!newItemsCopy.empty()) {
-      for (auto item : newItemsCopy) {
-         updateTransactionDetails(item.first, cbInited);
+      for (const auto &node : newItemsCopy) {
+         updateTransactionDetails(node->item(), cbInited);
       }
    }
    else {
@@ -873,14 +873,17 @@ void TransactionsViewModel::ledgerToTxData(const std::map<int, std::vector<bs::T
    initialLoadCompleted_ = true;
 }
 
-void TransactionsViewModel::onNewItems(const std::vector<std::pair<TransactionPtr, TXNode *>> &newItems)
+void TransactionsViewModel::onNewItems(const std::vector<TXNode *> &newItems)
 {
    const int curLastIdx = rootNode_->nbChildren();
    beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + newItems.size() - 1);
    {
       QMutexLocker locker(&updateMutex_);
       for (const auto &newItem : newItems) {
-         rootNode_->add(newItem.second);
+         if (rootNode_->find(newItem->item()->txEntry)) {
+            continue;
+         }
+         rootNode_->add(newItem);
       }
    }
    endInsertRows();
