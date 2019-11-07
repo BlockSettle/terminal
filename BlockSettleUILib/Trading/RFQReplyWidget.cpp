@@ -241,6 +241,13 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
             connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
+            connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this
+                    , [settlContainer, quoteId = order.quoteId](const std::string& failedQuoteId, const std::string& reason){
+               if (quoteId == failedQuoteId) {
+                  settlContainer->cancel();
+               }
+            });
+
             ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
             settlContainer->activate();
          } catch (const std::exception &e) {
