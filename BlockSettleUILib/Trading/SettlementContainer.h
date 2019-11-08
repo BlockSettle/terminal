@@ -46,7 +46,6 @@ namespace bs {
    signals:
       void error(QString);
 
-      void readyToAccept();
       void completed();
       void failed();
 

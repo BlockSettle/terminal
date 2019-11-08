@@ -27,8 +27,6 @@ void RfqStorage::addSettlementContainer(std::shared_ptr<bs::SettlementContainer>
    QObject::connect(rfq.get(), &bs::SettlementContainer::failed, this, deleteCb, Qt::QueuedConnection);
    QObject::connect(rfq.get(), &bs::SettlementContainer::timerExpired, this, deleteCb, Qt::QueuedConnection);
 
-   rfq->activate();
-
    rfqs_[rfq->id()] = std::move(rfq);
 }
 

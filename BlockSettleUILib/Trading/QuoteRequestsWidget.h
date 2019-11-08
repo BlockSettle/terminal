@@ -119,6 +119,7 @@ public:
       , std::shared_ptr<BaseCelerClient> celerClient);
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
+   bool StartCCSignOnOrder(const QString& orderId);
 
    RFQBlotterTreeView* view() const;
 
