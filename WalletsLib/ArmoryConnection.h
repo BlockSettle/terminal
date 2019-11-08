@@ -95,7 +95,7 @@ public:
    virtual void onRefresh(const std::vector<BinaryData> &, bool) {}
    virtual void onNewBlock(unsigned int height, unsigned int branchHeight) {}
    virtual void onZCReceived(const std::vector<bs::TXEntry> &) {}
-   virtual void onZCInvalidated(const std::vector<bs::TXEntry> &) {}
+   virtual void onZCInvalidated(const std::set<BinaryData> &ids) {}
    virtual void onLoadProgress(BDMPhase, float, unsigned int, unsigned int) {}
    virtual void onNodeStatus(NodeStatus, bool, RpcStatus) {}
    virtual void onError(const std::string &str, const std::string &extra) {}
@@ -259,9 +259,6 @@ protected:
 
    std::mutex  cbMutex_;
    std::map<BinaryData, std::vector<TxCb>>   txCallbacks_;
-
-   std::map<BinaryData, bs::TXEntry>   zcNotifiedEntries_;
-   std::mutex zcMutex_;
 
    std::unordered_set<ArmoryCallbackTarget *>   activeTargets_;
    std::atomic_bool  actChanged_{ false };

@@ -51,7 +51,7 @@ bs::Address::Address(const BinaryDataRef& data) :
       break;
 
    default:
-      throw std::runtime_error("unabled to resolve address type");
+      throw std::runtime_error("unable to resolve address type " + std::to_string(getPtr()[0]));
    }
 }
 

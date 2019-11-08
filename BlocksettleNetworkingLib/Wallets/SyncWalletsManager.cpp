@@ -855,13 +855,17 @@ bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &
    std::set<bs::Address> ownAddresses, foreignAddresses;
    for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
       TxOut out = tx.getTxOutCopy((int)i);
-      const auto addr = bs::Address::fromTxOut(out);
-      const auto addrWallet = getWalletByAddress(addr);
-      if (addrWallet == wallet) {
-         ownAddresses.insert(addr);
+      try {
+         const auto addr = bs::Address::fromTxOut(out);
+         const auto addrWallet = getWalletByAddress(addr);
+         if (addrWallet == wallet) {
+            ownAddresses.insert(addr);
+         } else {
+            foreignAddresses.insert(addr);
+         }
       }
-      else {
-         foreignAddresses.insert(addr);
+      catch (const std::exception &) {
+         // address conversion failure - likely OP_RETURN - do nothing
       }
    }
 
@@ -1238,11 +1242,9 @@ void WalletsManager::onZCReceived(const std::vector<bs::TXEntry> &entries)
    }
 }
 
-void WalletsManager::onZCInvalidated(const std::vector<bs::TXEntry> &entries)
+void WalletsManager::onZCInvalidated(const std::set<BinaryData> &ids)
 {
-   if (!entries.empty()) {
-      QMetaObject::invokeMethod(this, [this, entries] {emit invalidatedZCs(entries); });
-   }
+   QMetaObject::invokeMethod(this, [this, ids] {emit invalidatedZCs(ids); });
 }
 
 void WalletsManager::onTxBroadcastError(const std::string &txHash, const std::string &errMsg)

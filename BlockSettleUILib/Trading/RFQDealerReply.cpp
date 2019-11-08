@@ -670,11 +670,11 @@ void RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                }
                *spendVal = qrn.quantity * assetManager_->getCCLotSize(qrn.product);
                cbFee(0);
-               return;
-            } else {
-               *spendVal = qrn.quantity * price * BTCNumericTypes::BalanceDivider;
+            } else {                                     // 1e-6 is a maximum CC price precision allowed
+               uint64_t priceQty = std::ceil(price * qrn.quantity * 1000000.0);   // ugly hack to avoid rounding errors
+               priceQty *= 100;        // how to reproduce: sell 1 CC RFQ - reply to it with .012302 - without the hack
+               *spendVal = priceQty;   // the result in spendVal (after trivial multiply) will be 1230199
                walletsManager_->estimatedFeePerByte(2, cbFee, this);
-               return;
             }
          };
 
