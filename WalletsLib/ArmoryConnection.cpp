@@ -171,6 +171,11 @@ void ArmoryConnection::addToMaintQueue(const CallbackQueueCb &cb)
 
 void ArmoryConnection::runOnMaintThread(ArmoryConnection::EmptyCb cb)
 {
+   if (std::this_thread::get_id() == maintThread_.get_id()) {
+      cb();
+      return;
+   }
+
    std::unique_lock<std::mutex> lock(actMutex_);
    runQueue_.push_back(std::move(cb));
    actCV_.notify_one();
