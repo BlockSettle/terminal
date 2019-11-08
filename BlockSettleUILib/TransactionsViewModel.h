@@ -83,6 +83,7 @@ public:
    QList<TXNode *> children() const { return children_; }
    TXNode *parent() const { return parent_; }
    TXNode *find(const bs::TXEntry &) const;
+   std::vector<TXNode *> nodesByTxHash(const BinaryData &) const;
 
    void clear(bool del = true);
    void setData(const TransactionsViewItem &data) { *item_ = data; }
@@ -153,7 +154,7 @@ private slots:
    void updatePage();
    void refresh();
    void onWalletDeleted(std::string walletId);
-   void onNewItems(const std::vector<std::pair<TransactionPtr, TXNode *>> &);
+   void onNewItems(const std::vector<TXNode *> &);
    void onDelRows(std::vector<int> rows);
 
    void onItemConfirmed(const TransactionPtr);
@@ -162,7 +163,7 @@ private:
    void onNewBlock(unsigned int height, unsigned int branchHgt) override;
    void onStateChanged(ArmoryState) override;
    void onZCReceived(const std::vector<bs::TXEntry> &) override;
-   void onZCInvalidated(const std::vector<bs::TXEntry> &) override;
+   void onZCInvalidated(const std::set<BinaryData> &ids) override;
 
    void init();
    void clear();

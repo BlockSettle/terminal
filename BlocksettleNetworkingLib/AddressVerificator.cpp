@@ -109,7 +109,10 @@ bool AddressVerificator::addAddress(const bs::Address &address)
 
 void AddressVerificator::startAddressVerification()
 {
-   assert(!bsAddressList_.empty());
+   if (bsAddressList_.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "BS address list is not set");
+      return;
+   }
 
    AddCommandToQueue([this] {
       try {

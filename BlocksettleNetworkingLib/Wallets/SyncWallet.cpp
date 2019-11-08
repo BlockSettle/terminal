@@ -262,15 +262,15 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
 }
 
 bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t val)
-{
-   //combined utxo fetch method
+{   //combined utxo fetch method
 
    if (!isBalanceAvailable()) {
       return false;
    }
 
    const auto &cbTxOutList = [this, val, cb, handle = validityFlag_.handle()]
-      (const std::vector<UTXO> &txOutList) mutable {
+      (const std::vector<UTXO> &txOutList) mutable
+   {
       ValidityGuard lock(handle);
       if (!handle.isValid()) {
          return;
@@ -455,15 +455,16 @@ bool Wallet::getHistoryPage(const std::shared_ptr<AsyncClient::BtcWallet> &btcWa
    if (!isBalanceAvailable()) {
       return false;
    }
-   const auto &cb = [this, id, onlyNew, clientCb, handle = validityFlag_.handle()]
-                    (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) mutable -> void {
-      ValidityGuard lock(handle);
-      if (!handle.isValid()) {
-         return;
-      }
-
+   const auto &cb = [this, id, onlyNew, clientCb, handle = validityFlag_.handle(), logger=logger_]
+                    (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) mutable -> void
+   {
       try {
          auto le = entries.get();
+
+         ValidityGuard lock(handle);
+         if (!handle.isValid()) {
+            return;
+         }
          if (!onlyNew) {
             clientCb(this, le);
          }
@@ -496,8 +497,8 @@ bool Wallet::getHistoryPage(const std::shared_ptr<AsyncClient::BtcWallet> &btcWa
          historyCache_[id] = le;
       }
       catch (const std::exception& e) {
-         if (logger_ != nullptr) {
-            logger_->error("[bs::sync::Wallet::getHistoryPage] Return data " \
+         if (logger != nullptr) {
+            logger->error("[bs::sync::Wallet::getHistoryPage] Return data " \
                "error - {} - ID {}", e.what(), id);
          }
       }
@@ -541,20 +542,15 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
    }
    init(true);
 
-   const auto &cbTX = [this, balanceData = balanceData_, handle = validityFlag_.handle()](const Tx &tx) mutable {
-      ValidityGuard lock(handle);
-      if (!handle.isValid()) {
-         return;
-      }
+   const auto &cbTX = [this, balanceData = balanceData_, handle = validityFlag_.handle(), armory=armory_]
+      (const Tx &tx) mutable
+   {
       for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
          const TxIn in = tx.getTxInCopy(i);
          const OutPoint op = in.getOutPoint();
 
-         const auto &cbPrevTX = [this, balanceData, idx=op.getTxOutIndex(), handle](const Tx &prevTx) mutable {
-            ValidityGuard lock(handle);
-            if (!handle.isValid()) {
-               return;
-            }
+         const auto &cbPrevTX = [this, balanceData, idx=op.getTxOutIndex(), handle](const Tx &prevTx) mutable
+         {
             if (!prevTx.isInitialized()) {
                return;
             }
@@ -564,6 +560,10 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
                return;
             }
             bool updated = false;
+            ValidityGuard lock(handle);
+            if (!handle.isValid()) {
+               return;
+            }
             {
                std::unique_lock<std::mutex> lock(balanceData->addrMapsMtx);
                const auto &itTxn = balanceData->addressTxNMap.find(addr.id());
@@ -576,20 +576,20 @@ void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
                wct_->balanceUpdated(walletId());
             }
          };
-         armory_->getTxByHash(op.getTxHash(), cbPrevTX);
+         armory->getTxByHash(op.getTxHash(), cbPrevTX);
       }
    };
    for (const auto &entry : entries) {
       armory_->getTxByHash(entry.txHash, cbTX);
    }
-   updateBalances([this, handle = validityFlag_.handle()]() mutable {    // TxNs are not updated for ZCs
-      trackChainAddressUse([this, handle](bs::sync::SyncState st) mutable {
-         ValidityGuard lock(handle);
-         if (!handle.isValid()) {
-            return;
-         }
-         logger_->debug("{}: new live address found: {}", walletId(), (int)st);
+   updateBalances([this, handle = validityFlag_.handle(), logger=logger_]() mutable {    // TxNs are not updated for ZCs
+      trackChainAddressUse([this, handle, logger](bs::sync::SyncState st) mutable {
+         logger->debug("{}: new live address found: {}", walletId(), (int)st);
          if (st == bs::sync::SyncState::Success) {
+            ValidityGuard lock(handle);
+            if (!handle.isValid()) {
+               return;
+            }
             synchronize([this, handle]() mutable {
                ValidityGuard lock(handle);
                if (!handle.isValid()) {
@@ -621,13 +621,15 @@ void Wallet::onBalanceAvailable(const std::function<void()> &cb) const
       return;
    }
 
-   const auto thrBalAvail = [this, cb, handle = validityFlag_.handle()]() mutable {
-      ValidityGuard lock(handle);
-      if (!handle.isValid()) {
-         return;
-      }
-
+   const auto thrBalAvail = [this, cb, handle = validityFlag_.handle()]() mutable
+   {
       while (balThreadRunning_) {
+         {
+            ValidityGuard lock(handle);
+            if (!handle.isValid()) {
+               return;
+            }
+         }
          std::unique_lock<std::mutex> lock(balThrMutex_);
          balThrCV_.wait_for(lock, std::chrono::milliseconds{ 100 });
          if (!balThreadRunning_) {

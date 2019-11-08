@@ -158,7 +158,7 @@ namespace bs {
          void walletImportStarted(const std::string &walletId);
          void walletImportFinished(const std::string &walletId);
          void newTransactions(std::vector<bs::TXEntry>) const;
-         void invalidatedZCs(std::vector<bs::TXEntry>) const;
+         void invalidatedZCs(const std::set<BinaryData> &ids) const;
 
       public slots:
          void onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
@@ -166,7 +166,7 @@ namespace bs {
 
       private:
          void onZCReceived(const std::vector<bs::TXEntry> &) override;
-         void onZCInvalidated(const std::vector<bs::TXEntry> &) override;
+         void onZCInvalidated(const std::set<BinaryData> &ids) override;
          void onTxBroadcastError(const std::string &txHash, const std::string &errMsg) override;
          void onNewBlock(unsigned int height, unsigned int branchHeight) override;
          void onStateChanged(ArmoryState) override;

@@ -996,13 +996,6 @@ void ArmoryConnection::onZCsReceived(const std::vector<std::shared_ptr<ClientCla
 {
    const auto newEntries = bs::TXEntry::fromLedgerEntries(entries);
 
-   {
-      std::unique_lock<std::mutex> lock(zcMutex_);
-      for (const auto &newEntry : newEntries) {
-         zcNotifiedEntries_[newEntry.txHash] = newEntry;
-      }
-   }
-
    addToMaintQueue([newEntries](ArmoryCallbackTarget *tgt) {
       tgt->onZCReceived(newEntries);
    });
@@ -1010,25 +1003,9 @@ void ArmoryConnection::onZCsReceived(const std::vector<std::shared_ptr<ClientCla
 
 void ArmoryConnection::onZCsInvalidated(const std::set<BinaryData> &ids)
 {
-   std::vector<bs::TXEntry> zcInvEntries;
-   std::lock_guard<std::mutex> lock(zcMutex_);
-
-   for (const BinaryData &id : ids) {
-      const auto &itEntry = zcNotifiedEntries_.find(id);
-      if (itEntry != zcNotifiedEntries_.end()) {
-         zcInvEntries.emplace_back(std::move(itEntry->second));
-      }
-   }
-
-   if (!zcInvEntries.empty()) {
-      for (const auto &invEntry : zcInvEntries) {
-         zcNotifiedEntries_.erase(invEntry.txHash);
-      }
-      logger_->debug("[{}] found {} ZC entries to invalidate", __func__, zcInvEntries.size());
-      addToMaintQueue([zcInvEntries](ArmoryCallbackTarget *tgt) {
-         tgt->onZCInvalidated(zcInvEntries);
-      });
-   }
+   addToMaintQueue([ids](ArmoryCallbackTarget *tgt) {
+      tgt->onZCInvalidated(ids);
+   });
 }
 
 std::shared_ptr<AsyncClient::BtcWallet> ArmoryConnection::instantiateWallet(const std::string &walletId)
@@ -1173,7 +1150,11 @@ bs::TXEntry bs::TXEntry::fromLedgerEntry(const ClientClasses::LedgerEntry &entry
       , entry.getBlockNum(), entry.getTxTime(), entry.isOptInRBF()
       , entry.isChainedZC(), false, std::chrono::steady_clock::now() };
    for (const auto &addr : entry.getScrAddrList()) {
-      result.addresses.push_back(bs::Address::fromHash(addr));
+      try {
+         const auto &scrAddr = bs::Address::fromHash(addr);
+         result.addresses.emplace_back(std::move(scrAddr));
+      }
+      catch (const std::exception &) {}   // Likely an OP_RETURN output
    }
    return result;
 }

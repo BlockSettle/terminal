@@ -205,6 +205,19 @@ TXNode *TXNode::find(const bs::TXEntry &entry) const
    return nullptr;
 }
 
+std::vector<TXNode *> TXNode::nodesByTxHash(const BinaryData &txHash) const
+{
+   std::vector<TXNode *> result;
+   if (item_ && (item_->txEntry.txHash == txHash)) {
+      result.push_back(const_cast<TXNode*>(this));
+   }
+   for (const auto &child : children_) {
+      const auto childNodes = child->nodesByTxHash(txHash);
+      result.insert(result.end(), childNodes.cbegin(), childNodes.cend());
+   }
+   return result;
+}
+
 unsigned int TXNode::level() const
 {
    unsigned int result = 0;
@@ -474,8 +487,8 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction
    if (!item->wallets.empty()) {
       item->walletName = QString::fromStdString(item->wallets[0]->name());
    }
-   item->isValid = item->wallets.empty() ? false : item->wallets[0]->isTxValid(entry.txHash);
-   item->initialized = false;
+   const auto validWallet = item->wallets.empty() ? nullptr : item->wallets[0];
+   item->isValid = validWallet ? validWallet->isTxValid(entry.txHash) : false;
    return item;
 }
 
@@ -484,13 +497,20 @@ void TransactionsViewModel::onZCReceived(const std::vector<bs::TXEntry> &entries
    QMetaObject::invokeMethod(this, [this, entries] { updateTransactionsPage(entries); });
 }
 
-void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entries)
+void TransactionsViewModel::onZCInvalidated(const std::set<BinaryData> &ids)
 {
    std::vector<int> delRows;
+#ifdef TX_MODEL_NESTED_NODES
    std::vector<bs::TXEntry> children;
+#endif
    {
       QMutexLocker locker(&updateMutex_);
-      for (const auto &entry : entries) {
+      for (const auto &txHash : ids) {
+         const auto invNodes = rootNode_->nodesByTxHash(txHash);
+         for (const auto &node : invNodes) {
+            delRows.push_back(node->row());
+         }
+#ifdef TX_MODEL_NESTED_NODES // nested nodes are not supported for now
          const auto node = rootNode_->find(entry);
          if (node && (node->parent() == rootNode_.get()) && !node->item()->confirmations) {
             delRows.push_back(node->row());
@@ -502,17 +522,22 @@ void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entr
                }
             }
          }
+#endif   //TX_MODEL_NESTED_NODES
       }
    }
    if (!delRows.empty()) {
       onDelRows(delRows);
    }
+
+#ifdef TX_MODEL_NESTED_NODES
    if (!children.empty()) {
       logger_->debug("[{}] {} children to update", __func__, children.size());
       updateTransactionsPage(children);
    }
+#endif
 }
 
+#ifdef TX_MODEL_NESTED_NODES
 static bool isChildOf(TransactionPtr child, TransactionPtr parent)
 {
    if (!child->initialized || !parent->initialized) {
@@ -539,6 +564,7 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
    }
    return false;
 }
+#endif   //TX_MODEL_NESTED_NODES
 
 std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const std::vector<bs::TXEntry> &page)
 {
@@ -552,10 +578,9 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          return (walletIds < ik.walletIds);
       }
    };
-   auto newItems = std::make_shared<std::vector<std::pair<TransactionPtr, TXNode *>>>();
+   auto newItems = std::make_shared<std::vector<TXNode *>>();
    auto updatedItems = std::make_shared<std::vector<TransactionPtr>>();
    auto newTxKeys = std::make_shared<std::set<ItemKey>>();
-   auto keysMutex = std::make_shared<QMutex>();
 
    const auto mergedPage = allWallets_ ? walletsManager_->mergeEntries(page) : page;
 
@@ -565,7 +590,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          oldestItem_ = item;
       }
       newTxKeys->insert({ item->txEntry.txHash, item->txEntry.walletIds });
-      newItems->push_back({ item, new TXNode(item) } );
+      newItems->push_back(new TXNode(item));
    };
 
    const auto mergeItem = [this, updatedItems](const TransactionPtr &item) -> bool
@@ -583,32 +608,33 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       return false;
    };
 
-   {
-      QMutexLocker locker(&updateMutex_);
-      for (const auto &entry : mergedPage) {
-         const auto item = itemFromTransaction(entry);
-         if (item->wallets.empty()) {
-            continue;
-         }
+   for (const auto &entry : mergedPage) {
+      const auto item = itemFromTransaction(entry);
+      if (item->wallets.empty()) {
+         continue;
+      }
 
+      TXNode *node = nullptr;
+      {
+         QMutexLocker locker(&updateMutex_);
          const auto node = rootNode_->find(item->txEntry);
-         if (node) {
-            updatedItems->push_back(item);
-         }
-         else {
-            if (allWallets_) {
-               if (!mergeItem(item)) {
-                  lbdAddNew(item);
-               }
-            }
-            else {
+      }
+      if (node) {
+         updatedItems->push_back(item);
+      }
+      else {
+         if (allWallets_) {
+            if (!mergeItem(item)) {
                lbdAddNew(item);
             }
+         }
+         else {
+            lbdAddNew(item);
          }
       }
    }
 
-   const auto &cbInited = [this, newItems, updatedItems, newTxKeys, keysMutex]
+   const auto &cbInited = [this, newItems, updatedItems, newTxKeys]
       (const TransactionPtr &itemPtr)
    {
       if (!itemPtr || !itemPtr->initialized) {
@@ -619,12 +645,9 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          logger_->warn("TX keys already empty");
          return;
       }
-      {
-         QMutexLocker locker(keysMutex.get());
-         newTxKeys->erase({ itemPtr->txEntry.txHash, itemPtr->txEntry.walletIds });
-      }
+      newTxKeys->erase({ itemPtr->txEntry.txHash, itemPtr->txEntry.walletIds });
       if (newTxKeys->empty()) {
-#if 0
+#ifdef TX_MODEL_NESTED_NODES
          std::unordered_set<std::string> deletedItems;
          if (rootNode_->hasChildren()) {
             std::vector<int> delRows;
@@ -679,7 +702,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          for (const auto &delId : deletedItems) {
             newItems->erase(delId);
          }
-#endif   //0
+#endif   //TX_MODEL_NESTED_NODES
          if (!newItems->empty()) {
             onNewItems(*newItems);
             if (signalOnEndLoading_) {
@@ -695,8 +718,8 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
 
    const auto newItemsCopy = *newItems;
    if (!newItemsCopy.empty()) {
-      for (auto item : newItemsCopy) {
-         updateTransactionDetails(item.first, cbInited);
+      for (const auto &node : newItemsCopy) {
+         updateTransactionDetails(node->item(), cbInited);
       }
    }
    else {
@@ -717,7 +740,11 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
    }
 
    for (const auto &updItem : updItems) {
-      const auto node = rootNode_->find(updItem->txEntry);
+      TXNode *node = nullptr;
+      {
+         QMutexLocker locker(&updateMutex_);
+         node = rootNode_->find(updItem->txEntry);
+      }
       if (!node) {
          continue;
       }
@@ -737,7 +764,7 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
          const auto confNum = armory_->getConfirmationsNumber(newBlockNum);
          item->confirmations = confNum;
          item->txEntry.blockNum = newBlockNum;
-            onItemConfirmed(item);
+         onItemConfirmed(item);
       }
    }
 
@@ -811,8 +838,8 @@ void TransactionsViewModel::loadLedgerEntries(bool onNewBlock)
                   }
                }
                catch (std::exception& e) {
-                  logger->error("[TransactionsViewModel::loadLedgerEntries] " \
-                     "Return data error (getPageCount) - {}", e.what());
+                  logger->error("[TransactionsViewModel::loadLedgerEntries::cbLedger] " \
+                     "return data error: {}", e.what());
                }
 
                QMetaObject::invokeMethod(qApp, [thisPtr, pageId] {
@@ -825,8 +852,8 @@ void TransactionsViewModel::loadLedgerEntries(bool onNewBlock)
          }
       }
       catch (const std::exception &e) {
-         logger->error("[TransactionsViewModel::loadLedgerEntries] Return " \
-            "data error (getPageCount) - {}", e.what());
+         logger->error("[TransactionsViewModel::loadLedgerEntries::cbPageCount] return " \
+            "data error: {}", e.what());
       }
    };
 
@@ -846,14 +873,17 @@ void TransactionsViewModel::ledgerToTxData(const std::map<int, std::vector<bs::T
    initialLoadCompleted_ = true;
 }
 
-void TransactionsViewModel::onNewItems(const std::vector<std::pair<TransactionPtr, TXNode *>> &newItems)
+void TransactionsViewModel::onNewItems(const std::vector<TXNode *> &newItems)
 {
    const int curLastIdx = rootNode_->nbChildren();
    beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + newItems.size() - 1);
    {
       QMutexLocker locker(&updateMutex_);
       for (const auto &newItem : newItems) {
-         rootNode_->add(newItem.second);
+         if (rootNode_->find(newItem->item()->txEntry)) {
+            continue;
+         }
+         rootNode_->add(newItem);
       }
    }
    endInsertRows();
@@ -863,6 +893,7 @@ void TransactionsViewModel::onDelRows(std::vector<int> rows)
 {        // optimize for contiguous ranges, if needed
    std::sort(rows.begin(), rows.end());
    int rowCnt = rowCount();
+   QMutexLocker locker(&updateMutex_);
    for (int i = 0; i < rows.size(); ++i) {
       const int row = rows[i] - i;  // special hack for correcting row index after previous row deletion
       if ((row < 0) || row >= rowCnt) {
@@ -1088,23 +1119,25 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
       std::shared_ptr<bs::sync::Wallet> totalValWallet;
       for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
          const TxOut out = tx.getTxOutCopy(i);
-         const auto addr = bs::Address::fromTxOut(out);
-         const auto addrWallet = walletsManager->getWalletByAddress(addr);
-         if (txEntry.isChainedZC && !hasSpecialAddr && addrWallet) {
-            hasSpecialAddr = isSpecialWallet(addrWallet);
-         }
-
-         for (const auto &wallet : wallets) {
-            if (addrWallet == wallet) {
-               totalVal += out.getValue();
-               totalValWallet = wallet;
-               break;
+         try {
+            const auto addr = bs::Address::fromTxOut(out);
+            const auto addrWallet = walletsManager->getWalletByAddress(addr);
+            if (txEntry.isChainedZC && !hasSpecialAddr && addrWallet) {
+               hasSpecialAddr = isSpecialWallet(addrWallet);
             }
-         }
-
-         if (filterAddress.isValid() && addr == filterAddress) {
+            for (const auto &wallet : wallets) {
+               if (addrWallet == wallet) {
+                  totalVal += out.getValue();
+                  totalValWallet = wallet;
+                  break;
+               }
+            }
+            if (filterAddress.isValid() && addr == filterAddress) {
+               addressVal += out.getValue();
+            }
+         } catch (const std::exception &) {
             addressVal += out.getValue();
-         }
+         }  // ignore for OP_RETURN
       }
 
       std::shared_ptr<bs::sync::Wallet> addrValWallet;
@@ -1114,7 +1147,6 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
          const auto &prevTx = txIns[op.getTxHash()];
          if (prevTx.isInitialized()) {
             TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
-
             const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
             const auto addrWallet = walletsManager->getWalletByAddress(addr);
 

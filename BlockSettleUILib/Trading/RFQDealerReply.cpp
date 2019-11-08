@@ -575,9 +575,15 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
          }
 
          const bool isSpendCC = qrn.side == bs::network::Side::Buy;
-         const uint64_t spendVal = isSpendCC
-               ? qrn.quantity * assetManager_->getCCLotSize(qrn.product)
-               : qrn.quantity * price * BTCNumericTypes::BalanceDivider;
+         uint64_t spendVal;
+         if (isSpendCC) {
+            spendVal = qrn.quantity * assetManager_->getCCLotSize(qrn.product);
+         } else {
+            uint64_t priceQty = std::ceil(price * qrn.quantity * 1000000.0);   // ugly hack to avoid rounding errors
+            priceQty *= 100;        // how to reproduce: sell 1 CC RFQ - reply to it with .012302 - without the hack
+            spendVal = priceQty;   // the result in spendVal (after trivial multiply) will be 1230199 (on Windows)
+         }
+
          const auto &spendWallet = isSpendCC ? ccWallet : xbtWallet;
          const auto &recvWallet = isSpendCC ? xbtWallet : ccWallet;
          // For CC search for exact amount (as we have no need for change).
