@@ -1,7 +1,7 @@
 #ifndef __FX_AMOUNT_VALIDATOR_H__
 #define __FX_AMOUNT_VALIDATOR_H__
 
-#include "CustomDoubleValidator.h"
+#include "CustomControls/CustomDoubleValidator.h"
 
 class FXAmountValidator : public CustomDoubleValidator
 {

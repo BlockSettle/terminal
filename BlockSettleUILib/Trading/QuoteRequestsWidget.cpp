@@ -164,6 +164,15 @@ void QuoteRequestsWidget::addSettlementContainer(const std::shared_ptr<bs::Settl
    }
 }
 
+bool QuoteRequestsWidget::StartCCSignOnOrder(const QString& orderId)
+{
+   if (model_) {
+      return model_->StartCCSignOnOrder(orderId);
+   }
+
+   return false;
+}
+
 RFQBlotterTreeView* QuoteRequestsWidget::view() const
 {
    return ui_->treeViewQuoteRequests;

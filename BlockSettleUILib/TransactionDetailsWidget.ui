@@ -517,12 +517,12 @@
   <customwidget>
    <class>CustomLabel</class>
    <extends>QLabel</extends>
-   <header>CustomLabel.h</header>
+   <header>CustomControls/CustomLabel.h</header>
   </customwidget>
   <customwidget>
    <class>CustomTreeWidget</class>
    <extends>QTreeWidget</extends>
-   <header>CustomTreeWidget.h</header>
+   <header>CustomControls/CustomTreeWidget.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

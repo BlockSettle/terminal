@@ -76,9 +76,12 @@ private slots:
    void onQuoteReceived(const bs::network::Quote& quote);
    void onOrderFilled(const std::string &quoteId);
    void onOrderFailed(const std::string& quoteId, const std::string& reason);
-   void onSettlementAccepted();
+   void onXBTSettlementAccepted();
+
    void onSignTxRequested(QString orderId, QString reqId);
-   void onSettlementOrder();
+   void onCCQuoteAccepted();
+   void onCCTxSigned();
+
    void onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx);
    void logError(const QString& errorMessage);
 
@@ -105,9 +108,6 @@ private:
    std::shared_ptr<RfqStorage>                  rfqStorage_;
    std::shared_ptr<bs::sync::Wallet>            xbtWallet_;
 
-   std::unordered_map<std::string, std::string> ccTxMap_;
-   std::map<QString, QString>          ccReqIdToOrder_;
-
    std::shared_ptr<bs::SettlementContainer>     curContainer_;
    std::shared_ptr<ReqCCSettlementContainer>    ccSettlContainer_;
    std::shared_ptr<ReqXBTSettlementContainer>   xbtSettlContainer_;
@@ -120,7 +120,7 @@ private:
 
    RFQRequestWidget *requestWidget_{};
 
-   bs::UtxoReservationToken utxoRes_;
+   QString           ccOrderId_;
 
 };
 

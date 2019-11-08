@@ -95,7 +95,6 @@ private slots:
    void onOrder(const bs::network::Order &o);
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId);
-   void onReadyToAutoSign();
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
    void onEnterKeyPressed(const QModelIndex &index);
@@ -145,7 +144,6 @@ private:
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;
    std::shared_ptr<bs::SecurityStatsCollector>     statsCollector_;
-   std::unordered_map<std::string, std::string>    ccTxByOrder_;
 };
 
 #endif // __RFQ_REPLY_WIDGET_H__

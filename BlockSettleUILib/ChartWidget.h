@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <QButtonGroup>
 #include "CommonTypes.h"
-#include "qcustomplot.h"
+#include "CustomControls/qcustomplot.h"
 #include "market_data_history.pb.h"
 
 QT_BEGIN_NAMESPACE

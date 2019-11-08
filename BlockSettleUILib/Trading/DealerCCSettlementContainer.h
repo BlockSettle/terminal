@@ -40,7 +40,7 @@ public:
    void activate() override;
    void deactivate() override { stopTimer(); }
 
-   std::string id() const override { return quoteReqId_; }
+   std::string id() const override { return orderId_.toStdString(); }
    bs::network::Asset::Type assetType() const override { return order_.assetType; }
    std::string security() const override { return order_.security; }
    std::string product() const override { return order_.product; }
@@ -68,7 +68,6 @@ private:
 private:
    std::shared_ptr<spdlog::logger>     logger_;
    const bs::network::Order   order_;
-   const std::string          quoteReqId_;
    const uint64_t             lotSize_;
    const bs::Address          genesisAddr_;
    const bool                 delivery_;

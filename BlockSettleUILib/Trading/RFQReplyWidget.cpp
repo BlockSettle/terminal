@@ -6,7 +6,7 @@
 #include "BSMessageBox.h"
 #include "CelerClient.h"
 #include "CelerSubmitQuoteNotifSequence.h"
-#include "CustomDoubleSpinBox.h"
+#include "CustomControls/CustomDoubleSpinBox.h"
 #include "DealerCCSettlementContainer.h"
 #include "DealerXBTSettlementContainer.h"
 #include "DialogManager.h"
@@ -244,7 +244,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
                , sr.recipientAddress, sr.spendWallet, signingContainer_, armory_, std::move(sr.utxoRes));
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
-            connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
             connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this
                     , [settlContainer, quoteId = order.quoteId](const std::string& failedQuoteId, const std::string& reason){
@@ -255,6 +254,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
 
             ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
             settlContainer->activate();
+
          } catch (const std::exception &e) {
             BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
                , tr("Failed to start dealer's CC settlement")
@@ -276,8 +276,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_, order
                , walletsManager_, reply.xbtWallet, quoteProvider_, signingContainer_, armory_, authAddressManager_
                , reply.authAddr, reply.utxosPayinFixed, recvXbtAddr);
-
-            connect(settlContainer.get(), &bs::SettlementContainer::readyToAccept, this, &RFQReplyWidget::onReadyToAutoSign);
 
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);
@@ -309,19 +307,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
       }
       sentXbtReplies_.erase(order.settlementId);
    }
-}
-
-void RFQReplyWidget::onReadyToAutoSign()
-{
-   const auto settlContainer = qobject_cast<bs::SettlementContainer *>(sender());
-   if (!settlContainer) {
-      logger_->error("[RFQReplyWidget::onReadyToAutoSign] failed to cast sender");
-      return;
-   }
-//   if (!settlContainer->accept()) {
-//      logger_->warn("[RFQReplyWidget::onReadyToAutoSign] failed to accept");
-//      return;
-//   }
 }
 
 void RFQReplyWidget::onConnectedToCeler()
@@ -364,29 +349,17 @@ void RFQReplyWidget::onSelected(const QString& productGroup, const bs::network::
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)
 {
-   const auto it = ccTxByOrder_.find(orderId.toStdString());
-   if (it != ccTxByOrder_.end()) {
-      logger_->debug("[RFQReplyWidget::saveTxData] TX data already requested for order {}", orderId.toStdString());
-      quoteProvider_->SignTxRequest(orderId, txData);
-      ccTxByOrder_.erase(orderId.toStdString());
-   }
-   else {
-      logger_->debug("[RFQReplyWidget::saveTxData] saving TX data[{}] for order {}", txData.length(), orderId.toStdString());
-      ccTxByOrder_[orderId.toStdString()] = txData;
-   }
+   quoteProvider_->SignTxRequest(orderId, txData);
 }
 
 void RFQReplyWidget::onSignTxRequested(QString orderId, QString reqId)
 {
    Q_UNUSED(reqId);
-   const auto it = ccTxByOrder_.find(orderId.toStdString());
-   if (it == ccTxByOrder_.end()) {
-      logger_->debug("[RFQReplyWidget::onSignTxRequested] no TX data for order {}, yet", orderId.toStdString());
-      ccTxByOrder_[orderId.toStdString()] = std::string{};
-      return;
+
+   if (!ui_->widgetQuoteRequests->StartCCSignOnOrder(orderId)) {
+      logger_->error("[RFQReplyWidget::onSignTxRequested] failed to initiate sign on CC order: {}"
+                     , orderId.toStdString());
    }
-   quoteProvider_->SignTxRequest(orderId, it->second);
-   ccTxByOrder_.erase(orderId.toStdString());
 }
 
 

@@ -57,13 +57,14 @@ public:
    std::string txData() const;
    std::string txSignedData() const { return ccTxSigned_; }
 
+   bool startSigning();
+
 signals:
    void settlementCancelled();
-   // in current implementation that means that TX was signed.
-   void settlementAccepted();
-   // RFQDialog could send accept on quote. should be emitted only after settlementAccepted
-   // since it is used to save signed data in RFQDialog
+
    void sendOrder();
+
+   void txSigned();
    void genAddressVerified(bool result, QString error);
    void paymentVerified(bool result, QString error);
    void walletInfoReceived();
@@ -75,8 +76,9 @@ private slots:
 private:
    // read comments in source code
    bool createCCUnsignedTXdata();
-   bool startSigning();
    std::string txComment();
+
+   void AcceptQuote();
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
