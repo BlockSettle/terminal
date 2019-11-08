@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.24.8",
-   "release_date": "05 Nov 2019",
+   "latest_version": "0.24.9",
+   "release_date": "08 Nov 2019",
    "changes": [
+      {
+         "version_string": "0.24.9",
+         "previous_version": "0.24.8",
+         "release_date": "08 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fallback fee estimation"
+         ],
+         "bug_fixes": [
+            "Fix signing on rejected CC trade",
+            "Fix TX list updates",
+            "Fix CC balance loading"
+         ],
+         "revision": "ba8fd7a6",
+         "common_revision": "8aaecad9"
+      },
       {
          "version_string": "0.24.8",
          "previous_version": "0.24.7",
