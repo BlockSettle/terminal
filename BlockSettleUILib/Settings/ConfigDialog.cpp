@@ -78,7 +78,7 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
            ApplicationSettings::armoryDbName,
            ApplicationSettings::armoryDbIp,
            ApplicationSettings::armoryDbPort}) {
-         prevState_[s] = appSettings_->get<QStringList>(s);
+         prevState_[s] = appSettings_->get(s);
       }
    });
 
@@ -86,7 +86,7 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
       for (ApplicationSettings::Setting s : {
            ApplicationSettings::remoteSigners,
            ApplicationSettings::signerIndex}) {
-         prevState_[s] = appSettings_->get<QStringList>(s);
+         prevState_[s] = appSettings_->get(s);
       }
    });
 }

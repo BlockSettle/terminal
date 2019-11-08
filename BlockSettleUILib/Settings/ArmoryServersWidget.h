@@ -45,6 +45,7 @@ private:
 
 private slots:
    void resetForm();
+   void updateSaveButton();
 
 private:
    std::unique_ptr<Ui::ArmoryServersWidget> ui_; // The main widget object.

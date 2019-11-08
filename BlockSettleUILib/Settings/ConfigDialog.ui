@@ -144,7 +144,7 @@
           </brush>
          </property>
          <property name="icon">
-          <iconset resource="armory.qrc">
+          <iconset resource="../armory.qrc">
            <normaloff>:/resources/general-settings@1.5x.png</normaloff>
            <selectedoff>:/resources/general-settings-selected@1.5x.png</selectedoff>:/resources/general-settings@1.5x.png</iconset>
          </property>
@@ -181,7 +181,7 @@
           </brush>
          </property>
          <property name="icon">
-          <iconset resource="armory.qrc">
+          <iconset resource="../armory.qrc">
            <normaloff>:/resources/network@1.5x.png</normaloff>
            <selectedoff>:/resources/network-selected@1.5x.png</selectedoff>:/resources/network@1.5x.png</iconset>
          </property>
@@ -215,7 +215,7 @@
           </brush>
          </property>
          <property name="icon">
-          <iconset resource="armory.qrc">
+          <iconset resource="../armory.qrc">
            <normaloff>:/resources/password-icon@1.5x.png</normaloff>:/resources/password-icon@1.5x.png</iconset>
          </property>
          <property name="flags">
@@ -248,7 +248,7 @@
           </brush>
          </property>
          <property name="icon">
-          <iconset resource="armory.qrc">
+          <iconset resource="../armory.qrc">
            <normaloff>:/resources/dealing@1.5x.png</normaloff>
            <selectedoff>:/resources/dealing-selected@1.5x.png</selectedoff>:/resources/dealing@1.5x.png</iconset>
          </property>
@@ -386,7 +386,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="armory.qrc"/>
+  <include location="../armory.qrc"/>
  </resources>
  <connections/>
 </ui>
