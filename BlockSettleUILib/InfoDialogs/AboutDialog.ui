@@ -38,7 +38,7 @@
       <enum>QTabWidget::North</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>1</number>
      </property>
      <property name="elideMode">
       <enum>Qt::ElideLeft</enum>
@@ -237,6 +237,12 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
          <property name="minimumSize">
           <size>
            <width>0</width>
+           <height>1</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
            <height>1</height>
           </size>
          </property>
