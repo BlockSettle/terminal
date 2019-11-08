@@ -1,5 +1,6 @@
 #include "UtxoReservationToken.h"
 
+#include <cassert>
 #include <spdlog/spdlog.h>
 
 #include "CoreWallet.h"
@@ -31,6 +32,8 @@ UtxoReservationToken &UtxoReservationToken::operator=(UtxoReservationToken &&oth
 UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_ptr<spdlog::logger> &logger
    , const std::vector<UTXO> &utxos, const std::string &reserveId, const std::string &walletId)
 {
+   assert(!reserveId.empty());
+
    if (logger) {
       uint64_t sum = 0;
       for (const auto &utxo : utxos) {

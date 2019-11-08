@@ -14,6 +14,7 @@
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "QWalletInfo.h"
+#include "UtxoReservationToken.h"
 
 namespace Ui {
     class RFQDealerReply;
@@ -84,8 +85,10 @@ namespace bs {
          bs::Address selectedAuthAddress() const;
          std::vector<UTXO> selectedXbtInputs() const;
 
+         using SubmitQuoteNotifCb = std::function<void(bs::network::QuoteNotification, bs::UtxoReservationToken)>;
+         void setSubmitQuoteNotifCb(SubmitQuoteNotifCb cb);
+
       signals:
-         void submitQuoteNotif(network::QuoteNotification);
          void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
 
       public slots:
@@ -158,6 +161,7 @@ namespace bs {
          std::unordered_map<std::string, MDInfo>  mdInfo_;
 
          std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
+         SubmitQuoteNotifCb submitQuoteNotifCb_;
 
       private:
          void reset();
@@ -179,9 +183,9 @@ namespace bs {
          QDoubleSpinBox *getActivePriceWidget() const;
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
          // xbtWallet - what XBT wallet to use for XBT/CC trades (selected from UI for manual trades, default wallet for AQ trades), empty for FX trades
+         using SubmitCb = std::function<void(bs::network::QuoteNotification, bs::UtxoReservationToken)>;
          void submitReply(const network::QuoteReqNotification &qrn, double price
-            , std::function<void(bs::network::QuoteNotification)>
-            , const std::shared_ptr<bs::sync::Wallet> &xbtWallet);
+            , SubmitCb, const std::shared_ptr<bs::sync::Wallet> &xbtWallet);
          void updateWalletsList(bool skipWatchingOnly);
          bool isXbtSpend() const;
       };

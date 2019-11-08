@@ -535,18 +535,21 @@ std::vector<UTXO> RFQDealerReply::selectedXbtInputs() const
    return selectedXbtInputs_->GetSelectedTransactions();
 }
 
+void RFQDealerReply::setSubmitQuoteNotifCb(RFQDealerReply::SubmitQuoteNotifCb cb)
+{
+   submitQuoteNotifCb_ = std::move(cb);
+}
+
 void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
-   , double price
-   , std::function<void(bs::network::QuoteNotification)> cb
-   , const std::shared_ptr<bs::sync::Wallet> &xbtWallet)
+   , double price, SubmitCb cb, const std::shared_ptr<bs::sync::Wallet> &xbtWallet)
 {
    if (qFuzzyIsNull(price)) {
-      cb({});
+      cb({}, {});
       return;
    }
    const auto itQN = sentNotifs_.find(qrn.quoteRequestId);
    if ((itQN != sentNotifs_.end()) && (itQN->second == price)) {
-      cb({});
+      cb({}, {});
       return;
    }
 
@@ -554,12 +557,12 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
 
    switch (qrn.assetType) {
       case bs::network::Asset::SpotFX: {
-         cb(*qn);
+         cb(*qn, {});
          break;
       }
 
       case bs::network::Asset::SpotXBT: {
-         cb(*qn);
+         cb(*qn, {});
          break;
       }
 
@@ -567,7 +570,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
          auto ccWallet = getCCWallet(qrn);
          if (!ccWallet) {
             SPDLOG_LOGGER_ERROR(logger_, "can't find required CC wallet");
-            cb({});
+            cb({}, {});
             return;
          }
 
@@ -597,13 +600,13 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
                            const auto txReq = spendWallet->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
                               , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
                            qn->transactionData = txReq.serializeState().toHexStr();
-                           //dealerUtxoAdapter_->reserve(txReq, qn->quoteRequestId);
+                           auto utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, txReq, qn->quoteRequestId);
+                           cb(*qn, std::move(utxoRes));
                         } catch (const std::exception &e) {
                            logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
-                           cb({});
+                           cb({}, {});
                            return;
                         }
-                        cb(*qn);
                      };
 
                      if (qrn.side == bs::network::Side::Buy) {
@@ -665,11 +668,11 @@ void RFQDealerReply::submitButtonClicked()
       return;
    }
 
-   const auto &cbSubmit = [this, price](bs::network::QuoteNotification qn) {
+   const auto &cbSubmit = [this, price](bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes) {
       if (!qn.quoteRequestId.empty()) {
          logger_->debug("Submitted quote reply on {}: {}/{}", currentQRN_.quoteRequestId, qn.bidPx, qn.offerPx);
          sentNotifs_[qn.quoteRequestId] = price;
-         emit submitQuoteNotif(qn);
+         submitQuoteNotifCb_(std::move(qn), std::move(utxoRes));
       }
    };
    submitReply(currentQRN_, price, cbSubmit, getSelectedXbtWallet());
@@ -792,18 +795,18 @@ void RFQDealerReply::onBestQuotePrice(const QString reqId, double price, bool ow
 
 void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, double price)
 {
-   const auto &cbSubmit = [this, qrn, price](const bs::network::QuoteNotification &qn) {
-      if (!qn.quoteRequestId.empty()) {
-         logger_->debug("Submitted AQ reply on {}: {}/{}", qrn.quoteRequestId, qn.bidPx, qn.offerPx);
-         QMetaObject::invokeMethod(this, [this, qn, price] {
+   QMetaObject::invokeMethod(this, [this, qrn, price] {
+      const auto &cbSubmit = [this, qrn, price](bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes) {
+         if (!qn.quoteRequestId.empty()) {
+            logger_->debug("Submitted AQ reply on {}: {}/{}", qrn.quoteRequestId, qn.bidPx, qn.offerPx);
             // Store AQ too so it's possible to pull it later (and to disable submit button)
             sentNotifs_[qn.quoteRequestId] = price;
-            emit submitQuoteNotif(qn);
-         });
-      }
-   };
+            submitQuoteNotifCb_(std::move(qn), std::move(utxoRes));
+         }
+      };
 
-   submitReply(qrn, price, cbSubmit, nullptr);
+      submitReply(qrn, price, cbSubmit, nullptr);
+   });
 }
 
 void RFQDealerReply::onHDLeafCreated(const std::string& ccName)

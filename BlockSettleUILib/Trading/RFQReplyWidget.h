@@ -13,6 +13,7 @@
 #include "CoinControlModel.h"
 #include "CommonTypes.h"
 #include "TabWithShortcut.h"
+#include "UtxoReservationToken.h"
 
 namespace Ui {
     class RFQReplyWidget;
@@ -91,7 +92,6 @@ public slots:
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
 private slots:
-   void onReplied(bs::network::QuoteNotification qn);
    void onOrder(const bs::network::Order &o);
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId);
@@ -102,6 +102,7 @@ private slots:
    void onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk);
 
 private:
+   void onReplied(bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes);
    void showSettlementDialog(QDialog *dlg);
    bool checkConditions(const QString& productGroup, const bs::network::QuoteReqNotification& request);
    void popShield();
@@ -120,9 +121,10 @@ private:
 
    struct SentCCReply
    {
-      std::string                      recipientAddress;
-      std::string                      requestorAuthAddress;
-      std::shared_ptr<bs::sync::Wallet> spendWallet;
+      std::string                         recipientAddress;
+      std::string                         requestorAuthAddress;
+      std::shared_ptr<bs::sync::Wallet>   spendWallet;
+      bs::UtxoReservationToken            utxoRes;
    };
 
 private:

@@ -5,9 +5,10 @@
 #include "BSErrorCodeStrings.h"
 #include "CheckRecipSigner.h"
 #include "SignContainer.h"
-#include "UiUtils.h"
-#include "Wallets/SyncWallet.h"
 #include "SignerDefs.h"
+#include "UiUtils.h"
+#include "UtxoReservation.h"
+#include "Wallets/SyncWallet.h"
 
 #include <QApplication>
 #include <QPointer>
@@ -21,7 +22,8 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , const std::string &ownRecvAddr
    , const std::shared_ptr<bs::sync::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory)
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer()
    , logger_(logger)
    , order_(order)
@@ -35,6 +37,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , ownRecvAddr_(bs::Address::fromAddressString(ownRecvAddr))
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
+   , utxoRes_(std::move(utxoRes))
 {
    if (lotSize == 0) {
       throw std::logic_error("invalid lotSize");
@@ -42,15 +45,9 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
 
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
       , &DealerCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
-
-   utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
-   bs::UtxoReservation::addAdapter(utxoAdapter_);
 }
 
-DealerCCSettlementContainer::~DealerCCSettlementContainer()
-{
-   bs::UtxoReservation::delAdapter(utxoAdapter_);
-}
+DealerCCSettlementContainer::~DealerCCSettlementContainer() = default;
 
 bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData() const
 {
@@ -127,7 +124,7 @@ bool DealerCCSettlementContainer::startSigning()
    txReq_.walletIds = { wallet_->walletId() };
    txReq_.prevStates = { txReqData_ };
    txReq_.populateUTXOs = true;
-   txReq_.inputs = utxoAdapter_->get(id());
+   txReq_.inputs = bs::UtxoReservation::instance()->get(utxoRes_.reserveId());
    logger_->debug("[DealerCCSettlementContainer::accept] signing with wallet {}, {} inputs"
       , wallet_->name(), txReq_.inputs.size());
 
@@ -201,7 +198,7 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 
 bool DealerCCSettlementContainer::cancel()
 {
-   utxoAdapter_->unreserve(id());
+   utxoRes_.release();
    signingContainer_->CancelSignTx(id());
    cancelled_ = true;
    return true;

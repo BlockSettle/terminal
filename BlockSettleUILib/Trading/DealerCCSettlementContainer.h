@@ -5,7 +5,7 @@
 #include "AddressVerificator.h"
 #include "CheckRecipSigner.h"
 #include "SettlementContainer.h"
-#include "UtxoReservation.h"
+#include "UtxoReservationToken.h"
 #include "CoreWallet.h"
 
 namespace spdlog {
@@ -30,7 +30,8 @@ public:
       , const std::string &ownRecvAddr
       , const std::shared_ptr<bs::sync::Wallet> &
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ArmoryConnection> &);
+      , const std::shared_ptr<ArmoryConnection> &
+      , bs::UtxoReservationToken utxoRes);
    ~DealerCCSettlementContainer() override;
 
    bool startSigning();
@@ -73,7 +74,6 @@ private:
    const bool                 delivery_;
    std::shared_ptr<bs::sync::Wallet>   wallet_;
    std::shared_ptr<SignContainer>      signingContainer_;
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
    const BinaryData  txReqData_;
    const bs::Address ownRecvAddr_;
    const QString     orderId_;
@@ -84,6 +84,7 @@ private:
    bool              cancelled_ = false;
    bs::CheckRecipSigner signer_;
    bs::core::wallet::TXSignRequest txReq_;
+   bs::UtxoReservationToken utxoRes_;
 
 };
 
