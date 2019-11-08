@@ -34,6 +34,7 @@ namespace bs {
 struct CCoinSpender
 {
    bs::Address ccAddr_;
+   bs::Address ccChange;
    bs::Address xbtAddr_;
 
    uint64_t ccValue_ = 0;
@@ -170,7 +171,7 @@ public:
 
    void UpdateBalances(std::shared_ptr<bs::sync::hd::Leaf> wallet);
    void UpdateAllBalances();
-   void InitialFund();
+   void InitialFund(const std::vector<bs::Address> &recipients = {});
    std::vector<UTXO> GetUTXOsFor(const bs::Address & addr, bool sortedByValue = true);
 
    BinaryData FundFromCoinbase(const std::vector<bs::Address> & addresses, const uint64_t & valuePerOne);
@@ -185,7 +186,7 @@ public:
    void revoke(const bs::Address&);
 
    void waitOnZc(const Tx&);
-   void waitOnZc(const BinaryData& hash, const std::vector<bs::Address>&);
+   bool waitOnZc(const BinaryData& hash, const std::vector<bs::Address>&);
 
    ////
    std::shared_ptr<ColoredCoinTracker> makeCct(void);
