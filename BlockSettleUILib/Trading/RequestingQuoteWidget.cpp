@@ -31,19 +31,13 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
    ui_->labelHint->clear();
    ui_->labelHint->hide();
 
-   utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
-   bs::UtxoReservation::addAdapter(utxoAdapter_);
-
    setupTimer(Indicative, QDateTime::currentDateTime().addSecs(30));
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &RequestingQuoteWidget::onCancel);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &RequestingQuoteWidget::onAccept);
 }
 
-RequestingQuoteWidget::~RequestingQuoteWidget()
-{
-   bs::UtxoReservation::delAdapter(utxoAdapter_);
-}
+RequestingQuoteWidget::~RequestingQuoteWidget() = default;
 
 void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<BaseCelerClient> celerClient) {
    celerClient_ = celerClient;
@@ -73,7 +67,6 @@ void RequestingQuoteWidget::onCancel()
    if (quote_.quotingType == bs::network::Quote::Tradeable) {
       emit requestTimedOut();
    } else {
-      utxoAdapter_->unreserve(rfq_.requestId);
       emit cancelRFQ();
    }
 }
@@ -84,7 +77,6 @@ void RequestingQuoteWidget::ticker()
 
    if (timeDiff < -5000) {
       requestTimer_.stop();
-      utxoAdapter_->unreserve(rfq_.requestId);
       emit requestTimedOut();
    }
    else {
@@ -217,7 +209,6 @@ void RequestingQuoteWidget::onQuoteCancelled(const QString &reqId, bool byUser)
 
 void RequestingQuoteWidget::onReject(const QString &reqId, const QString &reason)
 {
-   utxoAdapter_->unreserve(reqId.toStdString());
    if (reqId.toStdString() == rfq_.requestId) {
       ui_->pushButtonAccept->setEnabled(false);
       ui_->labelQuoteValue->setText(tr("Rejected: %1").arg(reason));

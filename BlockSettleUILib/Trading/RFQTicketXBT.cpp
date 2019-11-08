@@ -22,7 +22,6 @@
 #include "TransactionData.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
-#include "UtxoReserveAdapters.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"

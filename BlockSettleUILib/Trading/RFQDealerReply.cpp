@@ -26,7 +26,6 @@
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "UserScriptRunner.h"
-#include "UtxoReserveAdapters.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -70,10 +69,7 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    ui_->responseTitle->hide();
 }
 
-RFQDealerReply::~RFQDealerReply()
-{
-   bs::UtxoReservation::delAdapter(dealerUtxoAdapter_);
-}
+RFQDealerReply::~RFQDealerReply() = default;
 
 void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
@@ -83,7 +79,6 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::DealerUtxoResAdapter> &dealerUtxoAdapter
    , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider)
 {
    logger_ = logger;
@@ -94,19 +89,14 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    signingContainer_ = container;
    armory_ = armory;
    connectionManager_ = connectionManager;
-   dealerUtxoAdapter_ = dealerUtxoAdapter;
    autoSignQuoteProvider_ = autoSignQuoteProvider;
 
-   connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, dealerUtxoAdapter_.get(), &bs::OrderUtxoResAdapter::onOrder);
    connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQDealerReply::onOrderUpdated);
-   connect(dealerUtxoAdapter_.get(), &bs::OrderUtxoResAdapter::reservedUtxosChanged, this, &RFQDealerReply::onReservedUtxosChanged, Qt::QueuedConnection);
 
    connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::sendQuote, this, &RFQDealerReply::onAQReply, Qt::QueuedConnection);
    connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::pullQuoteNotif, this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
 
    connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged, this, &RFQDealerReply::onAutoSignStateChanged, Qt::QueuedConnection);
-
-   UtxoReservation::addAdapter(dealerUtxoAdapter_);
 }
 
 void RFQDealerReply::initUi()
@@ -607,7 +597,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
                            const auto txReq = spendWallet->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
                               , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
                            qn->transactionData = txReq.serializeState().toHexStr();
-                           dealerUtxoAdapter_->reserve(txReq, qn->quoteRequestId);
+                           //dealerUtxoAdapter_->reserve(txReq, qn->quoteRequestId);
                         } catch (const std::exception &e) {
                            logger_->error("[RFQDealerReply::submit] error creating own unsigned half: {}", e.what());
                            cb({});
@@ -739,7 +729,7 @@ void RFQDealerReply::onOrderUpdated(const bs::network::Order &order)
    if ((order.assetType == bs::network::Asset::PrivateMarket) && (order.status == bs::network::Order::Failed)) {
       const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
       if (!quoteReqId.empty()) {
-         dealerUtxoAdapter_->unreserve(quoteReqId);
+         //dealerUtxoAdapter_->unreserve(quoteReqId);
       }
    }
 }

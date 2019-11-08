@@ -23,7 +23,6 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
-   class DealerUtxoResAdapter;
 }
 class SignContainer;
 
@@ -45,7 +44,6 @@ signals:
 
 public:
    explicit UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvider,
-      std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter,
       std::shared_ptr<SignContainer> signingContainer,
       std::shared_ptr<MarketDataProvider> mdProvider,
       std::shared_ptr<AssetManager> assetManager,
@@ -71,7 +69,6 @@ private slots:
 
 private:
    AutoQuoter *aq_ = nullptr;
-   std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter_;
    std::shared_ptr<SignContainer>            signingContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<MarketDataProvider>       mdProvider_;
@@ -114,7 +111,6 @@ signals:
 
 public:
    UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
-      std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter,
       std::shared_ptr<SignContainer> signingContainer,
       std::shared_ptr<MarketDataProvider> mdProvider,
       std::shared_ptr<AssetManager> assetManager,

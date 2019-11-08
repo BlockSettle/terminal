@@ -6,7 +6,6 @@
 #include <memory>
 #include <chrono>
 #include "CommonTypes.h"
-#include "UtxoReserveAdapters.h"
 
 
 namespace Ui {
@@ -70,7 +69,6 @@ private:
    bs::network::Quote         quote_;
    std::shared_ptr<AssetManager> assetManager_;
    bool                       balanceOk_ = true;
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
    std::shared_ptr<BaseCelerClient>                    celerClient_;
 
 private:

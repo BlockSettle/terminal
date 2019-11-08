@@ -24,7 +24,6 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
-   class DealerUtxoResAdapter;
    class SettlementAddressEntry;
    class SecurityStatsCollector;
 }
@@ -67,8 +66,8 @@ public:
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<bs::DealerUtxoResAdapter> &
-      , const std::shared_ptr<AutoSignQuoteProvider> &, OrderListModel *orderListModel);
+      , const std::shared_ptr<AutoSignQuoteProvider> &
+      , OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -140,7 +139,6 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
-   std::shared_ptr<bs::DealerUtxoResAdapter> dealerUtxoAdapter_;
 
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;

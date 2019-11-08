@@ -1,6 +1,5 @@
 
 #include "UserScriptRunner.h"
-#include "UtxoReserveAdapters.h"
 #include "SignContainer.h"
 #include "MarketDataProvider.h"
 #include "UserScript.h"
@@ -15,14 +14,12 @@
 //
 
 UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvider,
-   std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter,
    std::shared_ptr<SignContainer> signingContainer,
    std::shared_ptr<MarketDataProvider> mdProvider,
    std::shared_ptr<AssetManager> assetManager,
    std::shared_ptr<spdlog::logger> logger,
    UserScriptRunner *runner)
-   : utxoAdapter_(utxoAdapter)
-   , signingContainer_(signingContainer)
+   : signingContainer_(signingContainer)
    , mdProvider_(mdProvider)
    , assetManager_(assetManager)
    , logger_(logger)
@@ -112,9 +109,6 @@ void UserScriptHandler::onQuoteReqCancelled(const QString &reqId, bool userCance
    }
    auto qrn = itQR->second;
 
-   if (qrn.assetType == bs::network::Asset::SpotXBT) {
-      utxoAdapter_->unreserve(qrn.settlementId);
-   }
    qrn.status = (userCancelled ? bs::network::QuoteReqNotification::Withdrawn :
       bs::network::QuoteReqNotification::PendingAck);
    onQuoteReqNotification(qrn);
@@ -298,7 +292,6 @@ void UserScriptHandler::aqTick()
 //
 
 UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
-   std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter,
    std::shared_ptr<SignContainer> signingContainer,
    std::shared_ptr<MarketDataProvider> mdProvider,
    std::shared_ptr<AssetManager> assetManager,
@@ -306,7 +299,7 @@ UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
    QObject *parent)
    : QObject(parent)
    , thread_(new QThread(this))
-   , script_(new UserScriptHandler(quoteProvider, utxoAdapter, signingContainer,
+   , script_(new UserScriptHandler(quoteProvider, signingContainer,
          mdProvider, assetManager, logger, this))
 
    , logger_(logger)

@@ -32,7 +32,6 @@ namespace bs {
       class Wallet;
       class WalletsManager;
    }
-   class RequesterUtxoResAdapter;
 }
 class ArmoryConnection;
 class AssetManager;
