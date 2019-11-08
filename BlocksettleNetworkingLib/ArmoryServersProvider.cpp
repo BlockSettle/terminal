@@ -89,10 +89,7 @@ ArmorySettings ArmoryServersProvider::getArmorySettings() const
    if (serverIndex >= 0) {
       settings.armoryDBKey = servers().at(serverIndex).armoryDBKey;
    }
-//   if (settings.runLocally) {
-//      settings.armoryDBIp = QStringLiteral("127.0.0.1");
-//      settings.armoryDBPort = appSettings_->GetDefaultArmoryLocalPort(appSettings_->get<NetworkType>(ApplicationSettings::netType));
-//   }
+
    settings.socketType = appSettings_->GetArmorySocketType();
 
    settings.armoryExecutablePath = QDir::cleanPath(appSettings_->get<QString>(ApplicationSettings::armoryPathName));

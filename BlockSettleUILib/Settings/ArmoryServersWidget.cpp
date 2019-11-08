@@ -84,8 +84,18 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
       ui_->pushButtonDeleteServer->setDisabled(true);
       ui_->pushButtonEditServer->setDisabled(true);
    }
+
+   connect(ui_->lineEditName, &QLineEdit::textEdited, this, &ArmoryServersWidget::updateSaveButton);
+   connect(ui_->lineEditAddress, &QLineEdit::textEdited, this, &ArmoryServersWidget::updateSaveButton);
+   connect(ui_->comboBoxNetworkType, &QComboBox::currentTextChanged, this, &ArmoryServersWidget::updateSaveButton);
+   connect(ui_->spinBoxPort, QOverload<const QString &>::of(&QSpinBox::valueChanged), this, &ArmoryServersWidget::updateSaveButton);
+
+   updateSaveButton();
+
    // TODO: remove select server button if it's not required anymore
    ui_->pushButtonSelectServer->hide();
+
+   ui_->pushButtonKeyImport->hide();
 }
 
 void ArmoryServersWidget::adaptForStartupDialog()
@@ -108,7 +118,7 @@ void ArmoryServersWidget::setRowSelected(int row)
       currentIndex = armoryServersModel_->index(indexOfCurrent, 0);
    }
    ui_->tableViewArmory->selectionModel()->select(currentIndex
-                                                  , QItemSelectionModel::Select | QItemSelectionModel::Rows);
+      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
 }
 
 ArmoryServersWidget::~ArmoryServersWidget() = default;
@@ -254,6 +264,17 @@ void ArmoryServersWidget::resetForm()
    ui_->spinBoxPort->setValue(0);
    ui_->spinBoxPort->setSpecialValueText(tr(" "));
    ui_->lineEditKey->clear();
+}
+
+void ArmoryServersWidget::updateSaveButton()
+{
+   bool saveAllowed = !ui_->lineEditName->text().isEmpty()
+      && !ui_->lineEditAddress->text().isEmpty()
+      && ui_->comboBoxNetworkType->currentIndex() > 0
+      && ui_->spinBoxPort->value() > 0;
+
+   ui_->pushButtonSaveServer->setEnabled(saveAllowed);
+   ui_->pushButtonAddServer->setEnabled(saveAllowed);
 }
 
 bool ArmoryServersWidget::isExpanded() const
