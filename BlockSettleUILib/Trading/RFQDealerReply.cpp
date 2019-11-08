@@ -574,18 +574,21 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
             return;
          }
 
-         const uint64_t spendVal = qrn.side == bs::network::Side::Buy
+         const bool isSpendCC = qrn.side == bs::network::Side::Buy;
+         const uint64_t spendVal = isSpendCC
                ? qrn.quantity * assetManager_->getCCLotSize(qrn.product)
                : qrn.quantity * price * BTCNumericTypes::BalanceDivider;
+         const auto &spendWallet = isSpendCC ? ccWallet : xbtWallet;
+         const auto &recvWallet = isSpendCC ? xbtWallet : ccWallet;
+         // For CC search for exact amount (as we have no need for change).
+         // For XBT request all awailable inputs just in case (as getSpendableTxOutList is a bit broken and could return lower amount after UTXO filtering).
+         const uint64_t requestUtxoVal = isSpendCC ? spendVal : std::numeric_limits<uint64_t>::max();
 
-         const auto &spendWallet = (qrn.side == bs::network::Side::Buy) ? ccWallet : xbtWallet;
-         const auto &recvWallet = (qrn.side == bs::network::Side::Buy) ? xbtWallet : ccWallet;
-
-         auto recvAddrCb = [this, cb, qn, qrn, spendWallet, spendVal](const bs::Address &addr) {
+         auto recvAddrCb = [this, cb, qn, qrn, spendWallet, spendVal, requestUtxoVal](const bs::Address &addr) {
             qn->receiptAddress = addr.display();
             qn->reqAuthKey = qrn.requestorRecvAddress;
 
-            const auto &cbFee = [this, qrn, spendVal, spendWallet, cb, qn](float feePerByte) {
+            const auto &cbFee = [this, qrn, spendVal, spendWallet, cb, qn, requestUtxoVal](float feePerByte) {
                auto inputsCb = [this, qrn, feePerByte, qn, spendVal, spendWallet, cb](const std::vector<UTXO> &inputs) {
                   QMetaObject::invokeMethod(this, [this, feePerByte, qrn, qn, spendVal, spendWallet, cb, inputs] {
                      const auto &cbChangeAddr = [this, feePerByte, qrn, qn, spendVal, spendWallet, cb, inputs]
@@ -622,8 +625,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
                      spendWallet->getNewChangeAddress(cbChangeAddr);
                   });
                };
-               // FIXME: spendVal must include fee
-               spendWallet->getSpendableTxOutList(inputsCb, spendVal);
+               spendWallet->getSpendableTxOutList(inputsCb, requestUtxoVal);
             };
 
             if (qrn.side == bs::network::Side::Buy) {

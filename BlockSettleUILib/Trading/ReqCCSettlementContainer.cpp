@@ -38,6 +38,11 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , manualXbtInputs_(manualXbtInputs)
    , utxoRes_(std::move(utxoRes))
 {
+   ccWallet_ = walletsMgr->getCCWallet(rfq.product);
+   if (!ccWallet_) {
+      throw std::logic_error("can't find CC wallet");
+   }
+
    connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &ReqCCSettlementContainer::onWalletInfo);
    connect(this, &ReqCCSettlementContainer::genAddressVerified, this
       , &ReqCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
@@ -226,7 +231,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
             xbtWallet_->getNewChangeAddress(changeAddrCb);
          };
          if (manualXbtInputs_.empty()) {
-            xbtWallet_->getSpendableTxOutList(inputsCb, spendVal);
+            xbtWallet_->getSpendableTxOutList(inputsCb, std::numeric_limits<uint64_t>::max());
          } else {
             inputsCb(manualXbtInputs_);
          }
