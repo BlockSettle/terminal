@@ -121,6 +121,7 @@ private:
    RFQRequestWidget *requestWidget_{};
 
    QString           ccOrderId_;
+   bs::UtxoReservationToken utxoRes_;
 
 };
 

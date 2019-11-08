@@ -35,7 +35,7 @@ public:
       , const bs::network::Quote &
       , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
       , const std::vector<UTXO> &manualXbtInputs
-      , bs::UtxoReservationToken resToken);
+      , bs::UtxoReservationToken utxoRes);
    ~ReqCCSettlementContainer() override;
 
    bool cancel() override;
@@ -106,7 +106,7 @@ private:
    bs::hd::WalletInfo walletInfo_;
    std::vector<UTXO> manualXbtInputs_;
 
-   bs::UtxoReservationToken resToken_;
+   bs::UtxoReservationToken utxoRes_;
 
 };
 
