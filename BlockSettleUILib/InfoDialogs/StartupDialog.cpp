@@ -43,9 +43,11 @@ void StartupDialog::init(const std::shared_ptr<ApplicationSettings> &appSettings
    armoryServersWidget_->show();
    connect(ui_->pushButtonConfigure, &QPushButton::clicked, [this](){
       armoryServersWidget_->onExpandToggled();
+      armoryServersWidget_->adjustSize();
       ui_->pushButtonConfigure->hide();
       ui_->labelExpanded->show();
       ui_->labelSimple->hide();
+      adjustSize();
    });
 }
 
@@ -85,6 +87,8 @@ void StartupDialog::updateStatus()
       if (!armoryServersWidget_->isExpanded()) {
          ui_->pushButtonConfigure->show();
       }
+
+      adjustSize();
    }
 
    if (!showLicense_) {
