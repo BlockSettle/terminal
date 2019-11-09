@@ -437,6 +437,25 @@ std::vector<UTXO> TestCCoin::GetUTXOsFor(const bs::Address & addr, bool sortedBy
    return fut.get();
 }
 
+std::vector<UTXO> TestCCoin::GetCCUTXOsFor(std::shared_ptr<ColoredCoinTracker> ccPtr,
+   const bs::Address & addr, bool sortedByValue)
+{
+   auto promPtr = std::make_shared<std::promise<std::vector<UTXO>>>();
+   auto fut = promPtr->get_future();
+   auto utxoLbd = [promPtr](std::vector<UTXO> utxoVec, std::exception_ptr)
+   {
+      promPtr->set_value(utxoVec);
+   };
+
+   std::set<BinaryData> addrSet = { addr.prefixed() };
+   ccPtr->getCCUtxoForAddresses(addrSet, false, utxoLbd);
+   auto&& result = fut.get();
+
+   if (sortedByValue)
+      std::sort(result.begin(), result.end(), [](UTXO const & l, UTXO const & r) { return l.getValue() > r.getValue(); });
+   return result;
+}
+
 void TestCCoin::revoke(const bs::Address& addr)
 {
    std::vector<bs::Address> addrVec;
@@ -553,7 +572,7 @@ TEST_F(TestCCoin, Case_1CC_2CC)
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 100 * ccLotSize_);
 
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
 
    EXPECT_EQ(utxosA.size(), 1);
@@ -619,16 +638,16 @@ TEST_F(TestCCoin, Case_1CC_2CC)
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), 0);
 
    for (const auto &utxo : utxosC1) {
-      EXPECT_TRUE(cct->isTxHashExist(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
    }
    for (const auto &utxo : utxosC3) {
-      EXPECT_TRUE(cct->isTxHashExist(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
    }
 
    const auto utxosC = GetUTXOsFor(ccsC.ccAddr_);
    ASSERT_FALSE(utxosC.empty());
    for (const auto &utxo : utxosC) {
-      EXPECT_TRUE(cct->isTxHashExist(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
    }
 }
 
@@ -658,7 +677,7 @@ TEST_F(TestCCoin, Case_MultiUnorderedCC_2CC)
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 550 * ccLotSize_);
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
 
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
    std::swap(utxosA[0], utxosA[9]);
    std::swap(utxosA[2], utxosA[7]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
@@ -719,7 +738,7 @@ TEST_F(TestCCoin, Revoke)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 
    //send cc from addr9 to addr0
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[9]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[9]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[0]);
 
    const uint amountCC = 50;
@@ -775,7 +794,7 @@ TEST_F(TestCCoin, Revoke)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 
    //send cc from addr8 to addr1
-   std::vector<UTXO> utxosC = GetUTXOsFor(userCCAddresses_[8]);
+   std::vector<UTXO> utxosC = GetCCUTXOsFor(cct, userCCAddresses_[8]);
    std::vector<UTXO> utxosD = GetUTXOsFor(userFundAddresses_[1]);
 
    const uint amountCC2 = 60;
@@ -851,7 +870,7 @@ TEST_F(TestCCoin, Case_MultiUnorderedCC_NoChange)
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 550 * ccLotSize_);
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
 
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
    std::swap(utxosA[0], utxosA[9]);
    std::swap(utxosA[2], utxosA[7]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
@@ -920,7 +939,7 @@ TEST_F(TestCCoin, ZeroConf)
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 550 * ccLotSize_);
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
 
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
    std::swap(utxosA[0], utxosA[9]);
    std::swap(utxosA[2], utxosA[7]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
@@ -1387,21 +1406,21 @@ TEST_F(TestCCoin, Case_1CC_2CC_WithACT)
 {
    InitialFund();
 
-   ColoredCoinTracker cct(ccLotSize_, envPtr_->armoryConnection());
+   auto cct = std::make_shared<ColoredCoinTracker>(ccLotSize_, envPtr_->armoryConnection());
 
    auto actPtr = std::make_shared<ColoredCoinTestACT_WithNotif>(envPtr_->armoryConnection().get());
-   auto cctUT = (ColoredCoinTracker_UT*)&cct;
+   auto cctUT = (ColoredCoinTracker_UT*)cct.get();
    cctUT->setACT(actPtr);
 
-   cct.addOriginAddress(genesisAddr_);
-   cct.goOnline();
+   cct->addOriginAddress(genesisAddr_);
+   cct->goOnline();
 
-   EXPECT_EQ(cct.getCcValueForAddress(genesisAddr_), COIN);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
 
    for (size_t i = 0; i < usersCount_; i++)
-      EXPECT_EQ(cct.getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
 
    EXPECT_EQ(utxosA.size(), 1);
@@ -1433,9 +1452,9 @@ TEST_F(TestCCoin, Case_1CC_2CC_WithACT)
    EXPECT_EQ(userWallets_[1]->getAddrBalance(userCCAddresses_[1])[0], (100 + amountCC) * ccLotSize_);
    EXPECT_EQ(userWallets_[1]->getAddrBalance(userFundAddresses_[1])[0], 49 * COIN - 1000);
 
-   EXPECT_EQ(cct.getCcValueForAddress(genesisAddr_), COIN);
-   EXPECT_EQ(cct.getCcValueForAddress(userCCAddresses_[0].prefixed()), (100 - amountCC) * ccLotSize_);
-   EXPECT_EQ(cct.getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
 }
 
 ////

@@ -173,6 +173,8 @@ public:
    void UpdateAllBalances();
    void InitialFund(const std::vector<bs::Address> &recipients = {});
    std::vector<UTXO> GetUTXOsFor(const bs::Address & addr, bool sortedByValue = true);
+   std::vector<UTXO> GetCCUTXOsFor(std::shared_ptr<ColoredCoinTracker> ccPtr, 
+      const bs::Address & addr, bool sortedByValue = true);
 
    BinaryData FundFromCoinbase(const std::vector<bs::Address> & addresses, const uint64_t & valuePerOne);
    BinaryData SimpleSendMany(const bs::Address & fromAddress, const std::vector<bs::Address> & toAddresses, const uint64_t & valuePerOne);
