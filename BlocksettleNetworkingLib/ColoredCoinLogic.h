@@ -348,11 +348,14 @@ public:
    std::vector<std::shared_ptr<CcOutpoint>> getSpendableOutpointsForAddress(
       const BinaryData&) const;
 
-   bool isTxHashExist(const BinaryData &) const;
+   bool isTxHashValid(const BinaryData &) const;
 
    //in: set of prefixed addresses
    uint64_t getUnconfirmedCcValueForAddresses(const std::set<BinaryData>&) const;
    uint64_t getConfirmedCcValueForAddresses(const std::set<BinaryData>&) const;
+
+   bool getCCUtxoForAddresses(const std::set<BinaryData>&, bool,
+      const std::function<void(std::vector<UTXO>, std::exception_ptr)>&) const;
 };
 
 #endif
