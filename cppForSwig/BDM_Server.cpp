@@ -1487,6 +1487,63 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
 
       return response;
    }
+   case Methods::getOutputsForOutpoints:
+   {
+      /*
+      in:
+         output hash & id concatenated as:
+         txhash (32) | txout count (varint) | txout index #1 (varint) | txout index #2 ...
+
+      out:
+         vector<UTXO>
+      */
+
+      if (command->bindata_size() == 0)
+         throw runtime_error("expected bindata for getSpentnessForOutputs");
+
+      auto response = make_shared<::Codec_Utxo::ManyUtxo>();
+
+      {
+         auto&& stxo_tx = db_->beginTransaction(STXO, LMDB::ReadOnly);
+
+         //grab all spentness data for these outputs
+         for (unsigned i = 0; i < command->bindata_size(); i++)
+         {
+            auto& rawOutputs = command->bindata(i);
+            if (rawOutputs.size() < 33)
+               throw runtime_error("malformed output data");
+
+            BinaryRefReader brr((const uint8_t*)rawOutputs.c_str(), rawOutputs.size());
+            auto txHashref = brr.get_BinaryDataRef(32);
+
+            //get dbkey for this txhash
+            auto&& dbkey = db_->getDBKeyForHash(txHashref);
+
+            auto outputCount = brr.get_var_int();
+            for (unsigned y = 0; y < outputCount; y++)
+            {
+               //set txout index
+               uint16_t txOutId = brr.get_var_int();;
+               StoredTxOut stxo;
+               auto stxoKey = dbkey;
+               stxoKey.append(WRITE_UINT16_BE(txOutId));
+
+               db_->getStoredTxOut(stxo, stxoKey);
+
+               auto utxoPtr = response->add_value();
+               utxoPtr->set_value(stxo.getValue());
+               utxoPtr->set_script(stxo.getScriptRef().getPtr(),
+                  stxo.getScriptRef().getSize());
+               utxoPtr->set_txheight(stxo.getHeight());
+               utxoPtr->set_txindex(stxo.txIndex_);
+               utxoPtr->set_txoutindex(stxo.txOutIndex_);
+               utxoPtr->set_txhash(txHashref.getPtr(), txHashref.getSize());
+            }
+         }
+      }
+
+      return response;
+   }
 
    default:
       LOGWARN << "unknown command";
