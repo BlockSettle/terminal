@@ -94,30 +94,27 @@ bool DealerCCSettlementContainer::startSigning()
       return false;
    }
 
-   QPointer<DealerCCSettlementContainer> context(this);
-   const auto &cbTx = [this, context, logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
-      QMetaObject::invokeMethod(qApp, [this, result, signedTX, context, logger] {
-         if (!context) {
-            logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
-            return;
-         }
+   const auto &cbTx = [this, handle = validityFlag_.handle(), logger = logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
+      if (!handle.isValid()) {
+         logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
+         return;
+      }
 
-         if (result == bs::error::ErrorCode::NoError) {
-            emit signTxRequest(orderId_, signedTX.toHexStr());
-            emit completed();
-            wallet_->setTransactionComment(signedTX, txComment());
-         }
-         else if (result == bs::error::ErrorCode::TxCanceled) {
-            // FIXME
-            // Not clear what's wrong here, and what should be fixed
-            emit failed();
-         }
-         else {
-            logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
-            emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
-            emit failed();
-         }
-      });
+      if (result == bs::error::ErrorCode::NoError) {
+         emit signTxRequest(orderId_, signedTX.toHexStr());
+         emit completed();
+         wallet_->setTransactionComment(signedTX, txComment());
+      }
+      else if (result == bs::error::ErrorCode::TxCanceled) {
+         // FIXME
+         // Not clear what's wrong here, and what should be fixed
+         emit failed();
+      }
+      else {
+         logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
+         emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
+         emit failed();
+      }
    };
 
    txReq_.walletIds = { wallet_->walletId() };

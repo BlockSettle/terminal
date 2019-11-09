@@ -38,6 +38,10 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , manualXbtInputs_(manualXbtInputs)
    , utxoRes_(std::move(utxoRes))
 {
+   if (lotSize_ == 0) {
+      throw std::runtime_error("invalid lot size");
+   }
+
    ccWallet_ = walletsMgr->getCCWallet(rfq.product);
    if (!ccWallet_) {
       throw std::logic_error("can't find CC wallet");
@@ -115,9 +119,6 @@ void ReqCCSettlementContainer::activate()
    bool foundRecipAddr = false;
    bool amountValid = false;
    try {
-      if (!lotSize_) {
-         throw std::runtime_error("invalid lot size");
-      }
       signer_.deserializeState(dealerTx_);
       foundRecipAddr = signer_.findRecipAddress(bs::Address::fromAddressString(rfq_.receiptAddress)
          , [this, &amountValid](uint64_t value, uint64_t valReturn, uint64_t valInput) {
@@ -257,9 +258,8 @@ void ReqCCSettlementContainer::AcceptQuote()
 
 bool ReqCCSettlementContainer::startSigning()
 {
-   QPointer<ReqCCSettlementContainer> context(this);
-   const auto &cbTx = [this, context, logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
-      if (!context) {
+   const auto &cbTx = [this, handle = validityFlag_.handle(), logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
+      if (!handle.isValid()) {
          logger->warn("[ReqCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
          return;
       }
