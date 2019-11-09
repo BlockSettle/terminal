@@ -590,13 +590,13 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
          // For XBT request all awailable inputs just in case (as getSpendableTxOutList is a bit broken and could return lower amount after UTXO filtering).
          const uint64_t requestUtxoVal = isSpendCC ? spendVal : std::numeric_limits<uint64_t>::max();
 
-         auto recvAddrCb = [this, cb, qn, qrn, spendWallet, spendVal, requestUtxoVal](const bs::Address &addr) {
+         auto recvAddrCb = [this, cb, qn, qrn, spendWallet, spendVal, isSpendCC, requestUtxoVal](const bs::Address &addr) {
             qn->receiptAddress = addr.display();
             qn->reqAuthKey = qrn.requestorRecvAddress;
 
-            const auto &cbFee = [this, qrn, spendVal, spendWallet, cb, qn, requestUtxoVal](float feePerByte) {
-               auto inputsCb = [this, qrn, feePerByte, qn, spendVal, spendWallet, cb](const std::vector<UTXO> &inputs) {
-                  QMetaObject::invokeMethod(this, [this, feePerByte, qrn, qn, spendVal, spendWallet, cb, inputs] {
+            const auto &cbFee = [this, qrn, spendVal, spendWallet, isSpendCC, cb, qn, requestUtxoVal](float feePerByte) {
+               auto inputsCb = [this, qrn, feePerByte, qn, spendVal, spendWallet, isSpendCC, cb](const std::vector<UTXO> &inputs) {
+                  QMetaObject::invokeMethod(this, [this, feePerByte, qrn, qn, spendVal, spendWallet, isSpendCC, cb, inputs] {
                      const auto &cbChangeAddr = [this, feePerByte, qrn, qn, spendVal, spendWallet, cb, inputs]
                         (const bs::Address &changeAddress)
                      {
@@ -618,7 +618,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
                         }
                      };
 
-                     if (qrn.side == bs::network::Side::Buy) {
+                     if (isSpendCC) {
                         uint64_t inputsVal = 0;
                         for (const auto &input : inputs) {
                            inputsVal += input.getValue();
