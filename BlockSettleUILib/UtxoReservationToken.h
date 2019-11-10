@@ -39,7 +39,8 @@ namespace bs {
       UtxoReservationToken &operator=(UtxoReservationToken &&other);
 
       // Make new reservation (uses global UtxoReservationToken instance).
-      // reserveId must be non-empty
+      // reserveId and walletId must be non-empty
+      // logger could be nullptr
       static UtxoReservationToken makeNewReservation(const std::shared_ptr<spdlog::logger> &logger
          , const std::vector<UTXO> &utxos
          , const std::string &reserveId
@@ -54,6 +55,7 @@ namespace bs {
       void release();
 
    private:
+      // could be nullptr
       std::shared_ptr<spdlog::logger> logger_;
       std::string reserveId_;
 

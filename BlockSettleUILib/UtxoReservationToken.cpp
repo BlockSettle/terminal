@@ -33,6 +33,7 @@ UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_
    , const std::vector<UTXO> &utxos, const std::string &reserveId, const std::string &walletId)
 {
    assert(!reserveId.empty());
+   assert(!walletId.empty());
 
    if (logger) {
       uint64_t sum = 0;
@@ -59,9 +60,13 @@ void UtxoReservationToken::release()
    if (reserveId_.empty()) {
       return;
    }
+   std::string walletId = bs::UtxoReservation::instance()->unreserve(reserveId_);
    if (logger_) {
-      SPDLOG_LOGGER_DEBUG(logger_, "release UTXO reservation, reserveId: {}", reserveId_);
+      if (!walletId.empty()) {
+         SPDLOG_LOGGER_DEBUG(logger_, "release UTXO reservation succeed, reserveId: '{}', walletId: '{}'", reserveId_, walletId);
+      } else {
+         SPDLOG_LOGGER_ERROR(logger_, "release UTXO reservation failed, reserveId: '{}'", reserveId_, walletId);
+      }
    }
-   bs::UtxoReservation::instance()->unreserve(reserveId_);
    reserveId_.clear();
 }

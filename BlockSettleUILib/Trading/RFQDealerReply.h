@@ -111,7 +111,6 @@ namespace bs {
          void onTransactionDataChanged();
          void onAQReply(const bs::network::QuoteReqNotification &qrn, double price);
          void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
-         void onOrderUpdated(const bs::network::Order &);
          void onHDLeafCreated(const std::string& ccName);
          void onCreateHDWalletError(const std::string& ccName, bs::error::ErrorCode result);
          void onAuthAddrChanged(int);

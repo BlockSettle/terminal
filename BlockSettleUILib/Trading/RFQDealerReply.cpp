@@ -91,8 +91,6 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    connectionManager_ = connectionManager;
    autoSignQuoteProvider_ = autoSignQuoteProvider;
 
-   connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQDealerReply::onOrderUpdated);
-
    connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::sendQuote, this, &RFQDealerReply::onAQReply, Qt::QueuedConnection);
    connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::pullQuoteNotif, this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
 
@@ -733,16 +731,6 @@ void RFQDealerReply::validateGUI()
 void RFQDealerReply::onTransactionDataChanged()
 {
    QMetaObject::invokeMethod(this, &RFQDealerReply::updateSubmitButton);
-}
-
-void RFQDealerReply::onOrderUpdated(const bs::network::Order &order)
-{
-   if ((order.assetType == bs::network::Asset::PrivateMarket) && (order.status == bs::network::Order::Failed)) {
-      const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
-      if (!quoteReqId.empty()) {
-         //dealerUtxoAdapter_->unreserve(quoteReqId);
-      }
-   }
 }
 
 void RFQDealerReply::onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields mdFields)
