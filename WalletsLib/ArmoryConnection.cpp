@@ -663,6 +663,29 @@ bool ArmoryConnection::getSpentnessForOutputs(const std::map<BinaryData, std::se
    return true;
 }
 
+bool ArmoryConnection::getOutputsForOutpoints(const std::map<BinaryData, std::set<unsigned>>& outpoints,
+   bool withZc, const std::function<void(std::vector<UTXO>, std::exception_ptr)>& cb)
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
+      return false;
+   }
+   const auto cbWrap = [logger = logger_, cb](ReturnMessage<std::vector<UTXO>> msg)
+   {
+      try {
+         const auto &utxos = msg.get();
+         cb(utxos, nullptr);
+      }
+      catch (const std::exception &e) {
+         logger->error("[ArmoryConnection::getUTXOsForOutpoints] failed to get: {}", e.what());
+         cb({}, std::make_exception_ptr(e));
+      }
+   };
+   bdv_->getOutputsForOutpoints(outpoints, cbWrap);
+   return true;
+}
+
+
 bool ArmoryConnection::getCombinedBalances(const std::vector<std::string> &walletIDs
    , const std::function<void(const std::map<std::string, CombinedBalances> &)> &cb)
 {

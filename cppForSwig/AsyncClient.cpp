@@ -589,6 +589,32 @@ void BlockDataViewer::setCheckServerKeyPromptLambda(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void BlockDataViewer::getOutputsForOutpoints(
+   const map<BinaryData, set<unsigned>>& outpoints,
+   function<void(ReturnMessage<vector<UTXO>>)> callback)
+{
+   auto payload = make_payload(Methods::getOutputsForOutpoints, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& hashPair : outpoints)
+   {
+      BinaryWriter bw;
+      bw.put_BinaryData(hashPair.first);
+      bw.put_var_int(hashPair.second.size());
+
+      for (auto& id : hashPair.second)
+         bw.put_var_int(id);
+
+      command->add_bindata(bw.getDataRef().getPtr(), bw.getSize());
+   }
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ =
+      make_unique<CallbackReturn_VectorUTXO>(callback);
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //
 // LedgerDelegate
 //
