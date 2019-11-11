@@ -478,6 +478,8 @@ namespace AsyncClient
       void getSpentnessForOutputs(const std::map<BinaryData, std::set<unsigned>>&,
          std::function<void(
             ReturnMessage<std::map<BinaryData, std::map<unsigned, BinaryData>>>)>);
+      void getOutputsForOutpoints(const std::map<BinaryData, std::set<unsigned>>&,
+         std::function<void(ReturnMessage<std::vector<UTXO>>)>);
 
       //tx
       void broadcastZC(const BinaryData& rawTx);

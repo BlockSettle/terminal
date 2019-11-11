@@ -51,6 +51,7 @@ enum Methods
 	getSpendableZCList = 61;
 	getRBFTxOutList = 62;
 	getSpendableTxOutListForAddr = 63;
+	getOutputsForOutpoints = 64;
 
 	getCombinedSpendableTxOutListForValue = 65;
 	getCombinedSpendableZcOutputs = 66;
