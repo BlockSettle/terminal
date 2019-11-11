@@ -7,31 +7,56 @@ import "../BsStyles"
 
 
 BSMessageBox {
+    id: root
     title: qsTr("Notice!")
     customText: qsTr("Signing with Auth eID")
-    customDetails: qsTr("Auth eID is a convenient alternative to passwords. \
-Instead of entering a password, BlockSettle Terminal issues a secure notification to mobile devices attached to your wallet's Auth eID account. \
-You may then sign wallet-related requests via a press of a button in the Auth eID app on your mobile device(s).\
-<br><br>You may add or remove devices to your Auth eID accounts as required by the user, and users may have multiple devices on one account. \
-Auth eID requires the user to be vigilant with devices using Auth eID. \
-If a device is damaged or lost, the user will be unable to sign Auth eID requests, and the wallet will become unusable.\
-<br><br>Auth eID is not a wallet backup! No wallet data is stored with Auth eID. \
-Therefore, you must maintain proper backups of your wallet's Root Private Key (RPK). \
-In the event that all mobile devices attached to a wallet are damaged or lost, the RPK may be used to create a duplicate wallet. \
-You may then attach a password or your Auth eID account to the wallet.\
-<br><br>Auth eID, like any software, is susceptible to malware, although keyloggers will serve no purpose. \
-Please keep your mobile devices up-to-date with the latest software updates, and never install software offered outside your device's app store.\
-<br><br>For more information, please consult:<br><a href=\"https://static.autheid.com/download/getting_started.pdf\"><span style=\"color:white;\">Getting Started With Auth eID</span></a>.")
+
+    customDetails: qsTr("Encrypting your wallet with Auth eID \
+<br><br>Auth eID is a free-to-use mobile app that offers a convenient alternative to passwords. \
+<br><br>Instead of manually selecting a password to encrypt your wallet’s Root Private Key (RPK), \
+you can encrypt your wallet with a data generated password secured by a pin or fingerprint on your mobile device. \
+Auth eID is available to download for Android and iOS.")
 
     acceptable: true
     cancelButtonVisible: false
     width: 400
 
-    messageDialogContentItem: RowLayout {
+    messageDialogContentItem: ColumnLayout {
         Layout.leftMargin: 72
-        CustomCheckBox {
-            id: cb
-            text: qsTr("Don't show this information again")
+        Layout.rightMargin: 2
+        Rectangle {
+            id: warnRect
+            border.width: 1
+            border.color: "white"
+            color: "transparent"
+            height: 140
+            Layout.preferredWidth: root.width - 80
+
+            CustomLabel {
+                id: warnText
+                padding: 5
+                anchors.fill: warnRect
+                text: qsTr("Important! \
+<br><br>Auth eID is not a wallet backup. No wallet data is stored with Auth eID. \
+<br><br>In the event that you lose or damage your mobile device, or forget the pin code you have set, \
+you will need your RPK to restore your wallet. Therefore, you must maintain a safe copy of your RPK.")
+            }
+        }
+
+        CustomLabel {
+            Layout.preferredWidth: root.width - 80
+            onLinkActivated: Qt.openUrlExternally(link)
+
+            text: qsTr("Note: user who want to trade through BlockSettle will need to go through ID verification using Auth eID. \
+However, you may still use your manually selected password in order to sign transactions. \
+<br><br>For more information, please consult:\
+<br><a href=\"https://static.autheid.com/download/getting_started.pdf\"><span style=\"color:white;\">Getting Started With Auth eID</span></a>.")
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
         }
     }
 
