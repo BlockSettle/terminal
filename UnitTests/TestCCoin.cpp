@@ -184,7 +184,7 @@ void TestCCoin::waitOnZc(const Tx& tx)
    waitOnZc(tx.getThisHash(), addresses);
 }
 
-void TestCCoin::waitOnZc(
+bool TestCCoin::waitOnZc(
    const BinaryData& hash, const std::vector<bs::Address>& addresses)
 {
    std::set<bs::Address> addrSet;
@@ -200,8 +200,7 @@ void TestCCoin::waitOnZc(
       for (auto& zcObj : zcVec)
          zcAddrSet.insert(zcObj.addresses.begin(), zcObj.addresses.end());
 
-      if (addrSet == zcAddrSet)
-         return;
+      return (addrSet == zcAddrSet);
    }
 }
 
@@ -314,30 +313,37 @@ Tx TestCCoin::CreateCJtx(
    uint64_t ccValue = 0;
    uint64_t xbtValue = 0;
 
-   auto const sellerSignWallet = envPtr_->walletsMgr()->getWalletByAddress(structA.ccAddr_);
-   auto const buyerSignWallet = envPtr_->walletsMgr()->getWalletByAddress(structB.xbtAddr_);
+   std::set<bs::core::WalletsManager::WalletPtr> signWallets;
    auto const sellerWallet = syncMgr_->getWalletByAddress(structA.ccAddr_);
    auto const buyerWallet = syncMgr_->getWalletByAddress(structB.xbtAddr_);
 
    Signer cjSigner;
-   for (auto& utxo : ccSortedInputsUserA)
-   {
+   for (auto& utxo : ccSortedInputsUserA) {
       auto spender = std::make_shared<ScriptSpender>(utxo);
       cjSigner.addSpender(spender);
       ccValue += utxo.getValue();
+      const auto addr = bs::Address::fromUTXO(utxo);
+      const auto signWallet = envPtr_->walletsMgr()->getWalletByAddress(addr);
+      EXPECT_NE(signWallet, nullptr);
+      signWallets.insert(signWallet);
    }
-   
+
    for (auto& utxo : paymentSortedInputsUserB)
    {
       auto spender = std::make_shared<ScriptSpender>(utxo);
       cjSigner.addSpender(spender);
       xbtValue += utxo.getValue();
+      const auto addr = bs::Address::fromUTXO(utxo);
+      const auto signWallet = envPtr_->walletsMgr()->getWalletByAddress(addr);
+      EXPECT_NE(signWallet, nullptr);
+      signWallets.insert(signWallet);
    }
 
    //CC recipients
    cjSigner.addRecipient(structB.ccAddr_.getRecipient(bs::XBTAmount{ structB.ccValue_ }));
+   const bs::Address ccChange = structA.ccChange.isNull() ? structA.ccAddr_ : structA.ccChange;
    if(ccValue - structB.ccValue_ > 0)
-      cjSigner.addRecipient(structA.ccAddr_.getRecipient(bs::XBTAmount{ ccValue - structB.ccValue_ }));
+      cjSigner.addRecipient(ccChange.getRecipient(bs::XBTAmount{ ccValue - structB.ccValue_ }));
 
    //XBT recipients
    cjSigner.addRecipient(structA.xbtAddr_.getRecipient(bs::XBTAmount{ structA.xbtValue_ }));
@@ -345,20 +351,12 @@ Tx TestCCoin::CreateCJtx(
    if(xbtValue - structA.xbtValue_ - fee > 0)
       cjSigner.addRecipient(structB.xbtAddr_.getRecipient(bs::XBTAmount{ xbtValue - structA.xbtValue_ - fee }));
 
-   {
-      auto leaf = envPtr_->walletsMgr()->getHDRootForLeaf(sellerSignWallet->walletId());
-      const bs::core::WalletPasswordScoped passScoped(leaf, passphrase_);
-      const auto&& lock = sellerSignWallet->lockDecryptedContainer();
-      cjSigner.setFeed(sellerSignWallet->getResolver());
-      cjSigner.sign();
-   }
-
-   {
-      auto leaf = envPtr_->walletsMgr()->getHDRootForLeaf(buyerSignWallet->walletId());
-      const bs::core::WalletPasswordScoped passScoped(leaf, passphrase_);
-      const auto&& lock = buyerSignWallet->lockDecryptedContainer();
+   for (const auto &wallet : signWallets) {
+      auto hdRoot = envPtr_->walletsMgr()->getHDRootForLeaf(wallet->walletId());
+      const bs::core::WalletPasswordScoped passScoped(hdRoot, passphrase_);
+      const auto&& lock = wallet->lockDecryptedContainer();
       cjSigner.resetFeeds();
-      cjSigner.setFeed(buyerSignWallet->getResolver());
+      cjSigner.setFeed(wallet->getResolver());
       cjSigner.sign();
    }
 
@@ -375,14 +373,20 @@ Tx TestCCoin::CreateCJtx(
    addresses.push_back(structA.xbtAddr_);
    addresses.push_back(structB.ccAddr_);
    addresses.push_back(structB.xbtAddr_);
+   if (!structA.ccChange.isNull()) {
+      addresses.push_back(structA.ccChange);
+   }
+   if (!structB.ccChange.isNull()) {
+      addresses.push_back(structB.ccChange);
+   }
 
    envPtr_->armoryInstance()->pushZC(signedTx, blockDelay);
-   waitOnZc(tx.getThisHash(), addresses);
+   EXPECT_TRUE(waitOnZc(tx.getThisHash(), addresses));
 
    return tx;
 }
 
-void TestCCoin::InitialFund()
+void TestCCoin::InitialFund(const std::vector<bs::Address> &recipients)
 {
    const uint64_t fee = 1000;
    const uint64_t required = (100 * ccLotSize_) * usersCount_ + fee + COIN;
@@ -391,7 +395,7 @@ void TestCCoin::InitialFund()
    FundFromCoinbase( { genesisAddr_ }, required);
 
    // fund "common" user addresses
-   FundFromCoinbase( {userFundAddresses_}, 50 * COIN);
+   FundFromCoinbase(userFundAddresses_, 50 * COIN);
 
    ASSERT_NE(rootWallet_, nullptr);
 
@@ -402,8 +406,9 @@ void TestCCoin::InitialFund()
    ASSERT_FALSE(addrBalance.empty());
    EXPECT_EQ(addrBalance[0], required);
 
+   const auto &ccAddresses = recipients.empty() ? userCCAddresses_ : recipients;
    // fund "CC" user addresses from genesis
-   SimpleSendMany(genesisAddr_, userCCAddresses_, 100 * ccLotSize_);
+   SimpleSendMany(genesisAddr_, ccAddresses, 100 * ccLotSize_);
 
    MineBlocks(6);
    UpdateAllBalances();
@@ -430,6 +435,25 @@ std::vector<UTXO> TestCCoin::GetUTXOsFor(const bs::Address & addr, bool sortedBy
    auto const wallet = syncMgr_->getWalletByAddress(addr);
    wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
    return fut.get();
+}
+
+std::vector<UTXO> TestCCoin::GetCCUTXOsFor(std::shared_ptr<ColoredCoinTracker> ccPtr,
+   const bs::Address & addr, bool sortedByValue)
+{
+   auto promPtr = std::make_shared<std::promise<std::vector<UTXO>>>();
+   auto fut = promPtr->get_future();
+   auto utxoLbd = [promPtr](std::vector<UTXO> utxoVec, std::exception_ptr)
+   {
+      promPtr->set_value(utxoVec);
+   };
+
+   std::set<BinaryData> addrSet = { addr.prefixed() };
+   ccPtr->getCCUtxoForAddresses(addrSet, false, utxoLbd);
+   auto&& result = fut.get();
+
+   if (sortedByValue)
+      std::sort(result.begin(), result.end(), [](UTXO const & l, UTXO const & r) { return l.getValue() > r.getValue(); });
+   return result;
 }
 
 void TestCCoin::revoke(const bs::Address& addr)
@@ -538,17 +562,17 @@ TEST_F(TestCCoin, Initial_balances)
 ////
 TEST_F(TestCCoin, Case_1CC_2CC)
 {
-   InitialFund();
+   InitialFund({ userCCAddresses_[0] });
 
    auto&& cct = makeCct();
    cct->goOnline();
 
-   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+   const uint64_t gaBalance = COIN + (usersCount_ - 1) * 100 * ccLotSize_;
 
-   for (size_t i = 0; i < usersCount_; i++)
-      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 100 * ccLotSize_);
 
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
 
    EXPECT_EQ(utxosA.size(), 1);
@@ -557,6 +581,7 @@ TEST_F(TestCCoin, Case_1CC_2CC)
    const uint amountCC = 50;
    CCoinSpender ccsA;
    ccsA.ccAddr_ = userCCAddresses_[0];
+   ccsA.ccChange = userCCAddresses_[9];
    ccsA.xbtAddr_ = userFundAddresses_[0];
    ccsA.xbtValue_ = COIN;
 
@@ -567,21 +592,63 @@ TEST_F(TestCCoin, Case_1CC_2CC)
 
    auto tx = CreateCJtx(utxosA, utxosB, ccsA, ccsB);
    EXPECT_EQ(tx.getNumTxIn(), 2);
-   EXPECT_EQ(tx.getNumTxOut(), 4 );
+   EXPECT_EQ(tx.getNumTxOut(), 4);
    MineBlocks(6);
    UpdateAllBalances();
 
    update(cct);
 
-   EXPECT_EQ(userWallets_[0]->getAddrBalance(userCCAddresses_[0])[0], (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(userWallets_[0]->getAddrBalance(userCCAddresses_[0])[0], 0);
+   EXPECT_EQ(userWallets_[9]->getAddrBalance(userCCAddresses_[9])[0], (100 - amountCC) * ccLotSize_);
    EXPECT_EQ(userWallets_[0]->getAddrBalance(userFundAddresses_[0])[0], 51 * COIN);
 
-   EXPECT_EQ(userWallets_[1]->getAddrBalance(userCCAddresses_[1])[0], (100 + amountCC) * ccLotSize_);
+   EXPECT_EQ(userWallets_[1]->getAddrBalance(userCCAddresses_[1])[0], amountCC * ccLotSize_);
    EXPECT_EQ(userWallets_[1]->getAddrBalance(userFundAddresses_[1])[0], 49 * COIN - 1000);
 
-   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
-   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), (100 - amountCC) * ccLotSize_);
-   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), amountCC * ccLotSize_);
+
+   ccsB.ccChange = userCCAddresses_[8];
+   ccsB.xbtValue_ = COIN;
+
+   CCoinSpender ccsC;
+   ccsC.ccAddr_ = userCCAddresses_[2];
+   ccsC.xbtAddr_ = userFundAddresses_[2];
+   ccsC.ccChange = userCCAddresses_[9];
+   ccsC.ccValue_ = 25 * ccLotSize_;
+
+   auto utxosC1 = GetUTXOsFor(ccsB.ccAddr_);
+   ASSERT_FALSE(utxosC1.empty());
+   auto utxosC2 = GetUTXOsFor(ccsC.xbtAddr_);
+   ASSERT_FALSE(utxosC2.empty());
+   auto utxosC3 = GetUTXOsFor(userCCAddresses_[9]);
+   EXPECT_FALSE(utxosC3.empty());
+   // add change from previous TX as an input - sort it arbitrary after XBT inputs
+   utxosC2.insert(utxosC2.end(), utxosC3.cbegin(), utxosC3.cend());
+
+   tx = CreateCJtx(utxosC1, utxosC2, ccsB, ccsC);
+   MineBlocks(6);
+   update(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), (100 - amountCC - 25) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), 0);
+
+   for (const auto &utxo : utxosC1) {
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+   }
+   for (const auto &utxo : utxosC3) {
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+   }
+
+   const auto utxosC = GetUTXOsFor(ccsC.ccAddr_);
+   ASSERT_FALSE(utxosC.empty());
+   for (const auto &utxo : utxosC) {
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+   }
 }
 
 ////
@@ -610,7 +677,7 @@ TEST_F(TestCCoin, Case_MultiUnorderedCC_2CC)
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 550 * ccLotSize_);
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
 
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
    std::swap(utxosA[0], utxosA[9]);
    std::swap(utxosA[2], utxosA[7]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
@@ -671,7 +738,7 @@ TEST_F(TestCCoin, Revoke)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 
    //send cc from addr9 to addr0
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[9]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[9]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[0]);
 
    const uint amountCC = 50;
@@ -727,7 +794,7 @@ TEST_F(TestCCoin, Revoke)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 
    //send cc from addr8 to addr1
-   std::vector<UTXO> utxosC = GetUTXOsFor(userCCAddresses_[8]);
+   std::vector<UTXO> utxosC = GetCCUTXOsFor(cct, userCCAddresses_[8]);
    std::vector<UTXO> utxosD = GetUTXOsFor(userFundAddresses_[1]);
 
    const uint amountCC2 = 60;
@@ -803,7 +870,7 @@ TEST_F(TestCCoin, Case_MultiUnorderedCC_NoChange)
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 550 * ccLotSize_);
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
 
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
    std::swap(utxosA[0], utxosA[9]);
    std::swap(utxosA[2], utxosA[7]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
@@ -872,7 +939,7 @@ TEST_F(TestCCoin, ZeroConf)
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 550 * ccLotSize_);
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN - newCcBalance);
 
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
    std::swap(utxosA[0], utxosA[9]);
    std::swap(utxosA[2], utxosA[7]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
@@ -1339,21 +1406,21 @@ TEST_F(TestCCoin, Case_1CC_2CC_WithACT)
 {
    InitialFund();
 
-   ColoredCoinTracker cct(ccLotSize_, envPtr_->armoryConnection());
+   auto cct = std::make_shared<ColoredCoinTracker>(ccLotSize_, envPtr_->armoryConnection());
 
    auto actPtr = std::make_shared<ColoredCoinTestACT_WithNotif>(envPtr_->armoryConnection().get());
-   auto cctUT = (ColoredCoinTracker_UT*)&cct;
+   auto cctUT = (ColoredCoinTracker_UT*)cct.get();
    cctUT->setACT(actPtr);
 
-   cct.addOriginAddress(genesisAddr_);
-   cct.goOnline();
+   cct->addOriginAddress(genesisAddr_);
+   cct->goOnline();
 
-   EXPECT_EQ(cct.getCcValueForAddress(genesisAddr_), COIN);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
 
    for (size_t i = 0; i < usersCount_; i++)
-      EXPECT_EQ(cct.getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 
-   std::vector<UTXO> utxosA = GetUTXOsFor(userCCAddresses_[0]);
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
    std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[1]);
 
    EXPECT_EQ(utxosA.size(), 1);
@@ -1385,9 +1452,9 @@ TEST_F(TestCCoin, Case_1CC_2CC_WithACT)
    EXPECT_EQ(userWallets_[1]->getAddrBalance(userCCAddresses_[1])[0], (100 + amountCC) * ccLotSize_);
    EXPECT_EQ(userWallets_[1]->getAddrBalance(userFundAddresses_[1])[0], 49 * COIN - 1000);
 
-   EXPECT_EQ(cct.getCcValueForAddress(genesisAddr_), COIN);
-   EXPECT_EQ(cct.getCcValueForAddress(userCCAddresses_[0].prefixed()), (100 - amountCC) * ccLotSize_);
-   EXPECT_EQ(cct.getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), (100 + amountCC) * ccLotSize_);
 }
 
 ////
