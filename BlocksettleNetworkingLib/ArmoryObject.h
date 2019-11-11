@@ -20,8 +20,6 @@ public:
 
    bool getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb &) override;
 
-   bool getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &
-      , const LedgerDelegateCb &, QObject *context = nullptr);
    bool getWalletsLedgerDelegate(const LedgerDelegateCb &) override;
 
    bool getTxByHash(const BinaryData &hash, const TxCb &) override;
