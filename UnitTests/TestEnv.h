@@ -417,6 +417,8 @@ public:
       }).detach();
       return true;
    }
+
+   std::shared_ptr<AsyncClient::BlockDataViewer> bdv() const { return bdv_; }
 };
 
 class TestEnv

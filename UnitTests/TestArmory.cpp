@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 #include "AsyncClient.h"
+#include "BDVCodec.h"
 #include "TestEnv.h"
+
+using namespace ::Codec_BDVCommand;
 
 TEST(TestArmory, CrashOnEmptyAddress)
 {
@@ -55,4 +58,44 @@ TEST(TestArmory, CrashOnEmptyAddress)
       EXPECT_TRUE(true);
    }
    act.cleanup();
+
+   auto lbdGetOutpointsForAddressesRaw = [bdv=armoryConn->bdv()]
+      (unsigned startHeight, unsigned zcIndexCutoff
+         , std::function<void(ReturnMessage<OutpointBatch>)> callback)
+   {
+      auto payload = make_unique<WritePayload_Protobuf>();
+      auto message = make_unique<BDVCommand>();
+      message->set_method(Methods::getOutpointsForAddresses);
+
+      payload->message_ = move(message);
+
+      auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+      command->add_bindata("", 0);  // use maliciously crafted command to be passed to Armory server
+      command->set_height(0);
+      command->set_zcid(0);
+
+      auto read_payload = std::make_shared<Socket_ReadPayload>();
+      read_payload->callbackReturn_ =
+         make_unique<CallbackReturn_AddrOutpoints>(callback);
+      bdv->getSocketObject()->pushPayload(move(payload), read_payload);
+   };
+   const auto promPtrOPRaw = std::make_shared<std::promise<bool>>();
+   auto futOPRaw = promPtrOPRaw->get_future();
+   auto cbOPRaw = [promPtrOPRaw](ReturnMessage<OutpointBatch> retMsg)
+   {
+      try {
+         retMsg.get();
+         promPtrOPRaw->set_value(false);
+      }
+      catch (...) {
+         promPtrOPRaw->set_value(true);
+      }
+   };
+   try {
+      lbdGetOutpointsForAddressesRaw(0, 0, cbOPRaw);
+      EXPECT_TRUE(futOPRaw.get());
+   }
+   catch (...) {
+      EXPECT_TRUE(true);
+   }
 }
