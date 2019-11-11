@@ -60,8 +60,7 @@ TEST(TestArmory, CrashOnEmptyAddress)
    act.cleanup();
 
    auto lbdGetOutpointsForAddressesRaw = [bdv=armoryConn->bdv()]
-      (unsigned startHeight, unsigned zcIndexCutoff
-         , std::function<void(ReturnMessage<OutpointBatch>)> callback)
+      (std::function<void(ReturnMessage<OutpointBatch>)> callback)
    {
       auto payload = make_unique<WritePayload_Protobuf>();
       auto message = make_unique<BDVCommand>();
@@ -70,7 +69,7 @@ TEST(TestArmory, CrashOnEmptyAddress)
       payload->message_ = move(message);
 
       auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
-      command->add_bindata("", 0);  // use maliciously crafted command to be passed to Armory server
+      command->add_bindata((void *)"", 0);  // use maliciously crafted command to be passed to Armory server
       command->set_height(0);
       command->set_zcid(0);
 
@@ -92,7 +91,7 @@ TEST(TestArmory, CrashOnEmptyAddress)
       }
    };
    try {
-      lbdGetOutpointsForAddressesRaw(0, 0, cbOPRaw);
+      lbdGetOutpointsForAddressesRaw(cbOPRaw);
       EXPECT_TRUE(futOPRaw.get());
    }
    catch (...) {
