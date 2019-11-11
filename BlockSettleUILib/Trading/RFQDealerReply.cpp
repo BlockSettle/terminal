@@ -585,7 +585,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
          const auto &spendWallet = isSpendCC ? ccWallet : xbtWallet;
          const auto &recvWallet = isSpendCC ? xbtWallet : ccWallet;
          // For CC search for exact amount (as we have no need for change).
-         // For XBT request all awailable inputs just in case (as getSpendableTxOutList is a bit broken and could return lower amount after UTXO filtering).
+         // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee is set)
          const uint64_t requestUtxoVal = isSpendCC ? spendVal : std::numeric_limits<uint64_t>::max();
 
          auto recvAddrCb = [this, cb, qn, qrn, spendWallet, spendVal, isSpendCC, requestUtxoVal](const bs::Address &addr) {
