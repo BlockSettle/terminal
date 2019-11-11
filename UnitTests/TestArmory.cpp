@@ -9,7 +9,7 @@ TEST(TestArmory, CrashOnEmptyAddress)
    const auto armoryConn = env.armoryConnection();
    EXPECT_TRUE(armoryConn->isOnline());
 
-   // Explorer various crashes on invalid input data: either empty or non-existing address/wallet
+   // Exploring various crashes on invalid input data: either empty or non-existing address/wallet
    const bs::Address emptyAddr{};
 /*   const auto privKey = CryptoPRNG::generateRandom(32);
    const auto pubKey = CryptoECDSA().ComputePublicKey(privKey, true);
