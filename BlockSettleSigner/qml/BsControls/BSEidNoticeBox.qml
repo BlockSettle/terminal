@@ -24,23 +24,18 @@ Auth eID is available to download for Android and iOS.")
     messageDialogContentItem: ColumnLayout {
         Layout.leftMargin: 72
         Layout.rightMargin: 2
-        Rectangle {
-            id: warnRect
-            border.width: 1
-            border.color: "white"
-            color: "transparent"
-            height: 140
-            Layout.preferredWidth: root.width - 80
 
-            CustomLabel {
-                id: warnText
-                padding: 5
-                anchors.fill: warnRect
-                text: qsTr("Important! \
-<br><br>Auth eID is not a wallet backup. No wallet data is stored with Auth eID. \
+        CustomLabel {
+            text: qsTr("Important!")
+            font.bold: true
+        }
+
+        CustomLabel {
+            id: warnText
+            Layout.preferredWidth: root.width - 80
+            text: qsTr("Auth eID is not a wallet backup. No wallet data is stored with Auth eID. \
 <br><br>In the event that you lose or damage your mobile device, or forget the pin code you have set, \
 you will need your RPK to restore your wallet. Therefore, you must maintain a safe copy of your RPK.")
-            }
         }
 
         CustomLabel {
