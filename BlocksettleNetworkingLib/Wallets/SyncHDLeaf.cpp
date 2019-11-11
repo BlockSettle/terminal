@@ -5,6 +5,7 @@
 #include "ColoredCoinLogic.h"
 #include "FastLock.h"
 #include "WalletSignerContainer.h"
+#include "WalletUtils.h"
 
 #include <unordered_map>
 
@@ -736,7 +737,7 @@ int hd::Leaf::addAddress(const bs::Address &addr, const std::string &index, bool
 
 bool hd::Leaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t val)
 {  // process the UTXOs for the purposes of handling internal/external addresses
-   const ArmoryConnection::UTXOsCb &cbWrap = [this, cb](const std::vector<UTXO> &utxos) {
+   const ArmoryConnection::UTXOsCb &cbWrap = [this, cb, val](const std::vector<UTXO> &utxos) {
       std::vector<UTXO> filteredUTXOs;
       for (const auto &utxo : utxos) {
          const auto nbConf = armory_->getConfirmationsNumber(utxo.getHeight());
@@ -747,10 +748,10 @@ bool hd::Leaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64
          }
       }
       if (cb) {
-         cb(filteredUTXOs);
+         cb(bs::selectUtxoForAmount(std::move(filteredUTXOs), val));
       }
    };
-   return bs::sync::Wallet::getSpendableTxOutList(cbWrap, val);
+   return bs::sync::Wallet::getSpendableTxOutList(cbWrap, std::numeric_limits<uint64_t>::max());
 }
 
 BTCNumericTypes::balance_type hd::Leaf::getSpendableBalance() const
@@ -893,7 +894,7 @@ std::vector<std::string> hd::CCLeaf::setUnconfirmedTarget()
 
 bool hd::CCLeaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t val)
 {
-   const ArmoryConnection::UTXOsCb &cbWrap = [this, cb](const std::vector<UTXO> &utxos) {
+   const ArmoryConnection::UTXOsCb &cbWrap = [this, cb, val](const std::vector<UTXO> &utxos) {
       std::vector<UTXO> filteredUTXOs;
       for (const auto &utxo : utxos) {
          if (!isTxValid(utxo.getTxHash())) {
@@ -905,10 +906,10 @@ bool hd::CCLeaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint
          }
       }
       if (cb) {
-         cb(filteredUTXOs);
+         cb(bs::selectUtxoForAmount(std::move(filteredUTXOs), val));
       }
    };
-   return bs::sync::Wallet::getSpendableTxOutList(cbWrap, val);
+   return bs::sync::Wallet::getSpendableTxOutList(cbWrap, std::numeric_limits<uint64_t>::max());
 }
 
 void hd::CCLeaf::CCWalletACT::onStateChanged(ArmoryState state)
