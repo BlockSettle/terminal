@@ -12,14 +12,16 @@
 #include <QLocale>
 #include <QString>
 #include <spdlog/spdlog.h>
+
 #include "Address.h"
 #include "AssetManager.h"
 #include "CacheFile.h"
 #include "CurrencyPair.h"
 #include "EasyCoDec.h"
-#include "MarketDataProvider.h"
 #include "InprocSigner.h"
+#include "MarketDataProvider.h"
 #include "TestEnv.h"
+#include "WalletUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 
 
@@ -333,4 +335,48 @@ TEST(TestCommon, BotanSerpent_KDF_Romix)
    decrypter.set_key(decKdf->deriveKey(password).getDataVector());
    decrypter.decrypt(encrypted, decrypted);
    EXPECT_EQ(decrypted, privKey.getDataVector());
+}
+
+TEST(TestCommon, SelectUtxoForAmount)
+{
+   auto test = [](const std::vector<uint64_t> &inputs, uint64_t amount, size_t count, uint64_t sum) {
+      std::vector<UTXO> utxos;
+      for (auto value : inputs) {
+         UTXO utxo;
+         utxo.value_ = value;
+         utxos.push_back(utxo);
+      }
+
+      auto result = bs::selectUtxoForAmount(utxos, amount);
+      uint64_t resultSum = 0;
+      for (const auto &utxo : result) {
+         resultSum += utxo.value_;
+      }
+
+      ASSERT_EQ(count, result.size());
+      ASSERT_EQ(sum, resultSum);
+   };
+
+   test({}, 0, 0, 0);
+
+   test({1}, 1, 1, 1);
+
+   test({1, 2}, 1, 1, 1);
+   test({2, 1}, 1, 1, 1);
+   test({2, 1}, 2, 1, 2);
+
+   test({1, 2, 3}, 0, 0, 0);
+   test({1, 2, 3}, 2, 1, 2);
+   test({1, 2, 3}, 3, 1, 3);
+   test({1, 2, 3}, 4, 2, 4);
+   test({1, 2, 3}, 5, 2, 5);
+   test({1, 2, 3}, 6, 3, 6);
+   test({1, 2, 3}, 7, 3, 6);
+
+   test({10, 15, 20}, 7, 1, 10);
+   test({10, 15, 20}, 12, 1, 15);
+   test({10, 15, 20}, 17, 1, 20);
+   test({10, 15, 20}, 22, 2, 30);
+   test({10, 15, 20}, 42, 3, 45);
+   test({10, 15, 20}, 100, 3, 45);
 }
