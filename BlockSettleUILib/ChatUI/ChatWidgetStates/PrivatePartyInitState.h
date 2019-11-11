@@ -59,14 +59,12 @@ protected:
          }
       }
       else if (clientPartyPtr->isGlobal()) {
-         if (clientPartyPtr->displayName() == Chat::GlobalRoomName) {
-            chat_->ui_->widgetOTCShield->showOtcUnavailableGlobal();
-            return;
-         } 
-         else if (clientPartyPtr->displayName() == Chat::SupportRoomName) {
-            chat_->ui_->widgetOTCShield->showOtcUnavailableSupport();
-            return;
-         }
+#ifndef QT_NO_DEBUG
+         assert(clientPartyPtr->displayName() == Chat::GlobalRoomName ||
+            clientPartyPtr->displayName() == Chat::SupportRoomName);
+#endif
+         chat_->ui_->widgetOTCShield->showChatExplanation();
+         return;
       }
       else if (clientPartyPtr->isPrivate()) {
          if (!checkIsTradingParticipant()) {

@@ -13,6 +13,10 @@ protected:
       chat_->ui_->textEditMessages->onSwitchToChat({});
 
       chat_->ui_->labelUserName->setText(QString::fromStdString(chat_->ownUserId_));
+      chat_->ui_->labelUserName->setProperty("headerLabel", {});
+      chat_->ui_->labelUserName->setProperty("headerLabelActivated", true);
+      qApp->style()->unpolish(chat_->ui_->labelUserName);
+      qApp->style()->polish(chat_->ui_->labelUserName);
    }
    void applyChatFrameChange() override {
       chat_->ui_->textEditMessages->onSetOwnUserId(chat_->ownUserId_);

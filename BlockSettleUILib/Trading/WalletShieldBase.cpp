@@ -149,10 +149,33 @@ void WalletShieldBase::showShield(const QString& labelText,
    ui_->shieldHeaderText->setVisible(!headerText.isEmpty());
    ui_->shieldHeaderText->setText(headerText);
 
+   ui_->secondInfoBlock->hide();
+
+   raiseInStack();
+}
+
+void WalletShieldBase::showTwoBlockShield(const QString& headerText1, const QString& labelText1,
+   const QString& headerText2, const QString& labelText2)
+{
+   ui_->shieldButton->setVisible(false);
+
+   ui_->shieldText->setText(labelText1);
+   ui_->shieldHeaderText->setText(headerText1);
+   ui_->shieldHeaderText->setVisible(true);
+
+   ui_->shieldTextSecond->setText(labelText2);
+   ui_->shieldHeaderTextSecond->setText(headerText2);
+   ui_->secondInfoBlock->setVisible(true);
+
+   raiseInStack();
+}
+
+void WalletShieldBase::raiseInStack()
+{
    QStackedWidget* stack = qobject_cast<QStackedWidget*>(parent());
 
    // We expected that shield widget will leave only under stack widget
-   Q_ASSERT(stack);
+   assert(stack);
    if (!stack) {
       return;
    }

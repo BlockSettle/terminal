@@ -4,8 +4,6 @@
 
 namespace {
    const QString shieldLoginToAccessOTC = QObject::tr("Login to access OTC chat");
-   const QString shieldOtcUnavailableGlobal = QObject::tr("OTC unavailable in Global");
-   const QString shieldOtcUnavailableSupport = QObject::tr("OTC unavailable in Support");
    const QString shieldOtcAvailableToTradingParticipants = QObject::tr("OTC available to Trading Participants");
    const QString shieldCounterPartyIsntTradingParticipant = QObject::tr("Counterparty isn't a Trading Participant");
    const QString shieldContactIsOffline = QObject::tr("Contact is offline");
@@ -13,6 +11,15 @@ namespace {
    const QString shieldOtcSetupTransactionData = QObject::tr("Setup OTC transaction data");
 
    const QString tradingKeyWord = QObject::tr("trading");
+
+   const QString publicChatHeader = QObject::tr("Public chat");
+   const QString privateChatHeader = QObject::tr("Private chat");
+   const QString publicChatExplanation = QObject::tr("ChatID is a hash of the users email\n"
+      "Public rooms are unencrypted\n"
+      "(Trolls will be banned)\n");
+   const QString privateChatExplanation = QObject::tr("Communication is end-to-end encrypted with the users key-pair(s)\n"
+      "Trades can be negotiated in private chats\n"
+      "Price and volume will not be disclosed\n");
 }
 
 OTCShield::OTCShield(QWidget* parent)
@@ -26,16 +33,6 @@ OTCShield::~OTCShield() noexcept = default;
 void OTCShield::showLoginToAccessOTC()
 {
    showShield(shieldLoginToAccessOTC);
-}
-
-void OTCShield::showOtcUnavailableGlobal()
-{
-   showShield(shieldOtcUnavailableGlobal);
-}
-
-void OTCShield::showOtcUnavailableSupport()
-{
-   showShield(shieldOtcUnavailableSupport);
 }
 
 void OTCShield::showOtcAvailableToTradingParticipants()
@@ -61,6 +58,12 @@ void OTCShield::showOtcAvailableOnlyForAcceptedContacts()
 void OTCShield::showOtcSetupTransaction()
 {
    showShield(shieldOtcSetupTransactionData);
+}
+
+void OTCShield::showChatExplanation()
+{
+   showTwoBlockShield(publicChatHeader, publicChatExplanation,
+      privateChatHeader, privateChatExplanation);
 }
 
 bool OTCShield::onRequestCheckWalletSettings()
