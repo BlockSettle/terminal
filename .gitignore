@@ -39,7 +39,6 @@ stamp-h1
 1
 
 Makefile
-ArmoryDB
 /armoryengine/ArmoryBuild.py
 
 CppBlockUtils.py
