@@ -2,9 +2,11 @@
 #include <QLocale>
 #include <bech32/ref/c++/segwit_addr.h>
 #include <spdlog/spdlog.h>
+
 #include "CheckRecipSigner.h"
 #include "CoinSelection.h"
 #include "WalletSignerContainer.h"
+#include "WalletUtils.h"
 
 using namespace bs::sync;
 
@@ -279,23 +281,7 @@ bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t
       if (utxoAdapter_) {
          utxoAdapter_->filter(txOutListCopy);
       }
-      if (val != UINT64_MAX) {
-         uint64_t sum = 0;
-         int cutOffIdx = -1;
-         for (size_t i = 0; i < txOutListCopy.size(); i++) {
-            const auto &utxo = txOutListCopy[i];
-            sum += utxo.getValue();
-            if (sum >= val) {
-               cutOffIdx = (int)i;
-               break;
-            }
-         }
-         if (cutOffIdx >= 0) {
-            txOutListCopy.resize(cutOffIdx + 1);
-         }
-      }
-
-      cb(txOutListCopy);
+      cb(bs::selectUtxoForAmount(std::move(txOutListCopy), val));
    };
 
    std::vector<std::string> walletIDs;
@@ -306,7 +292,7 @@ bool Wallet::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t
    catch(std::exception&)
    {}
 
-   return armory_->getSpendableTxOutListForValue(walletIDs, val, cbTxOutList);
+   return armory_->getSpendableTxOutListForValue(walletIDs, std::numeric_limits<uint64_t>::max(), cbTxOutList);
 }
 
 bool Wallet::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const
