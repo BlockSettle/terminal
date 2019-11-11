@@ -12,13 +12,12 @@ public:
    ~OTCShield() noexcept override;
   
    void showLoginToAccessOTC();
-   void showOtcUnavailableGlobal();
-   void showOtcUnavailableSupport();
    void showOtcAvailableToTradingParticipants();
    void showCounterPartyIsntTradingParticipant();
    void showContactIsOffline();
    void showOtcAvailableOnlyForAcceptedContacts();
    void showOtcSetupTransaction();
+   void showChatExplanation();
 
 public slots:
    bool onRequestCheckWalletSettings();

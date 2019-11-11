@@ -17,6 +17,11 @@ namespace {
    const QString dialogRemoveContact = QObject::tr("Remove contact");
    const QString dialogRemoveCCAsContact = QObject::tr("Remove %1 as a contact?");
    const QString dialogRemoveContactAreYouSure = QObject::tr("Are you sure you wish to remove this contact?");
+
+   const QString noChatAvailable = QObject::tr("NO CHAT AVAILABLE");
+   const QString chatTemplateSuffix = QObject::tr(" CHAT");
+   const QString outgoingPendingContactRequest = QObject::tr("OUTGOING PENDING CONTACT REQUEST ");
+   const QString incomingContactRequest = QObject::tr("INCOMING CONTACT REQUEST ");
 }
 
 ChatUserListTreeView::ChatUserListTreeView(QWidget *parent)
@@ -227,10 +232,12 @@ void ChatUserListTreeView::updateDependUi(const QModelIndex& index)
    const Chat::ClientPartyPtr clientPartyPtr = item->data().value<Chat::ClientPartyPtr>();
 
    if (!chatPartiesTreeModel) {
+      label_->setText(noChatAvailable);
       return;
    }
 
    if (!clientPartyPtr) {
+      label_->setText(noChatAvailable);
       return;
    }
 
@@ -238,28 +245,25 @@ void ChatUserListTreeView::updateDependUi(const QModelIndex& index)
       return;
    }
 
+   const QString upperUserName = QString::fromStdString(clientPartyPtr->displayName()).toUpper();
+
    if (clientPartyPtr->isGlobal()) {
-      label_->setText(QObject::tr("CHAT #") + QString::fromStdString(clientPartyPtr->displayName()));
+      label_->setText(upperUserName + chatTemplateSuffix);
    }
 
    if (clientPartyPtr->isPrivateStandard()) {
-      QString labelPattern = QObject::tr("Contact request  #%1%2").arg(QString::fromStdString(clientPartyPtr->displayName()));
-      QString stringStatus = QLatin1String("");
-
       if ((Chat::PartyState::UNINITIALIZED == clientPartyPtr->partyState())
          || (Chat::PartyState::REQUESTED == clientPartyPtr->partyState())) {
 
          if (clientPartyPtr->partyCreatorHash() == chatPartiesTreeModel->currentUser()) {
-            stringStatus = QLatin1String("-OUTGOING PENDING");
+            label_->setText(outgoingPendingContactRequest + upperUserName);
          }
          else {
-            stringStatus = QLatin1String("-INCOMING");
+            label_->setText(incomingContactRequest + upperUserName);
          }
-         label_->setText(labelPattern.arg(stringStatus));
       }
-
-      if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState()) {
-         label_->setText(QObject::tr("CHAT #") + QString::fromStdString(clientPartyPtr->displayName()));
+      else if (Chat::PartyState::INITIALIZED == clientPartyPtr->partyState()) {
+         label_->setText(upperUserName + chatTemplateSuffix);
       }
    }
 }

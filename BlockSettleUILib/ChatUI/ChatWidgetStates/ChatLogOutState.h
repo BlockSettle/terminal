@@ -19,6 +19,10 @@ protected:
       }
 
       chat_->ui_->labelUserName->setText(QObject::tr("offline"));
+      chat_->ui_->labelUserName->setProperty("headerLabel", true);
+      chat_->ui_->labelUserName->setProperty("headerLabelActivated", {});
+      qApp->style()->unpolish(chat_->ui_->labelUserName);
+      qApp->style()->polish(chat_->ui_->labelUserName);
    }
    void applyChatFrameChange() override {
       chat_->ui_->stackedWidgetMessages->setCurrentIndex(static_cast<int>(StackedMessages::TextEditMessage));
