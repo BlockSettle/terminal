@@ -30,18 +30,29 @@ TEST(TestArmory, CrashOnEmptyAddress)
       EXPECT_TRUE(true);
    }
 
+   class TestACT : public ArmoryCallbackTarget
+   {
+   public:
+      TestACT(const std::shared_ptr<std::promise<bool>> &promise) : ArmoryCallbackTarget(), prom_(promise) {}
+   protected:
+      void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &ledger) override
+      {
+         prom_->set_value(ledger == nullptr);
+      }
+   private:
+      std::shared_ptr<std::promise<bool>> prom_;
+   };
    const auto promPtrLedger = std::make_shared<std::promise<bool>>();
    auto futLedger = promPtrLedger->get_future();
-   const auto cbLedgerDelegate = [promPtrLedger](const std::shared_ptr<AsyncClient::LedgerDelegate> &ledger)
-   {  // normally ledger should be null for empty address
-      promPtrLedger->set_value(ledger == nullptr);
-   };
+   TestACT act(promPtrLedger);
+   act.init(env.armoryConnection().get());
    try {
-      EXPECT_TRUE(armoryConn->getLedgerDelegateForAddress("walletId", emptyAddr, cbLedgerDelegate));
+      EXPECT_TRUE(armoryConn->getLedgerDelegateForAddress("walletId", emptyAddr));
       EXPECT_TRUE(futLedger.get());
    }
    catch (const std::exception &e) {
       std::cout << "getLedgerDelegateForAddress thrown " << e.what() << "\n";
       EXPECT_TRUE(true);
    }
+   act.cleanup();
 }
