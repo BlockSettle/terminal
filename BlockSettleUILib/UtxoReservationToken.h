@@ -2,6 +2,7 @@
 #define UTXO_RESERVATION_TOKEN_H
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace spdlog {
