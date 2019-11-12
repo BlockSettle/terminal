@@ -5,9 +5,10 @@
 #include "BSErrorCodeStrings.h"
 #include "CheckRecipSigner.h"
 #include "SignContainer.h"
-#include "UiUtils.h"
-#include "Wallets/SyncWallet.h"
 #include "SignerDefs.h"
+#include "UiUtils.h"
+#include "UtxoReservation.h"
+#include "Wallets/SyncWallet.h"
 
 #include <QApplication>
 #include <QPointer>
@@ -15,10 +16,14 @@
 using namespace bs::sync;
 
 DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
-      , const bs::network::Order &order, const std::string &quoteReqId, uint64_t lotSize
-      , const bs::Address &genAddr, const std::string &ownRecvAddr
-      , const std::shared_ptr<bs::sync::Wallet> &wallet, const std::shared_ptr<SignContainer> &container
-      , const std::shared_ptr<ArmoryConnection> &armory)
+   , const bs::network::Order &order
+   , const std::string &quoteReqId, uint64_t lotSize
+   , const bs::Address &genAddr
+   , const std::string &ownRecvAddr
+   , const std::shared_ptr<bs::sync::Wallet> &wallet
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer()
    , logger_(logger)
    , order_(order)
@@ -31,20 +36,17 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , ownRecvAddr_(bs::Address::fromAddressString(ownRecvAddr))
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
+   , utxoRes_(std::move(utxoRes))
 {
+   if (lotSize == 0) {
+      throw std::logic_error("invalid lotSize");
+   }
+
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
       , &DealerCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
-
-   utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
-   bs::UtxoReservation::addAdapter(utxoAdapter_);
-
-   walletName_ = QString::fromStdString(wallet_->name());
 }
 
-DealerCCSettlementContainer::~DealerCCSettlementContainer()
-{
-   bs::UtxoReservation::delAdapter(utxoAdapter_);
-}
+DealerCCSettlementContainer::~DealerCCSettlementContainer() = default;
 
 bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData() const
 {
@@ -92,36 +94,33 @@ bool DealerCCSettlementContainer::startSigning()
       return false;
    }
 
-   QPointer<DealerCCSettlementContainer> context(this);
-   const auto &cbTx = [this, context, logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
-      QMetaObject::invokeMethod(qApp, [this, result, signedTX, context, logger] {
-         if (!context) {
-            logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
-            return;
-         }
+   const auto &cbTx = [this, handle = validityFlag_.handle(), logger = logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
+      if (!handle.isValid()) {
+         logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
+         return;
+      }
 
-         if (result == bs::error::ErrorCode::NoError) {
-            emit signTxRequest(orderId_, signedTX.toHexStr());
-            emit completed();
-            wallet_->setTransactionComment(signedTX, txComment());
-         }
-         else if (result == bs::error::ErrorCode::TxCanceled) {
-            // FIXME
-            // Not clear what's wrong here, and what should be fixed
-            emit failed();
-         }
-         else {
-            logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
-            emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
-            emit failed();
-         }
-      });
+      if (result == bs::error::ErrorCode::NoError) {
+         emit signTxRequest(orderId_, signedTX.toHexStr());
+         emit completed();
+         wallet_->setTransactionComment(signedTX, txComment());
+      }
+      else if (result == bs::error::ErrorCode::TxCanceled) {
+         // FIXME
+         // Not clear what's wrong here, and what should be fixed
+         emit failed();
+      }
+      else {
+         logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
+         emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
+         emit failed();
+      }
    };
 
    txReq_.walletIds = { wallet_->walletId() };
    txReq_.prevStates = { txReqData_ };
    txReq_.populateUTXOs = true;
-   txReq_.inputs = utxoAdapter_->get(id());
+   txReq_.inputs = bs::UtxoReservation::instance()->get(utxoRes_.reserveId());
    logger_->debug("[DealerCCSettlementContainer::accept] signing with wallet {}, {} inputs"
       , wallet_->name(), txReq_.inputs.size());
 
@@ -136,10 +135,6 @@ void DealerCCSettlementContainer::activate()
    try {
       signer_.deserializeState(txReqData_);
       foundRecipAddr_ = signer_.findRecipAddress(ownRecvAddr_, [this](uint64_t value, uint64_t valReturn, uint64_t valInput) {
-         // Fix SIGFPE crash
-         if (lotSize_ == 0) {
-            return;
-         }
          if ((order_.side == bs::network::Side::Buy) && qFuzzyCompare(order_.quantity, value / lotSize_)) {
             amountValid_ = true; //valInput == (value + valReturn);
          }
@@ -194,15 +189,10 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 
 bool DealerCCSettlementContainer::cancel()
 {
-   utxoAdapter_->unreserve(id());
+   utxoRes_.release();
    signingContainer_->CancelSignTx(id());
    cancelled_ = true;
    return true;
-}
-
-QString DealerCCSettlementContainer::GetSigningWalletName() const
-{
-   return walletName_;
 }
 
 std::string DealerCCSettlementContainer::txComment()

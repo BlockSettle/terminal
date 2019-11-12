@@ -38,8 +38,11 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    ui_->setupUi(this);
    ui_->shieldPage->setTabType(QLatin1String("trade"));
 
-   connect(ui_->pageRFQTicket, &RFQTicketXBT::submitRFQ, this, &RFQRequestWidget::onRFQSubmit);
    connect(ui_->shieldPage, &RFQShieldPage::requestPrimaryWalletCreation, this, &RFQRequestWidget::requestPrimaryWalletCreation);
+
+   ui_->pageRFQTicket->setSubmitRFQ([this](const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes) {
+      onRFQSubmit(rfq, std::move(utxoRes));
+   });
 
    ui_->shieldPage->showShieldLoginToSubmitRequired();
 
@@ -176,7 +179,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    armory_ = armory;
    connectionManager_ = connectionManager;
 
-   ui_->pageRFQTicket->init(authAddressManager, assetManager, quoteProvider, container, armory);
+   ui_->pageRFQTicket->init(logger, authAddressManager, assetManager, quoteProvider, container, armory);
 
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);
@@ -227,15 +230,16 @@ void RFQRequestWidget::onDisconnectedFromCeler()
    popShield();
 }
 
-void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
+void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)
 {
    auto authAddr = ui_->pageRFQTicket->selectedAuthAddress();
 
    auto xbtWallet = ui_->pageRFQTicket->xbtWallet();
+   auto fixedXbtInputs = ui_->pageRFQTicket->fixedXbtInputs();
 
-   RFQDialog* dialog = new RFQDialog(logger_, rfq, ui_->pageRFQTicket->GetTransactionData(), quoteProvider_
+   RFQDialog* dialog = new RFQDialog(logger_, rfq, quoteProvider_
       , authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
-      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvAddress(), authAddr, this);
+      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvAddress(), authAddr, fixedXbtInputs, std::move(utxoRes), this);
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);

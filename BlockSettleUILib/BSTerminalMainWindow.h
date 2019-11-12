@@ -24,7 +24,6 @@ namespace Ui {
 }
 namespace bs {
    class LogManager;
-   class DealerUtxoResAdapter;
    namespace sync {
       class Wallet;
       class WalletsManager;
@@ -161,7 +160,6 @@ private:
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
    std::shared_ptr<SignContainer>            signContainer_;
-   std::shared_ptr<bs::DealerUtxoResAdapter> dealerUtxoAdapter_;
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
 
    std::unique_ptr<OrderListModel>           orderListModel_;

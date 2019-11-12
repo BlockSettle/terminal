@@ -15,7 +15,6 @@ class QuoteProvider;
 class MarketDataProvider;
 
 namespace bs {
-   class DealerUtxoResAdapter;
    namespace sync {
       class Wallet;
       class WalletsManager;
@@ -35,7 +34,6 @@ public:
       , const std::shared_ptr<AssetManager>&
       , const std::shared_ptr<QuoteProvider>&
       , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<bs::DealerUtxoResAdapter> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<MarketDataProvider> &
       , const std::shared_ptr<BaseCelerClient> &

@@ -10,13 +10,11 @@
 #include "ReqCCSettlementContainer.h"
 #include "ReqXBTSettlementContainer.h"
 #include "RfqStorage.h"
-#include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
 
 RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const bs::network::RFQ& rfq
-   , const std::shared_ptr<TransactionData>& transactionData
    , const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<AuthAddressManager>& authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager
@@ -30,13 +28,14 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
    , const bs::Address &recvXbtAddr
    , const bs::Address &authAddr
+   , const std::vector<UTXO> &fixedXbtInputs
+   , bs::UtxoReservationToken utxoRes
    , RFQRequestWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
    , logger_(logger)
    , rfq_(rfq)
    , recvXbtAddr_(recvXbtAddr)
-   , transactionData_(transactionData)
    , quoteProvider_(quoteProvider)
    , authAddressManager_(authAddressManager)
    , walletsManager_(walletsManager)
@@ -49,7 +48,9 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , rfqStorage_(rfqStorage)
    , xbtWallet_(xbtWallet)
    , authAddr_(authAddr)
+   , fixedXbtInputs_(fixedXbtInputs)
    , requestWidget_(parent)
+   , utxoRes_(std::move(utxoRes))
 {
    ui_->setupUi(this);
 
@@ -71,7 +72,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, this, &RFQDialog::onOrderFilled);
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQDialog::onSignTxRequested);
 
-   ui_->pageRequestingQuote->populateDetails(rfq_, transactionData_);
+   ui_->pageRequestingQuote->populateDetails(rfq_);
 
    quoteProvider_->SubmitRFQ(rfq_);
 }
@@ -131,14 +132,10 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       return nullptr;
    }
 
-   auto selectedInputs = transactionData_->getSelectedInputs();
-   auto fixedInputs = (!selectedInputs || transactionData_->getSelectedInputs()->UseAutoSel()) ?
-      std::vector<UTXO>{} : transactionData_->getSelectedInputs()->GetSelectedTransactions();
-
    try {
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
          , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
-         , rfq_, quote_, authAddr_, fixedInputs, recvXbtAddr_);
+         , rfq_, quote_, authAddr_, fixedXbtInputs_, recvXbtAddr_);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
          , this, &RFQDialog::onXBTSettlementAccepted);
@@ -169,7 +166,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 {
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, transactionData_);
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, std::move(utxoRes_));
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
          , this, &RFQDialog::onCCTxSigned);

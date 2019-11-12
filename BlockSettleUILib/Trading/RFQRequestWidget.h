@@ -8,6 +8,7 @@
 #include "CommonTypes.h"
 #include "MarketDataWidget.h"
 #include "TabWithShortcut.h"
+#include "UtxoReservationToken.h"
 
 namespace Ui {
     class RFQRequestWidget;
@@ -87,9 +88,9 @@ private:
 
    bool checkConditions(const MarketSelectedInfo& productGroup);
    bool checkWalletSettings(bs::network::Asset::Type productType, const MarketSelectedInfo& productGroup);
+   void onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes);
 
 public slots:
-   void onRFQSubmit(const bs::network::RFQ& rfq);
    void onCurrencySelected(const MarketSelectedInfo& selectedInfo);
    void onBidClicked(const MarketSelectedInfo& selectedInfo);
    void onAskClicked(const MarketSelectedInfo& selectedInfo);

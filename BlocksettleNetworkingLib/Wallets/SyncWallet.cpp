@@ -816,7 +816,9 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
          fee = selection.fee_;
          utxos = selection.utxoVec_;
       }
-      catch (...) {}
+      catch (const std::exception &e) {
+         SPDLOG_LOGGER_ERROR(logger_, "coin selection failed: {}, all inputs will be used", e.what());
+      }
    }
 /*   else {    // use all supplied inputs
       size_t nbUtxos = 0;

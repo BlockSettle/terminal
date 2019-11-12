@@ -7,7 +7,7 @@
 #include "CommonTypes.h"
 #include "CoreWallet.h"
 #include "QWalletInfo.h"
-#include "UtxoReservation.h"
+#include "UtxoReservationToken.h"
 
 namespace spdlog {
    class logger;
@@ -20,7 +20,6 @@ namespace bs {
 class ArmoryConnection;
 class AssetManager;
 class SignContainer;
-class TransactionData;
 
 
 class ReqCCSettlementContainer : public bs::SettlementContainer
@@ -34,7 +33,9 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const bs::network::RFQ &
       , const bs::network::Quote &
-      , const std::shared_ptr<TransactionData> &);
+      , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
+      , const std::vector<UTXO> &manualXbtInputs
+      , bs::UtxoReservationToken utxoRes);
    ~ReqCCSettlementContainer() override;
 
    bool cancel() override;
@@ -82,7 +83,8 @@ private:
 private:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<SignContainer>      signingContainer_;
-   std::shared_ptr<TransactionData>    transactionData_;
+   std::shared_ptr<bs::sync::Wallet>   xbtWallet_;
+   std::shared_ptr<bs::sync::Wallet>   ccWallet_;
    std::shared_ptr<AssetManager>       assetMgr_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    bs::network::RFQ           rfq_;
@@ -101,8 +103,11 @@ private:
    std::string                ccTxSigned_;
    bool                       genAddrVerified_ = false;
 
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
    bs::hd::WalletInfo walletInfo_;
+   std::vector<UTXO> manualXbtInputs_;
+
+   bs::UtxoReservationToken utxoRes_;
+
 };
 
 #endif // __REQ_CC_SETTLEMENT_CONTAINER_H__

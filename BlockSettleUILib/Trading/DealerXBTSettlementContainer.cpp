@@ -7,7 +7,6 @@
 #include "SettlementMonitor.h"
 #include "SignContainer.h"
 #include "TradesUtils.h"
-#include "TransactionData.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
