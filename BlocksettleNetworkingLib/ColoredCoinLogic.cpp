@@ -306,6 +306,9 @@ ParsedCcTx ColoredCoinTracker::processTx(
 std::vector<Tx> ColoredCoinTracker::grabTxBatch(
    const std::set<BinaryData>& hashes)
 {
+   if (hashes.empty()) {
+      return {};
+   }
    auto txProm = std::make_shared<std::promise<std::vector<Tx>>>();
    auto txFut = txProm->get_future();
    auto txLbd = [txProm, hashes](const std::vector<Tx> &batch, std::exception_ptr exPtr)
