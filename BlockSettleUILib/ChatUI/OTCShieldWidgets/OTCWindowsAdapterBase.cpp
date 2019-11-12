@@ -197,3 +197,8 @@ void OTCWindowsAdapterBase::clearSelectedInputs()
 {
    selectedUTXO_.clear();
 }
+
+void OTCWindowsAdapterBase::setSelectedInputs(const std::vector<UTXO>& selectedUTXO)
+{
+   selectedUTXO_ = selectedUTXO;
+}
