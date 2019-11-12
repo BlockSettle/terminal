@@ -1,8 +1,5 @@
 #include "OTCNegotiationRequestWidget.h"
 
-#include <QComboBox>
-#include <QPushButton>
-
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
 #include "CoinControlDialog.h"
@@ -14,6 +11,10 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ui_OTCNegotiationRequestWidget.h"
+
+#include <QComboBox>
+#include <QPushButton>
+#include <QKeyEvent>
 
 using namespace bs::network;
 
@@ -162,6 +163,15 @@ std::shared_ptr<bs::sync::hd::Wallet> OTCNegotiationRequestWidget::getCurrentHDW
 BTCNumericTypes::balance_type OTCNegotiationRequestWidget::getXBTSpendableBalance() const
 {
    return getXBTSpendableBalanceFromCombobox(ui_->comboBoxXBTWallets);
+}
+
+void OTCNegotiationRequestWidget::keyPressEvent(QKeyEvent* event)
+{
+   OTCWindowsAdapterBase::keyPressEvent(event);
+   if ((event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return)
+      && ui_->pushButtonAcceptRequest->isEnabled()) {
+      emit requestCreated();
+   }
 }
 
 void OTCNegotiationRequestWidget::onXbtInputsProcessed()

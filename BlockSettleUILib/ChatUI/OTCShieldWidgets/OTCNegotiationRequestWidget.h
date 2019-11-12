@@ -48,6 +48,8 @@ protected:
    std::shared_ptr<bs::sync::hd::Wallet> getCurrentHDWallet() const;
    BTCNumericTypes::balance_type getXBTSpendableBalance() const;
 
+   void keyPressEvent(QKeyEvent* event) override;
+
 private slots:
    void onSellClicked();
    void onBuyClicked();
