@@ -7,7 +7,6 @@
 #include "BSErrorCode.h"
 #include "SettlementContainer.h"
 #include "UtxoReservation.h"
-#include "TransactionData.h"
 #include "QWalletInfo.h"
 
 namespace spdlog {
@@ -26,7 +25,6 @@ class ArmoryConnection;
 class AuthAddressManager;
 class SignContainer;
 class QuoteProvider;
-class TransactionData;
 
 
 class ReqXBTSettlementContainer : public bs::SettlementContainer

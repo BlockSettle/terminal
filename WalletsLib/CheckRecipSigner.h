@@ -6,6 +6,7 @@
 #include "BtcDefinitions.h"
 #include "Signer.h"
 #include "TxClasses.h"
+#include "ValidityFlag.h"
 
 #include <functional>
 #include <memory>
@@ -76,6 +77,7 @@ namespace bs {
       std::set<BinaryData> txHashSet_;
       std::map<BinaryData, std::set<uint32_t>>  txOutIdx_;
       std::atomic_bool     resultFound_;
+      ValidityFlag validityFlag_;
    };
 
 

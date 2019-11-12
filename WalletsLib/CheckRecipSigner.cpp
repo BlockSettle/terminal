@@ -116,15 +116,23 @@ void CheckRecipSigner::hasInputAddress(const bs::Address &addr, std::function<vo
    auto checker = std::make_shared<TxAddressChecker>(addr, armory_);
    resultFound_ = false;
 
-   const auto &cbTXs = [this, cb, checker, lotsize]
-      (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+   const auto &cbTXs = [this, cb, checker, lotsize, handle = validityFlag_.handle()]
+      (const std::vector<Tx> &txs, std::exception_ptr exPtr) mutable
    {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
+         return;
+      }
       if (exPtr != nullptr) {
          cb(false);
          return;
       }
       for (const auto &tx : txs) {
-         const auto &cbContains = [this, cb, tx, checker](bool contains) {
+         const auto &cbContains = [this, cb, tx, checker, handle](bool contains) mutable {
+            ValidityGuard lock(handle);
+            if (!handle.isValid()) {
+               return;
+            }
             txHashSet_.erase(tx.getThisHash());
             if (contains) {
                resultFound_ = true;
@@ -207,9 +215,13 @@ bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>
       return false;
    }
 
-   const auto &cbTXs = [this, result, cb]
-      (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+   const auto &cbTXs = [this, result, cb, handle = validityFlag_.handle()]
+      (const std::vector<Tx> &txs, std::exception_ptr exPtr) mutable
    {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
+         return;
+      }
       if (exPtr != nullptr) {
          if (cb) {
             cb({});
@@ -232,9 +244,13 @@ bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>
          }
       }
    };
-   const auto &cbOutputTXs = [this, cbTXs, cb]
-      (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+   const auto &cbOutputTXs = [this, cbTXs, cb, handle = validityFlag_.handle()]
+      (const std::vector<Tx> &txs, std::exception_ptr exPtr) mutable
    {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
+         return;
+      }
       if (exPtr != nullptr) {
          cb({});
          return;

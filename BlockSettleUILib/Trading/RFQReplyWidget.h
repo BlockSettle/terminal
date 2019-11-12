@@ -13,6 +13,7 @@
 #include "CoinControlModel.h"
 #include "CommonTypes.h"
 #include "TabWithShortcut.h"
+#include "UtxoReservationToken.h"
 
 namespace Ui {
     class RFQReplyWidget;
@@ -24,7 +25,6 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
-   class DealerUtxoResAdapter;
    class SettlementAddressEntry;
    class SecurityStatsCollector;
 }
@@ -67,8 +67,8 @@ public:
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<bs::DealerUtxoResAdapter> &
-      , const std::shared_ptr<AutoSignQuoteProvider> &, OrderListModel *orderListModel);
+      , const std::shared_ptr<AutoSignQuoteProvider> &
+      , OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -92,7 +92,6 @@ public slots:
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
 private slots:
-   void onReplied(bs::network::QuoteNotification qn);
    void onOrder(const bs::network::Order &o);
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId);
@@ -102,6 +101,7 @@ private slots:
    void onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk);
 
 private:
+   void onReplied(bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes);
    void showSettlementDialog(QDialog *dlg);
    bool checkConditions(const QString& productGroup, const bs::network::QuoteReqNotification& request);
    void popShield();
@@ -120,9 +120,10 @@ private:
 
    struct SentCCReply
    {
-      std::string                      recipientAddress;
-      std::shared_ptr<TransactionData> txData;
-      std::string                      requestorAuthAddress;
+      std::string                         recipientAddress;
+      std::string                         requestorAuthAddress;
+      std::shared_ptr<bs::sync::Wallet>   spendWallet;
+      bs::UtxoReservationToken            utxoRes;
    };
 
 private:
@@ -139,7 +140,6 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
-   std::shared_ptr<bs::DealerUtxoResAdapter> dealerUtxoAdapter_;
 
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;

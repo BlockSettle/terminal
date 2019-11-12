@@ -5,7 +5,7 @@
 #include "AddressVerificator.h"
 #include "CheckRecipSigner.h"
 #include "SettlementContainer.h"
-#include "UtxoReservation.h"
+#include "UtxoReservationToken.h"
 #include "CoreWallet.h"
 
 namespace spdlog {
@@ -25,9 +25,13 @@ class DealerCCSettlementContainer : public bs::SettlementContainer
    Q_OBJECT
 public:
    DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
-      , const std::string &quoteReqId, uint64_t lotSize, const bs::Address &genAddr, const std::string &ownRecvAddr
-      , const std::shared_ptr<bs::sync::Wallet> &, const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ArmoryConnection> &);
+      , const std::string &quoteReqId, uint64_t lotSize
+      , const bs::Address &genAddr
+      , const std::string &ownRecvAddr
+      , const std::shared_ptr<bs::sync::Wallet> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ArmoryConnection> &
+      , bs::UtxoReservationToken utxoRes);
    ~DealerCCSettlementContainer() override;
 
    bool startSigning();
@@ -49,10 +53,6 @@ public:
    bool foundRecipAddr() const { return foundRecipAddr_; }
    bool isAmountValid() const { return amountValid_; }
 
-   QString GetSigningWalletName() const;
-
-   std::shared_ptr<bs::sync::Wallet> GetSigningWallet() const { return wallet_; }
-
    bool isDelivery() const { return delivery_; }
 
 signals:
@@ -73,7 +73,6 @@ private:
    const bool                 delivery_;
    std::shared_ptr<bs::sync::Wallet>   wallet_;
    std::shared_ptr<SignContainer>      signingContainer_;
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
    const BinaryData  txReqData_;
    const bs::Address ownRecvAddr_;
    const QString     orderId_;
@@ -84,8 +83,8 @@ private:
    bool              cancelled_ = false;
    bs::CheckRecipSigner signer_;
    bs::core::wallet::TXSignRequest txReq_;
+   bs::UtxoReservationToken utxoRes_;
 
-   QString walletName_;
 };
 
 #endif // __DEALER_CC_SETTLEMENT_CONTAINER_H__

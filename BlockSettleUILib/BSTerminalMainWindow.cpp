@@ -55,7 +55,6 @@
 #include "TransactionsViewModel.h"
 #include "TransactionsWidget.h"
 #include "UiUtils.h"
-#include "UtxoReserveAdapters.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -115,7 +114,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    initArmory();
 
    walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
-   dealerUtxoAdapter_ = std::make_shared<bs::DealerUtxoResAdapter>(logMgr_->logger(), nullptr);
 
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
@@ -1597,14 +1595,14 @@ void BSTerminalMainWindow::InitWidgets()
    quoteProvider->ConnectToCelerClient(celerConnection_);
 
    autoSignQuoteProvider_ = std::make_shared<AutoSignQuoteProvider>(logMgr_->logger(), assetManager_, quoteProvider
-      , applicationSettings_, dealerUtxoAdapter_, signContainer_, mdProvider_, celerConnection_);
+      , applicationSettings_, signContainer_, mdProvider_, celerConnection_);
 
    auto dialogManager = std::make_shared<DialogManager>(this);
 
    ui_->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
       , dialogManager, signContainer_, armory_, connectionManager_, orderListModel_.get());
    ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
-      , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_, dealerUtxoAdapter_, autoSignQuoteProvider_, orderListModel_.get());
+      , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_, autoSignQuoteProvider_, orderListModel_.get());
 
    connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
    connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);

@@ -124,7 +124,6 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
-   , const std::shared_ptr<bs::DealerUtxoResAdapter> &dealerUtxoAdapter
    , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
    , OrderListModel *orderListModel
 )
@@ -139,24 +138,26 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    armory_ = armory;
    appSettings_ = appSettings;
    connectionManager_ = connectionManager;
-   dealerUtxoAdapter_ = dealerUtxoAdapter;
    autoSignQuoteProvider_ = autoSignQuoteProvider;
 
    statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings, ApplicationSettings::Filter_MD_QN_cnt);
-   connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, statsCollector_.get(), &bs::SecurityStatsCollector::onQuoteSubmitted);
 
    ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_,
                                   appSettings, celerClient_);
    ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_,
-                           appSettings, connectionManager, signingContainer_, armory_, dealerUtxoAdapter_, autoSignQuoteProvider_);
+                           appSettings, connectionManager, signingContainer_, armory_, autoSignQuoteProvider_);
 
    ui_->widgetAutoSignQuote->init(autoSignQuoteProvider_);
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, this, &RFQReplyWidget::onSelected);
 
-   connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, quoteProvider_.get(), &QuoteProvider::SubmitQuoteNotif, Qt::QueuedConnection);
-   connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteReqNotifReplied);
-   connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, this, &RFQReplyWidget::onReplied);
+   ui_->pageRFQReply->setSubmitQuoteNotifCb([this](bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes) {
+      statsCollector_->onQuoteSubmitted(qn);
+      quoteProvider_->SubmitQuoteNotif(qn);
+      ui_->widgetQuoteRequests->onQuoteReqNotifReplied(qn);
+      onReplied(qn, std::move(utxoRes));
+   });
+
    connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, quoteProvider_.get(), &QuoteProvider::CancelQuoteNotif);
 
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onSecurityMDUpdated);
@@ -198,7 +199,7 @@ void RFQReplyWidget::forceCheckCondition()
    ui_->widgetQuoteRequests->onQuoteReqNotifSelected(index);
 }
 
-void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn)
+void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes)
 {
    if (qn.assetType == bs::network::Asset::SpotFX) {
       return;
@@ -210,8 +211,12 @@ void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn)
       reply.authAddr = ui_->pageRFQReply->selectedAuthAddress();
       reply.utxosPayinFixed = ui_->pageRFQReply->selectedXbtInputs();
    } else if (qn.assetType == bs::network::Asset::PrivateMarket) {
-      const auto &txData = ui_->pageRFQReply->getTransactionData(qn.quoteRequestId);
-      sentCCReplies_[qn.quoteRequestId] = SentCCReply{qn.receiptAddress, txData, qn.reqAuthKey};
+      auto &reply = sentCCReplies_[qn.quoteRequestId];
+      reply.recipientAddress = qn.receiptAddress;
+      reply.requestorAuthAddress = qn.reqAuthKey;
+      reply.utxoRes = std::move(utxoRes);
+      reply.spendWallet = (qn.side == bs::network::Side::Buy) ?
+         ui_->pageRFQReply->getSelectedXbtWallet() : walletsManager_->getCCWallet(qn.product);
    }
 }
 
@@ -233,11 +238,11 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             logger_->error("[RFQReplyWidget::onOrder] missing previous CC reply for {}", quoteReqId);
             return;
          }
-         const auto &sr = itCCSR->second;
+         auto &sr = itCCSR->second;
          try {
             const auto settlContainer = std::make_shared<DealerCCSettlementContainer>(logger_, order, quoteReqId
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
-               , sr.recipientAddress, sr.txData->getWallet(), signingContainer_, armory_);
+               , sr.recipientAddress, sr.spendWallet, signingContainer_, armory_, std::move(sr.utxoRes));
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
 
             connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this

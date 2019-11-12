@@ -76,6 +76,7 @@ protected:
 
    const std::vector<UTXO> &selectedUTXOs() const { return selectedUTXO_; }
    void clearSelectedInputs();
+   void setSelectedInputs(const std::vector<UTXO>& selectedUTXO);
 
 protected:
    std::shared_ptr<OTCWindowsManager> otcManager_{};

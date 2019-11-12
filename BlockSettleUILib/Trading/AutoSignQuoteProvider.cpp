@@ -16,7 +16,6 @@ AutoSignQuoteProvider::AutoSignQuoteProvider(const std::shared_ptr<spdlog::logge
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<bs::DealerUtxoResAdapter> &dealerUtxoAdapter
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<MarketDataProvider> &mdProvider
    , const std::shared_ptr<BaseCelerClient> &celerClient
@@ -27,7 +26,7 @@ AutoSignQuoteProvider::AutoSignQuoteProvider(const std::shared_ptr<spdlog::logge
    , signingContainer_(container)
    , celerClient_(celerClient)
 {
-   aq_ = new UserScriptRunner(quoteProvider, dealerUtxoAdapter, container,
+   aq_ = new UserScriptRunner(quoteProvider, container,
       mdProvider, assetManager, logger, this);
 
    if (walletsManager_) {

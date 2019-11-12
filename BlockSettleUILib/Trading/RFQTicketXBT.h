@@ -4,19 +4,23 @@
 #include <QFont>
 #include <QWidget>
 
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 #include "BSErrorCode.h"
 #include "CommonTypes.h"
-#include "TransactionData.h"
+#include "UtxoReservationToken.h"
 
 QT_BEGIN_NAMESPACE
 class QPushButton;
 class QLineEdit;
 QT_END_NAMESPACE
 
+namespace spdlog {
+   class logger;
+}
 namespace Ui {
     class RFQTicketXBT;
 }
@@ -28,7 +32,6 @@ namespace bs {
       class Wallet;
       class WalletsManager;
    }
-   class RequesterUtxoResAdapter;
 }
 class ArmoryConnection;
 class AssetManager;
@@ -36,8 +39,8 @@ class AuthAddressManager;
 class CCAmountValidator;
 class FXAmountValidator;
 class QuoteProvider;
-class SelectedTransactionInputs;
 class SignContainer;
+class TransactionData;
 class XbtAmountValidator;
 
 
@@ -46,10 +49,11 @@ class RFQTicketXBT : public QWidget
 Q_OBJECT
 
 public:
-   RFQTicketXBT(QWidget* parent = nullptr );
+   RFQTicketXBT(QWidget* parent = nullptr);
    ~RFQTicketXBT() override;
 
-   void init(const std::shared_ptr<AuthAddressManager> &
+   void init(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<AssetManager> &assetManager
       , const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<SignContainer> &
@@ -58,7 +62,7 @@ public:
 
    void resetTicket();
 
-   std::shared_ptr<TransactionData> GetTransactionData() const;
+   std::vector<UTXO> fixedXbtInputs() const;
 
    QPushButton* submitButton() const;
    QLineEdit* lineEditAmount() const;
@@ -68,8 +72,10 @@ public:
    QPushButton* denomCcyButton() const;
 
    bs::Address selectedAuthAddress() const;
-
    bs::Address recvAddress() const;
+
+   using SubmitRFQCb = std::function<void(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)>;
+   void setSubmitRFQ(SubmitRFQCb submitRFQCb);
 
 public slots:
    void SetProductAndSide(const QString& productGroup, const QString& currencyPair
@@ -101,8 +107,6 @@ private slots:
    void walletSelectedRecv(int index);
    void walletSelectedSend(int index);
 
-   void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
-
    void updateSubmitButton();
    void submitButtonClicked();
 
@@ -117,7 +121,6 @@ private slots:
    void onAuthAddrChanged(int);
 
 signals:
-   void submitRFQ(const bs::network::RFQ& rfq);
    void update();
 
 protected:
@@ -190,6 +193,7 @@ private:
 private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;
 
+   std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
 
@@ -207,8 +211,6 @@ private:
    unsigned int      leafCreateReqId_ = 0;
 
    std::unordered_map<std::string, double>      rfqMap_;
-   std::shared_ptr<SelectedTransactionInputs>   ccCoinSel_;
-   std::shared_ptr<bs::RequesterUtxoResAdapter> utxoAdapter_;
 
    std::unordered_map<std::string, bs::network::Side::Type>         lastSideSelection_;
 
@@ -228,6 +230,9 @@ private:
    QString currentOfferPrice_;
 
    bool maxAmount_ = false;
+
+   SubmitRFQCb submitRFQCb_;
+
 };
 
 #endif // __RFQ_TICKET_XBT_H__

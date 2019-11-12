@@ -14,6 +14,7 @@
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "QWalletInfo.h"
+#include "UtxoReservationToken.h"
 
 namespace Ui {
     class RFQDealerReply;
@@ -22,7 +23,6 @@ namespace spdlog {
    class logger;
 }
 namespace bs {
-   class DealerUtxoResAdapter;
    namespace sync {
       namespace hd {
          class Leaf;
@@ -39,7 +39,6 @@ class AutoSignQuoteProvider;
 class QuoteProvider;
 class SelectedTransactionInputs;
 class SignContainer;
-class TransactionData;
 class CustomDoubleSpinBox;
 class MarketDataProvider;
 class ConnectionManager;
@@ -72,12 +71,9 @@ namespace bs {
             , const std::shared_ptr<ConnectionManager> &connectionManager
             , const std::shared_ptr<SignContainer> &
             , const std::shared_ptr<ArmoryConnection> &
-            , const std::shared_ptr<bs::DealerUtxoResAdapter> &dealerUtxoAdapter
             , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider);
 
          void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
-
-         std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
 
          CustomDoubleSpinBox* bidSpinBox() const;
          CustomDoubleSpinBox* offerSpinBox() const;
@@ -89,8 +85,10 @@ namespace bs {
          bs::Address selectedAuthAddress() const;
          std::vector<UTXO> selectedXbtInputs() const;
 
+         using SubmitQuoteNotifCb = std::function<void(bs::network::QuoteNotification, bs::UtxoReservationToken)>;
+         void setSubmitQuoteNotifCb(SubmitQuoteNotifCb cb);
+
       signals:
-         void submitQuoteNotif(network::QuoteNotification);
          void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
 
       public slots:
@@ -113,7 +111,6 @@ namespace bs {
          void onTransactionDataChanged();
          void onAQReply(const bs::network::QuoteReqNotification &qrn, double price);
          void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
-         void onOrderUpdated(const bs::network::Order &);
          void onHDLeafCreated(const std::string& ccName);
          void onCreateHDWalletError(const std::string& ccName, bs::error::ErrorCode result);
          void onAuthAddrChanged(int);
@@ -133,16 +130,13 @@ namespace bs {
          std::shared_ptr<SignContainer>         signingContainer_;
          std::shared_ptr<ArmoryConnection>      armory_;
          std::shared_ptr<AutoSignQuoteProvider> autoSignQuoteProvider_;
-         std::shared_ptr<DealerUtxoResAdapter>  dealerUtxoAdapter_;
          std::string authKey_;
          bs::Address authAddr_;
 
          std::unordered_map<std::string, double>   sentNotifs_;
          network::QuoteReqNotification    currentQRN_;
-         std::shared_ptr<TransactionData> transactionData_;
          unsigned int   payInRecipId_{UINT_MAX};
          bool dealerSellXBT_{false};
-         std::shared_ptr<SelectedTransactionInputs>   ccCoinSel_;
 
          double   indicBid_{};
          double   indicAsk_{};
@@ -165,6 +159,9 @@ namespace bs {
          };
          std::unordered_map<std::string, MDInfo>  mdInfo_;
 
+         std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
+         SubmitQuoteNotifCb submitQuoteNotifCb_;
+
       private:
          void reset();
          void validateGUI();
@@ -180,15 +177,16 @@ namespace bs {
          void getRecvAddress(const std::shared_ptr<bs::sync::Wallet> &wallet, std::function<void(bs::Address)> cb) const;
          void setBalanceOk(bool ok);
          bool checkBalance() const;
+         XBTAmount getXbtBalance() const;
          BTCNumericTypes::balance_type getPrivateMarketCoinBalance() const;
          QDoubleSpinBox *getActivePriceWidget() const;
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
          // xbtWallet - what XBT wallet to use for XBT/CC trades (selected from UI for manual trades, default wallet for AQ trades), empty for FX trades
-         void submitReply(const std::shared_ptr<TransactionData> transData
-            , const network::QuoteReqNotification &qrn, double price
-            , std::function<void(bs::network::QuoteNotification)>
-            , const std::shared_ptr<bs::sync::Wallet> &xbtWallet);
+         using SubmitCb = std::function<void(bs::network::QuoteNotification, bs::UtxoReservationToken)>;
+         void submitReply(const network::QuoteReqNotification &qrn, double price
+            , SubmitCb, const std::shared_ptr<bs::sync::Wallet> &xbtWallet);
          void updateWalletsList(bool skipWatchingOnly);
+         bool isXbtSpend() const;
       };
 
    }  //namespace ui
