@@ -56,6 +56,7 @@ public slots:
 
 signals:
    void newOrder(const QPersistentModelIndex &index);
+   void selectRow(const QModelIndex &row);
 
 private:
    enum class DataType {
@@ -171,12 +172,16 @@ private:
 
    void reset();
    void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &msg);
+   void resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message);
 
    std::shared_ptr<AssetManager>    assetManager_;
    std::unordered_map<std::string, StatusGroup::Type> groups_;
    std::unique_ptr<StatusGroup> unsettled_;
    std::unique_ptr<StatusGroup> settled_;
    QDateTime latestOrderTimestamp_;
+
+   std::vector<std::pair<int64_t, int>> sortedPeviousOrderStatuses_{};
+   QDateTime latestChangedTimestamp_;
 };
 
 #endif // ORDERLISTMODEL_H
