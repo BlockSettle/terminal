@@ -908,10 +908,7 @@ bool hd::CCLeaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint
          cb(bs::selectUtxoForAmount(std::move(filteredUTXOs), val));
       }
    };
-   std::set<BinaryData> addrSet;
-   for (const auto &addr : getUsedAddressList()) {
-      addrSet.insert(addr.prefixed());
-   }
+   const auto &addrSet = collectAddresses();
    return tracker_->getCCUtxoForAddresses(addrSet, false, cbWrap);
 }
 
@@ -939,10 +936,7 @@ bool hd::CCLeaf::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const
       }
    };
 
-   std::set<BinaryData> addrSet;
-   for (const auto &addr : getUsedAddressList()) {
-      addrSet.insert(addr.prefixed());
-   }
+   const auto &addrSet = collectAddresses();
    return tracker_->getCCUtxoForAddresses(addrSet, true, cbWrap);
 }
 
