@@ -128,6 +128,17 @@ protected:
    float          originalFeePerByte_ = 0.0f;
 
    BinaryData     importedSignedTX_;
+
+   bool isCPFP_ = false;
+   bool isRBF_ = false;
+
+   float       minTotalFee_ = 0;
+   float       minFeePerByte_ = 0;
+   float       advisedFeePerByte_ = 0;
+   float       advisedTotalFee_ = 0;
+   float       addedFee_ = 0;
+   const float minRelayFeePerByte_ = 5;
+
 private:
    bs::core::wallet::TXSignRequest  txReq_;
 };
