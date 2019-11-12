@@ -37,6 +37,8 @@ OTCNegotiationResponseWidget::OTCNegotiationResponseWidget(QWidget* parent)
 
    ui_->quantitySpinBox->setEnabled(false);
 
+   timeoutSec_ = getSeconds(bs::network::otc::negotiationTimeout());
+
    onChanged();
 }
 
@@ -116,6 +118,8 @@ void OTCNegotiationResponseWidget::setPeer(const bs::network::otc::Peer &peer)
 
    ui_->rangeQuantity->setVisible(!isContact);
    ui_->rangeBid->setVisible(!isContact);
+
+   setupTimer({ peer.stateTimestamp, ui_->progressBarTimeLeft, ui_->labelTimeLeft });
 }
 
 void OTCNegotiationResponseWidget::onSyncInterface()

@@ -7,9 +7,6 @@
 using namespace bs::network;
 
 namespace {
-   const int kTimerRepeatTimeMSec = 500;
-   const QString secondsRemaining = QObject::tr("second(s) remaining");
-
    const QString headerTextOTCRequest = QObject::tr("OTC REQUEST");
    const QString headerTextOTCResponse = QObject::tr("OTC RESPONSE");
    const QString headerTextOTCPendingBuyerSign = QObject::tr("OTC PENDING SETTLEMENT PAY-IN");
@@ -17,10 +14,6 @@ namespace {
 
    const QString buttonTextPull = QObject::tr("PULL");
    const QString buttonTextCancel = QObject::tr("CANCEL");
-
-   int getSeconds(std::chrono::milliseconds durationInMillisecs) {
-      return int(std::chrono::duration_cast<std::chrono::seconds>(durationInMillisecs).count());
-   }
 }
 
 PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
@@ -28,11 +21,7 @@ PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
    , ui_{ new Ui::PullOwnOTCRequestWidget() }
 {
    ui_->setupUi(this);
-
-   connect(&pullTimer_, &QTimer::timeout, this, &PullOwnOTCRequestWidget::onUpdateTimerData);
    connect(ui_->pullPushButton, &QPushButton::clicked, this, &PullOwnOTCRequestWidget::currentRequestPulled);
-
-   pullTimer_.setInterval(kTimerRepeatTimeMSec);
 }
 
 PullOwnOTCRequestWidget::~PullOwnOTCRequestWidget() = default;
@@ -69,7 +58,7 @@ void PullOwnOTCRequestWidget::setResponse(const otc::QuoteResponse &response)
    ui_->priceWidget->show();
    ui_->totalWidget->hide();
 
-   timeoutSec_ = 0;
+   timeoutSec_ = std::chrono::seconds(0);
 }
 
 void PullOwnOTCRequestWidget::setPendingBuyerSign(const bs::network::otc::Offer &offer)
@@ -91,7 +80,7 @@ void PullOwnOTCRequestWidget::setPeer(const bs::network::otc::Peer &peer)
    using namespace bs::network::otc;
    if ((peer.state == State::WaitBuyerSign && ourSide_ == otc::Side::Buy) ||
       (peer.state == State::WaitSellerSeal && ourSide_ == otc::Side::Sell)) {
-      timeoutSec_ = 0;
+      timeoutSec_ = std::chrono::seconds(0);
       ui_->progressBarTimeLeft->hide();
       ui_->labelTimeLeft->hide();
       ui_->horizontalWidgetSubmit->hide();
@@ -101,30 +90,9 @@ void PullOwnOTCRequestWidget::setPeer(const bs::network::otc::Peer &peer)
       ui_->sideValue->setText(getSide(ourSide_, peer.isOurSideSentOffer));
    }
 
-   if (timeoutSec_) {
-      setupTimer(peer.stateTimestamp);
+   if (timeoutSec_.count()) {
+      setupTimer({ peer.stateTimestamp, ui_->progressBarTimeLeft, ui_->labelTimeLeft });
    }
-}
-
-void PullOwnOTCRequestWidget::onUpdateTimerData()
-{
-   const auto diff = currentOfferEndTimestamp_ - std::chrono::steady_clock::now();
-   const auto diffSeconds = std::chrono::duration_cast<std::chrono::seconds>(diff);
-
-   ui_->labelTimeLeft->setText(QString(QLatin1String("%1 %2")).arg(diffSeconds.count()).arg(secondsRemaining));
-   ui_->progressBarTimeLeft->setMaximum(timeoutSec_);
-   ui_->progressBarTimeLeft->setValue(diffSeconds.count());
-
-   if (diffSeconds.count() < 0) {
-      pullTimer_.stop();
-   }
-}
-
-void PullOwnOTCRequestWidget::setupTimer(const std::chrono::steady_clock::time_point& offerTimestamp)
-{
-   currentOfferEndTimestamp_ = offerTimestamp + std::chrono::seconds(timeoutSec_);
-   onUpdateTimerData();
-   pullTimer_.start();
 }
 
 void PullOwnOTCRequestWidget::setupNegotiationInterface(const QString& headerText, bool isResponse /* = false */)
