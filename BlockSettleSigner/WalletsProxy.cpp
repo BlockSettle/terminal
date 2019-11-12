@@ -257,6 +257,10 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
             , seed, *passwordData, tmpDir.path().toStdString());
 
          for (const auto &group : hdWallet->getGroups()) {
+            if (group->type() != bs::core::wallet::Type::Bitcoin
+                && group->type() != bs::core::wallet::Type::ColorCoin) {
+               continue;
+            }
             auto newGroup = newWallet->createGroup(static_cast<bs::hd::CoinType>(group->index()));
             if (!newGroup) {
                throw std::runtime_error("failed to create group");
