@@ -116,6 +116,8 @@ void OTCNegotiationResponseWidget::setPeer(const bs::network::otc::Peer &peer)
 
    ui_->rangeQuantity->setVisible(!isContact);
    ui_->rangeBid->setVisible(!isContact);
+
+   setSelectedInputs(peer.offer.inputs);
 }
 
 void OTCNegotiationResponseWidget::onSyncInterface()

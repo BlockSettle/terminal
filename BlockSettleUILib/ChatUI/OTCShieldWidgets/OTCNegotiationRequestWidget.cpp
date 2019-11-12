@@ -119,6 +119,7 @@ void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
    ui_->rangeQuantity->setVisible(!isContact);
    ui_->rangeBid->setVisible(!isContact && peer.type == otc::PeerType::Response);
 
+   setSelectedInputs(peer.offer.inputs);
    onChanged();
 }
 
@@ -182,7 +183,6 @@ void OTCNegotiationRequestWidget::onSellClicked()
    ui_->labelWallet->setText(paymentWallet);
 
    onUpdateIndicativePrice();
-   clearSelectedInputs();
 }
 
 void OTCNegotiationRequestWidget::onBuyClicked()
@@ -197,7 +197,6 @@ void OTCNegotiationRequestWidget::onBuyClicked()
    ui_->labelWallet->setText(receivingWallet);
 
    onUpdateIndicativePrice();
-   clearSelectedInputs();
 }
 
 void OTCNegotiationRequestWidget::onShowXBTInputsClicked()
