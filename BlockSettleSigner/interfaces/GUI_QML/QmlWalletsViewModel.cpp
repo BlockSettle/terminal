@@ -281,8 +281,7 @@ void QmlWalletsViewModel::loadWallets(const std::string &)
 {
    beginResetModel();
    rootNode_->clear();
-   for (unsigned int i = 0; i < walletsManager_->hdWalletsCount(); i++) {
-      const auto hdWallet = walletsManager_->getHDWallet(i);
+   for (const auto &hdWallet : walletsManager_->hdWallets()) {
       if (!hdWallet) {
          continue;
       }

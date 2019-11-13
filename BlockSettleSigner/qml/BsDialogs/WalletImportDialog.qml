@@ -300,7 +300,6 @@ CustomTitleDialogWindow {
                     }
 
                     RowLayout {
-                        visible: true
                         spacing: 5
                         Layout.fillWidth: true
                         Layout.leftMargin: 10
@@ -311,7 +310,7 @@ CustomTitleDialogWindow {
                             Layout.minimumWidth: inputLabelsWidth
                             Layout.preferredWidth: inputLabelsWidth
                             Layout.maximumWidth: inputLabelsWidth
-                            text: qsTr("Description")
+                            text: qsTr("Description (optional)")
                         }
                         CustomTextInput {
                             id: tfDesc
@@ -324,6 +323,7 @@ CustomTitleDialogWindow {
                     }
 
                     CustomHeader {
+                        visible: hasCCInfoLoaded
                         text: qsTr("Primary Wallet")
                         Layout.fillWidth: true
                         Layout.preferredHeight: 25
@@ -333,6 +333,7 @@ CustomTitleDialogWindow {
                     }
 
                     RowLayout {
+                        visible: hasCCInfoLoaded
                         spacing: 5
                         Layout.alignment: Qt.AlignTop
                         Layout.fillWidth: true
@@ -340,6 +341,7 @@ CustomTitleDialogWindow {
                         Layout.rightMargin: 10
 
                         CustomLabel {
+                            visible: hasCCInfoLoaded
                             Layout.minimumWidth: inputLabelsWidth
                             Layout.preferredWidth: inputLabelsWidth
                             Layout.maximumWidth: inputLabelsWidth
@@ -349,6 +351,7 @@ CustomTitleDialogWindow {
 
                         CustomCheckBox {
                             id: cbPrimary
+                            visible: hasCCInfoLoaded
                             Layout.fillWidth: true
                             checked: !primaryWalletExists && hasCCInfoLoaded
                             text: qsTr("Primary Wallet")
@@ -417,7 +420,7 @@ CustomTitleDialogWindow {
 
                     CustomHeader {
                         id: headerText2
-                        text: qsTr("Encryption")
+                        text: qsTr("Encrypt your Wallet")
                         Layout.fillWidth: true
                         Layout.preferredHeight: 25
                         Layout.topMargin: 5

@@ -108,7 +108,7 @@ CustomTitleDialogWindow {
                 Layout.preferredWidth: inputLabelsWidth
                 Layout.maximumWidth: inputLabelsWidth
                 Layout.fillWidth: true
-                text: qsTr("Description")
+                text: qsTr("Description (optional)")
             }
             CustomTextInput {
                 id: tfDesc
@@ -124,6 +124,7 @@ CustomTitleDialogWindow {
         }
 
         CustomHeader {
+            visible: hasCCInfoLoaded
             text: qsTr("Primary Wallet")
             Layout.fillWidth: true
             Layout.preferredHeight: 25
@@ -133,12 +134,14 @@ CustomTitleDialogWindow {
         }
 
         RowLayout {
+            visible: hasCCInfoLoaded
             spacing: 5
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
 
             CustomLabel {
+                visible: hasCCInfoLoaded
                 Layout.minimumWidth: inputLabelsWidth
                 Layout.preferredWidth: inputLabelsWidth
                 Layout.maximumWidth: inputLabelsWidth
@@ -148,8 +151,8 @@ CustomTitleDialogWindow {
 
             CustomCheckBox {
                 id: cbPrimary
+                visible: hasCCInfoLoaded
                 Layout.fillWidth: true
-                //Layout.leftMargin: inputLabelsWidth + 5
                 text: qsTr("Primary Wallet")
                 checked: !primaryWalletExists && hasCCInfoLoaded
 
@@ -181,7 +184,7 @@ CustomTitleDialogWindow {
 
         CustomHeader {
             id: headerText2
-            text: qsTr("Encryption")
+            text: qsTr("Encrypt your Wallet")
             Layout.fillWidth: true
             Layout.preferredHeight: 25
             Layout.topMargin: 5
