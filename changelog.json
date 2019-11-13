@@ -1,7 +1,26 @@
 {
-   "latest_version": "0.24.9",
-   "release_date": "08 Nov 2019",
+   "latest_version": "0.24.10",
+   "release_date": "13 Nov 2019",
    "changes": [
+      {
+         "version_string": "0.24.10",
+         "previous_version": "0.24.9",
+         "release_date": "13 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Allowed to export only bitcoin or cc leaves to wo backup ( BST-2312 )",
+            "Disable CC invalid TX detection",
+            "Fixed blotter selection always highlight MRU row",
+            "CPFP Tx fee message box warning ( BST-2265 )",
+            "Allow to sent otc request with enter click",
+            "Small fix for empty address",
+            "Fix CC UTXO reservation",
+            "Add UTXO fetching from CC manager"
+         ],
+         "bug_fixes": [],
+         "revision": "3015b376",
+         "common_revision": "46b7ed6e"
+      },
       {
          "version_string": "0.24.9",
          "previous_version": "0.24.8",
