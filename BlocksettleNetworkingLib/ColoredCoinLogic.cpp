@@ -178,7 +178,6 @@ uint64_t ColoredCoinTracker::getCcOutputValue(
    //try to grab the cc output
    auto ccPtr = getOpPtr();
 
-
    if (ccPtr != nullptr) {
       //check this cc addr isnt revoked
       if (ssPtr != nullptr) {
@@ -266,9 +265,8 @@ ParsedCcTx ColoredCoinTracker::processTx(
 
    //this tx consumes CC outputs, let's check the new outputs
    uint64_t outputValue = 0;
-   unsigned txOutCutOff = 0;
-   for (txOutCutOff; txOutCutOff < tx.getNumTxOut(); txOutCutOff++) {
-      auto&& output = tx.getTxOutCopy(txOutCutOff); //TODO: work on refs instead of copies
+   for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
+      auto&& output = tx.getTxOutCopy(i); //TODO: work on refs instead of copies
       auto&& val = output.getValue();
 
       //is the value a multiple of the CC coins per share?
@@ -308,15 +306,20 @@ ParsedCcTx ColoredCoinTracker::processTx(
 std::vector<Tx> ColoredCoinTracker::grabTxBatch(
    const std::set<BinaryData>& hashes)
 {
+   if (hashes.empty()) {
+      return {};
+   }
    auto txProm = std::make_shared<std::promise<std::vector<Tx>>>();
    auto txFut = txProm->get_future();
-   auto txLbd = [txProm](const std::vector<Tx> &batch, std::exception_ptr exPtr)
+   auto txLbd = [txProm, hashes](const std::vector<Tx> &batch, std::exception_ptr exPtr)
    {
       if (exPtr != nullptr) {
          txProm->set_exception(exPtr);
       }
       else {
-         txProm->set_value(batch);
+         auto sortedBatch = batch;
+         std::sort(sortedBatch.begin(), sortedBatch.end(), TxComparator());
+         txProm->set_value(sortedBatch);
       }
    };
    if (!connPtr_->getTXsByHash(hashes, txLbd)) {
@@ -648,14 +651,43 @@ std::set<BinaryData> ColoredCoinTracker::update()
    //process revokes
    processRevocationBatch(ssPtr, revokesToCheck);
 
+   std::set<BinaryData> combinedTxHashes = txsToCheck;
    //process settlements
    while (true) {
-      if (txsToCheck.size() == 0) {
+      if (txsToCheck.empty()) {
+         break;
+      }
+      txsToCheck = std::move(processTxBatch(ssPtr, txsToCheck));
+      combinedTxHashes.insert(txsToCheck.cbegin(), txsToCheck.cend());
+   }
+
+   /*
+   A kind of workaround below. This helps to resolve "loops" when current batch
+   processing attempts to retrieve valid inputs that will be added in the next
+   batch[es]. Example TX for this scenario (testnet):
+      fa6fc18e49ecdbd68ebd38b6146a3060157d3743e6908e8a6e7457b5bf35162e
+   It denies the second output because 6 of 9 CC inputs are not added to utxoSet_
+   at the moment of this TX processing in "traditional" loop above.
+   This solution just collects the TX hashes from the previous loop, sorts them by height
+   and processes further using the same loop until txsToCheck becomes empty.
+   */
+   for (auto& scrAddr : originAddresses_) {  // This is just to re-seed genesis TXs
+      auto iter = outpointData.outpoints_.find(scrAddr);
+      if (iter == outpointData.outpoints_.end()) {
+         continue;
+      }
+      for (auto& op : iter->second) {
+         addUtxo(ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr);
+      }
+   }
+   txsToCheck = processTxBatch(ssPtr, combinedTxHashes);
+   while (true) {
+      if (txsToCheck.empty()) {
          break;
       }
       txsToCheck = std::move(processTxBatch(ssPtr, txsToCheck));
    }
-   
+
    //update cutoff
    startHeight_ = outpointData.heightCutoff_ + 1;
 
@@ -875,6 +907,7 @@ ColoredCoinTracker::getSpendableOutpointsForAddress(
 {
    /*takes prefixed scrAddr*/
    std::vector<std::shared_ptr<CcOutpoint>> result;
+   const auto addr = bs::Address::fromHash(scrAddr).display();
 
    if (ssPtr != nullptr) {
       auto iter = ssPtr->scrAddrCcSet_.find(scrAddr.getRef());
