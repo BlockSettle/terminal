@@ -46,7 +46,7 @@ enum PartyMessageState
 
 message PartyRecipientPacket
 {
-   string user_name = 1;
+   string user_hash = 1;
    bytes public_key = 2;
    int64 timestamp_ms = 3;
 }
@@ -64,7 +64,7 @@ message PartyPacket
 
 message WelcomeRequest
 {
-   string user_name = 1;
+   string user_hash = 1;
    bytes client_public_key = 2;
    int32 celer_type = 3;
 
@@ -92,7 +92,7 @@ message LogoutResponse
 
 message StatusChanged
 {
-   string user_name = 1;
+   string user_hash = 1;
    ClientStatus client_status = 2;
    google.protobuf.BytesValue public_key = 3;
    google.protobuf.Int64Value timestamp_ms = 4;   
@@ -111,6 +111,11 @@ message PartyMessagePacket
    string sender_hash = 8;
 }
 
+message PartyMessageOfflineRequest
+{
+   string receiver_hash = 1;
+}
+
 message PartyMessageStateUpdate
 {
    string party_id = 1;
@@ -126,16 +131,16 @@ message PrivatePartyRequest
 
 message RequestSessionKeyExchange
 {
-   string sender_user_name = 1;
+   string sender_user_hash = 1;
    bytes encoded_public_key = 2;
-   string receiver_user_name = 3;
+   string receiver_user_hash = 3;
 }
 
 message ReplySessionKeyExchange
 {
-   string sender_user_name = 1;
+   string sender_user_hash = 1;
    bytes encoded_public_key = 2;
-   string receiver_user_name = 3;
+   string receiver_user_hash = 3;
 }
 
 message RequestPrivatePartyStateChange
@@ -158,7 +163,7 @@ message RequestSearchUser
 
 message ReplySearchUser
 {
-   repeated string user_name = 1;
+   repeated string user_hash = 1;
    string search_id = 2;
 }
 

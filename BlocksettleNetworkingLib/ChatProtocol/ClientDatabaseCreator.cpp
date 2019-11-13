@@ -63,7 +63,7 @@ const static QMap <QString, TableStructure> clientTablesMap{
          { //Table columns
             {partyMessage::kPartyMessageTableId, QStringLiteral("INTEGER PRIMARY KEY AUTOINCREMENT")},
             {partyMessage::kPartyTableId, QStringLiteral("INTEGER NOT NULL")},
-            {partyMessage::kMessageId, QStringLiteral("CHAR(32) NOT NULL UNIQUE")},
+            {partyMessage::kMessageId, QStringLiteral("CHAR(36) NOT NULL UNIQUE")},
             {partyMessage::kTimestamp, QStringLiteral("INTEGER NOT NULL")},
             {partyMessage::kMessageState, QStringLiteral("INTEGER NOT NULL")},
             {partyMessage::kEncryptionType, QStringLiteral("INTEGER NOT NULL")},

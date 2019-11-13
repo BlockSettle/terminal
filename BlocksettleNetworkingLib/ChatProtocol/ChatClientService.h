@@ -39,7 +39,7 @@ namespace Chat
       void DeclineNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
 
       ////////// RETURN SIGNALS //////////
-      void chatUserUserNameChanged(const std::string& chatUserDisplayName);
+      void chatUserUserHashChanged(const std::string& chatUserUserHash);
       void chatClientError(const Chat::ChatClientLogicError& errorCode);
       void clientLoggedOutFromServer();
       void clientLoggedInToServer();

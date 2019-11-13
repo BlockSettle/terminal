@@ -21,8 +21,8 @@ namespace Chat
       Q_OBJECT
    public:
       ChatUser(QObject *parent = nullptr);
-      std::string userName() const;
-      void setUserName(const std::string& userName);
+      std::string userHash() const;
+      void setUserHash(const std::string& userName);
 
       BinaryData publicKey() const { return publicKey_; }
       void setPublicKey(const BinaryData& val) { publicKey_ = val; }
@@ -33,13 +33,13 @@ namespace Chat
       bs::network::UserType celerUserType() const { return celerUserType_; }
       void setCelerUserType(const bs::network::UserType& val) { celerUserType_ = val; }
    signals:
-      void userNameChanged(const std::string& displayName);
+      void userHashChanged(const std::string& userHash);
 
    private:
-      std::string userName_;
+      std::string userHash_;
       BinaryData publicKey_;
       SecureBinaryData privateKey_;
-      bs::network::UserType  celerUserType_ = bs::network::UserType::Undefined;
+      bs::network::UserType celerUserType_ = bs::network::UserType::Undefined;
    };
 
    using ChatUserPtr = std::shared_ptr<ChatUser>;

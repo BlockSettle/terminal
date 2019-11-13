@@ -6,14 +6,14 @@ ChatUser::ChatUser(QObject* parent) : QObject(parent)
 {
 }
 
-std::string ChatUser::userName() const
+std::string ChatUser::userHash() const
 {
-   return userName_;
+   return userHash_;
 }
 
-void ChatUser::setUserName(const std::string& userName)
+void ChatUser::setUserHash(const std::string& userName)
 {
-   userName_ = userName;
+   userHash_ = userName;
 
-   emit userNameChanged(userName_);
+   emit userHashChanged(userHash_);
 }

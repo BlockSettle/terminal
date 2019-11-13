@@ -19,6 +19,7 @@ namespace spdlog
 
 namespace Chat
 {
+   class PartyMessageOfflineRequest;
    class WelcomeResponse;
    class LogoutResponse;
    class StatusChanged;
@@ -109,6 +110,7 @@ namespace Chat
       void handleReplySessionKeyExchange(const ReplySessionKeyExchange& replyKeyExchange) const;
       void handlePrivatePartyStateChanged(const PrivatePartyStateChanged& privatePartyStateChanged);
       void handleReplySearchUser(const ReplySearchUser& replySearchUser);
+      void handlePartyMessageOfflineRequest(const PartyMessageOfflineRequest& partyMessageOfflineRequest) const;
 
       void incomingGlobalPartyMessage(PartyMessagePacket& partyMessagePacket);
       void incomingPrivatePartyMessage(PartyMessagePacket& partyMessagePacket);

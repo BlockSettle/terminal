@@ -30,7 +30,7 @@ ChatClientLogic::ChatClientLogic()
 
 void ChatClientLogic::initDbDone()
 {
-   connect(currentUserPtr_.get(), &ChatUser::userNameChanged, this, &ChatClientLogic::chatUserUserNameChanged);
+   connect(currentUserPtr_.get(), &ChatUser::userHashChanged, this, &ChatClientLogic::chatUserUserHashChanged);
 
    setClientPartyLogicPtr(std::make_shared<ClientPartyLogic>(loggerPtr_, clientDBServicePtr_, this));
    connect(clientPartyLogicPtr_.get(), &ClientPartyLogic::partyModelChanged, this, &ChatClientLogic::partyModelChanged);
@@ -123,9 +123,9 @@ void ChatClientLogic::LoginToServer(const BinaryData &token, const BinaryData &t
 
    clientConnectionLogicPtr_->setToken(token, tokenSign);
 
-   currentUserPtr_->setUserName(chatToken.chat_login());
+   currentUserPtr_->setUserHash(chatToken.chat_login());
    currentUserPtr_->setCelerUserType(static_cast<bs::network::UserType>(chatToken.user_type()));
-   clientPartyModelPtr()->setOwnUserName(currentUserPtr_->userName());
+   clientPartyModelPtr()->setOwnUserName(currentUserPtr_->userHash());
    clientPartyModelPtr()->setOwnCelerUserType(currentUserPtr_->celerUserType());
 
    if (!connectionPtr_->openConnection(this->getChatServerHost(), this->getChatServerPort(), this))
@@ -312,7 +312,7 @@ void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
    auto clientPartyPtr = clientPartyModelPtr->getClientPartyById(partyId);
    if (clientPartyPtr && clientPartyPtr->isPrivate())
    {
-      const auto recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr_->userName());
+      const auto recipients = clientPartyPtr->getRecipientsExceptMe(currentUserPtr_->userHash());
       clientDBServicePtr_->deleteRecipientsKeys(recipients);
    }
 

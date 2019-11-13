@@ -88,7 +88,7 @@ namespace Chat
       void finished();
       void chatClientError(const Chat::ChatClientLogicError& errorCode, const std::string& what = "");
 
-      void chatUserUserNameChanged(const std::string& chatUserDisplayName);
+      void chatUserUserHashChanged(const std::string& chatUserUserHash);
       void clientLoggedOutFromServer();
       void partyModelChanged();
       void initDone();

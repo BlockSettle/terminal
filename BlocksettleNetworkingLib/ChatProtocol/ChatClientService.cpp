@@ -27,7 +27,7 @@ ChatClientService::ChatClientService(QObject* parent /*= nullptr*/)
    connect(this, &ChatClientService::DeclineNewPublicKeys, worker(), &ChatClientLogic::DeclineNewPublicKeys);
 
    ////////// RETURN SIGNALS //////////
-   connect(worker(), &ChatClientLogic::chatUserUserNameChanged, this, &ChatClientService::chatUserUserNameChanged);
+   connect(worker(), &ChatClientLogic::chatUserUserHashChanged, this, &ChatClientService::chatUserUserHashChanged);
    connect(worker(), &ChatClientLogic::chatClientError, this, &ChatClientService::chatClientError);
    connect(worker(), &ChatClientLogic::clientLoggedOutFromServer, this, &ChatClientService::clientLoggedOutFromServer);
    connect(worker(), &ChatClientLogic::properlyConnected, this, &ChatClientService::clientLoggedInToServer);
