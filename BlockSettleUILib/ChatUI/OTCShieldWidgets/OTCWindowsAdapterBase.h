@@ -4,14 +4,18 @@
 #include <memory>
 #include "CommonTypes.h"
 #include "OtcTypes.h"
-#include "QWidget"
 #include "ValidityFlag.h"
+
+#include <QWidget>
+#include <QTimer>
+#include <QPointer>
 
 class QComboBox;
 class OTCWindowsManager;
 class AuthAddressManager;
 class AssetManager;
 class QLabel;
+class QProgressBar;
 
 namespace bs {
    namespace sync {
@@ -28,6 +32,13 @@ namespace bs {
       }
    }
 }
+
+struct TimeoutData
+{
+   std::chrono::steady_clock::time_point offerTimestamp_{};
+   QPointer<QProgressBar> progressBarTimeLeft_{};
+   QPointer<QLabel> labelTimeLeft_{};
+};
 
 class OTCWindowsAdapterBase : public QWidget {
    Q_OBJECT
@@ -55,6 +66,7 @@ protected slots:
    virtual void onMDUpdated();
    virtual void onUpdateBalances();
    void onShowXBTInputReady();
+   void onUpdateTimerData();
 
 protected:
 
@@ -78,6 +90,9 @@ protected:
    void clearSelectedInputs();
    void setSelectedInputs(const std::vector<UTXO>& selectedUTXO);
 
+   void setupTimer(TimeoutData&& timeoutData);
+   std::chrono::seconds getSeconds(std::chrono::milliseconds durationInMillisecs);
+
 protected:
    std::shared_ptr<OTCWindowsManager> otcManager_{};
 
@@ -90,11 +105,14 @@ protected:
    double buyIndicativePrice_{};
 
    ValidityFlag validityFlag_;
+   std::chrono::seconds timeoutSec_{};
 
 private:
    std::vector<UTXO> allUTXOs_;
    std::vector<UTXO> selectedUTXO_;
 
+   QTimer timeoutTimer_;
+   TimeoutData currentTimeoutData_{};
 };
 
 #endif // __OTCWINDOWSMANAGER_H__

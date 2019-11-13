@@ -36,22 +36,14 @@ signals:
    void loadOfflineClicked();
    void broadcastOfflineClicked();
 
-protected slots:
-   void onUpdateTimerData();
-
 protected:
-   void setupTimer(const std::chrono::steady_clock::time_point& offerTimestamp);
    void setupNegotiationInterface(const QString& headerText, bool isResponse = false);
    void setupSignAwaitingInterface(const QString& headerText);
    void setupOfferInfo(const bs::network::otc::Offer &offer);
 
 private:
    std::unique_ptr<Ui::PullOwnOTCRequestWidget> ui_;
-
-   QTimer pullTimer_;
-   std::chrono::steady_clock::time_point currentOfferEndTimestamp_{};
    bs::network::otc::Side ourSide_ = bs::network::otc::Side::Unknown;
-   int timeoutSec_{};
 };
 
 #endif // __PULL_OWN_OTC_REQUEST_WIDGET_H__

@@ -11,10 +11,18 @@
 
 #include <QComboBox>
 #include <QLabel>
+#include <QProgressBar>
+
+namespace {
+   const std::chrono::milliseconds kTimerRepeatTimeMSec{ 500 };
+   const QString secondsRemaining = QObject::tr("second(s) remaining");
+}
 
 OTCWindowsAdapterBase::OTCWindowsAdapterBase(QWidget* parent /*= nullptr*/)
    : QWidget(parent)
 {
+   connect(&timeoutTimer_, &QTimer::timeout, this, &OTCWindowsAdapterBase::onUpdateTimerData);
+   timeoutTimer_.setInterval(kTimerRepeatTimeMSec);
 }
 
 void OTCWindowsAdapterBase::setChatOTCManager(const std::shared_ptr<OTCWindowsManager>& otcManager)
@@ -126,6 +134,26 @@ void OTCWindowsAdapterBase::onShowXBTInputReady()
    emit xbtInputsProcessed();
 }
 
+void OTCWindowsAdapterBase::onUpdateTimerData()
+{
+   if (!currentTimeoutData_.progressBarTimeLeft_ || !currentTimeoutData_.labelTimeLeft_) {
+      timeoutTimer_.stop();
+      return;
+   }
+
+   const auto currentOfferEndTimestamp = currentTimeoutData_.offerTimestamp_ + std::chrono::seconds(timeoutSec_);
+   const auto diff = currentOfferEndTimestamp - std::chrono::steady_clock::now();
+   const auto diffSeconds = std::chrono::duration_cast<std::chrono::seconds>(diff);
+
+   currentTimeoutData_.labelTimeLeft_->setText(QString(QLatin1String("%1 %2")).arg(diffSeconds.count()).arg(secondsRemaining));
+   currentTimeoutData_.progressBarTimeLeft_->setMaximum(timeoutSec_.count());
+   currentTimeoutData_.progressBarTimeLeft_->setValue(diffSeconds.count());
+
+   if (diffSeconds.count() < 0) {
+      timeoutTimer_.stop();
+   }
+}
+
 void OTCWindowsAdapterBase::updateIndicativePrices(bs::network::Asset::Type type, const QString& security
    , const bs::network::MDFields& fields)
 {
@@ -198,7 +226,20 @@ void OTCWindowsAdapterBase::clearSelectedInputs()
    selectedUTXO_.clear();
 }
 
+void OTCWindowsAdapterBase::setupTimer(TimeoutData&& timeoutData)
+{
+   currentTimeoutData_ = std::move(timeoutData);
+   onUpdateTimerData();
+   timeoutTimer_.start();
+}
+
+std::chrono::seconds OTCWindowsAdapterBase::getSeconds(std::chrono::milliseconds durationInMillisecs)
+{
+   return std::chrono::duration_cast<std::chrono::seconds>(durationInMillisecs);
+}
+
 void OTCWindowsAdapterBase::setSelectedInputs(const std::vector<UTXO>& selectedUTXO)
 {
    selectedUTXO_ = selectedUTXO;
+
 }

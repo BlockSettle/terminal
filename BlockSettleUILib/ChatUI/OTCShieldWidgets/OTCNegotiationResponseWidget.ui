@@ -18,13 +18,13 @@
     <number>5</number>
    </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="topMargin">
     <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="bottomMargin">
     <number>0</number>
@@ -70,719 +70,604 @@
     </widget>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="contentLayout">
-     <property name="leftMargin">
-      <number>5</number>
+    <widget class="QGroupBox" name="groupBoxOTCDetails">
+     <property name="title">
+      <string>OTC DETAILS</string>
      </property>
-     <property name="rightMargin">
-      <number>5</number>
+     <property name="wellGroupBoxWithButtonBar" stdset="0">
+      <bool>true</bool>
      </property>
-     <item>
-      <widget class="QGroupBox" name="groupBoxOTCDetails">
-       <property name="title">
-        <string>OTC DETAILS</string>
-       </property>
-       <property name="wellGroupBoxWithButtonBar" stdset="0">
-        <bool>true</bool>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <property name="spacing">
-         <number>10</number>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <property name="spacing">
+       <number>10</number>
+      </property>
+      <property name="leftMargin">
+       <number>5</number>
+      </property>
+      <property name="topMargin">
+       <number>5</number>
+      </property>
+      <property name="rightMargin">
+       <number>5</number>
+      </property>
+      <property name="bottomMargin">
+       <number>5</number>
+      </property>
+      <item>
+       <widget class="QWidget" name="recieveWidget" native="true">
+        <layout class="QHBoxLayout" name="receiveLyt">
+         <property name="spacing">
+          <number>5</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="recieveName">
+           <property name="text">
+            <string>Receive</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="recieveValue">
+           <property name="text">
+            <string>xx</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="deliverWgt" native="true">
+        <layout class="QHBoxLayout" name="deliverWidget">
+         <property name="spacing">
+          <number>5</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="deliverLabel">
+           <property name="text">
+            <string>Deliver</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="deliverValue">
+           <property name="text">
+            <string>yy</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="priceWidget" native="true">
+        <layout class="QHBoxLayout" name="sideLayout">
+         <property name="spacing">
+          <number>5</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="priceName">
+           <property name="text">
+            <string>Price</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="priceValue">
+           <property name="text">
+            <string>zz</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="rangeQuantity" native="true">
+        <layout class="QHBoxLayout" name="sideLayout_2">
+         <property name="spacing">
+          <number>5</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="labelQuantityRange">
+           <property name="text">
+            <string>Quantity (XBT)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelQuantityValue">
+           <property name="text">
+            <string>-</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="rangeBid" native="true">
+        <layout class="QHBoxLayout" name="sideLayout_5">
+         <property name="spacing">
+          <number>5</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="labelBidRange">
+           <property name="text">
+            <string>Bid (EUR)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelBidValue">
+           <property name="text">
+            <string>-</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupPricingUpdate">
+     <property name="title">
+      <string>UPDATE RESPONSE</string>
+     </property>
+     <property name="wellGroupBoxWithButtonBar" stdset="0">
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <property name="horizontalSpacing">
+       <number>0</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>5</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QWidget" name="QuantityLayout" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
         </property>
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
-        <item>
-         <widget class="QWidget" name="recieveWidget" native="true">
-          <layout class="QHBoxLayout" name="receiveLyt">
-           <property name="spacing">
-            <number>5</number>
+        <layout class="QVBoxLayout" name="verticalLayout_12">
+         <property name="spacing">
+          <number>3</number>
+         </property>
+         <property name="leftMargin">
+          <number>5</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>5</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="quantityLabel">
+           <property name="text">
+            <string>Quantity</string>
            </property>
-           <property name="leftMargin">
-            <number>0</number>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDoubleSpinBox" name="quantitySpinBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
            </property>
-           <property name="topMargin">
-            <number>0</number>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
            </property>
-           <property name="rightMargin">
-            <number>0</number>
+           <property name="locale">
+            <locale language="C" country="AnyCountry"/>
            </property>
-           <property name="bottomMargin">
-            <number>0</number>
+           <property name="decimals">
+            <number>8</number>
            </property>
-           <item>
-            <widget class="QLabel" name="recieveName">
-             <property name="text">
-              <string>Receive</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="recieveValue">
-             <property name="text">
-              <string>xx</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-             <property name="whiteLabel" stdset="0">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QWidget" name="deliverWgt" native="true">
-          <layout class="QHBoxLayout" name="deliverWidget">
-           <property name="spacing">
-            <number>5</number>
+           <property name="minimum">
+            <double>0.000000000000000</double>
            </property>
-           <property name="leftMargin">
-            <number>0</number>
+           <property name="maximum">
+            <double>1000000.000000000000000</double>
            </property>
-           <property name="topMargin">
-            <number>0</number>
+           <property name="singleStep">
+            <double>5.000000000000000</double>
            </property>
-           <property name="rightMargin">
-            <number>0</number>
+           <property name="value">
+            <double>10000.000000000000000</double>
            </property>
-           <property name="bottomMargin">
-            <number>0</number>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QWidget" name="BidOfferWidget" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="spacing">
+          <number>5</number>
+         </property>
+         <property name="leftMargin">
+          <number>5</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>5</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QWidget" name="bidLyt" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
            </property>
-           <item>
-            <widget class="QLabel" name="deliverLabel">
-             <property name="text">
-              <string>Deliver</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="deliverValue">
-             <property name="text">
-              <string>yy</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-             <property name="whiteLabel" stdset="0">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QWidget" name="priceWidget" native="true">
-          <layout class="QHBoxLayout" name="sideLayout">
-           <property name="spacing">
-            <number>5</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="priceName">
-             <property name="text">
-              <string>Price</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="priceValue">
-             <property name="text">
-              <string>zz</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-             <property name="whiteLabel" stdset="0">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QWidget" name="rangeQuantity" native="true">
-          <layout class="QHBoxLayout" name="sideLayout_2">
-           <property name="spacing">
-            <number>5</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="labelQuantityRange">
-             <property name="text">
-              <string>Quantity (XBT)</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="labelQuantityValue">
-             <property name="text">
-              <string>-</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-             <property name="whiteLabel" stdset="0">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QWidget" name="rangeBid" native="true">
-          <layout class="QHBoxLayout" name="sideLayout_5">
-           <property name="spacing">
-            <number>5</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="labelBidRange">
-             <property name="text">
-              <string>Bid (EUR)</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="labelBidValue">
-             <property name="text">
-              <string>-</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-             <property name="whiteLabel" stdset="0">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="groupPricingUpdate">
-       <property name="title">
-        <string>UPDATE RESPONSE</string>
-       </property>
-       <property name="wellGroupBoxWithButtonBar" stdset="0">
-        <bool>true</bool>
-       </property>
-       <layout class="QGridLayout" name="gridLayout">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
-        <property name="horizontalSpacing">
-         <number>0</number>
-        </property>
-        <property name="verticalSpacing">
-         <number>5</number>
-        </property>
-        <item row="0" column="0">
-         <widget class="QWidget" name="QuantityLayout" native="true">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_12">
-           <property name="spacing">
-            <number>3</number>
-           </property>
-           <property name="leftMargin">
-            <number>5</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>5</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="quantityLabel">
-             <property name="text">
-              <string>Quantity</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QDoubleSpinBox" name="quantitySpinBox">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="locale">
-              <locale language="C" country="AnyCountry"/>
-             </property>
-             <property name="decimals">
-              <number>8</number>
-             </property>
-             <property name="minimum">
-              <double>0.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>1000000.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>5.000000000000000</double>
-             </property>
-             <property name="value">
-              <double>10000.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QWidget" name="BidOfferWidget" native="true">
-          <layout class="QHBoxLayout" name="horizontalLayout">
-           <property name="spacing">
-            <number>5</number>
-           </property>
-           <property name="leftMargin">
-            <number>5</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>5</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QWidget" name="bidLyt" native="true">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_13">
-              <property name="spacing">
-               <number>3</number>
-              </property>
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QLabel" name="bidLabel">
-                <property name="text">
-                 <string>Bid</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QDoubleSpinBox" name="bidSpinBox">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="locale">
-                 <locale language="C" country="AnyCountry"/>
-                </property>
-                <property name="decimals">
-                 <number>2</number>
-                </property>
-                <property name="minimum">
-                 <double>1.000000000000000</double>
-                </property>
-                <property name="maximum">
-                 <double>1000000.000000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>5.000000000000000</double>
-                </property>
-                <property name="value">
-                 <double>10000.000000000000000</double>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QWidget" name="offerLyt" native="true">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_14">
-              <property name="spacing">
-               <number>3</number>
-              </property>
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QLabel" name="offerLabel">
-                <property name="text">
-                 <string>Offer</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QDoubleSpinBox" name="offerSpinBox">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="locale">
-                 <locale language="C" country="AnyCountry"/>
-                </property>
-                <property name="decimals">
-                 <number>2</number>
-                </property>
-                <property name="minimum">
-                 <double>1.000000000000000</double>
-                </property>
-                <property name="maximum">
-                 <double>1000000.000000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>5.000000000000000</double>
-                </property>
-                <property name="value">
-                 <double>10000.000000000000000</double>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="Line" name="lineBeforeBalance">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>1</height>
-           </size>
-          </property>
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QWidget" name="balanceLayout" native="true">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_10">
-           <property name="spacing">
-            <number>3</number>
-           </property>
-           <property name="leftMargin">
-            <number>5</number>
-           </property>
-           <property name="topMargin">
-            <number>5</number>
-           </property>
-           <property name="rightMargin">
-            <number>5</number>
-           </property>
-           <property name="bottomMargin">
-            <number>10</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="cashBalanceLabel">
-             <property name="text">
-              <string>Balance</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="labelBalanceValue">
-             <property name="styleSheet">
-              <string notr="true">font-weight: bold;</string>
-             </property>
-             <property name="text">
-              <string>xxx</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-             <property name="whiteLabel" stdset="0">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="groupBoxSettlementDetails">
-       <property name="title">
-        <string>SETTLEMENT DETAILS</string>
-       </property>
-       <property name="wellGroupBoxWithButtonBar" stdset="0">
-        <bool>true</bool>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_6">
-        <property name="spacing">
-         <number>5</number>
-        </property>
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
-        <item>
-         <layout class="QVBoxLayout" name="WalletLyt">
-          <property name="spacing">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="labelWallet">
-            <property name="text">
-             <string>Payment Wallet</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <layout class="QVBoxLayout" name="verticalLayout_13">
             <property name="spacing">
-             <number>5</number>
+             <number>3</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
             </property>
             <item>
-             <widget class="QComboBox" name="comboBoxXBTWallets">
+             <widget class="QLabel" name="bidLabel">
+              <property name="text">
+               <string>Bid</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="bidSpinBox">
               <property name="sizePolicy">
                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>20</height>
+                <height>16777215</height>
                </size>
               </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="toolButtonXBTInputs">
-              <property name="minimumSize">
-               <size>
-                <width>100</width>
-                <height>21</height>
-               </size>
+              <property name="locale">
+               <locale language="C" country="AnyCountry"/>
               </property>
-              <property name="maximumSize">
-               <size>
-                <width>100</width>
-                <height>21</height>
-               </size>
+              <property name="decimals">
+               <number>2</number>
               </property>
-              <property name="text">
-               <string>&amp;Inputs</string>
+              <property name="minimum">
+               <double>1.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>1000000.000000000000000</double>
+              </property>
+              <property name="singleStep">
+               <double>5.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>10000.000000000000000</double>
               </property>
              </widget>
             </item>
            </layout>
-          </item>
-         </layout>
-        </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="offerLyt" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_14">
+            <property name="spacing">
+             <number>3</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="offerLabel">
+              <property name="text">
+               <string>Offer</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="offerSpinBox">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="locale">
+               <locale language="C" country="AnyCountry"/>
+              </property>
+              <property name="decimals">
+               <number>2</number>
+              </property>
+              <property name="minimum">
+               <double>1.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>1000000.000000000000000</double>
+              </property>
+              <property name="singleStep">
+               <double>5.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>10000.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="Line" name="lineBeforeBalance">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>1</height>
+         </size>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QWidget" name="balanceLayout" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_10">
+         <property name="spacing">
+          <number>3</number>
+         </property>
+         <property name="leftMargin">
+          <number>5</number>
+         </property>
+         <property name="topMargin">
+          <number>5</number>
+         </property>
+         <property name="rightMargin">
+          <number>5</number>
+         </property>
+         <property name="bottomMargin">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="cashBalanceLabel">
+           <property name="text">
+            <string>Balance</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelBalanceValue">
+           <property name="styleSheet">
+            <string notr="true">font-weight: bold;</string>
+           </property>
+           <property name="text">
+            <string>xxx</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="whiteLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBoxSettlementDetails">
+     <property name="title">
+      <string>SETTLEMENT DETAILS</string>
+     </property>
+     <property name="wellGroupBoxWithButtonBar" stdset="0">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_6">
+      <property name="spacing">
+       <number>5</number>
+      </property>
+      <property name="leftMargin">
+       <number>5</number>
+      </property>
+      <property name="topMargin">
+       <number>5</number>
+      </property>
+      <property name="rightMargin">
+       <number>5</number>
+      </property>
+      <property name="bottomMargin">
+       <number>5</number>
+      </property>
+      <item>
+       <layout class="QVBoxLayout" name="WalletLyt">
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <item>
-         <widget class="QWidget" name="receivingAddressWdgt" native="true">
-          <layout class="QVBoxLayout" name="receivingAddressWidget">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="receivingAddressLabel">
-             <property name="text">
-              <string>Receiving Address</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QComboBox" name="receivingAddressComboBox">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>20</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-          </layout>
+         <widget class="QLabel" name="labelWallet">
+          <property name="text">
+           <string>Payment Wallet</string>
+          </property>
          </widget>
         </item>
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
+         <layout class="QHBoxLayout" name="horizontalLayout_5">
           <property name="spacing">
-           <number>0</number>
+           <number>5</number>
           </property>
           <item>
-           <widget class="QLabel" name="authenticationAddressLabel">
-            <property name="text">
-             <string>Authentication Address</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="authenticationAddressComboBox">
+           <widget class="QComboBox" name="comboBoxXBTWallets">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -803,25 +688,199 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QPushButton" name="toolButtonXBTInputs">
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>21</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>100</width>
+              <height>21</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>&amp;Inputs</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QWidget" name="receivingAddressWdgt" native="true">
+        <layout class="QVBoxLayout" name="receivingAddressWidget">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="receivingAddressLabel">
+           <property name="text">
+            <string>Receiving Address</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="receivingAddressComboBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>20</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <item>
-         <spacer name="verticalSpacer">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
+         <widget class="QLabel" name="authenticationAddressLabel">
+          <property name="text">
+           <string>Authentication Address</string>
           </property>
-          <property name="sizeHint" stdset="0">
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="authenticationAddressComboBox">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
            <size>
-            <width>20</width>
-            <height>40</height>
+            <width>0</width>
+            <height>20</height>
            </size>
           </property>
-         </spacer>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>20</height>
+           </size>
+          </property>
+         </widget>
         </item>
        </layout>
-      </widget>
-     </item>
-    </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="timeLeftWidget" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <property name="spacing">
+       <number>5</number>
+      </property>
+      <property name="bottomMargin">
+       <number>5</number>
+      </property>
+      <item>
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>496</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="progressBarTimeLeft">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>7</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>7</height>
+         </size>
+        </property>
+        <property name="value">
+         <number>24</number>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignBottom|Qt::AlignRight|Qt::AlignTrailing</set>
+        </property>
+        <property name="textVisible">
+         <bool>false</bool>
+        </property>
+        <property name="invertedAppearance">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelTimeLeft">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="Line" name="line">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>1</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>1</height>
+         </size>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QWidget" name="widgetButtons" native="true">
