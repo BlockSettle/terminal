@@ -239,7 +239,7 @@ uint64_t bs::Address::getNestedSegwitDustAmount()
 void bs::Address::decorateUTXOs(std::vector<UTXO> &utxos)
 {
    for (auto &utxo : utxos) {  // some kind of decoration code to replace the code above
-      const bs::Address recipAddr(utxo.getRecipientScrAddr());
+      const auto recipAddr = bs::Address::fromUTXO(utxo);
       utxo.txinRedeemSizeBytes_ = unsigned(recipAddr.getInputSize());
       utxo.witnessDataSizeBytes_ = unsigned(recipAddr.getWitnessDataSize());
       utxo.isInputSW_ = (recipAddr.getWitnessDataSize() != UINT32_MAX);

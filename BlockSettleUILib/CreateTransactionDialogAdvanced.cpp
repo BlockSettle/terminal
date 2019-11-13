@@ -1362,7 +1362,7 @@ void CreateTransactionDialogAdvanced::setTxFees()
       if ((minTotalFee_ > 0) && (fee < minTotalFee_)) {
          fee = minTotalFee_;
       }
-      transactionData_->setTotalFee(fee);
+      transactionData_->setTotalFee(fee, false);
    }
 
    validateAddOutputButton();

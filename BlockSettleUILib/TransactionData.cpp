@@ -517,22 +517,27 @@ void TransactionData::setFeePerByte(float feePerByte)
    // Let's add a workaround for this: don't allow feePerByte be less than 1.01f (that's just empirical estimate)
    const float minRelayFeeFixed = 1.01f;
 
+   const auto prevFee = feePerByte_;
    if (feePerByte >= 1.0f && feePerByte < minRelayFeeFixed) {
       feePerByte_ = minRelayFeeFixed;
    } else {
       feePerByte_ = feePerByte;
    }
    totalFee_ = 0;
-   InvalidateTransactionData();
+   if (!qFuzzyCompare(prevFee, feePerByte_)) {
+      InvalidateTransactionData();
+   }
 }
 
 void TransactionData::setTotalFee(uint64_t fee, bool overrideFeePerByte)
 {
-   totalFee_ = fee;
    if (overrideFeePerByte) {
       feePerByte_ = 0;
    }
-   InvalidateTransactionData();
+   if (totalFee_ != fee) {
+      totalFee_ = fee;
+      InvalidateTransactionData();
+   }
 }
 
 float TransactionData::feePerByte() const
