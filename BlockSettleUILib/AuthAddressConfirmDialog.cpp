@@ -83,6 +83,8 @@ void AuthAddressConfirmDialog::onAuthAddressSubmitCancelled(const QString &addre
 void AuthAddressConfirmDialog::onError(const QString &errorText)
 {
    // error message should be displayed by parent
+   hide();
+   parentWidget()->setFocus();
    reject();
 }
 
