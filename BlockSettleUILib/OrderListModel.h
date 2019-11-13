@@ -56,7 +56,7 @@ public slots:
 
 signals:
    void newOrder(const QPersistentModelIndex &index);
-   void selectRow(const QModelIndex &row);
+   void selectRow(const QPersistentModelIndex &row);
 
 private:
    enum class DataType {
