@@ -28,6 +28,7 @@ protected:
       const QModelIndex &index) const override;
 
 private slots:
+   void onSelectRow(const QModelIndex &row);
    void onRowsInserted(const QModelIndex &parent, int, int);
    void onCollapsed(const QModelIndex &index);
    void onExpanded(const QModelIndex &index);

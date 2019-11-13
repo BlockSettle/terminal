@@ -118,30 +118,6 @@ bool ArmoryObject::getWalletsHistory(const std::vector<std::string> &walletIDs, 
    return ArmoryConnection::getWalletsHistory(walletIDs, cbWrap);
 }
 
-bool ArmoryObject::getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &addr
-   , const LedgerDelegateCb &cb, QObject *context)
-{
-   QPointer<QObject> contextSmartPtr = context;
-   const auto &cbWrap = [this, cb, context, contextSmartPtr]
-                        (const std::shared_ptr<AsyncClient::LedgerDelegate> &ld) {
-      if (needInvokeCb()) {
-         QMetaObject::invokeMethod(this, [cb, ld, context, contextSmartPtr]{
-            if (context) {
-               if (contextSmartPtr) {
-                  cb(ld);
-               }
-            } else {
-               cb(ld);
-            }
-         });
-      }
-      else {
-         cb(ld);
-      }
-   };
-   return ArmoryConnection::getLedgerDelegateForAddress(walletId, addr/*, cbWrap*/);   //FIXME!
-}
-
 bool ArmoryObject::getWalletsLedgerDelegate(const LedgerDelegateCb &cb)
 {
    const auto &cbWrap = [this, cb](const std::shared_ptr<AsyncClient::LedgerDelegate> &ld) {

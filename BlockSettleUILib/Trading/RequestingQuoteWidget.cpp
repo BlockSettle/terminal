@@ -5,7 +5,6 @@
 #include "AssetManager.h"
 #include "BlockDataManagerConfig.h"
 #include "CurrencyPair.h"
-#include "TransactionData.h"
 #include "UiUtils.h"
 #include "CelerClient.h"
 
@@ -32,19 +31,13 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
    ui_->labelHint->clear();
    ui_->labelHint->hide();
 
-   utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
-   bs::UtxoReservation::addAdapter(utxoAdapter_);
-
    setupTimer(Indicative, QDateTime::currentDateTime().addSecs(30));
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &RequestingQuoteWidget::onCancel);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &RequestingQuoteWidget::onAccept);
 }
 
-RequestingQuoteWidget::~RequestingQuoteWidget()
-{
-   bs::UtxoReservation::delAdapter(utxoAdapter_);
-}
+RequestingQuoteWidget::~RequestingQuoteWidget() = default;
 
 void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<BaseCelerClient> celerClient) {
    celerClient_ = celerClient;
@@ -74,7 +67,6 @@ void RequestingQuoteWidget::onCancel()
    if (quote_.quotingType == bs::network::Quote::Tradeable) {
       emit requestTimedOut();
    } else {
-      utxoAdapter_->unreserve(rfq_.requestId);
       emit cancelRFQ();
    }
 }
@@ -85,7 +77,6 @@ void RequestingQuoteWidget::ticker()
 
    if (timeDiff < -5000) {
       requestTimer_.stop();
-      utxoAdapter_->unreserve(rfq_.requestId);
       emit requestTimedOut();
    }
    else {
@@ -139,16 +130,13 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
       return true;
    }
 
-   if (transactionData_ && (rfq_.side == bs::network::Side::Buy) && (rfq_.assetType != bs::network::Asset::SpotFX)) {
+   if (rfq_.side == bs::network::Side::Buy && rfq_.assetType != bs::network::Asset::SpotFX) {
       double amount = 0;
       if (rfq_.assetType == bs::network::Asset::PrivateMarket) {
          amount = rfq_.quantity * quote_.price;
       }
       else if (rfq_.product != bs::network::XbtCurrency) {
          amount = rfq_.quantity / quote_.price;
-      }
-      if (!qFuzzyIsNull(amount)) {
-         transactionData_->ReserveUtxosFor(amount, rfq_.requestId);
       }
    }
 
@@ -221,7 +209,6 @@ void RequestingQuoteWidget::onQuoteCancelled(const QString &reqId, bool byUser)
 
 void RequestingQuoteWidget::onReject(const QString &reqId, const QString &reason)
 {
-   utxoAdapter_->unreserve(reqId.toStdString());
    if (reqId.toStdString() == rfq_.requestId) {
       ui_->pushButtonAccept->setEnabled(false);
       ui_->labelQuoteValue->setText(tr("Rejected: %1").arg(reason));
@@ -234,10 +221,9 @@ void RequestingQuoteWidget::onCelerDisconnected()
    onCancel();
 }
 
-void RequestingQuoteWidget::populateDetails(const bs::network::RFQ& rfq, const std::shared_ptr<TransactionData> &transactionData)
+void RequestingQuoteWidget::populateDetails(const bs::network::RFQ& rfq)
 {
    rfq_ = rfq;
-   transactionData_ = transactionData;
 
    ui_->labelProductGroup->setText(tr(bs::network::Asset::toString(rfq.assetType)));
    ui_->labelSecurityId->setText(QString::fromStdString(rfq.security));

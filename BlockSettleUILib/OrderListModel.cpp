@@ -349,12 +349,24 @@ void OrderListModel::onMessageFromPB(const Blocksettle::Communication::ProxyTerm
 void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::Order& order,
    bool emitUpdate)
 {
+   assert(index >= 0 && index < group->rows_.size());
+   auto &rowData = group->rows_[static_cast<std::size_t>(index)];
+   bool isStatusChanged = false;
+
+   auto setNewStatusIfNeeded = [&](QString &&newStatus, QColor newColor) {
+      isStatusChanged = rowData->status_ != newStatus;
+      if (isStatusChanged) {
+         rowData->status_ = std::move(newStatus);
+         rowData->statusColor_ = newColor;
+      }
+   };
+
    switch (order.status)
    {
       case bs::network::Order::New:
          // New is not used currently
       case bs::network::Order::Pending: {
-         const auto status = order.pendingStatus.empty() ? tr("Pending") : QString::fromStdString(order.pendingStatus);
+         auto status = order.pendingStatus.empty() ? tr("Pending") : QString::fromStdString(order.pendingStatus);
 
          auto color = kPendingColor;
          if (status.toLower().startsWith(QStringLiteral("revoke"))) {
@@ -364,19 +376,16 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
             color = kNewOrderColor;
          }
 
-         group->rows_[static_cast<std::size_t>(index)]->status_ = status;
-         group->rows_[static_cast<std::size_t>(index)]->statusColor_ = color;
+         setNewStatusIfNeeded(std::move(status), color);
          break;
       }
 
       case bs::network::Order::Filled:
-         group->rows_[static_cast<std::size_t>(index)]->status_ = tr("Settled");
-         group->rows_[static_cast<std::size_t>(index)]->statusColor_ = kSettledColor;
+         setNewStatusIfNeeded(tr("Settled"), kSettledColor);
          break;
 
       case bs::network::Order::Failed:
-         group->rows_[static_cast<std::size_t>(index)]->status_ = tr("Failed");
-         group->rows_[static_cast<std::size_t>(index)]->statusColor_ = kFailedColor;
+         setNewStatusIfNeeded(tr("Failed"), kFailedColor);
          break;
    }
 
@@ -384,12 +393,22 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
       &group->rows_[static_cast<std::size_t>(index)]->idx_);
    const auto persistentIdx = QPersistentModelIndex(idx);
 
-   if (emitUpdate) {
+   if (isStatusChanged && emitUpdate) {
       emit dataChanged(idx, idx);
    }
+
    if (!latestOrderTimestamp_.isValid() || order.dateTime > latestOrderTimestamp_) {
       latestOrderTimestamp_ = order.dateTime;
       emit newOrder(persistentIdx);
+   }
+
+   // We should highlight latest changed if there any
+   // and if not let's highlight the most recent timestamp
+   if (latestChangedTimestamp_.isValid() && order.dateTime == latestChangedTimestamp_) {
+      emit selectRow(idx);
+   }
+   else if (!latestChangedTimestamp_.isValid() && order.dateTime == latestOrderTimestamp_) {
+      emit selectRow(idx);
    }
 }
 
@@ -579,9 +598,11 @@ void OrderListModel::reset()
 
 void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
 {
+   // Save latest selected index first
+   resetLatestChangedStatus(message);
    // OrderListModel supposed to work correctly when orders states updated one by one.
    // We don't use this anymore (server sends all active orders every time) so just clear old caches.
-   // Remove this if old behaviour is needed
+   // Remove this if old behavior is needed
    reset();
    // Use some fake orderId so old code works correctly
    int orderId = 0;
@@ -629,6 +650,36 @@ void OrderListModel::processUpdateOrders(const Blocksettle::Communication::Proxy
    }
 }
 
+void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
+{
+   latestChangedTimestamp_ = {};
+
+   std::vector<std::pair<int64_t, int>> newOrderStatuses(message.orders_size());
+   for (const auto &data : message.orders()) {
+      newOrderStatuses.push_back({ data.timestamp_ms(), static_cast<int>(data.status()) });
+   }
+   std::sort(newOrderStatuses.begin(), newOrderStatuses.end(), [&](const auto &left, const auto &right) {
+      return left.first < right.first;
+   });
+
+   // if length the same -> we could relay that only row status is changed
+   if (sortedPeviousOrderStatuses_.size() == newOrderStatuses.size()) {
+      for (int i = 0; i < newOrderStatuses.size(); ++i) {
+         // Order changed nothing to do
+         if (sortedPeviousOrderStatuses_[i].first != newOrderStatuses[i].first) {
+            break;
+         }
+
+         if (sortedPeviousOrderStatuses_[i].second != newOrderStatuses[i].second) {
+            latestChangedTimestamp_ = QDateTime::fromMSecsSinceEpoch(newOrderStatuses[i].first);
+            break;
+         }
+      }
+   }
+
+   sortedPeviousOrderStatuses_ = std::move(newOrderStatuses);
+}
+
 void OrderListModel::onOrderUpdated(const bs::network::Order& order)
 {
    auto found = findItem(order);
@@ -644,8 +695,10 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
 
    groups_[order.exchOrderId.toStdString()] = getStatusGroup(order);
 
+   const auto parentIndex = createIndex(findGroup(marketItem, groupItem), 0, &groupItem->idx_);
+
    if (found.second < 0) {
-      beginInsertRows(createIndex(findGroup(marketItem, groupItem), 0, &groupItem->idx_), 0, 0);
+      beginInsertRows(parentIndex, 0, 0);
 
       // As quantity is now could be negative need to invert value
       double value = - order.quantity * order.price;

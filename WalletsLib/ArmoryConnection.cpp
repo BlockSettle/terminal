@@ -422,7 +422,7 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
       catch (const std::exception &e) {
          logger_->error("[ArmoryConnection::getLedgerDelegateForAddress (cbWrap)] Return data "
             "error - {} - Wallet {} - Address {}", e.what(), walletId
-            , addr.display());
+            , addr.isNull() ? "<empty>" : addr.display());
          addToMaintQueue([addr](ArmoryCallbackTarget *tgt) {
             tgt->onLedgerForAddress(addr, nullptr);
          });

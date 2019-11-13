@@ -237,3 +237,9 @@ std::chrono::seconds OTCWindowsAdapterBase::getSeconds(std::chrono::milliseconds
 {
    return std::chrono::duration_cast<std::chrono::seconds>(durationInMillisecs);
 }
+
+void OTCWindowsAdapterBase::setSelectedInputs(const std::vector<UTXO>& selectedUTXO)
+{
+   selectedUTXO_ = selectedUTXO;
+
+}

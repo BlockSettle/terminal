@@ -1,8 +1,5 @@
 #include "OTCNegotiationRequestWidget.h"
 
-#include <QComboBox>
-#include <QPushButton>
-
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
 #include "CoinControlDialog.h"
@@ -14,6 +11,10 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ui_OTCNegotiationRequestWidget.h"
+
+#include <QComboBox>
+#include <QPushButton>
+#include <QKeyEvent>
 
 using namespace bs::network;
 
@@ -119,6 +120,7 @@ void OTCNegotiationRequestWidget::setPeer(const bs::network::otc::Peer &peer)
    ui_->rangeQuantity->setVisible(!isContact);
    ui_->rangeBid->setVisible(!isContact && peer.type == otc::PeerType::Response);
 
+   setSelectedInputs(peer.offer.inputs);
    onChanged();
 }
 
@@ -164,6 +166,15 @@ BTCNumericTypes::balance_type OTCNegotiationRequestWidget::getXBTSpendableBalanc
    return getXBTSpendableBalanceFromCombobox(ui_->comboBoxXBTWallets);
 }
 
+void OTCNegotiationRequestWidget::keyPressEvent(QKeyEvent* event)
+{
+   OTCWindowsAdapterBase::keyPressEvent(event);
+   if ((event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return)
+      && ui_->pushButtonAcceptRequest->isEnabled()) {
+      emit requestCreated();
+   }
+}
+
 void OTCNegotiationRequestWidget::onXbtInputsProcessed()
 {
    onUpdateBalances();
@@ -182,7 +193,6 @@ void OTCNegotiationRequestWidget::onSellClicked()
    ui_->labelWallet->setText(paymentWallet);
 
    onUpdateIndicativePrice();
-   clearSelectedInputs();
 }
 
 void OTCNegotiationRequestWidget::onBuyClicked()
@@ -197,7 +207,6 @@ void OTCNegotiationRequestWidget::onBuyClicked()
    ui_->labelWallet->setText(receivingWallet);
 
    onUpdateIndicativePrice();
-   clearSelectedInputs();
 }
 
 void OTCNegotiationRequestWidget::onShowXBTInputsClicked()

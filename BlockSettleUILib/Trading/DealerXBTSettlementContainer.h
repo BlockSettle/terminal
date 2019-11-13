@@ -4,7 +4,7 @@
 #include "AddressVerificator.h"
 #include "BSErrorCode.h"
 #include "SettlementContainer.h"
-#include "TransactionData.h"
+#include "UtxoReservation.h"
 
 #include <memory>
 #include <unordered_set>

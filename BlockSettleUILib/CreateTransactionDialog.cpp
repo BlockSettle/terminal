@@ -449,26 +449,48 @@ bool CreateTransactionDialog::CreateTransaction()
          , changeAddress, originalFee_);
       txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
 
-      // We shouldn't hit this case since the request checks the incremental
-      // relay fee requirement for RBF. But, in case we
-      if (txReq_.fee <= originalFee_) {
-         BSMessageBox(BSMessageBox::info, tr("Error"), tr("Fee is too low"),
-            tr("Due to RBF requirements, the current fee (%1) will be " \
-               "increased 1 satoshi above the original transaction fee (%2)")
-            .arg(UiUtils::displayAmount(txReq_.fee))
-            .arg(UiUtils::displayAmount(originalFee_))).exec();
-         txReq_.fee = originalFee_ + 1;
+      if (isRBF_) {
+         // We shouldn't hit this case since the request checks the incremental
+         // relay fee requirement for RBF. But, in case we
+         if (txReq_.fee <= originalFee_) {
+            BSMessageBox(BSMessageBox::info, tr("Warning"), tr("Fee is too low"),
+               tr("Due to RBF requirements, the current fee (%1) will be " \
+                  "increased 1 satoshi above the original transaction fee (%2)")
+               .arg(UiUtils::displayAmount(txReq_.fee))
+               .arg(UiUtils::displayAmount(originalFee_))).exec();
+            txReq_.fee = originalFee_ + 1;
+         }
+
+         const float newFeePerByte = transactionData_->feePerByte();
+         if ((originalFeePerByte_ - newFeePerByte) > 0.005) {  // allow some rounding
+            BSMessageBox(BSMessageBox::info, tr("Warning"), tr("Fee per byte is too low"),
+               tr("Due to RBF requirements, the current fee per byte (%1) will " \
+                  "be increased to the original transaction fee rate (%2)")
+               .arg(newFeePerByte)
+               .arg(originalFeePerByte_)).exec();
+            txReq_.fee = std::ceil(txReq_.fee * (originalFeePerByte_ / newFeePerByte));
+         }
+      }
+      else if (isCPFP_) {
+         if (txReq_.fee < originalFee_ + addedFee_) {
+            txReq_.fee = originalFee_ + addedFee_;
+            BSMessageBox(BSMessageBox::info, tr("Warning"), tr("CPFP fee warning"),
+               tr("In order to ensure the CPFP transaction gets mined withing the next two blocks, we recommend the total fee to be no less than %1")
+               .arg(UiUtils::displayAmount(txReq_.fee))).exec();
+         }
+
+         const float newFeePerByte = transactionData_->feePerByte();
+         if ((advisedFeePerByte_ - newFeePerByte) > 0.005) {  // allow some rounding
+            txReq_.fee = std::ceil(txReq_.fee * (advisedFeePerByte_ / newFeePerByte));
+            BSMessageBox(BSMessageBox::info, tr("Warning"), tr("CPFP fee warning"),
+               tr("In order to ensure the CPFP transaction gets mined withing the next two blocks, we recommend the fee per byte to be no less than %1")
+               .arg(advisedFeePerByte_)).exec();
+         }
+      }
+      else {
+         // do we need some checks here?
       }
 
-      const float newFeePerByte = transactionData_->feePerByte();
-      if ((originalFeePerByte_ - newFeePerByte) > 0.005) {  // allow some rounding
-         BSMessageBox(BSMessageBox::info, tr("Error"), tr("Fee per byte is too low"),
-            tr("Due to RBF requirements, the current fee per byte (%1) will " \
-               "be increased to the original transaction fee rate (%2)")
-            .arg(newFeePerByte)
-            .arg(originalFeePerByte_)).exec();
-         txReq_.fee = std::ceil(txReq_.fee * (originalFeePerByte_ / newFeePerByte));
-      }
 
       if (hdWallet->isOffline()) {
          QString offlineFilePath;

@@ -66,6 +66,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
    dlg->ui_->pushButtonImport->setEnabled(false);
 
    dlg->setRBFinputs(tx);
+   dlg->isRBF_ = true;
    return dlg;
 }
 
@@ -86,6 +87,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
    dlg->ui_->pushButtonImport->setEnabled(false);
 
    dlg->setCPFPinputs(tx, wallet);
+   dlg->isCPFP_ = true;
    return dlg;
 }
 
@@ -166,6 +168,8 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
          onTransactionUpdated();
          populateFeeList();
          SetInputs(selInputs->GetSelectedTransactions());
+
+         SetMinimumFee(originalFee_ + addedFee_, advisedFeePerByte_);
       };
       walletsManager_->estimatedFeePerByte(2, cbFee, this);
    };

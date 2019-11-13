@@ -120,6 +120,7 @@ void OTCNegotiationResponseWidget::setPeer(const bs::network::otc::Peer &peer)
    ui_->rangeBid->setVisible(!isContact);
 
    setupTimer({ peer.stateTimestamp, ui_->progressBarTimeLeft, ui_->labelTimeLeft });
+   setSelectedInputs(peer.offer.inputs);
 }
 
 void OTCNegotiationResponseWidget::onSyncInterface()

@@ -11,7 +11,6 @@
 #include <mutex>
 
 #include "UserScript.h"
-#include "TransactionData.h"
 #include "QuoteProvider.h"
 
 QT_BEGIN_NAMESPACE
@@ -24,7 +23,6 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
-   class DealerUtxoResAdapter;
 }
 class SignContainer;
 
@@ -46,7 +44,6 @@ signals:
 
 public:
    explicit UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvider,
-      std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter,
       std::shared_ptr<SignContainer> signingContainer,
       std::shared_ptr<MarketDataProvider> mdProvider,
       std::shared_ptr<AssetManager> assetManager,
@@ -55,10 +52,6 @@ public:
    ~UserScriptHandler() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
-
-   std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
-
-   void setTxData(const std::string &id, std::shared_ptr<TransactionData> txData);
 
 private slots:
    void onQuoteReqNotification(const bs::network::QuoteReqNotification &qrn);
@@ -76,7 +69,6 @@ private slots:
 
 private:
    AutoQuoter *aq_ = nullptr;
-   std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter_;
    std::shared_ptr<SignContainer>            signingContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<MarketDataProvider>       mdProvider_;
@@ -85,7 +77,6 @@ private:
 
    std::unordered_map<std::string, QObject*> aqObjs_;
    std::unordered_map<std::string, bs::network::QuoteReqNotification> aqQuoteReqs_;
-   std::unordered_map<std::string, std::shared_ptr<TransactionData>> aqTxData_;
    std::unordered_map<std::string, double>   bestQPrices_;
 
    struct MDInfo {
@@ -97,7 +88,6 @@ private:
 
    bool aqEnabled_;
    QTimer *aqTimer_;
-   mutable std::mutex mutex_;
 }; // class UserScriptHandler
 
 
@@ -121,7 +111,6 @@ signals:
 
 public:
    UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
-      std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter,
       std::shared_ptr<SignContainer> signingContainer,
       std::shared_ptr<MarketDataProvider> mdProvider,
       std::shared_ptr<AssetManager> assetManager,
@@ -130,10 +119,6 @@ public:
    ~UserScriptRunner() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
-
-   std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
-
-   void setTxData(const std::string &id, std::shared_ptr<TransactionData> txData);
 
 public slots:
    void enableAQ(const QString &fileName);

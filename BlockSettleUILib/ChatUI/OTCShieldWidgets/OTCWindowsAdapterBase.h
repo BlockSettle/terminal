@@ -88,6 +88,7 @@ protected:
 
    const std::vector<UTXO> &selectedUTXOs() const { return selectedUTXO_; }
    void clearSelectedInputs();
+   void setSelectedInputs(const std::vector<UTXO>& selectedUTXO);
 
    void setupTimer(TimeoutData&& timeoutData);
    std::chrono::seconds getSeconds(std::chrono::milliseconds durationInMillisecs);

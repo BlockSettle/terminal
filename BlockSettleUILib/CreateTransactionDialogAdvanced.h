@@ -166,13 +166,6 @@ private:
    bool        changeAddressFixed_ = false;
    bs::Address selectedChangeAddress_;
 
-   float       minTotalFee_ = 0;
-   float       minFeePerByte_ = 0;
-   float       advisedFeePerByte_ = 0;
-   float       advisedTotalFee_ = 0;
-   float       addedFee_ = 0;
-   const float minRelayFeePerByte_ = 5;
-
    bool        feeChangeDisabled_ = false;
 
    bool        showUnknownWalletWarning_ = false;
