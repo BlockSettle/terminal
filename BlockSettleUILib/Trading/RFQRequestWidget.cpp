@@ -192,13 +192,6 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
          , { false, QString::fromStdString(quoteId), QString::fromStdString(reason) });
    });
 
-   // Select new orders (need to use QueuedConnection)
-   connect(orderListModel, &OrderListModel::newOrder, this, [this](const QPersistentModelIndex &index) {
-      if (index.isValid()) {
-         ui_->treeViewOrders->selectionModel()->select(index.parent(), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-      }
-   }, Qt::QueuedConnection);
-
    connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
 

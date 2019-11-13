@@ -23,6 +23,7 @@ void OrdersView::initWithModel(OrderListModel *model)
 {
    model_ = model;
    connect(model, &OrderListModel::rowsInserted, this, &OrdersView::onRowsInserted);
+   connect(model, &OrderListModel::selectRow, this, &OrdersView::onSelectRow, Qt::QueuedConnection);
 }
 
 void OrdersView::drawRow(QPainter *painter, const QStyleOptionViewItem &option,
@@ -47,16 +48,37 @@ void OrdersView::drawRow(QPainter *painter, const QStyleOptionViewItem &option,
    }
 }
 
+void OrdersView::onSelectRow(const QModelIndex &row)
+{
+   if (!row.isValid()) {
+      return;
+   }
+
+   selectionModel()->select(row,
+      QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+
+   if (row.parent().isValid()) {
+      scrollTo(row.parent(), QAbstractItemView::EnsureVisible);
+   }
+   scrollTo(row, QAbstractItemView::EnsureVisible);
+}
+
 void OrdersView::onRowsInserted(const QModelIndex &parent, int first, int)
 {
+   if (!parent.isValid()) {
+      return;
+   }
+
    if (!collapsed_.contains(UiUtils::modelPath(parent, model_))) {
       expand(parent);
-   } else {
+   }
+   else {
       setHasNewItemFlag(parent, true);
    }
 
-   selectionModel()->select(parent.child(first, 0),
-      QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+   if (selectionModel()->hasSelection()) {
+      scrollTo(selectionModel()->selectedIndexes().at(0), QAbstractItemView::EnsureVisible);
+   }
 }
 
 void OrdersView::onCollapsed(const QModelIndex &index)
