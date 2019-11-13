@@ -314,7 +314,7 @@ QMenu::item:first {
     height: 25px;
     padding: 0; }
   *[headerPanel="true"] *[headerLabelActivated="true"] {
-    text-transform: uppercase;
+    text-transform: lowercase;
     background-color: transparent;
     color: #247dac;
     subcontrol-position: left center;
