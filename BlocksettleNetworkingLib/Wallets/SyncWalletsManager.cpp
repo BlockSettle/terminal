@@ -503,9 +503,6 @@ void WalletsManager::onStateChanged(ArmoryState state)
 void WalletsManager::walletReady(const std::string &walletId)
 {
    QMetaObject::invokeMethod(this, [this, walletId] { emit walletIsReady(walletId); });
-   if (!armory_) {
-      return;
-   }
    const auto rootWallet = getHDRootForLeaf(walletId);
    if (rootWallet) {
       const auto &itWallet = newWallets_.find(rootWallet->walletId());
@@ -518,11 +515,15 @@ void WalletsManager::walletReady(const std::string &walletId)
                for (const auto &leaf : rootWallet->getLeaves()) {
                   addWallet(leaf, true);
                }
-               emit walletChanged(rootWallet->walletId());
+               emit walletAdded(rootWallet->walletId());
                emit walletsReady();
                logger_->debug("[WalletsManager] wallets are ready after rescan");
             });
          });
+      }
+      else {
+         logger_->debug("[{}] wallet {} completed registration", __func__, walletId);
+         emit walletBalanceUpdated(walletId);
       }
    }
 
@@ -538,8 +539,11 @@ void WalletsManager::walletReady(const std::string &walletId)
 
 void WalletsManager::scanComplete(const std::string &walletId)
 {
-   logger_->debug("[WalletsManager::{}] - HD wallet {} imported", __func__
-      , walletId);
+   logger_->debug("[{}] - HD wallet {} imported", __func__, walletId);
+   const auto hdWallet = getHDWalletById(walletId);
+   if (hdWallet) {
+      hdWallet->registerWallet(armoryPtr_);
+   }
    QMetaObject::invokeMethod(this, [this, walletId] {
       emit walletChanged(walletId);
       emit walletImportFinished(walletId);
@@ -998,7 +1002,6 @@ void WalletsManager::onWalletsListUpdated()
                const auto hdWallet = getHDWalletById(hdWalletId);
                if (hdWallet) {
                   hdWallet->registerWallet(armoryPtr_);
-                  QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletAdded(hdWallet->walletId()); });
                }
             });
             newWallets_.insert(hdWallet.first);
