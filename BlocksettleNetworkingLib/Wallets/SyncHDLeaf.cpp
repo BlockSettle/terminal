@@ -397,6 +397,8 @@ std::vector<std::string> hd::Leaf::registerWallet(
    setArmory(armory);
 
    if (armory_) {
+      firstInit_ = false;
+      isRegistered_ = false;
       const auto addrsExt = getAddrHashesExt();
       const auto addrsInt = isExtOnly_ ? std::vector<BinaryData>{} : getAddrHashesInt();
       std::vector<std::string> regIds;
