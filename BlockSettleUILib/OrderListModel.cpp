@@ -405,10 +405,10 @@ void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::
    // We should highlight latest changed if there any
    // and if not let's highlight the most recent timestamp
    if (latestChangedTimestamp_.isValid() && order.dateTime == latestChangedTimestamp_) {
-      emit selectRow(idx);
+      emit selectRow(persistentIdx);
    }
    else if (!latestChangedTimestamp_.isValid() && order.dateTime == latestOrderTimestamp_) {
-      emit selectRow(idx);
+      emit selectRow(persistentIdx);
    }
 }
 

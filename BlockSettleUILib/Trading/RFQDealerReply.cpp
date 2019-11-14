@@ -890,7 +890,7 @@ void bs::ui::RFQDealerReply::updateBalanceLabel()
          .arg(QString::fromStdString(bs::network::XbtCurrency));
    } else if ((currentQRN_.side == bs::network::Side::Buy) && (currentQRN_.assetType == bs::network::Asset::PrivateMarket)) {
       totalBalance = tr("%1 %2")
-         .arg(UiUtils::displayCurrencyAmount(getPrivateMarketCoinBalance()))
+         .arg(UiUtils::displayCCAmount(getPrivateMarketCoinBalance()))
          .arg(QString::fromStdString(baseProduct_));
    } else {
       if (assetManager_) {

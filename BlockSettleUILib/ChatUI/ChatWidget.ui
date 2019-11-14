@@ -130,9 +130,6 @@
               <property name="text">
                <string>Chat ID</string>
               </property>
-              <property name="headerLabel" stdset="0">
-               <bool>false</bool>
-              </property>
              </widget>
             </item>
             <item>
@@ -160,10 +157,7 @@
                <string>offline</string>
               </property>
               <property name="textInteractionFlags">
-               <set>Qt::NoTextInteraction</set>
-              </property>
-              <property name="headerLabel" stdset="0">
-               <bool>true</bool>
+               <set>Qt::TextSelectableByMouse</set>
               </property>
               <property name="headerLabelActivated" stdset="0">
                <bool>false</bool>

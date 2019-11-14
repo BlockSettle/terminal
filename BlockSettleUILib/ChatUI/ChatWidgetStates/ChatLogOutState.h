@@ -19,8 +19,8 @@ protected:
       }
 
       chat_->ui_->labelUserName->setText(QObject::tr("offline"));
-      chat_->ui_->labelUserName->setProperty("headerLabel", true);
       chat_->ui_->labelUserName->setProperty("headerLabelActivated", {});
+      chat_->ui_->labelUserName->setTextInteractionFlags(Qt::NoTextInteraction);
       qApp->style()->unpolish(chat_->ui_->labelUserName);
       qApp->style()->polish(chat_->ui_->labelUserName);
    }

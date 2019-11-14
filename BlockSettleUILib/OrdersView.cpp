@@ -48,13 +48,13 @@ void OrdersView::drawRow(QPainter *painter, const QStyleOptionViewItem &option,
    }
 }
 
-void OrdersView::onSelectRow(const QModelIndex &row)
+void OrdersView::onSelectRow(const QPersistentModelIndex &row)
 {
    if (!row.isValid()) {
       return;
    }
 
-   selectionModel()->select(row,
+   selectionModel()->select(QModelIndex(row),
       QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 
    if (row.parent().isValid()) {
