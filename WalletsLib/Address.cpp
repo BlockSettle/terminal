@@ -127,7 +127,7 @@ bs::Address bs::Address::fromAddressString(const std::string& data)
 }
 
 
-static AddressEntryType mapTxOutScriptType(TXOUT_SCRIPT_TYPE scrType)
+AddressEntryType bs::Address::mapTxOutScriptType(TXOUT_SCRIPT_TYPE scrType)
 {
    auto aet = AddressEntryType_Default;
    switch (scrType) {

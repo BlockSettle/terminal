@@ -2,6 +2,7 @@
 #define TRADES_VERIFICATION_H
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -41,7 +42,7 @@ namespace bs {
          // returns from verifySignedPayout
          std::string payoutTxHashHex;
 
-         static Result error(std::string errorMsg);
+         static std::shared_ptr<Result> error(std::string errorMsg);
       };
 
       static bs::Address constructSettlementAddress(const BinaryData &settlementId
@@ -52,14 +53,14 @@ namespace bs {
          , const bs::Address &settlAddr
          , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey, std::string *errorMsg = nullptr);
 
-      static Result verifyUnsignedPayin(const BinaryData &unsignedPayin
+      static std::shared_ptr<Result> verifyUnsignedPayin(const BinaryData &unsignedPayin
          , float feePerByte, const std::string &settlementAddress, uint64_t tradeAmount);
 
-      static Result verifySignedPayout(const BinaryData &signedPayout
+      static std::shared_ptr<Result> verifySignedPayout(const BinaryData &signedPayout
          , const std::string &buyAuthKeyHex, const std::string &sellAuthKeyHex,  const BinaryData &payinHash
          , uint64_t tradeAmount, float feePerByte, const std::string &settlementId, const std::string &settlementAddress);
 
-      static Result verifySignedPayin(const BinaryData &signedPayin, const BinaryData &payinHash, float feePerByte, uint64_t totalPayinFee);
+      static std::shared_ptr<Result> verifySignedPayin(const BinaryData &signedPayin, const BinaryData &payinHash, float feePerByte, uint64_t totalPayinFee);
 
    };
 
