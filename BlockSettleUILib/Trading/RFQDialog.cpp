@@ -162,7 +162,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    return xbtSettlContainer_;
 }
 
-void RFQDialog::hideIdNoRemoteSignerMode()
+void RFQDialog::hideIfNoRemoteSignerMode()
 {
    if (signContainer_->opMode() != SignContainer::OpMode::Remote) {
       hide();
@@ -258,7 +258,7 @@ void RFQDialog::onSignTxRequested(QString orderId, QString reqId)
       return;
    }
 
-   hideIdNoRemoteSignerMode();
+   hideIfNoRemoteSignerMode();
 
    ccOrderId_ = orderId;
    ccSettlContainer_->startSigning();
@@ -284,7 +284,7 @@ void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const B
       return;
    }
 
-   hideIdNoRemoteSignerMode();
+   hideIfNoRemoteSignerMode();
 
    xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash);
 }
@@ -295,7 +295,7 @@ void RFQDialog::onSignedPayinRequested(const std::string& settlementId, const Bi
       return;
    }
 
-   hideIdNoRemoteSignerMode();
+   hideIfNoRemoteSignerMode();
 
    xbtSettlContainer_->onSignedPayinRequested(settlementId, unsignedPayin);
 }
