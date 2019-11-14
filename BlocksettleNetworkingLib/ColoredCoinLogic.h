@@ -348,7 +348,7 @@ public:
    std::vector<std::shared_ptr<CcOutpoint>> getSpendableOutpointsForAddress(
       const BinaryData&) const;
 
-   bool isTxHashValid(const BinaryData &) const;
+   bool isTxHashValid(const BinaryData &, uint32_t txOutIndex = UINT32_MAX) const;
 
    //in: set of prefixed addresses
    uint64_t getUnconfirmedCcValueForAddresses(const std::set<BinaryData>&) const;

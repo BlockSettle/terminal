@@ -4,6 +4,7 @@
 
 #include <BTCNumericTypes.h>
 #include <TxClasses.h>
+#include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 
@@ -76,12 +77,18 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
             ui_->treeAddresses->addTopLevelItem(itemSender_);
             ui_->treeAddresses->addTopLevelItem(itemReceiver_);
 
+            for (const auto &wallet : item->wallets) {
+               if (wallet->type() == bs::core::wallet::Type::ColorCoin) {
+                  ccLeaf_ = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(wallet);
+                  break;
+               }
+            }
+
             uint64_t value = 0;
             bool initialized = true;
 
             std::set<bs::sync::WalletsManager::WalletPtr> inputWallets;
 
-            const std::shared_ptr<bs::sync::Wallet> wallet = item->wallets.empty() ? nullptr : *item->wallets.cbegin();
             const bool isInternalTx = item->direction == bs::sync::Transaction::Internal;
             for (const auto &prevTx : txs) {
                if (!prevTx.isInitialized()) {
@@ -92,34 +99,36 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
                   continue;
                }
                for (const auto &txOutIdx : itTxOut->second) {
-                  if (prevTx.isInitialized() && wallet) {
-                     TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
-                     value += prevOut.getValue();
-                     const bool isOutput = false;
-                     addAddress(wallet, prevOut, isOutput, isInternalTx, prevTx.getThisHash(), nullptr);
-                     const auto addr = bs::Address::fromTxOut(prevOut);
-                     const auto addressWallet = walletsManager_->getWalletByAddress(addr);
-                     if (addressWallet) {
-                        inputWallets.insert(addressWallet);
-                     }
-                  }
-                  else {
-                     QStringList items;
-                     items << tr("Input") << tr("???") << tr("Unknown");
-                     itemSender_->addChild(new QTreeWidgetItem(items));
-                     initialized = false;
+                  TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
+                  value += prevOut.getValue();
+                  const bool isOutput = false;
+                  addAddress(prevOut, isOutput, isInternalTx, prevTx.getThisHash(), nullptr);
+                  const auto addr = bs::Address::fromTxOut(prevOut);
+                  const auto addressWallet = walletsManager_->getWalletByAddress(addr);
+                  if (addressWallet) {
+                     inputWallets.insert(addressWallet);
                   }
                }
             }
 
-            if (wallet) {
-               for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
-                  TxOut out = item->tx.getTxOutCopy(i);
-                  value -= out.getValue();
-                  const bool isOutput = true;
-                  addAddress(wallet, out, isOutput, isInternalTx, item->tx.getThisHash(), &inputWallets);
+            for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
+               TxOut out = item->tx.getTxOutCopy(i);
+               value -= out.getValue();
+               const bool isOutput = true;
+               addAddress(out, isOutput, isInternalTx, item->tx.getThisHash(), &inputWallets);
+            }
+
+            if (!item->wallets.empty()) {
+               std::string comment;
+               for (const auto &wallet : item->wallets) {
+                  comment = wallet->getTransactionComment(item->tx.getThisHash());
+                  if (!comment.empty()) {
+                     break;
+                  }
                }
-               ui_->labelComment->setText(QString::fromStdString(wallet->getTransactionComment(item->tx.getThisHash())));
+               if (!comment.empty()) {
+                  ui_->labelComment->setText(QString::fromStdString(comment));
+               }
             }
 
             if (initialized) {
@@ -196,19 +205,15 @@ QSize TransactionDetailDialog::minimumSizeHint() const
 }
 
 // Add an address to the dialog.
-// IN:  The wallet to check the address against. (const std::shared_ptr<bs::Wallet>)
-//      The TxOut to check the address against. (const TxOut&)
+// IN:  The TxOut to check the address against. (const TxOut&)
 //      Indicator for whether the TxOut is sourced against output. (bool)
 //      Indicator for whether the Tx type is outgoing. (bool)
 //      The TX hash. (const BinaryData&)
 // OUT: None
 // RET: None
-void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet> &wallet,
-                                         const TxOut& out,
-                                         bool isOutput,
-                                         bool isInternalTx,
-                                         const BinaryData& txHash,
-                                         const WalletsSet *inputWallets)
+void TransactionDetailDialog::addAddress(TxOut out    // can't use const ref due to getIndex()
+   , bool isOutput, bool isInternalTx, const BinaryData& txHash
+   , const WalletsSet *inputWallets)
 {
    QString addressType;
    QString displayedAddress;
@@ -217,10 +222,9 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
    try {
       const auto addr = bs::Address::fromTxOut(out);
       addressWallet = walletsManager_->getWalletByAddress(addr);
-      const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
 
       // Do not try mark outputs as change for internal tx (or there would be only input and change, without output)
-      isChange = isOutput && !isInternalTx && !isSettlement
+      isChange = isOutput && !isInternalTx
          && (inputWallets->find(addressWallet) != inputWallets->end());
 
       addressType = isChange ? tr("Change") : (isOutput ? tr("Output") : tr("Input"));
@@ -233,12 +237,29 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
 
    // Inputs should be negative, outputs positive, and change positive
    QString valueStr = isOutput ? QString() : QLatin1String("-");
+   QString walletName;
 
    const auto parent = (!isOutput || isChange) ? itemSender_ : itemReceiver_;
 
-   valueStr += addressWallet ? addressWallet->displayTxValue(int64_t(out.getValue())) : UiUtils::displayAmount(out.getValue());
-
-   QString walletName = addressWallet ? QString::fromStdString(addressWallet->name()) : QString();
+   if (addressWallet) {
+      valueStr += addressWallet->displayTxValue(int64_t(out.getValue()));
+      walletName = QString::fromStdString(addressWallet->name());
+   }
+   else {
+      bool isCCaddress = false;
+      if (ccLeaf_) {
+         if (walletsManager_->isValidCCOutpoint(ccLeaf_->shortName(), txHash, out.getIndex(), out.getValue())) {
+            isCCaddress = true;
+         }
+      }
+      if (isCCaddress) {
+         valueStr += ccLeaf_->displayTxValue(int64_t(out.getValue()));
+         walletName = QString::fromStdString(ccLeaf_->shortName());
+      }
+      else {
+         valueStr += UiUtils::displayAmount(out.getValue());
+      }
+   }
    QStringList items;
    items << addressType;
    items << valueStr;

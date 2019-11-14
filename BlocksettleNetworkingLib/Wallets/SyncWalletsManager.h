@@ -82,6 +82,8 @@ namespace bs {
          bool createAuthLeaf(const std::function<void()> &);
 
          WalletPtr getCCWallet(const std::string &cc);
+         bool isValidCCOutpoint(const std::string &cc, const BinaryData &txHash
+            , uint32_t txOutIndex, uint64_t value) const;
 
          const WalletPtr getAuthWallet() const { return authAddressWallet_; }
 

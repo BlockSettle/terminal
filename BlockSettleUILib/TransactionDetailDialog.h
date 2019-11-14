@@ -14,6 +14,9 @@ namespace Ui {
 }
 namespace bs {
    namespace sync {
+      namespace hd {
+         class CCLeaf;
+      }
       class Wallet;
       class WalletsManager;
    }
@@ -40,8 +43,8 @@ public:
 
 private:
    using WalletsSet = std::set<std::shared_ptr<bs::sync::Wallet>>;
-   void addAddress(const std::shared_ptr<bs::sync::Wallet> &, const TxOut& out,
-      bool isOutput, bool isInternalTx, const BinaryData& txHash, const WalletsSet *inputWallets);
+   void addAddress(TxOut out, bool isOutput, bool isInternalTx
+      , const BinaryData& txHash, const WalletsSet *inputWallets);
    QString getScriptType(const TxOut &);
 
 private:
@@ -50,7 +53,7 @@ private:
    QTreeWidgetItem   *itemSender_ = nullptr;
    QTreeWidgetItem   *itemReceiver_ = nullptr;
    ValidityFlag validityFlag_;
-
+   std::shared_ptr<bs::sync::hd::CCLeaf>  ccLeaf_;
 };
 
 #endif // __TRANSACTION_DETAIL_DIALOG_H__
