@@ -194,6 +194,18 @@ QStringList TXInfo::allRecipients() const
    return result;
 }
 
+QString TXInfo::counterPartyCCReceiverAddress() const
+{
+   // Find address where cc coins sent
+   for (auto address : counterPartyRecipients()) {
+      if (txReq_.amountReceivedOn(bs::Address::fromAddressString(address.toStdString())) == txReq_.amount(containsThisAddressCb_)) {
+         return address;
+      }
+   }
+   QStringList counterpartyRecipients = counterPartyRecipients();
+   return  {};
+}
+
 QStringList TXInfo::inputsXBT() const
 {
    return inputs(bs::core::wallet::Type::Bitcoin);

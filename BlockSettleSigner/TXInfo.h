@@ -28,6 +28,8 @@ class TXInfo : public QObject
    Q_PROPERTY(QStringList allRecipients READ allRecipients NOTIFY dataChanged)
    Q_PROPERTY(QStringList counterPartyRecipients READ counterPartyRecipients NOTIFY dataChanged)
 
+   Q_PROPERTY(QString counterPartyCCReceiverAddress READ counterPartyCCReceiverAddress NOTIFY dataChanged)
+
    Q_PROPERTY(int txVirtSize READ txVirtSize NOTIFY dataChanged)
    Q_PROPERTY(double amount READ amount NOTIFY dataChanged)
    Q_PROPERTY(double total READ total NOTIFY dataChanged)
@@ -55,6 +57,8 @@ public:
    QStringList inputsCC() const;
    QStringList counterPartyRecipients() const;
    QStringList allRecipients() const;
+
+   QString counterPartyCCReceiverAddress() const;
 
    size_t txVirtSize() const { return txReq_.estimateTxVirtSize(); }
    double amount() const { return txReq_.amount(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }

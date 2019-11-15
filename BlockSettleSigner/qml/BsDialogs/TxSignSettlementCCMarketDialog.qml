@@ -48,6 +48,8 @@ TxSignSettlementBaseDialog {
     signingAllowed: passwordDialogData.DeliveryUTXOVerified
     errorMessage: qsTr("Genesis Address could not be verified")
 
+    validationTitle: qsTr("Genesis Address")
+
     Component.onCompleted: {
         quantity = getQuantity() + " " + product
         totalValue = (getQuantity() * price).toFixed(8) + " XBT"
@@ -70,13 +72,13 @@ TxSignSettlementBaseDialog {
 
         // SettlementId
         CustomLabel {
-            visible: passwordDialogData.hasSettlementId()
+            visible: false
             Layout.fillWidth: true
             text: qsTr("Settlement Id")
         }
         CustomLabelCopyableValue {
             id: settlementId
-            visible: passwordDialogData.hasSettlementId()
+            visible: false
             text: passwordDialogData.SettlementId
                 .truncString(passwordDialogData.hasRequesterAuthAddress() ? passwordDialogData.RequesterAuthAddress.length : 30)
             Layout.alignment: Qt.AlignRight
@@ -95,7 +97,7 @@ TxSignSettlementBaseDialog {
             visible: passwordDialogData.InputsListVisible
 
             CustomLabel {
-                text: qsTr("Payment Address(es)")
+                text: qsTr("Delivery Inputs")
                 Layout.alignment: Qt.AlignTop
             }
 
@@ -125,53 +127,22 @@ TxSignSettlementBaseDialog {
                         horizontalAlignment: Text.AlignRight
                         verticalAlignment: Text.AlignTop
                         font: fixedFont
+                        color: passwordDialogData.DeliveryUTXOVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
                     }
                 }
             }
         }
 
         // Delivery UTXO(s)
-        RowLayout {
-            Layout.columnSpan: 2
+        CustomLabel {
+            text: qsTr("Delivery Address(es)")
             Layout.fillWidth: true
-            visible: passwordDialogData.RecipientsListVisible
+        }
 
-            CustomLabel {
-                text: qsTr("Delivery Address(es)")
-                Layout.alignment: Qt.AlignTop
-            }
-
-            ListView {
-                id: recipients
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignRight
-                model: txInfo.counterPartyRecipients
-                clip: true
-                Layout.preferredHeight: recipientsAddrHeight
-
-                flickableDirection: Flickable.VerticalFlick
-                boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: ScrollBar {
-                    active: true
-                }
-
-                delegate: Rectangle {
-                    id: recipientsAddressRect
-                    color: "transparent"
-                    height: 22
-                    width: recipients.width
-
-                    CustomLabelValue {
-                        id: labelTxWalletId
-                        text: modelData
-                        anchors.fill: recipientsAddressRect
-                        horizontalAlignment: Text.AlignRight
-                        verticalAlignment: Text.AlignTop
-                        font: fixedFont
-                        color: passwordDialogData.DeliveryUTXOVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
-                    }
-                }
-            }
+        CustomLabelValue {
+            text: txInfo.counterPartyCCReceiverAddress
+            font: fixedFont
+            Layout.alignment: Qt.AlignRight
         }
     }
 
