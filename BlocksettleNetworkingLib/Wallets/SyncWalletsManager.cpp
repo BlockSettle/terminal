@@ -1,6 +1,7 @@
 #include "SyncWalletsManager.h"
 
 #include "ApplicationSettings.h"
+#include "CheckRecipSigner.h"
 #include "ColoredCoinLogic.h"
 #include "FastLock.h"
 #include "SyncHDWallet.h"
@@ -342,6 +343,20 @@ WalletsManager::WalletPtr WalletsManager::getCCWallet(const std::string &cc)
    const bs::hd::Path ccLeafPath({ bs::hd::Purpose::Native, bs::hd::CoinType::BlockSettle_CC
       , bs::hd::Path::keyToElem(cc) });
    return ccGroup->getLeaf(ccLeafPath);
+}
+
+bool WalletsManager::isValidCCOutpoint(const std::string &cc, const BinaryData &txHash
+   , uint32_t, uint64_t value) const
+{  // not using txOutIndex is intended now, as it won't return correct results
+   const auto &itTracker = trackers_.find(cc);
+   if (itTracker == trackers_.end()) {
+      return false;
+   }
+   const bool result = itTracker->second->isTxHashValid(txHash);
+   if (!result) {
+      return false;
+   }
+   return ((value % ccResolver_->lotSizeFor(cc)) == 0);
 }
 
 void WalletsManager::setUserId(const BinaryData &userId)

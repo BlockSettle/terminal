@@ -963,18 +963,40 @@ std::vector<std::shared_ptr<CcOutpoint>> ColoredCoinTracker::getSpendableOutpoin
    return getSpendableOutpointsForAddress(ssPtr, zcPtr, scrAddr, false);
 }
 
-bool ColoredCoinTracker::isTxHashValid(const BinaryData &txHash) const
+bool ColoredCoinTracker::isTxHashValid(const BinaryData &txHash, uint32_t txOutIndex) const
 {
+   auto getOP = [txHash, txOutIndex]
+      (const std::map<BinaryData, std::map<unsigned, std::shared_ptr<CcOutpoint>>> &utxoSet) -> bool
+   {
+      auto hashIter = utxoSet.find(txHash);
+      if (hashIter == utxoSet.end()) {
+         return false;
+      }
+      if (txOutIndex == UINT32_MAX) {
+         return true;
+      }
+      auto idIter = hashIter->second.find(txOutIndex);
+      if (idIter == hashIter->second.end()) {
+         return false;
+      }
+      return true;
+   };
+
    const auto ssPtr = snapshot();
-   if (ssPtr && (ssPtr->utxoSet_.find(txHash) != ssPtr->utxoSet_.end())) {
+   if (!ssPtr) {
+      return false;
+   }
+   bool result = getOP(ssPtr->utxoSet_);
+   if (result) {
       return true;
    }
 
    const auto zcPtr = zcSnapshot();
-   if (zcPtr && (zcPtr->utxoSet_.find(txHash) != zcPtr->utxoSet_.end())) {
-      return true;
+   if (!zcPtr) {
+      return  false;
    }
-   return false;
+   result = getOP(zcPtr->utxoSet_);
+   return result;
 }
 
 ////
