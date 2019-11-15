@@ -1,13 +1,13 @@
 ******************************************************************************************
 
-BlockSettle -- Bitcoin Wallet and Order Management Software                                        
-Copyright (C) 2015-2017, BlockSettle AB 
-Copyright (C) 2016-2017, goatpig
+BlockSettle -- Bitcoin Wallet and Order Management Software
+Copyright (C) 2016-2019, BlockSettle AB
+Copyright (C) 2016-2019, goatpig
 
 Portion of the code is BlockSettle AB’s property, licensed under GNU Affero GPL Version 3
 Portion of the code is goatpig’s property, licensed under the MIT license
 
-See each individual code files to determine which licenses apply 
+See each individual code files to determine which licenses apply
 For code files pointing directly here (LICENSE), see LICENSE-BSAB (below)
 
 ******************************************************************************************
@@ -35,9 +35,9 @@ This license applies to all works under this directory tree EXCEPT for:
 * SQLite
 * ZeroMQ
 
-Everything in the cryptopp directory is considered public domain according 
-to http://www.cryptopp.com/ and included with the source distribution 
-as a convenience to the user. The leveldb library has been included, 
+Everything in the cryptopp directory is considered public domain according
+to http://www.cryptopp.com/ and included with the source distribution
+as a convenience to the user. The leveldb library has been included,
 unmodified, in compliance with its license that can be found in the
 cppForSwig/leveldb directory. Every listed file in objc_armory is also
 subject to the MIT/X11 license, as described below and online
