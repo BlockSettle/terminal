@@ -447,18 +447,7 @@ uint64_t wallet::TXSignRequest::amountSentFrom(const bs::Address &address) const
    std::set<UTXO> utxoSet;
    uint64_t amount = 0;
 
-   for (const auto &utxo: inputs) {
-      const auto addr = bs::Address::fromUTXO(utxo);
-
-      if (utxoSet.find(utxo) == utxoSet.cend()) {
-         if (addr == address) {
-            utxoSet.insert(utxo);
-            amount += utxo.getValue();
-         }
-      }
-   }
-
-   if (amount == 0 && !prevStates.empty()) {
+   if (!prevStates.empty()) {
       bs::CheckRecipSigner signer(prevStates.front());
 
       for (auto spender : signer.spenders()) {
@@ -471,7 +460,17 @@ uint64_t wallet::TXSignRequest::amountSentFrom(const bs::Address &address) const
             }
          }
       }
+   }
 
+   for (const auto &utxo: inputs) {
+      const auto addr = bs::Address::fromUTXO(utxo);
+
+      if (utxoSet.find(utxo) == utxoSet.cend()) {
+         if (addr == address) {
+            utxoSet.insert(utxo);
+            amount += utxo.getValue();
+         }
+      }
    }
 
    return amount;
