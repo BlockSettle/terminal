@@ -911,6 +911,16 @@ bool hd::CCLeaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint
       }
    };
    const auto &addrSet = collectAddresses();
+
+   if (tracker_ == nullptr) {
+      if (ccResolver_->genesisAddrFor(suffix_).isNull()) {
+         return bs::sync::hd::Leaf::getSpendableTxOutList(cb, val);
+      }
+      // GA is null if this CC leaf created inside PB and contain real GA address
+      // if it is not - tracker should be set
+      return false;
+   }
+
    return tracker_->getCCUtxoForAddresses(addrSet, false, cbWrap);
 }
 
@@ -939,6 +949,15 @@ bool hd::CCLeaf::getSpendableZCList(const ArmoryConnection::UTXOsCb &cb) const
    };
 
    const auto &addrSet = collectAddresses();
+   if (tracker_ == nullptr) {
+      if (ccResolver_->genesisAddrFor(suffix_).isNull()) {
+         return bs::sync::hd::Leaf::getSpendableZCList(cb);
+      }
+      // GA is null if this CC leaf created inside PB and contain real GA address
+      // if it is not - tracker should be set
+      return false;
+   }
+
    return tracker_->getCCUtxoForAddresses(addrSet, true, cbWrap);
 }
 
