@@ -476,6 +476,20 @@ uint64_t wallet::TXSignRequest::amountSentFrom(const bs::Address &address) const
    return amount;
 }
 
+uint64_t wallet::TXSignRequest::getFee() const
+{
+   if (fee > 0) {
+      return fee;
+   }
+
+   if (!prevStates.empty()) {
+      bs::CheckRecipSigner signer(prevStates.front());
+      return signer.inputsTotalValue() - signer.outputsTotalValue();
+   }
+
+   return 0;
+}
+
 std::vector<UTXO> wallet::TXSignRequest::getInputs(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
 {
    std::vector<UTXO> inputsVector;

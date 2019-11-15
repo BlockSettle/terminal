@@ -48,7 +48,8 @@ namespace bs {
 
       void hasInputAddress(const Address &, std::function<void(bool)>, uint64_t lotsize = 1);
       uint64_t estimateFee(float feePerByte) const;
-      uint64_t spendValue() const;
+      uint64_t outputsTotalValue() const;
+      uint64_t inputsTotalValue() const;
       std::vector<std::shared_ptr<ScriptSpender>> spenders() const { return spenders_; }
       std::vector<std::shared_ptr<ScriptRecipient>> recipients() const { return recipients_; }
 

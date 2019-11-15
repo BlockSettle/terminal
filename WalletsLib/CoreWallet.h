@@ -212,6 +212,8 @@ namespace bs {
             uint64_t amountReceivedOn(const bs::Address &address) const;
             uint64_t amountSentFrom(const bs::Address &address) const;
 
+            uint64_t getFee() const;
+
             std::vector<UTXO> getInputs(const ContainsAddressCb &containsAddressCb) const;
             std::vector<std::shared_ptr<ScriptRecipient>> getRecipients(const ContainsAddressCb &containsAddressCb) const;
 

@@ -196,11 +196,20 @@ uint64_t CheckRecipSigner::estimateFee(float feePerByte) const
    return txSize * feePerByte;
 }
 
-uint64_t CheckRecipSigner::spendValue() const
+uint64_t CheckRecipSigner::outputsTotalValue() const
 {
    uint64_t result = 0;
    for (const auto &recip : recipients_) {
       result += recip->getValue();
+   }
+   return result;
+}
+
+uint64_t CheckRecipSigner::inputsTotalValue() const
+{
+   uint64_t result = 0;
+   for (const auto &spender : spenders_) {
+      result += spender->getValue();
    }
    return result;
 }
