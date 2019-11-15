@@ -202,8 +202,7 @@ QString TXInfo::counterPartyCCReceiverAddress() const
          return address;
       }
    }
-   QStringList counterpartyRecipients = counterPartyRecipients();
-   return  {};
+   return {};
 }
 
 QStringList TXInfo::inputsXBT() const
