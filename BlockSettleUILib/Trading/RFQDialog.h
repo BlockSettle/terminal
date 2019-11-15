@@ -88,6 +88,7 @@ private slots:
 private:
    std::shared_ptr<bs::SettlementContainer> newCCcontainer();
    std::shared_ptr<bs::SettlementContainer> newXBTcontainer();
+   void hideIfNoRemoteSignerMode();
 
 private:
    std::unique_ptr<Ui::RFQDialog> ui_;
