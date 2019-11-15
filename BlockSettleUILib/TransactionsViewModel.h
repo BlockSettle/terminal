@@ -80,7 +80,7 @@ public:
    size_t nbChildren() const { return children_.size(); }
    bool hasChildren() const { return !children_.empty(); }
    TXNode *child(int index) const;
-   QList<TXNode *> children() const { return children_; }
+   const QList<TXNode *> &children() const { return children_; }
    TXNode *parent() const { return parent_; }
    TXNode *find(const bs::TXEntry &) const;
    std::vector<TXNode *> nodesByTxHash(const BinaryData &) const;

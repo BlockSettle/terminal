@@ -876,17 +876,41 @@ void TransactionsViewModel::ledgerToTxData(const std::map<int, std::vector<bs::T
 void TransactionsViewModel::onNewItems(const std::vector<TXNode *> &newItems)
 {
    const int curLastIdx = rootNode_->nbChildren();
-   beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + newItems.size() - 1);
-   {
-      QMutexLocker locker(&updateMutex_);
-      for (const auto &newItem : newItems) {
-         if (rootNode_->find(newItem->item()->txEntry)) {
-            continue;
-         }
-         rootNode_->add(newItem);
+
+   // That is less expensive just to compare first two list are the same - O(n)
+   // then lookup O(n^2) straight away in next block
+   if (rootNode_->children().size() == newItems.size()) {
+      bool isEqual = std::equal(newItems.begin(), newItems.end(), rootNode_->children().begin(), [](TXNode const * const left, TXNode const * const right) {
+         return left->item()->txEntry == right->item()->txEntry;
+      });
+
+      if (isEqual) {
+         return;
       }
    }
-   endInsertRows();
+
+   std::vector<TXNode *> actualChanges(newItems.size());
+   int nextInserPosition = 0;
+   for (const auto &newItem : newItems) {
+      if (rootNode_->find(newItem->item()->txEntry)) {
+         continue;
+      }
+      actualChanges[nextInserPosition++] = newItem;
+   }
+   actualChanges.resize(nextInserPosition);
+
+   if (actualChanges.empty()) {
+      return;
+   }
+
+   {
+      QMutexLocker locker(&updateMutex_);
+      beginInsertRows(QModelIndex(), curLastIdx, curLastIdx + actualChanges.size() - 1);
+      for (const auto &newItem : actualChanges) {
+         rootNode_->add(newItem);
+      }
+      endInsertRows();
+   }
 }
 
 void TransactionsViewModel::onDelRows(std::vector<int> rows)

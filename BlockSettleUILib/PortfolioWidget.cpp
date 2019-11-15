@@ -83,6 +83,8 @@ void PortfolioWidget::SetTransactionsModel(const std::shared_ptr<TransactionsVie
    model_ = model;
    filter_ = new UnconfirmedTransactionFilter(this);
    filter_->setSourceModel(model_.get());
+   filter_->setDynamicSortFilter(true);
+
    ui_->treeViewUnconfirmedTransactions->setModel(filter_);
    ui_->treeViewUnconfirmedTransactions->setSortingEnabled(true);
    ui_->treeViewUnconfirmedTransactions->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date)
