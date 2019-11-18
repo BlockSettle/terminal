@@ -352,10 +352,10 @@ bool WalletsManager::isValidCCOutpoint(const std::string &cc, const BinaryData &
    if (itTracker == trackers_.end()) {
       return false;
    }
-   const bool result = itTracker->second->isTxHashValid(txHash);
-   if (!result) {
-      return false;
-   }
+/*   const bool result = itTracker->second->isTxHashValid(txHash);
+   if (!result) {          // FIXME: disabled temporarily until CC tracker
+      return false;        // will allow to validate any spent UTXO
+   }*/
    return ((value % ccResolver_->lotSizeFor(cc)) == 0);
 }
 
