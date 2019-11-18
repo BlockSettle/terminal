@@ -410,6 +410,8 @@ uint64_t wallet::TXSignRequest::amountSent(const wallet::TXSignRequest::Contains
 uint64_t wallet::TXSignRequest::amountReceivedOnForCC(const bs::Address &address) const
 {
    // This method should be used only for calculaion values in TXInfo for CC settlements
+   // Duplicated recipients removed
+   // to bypass workaround In ReqCCSettlementContainer::createCCUnsignedTXdata()
 
    std::set<BinaryData> txSet;
    uint64_t amount = 0;
