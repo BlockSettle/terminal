@@ -17,7 +17,7 @@ QtObject {
     readonly property color textPressedColor: "#3a8ab4"
     readonly property color disabledHeaderColor: "#909090"
 
-    readonly property color labelsTextColor: "#757E83"
+    readonly property color labelsTextColor: "#939393"
     readonly property color labelsTextDisabledColor: "#454E53"
     readonly property color inputsBorderColor: "#757E83"
     readonly property color inputsFontColor: "white"
