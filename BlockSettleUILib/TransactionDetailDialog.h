@@ -44,7 +44,7 @@ public:
 private:
    using WalletsSet = std::set<std::shared_ptr<bs::sync::Wallet>>;
    void addAddress(TxOut out, bool isOutput, bool isInternalTx
-      , const BinaryData& txHash, const WalletsSet *inputWallets);
+      , const BinaryData& txHash, const WalletsSet &inputWallets);
    QString getScriptType(const TxOut &);
 
 private:
