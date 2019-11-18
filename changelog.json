@@ -1,7 +1,28 @@
 {
-   "latest_version": "0.24.10",
-   "release_date": "13 Nov 2019",
+   "latest_version": "0.24.11",
+   "release_date": "18 Nov 2019",
    "changes": [
+      {
+         "version_string": "0.24.11",
+         "previous_version": "0.24.10",
+         "release_date": "18 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Handling chat offline messages (#1614)",
+            "Add timer to otc negotiation response widget"
+         ],
+         "bug_fixes": [
+            "Fixes for various CPFP dialog crashes",
+            "Fix wallet balance after import",
+            "TXSignRequest fixes (#1623)",
+            "Fix transaction model update",
+            "CC leaf fixes",
+            "UI fixes",
+            "Settlement dialog fixes (#452)"
+         ],
+         "revision": "721304cf",
+         "common_revision": "66f8ba98"
+      },
       {
          "version_string": "0.24.10",
          "previous_version": "0.24.9",
