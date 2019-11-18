@@ -135,12 +135,12 @@ TxSignSettlementBaseDialog {
 
         // Delivery UTXO(s)
         CustomLabel {
-            text: qsTr("Delivery Address(es)")
+            text: is_sell ? qsTr("Delivery Address") : qsTr("Payment Address")
             Layout.fillWidth: true
         }
 
         CustomLabelValue {
-            text: txInfo.counterPartyCCReceiverAddress
+            text: is_sell ? txInfo.counterPartyCCReceiverAddress : txInfo.counterPartyXBTReceiverAddress
             font: fixedFont
             Layout.alignment: Qt.AlignRight
         }
@@ -211,7 +211,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_sell
-            text: minus_string + displayAmount(txInfo.amount) + inputProduct
+            text: minus_string + displayAmount(txInfo.amountCCSent()) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 
