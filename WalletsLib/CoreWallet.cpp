@@ -390,21 +390,74 @@ uint64_t wallet::TXSignRequest::amountReceived(const wallet::TXSignRequest::Cont
 
 uint64_t wallet::TXSignRequest::amountSent(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
 {
-   // get sent amount directly from recipients
-   // or
    // calculate sent amount based on inputs and change
    // containsAddressCb should return true if change address is in our wallet
+   // or
+   // get sent amount directly from recipients
+
+   if (!prevStates.empty() && containsAddressCb != nullptr) {
+      return totalSpent(containsAddressCb) - getFee();
+   }
 
    uint64_t amount = 0;
    for (const auto &recip : recipients) {
       amount += recip->getValue();
    }
 
-   if (amount == 0 && !prevStates.empty() && containsAddressCb != nullptr) {
-      return totalSpent(containsAddressCb) - fee;
+   return amount;
+}
+
+uint64_t wallet::TXSignRequest::amountReceivedOnForCC(const bs::Address &address) const
+{
+   // This method should be used only for calculaion values in TXInfo for CC settlements
+   // Duplicated recipients removed
+   // to bypass workaround In ReqCCSettlementContainer::createCCUnsignedTXdata()
+
+   std::set<BinaryData> txSet;
+   uint64_t amount = 0;
+
+   if (!prevStates.empty()) {
+      bs::CheckRecipSigner signer(prevStates.front());
+      for (auto recip : signer.recipients()) {
+         const auto addr = bs::Address::fromRecipient(recip);
+         const auto hash = recip->getSerializedScript();
+
+         if (txSet.find(hash) == txSet.cend()) {
+            if (addr == address) {
+               txSet.insert(hash);
+               amount += recip->getValue();
+            }
+         }
+      }
+   }
+
+   for (const auto &recip: recipients) {
+      const auto addr = bs::Address::fromRecipient(recip);
+      const auto hash = recip->getSerializedScript();
+
+      if (txSet.find(hash) == txSet.cend()) {
+         if (addr == address) {
+            txSet.insert(hash);
+            amount += recip->getValue();
+         }
+      }
    }
 
    return amount;
+}
+
+uint64_t wallet::TXSignRequest::getFee() const
+{
+   if (fee > 0) {
+      return fee;
+   }
+
+   if (!prevStates.empty()) {
+      bs::CheckRecipSigner signer(prevStates.front());
+      return signer.inputsTotalValue() - signer.outputsTotalValue();
+   }
+
+   return 0;
 }
 
 std::vector<UTXO> wallet::TXSignRequest::getInputs(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
@@ -412,7 +465,7 @@ std::vector<UTXO> wallet::TXSignRequest::getInputs(const wallet::TXSignRequest::
    std::vector<UTXO> inputsVector;
    std::set<UTXO> inputsSet;
 
-   if (!prevStates.empty() && containsAddressCb != nullptr) {
+   if (!prevStates.empty()) {
       bs::CheckRecipSigner signer(prevStates.front());
       for (auto spender : signer.spenders()) {
          const auto &addr = bs::Address::fromUTXO(spender->getUtxo());
@@ -445,7 +498,7 @@ std::vector<std::shared_ptr<ScriptRecipient>> wallet::TXSignRequest::getRecipien
    std::vector<std::shared_ptr<ScriptRecipient>> recipientsVector;
    std::set<BinaryData> recipientsSet;
 
-   if (!prevStates.empty() && containsAddressCb != nullptr) {
+   if (!prevStates.empty()) {
       bs::CheckRecipSigner signer(prevStates.front());
       for (auto recip : signer.recipients()) {
          const auto &addr = bs::Address::fromRecipient(recip);
