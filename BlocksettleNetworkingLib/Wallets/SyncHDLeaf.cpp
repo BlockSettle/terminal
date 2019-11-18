@@ -405,6 +405,9 @@ std::vector<std::string> hd::Leaf::registerWallet(
 
       std::unique_lock<std::mutex> lock(regMutex_);
       btcWallet_ = armory_->instantiateWallet(walletId());
+      if (!btcWallet_) {
+         return {};
+      }
       regIdExt_ = btcWallet_->registerAddresses(addrsExt, asNew);
       regIds.push_back(regIdExt_);
 

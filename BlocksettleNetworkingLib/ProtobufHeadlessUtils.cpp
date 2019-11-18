@@ -95,7 +95,7 @@ bs::core::wallet::TXSignRequest bs::signer::pbTxRequestToCore(const headless::Si
       txSignReq.prevStates.push_back(prevState);
       if (!value) {
          bs::CheckRecipSigner signer(prevState);
-         value = signer.spendValue();
+         value = signer.outputsTotalValue();
          if (txSignReq.change.value) {
             value -= txSignReq.change.value;
          }
