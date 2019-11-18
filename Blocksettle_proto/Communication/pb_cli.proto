@@ -21,6 +21,7 @@ enum CLIRequestType
    CreateCelerUserType              = 16;
    SetInitialPMPriceType            = 17;
    DisablePMProductType             = 18;
+   ExportRequestsType               = 19;
 }
 
 enum ArmoryConnectionState
@@ -233,4 +234,17 @@ message DisablePMProductResponse
    required string   product  = 1;
    required bool     result   = 2;
    optional string   message  = 3;
+}
+
+message ExportRequestsRequests
+{
+   required string   path = 1;
+}
+
+message ExportRequestsResponse
+{
+   required string   path           = 1;
+   required uint32   requests_count = 2;
+   required bool     result         = 3;
+   optional string   message        = 4;
 }
