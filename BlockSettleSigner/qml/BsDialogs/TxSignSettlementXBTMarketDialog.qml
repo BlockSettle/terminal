@@ -24,6 +24,7 @@ TxSignSettlementBaseDialog {
 
     signingAllowed: passwordDialogData.RequesterAuthAddressVerified && passwordDialogData.ResponderAuthAddressVerified
     errorMessage: qsTr("Authentication Address could not be verified")
+    validationTitle: qsTr("Counterparty")
 
     function getInputValue() {
         if (is_payOut) {

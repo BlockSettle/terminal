@@ -69,6 +69,7 @@ CustomTitleDialogWindowWithExpander {
     readonly property string plus_string: ""   // "+ "
 
     property string errorMessage
+    property string validationTitle
 
     id: root
     title: isExpanded ? passwordDialogData.Title : ""
@@ -285,7 +286,7 @@ CustomTitleDialogWindowWithExpander {
                 Layout.fillWidth: true
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
-                text: qsTr("Counterparty Validation")
+                text: validationTitle + qsTr(" Validation")
                 Layout.preferredHeight: 25
             }
 
@@ -295,7 +296,7 @@ CustomTitleDialogWindowWithExpander {
 
                 CustomLabel {
                     Layout.fillWidth: true
-                    text: qsTr("Counterparty")
+                    text: validationTitle
                 }
                 CustomLabelValue {
                     text: signingAllowed ? qsTr("Valid") : qsTr("Not Valid")

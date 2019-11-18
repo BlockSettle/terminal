@@ -85,6 +85,12 @@ double TXInfo::amountCCReceived(const QString &cc) const
    return txReq_.amountReceived(containsCCAddressCb) / BTCNumericTypes::BalanceDivider;
 }
 
+double TXInfo::amountCCSent() const
+{
+   return txReq_.totalSpent(containsAnyOurCCAddressCb_) / BTCNumericTypes::BalanceDivider;
+
+}
+
 double TXInfo::amountXBTReceived() const
 {
    // calculate received amount from counterparty outputs
@@ -192,6 +198,33 @@ QStringList TXInfo::allRecipients() const
 
    result.removeDuplicates();
    return result;
+}
+
+QString TXInfo::counterPartyCCReceiverAddress() const
+{
+   // Usable to find counterparty CC address where CC coins sent when we sell
+   uint64_t amountCCSpent = txReq_.totalSpent(containsAnyOurCCAddressCb_);
+
+   for (auto address : counterPartyRecipients()) {
+      if (txReq_.amountReceivedOnForCC(bs::Address::fromAddressString(address.toStdString())) == amountCCSpent) {
+         return address;
+      }
+   }
+   return {};
+}
+
+QString TXInfo::counterPartyXBTReceiverAddress() const
+{
+   // Find address where xbt coins sent (for CC settlements)
+   uint64_t amountXBTSpent = txReq_.totalSpent(containsAnyOurXbtAddressCb_) - txReq_.getFee();
+
+   for (auto address : counterPartyRecipients()) {
+      uint64_t amountXBTReceivedOnAddress = txReq_.amountReceivedOnForCC(bs::Address::fromAddressString(address.toStdString())) ;
+      if (amountXBTReceivedOnAddress == amountXBTSpent) {
+         return address;
+      }
+   }
+   return {};
 }
 
 QStringList TXInfo::inputsXBT() const
