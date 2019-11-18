@@ -209,8 +209,7 @@ namespace bs {
             uint64_t amountReceived(const ContainsAddressCb &containsAddressCb) const;
             uint64_t amountSent(const ContainsAddressCb &containsAddressCb) const;
 
-            uint64_t amountReceivedOn(const bs::Address &address) const;
-            uint64_t amountSentFrom(const bs::Address &address) const;
+            uint64_t amountReceivedOnForCC(const bs::Address &address) const;
 
             uint64_t getFee() const;
 

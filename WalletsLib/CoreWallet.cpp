@@ -390,25 +390,27 @@ uint64_t wallet::TXSignRequest::amountReceived(const wallet::TXSignRequest::Cont
 
 uint64_t wallet::TXSignRequest::amountSent(const wallet::TXSignRequest::ContainsAddressCb &containsAddressCb) const
 {
-   // get sent amount directly from recipients
-   // or
    // calculate sent amount based on inputs and change
    // containsAddressCb should return true if change address is in our wallet
+   // or
+   // get sent amount directly from recipients
+
+   if (!prevStates.empty() && containsAddressCb != nullptr) {
+      return totalSpent(containsAddressCb) - getFee();
+   }
 
    uint64_t amount = 0;
    for (const auto &recip : recipients) {
       amount += recip->getValue();
    }
 
-   if (amount == 0 && !prevStates.empty() && containsAddressCb != nullptr) {
-      return totalSpent(containsAddressCb) - fee;
-   }
-
    return amount;
 }
 
-uint64_t wallet::TXSignRequest::amountReceivedOn(const bs::Address &address) const
+uint64_t wallet::TXSignRequest::amountReceivedOnForCC(const bs::Address &address) const
 {
+   // This method should be used only for calculaion values in TXInfo for CC settlements
+
    std::set<BinaryData> txSet;
    uint64_t amount = 0;
 
@@ -435,40 +437,6 @@ uint64_t wallet::TXSignRequest::amountReceivedOn(const bs::Address &address) con
          if (addr == address) {
             txSet.insert(hash);
             amount += recip->getValue();
-         }
-      }
-   }
-
-   return amount;
-}
-
-uint64_t wallet::TXSignRequest::amountSentFrom(const bs::Address &address) const
-{
-   std::set<UTXO> utxoSet;
-   uint64_t amount = 0;
-
-   if (!prevStates.empty()) {
-      bs::CheckRecipSigner signer(prevStates.front());
-
-      for (auto spender : signer.spenders()) {
-         const auto addr = bs::Address::fromUTXO(spender->getUtxo());
-
-         if (utxoSet.find(spender->getUtxo()) == utxoSet.cend()) {
-            if (addr == address) {
-               utxoSet.insert(spender->getUtxo());
-               amount += spender->getValue();
-            }
-         }
-      }
-   }
-
-   for (const auto &utxo: inputs) {
-      const auto addr = bs::Address::fromUTXO(utxo);
-
-      if (utxoSet.find(utxo) == utxoSet.cend()) {
-         if (addr == address) {
-            utxoSet.insert(utxo);
-            amount += utxo.getValue();
          }
       }
    }
