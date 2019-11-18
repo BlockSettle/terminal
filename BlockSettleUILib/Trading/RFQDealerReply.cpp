@@ -800,7 +800,18 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
          }
       };
 
-      submitReply(qrn, price, cbSubmit, nullptr);
+      std::shared_ptr<bs::sync::Wallet> xbtWallet;
+      if (qrn.assetType != bs::network::Asset::SpotFX) {
+         xbtWallet = getSelectedXbtWallet();
+         if (!xbtWallet && walletsManager_) {
+            xbtWallet = walletsManager_->getDefaultWallet();
+         }
+         if (!xbtWallet) {
+            logger_->error("Can't submit CC/XBT reply without XBT wallet");
+            return;
+         }
+      }
+      submitReply(qrn, price, cbSubmit, xbtWallet);
    });
 }
 
