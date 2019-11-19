@@ -277,7 +277,7 @@ bool ReqCCSettlementContainer::startSigning()
          emit settlementCancelled();
       }
       else {
-         logger->warn("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
+         logger->error("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
          emit error(tr("own TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
       }
 
