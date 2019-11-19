@@ -38,7 +38,7 @@
       <enum>QTabWidget::North</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>2</number>
      </property>
      <property name="elideMode">
       <enum>Qt::ElideLeft</enum>
@@ -590,30 +590,6 @@ BlockSettle AB is regulated as a Payment Service Provider in Sweden (FI number 4
           </size>
          </property>
         </spacer>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_Copyright">
-         <property name="font">
-          <font>
-           <italic>true</italic>
-          </font>
-         </property>
-         <property name="text">
-          <string>Copyright © BlockSettle AB 2017</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-         </property>
-         <property name="margin">
-          <number>0</number>
-         </property>
-         <property name="indent">
-          <number>5</number>
-         </property>
-         <property name="subtleLabel" stdset="0">
-          <bool>true</bool>
-         </property>
-        </widget>
        </item>
       </layout>
      </widget>

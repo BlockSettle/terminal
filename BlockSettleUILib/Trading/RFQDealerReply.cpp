@@ -577,9 +577,8 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
          if (isSpendCC) {
             spendVal = qrn.quantity * assetManager_->getCCLotSize(qrn.product);
          } else {
-            uint64_t priceQty = std::ceil(price * qrn.quantity * 1000000.0);   // ugly hack to avoid rounding errors
-            priceQty *= 100;        // how to reproduce: sell 1 CC RFQ - reply to it with .012302 - without the hack
-            spendVal = priceQty;   // the result in spendVal (after trivial multiply) will be 1230199 (on Windows)
+            uint64_t priceInSatoshis = price * BTCNumericTypes::BalanceDivider;
+            spendVal = priceInSatoshis * (unsigned int)qrn.quantity;
          }
 
          const auto &spendWallet = isSpendCC ? ccWallet : xbtWallet;
@@ -801,7 +800,18 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
          }
       };
 
-      submitReply(qrn, price, cbSubmit, nullptr);
+      std::shared_ptr<bs::sync::Wallet> xbtWallet;
+      if (qrn.assetType != bs::network::Asset::SpotFX) {
+         xbtWallet = getSelectedXbtWallet();
+         if (!xbtWallet && walletsManager_) {
+            xbtWallet = walletsManager_->getDefaultWallet();
+         }
+         if (!xbtWallet) {
+            logger_->error("Can't submit CC/XBT reply without XBT wallet");
+            return;
+         }
+      }
+      submitReply(qrn, price, cbSubmit, xbtWallet);
    });
 }
 

@@ -109,7 +109,27 @@ bool ArmoryConnection::removeTarget(ArmoryCallbackTarget *act)
 void ArmoryConnection::maintenanceThreadFunc()
 {
    const auto &forEachTarget = [this](const std::function<void(ArmoryCallbackTarget *tgt)> &cb) {
-      do {
+      decltype(activeTargets_) notifiedACTs;
+
+      // go through existing ACT
+      // basically there are 2 cycles as minor optimization
+      // normal path - update once without any changes to ACT set.
+      // during startup there might be new ACT added on some armory events ( state changes usually )
+      // so we need to protect existing ACT from multiple notifications on the same event
+      {
+         std::unique_lock<std::mutex> lock(cbMutex_);
+         actChanged_ = false;
+         notifiedACTs = activeTargets_;
+      }
+
+      for (const auto &tgt : notifiedACTs) {
+         if (!maintThreadRunning_ || actChanged_) {
+            break;
+         }
+         cb(tgt);
+      }
+
+      while (actChanged_ && maintThreadRunning_) {
          decltype(activeTargets_) tempACT;
          {
             std::unique_lock<std::mutex> lock(cbMutex_);
@@ -121,9 +141,15 @@ void ArmoryConnection::maintenanceThreadFunc()
             if (!maintThreadRunning_ || actChanged_) {
                break;
             }
-            cb(tgt);
+
+            auto it = notifiedACTs.find(tgt);
+
+            if (it == notifiedACTs.end()) {
+               cb(tgt);
+               notifiedACTs.emplace_hint(it, tgt);
+            }
          }
-      } while (actChanged_ && maintThreadRunning_);
+      }
    };
 
    while (maintThreadRunning_) {
