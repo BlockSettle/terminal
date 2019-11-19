@@ -161,24 +161,24 @@ public:
 
                   auto result = bs::TradesVerification::verifyUnsignedPayin(
                      s.unsigned_tx(), env_->armoryConnection()->testFeePerByte(), settlementAddress.display(), uint64_t(s.amount()));
-                  ASSERT_TRUE(result.success);
+                  ASSERT_TRUE(result->success);
 
                   if (withoutChange_) {
-                     ASSERT_EQ(result.totalOutputCount, 1);
+                     ASSERT_EQ(result->totalOutputCount, 1);
                   } else {
-                     ASSERT_EQ(result.totalOutputCount, 2);
+                     ASSERT_EQ(result->totalOutputCount, 2);
 
                      // peer1_ is always sending XBT
                      auto changeWallet = peer1_.syncWalletMgr_->getWalletByAddress(
-                        bs::Address::fromAddressString(result.changeAddr));
+                        bs::Address::fromAddressString(result->changeAddr));
                      ASSERT_TRUE(changeWallet);
 
                      bool isExternal = changeWallet->isExternalAddress(
-                        bs::Address::fromAddressString(result.changeAddr));
+                        bs::Address::fromAddressString(result->changeAddr));
                      ASSERT_FALSE(isExternal);
                   }
 
-                  totalFee_ = result.totalFee;
+                  totalFee_ = result->totalFee;
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_WAIT_BUYER_SIGN);
                }
@@ -200,7 +200,7 @@ public:
                   auto result = bs::TradesVerification::verifySignedPayout(request.process_tx().signed_tx()
                      , bs::toHex(data.auth_address_buyer()), bs::toHex(data.auth_address_seller()), data.payin_hash()
                      , uint64_t(data.amount()), env_->armoryConnection()->testFeePerByte(), data.settlement_id(), settlementAddress.display());
-                  ASSERT_TRUE(result.success);
+                  ASSERT_TRUE(result->success);
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_WAIT_SELLER_SEAL);
                } else if (!payinDone_) {
@@ -211,7 +211,7 @@ public:
 
                   auto result = bs::TradesVerification::verifySignedPayin(request.process_tx().signed_tx()
                      , data.payin_hash(), env_->armoryConnection()->testFeePerByte(), totalFee_);
-                  ASSERT_TRUE(result.success);
+                  ASSERT_TRUE(result->success);
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_SUCCEED);
                   quit_ = true;
