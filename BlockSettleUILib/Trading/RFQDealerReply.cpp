@@ -575,10 +575,9 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
          const bool isSpendCC = qrn.side == bs::network::Side::Buy;
          uint64_t spendVal;
          if (isSpendCC) {
-            spendVal = qrn.quantity * assetManager_->getCCLotSize(qrn.product);
+            spendVal = static_cast<uint64_t>(qrn.quantity * assetManager_->getCCLotSize(qrn.product));
          } else {
-            uint64_t priceInSatoshis = price * BTCNumericTypes::BalanceDivider;
-            spendVal = priceInSatoshis * (unsigned int)qrn.quantity;
+            spendVal = bs::XBTAmount(price * qrn.quantity).GetValue();
          }
 
          const auto &spendWallet = isSpendCC ? ccWallet : xbtWallet;
