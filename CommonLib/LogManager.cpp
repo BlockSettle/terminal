@@ -39,7 +39,7 @@ LogManager::LogManager(const OnErrorCallback &cb)
    if (!override.empty()) {
       spdlog::set_pattern(detectFormatOverride(DefaultFormat));
    }
-   stderrSink_ = std::make_shared<spdlog::sinks::stdout_sink_mt>();
+   stderrSink_ = std::make_shared<spdlog::sinks::stderr_sink_mt>();
    stderrSink_->set_level(spdlog::level::err);
 }
 
