@@ -83,7 +83,7 @@ private:
    void connectArmory();
    void connectSigner();
    std::shared_ptr<WalletSignerContainer> createSigner();
-   std::shared_ptr<WalletSignerContainer> createRemoteSigner();
+   std::shared_ptr<WalletSignerContainer> createRemoteSigner(bool restoreHeadless = false);
    std::shared_ptr<WalletSignerContainer> createLocalSigner();
 
    void setTabStyle();

@@ -380,7 +380,7 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createSigner()
    }
 }
 
-std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createRemoteSigner()
+std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createRemoteSigner(bool restoreHeadless)
 {
    SignerHost signerHost = signersProvider_->getCurrentSigner();
    QString resultPort = QString::number(signerHost.port);
@@ -444,6 +444,11 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createRemoteSigner(
    }
    remoteSigner->updatePeerKeys(peers);
 
+   if (restoreHeadless) {
+      // setup headleass signer back (it was changed when createLocalSigner called signersProvider_->switchToLocalFullGUI)
+      signersProvider_->setupSigner(0, true);
+   }
+
    return remoteSigner;
 }
 
@@ -466,7 +471,7 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createLocalSigner()
 
       // Use locally started signer as remote
       signersProvider_->switchToLocalFullGUI(localSignerHost, localSignerPort);
-      return createRemoteSigner();
+      return createRemoteSigner(true);
    }
 
    const bool startLocalSignerProcess = true;
