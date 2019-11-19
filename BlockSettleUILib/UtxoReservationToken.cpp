@@ -34,6 +34,7 @@ UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_
 {
    assert(!reserveId.empty());
    assert(!walletId.empty());
+   assert(UtxoReservation::instance());
 
    if (logger) {
       uint64_t sum = 0;
@@ -60,6 +61,12 @@ void UtxoReservationToken::release()
    if (reserveId_.empty()) {
       return;
    }
+
+   if (!bs::UtxoReservation::instance()) {
+      SPDLOG_LOGGER_ERROR(logger_, "UtxoReservation::instance is already destroyed");
+      return;
+   }
+
    std::string walletId = bs::UtxoReservation::instance()->unreserve(reserveId_);
    if (logger_) {
       if (!walletId.empty()) {
