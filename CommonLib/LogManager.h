@@ -64,6 +64,7 @@ namespace bs {
       const OnErrorCallback   cb_;
       std::unordered_map<std::string, std::shared_ptr<spdlog::logger>>        loggers_;
       std::unordered_map<std::string, std::shared_ptr<spdlog::sinks::sink>>   sinks_;
+      std::shared_ptr<spdlog::sinks::sink> stderrSink_;
       std::unordered_map<std::string, std::string> patterns_;
       std::shared_ptr<spdlog::logger>              defaultLogger_;
       std::shared_ptr<spdlog::logger>              stdoutLogger_;
