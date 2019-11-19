@@ -173,7 +173,9 @@ std::shared_ptr<spdlog::logger> LogManager::createOrAppend(const std::shared_ptr
       }
    }
 
+#ifndef NDEBUG
    result->sinks().push_back(stderrSink_);
+#endif
 
    return result;
 }
