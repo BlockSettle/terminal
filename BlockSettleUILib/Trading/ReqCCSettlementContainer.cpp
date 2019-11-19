@@ -198,7 +198,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
    }
    else {
       const auto &cbFee = [this](float feePerByte) {
-         const uint64_t spendVal = amount() * BTCNumericTypes::BalanceDivider;
+         const uint64_t spendVal = bs::XBTAmount(amount()).GetValue();
          auto inputsCb = [this, feePerByte, spendVal](const std::vector<UTXO> &xbtInputs) {
             auto changeAddrCb = [this, feePerByte, xbtInputs, spendVal](const bs::Address &changeAddr) {
                try {
@@ -277,7 +277,7 @@ bool ReqCCSettlementContainer::startSigning()
          emit settlementCancelled();
       }
       else {
-         logger->warn("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
+         logger->error("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
          emit error(tr("own TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
       }
 
