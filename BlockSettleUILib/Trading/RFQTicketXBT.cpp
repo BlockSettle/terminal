@@ -734,7 +734,7 @@ void RFQTicketXBT::submitButtonClicked()
                }
                if (inputVal < spendVal) {
                   BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
-                     , tr("Not enough inputs for spend value")).exec();
+                     , tr("Insufficient input amount")).exec();
                   return;
                }
 
