@@ -98,3 +98,22 @@ TEST(TestArmory, CrashOnEmptyAddress)
       EXPECT_TRUE(true);
    }
 }
+
+TEST(TestArmory, CrashOnNonExistentHashInTxBatch)
+{  /* The crash happens in ClientCache::getTx at throw NoMatch()
+      because not properly caught in CallbackReturn_TxBatch::callback
+   */
+   TestEnv env(StaticLogger::loggerPtr);
+   env.requireArmory();
+   const auto armoryConn = env.armoryConnection();
+   const auto nonExHash = BinaryData::CreateFromHex("0001020304050607080900010203040506070809000102030405060708090001");
+
+   const auto promPtr = std::make_shared<std::promise<bool>>();
+   auto fut = promPtr->get_future();
+   const auto cbTXs = [promPtr](const std::vector<Tx> &, std::exception_ptr ePtr)
+   {
+      promPtr->set_value((ePtr != nullptr));
+   };
+   armoryConn->getTXsByHash({ nonExHash }, cbTXs);
+   EXPECT_TRUE(fut.get());
+}

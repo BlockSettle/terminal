@@ -304,9 +304,10 @@ BinaryData TestCCoin::SimpleSendMany(const bs::Address & fromAddress, const std:
 }
 
 Tx TestCCoin::CreateCJtx(
-   const std::vector<UTXO> & ccSortedInputsUserA, 
+   const std::vector<UTXO> & ccSortedInputsUserA,
    const std::vector<UTXO> & paymentSortedInputsUserB,
-   const CCoinSpender& structA, const CCoinSpender& structB, 
+   const CCoinSpender& structA, const CCoinSpender& structB,
+   const std::vector<UTXO> & ccInputsAppend,
    unsigned blockDelay)
 {
    uint64_t fee = 1000;
@@ -333,6 +334,16 @@ Tx TestCCoin::CreateCJtx(
       auto spender = std::make_shared<ScriptSpender>(utxo);
       cjSigner.addSpender(spender);
       xbtValue += utxo.getValue();
+      const auto addr = bs::Address::fromUTXO(utxo);
+      const auto signWallet = envPtr_->walletsMgr()->getWalletByAddress(addr);
+      EXPECT_NE(signWallet, nullptr);
+      signWallets.insert(signWallet);
+   }
+
+   for (auto& utxo : ccInputsAppend) {
+      auto spender = std::make_shared<ScriptSpender>(utxo);
+      cjSigner.addSpender(spender);
+      ccValue += utxo.getValue();
       const auto addr = bs::Address::fromUTXO(utxo);
       const auto signWallet = envPtr_->walletsMgr()->getWalletByAddress(addr);
       EXPECT_NE(signWallet, nullptr);
@@ -625,17 +636,26 @@ TEST_F(TestCCoin, Case_1CC_2CC)
    ASSERT_FALSE(utxosC2.empty());
    auto utxosC3 = GetUTXOsFor(userCCAddresses_[9]);
    EXPECT_FALSE(utxosC3.empty());
-   // add change from previous TX as an input - sort it arbitrary after XBT inputs
-   utxosC2.insert(utxosC2.end(), utxosC3.cbegin(), utxosC3.cend());
 
-   tx = CreateCJtx(utxosC1, utxosC2, ccsB, ccsC);
+   // add change from previous TX as an input - sort it after XBT inputs
+   tx = CreateCJtx(utxosC1, utxosC2, ccsB, ccsC, utxosC3);
    MineBlocks(6);
    update(cct);
 
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 25 * ccLotSize_);
-   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), (100 - amountCC - 25) * ccLotSize_);
+   // as we're using 2 inputs: [1] (50) and [9] (50), after subtracting tx #2 amount (25),
+   // we should get 75 on change address [8] (50 + 50 - 25)
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), (2*amountCC - 25) * ccLotSize_);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), 0);
+
+   std::set<BinaryData> participatingAddresses = {    // all addresses that participated in the above transactions
+      userCCAddresses_[0], userCCAddresses_[1],       // they simulate CCLeaf and its balance
+      userCCAddresses_[2], userCCAddresses_[8], userCCAddresses_[9]
+   };    // should be 100 CCs in sum (as no amount was sent outside)
+   EXPECT_EQ(cct->getConfirmedCcValueForAddresses(participatingAddresses), 100 * ccLotSize_);
+   // no unconfirmed balance should retain after 6 confirmations
+   EXPECT_EQ(cct->getUnconfirmedCcValueForAddresses(participatingAddresses), 0);
 
    for (const auto &utxo : utxosC1) {
       EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
