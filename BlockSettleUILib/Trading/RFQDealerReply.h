@@ -85,7 +85,7 @@ namespace bs {
          bs::Address selectedAuthAddress() const;
          std::vector<UTXO> selectedXbtInputs() const;
 
-         using SubmitQuoteNotifCb = std::function<void(bs::network::QuoteNotification, bs::UtxoReservationToken)>;
+         using SubmitQuoteNotifCb = std::function<void(bs::network::QuoteNotification, bs::UtxoReservationToken, std::shared_ptr<bs::sync::Wallet>)>;
          void setSubmitQuoteNotifCb(SubmitQuoteNotifCb cb);
 
       signals:

@@ -676,7 +676,7 @@ void RFQDealerReply::submitButtonClicked()
       if (!qn.quoteRequestId.empty()) {
          logger_->debug("Submitted quote reply on {}: {}/{}", currentQRN_.quoteRequestId, qn.bidPx, qn.offerPx);
          sentNotifs_[qn.quoteRequestId] = price;
-         submitQuoteNotifCb_(std::move(qn), std::move(utxoRes));
+         submitQuoteNotifCb_(std::move(qn), std::move(utxoRes), {});
       }
    };
    submitReply(currentQRN_, price, cbSubmit, getSelectedXbtWallet());
@@ -790,15 +790,6 @@ void RFQDealerReply::onBestQuotePrice(const QString reqId, double price, bool ow
 void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, double price)
 {
    QMetaObject::invokeMethod(this, [this, qrn, price] {
-      const auto &cbSubmit = [this, qrn, price](bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes) {
-         if (!qn.quoteRequestId.empty()) {
-            logger_->debug("Submitted AQ reply on {}: {}/{}", qrn.quoteRequestId, qn.bidPx, qn.offerPx);
-            // Store AQ too so it's possible to pull it later (and to disable submit button)
-            sentNotifs_[qn.quoteRequestId] = price;
-            submitQuoteNotifCb_(std::move(qn), std::move(utxoRes));
-         }
-      };
-
       std::shared_ptr<bs::sync::Wallet> xbtWallet;
       if (qrn.assetType != bs::network::Asset::SpotFX) {
          xbtWallet = getSelectedXbtWallet();
@@ -810,6 +801,16 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
             return;
          }
       }
+
+      const auto &cbSubmit = [this, qrn, price, defaultWallet = xbtWallet](bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes) {
+         if (!qn.quoteRequestId.empty()) {
+            logger_->debug("Submitted AQ reply on {}: {}/{}", qrn.quoteRequestId, qn.bidPx, qn.offerPx);
+            // Store AQ too so it's possible to pull it later (and to disable submit button)
+            sentNotifs_[qn.quoteRequestId] = price;
+            submitQuoteNotifCb_(std::move(qn), std::move(utxoRes), std::move(defaultWallet));
+         }
+      };
+
       submitReply(qrn, price, cbSubmit, xbtWallet);
    });
 }

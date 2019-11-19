@@ -151,11 +151,11 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, this, &RFQReplyWidget::onSelected);
 
-   ui_->pageRFQReply->setSubmitQuoteNotifCb([this](bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes) {
+   ui_->pageRFQReply->setSubmitQuoteNotifCb([this](bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes, std::shared_ptr<bs::sync::Wallet> defaultWallet) {
       statsCollector_->onQuoteSubmitted(qn);
       quoteProvider_->SubmitQuoteNotif(qn);
       ui_->widgetQuoteRequests->onQuoteReqNotifReplied(qn);
-      onReplied(qn, std::move(utxoRes));
+      onReplied(qn, std::move(utxoRes), std::move(defaultWallet));
    });
 
    connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, quoteProvider_.get(), &QuoteProvider::CancelQuoteNotif);
@@ -192,7 +192,7 @@ void RFQReplyWidget::forceCheckCondition()
    ui_->widgetQuoteRequests->onQuoteReqNotifSelected(index);
 }
 
-void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes)
+void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes, std::shared_ptr<bs::sync::Wallet> defaultWallet)
 {
    if (qn.assetType == bs::network::Asset::SpotFX) {
       return;
@@ -201,6 +201,9 @@ void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn, bs::UtxoReserv
    if (qn.assetType == bs::network::Asset::SpotXBT) {
       auto &reply = sentXbtReplies_[qn.settlementId];
       reply.xbtWallet = ui_->pageRFQReply->getSelectedXbtWallet();
+      if (!reply.xbtWallet && defaultWallet) {
+         reply.xbtWallet = defaultWallet;
+      }
       reply.authAddr = ui_->pageRFQReply->selectedAuthAddress();
       reply.utxosPayinFixed = ui_->pageRFQReply->selectedXbtInputs();
    } else if (qn.assetType == bs::network::Asset::PrivateMarket) {

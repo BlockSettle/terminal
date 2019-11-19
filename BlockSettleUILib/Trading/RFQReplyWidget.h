@@ -101,7 +101,7 @@ private slots:
    void onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk);
 
 private:
-   void onReplied(bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes);
+   void onReplied(bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes, std::shared_ptr<bs::sync::Wallet> defaultWallet);
    void showSettlementDialog(QDialog *dlg);
    bool checkConditions(const QString& productGroup, const bs::network::QuoteReqNotification& request);
    void popShield();
