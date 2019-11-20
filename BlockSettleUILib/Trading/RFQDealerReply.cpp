@@ -533,6 +533,9 @@ bs::Address RFQDealerReply::selectedAuthAddress(ReplyType replyType) const
 
 std::vector<UTXO> RFQDealerReply::selectedXbtInputs(ReplyType replyType) const
 {
+   if (replyType == ReplyType::Script) {
+      return {};
+   }
    if (!selectedXbtInputs_ || selectedXbtInputs_->UseAutoSel()) {
       return {};
    }
