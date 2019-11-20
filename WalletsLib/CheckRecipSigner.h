@@ -47,7 +47,7 @@ namespace bs {
       bool findRecipAddress(const Address &address, cbFindRecip cb) const;
 
       void hasInputAddress(const Address &, std::function<void(bool)>, uint64_t lotsize = 1);
-      uint64_t estimateFee(float feePerByte) const;
+      uint64_t estimateFee(float &feePerByte, uint64_t fixedFee = 0) const;
       uint64_t outputsTotalValue() const;
       uint64_t inputsTotalValue() const;
       std::vector<std::shared_ptr<ScriptSpender>> spenders() const { return spenders_; }

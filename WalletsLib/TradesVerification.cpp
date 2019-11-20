@@ -180,7 +180,7 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUn
       auto result = std::make_shared<Result>();
       result->success = true;
       result->totalFee = totalInput - totalOutputAmount;
-      result->estimatedFee = deserializedSigner.estimateFee(feePerByte);
+      result->estimatedFee = deserializedSigner.estimateFee(feePerByte, result->totalFee);
       result->totalOutputCount = totalOutputCount;
       result->changeAddr = changeAddr;
 
