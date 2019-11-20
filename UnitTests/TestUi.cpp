@@ -82,7 +82,7 @@ TEST(TestUi, Display)
    EXPECT_EQ(UiUtils::displayValue(12.01, "BLK/XBT", "BLK", bs::network::Asset::PrivateMarket), QLocale().toString(12.01, 'f', 6));
 }
 
-#if 0
+#if 0    // it now doesn't compile
 TEST(TestUi, DISABLED_RFQ_entry_CC_sell)
 {
    SecureBinaryData passphrase("passphrase");
@@ -157,4 +157,4 @@ TEST(TestUi, DISABLED_RFQ_entry_CC_sell)
 
    env.walletsMgr()->deleteWalletFile(priWallet);
 }
-#endif
+#endif   //0
