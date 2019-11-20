@@ -549,7 +549,7 @@ void RFQDealerReply::setSubmitQuoteNotifCb(RFQDealerReply::SubmitQuoteNotifCb cb
 
 void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, double price, ReplyType replyType)
 {
-   if (price == 0) {
+   if (qFuzzyIsNull(price)) {
       SPDLOG_LOGGER_ERROR(logger_, "invalid price");
       return;
    }
