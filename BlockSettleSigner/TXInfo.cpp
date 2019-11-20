@@ -2,6 +2,7 @@
 
 #include "CheckRecipSigner.h"
 #include "OfflineSigner.h"
+#include "TxClasses.h"
 #include "Wallets/SyncHDWallet.h"
 #include "QWalletInfo.h"
 
@@ -122,8 +123,13 @@ bool TXInfo::loadSignedTx(const QString &fileName)
       return false;
    }
 
+   // check signed tx
+   if (!txReq_.isSourceOfTx(Tx(loadedTxs.front().prevStates.front()))) {
+      SPDLOG_LOGGER_ERROR(logger_, "sign request not equal to signed tx in '{}'", fileName.toStdString());
+      return false;
+   }
+
    txReqSigned_ = loadedTxs.front();
-   // FIXME: check if txReqSigned_ originally is txReq_
 
    emit dataChanged();
    return true;
@@ -206,7 +212,7 @@ QString TXInfo::counterPartyCCReceiverAddress() const
    uint64_t amountCCSpent = txReq_.totalSpent(containsAnyOurCCAddressCb_);
 
    for (auto address : counterPartyRecipients()) {
-      if (txReq_.amountReceivedOnForCC(bs::Address::fromAddressString(address.toStdString())) == amountCCSpent) {
+      if (txReq_.amountReceivedOn(bs::Address::fromAddressString(address.toStdString())) == amountCCSpent) {
          return address;
       }
    }
@@ -219,7 +225,7 @@ QString TXInfo::counterPartyXBTReceiverAddress() const
    uint64_t amountXBTSpent = txReq_.totalSpent(containsAnyOurXbtAddressCb_) - txReq_.getFee();
 
    for (auto address : counterPartyRecipients()) {
-      uint64_t amountXBTReceivedOnAddress = txReq_.amountReceivedOnForCC(bs::Address::fromAddressString(address.toStdString())) ;
+      uint64_t amountXBTReceivedOnAddress = txReq_.amountReceivedOn(bs::Address::fromAddressString(address.toStdString())) ;
       if (amountXBTReceivedOnAddress == amountXBTSpent) {
          return address;
       }
