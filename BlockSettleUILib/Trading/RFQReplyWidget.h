@@ -107,7 +107,7 @@ private slots:
    void onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk);
 
 private:
-   void onReplied(bs::ui::SubmitQuoteReplyData data);
+   void onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
    void showSettlementDialog(QDialog *dlg);
    bool checkConditions(const QString& productGroup, const bs::network::QuoteReqNotification& request);
    void popShield();

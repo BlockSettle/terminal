@@ -560,10 +560,8 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
       return;
    }
 
-   auto qn = std::make_shared<bs::network::QuoteNotification>(qrn, authKey_, price, "");
-
    auto replyData = std::make_shared<SubmitQuoteReplyData>();
-   replyData->qn = qn;
+   replyData->qn = bs::network::QuoteNotification(qrn, authKey_, price, "");
 
    if (qrn.assetType != bs::network::Asset::SpotFX) {
       replyData->xbtWallet = getSelectedXbtWallet(replyType);
@@ -584,21 +582,20 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
       replyData->fixedXbtInputs = selectedXbtInputs(replyType);
    }
 
-   auto submit = [this, price, replyData](bs::UtxoReservationToken utxoRes) {
-      SPDLOG_LOGGER_DEBUG(logger_, "submitted quote reply on {}: {}/{}", replyData->qn->quoteRequestId, replyData->qn->bidPx, replyData->qn->offerPx);
-      sentNotifs_[replyData->qn->quoteRequestId] = price;
-      replyData->utxoRes = std::move(utxoRes);
-      submitQuoteNotifCb_(std::move(*replyData));
+   auto submit = [this, price, replyData]() {
+      SPDLOG_LOGGER_DEBUG(logger_, "submitted quote reply on {}: {}/{}", replyData->qn.quoteRequestId, replyData->qn.bidPx, replyData->qn.offerPx);
+      sentNotifs_[replyData->qn.quoteRequestId] = price;
+      submitQuoteNotifCb_(replyData);
    };
 
    switch (qrn.assetType) {
       case bs::network::Asset::SpotFX: {
-         submit({});
+         submit();
          break;
       }
 
       case bs::network::Asset::SpotXBT: {
-         submit({});
+         submit();
          break;
       }
 
@@ -623,14 +620,14 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
          // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee is set)
          const uint64_t requestUtxoVal = isSpendCC ? spendVal : std::numeric_limits<uint64_t>::max();
 
-         auto recvAddrCb = [this, submit, qn, qrn, spendWallet, spendVal, isSpendCC, requestUtxoVal](const bs::Address &addr) {
-            qn->receiptAddress = addr.display();
-            qn->reqAuthKey = qrn.requestorRecvAddress;
+         auto recvAddrCb = [this, submit, replyData, qrn, spendWallet, spendVal, isSpendCC, requestUtxoVal](const bs::Address &addr) {
+            replyData->qn.receiptAddress = addr.display();
+            replyData->qn.reqAuthKey = qrn.requestorRecvAddress;
 
-            const auto &cbFee = [this, qrn, spendVal, spendWallet, isSpendCC, submit, qn, requestUtxoVal](float feePerByte) {
-               auto inputsCb = [this, qrn, feePerByte, qn, spendVal, spendWallet, isSpendCC, submit](const std::vector<UTXO> &inputs) {
-                  QMetaObject::invokeMethod(this, [this, feePerByte, qrn, qn, spendVal, spendWallet, isSpendCC, submit, inputs] {
-                     const auto &cbChangeAddr = [this, feePerByte, qrn, qn, spendVal, spendWallet, submit, inputs]
+            const auto &cbFee = [this, qrn, spendVal, spendWallet, isSpendCC, submit, replyData, requestUtxoVal](float feePerByte) {
+               auto inputsCb = [this, qrn, feePerByte, replyData, spendVal, spendWallet, isSpendCC, submit](const std::vector<UTXO> &inputs) {
+                  QMetaObject::invokeMethod(this, [this, feePerByte, qrn, replyData, spendVal, spendWallet, isSpendCC, submit, inputs] {
+                     const auto &cbChangeAddr = [this, feePerByte, qrn, replyData, spendVal, spendWallet, submit, inputs]
                         (const bs::Address &changeAddress)
                      {
                         try {
@@ -641,9 +638,9 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            const auto outSortOrder = (qrn.side == bs::network::Side::Buy) ? kBuySortOrder : kSellSortOrder;
                            const auto txReq = spendWallet->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
                               , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
-                           qn->transactionData = txReq.serializeState().toHexStr();
-                           auto utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, txReq, qn->quoteRequestId);
-                           submit(std::move(utxoRes));
+                           replyData->qn.transactionData = txReq.serializeState().toHexStr();
+                           replyData->utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, txReq, replyData->qn.quoteRequestId);
+                           submit();
                         } catch (const std::exception &e) {
                            SPDLOG_LOGGER_ERROR(logger_, "error creating own unsigned half: {}", e.what());
                            return;

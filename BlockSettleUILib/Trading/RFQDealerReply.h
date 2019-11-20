@@ -57,7 +57,7 @@ namespace bs {
 
       struct SubmitQuoteReplyData
       {
-         std::shared_ptr<bs::network::QuoteNotification> qn;
+         bs::network::QuoteNotification qn;
          bs::UtxoReservationToken utxoRes;
          std::shared_ptr<bs::sync::Wallet> xbtWallet;
          bs::Address authAddr;
@@ -90,7 +90,7 @@ namespace bs {
          QPushButton* pullButton() const;
          QPushButton* quoteButton() const;
 
-         using SubmitQuoteNotifCb = std::function<void(SubmitQuoteReplyData data)>;
+         using SubmitQuoteNotifCb = std::function<void(const std::shared_ptr<SubmitQuoteReplyData> &data)>;
          void setSubmitQuoteNotifCb(SubmitQuoteNotifCb cb);
 
       signals:

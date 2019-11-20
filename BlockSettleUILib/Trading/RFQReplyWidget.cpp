@@ -150,11 +150,11 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, this, &RFQReplyWidget::onSelected);
 
-   ui_->pageRFQReply->setSubmitQuoteNotifCb([this](bs::ui::SubmitQuoteReplyData data) {
-      statsCollector_->onQuoteSubmitted(*data.qn);
-      quoteProvider_->SubmitQuoteNotif(*data.qn);
-      ui_->widgetQuoteRequests->onQuoteReqNotifReplied(*data.qn);
-      onReplied(std::move(data));
+   ui_->pageRFQReply->setSubmitQuoteNotifCb([this](const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data) {
+      statsCollector_->onQuoteSubmitted(data->qn);
+      quoteProvider_->SubmitQuoteNotif(data->qn);
+      ui_->widgetQuoteRequests->onQuoteReqNotifReplied(data->qn);
+      onReplied(data);
    });
 
    connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, quoteProvider_.get(), &QuoteProvider::CancelQuoteNotif);
@@ -191,25 +191,25 @@ void RFQReplyWidget::forceCheckCondition()
    ui_->widgetQuoteRequests->onQuoteReqNotifSelected(index);
 }
 
-void RFQReplyWidget::onReplied(SubmitQuoteReplyData data)
+void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data)
 {
-   switch (data.qn->assetType) {
+   switch (data->qn.assetType) {
       case bs::network::Asset::SpotXBT: {
-         assert(data.xbtWallet);
-         auto &reply = sentXbtReplies_[data.qn->settlementId];
-         reply.xbtWallet = data.xbtWallet;
-         reply.authAddr = data.authAddr;
-         reply.utxosPayinFixed = data.fixedXbtInputs;
+         assert(data->xbtWallet);
+         auto &reply = sentXbtReplies_[data->qn.settlementId];
+         reply.xbtWallet = data->xbtWallet;
+         reply.authAddr = data->authAddr;
+         reply.utxosPayinFixed = data->fixedXbtInputs;
          break;
       }
 
       case bs::network::Asset::PrivateMarket: {
-         assert(data.xbtWallet);
-         auto &reply = sentCCReplies_[data.qn->quoteRequestId];
-         reply.recipientAddress = data.qn->receiptAddress;
-         reply.requestorAuthAddress = data.qn->reqAuthKey;
-         reply.utxoRes = std::move(data.utxoRes);
-         reply.spendWallet = (data.qn->side == bs::network::Side::Buy) ? data.xbtWallet : walletsManager_->getCCWallet(data.qn->product);
+         assert(data->xbtWallet);
+         auto &reply = sentCCReplies_[data->qn.quoteRequestId];
+         reply.recipientAddress = data->qn.receiptAddress;
+         reply.requestorAuthAddress = data->qn.reqAuthKey;
+         reply.utxoRes = std::move(data->utxoRes);
+         reply.spendWallet = (data->qn.side == bs::network::Side::Buy) ? data->xbtWallet : walletsManager_->getCCWallet(data->qn.product);
          break;
       }
 
