@@ -15,7 +15,6 @@
 #include "OrdersView.h"
 #include "QuoteProvider.h"
 #include "RFQBlotterTreeView.h"
-#include "RFQDialog.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "Wallets/SyncHDWallet.h"
@@ -151,11 +150,11 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, this, &RFQReplyWidget::onSelected);
 
-   ui_->pageRFQReply->setSubmitQuoteNotifCb([this](bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes, std::shared_ptr<bs::sync::Wallet> defaultWallet) {
-      statsCollector_->onQuoteSubmitted(qn);
-      quoteProvider_->SubmitQuoteNotif(qn);
-      ui_->widgetQuoteRequests->onQuoteReqNotifReplied(qn);
-      onReplied(qn, std::move(utxoRes), std::move(defaultWallet));
+   ui_->pageRFQReply->setSubmitQuoteNotifCb([this](bs::ui::SubmitQuoteReplyData data) {
+      statsCollector_->onQuoteSubmitted(*data.qn);
+      quoteProvider_->SubmitQuoteNotif(*data.qn);
+      ui_->widgetQuoteRequests->onQuoteReqNotifReplied(*data.qn);
+      onReplied(std::move(data));
    });
 
    connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, quoteProvider_.get(), &QuoteProvider::CancelQuoteNotif);
@@ -192,27 +191,31 @@ void RFQReplyWidget::forceCheckCondition()
    ui_->widgetQuoteRequests->onQuoteReqNotifSelected(index);
 }
 
-void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn, bs::UtxoReservationToken utxoRes, std::shared_ptr<bs::sync::Wallet> defaultWallet)
+void RFQReplyWidget::onReplied(SubmitQuoteReplyData data)
 {
-   if (qn.assetType == bs::network::Asset::SpotFX) {
-      return;
-   }
-
-   if (qn.assetType == bs::network::Asset::SpotXBT) {
-      auto &reply = sentXbtReplies_[qn.settlementId];
-      reply.xbtWallet = ui_->pageRFQReply->getSelectedXbtWallet();
-      if (!reply.xbtWallet && defaultWallet) {
-         reply.xbtWallet = defaultWallet;
+   switch (data.qn->assetType) {
+      case bs::network::Asset::SpotXBT: {
+         assert(data.xbtWallet);
+         auto &reply = sentXbtReplies_[data.qn->settlementId];
+         reply.xbtWallet = data.xbtWallet;
+         reply.authAddr = data.authAddr;
+         reply.utxosPayinFixed = data.fixedXbtInputs;
+         break;
       }
-      reply.authAddr = ui_->pageRFQReply->selectedAuthAddress();
-      reply.utxosPayinFixed = ui_->pageRFQReply->selectedXbtInputs();
-   } else if (qn.assetType == bs::network::Asset::PrivateMarket) {
-      auto &reply = sentCCReplies_[qn.quoteRequestId];
-      reply.recipientAddress = qn.receiptAddress;
-      reply.requestorAuthAddress = qn.reqAuthKey;
-      reply.utxoRes = std::move(utxoRes);
-      reply.spendWallet = (qn.side == bs::network::Side::Buy) ?
-         ui_->pageRFQReply->getSelectedXbtWallet() : walletsManager_->getCCWallet(qn.product);
+
+      case bs::network::Asset::PrivateMarket: {
+         assert(data.xbtWallet);
+         auto &reply = sentCCReplies_[data.qn->quoteRequestId];
+         reply.recipientAddress = data.qn->receiptAddress;
+         reply.requestorAuthAddress = data.qn->reqAuthKey;
+         reply.utxoRes = std::move(data.utxoRes);
+         reply.spendWallet = (data.qn->side == bs::network::Side::Buy) ? data.xbtWallet : walletsManager_->getCCWallet(data.qn->product);
+         break;
+      }
+
+      default: {
+         break;
+      }
    }
 }
 
