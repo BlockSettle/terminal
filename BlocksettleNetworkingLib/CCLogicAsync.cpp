@@ -255,7 +255,7 @@ void ColoredCoinTrackerAsync::processTxBatch(
 
       //check new utxo list
       auto spentnessLbd = [this, ssPtr, cb](
-         const std::map<BinaryData, std::map<unsigned, BinaryData>> &spentnessBatch
+         const std::map<BinaryData, std::map<unsigned, std::pair<BinaryData, unsigned>>> &spentnessBatch
          , std::exception_ptr exPtr)
       {
          if (exPtr != nullptr) {
@@ -269,8 +269,8 @@ void ColoredCoinTrackerAsync::processTxBatch(
          for (auto& spentness : spentnessBatch) {
             auto& spentnessMap = spentness.second;
             for (auto& hashPair : spentnessMap) {
-               if (hashPair.second.getSize() == 32) {
-                  spenderHashes.insert(hashPair.second);
+               if (hashPair.second.first.getSize() == 32) {
+                  spenderHashes.insert(hashPair.second.first);
                }
             }
          }

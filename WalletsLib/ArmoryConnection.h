@@ -176,7 +176,7 @@ public:
       , const std::function<void(const OutpointBatch &, std::exception_ptr)> &
       , unsigned int height = 0, unsigned int zcIndex = 0);
    bool getSpentnessForOutputs(const std::map<BinaryData, std::set<unsigned>> &
-      , const std::function<void(const std::map<BinaryData, std::map<unsigned, BinaryData>> &
+      , const std::function<void(const std::map<BinaryData, std::map<unsigned, std::pair<BinaryData, unsigned>>> &
          , std::exception_ptr)> &);
    bool getOutputsForOutpoints(const std::map<BinaryData, std::set<unsigned>>&, bool withZc,
       const std::function<void(std::vector<UTXO>, std::exception_ptr)>&);
