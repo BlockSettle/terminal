@@ -55,6 +55,15 @@ namespace bs {
 
    namespace ui {
 
+      struct SubmitQuoteReplyData
+      {
+         bs::network::QuoteNotification qn;
+         bs::UtxoReservationToken utxoRes;
+         std::shared_ptr<bs::sync::Wallet> xbtWallet;
+         bs::Address authAddr;
+         std::vector<UTXO> fixedXbtInputs;
+      };
+
       class RFQDealerReply : public QWidget
       {
          Q_OBJECT
@@ -81,11 +90,7 @@ namespace bs {
          QPushButton* pullButton() const;
          QPushButton* quoteButton() const;
 
-         std::shared_ptr<bs::sync::Wallet> getSelectedXbtWallet() const;
-         bs::Address selectedAuthAddress() const;
-         std::vector<UTXO> selectedXbtInputs() const;
-
-         using SubmitQuoteNotifCb = std::function<void(bs::network::QuoteNotification, bs::UtxoReservationToken)>;
+         using SubmitQuoteNotifCb = std::function<void(const std::shared_ptr<SubmitQuoteReplyData> &data)>;
          void setSubmitQuoteNotifCb(SubmitQuoteNotifCb cb);
 
       signals:
@@ -163,6 +168,12 @@ namespace bs {
          SubmitQuoteNotifCb submitQuoteNotifCb_;
 
       private:
+         enum class ReplyType
+         {
+            Manual,
+            Script,
+         };
+
          void reset();
          void validateGUI();
          void updateRespQuantity();
@@ -182,11 +193,12 @@ namespace bs {
          QDoubleSpinBox *getActivePriceWidget() const;
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
          // xbtWallet - what XBT wallet to use for XBT/CC trades (selected from UI for manual trades, default wallet for AQ trades), empty for FX trades
-         using SubmitCb = std::function<void(bs::network::QuoteNotification, bs::UtxoReservationToken)>;
-         void submitReply(const network::QuoteReqNotification &qrn, double price
-            , SubmitCb, const std::shared_ptr<bs::sync::Wallet> &xbtWallet);
+         void submitReply(const network::QuoteReqNotification &qrn, double price, ReplyType replyType);
          void updateWalletsList(bool skipWatchingOnly);
          bool isXbtSpend() const;
+         std::shared_ptr<bs::sync::Wallet> getSelectedXbtWallet(ReplyType replyType) const;
+         bs::Address selectedAuthAddress(ReplyType replyType) const;
+         std::vector<UTXO> selectedXbtInputs(ReplyType replyType) const;
       };
 
    }  //namespace ui
