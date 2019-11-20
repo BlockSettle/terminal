@@ -899,15 +899,22 @@ std::vector<std::string> hd::CCLeaf::setUnconfirmedTarget()
 
 bool hd::CCLeaf::getSpendableTxOutList(const ArmoryConnection::UTXOsCb &cb, uint64_t val)
 {
-   const auto cbWrap = [cb, val, armory=armory_]
-      (const std::vector<UTXO> &utxos, std::exception_ptr eptr)
+   const auto cbWrap = [this, cb, val, handle = validityFlag_.handle()]
+      (const std::vector<UTXO> &utxos, std::exception_ptr eptr) mutable
    {
+      ValidityGuard lock(handle);
+      if (!handle.isValid()) {
+         return;
+      }
       std::vector<UTXO> filteredUTXOs;
       for (const auto &utxo : utxos) {
-         const auto nbConf = armory->getConfirmationsNumber(utxo.getHeight());
+         const auto nbConf = armory_->getConfirmationsNumber(utxo.getHeight());
          if (nbConf >= kIntConfCount) {
             filteredUTXOs.emplace_back(std::move(utxo));
          }
+      }
+      if (utxoAdapter_) {
+         utxoAdapter_->filter(filteredUTXOs);
       }
       if (cb) {
          cb(bs::selectUtxoForAmount(std::move(filteredUTXOs), val));

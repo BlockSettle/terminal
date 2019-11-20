@@ -39,6 +39,8 @@ LogManager::LogManager(const OnErrorCallback &cb)
    if (!override.empty()) {
       spdlog::set_pattern(detectFormatOverride(DefaultFormat));
    }
+   stderrSink_ = std::make_shared<spdlog::sinks::stderr_sink_mt>();
+   stderrSink_->set_level(spdlog::level::err);
 }
 
 bool LogManager::add(const std::shared_ptr<spdlog::logger> &logger, const std::string &category)
@@ -170,6 +172,11 @@ std::shared_ptr<spdlog::logger> LogManager::createOrAppend(const std::shared_ptr
          result = std::make_shared<spdlog::logger>(config.category, itSink->second);
       }
    }
+
+#ifndef NDEBUG
+   result->sinks().push_back(stderrSink_);
+#endif
+
    return result;
 }
 

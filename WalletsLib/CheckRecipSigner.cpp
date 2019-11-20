@@ -133,6 +133,9 @@ void CheckRecipSigner::hasInputAddress(const bs::Address &addr, std::function<vo
             if (!handle.isValid()) {
                return;
             }
+            if (resultFound_) {
+               return;
+            }
             txHashSet_.erase(tx.getThisHash());
             if (contains) {
                resultFound_ = true;
@@ -140,6 +143,7 @@ void CheckRecipSigner::hasInputAddress(const bs::Address &addr, std::function<vo
                return;
             }
             if (txHashSet_.empty()) {
+               resultFound_ = true;
                cb(false);
             }
          };
