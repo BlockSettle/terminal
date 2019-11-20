@@ -183,7 +183,7 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUn
       auto result = std::make_shared<Result>();
       result->success = true;
       result->totalFee = totalInput - totalOutputAmount;
-      result->estimatedFee = static_cast<uint64_t>(feePerByte * unsignedPayin.getSize());
+      result->estimatedFee = deserializedSigner.estimateFee(feePerByte);
       result->totalOutputCount = totalOutputCount;
       result->changeAddr = changeAddr;
 
