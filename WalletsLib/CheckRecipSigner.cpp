@@ -214,6 +214,16 @@ uint64_t CheckRecipSigner::inputsTotalValue() const
    return result;
 }
 
+bool CheckRecipSigner::isRBF() const
+{
+   for (const auto &spender : spenders()) {
+      if (spender->getSequence() == (UINT32_MAX - 2)) {
+         return true;
+      }
+   }
+   return false;
+}
+
 bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger> &logger
    , std::function<void(std::vector<bs::Address>)> cb)
 {

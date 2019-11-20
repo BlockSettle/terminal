@@ -173,10 +173,7 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUn
          return Result::error(fmt::format("total inputs {} lower that outputs {}", totalInput, totalOutputAmount));
       }
 
-      // is not RBF
-      Tx deserializedTx(unsignedPayin);
-
-      if (deserializedTx.isRBF()) {
+      if (deserializedSigner.isRBF()) {
          return Result::error("Pay-In could not be RBF transaction");
       }
 

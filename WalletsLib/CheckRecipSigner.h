@@ -52,6 +52,7 @@ namespace bs {
       uint64_t inputsTotalValue() const;
       std::vector<std::shared_ptr<ScriptSpender>> spenders() const { return spenders_; }
       std::vector<std::shared_ptr<ScriptRecipient>> recipients() const { return recipients_; }
+      bool isRBF() const;
 
       bool GetInputAddressList(const std::shared_ptr<spdlog::logger> &logger, std::function<void(std::vector<bs::Address>)>);
 
