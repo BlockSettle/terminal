@@ -217,7 +217,7 @@ uint64_t CheckRecipSigner::inputsTotalValue() const
 bool CheckRecipSigner::isRBF() const
 {
    for (const auto &spender : spenders()) {
-      if (spender->getSequence() == (UINT32_MAX - 2)) {
+      if (spender->getSequence() < (UINT32_MAX - 1)) {
          return true;
       }
    }
