@@ -1185,10 +1185,9 @@ void WalletsManager::goOnline()
       }
 
       ValidityGuard lock(handle);
-      if (!handle.isValid()) {
-         return;
+      if (handle.isValid()) {
+         QMetaObject::invokeMethod(this, &WalletsManager::walletsReady);
       }
-      QMetaObject::invokeMethod(this, &WalletsManager::walletsReady);
    }).detach();
 }
 
