@@ -1177,18 +1177,17 @@ void WalletsManager::goOnline()
       }
    }
 
-   std::thread([this, handle = validityFlag_.handle()]() mutable {
-      for (const auto &ccTracker : trackers_) {
-         ValidityGuard lock(handle);
-         if (!handle.isValid()) {
-            return;
-         }
-
+   std::thread([this, handle = validityFlag_.handle(), trackers = trackers_, logger = logger_]() mutable {
+      for (const auto &ccTracker : trackers) {
          if (!ccTracker.second->goOnline()) {
-            logger_->error("[WalletsManager::goOnline] failed for {}", ccTracker.first);
+            logger->error("[WalletsManager::goOnline] failed for {}", ccTracker.first);
          }
       }
-      QMetaObject::invokeMethod(this, &WalletsManager::walletsReady);
+
+      ValidityGuard lock(handle);
+      if (handle.isValid()) {
+         QMetaObject::invokeMethod(this, &WalletsManager::walletsReady);
+      }
    }).detach();
 }
 
