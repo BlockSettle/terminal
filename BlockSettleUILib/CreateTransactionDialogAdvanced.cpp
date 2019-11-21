@@ -652,7 +652,9 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
       if (!qFuzzyCompare(newTotalFee, advisedFeePerByte_) || !qFuzzyCompare(newFeePerByte, advisedFeePerByte_)) {
          QMetaObject::invokeMethod(this, [this, newTotalFee, newFeePerByte] {
             setAdvisedFees(newTotalFee, newFeePerByte);
+            validateCreateButton();
          });
+         return;
       }
    }
 

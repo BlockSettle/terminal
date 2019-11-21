@@ -1,5 +1,5 @@
 #include "RecipientContainer.h"
-
+#include <QtGlobal>
 #include "ScriptRecipient.h"
 #include "BlockDataManagerConfig.h"
 #include "BTCNumericTypes.h"
@@ -34,6 +34,9 @@ bs::Address RecipientContainer::GetAddress() const
 
 bool RecipientContainer::SetAmount(double amount, bool isMax)
 {
+   if (qFuzzyCompare(xbtAmount_.GetValueBitcoin(), amount) && (isMax_ = isMax)) {
+      return false;
+   }
    xbtAmount_.SetValue(amount);
    isMax_ = isMax;
    return true;
