@@ -407,10 +407,9 @@ uint64_t wallet::TXSignRequest::amountSent(const wallet::TXSignRequest::Contains
    return amount;
 }
 
-uint64_t wallet::TXSignRequest::amountReceivedOnForCC(const bs::Address &address) const
+uint64_t wallet::TXSignRequest::amountReceivedOn(const bs::Address &address, bool removeDuplicatedRecipients) const
 {
-   // This method should be used only for calculaion values in TXInfo for CC settlements
-   // Duplicated recipients removed
+   // Duplicated recipients removal should be used only for calculaion values in TXInfo for CC settlements
    // to bypass workaround In ReqCCSettlementContainer::createCCUnsignedTXdata()
 
    std::set<BinaryData> txSet;
@@ -424,7 +423,9 @@ uint64_t wallet::TXSignRequest::amountReceivedOnForCC(const bs::Address &address
 
          if (txSet.find(hash) == txSet.cend()) {
             if (addr == address) {
-               txSet.insert(hash);
+               if (removeDuplicatedRecipients) {
+                  txSet.insert(hash);
+               }
                amount += recip->getValue();
             }
          }
@@ -437,10 +438,16 @@ uint64_t wallet::TXSignRequest::amountReceivedOnForCC(const bs::Address &address
 
       if (txSet.find(hash) == txSet.cend()) {
          if (addr == address) {
-            txSet.insert(hash);
+            if (removeDuplicatedRecipients) {
+               txSet.insert(hash);
+            }
             amount += recip->getValue();
          }
       }
+   }
+
+   if (change.address == address) {
+      amount += change.value;
    }
 
    return amount;
@@ -526,6 +533,59 @@ std::vector<std::shared_ptr<ScriptRecipient>> wallet::TXSignRequest::getRecipien
    }
 
    return recipientsVector;
+}
+
+bool wallet::TXSignRequest::isSourceOfTx(const Tx &signedTx) const
+{
+   try {
+      if ((inputs.size() != signedTx.getNumTxIn())) {
+         return false;
+      }
+
+      const size_t nbRecipients = change.value > 0 ? recipients.size() + 1 : recipients.size();
+      // this->change may contains one of TxOut
+      if (signedTx.getNumTxOut() != nbRecipients) {
+         return false;
+      }
+
+      for (int i = 0; i < signedTx.getNumTxOut(); i++) {
+         auto&& txOut = signedTx.getTxOutCopy(i);
+         bs::Address txAddr = bs::Address::fromTxOut(txOut);
+         uint64_t outValSigned = txOut.getValue();
+         uint64_t outValUnsigned = amountReceivedOn(txAddr);
+
+         if (outValUnsigned != outValSigned) {
+            return false;
+         }
+      }
+
+      for (int i = 0; i < signedTx.getNumTxIn(); i++) {
+         auto&& txIn = signedTx.getTxInCopy(i);
+         OutPoint op = txIn.getOutPoint();
+
+         const auto signedHash = op.getTxHash();
+         uint32_t signedTxOutIndex = op.getTxOutIndex();
+
+         bool hasUnsignedInput = false;
+         for (int j = 0; j < inputs.size(); j++) {
+            const auto unsignedHash = inputs.at(j).getTxHash();
+            uint32_t unsignedTxOutIndex = inputs.at(j).getTxOutIndex();
+
+            if (signedHash == unsignedHash && signedTxOutIndex == unsignedTxOutIndex) {
+               hasUnsignedInput = true;
+               break;
+            }
+         }
+
+         if (!hasUnsignedInput) {
+            return false;
+         }
+      }
+      return true;
+
+   } catch (...) {
+      return false;
+   }
 }
 
 bool wallet::TXMultiSignRequest::isValid() const noexcept

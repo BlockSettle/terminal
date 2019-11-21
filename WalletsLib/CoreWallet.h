@@ -12,6 +12,7 @@
 #include "EasyCoDec.h"
 #include "Script.h"
 #include "Signer.h"
+#include "TxClasses.h"
 #include "WalletEncryption.h"
 #include "Wallets.h"
 #include "BIP32_Node.h"
@@ -209,12 +210,14 @@ namespace bs {
             uint64_t amountReceived(const ContainsAddressCb &containsAddressCb) const;
             uint64_t amountSent(const ContainsAddressCb &containsAddressCb) const;
 
-            uint64_t amountReceivedOnForCC(const bs::Address &address) const;
+            uint64_t amountReceivedOn(const bs::Address &address, bool removeDuplicatedRecipients = false) const;
 
             uint64_t getFee() const;
 
             std::vector<UTXO> getInputs(const ContainsAddressCb &containsAddressCb) const;
             std::vector<std::shared_ptr<ScriptRecipient>> getRecipients(const ContainsAddressCb &containsAddressCb) const;
+
+            bool isSourceOfTx(const Tx &signedTx) const;
 
             void DebugPrint(const std::string& prefix, const std::shared_ptr<spdlog::logger>& logger, bool serializeAndPrint, const std::shared_ptr<ResolverFeed> &resolver=nullptr);
 
