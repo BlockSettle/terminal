@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.24.11",
-   "release_date": "18 Nov 2019",
+   "latest_version": "0.24.12",
+   "release_date": "20 Nov 2019",
    "changes": [
+      {
+         "version_string": "0.24.12",
+         "previous_version": "0.24.11",
+         "release_date": "20 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "BSEidNoticeBox fix - BST-2353 (#453)",
+            "Use primary wallet and default auth address for XBT in AQ",
+            "Prevent crash on AQ reply for CC"
+         ],
+         "bug_fixes": [
+            "Fix XBT amount error for CC trade"
+         ],
+         "revision": "d3491368",
+         "common_revision": "df247faf"
+      },
       {
          "version_string": "0.24.11",
          "previous_version": "0.24.10",
