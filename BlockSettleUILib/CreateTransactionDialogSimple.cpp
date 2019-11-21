@@ -153,6 +153,7 @@ void CreateTransactionDialogSimple::onXBTAmountChanged(const QString &text)
 
 void CreateTransactionDialogSimple::onMaxPressed()
 {
+   transactionData_->UpdateRecipientAmount(recipientId_, 0, false);
    CreateTransactionDialog::onMaxPressed();
    transactionData_->UpdateRecipientAmount(recipientId_, UiUtils::parseAmountBtc(ui_->lineEditAmount->text()), true);
 }
