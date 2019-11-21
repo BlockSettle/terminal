@@ -34,7 +34,7 @@ bs::Address RecipientContainer::GetAddress() const
 
 bool RecipientContainer::SetAmount(double amount, bool isMax)
 {
-   if (qFuzzyCompare(xbtAmount_.GetValueBitcoin(), amount) && (isMax_ = isMax)) {
+   if (qFuzzyCompare(xbtAmount_.GetValueBitcoin(), amount) && (isMax_ == isMax)) {
       return false;
    }
    xbtAmount_.SetValue(amount);
