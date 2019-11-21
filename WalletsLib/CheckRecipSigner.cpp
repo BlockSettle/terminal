@@ -165,7 +165,7 @@ bool CheckRecipSigner::hasReceiver() const
    return !recipients_.empty();
 }
 
-uint64_t CheckRecipSigner::estimateFee(float feePerByte) const
+uint64_t CheckRecipSigner::estimateFee(float &feePerByte, uint64_t fixedFee) const
 {
    size_t txSize = 0;
    std::vector<UTXO> inputs;
@@ -185,11 +185,13 @@ uint64_t CheckRecipSigner::estimateFee(float feePerByte) const
    }
 
    try {
-      const PaymentStruct payment(recipientsMap, 0, 0, 0);
+      PaymentStruct payment(recipientsMap, fixedFee, 0, 0);
 
       auto usedUTXOCopy{ transactions };
       UtxoSelection selection{ usedUTXOCopy };
       selection.computeSizeAndFee(payment);
+
+      feePerByte = selection.fee_byte_;
 
       const size_t nonWitSize = selection.size_ - selection.witnessSize_;
       txSize = std::ceil(static_cast<float>(3 * nonWitSize + selection.size_) / 4.0f);
@@ -216,6 +218,16 @@ uint64_t CheckRecipSigner::inputsTotalValue() const
       result += spender->getValue();
    }
    return result;
+}
+
+bool CheckRecipSigner::isRBF() const
+{
+   for (const auto &spender : spenders()) {
+      if (spender->getSequence() < (UINT32_MAX - 1)) {
+         return true;
+      }
+   }
+   return false;
 }
 
 bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger> &logger

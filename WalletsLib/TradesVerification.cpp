@@ -173,17 +173,14 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUn
          return Result::error(fmt::format("total inputs {} lower that outputs {}", totalInput, totalOutputAmount));
       }
 
-      // is not RBF
-      Tx deserializedTx(unsignedPayin);
-
-      if (deserializedTx.isRBF()) {
+      if (deserializedSigner.isRBF()) {
          return Result::error("Pay-In could not be RBF transaction");
       }
 
       auto result = std::make_shared<Result>();
       result->success = true;
       result->totalFee = totalInput - totalOutputAmount;
-      result->estimatedFee = static_cast<uint64_t>(feePerByte * unsignedPayin.getSize());
+      result->estimatedFee = deserializedSigner.estimateFee(feePerByte, result->totalFee);
       result->totalOutputCount = totalOutputCount;
       result->changeAddr = changeAddr;
 
