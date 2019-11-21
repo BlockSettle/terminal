@@ -110,9 +110,9 @@ TEST(TestArmory, CrashOnNonExistentHashInTxBatch)
 
    const auto promPtr = std::make_shared<std::promise<bool>>();
    auto fut = promPtr->get_future();
-   const auto cbTXs = [promPtr](const std::vector<Tx> &, std::exception_ptr ePtr)
+   const auto cbTXs = [promPtr](const std::vector<Tx> &txs, std::exception_ptr)
    {
-      promPtr->set_value((ePtr != nullptr));
+      promPtr->set_value(txs.empty());
    };
    armoryConn->getTXsByHash({ nonExHash }, cbTXs);
    EXPECT_TRUE(fut.get());

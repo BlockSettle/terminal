@@ -472,7 +472,8 @@ TEST_F(TestSettlement, SpotXBT_buy)
 
    // get fee size. check against rate
    const auto totalFee = totalInputAmount - totalOutputValue;
-   const auto estimatedFee = deserializedSigner.estimateFee(feePerByte);
+   auto correctedFPB = feePerByte;
+   const auto estimatedFee = deserializedSigner.estimateFee(correctedFPB);
 
    UnitTestWalletACT::clear();
    StaticLogger::loggerPtr->debug("[{}] payin TX: {}", __func__, txPayIn.toHexStr());
