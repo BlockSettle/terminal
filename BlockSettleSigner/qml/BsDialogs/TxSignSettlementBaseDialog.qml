@@ -476,7 +476,7 @@ CustomTitleDialogWindowWithExpander {
                 primary: true
                 visible: walletInfo.encType === QPasswordData.Unencrypted
                 text: qsTr("SAVE TX")
-                anchors.right: btnImportTx.left
+                anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
                     exportTxDlg.open()
@@ -494,18 +494,20 @@ CustomTitleDialogWindowWithExpander {
                     onAccepted: {
                         txInfo.saveToFile(qmlAppObj.getUrlPath(exportTxDlg.file))
                         btnExportTx.primary = false
+                        btnExportTx.visible = false
                         btnImportTx.primary = true
                         btnImportTx.enabled = true
+                        btnImportTx.visible = true
                     }
                 }
             }
 
             CustomButton {
                 id: btnImportTx
-                visible: walletInfo.encType === QPasswordData.Unencrypted
+                visible: false
                 enabled: false
                 text: qsTr("LOAD SIGNED TX")
-                anchors.right: btnConfirm.left
+                anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
                     importTxDlg.open()
@@ -524,7 +526,15 @@ CustomTitleDialogWindowWithExpander {
                         result = txInfo.loadSignedTx(qmlAppObj.getUrlPath(importTxDlg.file))
                         if (result) {
                             btnImportTx.primary = false
+                            btnImportTx.visible = false
                             btnConfirm.primary = true
+                            btnConfirm.visible = true
+                        }
+                        else {
+                            JsHelper.messageBox(BSMessageBox.Type.Warning
+                                , qsTr("Signed Transacton Import")
+                                , qsTr("Error importing signed transaction")
+                                , qsTr("Error while importing signed transaction file.\nComparsion between signed and unsigned transaction failed."))
                         }
                     }
                 }
@@ -533,7 +543,7 @@ CustomTitleDialogWindowWithExpander {
             CustomButton {
                 id: btnConfirm
                 primary: walletInfo.encType ===  QPasswordData.Unencrypted ? false : true
-                visible: walletInfo.encType !== QPasswordData.Auth
+                visible: walletInfo.encType === QPasswordData.Password
                 text: qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
