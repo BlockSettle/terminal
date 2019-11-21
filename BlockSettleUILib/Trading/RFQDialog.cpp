@@ -81,6 +81,10 @@ RFQDialog::~RFQDialog() = default;
 
 void RFQDialog::onOrderFilled(const std::string &quoteId)
 {
+   if (quote_.quoteId != quoteId) {
+      return;
+   }
+
    if (rfq_.assetType == bs::network::Asset::SpotFX) {
       ui_->pageRequestingQuote->onOrderFilled(quoteId);
    }
@@ -88,6 +92,10 @@ void RFQDialog::onOrderFilled(const std::string &quoteId)
 
 void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& reason)
 {
+   if (quote_.quoteId != quoteId) {
+      return;
+   }
+
    if (rfq_.assetType == bs::network::Asset::SpotFX) {
       ui_->pageRequestingQuote->onOrderFailed(quoteId, reason);
    }
