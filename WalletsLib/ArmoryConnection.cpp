@@ -668,13 +668,15 @@ bool ArmoryConnection::getOutpointsForAddresses(const std::set<BinaryData> &addr
 }
 
 bool ArmoryConnection::getSpentnessForOutputs(const std::map<BinaryData, std::set<unsigned>> &outputs
-   , const std::function<void(const std::map<BinaryData, std::map<unsigned, BinaryData>> &, std::exception_ptr)> &cb)
+   , const std::function<void(const std::map<BinaryData, std::map<unsigned, std::pair<BinaryData, unsigned>>> &
+      , std::exception_ptr)> &cb)
 {
    if (!bdv_ || (state_ != ArmoryState::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
       return false;
    }
-   const auto cbWrap = [logger = logger_, cb](ReturnMessage<std::map<BinaryData, std::map<unsigned, BinaryData>>> msg)
+   const auto cbWrap = [logger = logger_, cb](ReturnMessage<std::map<BinaryData
+      , std::map<unsigned, std::pair<BinaryData, unsigned>>>> msg)
    {
       try {
          const auto &spentness = msg.get();
