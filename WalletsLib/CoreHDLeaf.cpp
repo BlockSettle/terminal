@@ -370,9 +370,16 @@ std::pair<std::shared_ptr<hd::Leaf>, BinaryData> hd::Leaf::deserialize(
    switch (key) {
    case LEAF_KEY:
    {
+      const auto groupType = static_cast<bs::hd::CoinType>(path.get(-2) | bs::hd::hardFlag);
+
       switch (static_cast<bs::hd::Purpose>(path.get(0) & ~bs::hd::hardFlag)) {
       case bs::hd::Purpose::Native:
-         leafPtr = std::make_shared<hd::LeafNative>(netType, logger);
+         if (groupType == bs::hd::CoinType::BlockSettle_CC) {
+            leafPtr = std::make_shared<hd::CCLeaf>(netType, logger);
+         }
+         else {
+            leafPtr = std::make_shared<hd::LeafNative>(netType, logger);
+         }
          break;
       case bs::hd::Purpose::Nested:
          leafPtr = std::make_shared<hd::LeafNested>(netType, logger);
