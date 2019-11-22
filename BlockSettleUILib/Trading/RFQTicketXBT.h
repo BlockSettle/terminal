@@ -74,7 +74,7 @@ public:
    QPushButton* denomCcyButton() const;
 
    bs::Address selectedAuthAddress() const;
-   bs::Address recvAddress() const;
+   bs::Address recvXbtAddress() const;
 
    using SubmitRFQCb = std::function<void(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)>;
    void setSubmitRFQ(SubmitRFQCb submitRFQCb);
@@ -151,10 +151,7 @@ private:
 
    BalanceInfoContainer getBalanceInfo() const;
    QString getProduct() const;
-   std::shared_ptr<bs::sync::Wallet> getCurrentWallet() const { return curWallet_; }
-   void setCurrentWallet(const std::shared_ptr<bs::sync::Wallet> &);
-   std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc);
-   void setWallets();
+   std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
    bool isXBTProduct() const;
    bool checkBalance(double qty) const;
    bs::network::Side::Type getSelectedSide() const;
@@ -173,8 +170,6 @@ private:
 
    void HideRFQControls();
 
-   void setCurrentCCWallet(const std::shared_ptr<bs::sync::Wallet>& newCCWallet);
-
    void initProductGroupMap();
    ProductGroupType getProductGroupType(const QString& productGroup);
 
@@ -189,6 +184,7 @@ private:
    std::shared_ptr<bs::sync::Wallet> getRecvXbtWallet() const;
    bs::XBTAmount getXbtBalance() const;
    QString getProductToSpend() const;
+   QString getProductToRecv() const;
 
 private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;
@@ -201,9 +197,6 @@ private:
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
 
-   std::shared_ptr<bs::sync::Wallet>   curWallet_;
-   std::shared_ptr<bs::sync::Wallet>   ccWallet_;
-   std::shared_ptr<bs::sync::Wallet>   recvWallet_;
    bs::Address authAddr_;
    std::string authKey_;
 
