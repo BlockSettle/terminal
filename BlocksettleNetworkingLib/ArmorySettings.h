@@ -48,6 +48,16 @@ struct ArmoryServer
             .arg(armoryDBPort)
             .arg(armoryDBKey);
    }
+
+   bool isValid() const {
+      if (armoryDBPort < 1 || armoryDBPort > USHRT_MAX) {
+         return false;
+      }
+      if (name.isEmpty()) {
+         return false;
+      }
+      return true;
+   }
 };
 
 struct ArmorySettings : public ArmoryServer

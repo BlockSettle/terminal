@@ -2,6 +2,7 @@
 #include "ui_ArmoryServersWidget.h"
 
 const int kArmoryDefaultMainNetPort = 80;
+const QRegExp kRxAddress(QStringLiteral(R"(^(((?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))|(^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9])$))$)"));
 
 ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings, QWidget *parent)
@@ -35,6 +36,11 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
    connect(ui_->pushButtonCancelSaveServer, &QPushButton::clicked, this, &ArmoryServersWidget::resetForm);
    connect(ui_->pushButtonSaveServer, &QPushButton::clicked, this, &ArmoryServersWidget::onSave);
 
+   connect(ui_->lineEditAddress, &QLineEdit::textChanged, this, &ArmoryServersWidget::onFormChanged);
+
+   QRegExp rx(kRxAddress);
+   ui_->lineEditAddress->setValidator(new QRegExpValidator(rx, this));
+   onFormChanged();
 
    connect(ui_->pushButtonClose, &QPushButton::clicked, this, [this](){
       emit needClose();
@@ -280,4 +286,25 @@ void ArmoryServersWidget::updateSaveButton()
 bool ArmoryServersWidget::isExpanded() const
 {
    return isExpanded_;
+}
+
+void ArmoryServersWidget::onFormChanged()
+{
+   bool acceptable = ui_->lineEditAddress->hasAcceptableInput();
+   bool exists = false;
+   bool valid = false;
+   if (acceptable) {
+      ArmoryServer armoryHost;
+      armoryHost.name = ui_->lineEditName->text();
+      armoryHost.armoryDBIp = ui_->lineEditAddress->text();
+      armoryHost.armoryDBPort = ui_->spinBoxPort->value();
+      armoryHost.armoryDBKey = ui_->lineEditKey->text();
+      valid = armoryHost.isValid();
+      if (valid) {
+         exists = armoryServersProvider_->indexOf(armoryHost.name) != -1
+               || armoryServersProvider_->indexOf(armoryHost) != -1;
+      }
+   }
+   ui_->pushButtonAddServer->setEnabled(valid && acceptable && !exists);
+   ui_->pushButtonSaveServer->setEnabled(valid && acceptable);
 }
