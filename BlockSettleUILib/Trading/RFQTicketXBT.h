@@ -12,6 +12,7 @@
 #include "BSErrorCode.h"
 #include "CommonTypes.h"
 #include "UtxoReservationToken.h"
+#include "XBTAmount.h"
 
 QT_BEGIN_NAMESPACE
 class QPushButton;
@@ -39,6 +40,7 @@ class AuthAddressManager;
 class CCAmountValidator;
 class FXAmountValidator;
 class QuoteProvider;
+class SelectedTransactionInputs;
 class SignContainer;
 class TransactionData;
 class XbtAmountValidator;
@@ -120,9 +122,6 @@ private slots:
 
    void onAuthAddrChanged(int);
 
-signals:
-   void update();
-
 protected:
    bool eventFilter(QObject *watched, QEvent *evt) override;
 
@@ -155,7 +154,6 @@ private:
    std::shared_ptr<bs::sync::Wallet> getCurrentWallet() const { return curWallet_; }
    void setCurrentWallet(const std::shared_ptr<bs::sync::Wallet> &);
    std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc);
-   void setTransactionData();
    void setWallets();
    bool isXBTProduct() const;
    bool checkBalance(double qty) const;
@@ -166,9 +164,6 @@ private:
    bool existsRFQ(const bs::network::RFQ &);
 
    static std::string mkRFQkey(const bs::network::RFQ &);
-
-   double estimatedXbtPayinFee() const;
-   void onTransactinDataChanged();
 
    void SetProductGroup(const QString& productGroup);
    void SetCurrencyPair(const QString& currencyPair);
@@ -190,6 +185,11 @@ private:
 
    void productSelectionChanged();
 
+   std::shared_ptr<bs::sync::Wallet> getSendXbtWallet() const;
+   std::shared_ptr<bs::sync::Wallet> getRecvXbtWallet() const;
+   bs::XBTAmount getXbtBalance() const;
+   QString getProductToSpend() const;
+
 private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;
 
@@ -197,7 +197,6 @@ private:
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
 
-   std::shared_ptr<TransactionData>    transactionData_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
@@ -232,6 +231,8 @@ private:
    bool maxAmount_ = false;
 
    SubmitRFQCb submitRFQCb_;
+
+   std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
 
 };
 
