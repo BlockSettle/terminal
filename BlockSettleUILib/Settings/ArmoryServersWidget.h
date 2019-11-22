@@ -35,6 +35,7 @@ public slots:
    void onConnect();
 
    void onExpandToggled();
+   void onFormChanged();
 
 signals:
    void reconnectArmory();

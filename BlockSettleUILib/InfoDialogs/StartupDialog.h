@@ -36,6 +36,8 @@ private slots:
   void onNext();
   void updateStatus();
 
+  void adjustPosition();
+
 private:
   std::unique_ptr<Ui::StartupDialog> ui_;
   bool showLicense_;

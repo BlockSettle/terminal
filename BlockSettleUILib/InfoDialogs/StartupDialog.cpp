@@ -1,6 +1,8 @@
 #include "StartupDialog.h"
 
 #include <QFile>
+#include <QScreen>
+
 #include "ApplicationSettings.h"
 #include "ui_StartupDialog.h"
 
@@ -48,7 +50,9 @@ void StartupDialog::init(const std::shared_ptr<ApplicationSettings> &appSettings
       ui_->labelExpanded->show();
       ui_->labelSimple->hide();
       adjustSize();
+      adjustPosition();
    });
+   adjustPosition();
 }
 
 StartupDialog::~StartupDialog() = default;
@@ -89,6 +93,7 @@ void StartupDialog::updateStatus()
       }
 
       adjustSize();
+      adjustPosition();
    }
 
    if (!showLicense_) {
@@ -109,4 +114,12 @@ void StartupDialog::updateStatus()
          break;
       }
    }
+}
+
+void StartupDialog::adjustPosition()
+{
+   auto currentDisplay = QGuiApplication::primaryScreen();
+   auto rect = geometry();
+   rect.moveCenter(currentDisplay->geometry().center());
+   setGeometry(rect);
 }
