@@ -1,0 +1,46 @@
+#!/usr/bin/make -f
+
+export DEBEMAIL = siraj@plexydesk.com
+export DEBFULLNAME = BlockSettle AB
+
+export DEB_VENDOR = Debian
+
+export pub_version = 0.20.4
+export deb_package = bsterminal
+
+all:
+
+rebuild:
+	set -e; \
+	dpkg-buildpackage -us -uc -S; \
+	deb_version=`dpkg-parsechangelog --show-field Version`; \
+	cd ..; \
+	ln -sf $${deb_package}_$${deb_version}.dsc $${deb_package}.dsc
+
+prepare:
+	set -e; \
+	git_commit_name=HEAD; \
+	git_commit_hash="`TZ=UTC git log -1 "$${git_commit_name}" --format='%h'`"; \
+	git_commit_date="`TZ=UTC git log -1 "$${git_commit_hash}" --format='%cd' --date=short-local`"; \
+	git_commit_line="`TZ=UTC git log --reverse --format='%h' --since="$${git_commit_date}T00:00:00Z" --until="$${git_commit_date}T23:59:59Z" \
+		| grep -n "$${git_commit_hash}" | cut -f1 -d ":"`"; \
+	git_commit_date="`echo $${git_commit_date} | tr -d "-"`"; \
+	git_version=$${pub_version}~git$${git_commit_date}.$${git_commit_line}.$${git_commit_hash}; \
+	tar -caf ../$${deb_package}_$${git_version}.orig.tar.xz --exclude '.git' --exclude 'debian' --checkpoint=1024 .; \
+	dch -D disco --check-dirname-level 0 --newversion "$${git_version}-1" "New upstream release"; \
+	dch --release ""
+
+distrib:
+	set -e; \
+	changelog="$$(cat < debian/changelog)"; \
+	deb_distrib="$${deb_distrib:-unstable}"; \
+	dch --local "~$${deb_distrib}" "No change backport to $${deb_distrib}" --distribution "$${deb_distrib}"; \
+	dpkg-buildpackage -us -uc -S; \
+	deb_version=`dpkg-parsechangelog --show-field Version`; \
+	echo "$${changelog}" > debian/changelog; \
+	cd ..; \
+	ln -sf $${deb_package}_$${deb_version}.dsc $${deb_package}~$${deb_distrib}.dsc
+
+backports:
+	deb_distrib=bionic $(MAKE) -f debian/utils distrib
+	deb_distrib=disco $(MAKE) -f debian/utils distrib

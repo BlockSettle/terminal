@@ -1,0 +1,79 @@
+# PREPARE A RELEASE
+
+	1. Clone git sources of terminal (reusable):
+
+		$ git clone https://github.com/BlockSettle/terminal.git .
+		$ cd terminal
+		$ python ./generate.py -download-only
+
+	2. Generate new changelog entry:
+
+		$ debian/utils prepare
+
+	3. (Optional) Save changelog to version control:
+
+		$ git commit -m "New debian package" -- debian/changelog
+
+	4. (Optional) Create source package for unstable:
+
+		$ debian/utils rebuild
+
+# REBUILD BACKPORTS
+
+Previous scenarios manage universal packaging artifacts. They're suitable for local builds.
+But for launchpad per-release artifacts should be built.
+
+	5. Rebuild backports artifacts for different releases:
+
+		$ debian/utils backports
+
+	By default it will create backports for: bionic cosmic disco and xenial releases.
+	It should create bunch of .dsc .debian.tar.xz for different releases. .orig.tar.gz reused with same name.
+
+# TEST LOCAL BUILDS
+
+Should be done independently for each backport:
+
+	6. Create chroot environments for clean rebuld (requires root privileges, reusable):
+
+		# distrib='bionic'
+		# pbuilder create --distribution ${distrib} --basetgz /var/cache/pbuilder/${distrib}.tgz --debootstrapopts --variant=buildd
+
+	7. Run build:
+
+		# package='terminal'
+		# pbuilder build --basetgz /var/cache/pbuilder/${distrib}.tgz ../${pacakge}~${distrib}.dsc
+
+	8. Once build completed packages check them:
+
+		$ cd /var/cache/pbuilder/result
+
+	9. In order to speed-up builds follow instructions in article about `tmpfs` and `ccache` usage:
+
+		https://wiki.ubuntu.com/PbuilderHowto
+
+# DEB-SIGN PACKAGES
+
+Should be done independently for each backport:
+
+	10. Unpack sources:
+
+		$ dpkg-source -x ./<package>_<version>-<release>~<distrib>1.dsc
+
+	11. Repack sources with signing:
+
+		$ cd ./<package>_<version>
+		$ debuild -S -sa -d
+
+	It should regenerate .dsc file and additionally generate .changes files.
+
+# UPLOAD FOR BUILD
+
+Should be done independently for each backport:
+
+	12. Upload sources:
+
+		$ dput ppa:blocksettle/<repository> ../<package>_<version>-<release>~${distrib}1_source.changes
+
+	If everything goes fine packages will be scheduled for build and publishing.
+	There will be mail message with upload status sent to email address associated with Launchpad-account.

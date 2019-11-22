@@ -80,11 +80,11 @@ include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 
 IF( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
-  MESSAGE( FATAL_ERROR "THis is not a Git repository, but it should be.")
-ELSE ()
-   # we only take the 8 first characters
-  string(SUBSTRING ${GIT_SHA1} 0 8 BS_REVISIOIN_SHA1)
+  SET(GIT_SHA1 "${FORCE_GIT_RREVISION}")
 ENDIF ()
+
+# we only take the 8 first characters
+string(SUBSTRING ${GIT_SHA1} 0 8 BS_REVISIOIN_SHA1)
 
 # set DEV_3RD_ROOT env variable to your custom location of 3rd party components
 IF (DEFINED ENV{DEV_3RD_ROOT})

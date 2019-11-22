@@ -1,0 +1,23 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE := 1
+export DEB_BUILD_OPTIONS := parallel=$(shell nproc) $(DEB_BUILD_OPTIONS)
+
+%:
+	dh $@ --build-system=cmake --parallel --without autoreconf
+
+override_dh_auto_configure:
+	DEV_3RD_ROOT=`pwd`/deps python ./generate.py release
+	DEV_3RD_ROOT=`pwd`/deps dh_auto_configure -- -DFORCE_GIT_RREVISION="54d2354fa7ced95203856a45970004c83115363b" -DPRODUCTION_BUILD=1 -Wno-dev -DCMAKE_BUILD_TYPE=Release
+
+override_dh_auto_install:
+	dh_auto_install
+	mkdir -p $(CURDIR)/debian/bsterminal/usr/bin/
+	cp $(CURDIR)/build_terminal/Release/bin/blocksettle $(CURDIR)/debian/bsterminal/usr/bin/
+	cp $(CURDIR)/build_terminal/Release/bin/blocksettle_signer $(CURDIR)/debian/bsterminal/usr/bin/
+
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -rf "$(CURDIR)/generated_proto"
+	rm -rf "$(CURDIR)/build_terminal"
+	rm -rf "$(CURDIR)/external/build_"*

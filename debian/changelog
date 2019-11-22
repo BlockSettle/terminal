@@ -1,0 +1,23 @@
+bsterminal (0.20.4~git20191115.2.54d2354f-1) disco; urgency=medium
+
+  * New upstream release
+
+ -- BlockSettle AB <siraj@plexydesk.com>  Fri, 22 Nov 2019 13:07:38 +0530
+
+bsterminal (0.20.3~git20191115.2.54d2354f-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- BlockSettle AB <hello@blocksettle.com>  Fri, 22 Nov 2019 10:04:13 +0530
+
+bsterminal (0.20.0~git20191120.1.6a7014a6-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- BlockSettle AB <hello@blocksettle.com>  Fri, 22 Nov 2019 02:10:06 +0530
+
+bsterminal (0.20.0~git20190816.3.70680682-1) unstable; urgency=medium
+
+  * Initial release
+
+ -- BlockSettle AB <hello@blocksettle.com>  Fri, 16 Aug 2019 09:32:04 +0000
