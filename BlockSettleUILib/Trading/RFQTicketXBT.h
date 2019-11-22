@@ -215,9 +215,9 @@ private:
 
    QFont    invalidBalanceFont_;
 
-   CCAmountValidator                            *ccAmountValidator_;
-   FXAmountValidator                            *fxAmountValidator_;
-   XbtAmountValidator                           *xbtAmountValidator_;
+   CCAmountValidator                            *ccAmountValidator_{};
+   FXAmountValidator                            *fxAmountValidator_{};
+   XbtAmountValidator                           *xbtAmountValidator_{};
 
    std::unordered_map<std::string, ProductGroupType> groupNameToType_;
    ProductGroupType     currentGroupType_ = ProductGroupType::GroupNotSelected;
@@ -227,8 +227,6 @@ private:
 
    QString currentBidPrice_;
    QString currentOfferPrice_;
-
-   bool maxAmount_ = false;
 
    SubmitRFQCb submitRFQCb_;
 

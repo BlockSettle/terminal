@@ -661,9 +661,6 @@ void RFQTicketXBT::submitButtonClicked()
       if (rfq->requestorAuthPublicKey.empty()) {
          return;
       }
-      if ((rfq->side == bs::network::Side::Sell) && (rfq->product == bs::network::XbtCurrency)) {
-         //transactionData_->setMaxSpendAmount(maxAmount_);
-      }
    } else if (rfq->assetType == bs::network::Asset::PrivateMarket) {
       rfq->receiptAddress = recvAddress().display();
 
@@ -865,7 +862,6 @@ void RFQTicketXBT::onMaxClicked()
                      }
                      const uint64_t fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
                      const double spendableQuantity = std::max(0.0, (total - fee) / BTCNumericTypes::BalanceDivider);
-                     maxAmount_ = true;
                      ui_->lineEditAmount->setText(UiUtils::displayAmount(spendableQuantity));
                      updateSubmitButton();
                   });
@@ -892,13 +888,11 @@ void RFQTicketXBT::onMaxClicked()
       }
    }
 
-   maxAmount_ = true;
    updateSubmitButton();
 }
 
 void RFQTicketXBT::onAmountEdited(const QString &)
 {
-   maxAmount_ = false;
    updateSubmitButton();
 }
 
