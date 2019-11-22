@@ -29,7 +29,6 @@ void hd::Leaf::init(
       throw WalletException("invalid account id");
 
    accountPtr_ = accPtr;
-   db_ = new LMDB(accountPtr_->getDbEnv().get(), BS_WALLET_DBNAME);
    walletPtr_ = walletPtr;
 
    auto&& addrMap = accountPtr_->getUsedAddressMap();
@@ -57,6 +56,16 @@ void hd::Leaf::reset()
    usedAddresses_.clear();
    addressHashes_.clear();
    accountPtr_ = nullptr;
+}
+
+std::shared_ptr<DBIfaceTransaction> hd::Leaf::getDBWriteTx()
+{
+   return walletPtr_->beginSubDBTransaction(BS_WALLET_DBNAME, true);
+}
+
+std::shared_ptr<DBIfaceTransaction> hd::Leaf::getDBReadTx()
+{
+   return walletPtr_->beginSubDBTransaction(BS_WALLET_DBNAME, false);
 }
 
 std::string hd::Leaf::walletId() const
@@ -512,11 +521,6 @@ std::string hd::Leaf::getFilename() const
 
 void hd::Leaf::shutdown()
 {
-   if (db_ != nullptr) {
-      delete db_;
-      db_ = nullptr;
-   }
-
    walletPtr_ = nullptr;
    accountPtr_ = nullptr;
 }
@@ -653,7 +657,7 @@ std::shared_ptr<AssetEntry> hd::Leaf::getRootAsset() const
 
 void hd::Leaf::readMetaData()
 {
-   MetaData::readFromDB(getDBEnv(), db_);
+   MetaData::readFromDB(getDBReadTx());
 }
 
 

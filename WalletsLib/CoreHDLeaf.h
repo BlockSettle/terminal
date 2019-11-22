@@ -109,6 +109,9 @@ namespace bs {
          protected:
             void reset();
 
+            std::shared_ptr<DBIfaceTransaction> getDBWriteTx() override;
+            std::shared_ptr<DBIfaceTransaction> getDBReadTx() override;
+
             bs::Address newAddress();
             bs::Address newInternalAddress();
 
@@ -123,8 +126,6 @@ namespace bs {
             };
             using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
 
-            std::shared_ptr<LMDBEnv> getDBEnv() { return accountPtr_->getDbEnv(); }
-            LMDB* getDB() { return db_; }
             void readMetaData();
 
          protected:
@@ -132,7 +133,6 @@ namespace bs {
             wallet::Type            type_;
             bs::hd::Path            path_;
             std::string suffix_;
-            LMDB* db_ = nullptr;
             const NetworkType netType_;
             std::shared_ptr<::AddressAccount> accountPtr_;
 
