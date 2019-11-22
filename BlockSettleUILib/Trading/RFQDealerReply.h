@@ -48,6 +48,10 @@ class QDoubleSpinBox;
 class QPushButton;
 QT_END_NAMESPACE
 
+namespace UiUtils {
+   enum class WoWallets : int;
+}
+
 namespace bs {
    namespace network {
       struct QuoteNotification;
@@ -194,7 +198,7 @@ namespace bs {
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
          // xbtWallet - what XBT wallet to use for XBT/CC trades (selected from UI for manual trades, default wallet for AQ trades), empty for FX trades
          void submitReply(const network::QuoteReqNotification &qrn, double price, ReplyType replyType);
-         void updateWalletsList(bool skipWatchingOnly);
+         void updateWalletsList(UiUtils::WoWallets walletsFlags);
          bool isXbtSpend() const;
          std::shared_ptr<bs::sync::Wallet> getSelectedXbtWallet(ReplyType replyType) const;
          bs::Address selectedAuthAddress(ReplyType replyType) const;

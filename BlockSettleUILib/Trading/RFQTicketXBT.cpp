@@ -280,8 +280,8 @@ void RFQTicketXBT::walletsLoaded()
       ui_->comboBoxXBTWalletsSend->setEnabled(true);
 
       // Only full wallets could be used to send, recv could be also done with WO
-      int walletIndex = UiUtils::fillWalletsComboBox(ui_->comboBoxXBTWalletsRecv, walletsManager_, false);
-      UiUtils::fillWalletsComboBox(ui_->comboBoxXBTWalletsSend, walletsManager_, true);
+      int walletIndex = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsRecv, walletsManager_, UiUtils::WoWallets::Enable);
+      UiUtils::fillWalletsComboBox(ui_->comboBoxXBTWalletsSend, walletsManager_, UiUtils::WoWallets::Disable);
       walletSelectedRecv(walletIndex);
    }
 }

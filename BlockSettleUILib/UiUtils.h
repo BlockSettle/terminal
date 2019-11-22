@@ -104,9 +104,16 @@ namespace UiUtils
 
    // Returns default wallet index (or -1 if empty).
    // Only bitcoin wallets would be used.
+
+   enum class WoWallets : int
+   {
+      Disable,
+      Enable,
+   };
    int fillWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
-      , bool skipWatchingOnly);
-   int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager);
+      , WoWallets woWallets);
+   int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
+      , WoWallets woWallets);
    void fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
    void fillRecvAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::Wallet>& targetWallet);
    void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox, const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet);
