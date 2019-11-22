@@ -80,7 +80,6 @@ void hd::Wallet::initNew(const wallet::Seed &seed
    };
 
    pwdMeta_.push_back(pd.metaData);
-   walletPtr_->addSubDB(BS_WALLET_DBNAME, lbdControlPassphrase_);
 
    initializeDB();
    writeToDB();
@@ -278,6 +277,14 @@ const std::string& hd::Wallet::getFileName() const
 
 void hd::Wallet::initializeDB()
 {
+   try {
+      walletPtr_->addSubDB(BS_WALLET_DBNAME, lbdControlPassphrase_);
+   }
+   catch (const std::exception &e) {
+      if (logger_) {
+         logger_->error("[{}] Wallet {} DB already inited: {}", __func__, walletId(), e.what());
+      }
+   }
    //commit bs header data
    const auto tx = walletPtr_->beginSubDBTransaction(BS_WALLET_DBNAME, true);
 
