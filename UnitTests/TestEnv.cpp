@@ -185,9 +185,13 @@ ArmoryInstance::ArmoryInstance()
    //setup bip151 context
    startupBIP150CTX(4, true);
 
+   const auto lbdEmptyPassphrase = [](const std::set<BinaryData> &) {
+      return SecureBinaryData{};
+   };
+
    //setup auth
-   AuthorizedPeers serverPeers(homedir_, SERVER_AUTH_PEER_FILENAME);
-   AuthorizedPeers clientPeers(homedir_, CLIENT_AUTH_PEER_FILENAME);
+   AuthorizedPeers serverPeers(homedir_, SERVER_AUTH_PEER_FILENAME, lbdEmptyPassphrase);
+   AuthorizedPeers clientPeers(homedir_, CLIENT_AUTH_PEER_FILENAME, lbdEmptyPassphrase);
 
    auto& serverPubkey = serverPeers.getOwnPublicKey();
    auto& clientPubkey = clientPeers.getOwnPublicKey();
@@ -212,17 +216,19 @@ ArmoryInstance::ArmoryInstance()
    theBDMt_->start(config_.initMode_);
 
    //start server
-   WebSocketServer::start(theBDMt_, BlockDataManagerConfig::getDataDir(),
-      BlockDataManagerConfig::ephemeralPeers_, true);
+   WebSocketServer::start(theBDMt_, BlockDataManagerConfig::getDataDir()
+      , lbdEmptyPassphrase
+      , BlockDataManagerConfig::ephemeralPeers_, true);
 }
 
 ////
 ArmoryInstance::~ArmoryInstance()
 {
    //shutdown server
-   auto&& bdvObj2 = AsyncClient::BlockDataViewer::getNewBDV(
-      "127.0.0.1", config_.listenPort_, BlockDataManagerConfig::getDataDir(),
-      BlockDataManagerConfig::ephemeralPeers_, nullptr);
+   auto&& bdvObj2 = AsyncClient::BlockDataViewer::getNewBDV("127.0.0.1"
+      , config_.listenPort_, BlockDataManagerConfig::getDataDir()
+      , [](const std::set<BinaryData> &) { return SecureBinaryData{}; }
+      , BlockDataManagerConfig::ephemeralPeers_, nullptr);
    auto&& serverPubkey = WebSocketServer::getPublicKey();
    bdvObj2->addPublicKey(serverPubkey);
    bdvObj2->connectToRemote();
