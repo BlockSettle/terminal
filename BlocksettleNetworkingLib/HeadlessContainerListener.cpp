@@ -1120,6 +1120,9 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
             }
 
             if ((path.get(1) | bs::hd::hardFlag) == bs::hd::CoinType::BlockSettle_Auth) {
+               for (int i = 0; i < 5; i++) {
+                  leaf->getNewExtAddress();
+               }
                createSettlementLeaves(hdWallet, leaf->getPooledAddressList());
             }
          }
@@ -1221,6 +1224,9 @@ bool HeadlessContainerListener::createAuthLeaf(const std::shared_ptr<bs::core::h
    try {
       auto leaf = group->createLeaf(AddressEntryType_Default, 0 + bs::hd::hardFlag, 5);
       if (leaf) {
+         for (int i = 0; i < 5; i++) {
+            leaf->getNewExtAddress();
+         }
          return createSettlementLeaves(wallet, leaf->getPooledAddressList());
       } else {
          logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf");
