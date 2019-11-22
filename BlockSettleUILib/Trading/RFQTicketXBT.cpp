@@ -57,7 +57,7 @@ RFQTicketXBT::RFQTicketXBT(QWidget* parent)
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &RFQTicketXBT::onBuySelected);
 
    connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &RFQTicketXBT::submitButtonClicked);
-   connect(ui_->toolButtonXBTInputsSend, &QPushButton::clicked, this, &RFQTicketXBT::showCoinControl);
+   connect(ui_->toolButtonXbtWalletInputs, &QPushButton::clicked, this, &RFQTicketXBT::showCoinControl);
    connect(ui_->toolButtonMax, &QPushButton::clicked, this, &RFQTicketXBT::onMaxClicked);
    connect(ui_->comboBoxXBTWalletsRecv, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQTicketXBT::walletSelectedRecv);
    connect(ui_->comboBoxXBTWalletsSend, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQTicketXBT::walletSelectedSend);

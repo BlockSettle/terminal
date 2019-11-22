@@ -63,7 +63,7 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    connect(ui_->pushButtonPull, &QPushButton::clicked, this, &RFQDealerReply::pullButtonClicked);
    connect(ui_->pushButtonAdvanced, &QPushButton::clicked, this, &RFQDealerReply::showCoinControl);
 
-   connect(ui_->comboBoxWallet, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::walletSelected);
+   connect(ui_->comboBoxXbtWallet, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::walletSelected);
    connect(ui_->authenticationAddressComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::onAuthAddrChanged);
 
    ui_->responseTitle->hide();
@@ -520,7 +520,7 @@ std::shared_ptr<bs::sync::Wallet> RFQDealerReply::getSelectedXbtWallet(ReplyType
    if (replyType == ReplyType::Script) {
       return walletsManager_->getDefaultWallet();
    }
-   return walletsManager_->getWalletById(ui_->comboBoxWallet->currentData(UiUtils::WalletIdRole).toString().toStdString());
+   return walletsManager_->getWalletById(ui_->comboBoxXbtWallet->currentData(UiUtils::WalletIdRole).toString().toStdString());
 }
 
 bs::Address RFQDealerReply::selectedAuthAddress(ReplyType replyType) const
@@ -681,13 +681,13 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
 
 void RFQDealerReply::updateWalletsList(bool skipWatchingOnly)
 {
-   auto oldWalletId = ui_->comboBoxWallet->currentData(UiUtils::WalletIdRole).toString().toStdString();
-   int defaultIndex = UiUtils::fillWalletsComboBox(ui_->comboBoxWallet, walletsManager_, skipWatchingOnly);
-   int oldIndex = UiUtils::selectWalletInCombobox(ui_->comboBoxWallet, oldWalletId);
+   auto oldWalletId = ui_->comboBoxXbtWallet->currentData(UiUtils::WalletIdRole).toString().toStdString();
+   int defaultIndex = UiUtils::fillWalletsComboBox(ui_->comboBoxXbtWallet, walletsManager_, skipWatchingOnly);
+   int oldIndex = UiUtils::selectWalletInCombobox(ui_->comboBoxXbtWallet, oldWalletId);
    if (oldIndex < 0) {
-      ui_->comboBoxWallet->setCurrentIndex(defaultIndex);
+      ui_->comboBoxXbtWallet->setCurrentIndex(defaultIndex);
    }
-   walletSelected(ui_->comboBoxWallet->currentIndex());
+   walletSelected(ui_->comboBoxXbtWallet->currentIndex());
 }
 
 bool RFQDealerReply::isXbtSpend() const
@@ -867,9 +867,9 @@ void RFQDealerReply::onCelerDisconnected()
 void RFQDealerReply::onAutoSignStateChanged()
 {
    if (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
-      ui_->comboBoxWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
+      ui_->comboBoxXbtWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
    }
-   ui_->comboBoxWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
+   ui_->comboBoxXbtWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
 }
 
 void bs::ui::RFQDealerReply::updateSpinboxes()
