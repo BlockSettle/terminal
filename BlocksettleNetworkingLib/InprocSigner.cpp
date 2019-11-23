@@ -28,7 +28,7 @@ bool InprocSigner::Start()
       const auto &cbLoadProgress = [this](size_t cur, size_t total) {
          logger_->debug("[InprocSigner::Start] loading wallets: {} of {}", cur, total);
       };
-      walletsMgr_->loadWallets(netType_, walletsPath_, cbLoadProgress);
+      walletsMgr_->loadWallets(netType_, walletsPath_, {}, cbLoadProgress);
    }
    inited_ = true;
    emit ready();

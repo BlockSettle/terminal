@@ -41,6 +41,8 @@ SET (SOURCES
    ${CPP_FOR_SWIG_ROOT}/TxClasses.cpp
    ${CPP_FOR_SWIG_ROOT}/TxEvalState.cpp
    ${CPP_FOR_SWIG_ROOT}/UniversalTimer.cpp
+   ${CPP_FOR_SWIG_ROOT}/WalletFileInterface.cpp
+   ${CPP_FOR_SWIG_ROOT}/WalletHeader.cpp
    ${CPP_FOR_SWIG_ROOT}/Wallets.cpp
    ${CPP_FOR_SWIG_ROOT}/WalletManager.cpp
    ${CPP_FOR_SWIG_ROOT}/WebSocketClient.cpp
@@ -126,6 +128,8 @@ SET (HEADERS
    ${CPP_FOR_SWIG_ROOT}/Transactions.h
    ${CPP_FOR_SWIG_ROOT}/TxClasses.h
    ${CPP_FOR_SWIG_ROOT}/TxEvalState.h
+   ${CPP_FOR_SWIG_ROOT}/WalletFileInterface.h
+   ${CPP_FOR_SWIG_ROOT}/WalletHeader.h
    ${CPP_FOR_SWIG_ROOT}/Wallets.h
    ${CPP_FOR_SWIG_ROOT}/WalletManager.h
    ${CPP_FOR_SWIG_ROOT}/WebSocketClient.h

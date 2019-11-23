@@ -74,7 +74,6 @@ namespace bs {
             std::map<bs::hd::Path, std::shared_ptr<hd::Leaf>> leaves_;
 
             std::shared_ptr<AssetWallet_Single> walletPtr_;
-            LMDB* db_ = nullptr;
 
          private:
             virtual BinaryData serialize() const;
@@ -87,8 +86,8 @@ namespace bs {
                , NetworkType netType
                , const std::shared_ptr<spdlog::logger> &logger);
             virtual void deserialize(BinaryDataRef value);
-            void commit(bool force = false);
-            void putDataToDB(const BinaryData&, const BinaryData&);
+            void commit(const std::shared_ptr<DBIfaceTransaction> &
+               , bool force = false);
          };
 
          ///////////////////////////////////////////////////////////////////////

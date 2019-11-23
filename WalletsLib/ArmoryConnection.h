@@ -215,6 +215,7 @@ public:
    using BIP151Cb = std::function<bool(const BinaryData&, const std::string&)>;
    void setupConnection(NetworkType, const std::string &host, const std::string &port
       , const std::string &dataDir, const BinaryData &serverKey
+      , const SecureBinaryData &passphrase = {}
       , const BIP151Cb &cbBIP151 = [](const BinaryData&, const std::string&) {return true; });
 
    std::shared_ptr<AsyncClient::BtcWallet> instantiateWallet(const std::string &walletId);

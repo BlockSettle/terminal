@@ -16,7 +16,6 @@ hd::Group::Group(const std::shared_ptr<AssetWallet_Single> &walletPtr
    if (walletPtr_ == nullptr) {
       throw AccountException("null armory wallet pointer");
    }
-   db_ = new LMDB(walletPtr_->getDbEnv().get(), BS_WALLET_DBNAME);
 }
 
 hd::Group::~Group()
@@ -98,7 +97,10 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(AddressEntryType aet
       auto result = newLeaf(aet);
       initLeaf(result, pathLeaf, lookup);
       addLeaf(result);
-      commit();
+      {
+         const auto tx = walletPtr_->beginSubDBTransaction(BS_WALLET_DBNAME, true);
+         commit(tx);
+      }
       return result;
    }
    catch (std::exception &e) {
@@ -304,14 +306,10 @@ void hd::Group::deserialize(BinaryDataRef value)
 
 void hd::Group::shutdown()
 {
-   for (auto& leaf : leaves_)
+   for (auto& leaf : leaves_) {
       leaf.second->shutdown();
-   leaves_.clear();
-
-   if (db_ != nullptr) {
-      delete db_;
-      db_ = nullptr;
    }
+   leaves_.clear();
 
    walletPtr_ = nullptr;
 }
@@ -323,7 +321,7 @@ std::set<AddressEntryType> hd::Group::getAddressTypeSet(void) const
       };
 }
 
-void hd::Group::commit(bool force)
+void hd::Group::commit(const std::shared_ptr<DBIfaceTransaction> &tx, bool force)
 {
    if (!force && !needsCommit()) {
       return;
@@ -332,25 +330,9 @@ void hd::Group::commit(bool force)
    bwKey.put_uint8_t(BS_GROUP_PREFIX);
    bwKey.put_uint32_t(index());
 
-   BinaryWriter bwData;
    const auto serData = serialize();
-   bwData.put_var_int(serData.getSize());
-   bwData.put_BinaryData(serData);
-   putDataToDB(bwKey.getData(), bwData.getData());
+   tx->insert(bwKey.getData(), serData);
    committed();
-}
-
-void hd::Group::putDataToDB(const BinaryData& key, const BinaryData& data)
-{
-   if (walletPtr_ == nullptr) {
-      throw WalletException("null wallet ptr");
-   }
-   CharacterArrayRef keyRef(key.getSize(), key.getPtr());
-   CharacterArrayRef dataRef(data.getSize(), data.getPtr());
-
-   auto envPtr = walletPtr_->getDbEnv();
-   LMDBEnv::Transaction tx(envPtr.get(), LMDB::ReadWrite);
-   db_->insert(keyRef, dataRef);
 }
 
 std::shared_ptr<hd::Group> hd::Group::getCopy(
@@ -594,9 +576,9 @@ std::shared_ptr<hd::Leaf> hd::SettlementGroup::createLeaf(
    auto& idPair = walletPtr_->getAssetIDForAddr(addr.prefixed());
    auto assetPtr = walletPtr_->getAssetForID(idPair.first);
    auto assetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
-   if (assetSingle == nullptr)
+   if (assetSingle == nullptr) {
       throw AssetException("cannot create settlement leaf from this asset type");
-
+   }
    //create the leaf
    auto leaf = newLeaf(AddressEntryType_Default);
 
@@ -623,7 +605,9 @@ std::shared_ptr<hd::Leaf> hd::SettlementGroup::createLeaf(
    //add the leaf
    leaves_[path] = leaf;
    needsCommit_ = true;
-   commit();
+
+   const auto tx = walletPtr_->beginSubDBTransaction(BS_WALLET_DBNAME, true);
+   commit(tx);
 
    return leaf;
 }

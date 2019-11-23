@@ -103,9 +103,8 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
 {
    const QString& userStr = ui_->searchBox->text();
    if (userStr.isEmpty()) {
-      QToolTip::showText(ui_->searchBox->mapToGlobal(QPoint(0, 7)),
-                         tr("Provide a valid address or transaction id."),
-                         ui_->searchBox);
+      QToolTip::showText(ui_->searchBox->mapToGlobal(QPoint(0, 7))
+         , tr("Provide a valid address or transaction id."), ui_->searchBox);
       return;
    }
 
@@ -116,13 +115,13 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
    try {
       bsAddress = bs::Address::fromAddressString(userStr.trimmed().toStdString());
       strIsAddress = bsAddress.isValid();
-   } catch (...) {}
+   } catch (const std::exception &) { }
 
    // If address, process. If not, see if it's a 32 byte (64 char) hex string.
    // Idx 0 = Block (BlockDetailsWidget - Not used for now)
    // Idx 1 = Tx (TransactionDetailsWidget)
    // Idx 2 = Address (AddressDetailsWidget)
-   if(strIsAddress == true) {
+   if (strIsAddress) {
       ui_->stackedWidget->setCurrentIndex(AddressPage);
 
       expTimer_->start();
@@ -135,7 +134,7 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
          pushTransactionHistory(userStr);
       }
    }
-   else if(userStr.length() == 64 &&
+   else if ((userStr.length() == 64) &&
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
       // String is a valid 32 byte hex string, so we may proceed.
       if (saveToHistory) {
@@ -147,9 +146,8 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
    }
    else {
       // This isn't a valid address or 32 byte hex string.
-      QToolTip::showText(ui_->searchBox->mapToGlobal(QPoint(0, 7)),
-                         tr("This is not a valid address or transaction ID."),
-                         ui_->searchBox);
+      QToolTip::showText(ui_->searchBox->mapToGlobal(QPoint(0, 7))
+         , tr("This is not a valid address or transaction ID."), ui_->searchBox);
    }
 
    ui_->btnBack->setEnabled(canGoBack());

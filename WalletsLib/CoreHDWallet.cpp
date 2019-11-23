@@ -26,10 +26,11 @@ hd::Wallet::Wallet(const std::string &name, const std::string &desc
 }
 
 hd::Wallet::Wallet(const std::string &filename, NetworkType netType,
-   const std::string& folder, const std::shared_ptr<spdlog::logger> &logger)
+   const std::string& folder, const SecureBinaryData &controlPassphrase
+   , const std::shared_ptr<spdlog::logger> &logger)
    : netType_(netType), logger_(logger)
 {
-   loadFromFile(filename, folder);
+   loadFromFile(filename, folder, controlPassphrase);
 }
 
 hd::Wallet::Wallet(const std::string &name, const std::string &desc
@@ -54,7 +55,7 @@ void hd::Wallet::initNew(const wallet::Seed &seed
 {
    try {
       walletPtr_ = AssetWallet_Single::createFromSeed_BIP32_Blank(
-         folder, seed.seed(), pd.password);
+         folder, seed.seed(), pd.password, pd.controlPassword);
    }
    catch (const WalletException &) {
       //empty account structure, will be set at group creation
@@ -66,41 +67,48 @@ void hd::Wallet::initNew(const wallet::Seed &seed
          throw WalletException("invalid seed node");
 
       walletPtr_ = AssetWallet_Single::createFromBIP32Node(
-         seed.getNode(), accountTypes, pd.password
+         seed.getNode(), accountTypes, pd.password, pd.controlPassword
          , folder, 0); //no lookup, as there are no accounts
    }
+   filePathName_ = folder;
+   DBUtils::appendPath(filePathName_, walletPtr_->getDbFilename());
+
+   lbdControlPassphrase_ = [controlPassphrase = pd.controlPassword]
+      (const std::set<BinaryData>&) -> SecureBinaryData
+   {
+      return controlPassphrase;
+   };
 
    pwdMeta_.push_back(pd.metaData);
 
-   dbEnv_ = walletPtr_->getDbEnv();
-   db_ = new LMDB(dbEnv_.get(), BS_WALLET_DBNAME);
    initializeDB();
    writeToDB();
 }
 
-void hd::Wallet::loadFromFile(
-   const std::string &filename, 
-   const std::string& folder)
+void hd::Wallet::loadFromFile(const std::string &filename,
+   const std::string &folder, const SecureBinaryData &controlPassphrase)
 {
-   auto fullname = folder;
-   DBUtils::appendPath(fullname, filename);
-   if (!SystemFileUtils::isValidFilePath(fullname)) {
-      throw std::invalid_argument(std::string("Invalid file path: ") + fullname);
+   filePathName_ = folder;
+   DBUtils::appendPath(filePathName_, filename);
+   if (!SystemFileUtils::isValidFilePath(filePathName_)) {
+      throw std::invalid_argument(std::string("Invalid file path: ") + filePathName_);
    }
-   if (!SystemFileUtils::fileExist(fullname)) {
-      throw std::runtime_error("Wallet file " + fullname + " does not exist");
+   if (!SystemFileUtils::fileExist(filePathName_)) {
+      throw std::runtime_error("Wallet file " + filePathName_ + " does not exist");
    }
+
+   lbdControlPassphrase_ = [controlPassphrase]
+      (const std::set<BinaryData>&)->SecureBinaryData
+   {
+      return controlPassphrase;
+   };
 
    //load armory wallet
-   auto walletPtr = AssetWallet::loadMainWalletFromFile(fullname);
+   auto walletPtr = AssetWallet::loadMainWalletFromFile(filePathName_, lbdControlPassphrase_);
    walletPtr_ = std::dynamic_pointer_cast<AssetWallet_Single>(walletPtr);
-   if (walletPtr_ == nullptr)
+   if (walletPtr_ == nullptr) {
       throw WalletException("failed to load wallet");
-
-   //setup bs wallet db object. the bs wallet custom data exists in its own
-   //db name, isolated from the armory content.
-   dbEnv_ = walletPtr_->getDbEnv();
-   db_ = new LMDB(dbEnv_.get(), BS_WALLET_DBNAME);
+   }
 
    readFromDB();
 }
@@ -229,18 +237,12 @@ void hd::Wallet::createStructure(unsigned lookup)
 
 void hd::Wallet::shutdown()
 {
-   for (auto& group : groups_)
+   for (const auto &group : groups_) {
       group.second->shutdown();
+   }
    groups_.clear();
 
-   if (db_ != nullptr) {
-      delete db_;
-      db_ = nullptr;
-   }
-   dbEnv_.reset();
-
-   if (walletPtr_ != nullptr)
-   {
+   if (walletPtr_ != nullptr) {
       walletPtr_->shutdown();
       walletPtr_.reset();
    }
@@ -275,18 +277,25 @@ const std::string& hd::Wallet::getFileName() const
 
 void hd::Wallet::initializeDB()
 {
+   try {
+      walletPtr_->addSubDB(BS_WALLET_DBNAME, lbdControlPassphrase_);
+   }
+   catch (const std::exception &e) {
+      if (logger_) {
+         logger_->error("[{}] Wallet {} DB already inited: {}", __func__, walletId(), e.what());
+      }
+   }
    //commit bs header data
-   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+   const auto tx = walletPtr_->beginSubDBTransaction(BS_WALLET_DBNAME, true);
 
    {  //network type
       BinaryWriter bwKey;
       bwKey.put_uint32_t(WALLETTYPE_KEY);
 
       BinaryWriter bwData;
-      bwData.put_var_int(1);
       bwData.put_uint8_t(static_cast<uint8_t>(netType_));
 
-      putDataToDB(bwKey.getData(), bwData.getData());
+      tx->insert(bwKey.getData(), bwData.getData());
    }
 
    {  //name
@@ -295,9 +304,9 @@ void hd::Wallet::initializeDB()
 
       BinaryData walletNameData = name_;
       BinaryWriter bwName;
-      bwName.put_var_int(walletNameData.getSize());
+//      bwName.put_var_int(walletNameData.getSize());
       bwName.put_BinaryData(walletNameData);
-      putDataToDB(bwKey.getData(), bwName.getData());
+      tx->insert(bwKey.getData(), bwName.getData());
    }
    {  //description
       BinaryWriter bwKey;
@@ -305,42 +314,47 @@ void hd::Wallet::initializeDB()
 
       BinaryData walletDescriptionData = desc_;
       BinaryWriter bwDesc;
-      bwDesc.put_var_int(walletDescriptionData.getSize());
+//      bwDesc.put_var_int(walletDescriptionData.getSize());
       bwDesc.put_BinaryData(walletDescriptionData);
-      putDataToDB(bwKey.getData(), bwDesc.getData());
+      tx->insert(bwKey.getData(), bwDesc.getData());
    }
 
    {  //ext only flag
       BinaryWriter bwKey;
       bwKey.put_uint32_t(WALLET_EXTONLY_KEY);
 
-      BinaryWriter bwDesc;
-      bwDesc.put_uint8_t(1); //flag size
-      bwDesc.put_uint8_t(extOnlyFlag_);
-      putDataToDB(bwKey.getData(), bwDesc.getData());
+      BinaryWriter bwFlag;
+      bwFlag.put_uint8_t(extOnlyFlag_);
+      tx->insert(bwKey.getData(), bwFlag.getData());
    }
+}
+
+static BinaryDataRef getDataRefForKey(const std::shared_ptr<DBIfaceTransaction> &tx
+   , uint32_t key)
+{
+   BinaryWriter bwKey;
+   bwKey.put_uint32_t(key);
+   return tx->getDataRef(bwKey.getData());
 }
 
 void hd::Wallet::readFromDB()
 {
-   //this needs to be a readwrite because initializing a leaf results 
-   //in opening a db name
-   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+   const auto tx = walletPtr_->beginSubDBTransaction(BS_WALLET_DBNAME, false);
 
    {  //header data
-      auto typeBdr = getDataRefForKey(WALLETTYPE_KEY);
+      auto typeBdr = getDataRefForKey(tx, WALLETTYPE_KEY);
       if (typeBdr.getSize() != 1) {
-         throw WalletException("invalid netType length");
+         throw WalletException("invalid netType length " + std::to_string(typeBdr.getSize()));
       }
       netType_ = static_cast<NetworkType>(typeBdr.getPtr()[0]);
 
-      name_ = getDataRefForKey(WALLETNAME_KEY).toBinStr();
-      desc_ = getDataRefForKey(WALLETDESCRIPTION_KEY).toBinStr();
-      extOnlyFlag_ = (bool)*getDataRefForKey(WALLET_EXTONLY_KEY).getPtr();
+      name_ = getDataRefForKey(tx, WALLETNAME_KEY).toBinStr();
+      desc_ = getDataRefForKey(tx, WALLETDESCRIPTION_KEY).toBinStr();
+      extOnlyFlag_ = (bool)*getDataRefForKey(tx, WALLET_EXTONLY_KEY).getPtr();
    }
 
    { // password metadata
-      BinaryRefReader brrPwdMeta(getDataRefForKey(WALLET_PWD_META_KEY));
+      BinaryRefReader brrPwdMeta(getDataRefForKey(tx, WALLET_PWD_META_KEY));
       auto pwdMetaSize = brrPwdMeta.get_var_int();
       if (pwdMetaSize > 32) { // unlikely there can be more than 32 passwords in a wallet
          throw WalletException("invalid password meta of size " + std::to_string(pwdMetaSize));
@@ -353,33 +367,25 @@ void hd::Wallet::readFromDB()
    }
 
    {  // groups
-      auto dbIter = db_->begin();
+      const auto dbIter = tx->getIterator();
 
       BinaryWriter bwKey;
       bwKey.put_uint8_t(BS_GROUP_PREFIX);
-      CharacterArrayRef keyRef(bwKey.getSize(), bwKey.getData().getPtr());
 
-      dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
-      while (dbIter.isValid()) {
-         auto iterkey = dbIter.key();
-         auto itervalue = dbIter.value();
-
-         BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
-         BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
+      dbIter->seek(bwKey.getData());
+      while (dbIter->isValid()) {
+         auto keyBDR = dbIter->key();
+         auto valueBDR = dbIter->value();
 
          //sanity check on the key
          if (keyBDR.getSize() == 0 || keyBDR.getPtr()[0] != BS_GROUP_PREFIX) {
             break;
          }
-         BinaryRefReader brrVal(valueBDR);
-         auto valsize = brrVal.get_var_int();
-         if (valsize != brrVal.getSizeRemaining()) {
-            throw WalletException("entry val size mismatch: " + std::to_string(valsize)
-               + " vs " + std::to_string(brrVal.getSizeRemaining()));
+         if (valueBDR.getSize() < 2) {
+            throw WalletException("invalid serialized group size " + std::to_string(valueBDR.getSize()));
          }
          try {
-            const auto group = hd::Group::deserialize(walletPtr_,
-               keyBDR, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
+            const auto group = hd::Group::deserialize(walletPtr_, keyBDR, valueBDR
                  , name_, desc_, netType_, logger_);
             if (group != nullptr) {
                addGroup(group);
@@ -394,7 +400,7 @@ void hd::Wallet::readFromDB()
             }
          }
 
-         dbIter.advance();
+         dbIter->advance();
       }
    }
    for (const auto &leaf : getLeaves()) {
@@ -414,47 +420,13 @@ void hd::Wallet::writeToDB(bool force)
       bwPwdMeta.put_var_int(meta.encKey.getSize());
       bwPwdMeta.put_BinaryData(meta.encKey);
    }
-   BinaryWriter bwData;
-   bwData.put_var_int(bwPwdMeta.getSize());
-   bwData.put_BinaryData(bwPwdMeta.getData());
-   putDataToDB(bwKey.getData(), bwData.getData());
+
+   const auto tx = walletPtr_->beginSubDBTransaction(BS_WALLET_DBNAME, true);
+   tx->insert(bwKey.getData(), bwPwdMeta.getData());
 
    for (const auto &group : groups_) {
-      group.second->commit(force);
+      group.second->commit(tx, force);
    }
-}
-
-BinaryDataRef hd::Wallet::getDataRefForKey(LMDB* db, const BinaryData& key) const
-{
-   CharacterArrayRef keyRef(key.getSize(), key.getPtr());
-   auto ref = db->get_NoCopy(keyRef);
-
-   if (ref.data == nullptr) {
-      throw NoEntryInWalletException();
-   }
-
-   BinaryRefReader brr((const uint8_t*)ref.data, ref.len);
-   auto len = brr.get_var_int();
-   if (len != brr.getSizeRemaining()) {
-      throw WalletException("on disk data length mismatch: "
-         + std::to_string(len) + ", " + std::to_string(brr.getSizeRemaining()));
-   }
-   return brr.get_BinaryDataRef((uint32_t)brr.getSizeRemaining());
-}
-
-BinaryDataRef hd::Wallet::getDataRefForKey(uint32_t key) const
-{
-   BinaryWriter bwKey;
-   bwKey.put_uint32_t(key);
-   return getDataRefForKey(db_, bwKey.getData());
-}
-
-void hd::Wallet::putDataToDB(const BinaryData& key, const BinaryData& data)
-{
-   CharacterArrayRef keyRef(key.getSize(), key.getPtr());
-   CharacterArrayRef dataRef(data.getSize(), data.getPtr());
-   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
-   db_->insert(keyRef, dataRef);
 }
 
 std::string hd::Wallet::fileNamePrefix(bool watchingOnly)
@@ -465,7 +437,8 @@ std::string hd::Wallet::fileNamePrefix(bool watchingOnly)
 std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly() const
 {
    //fork WO copy of armory wallet
-   auto woFilename = AssetWallet::forkWathcingOnly(walletPtr_->getDbFilename());
+   auto woFilename = AssetWallet::forkWatchingOnly(walletPtr_->getDbFilename()
+      , lbdControlPassphrase_);
 
    //instantiate empty core::hd::Wallet
    std::shared_ptr<hd::Wallet> woCopy(new hd::Wallet());
@@ -478,9 +451,8 @@ std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly() const
 
    //setup the armory wallet ptr and dbs
    woCopy->walletPtr_ = std::dynamic_pointer_cast<AssetWallet_Single>(
-      AssetWallet::loadMainWalletFromFile(woFilename));
-   woCopy->dbEnv_ = woCopy->walletPtr_->getDbEnv();
-   woCopy->db_ = new LMDB(woCopy->dbEnv_.get(), BS_WALLET_DBNAME);
+      AssetWallet::loadMainWalletFromFile(woFilename, lbdControlPassphrase_));
+   woCopy->lbdControlPassphrase_ = lbdControlPassphrase_;
 
    //init wo blocksettle meta data db
    woCopy->initializeDB();
@@ -583,9 +555,9 @@ bool hd::Wallet::isPrimary() const
    return false;
 }
 
-void hd::Wallet::copyToFile(const std::string& filename)
+void hd::Wallet::copyToFile(const std::string &filename)
 {
-   std::ifstream source(dbEnv_->getFilename(), std::ios::binary);
+   std::ifstream source(filePathName_, std::ios::binary);
    std::ofstream dest(filename, std::ios::binary);
 
    std::istreambuf_iterator<char> begin_source(source);
@@ -636,15 +608,14 @@ void hd::Wallet::setExtOnly()
    extOnlyFlag_ = true;
    
    //update flag on disk
-   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+   const auto tx = walletPtr_->beginSubDBTransaction(BS_WALLET_DBNAME, true);
 
    BinaryWriter bwKey;
    bwKey.put_uint32_t(WALLET_EXTONLY_KEY);
 
    BinaryWriter bwDesc;
-   bwDesc.put_uint8_t(1); //flag size
    bwDesc.put_uint8_t(extOnlyFlag_);
-   putDataToDB(bwKey.getData(), bwDesc.getData());
+   tx->insert(bwKey.getData(), bwDesc.getData());
 }
 
 bs::core::wallet::Seed hd::Wallet::getDecryptedSeed(void) const

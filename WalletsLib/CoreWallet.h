@@ -23,7 +23,7 @@
 #define WALLET_EXTONLY_KEY      0x00000030
 #define WALLET_PWD_META_KEY     0x00000031
 
-#define BS_WALLET_DBNAME "bs_wallet_name"
+#define BS_WALLET_DBNAME "bs_wallet_db"
 
 namespace spdlog {
    class logger;
@@ -102,8 +102,8 @@ namespace bs {
                return nullptr;
             }
             void set(const std::shared_ptr<AssetEntryMeta> &value);
-            bool write(const std::shared_ptr<LMDBEnv> env, LMDB *db);
-            void readFromDB(const std::shared_ptr<LMDBEnv> env, LMDB *db);
+            bool write(const std::shared_ptr<DBIfaceTransaction> &);
+            void readFromDB(const std::shared_ptr<DBIfaceTransaction> &);
             std::map<BinaryData, std::shared_ptr<AssetEntryMeta>> fetchAll() const { return data_; }
          };
 
@@ -358,8 +358,8 @@ namespace bs {
             bool keepDuplicatedRecipients = false);
 
       protected:
-         virtual std::shared_ptr<LMDBEnv> getDBEnv() = 0;
-         virtual LMDB *getDB() = 0;
+         virtual std::shared_ptr<DBIfaceTransaction> getDBWriteTx() = 0;
+         virtual std::shared_ptr<DBIfaceTransaction> getDBReadTx() = 0;
 
       protected:
          std::string       walletName_;
