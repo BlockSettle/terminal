@@ -16,6 +16,9 @@ namespace spdlog {
 }
 namespace bs {
    namespace sync {
+      namespace hd {
+         class Wallet;
+      }
       class Wallet;
       class WalletsManager;
    }
@@ -53,7 +56,7 @@ public:
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<RfqStorage> &rfqStorage
-      , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
+      , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const bs::Address &recvXbtAddr
       , const bs::Address &authAddr
       , const std::vector<UTXO> &fixedXbtInputs
@@ -107,7 +110,7 @@ private:
    std::shared_ptr<ApplicationSettings>         appSettings_;
    std::shared_ptr<ConnectionManager>           connectionManager_;
    std::shared_ptr<RfqStorage>                  rfqStorage_;
-   std::shared_ptr<bs::sync::Wallet>            xbtWallet_;
+   std::shared_ptr<bs::sync::hd::Wallet>        xbtWallet_;
 
    std::shared_ptr<bs::SettlementContainer>     curContainer_;
    std::shared_ptr<ReqCCSettlementContainer>    ccSettlContainer_;

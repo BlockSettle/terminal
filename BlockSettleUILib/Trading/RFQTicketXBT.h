@@ -29,6 +29,7 @@ namespace bs {
    namespace sync {
       namespace hd {
          class Leaf;
+         class Wallet;
       }
       class Wallet;
       class WalletsManager;
@@ -79,6 +80,8 @@ public:
    using SubmitRFQCb = std::function<void(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)>;
    void setSubmitRFQ(SubmitRFQCb submitRFQCb);
 
+   std::shared_ptr<bs::sync::hd::Wallet> xbtWallet() const;
+
 public slots:
    void SetProductAndSide(const QString& productGroup, const QString& currencyPair
       , const QString& bidPrice, const QString& offerPrice, bs::network::Side::Type side);
@@ -91,8 +94,6 @@ public slots:
 
    void enablePanel();
    void disablePanel();
-
-   std::shared_ptr<bs::sync::Wallet> xbtWallet() const;
 
 private slots:
    void updateBalances();
@@ -180,8 +181,8 @@ private:
 
    void productSelectionChanged();
 
-   std::shared_ptr<bs::sync::Wallet> getSendXbtWallet() const;
-   std::shared_ptr<bs::sync::Wallet> getRecvXbtWallet() const;
+   std::shared_ptr<bs::sync::hd::Wallet> getSendXbtWallet() const;
+   std::shared_ptr<bs::sync::hd::Wallet> getRecvXbtWallet() const;
    bs::XBTAmount getXbtBalance() const;
    QString getProductToSpend() const;
    QString getProductToRecv() const;

@@ -25,7 +25,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<RfqStorage> &rfqStorage
-   , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
+   , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const bs::Address &recvXbtAddr
    , const bs::Address &authAddr
    , const std::vector<UTXO> &fixedXbtInputs

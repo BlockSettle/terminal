@@ -35,7 +35,7 @@ public:
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
+      , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const bs::network::RFQ &
       , const bs::network::Quote &
@@ -89,7 +89,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<SignContainer>            signContainer_;
    std::shared_ptr<ArmoryConnection>         armory_;
-   std::shared_ptr<bs::sync::Wallet>         xbtWallet_;
+   std::shared_ptr<bs::sync::hd::Wallet>     xbtWallet_;
 
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
