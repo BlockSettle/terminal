@@ -32,6 +32,7 @@ namespace bs {
          SecureBinaryData  password;
          PasswordMetaData  metaData;
          BinaryData        salt;
+         SecureBinaryData  controlPassword;
       };
    }  // wallet
 }  //namespace bs

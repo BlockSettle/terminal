@@ -37,8 +37,10 @@ namespace bs {
          void reset();
 
          bool walletsLoaded() const { return walletsLoaded_; }
-         void loadWallets(NetworkType, const std::string &walletsPath, const CbProgress &cb = nullptr);
-         HDWalletPtr loadWoWallet(NetworkType, const std::string &walletsPath, const std::string &walletFileName);
+         void loadWallets(NetworkType, const std::string &walletsPath
+            , const SecureBinaryData &ctrlPass = {}, const CbProgress &cb = nullptr);
+         HDWalletPtr loadWoWallet(NetworkType, const std::string &walletsPath
+            , const std::string &walletFileName, const SecureBinaryData &ctrlPass = {});
          void backupWallet(const HDWalletPtr &, const std::string &targetDir) const;
 
          bool empty() const { return hdWallets_.empty(); }

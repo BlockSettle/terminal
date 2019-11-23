@@ -71,7 +71,10 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
    // In general, load the server key from a special Armory wallet file.
    if (!params.ephemeralPeers) {
       authPeers_ = std::make_unique<AuthorizedPeers>(
-         params.ownKeyFileDir, params.ownKeyFileName);
+         params.ownKeyFileDir, params.ownKeyFileName, [](const std::set<BinaryData> &)
+      {
+         return SecureBinaryData{};
+      });
    }
    else {
       authPeers_ = std::make_unique<AuthorizedPeers>();

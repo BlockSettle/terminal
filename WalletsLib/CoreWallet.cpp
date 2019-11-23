@@ -23,7 +23,7 @@ std::shared_ptr<wallet::AssetEntryMeta> wallet::AssetEntryMeta::deserialize(int,
       auto aeComment = std::make_shared<wallet::AssetEntryComment>();
       return (aeComment->deserialize(brr) ? aeComment : nullptr);
    }
-   throw AssetException("unknown metadata type");
+   throw AssetException("unknown metadata type " + std::to_string(type));
    return nullptr;
 }
 
@@ -39,10 +39,7 @@ BinaryData wallet::AssetEntryComment::serialize() const
    bw.put_var_int(comment_.length());
    bw.put_BinaryData(comment_);
 
-   BinaryWriter finalBw;
-   finalBw.put_var_int(bw.getSize());
-   finalBw.put_BinaryData(bw.getData());
-   return finalBw.getData();
+   return bw.getData();
 }
 
 bool wallet::AssetEntryComment::deserialize(BinaryRefReader brr)
@@ -61,9 +58,9 @@ void wallet::MetaData::set(const std::shared_ptr<AssetEntryMeta> &value)
    data_[value->key()] = value;
 }
 
-bool wallet::MetaData::write(const std::shared_ptr<LMDBEnv> env, LMDB *db)
+bool wallet::MetaData::write(const std::shared_ptr<DBIfaceTransaction> &tx)
 {
-   if (!env || !db) {
+   if (!tx) {
       return false;
    }
    for (const auto value : data_) {
@@ -84,67 +81,52 @@ bool wallet::MetaData::write(const std::shared_ptr<LMDBEnv> env, LMDB *db)
       bw.put_uint32_t(id);
       auto &&dbKey = bw.getData();
 
-      CharacterArrayRef keyRef(dbKey.getSize(), dbKey.getPtr());
-      CharacterArrayRef dataRef(serializedEntry.getSize(), serializedEntry.getPtr());
-      {
-         LMDBEnv::Transaction tx(env.get(), LMDB::ReadWrite);
-         db->insert(keyRef, dataRef);
-      }
+      tx->insert(dbKey, serializedEntry);
       value.second->doNotCommit();
    }
    return true;
 }
 
-void wallet::MetaData::readFromDB(const std::shared_ptr<LMDBEnv> env, LMDB *db)
+void wallet::MetaData::readFromDB(const std::shared_ptr<DBIfaceTransaction> &tx)
 {
-   if ((env == nullptr) || (db == nullptr)) {
-      throw WalletException("LMDB is not initialized");
+   if (!tx) {
+      throw WalletException("DB interface is not initialized");
    }
-   LMDBEnv::Transaction tx(env.get(), LMDB::ReadOnly);
 
-   auto dbIter = db->begin();
+   const auto dbIter = tx->getIterator();
 
    BinaryWriter bwKey;
    bwKey.put_uint8_t(ASSETMETA_PREFIX);
-   CharacterArrayRef keyRef(bwKey.getSize(), bwKey.getData().getPtr());
 
-   dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
+   dbIter->seek(bwKey.getData());
 
-   while (dbIter.isValid()) {
-      auto iterkey = dbIter.key();
-      auto itervalue = dbIter.value();
+   while (dbIter->isValid()) {
+      const auto keyBDR = dbIter->key();
+      const auto valueBDR = dbIter->value();
 
-      BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
-      BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
-
-      BinaryRefReader brrVal(valueBDR);
-      auto valsize = brrVal.get_var_int();
-      if (valsize != brrVal.getSizeRemaining()) {
-         throw WalletException("entry val size mismatch");
-      }
-
-      try {
+//      try {
          BinaryRefReader brrKey(keyBDR);
 
          auto prefix = brrKey.get_uint8_t();
          if (prefix != ASSETMETA_PREFIX) {
-            throw AssetException("invalid prefix");
+            break;
+//            throw AssetException("invalid prefix " + std::to_string(prefix));
          }
          auto index = brrKey.get_int32_t();
          nbMetaData_ = index + 1;
 
-         auto entryPtr = AssetEntryMeta::deserialize(index, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining()));
+         auto entryPtr = AssetEntryMeta::deserialize(index, valueBDR);
          if (entryPtr) {
             entryPtr->doNotCommit();
             data_[entryPtr->key()] = entryPtr;
          }
-      }
+/*      }
       catch (AssetException& e) {
          LOGERR << e.what();
          break;
-      }
+      }*/
 
-      dbIter.advance();
+      dbIter->advance();
    }
 }
 
@@ -731,7 +713,7 @@ bool Wallet::setAddressComment(const bs::Address &address, const std::string &co
       return false;
    }
    set(std::make_shared<wallet::AssetEntryComment>(nbMetaData_++, address.id(), comment));
-   return write(getDBEnv(), getDB());
+   return write(getDBWriteTx());
 }
 
 std::string Wallet::getTransactionComment(const BinaryData &txHash)
@@ -750,7 +732,7 @@ bool Wallet::setTransactionComment(const BinaryData &txHash, const std::string &
       return false;
    }
    set(std::make_shared<wallet::AssetEntryComment>(nbMetaData_++, txHash, comment));
-   return write(getDBEnv(), getDB());
+   return write(getDBWriteTx());
 }
 
 std::vector<std::pair<BinaryData, std::string>> Wallet::getAllTxComments() const

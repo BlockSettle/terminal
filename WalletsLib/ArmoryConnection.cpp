@@ -221,7 +221,7 @@ void ArmoryConnection::stopServiceThreads()
 
 void ArmoryConnection::setupConnection(NetworkType netType, const std::string &host
    , const std::string &port, const std::string &dataDir, const BinaryData &serverKey
-   , const BIP151Cb &cbBIP151)
+   , const SecureBinaryData &passphrase, const BIP151Cb &cbBIP151)
 {
    addToMaintQueue([netType, host, port](ArmoryCallbackTarget *tgt) {
       tgt->onPrepareConnection(netType, host, port);
@@ -271,7 +271,7 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
       logger_->debug("[ArmoryConnection::setupConnection] completed");
    };
 
-   const auto &connectRoutine = [this, registerRoutine, cbBIP151, host, port, dataDir] {
+   const auto &connectRoutine = [this, registerRoutine, cbBIP151, host, port, dataDir, passphrase] {
       if (connThreadRunning_) {
          return;
       }
@@ -301,7 +301,8 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
          // up BIP 150 keys before connecting. BIP 150/151 is transparent to us
          // otherwise. If it fails, the connection will fail.
          bdv_ = AsyncClient::BlockDataViewer::getNewBDV(host, port
-            , dataDir, true // enable ephemeralPeers, because we manage armory keys ourself
+            , dataDir, [passphrase](const std::set<BinaryData> &) { return passphrase; }
+            , true // enable ephemeralPeers, because we manage armory keys ourself
             , cbRemote_);
          if (!bdv_) {
             logger_->error("[setupConnection (connectRoutine)] failed to "

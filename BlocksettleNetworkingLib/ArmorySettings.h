@@ -7,6 +7,8 @@
 
 #include <bdmenums.h>
 #include "BtcDefinitions.h"
+#include "SecureBinaryData.h"
+
 
 struct ArmoryServer
 {
@@ -15,6 +17,7 @@ struct ArmoryServer
    QString armoryDBIp;
    int armoryDBPort = 0;
    QString armoryDBKey;
+   SecureBinaryData  password;
    bool runLocally = false;
 
    bool operator ==(const ArmoryServer &other) const  {
@@ -27,26 +30,29 @@ struct ArmoryServer
    }
    static ArmoryServer fromTextSettings(const QString &text) {
       ArmoryServer server;
-      if (text.split(QStringLiteral(":")).size() != 5) {
+      const QStringList &data = text.split(QStringLiteral(":"));
+      if (data.size() < 5) {  // password is optional now
          return server;
       }
-      const QStringList &data = text.split(QStringLiteral(":"));
       server.name = data.at(0);
       server.netType = data.at(1) == QStringLiteral("0") ? NetworkType::MainNet : NetworkType::TestNet;
       server.armoryDBIp = data.at(2);
       server.armoryDBPort = data.at(3).toInt();
       server.armoryDBKey = data.at(4);
-
+      if (data.size() > 5) {
+         server.password = data.at(5).toStdString();
+      }
       return server;
    }
 
    QString toTextSettings() const {
-      return QStringLiteral("%1:%2:%3:%4:%5")
+      return QStringLiteral("%1:%2:%3:%4:%5:%6")
             .arg(name)
             .arg(netType == NetworkType::MainNet ? 0 : 1)
             .arg(armoryDBIp)
             .arg(armoryDBPort)
-            .arg(armoryDBKey);
+            .arg(armoryDBKey)
+            .arg(QString::fromStdString(password.toBinStr()));
    }
 
    bool isValid() const {

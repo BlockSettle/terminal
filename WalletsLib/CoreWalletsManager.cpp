@@ -23,7 +23,7 @@ void WalletsManager::reset()
 }
 
 void WalletsManager::loadWallets(NetworkType netType, const std::string &walletsPath
-   , const CbProgress &cbProgress)
+   , const SecureBinaryData &controlPassphrase, const CbProgress &cbProgress)
 {
    if (walletsPath.empty()) {
       return;
@@ -44,7 +44,7 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
       try {
          logger_->debug("Loading BIP44 wallet from {}", file);
          const auto wallet = std::make_shared<hd::Wallet>(file, netType
-            , walletsPath, logger_);
+            , walletsPath, controlPassphrase, logger_);
          current++;
          if (cbProgress) {
             cbProgress(current, totalCount);
@@ -62,7 +62,8 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
 }
 
 WalletsManager::HDWalletPtr WalletsManager::loadWoWallet(NetworkType netType
-   , const std::string &walletsPath, const std::string &fileName)
+   , const std::string &walletsPath, const std::string &fileName
+   , const SecureBinaryData &controlPassphrase)
 {
    if (walletsPath.empty()) {
       return nullptr;
@@ -75,7 +76,7 @@ WalletsManager::HDWalletPtr WalletsManager::loadWoWallet(NetworkType netType
    try {
       logger_->debug("Loading BIP44 WO-wallet from {}", fileName);
       const auto wallet = std::make_shared<hd::Wallet>(fileName
-         , netType, walletsPath, logger_);
+         , netType, walletsPath, controlPassphrase, logger_);
       if (!wallet->isWatchingOnly()) {
          logger_->error("Wallet {} is not watching-only", fileName);
          return nullptr;
