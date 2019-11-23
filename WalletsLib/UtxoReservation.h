@@ -46,9 +46,9 @@ namespace bs {
 
       explicit UtxoReservation();
 
-      // Create and destroy the singleton. Use only once!
+      // Create the singleton. Use only once!
+      // Destroying disabled as it's broken, see BST-2362 for details
       static void init();
-      static void destroy();
 
       // Add and remove individual adapters. Typically added/deleted only once
       // per class that uses an adapter.

@@ -86,12 +86,6 @@ void bs::UtxoReservation::init()
    utxoResInstance_ = std::make_shared<bs::UtxoReservation>();
 }
 
-// Singleton destruction.
-void bs::UtxoReservation::destroy()
-{
-   utxoResInstance_.reset();
-}
-
 // Add an adapter to the singleton. True if success, false if failure.
 bool bs::UtxoReservation::addAdapter(const std::shared_ptr<Adapter> &a)
 {
