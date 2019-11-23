@@ -66,6 +66,7 @@ TEST_F(TestWallet, BIP44_derivation)
    const bs::core::wallet::Seed seed{ SecureBinaryData{"test seed"}, NetworkType::TestNet };
    const SecureBinaryData passphrase("passphrase");
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
+   const SecureBinaryData ctrlPass;
    auto wallet = std::make_shared<bs::core::hd::Wallet>("test", "", seed, pd, walletFolder_);
    ASSERT_NE(wallet, nullptr);
 
@@ -182,7 +183,7 @@ TEST_F(TestWallet, BIP44_primary)
 
 TEST_F(TestWallet, BIP44_address)
 {
-   SecureBinaryData passphrase("passphrase");
+   const SecureBinaryData passphrase("passphrase");
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
    auto wallet = std::make_shared<bs::core::hd::Wallet>("test", ""
       , bs::core::wallet::Seed{ SecureBinaryData("test seed"), NetworkType::TestNet }
@@ -210,7 +211,7 @@ TEST_F(TestWallet, BIP44_address)
 
 TEST_F(TestWallet, BIP44_WatchingOnly)
 {
-   SecureBinaryData passphrase("passphrase");
+   const SecureBinaryData passphrase("passphrase");
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
    const size_t nbAddresses = 10;
    auto wallet = std::make_shared<bs::core::hd::Wallet>("test", ""
@@ -275,7 +276,7 @@ TEST_F(TestWallet, BIP44_WatchingOnly)
 
 TEST_F(TestWallet, ExtOnlyAddresses)
 {
-   SecureBinaryData passphrase("test");
+   const SecureBinaryData passphrase("test");
    const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
 
@@ -337,7 +338,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
 
    std::string filename, woFilename;
 
-   SecureBinaryData passphrase("test");
+   const SecureBinaryData passphrase("test");
    {
       //create a wallet
       const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
@@ -445,10 +446,11 @@ TEST_F(TestWallet, CreateDestroyLoad)
       filename = walletPtr->getFileName();
    }
 
+   const SecureBinaryData ctrlPass;
    {
       //load from file
-      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet, "", envPtr_->logger());
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(filename
+         , NetworkType::TestNet, "", ctrlPass, envPtr_->logger());
       StaticLogger::loggerPtr->debug("walletPtr: {}", (void*)walletPtr.get());
 
       //run checks anew
@@ -510,8 +512,8 @@ TEST_F(TestWallet, CreateDestroyLoad)
    {
       int noop = 0;
       //load wo from file
-      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         woFilename, NetworkType::TestNet, "", envPtr_->logger());
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(woFilename
+         , NetworkType::TestNet, "", ctrlPass, envPtr_->logger());
 
       EXPECT_TRUE(walletPtr->isWatchingOnly());
 
@@ -542,7 +544,8 @@ TEST_F(TestWallet, CreateDestroyLoad)
 
 TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 {
-   SecureBinaryData passphrase("test");
+   const SecureBinaryData passphrase("test");
+   const SecureBinaryData ctrlPass;
    std::string filename;
 
    std::vector<bs::Address> extAddrVecNative, extAddrVecNested;
@@ -676,7 +679,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
    {
       //reload wallet
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet, "", envPtr_->logger());
+         filename, NetworkType::TestNet, "", ctrlPass, envPtr_->logger());
 
       auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
       inprocSigner->Start();
@@ -776,7 +779,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
    {
       //reload wallet
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet, "", envPtr_->logger());
+         filename, NetworkType::TestNet, "", ctrlPass, envPtr_->logger());
 
       EXPECT_EQ(walletPtr->isWatchingOnly(), true);
 
@@ -910,11 +913,12 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       filename = walletPtr->getFileName();
    }
 
+   const SecureBinaryData ctrlPass;
    const bs::hd::Path authPath({ bs::hd::Purpose::Native, bs::hd::BlockSettle_Auth, 0xb1 });
    {
       //load from file
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet, "", envPtr_->logger());
+         filename, NetworkType::TestNet, "", ctrlPass, envPtr_->logger());
 
       //run checks anew
       auto groupPtr = walletPtr->getGroup(bs::hd::BlockSettle_Auth);
@@ -1010,7 +1014,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
    {
       //load wo from file
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         woFilename, NetworkType::TestNet, "", envPtr_->logger());
+         woFilename, NetworkType::TestNet, "", ctrlPass, envPtr_->logger());
 
       EXPECT_TRUE(walletPtr->isWatchingOnly());
 
@@ -1073,7 +1077,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
    std::vector<BinaryData> settlementIDs;
    bs::Address authAddr;
 
-   SecureBinaryData passphrase("test");
+   const SecureBinaryData passphrase("test");
    {
       //create a wallet
       const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
@@ -1165,10 +1169,11 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
    }
 
    //reload
+   const SecureBinaryData ctrlPass;
    const bs::hd::Path settlPath({ bs::hd::Purpose::Native, bs::hd::BlockSettle_Settlement, 0 });
    {
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet, "", StaticLogger::loggerPtr);
+         filename, NetworkType::TestNet, "", ctrlPass, StaticLogger::loggerPtr);
 
       //grab settlement group
       auto group = walletPtr->getGroup(bs::hd::BlockSettle_Settlement);
@@ -1210,7 +1215,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
    //wo
    {
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet, "", StaticLogger::loggerPtr);
+         filename, NetworkType::TestNet, "", ctrlPass, StaticLogger::loggerPtr);
 
       //grab settlement group
       auto group = walletPtr->getGroup(bs::hd::BlockSettle_Settlement);
@@ -1252,7 +1257,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
    //reload WO, check again
    {
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet, "", StaticLogger::loggerPtr);
+         filename, NetworkType::TestNet, "", ctrlPass, StaticLogger::loggerPtr);
 
       //grab settlement group
       auto group = walletPtr->getGroup(bs::hd::BlockSettle_Settlement);
@@ -1276,7 +1281,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
 
 TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 {
-   SecureBinaryData passphrase("test");
+   const SecureBinaryData passphrase("test");
    std::string filename;
 
    std::vector<bs::Address> extAddrVec;
@@ -1300,8 +1305,8 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
       //create a wallet
       const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
       const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
-      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         "test", "", seed, pd, walletFolder_, envPtr_->logger());
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>("test", ""
+         , seed, pd, walletFolder_, envPtr_->logger());
 
       {
          const bs::core::WalletPasswordScoped lock(walletPtr, passphrase);
@@ -1454,7 +1459,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 
 TEST_F(TestWallet, ImportExport_Easy16)
 {
-   SecureBinaryData passphrase("test");
+   const SecureBinaryData passphrase("test");
 
    bs::core::wallet::Seed seed{ CryptoPRNG::generateRandom(32), NetworkType::TestNet };
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
@@ -1469,7 +1474,7 @@ TEST_F(TestWallet, ImportExport_Easy16)
       std::shared_ptr<bs::core::hd::Leaf> leaf1;
 
       auto wallet1 = std::make_shared<bs::core::hd::Wallet>(
-         "test1", "", seed, pd, walletFolder_, nullptr);
+         "test1", "", seed, pd, walletFolder_);
       auto grp1 = wallet1->createGroup(wallet1->getXBTGroupType());
       {
          const bs::core::WalletPasswordScoped lock(wallet1, passphrase);
@@ -1515,7 +1520,7 @@ TEST_F(TestWallet, ImportExport_Easy16)
       const auto seedRestored =
          bs::core::wallet::Seed::fromEasyCodeChecksum(easySeed, NetworkType::TestNet);
       auto wallet2 = std::make_shared<bs::core::hd::Wallet>(
-         "test2", "", seedRestored, pd, walletFolder_, nullptr);
+         "test2", "", seedRestored, pd, walletFolder_);
       auto grp2 = wallet2->createGroup(wallet2->getXBTGroupType());
 
       //check leaf id and addr data
@@ -1583,7 +1588,7 @@ TEST_F(TestWallet, ImportExport_Easy16)
 
 TEST_F(TestWallet, ImportExport_xpriv)
 {
-   SecureBinaryData passphrase("test");
+   const SecureBinaryData passphrase("test");
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
 
    bs::core::wallet::Seed seed{ CryptoPRNG::generateRandom(32), NetworkType::TestNet };
@@ -1598,7 +1603,7 @@ TEST_F(TestWallet, ImportExport_xpriv)
       std::shared_ptr<bs::core::hd::Leaf> leaf1;
 
       auto wallet1 = std::make_shared<bs::core::hd::Wallet>(
-         "test1", "", seed, pd, walletFolder_, nullptr);
+         "test1", "", seed, pd, walletFolder_);
       auto grp1 = wallet1->createGroup(wallet1->getXBTGroupType());
       {
          const bs::core::WalletPasswordScoped lock(wallet1, passphrase);
@@ -1643,7 +1648,7 @@ TEST_F(TestWallet, ImportExport_xpriv)
       const auto seedRestored =
          bs::core::wallet::Seed::fromXpriv(xpriv, NetworkType::TestNet);
       auto wallet2 = std::make_shared<bs::core::hd::Wallet>(
-         "test2", "", seedRestored, pd, walletFolder_, nullptr);
+         "test2", "", seedRestored, pd, walletFolder_);
       auto grp2 = wallet2->createGroup(wallet2->getXBTGroupType());
 
       //check leaf id and addr data
