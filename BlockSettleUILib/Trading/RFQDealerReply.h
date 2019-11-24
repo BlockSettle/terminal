@@ -63,7 +63,7 @@ namespace bs {
       {
          bs::network::QuoteNotification qn;
          bs::UtxoReservationToken utxoRes;
-         std::shared_ptr<bs::sync::Wallet> xbtWallet;
+         std::shared_ptr<bs::sync::hd::Wallet> xbtWallet;
          bs::Address authAddr;
          std::vector<UTXO> fixedXbtInputs;
       };
@@ -200,7 +200,7 @@ namespace bs {
          void submitReply(const network::QuoteReqNotification &qrn, double price, ReplyType replyType);
          void updateWalletsList(UiUtils::WoWallets walletsFlags);
          bool isXbtSpend() const;
-         std::shared_ptr<bs::sync::Wallet> getSelectedXbtWallet(ReplyType replyType) const;
+         std::shared_ptr<bs::sync::hd::Wallet> getSelectedXbtWallet(ReplyType replyType) const;
          bs::Address selectedAuthAddress(ReplyType replyType) const;
          std::vector<UTXO> selectedXbtInputs(ReplyType replyType) const;
       };

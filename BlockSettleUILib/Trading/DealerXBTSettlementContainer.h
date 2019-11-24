@@ -14,6 +14,9 @@ namespace spdlog {
 }
 namespace bs {
    namespace sync {
+      namespace hd {
+         class Wallet;
+      }
       class SettlementWallet;
       class Wallet;
       class WalletsManager;
@@ -35,7 +38,7 @@ public:
    DealerXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &
       , const bs::network::Order &
       , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
+      , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const std::shared_ptr<QuoteProvider> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
@@ -89,7 +92,7 @@ private:
    std::shared_ptr<spdlog::logger>              logger_;
    std::shared_ptr<ArmoryConnection>            armory_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
-   std::shared_ptr<bs::sync::Wallet>            xbtWallet_;
+   std::shared_ptr<bs::sync::hd::Wallet>        xbtWallet_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signContainer_;
    std::shared_ptr<AuthAddressManager>          authAddrMgr_;

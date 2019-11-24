@@ -23,6 +23,9 @@ namespace spdlog {
 }
 namespace bs {
    namespace sync {
+      namespace hd {
+         class Wallet;
+      }
       class WalletsManager;
    }
    class SettlementAddressEntry;
@@ -119,7 +122,7 @@ private:
 
    struct SentXbtReply
    {
-      std::shared_ptr<bs::sync::Wallet> xbtWallet;
+      std::shared_ptr<bs::sync::hd::Wallet> xbtWallet;
       bs::Address authAddr;
       std::vector<UTXO> utxosPayinFixed;
    };
@@ -128,7 +131,7 @@ private:
    {
       std::string                         recipientAddress;
       std::string                         requestorAuthAddress;
-      std::shared_ptr<bs::sync::Wallet>   spendWallet;
+      std::shared_ptr<bs::sync::hd::Wallet>  xbtWallet;
       bs::UtxoReservationToken            utxoRes;
    };
 

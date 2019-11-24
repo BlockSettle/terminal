@@ -209,7 +209,7 @@ void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyDat
          reply.recipientAddress = data->qn.receiptAddress;
          reply.requestorAuthAddress = data->qn.reqAuthKey;
          reply.utxoRes = std::move(data->utxoRes);
-         reply.spendWallet = (data->qn.side == bs::network::Side::Buy) ? data->xbtWallet : walletsManager_->getCCWallet(data->qn.product);
+         reply.xbtWallet = data->xbtWallet;
          break;
       }
 
@@ -241,7 +241,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          try {
             const auto settlContainer = std::make_shared<DealerCCSettlementContainer>(logger_, order, quoteReqId
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
-               , sr.recipientAddress, sr.spendWallet, signingContainer_, armory_, std::move(sr.utxoRes));
+               , sr.recipientAddress, sr.xbtWallet, signingContainer_, armory_, walletsManager_, std::move(sr.utxoRes));
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
 
             connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this
