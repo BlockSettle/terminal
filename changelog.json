@@ -1,7 +1,24 @@
 {
-   "latest_version": "0.24.12",
-   "release_date": "20 Nov 2019",
+   "latest_version": "0.25.0",
+   "release_date": "25 Nov 2019",
    "changes": [
+      {
+         "version_string": "0.25.0",
+         "previous_version": "0.24.12",
+         "release_date": "25 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Full wallet encryption",
+            "Combine native and nested XBT wallets on trades tab",
+            "Fix fee estimation for unsigned payin"
+         ],
+         "bug_fixes": [
+            "TXSignRequest fixes (#1634)",
+            "Fix MAX in simple create TX dialog ( BST-2050 )"
+         ],
+         "revision": "6b08f213",
+         "common_revision": "c0e19178"
+      },
       {
          "version_string": "0.24.12",
          "previous_version": "0.24.11",
