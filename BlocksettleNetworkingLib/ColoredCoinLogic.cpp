@@ -1157,7 +1157,7 @@ void ColoredCoinTracker::reorg(bool hard)
 ////
 bool ColoredCoinTracker::goOnline()
 {
-   if (ready_.load(std::memory_order_relaxed)) {
+   if (ready_.load(std::memory_order_relaxed) || !walletObj_) {
       return false;
    }
    //TODO: load from snapshot

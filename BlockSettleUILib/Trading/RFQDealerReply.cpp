@@ -619,19 +619,22 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
             spendVal = bs::XBTAmount(price * qrn.quantity).GetValue();
          }
 
-         auto xbtWallet = replyData->xbtWallet->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves().at(0);
+         auto xbtLeaves = replyData->xbtWallet->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves();
+         if (xbtLeaves.empty()) {
+            SPDLOG_LOGGER_ERROR(logger_, "empty XBT leaves in wallet {}", replyData->xbtWallet->walletId());
+            return;
+         }
+         auto  xbtWallets = std::vector<std::shared_ptr<bs::sync::Wallet>>(xbtLeaves.begin(), xbtLeaves.end());
+         auto xbtWallet = xbtWallets.front();
 
          const auto &spendWallet = isSpendCC ? ccWallet : xbtWallet;
          const auto &recvWallet = isSpendCC ? xbtWallet : ccWallet;
-         // For CC search for exact amount (as we have no need for change).
-         // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee is set)
-         const uint64_t requestUtxoVal = isSpendCC ? spendVal : std::numeric_limits<uint64_t>::max();
 
-         auto recvAddrCb = [this, submit, replyData, qrn, spendWallet, spendVal, isSpendCC, requestUtxoVal](const bs::Address &addr) {
+         auto recvAddrCb = [this, submit, replyData, qrn, spendWallet, spendVal, isSpendCC, ccWallet, xbtWallets](const bs::Address &addr) {
             replyData->qn.receiptAddress = addr.display();
             replyData->qn.reqAuthKey = qrn.requestorRecvAddress;
 
-            const auto &cbFee = [this, qrn, spendVal, spendWallet, isSpendCC, submit, replyData, requestUtxoVal](float feePerByte) {
+            const auto &cbFee = [this, qrn, spendVal, spendWallet, isSpendCC, submit, replyData, ccWallet, xbtWallets](float feePerByte) {
                auto inputsCb = [this, qrn, feePerByte, replyData, spendVal, spendWallet, isSpendCC, submit](const std::vector<UTXO> &inputs) {
                   QMetaObject::invokeMethod(this, [this, feePerByte, qrn, replyData, spendVal, spendWallet, isSpendCC, submit, inputs] {
                      const auto &cbChangeAddr = [this, feePerByte, qrn, replyData, spendVal, spendWallet, submit, inputs]
@@ -667,7 +670,13 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                      spendWallet->getNewChangeAddress(cbChangeAddr);
                   });
                };
-               spendWallet->getSpendableTxOutList(inputsCb, requestUtxoVal);
+               if (isSpendCC) {
+                  // For CC search for exact amount (preferable without change)
+                  ccWallet->getSpendableTxOutList(inputsCb, spendVal);
+               } else {
+                  // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee rate is set)
+                  bs::sync::Wallet::getSpendableTxOutList(xbtWallets, inputsCb);
+               }
             };
 
             if (qrn.side == bs::network::Side::Buy) {
@@ -676,6 +685,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                walletsManager_->estimatedFeePerByte(2, cbFee, this);
             }
          };
+         // recv. address is always set automatically
          getRecvAddress(recvWallet, recvAddrCb);
          break;
       }
