@@ -248,6 +248,8 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
 {
    walletsManager_ = walletsManager;
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQTicketXBT::walletsLoaded);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletAdded, this, &RFQTicketXBT::walletsLoaded);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &RFQTicketXBT::walletsLoaded);
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQTicketXBT::onHDLeafCreated);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &RFQTicketXBT::onCreateHDWalletError);
@@ -274,16 +276,16 @@ void RFQTicketXBT::walletsLoaded()
    if (signingContainer_->isOffline()) {
       ui_->comboBoxXBTWalletsRecv->setEnabled(false);
       ui_->comboBoxXBTWalletsSend->setEnabled(false);
-   }
-   else {
+   } else {
       ui_->comboBoxXBTWalletsRecv->setEnabled(true);
       ui_->comboBoxXBTWalletsSend->setEnabled(true);
 
       // Only full wallets could be used to send, recv could be also done with WO
-      int walletIndex = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsRecv, walletsManager_, UiUtils::WoWallets::Enable);
+      UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsRecv, walletsManager_, UiUtils::WoWallets::Enable);
       UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsSend, walletsManager_, UiUtils::WoWallets::Disable);
-      walletSelectedRecv(walletIndex);
    }
+
+   productSelectionChanged();
 }
 
 void RFQTicketXBT::onSignerReady()
