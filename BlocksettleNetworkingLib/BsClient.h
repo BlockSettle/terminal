@@ -130,7 +130,8 @@ public:
    static std::string requestDescCcAddr(const bs::Address &address, const std::string &token);
 
 public slots:
-   void sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
+   void sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin
+                          , const std::map<bs::Address, BinaryData>& preimageData);
    void sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout);
 

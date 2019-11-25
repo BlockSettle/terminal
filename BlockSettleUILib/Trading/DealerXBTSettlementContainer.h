@@ -69,7 +69,7 @@ public slots:
    void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
 
 signals:
-   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
+   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const std::map<bs::Address, BinaryData>& preimageData);
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 

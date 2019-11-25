@@ -317,11 +317,10 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
          addrVerificator_->startAddressVerification();
 
          unsignedPayinRequest_ = std::move(result.signRequest);
-         SPDLOG_LOGGER_DEBUG(logger_, "unsigned tx id {}", result.payinTxId.toHexStr(true));
 
          utxoAdapter_->reserve(xbtWallet_->walletId(), id(), unsignedPayinRequest_.inputs);
 
-         emit sendUnsignedPayinToPB(settlementIdHex_, unsignedPayinRequest_.serializeState(), result.payinTxId);
+         emit sendUnsignedPayinToPB(settlementIdHex_, unsignedPayinRequest_.serializeState(), result.preimageData);
       });
    });
 

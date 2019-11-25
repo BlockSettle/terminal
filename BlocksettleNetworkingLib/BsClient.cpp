@@ -53,7 +53,8 @@ void BsClient::sendPbMessage(std::string data)
    sendMessage(&request);
 }
 
-void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId)
+void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin
+                                 , const std::map<bs::Address, BinaryData>& preimageData)
 {
    SPDLOG_LOGGER_DEBUG(logger_, "send unsigned payin {}", settlementId);
 
@@ -63,7 +64,12 @@ void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryDa
    data->set_settlement_id(settlementId);
    data->set_unsigned_payin(unsignedPayin.toBinStr());
 
-   // XXX
+   for (const auto &preImageIt : preimageData) {
+      auto preImage = data->add_preimage_data();
+
+      preImage->set_address(preImageIt.first.display());
+      preImage->set_preimage_script(preImageIt.second.toBinStr());
+   }
 
    sendPbMessage(request.SerializeAsString());
 }

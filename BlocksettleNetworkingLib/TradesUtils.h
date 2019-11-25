@@ -91,7 +91,9 @@ namespace bs {
 
       struct PayinResult : public Result
       {
-         BinaryData payinTxId;
+         std::map<bs::Address, BinaryData> preimageData;
+
+         BinaryData     payinHash;
 
          static PayinResult error(std::string msg);
       };

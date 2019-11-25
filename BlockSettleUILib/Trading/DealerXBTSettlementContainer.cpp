@@ -276,11 +276,9 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
          settlAddr_ = result.settlementAddr;
 
          unsignedPayinRequest_ = std::move(result.signRequest);
-         SPDLOG_LOGGER_DEBUG(logger_, "unsigned tx id {}", result.payinTxId.toHexStr(true));
-
          utxoAdapter_->reserve(xbtWallet_->walletId(), id(), unsignedPayinRequest_.inputs);
 
-         emit sendUnsignedPayinToPB(settlementIdHex_, unsignedPayinRequest_.serializeState(), result.payinTxId);
+         emit sendUnsignedPayinToPB(settlementIdHex_, unsignedPayinRequest_.serializeState(), result.preimageData);
       });
    });
 
