@@ -171,7 +171,6 @@ TEST(TestCommon, UtxoReservation)
    EXPECT_TRUE(bs::UtxoReservation::addAdapter(adapter));
    EXPECT_TRUE(bs::UtxoReservation::delAdapter(adapter));
    EXPECT_FALSE(bs::UtxoReservation::delAdapter(adapter));
-   bs::UtxoReservation::destroy();
 }
 
 TEST(TestCommon, EasyCoDec)
