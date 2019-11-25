@@ -4,6 +4,7 @@
 
 #include "BinaryData.h"
 #include "CheckRecipSigner.h"
+#include "PublicResolver.h"
 
 const char *bs::toString(const bs::PayoutSignatureType t)
 {
@@ -190,6 +191,11 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUn
       for (const auto& spender : spenders) {
          const auto& utxo = spender->getUtxo();
          result->utxos.push_back(spender->getUtxo());
+      }
+
+      if (!preimageData.empty()) {
+         const auto resolver = std::make_shared<PublicResolver>(preimageData);
+         deserializedSigner.setFeed(resolver);
       }
 
       result->payinHash = deserializedSigner.getTxId();
