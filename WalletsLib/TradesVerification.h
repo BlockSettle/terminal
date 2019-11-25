@@ -2,13 +2,14 @@
 #define TRADES_VERIFICATION_H
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "TxClasses.h"
+
 class  BinaryData;
-class  Tx;
-class  UTXO;
 
 namespace bs {
 
@@ -61,6 +62,10 @@ namespace bs {
          , uint64_t tradeAmount, float feePerByte, const std::string &settlementId, const std::string &settlementAddress);
 
       static std::shared_ptr<Result> verifySignedPayin(const BinaryData &signedPayin, const BinaryData &payinHash, float feePerByte, uint64_t totalPayinFee);
+
+      // preImages - key: address, value:preimage script
+      // required for P2SH addresses only
+      static bool XBTInputsAcceptable(const std::vector<UTXO>& utxoList, const std::map<std::string, BinaryData>& preImages);
 
    };
 

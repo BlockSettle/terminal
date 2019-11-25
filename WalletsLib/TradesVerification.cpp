@@ -330,3 +330,33 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifySi
       return Result::error("undefined exception during payin processing");
    }
 }
+
+//only  TXOUT_SCRIPT_P2WPKH and (TXOUT_SCRIPT_P2SH | TXOUT_SCRIPT_P2WPKH) accepted
+bool bs::TradesVerification::XBTInputsAcceptable(const std::vector<UTXO>& utxoList, const std::map<std::string, BinaryData>& preImages)
+{
+   for (const auto& input : utxoList) {
+      const auto scrType = BtcUtils::getTxOutScriptType(input.getScript());
+      if (scrType == TXOUT_SCRIPT_P2WPKH) {
+         continue;
+      }
+
+      if (scrType != TXOUT_SCRIPT_P2SH) {
+         return false;
+      }
+
+      // check underlying script type
+      auto address = bs::Address::fromScript(input.getScript());
+
+      const auto it = preImages.find(address.display());
+      if (it == preImages.end()) {
+         return false;
+      }
+
+      auto underlyingScriptType = BtcUtils::getTxOutScriptType(it->second);
+      if (scrType != TXOUT_SCRIPT_P2WPKH) {
+         return false;
+      }
+   }
+
+   return true;
+}
