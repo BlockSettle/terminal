@@ -112,11 +112,11 @@ namespace UiUtils {
    }
 }
 
-int UiUtils::fillWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , bool skipWatchingOnly)
+int UiUtils::fillWalletsComboBox(QComboBox* comboBox
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager, WoWallets woWallets)
 {
-   auto addHdWallet = [comboBox, skipWatchingOnly](const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet) {
-      if (skipWatchingOnly && hdWallet->isOffline()) {
+   auto addHdWallet = [comboBox, woWallets](const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet) {
+      if (woWallets == WoWallets::Disable && hdWallet->isOffline()) {
          return;
       }
 
@@ -178,7 +178,8 @@ int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& wall
    return walletIndex;
 }
 
-int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
+int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
+   , WoWallets woWallets)
 {
    if ((walletsManager == nullptr) || walletsManager->hdWallets().empty()) {
       return -1;
@@ -192,12 +193,14 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
       if (hdWallet == priWallet) {
          selected = i;
       }
-      comboBox->addItem(QString::fromStdString(hdWallet->name()));
-      comboBox->setItemData(i, QString::fromStdString(hdWallet->walletId()), UiUtils::WalletIdRole);
-      i++;
+      if (woWallets == WoWallets::Enable || !hdWallet->isOffline()) {
+         comboBox->addItem(QString::fromStdString(hdWallet->name()));
+         comboBox->setItemData(i, QString::fromStdString(hdWallet->walletId()), UiUtils::WalletIdRole);
+         i++;
+      }
    }
    comboBox->blockSignals(b);
-   QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, selected));
+   comboBox->setCurrentIndex(selected);
    return selected;
 }
 

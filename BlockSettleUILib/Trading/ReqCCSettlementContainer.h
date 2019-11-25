@@ -33,7 +33,7 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const bs::network::RFQ &
       , const bs::network::Quote &
-      , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
+      , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const std::vector<UTXO> &manualXbtInputs
       , bs::UtxoReservationToken utxoRes);
    ~ReqCCSettlementContainer() override;
@@ -81,11 +81,12 @@ private:
    void AcceptQuote();
 
 private:
-   std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<SignContainer>      signingContainer_;
-   std::shared_ptr<bs::sync::Wallet>   xbtWallet_;
-   std::shared_ptr<bs::sync::Wallet>   ccWallet_;
-   std::shared_ptr<AssetManager>       assetMgr_;
+   std::shared_ptr<spdlog::logger>           logger_;
+   std::shared_ptr<SignContainer>            signingContainer_;
+   std::shared_ptr<bs::sync::hd::Wallet>     xbtWallet_;
+   std::vector<std::shared_ptr<bs::sync::Wallet>> xbtLeaves_;
+   std::shared_ptr<bs::sync::Wallet>         ccWallet_;
+   std::shared_ptr<AssetManager>             assetMgr_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;

@@ -22,7 +22,7 @@ using namespace bs::sync;
 DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
    , const bs::network::Order &order
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const std::shared_ptr<Wallet> &xbtWallet
+   , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
@@ -203,7 +203,9 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
          return;
       }
 
-      xbtWallet_->setTransactionComment(signedTX, comment_);
+      for (const auto &leaf : xbtWallet_->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves()) {
+         leaf->setTransactionComment(signedTX, comment_);
+      }
 //      settlWallet_->setTransactionComment(signedTX, comment_);   //TODO: implement later
 
       SPDLOG_LOGGER_DEBUG(logger_, "signed payout: {}", signedTX.toHexStr());
@@ -223,7 +225,9 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
          return;
       }
 
-      xbtWallet_->setTransactionComment(signedTX, comment_);
+      for (const auto &leaf : xbtWallet_->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves()) {
+         leaf->setTransactionComment(signedTX, comment_);
+      }
 //      settlWallet_->setTransactionComment(signedTX, comment_);  //TODO: implement later
 
       emit sendSignedPayinToPB(settlementIdHex_, signedTX);
@@ -249,7 +253,9 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
    bs::tradeutils::PayinArgs args;
    initTradesArgs(args, settlementId);
    args.fixedInputs = utxosPayinFixed_;
-   args.inputXbtWallets.push_back(xbtWallet_);
+   for (const auto &leaf : xbtWallet_->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves()) {
+      args.inputXbtWallets.push_back(leaf);
+   }
    args.utxoReservation = bs::UtxoReservation::instance();
    args.utxoReservationWalletId = xbtWallet_->walletId();
 
@@ -301,7 +307,7 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
    initTradesArgs(args, settlementId);
    args.payinTxId = payinHash;
    args.recvAddr = recvAddr_;
-   args.outputXbtWallet = xbtWallet_;
+   args.outputXbtWallet = xbtWallet_->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves().at(0);
 
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, payinHash, handle = validityFlag_.handle()]
       (bs::tradeutils::PayoutResult result)

@@ -72,9 +72,9 @@ namespace bs {
          BinaryData payinTxId;
 
          // If set this addr will be used for output
+         // If not set new ext address would be requested from outputXbtWallet for output
          bs::Address recvAddr;
 
-         // If not set new ext address would be requested from outputXbtWallet for output
          std::shared_ptr<bs::sync::Wallet> outputXbtWallet;
       };
 

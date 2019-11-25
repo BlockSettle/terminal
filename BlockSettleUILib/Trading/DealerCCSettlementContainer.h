@@ -13,7 +13,11 @@ namespace spdlog {
 }
 namespace bs {
    namespace sync {
+      namespace hd {
+         class Wallet;
+      }
       class Wallet;
+      class WalletsManager;
    }
 }
 class ArmoryConnection;
@@ -28,9 +32,10 @@ public:
       , const std::string &quoteReqId, uint64_t lotSize
       , const bs::Address &genAddr
       , const std::string &ownRecvAddr
-      , const std::shared_ptr<bs::sync::Wallet> &
+      , const std::shared_ptr<bs::sync::hd::Wallet> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , bs::UtxoReservationToken utxoRes);
    ~DealerCCSettlementContainer() override;
 
@@ -71,8 +76,9 @@ private:
    const uint64_t             lotSize_;
    const bs::Address          genesisAddr_;
    const bool                 delivery_;
-   std::shared_ptr<bs::sync::Wallet>   wallet_;
+   std::shared_ptr<bs::sync::hd::Wallet>   xbtWallet_;
    std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    const BinaryData  txReqData_;
    const bs::Address ownRecvAddr_;
    const QString     orderId_;
@@ -84,6 +90,8 @@ private:
    bs::CheckRecipSigner signer_;
    bs::core::wallet::TXSignRequest txReq_;
    bs::UtxoReservationToken utxoRes_;
+   bool isGetAddressValid_ = false;
+   std::shared_ptr<bs::sync::Wallet>         ccWallet_;
 
 };
 

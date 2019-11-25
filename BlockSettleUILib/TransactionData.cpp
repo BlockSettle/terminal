@@ -31,7 +31,6 @@ TransactionData::TransactionData(const onTransactionChanged &changedCallback
 
 TransactionData::~TransactionData() noexcept
 {
-   disableTransactionUpdate();
    changedCallback_ = {};
    bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
@@ -39,11 +38,6 @@ TransactionData::~TransactionData() noexcept
 void TransactionData::SetCallback(onTransactionChanged changedCallback)
 {
    changedCallback_ = std::move(changedCallback);
-}
-
-bool TransactionData::InputsLoadedFromArmory() const
-{
-   return inputsLoaded_;
 }
 
 bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet
@@ -54,12 +48,10 @@ bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet
    }
    if (wallet != wallet_) {
       wallet_ = wallet;
-      inputsLoaded_ = false;
 
       selectedInputs_ = std::make_shared<SelectedTransactionInputs>(wallet_
          , isSegWitInputsOnly_, confirmedInputs_
          , [this]() {
-         inputsLoaded_ = true;
          InvalidateTransactionData();
       }, cbInputsReset);
 
@@ -99,7 +91,6 @@ bool TransactionData::setGroup(const std::shared_ptr<bs::sync::hd::Group> &group
       if (!leaves.empty()) {
          wallet_ = leaves.front();
       }
-      inputsLoaded_ = false;
 
       BTCNumericTypes::balance_type spendableBalance = 0;
       for (const auto &leaf : leaves) {
@@ -109,7 +100,6 @@ bool TransactionData::setGroup(const std::shared_ptr<bs::sync::hd::Group> &group
       selectedInputs_ = std::make_shared<SelectedTransactionInputs>(group_
          , isSegWitInputsOnly_, confirmedInputs_
          , [this]() {
-         inputsLoaded_ = true;
          InvalidateTransactionData();
       }, cbInputsReset);
 
@@ -182,28 +172,8 @@ void TransactionData::InvalidateTransactionData()
 
    UpdateTransactionData();
 
-   if (transactionUpdateEnabled_) {
-      if (changedCallback_) {
-         changedCallback_();
-      }
-   } else {
-      transactionUpdateRequired_ = true;
-   }
-}
-
-bool TransactionData::disableTransactionUpdate()
-{
-   bool prevState = transactionUpdateEnabled_;
-   transactionUpdateEnabled_ = false;
-   return prevState;
-}
-
-void TransactionData::enableTransactionUpdate()
-{
-   transactionUpdateEnabled_ = true;
-   if (transactionUpdateRequired_) {
-      transactionUpdateRequired_ = false;
-      InvalidateTransactionData();
+   if (changedCallback_) {
+      changedCallback_();
    }
 }
 
@@ -569,35 +539,6 @@ uint64_t TransactionData::totalFee() const
    return 0;
 }
 
-void TransactionData::ReserveUtxosFor(double amount, const std::string &reserveId, const bs::Address &addr)
-{
-   if (!utxoAdapter_) {
-      utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
-      bs::UtxoReservation::addAdapter(utxoAdapter_);
-   }
-   reservedUTXO_.clear();
-   utxoAdapter_->unreserve(reserveId);
-
-   if (!addr.isNull() && !GetRecipientsCount()) {
-      const auto recip = RegisterNewRecipient();
-      UpdateRecipient(recip, amount, addr);
-      reservedUTXO_ = usedUTXO_;
-      RemoveRecipient(recip);
-   }
-   else {
-      reservedUTXO_ = usedUTXO_;
-   }
-   if (!reservedUTXO_.empty()) {
-      utxoAdapter_->reserve(wallet_->walletId(), reserveId, reservedUTXO_);
-   }
-}
-
-void TransactionData::ReloadSelection(const std::vector<UTXO> &utxos)
-{
-   selectedInputs_->Reload(utxos);
-   InvalidateTransactionData();
-}
-
 void TransactionData::clear()
 {
    totalFee_ = 0;
@@ -773,14 +714,6 @@ bool TransactionData::IsMaxAmount(unsigned int recipientId) const
    return itRecip->second->IsMaxAmount();
 }
 
-void TransactionData::setMaxSpendAmount(bool maxAmount)
-{
-   maxSpendAmount_ = maxAmount;
-   if (maxAmount) {
-      summary_.hasChange = false;
-   }
-}
-
 std::vector<std::shared_ptr<ScriptRecipient>> TransactionData::GetRecipientList() const
 {
    if (!IsTransactionValid()) {
@@ -799,27 +732,6 @@ std::vector<std::shared_ptr<ScriptRecipient>> TransactionData::GetRecipientList(
    }
 
    return recipientList;
-}
-
-bs::core::wallet::TXSignRequest TransactionData::createUnsignedTransaction(bool isRBF, const bs::Address &changeAddress)
-{
-   if (!wallet_) {
-      return {};
-   }
-   unsignedTxReq_ = wallet_->createTXRequest(inputs(), GetRecipientList(), summary_.totalFee, isRBF, changeAddress);
-   if (!unsignedTxReq_.isValid()) {
-      throw std::runtime_error("missing unsigned TX");
-   }
-   reservedUTXO_ = unsignedTxReq_.inputs;
-   return unsignedTxReq_;
-}
-
-bs::core::wallet::TXSignRequest TransactionData::getSignTxRequest() const
-{
-   if (!unsignedTxReq_.isValid()) {
-      throw std::runtime_error("missing unsigned TX");
-   }
-   return unsignedTxReq_;
 }
 
 bs::core::wallet::TXSignRequest TransactionData::createTXRequest(bool isRBF

@@ -12,6 +12,7 @@
 #include "BSErrorCode.h"
 #include "CommonTypes.h"
 #include "UtxoReservationToken.h"
+#include "XBTAmount.h"
 
 QT_BEGIN_NAMESPACE
 class QPushButton;
@@ -28,6 +29,7 @@ namespace bs {
    namespace sync {
       namespace hd {
          class Leaf;
+         class Wallet;
       }
       class Wallet;
       class WalletsManager;
@@ -39,6 +41,7 @@ class AuthAddressManager;
 class CCAmountValidator;
 class FXAmountValidator;
 class QuoteProvider;
+class SelectedTransactionInputs;
 class SignContainer;
 class TransactionData;
 class XbtAmountValidator;
@@ -72,10 +75,12 @@ public:
    QPushButton* denomCcyButton() const;
 
    bs::Address selectedAuthAddress() const;
-   bs::Address recvAddress() const;
+   bs::Address recvXbtAddress() const;
 
    using SubmitRFQCb = std::function<void(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)>;
    void setSubmitRFQ(SubmitRFQCb submitRFQCb);
+
+   std::shared_ptr<bs::sync::hd::Wallet> xbtWallet() const;
 
 public slots:
    void SetProductAndSide(const QString& productGroup, const QString& currencyPair
@@ -89,8 +94,6 @@ public slots:
 
    void enablePanel();
    void disablePanel();
-
-   std::shared_ptr<bs::sync::Wallet> xbtWallet() const;
 
 private slots:
    void updateBalances();
@@ -119,9 +122,6 @@ private slots:
    void onCreateWalletClicked();
 
    void onAuthAddrChanged(int);
-
-signals:
-   void update();
 
 protected:
    bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -152,11 +152,7 @@ private:
 
    BalanceInfoContainer getBalanceInfo() const;
    QString getProduct() const;
-   std::shared_ptr<bs::sync::Wallet> getCurrentWallet() const { return curWallet_; }
-   void setCurrentWallet(const std::shared_ptr<bs::sync::Wallet> &);
-   std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc);
-   void setTransactionData();
-   void setWallets();
+   std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
    bool isXBTProduct() const;
    bool checkBalance(double qty) const;
    bs::network::Side::Type getSelectedSide() const;
@@ -167,9 +163,6 @@ private:
 
    static std::string mkRFQkey(const bs::network::RFQ &);
 
-   double estimatedXbtPayinFee() const;
-   void onTransactinDataChanged();
-
    void SetProductGroup(const QString& productGroup);
    void SetCurrencyPair(const QString& currencyPair);
 
@@ -177,8 +170,6 @@ private:
    bs::network::Side::Type getLastSideSelection(const std::string& product, const std::string& currencyPair);
 
    void HideRFQControls();
-
-   void setCurrentCCWallet(const std::shared_ptr<bs::sync::Wallet>& newCCWallet);
 
    void initProductGroupMap();
    ProductGroupType getProductGroupType(const QString& productGroup);
@@ -190,6 +181,12 @@ private:
 
    void productSelectionChanged();
 
+   std::shared_ptr<bs::sync::hd::Wallet> getSendXbtWallet() const;
+   std::shared_ptr<bs::sync::hd::Wallet> getRecvXbtWallet() const;
+   bs::XBTAmount getXbtBalance() const;
+   QString getProductToSpend() const;
+   QString getProductToRecv() const;
+
 private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;
 
@@ -197,14 +194,10 @@ private:
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
 
-   std::shared_ptr<TransactionData>    transactionData_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
 
-   std::shared_ptr<bs::sync::Wallet>   curWallet_;
-   std::shared_ptr<bs::sync::Wallet>   ccWallet_;
-   std::shared_ptr<bs::sync::Wallet>   recvWallet_;
    bs::Address authAddr_;
    std::string authKey_;
 
@@ -216,9 +209,9 @@ private:
 
    QFont    invalidBalanceFont_;
 
-   CCAmountValidator                            *ccAmountValidator_;
-   FXAmountValidator                            *fxAmountValidator_;
-   XbtAmountValidator                           *xbtAmountValidator_;
+   CCAmountValidator                            *ccAmountValidator_{};
+   FXAmountValidator                            *fxAmountValidator_{};
+   XbtAmountValidator                           *xbtAmountValidator_{};
 
    std::unordered_map<std::string, ProductGroupType> groupNameToType_;
    ProductGroupType     currentGroupType_ = ProductGroupType::GroupNotSelected;
@@ -229,9 +222,9 @@ private:
    QString currentBidPrice_;
    QString currentOfferPrice_;
 
-   bool maxAmount_ = false;
-
    SubmitRFQCb submitRFQCb_;
+
+   std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
 
 };
 

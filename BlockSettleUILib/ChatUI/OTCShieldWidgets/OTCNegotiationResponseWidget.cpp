@@ -125,7 +125,7 @@ void OTCNegotiationResponseWidget::setPeer(const bs::network::otc::Peer &peer)
 
 void OTCNegotiationResponseWidget::onSyncInterface()
 {
-   int index = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWallets, getWalletManager());
+   int index = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWallets, getWalletManager(), UiUtils::WoWallets::Enable);
    ui_->comboBoxXBTWallets->setCurrentIndex(index);
    onCurrentWalletChanged();
 

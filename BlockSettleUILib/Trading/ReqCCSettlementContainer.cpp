@@ -20,7 +20,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const bs::network::RFQ &rfq
    , const bs::network::Quote &quote
-   , const std::shared_ptr<bs::sync::Wallet> &xbtWallet
+   , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::vector<UTXO> &manualXbtInputs
    , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer()
@@ -38,6 +38,20 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , manualXbtInputs_(manualXbtInputs)
    , utxoRes_(std::move(utxoRes))
 {
+   if (!xbtWallet_) {
+      throw std::logic_error("invalid hd wallet");
+   }
+
+   auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
+   if (!xbtGroup) {
+      throw std::invalid_argument(fmt::format("can't find XBT group in {}", xbtWallet_->walletId()));
+   }
+   auto xbtLeaves = xbtGroup->getLeaves();
+   xbtLeaves_.insert(xbtLeaves_.end(), xbtLeaves.begin(), xbtLeaves.end());
+   if (xbtLeaves_.empty()) {
+      throw std::invalid_argument(fmt::format("empty XBT group in {}", xbtWallet_->walletId()));
+   }
+
    if (lotSize_ == 0) {
       throw std::runtime_error("invalid lot size");
    }
@@ -51,12 +65,10 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    connect(this, &ReqCCSettlementContainer::genAddressVerified, this
       , &ReqCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
 
-   const auto &signingWallet = rfq.side == bs::network::Side::Sell ? ccWallet_ : xbtWallet_;
-   if (!signingWallet) {
+   const auto &rootWallet = (rfq.side == bs::network::Side::Sell) ? walletsMgr_->getHDRootForLeaf(ccWallet_->walletId()) : xbtWallet_;
+   if (!rootWallet) {
       throw std::runtime_error("missing signing wallet");
    }
-
-   const auto &rootWallet = walletsMgr_->getHDRootForLeaf(signingWallet->walletId());
    walletInfo_ = bs::hd::WalletInfo(walletsMgr_, rootWallet);
    infoReqId_ = signingContainer_->GetInfo(walletInfo_.rootId().toStdString());
 
@@ -107,7 +119,11 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() co
 void ReqCCSettlementContainer::activate()
 {
    if (side() == bs::network::Side::Buy) {
-      if (amount() > assetMgr_->getBalance(bs::network::XbtCurrency, xbtWallet_)) {
+      double balance = 0;
+      for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
+         balance += assetMgr_->getBalance(bs::network::XbtCurrency, leaf);
+      }
+      if (amount() > balance) {
          emit paymentVerified(false, tr("Insufficient XBT balance in signing wallet"));
          return;
       }
@@ -215,7 +231,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                      bs::core::wallet::OutputOrderType::Change
                   };
 
-                  ccTxData_ = xbtWallet_->createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte
+                  ccTxData_ = xbtLeaves_.front()->createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte
                      , { recipient }, outSortOrder, dealerTx_, false/*calcFeeFromPrevData*/);
                   ccTxData_.populateUTXOs = true;
 
@@ -229,10 +245,10 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   emit error(tr("Failed to create CC TX half"));
                }
             };
-            xbtWallet_->getNewChangeAddress(changeAddrCb);
+            xbtLeaves_.front()->getNewChangeAddress(changeAddrCb);
          };
          if (manualXbtInputs_.empty()) {
-            xbtWallet_->getSpendableTxOutList(inputsCb, std::numeric_limits<uint64_t>::max());
+            bs::sync::Wallet::getSpendableTxOutList(xbtLeaves_, inputsCb);
          } else {
             inputsCb(manualXbtInputs_);
          }
@@ -270,8 +286,13 @@ bool ReqCCSettlementContainer::startSigning()
          // notify RFQ dialog that signed half could be saved
          emit txSigned();
 
-         xbtWallet_->setTransactionComment(signedTX, txComment());
+         // FIXME: disabled as it does not work correctly (signedTX txid is different from combined txid)
+#if 0
+         for (const auto &xbtLeaf : xbtLeaves_) {
+            xbtLeaf->setTransactionComment(signedTX, txComment());
+         }
          ccWallet_->setTransactionComment(signedTX, txComment());
+#endif
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
          emit settlementCancelled();

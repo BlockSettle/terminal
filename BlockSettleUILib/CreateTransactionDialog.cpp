@@ -189,7 +189,7 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId)
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_);
+   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WoWallets::Enable);
    selectedWalletChanged(index);
 }
 

@@ -8,7 +8,9 @@
 #include "SignerDefs.h"
 #include "UiUtils.h"
 #include "UtxoReservation.h"
+#include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include <QApplication>
 #include <QPointer>
@@ -20,9 +22,10 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , const std::string &quoteReqId, uint64_t lotSize
    , const bs::Address &genAddr
    , const std::string &ownRecvAddr
-   , const std::shared_ptr<bs::sync::Wallet> &wallet
+   , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer()
    , logger_(logger)
@@ -30,8 +33,9 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , lotSize_(lotSize)
    , genesisAddr_(genAddr)
    , delivery_(order.side == bs::network::Side::Sell)
-   , wallet_(wallet)
+   , xbtWallet_(xbtWallet)
    , signingContainer_(container)
+   , walletsMgr_(walletsMgr)
    , txReqData_(BinaryData::CreateFromHex(order.reqTransaction))
    , ownRecvAddr_(bs::Address::fromAddressString(ownRecvAddr))
    , orderId_(QString::fromStdString(order.clOrderId))
@@ -40,6 +44,11 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
 {
    if (lotSize == 0) {
       throw std::logic_error("invalid lotSize");
+   }
+
+   ccWallet_ = walletsMgr->getCCWallet(order.product);
+   if (!ccWallet_) {
+      throw std::logic_error("can't find CC wallet");
    }
 
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
@@ -88,7 +97,7 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData()
 
 bool DealerCCSettlementContainer::startSigning()
 {
-   if (!wallet_) {
+   if (!ccWallet_ || !xbtWallet_) {
       logger_->error("[DealerCCSettlementContainer::accept] failed to validate counterparty's TX - aborting");
       emit failed();
       return false;
@@ -96,14 +105,15 @@ bool DealerCCSettlementContainer::startSigning()
 
    const auto &cbTx = [this, handle = validityFlag_.handle(), logger = logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
       if (!handle.isValid()) {
-         logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half, already destroyed");
+         SPDLOG_LOGGER_ERROR(logger, "failed to sign TX half, already destroyed");
          return;
       }
 
       if (result == bs::error::ErrorCode::NoError) {
          emit signTxRequest(orderId_, signedTX.toHexStr());
          emit completed();
-         wallet_->setTransactionComment(signedTX, txComment());
+         // FIXME: Does not work as expected as signedTX txid is different from combined txid
+         //wallet_->setTransactionComment(signedTX, txComment());
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
          // FIXME
@@ -111,21 +121,40 @@ bool DealerCCSettlementContainer::startSigning()
          emit failed();
       }
       else {
-         logger->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
+         SPDLOG_LOGGER_ERROR(logger_, "failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
          emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
          emit failed();
       }
    };
 
-   txReq_.walletIds = { wallet_->walletId() };
    txReq_.prevStates = { txReqData_ };
    txReq_.populateUTXOs = true;
    txReq_.inputs = bs::UtxoReservation::instance()->get(utxoRes_.reserveId());
-   logger_->debug("[DealerCCSettlementContainer::accept] signing with wallet {}, {} inputs"
-      , wallet_->name(), txReq_.inputs.size());
+
+   // TODO: Find out why code below does not work for sell requests (side() == bs::network::Side::Buy)
+#if 1
+   txReq_.walletIds.clear();
+   for (const auto &input : txReq_.inputs) {
+      const auto addr = bs::Address::fromUTXO(input);
+      const auto wallet = walletsMgr_->getWalletByAddress(addr);
+      if (!wallet) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't find wallet from UTXO");
+         continue;
+      }
+      txReq_.walletIds.push_back(wallet->walletId());
+   }
+#else
+   if (side() == bs::network::Side::Buy) {
+      for (const auto &leaf : xbtWallet_->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves()) {
+         txReq_.walletIds.push_back(leaf->walletId());
+      }
+   } else {
+      txReq_.walletIds.push_back(ccWallet_->walletId());
+   }
+#endif
 
    //Waiting for TX half signing...
-
+   SPDLOG_LOGGER_DEBUG(logger_, "signing with {} inputs", txReq_.inputs.size());
    bs::signer::RequestId signId = signingContainer_->signSettlementPartialTXRequest(txReq_, toPasswordDialogData(), cbTx);
    return (signId > 0);
 }
@@ -153,7 +182,8 @@ void DealerCCSettlementContainer::activate()
    if (!foundRecipAddr_ || !amountValid_) {
       logger_->warn("[DealerCCSettlementContainer::activate] requester's TX verification failed: {}/{}"
          , foundRecipAddr_, amountValid_);
-      wallet_ = nullptr;
+      ccWallet_ = nullptr;
+      xbtWallet_ = nullptr;
       emit genAddressVerified(false);
    }
    else if (order_.side == bs::network::Side::Buy) {
@@ -176,7 +206,8 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
    if (!addressVerified) {
       logger_->warn("[DealerCCSettlementContainer::onGenAddressVerified] counterparty's TX is unverified");
       emit error(tr("Failed to verify counterparty's transaction"));
-      wallet_ = nullptr;
+      ccWallet_ = nullptr;
+      xbtWallet_ = nullptr;
    }
 
    bs::sync::PasswordDialogData pd;

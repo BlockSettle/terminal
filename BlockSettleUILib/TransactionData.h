@@ -84,10 +84,8 @@ public:
       , const std::vector<UTXO> &, uint32_t topBlock);
    bool setGroupAndInputs(const std::shared_ptr<bs::sync::hd::Group> &
       , const std::vector<UTXO> &, uint32_t topBlock);
-   void setSigningWallet(const std::shared_ptr<bs::sync::Wallet>& wallet) { signWallet_ = wallet; }
    std::shared_ptr<bs::sync::Wallet> getWallet() const { return wallet_; }
    std::shared_ptr<bs::sync::hd::Group> getGroup() const { return group_; }
-   std::shared_ptr<bs::sync::Wallet> getSigningWallet() const { return signWallet_; }
    void setFeePerByte(float feePerByte);
    void setTotalFee(uint64_t fee, bool overrideFeePerByte = true);
    void setMinTotalFee(uint64_t fee) { minTotalFee_ = fee; }
@@ -95,7 +93,6 @@ public:
    uint64_t totalFee() const;
 
    bool IsTransactionValid() const;
-   bool InputsLoadedFromArmory() const;
 
    size_t GetRecipientsCount() const;
    std::vector<unsigned int> GetRecipientIdList() const;
@@ -117,10 +114,6 @@ public:
    bool IsMaxAmount(unsigned int recipientId) const;
 
    // If there is change then changeAddr must be set
-   bs::core::wallet::TXSignRequest createUnsignedTransaction(bool isRBF = false, const bs::Address &changeAddr = {});
-   bs::core::wallet::TXSignRequest getSignTxRequest() const;
-
-   // If there is change then changeAddr must be set
    bs::core::wallet::TXSignRequest createTXRequest(bool isRBF = false
                                              , const bs::Address &changeAddr = {}
                                              , const uint64_t& origFee = 0) const;
@@ -130,18 +123,8 @@ public:
 
    double CalculateMaxAmount(const bs::Address &recipient = {}, bool force = false) const;
 
-   void ReserveUtxosFor(double amount, const std::string &reserveId, const bs::Address &addr = {});
-   void ReloadSelection(const std::vector<UTXO> &);
-
    void clear();
    std::vector<UTXO> inputs() const;
-
-   void setMaxSpendAmount(bool maxAmount = true);
-   bool maxSpendAmount() const { return maxSpendAmount_; }
-
-   // return previous state
-   bool disableTransactionUpdate();
-   void enableTransactionUpdate();
 
 private:
    void InvalidateTransactionData();
@@ -162,7 +145,6 @@ private:
 
    std::shared_ptr<bs::sync::Wallet>            wallet_;
    std::shared_ptr<bs::sync::hd::Group>         group_;
-   std::shared_ptr<bs::sync::Wallet>            signWallet_;
    std::shared_ptr<SelectedTransactionInputs>   selectedInputs_;
 
    float       feePerByte_;
@@ -176,22 +158,12 @@ private:
 
    mutable std::vector<UTXO>  usedUTXO_;
    TransactionSummary   summary_;
-   bool     maxSpendAmount_ = false;
-
-   bs::core::wallet::TXSignRequest  unsignedTxReq_;
 
    const bool  isSegWitInputsOnly_;
    const bool  confirmedInputs_;
 
    std::vector<UTXO>    reservedUTXO_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
-
-   bool transactionUpdateEnabled_ = true;
-   bool transactionUpdateRequired_ = false;
-
-   bool inputsLoaded_ = false;
-
-   ValidityFlag validityFlag_;
 };
 
 #endif // __TRANSACTION_DATA_H__

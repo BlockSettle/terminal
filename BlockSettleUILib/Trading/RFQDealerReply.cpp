@@ -63,7 +63,7 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
    connect(ui_->pushButtonPull, &QPushButton::clicked, this, &RFQDealerReply::pullButtonClicked);
    connect(ui_->pushButtonAdvanced, &QPushButton::clicked, this, &RFQDealerReply::showCoinControl);
 
-   connect(ui_->comboBoxWallet, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::walletSelected);
+   connect(ui_->comboBoxXbtWallet, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::walletSelected);
    connect(ui_->authenticationAddressComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::onAuthAddrChanged);
 
    ui_->responseTitle->hide();
@@ -220,7 +220,15 @@ void RFQDealerReply::reset()
    updateSpinboxes();
 
    auto xbtWallet = getSelectedXbtWallet(ReplyType::Manual);
-   selectedXbtInputs_ = xbtWallet ? std::make_shared<SelectedTransactionInputs>(xbtWallet, true, true) : nullptr;
+   selectedXbtInputs_.reset();
+   if (xbtWallet) {
+      const auto &leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
+      std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
+      auto cb = [this](const std::vector<UTXO> &utxos) mutable {
+         selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(utxos);
+      };
+      bs::sync::Wallet::getSpendableTxOutList(wallets, cb);
+   }
 }
 
 void RFQDealerReply::quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn)
@@ -331,12 +339,9 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
          }
       }
 
-      const bool skipWatchingOnly = (qrn.side == bs::network::Side::Sell);
-      updateWalletsList(skipWatchingOnly);
-   }
-   else if (qrn.assetType == bs::network::Asset::SpotXBT) {
-      const bool skipWatchingOnly = (currentQRN_.side == bs::network::Side::Buy);
-      updateWalletsList(skipWatchingOnly);
+      updateWalletsList((qrn.side == bs::network::Side::Sell) ? UiUtils::WoWallets::Disable : UiUtils::WoWallets::Enable);
+   } else if (qrn.assetType == bs::network::Asset::SpotXBT) {
+      updateWalletsList((qrn.side == bs::network::Side::Sell) ? UiUtils::WoWallets::Disable : UiUtils::WoWallets::Enable);
    }
 }
 
@@ -512,15 +517,15 @@ double RFQDealerReply::getAmount() const
    return currentQRN_.quantity;
 }
 
-std::shared_ptr<bs::sync::Wallet> RFQDealerReply::getSelectedXbtWallet(ReplyType replyType) const
+std::shared_ptr<bs::sync::hd::Wallet> RFQDealerReply::getSelectedXbtWallet(ReplyType replyType) const
 {
    if (!walletsManager_) {
       return nullptr;
    }
    if (replyType == ReplyType::Script) {
-      return walletsManager_->getDefaultWallet();
+      return walletsManager_->getPrimaryWallet();
    }
-   return walletsManager_->getWalletById(ui_->comboBoxWallet->currentData(UiUtils::WalletIdRole).toString().toStdString());
+   return walletsManager_->getHDWalletById(ui_->comboBoxXbtWallet->currentData(UiUtils::WalletIdRole).toString().toStdString());
 }
 
 bs::Address RFQDealerReply::selectedAuthAddress(ReplyType replyType) const
@@ -614,8 +619,10 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
             spendVal = bs::XBTAmount(price * qrn.quantity).GetValue();
          }
 
-         const auto &spendWallet = isSpendCC ? ccWallet : replyData->xbtWallet;
-         const auto &recvWallet = isSpendCC ? replyData->xbtWallet : ccWallet;
+         auto xbtWallet = replyData->xbtWallet->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves().at(0);
+
+         const auto &spendWallet = isSpendCC ? ccWallet : xbtWallet;
+         const auto &recvWallet = isSpendCC ? xbtWallet : ccWallet;
          // For CC search for exact amount (as we have no need for change).
          // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee is set)
          const uint64_t requestUtxoVal = isSpendCC ? spendVal : std::numeric_limits<uint64_t>::max();
@@ -679,15 +686,15 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
    }
 }
 
-void RFQDealerReply::updateWalletsList(bool skipWatchingOnly)
+void RFQDealerReply::updateWalletsList(UiUtils::WoWallets walletsFlags)
 {
-   auto oldWalletId = ui_->comboBoxWallet->currentData(UiUtils::WalletIdRole).toString().toStdString();
-   int defaultIndex = UiUtils::fillWalletsComboBox(ui_->comboBoxWallet, walletsManager_, skipWatchingOnly);
-   int oldIndex = UiUtils::selectWalletInCombobox(ui_->comboBoxWallet, oldWalletId);
+   auto oldWalletId = ui_->comboBoxXbtWallet->currentData(UiUtils::WalletIdRole).toString().toStdString();
+   int defaultIndex = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXbtWallet, walletsManager_, walletsFlags);
+   int oldIndex = UiUtils::selectWalletInCombobox(ui_->comboBoxXbtWallet, oldWalletId);
    if (oldIndex < 0) {
-      ui_->comboBoxWallet->setCurrentIndex(defaultIndex);
+      ui_->comboBoxXbtWallet->setCurrentIndex(defaultIndex);
    }
-   walletSelected(ui_->comboBoxWallet->currentIndex());
+   walletSelected(ui_->comboBoxXbtWallet->currentIndex());
 }
 
 bool RFQDealerReply::isXbtSpend() const
@@ -867,9 +874,9 @@ void RFQDealerReply::onCelerDisconnected()
 void RFQDealerReply::onAutoSignStateChanged()
 {
    if (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
-      ui_->comboBoxWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
+      ui_->comboBoxXbtWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
    }
-   ui_->comboBoxWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
+   ui_->comboBoxXbtWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
 }
 
 void bs::ui::RFQDealerReply::updateSpinboxes()
@@ -937,7 +944,11 @@ bs::XBTAmount RFQDealerReply::getXbtBalance() const
       return {};
    }
 
-   return bs::XBTAmount(xbtWallet->getSpendableBalance());
+   double sum = 0;
+   for (const auto &leaf : xbtWallet->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves()) {
+      sum += leaf->getSpendableBalance();
+   }
+   return bs::XBTAmount(sum);
 }
 
 BTCNumericTypes::balance_type bs::ui::RFQDealerReply::getPrivateMarketCoinBalance() const

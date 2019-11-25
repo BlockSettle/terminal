@@ -230,7 +230,6 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
    }
    walletsMgr_.reset();
    assetManager_.reset();
-   bs::UtxoReservation::destroy();
 }
 
 void BSTerminalMainWindow::setupToolbar()
