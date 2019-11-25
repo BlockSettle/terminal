@@ -366,9 +366,7 @@ bool bs::TradesVerification::XBTInputsAcceptable(const std::vector<UTXO>& utxoLi
          bw.put_BinaryData(hash);
          const auto& prefixedHash = bw.getData();
 
-         const auto prefixedAddress = BtcUtils::scrAddrToBase58(prefixedHash);
-
-         if (prefixedAddress != address.prefixed()) {
+         if (prefixedHash != address.prefixed()) {
             return false;
          }
       } catch (...) {
