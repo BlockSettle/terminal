@@ -353,7 +353,25 @@ bool bs::TradesVerification::XBTInputsAcceptable(const std::vector<UTXO>& utxoLi
       }
 
       auto underlyingScriptType = BtcUtils::getTxOutScriptType(it->second);
-      if (scrType != TXOUT_SCRIPT_P2WPKH) {
+      if (underlyingScriptType != TXOUT_SCRIPT_P2WPKH) {
+         return false;
+      }
+
+      // check that preimage belong to that address
+      try {
+         const auto& hash = BtcUtils::getHash160(it->second);
+
+         BinaryWriter bw;
+         bw.put_uint8_t(NetworkConfig::getScriptHashPrefix());
+         bw.put_BinaryData(hash);
+         const auto& prefixedHash = bw.getData();
+
+         const auto prefixedAddress = BtcUtils::scrAddrToBase58(prefixedHash);
+
+         if (prefixedAddress != address.prefixed()) {
+            return false;
+         }
+      } catch (...) {
          return false;
       }
    }
