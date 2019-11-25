@@ -68,9 +68,14 @@ message Request
 
     message XBTUnsignedPayin
     {
+        message PreimageData
+        {
+            string address          = 1;
+            bytes  preimage_script   = 2;
+        };
         string  settlement_id       = 1;
         bytes   unsigned_payin      = 2;
-        bytes   unsigned_payin_id   = 3;
+        repeated PreimageData preimage_data = 3;
     }
 
     message XBTSignedPayin

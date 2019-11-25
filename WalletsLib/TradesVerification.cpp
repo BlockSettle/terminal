@@ -121,6 +121,7 @@ bs::PayoutSignatureType bs::TradesVerification::whichSignature(const Tx &tx, uin
 }
 
 std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUnsignedPayin(const BinaryData &unsignedPayin
+   , const std::map<std::string, BinaryData>& preimageData
    , float feePerByte, const std::string &settlementAddress, uint64_t tradeAmount)
 {
    if (unsignedPayin.isNull()) {
@@ -188,17 +189,13 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUn
 
       for (const auto& spender : spenders) {
          const auto& utxo = spender->getUtxo();
-
-         // XXX: code left for reference. will be removed once proper input type validation will be added
-         // const auto& scrType = BtcUtils::getTxOutScriptType(utxo.getScript());
-         // const auto& inputType = bs::Address::mapTxOutScriptType(scrType);
-
-         // // we should accept native SW inputs only
-         // if (inputType != AddressEntryType_P2WPKH) {
-         //    return Result::error("Non SW input in PayIn");
-         // }
-
          result->utxos.push_back(spender->getUtxo());
+      }
+
+      result->payinHash = deserializedSigner.getTxId();
+
+      if (!XBTInputsAcceptable(result->utxos, preimageData)) {
+         return Result::error("Not supported input type used");
       }
 
       return result;

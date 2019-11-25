@@ -39,6 +39,7 @@ namespace bs {
          int totalOutputCount{};
          std::vector<UTXO> utxos;
          std::string changeAddr;
+         BinaryData  payinHash;
 
          // returns from verifySignedPayout
          std::string payoutTxHashHex;
@@ -55,6 +56,7 @@ namespace bs {
          , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey, std::string *errorMsg = nullptr);
 
       static std::shared_ptr<Result> verifyUnsignedPayin(const BinaryData &unsignedPayin
+         , const std::map<std::string, BinaryData>& preimageData
          , float feePerByte, const std::string &settlementAddress, uint64_t tradeAmount);
 
       static std::shared_ptr<Result> verifySignedPayout(const BinaryData &signedPayout

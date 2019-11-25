@@ -62,7 +62,8 @@ void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryDa
    auto data = request.mutable_unsigned_payin();
    data->set_settlement_id(settlementId);
    data->set_unsigned_payin(unsignedPayin.toBinStr());
-   data->set_unsigned_payin_id(unsignedTxId.toBinStr());
+
+   // XXX
 
    sendPbMessage(request.SerializeAsString());
 }
