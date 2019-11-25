@@ -211,6 +211,7 @@ namespace bs {
          virtual void onZeroConfReceived(const std::vector<bs::TXEntry>&);
          virtual void onNewBlock(unsigned int, unsigned int);
          virtual void onRefresh(const std::vector<BinaryData> &ids, bool online);
+         virtual void onZCInvalidated(const std::set<BinaryData> &ids);
 
          virtual std::vector<BinaryData> getAddrHashes() const = 0;
 
@@ -254,6 +255,8 @@ namespace bs {
          WalletCallbackTarget       * wct_ = nullptr;
 
          ValidityFlag validityFlag_;
+
+         std::map<BinaryData, Tx>   zcEntries_;
 
       private:
          std::string regId_;
@@ -302,6 +305,9 @@ namespace bs {
          }
          virtual void onNewBlock(unsigned int block, unsigned int bh) override {
             parent_->onNewBlock(block, bh);
+         }
+         virtual void onZCInvalidated(const std::set<BinaryData> &ids) override {
+            parent_->onZCInvalidated(ids);
          }
          void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) override;
       protected:
