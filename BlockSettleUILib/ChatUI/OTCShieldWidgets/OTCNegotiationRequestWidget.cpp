@@ -272,10 +272,17 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
       return;
    }
 
-   auto cb = [this, parentWidget = QPointer<OTCWindowsAdapterBase>(this)](const std::vector<UTXO> &utxos) {
-      QMetaObject::invokeMethod(qApp, [this, utxos, parentWidget] {
+   auto cb = [this, parentWidget = QPointer<OTCWindowsAdapterBase>(this)]
+      (const std::map<UTXO, std::string> &inputs)
+   {
+      QMetaObject::invokeMethod(qApp, [this, inputs, parentWidget] {
          if (!parentWidget) {
             return;
+         }
+         std::vector<UTXO> utxos;
+         utxos.reserve(inputs.size());
+         for (const auto &input : inputs) {
+            utxos.emplace_back(std::move(input.first));
          }
          auto feeCb = [this, parentWidget, utxos = std::move(utxos)](float fee) {
             QMetaObject::invokeMethod(qApp, [this, parentWidget, fee, utxos = std::move(utxos)] {
@@ -297,11 +304,15 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
    };
 
    if (!selectedUTXOs().empty()) {
-      cb(selectedUTXOs());
+      std::map<UTXO, std::string> inputs;
+      for (const auto &utxo : selectedUTXOs()) {
+         inputs[utxo] = {};
+      }
+      cb(inputs);
       return;
    }
 
    const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-   bs::sync::Wallet::getSpendableTxOutList(wallets, cb);
+   bs::tradeutils::getSpendableTxOutList(wallets, cb);
 }

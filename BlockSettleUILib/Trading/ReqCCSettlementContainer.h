@@ -34,7 +34,7 @@ public:
       , const bs::network::RFQ &
       , const bs::network::Quote &
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
-      , const std::vector<UTXO> &manualXbtInputs
+      , const std::map<UTXO, std::string> &manualXbtInputs
       , bs::UtxoReservationToken utxoRes);
    ~ReqCCSettlementContainer() override;
 
@@ -105,7 +105,7 @@ private:
    bool                       genAddrVerified_ = false;
 
    bs::hd::WalletInfo walletInfo_;
-   std::vector<UTXO> manualXbtInputs_;
+   std::map<UTXO, std::string> manualXbtInputs_;
 
    bs::UtxoReservationToken utxoRes_;
 
