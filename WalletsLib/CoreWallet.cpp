@@ -871,7 +871,7 @@ BinaryData Wallet::signPartialTXRequest(const wallet::TXSignRequest &request)
 
 
 BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest &txMultiReq
-   , const WalletMap &wallets)
+   , const WalletMap &wallets, bool partial)
 {
    Signer signer;
    if (!txMultiReq.prevState.isNull()) {
@@ -913,10 +913,15 @@ BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest
       signer.sign();
    }
 
-   if (!signer.verify()) {
-      throw std::logic_error("signer failed to verify");
+   if (partial) {
+      return signer.serializeState();
    }
-   return signer.serialize();
+   else {
+      if (!signer.verify()) {
+         throw std::logic_error("signer failed to verify");
+      }
+      return signer.serialize();
+   }
 }
 
 
