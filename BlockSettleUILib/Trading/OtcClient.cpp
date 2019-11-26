@@ -42,7 +42,10 @@ struct OtcClientDeal
    bs::signer::RequestId payinReqId{};
    bs::signer::RequestId payoutReqId{};
 
-   BinaryData payinTxId;
+   std::map<bs::Address, BinaryData> preimageData;
+
+   BinaryData unsignedPayinHash;
+
    BinaryData signedTx;
 
    bs::Address ourAuthAddress;
@@ -997,7 +1000,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
       d->set_auth_address_buyer(peer->ourAuthPubKey.toBinStr());
       d->set_auth_address_seller(peer->authPubKey.toBinStr());
       d->set_unsigned_tx(unsignedPayout.toBinStr());
-      d->set_payin_hash(peer->payinTxIdFromSeller.toBinStr());
+      d->set_payin_tx_hash(peer->payinTxIdFromSeller.toBinStr());
       d->set_chat_id_buyer(ownContactId_);
       d->set_chat_id_seller(peer->contactId);
       emit sendPbMessage(request.SerializeAsString());
@@ -1024,6 +1027,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    changePeerState(peer, otc::State::WaitVerification);
 
    ProxyTerminalPb::Request request;
+
    auto d = request.mutable_verify_otc();
    d->set_is_seller(true);
    d->set_price(peer->offer.price);
@@ -1032,7 +1036,16 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    d->set_auth_address_buyer(peer->authPubKey.toBinStr());
    d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
    d->set_unsigned_tx(deal->payin.serializeState().toBinStr());
-   d->set_payin_hash(deal->payinTxId.toBinStr());
+
+   for (const auto& it : deal->preimageData) {
+      auto preImage = d->add_preimage_data();
+
+      preImage->set_address(it.first.display());
+      preImage->set_preimage_script(it.second.toBinStr());
+   }
+
+   d->set_payin_tx_hash(deal->unsignedPayinHash.toBinStr());
+
    d->set_chat_id_seller(ownContactId_);
    d->set_chat_id_buyer(peer->contactId);
    emit sendPbMessage(request.SerializeAsString());
@@ -1177,7 +1190,7 @@ void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &resp
       copyOffer(peer->offer, d->mutable_offer());
       d->set_settlement_id(settlementId);
       d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
-      d->set_payin_tx_id(deal.payinTxId.toBinStr());
+      d->set_payin_tx_id(deal.unsignedPayinHash.toBinStr());
       send(peer, msg);
 
       deal.peer = peer;
@@ -1444,7 +1457,10 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
          result.success = true;
          result.side = otc::Side::Sell;
          result.payin = std::move(payin.signRequest);
-         result.payinTxId = std::move(payin.payinTxId);
+
+         result.preimageData = std::move(payin.preimageData);
+         result.unsignedPayinHash = payin.payinHash;
+
          result.fee = int64_t(result.payin.fee);
          cb(std::move(result));
       });

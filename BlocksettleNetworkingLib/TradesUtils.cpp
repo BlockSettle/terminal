@@ -128,12 +128,20 @@ void bs::tradeutils::createPayin(bs::tradeutils::PayinArgs args, bs::tradeutils:
                   auto selectedInputs = selection.utxoVec_;
                   auto fee = selection.fee_;
 
-                  const auto cbPreimage = [args, cb, settlAddr, xbtWallet, selectedInputs, recipient, fee]
-                     (const std::map<bs::Address, BinaryData> &preimages)
+                  auto changeCb = [args, selectedInputs, fee, settlAddr, xbtWallet, recipient, cb](const bs::Address &changeAddr)
                   {
-                     const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
+                     std::vector<UTXO> p2shInputs;
 
-                     auto changeCb = [args, cb, settlAddr, resolver, xbtWallet, selectedInputs, recipient, fee](const bs::Address &changeAddr)
+                     for ( const auto& input : selectedInputs) {
+                        const auto scrType = BtcUtils::getTxOutScriptType(input.getScript());
+
+                        if (scrType == TXOUT_SCRIPT_P2SH) {
+                           p2shInputs.push_back(input);
+                        }
+                     }
+
+                     const auto cbPreimage = [args, settlAddr, cb, recipient, xbtWallet, selectedInputs, fee, changeAddr]
+                        (const std::map<bs::Address, BinaryData> &preimages)
                      {
                         PayinResult result;
                         result.settlementAddr = settlAddr;
@@ -142,8 +150,8 @@ void bs::tradeutils::createPayin(bs::tradeutils::PayinArgs args, bs::tradeutils:
                         auto recipients = std::vector<std::shared_ptr<ScriptRecipient>>(1, recipient);
                         try {
                            result.signRequest = xbtWallet->createTXRequest(selectedInputs, recipients, fee, false, changeAddr);
-
-                           result.payinTxId = result.signRequest.txId(resolver);
+                           result.preimageData = preimages;
+                           result.payinHash = result.signRequest.txId();
 
                         } catch (const std::exception &e) {
                            cb(PayinResult::error(fmt::format("creating paying request failed: {}", e.what())));
@@ -158,12 +166,15 @@ void bs::tradeutils::createPayin(bs::tradeutils::PayinArgs args, bs::tradeutils:
                         cb(std::move(result));
                      };
 
-                     xbtWallet->getNewIntAddress(changeCb);
+                     if (p2shInputs.empty()) {
+                        cbPreimage({});
+                     } else {
+                        const auto addrMapping = args.walletsMgr->getAddressToWalletsMapping(p2shInputs);
+                        args.signContainer->getAddressPreimage(addrMapping, cbPreimage);
+                     }
                   };
 
-                  const auto addrMapping = args.walletsMgr->getAddressToWalletsMapping(selectedInputs);
-                  args.signContainer->getAddressPreimage(addrMapping, cbPreimage);
-
+                  xbtWallet->getNewIntAddress(changeCb);
                } catch (const std::exception &e) {
                   cb(PayinResult::error(fmt::format("unexpected exception: {}", e.what())));
                   return;

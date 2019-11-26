@@ -114,6 +114,9 @@ public:
    bool IsMaxAmount(unsigned int recipientId) const;
 
    // If there is change then changeAddr must be set
+   bs::core::wallet::TXSignRequest createUnsignedTransaction(bool isRBF = false, const bs::Address &changeAddr = {});
+
+   // If there is change then changeAddr must be set
    bs::core::wallet::TXSignRequest createTXRequest(bool isRBF = false
                                              , const bs::Address &changeAddr = {}
                                              , const uint64_t& origFee = 0) const;
@@ -161,9 +164,6 @@ private:
 
    const bool  isSegWitInputsOnly_;
    const bool  confirmedInputs_;
-
-   std::vector<UTXO>    reservedUTXO_;
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 };
 
 #endif // __TRANSACTION_DATA_H__

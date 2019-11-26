@@ -10,10 +10,11 @@
 #include <spdlog/logger.h>
 
 #include "Address.h"
+#include "autheid_utils.h"
 #include "AutheIDClient.h"
 #include "CelerMessageMapper.h"
+#include "CommonTypes.h"
 #include "DataConnectionListener.h"
-#include "autheid_utils.h"
 
 class ZmqContext;
 class ZmqBIP15XDataConnection;
@@ -130,7 +131,7 @@ public:
    static std::string requestDescCcAddr(const bs::Address &address, const std::string &token);
 
 public slots:
-   void sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
+   void sendUnsignedPayin(const std::string& settlementId, const bs::network::UnsignedPayinData& unsignedPayinData);
    void sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout);
 

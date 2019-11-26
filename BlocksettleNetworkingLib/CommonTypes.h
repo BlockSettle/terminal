@@ -305,6 +305,13 @@ namespace bs {
          Last = Otc,
       };
 
+      // for celer and OTC trades
+      struct UnsignedPayinData
+      {
+         BinaryData                          unsignedPayin;
+         std::map<bs::Address, BinaryData>   preimageData;
+      };
+
    }  //namespace network
 }  //namespace bs
 
@@ -320,6 +327,7 @@ Q_DECLARE_METATYPE(bs::network::MDFields)
 Q_DECLARE_METATYPE(bs::network::CCSecurityDef)
 Q_DECLARE_METATYPE(bs::network::NewTrade)
 Q_DECLARE_METATYPE(bs::network::NewPMTrade)
+Q_DECLARE_METATYPE(bs::network::UnsignedPayinData)
 
 
 #endif //__BS_COMMON_TYPES_H__

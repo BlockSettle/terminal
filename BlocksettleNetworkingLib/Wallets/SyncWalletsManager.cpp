@@ -4,6 +4,7 @@
 #include "CheckRecipSigner.h"
 #include "ColoredCoinLogic.h"
 #include "FastLock.h"
+#include "PublicResolver.h"
 #include "SyncHDWallet.h"
 
 #include <QCoreApplication>
@@ -1356,39 +1357,39 @@ void WalletsManager::trackAddressChainUse(
    std::function<void(bool)> cb)
 {
    /***
-   This method grabs address txn count from the db for all managed 
+   This method grabs address txn count from the db for all managed
    wallets and deduces address chain use and type from the address
-   tx counters. 
+   tx counters.
 
-   This is then reflected to the armory wallets through the 
+   This is then reflected to the armory wallets through the
    SignContainer, to keep address chain counters and address types
    in sync.
 
    This method should be run only once per per, after registration.
 
-   It will only have an effect if a wallet has been restored from 
+   It will only have an effect if a wallet has been restored from
    seed or if there exist several instances of a wallet being used
    on different machines across time.
 
    More often than not, the armory wallet has all this meta data
    saved on disk to begin with.
 
-   Callback is fired with either true (operation success) or 
+   Callback is fired with either true (operation success) or
    false (SyncState_Failure, read below):
 
-   trackChainAddressUse can return 3 states per wallet. These 
-   states are combined and processed as one when all wallets are 
+   trackChainAddressUse can return 3 states per wallet. These
+   states are combined and processed as one when all wallets are
    done synchronizing. The states are as follow:
 
     - SyncState_Failure: the armory wallet failed to fine one or
       several of the addresses. This shouldn't typically happen.
       Most likely culprit is an address chain that is too short.
-      Extend it. 
+      Extend it.
       This state overrides all other states.
-    
-    - SyncState_NothingToDo: wallets are already sync'ed. 
+
+    - SyncState_NothingToDo: wallets are already sync'ed.
       Lowest priority.
-    
+
     - SyncState_Success: Armory wallet address chain usage is now up
       to date, call WalletsManager::SyncWallets once again.
       Overrides NothingToDo.
@@ -1786,33 +1787,7 @@ std::map<std::string, std::vector<bs::Address>> WalletsManager::getAddressToWall
 
 std::shared_ptr<ResolverFeed> WalletsManager::getPublicResolver(const std::map<bs::Address, BinaryData> &piMap)
 {
-   class PublicResolver : public ResolverFeed
-   {
-   public:
-      PublicResolver(const std::map<bs::Address, BinaryData> &preimageMap)
-         : ResolverFeed()
-      {
-         for (const auto &preimage : preimageMap) {
-            preimageMap_[preimage.first.unprefixed()] = preimage.second;
-         }
-      }
-
-      BinaryData getByVal(const BinaryData &addr) override
-      {
-         const auto itAddr = preimageMap_.find(addr);
-         if (itAddr != preimageMap_.end()) {
-            return itAddr->second;
-         }
-         throw std::runtime_error("not found");
-      }
-      const SecureBinaryData &getPrivKeyForPubkey(const BinaryData &pk) override
-      {
-         throw std::runtime_error("not supported");
-      }
-   private:
-      std::map<BinaryData, BinaryData>   preimageMap_;
-   };
-   return std::make_shared<PublicResolver>(piMap);
+   return std::make_shared<bs::PublicResolver>(piMap);
 }
 
 bool WalletsManager::mergeableEntries(const bs::TXEntry &entry1, const bs::TXEntry &entry2) const
@@ -1830,7 +1805,7 @@ bool WalletsManager::mergeableEntries(const bs::TXEntry &entry1, const bs::TXEnt
          break;
       }
    }
-   
+
    WalletPtr wallet2;
    for (const auto &walletId : entry2.walletIds) {
       wallet2 = getWalletById(walletId);

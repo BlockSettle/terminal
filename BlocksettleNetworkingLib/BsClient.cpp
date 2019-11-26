@@ -2,7 +2,7 @@
 #include "FutureValue.h"
 
 #include <QTimer>
-#include "Address.h"
+
 #include "ProtobufUtils.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "bs_proxy_terminal.pb.h"
@@ -53,7 +53,7 @@ void BsClient::sendPbMessage(std::string data)
    sendMessage(&request);
 }
 
-void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId)
+void BsClient::sendUnsignedPayin(const std::string& settlementId, const bs::network::UnsignedPayinData& unsignedPayinData)
 {
    SPDLOG_LOGGER_DEBUG(logger_, "send unsigned payin {}", settlementId);
 
@@ -61,8 +61,14 @@ void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryDa
 
    auto data = request.mutable_unsigned_payin();
    data->set_settlement_id(settlementId);
-   data->set_unsigned_payin(unsignedPayin.toBinStr());
-   data->set_unsigned_payin_id(unsignedTxId.toBinStr());
+   data->set_unsigned_payin(unsignedPayinData.unsignedPayin.toBinStr());
+
+   for (const auto &preImageIt : unsignedPayinData.preimageData) {
+      auto preImage = data->add_preimage_data();
+
+      preImage->set_address(preImageIt.first.display());
+      preImage->set_preimage_script(preImageIt.second.toBinStr());
+   }
 
    sendPbMessage(request.SerializeAsString());
 }

@@ -32,7 +32,6 @@ TransactionData::TransactionData(const onTransactionChanged &changedCallback
 TransactionData::~TransactionData() noexcept
 {
    changedCallback_ = {};
-   bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
 void TransactionData::SetCallback(onTransactionChanged changedCallback)
@@ -394,10 +393,6 @@ std::vector<UTXO> TransactionData::decorateUTXOs() const
 
    auto inputUTXOs = selectedInputs_->GetSelectedTransactions();
 
-   if (utxoAdapter_ && reservedUTXO_.empty()) {
-      utxoAdapter_->filter(selectedInputs_->GetWallet()->walletId(), inputUTXOs);
-   }
-
 #if 0 // since we don't have address entries and public keys now, we need to re-think this code
    for (auto& utxo : inputUTXOs) {
       // Prep the UTXOs for calculation.
@@ -545,16 +540,12 @@ void TransactionData::clear()
    feePerByte_ = 0;
    recipients_.clear();
    usedUTXO_.clear();
-   reservedUTXO_.clear();
    summary_ = {};
 }
 
 std::vector<UTXO> TransactionData::inputs() const
 {
-   if (reservedUTXO_.empty()) {
-      return usedUTXO_;
-   }
-   return reservedUTXO_;
+   return usedUTXO_;
 }
 
 bool TransactionData::IsTransactionValid() const
@@ -763,4 +754,17 @@ bs::core::wallet::TXSignRequest TransactionData::createTXRequest(bool isRBF
       txReq.walletIds.insert(txReq.walletIds.end(), walletIds.cbegin(), walletIds.cend());
    }
    return txReq;
+}
+
+bs::core::wallet::TXSignRequest TransactionData::createUnsignedTransaction(bool isRBF, const bs::Address &changeAddress)
+{
+   if (!wallet_) {
+      return {};
+   }
+   auto unsignedTxReq = wallet_->createTXRequest(inputs(), GetRecipientList(), summary_.totalFee, isRBF, changeAddress);
+   if (!unsignedTxReq.isValid()) {
+      throw std::runtime_error("missing unsigned TX");
+   }
+
+   return unsignedTxReq;
 }
