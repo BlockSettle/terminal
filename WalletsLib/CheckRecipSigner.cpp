@@ -184,6 +184,7 @@ uint64_t CheckRecipSigner::estimateFee(float &feePerByte, uint64_t fixedFee) con
       }
    }
 
+   const auto origFeePerByte = feePerByte;
    try {
       PaymentStruct payment(recipientsMap, fixedFee, 0, 0);
 
@@ -191,7 +192,9 @@ uint64_t CheckRecipSigner::estimateFee(float &feePerByte, uint64_t fixedFee) con
       UtxoSelection selection{ usedUTXOCopy };
       selection.computeSizeAndFee(payment);
 
-      feePerByte = selection.fee_byte_;
+      if (selection.fee_byte_ > 0) {
+         feePerByte = selection.fee_byte_;
+      }
 
       const size_t nonWitSize = selection.size_ - selection.witnessSize_;
       txSize = std::ceil(static_cast<float>(3 * nonWitSize + selection.size_) / 4.0f);
@@ -199,7 +202,7 @@ uint64_t CheckRecipSigner::estimateFee(float &feePerByte, uint64_t fixedFee) con
          txSize -= recipientsMap[0]->getSize();
       }
    } catch (...) {}
-   return txSize * feePerByte;
+   return txSize * ((origFeePerByte > 0) ? origFeePerByte : feePerByte);
 }
 
 uint64_t CheckRecipSigner::outputsTotalValue() const
