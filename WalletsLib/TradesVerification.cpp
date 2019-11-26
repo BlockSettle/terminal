@@ -361,18 +361,14 @@ try {
       }
 
       // check that preimage belong to that address
-      try {
-         const auto& hash = BtcUtils::getHash160(it->second);
+      const auto& hash = BtcUtils::getHash160(it->second);
 
-         BinaryWriter bw;
-         bw.put_uint8_t(NetworkConfig::getScriptHashPrefix());
-         bw.put_BinaryData(hash);
-         const auto& prefixedHash = bw.getData();
+      BinaryWriter bw;
+      bw.put_uint8_t(NetworkConfig::getScriptHashPrefix());
+      bw.put_BinaryData(hash);
+      const auto& prefixedHash = bw.getData();
 
-         if (prefixedHash != address.prefixed()) {
-            return false;
-         }
-      } catch (...) {
+      if (prefixedHash != address.prefixed()) {
          return false;
       }
    }
