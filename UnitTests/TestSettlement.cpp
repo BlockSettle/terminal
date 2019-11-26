@@ -293,6 +293,7 @@ TEST_F(TestSettlement, SpotXBT_sell)
 }
 #endif   //0
 
+#if 0
 TEST_F(TestSettlement, SpotXBT_buy)
 {
    auto logger = StaticLogger::loggerPtr;
@@ -514,3 +515,4 @@ TEST_F(TestSettlement, SpotXBT_buy)
    EXPECT_EQ(zcVecPayout[0].txHash, txPayoutObj.getThisHash());
    std::this_thread::sleep_for(150ms); // have no idea yet, why it's required
 }
+#endif
