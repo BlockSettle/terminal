@@ -179,6 +179,11 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUn
          return Result::error("Pay-In could not be RBF transaction");
       }
 
+      if (!preimageData.empty()) {
+         const auto resolver = std::make_shared<PublicResolver>(preimageData);
+         deserializedSigner.setFeed(resolver);
+      }
+
       auto result = std::make_shared<Result>();
       result->success = true;
       result->totalFee = totalInput - totalOutputAmount;
@@ -191,11 +196,6 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUn
       for (const auto& spender : spenders) {
          const auto& utxo = spender->getUtxo();
          result->utxos.push_back(spender->getUtxo());
-      }
-
-      if (!preimageData.empty()) {
-         const auto resolver = std::make_shared<PublicResolver>(preimageData);
-         deserializedSigner.setFeed(resolver);
       }
 
       result->payinHash = deserializedSigner.getTxId();
@@ -361,18 +361,14 @@ try {
       }
 
       // check that preimage belong to that address
-      try {
-         const auto& hash = BtcUtils::getHash160(it->second);
+      const auto& hash = BtcUtils::getHash160(it->second);
 
-         BinaryWriter bw;
-         bw.put_uint8_t(NetworkConfig::getScriptHashPrefix());
-         bw.put_BinaryData(hash);
-         const auto& prefixedHash = bw.getData();
+      BinaryWriter bw;
+      bw.put_uint8_t(NetworkConfig::getScriptHashPrefix());
+      bw.put_BinaryData(hash);
+      const auto& prefixedHash = bw.getData();
 
-         if (prefixedHash != address.prefixed()) {
-            return false;
-         }
-      } catch (...) {
+      if (prefixedHash != address.prefixed()) {
          return false;
       }
    }
