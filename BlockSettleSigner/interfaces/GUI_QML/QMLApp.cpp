@@ -189,6 +189,7 @@ void QMLAppObj::Start()
    if (trayIconOptional_) {
       trayIconOptional_->show();
    }
+   emit qmlAppStarted();
 }
 
 void QMLAppObj::registerQtTypes()
@@ -307,7 +308,7 @@ void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantM
       logger_->error("[{}] unknown signer dialog {}", __func__, dialogName.toStdString());
       throw(std::logic_error("Unknown signer dialog"));
    }
-   QMetaObject::invokeMethod(rootObj_, bs::signer::ui::customDialogRequest
+   QMetaObject::invokeMethod(rootObj_, QmlBridge::getQmlMethodName(QmlBridge::CustomDialogRequest)
       , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
 }
 
@@ -344,3 +345,4 @@ void QMLAppObj::onSignerPubKeyUpdated(const BinaryData &pubKey)
 {
    qmlFactory_->setHeadlessPubKey(QString::fromStdString(pubKey.toHexStr()));
 }
+

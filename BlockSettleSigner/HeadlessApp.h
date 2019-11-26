@@ -41,7 +41,7 @@ public:
    void start();
    void stop();
 
-   void reloadWallets(const std::string &, const std::function<void()> &);
+   void reloadWallets(const std::function<void()> & = nullptr);
    void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
 
@@ -58,6 +58,9 @@ public:
 
    static std::string getOwnKeyFileDir();
    static std::string getOwnKeyFileName();
+
+   SecureBinaryData controlPassword() const;
+   void setControlPassword(const SecureBinaryData &controlPassword);
 
 private:
    void startTerminalsProcessing();
@@ -77,6 +80,8 @@ private:
    std::unique_ptr<ZmqBIP15XServerConnection>   guiConnection_;
 
    std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
+
+   SecureBinaryData controlPassword_;
 };
 
 #endif // __HEADLESS_APP_H__

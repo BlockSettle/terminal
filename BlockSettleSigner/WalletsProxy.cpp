@@ -13,6 +13,7 @@
 #include "PaperBackupWriter.h"
 #include "SignerAdapter.h"
 #include "SignerAdapterContainer.h"
+#include "TXInfo.h"
 #include "UiUtils.h"
 #include "WalletBackupFile.h"
 #include "WalletEncryption.h"
@@ -21,7 +22,6 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
 #include "OfflineSigner.h"
-#include "TXInfo.h"
 
 #include "signer.pb.h"
 
@@ -527,7 +527,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
          bs::hd::WalletInfo *walletInfo = adapter_->qmlFactory()->createWalletInfo(walletId);
 
-         adapter_->qmlBridge()->invokeQmlMethod("createTxSignDialog", cb
+         adapter_->qmlBridge()->invokeQmlMethod(QmlBridge::CreateTxSignDialog, cb
             , QVariant::fromValue(txInfo)
             , QVariant::fromValue(dialogData)
             , QVariant::fromValue(walletInfo));

@@ -120,6 +120,7 @@ signals:
    void terminalHandshakeFailed(const std::string &peerAddress);
    void signerPubKeyUpdated(const BinaryData &pubKey) const;
    void ccInfoReceived(bool) const;
+   void walletsReloaded() const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

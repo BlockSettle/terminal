@@ -90,8 +90,6 @@ namespace bs {
                queue_->quit();
             });
 
-            appObj_.start();
-
             thrProc_ = std::thread([this] {
                logger_->debug("processing thread started");
 #ifdef NDEBUG
@@ -124,6 +122,8 @@ namespace bs {
             }
             logger_->info("signer ended execution");
          }
+
+         void start() { appObj_.start(); }
 
       private:
          std::shared_ptr<spdlog::logger>  logger_;
@@ -172,7 +172,8 @@ void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QS
 }
 
 static int QMLApp(int argc, char **argv
-   , const std::shared_ptr<HeadlessSettings> &mainSettings)
+   , const std::shared_ptr<HeadlessSettings> &mainSettings
+   , bs::signer::Queue &queue)
 {
    qRegisterMetaType<std::string>();
    qRegisterMetaType<std::vector<BinaryData>>();
@@ -289,6 +290,10 @@ static int QMLApp(int argc, char **argv
 
       bs::disableAppNap();
 
+      QObject::connect(&qmlAppObj, &QMLAppObj::qmlAppStarted, [&queue](){
+         queue.start();
+      });
+
       return app.exec();
    } catch (const std::exception &e) {
       logger->critical("Failed to start signer: {}", e.what());
@@ -357,5 +362,5 @@ int main(int argc, char** argv)
    logger->info("Starting BS Signer...");
    bs::signer::Queue queue(logger, settings);
 
-   return QMLApp(argc, argv, settings);
+   return QMLApp(argc, argv, settings, queue);
 }

@@ -20,6 +20,8 @@
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
+#include "bs_signer.pb.h"
+
 using namespace bs::error;
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
@@ -84,19 +86,30 @@ void HeadlessAppObj::start()
    const auto &cbProgress = [this](int cur, int total) {
       logger_->debug("Loaded wallet {} of {}", cur, total);
    };
-   walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
+   bool ok = walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
       , {}, cbProgress);
 
-   if (walletsMgr_->empty()) {
-      logger_->warn("No wallets loaded");
+   if (ok) {
+      if (walletsMgr_->empty()) {
+         logger_->warn("No wallets loaded");
+         guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::RequestedNew);
+      }
+      else {
+         logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
+         guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Accepted);
+      }
    }
    else {
-      logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
+      // wallets not loaded if control password wrong
+      // send message to gui to request it
+      logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
+      guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Rejected);
    }
 
    if (!settings_->offline()) {
       startTerminalsProcessing();
-   } else {
+   }
+   else {
       SPDLOG_LOGGER_INFO(logger_, "do not start listening for terminal connections (offline mode selected)");
    }
 }
@@ -319,6 +332,16 @@ void HeadlessAppObj::stopTerminalsProcessing()
    signerBindStatus_ = bs::signer::BindStatus::Inactive;
 }
 
+SecureBinaryData HeadlessAppObj::controlPassword() const
+{
+   return controlPassword_;
+}
+
+void HeadlessAppObj::setControlPassword(const SecureBinaryData &controlPassword)
+{
+   controlPassword_ = controlPassword;
+}
+
 ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
 {
    return terminalConnection_.get();
@@ -343,13 +366,33 @@ std::string HeadlessAppObj::getOwnKeyFileName()
    return "remote_signer.peers";
 }
 
-void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::function<void()> &cb)
+void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
 {
    walletsMgr_->reset();
-   walletsMgr_->loadWallets(settings_->netType(), walletsDir
-      , {}, [](int, int) {});
+   bool ok = walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
+      , controlPassword(), [](int, int) {});
 //   settings_->setWalletsDir(walletsDir);
-   cb();
+
+   if (cb) {
+      cb();
+   }
+
+   if (ok) {
+      if (walletsMgr_->empty()) {
+         logger_->warn("No wallets loaded");
+         guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::RequestedNew);
+      }
+      else {
+         logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
+         guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Accepted);
+      }
+   }
+   else {
+      // wallets not loaded if control password wrong
+      // send message to gui to request it
+      logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
+      guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Rejected);
+   }
 }
 
 void HeadlessAppObj::setLimits(bs::signer::Limits limits)

@@ -226,6 +226,9 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::SyncSettingsRequestType:
       rc = onSyncSettings(packet.data());
       break;
+   case signer::ControlPasswordReceivedType:
+      rc = onControlPasswordReceived(packet.data());
+      break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
       break;
@@ -260,6 +263,13 @@ void SignerAdapterListener::sendStatusUpdate()
    sendData(signer::UpdateStatusType, evt.SerializeAsString());
 
    callbacks_->ccNamesReceived(!walletsMgr_->ccLeaves().empty());
+}
+
+void SignerAdapterListener::sendControlPasswordStatusUpdate(signer::ControlPasswordStatus status)
+{
+   signer::UpdateControlPasswordStatus evt;
+   evt.set_controlpasswordstatus(status);
+   sendData(signer::UpdateControlPasswordStatusType, evt.SerializeAsString());
 }
 
 void SignerAdapterListener::resetConnection()
@@ -580,6 +590,17 @@ bool SignerAdapterListener::onSyncSettings(const std::string &data)
    return true;
 }
 
+bool SignerAdapterListener::onControlPasswordReceived(const std::string &data)
+{
+   signer::EnterControlPasswordRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   app_->setControlPassword(request.controlpassword());
+   return true;
+}
+
 bool SignerAdapterListener::onPasswordReceived(const std::string &data)
 {
    signer::DecryptWalletEvent request;
@@ -606,7 +627,7 @@ bool SignerAdapterListener::onReloadWallets(const std::string &data, bs::signer:
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
    }
-   app_->reloadWallets(request.path(), [this, reqId] {
+   app_->reloadWallets([this, reqId] {
       sendData(signer::ReloadWalletsType, "", reqId);
    });
    return true;
@@ -723,10 +744,11 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
       return false;
    }
 
-   const bs::wallet::PasswordData pwdData = { request.password().password()
-      , { static_cast<bs::wallet::EncryptionType>(request.password().enctype())
-         , request.password().enckey() } };
-
+   bs::wallet::PasswordData pwdData;
+   pwdData.password = request.password().password();
+   pwdData.metaData = { static_cast<bs::wallet::EncryptionType>(request.password().enctype())
+      , request.password().enckey() };
+   pwdData.controlPassword = app_->controlPassword();
 
    try {
       const auto &w = request.wallet();

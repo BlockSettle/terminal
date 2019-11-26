@@ -72,6 +72,10 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
       walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logger_, nullptr, nullptr);
       signContainer_->Start();
       walletsMgr_->setSignContainer(signContainer_);
+
+      connect(this, &SignerAdapter::walletsReloaded, [this](){
+         walletsMgr_->syncWallets();
+      });
    }
    return walletsMgr_;
 }
@@ -105,7 +109,14 @@ void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function
    signer::ReloadWalletsRequest request;
    request.set_path(walletsDir.toStdString());
    const auto reqId = listener_->send(signer::ReloadWalletsType, request.SerializeAsString());
-   listener_->setReloadWalletsCb(reqId, cb);
+
+   const auto &cbReloaded = [this, cb](){
+      emit walletsReloaded();
+      if (cb) {
+         cb();
+      }
+   };
+   listener_->setReloadWalletsCb(reqId, cbReloaded);
 }
 
 void SignerAdapter::updateWallet(const std::string &walletId)

@@ -605,6 +605,18 @@ function updateDialogData(jsCallback, passwordDialogData) {
     }
 }
 
+function createControlPasswordDialog(jsCallback, controlPasswordStatus) {
+    let dlg = Qt.createComponent("../BsControls/BSControlPasswordInput.qml").createObject(mainWindow
+        , { "controlPasswordStatus": controlPasswordStatus} )
+
+    dlg.bsAccepted.connect(function() {
+        jsCallback(dlg.passwordData)
+    })
+
+    prepareDialog(dlg)
+    dlg.open()
+}
+
 function isLiteMode(){
     return mainWindow.isLiteMode
 }

@@ -53,6 +53,7 @@ public:
 
 signals:
    void cancelSignTx(const QString &txId);
+   void qmlAppStarted();
 
 private slots:
    void onReady();

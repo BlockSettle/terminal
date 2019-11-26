@@ -23,13 +23,24 @@ public:
    QmlBridge(const std::shared_ptr<spdlog::logger> &logger, QObject *parent = nullptr)
       : QObject(parent), logger_(logger) {}
 
+   enum QmlMethod {
+      CreateTxSignDialog,
+      CreateTxSignSettlementDialog,
+      CreatePasswordDialogForType,
+      ControlPasswordStatusChanged,
+      CustomDialogRequest,
+      UpdateDialogData
+   };
+
+   static const char *getQmlMethodName(QmlMethod method);
+
    QObject *rootQmlObj() const;
    void setRootQmlObj(QObject *rootQmlObj);
 
    QQmlContext *ctxt() const;
    void setCtxt(QQmlContext *ctxt);
 
-   void invokeQmlMethod(const char *method, QmlCallbackBase* cb,
+   void invokeQmlMethod(QmlMethod method, QmlCallbackBase* cb,
       QVariant val0 = QVariant(), QVariant val1 = QVariant(), QVariant val2 = QVariant(), QVariant val3 = QVariant(),
       QVariant val4 = QVariant(), QVariant val5 = QVariant(), QVariant val6 = QVariant(), QVariant val7 = QVariant()) const;
 

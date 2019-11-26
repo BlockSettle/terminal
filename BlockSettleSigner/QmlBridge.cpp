@@ -3,6 +3,57 @@
 
 #include <spdlog/spdlog.h>
 
+// function name in main.qml which invoking other mothods
+static const char *kInvokeQmlMethod = "invokeQmlMethod";
+
+// function name in helper.js which calling TX Sign dialog
+static const char *kCreateTxSignDialog = "createTxSignDialog";
+
+// function name in helper.js which calling Settlement TX Sign dialog
+static const char *kCreateTxSignSettlementDialog = "createTxSignSettlementDialog";
+
+// function name in helper.js which calling various password input dialogs
+static const char *kCreatePasswordDialogForType = "createPasswordDialogForType";
+
+// function name in helper.js which displaying control password dialog
+static const char *kControlPasswordStatusDialog = "createControlPasswordDialog";
+
+// function name in helper.js which calling general dialogs
+static const char *kCustomDialogRequest = "customDialogRequest";
+
+// function name in helper.js which updating settlement dialog
+static const char *kUpdateDialogData = "updateDialogData";
+
+// these strings are function names in helper.js which allowed to be evaluated by name
+const QList<std::string> qmlCallableDialogMethods =
+{
+   kControlPasswordStatusDialog,
+   kCreateTxSignDialog,
+   kCreateTxSignSettlementDialog,
+   kCreatePasswordDialogForType,
+   kUpdateDialogData
+};
+
+const char *QmlBridge::getQmlMethodName(QmlBridge::QmlMethod method)
+{
+   switch (method) {
+   case QmlMethod::CreateTxSignDialog:
+      return kCreateTxSignDialog;
+   case QmlMethod::CreateTxSignSettlementDialog:
+      return kCreateTxSignSettlementDialog;
+   case QmlMethod::CreatePasswordDialogForType:
+      return kCreatePasswordDialogForType;
+   case QmlMethod::ControlPasswordStatusChanged:
+      return kControlPasswordStatusDialog;
+   case QmlMethod::CustomDialogRequest:
+      return kCustomDialogRequest;
+   case QmlMethod::UpdateDialogData:
+      return kCreatePasswordDialogForType;
+   default:
+      return {};
+   }
+}
+
 QObject *QmlBridge::rootQmlObj() const
 {
    return rootQmlObj_;
@@ -23,10 +74,10 @@ void QmlBridge::setCtxt(QQmlContext *ctxt)
    ctxt_ = ctxt;
 }
 
-void QmlBridge::invokeQmlMethod(const char *method, QmlCallbackBase *cb
+void QmlBridge::invokeQmlMethod(QmlBridge::QmlMethod method, QmlCallbackBase *cb
     , QVariant val0, QVariant val1, QVariant val2, QVariant val3, QVariant val4, QVariant val5, QVariant val6, QVariant val7) const
 {
-    if (!bs::signer::ui::qmlCallableDialogMethods.contains(method)) {
+    if (!qmlCallableDialogMethods.contains(getQmlMethodName(method))) {
         logger_->error("[{}] trying to call qml function which is not allowed: {}", __func__, method);
         return;
     }
@@ -41,8 +92,8 @@ void QmlBridge::invokeQmlMethod(const char *method, QmlCallbackBase *cb
     if (val6.isValid()) argList.append(val6);
     if (val7.isValid()) argList.append(val7);
 
-    QMetaObject::invokeMethod(rootQmlObj_, "invokeQmlMethod"
-       , Q_ARG(QVariant, QString::fromLatin1(method))
+    QMetaObject::invokeMethod(rootQmlObj_, kInvokeQmlMethod
+       , Q_ARG(QVariant, QString::fromLatin1(getQmlMethodName(method)))
        , Q_ARG(QVariant, QVariant::fromValue(cb))
        , Q_ARG(QVariant, QVariant::fromValue(argList)));
 }
