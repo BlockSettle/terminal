@@ -521,16 +521,55 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
+void Wallet::onZCInvalidated(const std::set<BinaryData> &ids)
+{
+   unsigned int processedEntries = 0;
+   for (const auto &id : ids) {
+      const auto &itTx = zcEntries_.find(id);
+      if (itTx == zcEntries_.end()) {
+         continue;
+      }
+      BTCNumericTypes::balance_type invalidatedBalance = 0;
+      for (size_t i = 0; i < itTx->second.getNumTxOut(); ++i) {
+         const auto txOut = itTx->second.getTxOutCopy(i);
+         const auto addr = bs::Address::fromTxOut(txOut);
+         if (containsAddress(addr)) {
+            const auto addrBal = txOut.getValue();
+            invalidatedBalance += addrBal / BTCNumericTypes::BalanceDivider;
+            auto &addrBalances = balanceData_->addressBalanceMap[addr.prefixed()];
+            addrBalances[0] -= addrBal;
+            addrBalances[1] -= addrBal;
+         }
+      }
+      balanceData_->unconfirmedBalance = balanceData_->unconfirmedBalance - invalidatedBalance;
+      logger_->debug("[{}] {} processed invalidated ZC entry {}, balance: {}"
+         , __func__, walletId(), itTx->first.toHexStr(true), invalidatedBalance);
+      zcEntries_.erase(itTx);
+      processedEntries++;
+   }
+   if (processedEntries && wct_) {
+      wct_->balanceUpdated(walletId());
+   }
+}
+
 void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 {
    if (skipPostOnline_) {
       return;
    }
-   init(true);
 
    const auto &cbTX = [this, balanceData = balanceData_, handle = validityFlag_.handle(), armory=armory_]
       (const Tx &tx) mutable
    {
+      for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
+         const auto txOut = tx.getTxOutCopy(i);
+         const auto addr = bs::Address::fromTxOut(txOut);
+         if (containsAddress(addr)) {
+            zcEntries_[tx.getThisHash()] = tx;
+            break;
+         }
+      }
+
       for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
          const TxIn in = tx.getTxInCopy(i);
          const OutPoint op = in.getOutPoint();
