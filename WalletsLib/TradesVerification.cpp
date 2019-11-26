@@ -336,7 +336,7 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifySi
 
 //only  TXOUT_SCRIPT_P2WPKH and (TXOUT_SCRIPT_P2SH | TXOUT_SCRIPT_P2WPKH) accepted
 bool bs::TradesVerification::XBTInputsAcceptable(const std::vector<UTXO>& utxoList, const std::map<std::string, BinaryData>& preImages)
-{
+try {
    for (const auto& input : utxoList) {
       const auto scrType = BtcUtils::getTxOutScriptType(input.getScript());
       if (scrType == TXOUT_SCRIPT_P2WPKH) {
@@ -378,4 +378,6 @@ bool bs::TradesVerification::XBTInputsAcceptable(const std::vector<UTXO>& utxoLi
    }
 
    return true;
+} catch (...) {
+   return false;
 }

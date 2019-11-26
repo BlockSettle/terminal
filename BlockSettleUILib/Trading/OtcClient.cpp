@@ -1037,7 +1037,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
    d->set_unsigned_tx(deal->payin.serializeState().toBinStr());
 
-   for (const auto it : deal->preimageData) {
+   for (const auto& it : deal->preimageData) {
       auto preImage = d->add_preimage_data();
 
       preImage->set_address(it.first.display());
