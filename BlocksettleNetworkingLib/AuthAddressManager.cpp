@@ -46,6 +46,8 @@ void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSet
    }
 
    SetAuthWallet();
+
+   ArmoryCallbackTarget::init(armory_.get());
 }
 
 void AuthAddressManager::ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &connMgr
@@ -73,6 +75,10 @@ bool AuthAddressManager::setup()
       return true;
    }
 
+   if (!IsReady()) {
+      return false;
+   }
+
    addressVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_
       , [this](const bs::Address &address, AddressVerificationState state)
    {
@@ -98,14 +104,14 @@ void AuthAddressManager::onAuthWalletChanged()
 {
    SetAuthWallet();
    addresses_.clear();
-   setup();
-   if (canStartVerifyWalletAddresses()) {
-      VerifyWalletAddresses();
-   }
+   VerifyWalletAddresses();
    emit AuthWalletChanged();
 }
 
-AuthAddressManager::~AuthAddressManager() noexcept = default;
+AuthAddressManager::~AuthAddressManager() noexcept
+{
+   ArmoryCallbackTarget::cleanup();
+}
 
 size_t AuthAddressManager::GetAddressCount()
 {
@@ -128,22 +134,30 @@ bool AuthAddressManager::WalletAddressesLoaded()
    return !addresses_.empty();
 }
 
-bool AuthAddressManager::IsReady() const
+bool AuthAddressManager::IsReady(std::string *errorMsg) const
 {
    if (!HasAuthAddr()) {
-      logger_->error("[AuthAddressManager::IsReady] Not ready, HasAuthAddr() == false");
+      if (errorMsg) {
+         *errorMsg = "HasAuthAddr() == false";
+      }
       return false;
    }
    if (!HaveBSAddressList()) {
-      logger_->error("[AuthAddressManager::IsReady] Not ready, HaveBSAddressList() == false");
+      if (errorMsg) {
+         *errorMsg = "HaveBSAddressList() == false";
+      }
       return false;
    }
    if (!armory_) {
-      logger_->error("[AuthAddressManager::IsReady] Not ready, armory_ is null");
+      if (errorMsg) {
+         *errorMsg = "armory_ is null";
+      }
       return false;
    }
    if (!armory_->isOnline()) {
-      logger_->error("[AuthAddressManager::IsReady] Not ready, armory_->isOnline() == false");
+      if (errorMsg) {
+         *errorMsg = "armory_->isOnline() == false";
+      }
       return false;
    }
 
@@ -224,6 +238,12 @@ bool AuthAddressManager::RevokeAddress(const bs::Address &address)
    if (!signingContainer_) {
       logger_->error("[AuthAddressManager::RevokeAddress] can't revoke without signing container");
       emit Error(tr("Missing signing container"));
+      return false;
+   }
+
+   if (!addressVerificator_) {
+      SPDLOG_LOGGER_ERROR(logger_, "addressVerificator_ is null");
+      emit Error(tr("Missing address verificator"));
       return false;
    }
 
@@ -485,11 +505,13 @@ void AuthAddressManager::ProcessErrorResponse(const std::string& responseString)
 void AuthAddressManager::VerifyWalletAddresses()
 {
    std::string errorMsg;
-   bool result = canStartVerifyWalletAddresses(&errorMsg);
+   bool result = IsReady(&errorMsg);
    if (!result) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't start auth address verification: {}", errorMsg);
+      SPDLOG_LOGGER_DEBUG(logger_, "can't start auth address verification: {}", errorMsg);
       return;
    }
+
+   setup();
 
    VerifyWalletAddressesFunction();
 }
@@ -583,11 +605,13 @@ void AuthAddressManager::onWalletChanged(const std::string &walletId)
       for (size_t i = addresses_.size(); i < count; i++) {
          const auto &addr = newAddresses[i];
          AddAddress(addr);
-         addressVerificator_->addAddress(addr);
+         if (addressVerificator_) {
+            addressVerificator_->addAddress(addr);
+         }
       }
    }
 
-   if (listUpdated) {
+   if (listUpdated && addressVerificator_) {
       addressVerificator_->startAddressVerification();
       emit AddressListUpdated();
    }
@@ -694,9 +718,7 @@ void AuthAddressManager::ProcessBSAddressListResponse(const std::string& respons
 
    ClearAddressList();
    SetBSAddressList(tempList);
-   if (canStartVerifyWalletAddresses()) {
-      VerifyWalletAddresses();
-   }
+   VerifyWalletAddresses();
 }
 
 AddressVerificationState AuthAddressManager::GetState(const bs::Address &addr) const
@@ -813,23 +835,11 @@ void AuthAddressManager::SetBSAddressList(const std::unordered_set<std::string>&
    }
 }
 
-bool AuthAddressManager::canStartVerifyWalletAddresses(std::string *errorMsg)
+void AuthAddressManager::onStateChanged(ArmoryState)
 {
-   if (!addressVerificator_) {
-      if (errorMsg) {
-         *errorMsg = "addressVerificator_ is null";
-      }
-      return false;
-   }
-
-   if (!IsReady()) {
-      if (errorMsg) {
-         *errorMsg = "not ready";
-      }
-      return false;
-   }
-
-   return true;
+   QMetaObject::invokeMethod(this, [this]{
+      VerifyWalletAddresses();
+   });
 }
 
 template <typename TVal> TVal AuthAddressManager::lookup(const bs::Address &key, const std::map<bs::Address, TVal> &container) const
