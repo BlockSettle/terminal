@@ -31,7 +31,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const bs::network::RFQ &rfq
    , const bs::network::Quote &quote
    , const bs::Address &authAddr
-   , const std::vector<UTXO> &utxosPayinFixed
+   , const std::map<UTXO, std::string> &utxosPayinFixed
    , const bs::Address &recvAddr)
    : bs::SettlementContainer()
    , logger_(logger)
@@ -279,7 +279,10 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
 
    bs::tradeutils::PayinArgs args;
    initTradesArgs(args, settlementId);
-   args.fixedInputs = utxosPayinFixed_;
+   args.fixedInputs.reserve(utxosPayinFixed_.size());
+   for (const auto &input : utxosPayinFixed_) {
+      args.fixedInputs.push_back(input.first);
+   }
    for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
       args.inputXbtWallets.push_back(leaf);
    }

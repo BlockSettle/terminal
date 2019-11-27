@@ -40,7 +40,7 @@ public:
       , const bs::network::RFQ &
       , const bs::network::Quote &
       , const bs::Address &authAddr
-      , const std::vector<UTXO> &utxosPayinFixed
+      , const std::map<UTXO, std::string> &utxosPayinFixed
       , const bs::Address &recvAddr);
    ~ReqXBTSettlementContainer() override;
 
@@ -118,8 +118,8 @@ private:
    bs::Address       dealerAuthAddress_;
 
    bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
-   BinaryData        usedPayinHash_;
-   std::vector<UTXO> utxosPayinFixed_;
+   BinaryData                    usedPayinHash_;
+   std::map<UTXO, std::string>   utxosPayinFixed_;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__

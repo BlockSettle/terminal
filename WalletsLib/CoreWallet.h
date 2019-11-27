@@ -370,7 +370,7 @@ namespace bs {
       };
 
       using WalletMap = std::unordered_map<std::string, std::shared_ptr<Wallet>>;   // key is wallet id
-      BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &, const WalletMap &);
+      BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &, const WalletMap &, bool partial = false);
 
    }  //namespace core
 }  //namespace bs

@@ -23,6 +23,7 @@
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
+#include "TradesUtils.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "UserScriptRunner.h"
@@ -224,10 +225,16 @@ void RFQDealerReply::reset()
    if (xbtWallet) {
       const auto &leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
       std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-      auto cb = [this](const std::vector<UTXO> &utxos) mutable {
+      auto cb = [this](const std::map<UTXO, std::string> &inputs) mutable
+      {
+         std::vector<UTXO> utxos;
+         utxos.reserve(inputs.size());
+         for (const auto &input : inputs) {
+            utxos.emplace_back(std::move(input.first));
+         }
          selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(utxos);
       };
-      bs::sync::Wallet::getSpendableTxOutList(wallets, cb);
+      bs::tradeutils::getSpendableTxOutList(wallets, cb);
    }
 }
 
@@ -635,7 +642,9 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
             replyData->qn.reqAuthKey = qrn.requestorRecvAddress;
 
             const auto &cbFee = [this, qrn, spendVal, spendWallet, isSpendCC, submit, replyData, ccWallet, xbtWallets](float feePerByte) {
-               auto inputsCb = [this, qrn, feePerByte, replyData, spendVal, spendWallet, isSpendCC, submit](const std::vector<UTXO> &inputs) {
+               auto inputsCb = [this, qrn, feePerByte, replyData, spendVal, spendWallet, isSpendCC, submit]
+                  (const std::map<UTXO, std::string> &inputs)
+               {
                   QMetaObject::invokeMethod(this, [this, feePerByte, qrn, replyData, spendVal, spendWallet, isSpendCC, submit, inputs] {
                      const auto &cbChangeAddr = [this, feePerByte, qrn, replyData, spendVal, spendWallet, submit, inputs]
                         (const bs::Address &changeAddress)
@@ -646,7 +655,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            logger_->debug("[cbFee] {} input[s], fpb={}, recip={}, prevPart={}", inputs.size(), feePerByte
                               , bs::Address::fromAddressString(qrn.requestorRecvAddress).display(), qrn.requestorAuthPublicKey);
                            const auto outSortOrder = (qrn.side == bs::network::Side::Buy) ? kBuySortOrder : kSellSortOrder;
-                           const auto txReq = spendWallet->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
+                           const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
                               , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
                            replyData->qn.transactionData = txReq.serializeState().toHexStr();
                            replyData->utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, txReq, replyData->qn.quoteRequestId);
@@ -660,7 +669,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                      if (isSpendCC) {
                         uint64_t inputsVal = 0;
                         for (const auto &input : inputs) {
-                           inputsVal += input.getValue();
+                           inputsVal += input.first.getValue();
                         }
                         if (inputsVal == spendVal) {
                            cbChangeAddr({});
@@ -671,11 +680,18 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                   });
                };
                if (isSpendCC) {
+                  const auto  inputsWrapCb = [inputsCb, ccWallet](const std::vector<UTXO> &utxos) {
+                     std::map<UTXO, std::string> inputs;
+                     for (const auto &utxo : utxos) {
+                        inputs[utxo] = ccWallet->walletId();
+                     }
+                     inputsCb(inputs);
+                  };
                   // For CC search for exact amount (preferable without change)
-                  ccWallet->getSpendableTxOutList(inputsCb, spendVal);
+                  ccWallet->getSpendableTxOutList(inputsWrapCb, spendVal);
                } else {
                   // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee rate is set)
-                  bs::sync::Wallet::getSpendableTxOutList(xbtWallets, inputsCb);
+                  bs::tradeutils::getSpendableTxOutList(xbtWallets, inputsCb);
                }
             };
 

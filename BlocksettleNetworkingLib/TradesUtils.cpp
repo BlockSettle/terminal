@@ -28,6 +28,48 @@ namespace {
 
 } // namespace
 
+bool bs::tradeutils::getSpendableTxOutList(const std::vector<std::shared_ptr<bs::sync::Wallet>> &wallets
+   , const std::function<void(const std::map<UTXO, std::string> &)> &cb)
+{
+   if (wallets.empty()) {
+      cb({});
+      return true;
+   }
+   struct Result
+   {
+      std::map<std::string, std::vector<UTXO>> utxosMap;
+      std::function<void(const std::map<UTXO, std::string> &)> cb;
+   };
+   auto result = std::make_shared<Result>();
+   result->cb = std::move(cb);
+
+   for (const auto &wallet : wallets) {
+      auto cbWrap = [result, size = wallets.size(), walletId = wallet->walletId()]
+      (std::vector<UTXO> utxos)
+      {
+         result->utxosMap.emplace(walletId, std::move(utxos));
+         if (result->utxosMap.size() != size) {
+            return;
+         }
+
+         std::map<UTXO, std::string> utxosAll;
+
+         for (auto &item : result->utxosMap) {
+            for (const auto &utxo : item.second) {
+               utxosAll[utxo] = item.first;
+            }
+         }
+         result->cb(utxosAll);
+      };
+
+      // If request for some wallet failed resulted callback won't be called.
+      if (!wallet->getSpendableTxOutList(cbWrap, UINT64_MAX)) {
+         return false;
+      }
+   }
+   return true;
+}
+
 bs::tradeutils::Result bs::tradeutils::Result::error(std::string msg)
 {
    bs::tradeutils::Result result;
@@ -183,14 +225,19 @@ void bs::tradeutils::createPayin(bs::tradeutils::PayinArgs args, bs::tradeutils:
             };
 
             if (args.fixedInputs.empty()) {
-               auto inputsCbWrap = [args, cb, inputsCb](std::vector<UTXO> utxos) {
+               auto inputsCbWrap = [args, cb, inputsCb](std::map<UTXO, std::string> inputs) {
+                  std::vector<UTXO> utxos;
+                  utxos.reserve(inputs.size());
+                  for (const auto &input : inputs) {
+                     utxos.emplace_back(std::move(input.first));
+                  }
                   if (args.utxoReservation) {
                      // Ignore filter return value as it fails if there were no reservations before
                      args.utxoReservation->filter(args.utxoReservationWalletId, utxos);
                   }
                   inputsCb(utxos);
                };
-               bs::sync::Wallet::getSpendableTxOutList(args.inputXbtWallets, inputsCbWrap);
+               getSpendableTxOutList(args.inputXbtWallets, inputsCbWrap);
             } else {
                inputsCb(args.fixedInputs);
             }

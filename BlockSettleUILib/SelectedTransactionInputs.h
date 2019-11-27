@@ -64,6 +64,7 @@ public:
 
    std::vector<UTXO> GetSelectedTransactions() const;
    std::vector<UTXO> GetAllTransactions() const;
+   std::map<UTXO, std::string> getSelectedInputs() const;
 
    std::shared_ptr<bs::sync::Wallet> GetWallet() const
    {
@@ -90,6 +91,7 @@ private:
    const bool                    confirmedOnly_;
    std::vector<UTXO>             inputs_;
    std::vector<UTXO>             cpfpInputs_;
+   std::map<UTXO, std::string>   inputsMap_;
    std::vector<bool>             selection_;
    const CbSelectionChanged      selectionChanged_;
    std::vector<std::function<void()>>  resetCallbacks_;

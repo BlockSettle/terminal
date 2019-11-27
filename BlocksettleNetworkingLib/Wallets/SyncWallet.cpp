@@ -331,50 +331,6 @@ bool Wallet::getRBFTxOutList(const ArmoryConnection::UTXOsCb &cb) const
    return true;
 }
 
-bool Wallet::getSpendableTxOutList(const std::vector<std::shared_ptr<Wallet>> &wallets, ArmoryConnection::UTXOsCb cb)
-{
-   if (wallets.empty()) {
-      cb({});
-      return true;
-   }
-   struct Result
-   {
-      std::map<int, std::vector<UTXO>> utxosMap;
-      ArmoryConnection::UTXOsCb cb;
-   };
-   auto result = std::make_shared<Result>();
-   result->cb = std::move(cb);
-
-   for (size_t i = 0; i < wallets.size(); ++i) {
-      const auto &wallet = wallets[i];
-      auto cbWrap = [i, result, size = wallets.size()](std::vector<UTXO> utxos) {
-         result->utxosMap.emplace(i, std::move(utxos));
-         if (result->utxosMap.size() != size) {
-            return;
-         }
-
-         size_t total = 0;
-         for (auto &item : result->utxosMap) {
-            total += item.second.size();
-         }
-         std::vector<UTXO> utxosAll;
-         utxosAll.reserve(total);
-
-         for (auto &item : result->utxosMap) {
-            utxosAll.insert(utxosAll.end(), std::make_move_iterator(item.second.begin())
-               , std::make_move_iterator(item.second.end()));
-         }
-         result->cb(utxosAll);
-      };
-      // If request for some wallet failed resulted callback won't be called.
-      bool status = wallet->getSpendableTxOutList(cbWrap, UINT64_MAX);
-      if (!status) {
-         return false;
-      }
-   }
-   return true;
-}
-
 void Wallet::setWCT(WalletCallbackTarget *wct)
 {
    wct_ = wct;

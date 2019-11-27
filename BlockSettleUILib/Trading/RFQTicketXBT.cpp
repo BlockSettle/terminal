@@ -98,12 +98,12 @@ void RFQTicketXBT::resetTicket()
    updatePanel();
 }
 
-std::vector<UTXO> RFQTicketXBT::fixedXbtInputs() const
+std::map<UTXO, std::string> RFQTicketXBT::fixedXbtInputs() const
 {
-   if (!selectedXbtInputs_ || selectedXbtInputs_->UseAutoSel()) {
-      return {};
+   if (selectedXbtInputs_) {
+      return selectedXbtInputs_->getSelectedInputs();
    }
-   return selectedXbtInputs_->GetSelectedTransactions();
+   return fixedInputs_;
 }
 
 void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager> &authAddressManager
@@ -305,12 +305,15 @@ void RFQTicketXBT::fillRecvAddresses()
 
 void RFQTicketXBT::showCoinControl()
 {
-   if (selectedXbtInputs_) {
-      int rc = CoinControlDialog(selectedXbtInputs_, true, this).exec();
-      if (rc == QDialog::Accepted) {
-         updateBalances();
-         updateSubmitButton();
-      }
+   if (!selectedXbtInputs_) {
+      const auto xbtWallet = getSendXbtWallet();
+      selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(xbtWallet->getGroup(xbtWallet->getXBTGroupType())
+         , false, true);
+   }
+   int rc = CoinControlDialog(selectedXbtInputs_, true, this).exec();
+   if (rc == QDialog::Accepted) {
+      updateBalances();
+      updateSubmitButton();
    }
 }
 
@@ -829,8 +832,13 @@ void RFQTicketXBT::onMaxClicked()
             return;
          }
 
-         auto cb = [this](const std::vector<UTXO> &utxos) {
-            QMetaObject::invokeMethod(this, [this, utxos] {
+         auto cb = [this](const std::map<UTXO, std::string> &inputs) {
+            QMetaObject::invokeMethod(this, [this, inputs] {
+               std::vector<UTXO> utxos;
+               utxos.reserve(inputs.size());
+               for (const auto &input : inputs) {
+                  utxos.emplace_back(std::move(input.first));
+               }
                auto feeCb = [this, utxos = std::move(utxos)](float fee) {
                   QMetaObject::invokeMethod(this, [this, fee, utxos = std::move(utxos)] {
                      float feePerByte = ArmoryConnection::toFeePerByte(fee);
@@ -854,7 +862,7 @@ void RFQTicketXBT::onMaxClicked()
          } else {
             auto leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
             auto xbtWallets = std::vector<std::shared_ptr<bs::sync::Wallet>>(leaves.begin(), leaves.end());
-            bs::sync::Wallet::getSpendableTxOutList(xbtWallets, cb);
+            bs::tradeutils::getSpendableTxOutList(xbtWallets, cb);
          }
          return;
       }
@@ -1008,10 +1016,10 @@ void RFQTicketXBT::productSelectionChanged()
          if (xbtWallet) {
             const auto &leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
             std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-            auto cb = [this](const std::vector<UTXO> &utxos) mutable {
-               selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(utxos);
+            auto cb = [this](const std::map<UTXO, std::string> &inputs) mutable {
+               fixedInputs_ = inputs;
             };
-            bs::sync::Wallet::getSpendableTxOutList(wallets, cb);
+            bs::tradeutils::getSpendableTxOutList(wallets, cb);
          }
       }
    }
@@ -1045,7 +1053,7 @@ bs::XBTAmount RFQTicketXBT::getXbtBalance() const
    if (!fixedInputs.empty()) {
       uint64_t sum = 0;
       for (const auto &utxo : fixedInputs) {
-         sum += utxo.getValue();
+         sum += utxo.first.getValue();
       }
       return bs::XBTAmount(sum);
    }

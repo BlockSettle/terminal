@@ -65,7 +65,7 @@ public:
 
    void resetTicket();
 
-   std::vector<UTXO> fixedXbtInputs() const;
+   std::map<UTXO, std::string> fixedXbtInputs() const;
 
    QPushButton* submitButton() const;
    QLineEdit* lineEditAmount() const;
@@ -225,7 +225,7 @@ private:
    SubmitRFQCb submitRFQCb_;
 
    std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
-
+   std::map<UTXO, std::string>   fixedInputs_;
 };
 
 #endif // __RFQ_TICKET_XBT_H__
