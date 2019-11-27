@@ -4,7 +4,6 @@
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
 #include "QuoteProvider.h"
-#include "SettlementMonitor.h"
 #include "SignContainer.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"

@@ -23,7 +23,6 @@
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
 #include "Wallets/SyncHDWallet.h"
-#include "SettlementMonitor.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "TreeViewWithEnterKey.h"
 #include "ManageEncryption/RootWalletPropertiesDialog.h"
@@ -637,39 +636,7 @@ void WalletsWidget::onEditAddrComment()
 
 void WalletsWidget::onRevokeSettlement()
 {
-   std::shared_ptr<bs::SettlementMonitorCb> monitor;
-   const auto &cbMonitorInited = [this, monitor] {
-      const auto title = tr("Settlement Revoke");
-      const auto &cbSettlInput = [this, title](UTXO input) {
-         if (!input.isInitialized()) {
-            return;
-         }
-         SelectAddressDialog selectAddressDialog{ walletsManager_, walletsManager_->getDefaultWallet(), this };
-         bs::Address recvAddr;
-         if (selectAddressDialog.exec() == QDialog::Accepted) {
-            recvAddr = selectAddressDialog.getSelectedAddress();
-         } else {
-            return;
-         }
-
-#if 0
-         const auto &cbFee = [this, input, recvAddr, title](float feePerByte) {
-            try {
-               const auto txReq = bs::SettlementMonitor::createPayoutTXRequest(input, recvAddr
-                  , feePerByte, armory_->topBlock());
-               //FIXME: need to retrive SettlementData for revoke - to be decided later
-               revokeReqId_ = signingContainer_->signSettlementPayoutTXRequest(txReq, {}, {});
-            } catch (const std::exception &e) {
-               BSMessageBox(BSMessageBox::critical, title, tr("Failed to sign revoke pay-out"), QLatin1String(e.what())).exec();
-            }
-         };
-         walletsManager_->estimatedFeePerByte(2, cbFee, this);
-#endif   //0
-      };
-      monitor->getPayinInput(cbSettlInput, false);
-   };
-   monitor = std::make_shared<bs::SettlementMonitorCb>(armory_, logger_, curAddress_
-      , BinaryData{}, BinaryData{}, cbMonitorInited);
+   BSMessageBox(BSMessageBox::info, tr("Settlement Revoke"), tr("Doesn't work currently"), this).exec();
 }
 
 void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result)

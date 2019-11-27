@@ -105,7 +105,15 @@ namespace bs {
 
       unsigned feeTargetBlockCount();
 
+      uint64_t getEstimatedFeeFor(UTXO input, const bs::Address &recvAddr
+         , float feePerByte, unsigned int topBlock);
+
       uint64_t estimatePayinFeeWithoutChange(const std::vector<UTXO> &inputs, float feePerByte);
+
+      UTXO getInputFromTX(const bs::Address &, const BinaryData &payinHash
+         , const bs::XBTAmount& amount);
+      bs::core::wallet::TXSignRequest createPayoutTXRequest(UTXO
+         , const bs::Address &recvAddr, float feePerByte, unsigned int topBlock);
 
       // Callback is called from background thread
       void createPayin(PayinArgs args, PayinResultCb cb);
