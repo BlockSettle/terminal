@@ -1123,7 +1123,6 @@ void WalletsManager::onAuthLeafAdded(const std::string &walletId)
       logger_->debug("[WalletsManager::onAuthLeafAdded sync cb] Synchronized auth leaf has {} address[es]", leaf->getUsedAddressCount());
       addWallet(leaf, true);
       authAddressWallet_ = leaf;
-      authAddressWallet_->registerWallet(armoryPtr_);
       QMetaObject::invokeMethod(this, [this, walletId=leaf->walletId()] {
          emit AuthLeafCreated();
          emit authWalletChanged();
