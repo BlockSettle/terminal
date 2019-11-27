@@ -102,24 +102,25 @@ private:
 
    using ContainsAddressCb = const std::function<bool(const bs::Address &)>;
    ContainsAddressCb containsThisAddressCb_ = [this](const bs::Address &address){
-      if (txReq_.walletIds.empty()) {
-         return false;
-      }
-
-      const auto &hdWallet = walletsMgr_->getHDWalletById(txReq_.walletIds.front());
-      if (hdWallet) {
-         for (auto leaf : hdWallet->getLeaves()) {
-            if (leaf->containsAddress(address)) {
+      for (const auto &walletId : txReq_.walletIds) {
+         const auto &wallet = walletsMgr_->getWalletById(walletId);
+         if (wallet) {
+            if (wallet->containsAddress(address)) {
                return true;
+            }
+            continue;
+         }
+
+         const auto &hdWallet = walletsMgr_->getHDWalletById(walletId);
+         if (hdWallet) {
+            for (auto leaf : hdWallet->getLeaves()) {
+               if (leaf->containsAddress(address)) {
+                  return true;
+               }
             }
          }
       }
-      else {
-         const auto &wallet = walletsMgr_->getWalletById(txReq_.walletIds.front());
-         if (wallet) {
-            return wallet->containsAddress(address);
-         }
-      }
+
       return false;
    };
 
