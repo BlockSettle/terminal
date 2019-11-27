@@ -99,7 +99,9 @@ void AuthAddressManager::onAuthWalletChanged()
    SetAuthWallet();
    addresses_.clear();
    setup();
-   VerifyWalletAddresses();
+   if (canStartVerifyWalletAddresses()) {
+      VerifyWalletAddresses();
+   }
    emit AuthWalletChanged();
 }
 
@@ -482,13 +484,10 @@ void AuthAddressManager::ProcessErrorResponse(const std::string& responseString)
 
 void AuthAddressManager::VerifyWalletAddresses()
 {
-   if (!addressVerificator_) {
-      logger_->error("[AuthAddressManager::VerifyWalletAddresses] Failed to VerifyWalletAddresses, addressVerificator_ is null");
-      return;
-   }
-
-   if (!IsReady()) {
-      logger_->error("[AuthAddressManager::VerifyWalletAddresses] Failed to VerifyWalletAddresses, Not Ready (!IsReady())");
+   std::string errorMsg;
+   bool result = canStartVerifyWalletAddresses(&errorMsg);
+   if (!result) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't start auth address verification: {}", errorMsg);
       return;
    }
 
@@ -695,7 +694,9 @@ void AuthAddressManager::ProcessBSAddressListResponse(const std::string& respons
 
    ClearAddressList();
    SetBSAddressList(tempList);
-   VerifyWalletAddresses();
+   if (canStartVerifyWalletAddresses()) {
+      VerifyWalletAddresses();
+   }
 }
 
 AddressVerificationState AuthAddressManager::GetState(const bs::Address &addr) const
@@ -810,6 +811,25 @@ void AuthAddressManager::SetBSAddressList(const std::unordered_set<std::string>&
          addressVerificator_->SetBSAddressList(bsAddressList);
       }
    }
+}
+
+bool AuthAddressManager::canStartVerifyWalletAddresses(std::string *errorMsg)
+{
+   if (!addressVerificator_) {
+      if (errorMsg) {
+         *errorMsg = "addressVerificator_ is null";
+      }
+      return false;
+   }
+
+   if (!IsReady()) {
+      if (errorMsg) {
+         *errorMsg = "not ready";
+      }
+      return false;
+   }
+
+   return true;
 }
 
 template <typename TVal> TVal AuthAddressManager::lookup(const bs::Address &key, const std::map<bs::Address, TVal> &container) const

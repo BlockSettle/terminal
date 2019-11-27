@@ -156,6 +156,7 @@ private:
    void SubmitToCeler(const bs::Address &);
    bool BroadcastTransaction(const BinaryData& transactionData);
    void SetBSAddressList(const std::unordered_set<std::string>& bsAddressList);
+   bool canStartVerifyWalletAddresses(std::string *errorMsg = nullptr);
 
 protected:
    std::shared_ptr<spdlog::logger>        logger_;
