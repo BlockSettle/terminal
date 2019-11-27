@@ -28,7 +28,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const bs::Address &recvXbtAddr
    , const bs::Address &authAddr
-   , const std::vector<UTXO> &fixedXbtInputs
+   , const std::map<UTXO, std::string> &fixedXbtInputs
    , bs::UtxoReservationToken utxoRes
    , RFQRequestWidget *parent)
    : QDialog(parent)

@@ -83,6 +83,9 @@ void SelectedTransactionInputs::onCPFPReceived(const std::shared_ptr<bs::sync::W
       for (const auto &cpfpInputs : accCpfpInputs_) {
          cpfpInputs_.insert(cpfpInputs_.end(), cpfpInputs.second.cbegin()
             , cpfpInputs.second.cend());
+         for (const auto &input : cpfpInputs.second) {
+            inputsMap_[input] = cpfpInputs.first;
+         }
       }
       accCpfpInputs_.clear();
    }
@@ -104,6 +107,9 @@ void SelectedTransactionInputs::onUTXOsReceived(const std::shared_ptr<bs::sync::
       for (const auto &accInputs : accInputs_) {
          inputs_.insert(inputs_.end(), accInputs.second.cbegin()
             , accInputs.second.cend());
+         for (const auto &input : accInputs.second) {
+            inputsMap_[input] = accInputs.first;
+         }
       }
       accInputs_.clear();
 
@@ -293,6 +299,27 @@ std::vector<UTXO> SelectedTransactionInputs::GetAllTransactions() const
    allTransactions.insert(allTransactions.end(), inputs_.begin(), inputs_.end());
    allTransactions.insert(allTransactions.end(), cpfpInputs_.begin(), cpfpInputs_.end());
    return allTransactions;
+}
+
+std::map<UTXO, std::string> SelectedTransactionInputs::getSelectedInputs() const
+{
+   if (useAutoSel_) {
+      return {};
+   }
+   std::map<UTXO, std::string> result;
+   for (size_t i = 0; i < selection_.size(); ++i) {
+      if (selection_[i]) {
+         const auto &utxo = GetTransaction(i);
+         const auto itInput = inputsMap_.find(utxo);
+         if (itInput != inputsMap_.end()) {
+            result[itInput->first] = itInput->second;
+         }
+         else {
+            result[utxo] = {};
+         }
+      }
+   }
+   return result;
 }
 
 void SelectedTransactionInputs::SetUseAutoSel(const bool autoSelect)

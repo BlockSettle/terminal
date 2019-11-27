@@ -59,7 +59,7 @@ public:
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const bs::Address &recvXbtAddr
       , const bs::Address &authAddr
-      , const std::vector<UTXO> &fixedXbtInputs
+      , const std::map<UTXO, std::string> &fixedXbtInputs
       , bs::UtxoReservationToken utxoRes
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
@@ -117,7 +117,7 @@ private:
    std::shared_ptr<ReqXBTSettlementContainer>   xbtSettlContainer_;
 
    const bs::Address authAddr_;
-   const std::vector<UTXO> fixedXbtInputs_;
+   const std::map<UTXO, std::string>   fixedXbtInputs_;
 
    bool  cancelOnClose_ = true;
    bool isRejectStarted_ = false;

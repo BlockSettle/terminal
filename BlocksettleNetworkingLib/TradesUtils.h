@@ -35,6 +35,11 @@ namespace bs {
 
 
    namespace tradeutils {
+      // Request getSpendableTxOutList for every wallet in wallets, merge results (keeping requested order) and call callback.
+      // If request failed for at least one wallet callback would not be called.
+      bool getSpendableTxOutList(const std::vector<std::shared_ptr<bs::sync::Wallet>> &wallets
+         // maps UTXO to the wallet used
+         , const std::function<void(const std::map<UTXO, std::string> &)> &);
 
       struct Args
       {

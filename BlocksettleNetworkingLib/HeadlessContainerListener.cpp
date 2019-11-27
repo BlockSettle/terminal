@@ -434,7 +434,7 @@ bool HeadlessContainerListener::onSignTxRequest(const std::string &clientId, con
             BinaryData tx;
             {
                const bs::core::WalletPasswordScoped passLock(rootWallet, pass);
-               tx = bs::core::SignMultiInputTX(multiReq, wallets);
+               tx = bs::core::SignMultiInputTX(multiReq, wallets, partial);
             }
             SignTXResponse(clientId, id, reqType, ErrorCode::NoError, tx);
          }
