@@ -225,7 +225,6 @@ private:
    SubmitRFQCb submitRFQCb_;
 
    std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
-   std::map<UTXO, std::string>   fixedInputs_;
 };
 
 #endif // __RFQ_TICKET_XBT_H__

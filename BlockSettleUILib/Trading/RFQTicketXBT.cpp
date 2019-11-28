@@ -103,7 +103,7 @@ std::map<UTXO, std::string> RFQTicketXBT::fixedXbtInputs() const
    if (selectedXbtInputs_) {
       return selectedXbtInputs_->getSelectedInputs();
    }
-   return fixedInputs_;
+   return {};
 }
 
 void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager> &authAddressManager
@@ -305,11 +305,23 @@ void RFQTicketXBT::fillRecvAddresses()
 
 void RFQTicketXBT::showCoinControl()
 {
+   if (getProductToSpend() != UiUtils::XbtCurrency) {
+      SPDLOG_LOGGER_ERROR(logger_, "unexpected call");
+      return;
+   }
+
+   auto xbtWallet = getSendXbtWallet();
+   if (!xbtWallet) {
+      SPDLOG_LOGGER_ERROR(logger_, "XBT wallet not found");
+      return;
+   }
+
    if (!selectedXbtInputs_) {
       const auto xbtWallet = getSendXbtWallet();
       selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(xbtWallet->getGroup(xbtWallet->getXBTGroupType())
          , false, true);
    }
+
    int rc = CoinControlDialog(selectedXbtInputs_, true, this).exec();
    if (rc == QDialog::Accepted) {
       updateBalances();
@@ -1011,17 +1023,6 @@ void RFQTicketXBT::productSelectionChanged()
       }
 
       selectedXbtInputs_.reset();
-      if (getProductToSpend() == UiUtils::XbtCurrency) {
-         auto xbtWallet = getSendXbtWallet();
-         if (xbtWallet) {
-            const auto &leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
-            std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-            auto cb = [this](const std::map<UTXO, std::string> &inputs) mutable {
-               fixedInputs_ = inputs;
-            };
-            bs::tradeutils::getSpendableTxOutList(wallets, cb);
-         }
-      }
    }
 
    ui_->lineEditAmount->setFocus();
