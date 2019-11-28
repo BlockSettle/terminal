@@ -666,7 +666,7 @@ std::vector<std::string> WalletsManager::registerWallets()
    for (auto &it : wallets_) {
       const auto &ids = it.second->registerWallet(armoryPtr_);
       result.insert(result.end(), ids.begin(), ids.end());
-      if (ids.empty()) {
+      if (ids.empty() && it.second->type() != bs::core::wallet::Type::Settlement) {
          logger_->error("[{}] failed to register wallet {}", __func__, it.second->walletId());
       }
    }
@@ -1123,7 +1123,6 @@ void WalletsManager::onAuthLeafAdded(const std::string &walletId)
       logger_->debug("[WalletsManager::onAuthLeafAdded sync cb] Synchronized auth leaf has {} address[es]", leaf->getUsedAddressCount());
       addWallet(leaf, true);
       authAddressWallet_ = leaf;
-      authAddressWallet_->registerWallet(armoryPtr_);
       QMetaObject::invokeMethod(this, [this, walletId=leaf->walletId()] {
          emit AuthLeafCreated();
          emit authWalletChanged();
