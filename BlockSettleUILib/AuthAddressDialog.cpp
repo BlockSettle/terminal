@@ -213,7 +213,7 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
             ui_->pushButtonDefault->setEnabled(false);
             break;
          case AddressVerificationState::Verified:
-            ui_->pushButtonRevoke->setEnabled(authAddressManager_->IsReady());
+            ui_->pushButtonRevoke->setEnabled(authAddressManager_->readyError() != AuthAddressManager::ReadyError::NoError);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
             break;

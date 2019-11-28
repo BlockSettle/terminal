@@ -50,6 +50,15 @@ class AuthAddressManager : public QObject, public ArmoryCallbackTarget
    Q_OBJECT
 
 public:
+   enum class ReadyError
+   {
+      NoError,
+      MissingAuthAddr,
+      MissingAddressList,
+      MissingArmoryPtr,
+      ArmoryOffline,
+   };
+
    AuthAddressManager(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<ArmoryConnection> &
       , const ZmqBipNewKeyCb &);
@@ -93,7 +102,7 @@ public:
 
    virtual bool RevokeAddress(const bs::Address &address);
 
-   virtual bool IsReady(std::string *errorMsg = nullptr) const;
+   virtual ReadyError readyError() const;
 
    virtual void OnDisconnectedFromCeler();
 
@@ -102,8 +111,10 @@ public:
    size_t FromVerifiedIndex(size_t index) const;
    const std::unordered_set<std::string> &GetBSAddresses() const;
 
+   static std::string readyErrorStr(ReadyError error);
+
 private slots:
-   void VerifyWalletAddresses();
+   void tryVerifyWalletAddresses();
    void onAuthWalletChanged();
    void onWalletChanged(const std::string &walletId);
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason);

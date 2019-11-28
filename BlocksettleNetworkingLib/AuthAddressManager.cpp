@@ -34,7 +34,7 @@ void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSet
    walletsManager_ = walletsManager;
    signingContainer_ = container;
 
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &AuthAddressManager::VerifyWalletAddresses);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &AuthAddressManager::tryVerifyWalletAddresses);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::authWalletChanged, this, &AuthAddressManager::onAuthWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &AuthAddressManager::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::AuthLeafCreated, this, &AuthAddressManager::onWalletCreated);
@@ -75,7 +75,7 @@ bool AuthAddressManager::setup()
       return true;
    }
 
-   if (!IsReady()) {
+   if (readyError() != ReadyError::NoError) {
       return false;
    }
 
@@ -104,7 +104,7 @@ void AuthAddressManager::onAuthWalletChanged()
 {
    SetAuthWallet();
    addresses_.clear();
-   VerifyWalletAddresses();
+   tryVerifyWalletAddresses();
    emit AuthWalletChanged();
 }
 
@@ -134,34 +134,22 @@ bool AuthAddressManager::WalletAddressesLoaded()
    return !addresses_.empty();
 }
 
-bool AuthAddressManager::IsReady(std::string *errorMsg) const
+AuthAddressManager::ReadyError AuthAddressManager::readyError() const
 {
    if (!HasAuthAddr()) {
-      if (errorMsg) {
-         *errorMsg = "HasAuthAddr() == false";
-      }
-      return false;
+      return ReadyError::MissingAuthAddr;
    }
    if (!HaveBSAddressList()) {
-      if (errorMsg) {
-         *errorMsg = "HaveBSAddressList() == false";
-      }
-      return false;
+      return ReadyError::MissingAddressList;
    }
    if (!armory_) {
-      if (errorMsg) {
-         *errorMsg = "armory_ is null";
-      }
-      return false;
+      return ReadyError::MissingArmoryPtr;
    }
    if (!armory_->isOnline()) {
-      if (errorMsg) {
-         *errorMsg = "armory_->isOnline() == false";
-      }
-      return false;
+      return ReadyError::ArmoryOffline;
    }
 
-   return true;
+   return ReadyError::NoError;
 }
 
 bool AuthAddressManager::HaveAuthWallet() const
@@ -502,12 +490,12 @@ void AuthAddressManager::ProcessErrorResponse(const std::string& responseString)
    emit Error(tr("Received error from BS server: %1").arg(QString::fromStdString(response.errormessage())));
 }
 
-void AuthAddressManager::VerifyWalletAddresses()
+void AuthAddressManager::tryVerifyWalletAddresses()
 {
    std::string errorMsg;
-   bool result = IsReady(&errorMsg);
-   if (!result) {
-      SPDLOG_LOGGER_DEBUG(logger_, "can't start auth address verification: {}", errorMsg);
+   ReadyError state = readyError();
+   if (state != ReadyError::NoError) {
+      SPDLOG_LOGGER_DEBUG(logger_, "can't start auth address verification: {}", readyErrorStr(state));
       return;
    }
 
@@ -634,6 +622,18 @@ const std::unordered_set<std::string> &AuthAddressManager::GetBSAddresses() cons
    return bsAddressList_;
 }
 
+std::string AuthAddressManager::readyErrorStr(AuthAddressManager::ReadyError error)
+{
+   switch (error) {
+      case ReadyError::NoError:              return "NoError";
+      case ReadyError::MissingAuthAddr:      return "MissingAuthAddr";
+      case ReadyError::MissingAddressList:   return "MissingAddressList";
+      case ReadyError::MissingArmoryPtr:     return "MissingArmoryPtr";
+      case ReadyError::ArmoryOffline:        return "ArmoryOffline";
+   }
+   return "Unknown";
+}
+
 bool AuthAddressManager::SendGetBSAddressListRequest()
 {
    GetBSFundingAddressListRequest addressRequest;
@@ -718,7 +718,7 @@ void AuthAddressManager::ProcessBSAddressListResponse(const std::string& respons
 
    ClearAddressList();
    SetBSAddressList(tempList);
-   VerifyWalletAddresses();
+   tryVerifyWalletAddresses();
 }
 
 AddressVerificationState AuthAddressManager::GetState(const bs::Address &addr) const
@@ -838,7 +838,7 @@ void AuthAddressManager::SetBSAddressList(const std::unordered_set<std::string>&
 void AuthAddressManager::onStateChanged(ArmoryState)
 {
    QMetaObject::invokeMethod(this, [this]{
-      VerifyWalletAddresses();
+      tryVerifyWalletAddresses();
    });
 }
 
