@@ -58,7 +58,7 @@ UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_
 
 void UtxoReservationToken::release()
 {
-   if (reserveId_.empty()) {
+   if (!isValid()) {
       return;
    }
 
@@ -76,4 +76,9 @@ void UtxoReservationToken::release()
       }
    }
    reserveId_.clear();
+}
+
+bool UtxoReservationToken::isValid() const
+{
+   return !reserveId_.empty();
 }

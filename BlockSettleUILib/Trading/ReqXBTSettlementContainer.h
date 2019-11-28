@@ -5,9 +5,8 @@
 #include <unordered_set>
 #include "AddressVerificator.h"
 #include "BSErrorCode.h"
-#include "SettlementContainer.h"
-#include "UtxoReservation.h"
 #include "QWalletInfo.h"
+#include "SettlementContainer.h"
 
 namespace spdlog {
    class logger;
@@ -96,7 +95,6 @@ private:
    bs::Address                settlAddr_;
 
    std::shared_ptr<AddressVerificator>             addrVerificator_;
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
    double            amount_{};
    std::string       fxProd_;

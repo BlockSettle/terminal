@@ -4,9 +4,24 @@
 using namespace bs;
 using namespace bs::sync;
 
+namespace {
+
+   const auto kUtxoReleaseDelay = std::chrono::seconds(15);
+
+} // namespace
+
 SettlementContainer::SettlementContainer()
    : QObject(nullptr)
 {}
+
+SettlementContainer::~SettlementContainer()
+{
+   if (utxoRes_.isValid()) {
+      QTimer::singleShot(kUtxoReleaseDelay, [utxoRes = std::move(utxoRes_)] () mutable {
+         utxoRes.release();
+      });
+   }
+}
 
 sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
 {
@@ -68,4 +83,9 @@ void SettlementContainer::stopTimer()
    msTimeLeft_ = 0;
    timer_.stop();
    emit timerStopped();
+}
+
+void SettlementContainer::releaseUtxoRes()
+{
+   utxoRes_.release();
 }

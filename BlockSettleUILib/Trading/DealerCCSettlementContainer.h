@@ -69,6 +69,7 @@ private slots:
 
 private:
    std::string txComment();
+   void sendFailed();
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
@@ -89,7 +90,6 @@ private:
    bool              cancelled_ = false;
    bs::CheckRecipSigner signer_;
    bs::core::wallet::TXSignRequest txReq_;
-   bs::UtxoReservationToken utxoRes_;
    bool isGetAddressValid_ = false;
    std::shared_ptr<bs::sync::Wallet>         ccWallet_;
 
