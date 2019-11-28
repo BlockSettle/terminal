@@ -100,10 +100,10 @@ void RFQTicketXBT::resetTicket()
 
 std::map<UTXO, std::string> RFQTicketXBT::fixedXbtInputs() const
 {
-   if (selectedXbtInputs_) {
-      return selectedXbtInputs_->getSelectedInputs();
+   if (!selectedXbtInputs_ || selectedXbtInputs_->UseAutoSel()) {
+      return {};
    }
-   return {};
+   return selectedXbtInputs_->getSelectedInputs();
 }
 
 void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager> &authAddressManager
@@ -305,21 +305,9 @@ void RFQTicketXBT::fillRecvAddresses()
 
 void RFQTicketXBT::showCoinControl()
 {
-   if (getProductToSpend() != UiUtils::XbtCurrency) {
-      SPDLOG_LOGGER_ERROR(logger_, "unexpected call");
-      return;
-   }
-
-   auto xbtWallet = getSendXbtWallet();
-   if (!xbtWallet) {
-      SPDLOG_LOGGER_ERROR(logger_, "XBT wallet not found");
-      return;
-   }
-
    if (!selectedXbtInputs_) {
-      const auto xbtWallet = getSendXbtWallet();
-      selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(xbtWallet->getGroup(xbtWallet->getXBTGroupType())
-         , false, true);
+      SPDLOG_LOGGER_ERROR(logger_, "selectedXbtInputs_ is not set");
+      return;
    }
 
    int rc = CoinControlDialog(selectedXbtInputs_, true, this).exec();
@@ -978,6 +966,8 @@ void RFQTicketXBT::productSelectionChanged()
    ui_->toolButtonMax->setEnabled(true);
    ui_->toolButtonXBTInputsSend->setEnabled(true);
 
+   selectedXbtInputs_.reset();
+
    if (currentGroupType_ == ProductGroupType::FXGroupType) {
       ui_->lineEditAmount->setValidator(fxAmountValidator_);
       ui_->lineEditAmount->setEnabled(true);
@@ -1021,8 +1011,12 @@ void RFQTicketXBT::productSelectionChanged()
             ui_->lineEditAmount->setValidator(fxAmountValidator_);
          }
       }
+   }
 
-      selectedXbtInputs_.reset();
+   const auto xbtWallet = getSendXbtWallet();
+   if (xbtWallet) {
+      selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(xbtWallet->getGroup(xbtWallet->getXBTGroupType())
+         , false, true);
    }
 
    ui_->lineEditAmount->setFocus();
