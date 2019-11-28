@@ -84,10 +84,10 @@ TEST(TestArmory, CrashOnEmptyAddress)
    {
       try {
          retMsg.get();
-         promPtrOPRaw->set_value(false);
+         promPtrOPRaw->set_value(true);
       }
       catch (...) {
-         promPtrOPRaw->set_value(true);
+         promPtrOPRaw->set_value(false);
       }
    };
    try {
@@ -95,7 +95,7 @@ TEST(TestArmory, CrashOnEmptyAddress)
       EXPECT_TRUE(futOPRaw.get());
    }
    catch (...) {
-      EXPECT_TRUE(true);
+      EXPECT_TRUE(false);
    }
 }
 
