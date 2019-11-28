@@ -1,5 +1,5 @@
 #include "CommonTypes.h"
-#include "SettlementMonitor.h"
+#include "TradesVerification.h"
 
 Q_DECLARE_METATYPE(bs::PayoutSignatureType)
 
