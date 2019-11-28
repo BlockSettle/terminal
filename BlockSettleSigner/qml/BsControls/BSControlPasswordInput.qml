@@ -21,11 +21,12 @@ CustomTitleDialogWindow {
     property QPasswordData passwordData: QPasswordData{}
     property int controlPasswordStatus
 
-    //property alias enteredPassword : passwordInput.text
-   // property alias passwordInput : passwordInput
     property string decryptHeaderText: qsTr("Enter Control Password")
 
-    title: qsTr("Decrypt Wallets Storage")
+    title: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+               ? qsTr("Encrypt Wallets Storage")
+               : qsTr("Decrypt Wallets Storage")
+
     width: 350
     rejectable: false
 
@@ -69,15 +70,14 @@ CustomTitleDialogWindow {
                 }
 
                 CustomTextInput {
+                    id: passwordInputDecrypt
                     visible: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Rejected
-                    id: passwordInput
                     Layout.fillWidth: true
                     Layout.topMargin: 5
                     Layout.bottomMargin: 5
                     focus: true
                     echoMode: TextField.Password
                     //placeholderText: qsTr("Password")
-
 
                     Keys.onEnterPressed: {
                         if (btnAccept.enabled) btnAccept.onClicked()
@@ -120,9 +120,9 @@ CustomTitleDialogWindow {
 
             CustomButton {
                 id: btnAccept
-//                enabled: BSControlPasswordInput.ControlPasswordStatus.RequestedNew
-//                         ? newPasswordWithConfirm.acceptableInput
-//                         : passwordInput.length >= 6
+                enabled: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+                         ? newPasswordWithConfirm.acceptableInput
+                         : passwordInputDecrypt.text.length >= 6
                 primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
@@ -130,7 +130,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Ok")
                 onClicked: {
                     if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Rejected) {
-                        passwordData.textPassword = passwordInput.text
+                        passwordData.textPassword = passwordInputDecrypt.text
                     }
                     else if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew) {
                         passwordData.textPassword = newPasswordWithConfirm.password

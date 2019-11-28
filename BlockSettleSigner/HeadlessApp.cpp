@@ -83,28 +83,8 @@ void HeadlessAppObj::start()
 {
    logger_->debug("[{}] loading wallets from dir <{}>", __func__
       , settings_->getWalletsDir());
-   const auto &cbProgress = [this](int cur, int total) {
-      logger_->debug("Loaded wallet {} of {}", cur, total);
-   };
-   bool ok = walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
-      , {}, cbProgress);
 
-   if (ok) {
-      if (walletsMgr_->empty()) {
-         logger_->warn("No wallets loaded");
-         guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::RequestedNew);
-      }
-      else {
-         logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
-         guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Accepted);
-      }
-   }
-   else {
-      // wallets not loaded if control password wrong
-      // send message to gui to request it
-      logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
-      guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Rejected);
-   }
+   reloadWallets();
 
    if (!settings_->offline()) {
       startTerminalsProcessing();
@@ -340,6 +320,11 @@ SecureBinaryData HeadlessAppObj::controlPassword() const
 void HeadlessAppObj::setControlPassword(const SecureBinaryData &controlPassword)
 {
    controlPassword_ = controlPassword;
+   if (requestedNewControlPassword_) {
+      requestedNewControlPassword_ = false;
+      guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Accepted);
+      terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::Accepted);
+   }
 }
 
 ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
@@ -369,8 +354,13 @@ std::string HeadlessAppObj::getOwnKeyFileName()
 void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
 {
    walletsMgr_->reset();
+
+   const auto &cbProgress = [this](int cur, int total) {
+      logger_->debug("Loaded wallet {} of {}", cur, total);
+   };
+
    bool ok = walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
-      , controlPassword(), [](int, int) {});
+      , controlPassword(), cbProgress);
 //   settings_->setWalletsDir(walletsDir);
 
    if (cb) {
@@ -380,11 +370,16 @@ void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
    if (ok) {
       if (walletsMgr_->empty()) {
          logger_->warn("No wallets loaded");
-         guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::RequestedNew);
+         if (controlPassword().getSize() == 0) {
+            guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::RequestedNew);
+            terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::RequestedNew);
+            requestedNewControlPassword_ = true;
+         }
       }
       else {
          logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
          guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Accepted);
+         terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::Accepted);
       }
    }
    else {
@@ -392,6 +387,7 @@ void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
       // send message to gui to request it
       logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
       guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Rejected);
+      terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::Rejected);
    }
 }
 
