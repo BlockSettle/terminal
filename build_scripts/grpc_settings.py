@@ -8,8 +8,8 @@ from component_configurator import Configurator
 class gRPCSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = '1.18.0'
-        self._package_name = 'grpc-' + self._version + '-1'
+        self._version = '1.25.0'
+        self._package_name = 'grpc-' + self._version + '-2'
         self._package_dir_name = 'gRPC'
 
     def get_package_name(self):
