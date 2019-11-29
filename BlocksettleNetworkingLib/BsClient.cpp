@@ -109,6 +109,26 @@ void BsClient::sendSignedPayout(const std::string& settlementId, const BinaryDat
    sendPbMessage(request.SerializeAsString());
 }
 
+void BsClient::findEmailHash(const std::string &email)
+{
+   Request request;
+   auto d = request.mutable_get_email_hash();
+   d->set_email(email);
+
+   auto timeoutCb = [this, email] {
+      SPDLOG_LOGGER_ERROR(logger_, "getting email hash timed out for address: {}", email);
+      emit emailHashReceived(email, "");
+   };
+
+   auto processCb = [this, email](const Blocksettle::Communication::ProxyTerminal::Response &response) {
+      const auto &hash = response.get_email_hash().hash();
+      SPDLOG_LOGGER_DEBUG(logger_, "got email hash address: {}, hash: {}", email, hash);
+      emit emailHashReceived(email, hash);
+   };
+
+   sendRequest(&request, std::chrono::seconds(10), std::move(timeoutCb), std::move(processCb));
+}
+
 void BsClient::cancelLogin()
 {
    Request request;
@@ -274,9 +294,12 @@ void BsClient::OnDataReceived(const std::string &data)
             return;
          case Response::kStartSignAddress:
          case Response::kGetSignResult:
+         case Response::kGetEmailHash:
             // Will be handled from processCb
             return;
+
          case Response::DATA_NOT_SET:
+            SPDLOG_LOGGER_ERROR(logger_, "invalid response from proxy");
             return;
       }
 

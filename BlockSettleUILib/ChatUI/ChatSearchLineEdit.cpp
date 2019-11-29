@@ -48,7 +48,6 @@ void ChatSearchLineEdit::keyPressEvent(QKeyEvent * e)
    case Qt::Key_Enter:     //Qt::Key_Enter   - Numpad Enter key
    case Qt::Key_Return:    //Qt::Key_Return  - Main Enter key
    {
-      qDebug("Return/Enter search press %d", e->key());
       emit keyEnterPressed();
       return e->ignore();
    }

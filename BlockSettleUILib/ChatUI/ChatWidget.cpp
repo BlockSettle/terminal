@@ -120,6 +120,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::searchUserReply, ui_->searchWidget, &SearchWidget::onSearchUserReply);
    connect(ui_->searchWidget, &SearchWidget::showUserRoom, this, &ChatWidget::onShowUserRoom);
    connect(ui_->searchWidget, &SearchWidget::contactFriendRequest, this, &ChatWidget::onContactFriendRequest);
+   connect(ui_->searchWidget, &SearchWidget::emailHashRequested, this, &ChatWidget::emailHashRequested);
 
    chatPartiesTreeModel_ = std::make_shared<ChatPartiesTreeModel>(chatClientServicePtr_, otcHelper_->client());
 
@@ -287,6 +288,11 @@ void ChatWidget::onOTCPeerError(const bs::network::otc::Peer *peer, bs::network:
 void ChatWidget::onUpdateOTCShield()
 {
    stateCurrent_->onUpdateOTCShield();
+}
+
+void ChatWidget::onEmailHashReceived(const std::string &email, const std::string &hash)
+{
+   ui_->searchWidget->onEmailHashReceived(email, hash);
 }
 
 void ChatWidget::onPartyModelChanged()

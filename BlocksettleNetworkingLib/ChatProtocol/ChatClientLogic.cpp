@@ -38,6 +38,8 @@ ChatClientLogic::ChatClientLogic()
    connect(this, &ChatClientLogic::chatClientError, this, &ChatClientLogic::handleLocalErrors);
 }
 
+ChatClientLogic::~ChatClientLogic() = default;
+
 void ChatClientLogic::initDbDone()
 {
    connect(currentUserPtr_.get(), &ChatUser::userHashChanged, this, &ChatClientLogic::chatUserUserHashChanged);
@@ -332,28 +334,6 @@ void ChatClientLogic::DeletePrivateParty(const std::string& partyId)
 void ChatClientLogic::SearchUser(const std::string& userHash, const std::string& searchId) const
 {
    clientConnectionLogicPtr_->searchUser(userHash, searchId);
-
-   // TODO: Decide how we should search for known emails
-#if 0
-   QRegularExpression re(kEmailRegex);
-   if (!re.isValid())
-   {
-      return;
-   }
-   QRegularExpressionMatch match = re.match(QString::fromStdString(userHash));
-
-   std::string stringToSearch;
-   if (match.hasMatch())
-   {
-      stringToSearch = userHasherPtr_->deriveKey(userHash);
-   }
-   else
-   {
-      stringToSearch = userHash;
-   }
-
-   clientConnectionLogicPtr_->searchUser(stringToSearch, searchId);
-#endif
 }
 
 void ChatClientLogic::AcceptNewPublicKeys(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList) const

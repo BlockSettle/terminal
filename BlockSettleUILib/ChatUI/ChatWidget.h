@@ -90,6 +90,8 @@ public slots:
    void onNewChatMessageTrayNotificationClicked(const QString& partyId);
    void onUpdateOTCShield();
 
+   void onEmailHashReceived(const std::string &email, const std::string &hash);
+
 private slots:
    void onPartyModelChanged();
    void onLogin();
@@ -139,6 +141,7 @@ signals:
    void sendOtcPbMessage(const std::string& data);
    void chatRoomChanged();
    void requestPrimaryWalletCreation();
+   void emailHashRequested(const std::string &email);
 
 private:
    friend class AbstractChatWidgetState;
