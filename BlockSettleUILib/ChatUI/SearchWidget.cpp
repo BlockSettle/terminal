@@ -63,6 +63,9 @@ SearchWidget::SearchWidget(QWidget *parent)
            this, &SearchWidget::onLeaveSearchResults);
    connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveWithCloseRequired,
            this, &SearchWidget::onLeaveAndCloseSearchResults);
+
+   emailRegex_ = std::make_unique<QRegularExpression>(kRxEmail);
+   assert(emailRegex_->isValid());
 }
 
 SearchWidget::~SearchWidget()
@@ -265,10 +268,17 @@ void SearchWidget::onSearchUserTextEdited()
       return;
    }
 
+   QRegularExpressionMatch match = emailRegex_->match(QString::fromStdString(userToAdd));
+
+   std::string stringToSearch;
+   if (match.hasMatch()) {
+      emit emailHashRequested(userToAdd);
+      return;
+   }
+
    // ! Feature: Think how to prevent spamming server
-   QUuid uid = QUuid::createUuid();
-   lastSearchId_ = uid.toString(QUuid::WithoutBraces).toStdString();
-   chatClientServicePtr_->SearchUser(userToAdd, lastSearchId_);
+
+   sendSearchRequest(userToAdd);
 }
 
 void SearchWidget::onSearchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId)
@@ -314,4 +324,20 @@ void SearchWidget::onSearchUserReply(const Chat::SearchUserReplyList& userHashLi
    if (visible && userInfoList.empty()) {
       onStartListAutoHide();
    }
+}
+
+void SearchWidget::onEmailHashReceived(const std::string &email, const std::string &hash)
+{
+   if (searchText().toStdString() != email) {
+      return;
+   }
+
+   sendSearchRequest(hash);
+}
+
+void SearchWidget::sendSearchRequest(const std::string &text)
+{
+   QUuid uid = QUuid::createUuid();
+   lastSearchId_ = uid.toString(QUuid::WithoutBraces).toStdString();
+   chatClientServicePtr_->SearchUser(text, lastSearchId_);
 }

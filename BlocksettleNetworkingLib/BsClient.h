@@ -20,11 +20,12 @@
 #include <spdlog/logger.h>
 
 #include "Address.h"
-#include "autheid_utils.h"
 #include "AutheIDClient.h"
 #include "CelerMessageMapper.h"
 #include "CommonTypes.h"
 #include "DataConnectionListener.h"
+#include "ValidityFlag.h"
+#include "autheid_utils.h"
 
 class ZmqContext;
 class ZmqBIP15XDataConnection;
@@ -145,6 +146,8 @@ public slots:
    void sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout);
 
+   void findEmailHash(const std::string &email);
+
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
    void getLoginResultDone(const BsClientLoginResult &result);
@@ -156,6 +159,8 @@ signals:
    void connected();
    void disconnected();
    void connectionFailed();
+
+   void emailHashReceived(const std::string &email, const std::string &hash);
 
 private:
    using ProcessCb = std::function<void(const Blocksettle::Communication::ProxyTerminal::Response &response)>;
@@ -195,6 +200,7 @@ private:
 
    std::map<int64_t, ActiveRequest> activeRequests_;
    int64_t lastRequestId_{};
+
 };
 
 #endif

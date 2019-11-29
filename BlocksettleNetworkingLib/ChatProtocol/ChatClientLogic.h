@@ -58,7 +58,7 @@ namespace Chat
 
    public:
       ChatClientLogic();
-      ~ChatClientLogic() override = default;
+      ~ChatClientLogic() override;
 
       ChatClientLogic(const ChatClientLogic&) = delete;
       ChatClientLogic& operator=(const ChatClientLogic&) = delete;
