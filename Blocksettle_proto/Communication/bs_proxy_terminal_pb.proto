@@ -18,14 +18,14 @@ enum OtcState
     OTC_STATE_SUCCEED = 6;
 }
 
+message PreimageData
+{
+    string address = 1;
+    bytes  preimage_script = 2;
+}
+
 message Request
 {
-   message PreimageData
-    {
-        string address = 1;
-        bytes  preimage_script = 2;
-    }
-
     // OTC
 
     message StartOtc

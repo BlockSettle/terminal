@@ -63,6 +63,11 @@ message Request
         bytes data = 1;
     }
 
+    message GetEmailHash
+    {
+        string email = 1;
+    }
+
     // Set for requests and server will copy them back in response
     int64 request_id = 1;
 
@@ -73,6 +78,7 @@ message Request
         GetLoginResult get_login_result = 11;
         StartSignAddress start_sign_address = 12;
         GetSignResult get_sign_result = 13;
+        GetEmailHash get_email_hash = 14;
 
         // Messages
         CancelLogin cancel_login = 30;
@@ -135,6 +141,14 @@ message Response
         bytes data = 1;
     }
 
+    message GetEmailHash
+    {
+        string email = 1;
+
+        // empty hash means there was some kind of failure
+        string hash = 2;
+    }
+
     int64 request_id = 1;
 
     oneof data
@@ -144,6 +158,7 @@ message Response
         GetLoginResult get_login_result = 11;
         StartSignAddress start_sign_address = 12;
         GetSignResult get_sign_result = 13;
+        GetEmailHash get_email_hash = 14;
 
         // Messages
         Celer celer = 30;
