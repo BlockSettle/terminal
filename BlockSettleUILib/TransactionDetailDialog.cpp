@@ -154,9 +154,7 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
                      break;
                   }
                }
-               if (!comment.empty()) {
-                  ui_->labelComment->setText(QString::fromStdString(comment));
-               }
+               ui_->labelComment->setText(QString::fromStdString(comment));
             }
 
             if (initialized) {
