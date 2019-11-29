@@ -13,12 +13,12 @@
 
 #include <memory>
 
+#include <QRegularExpression>
 #include <QWidget>
 
 #include "ChatProtocol/ChatClientService.h"
 
 class QAbstractItemModel;
-class QRegularExpression;
 class ChatClient;
 class ChatSearchActionsHandler;
 class UserSearchModel;
@@ -105,7 +105,7 @@ private:
    Chat::ChatClientServicePtr       chatClientServicePtr_;
    std::string                      lastSearchId_;
 
-   std::unique_ptr<QRegularExpression> emailRegex_;
+   QRegularExpression emailRegex_;
 
 };
 

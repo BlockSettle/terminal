@@ -37,6 +37,7 @@ SearchWidget::SearchWidget(QWidget *parent)
    , ui_(new Ui::SearchWidget)
    , listVisibleTimer_(new QTimer)
    , userSearchModel_(new UserSearchModel)
+   , emailRegex_(kRxEmail)
 {
    ui_->setupUi(this);
 
@@ -64,13 +65,10 @@ SearchWidget::SearchWidget(QWidget *parent)
    connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveWithCloseRequired,
            this, &SearchWidget::onLeaveAndCloseSearchResults);
 
-   emailRegex_ = std::make_unique<QRegularExpression>(kRxEmail);
-   assert(emailRegex_->isValid());
+   assert(emailRegex_.isValid());
 }
 
-SearchWidget::~SearchWidget()
-{
-}
+SearchWidget::~SearchWidget() = default;
 
 bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
 {
@@ -268,9 +266,7 @@ void SearchWidget::onSearchUserTextEdited()
       return;
    }
 
-   QRegularExpressionMatch match = emailRegex_->match(QString::fromStdString(userToAdd));
-
-   std::string stringToSearch;
+   QRegularExpressionMatch match = emailRegex_.match(QString::fromStdString(userToAdd));
    if (match.hasMatch()) {
       emit emailHashRequested(userToAdd);
       return;
