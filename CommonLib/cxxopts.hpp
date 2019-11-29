@@ -1,5 +1,15 @@
 /*
 
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
+/*
+
 Copyright (c) 2014, 2015, 2016, 2017 Jarryd Beck
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
