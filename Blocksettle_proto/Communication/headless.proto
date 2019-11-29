@@ -40,6 +40,7 @@ enum RequestType
    PromoteHDWalletRequestType  = 31;
    UpdateDialogDataType        = 32; // update fields in password input dialogs in signer ui
    AddressPreimageType         = 33;
+   ChatNodeRequestType         = 34;
 }
 
 message RequestPacket
@@ -503,4 +504,16 @@ message UpdateDialogDataRequest
 {
    uint32                                                dialogId              = 1;
    Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData    = 2;
+}
+
+
+message ChatNodeRequest
+{
+   string wallet_id = 1;
+}
+
+message ChatNodeResponse
+{
+   string wallet_id = 1;
+   string b58_chat_node = 2;
 }

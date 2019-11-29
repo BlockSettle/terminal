@@ -81,6 +81,8 @@ namespace bs {
             std::string description() const { return desc_; }
 
             void createStructure(unsigned lookup = UINT32_MAX);
+            void createChatPrivKey();
+
             void shutdown();
             bool eraseFile();
             const std::string& getFileName(void) const;
@@ -102,6 +104,8 @@ namespace bs {
             bs::core::wallet::Seed getDecryptedSeed(void) const;
             SecureBinaryData getDecryptedRootXpriv(void) const;
 
+            BIP32_Node getChatNode() const;
+
             //settlement leaves methods
             std::shared_ptr<hd::Leaf> createSettlementLeaf(const bs::Address&);
             std::shared_ptr<hd::Leaf> getSettlementLeaf(const bs::Address&);
@@ -122,6 +126,8 @@ namespace bs {
             std::shared_ptr<AssetWallet_Single> walletPtr_;
             PassphraseLambda  lbdControlPassphrase_;
             std::string       filePathName_;
+
+            mutable BIP32_Node   chatNode_;
 
             std::deque<std::function<SecureBinaryData(const std::set<BinaryData> &)>>  lbdPwdPrompts_;
 

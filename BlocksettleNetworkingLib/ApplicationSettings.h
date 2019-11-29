@@ -71,8 +71,6 @@ public:
       chatServerHost,
       chatServerPort,
       chatServerPubKey,
-      chatPrivKey,
-      chatPubKey,
       chatDbFile,
       celerUsername,
       localSignerPort,

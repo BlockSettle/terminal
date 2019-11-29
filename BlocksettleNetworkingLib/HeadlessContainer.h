@@ -107,6 +107,8 @@ public:
       , const std::function<void(bool, bs::Address)> &) override;
    void getRootPubkey(const std::string &walletID
       , const std::function<void(bool, const SecureBinaryData &)> &) override;
+   void getChatNode(const std::string &walletID
+      , const std::function<void(const BIP32_Node &)> &) override;
 
    bool isReady() const override;
    bool isWalletOffline(const std::string &walletId) const override;
@@ -131,6 +133,7 @@ protected:
    void ProcessGetPayinAddr(unsigned int id, const std::string &data);
    void ProcessSettlGetRootPubkey(unsigned int id, const std::string &data);
    void ProcessAddrPreimageResponse(unsigned int id, const std::string &data);
+   void ProcessChatNodeResponse(unsigned int id, const std::string &data);
 
 protected:
    std::shared_ptr<HeadlessListener>   listener_;
@@ -150,6 +153,7 @@ protected:
    std::map<bs::signer::RequestId, std::function<void(bool)>>                       cbSettlIdMap_;
    std::map<bs::signer::RequestId, std::function<void(bool, bs::Address)>>          cbPayinAddrMap_;
    std::map<bs::signer::RequestId, std::function<void(bool, const SecureBinaryData &)>>   cbSettlPubkeyMap_;
+   std::map<bs::signer::RequestId, std::function<void(const BIP32_Node &)>>   cbChatNodeMap_;
 
    std::map<bs::signer::RequestId, CreateHDLeafCb> cbCCreateLeafMap_;
    std::map<bs::signer::RequestId, PromoteHDWalletCb> cbPromoteHDWalletMap_;
