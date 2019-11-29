@@ -38,7 +38,7 @@ CustomTitleDialogWindow {
     property var seed
     property var passwordData: QPasswordData{}
 
-    width: 400
+    width: 410
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletCreation
     title: qsTr("Manage encryption")
