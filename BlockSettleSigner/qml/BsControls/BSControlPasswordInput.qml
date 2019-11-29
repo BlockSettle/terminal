@@ -53,7 +53,26 @@ CustomTitleDialogWindow {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
             }
+            CustomLabel{
+                id: labelDetails_
+                visible: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+                text: qsTr("Your wallet files contain metadata such as your public keys (addresses), chatID and chat history. \
+With Public Data Encryption enabled you will be required to decrypt this material on each Terminal launch. \
+<br><br>THIS PASSWORD WILL BE USED FOR ALL WALLETS")
+                padding: 10
+                textFormat: Text.RichText
+                Layout.preferredWidth: root.width - 20
+                horizontalAlignment: Text.AlignLeft
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
 
+                onLinkActivated: Qt.openUrlExternally(link)
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.NoButton
+                    cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                }
+            }
             RowLayout {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
@@ -112,7 +131,9 @@ CustomTitleDialogWindow {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 anchors.margins: 5
-                text: qsTr("Cancel")
+                text: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+                    ? qsTr("Skip")
+                    : qsTr("Cancel")
                 onClicked: {
                     rejectAnimated()
                 }

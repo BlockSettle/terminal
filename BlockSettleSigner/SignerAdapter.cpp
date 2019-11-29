@@ -301,3 +301,10 @@ std::shared_ptr<SignAdapterContainer> SignerAdapter::signContainer() const
 {
    return signContainer_;
 }
+
+void SignerAdapter::sendControlPassword(const bs::wallet::QPasswordData &password)
+{
+   signer::EnterControlPasswordRequest decryptEvent;
+   decryptEvent.set_controlpassword(password.binaryPassword().toBinStr());
+   listener_->send(signer::ControlPasswordReceivedType, decryptEvent.SerializeAsString());
+}

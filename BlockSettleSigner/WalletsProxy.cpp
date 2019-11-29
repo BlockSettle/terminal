@@ -754,3 +754,10 @@ QString WalletsProxy::walletIdForIndex(int index) const
    }
    return QString::fromStdString(hdWallets[index]->walletId());
 }
+
+void WalletsProxy::sendControlPassword(bs::wallet::QPasswordData *password)
+{
+   if (password) {
+      adapter_->sendControlPassword(*password);
+   }
+}

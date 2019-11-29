@@ -113,6 +113,7 @@ public:
    std::shared_ptr<QmlFactory> qmlFactory() const;
    std::shared_ptr<SignAdapterContainer> signContainer() const;
 
+   void sendControlPassword(const bs::wallet::QPasswordData &password);
 signals:
    void ready() const;
    void connectionError() const;
