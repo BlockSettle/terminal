@@ -5,7 +5,6 @@
 #include "SignContainer.h"
 #include "TradesUtils.h"
 #include "TransactionData.h"
-#include "UtxoReservation.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
@@ -346,9 +345,11 @@ void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const 
 bool ReqCCSettlementContainer::cancel()
 {
    deactivate();
-   utxoRes_.release();
    emit settlementCancelled();
    signingContainer_->CancelSignTx(id());
+
+   SettlementContainer::releaseUtxoRes();
+
    return true;
 }
 

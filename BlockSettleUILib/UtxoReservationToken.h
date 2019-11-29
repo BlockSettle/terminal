@@ -55,6 +55,8 @@ namespace bs {
 
       void release();
 
+      bool isValid() const;
+
    private:
       // could be nullptr
       std::shared_ptr<spdlog::logger> logger_;

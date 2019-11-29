@@ -4,7 +4,6 @@
 #include "AddressVerificator.h"
 #include "BSErrorCode.h"
 #include "SettlementContainer.h"
-#include "UtxoReservation.h"
 
 #include <memory>
 #include <unordered_set>
@@ -96,8 +95,6 @@ private:
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signContainer_;
    std::shared_ptr<AuthAddressManager>          authAddrMgr_;
-
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
    AddressVerificationState                     requestorAddressState_ = AddressVerificationState::VerificationFailed;
    bs::Address settlAddr_;

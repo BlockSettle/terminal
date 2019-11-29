@@ -11,6 +11,7 @@
 #include "CoreWallet.h"
 #include "EncryptionUtils.h"
 #include "PasswordDialogData.h"
+#include "UtxoReservationToken.h"
 #include "ValidityFlag.h"
 
 namespace bs {
@@ -20,7 +21,7 @@ namespace bs {
       Q_OBJECT
    public:
       explicit SettlementContainer();
-      ~SettlementContainer() override = default;
+      ~SettlementContainer() override;
 
       virtual bool cancel() = 0;
 
@@ -58,13 +59,17 @@ namespace bs {
       void stopTimer();
 
    protected:
+      void releaseUtxoRes();
+
       ValidityFlag validityFlag_;
+      bs::UtxoReservationToken utxoRes_;
 
    private:
       QTimer   timer_;
       int      msDuration_ = 0;
       int      msTimeLeft_ = 0;
       std::chrono::steady_clock::time_point startTime_;
+
    };
 
 }  // namespace bs

@@ -7,7 +7,6 @@
 #include "SignContainer.h"
 #include "SignerDefs.h"
 #include "UiUtils.h"
-#include "UtxoReservation.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -40,8 +39,9 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , ownRecvAddr_(bs::Address::fromAddressString(ownRecvAddr))
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
-   , utxoRes_(std::move(utxoRes))
 {
+   utxoRes_ = std::move(utxoRes);
+
    if (lotSize == 0) {
       throw std::logic_error("invalid lotSize");
    }
@@ -99,7 +99,7 @@ bool DealerCCSettlementContainer::startSigning()
 {
    if (!ccWallet_ || !xbtWallet_) {
       logger_->error("[DealerCCSettlementContainer::accept] failed to validate counterparty's TX - aborting");
-      emit failed();
+      sendFailed();
       return false;
    }
 
@@ -118,12 +118,12 @@ bool DealerCCSettlementContainer::startSigning()
       else if (result == bs::error::ErrorCode::TxCanceled) {
          // FIXME
          // Not clear what's wrong here, and what should be fixed
-         emit failed();
+         sendFailed();
       }
       else {
          SPDLOG_LOGGER_ERROR(logger_, "failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
          emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
-         emit failed();
+         sendFailed();
       }
    };
 
@@ -208,14 +208,22 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 
 bool DealerCCSettlementContainer::cancel()
 {
-   utxoRes_.release();
    signingContainer_->CancelSignTx(id());
    cancelled_ = true;
+
+   SettlementContainer::releaseUtxoRes();
+
    return true;
 }
 
 std::string DealerCCSettlementContainer::txComment()
 {
    return std::string(bs::network::Side::toString(order_.side))
-      + " " + order_.security + " @ " + std::to_string(order_.price);
+         + " " + order_.security + " @ " + std::to_string(order_.price);
+}
+
+void DealerCCSettlementContainer::sendFailed()
+{
+   SettlementContainer::releaseUtxoRes();
+   emit failed();
 }
