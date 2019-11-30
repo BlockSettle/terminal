@@ -259,6 +259,9 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
    case headless::AddressPreimageType:
       return onAddrPreimage(clientId, packet);
 
+   case headless::ChatNodeRequestType:
+      return onChatNodeRequest(clientId, packet);
+
    default:
       logger_->error("[HeadlessContainerListener] unknown request type {}", packet.type());
       return false;
@@ -2086,6 +2089,31 @@ bool HeadlessContainerListener::onAddrPreimage(const std::string &clientId, head
             piData->set_preimage(addrEntry->getPreimage().toBinStr());
          }
       }
+   }
+
+   packet.set_data(response.SerializeAsString());
+   sendData(packet.SerializeAsString(), clientId);
+   return true;
+}
+
+bool HeadlessContainerListener::onChatNodeRequest(const std::string &clientId, headless::RequestPacket packet)
+{
+   headless::ChatNodeRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      return false;
+   }
+   headless::ChatNodeResponse response;
+   const auto hdWallet = walletsMgr_->getHDWalletById(request.wallet_id());
+   if (hdWallet) {
+      response.set_wallet_id(hdWallet->walletId());
+      const auto chatNode = hdWallet->getChatNode();
+      if (!chatNode.getPrivateKey().isNull()) {
+         response.set_b58_chat_node(chatNode.getBase58().toBinStr());
+      }
+   }
+   else {
+      logger_->error("[{}] HD wallet with id {} not found", __func__, request.wallet_id());
    }
 
    packet.set_data(response.SerializeAsString());

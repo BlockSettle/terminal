@@ -635,3 +635,15 @@ void InprocSigner::getRootPubkey(const std::string& walletID
       cb(true, rootSingle->getPubKey()->getCompressedKey());
    }
 }
+
+void InprocSigner::getChatNode(const std::string &walletID
+   , const std::function<void(const BIP32_Node &)> &cb)
+{
+   const auto hdWallet = walletsMgr_->getHDWalletById(walletID);
+   if (!hdWallet) {
+      cb({});
+      return;
+   }
+   const auto chatNode = hdWallet->getChatNode();
+   cb(chatNode);
+}

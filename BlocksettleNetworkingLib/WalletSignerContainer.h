@@ -50,6 +50,9 @@ public:
    virtual void getRootPubkey(const std::string &walletID
       , const std::function<void(bool, const SecureBinaryData &)> &) = 0;
 
+   virtual void getChatNode(const std::string &walletID
+      , const std::function<void(const BIP32_Node &)> &) = 0;
+
    using CreateHDLeafCb = std::function<void(bs::error::ErrorCode, const std::string &leafWalletId)>;
    virtual bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}

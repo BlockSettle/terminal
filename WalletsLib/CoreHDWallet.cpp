@@ -245,6 +245,53 @@ void hd::Wallet::createStructure(unsigned lookup)
    writeToDB();
 }
 
+void hd::Wallet::createChatPrivKey()
+{
+   bs::hd::Path path;
+   path.append("BS-alt'");
+   path.append("Chat'");
+   path.append(0 | bs::hd::hardFlag);
+
+   chatNode_ = getDecryptedSeed().getNode();
+   for (int i = 0; i < path.length(); ++i) {
+      chatNode_.derivePrivate(path.get(i));
+   }
+   if (logger_) {
+      logger_->debug("[{}] created chat key {}", __func__
+         , chatNode_.getPublicKey().toHexStr());
+   }
+
+   try {
+      walletPtr_->addSubDB(BS_CHAT_DBNAME, lbdControlPassphrase_);
+   } catch (const std::exception &e) {
+      if (logger_) {
+         logger_->warn("[{}] wallet {} DB {} already inited: {}", __func__
+            , walletId(), BS_CHAT_DBNAME, e.what());
+      }
+   }
+
+   BinaryWriter bwKey;
+   bwKey.put_uint32_t(CHAT_NODE_KEY);
+
+   const auto tx = walletPtr_->beginSubDBTransaction(BS_CHAT_DBNAME, true);
+   tx->insert(bwKey.getData(), chatNode_.getBase58());
+}
+
+BIP32_Node hd::Wallet::getChatNode() const
+{
+   if (!chatNode_.getPrivateKey().isNull()) {
+      return chatNode_;
+   }
+   try {
+      const auto tx = walletPtr_->beginSubDBTransaction(BS_CHAT_DBNAME, false);
+      BinaryWriter bwKey;
+      bwKey.put_uint32_t(CHAT_NODE_KEY);
+
+      chatNode_.initFromBase58(tx->getDataRef(bwKey.getData()));
+   } catch (...) {}    // np if chat DB doesn't exist
+   return chatNode_;
+}
+
 void hd::Wallet::shutdown()
 {
    for (const auto &group : groups_) {

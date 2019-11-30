@@ -312,6 +312,7 @@ WalletsManager::HDWalletPtr WalletsManager::createWallet(
       const bs::core::WalletPasswordScoped lock(newWallet, pd.password);
       newWallet->createStructure();
       if (primary) {
+         newWallet->createChatPrivKey();
          auto group = newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
          if (!userId_.isNull()) {
             newWallet->createGroup(bs::hd::CoinType::BlockSettle_Settlement);

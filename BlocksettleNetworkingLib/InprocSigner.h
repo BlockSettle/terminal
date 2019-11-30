@@ -111,6 +111,8 @@ public:
       , const std::function<void(bool, bs::Address)> &) override;
    void getRootPubkey(const std::string &walletID
       , const std::function<void(bool, const SecureBinaryData &)> &) override;
+   void getChatNode(const std::string &walletID
+      , const std::function<void(const BIP32_Node &)> &) override;
 
    bool isReady() const override { return inited_; }
 

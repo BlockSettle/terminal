@@ -779,6 +779,19 @@ void HeadlessContainer::getRootPubkey(const std::string &walletID
    cbSettlPubkeyMap_[reqId] = cb;
 }
 
+void HeadlessContainer::getChatNode(const std::string &walletID
+   , const std::function<void(const BIP32_Node &)> &cb)
+{
+   headless::ChatNodeRequest request;
+   request.set_wallet_id(walletID);
+
+   headless::RequestPacket packet;
+   packet.set_data(request.SerializeAsString());
+   packet.set_type(headless::ChatNodeRequestType);
+   const auto reqId = Send(packet);
+   cbChatNodeMap_[reqId] = cb;
+}
+
 void HeadlessContainer::syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &cb)
 {
    headless::RequestPacket packet;
@@ -1028,6 +1041,36 @@ void HeadlessContainer::ProcessSettlGetRootPubkey(unsigned int id, const std::st
    }
    itCb->second(response.success(), response.public_key());
    cbSettlPubkeyMap_.erase(itCb);
+}
+
+void HeadlessContainer::ProcessChatNodeResponse(unsigned int id, const std::string &data)
+{
+   headless::ChatNodeResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[HeadlessContainer::ProcessChatNodeResponse] Failed to parse reply");
+      emit Error(id, "failed to parse");
+      return;
+   }
+   const auto itCb = cbChatNodeMap_.find(id);
+   if (itCb == cbChatNodeMap_.end()) {
+      emit Error(id, "no callback found for id " + std::to_string(id));
+      return;
+   }
+
+   if (response.wallet_id().empty()) {
+      logger_->error("[HeadlessContainer::ProcessChatNodeResponse] wallet not found");
+      emit Error(id, "wallet not found for chat node");
+   }
+   else {
+      BIP32_Node chatNode;
+      try {
+         chatNode.initFromBase58(response.b58_chat_node());
+      } catch (const std::exception &e) {
+         logger_->error("[HeadlessContainer::ProcessChatNodeResponse] failed to deserialize BIP32 node: {}", e.what());
+      }
+      itCb->second(chatNode);
+   }
+   cbChatNodeMap_.erase(itCb);
 }
 
 void HeadlessContainer::ProcessSyncWalletInfo(unsigned int id, const std::string &data)
@@ -1464,6 +1507,10 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 
    case headless::AddressPreimageType:
       ProcessAddrPreimageResponse(packet.id(), packet.data());
+      break;
+
+   case headless::ChatNodeRequestType:
+      ProcessChatNodeResponse(packet.id(), packet.data());
       break;
 
    default:

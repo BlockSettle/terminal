@@ -28,12 +28,14 @@
 #include "BIP32_Node.h"
 #include "HDPath.h"
 
-#define WALLETNAME_KEY          0x00000020
-#define WALLETDESCRIPTION_KEY   0x00000021
-#define WALLET_EXTONLY_KEY      0x00000030
-#define WALLET_PWD_META_KEY     0x00000031
+#define WALLETNAME_KEY           0x00000020
+#define WALLETDESCRIPTION_KEY    0x00000021
+#define WALLET_EXTONLY_KEY       0x00000030
+#define WALLET_PWD_META_KEY      0x00000031
+#define CHAT_NODE_KEY            0x00000040
 
-#define BS_WALLET_DBNAME "bs_wallet_db"
+#define BS_WALLET_DBNAME   "bs_wallet_db"
+#define BS_CHAT_DBNAME     "bs_chat_db"
 
 namespace spdlog {
    class logger;

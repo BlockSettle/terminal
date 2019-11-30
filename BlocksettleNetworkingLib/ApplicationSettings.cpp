@@ -132,8 +132,6 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { chatServerHost,          SettingDef(QString()) },
       { chatServerPort,          SettingDef(QString()) },
       { chatServerPubKey,        SettingDef(QLatin1String("ChatServerPubKey"), QString()) },
-      { chatPrivKey,             SettingDef(QString()) },
-      { chatPubKey,              SettingDef(QString()) },
       { chatDbFile,              SettingDef(QString(), AppendToWritableDir(QLatin1String("chat2.db"))) },
       { celerUsername,           SettingDef(QLatin1String("MatchSystemUsername")) },
       { localSignerPort,         SettingDef(QLatin1String("SignerPort"), 23456) },

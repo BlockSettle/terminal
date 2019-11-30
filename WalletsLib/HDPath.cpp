@@ -93,16 +93,19 @@ hd::Path::Elem hd::Path::keyToElem(const std::string &key)
    if (key.empty()) {
       throw PathException("empty string key");
    }
-   const auto hash = BtcUtils::getSha256(key);
+   auto mutableKey = key;
+   const bool isHardened = (key.back() == '\'');
+   if (isHardened) {
+      mutableKey.pop_back();
+   }
+   const auto hash = BtcUtils::getSha256(mutableKey);
    hd::Path::Elem result = 0;
    for (int startIdx = 0; startIdx < hash.getSize() - 4; ++startIdx) {
       result = BinaryData::StrToIntBE<hd::Path::Elem>(hash.getSliceCopy(startIdx, 4));
-      if ((result & hardFlag) == hardFlag) {
-         result &= ~hardFlag;
-      }
       bool isResultClashingPredefinedElems = false;
+      const auto unHarderendResult = result & ~hardFlag;
       for (const hd::Path::Elem elem : { 0, 1, 0x4253, 0x41757468 }) {
-         if (result == elem) {
+         if (unHarderendResult == elem) {
             isResultClashingPredefinedElems = true;
             break;
          }
@@ -116,6 +119,9 @@ hd::Path::Elem hd::Path::keyToElem(const std::string &key)
    }
    if (result == 0) {
       throw PathException("failed to generate index from key");
+   }
+   if (isHardened) {
+      result |= hardFlag;
    }
    return result;
 }
