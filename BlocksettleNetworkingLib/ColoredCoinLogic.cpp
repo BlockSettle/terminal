@@ -333,6 +333,8 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
    std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
    const std::set<BinaryData>& hashes)
 {
+   std::set<BinaryData> spenderHashes;
+
    //grab listed tx
    auto&& txBatch = grabTxBatch(hashes);
 
@@ -341,6 +343,23 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
 
    //process them
    for (auto& tx : txBatch) {
+      //check outpoints are covered by the processed height
+      bool skip = false;
+      for (auto& opId : tx.getOpIdVec())
+      {
+         if (opId > processedHeight_)
+         {
+            skip = true;
+            break;
+         }
+      }
+
+      if (skip)
+      {
+         spenderHashes.insert(tx.getThisHash());
+         continue;
+      }
+
       //parse the tx
       auto&& parsedTx = processTx(ssPtr, zcPtr, tx);
 
@@ -380,6 +399,8 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
             spentnessIter->second.insert(i);
          }
       }
+
+      processedHeight_ = tx.getTxHeight();
    }
 
    //check new utxo list
@@ -403,7 +424,6 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
    auto&& spentnessBatch = spentnessFut.get();
 
    //aggregate spender hashes
-   std::set<BinaryData> spenderHashes;
    for (auto& spentness : spentnessBatch) {
       auto& spentnessMap = spentness.second;
       for (auto& hashPair : spentnessMap) {
@@ -417,19 +437,42 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
 }
 
 ////
-void ColoredCoinTracker::processZcBatch(
+std::set<BinaryData> ColoredCoinTracker::processZcBatch(
    const std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
    const std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
    const std::set<BinaryData>& hashes)
 {
    if (hashes.size() == 0)
-      return;
+      return std::set<BinaryData>();
+
+   std::set<BinaryData> spenderHashes;
+   std::map<BinaryData, std::set<unsigned>> spentnessToTrack;
 
    //grab listed tx
    auto&& txBatch = grabTxBatch(hashes);
-
+   
    //process the zc transactions
    for (auto& tx : txBatch) {
+      //make sure this zc doesn't run on yet-to-be-processed zc
+      //only run this check if we're bootstrapping the zc parser
+      bool skip = false;
+      for (auto& opId : tx.getOpIdVec())
+      {
+         if (opId > processedZcIndex_)
+         {
+            skip = true;
+            break;
+         }
+      }
+
+      //this zc relies on zc outpoints we have yet to see, mark 
+      //it for later processing
+      if (skip)
+      {
+         spenderHashes.insert(tx.getThisHash());         
+         continue;
+      }
+
       //parse the tx
       auto&& parsedTx = processTx(ssPtr, zcPtr, tx);
       
@@ -456,23 +499,75 @@ void ColoredCoinTracker::processZcBatch(
          if (zcHashIter == zcPtr->utxoSet_.end()) {
             continue;
          }
+
+         auto objIter = zcHashIter->second.find(input.second);
+         auto value = objIter->second->value();
+
          zcHashIter->second.erase(input.second);
-         if (zcHashIter->second.size() == 0) {
+         if (zcHashIter->second.size() == 0)
             zcPtr->utxoSet_.erase(zcHashIter);
+
+         //add to spent outputs as well
+         auto zcSpentIter = zcPtr->spentOutputs_.find(input.first);
+         if (zcSpentIter == zcPtr->spentOutputs_.end()) {
+            zcSpentIter = zcPtr->spentOutputs_.insert(
+               std::make_pair(input.first, std::set<unsigned>())).first;
          }
+
+         zcSpentIter->second.insert(input.second);
       }
 
       if (parsedTx.isInitialized()) {
          //This tx creates valid CC utxos, add them to the map and 
          //track the spender hashes if any
 
+         auto insertIter = 
+            spentnessToTrack.insert(make_pair(tx.getThisHash(), std::set<unsigned>())).first;
+
          for (unsigned i = 0; i < parsedTx.outputs_.size(); i++) {
             //add the utxo
             auto& output = parsedTx.outputs_[i];
             addZcUtxo(ssPtr, zcPtr, parsedTx.txHash_, i, output.first, output.second);
+
+            insertIter->second.insert(i);
+         }
+      }
+
+      //zc tx carries its zc id as the tx index
+      processedZcIndex_ = tx.getZcIndex();
+   }
+
+   //check new utxo list
+   auto spentnessProm = std::make_shared<
+      std::promise<std::map<BinaryData, std::map<unsigned, std::pair<BinaryData, unsigned>>>>>();
+   auto spentnessFut = spentnessProm->get_future();
+   auto spentnessLbd = [spentnessProm](
+      const std::map<BinaryData, std::map<unsigned, std::pair<BinaryData, unsigned>>> &batch
+      , std::exception_ptr exPtr)
+   {
+      if (exPtr != nullptr) {
+         spentnessProm->set_exception(exPtr);
+      }
+      else {
+         spentnessProm->set_value(batch);
+      }
+   };
+   if (!connPtr_->getSpentnessForZcOutputs(spentnessToTrack, spentnessLbd)) {
+      throw ColoredCoinException("invalid DB state/connection");
+   }
+   auto&& spentnessBatch = spentnessFut.get();
+
+   //aggregate spender hashes
+   for (auto& spentness : spentnessBatch) {
+      auto& spentnessMap = spentness.second;
+      for (auto& hashPair : spentnessMap) {
+         if (hashPair.second.first.getSize() == 32) {
+            spenderHashes.insert(hashPair.second.first);
          }
       }
    }
+
+   return spenderHashes;
 }
 
 ////
@@ -594,6 +689,7 @@ std::set<BinaryData> ColoredCoinTracker::update()
    otherwise it will fail to tag user funding operations.
    */
 
+   unsigned lowestHeight = UINT32_MAX;
    for (auto& scrAddr : originAddresses_) {
       auto iter = outpointData.outpoints_.find(scrAddr);
       if (iter == outpointData.outpoints_.end()) {
@@ -601,8 +697,13 @@ std::set<BinaryData> ColoredCoinTracker::update()
       }
       for (auto& op : iter->second) {
          addUtxo(ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr);
+         if (op.txHeight_ < lowestHeight)
+            lowestHeight = op.txHeight_;
       }
    }
+
+   if (processedHeight_ == 0)
+      processedHeight_ = lowestHeight;
 
    /*
    Users cannot create new CC, only the origin address holder can. 
@@ -652,41 +753,14 @@ std::set<BinaryData> ColoredCoinTracker::update()
    //process revokes
    processRevocationBatch(ssPtr, revokesToCheck);
 
-   std::set<BinaryData> combinedTxHashes = txsToCheck;
    //process settlements
+   std::set<BinaryData> combinedTxHashes = txsToCheck;
    while (true) {
       if (txsToCheck.empty()) {
          break;
       }
       txsToCheck = std::move(processTxBatch(ssPtr, txsToCheck));
       combinedTxHashes.insert(txsToCheck.cbegin(), txsToCheck.cend());
-   }
-
-   /*
-   A kind of workaround below. This helps to resolve "loops" when current batch
-   processing attempts to retrieve valid inputs that will be added in the next
-   batch[es]. Example TX for this scenario (testnet):
-      fa6fc18e49ecdbd68ebd38b6146a3060157d3743e6908e8a6e7457b5bf35162e
-   It denies the second output because 6 of 9 CC inputs are not added to utxoSet_
-   at the moment of this TX processing in "traditional" loop above.
-   This solution just collects the TX hashes from the previous loop, sorts them by height
-   and processes further using the same loop until txsToCheck becomes empty.
-   */
-   for (auto& scrAddr : originAddresses_) {  // This is just to re-seed genesis TXs
-      auto iter = outpointData.outpoints_.find(scrAddr);
-      if (iter == outpointData.outpoints_.end()) {
-         continue;
-      }
-      for (auto& op : iter->second) {
-         addUtxo(ssPtr, op.txHash_, op.txOutIndex_, op.value_, scrAddr);
-      }
-   }
-   txsToCheck = processTxBatch(ssPtr, combinedTxHashes);
-   while (true) {
-      if (txsToCheck.empty()) {
-         break;
-      }
-      txsToCheck = std::move(processTxBatch(ssPtr, txsToCheck));
    }
 
    //update cutoff
@@ -797,7 +871,8 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
    }
 
    //process unconfirmed settlements
-   processZcBatch(currentSs, ssPtr, txsToCheck);
+   while (txsToCheck.size())
+      txsToCheck = move(processZcBatch(currentSs, ssPtr, txsToCheck));
 
    //update zc cutoff
    zcCutOff_ = outpointData.zcIndexCutoff_;
@@ -908,7 +983,8 @@ ColoredCoinTracker::getSpendableOutpointsForAddress(
 {
    /*takes prefixed scrAddr*/
    std::vector<std::shared_ptr<CcOutpoint>> result;
-   const auto addr = bs::Address::fromHash(scrAddr).display();
+   if (scrAddr.getSize() != 21 && scrAddr.getSize() != 33)
+      throw ColoredCoinException("only takes prefixed addresses");
 
    if (ssPtr != nullptr) {
       auto iter = ssPtr->scrAddrCcSet_.find(scrAddr.getRef());
@@ -943,9 +1019,19 @@ ColoredCoinTracker::getSpendableOutpointsForAddress(
    if (zcPtr == nullptr || confirmedOnly) {
       return result;
    }
+
+   //this formating is painful to read   
    auto zcIter = zcPtr->scrAddrCcSet_.find(scrAddr.getRef());
    if (zcIter != zcPtr->scrAddrCcSet_.end()) {
       for (auto& ccOp : zcIter->second) {
+         //is this outpoint spent by a zc?
+         auto zcSpentIter = zcPtr->spentOutputs_.find(ccOp->getTxHash()->getRef());
+         if (zcSpentIter != zcPtr->spentOutputs_.end()) {
+            auto idIter = zcSpentIter->second.find(ccOp->index());
+            if (idIter != zcSpentIter->second.end())
+               continue;
+         }
+
          result.push_back(ccOp);
       }
    }
@@ -1321,7 +1407,8 @@ bool ColoredCoinTracker::getCCUtxoForAddresses(
    std::map<BinaryData, std::set<unsigned>> outpointMap;
    for (auto& scrAddr : scrAddrSet)
    {
-      auto opVec = getSpendableOutpointsForAddress(ssPtr, zcPtr, scrAddr, withZc);
+      //getSpendableOutpointsForAddress reverses the zc flag
+      auto opVec = getSpendableOutpointsForAddress(ssPtr, zcPtr, scrAddr, !withZc);
       for (auto& op : opVec)
       {
          auto iter = outpointMap.find(*op->getTxHash());
