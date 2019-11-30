@@ -20,8 +20,8 @@ mkdir -p Ubuntu/usr/share/blocksettle/scripts
 
 cp $binpath/blocksettle Ubuntu/usr/bin/
 cp $binpath/blocksettle_signer Ubuntu/usr/bin/
-cp $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle/scripts/
-cp $scriptpath/RFQBot.qml Ubuntu/usr/share/blocksettle/scripts/
+#cp $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle/scripts/
+#cp $scriptpath/RFQBot.qml Ubuntu/usr/share/blocksettle/scripts/
 
 dpkg -b Ubuntu bsterminal.deb
 echo "deb package generated"
