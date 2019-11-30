@@ -80,11 +80,15 @@ include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 
 IF( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
-  MESSAGE( FATAL_ERROR "THis is not a Git repository, but it should be.")
-ELSE ()
-   # we only take the 8 first characters
-  string(SUBSTRING ${GIT_SHA1} 0 8 BS_REVISIOIN_SHA1)
+    IF (NOT DEFINED ENV{BS_GIT_REVISION})
+	MESSAGE( FATAL_ERROR "Building from a none git repository, please define the shell veriable revision BS_GIT_REVISION=XXX")
+    ELSE()
+	SET(GIT_SHA1 "$ENV{BS_GIT_REVISION}")
+    ENDIF()
 ENDIF ()
+
+# we only take the 8 first characters
+string(SUBSTRING ${GIT_SHA1} 0 8 BS_REVISIOIN_SHA1)
 
 # set DEV_3RD_ROOT env variable to your custom location of 3rd party components
 IF (DEFINED ENV{DEV_3RD_ROOT})
