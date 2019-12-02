@@ -1191,7 +1191,10 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
             for (const auto &wallet : wallets) {
                if (addrWallet == wallet) {
                   totalVal -= prevOut.getValue();
-                  addrValWallet;
+                  addrValWallet = addrWallet;
+                  if (!filterAddress.isValid()) {
+                     addressVal -= prevOut.getValue();
+                  }
                   break;
                }
             }
