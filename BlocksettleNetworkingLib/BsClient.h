@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef BS_CLIENT_H
 #define BS_CLIENT_H
 
@@ -12,7 +22,9 @@
 #include "Address.h"
 #include "AutheIDClient.h"
 #include "CelerMessageMapper.h"
+#include "CommonTypes.h"
 #include "DataConnectionListener.h"
+#include "ValidityFlag.h"
 #include "autheid_utils.h"
 
 class ZmqContext;
@@ -130,9 +142,11 @@ public:
    static std::string requestDescCcAddr(const bs::Address &address, const std::string &token);
 
 public slots:
-   void sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
+   void sendUnsignedPayin(const std::string& settlementId, const bs::network::UnsignedPayinData& unsignedPayinData);
    void sendSignedPayin(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayout(const std::string& settlementId, const BinaryData& signedPayout);
+
+   void findEmailHash(const std::string &email);
 
 signals:
    void startLoginDone(AutheIDClient::ErrorType status);
@@ -145,6 +159,8 @@ signals:
    void connected();
    void disconnected();
    void connectionFailed();
+
+   void emailHashReceived(const std::string &email, const std::string &hash);
 
 private:
    using ProcessCb = std::function<void(const Blocksettle::Communication::ProxyTerminal::Response &response)>;
@@ -184,6 +200,7 @@ private:
 
    std::map<int64_t, ActiveRequest> activeRequests_;
    int64_t lastRequestId_{};
+
 };
 
 #endif

@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "CreateTransactionDialog.h"
 
 #include <stdexcept>
@@ -446,7 +456,7 @@ bool CreateTransactionDialog::CreateTransaction()
 
    try {
       txReq_ = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked
-         , changeAddress, originalFee_);
+         , changeAddress);
       txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
 
       if (isRBF_) {
@@ -472,18 +482,22 @@ bool CreateTransactionDialog::CreateTransaction()
          }
       }
       else if (isCPFP_) {
+         const auto title = tr("CPFP fee warning");
          if (txReq_.fee < originalFee_ + addedFee_) {
             txReq_.fee = originalFee_ + addedFee_;
-            BSMessageBox(BSMessageBox::info, tr("Warning"), tr("CPFP fee warning"),
-               tr("In order to ensure the CPFP transaction gets mined withing the next two blocks, we recommend the total fee to be no less than %1")
+            BSMessageBox(BSMessageBox::info, tr("Warning"), title,
+               tr("In order to ensure the CPFP transaction gets mined within the next two blocks, "
+                  "we recommend the total fee to be no less than %1")
                .arg(UiUtils::displayAmount(txReq_.fee))).exec();
          }
 
          const float newFeePerByte = transactionData_->feePerByte();
          if ((advisedFeePerByte_ - newFeePerByte) > 0.005) {  // allow some rounding
+            const auto prevFee = txReq_.fee;
             txReq_.fee = std::ceil(txReq_.fee * (advisedFeePerByte_ / newFeePerByte));
-            BSMessageBox(BSMessageBox::info, tr("Warning"), tr("CPFP fee warning"),
-               tr("In order to ensure the CPFP transaction gets mined withing the next two blocks, we recommend the fee per byte to be no less than %1")
+            BSMessageBox(BSMessageBox::info, tr("Warning"), title,
+               tr("In order to ensure the CPFP transaction gets mined within the next two blocks, "
+                  "we recommend the fee per byte to be no less than %1")
                .arg(advisedFeePerByte_)).exec();
          }
       }

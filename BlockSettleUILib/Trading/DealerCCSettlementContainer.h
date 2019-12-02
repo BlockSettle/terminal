@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __DEALER_CC_SETTLEMENT_CONTAINER_H__
 #define __DEALER_CC_SETTLEMENT_CONTAINER_H__
 
@@ -69,6 +79,7 @@ private slots:
 
 private:
    std::string txComment();
+   void sendFailed();
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
@@ -89,7 +100,6 @@ private:
    bool              cancelled_ = false;
    bs::CheckRecipSigner signer_;
    bs::core::wallet::TXSignRequest txReq_;
-   bs::UtxoReservationToken utxoRes_;
    bool isGetAddressValid_ = false;
    std::shared_ptr<bs::sync::Wallet>         ccWallet_;
 

@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "TransactionDetailDialog.h"
 #include "ui_TransactionDetailDialog.h"
 #include "TransactionsViewModel.h"
@@ -144,9 +154,7 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
                      break;
                   }
                }
-               if (!comment.empty()) {
-                  ui_->labelComment->setText(QString::fromStdString(comment));
-               }
+               ui_->labelComment->setText(QString::fromStdString(comment));
             }
 
             if (initialized) {

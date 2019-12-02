@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "OTCWindowsAdapterBase.h"
 #include "OTCWindowsManager.h"
 
@@ -6,8 +16,9 @@
 #include "Wallets/SyncHDWallet.h"
 #include "AuthAddressManager.h"
 #include "AssetManager.h"
-#include "SelectedTransactionInputs.h"
 #include "CoinControlDialog.h"
+#include "SelectedTransactionInputs.h"
+#include "TradesUtils.h"
 
 #include <QComboBox>
 #include <QLabel>
@@ -96,19 +107,23 @@ void OTCWindowsAdapterBase::onUpdateBalances()
 
 void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 {
-   auto cb = [handle = validityFlag_.handle(), this](const std::vector<UTXO> &utxos) mutable {
+   auto cb = [handle = validityFlag_.handle(), this](const std::map<UTXO, std::string> &utxos) mutable {
       ValidityGuard guard(handle);
       if (!handle.isValid()) {
          return;
       }
-      allUTXOs_ = utxos;
+      allUTXOs_.clear();
+      allUTXOs_.reserve(utxos.size());
+      for (const auto &utxo : utxos) {
+         allUTXOs_.push_back(utxo.first);
+      }
       QMetaObject::invokeMethod(this, &OTCWindowsAdapterBase::onShowXBTInputReady);
    };
 
    const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
    const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-   bs::sync::Wallet::getSpendableTxOutList(wallets, cb);
+   bs::tradeutils::getSpendableTxOutList(wallets, cb);
 }
 
 void OTCWindowsAdapterBase::onShowXBTInputReady()

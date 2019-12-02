@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef BS_SYNC_WALLETS_MANAGER_H
 #define BS_SYNC_WALLETS_MANAGER_H
 
@@ -133,6 +143,14 @@ namespace bs {
 
          bool mergeableEntries(const bs::TXEntry &, const bs::TXEntry &) const;
          std::vector<bs::TXEntry> mergeEntries(const std::vector<bs::TXEntry> &) const;
+
+         core::wallet::TXSignRequest createPartialTXRequest(uint64_t spendVal
+            , const std::map<UTXO, std::string> &inputs, bs::Address changeAddress = {}
+            , float feePerByte = 0
+            , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients = {}
+            , const bs::core::wallet::OutputSortOrder &outSortOrder = { bs::core::wallet::OutputOrderType::PrevState
+               , bs::core::wallet::OutputOrderType::Recipients, bs::core::wallet::OutputOrderType::Change }
+         , const BinaryData prevPart = {}, bool feeCalcUsePrevPart = true);
 
       signals:
          void CCLeafCreated(const std::string& ccName);

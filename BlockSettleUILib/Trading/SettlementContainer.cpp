@@ -1,12 +1,37 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "SettlementContainer.h"
 #include "UiUtils.h"
 
 using namespace bs;
 using namespace bs::sync;
 
+namespace {
+
+   const auto kUtxoReleaseDelay = std::chrono::seconds(15);
+
+} // namespace
+
 SettlementContainer::SettlementContainer()
    : QObject(nullptr)
 {}
+
+SettlementContainer::~SettlementContainer()
+{
+   if (utxoRes_.isValid()) {
+      QTimer::singleShot(kUtxoReleaseDelay, [utxoRes = std::move(utxoRes_)] () mutable {
+         utxoRes.release();
+      });
+   }
+}
 
 sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
 {
@@ -68,4 +93,9 @@ void SettlementContainer::stopTimer()
    msTimeLeft_ = 0;
    timer_.stop();
    emit timerStopped();
+}
+
+void SettlementContainer::releaseUtxoRes()
+{
+   utxoRes_.release();
 }

@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "RFQDialog.h"
 #include "ui_RFQDialog.h"
 
@@ -28,7 +38,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const bs::Address &recvXbtAddr
    , const bs::Address &authAddr
-   , const std::vector<UTXO> &fixedXbtInputs
+   , const std::map<UTXO, std::string> &fixedXbtInputs
    , bs::UtxoReservationToken utxoRes
    , RFQRequestWidget *parent)
    : QDialog(parent)

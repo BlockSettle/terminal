@@ -1,10 +1,20 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "ReqCCSettlementContainer.h"
 #include <spdlog/spdlog.h>
 #include "AssetManager.h"
 #include "CheckRecipSigner.h"
 #include "SignContainer.h"
+#include "TradesUtils.h"
 #include "TransactionData.h"
-#include "UtxoReservation.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
@@ -21,7 +31,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const bs::network::RFQ &rfq
    , const bs::network::Quote &quote
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
-   , const std::vector<UTXO> &manualXbtInputs
+   , const std::map<UTXO, std::string> &manualXbtInputs
    , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer()
    , logger_(logger)
@@ -215,7 +225,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
    else {
       const auto &cbFee = [this](float feePerByte) {
          const uint64_t spendVal = bs::XBTAmount(amount()).GetValue();
-         auto inputsCb = [this, feePerByte, spendVal](const std::vector<UTXO> &xbtInputs) {
+         auto inputsCb = [this, feePerByte, spendVal](const std::map<UTXO, std::string> &xbtInputs) {
             auto changeAddrCb = [this, feePerByte, xbtInputs, spendVal](const bs::Address &changeAddr) {
                try {
 
@@ -231,7 +241,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                      bs::core::wallet::OutputOrderType::Change
                   };
 
-                  ccTxData_ = xbtLeaves_.front()->createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte
+                  ccTxData_ = walletsMgr_->createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte
                      , { recipient }, outSortOrder, dealerTx_, false/*calcFeeFromPrevData*/);
                   ccTxData_.populateUTXOs = true;
 
@@ -248,7 +258,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
             xbtLeaves_.front()->getNewChangeAddress(changeAddrCb);
          };
          if (manualXbtInputs_.empty()) {
-            bs::sync::Wallet::getSpendableTxOutList(xbtLeaves_, inputsCb);
+            bs::tradeutils::getSpendableTxOutList(xbtLeaves_, inputsCb);
          } else {
             inputsCb(manualXbtInputs_);
          }
@@ -345,9 +355,11 @@ void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const 
 bool ReqCCSettlementContainer::cancel()
 {
    deactivate();
-   utxoRes_.release();
    emit settlementCancelled();
    signingContainer_->CancelSignTx(id());
+
+   SettlementContainer::releaseUtxoRes();
+
    return true;
 }
 

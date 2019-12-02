@@ -1,10 +1,19 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __DEALER_XBT_SETTLEMENT_CONTAINER_H__
 #define __DEALER_XBT_SETTLEMENT_CONTAINER_H__
 
 #include "AddressVerificator.h"
 #include "BSErrorCode.h"
 #include "SettlementContainer.h"
-#include "UtxoReservation.h"
 
 #include <memory>
 #include <unordered_set>
@@ -69,7 +78,7 @@ public slots:
    void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
 
 signals:
-   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId);
+   void sendUnsignedPayinToPB(const std::string& settlementId, const bs::network::UnsignedPayinData& unsignedPayinData);
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
@@ -96,8 +105,6 @@ private:
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signContainer_;
    std::shared_ptr<AuthAddressManager>          authAddrMgr_;
-
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
    AddressVerificationState                     requestorAddressState_ = AddressVerificationState::VerificationFailed;
    bs::Address settlAddr_;

@@ -1,9 +1,20 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "TradesVerification.h"
 
 #include <spdlog/spdlog.h>
 
 #include "BinaryData.h"
 #include "CheckRecipSigner.h"
+#include "PublicResolver.h"
 
 const char *bs::toString(const bs::PayoutSignatureType t)
 {
@@ -121,6 +132,7 @@ bs::PayoutSignatureType bs::TradesVerification::whichSignature(const Tx &tx, uin
 }
 
 std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUnsignedPayin(const BinaryData &unsignedPayin
+   , const std::map<std::string, BinaryData>& preimageData
    , float feePerByte, const std::string &settlementAddress, uint64_t tradeAmount)
 {
    if (unsignedPayin.isNull()) {
@@ -177,6 +189,11 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUn
          return Result::error("Pay-In could not be RBF transaction");
       }
 
+      if (!preimageData.empty()) {
+         const auto resolver = std::make_shared<PublicResolver>(preimageData);
+         deserializedSigner.setFeed(resolver);
+      }
+
       auto result = std::make_shared<Result>();
       result->success = true;
       result->totalFee = totalInput - totalOutputAmount;
@@ -188,17 +205,13 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifyUn
 
       for (const auto& spender : spenders) {
          const auto& utxo = spender->getUtxo();
-
-         // XXX: code left for reference. will be removed once proper input type validation will be added
-         // const auto& scrType = BtcUtils::getTxOutScriptType(utxo.getScript());
-         // const auto& inputType = bs::Address::mapTxOutScriptType(scrType);
-
-         // // we should accept native SW inputs only
-         // if (inputType != AddressEntryType_P2WPKH) {
-         //    return Result::error("Non SW input in PayIn");
-         // }
-
          result->utxos.push_back(spender->getUtxo());
+      }
+
+      result->payinHash = deserializedSigner.getTxId();
+
+      if (!XBTInputsAcceptable(result->utxos, preimageData)) {
+         return Result::error("Not supported input type used");
       }
 
       return result;
@@ -329,4 +342,48 @@ std::shared_ptr<bs::TradesVerification::Result> bs::TradesVerification::verifySi
    catch (...) {
       return Result::error("undefined exception during payin processing");
    }
+}
+
+//only  TXOUT_SCRIPT_P2WPKH and (TXOUT_SCRIPT_P2SH | TXOUT_SCRIPT_P2WPKH) accepted
+bool bs::TradesVerification::XBTInputsAcceptable(const std::vector<UTXO>& utxoList, const std::map<std::string, BinaryData>& preImages)
+try {
+   for (const auto& input : utxoList) {
+      const auto scrType = BtcUtils::getTxOutScriptType(input.getScript());
+      if (scrType == TXOUT_SCRIPT_P2WPKH) {
+         continue;
+      }
+
+      if (scrType != TXOUT_SCRIPT_P2SH) {
+         return false;
+      }
+
+      // check underlying script type
+      auto address = bs::Address::fromScript(input.getScript());
+
+      const auto it = preImages.find(address.display());
+      if (it == preImages.end()) {
+         return false;
+      }
+
+      auto underlyingScriptType = BtcUtils::getTxOutScriptType(it->second);
+      if (underlyingScriptType != TXOUT_SCRIPT_P2WPKH) {
+         return false;
+      }
+
+      // check that preimage belong to that address
+      const auto& hash = BtcUtils::getHash160(it->second);
+
+      BinaryWriter bw;
+      bw.put_uint8_t(NetworkConfig::getScriptHashPrefix());
+      bw.put_BinaryData(hash);
+      const auto& prefixedHash = bw.getData();
+
+      if (prefixedHash != address.prefixed()) {
+         return false;
+      }
+   }
+
+   return true;
+} catch (...) {
+   return false;
 }

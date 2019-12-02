@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __BS_COMMON_TYPES_H__
 #define __BS_COMMON_TYPES_H__
 
@@ -305,6 +315,13 @@ namespace bs {
          Last = Otc,
       };
 
+      // for celer and OTC trades
+      struct UnsignedPayinData
+      {
+         BinaryData                          unsignedPayin;
+         std::map<bs::Address, BinaryData>   preimageData;
+      };
+
    }  //namespace network
 }  //namespace bs
 
@@ -320,6 +337,7 @@ Q_DECLARE_METATYPE(bs::network::MDFields)
 Q_DECLARE_METATYPE(bs::network::CCSecurityDef)
 Q_DECLARE_METATYPE(bs::network::NewTrade)
 Q_DECLARE_METATYPE(bs::network::NewPMTrade)
+Q_DECLARE_METATYPE(bs::network::UnsignedPayinData)
 
 
 #endif //__BS_COMMON_TYPES_H__

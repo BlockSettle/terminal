@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef BS_SYNC_WALLET_H
 #define BS_SYNC_WALLET_H
 
@@ -63,7 +73,7 @@ namespace bs {
             , const std::vector<UTXO> &inputs
             , const std::vector<std::shared_ptr<ScriptRecipient>> &
             , const bs::Address &changeAddr = {}
-            , const uint64_t fee = 0, bool isRBF = false, const uint64_t& origFee = 0);
+            , const uint64_t fee = 0, bool isRBF = false);
 
       }  // namepsace wallet
 
@@ -160,7 +170,7 @@ namespace bs {
          virtual core::wallet::TXSignRequest createTXRequest(const std::vector<UTXO> &
             , const std::vector<std::shared_ptr<ScriptRecipient>> &
             , const uint64_t fee = 0, bool isRBF = false
-            , const bs::Address &changeAddress = {}, const uint64_t& origFee = 0);
+            , const bs::Address &changeAddress = {});
          virtual core::wallet::TXSignRequest createPartialTXRequest(uint64_t spendVal
             , const std::vector<UTXO> &inputs, bs::Address changeAddress = {}
             , float feePerByte = 0
@@ -192,10 +202,6 @@ namespace bs {
          virtual bool getSpendableZCList(const ArmoryConnection::UTXOsCb &) const;
          virtual bool getRBFTxOutList(const ArmoryConnection::UTXOsCb &) const;
 
-         // Request getSpendableTxOutList for every wallet in wallets, merge results (keeping requested order) and call callback.
-         // If request failed for at least one wallet callback would not be called.
-         static bool getSpendableTxOutList(const std::vector<std::shared_ptr<Wallet>> &wallets, ArmoryConnection::UTXOsCb);
-
          //custom ACT
          template<class U> void setCustomACT(
             const std::shared_ptr<ArmoryConnection> &armory)
@@ -211,6 +217,7 @@ namespace bs {
          virtual void onZeroConfReceived(const std::vector<bs::TXEntry>&);
          virtual void onNewBlock(unsigned int, unsigned int);
          virtual void onRefresh(const std::vector<BinaryData> &ids, bool online);
+         virtual void onZCInvalidated(const std::set<BinaryData> &ids);
 
          virtual std::vector<BinaryData> getAddrHashes() const = 0;
 
@@ -254,6 +261,8 @@ namespace bs {
          WalletCallbackTarget       * wct_ = nullptr;
 
          ValidityFlag validityFlag_;
+
+         std::map<BinaryData, Tx>   zcEntries_;
 
       private:
          std::string regId_;
@@ -302,6 +311,9 @@ namespace bs {
          }
          virtual void onNewBlock(unsigned int block, unsigned int bh) override {
             parent_->onNewBlock(block, bh);
+         }
+         virtual void onZCInvalidated(const std::set<BinaryData> &ids) override {
+            parent_->onZCInvalidated(ids);
          }
          void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) override;
       protected:

@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "disable_warnings.h"
 #include <spdlog/spdlog.h>
 #include <btc/ecc.h>
@@ -302,6 +312,7 @@ WalletsManager::HDWalletPtr WalletsManager::createWallet(
       const bs::core::WalletPasswordScoped lock(newWallet, pd.password);
       newWallet->createStructure();
       if (primary) {
+         newWallet->createChatPrivKey();
          auto group = newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
          if (!userId_.isNull()) {
             newWallet->createGroup(bs::hd::CoinType::BlockSettle_Settlement);

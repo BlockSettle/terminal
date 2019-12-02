@@ -1,16 +1,27 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef SEARCHWIDGET_H
 #define SEARCHWIDGET_H
 
 #include <memory>
 
+#include <QRegularExpression>
 #include <QWidget>
 
 #include "ChatProtocol/ChatClientService.h"
 
 class QAbstractItemModel;
+class ChatClient;
 class ChatSearchActionsHandler;
 class UserSearchModel;
-class ChatClient;
 
 namespace Ui {
    class SearchWidget;
@@ -53,6 +64,7 @@ public slots:
 
 signals:
    void searchTextChanged(QString searchText);
+   void emailHashRequested(const std::string &email);
 /* Properties Section End */
 
 public:
@@ -67,6 +79,7 @@ public slots:
    void onClearLineEdit();
    void onStartListAutoHide();
    void onSearchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId);
+   void onEmailHashReceived(const std::string &email, const std::string &hash);
 
 private slots:
    void onResetTreeView();
@@ -84,11 +97,16 @@ signals:
    void showUserRoom(const QString &userID);
 
 private:
+   void sendSearchRequest(const std::string &text);
+
    QScopedPointer<Ui::SearchWidget> ui_;
    QScopedPointer<QTimer>           listVisibleTimer_;
    QScopedPointer<UserSearchModel>  userSearchModel_;
    Chat::ChatClientServicePtr       chatClientServicePtr_;
    std::string                      lastSearchId_;
+
+   QRegularExpression emailRegex_;
+
 };
 
 #endif // SEARCHWIDGET_H

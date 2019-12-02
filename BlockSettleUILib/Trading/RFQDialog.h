@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __RFQ_DIALOG_H__
 #define __RFQ_DIALOG_H__
 
@@ -59,7 +69,7 @@ public:
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const bs::Address &recvXbtAddr
       , const bs::Address &authAddr
-      , const std::vector<UTXO> &fixedXbtInputs
+      , const std::map<UTXO, std::string> &fixedXbtInputs
       , bs::UtxoReservationToken utxoRes
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
@@ -117,7 +127,7 @@ private:
    std::shared_ptr<ReqXBTSettlementContainer>   xbtSettlContainer_;
 
    const bs::Address authAddr_;
-   const std::vector<UTXO> fixedXbtInputs_;
+   const std::map<UTXO, std::string>   fixedXbtInputs_;
 
    bool  cancelOnClose_ = true;
    bool isRejectStarted_ = false;

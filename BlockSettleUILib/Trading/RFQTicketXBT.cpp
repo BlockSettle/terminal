@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "RFQTicketXBT.h"
 #include "ui_RFQTicketXBT.h"
 
@@ -98,12 +108,12 @@ void RFQTicketXBT::resetTicket()
    updatePanel();
 }
 
-std::vector<UTXO> RFQTicketXBT::fixedXbtInputs() const
+std::map<UTXO, std::string> RFQTicketXBT::fixedXbtInputs() const
 {
    if (!selectedXbtInputs_ || selectedXbtInputs_->UseAutoSel()) {
       return {};
    }
-   return selectedXbtInputs_->GetSelectedTransactions();
+   return selectedXbtInputs_->getSelectedInputs();
 }
 
 void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager> &authAddressManager
@@ -305,12 +315,15 @@ void RFQTicketXBT::fillRecvAddresses()
 
 void RFQTicketXBT::showCoinControl()
 {
-   if (selectedXbtInputs_) {
-      int rc = CoinControlDialog(selectedXbtInputs_, true, this).exec();
-      if (rc == QDialog::Accepted) {
-         updateBalances();
-         updateSubmitButton();
-      }
+   if (!selectedXbtInputs_) {
+      SPDLOG_LOGGER_ERROR(logger_, "selectedXbtInputs_ is not set");
+      return;
+   }
+
+   int rc = CoinControlDialog(selectedXbtInputs_, true, this).exec();
+   if (rc == QDialog::Accepted) {
+      updateBalances();
+      updateSubmitButton();
    }
 }
 
@@ -829,8 +842,13 @@ void RFQTicketXBT::onMaxClicked()
             return;
          }
 
-         auto cb = [this](const std::vector<UTXO> &utxos) {
-            QMetaObject::invokeMethod(this, [this, utxos] {
+         auto cb = [this](const std::map<UTXO, std::string> &inputs) {
+            QMetaObject::invokeMethod(this, [this, inputs] {
+               std::vector<UTXO> utxos;
+               utxos.reserve(inputs.size());
+               for (const auto &input : inputs) {
+                  utxos.emplace_back(std::move(input.first));
+               }
                auto feeCb = [this, utxos = std::move(utxos)](float fee) {
                   QMetaObject::invokeMethod(this, [this, fee, utxos = std::move(utxos)] {
                      float feePerByte = ArmoryConnection::toFeePerByte(fee);
@@ -854,7 +872,7 @@ void RFQTicketXBT::onMaxClicked()
          } else {
             auto leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
             auto xbtWallets = std::vector<std::shared_ptr<bs::sync::Wallet>>(leaves.begin(), leaves.end());
-            bs::sync::Wallet::getSpendableTxOutList(xbtWallets, cb);
+            bs::tradeutils::getSpendableTxOutList(xbtWallets, cb);
          }
          return;
       }
@@ -958,6 +976,8 @@ void RFQTicketXBT::productSelectionChanged()
    ui_->toolButtonMax->setEnabled(true);
    ui_->toolButtonXBTInputsSend->setEnabled(true);
 
+   selectedXbtInputs_.reset();
+
    if (currentGroupType_ == ProductGroupType::FXGroupType) {
       ui_->lineEditAmount->setValidator(fxAmountValidator_);
       ui_->lineEditAmount->setEnabled(true);
@@ -1001,19 +1021,12 @@ void RFQTicketXBT::productSelectionChanged()
             ui_->lineEditAmount->setValidator(fxAmountValidator_);
          }
       }
+   }
 
-      selectedXbtInputs_.reset();
-      if (getProductToSpend() == UiUtils::XbtCurrency) {
-         auto xbtWallet = getSendXbtWallet();
-         if (xbtWallet) {
-            const auto &leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
-            std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-            auto cb = [this](const std::vector<UTXO> &utxos) mutable {
-               selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(utxos);
-            };
-            bs::sync::Wallet::getSpendableTxOutList(wallets, cb);
-         }
-      }
+   const auto xbtWallet = getSendXbtWallet();
+   if (xbtWallet) {
+      selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(xbtWallet->getGroup(xbtWallet->getXBTGroupType())
+         , false, true);
    }
 
    ui_->lineEditAmount->setFocus();
@@ -1045,7 +1058,7 @@ bs::XBTAmount RFQTicketXBT::getXbtBalance() const
    if (!fixedInputs.empty()) {
       uint64_t sum = 0;
       for (const auto &utxo : fixedInputs) {
-         sum += utxo.getValue();
+         sum += utxo.first.getValue();
       }
       return bs::XBTAmount(sum);
    }

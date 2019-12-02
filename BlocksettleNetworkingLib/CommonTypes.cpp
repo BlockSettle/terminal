@@ -1,5 +1,15 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "CommonTypes.h"
-#include "SettlementMonitor.h"
+#include "TradesVerification.h"
 
 Q_DECLARE_METATYPE(bs::PayoutSignatureType)
 
@@ -21,6 +31,7 @@ public:
       qRegisterMetaType<bs::network::CCSecurityDef>("CCSecurityDef");
       qRegisterMetaType<bs::network::NewTrade>("NewTrade");
       qRegisterMetaType<bs::network::NewPMTrade>("NewPMTrade");
+      qRegisterMetaType<bs::network::UnsignedPayinData>();
       qRegisterMetaType<bs::PayoutSignatureType>();
    }
 

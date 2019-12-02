@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef CHATCLIENTLOGIC_H
 #define CHATCLIENTLOGIC_H
 
@@ -48,7 +58,7 @@ namespace Chat
 
    public:
       ChatClientLogic();
-      ~ChatClientLogic() override = default;
+      ~ChatClientLogic() override;
 
       ChatClientLogic(const ChatClientLogic&) = delete;
       ChatClientLogic& operator=(const ChatClientLogic&) = delete;

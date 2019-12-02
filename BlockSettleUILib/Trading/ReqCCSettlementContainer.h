@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __REQ_CC_SETTLEMENT_CONTAINER_H__
 #define __REQ_CC_SETTLEMENT_CONTAINER_H__
 
@@ -34,7 +44,7 @@ public:
       , const bs::network::RFQ &
       , const bs::network::Quote &
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
-      , const std::vector<UTXO> &manualXbtInputs
+      , const std::map<UTXO, std::string> &manualXbtInputs
       , bs::UtxoReservationToken utxoRes);
    ~ReqCCSettlementContainer() override;
 
@@ -105,7 +115,7 @@ private:
    bool                       genAddrVerified_ = false;
 
    bs::hd::WalletInfo walletInfo_;
-   std::vector<UTXO> manualXbtInputs_;
+   std::map<UTXO, std::string> manualXbtInputs_;
 
    bs::UtxoReservationToken utxoRes_;
 

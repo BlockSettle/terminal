@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "ChatSearchLineEdit.h"
 
 #include <QKeyEvent>
@@ -38,7 +48,6 @@ void ChatSearchLineEdit::keyPressEvent(QKeyEvent * e)
    case Qt::Key_Enter:     //Qt::Key_Enter   - Numpad Enter key
    case Qt::Key_Return:    //Qt::Key_Return  - Main Enter key
    {
-      qDebug("Return/Enter search press %d", e->key());
       emit keyEnterPressed();
       return e->ignore();
    }

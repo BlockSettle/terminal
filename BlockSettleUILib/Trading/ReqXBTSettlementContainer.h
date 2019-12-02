@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __REQ_XBT_SETTLEMENT_CONTAINER_H__
 #define __REQ_XBT_SETTLEMENT_CONTAINER_H__
 
@@ -5,9 +15,8 @@
 #include <unordered_set>
 #include "AddressVerificator.h"
 #include "BSErrorCode.h"
-#include "SettlementContainer.h"
-#include "UtxoReservation.h"
 #include "QWalletInfo.h"
+#include "SettlementContainer.h"
 
 namespace spdlog {
    class logger;
@@ -40,7 +49,7 @@ public:
       , const bs::network::RFQ &
       , const bs::network::Quote &
       , const bs::Address &authAddr
-      , const std::vector<UTXO> &utxosPayinFixed
+      , const std::map<UTXO, std::string> &utxosPayinFixed
       , const bs::Address &recvAddr);
    ~ReqXBTSettlementContainer() override;
 
@@ -68,7 +77,7 @@ signals:
    void settlementAccepted();
    void acceptQuote(std::string reqId, std::string hexPayoutTx);
 
-   void sendUnsignedPayinToPB(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& txId);
+   void sendUnsignedPayinToPB(const std::string& settlementId, const bs::network::UnsignedPayinData& unsignedPayinData);
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
@@ -96,7 +105,6 @@ private:
    bs::Address                settlAddr_;
 
    std::shared_ptr<AddressVerificator>             addrVerificator_;
-   std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
 
    double            amount_{};
    std::string       fxProd_;
@@ -118,8 +126,8 @@ private:
    bs::Address       dealerAuthAddress_;
 
    bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
-   BinaryData        usedPayinHash_;
-   std::vector<UTXO> utxosPayinFixed_;
+   BinaryData                    usedPayinHash_;
+   std::map<UTXO, std::string>   utxosPayinFixed_;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__

@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef TRADES_UTILS_H
 #define TRADES_UTILS_H
 
@@ -35,6 +45,11 @@ namespace bs {
 
 
    namespace tradeutils {
+      // Request getSpendableTxOutList for every wallet in wallets, merge results (keeping requested order) and call callback.
+      // If request failed for at least one wallet callback would not be called.
+      bool getSpendableTxOutList(const std::vector<std::shared_ptr<bs::sync::Wallet>> &wallets
+         // maps UTXO to the wallet used
+         , const std::function<void(const std::map<UTXO, std::string> &)> &);
 
       struct Args
       {
@@ -91,7 +106,9 @@ namespace bs {
 
       struct PayinResult : public Result
       {
-         BinaryData payinTxId;
+         std::map<bs::Address, BinaryData> preimageData;
+
+         BinaryData     payinHash;
 
          static PayinResult error(std::string msg);
       };
@@ -103,7 +120,15 @@ namespace bs {
 
       unsigned feeTargetBlockCount();
 
+      uint64_t getEstimatedFeeFor(UTXO input, const bs::Address &recvAddr
+         , float feePerByte, unsigned int topBlock);
+
       uint64_t estimatePayinFeeWithoutChange(const std::vector<UTXO> &inputs, float feePerByte);
+
+      UTXO getInputFromTX(const bs::Address &, const BinaryData &payinHash
+         , const bs::XBTAmount& amount);
+      bs::core::wallet::TXSignRequest createPayoutTXRequest(UTXO
+         , const bs::Address &recvAddr, float feePerByte, unsigned int topBlock);
 
       // Callback is called from background thread
       void createPayin(PayinArgs args, PayinResultCb cb);

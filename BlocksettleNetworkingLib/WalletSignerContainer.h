@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __WALLET_SIGNER_CONTAINER_H__
 #define __WALLET_SIGNER_CONTAINER_H__
 
@@ -39,6 +49,9 @@ public:
       , const std::function<void(bool, bs::Address)> &) = 0;
    virtual void getRootPubkey(const std::string &walletID
       , const std::function<void(bool, const SecureBinaryData &)> &) = 0;
+
+   virtual void getChatNode(const std::string &walletID
+      , const std::function<void(const BIP32_Node &)> &) = 0;
 
    using CreateHDLeafCb = std::function<void(bs::error::ErrorCode, const std::string &leafWalletId)>;
    virtual bool createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &

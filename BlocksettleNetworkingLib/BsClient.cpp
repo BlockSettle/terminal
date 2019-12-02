@@ -1,8 +1,18 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "BsClient.h"
 #include "FutureValue.h"
 
 #include <QTimer>
-#include "Address.h"
+
 #include "ProtobufUtils.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "bs_proxy_terminal.pb.h"
@@ -53,7 +63,7 @@ void BsClient::sendPbMessage(std::string data)
    sendMessage(&request);
 }
 
-void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryData& unsignedPayin, const BinaryData& unsignedTxId)
+void BsClient::sendUnsignedPayin(const std::string& settlementId, const bs::network::UnsignedPayinData& unsignedPayinData)
 {
    SPDLOG_LOGGER_DEBUG(logger_, "send unsigned payin {}", settlementId);
 
@@ -61,8 +71,14 @@ void BsClient::sendUnsignedPayin(const std::string& settlementId, const BinaryDa
 
    auto data = request.mutable_unsigned_payin();
    data->set_settlement_id(settlementId);
-   data->set_unsigned_payin(unsignedPayin.toBinStr());
-   data->set_unsigned_payin_id(unsignedTxId.toBinStr());
+   data->set_unsigned_payin(unsignedPayinData.unsignedPayin.toBinStr());
+
+   for (const auto &preImageIt : unsignedPayinData.preimageData) {
+      auto preImage = data->add_preimage_data();
+
+      preImage->set_address(preImageIt.first.display());
+      preImage->set_preimage_script(preImageIt.second.toBinStr());
+   }
 
    sendPbMessage(request.SerializeAsString());
 }
@@ -91,6 +107,26 @@ void BsClient::sendSignedPayout(const std::string& settlementId, const BinaryDat
    data->set_signed_payout(signedPayout.toBinStr());
 
    sendPbMessage(request.SerializeAsString());
+}
+
+void BsClient::findEmailHash(const std::string &email)
+{
+   Request request;
+   auto d = request.mutable_get_email_hash();
+   d->set_email(email);
+
+   auto timeoutCb = [this, email] {
+      SPDLOG_LOGGER_ERROR(logger_, "getting email hash timed out for address: {}", email);
+      emit emailHashReceived(email, "");
+   };
+
+   auto processCb = [this, email](const Blocksettle::Communication::ProxyTerminal::Response &response) {
+      const auto &hash = response.get_email_hash().hash();
+      SPDLOG_LOGGER_DEBUG(logger_, "got email hash address: {}, hash: {}", email, hash);
+      emit emailHashReceived(email, hash);
+   };
+
+   sendRequest(&request, std::chrono::seconds(10), std::move(timeoutCb), std::move(processCb));
 }
 
 void BsClient::cancelLogin()
@@ -258,9 +294,12 @@ void BsClient::OnDataReceived(const std::string &data)
             return;
          case Response::kStartSignAddress:
          case Response::kGetSignResult:
+         case Response::kGetEmailHash:
             // Will be handled from processCb
             return;
+
          case Response::DATA_NOT_SET:
+            SPDLOG_LOGGER_ERROR(logger_, "invalid response from proxy");
             return;
       }
 

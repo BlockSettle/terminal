@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef BS_CORE_WALLET_H
 #define BS_CORE_WALLET_H
 
@@ -18,12 +28,14 @@
 #include "BIP32_Node.h"
 #include "HDPath.h"
 
-#define WALLETNAME_KEY          0x00000020
-#define WALLETDESCRIPTION_KEY   0x00000021
-#define WALLET_EXTONLY_KEY      0x00000030
-#define WALLET_PWD_META_KEY     0x00000031
+#define WALLETNAME_KEY           0x00000020
+#define WALLETDESCRIPTION_KEY    0x00000021
+#define WALLET_EXTONLY_KEY       0x00000030
+#define WALLET_PWD_META_KEY      0x00000031
+#define CHAT_NODE_KEY            0x00000040
 
-#define BS_WALLET_DBNAME "bs_wallet_db"
+#define BS_WALLET_DBNAME   "bs_wallet_db"
+#define BS_CHAT_DBNAME     "bs_chat_db"
 
 namespace spdlog {
    class logger;
@@ -370,7 +382,7 @@ namespace bs {
       };
 
       using WalletMap = std::unordered_map<std::string, std::shared_ptr<Wallet>>;   // key is wallet id
-      BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &, const WalletMap &);
+      BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &, const WalletMap &, bool partial = false);
 
    }  //namespace core
 }  //namespace bs

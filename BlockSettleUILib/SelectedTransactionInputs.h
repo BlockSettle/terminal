@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __SELECTED_TRANSACTION_INPUTS_H__
 #define __SELECTED_TRANSACTION_INPUTS_H__
 
@@ -64,6 +74,7 @@ public:
 
    std::vector<UTXO> GetSelectedTransactions() const;
    std::vector<UTXO> GetAllTransactions() const;
+   std::map<UTXO, std::string> getSelectedInputs() const;
 
    std::shared_ptr<bs::sync::Wallet> GetWallet() const
    {
@@ -90,6 +101,7 @@ private:
    const bool                    confirmedOnly_;
    std::vector<UTXO>             inputs_;
    std::vector<UTXO>             cpfpInputs_;
+   std::map<UTXO, std::string>   inputsMap_;
    std::vector<bool>             selection_;
    const CbSelectionChanged      selectionChanged_;
    std::vector<std::function<void()>>  resetCallbacks_;

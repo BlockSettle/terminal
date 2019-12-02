@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "SyncHDLeaf.h"
 
 #include "AddressValidationState.h"
@@ -170,6 +180,7 @@ void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
       }
    }
 
+   std::lock_guard<std::mutex> lock(regMutex_);
    if (!unconfTgtRegIds_.empty()) {
       for (const auto &id : ids) {
          const auto it = std::find(unconfTgtRegIds_.cbegin(), unconfTgtRegIds_.cend(), id.toBinStr());

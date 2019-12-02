@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "DealerCCSettlementContainer.h"
 
 #include <spdlog/spdlog.h>
@@ -7,7 +17,6 @@
 #include "SignContainer.h"
 #include "SignerDefs.h"
 #include "UiUtils.h"
-#include "UtxoReservation.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -40,8 +49,9 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , ownRecvAddr_(bs::Address::fromAddressString(ownRecvAddr))
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
-   , utxoRes_(std::move(utxoRes))
 {
+   utxoRes_ = std::move(utxoRes);
+
    if (lotSize == 0) {
       throw std::logic_error("invalid lotSize");
    }
@@ -99,7 +109,7 @@ bool DealerCCSettlementContainer::startSigning()
 {
    if (!ccWallet_ || !xbtWallet_) {
       logger_->error("[DealerCCSettlementContainer::accept] failed to validate counterparty's TX - aborting");
-      emit failed();
+      sendFailed();
       return false;
    }
 
@@ -118,12 +128,12 @@ bool DealerCCSettlementContainer::startSigning()
       else if (result == bs::error::ErrorCode::TxCanceled) {
          // FIXME
          // Not clear what's wrong here, and what should be fixed
-         emit failed();
+         sendFailed();
       }
       else {
          SPDLOG_LOGGER_ERROR(logger_, "failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
          emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
-         emit failed();
+         sendFailed();
       }
    };
 
@@ -131,8 +141,6 @@ bool DealerCCSettlementContainer::startSigning()
    txReq_.populateUTXOs = true;
    txReq_.inputs = bs::UtxoReservation::instance()->get(utxoRes_.reserveId());
 
-   // TODO: Find out why code below does not work for sell requests (side() == bs::network::Side::Buy)
-#if 1
    txReq_.walletIds.clear();
    for (const auto &input : txReq_.inputs) {
       const auto addr = bs::Address::fromUTXO(input);
@@ -143,20 +151,10 @@ bool DealerCCSettlementContainer::startSigning()
       }
       txReq_.walletIds.push_back(wallet->walletId());
    }
-#else
-   if (side() == bs::network::Side::Buy) {
-      for (const auto &leaf : xbtWallet_->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves()) {
-         txReq_.walletIds.push_back(leaf->walletId());
-      }
-   } else {
-      txReq_.walletIds.push_back(ccWallet_->walletId());
-   }
-#endif
 
    //Waiting for TX half signing...
    SPDLOG_LOGGER_DEBUG(logger_, "signing with {} inputs", txReq_.inputs.size());
-   bs::signer::RequestId signId = signingContainer_->signSettlementPartialTXRequest(txReq_, toPasswordDialogData(), cbTx);
-   return (signId > 0);
+   return (signingContainer_->signSettlementPartialTXRequest(txReq_, toPasswordDialogData(), cbTx) > 0);
 }
 
 void DealerCCSettlementContainer::activate()
@@ -220,14 +218,22 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 
 bool DealerCCSettlementContainer::cancel()
 {
-   utxoRes_.release();
    signingContainer_->CancelSignTx(id());
    cancelled_ = true;
+
+   SettlementContainer::releaseUtxoRes();
+
    return true;
 }
 
 std::string DealerCCSettlementContainer::txComment()
 {
    return std::string(bs::network::Side::toString(order_.side))
-      + " " + order_.security + " @ " + std::to_string(order_.price);
+         + " " + order_.security + " @ " + std::to_string(order_.price);
+}
+
+void DealerCCSettlementContainer::sendFailed()
+{
+   SettlementContainer::releaseUtxoRes();
+   emit failed();
 }

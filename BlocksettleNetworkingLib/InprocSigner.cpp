@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "InprocSigner.h"
 #include <QTimer>
 #include <spdlog/spdlog.h>
@@ -624,4 +634,16 @@ void InprocSigner::getRootPubkey(const std::string& walletID
    if (cb) {
       cb(true, rootSingle->getPubKey()->getCompressedKey());
    }
+}
+
+void InprocSigner::getChatNode(const std::string &walletID
+   , const std::function<void(const BIP32_Node &)> &cb)
+{
+   const auto hdWallet = walletsMgr_->getHDWalletById(walletID);
+   if (!hdWallet) {
+      cb({});
+      return;
+   }
+   const auto chatNode = hdWallet->getChatNode();
+   cb(chatNode);
 }

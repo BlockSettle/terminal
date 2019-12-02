@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __HEADLESS_CONTAINER_LISTENER_H__
 #define __HEADLESS_CONTAINER_LISTENER_H__
 
@@ -142,6 +152,7 @@ private:
    bool onExtAddrChain(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onSyncNewAddr(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onAddrPreimage(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onChatNodeRequest(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onExecCustomDialog(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
 
    bool onCreateSettlWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);

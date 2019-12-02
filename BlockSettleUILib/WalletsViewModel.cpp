@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "WalletsViewModel.h"
 
 #include <QFont>
@@ -289,6 +299,8 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManage
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { onWalletChanged(); });
    connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &WalletsViewModel::onWalletChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::invalidatedZCs, [this](const std::set<BinaryData> &) {
+      onWalletChanged(); });
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
 

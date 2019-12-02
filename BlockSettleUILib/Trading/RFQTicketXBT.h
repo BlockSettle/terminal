@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __RFQ_TICKET_XBT_H__
 #define __RFQ_TICKET_XBT_H__
 
@@ -65,7 +75,7 @@ public:
 
    void resetTicket();
 
-   std::vector<UTXO> fixedXbtInputs() const;
+   std::map<UTXO, std::string> fixedXbtInputs() const;
 
    QPushButton* submitButton() const;
    QLineEdit* lineEditAmount() const;
@@ -225,7 +235,6 @@ private:
    SubmitRFQCb submitRFQCb_;
 
    std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
-
 };
 
 #endif // __RFQ_TICKET_XBT_H__

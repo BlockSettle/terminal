@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include <QTimer>
 #include <QMenu>
 #include <QKeyEvent>
@@ -27,6 +37,7 @@ SearchWidget::SearchWidget(QWidget *parent)
    , ui_(new Ui::SearchWidget)
    , listVisibleTimer_(new QTimer)
    , userSearchModel_(new UserSearchModel)
+   , emailRegex_(kRxEmail)
 {
    ui_->setupUi(this);
 
@@ -53,11 +64,11 @@ SearchWidget::SearchWidget(QWidget *parent)
            this, &SearchWidget::onLeaveSearchResults);
    connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveWithCloseRequired,
            this, &SearchWidget::onLeaveAndCloseSearchResults);
+
+   assert(emailRegex_.isValid());
 }
 
-SearchWidget::~SearchWidget()
-{
-}
+SearchWidget::~SearchWidget() = default;
 
 bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
 {
@@ -255,10 +266,15 @@ void SearchWidget::onSearchUserTextEdited()
       return;
    }
 
+   QRegularExpressionMatch match = emailRegex_.match(QString::fromStdString(userToAdd));
+   if (match.hasMatch()) {
+      emit emailHashRequested(userToAdd);
+      return;
+   }
+
    // ! Feature: Think how to prevent spamming server
-   QUuid uid = QUuid::createUuid();
-   lastSearchId_ = uid.toString(QUuid::WithoutBraces).toStdString();
-   chatClientServicePtr_->SearchUser(userToAdd, lastSearchId_);
+
+   sendSearchRequest(userToAdd);
 }
 
 void SearchWidget::onSearchUserReply(const Chat::SearchUserReplyList& userHashList, const std::string& searchId)
@@ -304,4 +320,20 @@ void SearchWidget::onSearchUserReply(const Chat::SearchUserReplyList& userHashLi
    if (visible && userInfoList.empty()) {
       onStartListAutoHide();
    }
+}
+
+void SearchWidget::onEmailHashReceived(const std::string &email, const std::string &hash)
+{
+   if (searchText().toStdString() != email) {
+      return;
+   }
+
+   sendSearchRequest(hash);
+}
+
+void SearchWidget::sendSearchRequest(const std::string &text)
+{
+   QUuid uid = QUuid::createUuid();
+   lastSearchId_ = uid.toString(QUuid::WithoutBraces).toStdString();
+   chatClientServicePtr_->SearchUser(text, lastSearchId_);
 }

@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "BSTerminalMainWindow.h"
 
 #include <QApplication>
@@ -1157,6 +1167,9 @@ void BSTerminalMainWindow::onLogin()
    connect(ui_->widgetRFQReply, &RFQReplyWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
    connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
    connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
+
+   connect(ui_->widgetChat, &ChatWidget::emailHashRequested, bsClient_.get(), &BsClient::findEmailHash);
+   connect(bsClient_.get(), &BsClient::emailHashReceived, ui_->widgetChat, &ChatWidget::onEmailHashReceived);
 
    connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
 

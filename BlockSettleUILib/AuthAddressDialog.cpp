@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "AuthAddressDialog.h"
 #include "ui_AuthAddressDialog.h"
 
@@ -213,7 +223,7 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
             ui_->pushButtonDefault->setEnabled(false);
             break;
          case AddressVerificationState::Verified:
-            ui_->pushButtonRevoke->setEnabled(authAddressManager_->IsReady());
+            ui_->pushButtonRevoke->setEnabled(authAddressManager_->readyError() != AuthAddressManager::ReadyError::NoError);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
             break;

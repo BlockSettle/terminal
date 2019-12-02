@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "SyncWallet.h"
 #include <QLocale>
 #include <bech32/ref/c++/segwit_addr.h>
@@ -331,50 +341,6 @@ bool Wallet::getRBFTxOutList(const ArmoryConnection::UTXOsCb &cb) const
    return true;
 }
 
-bool Wallet::getSpendableTxOutList(const std::vector<std::shared_ptr<Wallet>> &wallets, ArmoryConnection::UTXOsCb cb)
-{
-   if (wallets.empty()) {
-      cb({});
-      return true;
-   }
-   struct Result
-   {
-      std::map<int, std::vector<UTXO>> utxosMap;
-      ArmoryConnection::UTXOsCb cb;
-   };
-   auto result = std::make_shared<Result>();
-   result->cb = std::move(cb);
-
-   for (size_t i = 0; i < wallets.size(); ++i) {
-      const auto &wallet = wallets[i];
-      auto cbWrap = [i, result, size = wallets.size()](std::vector<UTXO> utxos) {
-         result->utxosMap.emplace(i, std::move(utxos));
-         if (result->utxosMap.size() != size) {
-            return;
-         }
-
-         size_t total = 0;
-         for (auto &item : result->utxosMap) {
-            total += item.second.size();
-         }
-         std::vector<UTXO> utxosAll;
-         utxosAll.reserve(total);
-
-         for (auto &item : result->utxosMap) {
-            utxosAll.insert(utxosAll.end(), std::make_move_iterator(item.second.begin())
-               , std::make_move_iterator(item.second.end()));
-         }
-         result->cb(utxosAll);
-      };
-      // If request for some wallet failed resulted callback won't be called.
-      bool status = wallet->getSpendableTxOutList(cbWrap, UINT64_MAX);
-      if (!status) {
-         return false;
-      }
-   }
-   return true;
-}
-
 void Wallet::setWCT(WalletCallbackTarget *wct)
 {
    wct_ = wct;
@@ -521,16 +487,55 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
+void Wallet::onZCInvalidated(const std::set<BinaryData> &ids)
+{
+   unsigned int processedEntries = 0;
+   for (const auto &id : ids) {
+      const auto &itTx = zcEntries_.find(id);
+      if (itTx == zcEntries_.end()) {
+         continue;
+      }
+      BTCNumericTypes::balance_type invalidatedBalance = 0;
+      for (size_t i = 0; i < itTx->second.getNumTxOut(); ++i) {
+         const auto txOut = itTx->second.getTxOutCopy(i);
+         const auto addr = bs::Address::fromTxOut(txOut);
+         if (containsAddress(addr)) {
+            const auto addrBal = txOut.getValue();
+            invalidatedBalance += addrBal / BTCNumericTypes::BalanceDivider;
+            auto &addrBalances = balanceData_->addressBalanceMap[addr.prefixed()];
+            addrBalances[0] -= addrBal;
+            addrBalances[1] -= addrBal;
+         }
+      }
+      balanceData_->unconfirmedBalance = balanceData_->unconfirmedBalance - invalidatedBalance;
+      logger_->debug("[{}] {} processed invalidated ZC entry {}, balance: {}"
+         , __func__, walletId(), itTx->first.toHexStr(true), invalidatedBalance);
+      zcEntries_.erase(itTx);
+      processedEntries++;
+   }
+   if (processedEntries && wct_) {
+      wct_->balanceUpdated(walletId());
+   }
+}
+
 void Wallet::onZeroConfReceived(const std::vector<bs::TXEntry> &entries)
 {
    if (skipPostOnline_) {
       return;
    }
-   init(true);
 
    const auto &cbTX = [this, balanceData = balanceData_, handle = validityFlag_.handle(), armory=armory_]
       (const Tx &tx) mutable
    {
+      for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
+         const auto txOut = tx.getTxOutCopy(i);
+         const auto addr = bs::Address::fromTxOut(txOut);
+         if (containsAddress(addr)) {
+            zcEntries_[tx.getThisHash()] = tx;
+            break;
+         }
+      }
+
       for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
          const TxIn in = tx.getTxInCopy(i);
          const OutPoint op = in.getOutPoint();
@@ -723,7 +728,7 @@ bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walle
    , const std::vector<UTXO> &inputs
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients
    , const bs::Address &changeAddr
-   , const uint64_t fee, bool isRBF, const uint64_t &origFee)
+   , const uint64_t fee, bool isRBF)
 {
    bs::core::wallet::TXSignRequest request;
    request.walletIds = { walletId };
@@ -768,13 +773,13 @@ bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walle
 
 bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> &inputs
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const uint64_t fee
-   , bool isRBF, const bs::Address &changeAddress, const uint64_t& origFee)
+   , bool isRBF, const bs::Address &changeAddress)
 {
    if (!changeAddress.isNull()) {
       setAddressComment(changeAddress, wallet::Comment::toString(wallet::Comment::ChangeAddress));
    }
    return wallet::createTXRequest(walletId(), inputs, recipients, changeAddress
-      , fee, isRBF, origFee);
+      , fee, isRBF);
 }
 
 bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal

@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "CreateTransactionDialogAdvanced.h"
 #include "ui_CreateTransactionDialogAdvanced.h"
 
@@ -139,16 +149,15 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
 
       if (!cntOutputs) {
          if (logger_ != nullptr) {
-            logger_->error("[{}] No input(s) found for TX {}.", __func__
+            logger_->error("[setCPFPinputs] No input(s) found for TX {}"
                , tx.getThisHash().toHexStr(true));
          }
          return;
       }
       if (origFee < 0) {
          if (logger_ != nullptr) {
-            logger_->error("[{}] Negative TX balance ({}) for TX {}."
-               , __func__, origFee
-               , tx.getThisHash().toHexStr(true));
+            logger_->error("[setCPFPinputs] Negative TX balance ({}) for TX {}"
+               , origFee, tx.getThisHash().toHexStr(true));
          }
          return;
       }
@@ -165,11 +174,11 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
          }
 
          advisedFeePerByte_ = feePerByte + addedFee_ / txSize;
-         onTransactionUpdated();
          populateFeeList();
          SetInputs(selInputs->GetSelectedTransactions());
 
          SetMinimumFee(originalFee_ + addedFee_, advisedFeePerByte_);
+         onTransactionUpdated();
       };
       walletsManager_->estimatedFeePerByte(2, cbFee, this);
    };
@@ -646,10 +655,10 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
       ui_->spinBoxFeesManualTotal->setValue(summary.txVirtSize);
    }
 
-   if (addedFee_ > 0) {
+   if ((addedFee_ > 0) && !isCPFP_) {
       const float newTotalFee = transactionData_->feePerByte() * summary.txVirtSize + addedFee_;
       const float newFeePerByte = newTotalFee / summary.txVirtSize;
-      if (!qFuzzyCompare(newTotalFee, advisedFeePerByte_) || !qFuzzyCompare(newFeePerByte, advisedFeePerByte_)) {
+      if (!qFuzzyCompare(newTotalFee, advisedTotalFee_) || !qFuzzyCompare(newFeePerByte, advisedFeePerByte_)) {
          QMetaObject::invokeMethod(this, [this, newTotalFee, newFeePerByte] {
             setAdvisedFees(newTotalFee, newFeePerByte);
             validateCreateButton();

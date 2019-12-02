@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef UTXO_RESERVATION_TOKEN_H
 #define UTXO_RESERVATION_TOKEN_H
 
@@ -54,6 +64,8 @@ namespace bs {
       const std::string &reserveId() const { return reserveId_; }
 
       void release();
+
+      bool isValid() const;
 
    private:
       // could be nullptr

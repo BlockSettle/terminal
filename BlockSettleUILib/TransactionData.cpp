@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "TransactionData.h"
 
 #include "ArmoryConnection.h"
@@ -32,7 +42,6 @@ TransactionData::TransactionData(const onTransactionChanged &changedCallback
 TransactionData::~TransactionData() noexcept
 {
    changedCallback_ = {};
-   bs::UtxoReservation::delAdapter(utxoAdapter_);
 }
 
 void TransactionData::SetCallback(onTransactionChanged changedCallback)
@@ -211,9 +220,10 @@ bool TransactionData::UpdateTransactionData()
       return false;
    }
 
-   PaymentStruct payment = (!totalFee_ && !qFuzzyIsNull(feePerByte_))
+   const auto totalFee = totalFee_ ? totalFee_ : minTotalFee_;
+   PaymentStruct payment = (!totalFee && !qFuzzyIsNull(feePerByte_))
       ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
-      : PaymentStruct(recipientsMap, totalFee_, 0, 0);
+      : PaymentStruct(recipientsMap, totalFee, 0, 0);
    summary_.balanceToSpend = UiUtils::amountToBtc(payment.spendVal_);
 
    if (payment.spendVal_ <= availableBalance) {
@@ -275,6 +285,10 @@ bool TransactionData::UpdateTransactionData()
                   }*/
       }
       summary_.usedTransactions = usedUTXO_.size();
+   }
+
+   if (minTotalFee_ && (summary_.totalFee < minTotalFee_)) {
+      summary_.totalFee = minTotalFee_;
    }
 
    summary_.outputsCount = recipients_.size();
@@ -393,10 +407,6 @@ std::vector<UTXO> TransactionData::decorateUTXOs() const
    }
 
    auto inputUTXOs = selectedInputs_->GetSelectedTransactions();
-
-   if (utxoAdapter_ && reservedUTXO_.empty()) {
-      utxoAdapter_->filter(selectedInputs_->GetWallet()->walletId(), inputUTXOs);
-   }
 
 #if 0 // since we don't have address entries and public keys now, we need to re-think this code
    for (auto& utxo : inputUTXOs) {
@@ -545,16 +555,12 @@ void TransactionData::clear()
    feePerByte_ = 0;
    recipients_.clear();
    usedUTXO_.clear();
-   reservedUTXO_.clear();
    summary_ = {};
 }
 
 std::vector<UTXO> TransactionData::inputs() const
 {
-   if (reservedUTXO_.empty()) {
-      return usedUTXO_;
-   }
-   return reservedUTXO_;
+   return usedUTXO_;
 }
 
 bool TransactionData::IsTransactionValid() const
@@ -735,13 +741,14 @@ std::vector<std::shared_ptr<ScriptRecipient>> TransactionData::GetRecipientList(
 }
 
 bs::core::wallet::TXSignRequest TransactionData::createTXRequest(bool isRBF
-   , const bs::Address &changeAddr, const uint64_t& origFee) const
+   , const bs::Address &changeAddr) const
 {
    if (!wallet_ && !group_) {
       return {};
    }
+   const auto fee = summary_.totalFee ? summary_.totalFee : totalFee();
    auto txReq = wallet_->createTXRequest(inputs(), GetRecipientList()
-      , summary_.totalFee, isRBF, changeAddr, origFee);
+      , fee, isRBF, changeAddr);
    if (group_) {
       txReq.walletIds.clear();
       std::set<std::string> walletIds;
@@ -763,4 +770,17 @@ bs::core::wallet::TXSignRequest TransactionData::createTXRequest(bool isRBF
       txReq.walletIds.insert(txReq.walletIds.end(), walletIds.cbegin(), walletIds.cend());
    }
    return txReq;
+}
+
+bs::core::wallet::TXSignRequest TransactionData::createUnsignedTransaction(bool isRBF, const bs::Address &changeAddress)
+{
+   if (!wallet_) {
+      return {};
+   }
+   auto unsignedTxReq = wallet_->createTXRequest(inputs(), GetRecipientList(), summary_.totalFee, isRBF, changeAddress);
+   if (!unsignedTxReq.isValid()) {
+      throw std::runtime_error("missing unsigned TX");
+   }
+
+   return unsignedTxReq;
 }

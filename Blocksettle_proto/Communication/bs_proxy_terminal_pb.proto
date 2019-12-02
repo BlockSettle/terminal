@@ -18,6 +18,12 @@ enum OtcState
     OTC_STATE_SUCCEED = 6;
 }
 
+message PreimageData
+{
+    string address = 1;
+    bytes  preimage_script = 2;
+}
+
 message Request
 {
     // OTC
@@ -41,7 +47,8 @@ message Request
 
         // Used to check fees and other details (UTXO for payin, settlement address etc)
         bytes unsigned_tx = 7;
-        bytes payin_hash = 8;
+        repeated PreimageData preimage_data = 8;
+        bytes payin_tx_hash = 9;
 
         string chat_id_seller = 10;
         string chat_id_buyer = 11;
@@ -70,7 +77,7 @@ message Request
     {
         string  settlement_id       = 1;
         bytes   unsigned_payin      = 2;
-        bytes   unsigned_payin_id   = 3;
+        repeated PreimageData preimage_data = 3;
     }
 
     message XBTSignedPayin

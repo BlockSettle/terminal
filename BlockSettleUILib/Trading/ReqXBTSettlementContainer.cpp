@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "ReqXBTSettlementContainer.h"
 
 #include <QApplication>
@@ -9,11 +19,9 @@
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
 #include "QuoteProvider.h"
-#include "SettlementMonitor.h"
 #include "SignContainer.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"
-#include "UtxoReservation.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -32,7 +40,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const bs::network::RFQ &rfq
    , const bs::network::Quote &quote
    , const bs::Address &authAddr
-   , const std::vector<UTXO> &utxosPayinFixed
+   , const std::map<UTXO, std::string> &utxosPayinFixed
    , const bs::Address &recvAddr)
    : bs::SettlementContainer()
    , logger_(logger)
@@ -52,9 +60,6 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
 
    qRegisterMetaType<AddressVerificationState>();
 
-   utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
-   bs::UtxoReservation::addAdapter(utxoAdapter_);
-
    connect(signContainer_.get(), &SignContainer::TXSigned, this, &ReqXBTSettlementContainer::onTXSigned);
 
    connect(this, &ReqXBTSettlementContainer::timerExpired, this, &ReqXBTSettlementContainer::onTimerExpired);
@@ -68,13 +73,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
       + quote_.security + " @ " + std::to_string(price());
 }
 
-ReqXBTSettlementContainer::~ReqXBTSettlementContainer()
-{
-   if (weSellXbt_) {
-      utxoAdapter_->unreserve(id());
-   }
-   bs::UtxoReservation::delAdapter(utxoAdapter_);
-}
+ReqXBTSettlementContainer::~ReqXBTSettlementContainer() = default;
 
 void ReqXBTSettlementContainer::acceptSpotXBT()
 {
@@ -85,6 +84,9 @@ bool ReqXBTSettlementContainer::cancel()
 {
    deactivate();
    emit settlementCancelled();
+
+   SettlementContainer::releaseUtxoRes();
+
    return true;
 }
 
@@ -280,7 +282,10 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
 
    bs::tradeutils::PayinArgs args;
    initTradesArgs(args, settlementId);
-   args.fixedInputs = utxosPayinFixed_;
+   args.fixedInputs.reserve(utxosPayinFixed_.size());
+   for (const auto &input : utxosPayinFixed_) {
+      args.fixedInputs.push_back(input.first);
+   }
    for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
       args.inputXbtWallets.push_back(leaf);
    }
@@ -317,11 +322,10 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
          addrVerificator_->startAddressVerification();
 
          unsignedPayinRequest_ = std::move(result.signRequest);
-         SPDLOG_LOGGER_DEBUG(logger_, "unsigned tx id {}", result.payinTxId.toHexStr(true));
 
-         utxoAdapter_->reserve(xbtWallet_->walletId(), id(), unsignedPayinRequest_.inputs);
+         utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_, id());
 
-         emit sendUnsignedPayinToPB(settlementIdHex_, unsignedPayinRequest_.serializeState(), result.payinTxId);
+         emit sendUnsignedPayinToPB(settlementIdHex_, bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState(), std::move(result.preimageData)} );
       });
    });
 
