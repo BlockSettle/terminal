@@ -73,7 +73,6 @@ Homepage: http://blocksettle.com
 
 Package: bsterminal
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: BlockSettle bitcoin terminal and wallet manager
  This application is as terminal for BlockSettle's real-time
  settlement network, but can also act as a comprehensive Bitcoin
