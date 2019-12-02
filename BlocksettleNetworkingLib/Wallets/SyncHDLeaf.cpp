@@ -180,6 +180,7 @@ void hd::Leaf::onRefresh(const std::vector<BinaryData> &ids, bool online)
       }
    }
 
+   std::lock_guard<std::mutex> lock(regMutex_);
    if (!unconfTgtRegIds_.empty()) {
       for (const auto &id : ids) {
          const auto it = std::find(unconfTgtRegIds_.cbegin(), unconfTgtRegIds_.cend(), id.toBinStr());
