@@ -720,7 +720,7 @@ bool ArmoryConnection::getOutputsForOutpoints(const std::map<BinaryData, std::se
          cb({}, std::make_exception_ptr(e));
       }
    };
-   bdv_->getOutputsForOutpoints(outpoints, cbWrap);
+   bdv_->getOutputsForOutpoints(outpoints, withZc, cbWrap);
    return true;
 }
 
