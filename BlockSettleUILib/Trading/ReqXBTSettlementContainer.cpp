@@ -127,9 +127,9 @@ void ReqXBTSettlementContainer::deactivate()
    stopTimer();
 }
 
-bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData() const
+bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData(QDateTime timestamp) const
 {
-   bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+   bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData(timestamp);
    dialogData.setValue(PasswordDialogData::Market, "XBT");
    dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
 
@@ -332,7 +332,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
    bs::tradeutils::createPayin(std::move(args), std::move(payinCb));
 }
 
-void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash)
+void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp)
 {
    if (settlementIdHex_ != settlementId) {
       SPDLOG_LOGGER_ERROR(logger_, "invalid id : {} . {} expected", settlementId, settlementIdHex_);
@@ -350,10 +350,10 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
    args.recvAddr = recvAddr_;
    args.outputXbtWallet = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves().at(0);
 
-   auto payoutCb = bs::tradeutils::PayoutResultCb([this, payinHash, handle = validityFlag_.handle()]
+   auto payoutCb = bs::tradeutils::PayoutResultCb([this, payinHash, timestamp, handle = validityFlag_.handle()]
       (bs::tradeutils::PayoutResult result)
    {
-      QMetaObject::invokeMethod(qApp, [this, payinHash, handle, result = std::move(result)] {
+      QMetaObject::invokeMethod(qApp, [this, payinHash, handle, timestamp, result = std::move(result)] {
          if (!handle.isValid()) {
             return;
          }
@@ -366,7 +366,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
 
          settlAddr_ = result.settlementAddr;
 
-         bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(result.signRequest);
+         bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(result.signRequest, timestamp);
          dlgData.setValue(PasswordDialogData::Market, "XBT");
          dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
          dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
@@ -382,7 +382,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
    bs::tradeutils::createPayout(std::move(args), std::move(payoutCb));
 }
 
-void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin)
+void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp)
 {
    if (settlementIdHex_ != settlementId) {
       SPDLOG_LOGGER_ERROR(logger_, "invalid id : {} . {} expected", settlementId, settlementIdHex_);
@@ -405,7 +405,7 @@ void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settle
 
    // XXX check unsigned payin?
 
-   bs::sync::PasswordDialogData dlgData = toPasswordDialogData();
+   bs::sync::PasswordDialogData dlgData = toPasswordDialogData(timestamp);
    dlgData.setValue(PasswordDialogData::SettlementPayInVisible, true);
 
    payinSignId_ = signContainer_->signSettlementTXRequest(unsignedPayinRequest_, dlgData);

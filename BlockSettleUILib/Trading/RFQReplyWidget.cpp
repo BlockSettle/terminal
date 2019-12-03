@@ -361,11 +361,11 @@ void RFQReplyWidget::saveTxData(QString orderId, std::string txData)
    quoteProvider_->SignTxRequest(orderId, txData);
 }
 
-void RFQReplyWidget::onSignTxRequested(QString orderId, QString reqId)
+void RFQReplyWidget::onSignTxRequested(QString orderId, QString reqId, QDateTime timestamp)
 {
    Q_UNUSED(reqId);
 
-   if (!ui_->widgetQuoteRequests->StartCCSignOnOrder(orderId)) {
+   if (!ui_->widgetQuoteRequests->StartCCSignOnOrder(orderId, timestamp)) {
       logger_->error("[RFQReplyWidget::onSignTxRequested] failed to initiate sign on CC order: {}"
                      , orderId.toStdString());
    }
@@ -466,29 +466,28 @@ void RFQReplyWidget::showEditableRFQPage()
 void RFQReplyWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
    switch (response.data_case()) {
-      case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin:
-         {
-            auto command = response.send_unsigned_payin();
-
-            emit unsignedPayinRequested(command.settlement_id());
-         }
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin: {
+         const auto &command = response.send_unsigned_payin();
+         emit unsignedPayinRequested(command.settlement_id());
          break;
-      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayout:
-         {
-            auto command = response.sign_payout();
+      }
 
-            // payin_data - payin hash . binary
-            emit signedPayoutRequested(command.settlement_id(), command.payin_data());
-         }
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayout: {
+         const auto &command = response.sign_payout();
+         auto timestamp = QDateTime::fromMSecsSinceEpoch(command.timestamp_ms());
+         // payin_data - payin hash . binary
+         emit signedPayoutRequested(command.settlement_id(), command.payin_data(), timestamp);
          break;
-      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayin:
-         {
-            auto command = response.sign_payin();
+      }
 
-            // unsigned_payin_data - serialized payin. binary
-            emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data());
-         }
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayin: {
+         auto command = response.sign_payin();
+         auto timestamp = QDateTime::fromMSecsSinceEpoch(command.timestamp_ms());
+         // unsigned_payin_data - serialized payin. binary
+         emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data(), timestamp);
          break;
+      }
+
       default:
          break;
    }
