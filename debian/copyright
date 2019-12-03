@@ -1,0 +1,11 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: bsterminal
+Source: https://github.com/BlockSettle/terminal
+
+Files: *
+Copyright: 2011-2019 BlockSettle AB
+License: AGPL3+
+
+Files: debian/*
+Copyright: 2019 BlockSettle AB
+License: AGPL3+
