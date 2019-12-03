@@ -255,7 +255,7 @@ private:
    ////
    std::set<BinaryData> processTxBatch(
       std::shared_ptr<ColoredCoinSnapshot>&,
-      const std::set<BinaryData>&);
+      const std::set<BinaryData>&, bool parseLowest);
 
    std::set<BinaryData> processZcBatch(
       const std::shared_ptr<ColoredCoinSnapshot>&,
