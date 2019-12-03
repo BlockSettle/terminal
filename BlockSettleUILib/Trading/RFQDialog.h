@@ -67,7 +67,7 @@ public:
       , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<RfqStorage> &rfqStorage
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
-      , const bs::Address &recvXbtAddr
+      , const bs::Address &recvXbtAddrIfSet
       , const bs::Address &authAddr
       , const std::map<UTXO, std::string> &fixedXbtInputs
       , bs::UtxoReservationToken utxoRes
@@ -108,7 +108,7 @@ private:
    std::shared_ptr<spdlog::logger>     logger_;
    const bs::network::RFQ              rfq_;
    bs::network::Quote                  quote_;
-   bs::Address recvXbtAddr_;
+   bs::Address recvXbtAddrIfSet_;
 
    std::shared_ptr<QuoteProvider>               quoteProvider_;
    std::shared_ptr<AuthAddressManager>          authAddressManager_;

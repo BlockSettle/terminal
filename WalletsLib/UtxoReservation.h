@@ -18,6 +18,9 @@
 #include <unordered_map>
 #include "TxClasses.h"
 
+namespace spdlog {
+   class logger;
+}
 
 namespace bs {
    // A reservation system for UTXOs. It can be fed a list of inputs. The inputs
@@ -58,7 +61,7 @@ namespace bs {
 
       // Create the singleton. Use only once!
       // Destroying disabled as it's broken, see BST-2362 for details
-      static void init();
+      static void init(const std::shared_ptr<spdlog::logger> &logger);
 
       // Add and remove individual adapters. Typically added/deleted only once
       // per class that uses an adapter.
@@ -95,6 +98,8 @@ namespace bs {
       std::unordered_map<std::string, std::chrono::time_point<std::chrono::system_clock>> reserveTime_;
       // Active adapters.
       std::vector<std::shared_ptr<Adapter>>        adapters_;
+
+      std::shared_ptr<spdlog::logger> logger_;
    };
 
 }  //namespace bs

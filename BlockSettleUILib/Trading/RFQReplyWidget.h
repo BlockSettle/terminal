@@ -121,6 +121,7 @@ private slots:
 
 private:
    void onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
+   void onResetCurrentReservation(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
    void showSettlementDialog(QDialog *dlg);
    bool checkConditions(const QString& productGroup, const bs::network::QuoteReqNotification& request);
    void popShield();

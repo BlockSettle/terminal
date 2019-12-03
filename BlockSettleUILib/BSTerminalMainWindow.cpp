@@ -76,8 +76,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    , ui_(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
 {
-   bs::UtxoReservation::init();
-
    UiUtils::SetupLocale();
 
    ui_->setupUi(this);
@@ -108,6 +106,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    logMgr_->add(applicationSettings_->GetLogsConfig());
 
    logMgr_->logger()->debug("Settings loaded from {}", applicationSettings_->GetSettingsPath().toStdString());
+
+   bs::UtxoReservation::init(logMgr_->logger());
 
    setupIcon();
    UiUtils::setupIconFont(this);
@@ -494,8 +494,7 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createLocalSigner()
 bool BSTerminalMainWindow::InitSigningContainer()
 {
    // create local var just to avoid up-casting
-   auto walletSignerContainer = createSigner();
-   signContainer_ = walletSignerContainer;
+   signContainer_ = createSigner();
 
    if (!signContainer_) {
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
@@ -505,7 +504,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError, Qt::QueuedConnection);
    connect(signContainer_.get(), &SignContainer::disconnected, this, &BSTerminalMainWindow::updateControlEnabledState, Qt::QueuedConnection);
 
-   walletsMgr_->setSignContainer(walletSignerContainer);
+   walletsMgr_->setSignContainer(signContainer_);
 
    return true;
 }

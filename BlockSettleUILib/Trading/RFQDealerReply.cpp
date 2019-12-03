@@ -398,6 +398,12 @@ void RFQDealerReply::updateSubmitButton()
       && (!signingContainer_ || signingContainer_->isOffline())) {
       isQRNRepliable = false;
    }
+
+   if (!currentQRN_.empty() && activeQuoteSubmits_.find(currentQRN_.quoteRequestId) != activeQuoteSubmits_.end()) {
+      // Do not allow re-enter into submitReply as it could cause problems
+      isQRNRepliable = false;
+   }
+
    ui_->pushButtonSubmit->setEnabled(isQRNRepliable);
    ui_->pushButtonPull->setEnabled(isQRNRepliable);
    if (!isQRNRepliable) {
@@ -569,6 +575,11 @@ void RFQDealerReply::setSubmitQuoteNotifCb(RFQDealerReply::SubmitQuoteNotifCb cb
    submitQuoteNotifCb_ = std::move(cb);
 }
 
+void RFQDealerReply::setResetCurrentReservation(RFQDealerReply::ResetCurrentReservationCb cb)
+{
+   resetCurrentReservationCb_ = std::move(cb);
+}
+
 void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, double price, ReplyType replyType)
 {
    if (qFuzzyIsNull(price)) {
@@ -604,10 +615,20 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
       replyData->fixedXbtInputs = selectedXbtInputs(replyType);
    }
 
+   auto it = activeQuoteSubmits_.find(replyData->qn.quoteRequestId);
+   if (it != activeQuoteSubmits_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "quote submit already active for quote request '{}'", replyData->qn.quoteRequestId);
+      return;
+   }
+   activeQuoteSubmits_.insert(replyData->qn.quoteRequestId);
+   updateSubmitButton();
+
    auto submit = [this, price, replyData]() {
       SPDLOG_LOGGER_DEBUG(logger_, "submitted quote reply on {}: {}/{}", replyData->qn.quoteRequestId, replyData->qn.bidPx, replyData->qn.offerPx);
       sentNotifs_[replyData->qn.quoteRequestId] = price;
       submitQuoteNotifCb_(replyData);
+      activeQuoteSubmits_.erase(replyData->qn.quoteRequestId);
+      updateSubmitButton();
    };
 
    switch (qrn.assetType) {
@@ -689,6 +710,10 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                      spendWallet->getNewChangeAddress(cbChangeAddr);
                   });
                };
+
+               // Try to reset current reservation if needed when user sends another quote
+               resetCurrentReservationCb_(replyData);
+
                if (isSpendCC) {
                   const auto  inputsWrapCb = [inputsCb, ccWallet](const std::vector<UTXO> &utxos) {
                      std::map<UTXO, std::string> inputs;

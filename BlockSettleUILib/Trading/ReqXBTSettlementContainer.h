@@ -50,7 +50,7 @@ public:
       , const bs::network::Quote &
       , const bs::Address &authAddr
       , const std::map<UTXO, std::string> &utxosPayinFixed
-      , const bs::Address &recvAddr);
+      , const bs::Address &recvAddrIfSet);
    ~ReqXBTSettlementContainer() override;
 
    bool cancel() override;
@@ -112,7 +112,7 @@ private:
    std::string       settlementIdHex_;
    BinaryData        userKey_;
    BinaryData        dealerAuthKey_;
-   bs::Address       recvAddr_;
+   bs::Address       recvAddrIfSet_;
    AddressVerificationState dealerVerifState_ = AddressVerificationState::VerificationFailed;
 
    std::string       comment_;
