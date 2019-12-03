@@ -109,7 +109,8 @@ namespace {
 
    const auto kStartOtcTimeout = std::chrono::seconds(10);
 
-   bs::sync::PasswordDialogData toPasswordDialogData(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
+   bs::sync::PasswordDialogData toPasswordDialogData(const OtcClientDeal &deal
+      , const bs::core::wallet::TXSignRequest &signRequest, QDateTime timestamp)
    {
       double price = fromCents(deal.price);
 
@@ -145,16 +146,15 @@ namespace {
       dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, !deal.isRequestor());
 
       // Set timestamp that will be used by auth eid server to update timers.
-      // TODO: Use time from PB and use it for all counters.
-      const int timestamp = static_cast<int>(std::chrono::system_clock::now().time_since_epoch() / std::chrono::seconds(1));
-      dialogData.setValue(PasswordDialogData::DurationTimestamp, timestamp);
+      dialogData.setValue(PasswordDialogData::DurationTimestamp, static_cast<int>(timestamp.toSecsSinceEpoch()));
 
       return dialogData;
    }
 
-   bs::sync::PasswordDialogData toPasswordDialogDataPayin(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
+   bs::sync::PasswordDialogData toPasswordDialogDataPayin(const OtcClientDeal &deal
+      , const bs::core::wallet::TXSignRequest &signRequest, QDateTime timestamp)
    {
-      auto dialogData = toPasswordDialogData(deal, signRequest);
+      auto dialogData = toPasswordDialogData(deal, signRequest, timestamp);
       dialogData.setValue(PasswordDialogData::SettlementPayInVisible, true);
       dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-In"));
       dialogData.setValue(PasswordDialogData::DurationTotal, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payinTimeout()).count()));
@@ -162,9 +162,10 @@ namespace {
       return dialogData;
    }
 
-   bs::sync::PasswordDialogData toPasswordDialogDataPayout(const OtcClientDeal &deal, const bs::core::wallet::TXSignRequest &signRequest)
+   bs::sync::PasswordDialogData toPasswordDialogDataPayout(const OtcClientDeal &deal
+      , const bs::core::wallet::TXSignRequest &signRequest, QDateTime timestamp)
    {
-      auto dialogData = toPasswordDialogData(deal, signRequest);
+      auto dialogData = toPasswordDialogData(deal, signRequest, timestamp);
       dialogData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
       dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-Out"));
       dialogData.setValue(PasswordDialogData::DurationTotal, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payoutTimeout()).count()));
@@ -1229,6 +1230,8 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
    SPDLOG_LOGGER_DEBUG(logger_, "change OTC trade state to: {}, settlementId: {}"
       , response.settlement_id(), ProxyTerminalPb::OtcState_Name(response.state()));
 
+   auto timestamp = QDateTime::fromMSecsSinceEpoch(response.timestamp_ms());
+
    switch (response.state()) {
       case ProxyTerminalPb::OTC_STATE_FAILED: {
          switch (peer->state) {
@@ -1263,7 +1266,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             settlData.cpPublicKey = deal->cpPubKey;
             settlData.ownKeyFirst = true;
 
-            auto payoutInfo = toPasswordDialogDataPayout(*deal, deal->payout);
+            auto payoutInfo = toPasswordDialogDataPayout(*deal, deal->payout, timestamp);
             auto reqId = signContainer_->signSettlementPayoutTXRequest(deal->payout, settlData, payoutInfo);
             signRequestIds_[reqId] = deal->settlementId;
             deal->payoutReqId = reqId;
@@ -1292,7 +1295,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
          if (deal->side == otc::Side::Sell) {
             assert(deal->payin.isValid());
 
-            auto payinInfo = toPasswordDialogDataPayin(*deal, deal->payin);
+            auto payinInfo = toPasswordDialogDataPayin(*deal, deal->payin, timestamp);
             auto reqId = signContainer_->signSettlementTXRequest(deal->payin, payinInfo);
             signRequestIds_[reqId] = deal->settlementId;
             deal->payinReqId = reqId;
