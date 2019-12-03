@@ -174,18 +174,16 @@ void CreateTransactionDialogSimple::showAdvanced()
    accept();
 }
 
-bs::Address CreateTransactionDialogSimple::getChangeAddress() const
+void CreateTransactionDialogSimple::getChangeAddress(std::function<void(bs::Address)> cb) const
 {
-   auto promAddr = std::make_shared<std::promise<bs::Address>>();
-   auto futAddr = promAddr->get_future();
-   const auto &cbAddr = [promAddr](const bs::Address &addr) {
-      promAddr->set_value(addr);
-   };
    if (transactionData_->GetTransactionSummary().hasChange) {
+      const auto &cbAddr = [cb = std::move(cb)](const bs::Address &addr) {
+         cb(addr);
+      };
       transactionData_->getWallet()->getNewChangeAddress(cbAddr);
-      return futAddr.get();
+      return;
    }
-   return {};
+   cb({});
 }
 
 void CreateTransactionDialogSimple::createTransaction()
@@ -202,9 +200,14 @@ void CreateTransactionDialogSimple::createTransaction()
       }
    }
 
-   if (!CreateTransaction()) {
-      reject();
-   }
+   CreateTransaction([this, handle = validityFlag_.handle()](bool result) {
+      if (!handle.isValid()) {
+         return;
+      }
+      if (!result) {
+         reject();
+      }
+   });
 }
 
 bool CreateTransactionDialogSimple::userRequestedAdvancedDialog() const
