@@ -131,7 +131,7 @@ private slots:
    void CompleteUIOnlineView();
    void CompleteDBConnection();
 
-   bool createWallet(bool primary, const std::function<void()> &, bool reportSuccess = true);
+   bool createWallet(bool primary, const std::function<void()> & = nullptr, bool reportSuccess = true);
    void onCreatePrimaryWalletRequest();
 
    void acceptMDAgreement();
@@ -147,7 +147,7 @@ private slots:
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
    QAction *action_send_ = nullptr;
-   QAction *action_receive_ = nullptr;
+   QAction *action_generate_address_ = nullptr;
    QAction *action_login_ = nullptr;
    QAction *action_logout_ = nullptr;
 
@@ -187,7 +187,7 @@ private:
 
 private slots:
    void onSend();
-   void onReceive();
+   void onGenerateAddress();
 
    void openAuthManagerDialog();
    void openAuthDlgVerify(const QString &addrToVerify);

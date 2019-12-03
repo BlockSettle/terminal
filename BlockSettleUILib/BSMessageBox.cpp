@@ -14,6 +14,8 @@
 #include <QStyle>
 #include <QTimer>
 
+QString BSMessageBox::kUrlColor = QLatin1String("#ffffff");
+
 // Basic constructor, sets message box type, title and text
 BSMessageBox::BSMessageBox(Type mbType, const QString& title
    , const QString& text, QWidget* parent)
@@ -168,28 +170,6 @@ MessageBoxExpTimeout::MessageBoxExpTimeout(QWidget *parent)
    : BSMessageBox(BSMessageBox::warning, tr("Explorer Timeout"),
       tr("Explorer Timeout"), tr("Armory has timed out. Cannot resolve query.")
       , parent) {
-}
-
-MessageBoxAuthNotice::MessageBoxAuthNotice(QWidget *parent)
-   : BSMessageBox(BSMessageBox::info
-      , tr("Auth eID")
-      , tr("Signing with Auth eID")
-      , tr("Auth eID is a convenient alternative to passwords. "
-           "Instead of entering a password, BlockSettle Terminal issues a secure notification to mobile devices attached to your wallet's Auth eID account. "
-            "You may then sign wallet-related requests via a press of a button in the Auth eID app on your mobile device(s)."
-            "<br><br>You may add or remove devices to your Auth eID accounts as required by the user, and users may have multiple devices on one account. "
-            "Auth eID requires the user to be vigilant with devices using Auth eID. "
-            "If a device is damaged or lost, the user will be unable to sign Auth eID requests, and the wallet will become unusable."
-            "<br><br>Auth eID is not a wallet backup! No wallet data is stored with Auth eID. "
-            "Therefore, you must maintain proper backups of your wallet's Root Private Key (RPK). "
-            "In the event that all mobile devices attached to a wallet are damaged or lost, the RPK may be used to create a duplicate wallet. "
-            "You may then attach a password or your Auth eID account to the wallet."
-            "<br><br>Auth eID, like any software, is susceptible to malware, although keyloggers will serve no purpose. "
-            "Please keep your mobile devices up-to-date with the latest software updates, and never install software offered outside your device's app store."
-            "<br><br>For more information, please consult:<br><a href=\"https://autheid.com/\"><span style=\"color:white;\">Getting Started With Auth eID</span></a>.")
-                  , parent) {
-   // use rich text because of the hyperlink
-   setLabelTextFormat(Qt::RichText);
 }
 
 MessageBoxWalletCreateAbort::MessageBoxWalletCreateAbort(QWidget *parent)

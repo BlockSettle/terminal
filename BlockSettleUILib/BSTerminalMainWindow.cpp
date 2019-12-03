@@ -246,8 +246,8 @@ void BSTerminalMainWindow::setupToolbar()
 {
    action_send_ = new QAction(tr("Create &Transaction"), this);
    connect(action_send_, &QAction::triggered, this, &BSTerminalMainWindow::onSend);
-   action_receive_ = new QAction(tr("Generate &Address"), this);
-   connect(action_receive_, &QAction::triggered, this, &BSTerminalMainWindow::onReceive);
+   action_generate_address_ = new QAction(tr("Generate &Address"), this);
+   connect(action_generate_address_, &QAction::triggered, this, &BSTerminalMainWindow::onGenerateAddress);
 
    action_login_ = new QAction(tr("Login to BlockSettle"), this);
    connect(action_login_, &QAction::triggered, this, &BSTerminalMainWindow::onLogin);
@@ -262,7 +262,7 @@ void BSTerminalMainWindow::setupToolbar()
    // send bitcoins
    toolBar->addAction(action_send_);
    // receive bitcoins
-   toolBar->addAction(action_receive_);
+   toolBar->addAction(action_generate_address_);
 
    action_logout_->setVisible(false);
 
@@ -274,7 +274,7 @@ void BSTerminalMainWindow::setupToolbar()
    trayMenu->addSeparator();
 
    trayMenu->addAction(action_send_);
-   trayMenu->addAction(action_receive_);
+   trayMenu->addAction(action_generate_address_);
    trayMenu->addAction(ui_->actionSettings);
 
    trayMenu->addSeparator();
@@ -696,7 +696,7 @@ void BSTerminalMainWindow::MainWinACT::onRefresh(const std::vector<BinaryData> &
       && parent_->walletsMgr_->hdWallets().empty()) {
 
       const auto &deferredDialog = [this]{
-         parent_->createWallet(true, [] {});
+         parent_->createWallet(true);
       };
 
       parent_->addDeferredDialog(deferredDialog);
@@ -919,7 +919,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
 
 void BSTerminalMainWindow::onCreatePrimaryWalletRequest()
 {
-   bool result = createWallet(true, [] {});
+   bool result = createWallet(true);
 
    if (!result) {
       // Need to inform UI about rejection
@@ -956,33 +956,39 @@ void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError erro
    }
 }
 
-void BSTerminalMainWindow::onReceive()
+void BSTerminalMainWindow::onGenerateAddress()
 {
-   const auto defWallet = walletsMgr_->getDefaultWallet();
-   std::string selWalletId = defWallet ? defWallet->walletId() : std::string{};
-   if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
-      auto wallets = ui_->widgetWallets->getSelectedWallets();
-      if (!wallets.empty()) {
-         selWalletId = wallets[0]->walletId();
-      } else {
-         wallets = ui_->widgetWallets->getFirstWallets();
+   if (walletsMgr_->hdWallets().empty()) {
+      createWallet(true);
+   }
+   else {
+      const auto defWallet = walletsMgr_->getDefaultWallet();
+      std::string selWalletId = defWallet ? defWallet->walletId() : std::string{};
 
+      if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
+         auto wallets = ui_->widgetWallets->getSelectedWallets();
          if (!wallets.empty()) {
             selWalletId = wallets[0]->walletId();
+         } else {
+            wallets = ui_->widgetWallets->getFirstWallets();
+
+            if (!wallets.empty()) {
+               selWalletId = wallets[0]->walletId();
+            }
          }
       }
-   }
-   SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(
-      walletsMgr_, selWalletId, this);
-   selectWalletDialog->exec();
+      SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(
+         walletsMgr_, selWalletId, this);
+      selectWalletDialog->exec();
 
-   if (selectWalletDialog->result() == QDialog::Rejected) {
-      return;
-   }
+      if (selectWalletDialog->result() == QDialog::Rejected) {
+         return;
+      }
 
-   NewAddressDialog* newAddressDialog = new NewAddressDialog(
-      selectWalletDialog->getSelectedWallet(), signContainer_, this);
-   newAddressDialog->show();
+      NewAddressDialog* newAddressDialog = new NewAddressDialog(
+         selectWalletDialog->getSelectedWallet(), signContainer_, this);
+      newAddressDialog->show();
+   }
 }
 
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
