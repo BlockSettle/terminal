@@ -61,13 +61,13 @@ public:
    double quantity() const override { return quote_.quantity; }
    double price() const override { return quote_.price; }
    double amount() const override { return quantity() * price(); }
-   bs::sync::PasswordDialogData toPasswordDialogData() const override;
+   bs::sync::PasswordDialogData toPasswordDialogData(QDateTime timestamp) const override;
 
    bs::hd::WalletInfo walletInfo() const { return walletInfo_; }
    std::string txData() const;
    std::string txSignedData() const { return ccTxSigned_; }
 
-   bool startSigning();
+   bool startSigning(QDateTime timestamp);
 
 signals:
    void settlementCancelled();

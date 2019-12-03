@@ -50,8 +50,9 @@ namespace bs {
       int durationMs() const { return msDuration_; }
       int timeLeftMs() const { return msTimeLeft_; }
 
-      virtual bs::sync::PasswordDialogData toPasswordDialogData() const;
-      virtual bs::sync::PasswordDialogData toPayOutTxDetailsPasswordDialogData(bs::core::wallet::TXSignRequest payOutReq) const;
+      virtual bs::sync::PasswordDialogData toPasswordDialogData(QDateTime timestamp) const;
+      virtual bs::sync::PasswordDialogData toPayOutTxDetailsPasswordDialogData(bs::core::wallet::TXSignRequest payOutReq
+         , QDateTime timestamp) const;
 
       static constexpr unsigned int kWaitTimeoutInSec = 30;
    signals:

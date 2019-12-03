@@ -110,7 +110,7 @@ public:
    QString getMarketSecurity(const QModelIndex &index);
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
-   bool StartCCSignOnOrder(const QString& orderId);
+   bool StartCCSignOnOrder(const QString& orderId, QDateTime timestamp);
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;

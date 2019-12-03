@@ -79,8 +79,8 @@ protected:
 
 public slots:
    void onUnsignedPayinRequested(const std::string& settlementId);
-   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
-   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
 
 private slots:
    bool close();
@@ -91,7 +91,7 @@ private slots:
    void onOrderFailed(const std::string& quoteId, const std::string& reason);
    void onXBTSettlementAccepted();
 
-   void onSignTxRequested(QString orderId, QString reqId);
+   void onSignTxRequested(QString orderId, QString reqId, QDateTime timestamp);
    void onCCQuoteAccepted();
    void onCCTxSigned();
 

@@ -76,7 +76,7 @@ signals:
    void orderUpdated(const bs::network::Order& order) const;
    void orderFailed(const std::string& quoteId, const std::string& reason) const;
    void orderRejected(const QString &id, const QString &reason) const;
-   void signTxRequested(QString orderId, QString reqId) const;
+   void signTxRequested(QString orderId, QString reqId, QDateTime timestamp) const;
    void bestQuotePrice(const QString reqId, double price, bool own) const;
 
    void quoteReqNotifReceived(const bs::network::QuoteReqNotification& qrn);

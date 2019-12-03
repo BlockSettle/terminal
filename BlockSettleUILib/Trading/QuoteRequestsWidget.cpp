@@ -174,10 +174,10 @@ void QuoteRequestsWidget::addSettlementContainer(const std::shared_ptr<bs::Settl
    }
 }
 
-bool QuoteRequestsWidget::StartCCSignOnOrder(const QString& orderId)
+bool QuoteRequestsWidget::StartCCSignOnOrder(const QString& orderId, QDateTime timestamp)
 {
    if (model_) {
-      return model_->StartCCSignOnOrder(orderId);
+      return model_->StartCCSignOnOrder(orderId, timestamp);
    }
 
    return false;

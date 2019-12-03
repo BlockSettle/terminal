@@ -890,16 +890,16 @@ void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNoti
    }
 }
 
-bool QuoteRequestsModel::StartCCSignOnOrder(const QString& orderId)
+bool QuoteRequestsModel::StartCCSignOnOrder(const QString& orderId, QDateTime timestamp)
 {
    auto it = settlContainers_.find(orderId.toStdString());
    if (it == settlContainers_.end()) {
       return false;
    }
 
-   std::shared_ptr< DealerCCSettlementContainer> container = std::dynamic_pointer_cast<DealerCCSettlementContainer>(it->second);
+   auto container = std::dynamic_pointer_cast<DealerCCSettlementContainer>(it->second);
    if (container != nullptr) {
-      return container->startSigning();
+      return container->startSigning(timestamp);
    }
 
    return false;
