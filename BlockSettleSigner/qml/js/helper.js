@@ -292,6 +292,12 @@ function evalWorker(method, cppCallback, argList) {
 }
 
 function prepareDialog(dialog) {
+    // close previous dialog
+    if (currentDialog && typeof currentDialog.close !== "undefined") {
+        currentDialog.close()
+    }
+    currentDialog = dialog
+
     if (isLiteMode()) {
         prepareLiteModeDialog(dialog)
     }
@@ -305,17 +311,6 @@ function prepareLiteModeDialog(dialog) {
         return
     }
     console.log("Prepare qml lite dialog")
-
-    // close previous dialog
-    if (currentDialog && typeof currentDialog.close !== "undefined") {
-        currentDialog.close()
-    }
-
-    //dialog.show()
-    currentDialog = dialog
-//    if (typeof dialog.qmlTitleVisible !== "undefined") {
-//        dialog.qmlTitleVisible = false
-//    }
 
     mainWindow.moveMainWindowToScreenCenter()
     mainWindow.resizeAnimated(dialog.width, dialog.height)
@@ -380,12 +375,7 @@ function createNewWalletDialog(data) {
         dlgCreateWallet.seed = newSeed
         dlgCreateWallet.open()
     })
-//    if (Object.keys(mainWindow).indexOf("currentDialog") != -1) {
-//        mainWindow.sizeChanged.connect(function(w, h) {
-//            dlgNewSeed.width = w
-//            dlgNewSeed.height = h
-//        })
-//    }
+
     dlgNewSeed.open()
     return dlgNewSeed
 }
@@ -604,10 +594,12 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
 }
 
 function updateDialogData(jsCallback, passwordDialogData) {
-    console.log("Trying to update password dialog " + currentDialog + ", Settl Id: " + passwordDialogData.SettlementId)
+    console.log("Trying to update password dialog with Settl Id: " + passwordDialogData.SettlementId)
     if (!currentDialog || typeof currentDialog.passwordDialogData === "undefined") {
+        console.log("Warning: current dialog not set")
         return
     }
+    console.log("Current dialog with Settl Id: " + currentDialog.passwordDialogData.SettlementId)
 
     if (passwordDialogData.SettlementId === currentDialog.passwordDialogData.SettlementId) {
         console.log("Updating password dialog, updated keys: " + passwordDialogData.keys())
