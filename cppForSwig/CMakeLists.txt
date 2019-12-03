@@ -37,6 +37,7 @@ SET (SOURCES
    ${CPP_FOR_SWIG_ROOT}/SocketObject.cpp
    ${CPP_FOR_SWIG_ROOT}/SwigClient.cpp
    ${CPP_FOR_SWIG_ROOT}/StringSockets.cpp
+   ${CPP_FOR_SWIG_ROOT}/TerminalPassphrasePrompt.cpp
    ${CPP_FOR_SWIG_ROOT}/Transactions.cpp
    ${CPP_FOR_SWIG_ROOT}/TxClasses.cpp
    ${CPP_FOR_SWIG_ROOT}/TxEvalState.cpp
@@ -125,6 +126,7 @@ SET (HEADERS
    ${CPP_FOR_SWIG_ROOT}/SocketService.h
    ${CPP_FOR_SWIG_ROOT}/StringSockets.h
    ${CPP_FOR_SWIG_ROOT}/SwigClient.h
+   ${CPP_FOR_SWIG_ROOT}/TerminalPassphrasePrompt.h
    ${CPP_FOR_SWIG_ROOT}/Transactions.h
    ${CPP_FOR_SWIG_ROOT}/TxClasses.h
    ${CPP_FOR_SWIG_ROOT}/TxEvalState.h

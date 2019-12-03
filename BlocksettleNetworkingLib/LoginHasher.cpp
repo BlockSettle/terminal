@@ -17,7 +17,8 @@
 
 namespace {
    const std::string DefaultIvWithoutSalt =
-      "2b"                //total_length
+      "2f"                //total_length
+      "01000000"          //version
       "00c1"              //Romix_KDF
       "01000000"          //Iterations
       "00040000"          //memory_target
