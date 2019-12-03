@@ -740,12 +740,12 @@ void RFQTicketXBT::submitButtonClicked()
       }
 
       // Buy
-      auto promAddr = std::promise<bs::Address>();
-      auto cbAddr = [&promAddr](const bs::Address &addr) {
-         promAddr.set_value(addr);
+      auto cbRecvAddr = [this, rfq](const bs::Address &recvAddr) {
+         rfq->receiptAddress = recvAddr.display();
+         submitRFQCb_(*rfq, bs::UtxoReservationToken{});
       };
-      ccWallet->getNewExtAddress(cbAddr);
-      rfq->receiptAddress = promAddr.get_future().get().display();
+      ccWallet->getNewExtAddress(cbRecvAddr);
+      return;
    }
 
    submitRFQCb_(*rfq, bs::UtxoReservationToken{});
