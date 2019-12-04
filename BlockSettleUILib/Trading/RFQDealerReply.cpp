@@ -72,12 +72,12 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
 
    connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &RFQDealerReply::submitButtonClicked);
    connect(ui_->pushButtonPull, &QPushButton::clicked, this, &RFQDealerReply::pullButtonClicked);
-   connect(ui_->pushButtonAdvanced, &QPushButton::clicked, this, &RFQDealerReply::showCoinControl);
+   connect(ui_->toolButtonXBTInputsSend, &QPushButton::clicked, this, &RFQDealerReply::showCoinControl);
 
    connect(ui_->comboBoxXbtWallet, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::walletSelected);
    connect(ui_->authenticationAddressComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::onAuthAddrChanged);
 
-   ui_->responseTitle->hide();
+   ui_->groupBoxSettlementInputs->hide();
 }
 
 RFQDealerReply::~RFQDealerReply() = default;
@@ -281,7 +281,7 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
    ui_->authenticationAddressLabel->setVisible(isXBT);
    ui_->authenticationAddressComboBox->setVisible(isXBT);
    ui_->widgetWallet->setVisible(isXBT || isPrivMkt);
-   ui_->pushButtonAdvanced->setVisible(dealerSellXBT_ && isXBT);
+   ui_->toolButtonXBTInputsSend->setVisible(dealerSellXBT_ && isXBT);
    ui_->labelWallet->setText(dealerSellXBT_ ? tr("Payment Wallet") : tr("Receiving Wallet"));
 
    updateUiWalletFor(qrn);
@@ -292,9 +292,9 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
 
    if (qrn.assetType == bs::network::Asset::SpotFX ||
       qrn.assetType == bs::network::Asset::Undefined) {
-         ui_->responseTitle->hide();
+         ui_->groupBoxSettlementInputs->hide();
    } else {
-      ui_->responseTitle->show();
+      ui_->groupBoxSettlementInputs->show();
    }
 
    updateSubmitButton();
