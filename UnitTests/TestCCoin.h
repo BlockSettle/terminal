@@ -127,7 +127,7 @@ public:
    using UTXOs = std::vector<UTXO>;
 
    const uint64_t ccLotSize_ = 307;
-   const size_t usersCount_ = 10;
+   size_t usersCount_ = 20;
 
 
    std::shared_ptr<bs::core::hd::Leaf>   rootSignWallet_;
