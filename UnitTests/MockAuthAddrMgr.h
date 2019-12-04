@@ -22,7 +22,7 @@ public:
 
    bool HaveAuthWallet() const override { return false; }
    bool HasAuthAddr() const override { return true; }
-   bool IsReady() const override { return true; }
+   ReadyError readyError() const override { return ReadyError::NoError; }
 
    bool CreateNewAuthAddress() override { return false; }
    bool SubmitForVerification(const bs::Address &) override { return true; }

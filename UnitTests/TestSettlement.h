@@ -9,7 +9,6 @@
 #include <QMutex>
 #include "Address.h"
 #include "BlockchainMonitor.h"
-#include "SettlementMonitor.h"
 #include "TestEnv.h"
 
 
