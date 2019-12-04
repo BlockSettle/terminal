@@ -159,8 +159,20 @@ public:
                      , s.auth_address_buyer(), s.auth_address_seller());
                   ASSERT_TRUE(settlementAddress.isValid());
 
-                  auto result = bs::TradesVerification::verifyUnsignedPayin(
-                     s.unsigned_tx(), env_->armoryConnection()->testFeePerByte(), settlementAddress.display(), uint64_t(s.amount()));
+                  std::map<std::string, BinaryData> preimageData;
+
+                  if (!nativeAddr_) {
+                     auto wallet = peer1_.walletsMgr_->getWalletByAddress(peer1_.nestedAddr_);
+                     ASSERT_TRUE(wallet);
+                     auto entry = wallet->getAddressEntryForAddr(peer1_.nestedAddr_.prefixed());
+                     ASSERT_TRUE(entry);
+                     auto preimage = entry->getPreimage();
+                     ASSERT_FALSE(preimage.isNull());
+                     preimageData.emplace(peer1_.nestedAddr_.display(), preimage);
+                  }
+
+                  auto result = bs::TradesVerification::verifyUnsignedPayin(s.unsigned_tx(), preimageData, env_->armoryConnection()->testFeePerByte()
+                     , settlementAddress.display(), uint64_t(s.amount()));
                   ASSERT_TRUE(result->success);
 
                   if (withoutChange_) {
@@ -198,7 +210,7 @@ public:
                   ASSERT_TRUE(settlementAddress.isValid());
 
                   auto result = bs::TradesVerification::verifySignedPayout(request.process_tx().signed_tx()
-                     , bs::toHex(data.auth_address_buyer()), bs::toHex(data.auth_address_seller()), data.payin_hash()
+                     , bs::toHex(data.auth_address_buyer()), bs::toHex(data.auth_address_seller()), data.payin_tx_hash()
                      , uint64_t(data.amount()), env_->armoryConnection()->testFeePerByte(), data.settlement_id(), settlementAddress.display());
                   ASSERT_TRUE(result->success);
 
@@ -210,7 +222,7 @@ public:
                   const auto &data = verifySeller_.getValue();
 
                   auto result = bs::TradesVerification::verifySignedPayin(request.process_tx().signed_tx()
-                     , data.payin_hash(), env_->armoryConnection()->testFeePerByte(), totalFee_);
+                     , data.payin_tx_hash(), env_->armoryConnection()->testFeePerByte(), totalFee_);
                   ASSERT_TRUE(result->success);
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_SUCCEED);
