@@ -953,7 +953,7 @@ void CreateTransactionDialogAdvanced::feeSelectionChanged(int currentIndex)
    setTxFees();
 }
 
-void CreateTransactionDialogAdvanced::getChangeAddress(std::function<void(bs::Address)> cb) const
+void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb) const
 {
    if (transactionData_->GetTransactionSummary().hasChange) {
       if (changeAddressFixed_) {

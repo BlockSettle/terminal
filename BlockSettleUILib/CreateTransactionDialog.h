@@ -86,7 +86,8 @@ protected:
    virtual QLabel* feePerByteLabel() const { return nullptr; }
    virtual QLabel* changeLabel() const {return nullptr; }
 
-   virtual void getChangeAddress(std::function<void(bs::Address)>) const = 0;
+   using AddressCb = std::function<void(const bs::Address&)>;
+   virtual void getChangeAddress(AddressCb) const = 0;
 
    virtual void onTransactionUpdated();
 

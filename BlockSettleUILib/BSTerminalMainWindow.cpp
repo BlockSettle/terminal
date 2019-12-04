@@ -493,7 +493,6 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createLocalSigner()
 
 bool BSTerminalMainWindow::InitSigningContainer()
 {
-   // create local var just to avoid up-casting
    signContainer_ = createSigner();
 
    if (!signContainer_) {

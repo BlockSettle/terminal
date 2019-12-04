@@ -174,13 +174,12 @@ void CreateTransactionDialogSimple::showAdvanced()
    accept();
 }
 
-void CreateTransactionDialogSimple::getChangeAddress(std::function<void(bs::Address)> cb) const
+void CreateTransactionDialogSimple::getChangeAddress(AddressCb cb) const
 {
    if (transactionData_->GetTransactionSummary().hasChange) {
-      const auto &cbAddr = [cb = std::move(cb)](const bs::Address &addr) {
+      transactionData_->getWallet()->getNewChangeAddress([cb = std::move(cb)](const bs::Address &addr) {
          cb(addr);
-      };
-      transactionData_->getWallet()->getNewChangeAddress(cbAddr);
+      });
       return;
    }
    cb({});
