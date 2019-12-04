@@ -803,7 +803,7 @@ std::set<BinaryData> ColoredCoinTracker::update()
       bool allIncluded = true;
       for (auto& hash : newHashSet)
       {
-         if (hashesToCheck.find(hash) == newHashSet.end())
+         if (hashesToCheck.find(hash) == hashesToCheck.end())
          {
             allIncluded = false;
             break;
