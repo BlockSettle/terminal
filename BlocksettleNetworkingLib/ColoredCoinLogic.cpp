@@ -352,7 +352,6 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
    std::map<BinaryData, std::set<unsigned>> spentnessToTrack;
 
    //process them
-   unsigned skipCount = 0;
    auto txIter = txBatch.begin();
    while (txIter != txBatch.end()) {
       //check outpoints are covered by the processed height
@@ -381,7 +380,7 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
          while (txIter != txBatch.end())
          {
             spenderHashes.insert(txIter->getThisHash());
-            ++skipCount; ++txIter;
+            ++txIter;
          }
          break;
       }
@@ -469,7 +468,7 @@ std::set<BinaryData> ColoredCoinTracker::processTxBatch(
 std::set<BinaryData> ColoredCoinTracker::processZcBatch(
    const std::shared_ptr<ColoredCoinSnapshot>& ssPtr,
    const std::shared_ptr<ColoredCoinZCSnapshot>& zcPtr,
-   const std::set<BinaryData>& hashes)
+   const std::set<BinaryData>& hashes, bool processFirst)
 {
    if (hashes.size() == 0)
       return std::set<BinaryData>();
@@ -481,9 +480,13 @@ std::set<BinaryData> ColoredCoinTracker::processZcBatch(
    auto&& txBatch = grabTxBatch(hashes);
    
    //process the zc transactions
-   for (auto& tx : txBatch) {
+   auto txIter = txBatch.begin();
+   while (txIter != txBatch.end()) {
       //make sure this zc doesn't run on yet-to-be-processed zc
       //only run this check if we're bootstrapping the zc parser
+
+      auto& tx = *txIter;
+
       bool skip = false;
       for (auto& opId : tx.getOpIdVec())
       {
@@ -494,13 +497,19 @@ std::set<BinaryData> ColoredCoinTracker::processZcBatch(
          }
       }
 
-      //this zc relies on zc outpoints we have yet to see, mark 
-      //it for later processing
-      if (skip)
+      //this zc relies on zc outpoints we have yet to see, break out
+      //of the loop and mark all txs for later processing
+      if (skip && !processFirst)
       {
-         spenderHashes.insert(tx.getThisHash());         
-         continue;
+         while (txIter != txBatch.end())
+         {
+            spenderHashes.insert(txIter->getThisHash());         
+            ++txIter;
+         }
+         break;
       }
+
+      processFirst = false;
 
       //parse the tx
       auto&& parsedTx = processTx(ssPtr, zcPtr, tx);
@@ -561,6 +570,7 @@ std::set<BinaryData> ColoredCoinTracker::processZcBatch(
 
       //zc tx carries its zc id as the tx index
       processedZcIndex_ = tx.getZcIndex();
+      ++txIter;
    }
 
    //check new utxo list
@@ -881,7 +891,7 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
    }
 
    auto&& outpointData = fut.get();
-   std::set<BinaryData> txsToCheck;
+   std::set<BinaryData> hashesToCheck;
 
    //parse new outputs for origin addresses
    for (auto& scrAddr : originAddresses_) {
@@ -914,14 +924,34 @@ std::set<BinaryData> ColoredCoinTracker::zcUpdate()
                continue;
             }
             //mark the spender for CC settlement check
-            txsToCheck.insert(op.spenderHash_);
+            hashesToCheck.insert(op.spenderHash_);
          }
       }
    }
 
    //process unconfirmed settlements
-   while (txsToCheck.size())
-      txsToCheck = move(processZcBatch(currentSs, ssPtr, txsToCheck));
+   
+   bool processFirst = false;
+   while (hashesToCheck.size())
+   {
+      auto&& returnedHashes = 
+         processZcBatch(currentSs, ssPtr, hashesToCheck, processFirst);
+      processFirst = false;
+
+      bool allIncluded = true;
+      for (auto& hash : returnedHashes)
+      {
+         if (hashesToCheck.find(hash) == hashesToCheck.end())
+         {
+            allIncluded = false;
+         }
+      }
+
+      if (allIncluded)
+         processFirst = true;
+
+      hashesToCheck = std::move(returnedHashes);
+   }
 
    //update zc cutoff
    zcCutOff_ = outpointData.zcIndexCutoff_;
@@ -1001,9 +1031,10 @@ void ColoredCoinTracker::purgeZc()
       }
    }
 
+   //TODO: does this zc batch processing needs the reentrant loop?
    if (txsToCheck.size() > 0) {
       //process unconfirmed settlements
-      processZcBatch(currentSs, zcPtr, txsToCheck);
+      processZcBatch(currentSs, zcPtr, txsToCheck, false);
    }
 
    //swap the new snapshot in

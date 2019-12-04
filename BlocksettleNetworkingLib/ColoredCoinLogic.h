@@ -260,7 +260,7 @@ private:
    std::set<BinaryData> processZcBatch(
       const std::shared_ptr<ColoredCoinSnapshot>&,
       const std::shared_ptr<ColoredCoinZCSnapshot>&,
-      const std::set<BinaryData>&);
+      const std::set<BinaryData>&, bool);
 
    void processRevocationBatch(
       const std::shared_ptr<ColoredCoinSnapshot>&,
