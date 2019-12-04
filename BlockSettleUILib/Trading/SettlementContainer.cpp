@@ -33,7 +33,7 @@ SettlementContainer::~SettlementContainer()
    }
 }
 
-sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
+sync::PasswordDialogData SettlementContainer::toPasswordDialogData(QDateTime timestamp) const
 {
    bs::sync::PasswordDialogData info;
 
@@ -42,9 +42,7 @@ sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
    info.setValue(PasswordDialogData::DurationTotal, (int)kWaitTimeoutInSec * 1000);
 
    // Set timestamp that will be used by auth eid server to update timers.
-   // TODO: Use time from PB and use it for all counters.
-   const int timestamp = static_cast<int>(std::chrono::system_clock::now().time_since_epoch() / std::chrono::seconds(1));
-   info.setValue(PasswordDialogData::DurationTimestamp, timestamp);
+   info.setValue(PasswordDialogData::DurationTimestamp, static_cast<int>(timestamp.toSecsSinceEpoch()));
 
    info.setValue(PasswordDialogData::ProductGroup, tr(bs::network::Asset::toString(assetType())));
    info.setValue(PasswordDialogData::Security, security());
@@ -54,9 +52,10 @@ sync::PasswordDialogData SettlementContainer::toPasswordDialogData() const
    return info;
 }
 
-sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogData(core::wallet::TXSignRequest payOutReq) const
+sync::PasswordDialogData SettlementContainer::toPayOutTxDetailsPasswordDialogData(core::wallet::TXSignRequest payOutReq
+   , QDateTime timestamp) const
 {
-   bs::sync::PasswordDialogData dialogData = toPasswordDialogData();
+   bs::sync::PasswordDialogData dialogData = toPasswordDialogData(timestamp);
 
    dialogData.setValue(PasswordDialogData::Title, tr("Settlement Pay-Out"));
    dialogData.setValue(PasswordDialogData::DurationLeft, static_cast<int>(kWaitTimeoutInSec * 1000));

@@ -276,13 +276,13 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
    const bool isXBT = (qrn.assetType == bs::network::Asset::SpotXBT);
    const bool isPrivMkt = (qrn.assetType == bs::network::Asset::PrivateMarket);
 
+   dealerSellXBT_ = (isXBT || isPrivMkt) && ((qrn.product == bs::network::XbtCurrency) != (qrn.side == bs::network::Side::Sell));
+
    ui_->authenticationAddressLabel->setVisible(isXBT);
    ui_->authenticationAddressComboBox->setVisible(isXBT);
    ui_->widgetWallet->setVisible(isXBT || isPrivMkt);
-   ui_->pushButtonAdvanced->setVisible(isXBT && (qrn.side == bs::network::Side::Buy));
-   ui_->labelWallet->setText(qrn.side == bs::network::Side::Buy ? tr("Payment Wallet") : tr("Receiving Wallet"));
-
-   dealerSellXBT_ = (isXBT || isPrivMkt) && ((qrn.product == bs::network::XbtCurrency) != (qrn.side == bs::network::Side::Sell));
+   ui_->pushButtonAdvanced->setVisible(dealerSellXBT_ && isXBT);
+   ui_->labelWallet->setText(dealerSellXBT_ ? tr("Payment Wallet") : tr("Receiving Wallet"));
 
    updateUiWalletFor(qrn);
 

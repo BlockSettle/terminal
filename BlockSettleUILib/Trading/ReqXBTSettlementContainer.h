@@ -66,11 +66,11 @@ public:
    double quantity() const override { return quote_.quantity; }
    double price() const override { return quote_.price; }
    double amount() const override { return amount_; }
-   bs::sync::PasswordDialogData toPasswordDialogData() const override;
+   bs::sync::PasswordDialogData toPasswordDialogData(QDateTime timestamp) const override;
 
    void onUnsignedPayinRequested(const std::string& settlementId);
-   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
-   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
 
 signals:
    void settlementCancelled();

@@ -589,7 +589,8 @@ bool QuoteProvider::onSignTxNotif(const std::string& data)
       logger_->debug("[QuoteProvider::onSignTxNotif] {}", ProtobufUtils::toJsonCompact(response));
    }
 
-   emit signTxRequested(QString::fromStdString(response.orderid()), QString::fromStdString(response.quoterequestid()));
+   auto timestamp = QDateTime::fromMSecsSinceEpoch(response.timestampinutcinmillis());
+   emit signTxRequested(QString::fromStdString(response.orderid()), QString::fromStdString(response.quoterequestid()), timestamp);
    return true;
 }
 

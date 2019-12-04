@@ -83,7 +83,7 @@ void OTCNegotiationResponseWidget::setOffer(const bs::network::otc::Offer &offer
    ui_->offerSpinBox->setEnabled(isSell);
    ui_->receivingAddressWdgt->setVisible(!isSell);
    ui_->labelWallet->setText(isSell ? paymentWallet : receivingWallet);
-
+   ui_->toolButtonXBTInputs->setVisible(offer.ourSide == bs::network::otc::Side::Sell);
 
    onChanged();
 }

@@ -70,12 +70,12 @@ public:
    double quantity() const override { return order_.quantity; }
    double price() const override { return order_.price; }
    double amount() const override { return amount_; }
-   bs::sync::PasswordDialogData toPasswordDialogData() const override;
+   bs::sync::PasswordDialogData toPasswordDialogData(QDateTime timestamp) const override;
 
 public slots:
    void onUnsignedPayinRequested(const std::string& settlementId);
-   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
-   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
 
 signals:
    void sendUnsignedPayinToPB(const std::string& settlementId, const bs::network::UnsignedPayinData& unsignedPayinData);

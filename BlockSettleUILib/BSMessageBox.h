@@ -33,6 +33,8 @@ public:
       critical = 5
    };
 
+   static QString kUrlColor;
+
    BSMessageBox(Type mbType
       , const QString& title, const QString& text
       , QWidget* parent = nullptr);
@@ -82,11 +84,6 @@ public:
 class MessageBoxExpTimeout : public BSMessageBox {
 public:
    MessageBoxExpTimeout(QWidget *parent = nullptr);
-};
-
-class MessageBoxAuthNotice : public BSMessageBox {
-public:
-   MessageBoxAuthNotice(QWidget *parent = nullptr);
 };
 
 class MessageBoxWalletCreateAbort : public BSMessageBox {

@@ -49,7 +49,7 @@ public:
       , bs::UtxoReservationToken utxoRes);
    ~DealerCCSettlementContainer() override;
 
-   bool startSigning();
+   bool startSigning(QDateTime timestamp);
    bool cancel() override;
 
    void activate() override;
@@ -63,7 +63,7 @@ public:
    double quantity() const override { return order_.quantity; }
    double price() const override { return order_.price; }
    double amount() const override { return quantity(); }
-   bs::sync::PasswordDialogData toPasswordDialogData() const override;
+   bs::sync::PasswordDialogData toPasswordDialogData(QDateTime timestamp) const override;
 
    bool foundRecipAddr() const { return foundRecipAddr_; }
    bool isAmountValid() const { return amountValid_; }

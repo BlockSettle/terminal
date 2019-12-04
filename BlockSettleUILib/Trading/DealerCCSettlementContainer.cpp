@@ -67,9 +67,9 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
 
 DealerCCSettlementContainer::~DealerCCSettlementContainer() = default;
 
-bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData() const
+bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData(QDateTime timestamp) const
 {
-   bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+   bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData(timestamp);
    dialogData.setValue(PasswordDialogData::IsDealer, true);
    dialogData.setValue(PasswordDialogData::Market, "CC");
    dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
@@ -105,7 +105,7 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData()
    return dialogData;
 }
 
-bool DealerCCSettlementContainer::startSigning()
+bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
 {
    if (!ccWallet_ || !xbtWallet_) {
       logger_->error("[DealerCCSettlementContainer::accept] failed to validate counterparty's TX - aborting");
@@ -154,7 +154,7 @@ bool DealerCCSettlementContainer::startSigning()
 
    //Waiting for TX half signing...
    SPDLOG_LOGGER_DEBUG(logger_, "signing with {} inputs", txReq_.inputs.size());
-   return (signingContainer_->signSettlementPartialTXRequest(txReq_, toPasswordDialogData(), cbTx) > 0);
+   return (signingContainer_->signSettlementPartialTXRequest(txReq_, toPasswordDialogData(timestamp), cbTx) > 0);
 }
 
 void DealerCCSettlementContainer::activate()

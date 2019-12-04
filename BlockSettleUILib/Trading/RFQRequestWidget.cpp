@@ -367,29 +367,28 @@ void RFQRequestWidget::onDisableSelectedInfo()
 void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
    switch (response.data_case()) {
-      case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin:
-         {
-            auto command = response.send_unsigned_payin();
-
-            emit unsignedPayinRequested(command.settlement_id());
-         }
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin: {
+         const auto &command = response.send_unsigned_payin();
+         emit unsignedPayinRequested(command.settlement_id());
          break;
-      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayout:
-         {
-            auto command = response.sign_payout();
+      }
 
-            // payin_data - payin hash . binary
-            emit signedPayoutRequested(command.settlement_id(), command.payin_data());
-         }
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayout: {
+         const auto &command = response.sign_payout();
+         auto timestamp = QDateTime::fromMSecsSinceEpoch(command.timestamp_ms());
+         // payin_data - payin hash . binary
+         emit signedPayoutRequested(command.settlement_id(), command.payin_data(), timestamp);
          break;
-      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayin:
-         {
-            auto command = response.sign_payin();
+      }
 
-            // unsigned_payin_data - serialized payin. binary
-            emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data());
-         }
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayin: {
+         const auto &command = response.sign_payin();
+         auto timestamp = QDateTime::fromMSecsSinceEpoch(command.timestamp_ms());
+         // unsigned_payin_data - serialized payin. binary
+         emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data(), timestamp);
          break;
+      }
+
       default:
          break;
    }

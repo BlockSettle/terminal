@@ -135,6 +135,7 @@ message Response
     {
         string  settlement_id   = 1;
         bytes   payin_data      = 2;
+        int64   timestamp_ms    = 3;
     }
 
     message SignPayinRequest
@@ -142,6 +143,7 @@ message Response
         string  settlement_id       = 1;
         bytes   signed_payout_data  = 2;
         bytes   unsigned_payin_data = 3;
+        int64   timestamp_ms        = 4;
     }
 
     // Blotter

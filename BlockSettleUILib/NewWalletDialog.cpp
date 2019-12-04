@@ -12,6 +12,7 @@
 #include "ui_NewWalletDialog.h"
 
 #include "ApplicationSettings.h"
+#include "BSMessageBox.h"
 
 NewWalletDialog::NewWalletDialog(bool noWalletsFound, const std::shared_ptr<ApplicationSettings>& appSettings, QWidget *parent)
    : QDialog(parent)
@@ -23,7 +24,12 @@ NewWalletDialog::NewWalletDialog(bool noWalletsFound, const std::shared_ptr<Appl
       ui_->labelPurpose->setText(tr("THE TERMINAL CAN'T FIND ANY EXISTING WALLETS"));
    }
 
-   const auto messageText = tr("<html><head/><body><p>For guidance, please consult the <a href=\"%1\"><span style=\" padding-left: 5px; text-decoration: none; color:#ffffff;\">\"Getting Started Guide\".</span></a></p></body></html>").arg(appSettings->get<QString>(ApplicationSettings::GettingStartedGuide_Url));
+   // Use ApplicationSettings::GettingStartedGuide_Url carefully with arg() - it contains '%' symbol
+   const auto messageText =
+         tr("For guidance, please consult the ")
+         + QStringLiteral("<a href=\"") + appSettings->get<QString>(ApplicationSettings::GettingStartedGuide_Url) + QStringLiteral("\">")
+         + QStringLiteral("<span style=\"text-decoration: underline; color: %1;\">Getting Started Guide.</span></a>")
+         .arg(BSMessageBox::kUrlColor);
 
    ui_->labelMessage->setText(messageText);
 

@@ -90,9 +90,9 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
 
 ReqCCSettlementContainer::~ReqCCSettlementContainer() = default;
 
-bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData() const
+bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData(QDateTime timestamp) const
 {
-   bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData();
+   bs::sync::PasswordDialogData dialogData = SettlementContainer::toPasswordDialogData(timestamp);
    dialogData.setValue(PasswordDialogData::Market, "CC");
    dialogData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementRequestor));
    dialogData.setValue(PasswordDialogData::LotSize, static_cast<int>(lotSize_));
@@ -282,7 +282,7 @@ void ReqCCSettlementContainer::AcceptQuote()
    emit sendOrder();
 }
 
-bool ReqCCSettlementContainer::startSigning()
+bool ReqCCSettlementContainer::startSigning(QDateTime timestamp)
 {
    const auto &cbTx = [this, handle = validityFlag_.handle(), logger=logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
       if (!handle.isValid()) {
@@ -316,7 +316,7 @@ bool ReqCCSettlementContainer::startSigning()
       emit completed();
    };
 
-   ccSignId_ = signingContainer_->signSettlementPartialTXRequest(ccTxData_, toPasswordDialogData(), cbTx);
+   ccSignId_ = signingContainer_->signSettlementPartialTXRequest(ccTxData_, toPasswordDialogData(timestamp), cbTx);
    logger_->debug("[CCSettlementTransactionWidget::createCCSignedTXdata] {} recipients", ccTxData_.recipients.size());
    return (ccSignId_ > 0);
 }

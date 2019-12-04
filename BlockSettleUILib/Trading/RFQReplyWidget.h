@@ -102,8 +102,8 @@ signals:
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
    void unsignedPayinRequested(const std::string& settlementId);
-   void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash);
-   void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin);
+   void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
+   void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
 
 public slots:
    void forceCheckCondition();
@@ -113,7 +113,7 @@ public slots:
 private slots:
    void onOrder(const bs::network::Order &o);
    void saveTxData(QString orderId, std::string txData);
-   void onSignTxRequested(QString orderId, QString reqId);
+   void onSignTxRequested(QString orderId, QString reqId, QDateTime timestamp);
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
    void onEnterKeyPressed(const QModelIndex &index);
