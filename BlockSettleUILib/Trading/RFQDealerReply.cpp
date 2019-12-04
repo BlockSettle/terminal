@@ -392,15 +392,17 @@ void RFQDealerReply::onAuthAddrChanged(int index)
 
 void RFQDealerReply::updateSubmitButton()
 {
+   if (!currentQRN_.empty() && activeQuoteSubmits_.find(currentQRN_.quoteRequestId) != activeQuoteSubmits_.end()) {
+      // Do not allow re-enter into submitReply as it could cause problems
+      ui_->pushButtonSubmit->setEnabled(false);
+      ui_->pushButtonPull->setEnabled(false);
+      return;
+   }
+
    updateBalanceLabel();
    bool isQRNRepliable = (!currentQRN_.empty() && QuoteProvider::isRepliableStatus(currentQRN_.status));
    if ((currentQRN_.assetType != bs::network::Asset::SpotFX)
       && (!signingContainer_ || signingContainer_->isOffline())) {
-      isQRNRepliable = false;
-   }
-
-   if (!currentQRN_.empty() && activeQuoteSubmits_.find(currentQRN_.quoteRequestId) != activeQuoteSubmits_.end()) {
-      // Do not allow re-enter into submitReply as it could cause problems
       isQRNRepliable = false;
    }
 
