@@ -434,7 +434,21 @@ void TestCCoin::InitialFund(const std::vector<bs::Address> &recipients)
    ASSERT_FALSE(addrBalance.empty());
    EXPECT_EQ(addrBalance[0], required);
 
-   const auto &ccAddresses = recipients.empty() ? userCCAddresses_ : recipients;
+   std::vector<bs::Address> ccAddresses;
+   if (!recipients.empty())
+   {
+      ccAddresses = recipients;
+   }
+   else
+   {
+      /*
+      Most tests have hardcoded value checks for 10 users.
+      TxProcessOrder7 needs all 20.
+      */
+      ccAddresses.insert(ccAddresses.end(), 
+         userCCAddresses_.begin(), userCCAddresses_.begin() + usersCount_);
+   }
+
    // fund "CC" user addresses from genesis
    SimpleSendMany(genesisAddr_, ccAddresses, 100 * ccLotSize_);
 
@@ -563,6 +577,7 @@ void ColoredCoinTracker_UT::reorg_UT()
 ////////////////////////////////////////////////////////////////////////////////
 TEST_F(TestCCoin, Initial_balances)
 {
+   usersCount_ = 10;
    InitialFund();
 
    const auto &gaBalance = rootWallet_->getAddrBalance(genesisAddr_);
@@ -590,6 +605,7 @@ TEST_F(TestCCoin, Initial_balances)
 ////
 TEST_F(TestCCoin, Case_TxProcessOrder1)
 {
+   usersCount_ = 10;
    InitialFund({ userCCAddresses_[0], userCCAddresses_[2] });
 
    auto&& cct = makeCct();
@@ -726,6 +742,7 @@ TEST_F(TestCCoin, Case_TxProcessOrder1)
 ////
 TEST_F(TestCCoin, Case_TxProcessOrder2)
 {
+   usersCount_ = 10;
    InitialFund({ userCCAddresses_[0], userCCAddresses_[2] });
 
    auto&& cct = makeCct();
@@ -860,6 +877,7 @@ TEST_F(TestCCoin, Case_TxProcessOrder2)
 TEST_F(TestCCoin, Case_TxProcessOrder3)
 {
    //last tx as zc only
+   usersCount_ = 10;
    InitialFund({ userCCAddresses_[0], userCCAddresses_[2] });
 
    auto&& cct = makeCct();
@@ -997,6 +1015,7 @@ TEST_F(TestCCoin, Case_TxProcessOrder3)
 TEST_F(TestCCoin, Case_TxProcessOrder4)
 {
    //all tx past funding as zc
+   usersCount_ = 10;
    InitialFund({ userCCAddresses_[0], userCCAddresses_[2] });
 
    auto&& cct = makeCct();
@@ -1127,9 +1146,632 @@ TEST_F(TestCCoin, Case_TxProcessOrder4)
    EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
 }
 
+TEST_F(TestCCoin, Case_TxProcessOrder5)
+{
+   //GA to 3 user address, tx #1 + #2 + #3 chain, #4 from uA, #5 from #3 & #4
+   usersCount_ = 10;
+   InitialFund({ userCCAddresses_[0], userCCAddresses_[1], userCCAddresses_[2] });
+
+   auto&& cct = makeCct();
+   cct->goOnline();
+
+   const uint64_t gaBalance = COIN + (usersCount_ - 3) * 100 * ccLotSize_;
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
+   std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[3]);
+
+   EXPECT_EQ(utxosA.size(), 1);
+   EXPECT_EQ(utxosB.size(), 1);
+
+   //tx #1
+   const uint amountCC = 50;
+   CCoinSpender ccsA;
+   ccsA.ccAddr_ = userCCAddresses_[0];
+   ccsA.ccChange = userCCAddresses_[9];
+   ccsA.xbtAddr_ = userFundAddresses_[0];
+   ccsA.xbtValue_ = COIN;
+
+   CCoinSpender ccsB;
+   ccsB.ccAddr_ = userCCAddresses_[3];
+   ccsB.xbtAddr_ = userFundAddresses_[3];
+   ccsB.ccValue_ = amountCC * ccLotSize_;
+
+   auto tx = CreateCJtx(utxosA, utxosB, ccsA, ccsB);
+   EXPECT_EQ(tx.getNumTxIn(), 2);
+   EXPECT_EQ(tx.getNumTxOut(), 4);
+   MineBlocks(6);
+   update(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), amountCC * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);  
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+
+   //tx #2
+   ccsB.ccChange = userCCAddresses_[8];
+   ccsB.xbtValue_ = COIN;
+
+   CCoinSpender ccsC;
+   ccsC.ccAddr_ = userCCAddresses_[4];
+   ccsC.xbtAddr_ = userFundAddresses_[4];
+   ccsC.ccValue_ = 25 * ccLotSize_;
+
+   auto utxosC1 = GetCCUTXOsFor(cct, ccsB.ccAddr_, true, true);
+   ASSERT_FALSE(utxosC1.empty());
+   auto utxosC2 = GetUTXOsFor(ccsC.xbtAddr_);
+   ASSERT_FALSE(utxosC2.empty());
+
+   tx = CreateCJtx(utxosC1, utxosC2, ccsB, ccsC);
+   MineBlocks(6);
+   update(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);  
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+
+   //tx #3
+   ccsC.ccChange = userCCAddresses_[7];
+   ccsC.xbtValue_ = COIN;
+
+   CCoinSpender ccsD;
+   ccsD.ccAddr_ = userCCAddresses_[5];
+   ccsD.xbtAddr_ = userFundAddresses_[5];
+   ccsD.ccValue_ = 15 * ccLotSize_;
+
+   auto utxosD1 = GetCCUTXOsFor(cct, ccsC.ccAddr_, false, true);
+   ASSERT_FALSE(utxosD1.empty());
+   auto utxosD2 = GetUTXOsFor(ccsD.xbtAddr_);
+   ASSERT_FALSE(utxosD2.empty());
+
+   tx = CreateCJtx(utxosD1, utxosD2, ccsC, ccsD);
+   MineBlocks(6);
+   update(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 15 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+
+   //tx #4
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[11].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 0);
+
+   ccsD.ccAddr_ = userCCAddresses_[1];
+   ccsD.ccChange = userCCAddresses_[11];
+   ccsD.xbtValue_ = COIN;
+
+   CCoinSpender ccsE;
+   ccsE.ccAddr_ = userCCAddresses_[6];
+   ccsE.xbtAddr_ = userFundAddresses_[6];
+   ccsE.ccValue_ = 60 * ccLotSize_;
+
+   auto utxosE1 = GetCCUTXOsFor(cct, ccsD.ccAddr_, false, true);
+   ASSERT_FALSE(utxosE1.empty());
+   auto utxosE2 = GetUTXOsFor(ccsE.xbtAddr_);
+   ASSERT_FALSE(utxosE2.empty());
+
+   tx = CreateCJtx(utxosE1, utxosE2, ccsD, ccsE);
+   MineBlocks(6);
+   update(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 15 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 60 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 0);
+
+   //tx #5
+   ccsE.ccChange = userCCAddresses_[13];
+   ccsE.xbtValue_ = COIN;
+
+   CCoinSpender ccsF;
+   ccsF.ccAddr_ = userCCAddresses_[12];
+   ccsF.xbtAddr_ = userFundAddresses_[7];
+   ccsF.ccValue_ = 62 * ccLotSize_;
+
+   auto utxosF1 = GetCCUTXOsFor(cct, ccsE.ccAddr_, false, true);
+   ASSERT_FALSE(utxosF1.empty());
+   auto utxosF2 = GetUTXOsFor(ccsF.xbtAddr_);
+   ASSERT_FALSE(utxosF2.empty());
+   auto utxosF3 = GetCCUTXOsFor(cct, userCCAddresses_[5], false, true);
+   ASSERT_FALSE(utxosF3.empty());
+
+   tx = CreateCJtx(utxosF1, utxosF2, ccsE, ccsF, utxosF3);
+   MineBlocks(6);
+   update(cct);
+  
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+
+   //set up new cct object, should have same balance as first cct;
+   auto&& cct2 = makeCct();
+   cct2->goOnline();
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+}
+
+TEST_F(TestCCoin, Case_TxProcessOrder6)
+{
+   //same as case #5 but all zc this time
+   InitialFund({ userCCAddresses_[0], userCCAddresses_[1], userCCAddresses_[2] });
+
+   auto&& cct = makeCct();
+   cct->goOnline();
+
+   const uint64_t gaBalance = COIN + (usersCount_ - 3) * 100 * ccLotSize_;
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
+   std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[3]);
+
+   EXPECT_EQ(utxosA.size(), 1);
+   EXPECT_EQ(utxosB.size(), 1);
+
+   //tx #1
+   const uint amountCC = 50;
+   CCoinSpender ccsA;
+   ccsA.ccAddr_ = userCCAddresses_[0];
+   ccsA.ccChange = userCCAddresses_[9];
+   ccsA.xbtAddr_ = userFundAddresses_[0];
+   ccsA.xbtValue_ = COIN;
+
+   CCoinSpender ccsB;
+   ccsB.ccAddr_ = userCCAddresses_[3];
+   ccsB.xbtAddr_ = userFundAddresses_[3];
+   ccsB.ccValue_ = amountCC * ccLotSize_;
+
+   auto tx = CreateCJtx(utxosA, utxosB, ccsA, ccsB, {}, 200);
+   EXPECT_EQ(tx.getNumTxIn(), 2);
+   EXPECT_EQ(tx.getNumTxOut(), 4);
+   zcUpdate(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), amountCC * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);  
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+
+   //tx #2
+   ccsB.ccChange = userCCAddresses_[8];
+   ccsB.xbtValue_ = COIN;
+
+   CCoinSpender ccsC;
+   ccsC.ccAddr_ = userCCAddresses_[4];
+   ccsC.xbtAddr_ = userFundAddresses_[4];
+   ccsC.ccValue_ = 25 * ccLotSize_;
+
+   auto utxosC1 = GetCCUTXOsFor(cct, ccsB.ccAddr_, true, true);
+   ASSERT_FALSE(utxosC1.empty());
+   auto utxosC2 = GetUTXOsFor(ccsC.xbtAddr_);
+   ASSERT_FALSE(utxosC2.empty());
+
+   tx = CreateCJtx(utxosC1, utxosC2, ccsB, ccsC, {}, 200);
+   zcUpdate(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);  
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+
+   //tx #3
+   ccsC.ccChange = userCCAddresses_[7];
+   ccsC.xbtValue_ = COIN;
+
+   CCoinSpender ccsD;
+   ccsD.ccAddr_ = userCCAddresses_[5];
+   ccsD.xbtAddr_ = userFundAddresses_[5];
+   ccsD.ccValue_ = 15 * ccLotSize_;
+
+   auto utxosD1 = GetCCUTXOsFor(cct, ccsC.ccAddr_, false, true);
+   ASSERT_FALSE(utxosD1.empty());
+   auto utxosD2 = GetUTXOsFor(ccsD.xbtAddr_);
+   ASSERT_FALSE(utxosD2.empty());
+
+   tx = CreateCJtx(utxosD1, utxosD2, ccsC, ccsD, {}, 200);
+   zcUpdate(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 15 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+
+   //tx #4
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[11].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 0);
+
+   ccsD.ccAddr_ = userCCAddresses_[1];
+   ccsD.ccChange = userCCAddresses_[11];
+   ccsD.xbtValue_ = COIN;
+
+   CCoinSpender ccsE;
+   ccsE.ccAddr_ = userCCAddresses_[6];
+   ccsE.xbtAddr_ = userFundAddresses_[6];
+   ccsE.ccValue_ = 60 * ccLotSize_;
+
+   auto utxosE1 = GetCCUTXOsFor(cct, ccsD.ccAddr_, false, true);
+   ASSERT_FALSE(utxosE1.empty());
+   auto utxosE2 = GetUTXOsFor(ccsE.xbtAddr_);
+   ASSERT_FALSE(utxosE2.empty());
+
+   tx = CreateCJtx(utxosE1, utxosE2, ccsD, ccsE, {}, 200);
+   zcUpdate(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 15 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 60 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 0);
+
+   //tx #5
+   ccsE.ccChange = userCCAddresses_[13];
+   ccsE.xbtValue_ = COIN;
+
+   CCoinSpender ccsF;
+   ccsF.ccAddr_ = userCCAddresses_[12];
+   ccsF.xbtAddr_ = userFundAddresses_[7];
+   ccsF.ccValue_ = 62 * ccLotSize_;
+
+   auto utxosF1 = GetCCUTXOsFor(cct, ccsE.ccAddr_, false, true);
+   ASSERT_FALSE(utxosF1.empty());
+   auto utxosF2 = GetUTXOsFor(ccsF.xbtAddr_);
+   ASSERT_FALSE(utxosF2.empty());
+   auto utxosF3 = GetCCUTXOsFor(cct, userCCAddresses_[5], false, true);
+   ASSERT_FALSE(utxosF3.empty());
+
+   tx = CreateCJtx(utxosF1, utxosF2, ccsE, ccsF, utxosF3, 200);
+   zcUpdate(cct);
+  
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+
+   //set up new cct object, should have same balance as first cct;
+   auto&& cct2 = makeCct();
+   cct2->goOnline();
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
+   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+}
+
+TEST_F(TestCCoin, Case_TxProcessOrder7)
+{
+   //same as #6, but mine the transactions afterwards
+   InitialFund({ userCCAddresses_[0], userCCAddresses_[1], userCCAddresses_[2] });
+
+   auto&& cct = makeCct();
+   cct->goOnline();
+
+   const uint64_t gaBalance = COIN + (usersCount_ - 3) * 100 * ccLotSize_;
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+
+   std::vector<UTXO> utxosA = GetCCUTXOsFor(cct, userCCAddresses_[0]);
+   std::vector<UTXO> utxosB = GetUTXOsFor(userFundAddresses_[3]);
+
+   EXPECT_EQ(utxosA.size(), 1);
+   EXPECT_EQ(utxosB.size(), 1);
+
+   //tx #1
+   const uint amountCC = 50;
+   CCoinSpender ccsA;
+   ccsA.ccAddr_ = userCCAddresses_[0];
+   ccsA.ccChange = userCCAddresses_[9];
+   ccsA.xbtAddr_ = userFundAddresses_[0];
+   ccsA.xbtValue_ = COIN;
+
+   CCoinSpender ccsB;
+   ccsB.ccAddr_ = userCCAddresses_[3];
+   ccsB.xbtAddr_ = userFundAddresses_[3];
+   ccsB.ccValue_ = amountCC * ccLotSize_;
+
+   auto tx = CreateCJtx(utxosA, utxosB, ccsA, ccsB, {});
+   EXPECT_EQ(tx.getNumTxIn(), 2);
+   EXPECT_EQ(tx.getNumTxOut(), 4);
+   zcUpdate(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), amountCC * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);  
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+
+   //tx #2
+   ccsB.ccChange = userCCAddresses_[8];
+   ccsB.xbtValue_ = COIN;
+
+   CCoinSpender ccsC;
+   ccsC.ccAddr_ = userCCAddresses_[4];
+   ccsC.xbtAddr_ = userFundAddresses_[4];
+   ccsC.ccValue_ = 25 * ccLotSize_;
+
+   auto utxosC1 = GetCCUTXOsFor(cct, ccsB.ccAddr_, true, true);
+   ASSERT_FALSE(utxosC1.empty());
+   auto utxosC2 = GetUTXOsFor(ccsC.xbtAddr_);
+   ASSERT_FALSE(utxosC2.empty());
+
+   tx = CreateCJtx(utxosC1, utxosC2, ccsB, ccsC, {}, 1);
+   zcUpdate(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);  
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+
+   //tx #3
+   ccsC.ccChange = userCCAddresses_[7];
+   ccsC.xbtValue_ = COIN;
+
+   CCoinSpender ccsD;
+   ccsD.ccAddr_ = userCCAddresses_[5];
+   ccsD.xbtAddr_ = userFundAddresses_[5];
+   ccsD.ccValue_ = 15 * ccLotSize_;
+
+   auto utxosD1 = GetCCUTXOsFor(cct, ccsC.ccAddr_, false, true);
+   ASSERT_FALSE(utxosD1.empty());
+   auto utxosD2 = GetUTXOsFor(ccsD.xbtAddr_);
+   ASSERT_FALSE(utxosD2.empty());
+
+   tx = CreateCJtx(utxosD1, utxosD2, ccsC, ccsD, {}, 2);
+   zcUpdate(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 15 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+
+   //tx #4
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[11].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 0);
+
+   ccsD.ccAddr_ = userCCAddresses_[1];
+   ccsD.ccChange = userCCAddresses_[11];
+   ccsD.xbtValue_ = COIN;
+
+   CCoinSpender ccsE;
+   ccsE.ccAddr_ = userCCAddresses_[6];
+   ccsE.xbtAddr_ = userFundAddresses_[6];
+   ccsE.ccValue_ = 60 * ccLotSize_;
+
+   auto utxosE1 = GetCCUTXOsFor(cct, ccsD.ccAddr_, false, true);
+   ASSERT_FALSE(utxosE1.empty());
+   auto utxosE2 = GetUTXOsFor(ccsE.xbtAddr_);
+   ASSERT_FALSE(utxosE2.empty());
+
+   tx = CreateCJtx(utxosE1, utxosE2, ccsD, ccsE, {}, 3);
+   zcUpdate(cct);
+
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 15 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 60 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 0);
+
+   //tx #5
+   ccsE.ccChange = userCCAddresses_[13];
+   ccsE.xbtValue_ = COIN;
+
+   CCoinSpender ccsF;
+   ccsF.ccAddr_ = userCCAddresses_[12];
+   ccsF.xbtAddr_ = userFundAddresses_[7];
+   ccsF.ccValue_ = 62 * ccLotSize_;
+
+   auto utxosF1 = GetCCUTXOsFor(cct, ccsE.ccAddr_, false, true);
+   ASSERT_FALSE(utxosF1.empty());
+   auto utxosF2 = GetUTXOsFor(ccsF.xbtAddr_);
+   ASSERT_FALSE(utxosF2.empty());
+   auto utxosF3 = GetCCUTXOsFor(cct, userCCAddresses_[5], false, true);
+   ASSERT_FALSE(utxosF3.empty());
+
+   tx = CreateCJtx(utxosF1, utxosF2, ccsE, ccsF, utxosF3, 4);
+   zcUpdate(cct);
+  
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+
+   //mine the transactions
+   for (unsigned i=0; i<10; i++)
+   {
+      MineBlocks(1);
+      update(cct);
+
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
+      EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+
+      //set up new cct object, should have same balance as first cct;
+      auto&& cct2 = makeCct();
+      cct2->goOnline();
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+   }
+}
+
 ////
 TEST_F(TestCCoin, Case_1CC_2CC)
 {
+   usersCount_ = 10;
    InitialFund({ userCCAddresses_[0] });
 
    auto&& cct = makeCct();
@@ -1241,6 +1883,7 @@ TEST_F(TestCCoin, Case_1CC_2CC)
 ////
 TEST_F(TestCCoin, Case_MultiUnorderedCC_2CC)
 {
+   usersCount_ = 10;
    InitialFund();
 
    auto&& cct = makeCct();
@@ -1304,6 +1947,7 @@ TEST_F(TestCCoin, Case_MultiUnorderedCC_2CC)
 ////
 TEST_F(TestCCoin, Revoke)
 {
+   usersCount_ = 10;
    InitialFund();
    FundFromCoinbase({ revocationAddr_ }, 50 * COIN);
    MineBlocks(6);
@@ -1435,6 +2079,7 @@ TEST_F(TestCCoin, Revoke)
 ////
 TEST_F(TestCCoin, Case_MultiUnorderedCC_NoChange)
 {
+   usersCount_ = 10;
    InitialFund();
    
    auto&& cct = makeCct();
@@ -1497,6 +2142,7 @@ TEST_F(TestCCoin, Case_MultiUnorderedCC_NoChange)
 ////
 TEST_F(TestCCoin, ZeroConf)
 {
+   usersCount_ = 10;
    InitialFund();
 
    auto&& cct = makeCct();
@@ -1572,6 +2218,7 @@ TEST_F(TestCCoin, ZeroConf)
 ////
 TEST_F(TestCCoin, ZeroConfChain)
 {
+   usersCount_ = 10;
    InitialFund();
 
    auto&& cct = makeCct();
@@ -1691,6 +2338,7 @@ TEST_F(TestCCoin, ZeroConfChain)
 ////
 TEST_F(TestCCoin, Reorg)
 {
+   usersCount_ = 10;
    InitialFund();
 
    auto&& cct = makeCct();
@@ -1991,6 +2639,7 @@ TEST_F(TestCCoin, Reorg)
 ////
 TEST_F(TestCCoin, Case_1CC_2CC_WithACT)
 {
+   usersCount_ = 10;
    InitialFund();
 
    auto cct = std::make_shared<ColoredCoinTracker>(ccLotSize_, envPtr_->armoryConnection());
@@ -2047,6 +2696,7 @@ TEST_F(TestCCoin, Case_1CC_2CC_WithACT)
 ////
 TEST_F(TestCCoin, Reorg_WithACT)
 {
+   usersCount_ = 10;
    InitialFund();
 
    ColoredCoinTracker cct(ccLotSize_, envPtr_->armoryConnection());
