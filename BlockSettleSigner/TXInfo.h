@@ -71,6 +71,7 @@ public:
 
    QString counterPartyCCReceiverAddress() const;
    QString counterPartyXBTReceiverAddress() const;
+   QString counterPartyReceiverAddress(uint64_t amount) const;
 
    size_t txVirtSize() const { return txReq_.estimateTxVirtSize(); }
    double amount() const { return txReq_.amount(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }
