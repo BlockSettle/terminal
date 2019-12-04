@@ -293,7 +293,7 @@ void CCPubResolver::clear()
 void CCPubResolver::add(const bs::network::CCSecurityDef &ccDef)
 {
    securities_[ccDef.product] = ccDef;
-   const auto walletIdx = bs::hd::Path::keyToElem(ccDef.product);
+   const auto walletIdx = bs::hd::Path::keyToElem(ccDef.product) | bs::hd::hardFlag;
    walletIdxMap_[walletIdx] = ccDef.product;
    cbSecLoaded_(ccDef);
 }
@@ -309,7 +309,7 @@ std::vector<std::string> CCPubResolver::securities() const
 
 std::string CCPubResolver::nameByWalletIndex(bs::hd::Path::Elem idx) const
 {
-   idx &= ~bs::hd::hardFlag;
+   idx |= bs::hd::hardFlag;
    const auto &itWallet = walletIdxMap_.find(idx);
    if (itWallet != walletIdxMap_.end()) {
       return itWallet->second;

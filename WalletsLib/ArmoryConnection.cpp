@@ -702,8 +702,33 @@ bool ArmoryConnection::getSpentnessForOutputs(const std::map<BinaryData, std::se
    return true;
 }
 
-bool ArmoryConnection::getOutputsForOutpoints(const std::map<BinaryData, std::set<unsigned>>& outpoints,
-   bool withZc, const std::function<void(std::vector<UTXO>, std::exception_ptr)>& cb)
+bool ArmoryConnection::getSpentnessForZcOutputs(const std::map<BinaryData, std::set<unsigned>> &outputs
+   , const std::function<void(const std::map<BinaryData, std::map<unsigned, std::pair<BinaryData, unsigned>>> &
+      , std::exception_ptr)> &cb)
+{
+   if (!bdv_ || (state_ != ArmoryState::Ready)) {
+      logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
+      return false;
+   }
+   const auto cbWrap = [logger = logger_, cb](ReturnMessage<std::map<BinaryData
+      , std::map<unsigned, std::pair<BinaryData, unsigned>>>> msg)
+   {
+      try {
+         const auto &spentness = msg.get();
+         cb(spentness, nullptr);
+      }
+      catch (const std::exception &e) {
+         logger->error("[ArmoryConnection::getSpentnessForOutputs] failed to get: {}", e.what());
+         cb({}, std::make_exception_ptr(e));
+      }
+   };
+   bdv_->getSpentnessForZcOutputs(outputs, cbWrap);
+   return true;
+}
+
+bool ArmoryConnection::getOutputsForOutpoints(
+   const std::map<BinaryData, std::set<unsigned>>& outpoints, bool withZc, 
+   const std::function<void(std::vector<UTXO>, std::exception_ptr)>& cb)
 {
    if (!bdv_ || (state_ != ArmoryState::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());

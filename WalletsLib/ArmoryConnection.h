@@ -188,6 +188,9 @@ public:
    bool getSpentnessForOutputs(const std::map<BinaryData, std::set<unsigned>> &
       , const std::function<void(const std::map<BinaryData, std::map<unsigned, std::pair<BinaryData, unsigned>>> &
          , std::exception_ptr)> &);
+   bool getSpentnessForZcOutputs(const std::map<BinaryData, std::set<unsigned>> &
+      , const std::function<void(const std::map<BinaryData, std::map<unsigned, std::pair<BinaryData, unsigned>>> &
+         , std::exception_ptr)> &);
    bool getOutputsForOutpoints(const std::map<BinaryData, std::set<unsigned>>&, bool withZc,
       const std::function<void(std::vector<UTXO>, std::exception_ptr)>&);
 

@@ -231,6 +231,8 @@ private:
 
    unsigned startHeight_ = 0;
    unsigned zcCutOff_ = 0;
+   unsigned processedHeight_ = 0;
+   unsigned processedZcIndex_ = 0;
    
    uint64_t coinsPerShare_;
 
@@ -253,12 +255,12 @@ private:
    ////
    std::set<BinaryData> processTxBatch(
       std::shared_ptr<ColoredCoinSnapshot>&,
-      const std::set<BinaryData>&);
+      const std::set<BinaryData>&, bool parseLowest);
 
-   void processZcBatch(
+   std::set<BinaryData> processZcBatch(
       const std::shared_ptr<ColoredCoinSnapshot>&,
       const std::shared_ptr<ColoredCoinZCSnapshot>&,
-      const std::set<BinaryData>&);
+      const std::set<BinaryData>&, bool);
 
    void processRevocationBatch(
       const std::shared_ptr<ColoredCoinSnapshot>&,
