@@ -343,6 +343,8 @@ bool BaseCelerClient::onMultiMessage(const std::string& message)
 
 bool BaseCelerClient::SendDataToSequence(const std::string& sequenceId, CelerAPI::CelerMessageType messageType, const std::string& message)
 {
+   std::lock_guard<std::recursive_mutex> lock(activeCommandsMutex_);
+
    auto commandIt = activeCommands_.find(sequenceId);
    if (commandIt == activeCommands_.end()) {
       logger_->error("[CelerClient::SendDataToSequence] there is no active sequence for id {}", sequenceId);
@@ -418,6 +420,7 @@ bool BaseCelerClient::IsConnected() const
 
 void BaseCelerClient::RegisterUserCommand(const std::shared_ptr<BaseCelerCommand>& command)
 {
+   std::lock_guard<std::recursive_mutex> lock(activeCommandsMutex_);
    activeCommands_.emplace(command->GetSequenceId(), command);
 }
 
