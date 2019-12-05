@@ -38,13 +38,13 @@ ClientDBLogic::ClientDBLogic(QObject* parent /* = nullptr */) : DatabaseExecutor
    connect(this, &ClientDBLogic::error, this, &ClientDBLogic::handleLocalErrors);
 }
 
-void ClientDBLogic::Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, const ChatUserPtr& chatUserPtr,
+void ClientDBLogic::Init(const Chat::LoggerPtr& loggerPtr, QString chatDbFile, const ChatUserPtr& chatUserPtr,
    const Chat::CryptManagerPtr& cryptManagerPtr)
 {
    loggerPtr_ = loggerPtr;
-   applicationSettingsPtr_ = appSettings;
    currentChatUserPtr_ = chatUserPtr;
    cryptManagerPtr_ = cryptManagerPtr;
+   chatDbFile_ = chatDbFile;
 
    setLogger(loggerPtr);
 
@@ -63,7 +63,7 @@ QSqlDatabase ClientDBLogic::getDb()
    {
       auto db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connectionName);
 
-      db.setDatabaseName(applicationSettingsPtr_->get<QString>(ApplicationSettings::chatDbFile));
+      db.setDatabaseName(chatDbFile_);
 
       try
       {

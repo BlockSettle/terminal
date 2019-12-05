@@ -27,11 +27,11 @@
 
 using namespace Chat;
 
-ClientConnectionLogic::ClientConnectionLogic(ClientPartyLogicPtr clientPartyLogicPtr, ApplicationSettingsPtr appSettings,
+ClientConnectionLogic::ClientConnectionLogic(ClientPartyLogicPtr clientPartyLogicPtr,
                                              ClientDBServicePtr clientDBServicePtr, LoggerPtr loggerPtr,
                                              Chat::CryptManagerPtr cryptManagerPtr,
                                              SessionKeyHolderPtr sessionKeyHolderPtr, QObject* parent /* = nullptr */)
-   : QObject(parent), loggerPtr_(std::move(loggerPtr)), appSettings_(std::move(appSettings)), clientPartyLogicPtr_(
+   : QObject(parent), loggerPtr_(std::move(loggerPtr)), clientPartyLogicPtr_(
         std::move(clientPartyLogicPtr)), 
    clientDBServicePtr_(std::move(clientDBServicePtr)), sessionKeyHolderPtr_(std::move(sessionKeyHolderPtr)), cryptManagerPtr_(
       std::move(cryptManagerPtr))

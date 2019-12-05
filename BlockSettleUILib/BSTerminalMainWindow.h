@@ -105,8 +105,11 @@ private:
 
    void InitPortfolioView();
    void InitWalletsView();
-   void InitChatView();
    void InitChartsView();
+
+   void tryInitChatView();
+   void tryLoginIntoChat();
+   void tryGetChatKeys();
 
    void UpdateMainWindowAppearence();
 
@@ -234,6 +237,13 @@ private:
    void networkSettingsReceived(const NetworkSettings &settings);
 
 private:
+   enum class ChatInitState
+   {
+      NoStarted,
+      InProgress,
+      Done,
+   };
+
    QString           loginButtonText_;
 
    bool initialWalletCreateDialogShown_ = false;
@@ -273,6 +283,15 @@ private:
    std::unique_ptr<BsClient> bsClient_;
 
    Chat::ChatClientServicePtr chatClientServicePtr_;
+
+   ChatInitState chatInitState_{ChatInitState::NoStarted};
+   bool networkSettingsReceived_{false};
+   bool gotChatKeys_{false};
+   BinaryData chatTokenData_;
+   SecureBinaryData chatTokenSign_;
+   BinaryData chatPubKey_;
+   SecureBinaryData chatPrivKey_;
+
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

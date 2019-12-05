@@ -15,7 +15,6 @@ using namespace Chat;
 ClientDBService::ClientDBService(QObject* parent /* = nullptr */)
    : ServiceThread<ClientDBLogic>(new ClientDBLogic, parent)
 {
-   qRegisterMetaType<Chat::ApplicationSettingsPtr>();
    qRegisterMetaType<Chat::CryptManagerPtr>();
    qRegisterMetaType<Chat::PartyRecipientsPtrList>();
    qRegisterMetaType<Chat::UniqieRecipientMap>();

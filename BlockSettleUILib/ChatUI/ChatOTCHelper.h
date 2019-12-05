@@ -45,7 +45,6 @@ namespace Blocksettle {
    }
 }
 
-class ApplicationSettings;
 class ArmoryConnection;
 class AuthAddressManager;
 class OtcClient;
@@ -62,8 +61,7 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
       , const std::shared_ptr<ArmoryConnection>& armory
       , const std::shared_ptr<SignContainer>& signContainer
-      , const std::shared_ptr<AuthAddressManager> &authAddressManager
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings);
+      , const std::shared_ptr<AuthAddressManager> &authAddressManager);
 
    OtcClient* client() const;
 
