@@ -219,25 +219,29 @@ QStringList TXInfo::allRecipients() const
 QString TXInfo::counterPartyCCReceiverAddress() const
 {
    // Usable to find counterparty CC address where CC coins sent when we sell
-   uint64_t amountCCSpent = txReq_.totalSpent(containsAnyOurCCAddressCb_);
-
-   for (auto address : counterPartyRecipients()) {
-      if (txReq_.amountReceivedOn(bs::Address::fromAddressString(address.toStdString())) == amountCCSpent) {
-         return address;
-      }
-   }
-   return {};
+   const uint64_t amountCCSpent = txReq_.totalSpent(containsAnyOurCCAddressCb_);
+   return counterPartyReceiverAddress(amountCCSpent);
 }
 
 QString TXInfo::counterPartyXBTReceiverAddress() const
 {
    // Find address where xbt coins sent (for CC settlements)
-   uint64_t amountXBTSpent = txReq_.totalSpent(containsAnyOurXbtAddressCb_) - txReq_.getFee();
+   const uint64_t amountXBTSpent = txReq_.totalSpent(containsAnyOurXbtAddressCb_) - txReq_.getFee();
+   return counterPartyReceiverAddress(amountXBTSpent);
+}
 
-   for (auto address : counterPartyRecipients()) {
-      uint64_t amountXBTReceivedOnAddress = txReq_.amountReceivedOn(bs::Address::fromAddressString(address.toStdString())) ;
-      if (amountXBTReceivedOnAddress == amountXBTSpent) {
-         return address;
+QString TXInfo::counterPartyReceiverAddress(uint64_t amount) const
+{
+   for (const auto &addressStr : counterPartyRecipients()) {
+      const auto address = bs::Address::fromAddressString(addressStr.toStdString());
+
+      // Set removeDuplicatedRecipients to fix problem with duplicated recipients.
+      // Looks like this is only needed for requesters.
+      const bool removeDuplicatedRecipients = true;
+      const uint64_t amountReceivedOn = txReq_.amountReceivedOn(address, removeDuplicatedRecipients) ;
+
+      if (amountReceivedOn == amount) {
+         return addressStr;
       }
    }
    return {};

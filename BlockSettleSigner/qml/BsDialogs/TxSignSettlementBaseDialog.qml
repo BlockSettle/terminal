@@ -485,7 +485,7 @@ CustomTitleDialogWindowWithExpander {
                 id: btnExportTx
                 primary: true
                 visible: walletInfo.encType === QPasswordData.Unencrypted
-                text: qsTr("SAVE TX")
+                text: qsTr("EXPORT")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
@@ -516,7 +516,7 @@ CustomTitleDialogWindowWithExpander {
                 id: btnImportTx
                 visible: false
                 enabled: false
-                text: qsTr("LOAD SIGNED TX")
+                text: qsTr("IMPORT")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
@@ -554,7 +554,7 @@ CustomTitleDialogWindowWithExpander {
                 id: btnConfirm
                 primary: walletInfo.encType ===  QPasswordData.Unencrypted ? false : true
                 visible: walletInfo.encType === QPasswordData.Password
-                text: qsTr("CONFIRM")
+                text: walletInfo.encType === QPasswordData.Unencrypted ?  qsTr("BROADCAST") : qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: signingAllowed && acceptable
