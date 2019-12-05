@@ -113,6 +113,9 @@ public:
    std::shared_ptr<SignAdapterContainer> signContainer() const;
 
    void sendControlPassword(const bs::wallet::QPasswordData &password);
+   void changeControlPassword(const bs::wallet::QPasswordData &oldPassword, const bs::wallet::QPasswordData &newPassword
+      , const std::function<void(bs::error::ErrorCode errorCode)> &cb);
+
 signals:
    void ready() const;
    void connectionError() const;

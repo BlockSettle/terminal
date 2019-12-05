@@ -71,6 +71,7 @@ public:
 
    SecureBinaryData controlPassword() const;
    void setControlPassword(const SecureBinaryData &controlPassword);
+   bs::error::ErrorCode changeControlPassword(const SecureBinaryData &controlPasswordOld, const SecureBinaryData &controlPasswordNew);
 
 private:
    void startTerminalsProcessing();

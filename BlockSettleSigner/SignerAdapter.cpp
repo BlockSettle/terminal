@@ -308,3 +308,15 @@ void SignerAdapter::sendControlPassword(const bs::wallet::QPasswordData &passwor
    decryptEvent.set_controlpassword(password.binaryPassword().toBinStr());
    listener_->send(signer::ControlPasswordReceivedType, decryptEvent.SerializeAsString());
 }
+
+void SignerAdapter::changeControlPassword(const bs::wallet::QPasswordData &oldPassword
+   , const bs::wallet::QPasswordData &newPassword
+   , const std::function<void(bs::error::ErrorCode errorCode)> &cb = nullptr)
+{
+   signer::ChangeControlPasswordRequest request;
+   request.set_controlpasswordold(oldPassword.binaryPassword().toBinStr());
+   request.set_controlpasswordnew(newPassword.binaryPassword().toBinStr());
+   const auto reqId = listener_->send(signer::ChangeControlPasswordType, request.SerializeAsString());
+
+   listener_->setChangeControlPwCb(reqId, cb);
+}

@@ -99,6 +99,8 @@ public:
    QString defaultBackupLocation() const;
 
    Q_INVOKABLE void sendControlPassword(bs::wallet::QPasswordData *password);
+   Q_INVOKABLE void changeControlPassword(bs::wallet::QPasswordData *oldPassword, bs::wallet::QPasswordData *newPassword
+      , const QJSValue &jsCallback);
 
 signals:
    void walletsChanged();

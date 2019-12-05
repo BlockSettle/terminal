@@ -761,3 +761,23 @@ void WalletsProxy::sendControlPassword(bs::wallet::QPasswordData *password)
       adapter_->sendControlPassword(*password);
    }
 }
+
+void WalletsProxy::changeControlPassword(bs::wallet::QPasswordData *oldPassword, bs::wallet::QPasswordData *newPassword
+   , const QJSValue &jsCallback)
+{
+   const auto cb = [this, jsCallback](bs::error::ErrorCode result) {
+      QMetaObject::invokeMethod(this, [this, jsCallback, result] {
+         invokeJsCallBack(jsCallback, QJSValueList()
+            << QJSValue(result == bs::error::ErrorCode::NoError)
+            << QJSValue(bs::error::ErrorCodeToString(result)));
+      });
+
+      if (result == bs::error::ErrorCode::NoError) {
+         onWalletsChanged();
+      }
+   };
+
+   if (oldPassword && newPassword) {
+      adapter_->changeControlPassword(*oldPassword, *newPassword, cb);
+   }
+}

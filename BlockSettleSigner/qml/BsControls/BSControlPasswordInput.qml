@@ -19,6 +19,7 @@ CustomTitleDialogWindow {
     }
 
     property QPasswordData passwordData: QPasswordData{}
+    property QPasswordData passwordDataOld: QPasswordData{}
     property int controlPasswordStatus
 
     property string decryptHeaderText: qsTr("Enter Control Password")
@@ -158,12 +159,15 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                 anchors.margins: 5
                 text: qsTr("Ok")
                 onClicked: {
+                    passwordDataOld.textPassword = passwordInputDecrypt.text
+
                     if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Rejected) {
                         passwordData.textPassword = passwordInputDecrypt.text
                     }
-                    else if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew) {
+                    else {
                         passwordData.textPassword = newPasswordWithConfirm.password
                     }
+
                     passwordData.encType = QPasswordData.Password
                     acceptAnimated()
                 }

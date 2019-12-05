@@ -634,13 +634,24 @@ function createControlPasswordDialog(jsCallback, controlPasswordStatus) {
     let dlg = Qt.createComponent("../BsControls/BSControlPasswordInput.qml").createObject(mainWindow
         , { "controlPasswordStatus": controlPasswordStatus} )
 
-    dlg.bsAccepted.connect(function() {
-        jsCallback(dlg.passwordData)
-    })
+    // Fixme
+    // Accepted = 0;
+    // Rejected = 1;
+    // RequestedNew = 2;
+    if (controlPasswordStatus === 0) {
+        dlg.bsAccepted.connect(function() {
+            jsCallback(dlg.passwordDataOld, dlg.passwordData)
+        })
+    }
+    else {
+        dlg.bsAccepted.connect(function() {
+            jsCallback(dlg.passwordData)
+        })
 
-    dlg.bsRejected.connect(function() {
-        jsCallback("")
-    })
+        dlg.bsRejected.connect(function() {
+            jsCallback("")
+        })
+    }
 
     prepareDialog(dlg)
     dlg.open()

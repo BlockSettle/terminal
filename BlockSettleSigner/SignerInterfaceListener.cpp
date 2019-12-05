@@ -173,6 +173,9 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::TerminalEventType:
       onTerminalEvent(packet.data());
       break;
+   case signer::ChangeControlPasswordType:
+      onChangeControlPassword(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;
@@ -564,6 +567,23 @@ void SignerInterfaceListener::onChangePassword(const std::string &data, bs::sign
    }
    itCb->second(static_cast<bs::error::ErrorCode>(response.errorcode()));
    cbChangePwReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onChangeControlPassword(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::ChangeControlPasswordResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   const auto &itCb = cbChangeControlPwReqs_.find(reqId);
+   if (itCb == cbChangeControlPwReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
+   }
+   itCb->second(static_cast<bs::error::ErrorCode>(response.errorcode()));
+   cbChangeControlPwReqs_.erase(itCb);
 }
 
 void SignerInterfaceListener::onCreateHDWallet(const std::string &data, bs::signer::RequestId reqId)

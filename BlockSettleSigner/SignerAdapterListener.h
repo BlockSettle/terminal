@@ -88,6 +88,7 @@ protected:
    bool onExportWoWallet(const std::string &data, bs::signer::RequestId);
    bool onSyncSettings(const std::string &data);
    bool onControlPasswordReceived(const std::string &data);
+   bool onChangeControlPassword(const std::string &data, bs::signer::RequestId);
 
    void walletsListUpdated();
    void shutdownIfNeeded();

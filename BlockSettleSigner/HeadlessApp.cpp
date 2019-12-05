@@ -337,6 +337,19 @@ void HeadlessAppObj::setControlPassword(const SecureBinaryData &controlPassword)
    }
 }
 
+bs::error::ErrorCode HeadlessAppObj::changeControlPassword(const SecureBinaryData &controlPasswordOld, const SecureBinaryData &controlPasswordNew)
+{
+   if (controlPasswordOld != controlPassword()) {
+      return bs::error::ErrorCode::InvalidPassword;
+   }
+   try {
+      walletsMgr_->changeControlPassword(controlPasswordOld, controlPasswordNew);
+   } catch (...) {
+      return bs::error::ErrorCode::InvalidPassword;
+   }
+   return bs::error::ErrorCode::NoError;
+}
+
 ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
 {
    return terminalConnection_.get();

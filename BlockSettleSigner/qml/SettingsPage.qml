@@ -468,9 +468,18 @@ Item {
                     Layout.maximumHeight: 22
                     Layout.rightMargin: 6
                     onClicked: {
-                        var onControlPasswordFinished = function(password){
-                            walletsProxy.sendControlPassword(password)
-                            dlgNewSeed.open()
+                        var onControlPasswordChanged = function(success, errorMsg){
+                            if (success) {
+                                JsHelper.messageBox(BSMessageBox.Type.Success
+                                    , qsTr("Master Password"), qsTr("Change Master Password succeed"))
+
+                            } else {
+                                JsHelper.messageBox(BSMessageBox.Type.Critical
+                                    , qsTr("Master Password"), qsTr("Change Master Password failed: \n") + errorMsg)
+                            }
+                        }
+                        var onControlPasswordFinished = function(oldPassword, newPassword){
+                            walletsProxy.changeControlPassword(oldPassword, newPassword, onControlPasswordChanged)
                         }
                         JsHelper.createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
                     }
