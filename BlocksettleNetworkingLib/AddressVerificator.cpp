@@ -188,7 +188,6 @@ void AddressVerificator::validateAddress(const std::shared_ptr<AddressVerificati
       return;
    }
 
-   validationMgr_->update();
    try {
       state->currentState = AuthAddressLogic::getAuthAddrState(*validationMgr_, state->address);
    }
