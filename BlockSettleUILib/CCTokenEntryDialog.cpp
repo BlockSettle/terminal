@@ -56,6 +56,8 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsMa
 
    timer_.setInterval(100);
    connect(&timer_, &QTimer::timeout, this, &CCTokenEntryDialog::onTimer);
+
+   ui_->stackedWidgetAuth->setCurrentIndex(0);
 }
 
 CCTokenEntryDialog::~CCTokenEntryDialog() = default;
@@ -146,6 +148,7 @@ void CCTokenEntryDialog::accept()
    timer_.start();
    ui_->stackedWidgetAuth->setCurrentWidget(ui_->pageAuth);
    ui_->labelToken->setText(ui_->lineEditToken->text());
+   ui_->labelProduct->setText(QString::fromStdString(ccProduct_));
 }
 
 void CCTokenEntryDialog::onCCAddrSubmitted(const QString)
