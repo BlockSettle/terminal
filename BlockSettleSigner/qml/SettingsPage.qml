@@ -432,6 +432,52 @@ Item {
             }
 
             CustomHeader {
+                text: qsTr("Security Settings")
+                checkable: true
+                checked: true
+                down: true
+                Layout.preferredHeight: 25
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                Layout.topMargin: 10
+            }
+
+            RowLayout {
+                Layout.topMargin: 5
+                Layout.fillWidth: true
+                Layout.rightMargin: 10
+                Layout.leftMargin: 10
+
+                CustomLabel {
+                    text: qsTr("Master Password")
+                    Layout.minimumWidth: 125
+                    Layout.preferredWidth: 125
+                    Layout.maximumWidth: 125
+                }
+
+                CustomLabel {
+                    Layout.fillWidth: true
+                }
+
+                CustomButton {
+                    text: qsTr("Change")
+                    Layout.minimumWidth: 150
+                    Layout.preferredWidth: 150
+                    Layout.maximumWidth: 150
+                    Layout.maximumHeight: 22
+                    Layout.rightMargin: 6
+                    onClicked: {
+                        var onControlPasswordFinished = function(password){
+                            walletsProxy.sendControlPassword(password)
+                            dlgNewSeed.open()
+                        }
+                        JsHelper.createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+                    }
+                }
+            }
+
+            CustomHeader {
                 visible: false
                 text: qsTr("Limits")
                 font.pixelSize: 14

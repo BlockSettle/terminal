@@ -80,17 +80,19 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                 Layout.bottomMargin: 5
 
                 CustomLabel {
-                    visible: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Rejected
+                    visible: controlPasswordStatus !== BSControlPasswordInput.ControlPasswordStatus.RequestedNew
                     Layout.fillWidth: true
                     Layout.minimumWidth: 110
                     Layout.preferredWidth: 110
                     Layout.maximumWidth: 110
-                    text: qsTr("Password")
+                    text: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Rejected
+                          ? qsTr("Password")
+                          : qsTr("Old Password")
                 }
 
                 CustomTextInput {
                     id: passwordInputDecrypt
-                    visible: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Rejected
+                    visible: controlPasswordStatus !== BSControlPasswordInput.ControlPasswordStatus.RequestedNew
                     Layout.fillWidth: true
                     Layout.topMargin: 5
                     Layout.bottomMargin: 5
@@ -109,7 +111,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
 
             BSConfirmedPasswordInput {
                 id: newPasswordWithConfirm
-                visible: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+                visible: controlPasswordStatus !== BSControlPasswordInput.ControlPasswordStatus.Rejected
                 columnSpacing: 10
                 passwordLabelTxt: qsTr("Control Password")
                 confirmLabelTxt: qsTr("Confirm Password")
@@ -131,7 +133,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 anchors.margins: 5
-                text: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+                text: controlPasswordStatus !== BSControlPasswordInput.ControlPasswordStatus.Rejected
                     ? qsTr("Skip")
                     : qsTr("Cancel")
                 onClicked: {
@@ -141,9 +143,15 @@ With Public Data Encryption enabled you will be required to decrypt this materia
 
             CustomButton {
                 id: btnAccept
-                enabled: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
-                         ? newPasswordWithConfirm.acceptableInput
-                         : passwordInputDecrypt.text.length >= 6
+                enabled: {
+                    if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew)
+                        return newPasswordWithConfirm.acceptableInput
+                    else if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Rejected)
+                        return passwordInputDecrypt.text.length >= 6
+                    else
+                        return newPasswordWithConfirm.acceptableInput && passwordInputDecrypt.text.length >= 6
+                }
+
                 primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
