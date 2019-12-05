@@ -167,6 +167,10 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
       onReplied(data);
    });
 
+   ui_->pageRFQReply->setResetCurrentReservation([this](const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data) {
+      onResetCurrentReservation(data);
+   });
+
    connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, quoteProvider_.get(), &QuoteProvider::CancelQuoteNotif);
 
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onSecurityMDUpdated);
@@ -220,6 +224,23 @@ void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyDat
          reply.requestorAuthAddress = data->qn.reqAuthKey;
          reply.utxoRes = std::move(data->utxoRes);
          reply.xbtWallet = data->xbtWallet;
+         break;
+      }
+
+      default: {
+         break;
+      }
+   }
+}
+
+void RFQReplyWidget::onResetCurrentReservation(const std::shared_ptr<SubmitQuoteReplyData> &data)
+{
+   switch (data->qn.assetType) {
+      case bs::network::Asset::PrivateMarket: {
+         auto it = sentCCReplies_.find(data->qn.quoteRequestId);
+         if (it != sentCCReplies_.end()) {
+            it->second.utxoRes.release();
+         }
          break;
       }
 

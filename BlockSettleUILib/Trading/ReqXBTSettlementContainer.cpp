@@ -41,7 +41,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const bs::network::Quote &quote
    , const bs::Address &authAddr
    , const std::map<UTXO, std::string> &utxosPayinFixed
-   , const bs::Address &recvAddr)
+   , const bs::Address &recvAddrIfSet)
    : bs::SettlementContainer()
    , logger_(logger)
    , authAddrMgr_(authAddrMgr)
@@ -51,7 +51,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , xbtWallet_(xbtWallet)
    , rfq_(rfq)
    , quote_(quote)
-   , recvAddr_(recvAddr)
+   , recvAddrIfSet_(recvAddrIfSet)
    , weSellXbt_(!rfq.isXbtBuy())
    , authAddr_(authAddr)
    , utxosPayinFixed_(utxosPayinFixed)
@@ -347,7 +347,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
    bs::tradeutils::PayoutArgs args;
    initTradesArgs(args, settlementId);
    args.payinTxId = payinHash;
-   args.recvAddr = recvAddr_;
+   args.recvAddr = recvAddrIfSet_;
    args.outputXbtWallet = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves().at(0);
 
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, payinHash, timestamp, handle = validityFlag_.handle()]

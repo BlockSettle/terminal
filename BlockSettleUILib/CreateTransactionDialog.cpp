@@ -440,9 +440,19 @@ bool CreateTransactionDialog::BroadcastImportedTx()
    return false;
 }
 
-bool CreateTransactionDialog::CreateTransaction()
+void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
 {
-   const auto changeAddress = getChangeAddress();
+   getChangeAddress([this, cb = std::move(cb), handle = validityFlag_.handle()](bs::Address changeAddress) {
+      if (!handle.isValid()) {
+         return;
+      }
+      bool result = createTransactionImpl(changeAddress);
+      cb(result);
+   });
+}
+
+bool CreateTransactionDialog::createTransactionImpl(const bs::Address &changeAddress)
+{
    QString text;
    QString detailedText;
 

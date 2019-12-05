@@ -85,7 +85,8 @@ public:
    QPushButton* denomCcyButton() const;
 
    bs::Address selectedAuthAddress() const;
-   bs::Address recvXbtAddress() const;
+   // returns empty address if automatic selected
+   bs::Address recvXbtAddressIfSet() const;
 
    using SubmitRFQCb = std::function<void(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)>;
    void setSubmitRFQ(SubmitRFQCb submitRFQCb);

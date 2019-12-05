@@ -72,12 +72,12 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
 
    connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &RFQDealerReply::submitButtonClicked);
    connect(ui_->pushButtonPull, &QPushButton::clicked, this, &RFQDealerReply::pullButtonClicked);
-   connect(ui_->pushButtonAdvanced, &QPushButton::clicked, this, &RFQDealerReply::showCoinControl);
+   connect(ui_->toolButtonXBTInputsSend, &QPushButton::clicked, this, &RFQDealerReply::showCoinControl);
 
    connect(ui_->comboBoxXbtWallet, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::walletSelected);
    connect(ui_->authenticationAddressComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQDealerReply::onAuthAddrChanged);
 
-   ui_->responseTitle->hide();
+   ui_->groupBoxSettlementInputs->hide();
 }
 
 RFQDealerReply::~RFQDealerReply() = default;
@@ -193,6 +193,7 @@ void RFQDealerReply::reset()
       ui_->labelReqSide->clear();
       ui_->labelReqQty->clear();
       ui_->labelRespProduct->clear();
+      ui_->labelQuantity->clear();
       indicBid_ = indicAsk_ = 0;
       setBalanceOk(true);
    }
@@ -225,6 +226,8 @@ void RFQDealerReply::reset()
          , QString::fromStdString(currentQRN_.product), currentQRN_.assetType));
 
       ui_->labelRespProduct->setText(QString::fromStdString(product_));
+      ui_->labelQuantity->setText(UiUtils::displayAmountForProduct(currentQRN_.quantity
+         , QString::fromStdString(currentQRN_.product), currentQRN_.assetType));
    }
 
    updateRespQuantity();
@@ -281,7 +284,7 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
    ui_->authenticationAddressLabel->setVisible(isXBT);
    ui_->authenticationAddressComboBox->setVisible(isXBT);
    ui_->widgetWallet->setVisible(isXBT || isPrivMkt);
-   ui_->pushButtonAdvanced->setVisible(dealerSellXBT_ && isXBT);
+   ui_->toolButtonXBTInputsSend->setVisible(dealerSellXBT_ && isXBT);
    ui_->labelWallet->setText(dealerSellXBT_ ? tr("Payment Wallet") : tr("Receiving Wallet"));
 
    updateUiWalletFor(qrn);
@@ -292,9 +295,9 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
 
    if (qrn.assetType == bs::network::Asset::SpotFX ||
       qrn.assetType == bs::network::Asset::Undefined) {
-         ui_->responseTitle->hide();
+         ui_->groupBoxSettlementInputs->hide();
    } else {
-      ui_->responseTitle->show();
+      ui_->groupBoxSettlementInputs->show();
    }
 
    updateSubmitButton();
@@ -392,12 +395,20 @@ void RFQDealerReply::onAuthAddrChanged(int index)
 
 void RFQDealerReply::updateSubmitButton()
 {
+   if (!currentQRN_.empty() && activeQuoteSubmits_.find(currentQRN_.quoteRequestId) != activeQuoteSubmits_.end()) {
+      // Do not allow re-enter into submitReply as it could cause problems
+      ui_->pushButtonSubmit->setEnabled(false);
+      ui_->pushButtonPull->setEnabled(false);
+      return;
+   }
+
    updateBalanceLabel();
    bool isQRNRepliable = (!currentQRN_.empty() && QuoteProvider::isRepliableStatus(currentQRN_.status));
    if ((currentQRN_.assetType != bs::network::Asset::SpotFX)
       && (!signingContainer_ || signingContainer_->isOffline())) {
       isQRNRepliable = false;
    }
+
    ui_->pushButtonSubmit->setEnabled(isQRNRepliable);
    ui_->pushButtonPull->setEnabled(isQRNRepliable);
    if (!isQRNRepliable) {
@@ -569,6 +580,11 @@ void RFQDealerReply::setSubmitQuoteNotifCb(RFQDealerReply::SubmitQuoteNotifCb cb
    submitQuoteNotifCb_ = std::move(cb);
 }
 
+void RFQDealerReply::setResetCurrentReservation(RFQDealerReply::ResetCurrentReservationCb cb)
+{
+   resetCurrentReservationCb_ = std::move(cb);
+}
+
 void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, double price, ReplyType replyType)
 {
    if (qFuzzyIsNull(price)) {
@@ -604,10 +620,20 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
       replyData->fixedXbtInputs = selectedXbtInputs(replyType);
    }
 
+   auto it = activeQuoteSubmits_.find(replyData->qn.quoteRequestId);
+   if (it != activeQuoteSubmits_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "quote submit already active for quote request '{}'", replyData->qn.quoteRequestId);
+      return;
+   }
+   activeQuoteSubmits_.insert(replyData->qn.quoteRequestId);
+   updateSubmitButton();
+
    auto submit = [this, price, replyData]() {
       SPDLOG_LOGGER_DEBUG(logger_, "submitted quote reply on {}: {}/{}", replyData->qn.quoteRequestId, replyData->qn.bidPx, replyData->qn.offerPx);
       sentNotifs_[replyData->qn.quoteRequestId] = price;
       submitQuoteNotifCb_(replyData);
+      activeQuoteSubmits_.erase(replyData->qn.quoteRequestId);
+      updateSubmitButton();
    };
 
    switch (qrn.assetType) {
@@ -689,6 +715,10 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                      spendWallet->getNewChangeAddress(cbChangeAddr);
                   });
                };
+
+               // Try to reset current reservation if needed when user sends another quote
+               resetCurrentReservationCb_(replyData);
+
                if (isSpendCC) {
                   const auto  inputsWrapCb = [inputsCb, ccWallet](const std::vector<UTXO> &utxos) {
                      std::map<UTXO, std::string> inputs;

@@ -464,29 +464,50 @@ void RFQTicketXBT::setSubmitRFQ(RFQTicketXBT::SubmitRFQCb submitRFQCb)
    submitRFQCb_ = std::move(submitRFQCb);
 }
 
-bs::Address RFQTicketXBT::recvXbtAddress() const
+bs::Address RFQTicketXBT::recvXbtAddressIfSet() const
 {
-   auto recvWallet = getRecvXbtWallet();
    const auto index = ui_->receivingAddressComboBox->currentIndex();
-   if ((index < 0) || !recvWallet) {
+   if (index < 0) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid address index");
       return bs::Address();
    }
 
-   if (index != 0) {
-      return bs::Address::fromAddressString(ui_->receivingAddressComboBox->currentText().toStdString());
-   }
-
-   auto leaves = recvWallet->getGroup(recvWallet->getXBTGroupType())->getLeaves();
-   if (leaves.empty()) {
+   if (index == 0) {
+      // Automatic address generation
       return bs::Address();
    }
-   auto promAddr = std::make_shared<std::promise<bs::Address>>();
-   auto futAddr = promAddr->get_future();
-   const auto &cbAddr = [promAddr](const bs::Address &addr) {
-      promAddr->set_value(addr);
-   };
-   leaves.front()->getNewExtAddress(cbAddr);
-   return futAddr.get();
+
+   bs::Address address;
+   const auto &addressStr = ui_->receivingAddressComboBox->currentText().toStdString();
+   try {
+      address = bs::Address::fromAddressString(addressStr);
+   } catch (const std::exception &e) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't parse address '{}': {}", addressStr, e.what());
+      return address;
+   }
+
+   // Sanity checks
+   auto recvWallet = getRecvXbtWallet();
+   if (!recvWallet) {
+      SPDLOG_LOGGER_ERROR(logger_, "recv XBT wallet is not set");
+      return bs::Address();
+   }
+   auto wallet = walletsManager_->getWalletByAddress(address);
+   if (!wallet) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find receiving wallet for address {}", address.display());
+      return bs::Address();
+   }
+   auto hdWallet = walletsManager_->getHDRootForLeaf(wallet->walletId());
+   if (!hdWallet) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find HD wallet for receiving wallet {}", wallet->walletId());
+      return bs::Address();
+   }
+   if (hdWallet != recvWallet) {
+      SPDLOG_LOGGER_ERROR(logger_, "receiving HD wallet {} does not contain waller {}", hdWallet->walletId(), wallet->walletId());
+      return bs::Address();
+   }
+
+   return address;
 }
 
 bool RFQTicketXBT::checkBalance(double qty) const
@@ -649,62 +670,82 @@ void RFQTicketXBT::submitButtonClicked()
       }
 
       if (rfq->side == bs::network::Side::Sell) {
-         rfq->receiptAddress = recvXbtAddress().display();
+         // Sell
+         auto recvXbtAddressCb = [this, rfq, ccWallet](const bs::Address &recvXbtAddr) {
+            rfq->receiptAddress = recvXbtAddr.display();
+            const uint64_t spendVal = rfq->quantity * assetManager_->getCCLotSize(rfq->product);
+            if (!ccWallet) {
+               SPDLOG_LOGGER_ERROR(logger_, "ccWallet is not set");
+               return;
+            }
 
-         const uint64_t spendVal = rfq->quantity * assetManager_->getCCLotSize(rfq->product);
-         if (!ccWallet) {
-            SPDLOG_LOGGER_ERROR(logger_, "ccWallet is not set");
-            return;
-         }
-
-         const auto ccInputsCb = [this, spendVal, rfq, ccWallet]
-            (const std::vector<UTXO> &ccInputs) mutable
-         {
-            QMetaObject::invokeMethod(this, [this, spendVal, rfq, ccInputs, ccWallet] {
-               uint64_t inputVal = 0;
-               for (const auto &input : ccInputs) {
-                  inputVal += input.getValue();
-               }
-               if (inputVal < spendVal) {
-                  BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
-                     , tr("Insufficient input amount")).exec();
-                  return;
-               }
-
-               const auto cbAddr = [this, spendVal, rfq, ccInputs, ccWallet](const bs::Address &addr) {
-                  try {
-                     const auto txReq = ccWallet->createPartialTXRequest(spendVal, ccInputs, addr);
-                     rfq->coinTxInput = txReq.serializeState().toHexStr();
-                     auto reservationToken = bs::UtxoReservationToken::makeNewReservation(logger_, txReq, rfq->requestId);
-                     submitRFQCb_(*rfq, std::move(reservationToken));
+            const auto ccInputsCb = [this, spendVal, rfq, ccWallet]
+               (const std::vector<UTXO> &ccInputs) mutable
+            {
+               QMetaObject::invokeMethod(this, [this, spendVal, rfq, ccInputs, ccWallet] {
+                  uint64_t inputVal = 0;
+                  for (const auto &input : ccInputs) {
+                     inputVal += input.getValue();
                   }
-                  catch (const std::exception &e) {
-                     BSMessageBox(BSMessageBox::critical, tr("RFQ Failure")
-                        , QString::fromLatin1(e.what()), this).exec();
+                  if (inputVal < spendVal) {
+                     BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
+                        , tr("Insufficient input amount")).exec();
                      return;
                   }
-               };
-               if (inputVal == spendVal) {
-                  cbAddr({});
-               }
-               else {
-                  ccWallet->getNewExtAddress(cbAddr);
-               }
-            });
+
+                  const auto cbAddr = [this, spendVal, rfq, ccInputs, ccWallet](const bs::Address &addr) {
+                     try {
+                        const auto txReq = ccWallet->createPartialTXRequest(spendVal, ccInputs, addr);
+                        rfq->coinTxInput = txReq.serializeState().toHexStr();
+                        auto reservationToken = bs::UtxoReservationToken::makeNewReservation(logger_, txReq, rfq->requestId);
+                        submitRFQCb_(*rfq, std::move(reservationToken));
+                     }
+                     catch (const std::exception &e) {
+                        BSMessageBox(BSMessageBox::critical, tr("RFQ Failure")
+                           , QString::fromLatin1(e.what()), this).exec();
+                        return;
+                     }
+                  };
+                  if (inputVal == spendVal) {
+                     cbAddr({});
+                  }
+                  else {
+                     ccWallet->getNewExtAddress(cbAddr);
+                  }
+               });
+            };
+            bool result = ccWallet->getSpendableTxOutList(ccInputsCb, spendVal);
+            if (!result) {
+               SPDLOG_LOGGER_ERROR(logger_, "can't spendable TX list");
+            }
          };
-         bool result = ccWallet->getSpendableTxOutList(ccInputsCb, spendVal);
-         if (!result) {
-            SPDLOG_LOGGER_ERROR(logger_, "can't spendable TX list");
+
+         auto recvXbtAddrIfSet = recvXbtAddressIfSet();
+         if (recvXbtAddrIfSet.isValid()) {
+            recvXbtAddressCb(recvXbtAddrIfSet);
+         } else {
+            auto recvXbtWallet = getRecvXbtWallet();
+            if (!recvXbtWallet) {
+               SPDLOG_LOGGER_ERROR(logger_, "recv XBT wallet is not set");
+               return;
+            }
+            auto leaves = recvXbtWallet->getGroup(recvXbtWallet->getXBTGroupType())->getLeaves();
+            if (leaves.empty()) {
+               SPDLOG_LOGGER_ERROR(logger_, "can't find XBT leaves");
+               return;
+            }
+            leaves.front()->getNewExtAddress(recvXbtAddressCb);
          }
          return;
-      } else {
-         auto promAddr = std::promise<bs::Address>();
-         auto cbAddr = [&promAddr](const bs::Address &addr) {
-            promAddr.set_value(addr);
-         };
-         ccWallet->getNewExtAddress(cbAddr);
-         rfq->receiptAddress = promAddr.get_future().get().display();
       }
+
+      // Buy
+      auto cbRecvAddr = [this, rfq](const bs::Address &recvAddr) {
+         rfq->receiptAddress = recvAddr.display();
+         submitRFQCb_(*rfq, bs::UtxoReservationToken{});
+      };
+      ccWallet->getNewExtAddress(cbRecvAddr);
+      return;
    }
 
    submitRFQCb_(*rfq, bs::UtxoReservationToken{});

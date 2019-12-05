@@ -57,7 +57,7 @@ protected:
    QLabel* labelTXAmount() const override;
    QLabel* labelTxOutputs() const override;
 
-   bs::Address getChangeAddress() const override;
+   void getChangeAddress(AddressCb cb) const override;
 
 protected slots:
    void onMaxPressed() override;

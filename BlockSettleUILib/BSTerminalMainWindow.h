@@ -169,7 +169,7 @@ private:
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
-   std::shared_ptr<SignContainer>            signContainer_;
+   std::shared_ptr<WalletSignerContainer>    signContainer_;
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
 
    std::unique_ptr<OrderListModel>           orderListModel_;
