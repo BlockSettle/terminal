@@ -1136,7 +1136,7 @@ bool HeadlessContainerListener::onCreateHDLeaf(const std::string &clientId
                for (int i = 0; i < 5; i++) {
                   leaf->getNewExtAddress();
                }
-               createSettlementLeaves(hdWallet, leaf->getPooledAddressList());
+               createSettlementLeaves(hdWallet, leaf->getUsedAddressList());
             }
          }
 
@@ -1240,7 +1240,7 @@ bool HeadlessContainerListener::createAuthLeaf(const std::shared_ptr<bs::core::h
          for (int i = 0; i < 5; i++) {
             leaf->getNewExtAddress();
          }
-         return createSettlementLeaves(wallet, leaf->getPooledAddressList());
+         return createSettlementLeaves(wallet, leaf->getUsedAddressList());
       } else {
          logger_->error("[HeadlessContainerListener::onSetUserId] failed to create auth leaf");
       }
