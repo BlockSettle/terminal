@@ -10,7 +10,6 @@
 */
 #include "SyncWallet.h"
 #include <QLocale>
-#include <bech32/ref/c++/segwit_addr.h>
 #include <spdlog/spdlog.h>
 
 #include "CheckRecipSigner.h"
