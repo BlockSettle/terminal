@@ -153,7 +153,10 @@ private:
    commandsQueueType internalCommands_;
 
    std::unordered_map<CelerAPI::CelerMessageType, message_handler, std::hash<int> > messageHandlersMap_;
+
    std::unordered_map<std::string, std::shared_ptr<BaseCelerCommand>>               activeCommands_;
+   // Use recursive mutex here as active commands could probably call RegisterUserCommand again
+   std::recursive_mutex activeCommandsMutex_;
 
    std::string sessionToken_;
    std::string userName_;
