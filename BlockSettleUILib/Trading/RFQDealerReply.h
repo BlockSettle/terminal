@@ -107,6 +107,9 @@ namespace bs {
          using SubmitQuoteNotifCb = std::function<void(const std::shared_ptr<SubmitQuoteReplyData> &data)>;
          void setSubmitQuoteNotifCb(SubmitQuoteNotifCb cb);
 
+         using ResetCurrentReservationCb = std::function<void(const std::shared_ptr<SubmitQuoteReplyData> &data)>;
+         void setResetCurrentReservation(ResetCurrentReservationCb cb);
+
       signals:
          void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
 
@@ -180,6 +183,7 @@ namespace bs {
 
          std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
          SubmitQuoteNotifCb submitQuoteNotifCb_;
+         ResetCurrentReservationCb resetCurrentReservationCb_;
 
       private:
          enum class ReplyType
@@ -213,6 +217,8 @@ namespace bs {
          std::shared_ptr<bs::sync::hd::Wallet> getSelectedXbtWallet(ReplyType replyType) const;
          bs::Address selectedAuthAddress(ReplyType replyType) const;
          std::vector<UTXO> selectedXbtInputs(ReplyType replyType) const;
+         std::set<std::string> activeQuoteSubmits_;
+
       };
 
    }  //namespace ui

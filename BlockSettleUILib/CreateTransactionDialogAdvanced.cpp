@@ -953,11 +953,12 @@ void CreateTransactionDialogAdvanced::feeSelectionChanged(int currentIndex)
    setTxFees();
 }
 
-bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
+void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb) const
 {
    if (transactionData_->GetTransactionSummary().hasChange) {
       if (changeAddressFixed_) {
-         return selectedChangeAddress_;
+         cb(selectedChangeAddress_);
+         return;
       }
       else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
          const auto group = transactionData_->getGroup();
@@ -972,24 +973,25 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
             wallet = transactionData_->getWallet();
          }
 
-         auto promAddr = std::make_shared<std::promise<bs::Address>>();
-         auto futAddr = promAddr->get_future();
-         const auto &cbAddr = [this, promAddr, wallet](const bs::Address &addr) {
+         const auto &cbAddr = [this, cb = std::move(cb), wallet, handle = validityFlag_.handle()](const bs::Address &addr) {
+            if (!handle.isValid()) {
+               return;
+            }
             logger_->debug("[CreateTransactionDialogAdvanced::getChangeAddress] new change address: {}"
                , addr.display());
             wallet->setAddressComment(addr
                , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::ChangeAddress));
-            promAddr->set_value(addr);
+            transactionData_->getWallet()->syncAddresses();
+            cb(addr);
          };
          wallet->getNewChangeAddress(cbAddr);
-         const auto changeAddr = futAddr.get();
-         transactionData_->getWallet()->syncAddresses();
-         return changeAddr;
+         return;
       } else {
-         return selectedChangeAddress_;
+         cb(selectedChangeAddress_);
+         return;
       }
    }
-   return {};
+   cb({});
 }
 
 void CreateTransactionDialogAdvanced::onCreatePressed()
@@ -1013,9 +1015,14 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
       return;
    }
 
-   if (!CreateTransaction()) {
-      reject();
-   }
+   CreateTransaction([this, handle = validityFlag_.handle()](bool result) {
+      if (!handle.isValid()) {
+         return;
+      }
+      if (!result) {
+         reject();
+      }
+   });
 }
 
 bool CreateTransactionDialogAdvanced::HaveSignedImportedTransaction() const

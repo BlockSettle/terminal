@@ -76,8 +76,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    , ui_(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
 {
-   bs::UtxoReservation::init();
-
    UiUtils::SetupLocale();
 
    ui_->setupUi(this);
@@ -108,6 +106,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    logMgr_->add(applicationSettings_->GetLogsConfig());
 
    logMgr_->logger()->debug("Settings loaded from {}", applicationSettings_->GetSettingsPath().toStdString());
+
+   bs::UtxoReservation::init(logMgr_->logger());
 
    setupIcon();
    UiUtils::setupIconFont(this);

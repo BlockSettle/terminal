@@ -19,8 +19,9 @@
 #include <QMenu>
 #include <QPoint>
 #include <QString>
-#include "CoreWallet.h"
 #include "BSErrorCodeStrings.h"
+#include "CoreWallet.h"
+#include "ValidityFlag.h"
 
 namespace bs {
    namespace sync {
@@ -85,7 +86,8 @@ protected:
    virtual QLabel* feePerByteLabel() const { return nullptr; }
    virtual QLabel* changeLabel() const {return nullptr; }
 
-   virtual bs::Address getChangeAddress() const = 0;
+   using AddressCb = std::function<void(const bs::Address&)>;
+   virtual void getChangeAddress(AddressCb) const = 0;
 
    virtual void onTransactionUpdated();
 
@@ -93,7 +95,7 @@ protected:
 
    std::vector<bs::core::wallet::TXSignRequest> ImportTransactions();
    bool BroadcastImportedTx();
-   bool CreateTransaction();
+   void CreateTransaction(std::function<void(bool result)> cb);
 
    void showError(const QString &text, const QString &detailedText);
 
@@ -118,6 +120,7 @@ private:
    void populateWalletsList();
    void startBroadcasting();
    void stopBroadcasting();
+   bool createTransactionImpl(const bs::Address &changeAddress);
 
 protected:
    std::shared_ptr<ArmoryConnection>   armory_;
@@ -148,6 +151,8 @@ protected:
    float       advisedTotalFee_ = 0;
    float       addedFee_ = 0;
    const float minRelayFeePerByte_ = 5;
+
+   ValidityFlag validityFlag_;
 
 private:
    bs::core::wallet::TXSignRequest  txReq_;

@@ -10,6 +10,7 @@
 */
 #include "UtxoReservation.h"
 #include <thread>
+#include <spdlog/spdlog.h>
 #include "FastLock.h"
 
 using namespace bs;
@@ -90,10 +91,11 @@ bs::UtxoReservation::UtxoReservation()
 }
 
 // Singleton reservation.
-void bs::UtxoReservation::init()
+void bs::UtxoReservation::init(const std::shared_ptr<spdlog::logger> &logger)
 {
    assert(!utxoResInstance_);
    utxoResInstance_ = std::make_shared<bs::UtxoReservation>();
+   utxoResInstance_->logger_ = logger;
 }
 
 // Add an adapter to the singleton. True if success, false if failure.
@@ -133,6 +135,13 @@ void bs::UtxoReservation::reserve(const std::string &walletId
 {
    const auto curTime = std::chrono::system_clock::now();
    FastLock lock(flag_);
+
+   auto it = byReserveId_.find(reserveId);
+   if (it != byReserveId_.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "reservation '{}' already exist", reserveId);
+      return;
+   }
+
    byReserveId_[reserveId] = utxos;
    walletByReserveId_[reserveId] = walletId;
    resIdByWalletId_[walletId].insert(reserveId);
