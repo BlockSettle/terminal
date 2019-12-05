@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>401</width>
-    <height>153</height>
+    <width>417</width>
+    <height>175</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -40,6 +40,9 @@
    </property>
    <item>
     <widget class="QStackedWidget" name="stackedWidgetAuth">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
      <widget class="QWidget" name="pageEnter">
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <property name="spacing">
@@ -99,6 +102,19 @@
              <property name="bottomMargin">
               <number>0</number>
              </property>
+             <item>
+              <spacer name="verticalSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>0</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
              <item>
               <widget class="QWidget" name="horizontalWidget1" native="true">
                <property name="minimumSize">
@@ -174,27 +190,21 @@
                </property>
               </widget>
              </item>
+             <item>
+              <spacer name="verticalSpacer_6">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Expanding</enum>
+               </property>
+              </spacer>
+             </item>
             </layout>
            </widget>
           </item>
          </layout>
         </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_6">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Expanding</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>284</width>
-           <height>12</height>
-          </size>
-         </property>
-        </spacer>
        </item>
        <item>
         <widget class="QWidget" name="widget" native="true">
@@ -319,7 +329,7 @@
              <property name="bottomMargin">
               <number>0</number>
              </property>
-             <item row="0" column="0">
+             <item row="1" column="0">
               <widget class="QLabel" name="label_2">
                <property name="minimumSize">
                 <size>
@@ -341,8 +351,22 @@
                </property>
               </widget>
              </item>
-             <item row="0" column="1">
+             <item row="1" column="1">
               <widget class="QLabel" name="labelToken">
+               <property name="text">
+                <string>TextLabel</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>Product</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="labelProduct">
                <property name="text">
                 <string>TextLabel</string>
                </property>
