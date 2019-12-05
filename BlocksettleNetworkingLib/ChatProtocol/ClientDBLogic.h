@@ -24,12 +24,9 @@
 #include "ChatProtocol/Party.h"
 
 class QSqlDatabase;
-class ApplicationSettings;
 
 namespace Chat
 {
-   using ApplicationSettingsPtr = std::shared_ptr<ApplicationSettings>;
-
    enum class ClientDBLogicError
    {
       InitDatabase,
@@ -60,7 +57,7 @@ namespace Chat
       ClientDBLogic(QObject* parent = nullptr);
 
    public slots:
-      void Init(const Chat::LoggerPtr& loggerPtr, const Chat::ApplicationSettingsPtr& appSettings, const Chat::ChatUserPtr& chatUserPtr,
+      void Init(const Chat::LoggerPtr& loggerPtr, QString chatDbFile, const Chat::ChatUserPtr& chatUserPtr,
          const Chat::CryptManagerPtr& cryptManagerPtr);
       void updateMessageState(const std::string& message_id, int party_message_state);
       void saveMessage(const Chat::PartyPtr& partyPtr, const std::string& data);
@@ -103,10 +100,10 @@ namespace Chat
       void insertNewUserHash(const std::string& userHash);
       QSqlDatabase getDb();
 
-      ApplicationSettingsPtr     applicationSettingsPtr_;
       ClientDatabaseCreatorPtr   databaseCreatorPtr_;
       CryptManagerPtr            cryptManagerPtr_;
       ChatUserPtr                currentChatUserPtr_;
+      QString                    chatDbFile_;
    };
 
    using ClientDBLogicPtr = std::shared_ptr<ClientDBLogic>;

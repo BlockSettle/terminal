@@ -132,7 +132,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitAssets();
    InitSigningContainer();
    InitAuthManager();
-   InitChatView();
 
    statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
       , signContainer_, ui_->statusbar);
@@ -334,18 +333,17 @@ void BSTerminalMainWindow::LoadWallets()
    wasWalletsRegistered_ = false;
    walletsSynched_ = false;
 
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, [this] {
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this, [this] {
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
       autoSignQuoteProvider_->setWalletsManager(walletsMgr_);
    });
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, [this] {
       walletsSynched_ = true;
-      QMetaObject::invokeMethod(this, [this] {
-         updateControlEnabledState();
-         CompleteDBConnection();
-         act_->onRefresh({}, true);
-      });
+      updateControlEnabledState();
+      CompleteDBConnection();
+      act_->onRefresh({}, true);
+      tryGetChatKeys();
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);
@@ -493,9 +491,7 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createLocalSigner()
 
 bool BSTerminalMainWindow::InitSigningContainer()
 {
-   // create local var just to avoid up-casting
-   auto walletSignerContainer = createSigner();
-   signContainer_ = walletSignerContainer;
+   signContainer_ = createSigner();
 
    if (!signContainer_) {
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
@@ -505,7 +501,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError, Qt::QueuedConnection);
    connect(signContainer_.get(), &SignContainer::disconnected, this, &BSTerminalMainWindow::updateControlEnabledState, Qt::QueuedConnection);
 
-   walletsMgr_->setSignContainer(walletSignerContainer);
+   walletsMgr_->setSignContainer(signContainer_);
 
    return true;
 }
@@ -628,16 +624,43 @@ void BSTerminalMainWindow::InitWalletsView()
       , applicationSettings_, connectionManager_, assetManager_, authManager_, armory_);
 }
 
-void BSTerminalMainWindow::InitChatView()
+void BSTerminalMainWindow::tryInitChatView()
 {
+   // Chat initialization is a bit convoluted.
+   // First we need to create and initialize chatClientServicePtr_ (which lives in background thread and so is async).
+   // For this it needs to know chat server address where to connect and chat keys used for chat messages encryption.
+   // Only after that we could init ui_->widgetChat and try to login after that.
+   if (chatInitState_ != ChatInitState::NoStarted || !networkSettingsReceived_ || !gotChatKeys_) {
+      return;
+   }
+   chatInitState_ = ChatInitState::InProgress;
+
    chatClientServicePtr_ = std::make_shared<Chat::ChatClientService>();
 
-   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, [this]() {
-      ui_->widgetChat->init(connectionManager_, applicationSettings_, chatClientServicePtr_,
+   connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, this, [this]() {
+      const bool isProd = applicationSettings_->get<int>(ApplicationSettings::envConfiguration) == ApplicationSettings::PROD;
+      const auto env = isProd ? bs::network::otc::Env::Prod : bs::network::otc::Env::Test;
+
+      ui_->widgetChat->init(connectionManager_, env, chatClientServicePtr_,
          logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_);
+      chatInitState_ = ChatInitState::Done;
+      tryLoginIntoChat();
    });
 
-   chatClientServicePtr_->Init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
+   Chat::ChatSettings chatSettings;
+   chatSettings.connectionManager = connectionManager_;
+
+//   const auto authKeys = applicationSettings_->GetAuthKeys();
+//   chatSettings.chatPrivKey = SecureBinaryData(authKeys.first.data(), authKeys.first.size());
+//   chatSettings.chatPubKey = BinaryData(authKeys.second.data(), authKeys.second.size());
+   chatSettings.chatPrivKey = chatPrivKey_;
+   chatSettings.chatPubKey = chatPubKey_;
+
+   chatSettings.chatServerHost = applicationSettings_->get<std::string>(ApplicationSettings::chatServerHost);
+   chatSettings.chatServerPort = applicationSettings_->get<std::string>(ApplicationSettings::chatServerPort);
+   chatSettings.chatDbFile = applicationSettings_->get<QString>(ApplicationSettings::chatDbFile);
+
+   chatClientServicePtr_->Init(logMgr_->logger("chat"), chatSettings);
 
    connect(ui_->tabWidget, &QTabWidget::currentChanged, this, &BSTerminalMainWindow::onTabWidgetCurrentChanged);
    connect(ui_->widgetChat, &ChatWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
@@ -647,9 +670,42 @@ void BSTerminalMainWindow::InitChatView()
    }
 }
 
+void BSTerminalMainWindow::tryLoginIntoChat()
+{
+   if (chatInitState_ != ChatInitState::Done || chatTokenData_.isNull() || chatTokenSign_.isNull()) {
+      return;
+   }
+
+   chatClientServicePtr_->LoginToServer(chatTokenData_, chatTokenSign_, cbApproveChat_);
+
+   chatTokenData_.clear();
+   chatTokenSign_.clear();
+}
+
+void BSTerminalMainWindow::tryGetChatKeys()
+{
+   if (gotChatKeys_) {
+      return;
+   }
+   const auto &primaryWallet = walletsMgr_->getPrimaryWallet();
+   if (!primaryWallet) {
+      return;
+   }
+   signContainer_->getChatNode(primaryWallet->walletId(), [this](const BIP32_Node &node) {
+      if (node.getPublicKey().isNull() || node.getPrivateKey().isNull()) {
+         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "chat keys is empty");
+         return;
+      }
+      chatPubKey_ = node.getPublicKey();
+      chatPrivKey_ = node.getPrivateKey();
+      gotChatKeys_ = true;
+      tryInitChatView();
+   });
+}
+
 void BSTerminalMainWindow::InitChartsView()
 {
-    ui_->widgetChart->init(applicationSettings_, mdProvider_, connectionManager_, logMgr_->logger("ui"));
+   ui_->widgetChart->init(applicationSettings_, mdProvider_, connectionManager_, logMgr_->logger("ui"));
 }
 
 // Initialize widgets related to transactions.
@@ -881,9 +937,13 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
             " may only have one Primary Wallet. Do you wish to promote '%1'?")
          .arg(QString::fromStdString(wallet->name())), this);
       if (qry.exec() == QDialog::Accepted) {
-         walletsMgr_->PromoteHDWallet(wallet->walletId(), [cb](bs::error::ErrorCode result) {
-            if ((result == bs::error::ErrorCode::NoError) && cb) {
-               cb();
+         walletsMgr_->PromoteHDWallet(wallet->walletId(), [this, cb](bs::error::ErrorCode result) {
+            if (result == bs::error::ErrorCode::NoError) {
+               if (cb) {
+                  cb();
+               }
+               // If wallet was promoted to primary we could try to get chat keys now
+               tryGetChatKeys();
             }
          });
          return true;
@@ -1153,8 +1213,13 @@ void BSTerminalMainWindow::onLogin()
 
    currentUserLogin_ = loginDialog.email();
 
+   networkSettingsReceived(loginDialog.networkSettings());
+
    ui_->widgetChat->setUserType(loginDialog.result()->userType);
-   chatClientServicePtr_->LoginToServer(loginDialog.result()->chatTokenData, loginDialog.result()->chatTokenSign, cbApproveChat_);
+
+   chatTokenData_ = loginDialog.result()->chatTokenData;
+   chatTokenSign_ = loginDialog.result()->chatTokenSign;
+   tryLoginIntoChat();
 
    bsClient_ = loginDialog.getClient();
    ccFileManager_->setBsClient(bsClient_.get());
@@ -1178,8 +1243,6 @@ void BSTerminalMainWindow::onLogin()
    connect(bsClient_.get(), &BsClient::emailHashReceived, ui_->widgetChat, &ChatWidget::onEmailHashReceived);
 
    connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
-
-   networkSettingsReceived(loginDialog.networkSettings());
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
 
@@ -1303,6 +1366,8 @@ void BSTerminalMainWindow::createAuthWallet(const std::function<void()> &cb)
                   if (cb) {
                      cb();
                   }
+                  // Primary wallet is one with auth wallet and so we could try to grab chat keys now
+                  tryGetChatKeys();
                }
                else {
                   BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
@@ -1679,6 +1744,9 @@ void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settin
 
    mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
+
+   networkSettingsReceived_ = true;
+   tryInitChatView();
 }
 
 void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)

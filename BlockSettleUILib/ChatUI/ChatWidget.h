@@ -63,7 +63,7 @@ public:
    ~ChatWidget() override;
 
    void init(const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::shared_ptr<ApplicationSettings>& appSettings
+      , bs::network::otc::Env env
       , const Chat::ChatClientServicePtr& chatClientServicePtr
       , const std::shared_ptr<spdlog::logger>& loggerPtr
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr

@@ -13,7 +13,6 @@
 #include <QFileDialog>
 #include <spdlog/spdlog.h>
 
-#include "ApplicationSettings.h"
 #include "ArmoryConnection.h"
 #include "ChatProtocol/ClientParty.h"
 #include "OtcClient.h"
@@ -31,8 +30,7 @@ void ChatOTCHelper::init(bs::network::otc::Env env
    , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
    , const std::shared_ptr<ArmoryConnection>& armory
    , const std::shared_ptr<SignContainer>& signContainer
-   , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<ApplicationSettings> &applicationSettings)
+   , const std::shared_ptr<AuthAddressManager> &authAddressManager)
 {
    loggerPtr_ = loggerPtr;
 

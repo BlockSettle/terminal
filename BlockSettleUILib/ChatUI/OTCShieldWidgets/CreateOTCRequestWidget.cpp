@@ -30,7 +30,7 @@ CreateOTCRequestWidget::CreateOTCRequestWidget(QWidget* parent)
 
 CreateOTCRequestWidget::~CreateOTCRequestWidget() = default;
 
-void CreateOTCRequestWidget::init(otc::Env env)
+void CreateOTCRequestWidget::init(bs::network::otc::Env env)
 {
    env_ = static_cast<int>(env);
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &CreateOTCRequestWidget::onBuyClicked);

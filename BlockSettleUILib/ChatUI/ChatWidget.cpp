@@ -91,7 +91,7 @@ ChatWidget::~ChatWidget()
 }
 
 void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManager
-   , const std::shared_ptr<ApplicationSettings>& appSettings
+   , bs::network::otc::Env env
    , const Chat::ChatClientServicePtr& chatClientServicePtr
    , const std::shared_ptr<spdlog::logger>& loggerPtr
    , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
@@ -103,12 +103,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 {
    loggerPtr_ = loggerPtr;
 
-   bool isProd = appSettings->get<int>(ApplicationSettings::envConfiguration) == ApplicationSettings::PROD;
-   auto env = isProd ? otc::Env::Prod : otc::Env::Test;
-
    // OTC
    otcHelper_ = new ChatOTCHelper(this);
-   otcHelper_->init(env, loggerPtr, walletsMgr, armory, signContainer, authManager, appSettings);
+   otcHelper_->init(env, loggerPtr, walletsMgr, armory, signContainer, authManager);
    otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager, armory);
 
    chatClientServicePtr_ = chatClientServicePtr;
