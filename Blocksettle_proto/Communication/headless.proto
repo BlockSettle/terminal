@@ -41,6 +41,7 @@ enum RequestType
    UpdateDialogDataType        = 32; // update fields in password input dialogs in signer ui
    AddressPreimageType         = 33;
    ChatNodeRequestType         = 34;
+   UpdateControlPasswordStatusType   = 35; // send message to ui if control password wrong, accepted or requested new
 }
 
 message RequestPacket
@@ -69,6 +70,12 @@ enum NetworkType
    TestNetType = 1;
 }
 
+enum ControlPasswordStatus
+{
+   Accepted = 0;
+   Rejected = 1;
+   RequestedNew = 2;
+}
 
 message AuthenticationRequest
 {
@@ -506,6 +513,10 @@ message UpdateDialogDataRequest
    Blocksettle.Communication.Internal.PasswordDialogData passwordDialogData    = 2;
 }
 
+message UpdateControlPasswordStatus
+{
+   ControlPasswordStatus controlPasswordStatus = 1;
+}
 
 message ChatNodeRequest
 {

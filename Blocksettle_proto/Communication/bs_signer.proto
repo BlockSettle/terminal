@@ -51,6 +51,9 @@ enum PacketType
 
    DecryptWalletRequestType   = 30;
    UpdateDialogDataType       = 32; // update fields in password input dialogs in signer ui
+   UpdateControlPasswordStatusType   = 33; // send message to ui if control password wrong, accepted or requested new
+   ControlPasswordReceivedType       = 34;
+   ChangeControlPasswordType         = 35;
 }
 
 enum PasswordDialogType
@@ -132,6 +135,13 @@ enum BindStatus
    BindInactive = 0;
    BindSucceed = 1;
    BindFailed = 2;
+}
+
+enum ControlPasswordStatus
+{
+   Accepted = 0;
+   Rejected = 1;
+   RequestedNew = 2;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -355,6 +365,27 @@ message UpdateStatus
 {
    BindStatus signer_bind_status = 1;
    bytes signer_pub_key = 2;
+}
+
+message UpdateControlPasswordStatus
+{
+   ControlPasswordStatus controlPasswordStatus = 1;
+}
+
+message EnterControlPasswordRequest
+{
+   string controlPassword = 1;
+}
+
+message ChangeControlPasswordRequest
+{
+   string controlPasswordOld = 1;
+   string controlPasswordNew = 2;
+}
+
+message ChangeControlPasswordResponse
+{
+   uint32   errorCode = 1;
 }
 
 message ImportWoWalletRequest

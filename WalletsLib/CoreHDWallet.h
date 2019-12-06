@@ -90,6 +90,7 @@ namespace bs {
             std::string name() const { return name_; }
             std::string description() const { return desc_; }
 
+            void changeControlPassword(const SecureBinaryData &oldPass, const SecureBinaryData &newPass);
             void createStructure(unsigned lookup = UINT32_MAX);
             void createChatPrivKey();
 

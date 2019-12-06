@@ -2135,6 +2135,18 @@ bool HeadlessContainerListener::onExecCustomDialog(const std::string &clientId, 
    return true;
 }
 
+void HeadlessContainerListener::sendControlPasswordStatusUpdate(headless::ControlPasswordStatus status)
+{
+   headless::UpdateControlPasswordStatus evt;
+   evt.set_controlpasswordstatus(status);
+
+   headless::RequestPacket packet;
+   packet.set_type(headless::UpdateControlPasswordStatusType);
+   packet.set_data(evt.SerializeAsString());
+
+   sendData(packet.SerializeAsString());
+}
+
 bool PasswordRequest::operator <(const PasswordRequest &other) const
 {
    return dialogExpirationTime < other.dialogExpirationTime;

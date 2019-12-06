@@ -106,9 +106,13 @@ void hd::Wallet::loadFromFile(const std::string &filename,
       throw std::runtime_error("Wallet file " + filePathName_ + " does not exist");
    }
 
-   lbdControlPassphrase_ = [controlPassphrase]
+   auto nbTries = std::make_shared<int>(0);
+   lbdControlPassphrase_ = [controlPassphrase, nbTries]
       (const std::set<BinaryData>&)->SecureBinaryData
    {
+      if (++(*nbTries) > 1) {
+         return {};
+      }
       return controlPassphrase;
    };
 
@@ -232,6 +236,21 @@ std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
       return nullptr;
    }
    return itGroup->second;
+}
+
+void hd::Wallet::changeControlPassword(const SecureBinaryData &oldPass, const SecureBinaryData &newPass)
+{
+   auto nbTries = std::make_shared<int>(0);
+   lbdControlPassphrase_ = [oldPass, nbTries]
+      (const std::set<BinaryData>&)->SecureBinaryData
+   {
+      if (++(*nbTries) > 1) {
+         return {};
+      }
+      return oldPass;
+   };
+
+   walletPtr_->changeControlPassphrase(newPass, lbdControlPassphrase_);
 }
 
 void hd::Wallet::createStructure(unsigned lookup)

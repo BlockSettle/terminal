@@ -76,6 +76,7 @@ void WalletsManager::setSignContainer(const std::shared_ptr<WalletSignerContaine
 
    connect(signContainer_.get(), &WalletSignerContainer::AuthLeafAdded, this, &WalletsManager::onAuthLeafAdded);
    connect(signContainer_.get(), &WalletSignerContainer::walletsListUpdated, this, &WalletsManager::onWalletsListUpdated);
+   connect(signContainer_.get(), &WalletSignerContainer::walletsStorageDecrypted, this, &WalletsManager::onWalletsListUpdated);
 }
 
 void WalletsManager::reset()

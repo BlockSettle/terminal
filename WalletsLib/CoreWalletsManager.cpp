@@ -20,6 +20,8 @@
 
 using namespace bs::core;
 
+static const char *wrongControlPasswordException = "empty passphrase";
+
 WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger> &logger, unsigned int nbBackups)
    : logger_(logger), nbBackupFilesToKeep_(nbBackups)
 {}
@@ -32,11 +34,11 @@ void WalletsManager::reset()
 //   settlementWallet_.reset();
 }
 
-void WalletsManager::loadWallets(NetworkType netType, const std::string &walletsPath
+bool WalletsManager::loadWallets(NetworkType netType, const std::string &walletsPath
    , const SecureBinaryData &controlPassphrase, const CbProgress &cbProgress)
 {
    if (walletsPath.empty()) {
-      return;
+      return true;
    }
    if (!SystemFileUtils::pathExist(walletsPath)) {
       logger_->debug("Creating wallets path {}", walletsPath);
@@ -66,9 +68,14 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
       }
       catch (const std::exception &e) {
          logger_->warn("Failed to load BIP44 wallet: {}", e.what());
+
+         if (!strncmp(e.what(), wrongControlPasswordException, strlen(wrongControlPasswordException))) {
+            return false;
+         }
       }
    }
    walletsLoaded_ = true;
+   return true;
 }
 
 WalletsManager::HDWalletPtr WalletsManager::loadWoWallet(NetworkType netType
@@ -98,6 +105,13 @@ WalletsManager::HDWalletPtr WalletsManager::loadWoWallet(NetworkType netType
       logger_->warn("Failed to load WO-wallet: {}", e.what());
    }
    return nullptr;
+}
+
+void WalletsManager::changeControlPassword(const SecureBinaryData &oldPass, const SecureBinaryData &newPass)
+{
+   for (const auto &hdWallet : hdWallets_) {
+      hdWallet.second->changeControlPassword(oldPass, newPass);
+   }
 }
 
 void WalletsManager::backupWallet(const HDWalletPtr &wallet, const std::string &targetDir) const
@@ -140,12 +154,19 @@ bool WalletsManager::isWalletFile(const std::string &fileName) const
 
 WalletsManager::HDWalletPtr WalletsManager::getPrimaryWallet() const
 {
+   HDWalletPtr primaryWallet = nullptr;
+   int count = 0;
    for (const auto &hdWallet : hdWallets_) {
       if (hdWallet.second->isPrimary()) {
-         return hdWallet.second;
+         primaryWallet = hdWallet.second;
+         count++;
       }
    }
-   return nullptr;
+   if (count > 1) {
+      throw std::runtime_error("Only one primary wallet allowed");
+   }
+
+   return primaryWallet;
 }
 
 void WalletsManager::saveWallet(const HDWalletPtr &wallet)

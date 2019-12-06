@@ -217,7 +217,11 @@ void hd::Leaf::postOnline()
 
    unconfTgtRegIds_ = setUnconfirmedTarget();
 
-   const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
+   const auto &cbTrackAddrChain = [this, handle = validityFlag_.handle()](bs::sync::SyncState st) {
+      if (!handle.isValid()) {
+         return;
+      }
+
       if (st != bs::sync::SyncState::Success) {
          updateBalances();
          if (wct_) {
