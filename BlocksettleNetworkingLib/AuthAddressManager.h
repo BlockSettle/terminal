@@ -72,7 +72,7 @@ public:
    AuthAddressManager(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<ArmoryConnection> &
       , const ZmqBipNewKeyCb &);
-   ~AuthAddressManager() noexcept;
+   ~AuthAddressManager() noexcept override;
 
    AuthAddressManager(const AuthAddressManager&) = delete;
    AuthAddressManager& operator = (const AuthAddressManager&) = delete;

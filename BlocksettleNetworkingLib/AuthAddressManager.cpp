@@ -120,6 +120,7 @@ void AuthAddressManager::onAuthWalletChanged()
 
 AuthAddressManager::~AuthAddressManager() noexcept
 {
+   addressVerificator_.reset();
    ArmoryCallbackTarget::cleanup();
 }
 
