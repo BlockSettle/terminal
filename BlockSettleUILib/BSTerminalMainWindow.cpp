@@ -1269,7 +1269,9 @@ void BSTerminalMainWindow::onLogin()
 void BSTerminalMainWindow::onLogout()
 {
    ui_->widgetWallets->setUsername(QString());
-   chatClientServicePtr_->LogoutFromServer();
+   if (chatClientServicePtr_) {
+      chatClientServicePtr_->LogoutFromServer();
+   }
    ui_->widgetChart->disconnect();
 
    if (celerConnection_->IsConnected()) {
@@ -1471,7 +1473,9 @@ void BSTerminalMainWindow::closeEvent(QCloseEvent* event)
       event->ignore();
    }
    else {
-      chatClientServicePtr_->LogoutFromServer();
+      if (chatClientServicePtr_) {
+         chatClientServicePtr_->LogoutFromServer();
+      }
 
       QMainWindow::closeEvent(event);
       QApplication::exit();
