@@ -21,6 +21,8 @@
 
 #include "BSErrorCode.h"
 
+#include "bs_signer.pb.h"
+
 class SignerAdapter;
 namespace bs {
    namespace sync {
@@ -121,6 +123,8 @@ public:
 
    Q_INVOKABLE bool isDebugBuild();
 
+   Q_INVOKABLE int controlPasswordStatus() const;
+   void setControlPasswordStatus(int controlPasswordStatus);
 
 signals:
    void closeEventReceived();
@@ -137,6 +141,8 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
 
    QString headlessPubKey_;
+   int controlPasswordStatus_;
+
 };
 
 

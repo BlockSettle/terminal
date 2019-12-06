@@ -194,3 +194,14 @@ void QmlFactory::setHeadlessPubKey(const QString &headlessPubKey)
       emit headlessPubKeyChanged();
    }
 }
+
+int QmlFactory::controlPasswordStatus() const
+{
+    return controlPasswordStatus_;
+}
+
+void QmlFactory::setControlPasswordStatus(int controlPasswordStatus)
+{
+    controlPasswordStatus_ = controlPasswordStatus;
+}
+

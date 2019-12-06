@@ -1,14 +1,40 @@
 {
-   "latest_version": "0.25.1",
-   "release_date": "26 Nov 2019",
+   "latest_version": "0.25.3",
+   "release_date": "06 Dec 2019",
    "changes": [
+      {
+         "version_string": "0.25.3",
+         "previous_version": "0.25.2",
+         "release_date": "06 Dec 2019",
+         "release_type": "dev",
+         "improvements": [
+            "New chat keys",
+            "Terminal ui fixes (#1667)"
+         ],
+         "bug_fixes": [],
+         "revision": "5eeafd89",
+         "common_revision": "8f2046f6"
+      },
+      {
+         "version_string": "0.25.2",
+         "previous_version": "0.25.1",
+         "release_date": "03 Dec 2019",
+         "release_type": "dev",
+         "improvements": [
+            "don't deploy AQ scripts [temporarily] (BST-2381)",
+            "various CPFP fixes"
+         ],
+         "bug_fixes": [],
+         "revision": "ad343a65",
+         "common_revision": "156357d6"
+      },
       {
          "version_string": "0.25.1",
          "previous_version": "0.25.0",
          "release_date": "26 Nov 2019",
          "release_type": "dev",
          "improvements": [
-            "Pay-In inputs filtering"
+            "Pay-In inputs filtering",
             "Processing for invalidated ZC that is never replaced (BST-1786)",
             "Use both native and nested inputs if needed for CC sell"
          ],
