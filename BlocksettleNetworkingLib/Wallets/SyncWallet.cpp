@@ -501,6 +501,8 @@ void Wallet::onZCInvalidated(const std::set<BinaryData> &ids)
          if (containsAddress(addr)) {
             const auto addrBal = txOut.getValue();
             invalidatedBalance += addrBal / BTCNumericTypes::BalanceDivider;
+
+            std::unique_lock<std::mutex> lock(balanceData_->addrMapsMtx);
             auto &addrBalances = balanceData_->addressBalanceMap[addr.prefixed()];
             addrBalances[0] -= addrBal;
             addrBalances[1] -= addrBal;

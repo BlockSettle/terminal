@@ -120,6 +120,7 @@ void AuthAddressManager::onAuthWalletChanged()
 
 AuthAddressManager::~AuthAddressManager() noexcept
 {
+   addressVerificator_.reset();
    ArmoryCallbackTarget::cleanup();
 }
 
@@ -733,6 +734,7 @@ void AuthAddressManager::ProcessBSAddressListResponse(const std::string& respons
 
 AddressVerificationState AuthAddressManager::GetState(const bs::Address &addr) const
 {
+   FastLock lock(statesLock_);
    const auto itState = states_.find(addr);
    if (itState == states_.end()) {
       return AddressVerificationState::InProgress;
@@ -746,7 +748,11 @@ void AuthAddressManager::SetState(const bs::Address &addr, AddressVerificationSt
    if ((prevState == AddressVerificationState::Submitted) && (state == AddressVerificationState::NotSubmitted)) {
       return;
    }
-   states_[addr] = state;
+
+   {
+      FastLock lock(statesLock_);
+      states_[addr] = state;
+   }
 
    if ((state == AddressVerificationState::Verified) && (prevState == AddressVerificationState::PendingVerification)) {
       emit AddrStateChanged(QString::fromStdString(addr.display()), tr("Verified"));

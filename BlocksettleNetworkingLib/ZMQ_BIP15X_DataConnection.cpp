@@ -285,7 +285,11 @@ void ZmqBIP15XDataConnection::resetConnectionObjects()
    socketId_.clear();
 
    dataSocket_.reset();
-   threadMasterSocket_.reset();
+   {
+      FastLock locker(threadMasterSocketMutex_);
+      threadMasterSocket_.reset();
+   }
+
    threadSlaveSocket_.reset();
 }
 
@@ -360,7 +364,7 @@ bool ZmqBIP15XDataConnection::send(const string& data)
    }
 
    {
-      std::lock_guard<std::mutex> lock(pendingDataMutex_);
+      FastLock locker(pendingDataMutex_);
       pendingData_.push_back(data);
    }
 
@@ -625,7 +629,10 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
    connectionName_ = std::move(tempConnectionName);
    socketId_ = std::string(buf, buf_size);
    dataSocket_ = std::move(tempDataSocket);
-   threadMasterSocket_ = std::move(tempThreadMasterSocket);
+   {
+      FastLock locker(threadMasterSocketMutex_);
+      threadMasterSocket_ = std::move(tempThreadMasterSocket);
+   }
    threadSlaveSocket_ = std::move(tempThreadSlaveSocket);
 
    setListener(listener);
@@ -668,7 +675,10 @@ bool ZmqBIP15XDataConnection::closeConnection()
    resetConnectionObjects();
 
    bip151Connection_.reset();
-   pendingData_.clear();
+   {
+      FastLock locker(pendingDataMutex_);
+      pendingData_.clear();
+   }
    bip150HandshakeCompleted_ = false;
    bip151HandshakeCompleted_ = false;
    return true;
@@ -1183,6 +1193,7 @@ BinaryData ZmqBIP15XDataConnection::getOwnPubKey() const
 
 void ZmqBIP15XDataConnection::sendCommand(ZmqBIP15XDataConnection::InternalCommandCode command)
 {
+   FastLock locker(threadMasterSocketMutex_);
    int result = zmq_send(threadMasterSocket_.get(), &command, sizeof(command), 0);
    assert(result == int(sizeof(command)));
 }
@@ -1195,7 +1206,7 @@ void ZmqBIP15XDataConnection::sendPendingData()
 
    std::vector<std::string> pendingDataTmp;
    {
-      std::lock_guard<std::mutex> lock(pendingDataMutex_);
+      FastLock locker(pendingDataMutex_);
       pendingDataTmp = std::move(pendingData_);
    }
 
