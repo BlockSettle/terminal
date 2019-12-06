@@ -13,6 +13,7 @@
 #include <spdlog/spdlog.h>
 
 #include "CoinSelection.h"
+#include "FastLock.h"
 #include "UtxoReservation.h"
 #include "Wallets/SyncHDGroup.h"
 #include "Wallets/SyncHDLeaf.h"
@@ -49,6 +50,7 @@ bool bs::tradeutils::getSpendableTxOutList(const std::vector<std::shared_ptr<bs:
    {
       std::map<std::string, std::vector<UTXO>> utxosMap;
       std::function<void(const std::map<UTXO, std::string> &)> cb;
+      std::atomic_flag lockFlag = ATOMIC_FLAG_INIT;
    };
    auto result = std::make_shared<Result>();
    result->cb = std::move(cb);
@@ -57,6 +59,7 @@ bool bs::tradeutils::getSpendableTxOutList(const std::vector<std::shared_ptr<bs:
       auto cbWrap = [result, size = wallets.size(), walletId = wallet->walletId()]
       (std::vector<UTXO> utxos)
       {
+         FastLock lock(result->lockFlag);
          result->utxosMap.emplace(walletId, std::move(utxos));
          if (result->utxosMap.size() != size) {
             return;
