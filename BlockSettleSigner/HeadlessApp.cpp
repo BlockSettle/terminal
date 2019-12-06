@@ -94,14 +94,14 @@ void HeadlessAppObj::start()
    logger_->debug("[{}] loading wallets from dir <{}>", __func__
       , settings_->getWalletsDir());
 
-   reloadWallets();
-
    if (!settings_->offline()) {
       startTerminalsProcessing();
    }
    else {
       SPDLOG_LOGGER_INFO(logger_, "do not start listening for terminal connections (offline mode selected)");
    }
+
+   reloadWallets();
 }
 
 void HeadlessAppObj::stop()
