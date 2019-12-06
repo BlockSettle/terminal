@@ -1,0 +1,3 @@
+[submodule "cppForSwig/ArmoryDB"]
+	path = cppForSwig/ArmoryDB
+	url = https://github.com/BlockSettle/ArmoryDB
