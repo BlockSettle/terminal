@@ -210,7 +210,8 @@ public:
          , 0, 0, 0, wallet->getUsedAddressCount())
       , wallet_(wallet)
    {
-      wallet->onBalanceAvailable([this, wallet, handle = validityFlag_.handle()] {
+      wallet->onBalanceAvailable([this, wallet, handle = validityFlag_.handle()]() mutable {
+         ValidityGuard lock(handle);
          if (!handle.isValid()) {
             return;
          }
