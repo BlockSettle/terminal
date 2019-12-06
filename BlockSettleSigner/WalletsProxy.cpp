@@ -387,7 +387,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
       if (isPrintable) {
          try {
             WalletBackupPdfWriter pdfWriter(walletId, QString::fromStdString(seedData.part1),
-               QString::fromStdString(seedData.part2), QPixmap(QLatin1String(":/FULL_LOGO")),
+               QString::fromStdString(seedData.part2),
                UiUtils::getQRCode(QString::fromStdString(seedData.part1 + "\n" + seedData.part2)));
             if (!pdfWriter.write(fn)) {
                throw std::runtime_error("write failure");

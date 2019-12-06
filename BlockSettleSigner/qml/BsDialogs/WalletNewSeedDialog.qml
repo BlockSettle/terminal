@@ -139,6 +139,11 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
                     anchors.fill: parent
                     seed: root.seed
                 }
+
+                Component.onCompleted: {
+                    // scroll to bottom
+                    contentItem.contentY = pdf.height - contentItem.height
+                }
             }
         }
 

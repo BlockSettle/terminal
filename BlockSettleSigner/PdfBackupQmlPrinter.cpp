@@ -31,8 +31,7 @@ QmlPdfBackup::QmlPdfBackup(QQuickItem *parent)
    : QQuickPaintedItem(parent)
    , seed_(new bs::wallet::QSeed(this))
    , pdf_(new WalletBackupPdfWriter(QString(), QString(), QString(),
-                                    QPixmap(QLatin1String(":/FULL_LOGO")),
-                                    UiUtils::getQRCode(QString())))
+      UiUtils::getQRCode(QString())))
 {
    connect(this, &QQuickPaintedItem::widthChanged, this, &QmlPdfBackup::onWidthChanged);
    connect(this, &QmlPdfBackup::seedChanged, this, &QmlPdfBackup::onSeedChanged);
@@ -49,8 +48,7 @@ void QmlPdfBackup::onSeedChanged()
       return;
    }
    pdf_.reset(new WalletBackupPdfWriter(seed_->walletId(), seed_->part1(), seed_->part2(),
-                                        QPixmap(QLatin1String(":/FULL_LOGO")),
-                                        UiUtils::getQRCode(seed_->part1() + QLatin1Literal("\n") + seed_->part2())));
+      UiUtils::getQRCode(seed_->part1() + QLatin1Literal("\n") + seed_->part2())));
 
    update();
 }
