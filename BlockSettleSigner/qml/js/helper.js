@@ -376,14 +376,37 @@ function createNewWalletDialog(data) {
         dlgCreateWallet.open()
     })
 
-    dlgNewSeed.open()
-    return dlgNewSeed
+    var onControlPasswordFinished = function(password){
+        walletsProxy.sendControlPassword(password)
+        dlgNewSeed.open()
+    }
+
+    // Fixme, 2 == new pass requested
+    if (qmlFactory.controlPasswordStatus() === 2) {
+        return createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+    }
+    else {
+        dlgNewSeed.open()
+        return dlgNewSeed
+    }
 }
 
 function importWalletDialog(data) {
     var dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
-    dlgImp.open()
-    return dlgImp
+
+    var onControlPasswordFinished = function(password){
+        walletsProxy.sendControlPassword(password)
+        dlgImp.open()
+    }
+
+    // Fixme, 2 == new pass requested
+    if (qmlFactory.controlPasswordStatus() === 2) {
+        return createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+    }
+    else {
+        dlgImp.open()
+        return dlgImp
+    }
 }
 
 function backupWalletDialog(data) {
@@ -605,6 +628,34 @@ function updateDialogData(jsCallback, passwordDialogData) {
         console.log("Updating password dialog, updated keys: " + passwordDialogData.keys())
         currentDialog.passwordDialogData.merge(passwordDialogData)
     }
+}
+
+function createControlPasswordDialog(jsCallback, controlPasswordStatus) {
+    let dlg = Qt.createComponent("../BsControls/BSControlPasswordInput.qml").createObject(mainWindow
+        , { "controlPasswordStatus": controlPasswordStatus} )
+
+    // Fixme
+    // Accepted = 0;
+    // Rejected = 1;
+    // RequestedNew = 2;
+    if (controlPasswordStatus === 0) {
+        dlg.bsAccepted.connect(function() {
+            jsCallback(dlg.passwordDataOld, dlg.passwordData)
+        })
+    }
+    else {
+        dlg.bsAccepted.connect(function() {
+            jsCallback(dlg.passwordData)
+        })
+
+        dlg.bsRejected.connect(function() {
+            jsCallback("")
+        })
+    }
+
+    prepareDialog(dlg)
+    dlg.open()
+    return dlg
 }
 
 function isLiteMode(){

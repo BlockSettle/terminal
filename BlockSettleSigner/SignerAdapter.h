@@ -112,6 +112,10 @@ public:
    std::shared_ptr<QmlFactory> qmlFactory() const;
    std::shared_ptr<SignAdapterContainer> signContainer() const;
 
+   void sendControlPassword(const bs::wallet::QPasswordData &password);
+   void changeControlPassword(const bs::wallet::QPasswordData &oldPassword, const bs::wallet::QPasswordData &newPassword
+      , const std::function<void(bs::error::ErrorCode errorCode)> &cb);
+
 signals:
    void ready() const;
    void connectionError() const;
@@ -129,6 +133,7 @@ signals:
    void terminalHandshakeFailed(const std::string &peerAddress);
    void signerPubKeyUpdated(const BinaryData &pubKey) const;
    void ccInfoReceived(bool) const;
+   void walletsReloaded() const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

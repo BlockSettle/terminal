@@ -93,6 +93,9 @@ public:
    void setAutoSignCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
       cbAutoSignReqs_[reqId] = cb;
    }
+   void setChangeControlPwCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
+      cbChangeControlPwReqs_[reqId] = cb;
+   }
 
    void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
 
@@ -122,7 +125,9 @@ private:
    void onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
    void onUpdateWallet(const std::string &data, bs::signer::RequestId);
    void onUpdateStatus(const std::string &data);
+   void onUpdateControlPasswordStatus(const std::string &data);
    void onTerminalEvent(const std::string &data);
+   void onChangeControlPassword(const std::string &data, bs::signer::RequestId);
 
    void requestPasswordForTx(signer::PasswordDialogType reqType, bs::sync::PasswordDialogData *dialogData
       , bs::wallet::TXInfo *txInfo, bs::hd::WalletInfo *walletInfo);
@@ -157,6 +162,7 @@ private:
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbCreateHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbDeleteHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbAutoSignReqs_;
+   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbChangeControlPwReqs_;
 
    std::shared_ptr<QmlBridge>  qmlBridge_;
 };

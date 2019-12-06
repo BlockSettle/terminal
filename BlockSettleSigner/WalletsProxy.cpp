@@ -23,6 +23,7 @@
 #include "PaperBackupWriter.h"
 #include "SignerAdapter.h"
 #include "SignerAdapterContainer.h"
+#include "TXInfo.h"
 #include "UiUtils.h"
 #include "WalletBackupFile.h"
 #include "WalletEncryption.h"
@@ -31,7 +32,6 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
 #include "OfflineSigner.h"
-#include "TXInfo.h"
 
 #include "signer.pb.h"
 
@@ -537,7 +537,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
          bs::hd::WalletInfo *walletInfo = adapter_->qmlFactory()->createWalletInfo(walletId);
 
-         adapter_->qmlBridge()->invokeQmlMethod("createTxSignDialog", cb
+         adapter_->qmlBridge()->invokeQmlMethod(QmlBridge::CreateTxSignDialog, cb
             , QVariant::fromValue(txInfo)
             , QVariant::fromValue(dialogData)
             , QVariant::fromValue(walletInfo));
@@ -753,4 +753,31 @@ QString WalletsProxy::walletIdForIndex(int index) const
       return {};
    }
    return QString::fromStdString(hdWallets[index]->walletId());
+}
+
+void WalletsProxy::sendControlPassword(bs::wallet::QPasswordData *password)
+{
+   if (password) {
+      adapter_->sendControlPassword(*password);
+   }
+}
+
+void WalletsProxy::changeControlPassword(bs::wallet::QPasswordData *oldPassword, bs::wallet::QPasswordData *newPassword
+   , const QJSValue &jsCallback)
+{
+   const auto cb = [this, jsCallback](bs::error::ErrorCode result) {
+      QMetaObject::invokeMethod(this, [this, jsCallback, result] {
+         invokeJsCallBack(jsCallback, QJSValueList()
+            << QJSValue(result == bs::error::ErrorCode::NoError)
+            << QJSValue(bs::error::ErrorCodeToString(result)));
+      });
+
+      if (result == bs::error::ErrorCode::NoError) {
+         onWalletsChanged();
+      }
+   };
+
+   if (oldPassword && newPassword) {
+      adapter_->changeControlPassword(*oldPassword, *newPassword, cb);
+   }
 }
