@@ -1,3 +1,10 @@
-[submodule "cppForSwig/ArmoryDB"]
-	path = cppForSwig/ArmoryDB
-	url = https://github.com/BlockSettle/ArmoryDB
+[submodule "common"]
+	path = common
+	url = https://github.com/BlockSettle/common
+	branch = bs_dev
+[submodule "AuthAPI"]
+	path = AuthAPI
+	url = https://github.com/autheid/AuthAPI
+[submodule "Celer"]
+	path = Celer
+	url = https://github.com/BlockSettle/Celer
