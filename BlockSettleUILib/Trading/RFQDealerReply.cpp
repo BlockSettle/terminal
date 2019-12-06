@@ -245,7 +245,9 @@ void RFQDealerReply::reset()
          for (const auto &input : inputs) {
             utxos.emplace_back(std::move(input.first));
          }
-         selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(utxos);
+         QMetaObject::invokeMethod(this, [this, utxos = std::move(utxos)] {
+            selectedXbtInputs_ = std::make_shared<SelectedTransactionInputs>(utxos);
+         });
       };
       bs::tradeutils::getSpendableTxOutList(wallets, cb);
    }
