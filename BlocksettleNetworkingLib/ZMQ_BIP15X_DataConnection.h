@@ -114,7 +114,7 @@ public:
    void addAuthPeer(const ZmqBIP15XPeer &peer);
    void updatePeerKeys(const ZmqBIP15XPeers &peers);
 
-   // Could be called from callbacks and control thread (where openConnection was called, main thread usually)
+   // thread-safe (could be called from callbacks too)
    bool send(const std::string& data) override;
 
    bool openConnection(const std::string &host, const std::string &port
@@ -189,8 +189,10 @@ private:
 
    ZmqContext::sock_ptr             dataSocket_;
    ZmqContext::sock_ptr             monSocket_;
-   ZmqContext::sock_ptr             threadMasterSocket_;
    ZmqContext::sock_ptr             threadSlaveSocket_;
+
+   ZmqContext::sock_ptr             threadMasterSocket_;
+   std::atomic_flag                 threadMasterSocketMutex_ = ATOMIC_FLAG_INIT;
 
    std::string                      connectionName_;
    std::string                      hostAddr_;
@@ -202,7 +204,7 @@ private:
    ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
 
    std::vector<std::string>         pendingData_;
-   std::mutex                       pendingDataMutex_;
+   std::atomic_flag                 pendingDataMutex_ = ATOMIC_FLAG_INIT;
 
    // Reset this in openConnection
    bool                             isConnected_{};
