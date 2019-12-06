@@ -17,8 +17,6 @@
 #include <QStandardPaths>
 #include <QSortFilterProxyModel>
 
-#include <bech32/ref/c++/segwit_addr.h>
-
 #include "Address.h"
 #include "ApplicationSettings.h"
 #include "AssetManager.h"

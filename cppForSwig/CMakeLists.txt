@@ -51,8 +51,6 @@ SET (SOURCES
    ${CPP_FOR_SWIG_ROOT}/lmdb/libraries/liblmdb/mdb.c
    ${CPP_FOR_SWIG_ROOT}/lmdb/libraries/liblmdb/midl.c
    ${CPP_FOR_SWIG_ROOT}/lmdb/libraries/liblmdb/lmdbpp.cpp
-   ${CPP_FOR_SWIG_ROOT}/bech32/ref/c++/bech32.cpp
-   ${CPP_FOR_SWIG_ROOT}/bech32/ref/c++/segwit_addr.cpp
    ${CPP_FOR_SWIG_ROOT}/chacha20poly1305/chacha.c
    ${CPP_FOR_SWIG_ROOT}/chacha20poly1305/chachapoly_aead.c
    ${CPP_FOR_SWIG_ROOT}/chacha20poly1305/poly1305.c
@@ -140,8 +138,6 @@ SET (HEADERS
    ${CPP_FOR_SWIG_ROOT}/lmdb/libraries/liblmdb/lmdb.h
    ${CPP_FOR_SWIG_ROOT}/lmdb/libraries/liblmdb/midl.h
    ${CPP_FOR_SWIG_ROOT}/lmdb/libraries/liblmdb/lmdbpp.h
-   ${CPP_FOR_SWIG_ROOT}/bech32/ref/c++/bech32.h
-   ${CPP_FOR_SWIG_ROOT}/bech32/ref/c++/segwit_addr.h
    )
 
 IF (BUILD_TEST_TOOLS)

@@ -107,8 +107,9 @@ bs::Address bs::Address::fromAddressString(const std::string& data)
    }
    const auto &prefix = data.substr(0, 2);
    if ((prefix == SEGWIT_ADDRESS_MAINNET_HEADER) || (prefix == SEGWIT_ADDRESS_TESTNET_HEADER)) {
-
-      auto&& scrAddr = BtcUtils::segWitAddressToScrAddr(data);
+      BinaryData dataCopy(data);
+      dataCopy.append(0);  // segWitAddressToScrAddr requires null-terminated C string
+      auto&& scrAddr = BtcUtils::segWitAddressToScrAddr(dataCopy);
       if (scrAddr.getSize() == 20) {
          return bs::Address(scrAddr, AddressEntryType_P2WPKH);
       }

@@ -9,7 +9,6 @@
 
 */
 #include "CoreHDWallet.h"
-#include <bech32/ref/c++/segwit_addr.h>
 #include <spdlog/spdlog.h>
 #include "SystemFileUtils.h"
 #include "Wallets.h"
