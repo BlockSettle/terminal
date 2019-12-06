@@ -198,7 +198,10 @@ protected:
 
    mutable std::atomic_flag                  lockList_ = ATOMIC_FLAG_INIT;
    std::vector<bs::Address>                  addresses_;
+
    std::map<bs::Address, AddressVerificationState> states_;
+   mutable std::atomic_flag                        statesLock_ = ATOMIC_FLAG_INIT;
+
    using HashMap = std::map<bs::Address, BinaryData>;
    bs::Address                               defaultAddr_;
 
@@ -207,6 +210,7 @@ protected:
 
    std::shared_ptr<SignContainer>      signingContainer_;
    std::unordered_set<unsigned int>    signIdsRevoke_;
+
 };
 
 #endif // __AUTH_ADDRESS_MANAGER_H__
