@@ -292,6 +292,17 @@ function evalWorker(method, cppCallback, argList) {
 }
 
 function prepareDialog(dialog) {
+    console.log("[JsHelper] prepareDialog: " + dialog)
+
+    if (dialog.hasOwnProperty("isPrepared")) {
+        if (dialog.isPrepared) {
+            return
+        }
+        else {
+            dialog.isPrepared = true
+        }
+    }
+
     // close previous dialog
     if (currentDialog && typeof currentDialog.close !== "undefined") {
         currentDialog.close()
@@ -383,7 +394,9 @@ function createNewWalletDialog(data) {
 
     // Fixme, 2 == new pass requested
     if (qmlFactory.controlPasswordStatus() === 2) {
-        return createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+        var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+        controlPasswordDialog.setNextChainDialog(dlgNewSeed)
+        return controlPasswordDialog
     }
     else {
         dlgNewSeed.open()
@@ -401,7 +414,9 @@ function importWalletDialog(data) {
 
     // Fixme, 2 == new pass requested
     if (qmlFactory.controlPasswordStatus() === 2) {
-        return createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+        var controlPasswordDialog =  createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+        controlPasswordDialog.setNextChainDialog(dlgImp)
+        return controlPasswordDialog
     }
     else {
         dlgImp.open()

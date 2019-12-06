@@ -20,6 +20,8 @@ import "../js/helper.js" as JsHelper
 
 CustomDialogWindow {
     id: root
+
+    property bool isPrepared: false
     property bool acceptable: false
     property bool rejectable: false
     property bool abortConfirmation: false
