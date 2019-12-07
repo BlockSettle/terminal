@@ -231,6 +231,16 @@ SectionEnd
 
 # Installer functions
 Function .onInit
+    ; Avoid running the installer if BlockSettle Terminal Installer is already running,
+    System::Call 'kernel32::CreateMutexA(i 0, i 0, t "${PRODUCT_NAME}InstMutex") i .r1 ?e'
+    Pop $R0
+    StrCmp $R0 0 +3
+    MessageBox MB_OK|MB_ICONEXCLAMATION \
+             "The ${PRODUCT_NAME} Installer is already running."
+    Abort
+
+    ClearErrors
+
     InitPluginsDir
     !insertmacro MULTIUSER_INIT
     StrCpy $INSTDIR "$PROGRAMFILES64\BlockSettle"
