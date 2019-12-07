@@ -5,6 +5,7 @@ SetCompressor /SOLID lzma
 !define COMPANY "BlockSettle AB"
 !define URL http://blocksettle.com/
 !define VERSION "0.24.12"
+!define PRODUCT_NAME "BlockSettle Terminal"
 
 # MultiUser Symbol Definitions
 !define MULTIUSER_EXECUTIONLEVEL Highest
@@ -25,6 +26,7 @@ SetCompressor /SOLID lzma
 !include MUI2.nsh
 !include logiclib.nsh
 !include x64.nsh
+!include "WordFunc.nsh"
 
 #BlockSettle Branding
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "resources\nsis3-banner.bmp" ;
@@ -64,7 +66,7 @@ ShowInstDetails show
 AutoCloseWindow true
 LicenseData LICENSE
 VIProductVersion "${VERSION}.0"
-VIAddVersionKey ProductName "BlockSettle Terminal"
+VIAddVersionKey ProductName "${PRODUCT_NAME}"
 VIAddVersionKey ProductVersion "${VERSION}"
 VIAddVersionKey CompanyName "${COMPANY}"
 VIAddVersionKey CompanyWebsite "${URL}"
@@ -75,6 +77,8 @@ VIAddVersionKey LegalCopyright "Copyright (C) 2016-2019 BlockSettle AB"
 UninstallIcon bs.ico
 ShowUninstDetails show
 
+#registry key for unisntalling
+!define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 
 !macro CREATE_SMGROUP_SHORTCUT NAME PATH ARGS
     Push "${ARGS}"
@@ -107,7 +111,6 @@ Function ComponentsLeave
     Abort
     End:
 FunctionEnd
-
 
 Section "install"
     ${If} ${RunningX64}
@@ -187,6 +190,13 @@ Section "install"
         MessageBox MB_OK "You cannot install this version on a 32-bit system"
     ${EndIf}
 SectionEnd
+#post install registry handling
+Section -Post
+  #To be used when running the uninstaller
+  WriteRegStr SHELL_CONTEXT "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
+  WriteRegStr SHELL_CONTEXT "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninstall.exe"
+SectionEnd
+
 
 # Uninstaller sections
 !macro DELETE_SMGROUP_SHORTCUT NAME
@@ -213,6 +223,8 @@ Section "Uninstall"
     Push $R0
     StrCpy $R0 $StartMenuGroup 1
     StrCmp $R0 ">" no_smgroup
+
+    DeleteRegKey SHELL_CONTEXT "${PRODUCT_UNINST_KEY}"
 no_smgroup:
     Pop $R0
 SectionEnd
@@ -222,6 +234,41 @@ Function .onInit
     InitPluginsDir
     !insertmacro MULTIUSER_INIT
     StrCpy $INSTDIR "$PROGRAMFILES64\BlockSettle"
+
+    ReadRegStr $R0 SHELL_CONTEXT "${PRODUCT_UNINST_KEY}" "UninstallString"
+
+    ${if} $R0 != ""
+	    FindWindow $0 "Qt5QWindowIcon" "${PRODUCT_NAME}"
+	    SendMessage $0 ${WM_CLOSE} 0 0 /TIMEOUT=5000
+
+	     MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+			      "${PRODUCT_NAME} is already installed. \
+			       $\nYou should remove the already installed version first. \
+			        $\n$\nClick `OK` to remove the existing version or `Cancel` to cancel this installation." \
+				/SD IDOK \
+				IDOK +2
+	     Abort
+	     ${WordFind} "$R0" "\" "-2{*" $R3
+	     ${WordReplace} $R3 '"' "" "+" $R3
+
+	     ClearErrors
+	     ExecWait '"$R0" /KEEP_SETTINGS _?=$R3' ;Run the uninstaller of the old version
+	     IfErrors +1 remove_uninstaller
+
+	     MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+			      "The old installation of ${PRODUCT_NAME} could't be removed. \
+			       $\n$\nClick `OK` to continue with this installation or `Cancel` to cancel the installation." \
+			        /SD IDOK \
+				IDOK done_install_mode
+	     Abort
+
+	     remove_uninstaller:
+	       Delete "$R3\*.*"
+	       RMDir "$R3"
+             done_install_mode:
+    ${EndIf}
+
+
 FunctionEnd
 
 Function CreateSMGroupShortcut
