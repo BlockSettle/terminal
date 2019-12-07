@@ -26,6 +26,10 @@ SetCompressor /SOLID lzma
 !include logiclib.nsh
 !include x64.nsh
 
+#BlockSettle Branding
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP "resources\nsis3-banner.bmp" ;
+!define MUI_WELCOMEFINISHPAGE_BITMAP "resources\nsis3-banner.bmp" ;
+
 #language settings
 !define MUI_LANGDLL_REGISTRY_ROOT SHELL_CONTEXT
 !define MUI_LANGDLL_REGISTRY_VALUENAME "NSIS:Language"
