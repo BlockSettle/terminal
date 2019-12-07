@@ -26,6 +26,11 @@ SetCompressor /SOLID lzma
 !include logiclib.nsh
 !include x64.nsh
 
+#language settings
+!define MUI_LANGDLL_REGISTRY_ROOT SHELL_CONTEXT
+!define MUI_LANGDLL_REGISTRY_VALUENAME "NSIS:Language"
+!define MUI_LANGDLL_ALLLANGUAGES
+!define MUI_LANGDLL_ALWAYSSHOW
 
 # Variables
 Var StartMenuGroup
