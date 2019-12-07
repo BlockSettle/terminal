@@ -207,21 +207,14 @@ QWidget#chatTopSeparatorWidget {
   
 QToolBar {
   background: transparent;
-  spacing: 0;
-  /* spacing between items in the tool bar */
-  icon-size: 18px;
-  min-height: 38px;
-  padding: 0 0px 0 0; }
+  margin: 1px;
+  padding: 0px;
+  spacing: 5px; }
 
 QToolButton {
-  min-height: 30px;
-  max-height: 30px;
-  height: 30px;
-  margin-right: 5px;
-  margin-top: 4px;
-  /*this aligns the toolbar buttons in the middle of the toolbar*/
-  margin-bottom: 4px; }
-
+  margin: 0px;
+  padding: 0px; }
+  
 *[applicationBar="true"] {
   background-color: #1c2835;
   padding: 0 0 0 35px;
@@ -416,6 +409,11 @@ QTreeWidget QPushButton:hover, QTreeWidget QToolButton:hover, QTreeWidget [butto
     color: #e7e8e9;
     font-weight: normal; }
 
+
+QTabWidget::right-corner {
+  padding: 0px;
+  margin: 0px; }
+    
 QTabWidget::pane {
   /* The tab widget frame */
   border-top: 0 solid #C2C7CB;
@@ -423,29 +421,41 @@ QTabWidget::pane {
   margin: 0px; }
 
 QTabWidget::tab-bar {
-  left: 5px;
-  /* move to the right by 5px */ }
+  left: 1px;
+  margin: 0px;
+  padding: 0px; }
 
 /* Style the tab using the tab sub-control. Note that
     it reads QTabBar _not_ QTabWidget */
 QTabBar::tab {
-  border: 0 solid #C4C4C3;
+  margin-top: 0px;
+  margin-right: 0px;
+  margin-left: -1px;
+  border-top: 1px solid #C4C4C3;
+  border-right: 1px solid #C4C4C3;
+  border-left: 0px solid #C4C4C3;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+  border-width: 1px;
   border-bottom-color: #C2C7CB;
-  /* same as the pane color */
-  padding: 20px 15px 5px 15px;
+  padding: 6px 15px 6px 15px;
   background-color: transparent;
-  subcontrol-origin: content;
 }
 
 QTabBar::tab:first {
-  padding: 20px 15px 5px 5px; }
+  border-left: 1 solid #C4C4C3;
+  margin-left: 0px; }
 
+QTabBar::tab:last {
+  border-right: 1 solid #C4C4C3; }
+  
 /* make use of negative margins for overlapping tabs */
+QTabBar::tab:!selected {
+  margin-top: 2px;}
+  
 QTabBar::tab:selected {
-  subcontrol-origin: content;
-  /* expand/overlap to the left and right by 4px */
   color: #247dac; }
-
+  
 QTabBar::tab:only-one {
   margin: 0;
   /* if there is only one tab, we don't want overlapping margins */ }
@@ -1574,4 +1584,3 @@ ChatSearchListViewItemStyle {
 *[contact_editor=true] {
     background-color: #1c2835;
 }
-
