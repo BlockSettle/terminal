@@ -1,4 +1,5 @@
 Name "BlockSettle Terminal"
+SetCompressor /SOLID lzma
 
 # General Symbol Definitions
 !define COMPANY "BlockSettle AB"
