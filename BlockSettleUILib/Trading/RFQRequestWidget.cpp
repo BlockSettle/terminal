@@ -68,12 +68,11 @@ void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::Wallets
       ui_->pageRFQTicket->setWalletsManager(walletsManager);
       ui_->shieldPage->init(walletsManager, authAddressManager_);
 
+      // Do not listen for walletChanged (too verbose and resets UI too often) and walletsReady (to late and resets UI after startup unexpectedly)
       connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
       connect(walletsManager_.get(), &bs::sync::WalletsManager::AuthLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
-      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &RFQRequestWidget::forceCheckCondition);
       connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &RFQRequestWidget::forceCheckCondition);
       connect(walletsManager_.get(), &bs::sync::WalletsManager::walletAdded, this, &RFQRequestWidget::forceCheckCondition);
-      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &RFQRequestWidget::forceCheckCondition);
       connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQRequestWidget::forceCheckCondition);
       connect(walletsManager_.get(), &bs::sync::WalletsManager::walletPromotedToPrimary, this, &RFQRequestWidget::forceCheckCondition);
    }
@@ -206,6 +205,8 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
 
    ui_->pageRFQTicket->disablePanel();
+
+   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, &RFQRequestWidget::forceCheckCondition);
 }
 
 void RFQRequestWidget::onConnectedToCeler()
