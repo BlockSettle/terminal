@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 // https://doc.qt.io/qt-5/qtqml-javascript-resources.html
 // Don't use .import here
 // Don't use .pragma library here
@@ -282,6 +292,23 @@ function evalWorker(method, cppCallback, argList) {
 }
 
 function prepareDialog(dialog) {
+    console.log("[JsHelper] prepareDialog: " + dialog)
+
+    if (dialog.hasOwnProperty("isPrepared")) {
+        if (dialog.isPrepared) {
+            return
+        }
+        else {
+            dialog.isPrepared = true
+        }
+    }
+
+    // close previous dialog
+    if (currentDialog && typeof currentDialog.close !== "undefined") {
+        currentDialog.close()
+    }
+    currentDialog = dialog
+
     if (isLiteMode()) {
         prepareLiteModeDialog(dialog)
     }
@@ -295,17 +322,6 @@ function prepareLiteModeDialog(dialog) {
         return
     }
     console.log("Prepare qml lite dialog")
-
-    // close previous dialog
-    if (currentDialog && typeof currentDialog.close !== "undefined") {
-        currentDialog.close()
-    }
-
-    //dialog.show()
-    currentDialog = dialog
-//    if (typeof dialog.qmlTitleVisible !== "undefined") {
-//        dialog.qmlTitleVisible = false
-//    }
 
     mainWindow.moveMainWindowToScreenCenter()
     mainWindow.resizeAnimated(dialog.width, dialog.height)
@@ -370,20 +386,42 @@ function createNewWalletDialog(data) {
         dlgCreateWallet.seed = newSeed
         dlgCreateWallet.open()
     })
-//    if (Object.keys(mainWindow).indexOf("currentDialog") != -1) {
-//        mainWindow.sizeChanged.connect(function(w, h) {
-//            dlgNewSeed.width = w
-//            dlgNewSeed.height = h
-//        })
-//    }
-    dlgNewSeed.open()
-    return dlgNewSeed
+
+    var onControlPasswordFinished = function(password){
+        walletsProxy.sendControlPassword(password)
+        dlgNewSeed.open()
+    }
+
+    // Fixme, 2 == new pass requested
+    if (qmlFactory.controlPasswordStatus() === 2) {
+        var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+        controlPasswordDialog.setNextChainDialog(dlgNewSeed)
+        return controlPasswordDialog
+    }
+    else {
+        dlgNewSeed.open()
+        return dlgNewSeed
+    }
 }
 
 function importWalletDialog(data) {
     var dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
-    dlgImp.open()
-    return dlgImp
+
+    var onControlPasswordFinished = function(password){
+        walletsProxy.sendControlPassword(password)
+        dlgImp.open()
+    }
+
+    // Fixme, 2 == new pass requested
+    if (qmlFactory.controlPasswordStatus() === 2) {
+        var controlPasswordDialog =  createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+        controlPasswordDialog.setNextChainDialog(dlgImp)
+        return controlPasswordDialog
+    }
+    else {
+        dlgImp.open()
+        return dlgImp
+    }
 }
 
 function backupWalletDialog(data) {
@@ -594,15 +632,45 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
 }
 
 function updateDialogData(jsCallback, passwordDialogData) {
-    console.log("Trying to update password dialog " + currentDialog + ", Settl Id: " + passwordDialogData.SettlementId)
+    console.log("Trying to update password dialog with Settl Id: " + passwordDialogData.SettlementId)
     if (!currentDialog || typeof currentDialog.passwordDialogData === "undefined") {
+        console.log("Warning: current dialog not set")
         return
     }
+    console.log("Current dialog with Settl Id: " + currentDialog.passwordDialogData.SettlementId)
 
     if (passwordDialogData.SettlementId === currentDialog.passwordDialogData.SettlementId) {
         console.log("Updating password dialog, updated keys: " + passwordDialogData.keys())
         currentDialog.passwordDialogData.merge(passwordDialogData)
     }
+}
+
+function createControlPasswordDialog(jsCallback, controlPasswordStatus) {
+    let dlg = Qt.createComponent("../BsControls/BSControlPasswordInput.qml").createObject(mainWindow
+        , { "controlPasswordStatus": controlPasswordStatus} )
+
+    // Fixme
+    // Accepted = 0;
+    // Rejected = 1;
+    // RequestedNew = 2;
+    if (controlPasswordStatus === 0) {
+        dlg.bsAccepted.connect(function() {
+            jsCallback(dlg.passwordDataOld, dlg.passwordData)
+        })
+    }
+    else {
+        dlg.bsAccepted.connect(function() {
+            jsCallback(dlg.passwordData)
+        })
+
+        dlg.bsRejected.connect(function() {
+            jsCallback("")
+        })
+    }
+
+    prepareDialog(dlg)
+    dlg.open()
+    return dlg
 }
 
 function isLiteMode(){

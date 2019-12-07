@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef SIGNER_ADAPTER_LISTENER_H
 #define SIGNER_ADAPTER_LISTENER_H
 
@@ -42,6 +52,7 @@ public:
 
    // Sent to GUI status update message
    void sendStatusUpdate();
+   void sendControlPasswordStatusUpdate(signer::ControlPasswordStatus status);
 
    void resetConnection();
 
@@ -76,6 +87,8 @@ protected:
    bool onImportWoWallet(const std::string &data, bs::signer::RequestId);
    bool onExportWoWallet(const std::string &data, bs::signer::RequestId);
    bool onSyncSettings(const std::string &data);
+   bool onControlPasswordReceived(const std::string &data);
+   bool onChangeControlPassword(const std::string &data, bs::signer::RequestId);
 
    void walletsListUpdated();
    void shutdownIfNeeded();

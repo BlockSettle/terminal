@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef SIGNER_ADAPTER_H
 #define SIGNER_ADAPTER_H
 
@@ -82,7 +92,6 @@ public:
    void getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &
       , Blocksettle::Communication::signer::PacketType pt = Blocksettle::Communication::signer::GetDecryptedNodeType);
-   void getHeadlessPubKey(const std::function<void(const std::string &)> &);
 
    void activateAutoSign(const std::string &walletId
       , bs::wallet::QPasswordData *passwordData
@@ -103,6 +112,10 @@ public:
    std::shared_ptr<QmlFactory> qmlFactory() const;
    std::shared_ptr<SignAdapterContainer> signContainer() const;
 
+   void sendControlPassword(const bs::wallet::QPasswordData &password);
+   void changeControlPassword(const bs::wallet::QPasswordData &oldPassword, const bs::wallet::QPasswordData &newPassword
+      , const std::function<void(bs::error::ErrorCode errorCode)> &cb);
+
 signals:
    void ready() const;
    void connectionError() const;
@@ -120,6 +133,7 @@ signals:
    void terminalHandshakeFailed(const std::string &peerAddress);
    void signerPubKeyUpdated(const BinaryData &pubKey) const;
    void ccInfoReceived(bool) const;
+   void walletsReloaded() const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

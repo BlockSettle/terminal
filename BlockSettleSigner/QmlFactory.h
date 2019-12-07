@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef QMLFACTORY_H
 #define QMLFACTORY_H
 
@@ -10,6 +20,8 @@
 #include "AuthProxy.h"
 
 #include "BSErrorCode.h"
+
+#include "bs_signer.pb.h"
 
 class SignerAdapter;
 namespace bs {
@@ -111,6 +123,8 @@ public:
 
    Q_INVOKABLE bool isDebugBuild();
 
+   Q_INVOKABLE int controlPasswordStatus() const;
+   void setControlPasswordStatus(int controlPasswordStatus);
 
 signals:
    void closeEventReceived();
@@ -127,6 +141,8 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
 
    QString headlessPubKey_;
+   int controlPasswordStatus_;
+
 };
 
 

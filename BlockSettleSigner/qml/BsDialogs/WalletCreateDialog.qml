@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.4
@@ -28,7 +38,7 @@ CustomTitleDialogWindow {
     property var seed
     property var passwordData: QPasswordData{}
 
-    width: 400
+    width: 410
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletCreation
     title: qsTr("Manage encryption")

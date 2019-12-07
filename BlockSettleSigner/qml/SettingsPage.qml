@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
@@ -417,6 +427,61 @@ Item {
                     onClicked: {
                         var dlgTerminals = Qt.createComponent("BsDialogs/TerminalKeysDialog.qml").createObject(mainWindow)
                         dlgTerminals.open()
+                    }
+                }
+            }
+
+            CustomHeader {
+                text: qsTr("Security Settings")
+                checkable: true
+                checked: true
+                down: true
+                Layout.preferredHeight: 25
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                Layout.topMargin: 10
+            }
+
+            RowLayout {
+                Layout.topMargin: 5
+                Layout.fillWidth: true
+                Layout.rightMargin: 10
+                Layout.leftMargin: 10
+
+                CustomLabel {
+                    text: qsTr("Master Password")
+                    Layout.minimumWidth: 125
+                    Layout.preferredWidth: 125
+                    Layout.maximumWidth: 125
+                }
+
+                CustomLabel {
+                    Layout.fillWidth: true
+                }
+
+                CustomButton {
+                    text: qsTr("Change")
+                    Layout.minimumWidth: 150
+                    Layout.preferredWidth: 150
+                    Layout.maximumWidth: 150
+                    Layout.maximumHeight: 22
+                    Layout.rightMargin: 6
+                    onClicked: {
+                        var onControlPasswordChanged = function(success, errorMsg){
+                            if (success) {
+                                JsHelper.messageBox(BSMessageBox.Type.Success
+                                    , qsTr("Master Password"), qsTr("Change Master Password succeed"))
+
+                            } else {
+                                JsHelper.messageBox(BSMessageBox.Type.Critical
+                                    , qsTr("Master Password"), qsTr("Change Master Password failed: \n") + errorMsg)
+                            }
+                        }
+                        var onControlPasswordFinished = function(oldPassword, newPassword){
+                            walletsProxy.changeControlPassword(oldPassword, newPassword, onControlPasswordChanged)
+                        }
+                        JsHelper.createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
                     }
                 }
             }

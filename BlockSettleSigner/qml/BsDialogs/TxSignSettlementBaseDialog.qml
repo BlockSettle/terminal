@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.4
@@ -475,7 +485,7 @@ CustomTitleDialogWindowWithExpander {
                 id: btnExportTx
                 primary: true
                 visible: walletInfo.encType === QPasswordData.Unencrypted
-                text: qsTr("SAVE TX")
+                text: qsTr("EXPORT")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
@@ -506,7 +516,7 @@ CustomTitleDialogWindowWithExpander {
                 id: btnImportTx
                 visible: false
                 enabled: false
-                text: qsTr("LOAD SIGNED TX")
+                text: qsTr("IMPORT")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
@@ -544,7 +554,7 @@ CustomTitleDialogWindowWithExpander {
                 id: btnConfirm
                 primary: walletInfo.encType ===  QPasswordData.Unencrypted ? false : true
                 visible: walletInfo.encType === QPasswordData.Password
-                text: qsTr("CONFIRM")
+                text: walletInfo.encType === QPasswordData.Unencrypted ?  qsTr("BROADCAST") : qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: signingAllowed && acceptable

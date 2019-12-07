@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef SIGNER_ADAPTER_CONTAINER_H
 #define SIGNER_ADAPTER_CONTAINER_H
 
@@ -88,6 +98,7 @@ public:
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool = true) override {}
    void getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &
       , const std::function<void(const std::map<bs::Address, BinaryData> &)> &) override {}
+   void getChatNode(const std::string &walletID, const std::function<void(const BIP32_Node &)> &) override {}
 
    bool isWalletOffline(const std::string &id) const override { return (woWallets_.find(id) != woWallets_.end()); }
 
