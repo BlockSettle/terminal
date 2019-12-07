@@ -58,10 +58,9 @@ const char *QmlBridge::getQmlMethodName(QmlBridge::QmlMethod method)
    case QmlMethod::CustomDialogRequest:
       return kCustomDialogRequest;
    case QmlMethod::UpdateDialogData:
-      return kCreatePasswordDialogForType;
-   default:
-      return {};
+      return kUpdateDialogData;
    }
+   return {};
 }
 
 QObject *QmlBridge::rootQmlObj() const
