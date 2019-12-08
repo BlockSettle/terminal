@@ -27,9 +27,15 @@ QT_END_NAMESPACE
 class WalletBackupPdfWriter final
 {
 public:
+   static constexpr int kResolution = 1200;
+   static constexpr double kTotalWidthInches = 8.27;
+   static constexpr double kTotalHeightInches = 11.69;
+   static constexpr double kMarginInches = 0.0;
+
+public:
    WalletBackupPdfWriter(const QString &walletId
       , const QString &keyLine1, const QString &keyLine2
-      , const QPixmap &logo, const QPixmap &qr);
+      , const QPixmap &qr);
 
    //! Write backup to PDF.
    bool write(const QString &fileName);
@@ -47,7 +53,6 @@ private:
    QString walletId_;
    QString keyLine1_;
    QString keyLine2_;
-   QPixmap logo_;
    QPixmap qr_;
 }; // class WalletBackupPdfWriter
 
