@@ -46,6 +46,11 @@
 #include "QmlBridge.h"
 
 #include "AppNap.h"
+#include "TerminalVersion.h"
+
+#ifdef ENABLE_QT_BREAKPAD
+#include "qtsystemexceptionhandler.h"
+#endif
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
@@ -192,6 +197,14 @@ static int QMLApp(int argc, char **argv
 
    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
    QApplication app(argc, argv);
+
+   app.setApplicationVersion(QLatin1String(TERMINAL_VERSION_STRING));
+
+#ifdef ENABLE_QT_BREAKPAD
+   // uncomment this to test the crash handler
+   //QTimer::singleShot(20000, []{ QtSystemExceptionHandler::crash(); });
+   QtSystemExceptionHandler exceptionHandler(app.applicationDirPath());
+#endif
 
    QApplication::setOrganizationDomain(QLatin1String("blocksettle.com"));
 #ifdef __linux__

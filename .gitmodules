@@ -7,3 +7,6 @@
 [submodule "AuthAPI"]
 	path = AuthAPI
 	url = https://github.com/autheid/AuthAPI
+[submodule "breakpad/breakpad"]
+	path = breakpad/breakpad
+	url = https://github.com/google/breakpad.git

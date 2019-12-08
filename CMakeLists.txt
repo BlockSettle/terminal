@@ -14,6 +14,8 @@ endif()
 
 option(BSTERMINAL_SHARED_LIBS "Build shared libraries" OFF)
 
+option(ENABLE_CRASH_HANDLER "Enable the crash handler" OFF)
+
 add_definitions(-DSTATIC_BUILD)
 add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
 
@@ -820,6 +822,11 @@ ENDIF()
 ADD_SUBDIRECTORY( Celer )
 ADD_SUBDIRECTORY( common/Blocksettle_proto )
 ADD_SUBDIRECTORY( AuthAPI )
+
+if(WIN32)
+   add_subdirectory(breakpad)
+   add_subdirectory(qtcrashhandler)
+endif()
 
 ADD_SUBDIRECTORY(BlockSettleApp)
 ADD_SUBDIRECTORY(BlockSettleSigner)

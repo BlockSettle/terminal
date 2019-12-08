@@ -32,6 +32,11 @@
 #include "btc/ecc.h"
 
 #include "AppNap.h"
+#include "TerminalVersion.h"
+
+#ifdef ENABLE_QT_BREAKPAD
+#include "qtsystemexceptionhandler.h"
+#endif
 
 #ifdef USE_QWindowsIntegrationPlugin
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
@@ -181,6 +186,16 @@ static int GuiApp(int &argc, char** argv)
    QApplication app(argc, argv);
 #endif
 
+   app.setApplicationVersion(QLatin1String(TERMINAL_VERSION_STRING));
+
+#ifdef ENABLE_QT_BREAKPAD
+   // uncomment this to test the crash handler
+   //QTimer::singleShot(13000, []{ QtSystemExceptionHandler::crash(); });
+   QtSystemExceptionHandler exceptionHandler(app.applicationDirPath());
+#endif
+
+   QApplication::setOrganizationName(QLatin1String("BlockSettle"));
+   QApplication::setApplicationName(QLatin1String("Terminal"));
 
    QApplication::setQuitOnLastWindowClosed(false);
 
@@ -265,6 +280,7 @@ static int GuiApp(int &argc, char** argv)
    splashScreen.setGeometry(splashGeometry);
 
    splashScreen.show();
+
    app.processEvents();
 
 #ifdef NDEBUG
@@ -273,6 +289,9 @@ static int GuiApp(int &argc, char** argv)
    return runUnchecked(&app, settings, splashScreen);
 #endif
 }
+
+#include <QTextStream>
+#include <QFile>
 
 int main(int argc, char** argv)
 {

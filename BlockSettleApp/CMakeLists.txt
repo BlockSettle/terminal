@@ -4,6 +4,12 @@ FILE(GLOB SOURCES *.cpp)
 FILE(GLOB HEADERS *.h)
 
 INCLUDE_DIRECTORIES( ${COMMON_UI_LIB_INCLUDE_DIR} )
+
+if(WIN32)
+   set(SOURCES ${SOURCES} ../breakpad/qtsystemexceptionhandler.cpp)
+   set(HEADERS ${HEADERS} ../breakpad/qtsystemexceptionhandler.h)
+endif()
+
 INCLUDE_DIRECTORIES( ${COMMON_LIB_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${BLOCKSETTLE_UI_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${BS_NETWORK_INCLUDE_DIR} )
@@ -13,6 +19,7 @@ INCLUDE_DIRECTORIES( ${WALLET_LIB_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${CRYPTO_LIB_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${BOTAN_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${Qt5Svg_INCLUDE_DIRS} )
+
 
 IF ( APPLE )
     SET( BUNDLE_NAME "BlockSettle Terminal" )
@@ -58,4 +65,13 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    ${QT_LIBS}
    ${OS_SPECIFIC_LIBS}
    ${OPENSSL_LIBS}
+)
+
+if(WIN32)
+   target_include_directories(${BLOCKSETTLE_APP_NAME}
+      PRIVATE ${CMAKE_BINARY_DIR}/common/BlockSettleUILib # for TerminalVersion.h
+      PRIVATE ../breakpad
    )
+   target_compile_definitions(${BLOCKSETTLE_APP_NAME} PRIVATE -DENABLE_QT_BREAKPAD)
+   target_link_libraries(${BLOCKSETTLE_APP_NAME} libbreakpad)
+endif()
