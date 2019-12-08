@@ -31,8 +31,7 @@ QmlPdfBackup::QmlPdfBackup(QQuickItem *parent)
    : QQuickPaintedItem(parent)
    , seed_(new bs::wallet::QSeed(this))
    , pdf_(new WalletBackupPdfWriter(QString(), QString(), QString(),
-                                    QPixmap(QLatin1String(":/FULL_LOGO")),
-                                    UiUtils::getQRCode(QString())))
+      UiUtils::getQRCode(QString())))
 {
    connect(this, &QQuickPaintedItem::widthChanged, this, &QmlPdfBackup::onWidthChanged);
    connect(this, &QmlPdfBackup::seedChanged, this, &QmlPdfBackup::onSeedChanged);
@@ -49,8 +48,7 @@ void QmlPdfBackup::onSeedChanged()
       return;
    }
    pdf_.reset(new WalletBackupPdfWriter(seed_->walletId(), seed_->part1(), seed_->part2(),
-                                        QPixmap(QLatin1String(":/FULL_LOGO")),
-                                        UiUtils::getQRCode(seed_->part1() + QLatin1Literal("\n") + seed_->part2())));
+      UiUtils::getQRCode(seed_->part1() + QLatin1Literal("\n") + seed_->part2())));
 
    update();
 }
@@ -69,12 +67,14 @@ void QmlPdfBackup::setSeed(bs::wallet::QSeed *seed)
 void QmlPdfBackup::paint(QPainter *painter)
 {
    int viewportWidth = static_cast<int>(width());
-   int viewportHeight = qRound(viewportWidth * kTotalHeightInches / kTotalWidthInches);
+   int viewportHeight = qRound(viewportWidth * WalletBackupPdfWriter::kTotalHeightInches / WalletBackupPdfWriter::kTotalWidthInches);
 
-   int windowWidth = qRound((kTotalWidthInches - kMarginInches * 2.0) * kResolution);
-   int windowHeight = qRound((kTotalHeightInches - kMarginInches * 2.0) * kResolution);
+   int windowWidth = qRound((WalletBackupPdfWriter::kTotalWidthInches - WalletBackupPdfWriter::kMarginInches * 2.0)
+                            * WalletBackupPdfWriter::kResolution);
+   int windowHeight = qRound((WalletBackupPdfWriter::kTotalHeightInches - WalletBackupPdfWriter::kMarginInches * 2.0)
+                            * WalletBackupPdfWriter::kResolution);
 
-   int viewportMargin = qRound(kMarginInches / kTotalWidthInches * viewportWidth * 0.5);
+   int viewportMargin = qRound(WalletBackupPdfWriter::kMarginInches / WalletBackupPdfWriter::kTotalWidthInches * viewportWidth * 0.5);
 
    painter->setRenderHint(QPainter::SmoothPixmapTransform);
 
@@ -93,7 +93,7 @@ void QmlPdfBackup::paint(QPainter *painter)
 
 qreal QmlPdfBackup::preferredHeightForWidth() const
 {
-   return (width() * kTotalHeightInches / kTotalWidthInches);
+   return (width() * WalletBackupPdfWriter::kTotalHeightInches / WalletBackupPdfWriter::kTotalWidthInches);
 }
 
 void QmlPdfBackup::componentComplete()

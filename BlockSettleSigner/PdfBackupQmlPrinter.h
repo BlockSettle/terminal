@@ -66,10 +66,7 @@ signals:
 private:
    bs::wallet::QSeed *seed_;
    std::unique_ptr<WalletBackupPdfWriter> pdf_;
-   qreal kTotalHeightInches = 11;
-   qreal kTotalWidthInches = 8.27;
-   qreal kMarginInches = 1.0;
-   qreal kResolution = 1200;
+
 }; // class QmlPdfBackup
 
 #endif // PDFBACKUPQMLPRINTER_H_INCLUDED
