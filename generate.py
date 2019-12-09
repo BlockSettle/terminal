@@ -1,11 +1,12 @@
 import argparse
+import multiprocessing
 import os
 import platform
 import shutil
 import subprocess
 import sys
-sys.path.insert(0, 'common')
-sys.path.insert(0, os.path.join('common', 'build_scripts'))
+sys.path.insert(0, os.path.join('terminalGUI', 'common'))
+sys.path.insert(0, os.path.join('terminalGUI', 'common', 'build_scripts'))
 
 from build_scripts.gtest_settings         import GtestSettings
 from build_scripts.jom_settings           import JomSettings
@@ -21,6 +22,86 @@ from build_scripts.spdlog_settings        import SpdlogSettings
 from build_scripts.websockets_settings    import WebsocketsSettings
 from build_scripts.zeromq_settings        import ZeroMQSettings
 from build_scripts.botan_settings         import BotanSettings
+
+
+gui_build_path = ''
+
+def generate_terminal_GUI(build_mode, cmake_flags):
+   project_settings = Settings(build_mode)
+   cur_dir = os.getcwd()
+
+   if not os.path.isdir('terminalGUI'):
+      print("terminalGUI submodule doesn't exist")
+      return False
+
+   global gui_build_path
+   if project_settings._is_windows:
+      if project_settings.get_build_mode() == 'debug':
+         gui_build_path = os.path.join('terminalGUI', 'build_terminal_GUI', 'Debug', 'bin', 'Debug')
+      else:
+         gui_build_path = os.path.join('terminalGUI', 'build_terminal_GUI', 'Release', 'bin', 'Release')
+   else:
+      if project_settings.get_build_mode() == 'debug':
+         gui_build_path = os.path.join('terminalGUI', 'build_terminal_GUI', 'Debug', 'libs')
+      else:
+         gui_build_path = os.path.join('terminalGUI', 'build_terminal_GUI', 'Release', 'libs')
+
+   if os.path.isdir(gui_build_path):
+      print("terminalGUI already built")
+      return True
+
+   os.chdir('terminalGUI')
+
+   command = []
+
+   command.append('python')
+   command.append('generate.py')
+   command.append('-test')
+   command.append(build_mode)
+
+   if cmake_flags != None:
+      for flag in cmake_flags.split():
+         command.append(flag)
+
+   result = subprocess.call(command)
+   if result == 0:
+      print('terminalGUI generation succeeded')
+
+      os.chdir('terminalGUI.' + build_mode)
+
+      if project_settings._is_windows:
+         build_conf = 'Debug'
+         if project_settings.get_build_mode() == 'release':
+            build_conf = 'RelWithDebInfo'
+
+         command = ['msbuild', 'BS_Terminal_GUI.sln',
+                   '/p:Configuration=' + build_conf,
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
+
+         print(' '.join(command))
+
+         result = subprocess.call(command)
+         if result == 0:
+            print("terminalGUI build succeeded")
+         else:
+            return False
+
+      else:
+         command = ['make', '-j', str(multiprocessing.cpu_count())]
+
+         result = subprocess.call(command)
+         if result == 0:
+            print("terminalGUI build succeeded")
+         else:
+            return False
+
+      os.chdir(cur_dir)
+      return True
+
+   else:
+      print('terminalGUI project generation failed')
+      return False
+
 
 def generate_project(build_mode, cmake_flags):
    project_settings = Settings(build_mode)
@@ -61,12 +142,6 @@ def generate_project(build_mode, cmake_flags):
 
    build_dir = os.path.join(os.getcwd(), 'tests.' + build_mode)
 
-   generated_dir = os.path.join(os.getcwd(), 'generated_proto')
-   if os.path.isfile(generated_dir):
-      os.remove(generated_dir)
-   elif os.path.isdir(generated_dir):
-      shutil.rmtree(generated_dir)
-
    if os.path.isfile(build_dir):
       os.remove(build_dir)
    elif os.path.isdir(build_dir):
@@ -91,6 +166,8 @@ def generate_project(build_mode, cmake_flags):
       if project_settings._is_windows:
          command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /DNDEBUG')
          command.append('-DCMAKE_CONFIGURATION_TYPES=Release')
+
+   command.append('-DBS_GUI_BUILD_PATH=' + os.path.join('..', gui_build_path))
 
 
    # to remove cmake 3.10 dev warnings
@@ -122,5 +199,8 @@ if __name__ == '__main__':
                              help='Additional CMake flags. Example: "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_FLAGS=-fuse-ld=gold"')
 
    args = input_parser.parse_args()
+
+   if not generate_terminal_GUI(args.build_mode, args.cmake_flags):
+      sys.exit(1)
 
    sys.exit(generate_project(args.build_mode, args.cmake_flags))

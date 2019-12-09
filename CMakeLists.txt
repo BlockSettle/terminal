@@ -19,21 +19,16 @@ ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 add_definitions(-DNOMINMAX)
 add_definitions(-DCOINBASE_MATURITY_TESTS)
 
-# Force Armory to ignore Crypto++ and use libbtc instead.
-add_definitions(-DLIBBTC_ONLY)
-
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
-SET(AUTH_EID_ROOT ${CMAKE_SOURCE_DIR})
-
-set(CMAKE_MODULE_PATH "${BLOCK_SETTLE_ROOT}/common/build_scripts/CMakeModules")
-set(BUILD_TEST_TOOLS 1)
+SET(TERMINAL_GUI_ROOT "${CMAKE_SOURCE_DIR}/terminalGUI")
+set(CMAKE_MODULE_PATH "${TERMINAL_GUI_ROOT}/common/build_scripts/CMakeModules")
 
 # set versions info
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
-SET(BS_VERSION_MINOR 9 )
-SET(BS_VERSION_PATCH 1 )
+SET(BS_VERSION_MINOR 10 )
+SET(BS_VERSION_PATCH 0 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 #include(GetGitRevisionDescription)
@@ -320,16 +315,14 @@ ELSE ( APPLE )
    SET( PROTO_LIB ${PROTOBUF_LIBRARIES} )
 ENDIF ( APPLE )
 
-SET( PATH_TO_GENERATED ${BLOCK_SETTLE_ROOT}/generated_proto )
-FILE( MAKE_DIRECTORY ${PATH_TO_GENERATED} )
+SET( PATH_TO_GENERATED ${TERMINAL_GUI_ROOT}/generated_proto )
+SET( BS_COMMUNICATION_INCLUDE_DIR ${PATH_TO_GENERATED}/BS/Communication )
 
-INCLUDE_DIRECTORIES( ${BLOCK_SETTLE_ROOT}/AuthAPI/utils/cpp )
+INCLUDE_DIRECTORIES( ${TERMINAL_GUI_ROOT}/AuthAPI/utils/cpp )
 
 SET( AUTH_PROTO_LIB_NAME               AuthAPI )
 SET( BS_PROTO_LIB_NAME                 BsProtoLib )
 SET( CELER_PROTO_LIB_NAME              CelerProtoLib )
-SET( BLOCKSETTLE_APP_NAME              blocksettle )
-SET( SIGNER_APP_NAME                   blocksettle_signer )
 SET( BLOCKSETTLE_UI_LIBRARY_NAME       bsuilib )
 SET( CRYPTO_LIB_NAME                   ArmoryCryptoLib )
 SET( CPP_WALLET_LIB_NAME               ArmoryWalletLib )
@@ -337,18 +330,17 @@ SET( BS_NETWORK_LIB_NAME               BSNetwork )
 SET( COMMON_LIB_NAME                   CommonLib )
 SET( COMMON_UI_LIB_NAME                CommonUI )
 
-SET( BLOCKSETTLE_UI_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/BlockSettleUILib)
-SET( CRYPTO_LIB_DIR ${BLOCK_SETTLE_ROOT}/common/cppForSwig )
+SET( BLOCKSETTLE_UI_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/BlockSettleUILib)
+SET( CRYPTO_LIB_DIR ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig )
 SET( CRYPTO_LIB_INCLUDE_DIR ${CRYPTO_LIB_DIR} )
-SET( WALLET_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/WalletsLib )
-SET( BS_NETWORK_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/BlocksettleNetworkingLib )
-SET( COMMON_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/CommonLib )
-SET( COMMON_UI_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/CommonUI )
+SET( WALLET_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/WalletsLib )
+SET( BS_NETWORK_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/BlocksettleNetworkingLib )
+SET( COMMON_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/CommonLib )
+SET( COMMON_UI_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/CommonUI )
 
-SET( PB_SOURCES_DIR ${BLOCK_SETTLE_ROOT}/BlocksettleServer)
+link_directories(${BS_GUI_BUILD_PATH})
 
 SET(MDB_DIR ${CRYPTO_LIB_DIR}/lmdb/libraries/liblmdb)
-
 INCLUDE_DIRECTORIES( ${MDB_DIR} )
 
 IF(WIN32)
@@ -558,17 +550,6 @@ ELSE(WIN32)
    FILE(COPY ${SERVER_CONFIGURAIOTN_FILES} DESTINATION ${EXECUTABLE_OUTPUT_PATH})
 ENDIF(WIN32)
 
-
-ADD_SUBDIRECTORY( AuthAPI )
-ADD_SUBDIRECTORY( Celer )
-ADD_SUBDIRECTORY( common/Blocksettle_proto )
-
-ADD_SUBDIRECTORY( common/WalletsLib )
-ADD_SUBDIRECTORY( common/cppForSwig )
-ADD_SUBDIRECTORY( common/CommonLib )
-ADD_SUBDIRECTORY( common/CommonUI )
-ADD_SUBDIRECTORY( common/BlocksettleNetworkingLib )
-ADD_SUBDIRECTORY( common/BlockSettleUILib )
 
 ADD_SUBDIRECTORY( UnitTests )
 
