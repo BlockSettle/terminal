@@ -1,7 +1,20 @@
 {
-   "latest_version": "0.25.3",
-   "release_date": "06 Dec 2019",
+   "latest_version": "0.25.4",
+   "release_date": "09 Dec 2019",
    "changes": [
+      {
+         "version_string": "0.25.4",
+         "previous_version": "0.25.3",
+         "release_date": "09 Dec 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Rpk template change (#467)",
+            "Control password workflow (#457)"
+         ],
+         "bug_fixes": [],
+         "revision": "5aa4c8d3",
+         "common_revision": "2960c01a"
+      },
       {
          "version_string": "0.25.3",
          "previous_version": "0.25.2",
