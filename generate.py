@@ -27,7 +27,7 @@ from build_scripts.websockets_settings    import WebsocketsSettings
 from build_scripts.libchacha20poly1305_settings import LibChaCha20Poly1305Settings
 from build_scripts.botan_settings         import BotanSettings
 
-def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags):
+def generate_project(build_mode, link_mode, build_production, build_test, hide_warnings, cmake_flags):
    project_settings = Settings(build_mode, link_mode)
 
    print('Build mode        : {} ( {} )'.format(project_settings.get_build_mode(), ('Production' if build_production else 'Development')))
@@ -105,6 +105,9 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
    if build_production:
       command.append('-DPRODUCTION_BUILD=1')
 
+   if build_test:
+      command.append('-DBUILD_TEST_TOOLS=1')
+
    if project_settings.get_link_mode() == 'shared':
       command.append('-DBUILD_SHARED_LIBS=ON')
 
@@ -137,6 +140,9 @@ if __name__ == '__main__':
                              action='store_true',
                              dest='build_production',
                              default=False)
+   input_parser.add_argument('-test',
+                             help='Select to also build tests',
+                             action='store_true')
    input_parser.add_argument('link_mode',
                              help='Linking library type used by the project generator [ static | shared ]',
                              nargs='?',
@@ -155,4 +161,4 @@ if __name__ == '__main__':
 
    args = input_parser.parse_args()
 
-   sys.exit(generate_project(args.build_mode, args.link_mode, args.build_production, args.hide_warnings, args.cmake_flags))
+   sys.exit(generate_project(args.build_mode, args.link_mode, args.build_production, args.test, args.hide_warnings, args.cmake_flags))
