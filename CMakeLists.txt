@@ -489,49 +489,67 @@ ELSE(WIN32)
       FIND_PACKAGE( Freetype REQUIRED )
       FIND_PACKAGE( Fontconfig REQUIRED )
 
-      SET(QT_LIBS
-         libqtharfbuzz.a
-         libqtpcre2.a
-         libQt5EventDispatcherSupport.a
-         libQt5ThemeSupport.a
-         libQt5ServiceSupport.a
+      SET(TMP_LIBS
          libQt5XcbQpa.a
+         libQt5ServiceSupport.a
+         libQt5ThemeSupport.a
+         libQt5EventDispatcherSupport.a
+         libQt5FontDatabaseSupport.a
          libQt5LinuxAccessibilitySupport.a
          libQt5AccessibilitySupport.a
-         libQt5DBus.a
          libQt5EdidSupport.a
          )
 
-      SET(OS_SPECIFIC_LIBS
+      LIST(APPEND QT_LINUX_LIBS
+         ${QT5_PLUGINS_ROOT}/platforms/libqxcb.a
+         ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
+         ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlmysql.a
+         mysqlclient
+      )
+
+      IF(NOT EXISTS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
+         MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a")
+      ENDIF()
+
+      FOREACH(lib_name ${TMP_LIBS})
+         IF(NOT EXISTS ${QT5_LIB_ROOT}/${lib_name})
+            MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
+         ENDIF()
+
+         LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/${lib_name})
+      ENDFOREACH(lib_name)
+
+      LIST(APPEND QT_LINUX_LIBS
          Qt5::QXcbIntegrationPlugin
-         dl
-         m
-         ${CMAKE_THREAD_LIBS_INIT}
-         ${ZLIB_LIBRARIES}
-         ${XCB_LIBRARIES}
-         ${QT5_LIB_ROOT}/libQt5FontDatabaseSupport.a
-         ${FREETYPE_LIBRARIES}
-         ${FONTCONFIG_LIBRARIES}
+         Qt5::QICOPlugin
+         Qt5::QCupsPrinterSupportPlugin
+      )
+
+      SET(OS_SPECIFIC_LIBS
+         ${QT5_LIB_ROOT}/libqtharfbuzz.a
+         ${QT5_LIB_ROOT}/libqtpcre2.a
+         Fontconfig::Fontconfig
+         freetype
          X11::XCB
          X11
          Xi
-         Xrender
          SM
          ICE
-         png
-         double-conversion
-         xkbcommon
+         Xrender
+         ${XCB_LIBRARIES}
          xkbcommon-x11
+         xkbcommon
          dbus-1
+         ${ZLIB_LIBRARIES}
+         png
+         m
+         double-conversion
+         dl
          ${CMAKE_THREAD_LIBS_INIT}
          )
 
-         LIST (APPEND OS_SPECIFIC_LIBS
-            ${QT5_PLUGINS_ROOT}/platforms/libqxcb.a
-            ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
-            ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlmysql.a
-            mysqlclient
-         )
+         LIST(REMOVE_DUPLICATES QT_LINUX_LIBS)
+         add_definitions(-DUSE_QXcbIntegrationPlugin)
    ENDIF( APPLE )
 ENDIF(WIN32)
 
