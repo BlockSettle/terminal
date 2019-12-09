@@ -52,6 +52,11 @@ def generate_terminal_GUI(build_mode, cmake_flags):
 
    os.chdir('terminalGUI')
 
+
+   if os.getenv('DEV_3RD_ROOT') == '':
+      top_path = os.path.abspath(os.path.join(cur_dir, '..'))
+      os.environ['DEV_3RD_ROOT'] = os.path.join(top_path, '3rd')
+
    command = []
 
    command.append('python')
