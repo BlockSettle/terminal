@@ -28,33 +28,23 @@ void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& wa
 
    walletsMgr_ = walletsMgr;
 
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &OTCWindowsManager::syncInterfaceRequired);
+   // Do not listen for walletChanged (too verbose and resets UI too often) and walletsReady (to late and resets UI after startup unexpectedly)
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::AuthLeafCreated, this, &OTCWindowsManager::syncInterfaceRequired);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletPromotedToPrimary, this, &OTCWindowsManager::syncInterfaceRequired);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this, &OTCWindowsManager::syncInterfaceRequired);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this, &OTCWindowsManager::syncInterfaceRequired);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this, &OTCWindowsManager::syncInterfaceRequired);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this, &OTCWindowsManager::syncInterfaceRequired);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &OTCWindowsManager::syncInterfaceRequired);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::authWalletChanged, this, &OTCWindowsManager::syncInterfaceRequired);
 
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &OTCWindowsManager::updateBalances);
 
    authManager_ = authManager;
-
-   connect(authManager_.get(), &AuthAddressManager::AddressListUpdated, this, &OTCWindowsManager::syncInterfaceRequired);
-   connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, this, &OTCWindowsManager::syncInterfaceRequired);
-   connect(authManager_.get(), &AuthAddressManager::AuthWalletChanged, this, &OTCWindowsManager::syncInterfaceRequired);
-   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, &OTCWindowsManager::syncInterfaceRequired);
-   connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, &OTCWindowsManager::syncInterfaceRequired);
    connect(authManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, &OTCWindowsManager::syncInterfaceRequired);
 
    mdProvider_ = mdProvider;
-
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &OTCWindowsManager::updateMDDataRequired);
 
    assetManager_ = assetManager;
-
    connect(assetManager_.get(), &AssetManager::totalChanged, this, &OTCWindowsManager::updateBalances);
    connect(assetManager_.get(), &AssetManager::securitiesChanged, this, &OTCWindowsManager::updateBalances);
 

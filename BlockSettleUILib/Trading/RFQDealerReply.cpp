@@ -194,6 +194,7 @@ void RFQDealerReply::reset()
       ui_->labelReqQty->clear();
       ui_->labelRespProduct->clear();
       ui_->labelQuantity->clear();
+      ui_->labelProduct->clear();
       indicBid_ = indicAsk_ = 0;
       setBalanceOk(true);
    }
@@ -228,6 +229,7 @@ void RFQDealerReply::reset()
       ui_->labelRespProduct->setText(QString::fromStdString(product_));
       ui_->labelQuantity->setText(UiUtils::displayAmountForProduct(currentQRN_.quantity
          , QString::fromStdString(currentQRN_.product), currentQRN_.assetType));
+      ui_->labelProduct->setText(QString::fromStdString(currentQRN_.product));
    }
 
    updateRespQuantity();
