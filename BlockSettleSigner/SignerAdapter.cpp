@@ -83,6 +83,11 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
       signContainer_->Start();
       walletsMgr_->setSignContainer(signContainer_);
 
+      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronizationStarted
+         , listener_.get(), &SignerInterfaceListener::onWalletsSynchronizationStarted);
+      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized
+         , listener_.get(), &SignerInterfaceListener::onWalletsSynchronized);
+
       connect(this, &SignerAdapter::walletsReloaded, [this](){
          walletsMgr_->syncWallets();
       });
