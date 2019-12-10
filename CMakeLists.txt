@@ -63,8 +63,9 @@ ENDIF()
 
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
+SET(TERMINAL_GUI_ROOT ${CMAKE_SOURCE_DIR}/terminalGUI)
 
-set(CMAKE_MODULE_PATH "${BLOCK_SETTLE_ROOT}/common/build_scripts/CMakeModules")
+set(CMAKE_MODULE_PATH "${TERMINAL_GUI_ROOT}/common/build_scripts/CMakeModules")
 
 set(QML_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "QML import path")
 set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "QML2 import path")
@@ -369,10 +370,12 @@ ELSE ( UNIX )
 ENDIF ( UNIX )
 
 # autheid helper sources
-INCLUDE_DIRECTORIES( ${BLOCK_SETTLE_ROOT}/AuthAPI/utils/cpp )
+INCLUDE_DIRECTORIES( ${TERMINAL_GUI_ROOT}/AuthAPI/utils/cpp )
+SET( AUTHEID_UTILS ${TERMINAL_GUI_ROOT}/AuthAPI/utils/cpp/autheid_utils.cpp )
 
 
-SET( PATH_TO_GENERATED ${BLOCK_SETTLE_ROOT}/generated_proto )
+SET( PROTO_ROOT_DIR ${TERMINAL_GUI_ROOT} )
+SET( PATH_TO_GENERATED ${TERMINAL_GUI_ROOT}/generated_proto )
 FILE( MAKE_DIRECTORY ${PATH_TO_GENERATED} )
 
 SET( AUTH_PROTO_LIB_NAME               AuthAPI )
@@ -387,13 +390,13 @@ SET( BS_NETWORK_LIB_NAME               BSNetwork )
 SET( COMMON_LIB_NAME                   CommonLib )
 SET( COMMON_UI_LIB_NAME                CommonUI )
 
-SET( BLOCKSETTLE_UI_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/BlockSettleUILib)
-SET( CRYPTO_LIB_DIR ${BLOCK_SETTLE_ROOT}/common/cppForSwig )
+SET( BLOCKSETTLE_UI_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/BlockSettleUILib)
+SET( CRYPTO_LIB_DIR ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig )
 SET( CRYPTO_LIB_INCLUDE_DIR ${CRYPTO_LIB_DIR} )
-SET( WALLET_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/WalletsLib )
-SET( BS_NETWORK_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/BlocksettleNetworkingLib )
-SET( COMMON_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/CommonLib )
-SET( COMMON_UI_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/CommonUI )
+SET( WALLET_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/WalletsLib )
+SET( BS_NETWORK_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/BlocksettleNetworkingLib )
+SET( COMMON_UI_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/CommonUI )
+SET( COMMON_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/CommonLib )
 
 SET(MDB_DIR ${CRYPTO_LIB_DIR}/lmdb/libraries/liblmdb)
 
@@ -817,19 +820,20 @@ ELSE() # Static version
 ENDIF()
 
 
-ADD_SUBDIRECTORY( Celer )
-ADD_SUBDIRECTORY( common/Blocksettle_proto )
-ADD_SUBDIRECTORY( AuthAPI )
+ADD_SUBDIRECTORY( terminalGUI/common/Blocksettle_proto )
+ADD_SUBDIRECTORY( terminalGUI/Celer )
+ADD_SUBDIRECTORY( terminalGUI/AuthAPI )
+
+ADD_SUBDIRECTORY(terminalGUI/BlockSettleUILib)
+ADD_SUBDIRECTORY(terminalGUI/common/BlocksettleNetworkingLib)
+ADD_SUBDIRECTORY(terminalGUI/common/WalletsLib)
+ADD_SUBDIRECTORY(terminalGUI/common/cppForSwig)
+ADD_SUBDIRECTORY(terminalGUI/common/CommonLib)
+ADD_SUBDIRECTORY(terminalGUI/CommonUI)
 
 ADD_SUBDIRECTORY(BlockSettleApp)
 ADD_SUBDIRECTORY(BlockSettleSigner)
 
-ADD_SUBDIRECTORY(common/BlockSettleUILib)
-ADD_SUBDIRECTORY(common/BlocksettleNetworkingLib)
-ADD_SUBDIRECTORY(common/WalletsLib)
-ADD_SUBDIRECTORY(common/cppForSwig)
-ADD_SUBDIRECTORY(common/CommonLib)
-ADD_SUBDIRECTORY(common/CommonUI)
 
 MESSAGE("3rd party root   : ${THIRD_PARTY_COMMON_DIR}")
 MESSAGE("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
