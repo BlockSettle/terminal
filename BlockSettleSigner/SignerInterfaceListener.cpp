@@ -206,6 +206,13 @@ void SignerInterfaceListener::onPeerConnected(const std::string &data, bool conn
 
 void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
 {
+   if (!isWalletsSynchronized_) {
+      // Delay decrypting wallet requests until wallets is synchronized
+      // (otherwise qmlFactory_->createWalletInfo could fail if not all wallets are loaded)
+      decryptWalletRequestsQueue_.push(data);
+      return;
+   }
+
    signer::DecryptWalletRequest request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
@@ -721,6 +728,24 @@ void SignerInterfaceListener::shutdown()
 void SignerInterfaceListener::closeConnection()
 {
    connection_->closeConnection();
+}
+
+void SignerInterfaceListener::onWalletsSynchronizationStarted()
+{
+   isWalletsSynchronized_ = false;
+}
+
+void SignerInterfaceListener::onWalletsSynchronized()
+{
+   isWalletsSynchronized_ = true;
+
+   QMetaObject::invokeMethod(this, [this] {
+      while (isWalletsSynchronized_ && !decryptWalletRequestsQueue_.empty()) {
+         auto data = std::move(decryptWalletRequestsQueue_.front());
+         decryptWalletRequestsQueue_.pop();
+         onDecryptWalletRequested(data);
+      }
+   }, Qt::QueuedConnection);
 }
 
 QmlCallbackBase *SignerInterfaceListener::createQmlPasswordCallback()
