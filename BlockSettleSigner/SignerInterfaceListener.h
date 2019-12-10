@@ -20,6 +20,7 @@
 
 #include <functional>
 #include <memory>
+#include <queue>
 
 namespace bs {
    namespace signer {
@@ -101,6 +102,10 @@ public:
 
    void closeConnection();
 
+public slots:
+   void onWalletsSynchronizationStarted();
+   void onWalletsSynchronized();
+
 private:
    void processData(const std::string &);
 
@@ -165,6 +170,11 @@ private:
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbChangeControlPwReqs_;
 
    std::shared_ptr<QmlBridge>  qmlBridge_;
+
+   std::queue<std::string> decryptWalletRequestsQueue_;
+
+   bool isWalletsSynchronized_{false};
+
 };
 
 
