@@ -31,7 +31,6 @@ public:
       , QWidget *parent = nullptr);
    ~ArmoryServersWidget();
 
-   void adaptForStartupDialog();
    void setRowSelected(int row);
 
    bool isExpanded() const;

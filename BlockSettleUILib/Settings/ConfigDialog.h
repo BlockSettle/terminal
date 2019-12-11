@@ -65,6 +65,8 @@ public:
      , QWidget* parent = nullptr);
    ~ConfigDialog() override;
 
+   void popupNetworkSettings();
+
 protected:
    void reject() override;
 

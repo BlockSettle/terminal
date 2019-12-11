@@ -194,7 +194,7 @@ private slots:
 
    void openAuthManagerDialog();
    void openAuthDlgVerify(const QString &addrToVerify);
-   void openConfigDialog();
+   void openConfigDialog(bool showInNetworkPage = false);
    void openAccountInfoDialog();
    void openCCTokenDialog();
 

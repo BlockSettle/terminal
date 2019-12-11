@@ -103,6 +103,12 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
 
 ConfigDialog::~ConfigDialog() = default;
 
+void ConfigDialog::popupNetworkSettings()
+{
+   ui_->stackedWidget->setCurrentWidget(ui_->pageNetwork);
+   ui_->listWidget->setCurrentRow(ui_->stackedWidget->indexOf(ui_->pageNetwork));
+}
+
 void ConfigDialog::onDisplayDefault()
 {  // reset only currently selected page - maybe a subject to change
    pages_[ui_->stackedWidget->currentIndex()]->reset();
