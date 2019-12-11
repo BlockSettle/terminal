@@ -512,7 +512,7 @@
    <item>
     <widget class="QGroupBox" name="PublicBridgeSettingsGroup">
      <property name="title">
-      <string>PUBLIC BRIDGE</string>
+      <string>ENVIRONMENT</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_5">
       <property name="spacing">

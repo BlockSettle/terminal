@@ -11,19 +11,16 @@
 #ifndef __STARTUPDIALOG_H__
 #define __STARTUPDIALOG_H__
 
-#include <QDialog>
-#include <QLatin1String>
-
 #include <memory>
+#include <QDialog>
 
 #include "BtcDefinitions.h"
 #include "ApplicationSettings.h"
-#include "ArmoryServersProvider.h"
-#include "Settings/ArmoryServersWidget.h"
 
 namespace Ui {
 class StartupDialog;
 }
+class ApplicationSettings;
 
 class StartupDialog : public QDialog
 {
@@ -38,23 +35,25 @@ public:
   explicit StartupDialog(bool showLicense, QWidget *parent = nullptr);
   ~StartupDialog() override;
 
-  void init(const std::shared_ptr<ApplicationSettings> &appSettings
-          , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider);
+  void init(const std::shared_ptr<ApplicationSettings> &appSettings);
+
+  NetworkType getSelectedNetworkType() const;
 
 private slots:
   void onBack();
   void onNext();
+  void onConnectivitySelectionChanged();
+  
+private:
   void updateStatus();
-
   void adjustPosition();
+  void setupConnectivityList();
 
 private:
   std::unique_ptr<Ui::StartupDialog> ui_;
   bool showLicense_;
 
   std::shared_ptr<ApplicationSettings>   appSettings_;
-  std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
-  ArmoryServersWidget *armoryServersWidget_ {};
 };
 
 #endif // __STARTUPDIALOG_H__

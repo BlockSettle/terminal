@@ -28,7 +28,7 @@
   <widget class="QWidget" name="mainTabBackground">
    <layout class="QVBoxLayout" name="verticalLayout">
     <property name="spacing">
-     <number>0</number>
+     <number>5</number>
     </property>
     <property name="leftMargin">
      <number>0</number>
@@ -42,6 +42,48 @@
     <property name="bottomMargin">
      <number>0</number>
     </property>
+    <item>
+     <widget class="QWidget" name="horizontalTestEnvWidget" native="true">
+      <layout class="QHBoxLayout" name="horizontalTestEnvLyt">
+       <item>
+        <spacer name="horizontalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="testEnvSettings">
+         <property name="text">
+          <string>TEST ENVIRONMENT</string>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>45</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </item>
     <item>
      <widget class="QFrame" name="horizontalFrame">
       <property name="sizePolicy">
@@ -144,6 +186,9 @@
       <property name="movable">
        <bool>false</bool>
       </property>
+      <property name="h5" stdset="0">
+       <bool>true</bool>
+      </property>
       <widget class="PortfolioWidget" name="widgetPortfolio">
        <property name="minimumSize">
         <size>
@@ -206,7 +251,7 @@
      <x>0</x>
      <y>0</y>
      <width>997</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

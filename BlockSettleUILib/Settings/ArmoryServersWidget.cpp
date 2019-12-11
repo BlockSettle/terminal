@@ -114,15 +114,6 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
    ui_->pushButtonKeyImport->hide();
 }
 
-void ArmoryServersWidget::adaptForStartupDialog()
-{
-   ui_->widgetControlButtons->hide();
-   ui_->tableViewArmory->hideColumn(4);
-   ui_->widget->layout()->setContentsMargins(0,0,0,0);
-   onExpandToggled();
-   isStartupDialog_ = true;
-}
-
 void ArmoryServersWidget::setRowSelected(int row)
 {
    QModelIndex currentIndex;

@@ -572,7 +572,7 @@ bool BSTerminalMainWindow::showStartupDialog()
  #endif // _WIN32
 
    StartupDialog startupDialog(showLicense);
-   startupDialog.init(applicationSettings_, armoryServersProvider_);
+   startupDialog.init(applicationSettings_);
    int result = startupDialog.exec();
 
    if (result == QDialog::Rejected) {
@@ -581,7 +581,8 @@ bool BSTerminalMainWindow::showStartupDialog()
    }
 
    // Ueed update armory settings if case user selects TestNet
-   // (MainNet selected by default at startup)
+   NetworkType selectedNetwork = startupDialog.getSelectedNetworkType();
+   applicationSettings_->set(ApplicationSettings::netType, static_cast<int>(selectedNetwork));
    applicationSettings_->selectNetwork();
 
    return true;
@@ -636,7 +637,8 @@ void BSTerminalMainWindow::tryInitChatView()
    chatClientServicePtr_ = std::make_shared<Chat::ChatClientService>();
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, this, [this]() {
-      const bool isProd = applicationSettings_->get<int>(ApplicationSettings::envConfiguration) == ApplicationSettings::PROD;
+      const bool isProd = applicationSettings_->get<int>(ApplicationSettings::envConfiguration) ==
+         static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
       const auto env = isProd ? bs::network::otc::Env::Prod : bs::network::otc::Env::Test;
 
       ui_->widgetChat->init(connectionManager_, env, chatClientServicePtr_,
@@ -1137,6 +1139,7 @@ void BSTerminalMainWindow::setupMenu()
    connect(ui_->actionVersion, &QAction::triggered, aboutDlgCb(3));
    connect(ui_->actionGuides, &QAction::triggered, supportDlgCb(0));
    connect(ui_->actionContact, &QAction::triggered, supportDlgCb(1));
+   connect(ui_->testEnvSettings, &QPushButton::clicked, this, [=]() { openConfigDialog(true/* start in network settings*/); });
 
    onUserLoggedOut();
 
@@ -1144,6 +1147,11 @@ void BSTerminalMainWindow::setupMenu()
    ui_->horizontalFrame->hide();
    ui_->menubar->setCornerWidget(ui_->pushButtonUser);
 #endif
+
+   auto EnvType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::netType).toInt());
+   if (EnvType != ApplicationSettings::EnvConfiguration::Test) {
+      ui_->horizontalTestEnvWidget->hide();
+   }
 }
 
 void BSTerminalMainWindow::openAuthManagerDialog()
@@ -1167,10 +1175,15 @@ void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
    }
 }
 
-void BSTerminalMainWindow::openConfigDialog()
+void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
 {
    ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, this);
    connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
+
+   if (showInNetworkPage) {
+      configDialog.popupNetworkSettings();
+   }
+
    configDialog.exec();
 
    UpdateMainWindowAppearence();

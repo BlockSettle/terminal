@@ -1372,6 +1372,27 @@ QDialog {
   background-color: #1c2835;
   padding: 5px; }
 
+QListWidget#envConnectivityListWidget {
+    font-size: 12px;
+    background-color: #1c2835;
+    alternate-background-color: #18202b;
+    color: #e7e8e9;
+    selection-background-color: #3a8ab4;
+    selection-color: #e7e8e9; }
+
+QListWidget#envConnectivityListWidget::item:selected {
+      background-color: #3a8ab4;
+      color: #e7e8e9; }
+
+QFrame#connectivity {
+    border: 1px solid #247dac; }
+
+QLabel#headerNetwotkType {
+  background-color: #18202b;
+  color: #81888f;
+  padding-left: 4px;
+  padding-right: 10px;}
+
 QListWidget {
   background-color: rgba(0, 0, 0, 0.1);
   border: none;

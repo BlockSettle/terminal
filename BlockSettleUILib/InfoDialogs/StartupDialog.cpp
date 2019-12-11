@@ -18,9 +18,18 @@
 
 
 namespace {
+   const char *kLicenseFilePath = "://resources/license.txt";
+   const QString kLicenseAgreementTitle = QObject::tr("License Agreement");
+   const QString kEnvConnectivityTitle = QObject::tr("BlockSettle Environment Connection");
 
-const char *kLicenseFilePath = "://resources/license.txt";
+   const QString kOkButton = QObject::tr("Ok");
+   const QString kCancelButton = QObject::tr("Cancel");
+   const QString kAgreeButton = QObject::tr("Agree");
+   const QString kBackButton = QObject::tr("Back");
+   const QString kDoneButton = QObject::tr("Done");
 
+   const QString kProductionConnectivity = QObject::tr("BlockSettle Production Environment");
+   const QString kTestConnectivity = QObject::tr("BlockSettle Test Environment");
 }
 
 StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
@@ -29,10 +38,10 @@ StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
   , showLicense_(showLicense)
 {
    ui_->setupUi(this);
-   ui_->labelExpanded->hide();
 
    connect(ui_->pushButtonBack, &QPushButton::clicked, this, &StartupDialog::onBack);
    connect(ui_->pushButtonNext, &QPushButton::clicked, this, &StartupDialog::onNext);
+   connect(ui_->envConnectivityListWidget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &StartupDialog::onConnectivitySelectionChanged);
    ui_->stackedWidget->setCurrentIndex(showLicense_ ? Pages::LicenseAgreement : Pages::Settings);
 
    QFile file;
@@ -42,30 +51,34 @@ StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
    QString licenseText = QString::fromUtf8(file.readAll());
 
    ui_->textBrowserLicense->setPlainText(licenseText);
+   setupConnectivityList();
    updateStatus();
 }
 
-void StartupDialog::init(const std::shared_ptr<ApplicationSettings> &appSettings, const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider)
+StartupDialog::~StartupDialog() = default;
+
+void StartupDialog::init(const std::shared_ptr<ApplicationSettings> &appSettings)
 {
    appSettings_ = appSettings;
-   armoryServersProvider_ = armoryServersProvider;
-   armoryServersWidget_ = new ArmoryServersWidget(armoryServersProvider_, appSettings_, ui_->widgetManageArmory);
-   armoryServersWidget_->adaptForStartupDialog();
-   ui_->widgetManageArmory->layout()->addWidget(armoryServersWidget_);
-   armoryServersWidget_->show();
-   connect(ui_->pushButtonConfigure, &QPushButton::clicked, [this](){
-      armoryServersWidget_->onExpandToggled();
-      armoryServersWidget_->adjustSize();
-      ui_->pushButtonConfigure->hide();
-      ui_->labelExpanded->show();
-      ui_->labelSimple->hide();
-      adjustSize();
-      adjustPosition();
-   });
    adjustPosition();
 }
 
-StartupDialog::~StartupDialog() = default;
+NetworkType StartupDialog::getSelectedNetworkType() const
+{
+   if (ui_->envConnectivityListWidget->selectedItems().isEmpty()) {
+      return NetworkType::Invalid;
+   }
+
+   const auto *selectedItem = ui_->envConnectivityListWidget->selectedItems()[0];
+   const int selectedIndex = ui_->envConnectivityListWidget->row(selectedItem);
+
+   if (selectedIndex == 0) {
+      return NetworkType::MainNet;
+   }
+   else {
+      return NetworkType::TestNet;
+   }
+}
 
 void StartupDialog::onBack()
 {
@@ -80,7 +93,7 @@ void StartupDialog::onBack()
 
 void StartupDialog::onNext()
 {
-   if (!showLicense_ || ui_->stackedWidget->currentIndex()  == Pages::Settings) {
+   if (!showLicense_ || ui_->stackedWidget->currentIndex() == Pages::Settings) {
       accept();
       return;
    }
@@ -89,40 +102,43 @@ void StartupDialog::onNext()
    updateStatus();
 }
 
+void StartupDialog::onConnectivitySelectionChanged()
+{
+   ui_->pushButtonNext->setDisabled(ui_->envConnectivityListWidget->selectedItems().isEmpty());
+}
+
 void StartupDialog::updateStatus()
 {
    int currentPage = ui_->stackedWidget->currentIndex();
 
+   ui_->pushButtonNext->setEnabled(true);
    if (currentPage == Pages::LicenseAgreement) {
-      setWindowTitle(tr("License Agreement"));
-      ui_->pushButtonConfigure->hide();
+      setWindowTitle(kLicenseAgreementTitle);
    } else {
-      setWindowTitle(tr("Bitcoin Network Connection"));
-      if (!armoryServersWidget_->isExpanded()) {
-         ui_->pushButtonConfigure->show();
-      }
+      setWindowTitle(kEnvConnectivityTitle);
+      onConnectivitySelectionChanged();
 
       adjustSize();
       adjustPosition();
    }
 
    if (!showLicense_) {
-      ui_->pushButtonBack->setText(tr("Cancel"));
-      ui_->pushButtonNext->setText(tr("Done"));
+      ui_->pushButtonBack->setText(kCancelButton);
+      ui_->pushButtonNext->setText(kDoneButton);
       return;
-   } else {
-      switch (currentPage)
-      {
-         case Pages::LicenseAgreement:
-            ui_->pushButtonBack->setText(tr("Cancel"));
-            ui_->pushButtonNext->setText(tr("Agree"));
-         break;
+   }
 
-         case Pages::Settings:
-            ui_->pushButtonBack->setText(tr("Back"));
-            ui_->pushButtonNext->setText(tr("Done"));
-         break;
-      }
+   switch (currentPage)
+   {
+   case Pages::LicenseAgreement:
+      ui_->pushButtonBack->setText(kCancelButton);
+      ui_->pushButtonNext->setText(kAgreeButton);
+      break;
+
+   case Pages::Settings:
+      ui_->pushButtonBack->setText(kBackButton);
+      ui_->pushButtonNext->setText(kDoneButton);
+      break;
    }
 }
 
@@ -132,4 +148,11 @@ void StartupDialog::adjustPosition()
    auto rect = geometry();
    rect.moveCenter(currentDisplay->geometry().center());
    setGeometry(rect);
+}
+
+void StartupDialog::setupConnectivityList()
+{
+   QListWidget *connectivity = ui_->envConnectivityListWidget;
+
+   connectivity->addItems({ kProductionConnectivity , kTestConnectivity });
 }
