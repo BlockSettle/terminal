@@ -1,0 +1,123 @@
+CMAKE_MINIMUM_REQUIRED( VERSION 3.3 )
+
+SET(UNIT_TESTS unit_tests)
+PROJECT( ${UNIT_TESTS} )
+
+FILE(GLOB SOURCES *.cpp)
+FILE(GLOB HEADERS *.h)
+
+# These files are not included even if terminalGUI is built with BUILD_TEST_TOOLS=1,
+# including them once again for now as a workaround
+LIST (APPEND SOURCES
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BDM_mainthread.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BDM_Server.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BitcoinP2P.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/Blockchain.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainScanner.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainScanner_Super.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockDataMap.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockDataViewer.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockObj.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockUtils.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BtcWallet.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/DatabaseBuilder.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/HistoryPager.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/LedgerEntry.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/nodeRPC.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/Progress.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/ScrAddrFilter.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/ScrAddrObj.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/Server.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/SshParser.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/StoredBlockObj.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/txio.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/ZeroConf.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/gtest/NodeUnitTest.cpp
+   )
+
+INCLUDE_DIRECTORIES( ${BLOCKSETTLE_UI_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES( ${BS_NETWORK_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES( ${COMMON_LIB_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES( ${CRYPTO_LIB_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES( ${WALLET_LIB_INCLUDE_DIR} )
+
+INCLUDE_DIRECTORIES( ${BS_COMMUNICATION_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES( ${PATH_TO_GENERATED} )
+
+INCLUDE_DIRECTORIES( ${NETTY_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES( ${BS_COMMON_ENUMS_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES( ${BS_TERMINAL_API_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES( ${MARKET_ENUMS_INCLUDE_DIR} )
+
+ADD_EXECUTABLE( ${UNIT_TESTS}
+   ${SOURCES}
+   ${HEADERS}
+   )
+
+TARGET_COMPILE_DEFINITIONS( ${UNIT_TESTS} PRIVATE
+   SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG
+   COINBASE_MATURITY_TESTS
+   )
+
+IF( WIN32 )
+   find_library(BLOCKSETTLE_UI_LIB NAMES ${BLOCKSETTLE_UI_LIBRARY_NAME} PATHS ${BS_GUI_BUILD_PATH})
+   find_library(BS_NETWORK_LIB NAMES ${BS_NETWORK_LIB_NAME} PATHS ${BS_GUI_BUILD_PATH})
+   find_library(CPP_WALLET_LIB NAMES ${CPP_WALLET_LIB_NAME} PATHS ${BS_GUI_BUILD_PATH})
+   find_library(CRYPTO_LIB NAMES ${CRYPTO_LIB_NAME} PATHS ${BS_GUI_BUILD_PATH})
+   find_library(COMMON_LIB NAMES ${COMMON_LIB_NAME} PATHS ${BS_GUI_BUILD_PATH})
+   find_library(AUTH_PROTO_LIB NAMES ${AUTH_PROTO_LIB_NAME} PATHS ${BS_GUI_BUILD_PATH})
+   find_library(BS_PROTO_LIB NAMES ${BS_PROTO_LIB_NAME} PATHS ${BS_GUI_BUILD_PATH})
+   find_library(CELER_PROTO_LIB NAMES ${CELER_PROTO_LIB_NAME} PATHS ${BS_GUI_BUILD_PATH})
+   find_library(COMMON_UI_LIB NAMES ${COMMON_UI_LIB_NAME} PATHS ${BS_GUI_BUILD_PATH})
+ELSE( WIN32 )
+   find_library(BLOCKSETTLE_UI_LIB NAMES lib${BLOCKSETTLE_UI_LIBRARY_NAME}.a PATHS ${BS_GUI_BUILD_PATH})
+   find_library(BS_NETWORK_LIB NAMES lib${BS_NETWORK_LIB_NAME}.a PATHS ${BS_GUI_BUILD_PATH})
+   find_library(CPP_WALLET_LIB NAMES lib${CPP_WALLET_LIB_NAME}.a PATHS ${BS_GUI_BUILD_PATH})
+   find_library(CRYPTO_LIB NAMES lib${CRYPTO_LIB_NAME}.a PATHS ${BS_GUI_BUILD_PATH})
+   find_library(COMMON_LIB NAMES lib${COMMON_LIB_NAME}.a PATHS ${BS_GUI_BUILD_PATH})
+   find_library(AUTH_PROTO_LIB NAMES lib${AUTH_PROTO_LIB_NAME}.a PATHS ${BS_GUI_BUILD_PATH})
+   find_library(BS_PROTO_LIB NAMES lib${BS_PROTO_LIB_NAME}.a PATHS ${BS_GUI_BUILD_PATH})
+   find_library(CELER_PROTO_LIB NAMES lib${CELER_PROTO_LIB_NAME}.a PATHS ${BS_GUI_BUILD_PATH})
+   find_library(COMMON_UI_LIB NAMES lib${COMMON_UI_LIB_NAME}.a PATHS ${BS_GUI_BUILD_PATH})
+ENDIF( WIN32 )
+
+IF( NOT BLOCKSETTLE_UI_LIB )
+   MESSAGE( FATAL_ERROR "terminalGUI libs not found" )
+ENDIF( NOT BLOCKSETTLE_UI_LIB )
+
+TARGET_LINK_LIBRARIES( ${UNIT_TESTS}
+   ${BLOCKSETTLE_UI_LIB}
+   ${BS_NETWORK_LIB}
+   ${CPP_WALLET_LIB}
+   ${CRYPTO_LIB}
+   ${LIBBTC_LIB}
+   ${MPIR_LIB}
+   ${BOTAN_LIB}
+   ${COMMON_LIB}
+   ${PROTO_LIB}
+   ${ZMQ_LIB}
+   ${GTEST_LIB}
+   ${AUTH_PROTO_LIB}
+   ${BS_PROTO_LIB}
+   ${CELER_PROTO_LIB}
+   ${QRENCODE_LIB}
+   ${QT_LINUX_LIBS}
+   ${WS_LIB}
+   ${COMMON_UI_LIB}
+   Qt5::Qml
+   Qt5::Core
+   Qt5::Widgets
+   Qt5::Gui
+   Qt5::Network
+   Qt5::Core
+   Qt5::Sql
+   Qt5::Charts
+   Qt5::DBus
+   Qt5::PrintSupport
+   ${OS_SPECIFIC_LIBS}
+   ${OPENSSL_LIBS}
+   )
+
+TARGET_INCLUDE_DIRECTORIES( ${UNIT_TESTS}
+   PRIVATE ${BOTAN_INCLUDE_DIR}
+)
