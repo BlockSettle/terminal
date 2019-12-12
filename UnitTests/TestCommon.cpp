@@ -165,7 +165,7 @@ TEST(TestCommon, UtxoReservation)
    EXPECT_FALSE(ur.filter("wallet", filtered));
    EXPECT_EQ(filtered.size(), nbUtxos);
 
-   bs::UtxoReservation::init();
+   bs::UtxoReservation::init(StaticLogger::loggerPtr);
    const auto adapter = std::make_shared<bs::UtxoReservation::Adapter>();
    ASSERT_NE(adapter, nullptr);
    EXPECT_TRUE(bs::UtxoReservation::addAdapter(adapter));
