@@ -387,15 +387,15 @@ function createNewWalletDialog(data) {
         dlgCreateWallet.open()
     })
 
-    var onControlPasswordFinished = function(password){
+    var onControlPasswordFinished = function(dlg, password){
         walletsProxy.sendControlPassword(password)
+        dlg.setNextChainDialog(dlgNewSeed);
         dlgNewSeed.open()
     }
 
     // Fixme, 2 == new pass requested
     if (qmlFactory.controlPasswordStatus() === 2) {
         var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
-        controlPasswordDialog.setNextChainDialog(dlgNewSeed)
         return controlPasswordDialog
     }
     else {
@@ -407,15 +407,15 @@ function createNewWalletDialog(data) {
 function importWalletDialog(data) {
     var dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
 
-    var onControlPasswordFinished = function(password){
+    var onControlPasswordFinished = function(dlg, password){
         walletsProxy.sendControlPassword(password)
+        dlg.setNextChainDialog(dlgImp);
         dlgImp.open()
     }
 
     // Fixme, 2 == new pass requested
     if (qmlFactory.controlPasswordStatus() === 2) {
         var controlPasswordDialog =  createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
-        controlPasswordDialog.setNextChainDialog(dlgImp)
         return controlPasswordDialog
     }
     else {
@@ -660,11 +660,11 @@ function createControlPasswordDialog(jsCallback, controlPasswordStatus) {
     }
     else {
         dlg.bsAccepted.connect(function() {
-            jsCallback(dlg.passwordData)
+            jsCallback(dlg, dlg.passwordData)
         })
 
         dlg.bsRejected.connect(function() {
-            jsCallback("")
+            jsCallback(dlg, "")
         })
     }
 
