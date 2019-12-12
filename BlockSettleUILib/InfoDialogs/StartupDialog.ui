@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>StartupDialog</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_5">
+  <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
     <number>5</number>
    </property>
@@ -95,7 +95,7 @@
           <string>SELECT ENVIRONMENT CONNECTIVITY</string>
          </property>
          <property name="h5" stdset="0">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <property name="spacing">
@@ -131,7 +131,7 @@ Our default configuration will connect you to our supernode cluster (Production 
              <bool>true</bool>
             </property>
             <property name="h5" stdset="0">
-             <bool>true</bool>
+             <bool>false</bool>
             </property>
            </widget>
           </item>
@@ -150,7 +150,7 @@ Our default configuration will connect you to our supernode cluster (Production 
           <enum>QFrame::Sunken</enum>
          </property>
          <property name="lineWidth">
-          <number>1</number>
+          <number>0</number>
          </property>
          <property name="midLineWidth">
           <number>0</number>
@@ -172,59 +172,40 @@ Our default configuration will connect you to our supernode cluster (Production 
            <number>0</number>
           </property>
           <item>
-           <widget class="QLabel" name="headerNetwotkType">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
-            </property>
-            <property name="text">
-             <string>NETWORK TYPE</string>
-            </property>
-            <property name="margin">
-             <number>2</number>
-            </property>
-            <property name="h5" stdset="0">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QListWidget" name="envConnectivityListWidget">
-            <property name="minimumSize">
-             <size>
-              <width>560</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Plain</enum>
+           <widget class="QTableView" name="envConnectivityListView">
+            <property name="horizontalScrollBarPolicy">
+             <enum>Qt::ScrollBarAsNeeded</enum>
             </property>
             <property name="alternatingRowColors">
              <bool>true</bool>
             </property>
-            <property name="spacing">
-             <number>0</number>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::SingleSelection</enum>
             </property>
-            <property name="itemAlignment">
-             <set>Qt::AlignLeading</set>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectRows</enum>
+            </property>
+            <property name="textElideMode">
+             <enum>Qt::ElideNone</enum>
+            </property>
+            <property name="showGrid">
+             <bool>false</bool>
+            </property>
+            <property name="cornerButtonEnabled">
+             <bool>false</bool>
             </property>
             <property name="h5" stdset="0">
              <bool>true</bool>
             </property>
+            <attribute name="horizontalHeaderVisible">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="horizontalHeaderStretchLastSection">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
            </widget>
           </item>
          </layout>

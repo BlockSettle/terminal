@@ -580,9 +580,8 @@ bool BSTerminalMainWindow::showStartupDialog()
       return false;
    }
 
-   // Ueed update armory settings if case user selects TestNet
-   NetworkType selectedNetwork = startupDialog.getSelectedNetworkType();
-   applicationSettings_->set(ApplicationSettings::netType, static_cast<int>(selectedNetwork));
+   // Need update armory settings if case user selects TestNet
+   startupDialog.applySelectedConnectivity(armoryServersProvider_);
    applicationSettings_->selectNetwork();
 
    return true;
@@ -1145,12 +1144,12 @@ void BSTerminalMainWindow::setupMenu()
 
 #ifndef Q_OS_MAC
    ui_->horizontalFrame->hide();
-   ui_->menubar->setCornerWidget(ui_->pushButtonUser);
+   ui_->menubar->setCornerWidget(ui_->loginGroupWidget);
 #endif
 
-   auto EnvType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::netType).toInt());
-   if (EnvType != ApplicationSettings::EnvConfiguration::Test) {
-      ui_->horizontalTestEnvWidget->hide();
+   auto EnvType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+   if (EnvType == ApplicationSettings::EnvConfiguration::Production) {
+      ui_->testEnvSettings->hide();
    }
 }
 
