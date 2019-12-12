@@ -63,7 +63,7 @@ ENDIF()
 
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
-SET(TERMINAL_GUI_ROOT ${CMAKE_SOURCE_DIR}/terminalGUI)
+SET(TERMINAL_GUI_ROOT ${CMAKE_SOURCE_DIR})
 
 set(CMAKE_MODULE_PATH "${TERMINAL_GUI_ROOT}/common/build_scripts/CMakeModules")
 
@@ -356,6 +356,25 @@ FIND_LIBRARY( MPIR_LIB NAMES ${MPIR_LIB_NAME} PATHS ${MPIR_LIB_DIR} NO_DEFAULT_P
 IF( NOT MPIR_LIB)
    MESSAGE( FATAL_ERROR "Could not find MPIR lib in ${MPIR_LIB_DIR}")
 ENDIF()
+
+IF(BUILD_TESTS)
+   SET(GTEST_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/Gtest)
+   INCLUDE_DIRECTORIES( ${GTEST_PACKAGE_ROOT}/include )
+   SET(GTEST_LIB_DIR ${GTEST_PACKAGE_ROOT}/lib)
+   IF (WIN32)
+      IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
+         SET(GTEST_LIB_NAME gtestd gtest_maind)
+      ELSE ("Debug")
+         SET(GTEST_LIB_NAME gtest gtest_main)
+      ENDIF ("Debug")
+   ELSE(WIN32)
+      SET(GTEST_LIB_NAME libgtest.a libgtest_main.a)
+   ENDIF(WIN32)
+   FIND_LIBRARY( GTEST_LIB NAMES ${GTEST_LIB_NAME} PATHS ${GTEST_LIB_DIR} NO_DEFAULT_PATH )
+   IF( NOT GTEST_LIB)
+      MESSAGE( FATAL_ERROR "Could not find Gtest lib in ${GTEST_LIB_DIR}")
+   ENDIF()
+ENDIF(BUILD_TESTS)
 
 # setup protobuf
 SET( CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${THIRD_PARTY_COMMON_DIR}/Protobuf )
@@ -820,20 +839,23 @@ ELSE() # Static version
 ENDIF()
 
 
-ADD_SUBDIRECTORY( terminalGUI/common/Blocksettle_proto )
-ADD_SUBDIRECTORY( terminalGUI/Celer )
-ADD_SUBDIRECTORY( terminalGUI/AuthAPI )
+ADD_SUBDIRECTORY( common/Blocksettle_proto )
+ADD_SUBDIRECTORY( Celer )
+ADD_SUBDIRECTORY( AuthAPI )
 
-ADD_SUBDIRECTORY(terminalGUI/BlockSettleUILib)
-ADD_SUBDIRECTORY(terminalGUI/common/BlocksettleNetworkingLib)
-ADD_SUBDIRECTORY(terminalGUI/common/WalletsLib)
-ADD_SUBDIRECTORY(terminalGUI/common/cppForSwig)
-ADD_SUBDIRECTORY(terminalGUI/common/CommonLib)
-ADD_SUBDIRECTORY(terminalGUI/CommonUI)
+ADD_SUBDIRECTORY(BlockSettleUILib)
+ADD_SUBDIRECTORY(common/BlocksettleNetworkingLib)
+ADD_SUBDIRECTORY(common/WalletsLib)
+ADD_SUBDIRECTORY(common/cppForSwig)
+ADD_SUBDIRECTORY(common/CommonLib)
+ADD_SUBDIRECTORY(CommonUI)
 
 ADD_SUBDIRECTORY(BlockSettleApp)
 ADD_SUBDIRECTORY(BlockSettleSigner)
 
+IF(BUILD_TESTS)
+   ADD_SUBDIRECTORY(UnitTests)
+ENDIF(BUILD_TESTS)
 
 MESSAGE("3rd party root   : ${THIRD_PARTY_COMMON_DIR}")
 MESSAGE("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")

@@ -1,0 +1,224 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="ICON_STATUS_OFFLINE">resources/status_offline_2.png</file>
+        <file alias="ICON_STATUS_ERROR">resources/status_error_2.png</file>
+        <file alias="ICON_STATUS_ONLINE">resources/status_online_2.png</file>
+        <file alias="ICON_STATUS_CONNECTING">resources/status_connecting_2.png</file>
+        <file alias="ICON_MSG_STATUS_OFFLINE">resources/msg_status_offline_2.png</file>
+        <file alias="ICON_MSG_STATUS_ONLINE">resources/msg_status_online_2.png</file>
+        <file alias="ICON_MSG_STATUS_CONNECTING">resources/msg_status_connecting_2.png</file>
+        <file alias="ICON_MSG_STATUS_READ">resources/msg_status_read_2.png</file>
+        <file>resources/preferences-system.png</file>
+        <file>resources/preferences-system-network.png</file>
+        <file>resources/Raleway/Raleway-Regular.ttf</file>
+        <file>resources/Raleway/Raleway-Italic.ttf</file>
+        <file>resources/Raleway/Raleway-Medium.ttf</file>
+        <file>resources/Raleway/Raleway-MediumItalic.ttf</file>
+        <file>resources/Raleway/Raleway-Light.ttf</file>
+        <file>resources/Raleway/Raleway-LightItalic.ttf</file>
+        <file>resources/Raleway/Raleway-SemiBold.ttf</file>
+        <file>resources/Raleway/Raleway-SemiBoldItalic.ttf</file>
+        <file>resources/Raleway/Raleway-Thin.ttf</file>
+        <file>resources/Raleway/Raleway-ThinItalic.ttf</file>
+        <file>resources/Raleway/Raleway-ExtraLight.ttf</file>
+        <file>resources/Raleway/Raleway-ExtraLightItalic.ttf</file>
+        <file>resources/Raleway/Raleway-Bold.ttf</file>
+        <file>resources/Raleway/Raleway-BoldItalic.ttf</file>
+        <file>resources/Raleway/Raleway-ExtraBold.ttf</file>
+        <file>resources/Raleway/Raleway-ExtraBoldItalic.ttf</file>
+        <file>resources/Raleway/Raleway-Black.ttf</file>
+        <file>resources/Raleway/Raleway-BlackItalic.ttf</file>
+        <file>resources/dropdown-arrow.png</file>
+        <file>resources/dropdown-arrow@1.5x.png</file>
+        <file>resources/dropdown-arrow@2x.png</file>
+        <file>resources/tick.png</file>
+        <file>resources/tick@1.5x.png</file>
+        <file>resources/tick@2x.png</file>
+        <file>resources/calendar.png</file>
+        <file>resources/calendar@1.5x.png</file>
+        <file>resources/calendar@2x.png</file>
+        <file>resources/search.png</file>
+        <file>resources/search@1.5x.png</file>
+        <file>resources/search@2x.png</file>
+        <file>resources/left-arrow.png</file>
+        <file>resources/left-arrow@1.5x.png</file>
+        <file>resources/left-arrow@2x.png</file>
+        <file>resources/right-arrow.png</file>
+        <file>resources/right-arrow@1.5x.png</file>
+        <file>resources/right-arrow@2x.png</file>
+        <file>resources/brand-logo.png</file>
+        <file>resources/brand-logo@1.5x.png</file>
+        <file>resources/brand-logo@2x.png</file>
+        <file>resources/brand-logo.svg</file>
+        <file>resources/login-logo.png</file>
+        <file>resources/login-logo@1.5x.png</file>
+        <file>resources/login-logo@2x.png</file>
+        <file>resources/close-icon.png</file>
+        <file>resources/close-icon@1.5x.png</file>
+        <file>resources/close-icon@2x.png</file>
+        <file>resources/ios-infinity.ttf</file>
+        <file>resources/progress-bar-pattern.png</file>
+        <file alias="SPLASH_LOGO">resources/splashlogo_splashscreen.png</file>
+        <file alias="ICON_BITCOIN">resources/bitcoin-main-net.png</file>
+        <file alias="ICON_BITCOIN_2X">resources/bitcoin-main-net@2x.png</file>
+        <file alias="ICON_BITCOIN_GRAY">resources/bitcoin-disabled.png</file>
+        <file alias="ICON_BITCOIN_ENABLED">resources/bitcoin-enabled.png</file>
+        <file alias="ICON_BITCOIN_ERROR">resources/bitcoin-error.png</file>
+        <file alias="ICON_BS_16">resources/clearing-connection-blocksettle.png</file>
+        <file alias="ICON_BS_24">resources/clearing-connection-blocksettle@1.5x.png</file>
+        <file alias="ICON_BS_32">resources/clearing-connection-blocksettle@2x.png</file>
+        <file alias="ICON_BS_16_GRAY">resources/clearing-connection-disabled.png</file>
+        <file alias="ICON_BS_24_GRAY">resources/clearing-connection-disabled@1.5x.png</file>
+        <file alias="ICON_BS_32_GRAY">resources/clearing-connection-disabled@2x.png</file>
+        <file alias="ICON_BITCOIN_TESTNET">resources/bitcoin-test-net.png</file>
+        <file alias="STYLESHEET">Stylesheet/stylesheet.css</file>
+        <file>resources/SourceSansPro-Bold.ttf</file>
+        <file>resources/SourceSansPro-BoldItalic.ttf</file>
+        <file>resources/SourceSansPro-Italic.ttf</file>
+        <file>resources/SourceSansPro-Light.ttf</file>
+        <file>resources/SourceSansPro-Regular.ttf</file>
+        <file>resources/SourceSansPro-Semibold.ttf</file>
+        <file>resources/right-arrow-black.png</file>
+        <file>resources/right-arrow-black@1.5x.png</file>
+        <file>resources/right-arrow-black@2x.png</file>
+        <file>resources/left-arrow-black.png</file>
+        <file>resources/left-arrow-black@1.5x.png</file>
+        <file>resources/left-arrow-black@2x.png</file>
+        <file alias="ICON_DOT">resources/dot.png</file>
+        <file>resources/down-arrow.png</file>
+        <file>resources/down-arrow@1.5x.png</file>
+        <file>resources/down-arrow@2x.png</file>
+        <file>resources/up-arrow.png</file>
+        <file>resources/up-arrow@1.5x.png</file>
+        <file>resources/up-arrow@2x.png</file>
+        <file>resources/copy.png</file>
+        <file>resources/copy@1.5x.png</file>
+        <file>resources/copy@2x.png</file>
+        <file>resources/new-link.png</file>
+        <file>resources/new-link@1.5x.png</file>
+        <file>resources/new-link@2x.png</file>
+        <file alias="FULL_LOGO">resources/logo.png</file>
+        <file>resources/logo@1.5x.png</file>
+        <file>resources/logo@2x.png</file>
+        <file>resources/logo-print-85px-300ppi.png</file>
+        <file alias="ICON_SYSTEM">resources/com-window-script.png</file>
+        <file>resources/com-window-script@1.5x.png</file>
+        <file>resources/com-window-script@2x.png</file>
+        <file alias="ICON_LOCATION">resources/loc-latitude.png</file>
+        <file>resources/loc-latitude@1.5x.png</file>
+        <file>resources/loc-latitude@2x.png</file>
+        <file alias="ICON_CONTACT">resources/tel-headset-generic.png</file>
+        <file>resources/tel-headset-generic@1.5x.png</file>
+        <file>resources/tel-headset-generic@2x.png</file>
+        <file alias="ICON_ABOUT">resources/ui-fingerprint.png</file>
+        <file>resources/ui-fingerprint@1.5x.png</file>
+        <file>resources/ui-fingerprint@2x.png</file>
+        <file>resources/radio-button-active.png</file>
+        <file>resources/radio-button-active@2x.png</file>
+        <file>resources/radio-button.png</file>
+        <file>resources/radio-button@2x.png</file>
+        <file>resources/edit.png</file>
+        <file>resources/edit@2x.png</file>
+        <file>resources/login-icon.png</file>
+        <file>resources/login-icon@1.5x.png</file>
+        <file>resources/login-icon@2x.png</file>
+        <file>resources/password-icon.png</file>
+        <file>resources/password-icon@1.5x.png</file>
+        <file>resources/password-icon@2x.png</file>
+        <file>resources/username-icon.png</file>
+        <file>resources/username-icon@1.5x.png</file>
+        <file>resources/username-icon@2x.png</file>
+        <file>resources/ios-infinity-glyph.ttf</file>
+        <file>resources/bpk_contacts-2.svg</file>
+        <file>resources/bpk_contacts-2-white.svg</file>
+        <file>resources/username-white.png</file>
+        <file>resources/username-white@2x.png</file>
+        <file>resources/general-settings.png</file>
+        <file>resources/general-settings@1.5x.png</file>
+        <file>resources/general-settings@2x.png</file>
+        <file>resources/dealing.png</file>
+        <file>resources/dealing@1.5x.png</file>
+        <file>resources/dealing@2x.png</file>
+        <file>resources/network.png</file>
+        <file>resources/network@1.5x.png</file>
+        <file>resources/network@2x.png</file>
+        <file>resources/dealing-selected.png</file>
+        <file>resources/dealing-selected@1.5x.png</file>
+        <file>resources/dealing-selected@2x.png</file>
+        <file>resources/general-settings-selected.png</file>
+        <file>resources/general-settings-selected@1.5x.png</file>
+        <file>resources/general-settings-selected@2x.png</file>
+        <file>resources/network-selected.png</file>
+        <file>resources/network-selected@1.5x.png</file>
+        <file>resources/network-selected@2x.png</file>
+        <file>resources/sign.png</file>
+        <file>resources/sign@2x.png</file>
+        <file>resources/sign@3x.png</file>
+        <file alias="TEMPLATE_WALLET_BACKUP">resources/wallet_backup_template.html</file>
+        <file>resources/wallet_backup.png</file>
+        <file>resources/wallet_backup@2x.png</file>
+        <file>resources/wallet_create.png</file>
+        <file>resources/wallet_create@2x.png</file>
+        <file>resources/wallet_import.png</file>
+        <file>resources/wallet_import@2x.png</file>
+        <file>resources/wallet_verify.png</file>
+        <file>resources/wallet_verify@2x.png</file>
+        <file>resources/wallet_warning.png</file>
+        <file>resources/wallet_warning@2x.png</file>
+        <file>resources/notification_critical.png</file>
+        <file>resources/notification_critical@2x.png</file>
+        <file>resources/notification_info.png</file>
+        <file>resources/notification_info@2x.png</file>
+        <file>resources/notification_question.png</file>
+        <file>resources/notification_question@2x.png</file>
+        <file>resources/notification_success.png</file>
+        <file>resources/notification_success@2x.png</file>
+        <file>resources/notification_warning.png</file>
+        <file>resources/notification_warning@2x.png</file>
+        <file>resources/logo_print-160px-300ppi.png</file>
+        <file>resources/logo_print-250px-300ppi.png</file>
+        <file alias="ICON_BS_16_TESTNET">resources/clearing-connection-test-net.png</file>
+        <file alias="ICON_BS_24_TESTNET">resources/clearing-connection-test-net@1.5x.png</file>
+        <file alias="ICON_BS_32_TESTNET">resources/clearing-connection-test-net@2x.png</file>
+        <file>resources/wallet_no.png</file>
+        <file>resources/wallet_no@2x.png</file>
+        <file>resources/intermediate-check.png</file>
+        <file>resources/intermediate-check@1.5x.png</file>
+        <file>resources/intermediate-check@2x.png</file>
+        <file>resources/intermediate-check2.png</file>
+        <file>resources/intermediate-check2@1.5x.png</file>
+        <file>resources/intermediate-check2@2x.png</file>
+        <file>resources/cog-animation.gif</file>
+        <file>resources/cog-animation_white.gif</file>
+        <file>resources/up-arrow-primary.png</file>
+        <file>resources/up-arrow-primary@1.5x.png</file>
+        <file>resources/up-arrow-primary@2x.png</file>
+        <file>resources/down-arrow-primary.png</file>
+        <file>resources/down-arrow-primary@1.5x.png</file>
+        <file>resources/down-arrow-primary@2x.png</file>
+        <file>resources/radio-button-disabled.png</file>
+        <file>resources/radio-button-disabled@2x.png</file>
+        <file>resources/license.txt</file>
+        <file>resources/md_license.html</file>
+        <file>resources/cancel.png</file>
+        <file>resources/cancel@2x.png</file>
+        <file>resources/finger.png</file>
+        <file>resources/finger@2x.png</file>
+        <file>resources/PublicKeys/pub_prod.key</file>
+        <file>resources/PublicKeys/pub_uat.key</file>
+        <file>resources/PublicKeys/pub_staging.key</file>
+        <file>resources/PublicKeys/chat_prod.key</file>
+        <file>resources/PublicKeys/chat_uat.key</file>
+        <file>resources/PublicKeys/chat_staging.key</file>
+        <file>resources/PublicKeys/proxy_prod.key</file>
+        <file>resources/PublicKeys/proxy_uat.key</file>
+        <file>resources/PublicKeys/proxy_staging.key</file>
+        <file>resources/eye.png</file>
+        <file>resources/getstarted-manual@2x.png</file>
+        <file>resources/getstarted-manual.png</file>
+        <file>resources/getstarted-trading@2x.png</file>
+        <file>resources/getstarted-trading.png</file>
+        <file>resources/getstarted-wallet@2x.png</file>
+        <file>resources/getstarted-wallet.png</file>
+    </qresource>
+</RCC>
