@@ -63,7 +63,7 @@ ENDIF()
 
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
-SET(TERMINAL_GUI_ROOT ${CMAKE_SOURCE_DIR}/terminalGUI)
+SET(TERMINAL_GUI_ROOT ${CMAKE_SOURCE_DIR})
 
 set(CMAKE_MODULE_PATH "${TERMINAL_GUI_ROOT}/common/build_scripts/CMakeModules")
 
@@ -820,16 +820,16 @@ ELSE() # Static version
 ENDIF()
 
 
-ADD_SUBDIRECTORY( terminalGUI/common/Blocksettle_proto )
-ADD_SUBDIRECTORY( terminalGUI/Celer )
-ADD_SUBDIRECTORY( terminalGUI/AuthAPI )
+ADD_SUBDIRECTORY( common/Blocksettle_proto )
+ADD_SUBDIRECTORY( Celer )
+ADD_SUBDIRECTORY( AuthAPI )
 
-ADD_SUBDIRECTORY(terminalGUI/BlockSettleUILib)
-ADD_SUBDIRECTORY(terminalGUI/common/BlocksettleNetworkingLib)
-ADD_SUBDIRECTORY(terminalGUI/common/WalletsLib)
-ADD_SUBDIRECTORY(terminalGUI/common/cppForSwig)
-ADD_SUBDIRECTORY(terminalGUI/common/CommonLib)
-ADD_SUBDIRECTORY(terminalGUI/CommonUI)
+ADD_SUBDIRECTORY(BlockSettleUILib)
+ADD_SUBDIRECTORY(common/BlocksettleNetworkingLib)
+ADD_SUBDIRECTORY(common/WalletsLib)
+ADD_SUBDIRECTORY(common/cppForSwig)
+ADD_SUBDIRECTORY(common/CommonLib)
+ADD_SUBDIRECTORY(CommonUI)
 
 ADD_SUBDIRECTORY(BlockSettleApp)
 ADD_SUBDIRECTORY(BlockSettleSigner)

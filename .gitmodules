@@ -1,3 +1,9 @@
-[submodule "terminalGUI"]
-	path = terminalGUI
-	url = https://github.com/BlockSettle/terminalGUI
+[submodule "Celer"]
+	path = Celer
+	url = git@github.com:BlockSettle/Celer.git
+[submodule "common"]
+	path = common
+	url = git@github.com:BlockSettle/common.git
+[submodule "AuthAPI"]
+	path = AuthAPI
+	url = https://github.com/autheid/AuthAPI.git

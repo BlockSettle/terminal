@@ -9,8 +9,8 @@ import sys
 if sys.platform == "darwin":
    os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.12'
 
-sys.path.insert(0, os.path.join('terminalGUI', 'common'))
-sys.path.insert(0, os.path.join('terminalGUI', 'common', 'build_scripts'))
+sys.path.insert(0, os.path.join('common'))
+sys.path.insert(0, os.path.join('common', 'build_scripts'))
 
 from build_scripts.settings               import Settings
 from build_scripts.protobuf_settings      import ProtobufSettings
