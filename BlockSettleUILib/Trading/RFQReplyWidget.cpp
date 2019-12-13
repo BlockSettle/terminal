@@ -186,9 +186,11 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    connect(quoteProvider_.get(), &QuoteProvider::quoteNotifCancelled, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteNotifCancelled);
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQReplyWidget::onSignTxRequested);
 
-   ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);
    ui_->treeViewOrders->initWithModel(orderListModel);
+   ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::Interactive);
+   ui_->treeViewOrders->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+
 
    connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQReplyWidget::onConnectedToCeler);
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQReplyWidget::onDisconnectedFromCeler);
