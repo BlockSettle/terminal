@@ -12,10 +12,11 @@
 
 #include <QFile>
 #include <QScreen>
+#include <QStandardItemModel>
 
 #include "ApplicationSettings.h"
 #include "ui_StartupDialog.h"
-
+#include "ArmoryServersProvider.h"
 
 namespace {
    const char *kLicenseFilePath = "://resources/license.txt";
@@ -28,6 +29,7 @@ namespace {
    const QString kBackButton = QObject::tr("Back");
    const QString kDoneButton = QObject::tr("Done");
 
+   const QString kNetworkType = QObject::tr("NETWORK TYPE");
    const QString kProductionConnectivity = QObject::tr("BlockSettle Production Environment");
    const QString kTestConnectivity = QObject::tr("BlockSettle Test Environment");
 }
@@ -41,7 +43,7 @@ StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
 
    connect(ui_->pushButtonBack, &QPushButton::clicked, this, &StartupDialog::onBack);
    connect(ui_->pushButtonNext, &QPushButton::clicked, this, &StartupDialog::onNext);
-   connect(ui_->envConnectivityListWidget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &StartupDialog::onConnectivitySelectionChanged);
+   connect(ui_->envConnectivityListView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &StartupDialog::onConnectivitySelectionChanged);
    ui_->stackedWidget->setCurrentIndex(showLicense_ ? Pages::LicenseAgreement : Pages::Settings);
 
    QFile file;
@@ -65,12 +67,12 @@ void StartupDialog::init(const std::shared_ptr<ApplicationSettings> &appSettings
 
 NetworkType StartupDialog::getSelectedNetworkType() const
 {
-   if (ui_->envConnectivityListWidget->selectedItems().isEmpty()) {
+   if (!ui_->envConnectivityListView->selectionModel()->hasSelection()) {
       return NetworkType::Invalid;
    }
 
-   const auto *selectedItem = ui_->envConnectivityListWidget->selectedItems()[0];
-   const int selectedIndex = ui_->envConnectivityListWidget->row(selectedItem);
+   auto selectedItem = ui_->envConnectivityListView->selectionModel()->selectedRows()[0];
+   const int selectedIndex = selectedItem.row();
 
    if (selectedIndex == 0) {
       return NetworkType::MainNet;
@@ -78,6 +80,27 @@ NetworkType StartupDialog::getSelectedNetworkType() const
    else {
       return NetworkType::TestNet;
    }
+}
+
+void StartupDialog::applySelectedConnectivity(std::shared_ptr<ArmoryServersProvider> &armoryServersProvider)
+{
+   NetworkType network = getSelectedNetworkType();
+
+   auto servers = armoryServersProvider->servers();
+   int selectedIndex = 0;
+   for (; selectedIndex < servers.size(); ++selectedIndex) {
+      auto &server = servers[selectedIndex];
+      if (server.name == QString::fromLatin1(ARMORY_BLOCKSETTLE_NAME) && server.netType == network) {
+         break;
+      }
+   }
+   assert(selectedIndex != servers.size());
+   armoryServersProvider->setupServer(selectedIndex);
+
+   ApplicationSettings::EnvConfiguration envConfig = (network == NetworkType::TestNet) ?
+      ApplicationSettings::EnvConfiguration::Test : ApplicationSettings::EnvConfiguration::Production;
+   appSettings_->set(ApplicationSettings::envConfiguration, static_cast<int>(envConfig));
+   appSettings_->set(ApplicationSettings::initialized, true);
 }
 
 void StartupDialog::onBack()
@@ -104,7 +127,7 @@ void StartupDialog::onNext()
 
 void StartupDialog::onConnectivitySelectionChanged()
 {
-   ui_->pushButtonNext->setDisabled(ui_->envConnectivityListWidget->selectedItems().isEmpty());
+   ui_->pushButtonNext->setDisabled(!ui_->envConnectivityListView->selectionModel()->hasSelection());
 }
 
 void StartupDialog::updateStatus()
@@ -152,7 +175,14 @@ void StartupDialog::adjustPosition()
 
 void StartupDialog::setupConnectivityList()
 {
-   QListWidget *connectivity = ui_->envConnectivityListWidget;
+   ui_->envConnectivityListView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->envConnectivityListView->horizontalHeader()->setStretchLastSection(true);
 
-   connectivity->addItems({ kProductionConnectivity , kTestConnectivity });
+   auto *connectivity = ui_->envConnectivityListView;
+   auto *model = new QStandardItemModel(2, 1, connectivity);
+   model->setItem(0, new QStandardItem(kProductionConnectivity));
+   model->setItem(1, new QStandardItem(kTestConnectivity));
+   model->setHorizontalHeaderItem(0, new QStandardItem(kNetworkType));
+   connectivity->setModel(model);
+   connectivity->selectRow(1);
 }

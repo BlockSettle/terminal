@@ -21,6 +21,7 @@ namespace Ui {
 class StartupDialog;
 }
 class ApplicationSettings;
+class ArmoryServersProvider;
 
 class StartupDialog : public QDialog
 {
@@ -36,8 +37,7 @@ public:
   ~StartupDialog() override;
 
   void init(const std::shared_ptr<ApplicationSettings> &appSettings);
-
-  NetworkType getSelectedNetworkType() const;
+  void applySelectedConnectivity(std::shared_ptr<ArmoryServersProvider> &armoryServersProvider);
 
 private slots:
   void onBack();
@@ -48,6 +48,7 @@ private:
   void updateStatus();
   void adjustPosition();
   void setupConnectivityList();
+  NetworkType getSelectedNetworkType() const;
 
 private:
   std::unique_ptr<Ui::StartupDialog> ui_;
