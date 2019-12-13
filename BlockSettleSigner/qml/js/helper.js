@@ -387,15 +387,15 @@ function createNewWalletDialog(data) {
         dlgCreateWallet.open()
     })
 
-    var onControlPasswordFinished = function(password){
+    var onControlPasswordFinished = function(prevDialog, password){
         walletsProxy.sendControlPassword(password)
+        prevDialog.setNextChainDialog(dlgNewSeed)
         dlgNewSeed.open()
     }
 
     // Fixme, 2 == new pass requested
     if (qmlFactory.controlPasswordStatus() === 2) {
         var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
-        controlPasswordDialog.setNextChainDialog(dlgNewSeed)
         return controlPasswordDialog
     }
     else {
@@ -407,15 +407,15 @@ function createNewWalletDialog(data) {
 function importWalletDialog(data) {
     var dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
 
-    var onControlPasswordFinished = function(password){
+    var onControlPasswordFinished = function(prevDialog, password){
         walletsProxy.sendControlPassword(password)
+        prevDialog.setNextChainDialog(dlgImp)
         dlgImp.open()
     }
 
     // Fixme, 2 == new pass requested
     if (qmlFactory.controlPasswordStatus() === 2) {
         var controlPasswordDialog =  createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
-        controlPasswordDialog.setNextChainDialog(dlgImp)
         return controlPasswordDialog
     }
     else {
@@ -653,18 +653,19 @@ function createControlPasswordDialog(jsCallback, controlPasswordStatus) {
     // Accepted = 0;
     // Rejected = 1;
     // RequestedNew = 2;
+
     if (controlPasswordStatus === 0) {
         dlg.bsAccepted.connect(function() {
-            jsCallback(dlg.passwordDataOld, dlg.passwordData)
+            jsCallback(dlg, dlg.passwordDataOld, dlg.passwordData)
         })
     }
     else {
         dlg.bsAccepted.connect(function() {
-            jsCallback(dlg.passwordData)
+            jsCallback(dlg, dlg.passwordData)
         })
 
         dlg.bsRejected.connect(function() {
-            jsCallback("")
+            jsCallback(dlg, "")
         })
     }
 

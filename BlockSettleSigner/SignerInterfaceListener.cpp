@@ -660,8 +660,8 @@ void SignerInterfaceListener::onUpdateControlPasswordStatus(const std::string &d
    qmlFactory_->setControlPasswordStatus(static_cast<int>(evt.controlpasswordstatus()));
 
    if (evt.controlpasswordstatus() == signer::ControlPasswordStatus::Rejected) {
-      auto cb = new bs::signer::QmlCallback<bs::wallet::QPasswordData *>
-            ([this](bs::wallet::QPasswordData *passwordData){
+      auto cb = new bs::signer::QmlCallback<QObject *, bs::wallet::QPasswordData *>
+            ([this](QObject *, bs::wallet::QPasswordData *passwordData){
          signer::EnterControlPasswordRequest decryptEvent;
          if (passwordData) {
             decryptEvent.set_controlpassword(passwordData->binaryPassword().toBinStr());
