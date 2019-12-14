@@ -337,6 +337,7 @@ void BSTerminalMainWindow::LoadWallets()
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
       autoSignQuoteProvider_->setWalletsManager(walletsMgr_);
+      tryGetChatKeys();
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, [this] {
       walletsSynched_ = true;
