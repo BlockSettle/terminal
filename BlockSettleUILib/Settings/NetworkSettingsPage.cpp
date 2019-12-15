@@ -182,7 +182,11 @@ void NetworkSettingsPage::apply()
 void NetworkSettingsPage::onEnvSelected(int index)
 {
    auto env = ApplicationSettings::EnvConfiguration(index);
+#ifndef PRODUCTION_BUILD
    const bool isCustom = (env == ApplicationSettings::EnvConfiguration::Custom);
+#else
+   const bool isCustom = false;
+#endif
    ui_->lineEditCustomPubBridgeHost->setVisible(isCustom);
    ui_->spinBoxCustomPubBridgePort->setVisible(isCustom);
    ui_->labelCustomPubBridgeHost->setVisible(isCustom);

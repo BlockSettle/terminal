@@ -64,15 +64,19 @@ BinaryData PubKeyLoader::loadKeyFromResource(KeyType kt, ApplicationSettings::En
 
    switch (ec) {
    case ApplicationSettings::EnvConfiguration::Production:
-   case ApplicationSettings::EnvConfiguration::Custom:
       filename += QStringLiteral("prod");
       break;
    case ApplicationSettings::EnvConfiguration::Test:
       filename += QStringLiteral("uat");
       break;
+#ifndef PRODUCTION_BUILD
    case ApplicationSettings::EnvConfiguration::Staging:
       filename += QStringLiteral("staging");
       break;
+   case ApplicationSettings::EnvConfiguration::Custom:
+      filename += QStringLiteral("prod");
+      break;
+#endif
    }
    if (filename.isEmpty()) {
       return {};
