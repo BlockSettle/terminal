@@ -21,17 +21,17 @@
 namespace {
    const char *kLicenseFilePath = "://resources/license.txt";
    const QString kLicenseAgreementTitle = QObject::tr("License Agreement");
-   const QString kEnvConnectivityTitle = QObject::tr("BlockSettle Environment Connection");
+   const QString kEnvConnectivityTitle = QObject::tr("BlockSettle Environment");
 
    const QString kOkButton = QObject::tr("Ok");
    const QString kCancelButton = QObject::tr("Cancel");
    const QString kAgreeButton = QObject::tr("Agree");
    const QString kBackButton = QObject::tr("Back");
-   const QString kDoneButton = QObject::tr("Done");
+   const QString kDoneButton = QObject::tr("Continue");
 
-   const QString kNetworkType = QObject::tr("NETWORK TYPE");
-   const QString kProductionConnectivity = QObject::tr("BlockSettle Production Environment");
-   const QString kTestConnectivity = QObject::tr("BlockSettle Test Environment");
+   const QString kNetworkType = QObject::tr("ENVIRONMENT");
+   const QString kProductionConnectivity = QObject::tr("Production Environment");
+   const QString kTestConnectivity = QObject::tr("Test Environment");
 }
 
 StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :

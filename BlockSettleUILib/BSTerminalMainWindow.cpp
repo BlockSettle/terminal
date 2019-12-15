@@ -187,6 +187,11 @@ void BSTerminalMainWindow::onBsConnectionFailed()
    showError(tr("Network error"), tr("Connection to BlockSettle server failed"));
 }
 
+void BSTerminalMainWindow::onInitWalletDialogWasShown()
+{
+   initialWalletCreateDialogShown_ = true;
+}
+
 void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
 {
    if (!ccFileManager_) {
@@ -620,6 +625,7 @@ void BSTerminalMainWindow::InitWalletsView()
 {
    ui_->widgetWallets->init(logMgr_->logger("ui"), walletsMgr_, signContainer_
       , applicationSettings_, connectionManager_, assetManager_, authManager_, armory_);
+   connect(ui_->widgetWallets, &WalletsWidget::newWalletCreationRequest, this, &BSTerminalMainWindow::onInitWalletDialogWasShown);
 }
 
 void BSTerminalMainWindow::tryInitChatView()
@@ -755,8 +761,8 @@ void BSTerminalMainWindow::MainWinACT::onRefresh(const std::vector<BinaryData> &
       };
 
       parent_->addDeferredDialog(deferredDialog);
+      parent_->initialWalletCreateDialogShown_ = true;
    }
-   parent_->initialWalletCreateDialogShown_ = true;
 }
 
 void BSTerminalMainWindow::CompleteUIOnlineView()
@@ -953,6 +959,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
 
    if (!signContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(true, applicationSettings_, this);
+      onInitWalletDialogWasShown();
       if (newWalletDialog.exec() != QDialog::Accepted) {
          return false;
       }

@@ -523,6 +523,7 @@ void WalletsWidget::onNewWallet()
 {
    if (!signingContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(false, appSettings_, this);
+      emit newWalletCreationRequest();
       if (newWalletDialog.exec() != QDialog::Accepted ) {
          return;
       }

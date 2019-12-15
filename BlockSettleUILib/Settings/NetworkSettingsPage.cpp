@@ -187,4 +187,11 @@ void NetworkSettingsPage::onEnvSelected(int index)
    ui_->spinBoxCustomPubBridgePort->setVisible(isCustom);
    ui_->labelCustomPubBridgeHost->setVisible(isCustom);
    ui_->labelCustomPubBridgePort->setVisible(isCustom);
+
+   if (env == ApplicationSettings::EnvConfiguration::Production) {
+      ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfMainNetServer());
+   }
+   else {
+      ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfTestNetServer());
+   }
 }

@@ -69,13 +69,13 @@
      <widget class="QWidget" name="pageSettings">
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <property name="spacing">
-        <number>5</number>
+        <number>10</number>
        </property>
        <property name="leftMargin">
         <number>5</number>
        </property>
        <property name="topMargin">
-        <number>5</number>
+        <number>10</number>
        </property>
        <property name="rightMargin">
         <number>5</number>
@@ -92,7 +92,7 @@
           </font>
          </property>
          <property name="title">
-          <string>SELECT ENVIRONMENT CONNECTIVITY</string>
+          <string>SELECT ENVIRONMENT</string>
          </property>
          <property name="h5" stdset="0">
           <bool>false</bool>
@@ -118,9 +118,9 @@
             <property name="text">
              <string>Please select which environment you wish to connect. 
 
-BlockSettle Production environment concerns trading and settlement in real cash currencies and bitcoins. 
+BlockSettle's Production environment concerns trading and settlement in real cash currencies and bitcoins. 
 
-BlockSettles Test environment concerns trading in &quot;play&quot; money and testnet bitcoins. 
+BlockSettles's Test environment concerns trading in &quot;play&quot; money and testnet bitcoins. 
 
 Our default configuration will connect you to our supernode cluster (Production = Mainnet, Test = Testnet). Should you wish to connect to your own supernode, please configure this under network settings. </string>
             </property>
@@ -139,21 +139,9 @@ Our default configuration will connect you to our supernode cluster (Production 
         </widget>
        </item>
        <item>
-        <widget class="QFrame" name="connectivity">
+        <widget class="QWidget" name="connectivity" native="true">
          <property name="focusPolicy">
           <enum>Qt::StrongFocus</enum>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
-         </property>
-         <property name="lineWidth">
-          <number>0</number>
-         </property>
-         <property name="midLineWidth">
-          <number>0</number>
          </property>
          <layout class="QVBoxLayout" name="listLyt">
           <property name="spacing">
@@ -193,9 +181,6 @@ Our default configuration will connect you to our supernode cluster (Production 
             </property>
             <property name="cornerButtonEnabled">
              <bool>false</bool>
-            </property>
-            <property name="h5" stdset="0">
-             <bool>true</bool>
             </property>
             <attribute name="horizontalHeaderVisible">
              <bool>true</bool>

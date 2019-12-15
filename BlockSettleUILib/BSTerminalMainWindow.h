@@ -214,6 +214,8 @@ private slots:
 
    void onBsConnectionFailed();
 
+   void onInitWalletDialogWasShown();
+
 protected:
    void closeEvent(QCloseEvent* event) override;
    void changeEvent(QEvent* e) override;
