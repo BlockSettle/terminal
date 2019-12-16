@@ -25,8 +25,8 @@ CustomTitleDialogWindow {
     property string decryptHeaderText: qsTr("Enter Control Password")
 
     title: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
-               ? qsTr("Encrypt Wallets Storage")
-               : qsTr("Decrypt Wallets Storage")
+               ? qsTr("PUBLIC DATA ENCRYPTION")
+               : qsTr("PUBLIC DATA DECRYPTION")
 
     width: 350
     rejectable: false
@@ -60,12 +60,12 @@ CustomTitleDialogWindow {
                 text: qsTr("Your wallet files contain metadata such as your public keys (addresses), chatID and chat history. \
 With Public Data Encryption enabled you will be required to decrypt this material on each Terminal launch. \
 <br><br>THIS PASSWORD WILL BE USED FOR ALL WALLETS")
-                padding: 10
+                padding: 5
                 textFormat: Text.RichText
                 Layout.preferredWidth: root.width - 20
                 horizontalAlignment: Text.AlignLeft
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
+                Layout.leftMargin: 5
+                Layout.rightMargin: 5
 
                 onLinkActivated: Qt.openUrlExternally(link)
                 MouseArea {

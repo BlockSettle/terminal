@@ -94,6 +94,7 @@ private:
 
 signals:
    void showContextMenu(QMenu *, QPoint);
+   void newWalletCreationRequest();
 
 private slots:
    void showWalletProperties(const QModelIndex& index);
