@@ -414,7 +414,7 @@ function importWalletDialog(data) {
 
     var onControlPasswordFinished = function(prevDialog, password){
         if (password === "") {
-            dlgNewSeed.bsRejected();
+            dlgImp.bsRejected();
             return;
         }
 

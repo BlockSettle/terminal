@@ -424,7 +424,9 @@ void WalletsWidget::updateAddresses()
    prevSelectedWallets_ = selectedWallets;
 
    keepSelection();
-   ui_->treeViewAddresses->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+   if (ui_->treeViewAddresses->header()->count() > 0) {
+      ui_->treeViewAddresses->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+   }
 }
 
 void WalletsWidget::keepSelection()
