@@ -388,6 +388,11 @@ function createNewWalletDialog(data) {
     })
 
     var onControlPasswordFinished = function(prevDialog, password){
+        if (password === "") {
+            dlgNewSeed.bsRejected();
+            return;
+        }
+
         walletsProxy.sendControlPassword(password)
         prevDialog.setNextChainDialog(dlgNewSeed)
         dlgNewSeed.open()
@@ -408,6 +413,11 @@ function importWalletDialog(data) {
     var dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
 
     var onControlPasswordFinished = function(prevDialog, password){
+        if (password === "") {
+            dlgNewSeed.bsRejected();
+            return;
+        }
+
         walletsProxy.sendControlPassword(password)
         prevDialog.setNextChainDialog(dlgImp)
         dlgImp.open()
