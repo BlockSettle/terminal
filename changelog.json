@@ -1,7 +1,21 @@
 {
-   "latest_version": "0.25.4",
-   "release_date": "09 Dec 2019",
+   "latest_version": "0.25.5",
+   "release_date": "16 Dec 2019",
    "changes": [
+      {
+         "version_string": "0.25.5",
+         "previous_version": "0.25.4",
+         "release_date": "16 Dec 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Update UAT and prod keys",
+            "Fix chat after wallet adding",
+            "View Auth TX in tx view"
+         ],
+         "bug_fixes": [],
+         "revision": "ca61b8d6c",
+         "common_revision": "1d21f01d"
+      },
       {
          "version_string": "0.25.4",
          "previous_version": "0.25.3",
