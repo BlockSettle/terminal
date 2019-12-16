@@ -117,6 +117,8 @@ void NetworkSettingsPage::display()
 
    displayArmorySettings();
    displayEnvironmentSettings();
+
+   disableSettingUpdate_ = false;
 }
 
 void NetworkSettingsPage::displayArmorySettings()
@@ -191,6 +193,10 @@ void NetworkSettingsPage::onEnvSelected(int index)
    ui_->spinBoxCustomPubBridgePort->setVisible(isCustom);
    ui_->labelCustomPubBridgeHost->setVisible(isCustom);
    ui_->labelCustomPubBridgePort->setVisible(isCustom);
+
+   if (disableSettingUpdate_) {
+      return;
+   }
 
    if (env == ApplicationSettings::EnvConfiguration::Production) {
       ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfMainNetServer());
