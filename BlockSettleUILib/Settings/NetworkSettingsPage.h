@@ -47,7 +47,7 @@ private slots:
 private:
    std::unique_ptr<Ui::NetworkSettingsPage> ui_;
    ArmoryServersViewModel *armoryServerModel_;
-   bool disableSettingUpdate_{false};
+   bool disableSettingUpdate_{true};
 };
 
 #endif // __NETWORK_SETTINGS_PAGE_H__
