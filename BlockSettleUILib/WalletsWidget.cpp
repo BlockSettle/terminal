@@ -228,6 +228,7 @@ void WalletsWidget::setUsername(const QString& username)
 void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
 {
    walletsModel_ = new WalletsViewModel(walletsManager_, defaultWalletId, signingContainer_, ui_->treeViewWallets);
+   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewWallets->setModel(walletsModel_);
    ui_->treeViewWallets->setFocus(Qt::ActiveWindowFocusReason);
    ui_->treeViewWallets->setItemsExpandable(true);
@@ -236,8 +237,6 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    // show the column as per BST-1520
    //ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnID));
    walletsModel_->LoadWallets();
-   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::Interactive);
-   ui_->treeViewWallets->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
 
    connect(ui_->walletPropertiesButton, &QPushButton::clicked, this, &WalletsWidget::showSelectedWalletProperties);
    connect(ui_->createWalletButton, &QPushButton::clicked, this, &WalletsWidget::onNewWallet);
@@ -257,9 +256,8 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui_->treeViewAddresses->setUniformRowHeights(true);
    ui_->treeViewAddresses->setModel(addressSortFilterModel_);
    ui_->treeViewAddresses->sortByColumn(2, Qt::DescendingOrder);
-   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::Interactive);
-   ui_->treeViewWallets->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
    ui_->treeViewAddresses->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+   ui_->treeViewAddresses->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
    updateAddresses();
    connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
@@ -425,9 +423,6 @@ void WalletsWidget::updateAddresses()
    prevSelectedWallets_ = selectedWallets;
 
    keepSelection();
-   if (ui_->treeViewAddresses->header()->count() > 0) {
-      ui_->treeViewAddresses->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-   }
 }
 
 void WalletsWidget::keepSelection()

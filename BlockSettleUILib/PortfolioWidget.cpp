@@ -67,7 +67,7 @@ PortfolioWidget::PortfolioWidget(QWidget* parent)
    ui_->treeViewUnconfirmedTransactions->setContextMenuPolicy(Qt::CustomContextMenu);
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::customContextMenuRequested, this, &PortfolioWidget::showContextMenu);
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::activated, this, &PortfolioWidget::showTransactionDetails);
-   ui_->treeViewUnconfirmedTransactions->header()->setSectionResizeMode(QHeaderView::Interactive);
+   ui_->treeViewUnconfirmedTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
    actionCopyAddr_ = new QAction(tr("&Copy Address"));
    connect(actionCopyAddr_, &QAction::triggered, [this]() {
@@ -101,8 +101,6 @@ void PortfolioWidget::SetTransactionsModel(const std::shared_ptr<TransactionsVie
       , Qt::SortOrder::DescendingOrder);
    ui_->treeViewUnconfirmedTransactions->hideColumn(
       static_cast<int>(TransactionsViewModel::Columns::TxHash));
-   ui_->treeViewUnconfirmedTransactions->header()->setSectionResizeMode(static_cast<int>(TransactionsViewModel::Columns::Date)
-      , QHeaderView::ResizeToContents);
 }
 
 void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
