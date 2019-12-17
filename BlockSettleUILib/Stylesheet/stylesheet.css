@@ -206,15 +206,13 @@ QWidget#chatTopSeparatorWidget {
   background-color: #3f4c50;}
   
 QToolBar {
-  background: transparent;
-  margin: 1px;
-  padding: 0px;
-  spacing: 5px; }
+  spacing: 5px;
+  border: none; }
 
-QToolButton {
-  margin: 0px;
-  padding: 0px; }
-  
+QToolButton#mainToolBarActions
+{
+    height: 26px; }
+
 *[applicationBar="true"] {
   background-color: #1c2835;
   padding: 0 0 0 35px;
@@ -410,9 +408,11 @@ QTreeWidget QPushButton:hover, QTreeWidget QToolButton:hover, QTreeWidget [butto
     font-weight: normal; }
 
 
-QTabWidget::right-corner {
+QTabWidget#tabWidget::right-corner {
+  right: 1px;
   padding: 0px;
-  margin: 0px; }
+  height: 29px;
+  bottom: 2px; }
     
 QTabWidget::pane {
   /* The tab widget frame */

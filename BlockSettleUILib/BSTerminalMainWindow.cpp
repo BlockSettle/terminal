@@ -250,6 +250,7 @@ void BSTerminalMainWindow::setupToolbar()
 {
    action_send_ = new QAction(tr("Create &Transaction"), this);
    connect(action_send_, &QAction::triggered, this, &BSTerminalMainWindow::onSend);
+
    action_generate_address_ = new QAction(tr("Generate &Address"), this);
    connect(action_generate_address_, &QAction::triggered, this, &BSTerminalMainWindow::onGenerateAddress);
 
@@ -260,13 +261,20 @@ void BSTerminalMainWindow::setupToolbar()
    connect(action_logout_, &QAction::triggered, this, &BSTerminalMainWindow::onLogout);
 
    auto toolBar = new QToolBar(this);
+   toolBar->setObjectName(QLatin1String("mainToolBar"));
    toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
    ui_->tabWidget->setCornerWidget(toolBar, Qt::TopRightCorner);
 
-   // send bitcoins
    toolBar->addAction(action_send_);
-   // receive bitcoins
    toolBar->addAction(action_generate_address_);
+  
+   for (int i = 0; i < toolBar->children().size(); ++i) {
+      auto *toolButton = qobject_cast<QToolButton*>(toolBar->children().at(i));
+      if (toolButton && (toolButton->defaultAction() == action_send_
+         || toolButton->defaultAction() == action_generate_address_)) {
+         toolButton->setObjectName(QLatin1String("mainToolBarActions"));
+      }
+   }
 
    action_logout_->setVisible(false);
 
