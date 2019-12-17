@@ -60,7 +60,6 @@ public:
    SignerAdapter& operator = (SignerAdapter&&) = delete;
 
    std::shared_ptr<bs::sync::WalletsManager> getWalletsManager();
-   void reloadWallets(const QString &, const std::function<void()> &);
    void updateWallet(const std::string &walletId);
 
    void setLimits(bs::signer::Limits);
@@ -133,7 +132,6 @@ signals:
    void terminalHandshakeFailed(const std::string &peerAddress);
    void signerPubKeyUpdated(const BinaryData &pubKey) const;
    void ccInfoReceived(bool) const;
-   void walletsReloaded() const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

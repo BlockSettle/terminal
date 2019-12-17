@@ -30,6 +30,7 @@ namespace Blocksettle {
    namespace Communication {
       namespace signer {
          class Settings;
+         enum ControlPasswordStatus : int;
       }
    }
 }
@@ -93,7 +94,8 @@ private:
    std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
 
    SecureBinaryData controlPassword_;
-   bool requestedNewControlPassword_ = false;
+   Blocksettle::Communication::signer::ControlPasswordStatus controlPasswordStatus_;
+
 };
 
 #endif // __HEADLESS_APP_H__

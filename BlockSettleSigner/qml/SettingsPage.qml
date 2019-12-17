@@ -478,7 +478,7 @@ Item {
                                     , qsTr("Master Password"), qsTr("Change Master Password failed: \n") + errorMsg)
                             }
                         }
-                        var onControlPasswordFinished = function(dlg, oldPassword, newPassword){
+                        var onControlPasswordFinished = function(oldPassword, newPassword){
                             walletsProxy.changeControlPassword(oldPassword, newPassword, onControlPasswordChanged)
                         }
                         JsHelper.createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())

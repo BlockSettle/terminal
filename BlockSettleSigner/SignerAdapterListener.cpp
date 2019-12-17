@@ -212,9 +212,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::RequestCloseType:
       rc = onRequestClose();
       break;
-   case signer::ReloadWalletsType:
-      rc = onReloadWallets(packet.data(), packet.id());
-      break;
    case signer::AutoSignActType:
       rc = onAutoSignRequest(packet.data(), packet.id());
       break;
@@ -649,19 +646,6 @@ bool SignerAdapterListener::onRequestClose()
    return true;
 }
 
-bool SignerAdapterListener::onReloadWallets(const std::string &data, bs::signer::RequestId reqId)
-{
-   signer::ReloadWalletsRequest request;
-   if (!request.ParseFromString(data)) {
-      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
-      return false;
-   }
-   app_->reloadWallets([this, reqId] {
-      sendData(signer::ReloadWalletsType, "", reqId);
-   });
-   return true;
-}
-
 bool SignerAdapterListener::onAutoSignRequest(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::AutoSignActRequest request;
@@ -920,6 +904,12 @@ void SignerAdapterListener::walletsListUpdated()
    sendData(signer::WalletsListUpdatedType, {});
 }
 
+void SignerAdapterListener::onStarted()
+{
+   started_ = true;
+   sendReady();
+}
+
 void SignerAdapterListener::shutdownIfNeeded()
 {
    if (settings_->runMode() == bs::signer::RunMode::litegui && app_) {
@@ -930,6 +920,10 @@ void SignerAdapterListener::shutdownIfNeeded()
 
 bool SignerAdapterListener::sendReady()
 {
+   if (!started_) {
+      return true;
+   }
+
    // Notify GUI about bind status
    sendStatusUpdate();
 

@@ -134,7 +134,9 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 anchors.margins: 5
-                text: qsTr("Cancel")
+                text: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+                    ? qsTr("Skip")
+                    : qsTr("Cancel")
                 onClicked: {
                     rejectAnimated()
                 }

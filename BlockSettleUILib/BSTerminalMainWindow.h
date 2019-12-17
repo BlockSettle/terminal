@@ -127,6 +127,7 @@ private slots:
    void InitTransactionsView();
    void ArmoryIsOffline();
    void SignerReady();
+   void onNeedNewWallet();
    void showInfo(const QString &title, const QString &text);
    void showError(const QString &title, const QString &text);
    void onSignerConnError(SignContainer::ConnectionError error, const QString &details);
@@ -275,7 +276,6 @@ private:
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
       void onStateChanged(ArmoryState) override;
       void onTxBroadcastError(const std::string &hash, const std::string &error) override;
-      void onRefresh(const std::vector<BinaryData> &, bool) override;
 
    private:
       BSTerminalMainWindow *parent_;
