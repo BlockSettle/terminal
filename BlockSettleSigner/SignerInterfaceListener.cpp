@@ -663,7 +663,7 @@ void SignerInterfaceListener::onUpdateControlPasswordStatus(const std::string &d
       auto cb = new bs::signer::QmlCallback<QObject *, bs::wallet::QPasswordData *>
             ([this](QObject *, bs::wallet::QPasswordData *passwordData){
          signer::EnterControlPasswordRequest decryptEvent;
-         if (passwordData && !passwordData->textPassword().isEmpty()) {
+         if (passwordData) {
             decryptEvent.set_controlpassword(passwordData->binaryPassword().toBinStr());
          }
          send(signer::ControlPasswordReceivedType, decryptEvent.SerializeAsString());
