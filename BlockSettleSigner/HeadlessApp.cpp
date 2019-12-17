@@ -412,6 +412,8 @@ void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
       guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Rejected);
       controlPasswordStatus_ = signer::ControlPasswordStatus::Rejected;
    }
+
+   terminalListener_->setNoWallets(ok && walletsMgr_->empty());
 }
 
 void HeadlessAppObj::setLimits(bs::signer::Limits limits)
