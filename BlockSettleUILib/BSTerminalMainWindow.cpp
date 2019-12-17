@@ -505,7 +505,8 @@ bool BSTerminalMainWindow::InitSigningContainer()
    connect(signContainer_.get(), &SignContainer::disconnected, this, &BSTerminalMainWindow::updateControlEnabledState, Qt::QueuedConnection);
 
    walletsMgr_->setSignContainer(signContainer_);
-   connect(signContainer_.get(), &WalletSignerContainer::walletsStorageDecrypted, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
+   connect(signContainer_.get(), &WalletSignerContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
+   connect(signContainer_.get(), &WalletSignerContainer::needNewWalletPrompt, this, &BSTerminalMainWindow::onNeedNewWallet, Qt::QueuedConnection);
 
    return true;
 }
@@ -524,6 +525,17 @@ void BSTerminalMainWindow::SignerReady()
    }
 
    lastSignerError_ = SignContainer::NoError;
+}
+
+void BSTerminalMainWindow::onNeedNewWallet()
+{
+   if (!initialWalletCreateDialogShown_) {
+      initialWalletCreateDialogShown_ = true;
+      const auto &deferredDialog = [this]{
+         createWallet(true);
+      };
+      addDeferredDialog(deferredDialog);
+   }
 }
 
 void BSTerminalMainWindow::acceptMDAgreement()
@@ -748,21 +760,6 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
       break;
    default:
       break;
-   }
-}
-
-void BSTerminalMainWindow::MainWinACT::onRefresh(const std::vector<BinaryData> &, bool)
-{
-   if (!parent_->initialWalletCreateDialogShown_ && parent_->walletsMgr_
-      && parent_->walletsMgr_->isWalletsReady()
-      && parent_->walletsMgr_->hdWallets().empty()) {
-
-      const auto &deferredDialog = [this]{
-         parent_->createWallet(true);
-      };
-
-      parent_->addDeferredDialog(deferredDialog);
-      parent_->initialWalletCreateDialogShown_ = true;
    }
 }
 
