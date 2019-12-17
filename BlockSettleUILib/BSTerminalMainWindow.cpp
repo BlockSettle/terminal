@@ -505,7 +505,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    connect(signContainer_.get(), &SignContainer::disconnected, this, &BSTerminalMainWindow::updateControlEnabledState, Qt::QueuedConnection);
 
    walletsMgr_->setSignContainer(signContainer_);
-   connect(signContainer_.get(), &WalletSignerContainer::walletsStorageDecrypted, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
+   connect(signContainer_.get(), &WalletSignerContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
 
    return true;
 }

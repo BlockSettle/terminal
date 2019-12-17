@@ -39,6 +39,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    : logger_(logger)
    , settings_(params)
    , queue_(queue)
+   , controlPasswordStatus_(Blocksettle::Communication::signer::ControlPasswordStatus::RequestedNew)
 {
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 
@@ -94,14 +95,14 @@ void HeadlessAppObj::start()
    logger_->debug("[{}] loading wallets from dir <{}>", __func__
       , settings_->getWalletsDir());
 
+   reloadWallets();
+
    if (!settings_->offline()) {
       startTerminalsProcessing();
    }
    else {
       SPDLOG_LOGGER_INFO(logger_, "do not start listening for terminal connections (offline mode selected)");
    }
-
-   reloadWallets();
 
    guiListener_->onStarted();
 }
@@ -333,8 +334,7 @@ void HeadlessAppObj::setControlPassword(const SecureBinaryData &controlPassword)
 {
    controlPassword_ = controlPassword;
    reloadWallets();
-   guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus(controlPasswordStatus_));
-   terminalListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
+   guiListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
    guiListener_->walletsListUpdated();
 }
 
@@ -396,15 +396,13 @@ void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
          logger_->warn("No wallets loaded");
          if (controlPassword().getSize() == 0) {
             guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::RequestedNew);
-            terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::RequestedNew);
-            controlPasswordStatus_ = headless::ControlPasswordStatus::RequestedNew;
+            controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
          }
       }
       else {
          logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
          guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Accepted);
-         terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::Accepted);
-         controlPasswordStatus_ = headless::ControlPasswordStatus::Accepted;
+         controlPasswordStatus_ = signer::ControlPasswordStatus::Accepted;
       }
    }
    else {
@@ -412,8 +410,7 @@ void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
       // send message to gui to request it
       logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
       guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Rejected);
-      terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::Rejected);
-      controlPasswordStatus_ = headless::ControlPasswordStatus::Rejected;
+      controlPasswordStatus_ = signer::ControlPasswordStatus::Rejected;
    }
 }
 
