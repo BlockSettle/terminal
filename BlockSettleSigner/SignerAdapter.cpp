@@ -87,10 +87,6 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
          , listener_.get(), &SignerInterfaceListener::onWalletsSynchronizationStarted);
       connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized
          , listener_.get(), &SignerInterfaceListener::onWalletsSynchronized);
-
-      connect(this, &SignerAdapter::walletsReloaded, [this](){
-         walletsMgr_->syncWallets();
-      });
    }
    return walletsMgr_;
 }
@@ -117,21 +113,6 @@ void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const Secu
    request.set_password(password.toBinStr());
    const auto reqId = listener_->send(pt, request.SerializeAsString());
    listener_->setDecryptNodeCb(reqId, cb);
-}
-
-void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function<void()> &cb)
-{
-   signer::ReloadWalletsRequest request;
-   request.set_path(walletsDir.toStdString());
-   const auto reqId = listener_->send(signer::ReloadWalletsType, request.SerializeAsString());
-
-   const auto &cbReloaded = [this, cb](){
-      emit walletsReloaded();
-      if (cb) {
-         cb();
-      }
-   };
-   listener_->setReloadWalletsCb(reqId, cbReloaded);
 }
 
 void SignerAdapter::updateWallet(const std::string &walletId)

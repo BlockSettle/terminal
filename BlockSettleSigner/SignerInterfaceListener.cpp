@@ -143,9 +143,6 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::GetDecryptedNodeType:
       onDecryptedKey(packet.data(), packet.id());
       break;
-   case signer::ReloadWalletsType:
-      onReloadWallets(packet.id());
-      break;
    case signer::ExecCustomDialogRequestType:
       onExecCustomDialog(packet.data(), packet.id());
       break;
@@ -528,20 +525,6 @@ void SignerInterfaceListener::onDecryptedKey(const std::string &data, bs::signer
    cbDecryptNode_.erase(itCb);
 }
 
-void SignerInterfaceListener::onReloadWallets(bs::signer::RequestId reqId)
-{
-   const auto &itCb = cbReloadWallets_.find(reqId);
-   if (itCb == cbReloadWallets_.end()) {
-      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
-         , __func__, reqId);
-      return;
-   }
-   if (itCb->second) {
-      itCb->second();
-   }
-   cbReloadWallets_.erase(itCb);
-}
-
 void SignerInterfaceListener::onExecCustomDialog(const std::string &data, bs::signer::RequestId)
 {
    signer::CustomDialogRequest evt;
@@ -667,8 +650,6 @@ void SignerInterfaceListener::onUpdateControlPasswordStatus(const std::string &d
             decryptEvent.set_controlpassword(passwordData->binaryPassword().toBinStr());
          }
          send(signer::ControlPasswordReceivedType, decryptEvent.SerializeAsString());
-
-         parent_->reloadWallets({}, nullptr);
       });
 
       qmlBridge_->invokeQmlMethod(QmlBridge::ControlPasswordStatusChanged, cb

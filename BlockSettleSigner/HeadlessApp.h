@@ -93,7 +93,8 @@ private:
    std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
 
    SecureBinaryData controlPassword_;
-   bool requestedNewControlPassword_ = false;
+   headless::ControlPasswordStatus controlPasswordStatus_ = headless::ControlPasswordStatus::RequestedNew;
+
 };
 
 #endif // __HEADLESS_APP_H__

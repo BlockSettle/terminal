@@ -102,6 +102,8 @@ void HeadlessAppObj::start()
    }
 
    reloadWallets();
+
+   guiListener_->onStarted();
 }
 
 void HeadlessAppObj::stop()
@@ -330,11 +332,10 @@ SecureBinaryData HeadlessAppObj::controlPassword() const
 void HeadlessAppObj::setControlPassword(const SecureBinaryData &controlPassword)
 {
    controlPassword_ = controlPassword;
-   if (requestedNewControlPassword_) {
-      requestedNewControlPassword_ = false;
-      guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Accepted);
-      terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::Accepted);
-   }
+   reloadWallets();
+   guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus(controlPasswordStatus_));
+   terminalListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
+   guiListener_->walletsListUpdated();
 }
 
 bs::error::ErrorCode HeadlessAppObj::changeControlPassword(const SecureBinaryData &controlPasswordOld, const SecureBinaryData &controlPasswordNew)
@@ -396,13 +397,14 @@ void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
          if (controlPassword().getSize() == 0) {
             guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::RequestedNew);
             terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::RequestedNew);
-            requestedNewControlPassword_ = true;
+            controlPasswordStatus_ = headless::ControlPasswordStatus::RequestedNew;
          }
       }
       else {
          logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
          guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Accepted);
          terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::Accepted);
+         controlPasswordStatus_ = headless::ControlPasswordStatus::Accepted;
       }
    }
    else {
@@ -411,6 +413,7 @@ void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
       logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
       guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Rejected);
       terminalListener_->sendControlPasswordStatusUpdate(headless::ControlPasswordStatus::Rejected);
+      controlPasswordStatus_ = headless::ControlPasswordStatus::Rejected;
    }
 }
 

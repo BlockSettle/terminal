@@ -79,9 +79,6 @@ public:
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb) {
       cbDecryptNode_[reqId] = cb;
    }
-   void setReloadWalletsCb(bs::signer::RequestId reqId, const std::function<void()> &cb) {
-      cbReloadWallets_[reqId] = cb;
-   }
    void setChangePwCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
       cbChangePwReqs_[reqId] = cb;
    }
@@ -123,7 +120,6 @@ private:
    void onCreateWO(const std::string &data, bs::signer::RequestId);
    void onExportWO(const std::string &data, bs::signer::RequestId);
    void onDecryptedKey(const std::string &data, bs::signer::RequestId);
-   void onReloadWallets(bs::signer::RequestId);
    void onExecCustomDialog(const std::string &data, bs::signer::RequestId);
    void onChangePassword(const std::string &data, bs::signer::RequestId);
    void onCreateHDWallet(const std::string &data, bs::signer::RequestId);
@@ -162,7 +158,6 @@ private:
    std::map<bs::signer::RequestId, std::function<void(const BinaryData &)>>      cbExportWO_;
    std::map<bs::signer::RequestId
       , std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)>>   cbDecryptNode_;
-   std::map<bs::signer::RequestId, std::function<void()>>   cbReloadWallets_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbChangePwReqs_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbCreateHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbDeleteHDWalletReqs_;
