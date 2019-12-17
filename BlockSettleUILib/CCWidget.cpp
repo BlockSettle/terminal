@@ -32,8 +32,7 @@ void CCWidget::SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model)
    const auto &walletsManager = model->walletsManager();
 
    ui_->treeViewCC->setModel(model.get());
-   ui_->treeViewCC->header()->setSectionResizeMode(QHeaderView::Interactive);
-   ui_->treeViewCC->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+   ui_->treeViewCC->header()->setSectionResizeMode(QHeaderView::Stretch);
 
    connect(model.get(), &CCPortfolioModel::rowsInserted, this, &CCWidget::onRowsInserted);
    connect(assetManager_.get(), &AssetManager::totalChanged, this, &CCWidget::updateTotalAssets);
