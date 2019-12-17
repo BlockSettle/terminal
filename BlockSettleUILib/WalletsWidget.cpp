@@ -257,9 +257,8 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui_->treeViewAddresses->setUniformRowHeights(true);
    ui_->treeViewAddresses->setModel(addressSortFilterModel_);
    ui_->treeViewAddresses->sortByColumn(2, Qt::DescendingOrder);
-   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::Interactive);
-   ui_->treeViewWallets->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
    ui_->treeViewAddresses->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+   ui_->treeViewAddresses->header()->setSectionResizeMode(QHeaderView::Interactive);
 
    updateAddresses();
    connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
@@ -425,6 +424,9 @@ void WalletsWidget::updateAddresses()
    prevSelectedWallets_ = selectedWallets;
 
    keepSelection();
+   if (ui_->treeViewAddresses->header()->count() > 0) {
+      ui_->treeViewAddresses->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+   }
 }
 
 void WalletsWidget::keepSelection()
