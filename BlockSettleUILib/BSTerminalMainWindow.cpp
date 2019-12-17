@@ -260,21 +260,7 @@ void BSTerminalMainWindow::setupToolbar()
    action_logout_ = new QAction(tr("Logout from BlockSettle"), this);
    connect(action_logout_, &QAction::triggered, this, &BSTerminalMainWindow::onLogout);
 
-   auto toolBar = new QToolBar(this);
-   toolBar->setObjectName(QLatin1String("mainToolBar"));
-   toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-   ui_->tabWidget->setCornerWidget(toolBar, Qt::TopRightCorner);
-
-   toolBar->addAction(action_send_);
-   toolBar->addAction(action_generate_address_);
-  
-   for (int i = 0; i < toolBar->children().size(); ++i) {
-      auto *toolButton = qobject_cast<QToolButton*>(toolBar->children().at(i));
-      if (toolButton && (toolButton->defaultAction() == action_send_
-         || toolButton->defaultAction() == action_generate_address_)) {
-         toolButton->setObjectName(QLatin1String("mainToolBarActions"));
-      }
-   }
+   setupTopRightWidget();
 
    action_logout_->setVisible(false);
 
@@ -292,6 +278,34 @@ void BSTerminalMainWindow::setupToolbar()
    trayMenu->addSeparator();
    trayMenu->addAction(ui_->actionQuit);
    sysTrayIcon_->setContextMenu(trayMenu);
+}
+
+void BSTerminalMainWindow::setupTopRightWidget()
+{
+   auto toolBar = new QToolBar(this);
+   toolBar->setObjectName(QLatin1String("mainToolBar"));
+   toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+   ui_->tabWidget->setCornerWidget(toolBar, Qt::TopRightCorner);
+
+   toolBar->addAction(action_send_);
+   toolBar->addAction(action_generate_address_);
+
+   for (int i = 0; i < toolBar->children().size(); ++i) {
+      auto *toolButton = qobject_cast<QToolButton*>(toolBar->children().at(i));
+      if (toolButton && (toolButton->defaultAction() == action_send_
+         || toolButton->defaultAction() == action_generate_address_)) {
+         toolButton->setObjectName(QLatin1String("mainToolBarActions"));
+      }
+   }
+
+#ifdef Q_OS_WIN
+   ui_->tabWidget->setProperty("onWindows", QVariant(true));
+#else
+   ui_->tabWidget->setProperty("onLinux", QVariant(true));
+#endif // DEBUG
+   auto *prevStyle = ui_->tabWidget->style();
+   ui_->tabWidget->setStyle(nullptr);
+   ui_->tabWidget->setStyle(prevStyle);
 }
 
 void BSTerminalMainWindow::setupIcon()

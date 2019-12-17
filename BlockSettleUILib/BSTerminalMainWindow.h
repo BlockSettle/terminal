@@ -82,6 +82,7 @@ public:
 
 private:
    void setupToolbar();
+   void setupTopRightWidget();
    void setupMenu();
    void setupIcon();
 

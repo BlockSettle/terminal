@@ -211,7 +211,7 @@ QToolBar {
 
 QToolButton#mainToolBarActions
 {
-    height: 26px; }
+    height: 27px; }
 
 *[applicationBar="true"] {
   background-color: #1c2835;
@@ -411,8 +411,13 @@ QTreeWidget QPushButton:hover, QTreeWidget QToolButton:hover, QTreeWidget [butto
 QTabWidget#tabWidget::right-corner {
   right: 1px;
   padding: 0px;
-  height: 29px;
+  height: 29px; }
+
+QTabWidget[onWindows="true"]::right-corner {
   bottom: 2px; }
+
+QTabWidget[onLinux="true"]::right-corner {
+  bottom: 1px; }
     
 QTabWidget::pane {
   /* The tab widget frame */
