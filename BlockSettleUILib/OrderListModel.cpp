@@ -715,14 +715,13 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
       if (order.security.substr(0, order.security.find('/')) != order.product) {
          value = order.quantity / order.price;
       }
-      const auto priceAssetType = assetManager_->GetAssetTypeForSecurity(order.security);
 
       groupItem->rows_.push_front(make_unique<Data>(
          UiUtils::displayTimeMs(order.dateTime),
          QString::fromStdString(order.product),
          tr(bs::network::Side::toString(order.side)),
          UiUtils::displayQty(order.quantity, order.security, order.product, order.assetType),
-         UiUtils::displayPriceForAssetType(order.price, priceAssetType),
+         UiUtils::displayPriceForAssetType(order.price, order.assetType),
          UiUtils::displayValue(value, order.security, order.product, order.assetType),
          QString(),
          order.exchOrderId,
