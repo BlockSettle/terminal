@@ -640,6 +640,7 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsMgr_.get(), &bs::sync::WalletsManager::onCCSecurityInfo);
    connect(ccFileManager_.get(), &CCFileManager::Loaded, this, &BSTerminalMainWindow::onCCLoaded);
    connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
+   connect(ccFileManager_.get(), &CCFileManager::definitionsLoadedFromPub, this, &BSTerminalMainWindow::onCcDefinitionsLoadedFromPub);
 
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
@@ -1566,7 +1567,14 @@ void BSTerminalMainWindow::onCCLoaded()
 }
 
 void BSTerminalMainWindow::onCCInfoMissing()
-{ }   // do nothing here since we don't know if user will need Private Market before logon to Celer
+{
+   // do nothing here since we don't know if user will need Private Market before logon to Celer
+}
+
+void BSTerminalMainWindow::onCcDefinitionsLoadedFromPub()
+{
+   promoteToPrimaryIfNeeded();
+}
 
 void BSTerminalMainWindow::setupShortcuts()
 {
@@ -1788,6 +1796,47 @@ void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settin
 
    networkSettingsReceived_ = true;
    tryInitChatView();
+}
+
+void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
+{
+   // Can't proceed without userId
+   if (walletsMgr_->userId().isNull()) {
+      return;
+   }
+
+   auto promoteToPrimary = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
+      addDeferredDialog([this, wallet] {
+         BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
+            , tr("To trade through BlockSettle, you are required to have a wallet which"
+               " supports the sub-wallets required to interact with the system. Each Terminal"
+               " may only have one Primary Wallet. Do you wish to promote '%1'?")
+            .arg(QString::fromStdString(wallet->name())), this);
+         if (qry.exec() == QDialog::Accepted) {
+            walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
+               if (result == bs::error::ErrorCode::NoError) {
+                  // If wallet was promoted to primary we could try to get chat keys now
+                  tryGetChatKeys();
+               }
+            });
+         }
+      });
+   };
+
+   auto primaryWallet = walletsMgr_->getPrimaryWallet();
+   if (primaryWallet) {
+      for (const auto &leaf : primaryWallet->getLeaves()) {
+         if (leaf->type() == bs::core::wallet::Type::ColorCoin) {
+            return;
+         }
+      }
+      promoteToPrimary(primaryWallet);
+      return;
+   }
+   auto hdWallets = walletsMgr_->hdWallets();
+   if (!hdWallets.empty()) {
+      promoteToPrimary(hdWallets.front());
+   }
 }
 
 void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)

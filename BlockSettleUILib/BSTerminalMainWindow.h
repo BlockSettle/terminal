@@ -211,6 +211,7 @@ private slots:
    void onCelerConnectionError(int errorCode);
    void showRunInBackgroundMessage();
    void onCCInfoMissing();
+   void onCcDefinitionsLoadedFromPub();
 
    void onMDConnectionDetailsRequired();
 
@@ -239,6 +240,8 @@ private:
    void InitWidgets();
 
    void networkSettingsReceived(const NetworkSettings &settings);
+
+   void promoteToPrimaryIfNeeded();
 
 private:
    enum class ChatInitState
