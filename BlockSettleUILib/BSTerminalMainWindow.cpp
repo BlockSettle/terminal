@@ -398,7 +398,7 @@ void BSTerminalMainWindow::InitAuthManager()
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &walletId) {
-      if (authAddrDlg_ && walletId.isEmpty()) {
+      if (allowInitAuthAddr_ && walletId.isEmpty()) {
          openAuthManagerDialog();
       }
    });
@@ -1189,9 +1189,13 @@ void BSTerminalMainWindow::openAuthManagerDialog()
 void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 {
    const auto showAuthDlg = [this, addrToVerify] {
-      authAddrDlg_->show();
+      auto authAddrDlg = new AuthAddressDialog(logMgr_->logger(), authManager_
+         , assetManager_, applicationSettings_, this);
+      authAddrDlg->setBsClient(bsClient_.get());
+      authAddrDlg->show();
       QApplication::processEvents();
-      authAddrDlg_->setAddressToVerify(addrToVerify);
+      authAddrDlg->setAddressToVerify(addrToVerify);
+      connect(authAddrDlg, &QDialog::finished, this, [authDlg = authAddrDlg]() { authDlg->deleteLater(); });
    };
    if (authManager_->HaveAuthWallet()) {
       showAuthDlg();
@@ -1261,7 +1265,6 @@ void BSTerminalMainWindow::onLogin()
 
    bsClient_ = loginDialog.getClient();
    ccFileManager_->setBsClient(bsClient_.get());
-   authAddrDlg_->setBsClient(bsClient_.get());
 
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 
@@ -1720,8 +1723,7 @@ void BSTerminalMainWindow::onTabWidgetCurrentChanged(const int &index)
 
 void BSTerminalMainWindow::InitWidgets()
 {
-   authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
-      , assetManager_, applicationSettings_, this);
+   allowInitAuthAddr_ = true;
 
    InitWalletsView();
    InitPortfolioView();
