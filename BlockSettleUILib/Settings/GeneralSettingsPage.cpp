@@ -14,7 +14,6 @@
 
 #include "ApplicationSettings.h"
 #include "UiUtils.h"
-#include "TerminalEncryptionDialog.h"
 
 #include <QLineEdit>
 #include <QPushButton>
@@ -45,14 +44,7 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget* parent)
    connect(ui_->logLevelMsg, QOverload<int>::of(&QComboBox::currentIndexChanged),
       this, &GeneralSettingsPage::onLogLevelChanged);
 
-   connect(ui_->pushButtonEnableEncryption, &QPushButton::clicked, this, [this](){
-      TerminalEncryptionDialog dialog(TerminalEncryptionDialog::EnableEncryption, this);
-      dialog.exec();
-   });
-
-   connect(ui_->pushButtonDisableEncryption, &QPushButton::clicked, this, [this](){
-      TerminalEncryptionDialog dialog(TerminalEncryptionDialog::DisableEncryption, this);
-      dialog.exec();
+   connect(ui_->pushButtonManage, &QPushButton::clicked, this, [this](){
    });
 }
 

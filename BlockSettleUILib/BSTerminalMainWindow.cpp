@@ -61,7 +61,6 @@
 #include "StatusBarView.h"
 #include "SystemFileUtils.h"
 #include "TabWithShortcut.h"
-#include "TerminalEncryptionDialog.h"
 #include "TransactionsViewModel.h"
 #include "TransactionsWidget.h"
 #include "UiUtils.h"
