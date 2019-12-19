@@ -44,8 +44,7 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget* parent)
    connect(ui_->logLevelMsg, QOverload<int>::of(&QComboBox::currentIndexChanged),
       this, &GeneralSettingsPage::onLogLevelChanged);
 
-   connect(ui_->pushButtonManage, &QPushButton::clicked, this, [this](){
-   });
+   connect(ui_->pushButtonManage, &QPushButton::clicked, this, &GeneralSettingsPage::requestDataEncryption);
 }
 
 GeneralSettingsPage::~GeneralSettingsPage() = default;

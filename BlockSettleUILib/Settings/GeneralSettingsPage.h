@@ -23,6 +23,7 @@ class WalletsManager;
 
 class GeneralSettingsPage : public SettingsPage
 {
+   Q_OBJECT
 public:
    GeneralSettingsPage(QWidget* parent = nullptr);
    ~GeneralSettingsPage() override;
@@ -39,6 +40,9 @@ private slots:
 
 private:
    void checkSettings();
+
+signals:
+   void requestDataEncryption();
 
 private:
    std::unique_ptr<Ui::GeneralSettingsPage> ui_;

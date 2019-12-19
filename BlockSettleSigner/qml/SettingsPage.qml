@@ -450,7 +450,7 @@ Item {
                 Layout.leftMargin: 10
 
                 CustomLabel {
-                    text: qsTr("Master Password")
+                    text: qsTr("Public Data Encryption")
                     Layout.minimumWidth: 125
                     Layout.preferredWidth: 125
                     Layout.maximumWidth: 125
@@ -461,7 +461,7 @@ Item {
                 }
 
                 CustomButton {
-                    text: qsTr("Change")
+                    text: qsTr("MANAGE")
                     Layout.minimumWidth: 150
                     Layout.preferredWidth: 150
                     Layout.maximumWidth: 150

@@ -424,6 +424,15 @@ function importWalletDialog(data) {
     }
 }
 
+function managePublicDataEncryption() {
+    var onControlPasswordFinished = function(prevDialog, password){
+        walletsProxy.sendControlPassword(password);
+    }
+
+    let controlPasswordDialog =  createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+    return controlPasswordDialog;
+}
+
 function backupWalletDialog(data) {
     var rootId = data["rootId"]
     var dlg = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow
