@@ -1801,7 +1801,7 @@ void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settin
 void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 {
    // Can't proceed without userId
-   if (walletsMgr_->userId().isNull()) {
+   if (!walletsMgr_->isUserIdSet()) {
       return;
    }
 
