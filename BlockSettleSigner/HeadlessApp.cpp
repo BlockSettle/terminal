@@ -351,6 +351,8 @@ bs::error::ErrorCode HeadlessAppObj::changeControlPassword(const SecureBinaryDat
    } catch (...) {
       return bs::error::ErrorCode::InvalidPassword;
    }
+
+   controlPassword_ = controlPasswordNew;
    return bs::error::ErrorCode::NoError;
 }
 
