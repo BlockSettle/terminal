@@ -54,6 +54,7 @@ CustomTitleDialogWindow {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
             }
+
             CustomLabel{
                 id: labelDetails_
                 visible: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
@@ -74,6 +75,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                     cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
                 }
             }
+
             RowLayout {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
@@ -169,7 +171,12 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                     }
 
                     passwordData.encType = QPasswordData.Password
-                    acceptAnimated()
+
+                    if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Accepted) {
+                        bsAccepted();
+                    } else {
+                        acceptAnimated();
+                    }
                 }
             }
         }

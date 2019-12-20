@@ -332,6 +332,9 @@ SecureBinaryData HeadlessAppObj::controlPassword() const
 
 void HeadlessAppObj::setControlPassword(const SecureBinaryData &controlPassword)
 {
+   if (!walletsMgr_->empty()) {
+      changeControlPassword(controlPassword_, controlPassword);
+   }
    controlPassword_ = controlPassword;
    reloadWallets();
    guiListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
@@ -392,15 +395,12 @@ void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
    }
 
    if (ok) {
-      if (walletsMgr_->empty()) {
-         logger_->warn("No wallets loaded");
-         if (controlPassword().getSize() == 0) {
-            guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::RequestedNew);
-            controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
-         }
+      logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
+      if (controlPassword().getSize() == 0) {
+         guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::RequestedNew);
+         controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
       }
       else {
-         logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
          guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Accepted);
          controlPasswordStatus_ = signer::ControlPasswordStatus::Accepted;
       }

@@ -415,7 +415,7 @@ function importWalletDialog(data) {
 
     // Fixme, 2 == new pass requested
     if (qmlFactory.controlPasswordStatus() === 2) {
-        var controlPasswordDialog =  createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+        var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
         return controlPasswordDialog
     }
     else {
@@ -425,11 +425,31 @@ function importWalletDialog(data) {
 }
 
 function managePublicDataEncryption() {
-    var onControlPasswordFinished = function(prevDialog, password){
-        walletsProxy.sendControlPassword(password);
+    const previousState = qmlFactory.controlPasswordStatus();
+    let onControlPasswordFinished = function(dialog, newPassword, oldPassword){
+        if (previousState !== 0) {
+            walletsProxy.sendControlPassword(newPassword);
+            return;
+        }
+
+        let onControlPasswordChanged = function(success, errorMsg){
+            if (success) {
+                let mb = messageBox(BSMessageBox.Type.Success
+                    , qsTr("Master Password"), qsTr("Change Master Password succeed"));
+                mb.bsAccepted.connect(dialog.acceptAnimated)
+
+            } else {
+                let mb = messageBox(BSMessageBox.Type.Critical
+                    , qsTr("Master Password"), qsTr("Change Master Password failed: \n") + errorMsg);
+                mb.bsAccepted.connect(dialog.rejectAnimated)
+            }
+        }
+
+        walletsProxy.changeControlPassword(oldPassword,
+                                           newPassword, onControlPasswordChanged);
     }
 
-    let controlPasswordDialog =  createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+    let controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
     return controlPasswordDialog;
 }
 
@@ -665,7 +685,7 @@ function createControlPasswordDialog(jsCallback, controlPasswordStatus) {
 
     if (controlPasswordStatus === 0) {
         dlg.bsAccepted.connect(function() {
-            jsCallback(dlg, dlg.passwordDataOld, dlg.passwordData)
+            jsCallback(dlg, dlg.passwordData, dlg.passwordDataOld)
         })
     }
     else {
