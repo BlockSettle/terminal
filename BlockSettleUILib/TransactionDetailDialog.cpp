@@ -97,6 +97,10 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
             if (!ccLeaf_) {
                for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
                   const TxOut out = item->tx.getTxOutCopy(i);
+                  const auto txType = out.getScriptType();
+                  if (txType == TXOUT_SCRIPT_OPRETURN || txType == TXOUT_SCRIPT_NONSTANDARD) {
+                     continue;
+                  }
                   const auto addr = bs::Address::fromTxOut(out);
                   const auto addressWallet = walletsManager_->getWalletByAddress(addr);
                   if (addressWallet && (addressWallet->type() == bs::core::wallet::Type::ColorCoin)) {
@@ -310,14 +314,15 @@ void TransactionDetailDialog::addAddress(TxOut out    // can't use const ref due
 QString TransactionDetailDialog::getScriptType(const TxOut &out)
 {
    switch (out.getScriptType()) {
-   case TXOUT_SCRIPT_STDHASH160:    return tr("hash160");
-   case TXOUT_SCRIPT_STDPUBKEY65:   return tr("pubkey65");
-   case TXOUT_SCRIPT_STDPUBKEY33:   return tr("pubkey33");
-   case TXOUT_SCRIPT_MULTISIG:      return tr("multisig");
-   case TXOUT_SCRIPT_P2SH:          return tr("p2sh");
-   case TXOUT_SCRIPT_NONSTANDARD:   return tr("non-std");
-   case TXOUT_SCRIPT_P2WPKH:        return tr("p2wpkh");
-   case TXOUT_SCRIPT_P2WSH:         return tr("p2wsh");
-   default:            return tr("unknown");
+      case TXOUT_SCRIPT_STDHASH160:    return tr("hash160");
+      case TXOUT_SCRIPT_STDPUBKEY65:   return tr("pubkey65");
+      case TXOUT_SCRIPT_STDPUBKEY33:   return tr("pubkey33");
+      case TXOUT_SCRIPT_MULTISIG:      return tr("multisig");
+      case TXOUT_SCRIPT_P2SH:          return tr("p2sh");
+      case TXOUT_SCRIPT_NONSTANDARD:   return tr("non-std");
+      case TXOUT_SCRIPT_P2WPKH:        return tr("p2wpkh");
+      case TXOUT_SCRIPT_P2WSH:         return tr("p2wsh");
+      case TXOUT_SCRIPT_OPRETURN:      return tr("op-return");
    }
+   return tr("unknown");
 }
