@@ -21,6 +21,7 @@ CustomTitleDialogWindow {
     property QPasswordData passwordData: QPasswordData{}
     property QPasswordData passwordDataOld: QPasswordData{}
     property int controlPasswordStatus
+    property bool usedInChain: false
 
     property string decryptHeaderText: qsTr("Enter Control Password")
 
@@ -136,7 +137,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 anchors.margins: 5
-                text: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+                text: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew && root.usedInChain
                     ? qsTr("Skip")
                     : qsTr("Cancel")
                 onClicked: {
@@ -172,7 +173,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
 
                     passwordData.encType = QPasswordData.Password
 
-                    if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Accepted) {
+                    if (!root.usedInChain && root.controlPasswordStatus !== BSControlPasswordInput.ControlPasswordStatus.Rejected) {
                         bsAccepted();
                     } else {
                         acceptAnimated();
