@@ -225,8 +225,8 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
    else {
       const auto &cbFee = [this](float feePerByte) {
          const uint64_t spendVal = bs::XBTAmount(amount()).GetValue();
-         auto inputsCb = [this, feePerByte, spendVal](const std::map<UTXO, std::string> &xbtInputs) {
-            auto changeAddrCb = [this, feePerByte, xbtInputs, spendVal](const bs::Address &changeAddr) {
+         auto inputsCb = [this, feePerByte, spendVal](const std::map<UTXO, std::string> &xbtInputs, bool useAllInputs = false) {
+            auto changeAddrCb = [this, feePerByte, xbtInputs, spendVal, useAllInputs](const bs::Address &changeAddr) {
                try {
 
                   const auto recipient = bs::Address::fromAddressString(dealerAddress_).getRecipient(bs::XBTAmount{ spendVal });
@@ -242,7 +242,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   };
 
                   ccTxData_ = walletsMgr_->createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte
-                     , { recipient }, outSortOrder, dealerTx_, false/*calcFeeFromPrevData*/);
+                     , { recipient }, outSortOrder, dealerTx_, false/*calcFeeFromPrevData*/, useAllInputs);
                   ccTxData_.populateUTXOs = true;
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
@@ -260,7 +260,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
          if (manualXbtInputs_.empty()) {
             bs::tradeutils::getSpendableTxOutList(xbtLeaves_, inputsCb);
          } else {
-            inputsCb(manualXbtInputs_);
+            inputsCb(manualXbtInputs_, true);
          }
       };
       walletsMgr_->estimatedFeePerByte(0, cbFee, this);

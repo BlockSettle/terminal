@@ -350,10 +350,8 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
    for (size_t i = 0; i < curTx_.getNumTxOut(); i++) {
       TxOut txOut = curTx_.getTxOutCopy(i);
       auto txType = txOut.getScriptType();
-      const auto outAddr = bs::Address::fromTxOut(txOut);
-      const auto addressWallet = walletsMgr_->getWalletByAddress(outAddr);
       QString addrStr;
-      const QString walletName = addressWallet ? QString::fromStdString(addressWallet->name()) : QString();
+      QString walletName;
 
       // For now, don't display any data if the TxOut is OP_RETURN or non-std.
       // Displaying a hex version of the script is one thing that could be done.
@@ -361,11 +359,12 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
       // (80 bytes max) but non-std could mean just about anything.
       if (txType == TXOUT_SCRIPT_OPRETURN) {
          addrStr = tr("<OP_RETURN>");
-      }
-      else if (txType == TXOUT_SCRIPT_NONSTANDARD) {
+      } else if (txType == TXOUT_SCRIPT_NONSTANDARD) {
          addrStr = tr("<Non-Standard>");
-      }
-      else {
+      } else {
+         const auto outAddr = bs::Address::fromTxOut(txOut);
+         const auto addressWallet = walletsMgr_->getWalletByAddress(outAddr);
+         walletName = addressWallet ? QString::fromStdString(addressWallet->name()) : QString();
          addrStr = QString::fromStdString(outAddr.display());
       }
 
