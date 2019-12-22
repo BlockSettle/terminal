@@ -30,6 +30,25 @@ namespace bs {
    }
 }
 
+class ControlPasswordStatus : public QObject
+{
+   Q_OBJECT
+   using ControlStatus = ::Blocksettle::Communication::signer::ControlPasswordStatus;
+public:
+   ControlPasswordStatus(QObject *parent = nullptr) : QObject(parent) {
+      assert(metaObject()->enumerator(metaObject()->indexOfEnumerator("Status")).keyCount() ==
+         ::Blocksettle::Communication::signer::ControlPasswordStatus_ARRAYSIZE);
+   }
+
+   enum Status {
+      Accepted = ControlStatus::Accepted,
+      Rejected = ControlStatus::Rejected,
+      RequestedNew = ControlStatus::RequestedNew,
+   };
+
+   Q_ENUMS(Status)
+};
+
 class QmlFactory : public QObject
 {
    Q_OBJECT
@@ -124,7 +143,7 @@ public:
    Q_INVOKABLE bool isDebugBuild();
 
    Q_INVOKABLE int controlPasswordStatus() const;
-   void setControlPasswordStatus(int controlPasswordStatus);
+   void setControlPasswordStatus(ControlPasswordStatus::Status controlPasswordStatus);
 
 signals:
    void closeEventReceived();
@@ -141,9 +160,8 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
 
    QString headlessPubKey_;
-   int controlPasswordStatus_;
+   ControlPasswordStatus::Status controlPasswordStatus_;
 
 };
-
 
 #endif // QMLFACTORY_H

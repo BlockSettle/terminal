@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.11
 
 import "../StyledControls"
 import "../BsStyles"
+import com.blocksettle.ControlPasswordStatus 1.0
 
 import com.blocksettle.PasswordDialogData 1.0
 import com.blocksettle.QPasswordData 1.0
@@ -11,21 +12,14 @@ import com.blocksettle.QPasswordData 1.0
 CustomTitleDialogWindow {
     id: root
 
-    enum ControlPasswordStatus
-    {
-       Accepted,
-       Rejected,
-       RequestedNew
-    }
-
     property QPasswordData passwordData: QPasswordData{}
     property QPasswordData passwordDataOld: QPasswordData{}
-    property int controlPasswordStatus
+    property var controlPasswordStatus
     property bool usedInChain: false
 
     property string decryptHeaderText: qsTr("Enter Control Password")
 
-    title: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+    title: controlPasswordStatus === ControlPasswordStatus.RequestedNew
                ? qsTr("PUBLIC DATA ENCRYPTION")
                : qsTr("PUBLIC DATA DECRYPTION")
 
@@ -58,7 +52,7 @@ CustomTitleDialogWindow {
 
             CustomLabel{
                 id: labelDetails_
-                visible: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+                visible: controlPasswordStatus === ControlPasswordStatus.RequestedNew
                 text: qsTr("Your wallet files contain metadata such as your public keys (addresses), chatID and chat history. \
 With Public Data Encryption enabled you will be required to decrypt this material on each Terminal launch. \
 <br><br>THIS PASSWORD WILL BE USED FOR ALL WALLETS")
@@ -84,19 +78,19 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                 Layout.bottomMargin: 5
 
                 CustomLabel {
-                    visible: controlPasswordStatus !== BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+                    visible: controlPasswordStatus !== ControlPasswordStatus.RequestedNew
                     Layout.fillWidth: true
                     Layout.minimumWidth: 110
                     Layout.preferredWidth: 110
                     Layout.maximumWidth: 110
-                    text: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Rejected
+                    text: controlPasswordStatus === ControlPasswordStatus.Rejected
                           ? qsTr("Password")
                           : qsTr("Old Password")
                 }
 
                 CustomTextInput {
                     id: passwordInputDecrypt
-                    visible: controlPasswordStatus !== BSControlPasswordInput.ControlPasswordStatus.RequestedNew
+                    visible: controlPasswordStatus !== ControlPasswordStatus.RequestedNew
                     Layout.fillWidth: true
                     Layout.topMargin: 5
                     Layout.bottomMargin: 5
@@ -115,7 +109,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
 
             BSConfirmedPasswordInput {
                 id: newPasswordWithConfirm
-                visible: controlPasswordStatus !== BSControlPasswordInput.ControlPasswordStatus.Rejected
+                visible: controlPasswordStatus !== ControlPasswordStatus.Rejected
                 columnSpacing: 10
                 passwordLabelTxt: qsTr("Control Password")
                 confirmLabelTxt: qsTr("Confirm Password")
@@ -137,7 +131,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 anchors.margins: 5
-                text: controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew && root.usedInChain
+                text: controlPasswordStatus === ControlPasswordStatus.RequestedNew && root.usedInChain
                     ? qsTr("Skip")
                     : qsTr("Cancel")
                 onClicked: {
@@ -148,9 +142,9 @@ With Public Data Encryption enabled you will be required to decrypt this materia
             CustomButton {
                 id: btnAccept
                 enabled: {
-                    if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.RequestedNew)
+                    if (controlPasswordStatus === ControlPasswordStatus.RequestedNew)
                         return newPasswordWithConfirm.acceptableInput
-                    else if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Rejected)
+                    else if (controlPasswordStatus === ControlPasswordStatus.Rejected)
                         return passwordInputDecrypt.text.length >= 6
                     else
                         return newPasswordWithConfirm.acceptableInput && passwordInputDecrypt.text.length >= 6
@@ -164,7 +158,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                 onClicked: {
                     passwordDataOld.textPassword = passwordInputDecrypt.text
 
-                    if (controlPasswordStatus === BSControlPasswordInput.ControlPasswordStatus.Rejected) {
+                    if (controlPasswordStatus === ControlPasswordStatus.Rejected) {
                         passwordData.textPassword = passwordInputDecrypt.text
                     }
                     else {
@@ -173,7 +167,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
 
                     passwordData.encType = QPasswordData.Password
 
-                    if (!root.usedInChain && root.controlPasswordStatus !== BSControlPasswordInput.ControlPasswordStatus.Rejected) {
+                    if (!root.usedInChain && root.controlPasswordStatus !== ControlPasswordStatus.Rejected) {
                         bsAccepted();
                     } else {
                         acceptAnimated();

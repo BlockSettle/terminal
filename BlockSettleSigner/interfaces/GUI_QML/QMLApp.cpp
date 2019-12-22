@@ -231,6 +231,11 @@ void QMLAppObj::registerQtTypes()
    qmlRegisterType<bs::hd::WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
    qmlRegisterType<bs::wallet::QSeed>("com.blocksettle.QSeed", 1, 0, "QSeed");
    qmlRegisterType<bs::wallet::QPasswordData>("com.blocksettle.QPasswordData", 1, 0, "QPasswordData");
+   qmlRegisterType<ControlPasswordStatus>("com.blocksettle.ControlPasswordStatus", 1, 0, "ControlPasswordStatus");
+
+   // Exposing metadata to js files
+   QJSValue scriptControlEnum = ctxt_->engine()->newQMetaObject(&ControlPasswordStatus::staticMetaObject);
+   ctxt_->engine()->globalObject().setProperty(QLatin1String("ControlPasswordStatus"), scriptControlEnum);
 }
 
 void QMLAppObj::onLimitsChanged()

@@ -393,8 +393,7 @@ function createNewWalletDialog(data) {
         dlgNewSeed.open()
     }
 
-    // Fixme, 2 == new pass requested
-    if (qmlFactory.controlPasswordStatus() === 2) {
+    if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.RequestedNew) {
         var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished,
                                         qmlFactory.controlPasswordStatus(), true)
         return controlPasswordDialog
@@ -414,8 +413,7 @@ function importWalletDialog(data) {
         dlgImp.open()
     }
 
-    // Fixme, 2 == new pass requested
-    if (qmlFactory.controlPasswordStatus() === 2) {
+    if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.RequestedNew) {
         var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished,
                                         qmlFactory.controlPasswordStatus(), true)
         return controlPasswordDialog
@@ -430,7 +428,7 @@ function managePublicDataEncryption() {
     const previousState = qmlFactory.controlPasswordStatus();
 
     let onControlPasswordFinished = function(dialog, newPassword, oldPassword){
-        if (previousState !== 0) {
+        if (previousState !== ControlPasswordStatus.Accepted) {
             walletsProxy.sendControlPassword(newPassword);
             if (newPassword !== "") {
                 let mbAccept = messageBox(BSMessageBox.Type.Success
@@ -686,14 +684,9 @@ function updateDialogData(jsCallback, passwordDialogData) {
 function createControlPasswordDialog(jsCallback, controlPasswordStatus, usedInChain) {
     let dlg = Qt.createComponent("../BsControls/BSControlPasswordInput.qml").createObject(mainWindow
         , { "controlPasswordStatus": controlPasswordStatus ,
-            "usedInChain" : usedInChain } )
+            "usedInChain" : usedInChain } );
 
-    // Fixme
-    // Accepted = 0;
-    // Rejected = 1;
-    // RequestedNew = 2;
-
-    if (controlPasswordStatus === 0) {
+    if (controlPasswordStatus === ControlPasswordStatus.Accepted) {
         dlg.bsAccepted.connect(function() {
             jsCallback(dlg, dlg.passwordData, dlg.passwordDataOld)
         })
@@ -703,9 +696,11 @@ function createControlPasswordDialog(jsCallback, controlPasswordStatus, usedInCh
             jsCallback(dlg, dlg.passwordData)
         })
 
-        dlg.bsRejected.connect(function() {
-            jsCallback(dlg, "")
-        })
+        if (usedInChain) {
+            dlg.bsRejected.connect(function() {
+                jsCallback(dlg, "")
+            })
+        }
     }
 
     prepareDialog(dlg)
