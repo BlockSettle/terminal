@@ -394,9 +394,13 @@ QVariant TransactionsViewModel::data(const QModelIndex &index, int role) const
 
    if (role == Qt::TextAlignmentRole) {
       switch (col) {
-      case Columns::Amount:   return Qt::AlignRight;
-      case Columns::Flag:     return Qt::AlignCenter;
-      default:  break;
+      case Columns::Status:
+      case Columns::Amount:
+         return Qt::AlignRight;
+      case Columns::Flag:
+         return Qt::AlignCenter;
+      default:
+         break;
       }
       return {};
    }
