@@ -52,7 +52,7 @@ public:
    void start();
    void stop();
 
-   void reloadWallets(const std::function<void()> & = nullptr);
+   void reloadWallets(bool notifyGUI, const std::function<void()> & = nullptr);
    void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
 
@@ -77,6 +77,7 @@ public:
 private:
    void startTerminalsProcessing();
    void stopTerminalsProcessing();
+   void applyNewControlPassword(const SecureBinaryData &controlPassword, bool notifyGui);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

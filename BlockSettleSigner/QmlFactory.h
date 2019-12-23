@@ -143,7 +143,7 @@ public:
    Q_INVOKABLE bool isDebugBuild();
 
    Q_INVOKABLE int controlPasswordStatus() const;
-   void setControlPasswordStatus(ControlPasswordStatus::Status controlPasswordStatus);
+   Q_INVOKABLE void setControlPasswordStatus(int controlPasswordStatus);
 
 signals:
    void closeEventReceived();

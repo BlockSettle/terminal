@@ -167,7 +167,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
 
                     passwordData.encType = QPasswordData.Password
 
-                    if (!root.usedInChain && root.controlPasswordStatus !== ControlPasswordStatus.Rejected) {
+                    if (!root.usedInChain || controlPasswordStatus === ControlPasswordStatus.Rejected) {
                         bsAccepted();
                     } else {
                         acceptAnimated();

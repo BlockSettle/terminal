@@ -201,8 +201,8 @@ int QmlFactory::controlPasswordStatus() const
    return static_cast<int>(controlPasswordStatus_);
 }
 
-void QmlFactory::setControlPasswordStatus(ControlPasswordStatus::Status controlPasswordStatus)
+void QmlFactory::setControlPasswordStatus(int controlPasswordStatus)
 {
-   controlPasswordStatus_ = controlPasswordStatus;
+   controlPasswordStatus_ = static_cast<ControlPasswordStatus::Status>(controlPasswordStatus);
 }
 
