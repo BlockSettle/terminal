@@ -95,7 +95,7 @@ void HeadlessAppObj::start()
    logger_->debug("[{}] loading wallets from dir <{}>", __func__
       , settings_->getWalletsDir());
 
-   reloadWallets();
+   reloadWallets(true /* notify GUI */);
 
    if (!settings_->offline()) {
       startTerminalsProcessing();
@@ -325,6 +325,13 @@ void HeadlessAppObj::stopTerminalsProcessing()
    signerBindStatus_ = bs::signer::BindStatus::Inactive;
 }
 
+void HeadlessAppObj::applyNewControlPassword(const SecureBinaryData &controlPassword, bool notifyGui)
+{
+   controlPassword_ = controlPassword;
+   reloadWallets(notifyGui);
+   guiListener_->walletsListUpdated();
+}
+
 SecureBinaryData HeadlessAppObj::controlPassword() const
 {
    return controlPassword_;
@@ -332,22 +339,34 @@ SecureBinaryData HeadlessAppObj::controlPassword() const
 
 void HeadlessAppObj::setControlPassword(const SecureBinaryData &controlPassword)
 {
-   controlPassword_ = controlPassword;
-   reloadWallets();
-   guiListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
-   guiListener_->walletsListUpdated();
+   if (!walletsMgr_->empty()) {
+      changeControlPassword(controlPassword_, controlPassword);
+   }
+
+   applyNewControlPassword(controlPassword, true /* notify GUI */);
 }
 
 bs::error::ErrorCode HeadlessAppObj::changeControlPassword(const SecureBinaryData &controlPasswordOld, const SecureBinaryData &controlPasswordNew)
 {
-   if (controlPasswordOld != controlPassword()) {
+   if (controlPasswordStatus_ == signer::Rejected) {
+      applyNewControlPassword(controlPasswordOld, false /* do not notify GUI */);
+   }
+
+   if (controlPasswordOld != controlPassword() || controlPasswordStatus_ == signer::Rejected) {
       return bs::error::ErrorCode::InvalidPassword;
    }
+
+   if (controlPasswordOld == controlPasswordNew) {
+      return bs::error::ErrorCode::NoError;
+   }
+
    try {
       walletsMgr_->changeControlPassword(controlPasswordOld, controlPasswordNew);
    } catch (...) {
       return bs::error::ErrorCode::InvalidPassword;
    }
+
+   controlPassword_ = controlPasswordNew;
    return bs::error::ErrorCode::NoError;
 }
 
@@ -375,7 +394,7 @@ std::string HeadlessAppObj::getOwnKeyFileName()
    return "remote_signer.peers";
 }
 
-void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
+void HeadlessAppObj::reloadWallets(bool notifyGUI, const std::function<void()> &cb)
 {
    walletsMgr_->reset();
 
@@ -392,16 +411,11 @@ void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
    }
 
    if (ok) {
-      if (walletsMgr_->empty()) {
-         logger_->warn("No wallets loaded");
-         if (controlPassword().getSize() == 0) {
-            guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::RequestedNew);
-            controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
-         }
+      logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
+      if (controlPassword().getSize() == 0) {
+         controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
       }
       else {
-         logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
-         guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Accepted);
          controlPasswordStatus_ = signer::ControlPasswordStatus::Accepted;
       }
    }
@@ -409,10 +423,12 @@ void HeadlessAppObj::reloadWallets(const std::function<void()> &cb)
       // wallets not loaded if control password wrong
       // send message to gui to request it
       logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
-      guiListener_->sendControlPasswordStatusUpdate(signer::ControlPasswordStatus::Rejected);
       controlPasswordStatus_ = signer::ControlPasswordStatus::Rejected;
    }
 
+   if (notifyGUI) {
+      guiListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
+   }
    terminalListener_->setNoWallets(ok && walletsMgr_->empty());
 }
 

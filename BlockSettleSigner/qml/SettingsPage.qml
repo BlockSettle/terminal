@@ -450,7 +450,7 @@ Item {
                 Layout.leftMargin: 10
 
                 CustomLabel {
-                    text: qsTr("Master Password")
+                    text: qsTr("Public Data Encryption")
                     Layout.minimumWidth: 125
                     Layout.preferredWidth: 125
                     Layout.maximumWidth: 125
@@ -461,27 +461,14 @@ Item {
                 }
 
                 CustomButton {
-                    text: qsTr("Change")
+                    text: qsTr("MANAGE")
                     Layout.minimumWidth: 150
                     Layout.preferredWidth: 150
                     Layout.maximumWidth: 150
                     Layout.maximumHeight: 22
                     Layout.rightMargin: 6
                     onClicked: {
-                        var onControlPasswordChanged = function(success, errorMsg){
-                            if (success) {
-                                JsHelper.messageBox(BSMessageBox.Type.Success
-                                    , qsTr("Master Password"), qsTr("Change Master Password succeed"))
-
-                            } else {
-                                JsHelper.messageBox(BSMessageBox.Type.Critical
-                                    , qsTr("Master Password"), qsTr("Change Master Password failed: \n") + errorMsg)
-                            }
-                        }
-                        var onControlPasswordFinished = function(oldPassword, newPassword){
-                            walletsProxy.changeControlPassword(oldPassword, newPassword, onControlPasswordChanged)
-                        }
-                        JsHelper.createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
+                        JsHelper.managePublicDataEncryption();
                     }
                 }
             }

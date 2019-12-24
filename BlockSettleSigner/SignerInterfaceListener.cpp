@@ -653,7 +653,9 @@ void SignerInterfaceListener::onUpdateControlPasswordStatus(const std::string &d
       });
 
       qmlBridge_->invokeQmlMethod(QmlBridge::ControlPasswordStatusChanged, cb
-         , QVariant::fromValue(static_cast<int>(evt.controlpasswordstatus())));
+         , QVariant::fromValue(static_cast<int>(evt.controlpasswordstatus()))
+         , { false } /* standalone dialog */
+         , { true } /* init dialog*/);
    }
 }
 

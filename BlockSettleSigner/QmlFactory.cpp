@@ -197,11 +197,12 @@ void QmlFactory::setHeadlessPubKey(const QString &headlessPubKey)
 
 int QmlFactory::controlPasswordStatus() const
 {
-    return controlPasswordStatus_;
+   // This method is using in QML so that's why we return int type 
+   return static_cast<int>(controlPasswordStatus_);
 }
 
 void QmlFactory::setControlPasswordStatus(int controlPasswordStatus)
 {
-    controlPasswordStatus_ = controlPasswordStatus;
+   controlPasswordStatus_ = static_cast<ControlPasswordStatus::Status>(controlPasswordStatus);
 }
 

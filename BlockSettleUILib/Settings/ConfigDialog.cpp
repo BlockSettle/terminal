@@ -99,6 +99,10 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
          prevState_[s] = appSettings_->get(s);
       }
    });
+
+   connect(ui_->pageGeneral, &GeneralSettingsPage::requestDataEncryption, this, [this]() {
+      signContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ManagePublicDataEncryption);
+   });
 }
 
 ConfigDialog::~ConfigDialog() = default;

@@ -373,11 +373,51 @@ function prepareFullModeDialog(dialog) {
     })
 }
 
+function checkEncryptionPassword(dlg) {
+    var onControlPasswordFinished = function(prevDialog, password){
+        if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.RequestedNew) {
+            walletsProxy.sendControlPassword(password)
+            prevDialog.setNextChainDialog(dlg)
+            dlg.open()
+            return;
+        }
+        else if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.Accepted) {
+            return;
+        }
+
+        let onControlPasswordChanged = function(success, errorMsg){
+            if (success) {
+                qmlFactory.setControlPasswordStatus(ControlPasswordStatus.Accepted);
+                prevDialog.setNextChainDialog(dlg)
+                dlg.open()
+            } else {
+                let mbFail= messageBox(BSMessageBox.Type.Critical
+                    , qsTr("Public Data Encryption"), qsTr("Apply Public Data Encryption Password failed: \n") + errorMsg);
+                mbFail.bsAccepted.connect(prevDialog.dialogsChainFinished)
+                prevDialog.sizeChanged(mbFail.width, mbFail.height + 10)
+            }
+        }
+
+        walletsProxy.changeControlPassword(password,
+                                           password, onControlPasswordChanged);
+    }
+
+    if (qmlFactory.controlPasswordStatus() !== ControlPasswordStatus.Accepted) {
+        var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished,
+                                        qmlFactory.controlPasswordStatus(), true, false)
+        return controlPasswordDialog
+    }
+    else {
+        dlg.open()
+        return dlg
+    }
+}
+
 function createNewWalletDialog(data) {
-    var newSeed = qmlFactory.createSeed(signerSettings.testNet)
+    let newSeed = qmlFactory.createSeed(signerSettings.testNet)
 
     // allow user to save wallet seed lines and then prompt him to enter them for verification
-    var dlgNewSeed = Qt.createComponent("../BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
+    let dlgNewSeed = Qt.createComponent("../BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
     dlgNewSeed.seed = newSeed
     dlgNewSeed.bsAccepted.connect(function() {
         // let user set a password or Auth eID and also name and desc. for the new wallet
@@ -387,41 +427,66 @@ function createNewWalletDialog(data) {
         dlgCreateWallet.open()
     })
 
-    var onControlPasswordFinished = function(prevDialog, password){
-        walletsProxy.sendControlPassword(password)
-        prevDialog.setNextChainDialog(dlgNewSeed)
-        dlgNewSeed.open()
-    }
-
-    // Fixme, 2 == new pass requested
-    if (qmlFactory.controlPasswordStatus() === 2) {
-        var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
-        return controlPasswordDialog
-    }
-    else {
-        dlgNewSeed.open()
-        return dlgNewSeed
-    }
+    return checkEncryptionPassword(dlgNewSeed);
 }
 
 function importWalletDialog(data) {
-    var dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
+    let dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
+    return checkEncryptionPassword(dlgImp);
+}
 
-    var onControlPasswordFinished = function(prevDialog, password){
-        walletsProxy.sendControlPassword(password)
-        prevDialog.setNextChainDialog(dlgImp)
-        dlgImp.open()
+function managePublicDataEncryption() {
+    const previousState = qmlFactory.controlPasswordStatus();
+
+    let onControlPasswordFinished = function(dialog, newPassword, oldPassword){
+        if (previousState === ControlPasswordStatus.RequestedNew) {
+            walletsProxy.sendControlPassword(newPassword);
+            if (newPassword !== "") {
+                let mbAccept = messageBox(BSMessageBox.Type.Success
+                    , qsTr("Public Data Encryption"), qsTr("Set Public Data Encryption Password succeed"));
+                mbAccept.bsAccepted.connect(dialog.dialogsChainFinished);
+            } else {
+                dialog.dialogsChainFinished();
+            }
+
+            return;
+        }
+
+        let successMessageBody;
+        let errorMessageBody;
+        let updatedOldPassword;
+        if (previousState === ControlPasswordStatus.Accepted) {
+            successMessageBody = qsTr("Change Public Data Encryption Password succeed");
+            errorMessageBody = qsTr("Change Public Data Encryption Password failed: ");
+            updatedOldPassword = oldPassword;
+        } else if (previousState === ControlPasswordStatus.Rejected) {
+            successMessageBody = qsTr("Set Public Data Encryption Password succeed");
+            errorMessageBody = qsTr("Set Public Data Encryption Password failed: ");
+            updatedOldPassword = newPassword;
+        }
+
+        let onControlPasswordChanged = function(success, errorMsg){
+            if (success) {
+                qmlFactory.setControlPasswordStatus(ControlPasswordStatus.Accepted);
+                let mbSuccess = messageBox(BSMessageBox.Type.Success
+                    , qsTr("Public Data Encryption"), qsTr(successMessageBody));
+                mbSuccess.bsAccepted.connect(dialog.dialogsChainFinished)
+                dialog.sizeChanged(mbSuccess.width, mbSuccess.height + 10)
+            } else {
+                let mbFail= messageBox(BSMessageBox.Type.Critical
+                    , qsTr("Public Data Encryption"), qsTr(errorMessageBody + "\n") + errorMsg);
+                mbFail.bsAccepted.connect(dialog.dialogsChainFinished)
+                dialog.sizeChanged(mbFail.width, mbFail.height + 10)
+            }
+        }
+
+        walletsProxy.changeControlPassword(updatedOldPassword,
+                                           newPassword, onControlPasswordChanged);
     }
 
-    // Fixme, 2 == new pass requested
-    if (qmlFactory.controlPasswordStatus() === 2) {
-        var controlPasswordDialog =  createControlPasswordDialog(onControlPasswordFinished, qmlFactory.controlPasswordStatus())
-        return controlPasswordDialog
-    }
-    else {
-        dlgImp.open()
-        return dlgImp
-    }
+    let controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished,
+                                        qmlFactory.controlPasswordStatus(), false, false)
+    return controlPasswordDialog;
 }
 
 function backupWalletDialog(data) {
@@ -645,18 +710,15 @@ function updateDialogData(jsCallback, passwordDialogData) {
     }
 }
 
-function createControlPasswordDialog(jsCallback, controlPasswordStatus) {
+function createControlPasswordDialog(jsCallback, controlPasswordStatus, usedInChain, initDialog) {
     let dlg = Qt.createComponent("../BsControls/BSControlPasswordInput.qml").createObject(mainWindow
-        , { "controlPasswordStatus": controlPasswordStatus} )
+        , { "controlPasswordStatus": controlPasswordStatus ,
+            "usedInChain" : usedInChain ,
+            "initDialog" : initDialog });
 
-    // Fixme
-    // Accepted = 0;
-    // Rejected = 1;
-    // RequestedNew = 2;
-
-    if (controlPasswordStatus === 0) {
+    if (controlPasswordStatus === ControlPasswordStatus.Accepted) {
         dlg.bsAccepted.connect(function() {
-            jsCallback(dlg, dlg.passwordDataOld, dlg.passwordData)
+            jsCallback(dlg, dlg.passwordData, dlg.passwordDataOld)
         })
     }
     else {
@@ -664,9 +726,11 @@ function createControlPasswordDialog(jsCallback, controlPasswordStatus) {
             jsCallback(dlg, dlg.passwordData)
         })
 
-        dlg.bsRejected.connect(function() {
-            jsCallback(dlg, "")
-        })
+        if (usedInChain) {
+            dlg.bsRejected.connect(function() {
+                jsCallback(dlg, "")
+            })
+        }
     }
 
     prepareDialog(dlg)
