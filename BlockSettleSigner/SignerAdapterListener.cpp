@@ -848,7 +848,7 @@ bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer
    }
 
    const auto woWallet = walletsMgr_->loadWoWallet(settings_->netType()
-      , settings_->getWalletsDir(), request.filename());
+      , settings_->getWalletsDir(), request.filename(), app_->controlPassword());
    if (!woWallet) {
       return false;
    }
