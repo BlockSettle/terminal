@@ -97,7 +97,10 @@ namespace bs {
          {
             SignalsHandler::registerHandler([this](int signal) {
                logger_->info("quit signal received, shutdown...");
-               queue_->quit();
+
+               QMetaObject::invokeMethod(qApp, [] {
+                  QApplication::quit();
+               });
             });
 
             thrProc_ = std::thread([this] {
@@ -114,22 +117,17 @@ namespace bs {
                   const auto errMsg = std::string("Signer processing error: ") + e.what();
                   logger_->error("{}", errMsg);
                   std::cerr << errMsg << std::endl;
-                  return EXIT_FAILURE;
+                  std::exit(EXIT_FAILURE);
                }
 #endif   //NDEBUG
-
-               QMetaObject::invokeMethod(qApp, [] {
-                  QApplication::quit();
-               });
             });
          }
 
          ~Queue()
          {
             appObj_.stop();
-            if (thrProc_.joinable()) {
-               thrProc_.join();
-            }
+            queue_->quit();
+            thrProc_.join();
             logger_->info("signer ended execution");
          }
 
