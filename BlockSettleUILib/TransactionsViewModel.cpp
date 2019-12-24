@@ -631,7 +631,7 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       TXNode *node = nullptr;
       {
          QMutexLocker locker(&updateMutex_);
-         const auto node = rootNode_->find(item->txEntry);
+         node = rootNode_->find(item->txEntry);
       }
       if (node) {
          updatedItems->push_back(item);
@@ -881,7 +881,7 @@ void TransactionsViewModel::ledgerToTxData(const std::map<int, std::vector<bs::T
 
    signalOnEndLoading_ = true;
    for (const auto &le : rawData) {
-      const auto result = updateTransactionsPage(le.second);
+      updateTransactionsPage(le.second);
       emit updateProgress(int(rawData.size()) + pageCnt++);
    }
    initialLoadCompleted_ = true;
