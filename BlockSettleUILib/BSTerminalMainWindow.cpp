@@ -1046,35 +1046,35 @@ void BSTerminalMainWindow::onGenerateAddress()
 {
    if (walletsMgr_->hdWallets().empty()) {
       createWallet(true);
+      return;
    }
-   else {
-      const auto defWallet = walletsMgr_->getDefaultWallet();
-      std::string selWalletId = defWallet ? defWallet->walletId() : std::string{};
 
-      if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
-         auto wallets = ui_->widgetWallets->getSelectedWallets();
+   const auto defWallet = walletsMgr_->getDefaultWallet();
+   std::string selWalletId = defWallet ? defWallet->walletId() : std::string{};
+
+   if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
+      auto wallets = ui_->widgetWallets->getSelectedWallets();
+      if (!wallets.empty()) {
+         selWalletId = wallets[0]->walletId();
+      } else {
+         wallets = ui_->widgetWallets->getFirstWallets();
+
          if (!wallets.empty()) {
             selWalletId = wallets[0]->walletId();
-         } else {
-            wallets = ui_->widgetWallets->getFirstWallets();
-
-            if (!wallets.empty()) {
-               selWalletId = wallets[0]->walletId();
-            }
          }
       }
-      SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(
-         walletsMgr_, selWalletId, this);
-      selectWalletDialog->exec();
-
-      if (selectWalletDialog->result() == QDialog::Rejected) {
-         return;
-      }
-
-      NewAddressDialog* newAddressDialog = new NewAddressDialog(
-         selectWalletDialog->getSelectedWallet(), signContainer_, this);
-      newAddressDialog->show();
    }
+   SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(
+      walletsMgr_, selWalletId, this);
+   selectWalletDialog->exec();
+
+   if (selectWalletDialog->result() == QDialog::Rejected) {
+      return;
+   }
+
+   NewAddressDialog* newAddressDialog = new NewAddressDialog(
+      selectWalletDialog->getSelectedWallet(), signContainer_, this);
+   newAddressDialog->show();
 }
 
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
