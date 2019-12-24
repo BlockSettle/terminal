@@ -275,6 +275,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
                , sr.recipientAddress, sr.xbtWallet, signingContainer_, armory_, walletsManager_, std::move(sr.utxoRes));
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
+            connect(settlContainer.get(), &DealerCCSettlementContainer::error, this, &RFQReplyWidget::onTransactionError);
 
             connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this
                     , [settlContainer, quoteId = order.quoteId](const std::string& failedQuoteId, const std::string& reason){
@@ -311,6 +312,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayoutToPB, this, &RFQReplyWidget::sendSignedPayoutToPB);
+            connect(settlContainer.get(), &DealerXBTSettlementContainer::error, this, &RFQReplyWidget::onTransactionError);
 
             connect(this, &RFQReplyWidget::unsignedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onUnsignedPayinRequested);
             connect(this, &RFQReplyWidget::signedPayoutRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayoutRequested);
@@ -376,6 +378,11 @@ void RFQReplyWidget::onSelected(const QString& productGroup, const bs::network::
    }
 
    ui_->pageRFQReply->setQuoteReqNotification(request, indicBid, indicAsk);
+}
+
+void RFQReplyWidget::onTransactionError(const QString& error)
+{
+   MessageBoxBroadcastError(error, this).exec();
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)
