@@ -185,10 +185,8 @@ void CCTokenEntryDialog::onTimer()
 
 void CCTokenEntryDialog::onCancel()
 {
-   ui_->stackedWidgetAuth->setCurrentWidget(ui_->pageEnter);
+   setDisabled(true);
    timeLeft_ = 0;
    timer_.stop();
-
-   // FIXME:
-   // implement cancelation
+   ccFileMgr_->cancelSubmitAddressToPub();
 }
