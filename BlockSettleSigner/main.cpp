@@ -120,6 +120,9 @@ namespace bs {
                   std::exit(EXIT_FAILURE);
                }
 #endif   //NDEBUG
+               QMetaObject::invokeMethod(qApp, [] {
+                  QApplication::quit();
+               });
             });
          }
 
