@@ -52,7 +52,7 @@ AuthSignWalletObject::AuthSignWalletObject(const AuthSignWalletObject &other)
 void AuthSignWalletObject::connectToServer()
 {
    auto authKeys = settings_->GetAuthKeys();
-   autheIDClient_ = std::make_shared<AutheIDClient>(logger_, connectionManager_->GetNAM(), settings_->GetAuthKeys(), settings_->isAutheidTestEnv(), this);
+   autheIDClient_ = std::make_shared<AutheIDClient>(logger_, connectionManager_->GetNAM(), settings_->GetAuthKeys(), settings_->autheidEnv(), this);
 
    connect(autheIDClient_.get(), &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
       emit succeeded(QString::fromStdString(encKey), password);
