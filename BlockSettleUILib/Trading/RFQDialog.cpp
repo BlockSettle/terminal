@@ -200,7 +200,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
          , this, &RFQDialog::onCCQuoteAccepted);
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::settlementCancelled
          , this, &QDialog::close);
-      connect(xbtSettlContainer_.get(), &ReqCCSettlementContainer::error
+      connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::error
          , this, &RFQDialog::logError);
    }
    catch (const std::exception &e) {
