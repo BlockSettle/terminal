@@ -51,7 +51,7 @@ TEST(TestAuthEid, VerifySignature)
    signResult.certificateIssuer = packet.autheidsign().certificate_issuer();
    signResult.ocspResponse = packet.autheidsign().ocsp_response();
 
-   auto result = AutheIDClient::verifySignature(signResult, AutheIDClient::AuthEidEnv::Test);
+   auto result = AutheIDClient::verifySignature(signResult, AuthEidEnv::Staging);
    ASSERT_TRUE(result.valid);
 
    ASSERT_EQ(result.uniqueUserId, "2pq54tfr");
@@ -68,26 +68,26 @@ TEST(TestAuthEid, VerifySignature)
 
    auto signResultInvalid = signResult;
    signResultInvalid.sign = mangleEnd(signResult.sign);
-   result = AutheIDClient::verifySignature(signResultInvalid, AutheIDClient::AuthEidEnv::Test);
+   result = AutheIDClient::verifySignature(signResultInvalid, AuthEidEnv::Staging);
    EXPECT_TRUE(!result.valid);
 
    signResultInvalid = signResult;
    signResultInvalid.certificateClient = mangleEnd(signResult.certificateClient);
-   result = AutheIDClient::verifySignature(signResultInvalid, AutheIDClient::AuthEidEnv::Test);
+   result = AutheIDClient::verifySignature(signResultInvalid, AuthEidEnv::Staging);
    EXPECT_TRUE(!result.valid);
 
    signResultInvalid = signResult;
    signResultInvalid.certificateIssuer = mangleEnd(signResult.certificateIssuer);
-   result = AutheIDClient::verifySignature(signResultInvalid, AutheIDClient::AuthEidEnv::Test);
+   result = AutheIDClient::verifySignature(signResultInvalid, AuthEidEnv::Staging);
    EXPECT_TRUE(!result.valid);
 
    signResultInvalid = signResult;
    signResultInvalid.ocspResponse = mangleBegin(signResult.ocspResponse);
-   result = AutheIDClient::verifySignature(signResultInvalid, AutheIDClient::AuthEidEnv::Test);
+   result = AutheIDClient::verifySignature(signResultInvalid, AuthEidEnv::Staging);
    EXPECT_TRUE(!result.valid);
 
    signResultInvalid = signResult;
    // Invalid check using production root CA
-   result = AutheIDClient::verifySignature(signResultInvalid, AutheIDClient::AuthEidEnv::Prod);
+   result = AutheIDClient::verifySignature(signResultInvalid, AuthEidEnv::Staging);
    EXPECT_TRUE(!result.valid);
 }
