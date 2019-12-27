@@ -394,7 +394,7 @@ function checkEncryptionPassword(dlg) {
                 let mbFail= messageBox(BSMessageBox.Type.Critical
                     , qsTr("Public Data Encryption"), qsTr("Apply Public Data Encryption Password failed: \n") + errorMsg);
                 mbFail.bsAccepted.connect(prevDialog.dialogsChainFinished)
-                prevDialog.sizeChanged(mbFail.width, mbFail.height + 10)
+                prevDialog.setNextChainDialog(mbFail)
             }
         }
 
@@ -445,6 +445,7 @@ function managePublicDataEncryption() {
                 let mbAccept = messageBox(BSMessageBox.Type.Success
                     , qsTr("Public Data Encryption"), qsTr("Set Public Data Encryption Password succeed"));
                 mbAccept.bsAccepted.connect(dialog.dialogsChainFinished);
+                dialog.setNextChainDialog(mbAccept)
             } else {
                 dialog.dialogsChainFinished();
             }
@@ -471,12 +472,12 @@ function managePublicDataEncryption() {
                 let mbSuccess = messageBox(BSMessageBox.Type.Success
                     , qsTr("Public Data Encryption"), qsTr(successMessageBody));
                 mbSuccess.bsAccepted.connect(dialog.dialogsChainFinished)
-                dialog.sizeChanged(mbSuccess.width, mbSuccess.height + 10)
+                dialog.setNextChainDialog(mbSuccess)
             } else {
                 let mbFail= messageBox(BSMessageBox.Type.Critical
                     , qsTr("Public Data Encryption"), qsTr(errorMessageBody + "\n") + errorMsg);
                 mbFail.bsAccepted.connect(dialog.dialogsChainFinished)
-                dialog.sizeChanged(mbFail.width, mbFail.height + 10)
+                dialog.setNextChainDialog(mbFail)
             }
         }
 
