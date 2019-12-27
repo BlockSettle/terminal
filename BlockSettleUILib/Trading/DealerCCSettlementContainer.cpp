@@ -132,7 +132,7 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
       }
       else {
          SPDLOG_LOGGER_ERROR(logger_, "failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
-         emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
+         emit error(tr("TX half signing failed: %1").arg(bs::error::ErrorCodeToString(result)));
          sendFailed();
       }
    };

@@ -201,7 +201,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       auto verifyResult = bs::tradeutils::verifySignedPayout(verifyArgs);
       if (!verifyResult.success) {
          SPDLOG_LOGGER_ERROR(logger_, "payout verification failed: {}", verifyResult.errorMsg);
-         failWithErrorText(tr("payin verification failed"));
+         failWithErrorText(tr("Payin verification failed"));
          return;
       }
 
