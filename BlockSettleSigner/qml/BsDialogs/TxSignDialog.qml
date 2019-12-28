@@ -25,7 +25,7 @@ import "../BsControls"
 import "../BsStyles"
 import "../js/helper.js" as JsHelper
 
-CustomTitleDialogWindow {
+BSWalletHandlerDialog {
     property WalletInfo walletInfo: WalletInfo {}
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
@@ -61,10 +61,7 @@ CustomTitleDialogWindow {
             acceptAnimated()
         });
         authSign.failed.connect(function(errorText) {
-            var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
-                , qsTr("Wallet"), errorText
-                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
-            mb.bsAccepted.connect(function() { rejectAnimated() })
+            showWalletError(errorText);
         })
         authSign.userCancelled.connect(function() {
             rejectAnimated()
@@ -298,7 +295,7 @@ CustomTitleDialogWindow {
                     timeLeft -= 0.5
                     if (timeLeft <= 0) {
                         stop()
-                        rejectAnimated()
+                        showWalletError(kOperationTimeExceeded);
                     }
                 }
                 signal expired()
@@ -315,7 +312,7 @@ CustomTitleDialogWindow {
             }
 
             CustomLabelValue {
-                text: qsTr("%1 seconds left").arg(timeLeft.toFixed((0)))
+                text: qsTr("%1 seconds left").arg(Math.max(0, timeLeft.toFixed(0)))
                 Layout.fillWidth: true
             }
         }

@@ -230,7 +230,7 @@ CustomTitleDialogWindow {
                 onClicked: {
                     var exportCallback = function(success, errorMsg) {
                         if (success) {
-                            var mb = JsHelper.messageBox(BSMessageBox.Type.Success
+                            let mbAccept = JsHelper.messageBox(BSMessageBox.Type.Success
                                 , qsTr("Wallet Export")
                                 , qsTr("%1Wallet successfully exported")
                                     .arg(fullBackupMode ? "" : "Watching-Only ")
@@ -238,13 +238,16 @@ CustomTitleDialogWindow {
                                     .arg(walletInfo.name)
                                     .arg(walletInfo.walletId)
                                     .arg(targetFile))
-                            mb.bsAccepted.connect(function(){ acceptAnimated() })
+                            mbAccept.bsAccepted.connect(function(){ root.acceptAnimated() })
+                            root.setNextChainDialog(mbAccept);
                         } else {
-                            JsHelper.messageBox(BSMessageBox.Type.Critical
+                            let mbReject = JsHelper.messageBox(BSMessageBox.Type.Critical
                                 , qsTr("Error")
                                 , qsTr("%1Wallet export failed")
                                     .arg(fullBackupMode ? "" : "Watching-Only ")
                                 , errorMsg)
+                            mbReject.bsAccepted.connect(function(){ root.rejectAnimated() })
+                            root.setNextChainDialog(mbReject);
                         }
                     }
 

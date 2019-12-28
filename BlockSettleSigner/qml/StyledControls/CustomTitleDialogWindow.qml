@@ -20,13 +20,7 @@ CustomDialog {
    // property bool qmlTitleVisible: true    //: !mainWindow.isLiteMode
     property alias headerPanel: headerPanel
     property bool fixedHeight: false
-    height: fixedHeight ? undefined: cHeaderHeight + cContentHeight + cFooterHeight
-
-    function isApplicationWindow(item) {
-        return item instanceof ApplicationWindow
-    }
-
-    cHeaderItem: ColumnLayout {
+    property var customHeader: ColumnLayout {
         id: layout
         spacing: 0
         Layout.alignment: Qt.AlignTop
@@ -40,6 +34,13 @@ CustomDialog {
         }
     }
 
+    height: fixedHeight ? undefined: cHeaderHeight + cContentHeight + cFooterHeight
+
+    function isApplicationWindow(item) {
+        return item instanceof ApplicationWindow
+    }
+
+    cHeaderItem: customHeader
 //    onNextChainDialogChangedOverloaded: {
 //        nextDialog.qmlTitleVisible = qmlTitleVisible
 //    }

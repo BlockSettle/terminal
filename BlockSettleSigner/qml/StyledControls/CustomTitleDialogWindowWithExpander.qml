@@ -13,17 +13,15 @@ import QtQuick.Controls 2.3
 import QtQuick.Layouts 1.0
 
 import "../BsStyles"
+import "../BsControls"
 
-// dialog window with header
-CustomDialog {
+BSWalletHandlerDialog {
     id: root
-    property bool fixedHeight: false
-    property string headerButtonText: ""
-    height: fixedHeight ? undefined: cHeaderHeight + cContentHeight + cFooterHeight
 
+    property string headerButtonText: ""
     signal headerButtonClicked()
 
-    cHeaderItem: ColumnLayout {
+    customHeader: ColumnLayout {
         id: layout
         spacing: 0
         Layout.alignment: Qt.AlignTop
