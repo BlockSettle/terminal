@@ -21,7 +21,7 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QPasswordData 1.0
 
-CustomTitleDialogWindow {
+BSWalletHandlerDialog {
     id: root
 
     property AuthSignWalletObject authSign: AuthSignWalletObject{}
@@ -60,13 +60,10 @@ CustomTitleDialogWindow {
             acceptAnimated()
         });
         authSign.failed.connect(function(errorText) {
-            var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
-                , qsTr("Wallet"), errorText
-                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
-            mb.bsAccepted.connect(function() { rejectAnimated() })
+            showWalletError(errorText);
         })
         authSign.userCancelled.connect(function() {
-            rejectAnimated()
+            rejectAnimated();
         })
     }
 
@@ -159,7 +156,7 @@ CustomTitleDialogWindow {
                         timeLeft -= 0.5
                         if (timeLeft <= 0) {
                             stop()
-                            rejectAnimated()
+                            showWalletError(kOperationTimeExceeded);
                         }
                     }
                     signal expired()
@@ -178,7 +175,7 @@ CustomTitleDialogWindow {
 
                 CustomLabelValue {
                     visible: walletInfo.encType === QPasswordData.Auth
-                    text: qsTr("%1 seconds left").arg(timeLeft.toFixed(0))
+                    text: qsTr("%1 seconds left").arg(Math.max(0, timeLeft.toFixed(0)))
                     Layout.fillWidth: true
                 }
             }

@@ -120,10 +120,7 @@ CustomTitleDialogWindowWithExpander {
         });
         authSign.failed.connect(function(errorText) {
             if (root) {
-                var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
-                    , qsTr("Wallet"), errorText
-                    , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
-                mb.bsAccepted.connect(function() { root.rejectAnimated() })
+                showWalletError(errorText);
             }
         })
         authSign.userCancelled.connect(function() {
@@ -442,7 +439,7 @@ CustomTitleDialogWindowWithExpander {
                         if (timeLeft <= 0) {
                             stop()
                             // assume non signed tx is cancelled tx
-                            rejectAnimated()
+                            showWalletError(kOperationTimeExceeded);
                         }
                     }
                     signal expired()
@@ -459,7 +456,7 @@ CustomTitleDialogWindowWithExpander {
                 }
 
                 CustomLabelValue {
-                    text: signingAllowed ? qsTr("%1 seconds left").arg(timeLeft.toFixed(0)) : errorMessage
+                    text: signingAllowed ? qsTr("%1 seconds left").arg(Math.max(0, timeLeft.toFixed(0))) : errorMessage
                     Layout.fillWidth: true
                 }
             }
