@@ -2414,10 +2414,14 @@ TEST_F(TestCCoin, Reorg)
    auto&& cct = makeCct();
    cct->goOnline();
 
+   std::vector<BinaryData> snapshots;
+
    EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), COIN);
 
    for (size_t i = 0; i < usersCount_; ++i)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
+
+   snapshots.push_back(cct->saveSnapshot());
 
    auto createTxLbd = [](std::shared_ptr<ScriptSpender> spender, 
       const std::map<bs::Address, uint64_t>& recipients)->Tx
@@ -2531,6 +2535,8 @@ TEST_F(TestCCoin, Reorg)
 
       //mine new block
       MineBlocks(1);
+
+      snapshots.push_back(cct->saveSnapshot());
    }
 
    auto&& branchPointHash = getCurrentTopBlockHash();
@@ -2630,6 +2636,8 @@ TEST_F(TestCCoin, Reorg)
    update(cct);
    zcUpdate(cct);
 
+   snapshots.push_back(cct->saveSnapshot());
+
    auto&& branchATop = getCurrentTopBlockHash();
 
    //check balances
@@ -2645,6 +2653,8 @@ TEST_F(TestCCoin, Reorg)
 
    //reorg
    setReorgBranchPoint(branchPointHash);
+
+   snapshots.push_back(cct->saveSnapshot());
 
    //push common & branch B tx
    for (unsigned i = 0; i < vecMain.size(); i++)
@@ -2672,6 +2682,8 @@ TEST_F(TestCCoin, Reorg)
    update(cct);
    zcUpdate(cct);
 
+   snapshots.push_back(cct->saveSnapshot());
+
    //check balances
    for (unsigned i = 2; i < 6; i++)
    {
@@ -2693,6 +2705,8 @@ TEST_F(TestCCoin, Reorg)
    update(cct);
    zcUpdate(cct);
 
+   snapshots.push_back(cct->saveSnapshot());
+
    //check balances
    for (unsigned i = 2; i < 6; i++)
    {
@@ -2703,6 +2717,27 @@ TEST_F(TestCCoin, Reorg)
       y = c + 1 + 100;
 
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[c]), y*ccLotSize_);
+   }
+
+   for (const auto &snapshot : snapshots)
+   {
+      EXPECT_FALSE(snapshot.isNull());
+
+      auto cct2 = makeCct();
+      bool result = cct2->loadSnapshot(snapshot);
+      EXPECT_TRUE(result);
+      cct2->goOnline();
+
+      //check balances
+      for (unsigned i = 2; i < 6; i++)
+      {
+         auto y = i + 1 + 100;
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[i]), y*ccLotSize_);
+
+         auto c = i + 4;
+         y = c + 1 + 100;
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[c]), y*ccLotSize_);
+      }
    }
 }
 
