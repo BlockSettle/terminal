@@ -725,18 +725,28 @@ TEST_F(TestCCoin, Case_TxProcessOrder1)
       EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
    }
 
-   //set up new cct object, should have same balance as first cct;
-   auto&& cct2 = makeCct();
-   cct2->goOnline();
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 326407 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 150 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), (amountCC - 25) * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(genesisAddr_.prefixed()), 0);
+   auto snapshot = cct->saveSnapshot();
+   EXPECT_FALSE(snapshot.isNull());
+
+   for (bool useSnapshot : { false, true }) {
+      //set up new cct object, should have same balance as first cct;
+      auto&& cct2 = makeCct();
+      if (useSnapshot) {
+         bool result = cct2->loadSnapshot(snapshot);
+         EXPECT_TRUE(result);
+      }
+      cct2->goOnline();
+
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 326407 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 150 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), (amountCC - 25) * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(genesisAddr_.prefixed()), 0);
+   }
 }
 
 ////
@@ -861,17 +871,27 @@ TEST_F(TestCCoin, Case_TxProcessOrder2)
       EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
    }
 
-   //set up new cct object, should have same balance as first cct;
-   auto&& cct2 = makeCct();
-   cct2->goOnline();
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 15 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 110 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), (amountCC - 25) * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   auto snapshot = cct->saveSnapshot();
+   EXPECT_FALSE(snapshot.isNull());
+
+   for (bool useSnapshot : { false, true }) {
+      //set up new cct object, should have same balance as first cct;
+      auto&& cct2 = makeCct();
+      if (useSnapshot) {
+         bool result = cct2->loadSnapshot(snapshot);
+         EXPECT_TRUE(result);
+      }
+      cct2->goOnline();
+
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 15 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 110 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), (amountCC - 25) * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   }
 }
 
 TEST_F(TestCCoin, Case_TxProcessOrder3)
@@ -999,17 +1019,27 @@ TEST_F(TestCCoin, Case_TxProcessOrder3)
       EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
    }
 
-   //set up new cct object, should have same balance as first cct;
-   auto&& cct2 = makeCct();
-   cct2->goOnline();
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 15 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 110 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), (amountCC - 25) * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   auto snapshot = cct->saveSnapshot();
+   EXPECT_FALSE(snapshot.isNull());
+
+   for (bool useSnapshot : { false, true }) {
+      //set up new cct object, should have same balance as first cct;
+      auto&& cct2 = makeCct();
+      if (useSnapshot) {
+         bool result = cct2->loadSnapshot(snapshot);
+         EXPECT_TRUE(result);
+      }
+      cct2->goOnline();
+
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 15 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 110 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), (amountCC - 25) * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   }
 }
 
 TEST_F(TestCCoin, Case_TxProcessOrder4)
@@ -1133,17 +1163,27 @@ TEST_F(TestCCoin, Case_TxProcessOrder4)
       EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
    }
 
-   //set up new cct object, should have same balance as first cct;
-   auto&& cct2 = makeCct();
-   cct2->goOnline();
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 15 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 110 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), (amountCC - 25) * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   auto snapshot = cct->saveSnapshot();
+   EXPECT_FALSE(snapshot.isNull());
+
+   for (bool useSnapshot : { false, true }) {
+      //set up new cct object, should have same balance as first cct;
+      auto&& cct2 = makeCct();
+      if (useSnapshot) {
+         bool result = cct2->loadSnapshot(snapshot);
+         EXPECT_TRUE(result);
+      }
+      cct2->goOnline();
+
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 15 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 110 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), (amountCC - 25) * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+   }
 }
 
 TEST_F(TestCCoin, Case_TxProcessOrder5)
@@ -1331,23 +1371,33 @@ TEST_F(TestCCoin, Case_TxProcessOrder5)
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
 
-   //set up new cct object, should have same balance as first cct;
-   auto&& cct2 = makeCct();
-   cct2->goOnline();
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+   auto snapshot = cct->saveSnapshot();
+   EXPECT_FALSE(snapshot.isNull());
+
+   for (bool useSnapshot : { false, true }) {
+      //set up new cct object, should have same balance as first cct;
+      auto&& cct2 = makeCct();
+      if (useSnapshot) {
+         bool result = cct2->loadSnapshot(snapshot);
+         EXPECT_TRUE(result);
+      }
+      cct2->goOnline();
+
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+   }
 }
 
 TEST_F(TestCCoin, Case_TxProcessOrder6)
@@ -1529,23 +1579,33 @@ TEST_F(TestCCoin, Case_TxProcessOrder6)
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
    EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
 
-   //set up new cct object, should have same balance as first cct;
-   auto&& cct2 = makeCct();
-   cct2->goOnline();
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
-   EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+   auto snapshot = cct->saveSnapshot();
+   EXPECT_FALSE(snapshot.isNull());
+
+   for (bool useSnapshot : { false, true }) {
+      //set up new cct object, should have same balance as first cct;
+      auto&& cct2 = makeCct();
+      if (useSnapshot) {
+         bool result = cct2->loadSnapshot(snapshot);
+         EXPECT_TRUE(result);
+      }
+      cct2->goOnline();
+
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
+      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+   }
 }
 
 TEST_F(TestCCoin, Case_TxProcessOrder7)
@@ -1748,23 +1808,33 @@ TEST_F(TestCCoin, Case_TxProcessOrder7)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
 
-      //set up new cct object, should have same balance as first cct;
-      auto&& cct2 = makeCct();
-      cct2->goOnline();
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
-      EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+      auto snapshot = cct->saveSnapshot();
+      EXPECT_FALSE(snapshot.isNull());
+
+      for (bool useSnapshot : { false, true }) {
+         //set up new cct object, should have same balance as first cct;
+         auto&& cct2 = makeCct();
+         if (useSnapshot) {
+            bool result = cct2->loadSnapshot(snapshot);
+            EXPECT_TRUE(result);
+         }
+         cct2->goOnline();
+
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[3].prefixed()), 0);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[4].prefixed()), 0);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[5].prefixed()), 0);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[6].prefixed()), 0);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[7].prefixed()), 10 * ccLotSize_);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[8].prefixed()), 25 * ccLotSize_);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[9].prefixed()), (100 - amountCC) * ccLotSize_);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[10].prefixed()), 0);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[11].prefixed()), 40 * ccLotSize_);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[12].prefixed()), 62 * ccLotSize_);
+         EXPECT_EQ(cct2->getCcValueForAddress(userCCAddresses_[13].prefixed()), 13 * ccLotSize_);
+      }
    }
 }
 
