@@ -122,7 +122,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    initConnections();
    initArmory();
 
-   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
+   auto ccTrackersCacheFileName = applicationSettings_->get<std::string>(ApplicationSettings::ccTrackersCacheFileName);
+   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_, ccTrackersCacheFileName);
 
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
