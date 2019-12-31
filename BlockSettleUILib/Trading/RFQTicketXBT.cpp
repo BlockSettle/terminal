@@ -710,7 +710,7 @@ void RFQTicketXBT::submitButtonClicked()
                      cbAddr({});
                   }
                   else {
-                     ccWallet->getNewExtAddress(cbAddr);
+                     ccWallet->getNewChangeAddress(cbAddr);
                   }
                });
             };

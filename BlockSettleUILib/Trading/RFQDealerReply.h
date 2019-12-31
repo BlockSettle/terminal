@@ -192,6 +192,14 @@ namespace bs {
             Script,
          };
 
+         enum class AddressType
+         {
+            Recv,
+            Change,
+
+            Max = Change,
+         };
+
          void reset();
          void validateGUI();
          void updateRespQuantity();
@@ -203,7 +211,8 @@ namespace bs {
          double getAmount() const;
          std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
          std::shared_ptr<bs::sync::Wallet> getCCWallet(const bs::network::QuoteReqNotification &qrn) const;
-         void getRecvAddress(const std::shared_ptr<bs::sync::Wallet> &wallet, std::function<void(bs::Address)> cb) const;
+         void getAddress(const std::string &quoteRequestId, const std::shared_ptr<bs::sync::Wallet> &wallet
+            , AddressType type, std::function<void(bs::Address)> cb);
          void setBalanceOk(bool ok);
          bool checkBalance() const;
          XBTAmount getXbtBalance() const;
@@ -218,6 +227,7 @@ namespace bs {
          bs::Address selectedAuthAddress(ReplyType replyType) const;
          std::vector<UTXO> selectedXbtInputs(ReplyType replyType) const;
          std::set<std::string> activeQuoteSubmits_;
+         std::map<std::string, std::map<std::string, std::array<bs::Address, static_cast<size_t>(AddressType::Max) + 1>>> addresses_;
 
       };
 
