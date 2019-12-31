@@ -259,6 +259,7 @@ void RFQDealerReply::quoteReqNotifStatusChanged(const bs::network::QuoteReqNotif
 {
    if (!QuoteProvider::isRepliableStatus(qrn.status)) {
       sentNotifs_.erase(qrn.quoteRequestId);
+      addresses_.erase(qrn.quoteRequestId);
    }
 
    if (qrn.quoteRequestId == currentQRN_.quoteRequestId) {
@@ -317,21 +318,35 @@ std::shared_ptr<bs::sync::Wallet> RFQDealerReply::getCCWallet(const bs::network:
    return getCCWallet(qrn.product);
 }
 
-void RFQDealerReply::getRecvAddress(const std::shared_ptr<bs::sync::Wallet> &wallet, std::function<void(bs::Address)> cb) const
+void RFQDealerReply::getAddress(const std::string &quoteRequestId, const std::shared_ptr<bs::sync::Wallet> &wallet
+   , AddressType type, std::function<void(bs::Address)> cb)
 {
    if (!wallet) {
       cb({});
       return;
    }
 
-   auto cbWrap = [wallet, cb = std::move(cb)](const bs::Address &addr) {
-      if (wallet->type() != bs::core::wallet::Type::ColorCoin) {
+   auto address = addresses_[quoteRequestId][wallet->walletId()].at(static_cast<size_t>(type));
+   if (!address.isNull()) {
+      cb(address);
+      return;
+   }
+
+   auto cbWrap = [this, quoteRequestId, wallet, cb = std::move(cb), type](const bs::Address &addr) {
+      if (wallet->type() != bs::core::wallet::Type::ColorCoin && type == AddressType::Recv) {
          wallet->setAddressComment(addr, bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::SettlementPayOut));
       }
+      addresses_[quoteRequestId][wallet->walletId()][static_cast<size_t>(type)] = addr;
       cb(addr);
    };
-   wallet->getNewIntAddress(cbWrap);
-   //curWallet_->RegisterWallet();  //TODO: invoke at address callback
+   switch (type) {
+      case AddressType::Recv:
+         wallet->getNewExtAddress(cbWrap);
+         break;
+      case AddressType::Change:
+         wallet->getNewChangeAddress(cbWrap);
+         break;
+   }
 }
 
 void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &qrn)
@@ -716,7 +731,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            return;
                         }
                      }
-                     spendWallet->getNewChangeAddress(cbChangeAddr);
+                     getAddress(qrn.quoteRequestId, spendWallet, AddressType::Change, cbChangeAddr);
                   });
                };
 
@@ -746,7 +761,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
             }
          };
          // recv. address is always set automatically
-         getRecvAddress(recvWallet, recvAddrCb);
+         getAddress(qrn.quoteRequestId, recvWallet, AddressType::Recv, recvAddrCb);
          break;
       }
 
