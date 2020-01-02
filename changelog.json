@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.25.5",
-   "release_date": "16 Dec 2019",
+   "latest_version": "0.25.6",
+   "release_date": "02 Jan 2020",
    "changes": [
+      {
+         "version_string": "0.25.6",
+         "previous_version": "0.25.5",
+         "release_date": "02 Jan 2020",
+         "release_type": "dev",
+         "improvements": [
+            "Use all fixed inputs",
+            "Add checks for partial signing (#1720)"
+         ],
+         "bug_fixes": [
+            "Multiple fixes"
+         ],
+         "revision": "833ad9c72",
+         "common_revision": "4c6e75ec"
+      },
       {
          "version_string": "0.25.5",
          "previous_version": "0.25.4",
