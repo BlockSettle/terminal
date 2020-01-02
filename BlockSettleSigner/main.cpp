@@ -35,11 +35,11 @@
 #include "BIP150_151.h"
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
-#include "HeadlessSettings.h"
+#include "Settings/HeadlessSettings.h"
 #include "LogManager.h"
 #include "SignalsHandler.h"
 #include "SignerAdapter.h"
-#include "SignerSettings.h"
+#include "Settings/SignerSettings.h"
 #include "SystemFileUtils.h"
 
 #include "QMLApp.h"

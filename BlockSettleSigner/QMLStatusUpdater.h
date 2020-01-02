@@ -17,7 +17,7 @@
 #include <QElapsedTimer>
 #include <QJSValue>
 #include <QPasswordData.h>
-#include "SignerSettings.h"
+#include "Settings/SignerSettings.h"
 
 namespace spdlog {
    class logger;

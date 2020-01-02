@@ -13,13 +13,13 @@
 
 #include <memory>
 #include "ConfigDialog.h"
-#include "ArmoryServersViewModel.h"
 
 namespace Ui {
    class NetworkSettingsPage;
 }
 
 class ApplicationSettings;
+class ArmoryServersViewModel;
 
 class NetworkSettingsPage : public SettingsPage
 {
@@ -43,6 +43,9 @@ private slots:
    void onEnvSelected(int);
    void displayArmorySettings();
    void displayEnvironmentSettings();
+
+private:
+   void applyLocalSignerNetOption();
 
 private:
    std::unique_ptr<Ui::NetworkSettingsPage> ui_;
