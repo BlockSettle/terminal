@@ -20,6 +20,9 @@
 #include "ArmoryServersWidget.h"
 #include "WebSocketClient.h"
 #include "HeadlessContainer.h"
+#include "ArmoryServersViewModel.h"
+#include "Settings/SignerSettings.h"
+#include "SignersProvider.h"
 
 
 struct EnvSettings
@@ -157,6 +160,13 @@ void NetworkSettingsPage::displayEnvironmentSettings()
    onEnvSelected(env);
 }
 
+void NetworkSettingsPage::applyLocalSignerNetOption()
+{
+   NetworkType networkType = static_cast<NetworkType>(appSettings_->get(ApplicationSettings::netType).toInt());
+   SignerSettings settings;
+   settings.setTestNet(networkType == NetworkType::TestNet);
+}
+
 void NetworkSettingsPage::reset()
 {
    for (const auto &setting : {
@@ -179,6 +189,10 @@ void NetworkSettingsPage::apply()
    appSettings_->set(ApplicationSettings::envConfiguration, ui_->comboBoxEnvironment->currentIndex());
    appSettings_->set(ApplicationSettings::customPubBridgeHost, ui_->lineEditCustomPubBridgeHost->text());
    appSettings_->set(ApplicationSettings::customPubBridgePort, ui_->spinBoxCustomPubBridgePort->value());
+
+   if (signersProvider_->currentSignerIsLocal()) {
+      applyLocalSignerNetOption();
+   }
 }
 
 void NetworkSettingsPage::onEnvSelected(int index)

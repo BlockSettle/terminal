@@ -23,7 +23,7 @@
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
-#include "HeadlessSettings.h"
+#include "Settings/HeadlessSettings.h"
 #include "SignerAdapterListener.h"
 #include "SignerVersion.h"
 #include "SystemFileUtils.h"

@@ -24,7 +24,7 @@
 #include "QSeed.h"
 #include "QWalletInfo.h"
 #include "SignerAdapter.h"
-#include "SignerSettings.h"
+#include "Settings/SignerSettings.h"
 #include "SignerVersion.h"
 #include "SignerUiDefs.h"
 #include "SignContainer.h"
