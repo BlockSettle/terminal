@@ -13,6 +13,11 @@
 
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
+#include "InfoDialogs/SupportDialog.h"
+
+namespace {
+   const QString kSupportDialogLink = QLatin1String("SupportDialog");
+}
 
 NewWalletDialog::NewWalletDialog(bool noWalletsFound, const std::shared_ptr<ApplicationSettings>& appSettings, QWidget *parent)
    : QDialog(parent)
@@ -24,22 +29,31 @@ NewWalletDialog::NewWalletDialog(bool noWalletsFound, const std::shared_ptr<Appl
       ui_->labelPurpose->setText(tr("THE TERMINAL CAN'T FIND ANY EXISTING WALLETS"));
    }
 
-   // Use ApplicationSettings::GettingStartedGuide_Url carefully with arg() - it contains '%' symbol
    const auto messageText =
-         tr("For guidance, please consult the ")
-         + QStringLiteral("<a href=\"") + appSettings->get<QString>(ApplicationSettings::GettingStartedGuide_Url) + QStringLiteral("\">")
-         + QStringLiteral("<span style=\"text-decoration: underline; color: %1;\">Getting Started Guide.</span></a>")
+         tr("For guidance, please our ")
+         + QStringLiteral("<a href=\"%1\">").arg(kSupportDialogLink)
+         + QStringLiteral("<span style=\"text-decoration: underline; color: %1;\">Guides</span></a>")
          .arg(BSMessageBox::kUrlColor);
 
    ui_->labelMessage->setText(messageText);
 
-   connect(ui_->pushButtonCreate, &QPushButton::clicked, [this] {
+   connect(ui_->pushButtonCreate, &QPushButton::clicked, this, [this] {
       isCreate_ = true;
       accept();
    });
-   connect(ui_->pushButtonImport, &QPushButton::clicked, [this] {
+   connect(ui_->pushButtonImport, &QPushButton::clicked, this, [this] {
       isImport_ = true;
       accept();
+   });
+
+   connect(ui_->labelMessage, &QLabel::linkActivated, this, [this](const QString & link) {
+      reject();
+
+      if (link == kSupportDialogLink) {
+         SupportDialog *supportDlg = new SupportDialog(parentWidget());
+         supportDlg->setTab(0);
+         supportDlg->show();
+      }
    });
 }
 
