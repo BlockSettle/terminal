@@ -64,8 +64,8 @@ function raiseWindow(w) {
 
 function hideWindow(w) {
     if ( w.hasOwnProperty("currentDialog") &&
-            (typeof w.currentDialog.rejectAnimated === "function")) {
-        w.currentDialog.rejectAnimated();
+            (typeof w.currentDialog.hideMainWindow === "function")) {
+        w.currentDialog.hideMainWindow();
         return;
     }
 
@@ -328,7 +328,9 @@ function prepareLiteModeDialog(dialog) {
 
     mainWindow.title = qsTr("BlockSettle Signer")
 
-    dialog.dialogsChainFinished.connect(function(){ hide() })
+    dialog.dialogsChainFinished.connect(function(){
+        hide();
+    })
     dialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
 //        if (typeof nextDialog.qmlTitleVisible !== "undefined") {
 //            nextDialog.qmlTitleVisible = false
@@ -378,6 +380,7 @@ function checkEncryptionPassword(dlg) {
         if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.RequestedNew) {
             walletsProxy.sendControlPassword(password)
             prevDialog.setNextChainDialog(dlg)
+            prepareDialog(dlg);
             dlg.open()
             return;
         }
@@ -389,6 +392,7 @@ function checkEncryptionPassword(dlg) {
             if (success) {
                 qmlFactory.setControlPasswordStatus(ControlPasswordStatus.Accepted);
                 prevDialog.setNextChainDialog(dlg)
+                prepareDialog(dlg);
                 dlg.open()
             } else {
                 let mbFail= messageBox(BSMessageBox.Type.Critical
@@ -408,8 +412,9 @@ function checkEncryptionPassword(dlg) {
         return controlPasswordDialog
     }
     else {
-        dlg.open()
-        return dlg
+        prepareDialog(dlg);
+        dlg.open();
+        return dlg;
     }
 }
 
@@ -424,6 +429,7 @@ function createNewWalletDialog(data) {
         var dlgCreateWallet = Qt.createComponent("../BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
         dlgNewSeed.setNextChainDialog(dlgCreateWallet)
         dlgCreateWallet.seed = newSeed
+        prepareDialog(dlgCreateWallet);
         dlgCreateWallet.open()
     })
 

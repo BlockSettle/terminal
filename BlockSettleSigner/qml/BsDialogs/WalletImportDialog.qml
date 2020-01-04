@@ -642,4 +642,9 @@ CustomTitleDialogWindow {
             }
         }
     }
+
+    function applyDialogClosing() {
+        JsHelper.openAbortBox(root, abortBoxType);
+        return false;
+    }
 }
