@@ -683,6 +683,14 @@ void BSTerminalMainWindow::tryInitChatView()
 
       ui_->widgetChat->init(connectionManager_, env, chatClientServicePtr_,
          logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_);
+
+      connect(chatClientServicePtr_->getClientPartyModelPtr().get(), &Chat::ClientPartyModel::userPublicKeyChanged,
+         this, [this](const Chat::UserPublicKeyInfoList& userPublicKeyInfoList) {
+         addDeferredDialog([this, &userPublicKeyInfoList]() {
+            ui_->widgetChat->onUserPublicKeyChanged(userPublicKeyInfoList);
+         });
+      }, Qt::QueuedConnection);
+
       chatInitState_ = ChatInitState::Done;
       tryLoginIntoChat();
    });
@@ -690,9 +698,9 @@ void BSTerminalMainWindow::tryInitChatView()
    Chat::ChatSettings chatSettings;
    chatSettings.connectionManager = connectionManager_;
 
-//   const auto authKeys = applicationSettings_->GetAuthKeys();
-//   chatSettings.chatPrivKey = SecureBinaryData(authKeys.first.data(), authKeys.first.size());
-//   chatSettings.chatPubKey = BinaryData(authKeys.second.data(), authKeys.second.size());
+   //   const auto authKeys = applicationSettings_->GetAuthKeys();
+   //   chatSettings.chatPrivKey = SecureBinaryData(authKeys.first.data(), authKeys.first.size());
+   //   chatSettings.chatPubKey = BinaryData(authKeys.second.data(), authKeys.second.size());
    chatSettings.chatPrivKey = chatPrivKey_;
    chatSettings.chatPubKey = chatPubKey_;
 
