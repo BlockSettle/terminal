@@ -236,4 +236,9 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
             }
         }
     }
+
+    function applyDialogClosing() {
+        JsHelper.openAbortBox(root, abortBoxType);
+        return false;
+    }
 }

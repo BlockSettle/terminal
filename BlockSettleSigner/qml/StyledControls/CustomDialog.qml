@@ -71,6 +71,17 @@ CustomDialogWindow {
         else rejectAnimated()
     }
 
+    function hideMainWindow() {
+        if (applyDialogClosing()) {
+            rejectAnimated();
+        }
+    }
+
+    // override this function where needed
+    function applyDialogClosing() {
+        return true;
+    }
+
     property int animationDuration: 100
 
     default property alias cContentItem: customContentContainer.data
