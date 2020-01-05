@@ -91,6 +91,7 @@ public slots:
    void onUpdateOTCShield();
 
    void onEmailHashReceived(const std::string &email, const std::string &hash);
+   void onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
 
 private slots:
    void onPartyModelChanged();
@@ -110,7 +111,6 @@ private slots:
    void onShowUserRoom(const QString& userHash);
    void onContactFriendRequest(const QString& userHash);
    void onSetDisplayName(const std::string& partyId, const std::string& contactName);
-   void onUserPublicKeyChanged(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList);
    void onConfirmContactNewKeyData(const Chat::UserPublicKeyInfoList& userPublicKeyInfoList, bool bForceUpdateAllUsers);
 
    void onOtcRequestCurrentChanged(const QModelIndex &current, const QModelIndex &previous);
