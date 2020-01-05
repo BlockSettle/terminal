@@ -30,7 +30,7 @@ NewWalletDialog::NewWalletDialog(bool noWalletsFound, const std::shared_ptr<Appl
    }
 
    const auto messageText =
-         tr("For guidance, please our ")
+         tr("For guidance, please consult our ")
          + QStringLiteral("<a href=\"%1\">").arg(kSupportDialogLink)
          + QStringLiteral("<span style=\"text-decoration: underline; color: %1;\">Guides</span></a>")
          .arg(BSMessageBox::kUrlColor);
