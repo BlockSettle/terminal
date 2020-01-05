@@ -65,6 +65,7 @@ SearchWidget::SearchWidget(QWidget *parent)
    connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveWithCloseRequired,
            this, &SearchWidget::onLeaveAndCloseSearchResults);
 
+   onSetListVisible(false);
    assert(emailRegex_.isValid());
 }
 
@@ -149,10 +150,12 @@ void SearchWidget::onSetLineEditEnabled(bool value)
 
 void SearchWidget::onSetListVisible(bool value)
 {
-   bool hasUsers = ui_->searchResultTreeView->model()->rowCount() > 0;
-   ui_->searchResultTreeView->setVisible(value && hasUsers);
-   ui_->searchResultTreeView->scrollToTop();
-   ui_->searchResultTreeView->setCurrentIndex(QModelIndex());
+   auto *result = ui_->searchResultTreeView;
+   bool hasUsers = result->model() && result->model()->rowCount() > 0;
+
+   result->setVisible(value && hasUsers);
+   result->scrollToTop();
+   result->setCurrentIndex(QModelIndex());
    ui_->notFoundLabel->setVisible(value && !hasUsers);
    layout()->update();
    listVisibleTimer_->stop();
