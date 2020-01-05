@@ -232,7 +232,6 @@
  </widget>
  <resources>
   <include location="armory.qrc"/>
-  <include location="armory.qrc"/>
  </resources>
  <connections/>
 </ui>
