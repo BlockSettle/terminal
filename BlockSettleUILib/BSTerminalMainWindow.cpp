@@ -698,9 +698,6 @@ void BSTerminalMainWindow::tryInitChatView()
    Chat::ChatSettings chatSettings;
    chatSettings.connectionManager = connectionManager_;
 
-   //   const auto authKeys = applicationSettings_->GetAuthKeys();
-   //   chatSettings.chatPrivKey = SecureBinaryData(authKeys.first.data(), authKeys.first.size());
-   //   chatSettings.chatPubKey = BinaryData(authKeys.second.data(), authKeys.second.size());
    chatSettings.chatPrivKey = chatPrivKey_;
    chatSettings.chatPubKey = chatPubKey_;
 
