@@ -686,8 +686,8 @@ void BSTerminalMainWindow::tryInitChatView()
 
       connect(chatClientServicePtr_->getClientPartyModelPtr().get(), &Chat::ClientPartyModel::userPublicKeyChanged,
          this, [this](const Chat::UserPublicKeyInfoList& userPublicKeyInfoList) {
-         addDeferredDialog([this, &userPublicKeyInfoList]() {
-            ui_->widgetChat->onUserPublicKeyChanged(userPublicKeyInfoList);
+         addDeferredDialog([this, userPublicKeyList = userPublicKeyInfoList]() {
+            ui_->widgetChat->onUserPublicKeyChanged(userPublicKeyList);
          });
       }, Qt::QueuedConnection);
 
