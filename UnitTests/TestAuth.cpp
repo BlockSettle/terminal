@@ -146,7 +146,7 @@ bs::Address TestAuth::getNewAddress(std::shared_ptr<bs::sync::Wallet> wltPtr
 ////
 void TestAuth::SetUp()
 {
-   passphrase_ = SecureBinaryData("pass");
+   passphrase_ = SecureBinaryData::fromString("pass");
    
    coinbasePubKey_ = CryptoECDSA().ComputePublicKey(coinbasePrivKey_, true);
    coinbaseScrAddr_ = BtcUtils::getHash160(coinbasePubKey_);

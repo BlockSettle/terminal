@@ -229,7 +229,7 @@ void SignerKeysWidget::onKeyImport()
 
    QFile file(fileName);
    if (file.open(QIODevice::ReadOnly)) {
-      SecureBinaryData key = SecureBinaryData(file.readAll().constData());
+      SecureBinaryData key = SecureBinaryData::fromString(file.readAll().constData());
       ui_->lineEditKey->setText(QString::fromStdString(key.toHexStr()));
    }
 }
