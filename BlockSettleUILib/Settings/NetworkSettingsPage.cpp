@@ -114,10 +114,6 @@ NetworkSettingsPage::~NetworkSettingsPage() = default;
 
 void NetworkSettingsPage::display()
 {
-#ifdef PRODUCTION_BUILD
-   ui_->PublicBridgeSettingsGroup->hide();
-#endif
-
    displayArmorySettings();
    displayEnvironmentSettings();
 
