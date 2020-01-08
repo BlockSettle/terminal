@@ -379,6 +379,7 @@ function checkEncryptionPassword(dlg) {
     var onControlPasswordFinished = function(prevDialog, password){
         if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.RequestedNew) {
             walletsProxy.sendControlPassword(password)
+            qmlFactory.setControlPasswordStatus(ControlPasswordStatus.Accepted);
             prevDialog.setNextChainDialog(dlg)
             prepareDialog(dlg);
             dlg.open()
