@@ -1,9 +1,9 @@
 [submodule "Celer"]
 	path = Celer
-	url = git@github.com:BlockSettle/Celer.git
+	url = ../Celer
 [submodule "common"]
 	path = common
-	url = git@github.com:BlockSettle/common.git
+	url = ../common
 [submodule "AuthAPI"]
 	path = AuthAPI
 	url = https://github.com/autheid/AuthAPI.git
