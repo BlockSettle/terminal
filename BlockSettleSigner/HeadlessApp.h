@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __HEADLESS_APP_H__
 #define __HEADLESS_APP_H__
 
@@ -20,6 +30,7 @@ namespace Blocksettle {
    namespace Communication {
       namespace signer {
          class Settings;
+         enum ControlPasswordStatus : int;
       }
    }
 }
@@ -41,7 +52,7 @@ public:
    void start();
    void stop();
 
-   void reloadWallets(const std::string &, const std::function<void()> &);
+   void reloadWallets(bool notifyGUI, const std::function<void()> & = nullptr);
    void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
 
@@ -59,9 +70,14 @@ public:
    static std::string getOwnKeyFileDir();
    static std::string getOwnKeyFileName();
 
+   SecureBinaryData controlPassword() const;
+   void setControlPassword(const SecureBinaryData &controlPassword);
+   bs::error::ErrorCode changeControlPassword(const SecureBinaryData &controlPasswordOld, const SecureBinaryData &controlPasswordNew);
+
 private:
    void startTerminalsProcessing();
    void stopTerminalsProcessing();
+   void applyNewControlPassword(const SecureBinaryData &controlPassword, bool notifyGui);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -77,6 +93,10 @@ private:
    std::unique_ptr<ZmqBIP15XServerConnection>   guiConnection_;
 
    std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
+
+   SecureBinaryData controlPassword_;
+   Blocksettle::Communication::signer::ControlPasswordStatus controlPasswordStatus_;
+
 };
 
 #endif // __HEADLESS_APP_H__

@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "ApplicationSettings.h"
 #include "AutheIDClient.h"
 #include "AuthProxy.h"
@@ -14,7 +24,7 @@
 #include "QSeed.h"
 #include "QWalletInfo.h"
 #include "SignerAdapter.h"
-#include "SignerSettings.h"
+#include "Settings/SignerSettings.h"
 #include "SignerVersion.h"
 #include "SignerUiDefs.h"
 #include "SignContainer.h"
@@ -189,6 +199,7 @@ void QMLAppObj::Start()
    if (trayIconOptional_) {
       trayIconOptional_->show();
    }
+   emit qmlAppStarted();
 }
 
 void QMLAppObj::registerQtTypes()
@@ -220,6 +231,11 @@ void QMLAppObj::registerQtTypes()
    qmlRegisterType<bs::hd::WalletInfo>("com.blocksettle.WalletInfo", 1, 0, "WalletInfo");
    qmlRegisterType<bs::wallet::QSeed>("com.blocksettle.QSeed", 1, 0, "QSeed");
    qmlRegisterType<bs::wallet::QPasswordData>("com.blocksettle.QPasswordData", 1, 0, "QPasswordData");
+   qmlRegisterType<ControlPasswordStatus>("com.blocksettle.ControlPasswordStatus", 1, 0, "ControlPasswordStatus");
+
+   // Exposing metadata to js files
+   QJSValue scriptControlEnum = ctxt_->engine()->newQMetaObject(&ControlPasswordStatus::staticMetaObject);
+   ctxt_->engine()->globalObject().setProperty(QLatin1String("ControlPasswordStatus"), scriptControlEnum);
 }
 
 void QMLAppObj::onLimitsChanged()
@@ -307,7 +323,7 @@ void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantM
       logger_->error("[{}] unknown signer dialog {}", __func__, dialogName.toStdString());
       throw(std::logic_error("Unknown signer dialog"));
    }
-   QMetaObject::invokeMethod(rootObj_, bs::signer::ui::customDialogRequest
+   QMetaObject::invokeMethod(rootObj_, QmlBridge::getQmlMethodName(QmlBridge::CustomDialogRequest)
       , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
 }
 
@@ -344,3 +360,4 @@ void QMLAppObj::onSignerPubKeyUpdated(const BinaryData &pubKey)
 {
    qmlFactory_->setHeadlessPubKey(QString::fromStdString(pubKey.toHexStr()));
 }
+

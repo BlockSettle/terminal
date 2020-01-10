@@ -1,7 +1,158 @@
 {
-   "latest_version": "0.24.10",
-   "release_date": "13 Nov 2019",
+   "latest_version": "0.25.7",
+   "release_date": "10 Jan 2020",
    "changes": [
+      {
+         "version_string": "0.25.7",
+         "previous_version": "0.25.6",
+         "release_date": "10 Jan 2020",
+         "release_type": "dev",
+         "improvements": [
+            "Update armory",
+            "UI improvements",
+            "Update trades reporting",
+            "Update CCY list"
+         ],
+         "bug_fixes": [],
+         "revision": "8d2ddaef7",
+         "common_revision": "fd54df17"
+      },
+      {
+         "version_string": "0.25.6",
+         "previous_version": "0.25.5",
+         "release_date": "02 Jan 2020",
+         "release_type": "dev",
+         "improvements": [
+            "Use all fixed inputs",
+            "Add checks for partial signing (#1720)"
+         ],
+         "bug_fixes": [
+            "Multiple fixes"
+         ],
+         "revision": "833ad9c72",
+         "common_revision": "4c6e75ec"
+      },
+      {
+         "version_string": "0.25.5",
+         "previous_version": "0.25.4",
+         "release_date": "16 Dec 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Update UAT and prod keys",
+            "Fix chat after wallet adding",
+            "View Auth TX in tx view"
+         ],
+         "bug_fixes": [],
+         "revision": "ca61b8d6c",
+         "common_revision": "1d21f01d"
+      },
+      {
+         "version_string": "0.25.4",
+         "previous_version": "0.25.3",
+         "release_date": "09 Dec 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Rpk template change (#467)",
+            "Control password workflow (#457)"
+         ],
+         "bug_fixes": [],
+         "revision": "5aa4c8d3",
+         "common_revision": "2960c01a"
+      },
+      {
+         "version_string": "0.25.3",
+         "previous_version": "0.25.2",
+         "release_date": "06 Dec 2019",
+         "release_type": "dev",
+         "improvements": [
+            "New chat keys",
+            "Terminal ui fixes (#1667)"
+         ],
+         "bug_fixes": [],
+         "revision": "5eeafd89",
+         "common_revision": "8f2046f6"
+      },
+      {
+         "version_string": "0.25.2",
+         "previous_version": "0.25.1",
+         "release_date": "03 Dec 2019",
+         "release_type": "dev",
+         "improvements": [
+            "don't deploy AQ scripts [temporarily] (BST-2381)",
+            "various CPFP fixes"
+         ],
+         "bug_fixes": [],
+         "revision": "ad343a65",
+         "common_revision": "156357d6"
+      },
+      {
+         "version_string": "0.25.1",
+         "previous_version": "0.25.0",
+         "release_date": "26 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Pay-In inputs filtering",
+            "Processing for invalidated ZC that is never replaced (BST-1786)",
+            "Use both native and nested inputs if needed for CC sell"
+         ],
+         "bug_fixes": [],
+         "revision": "7abcdd17",
+         "common_revision": "13d21387"
+      },
+      {
+         "version_string": "0.25.0",
+         "previous_version": "0.24.12",
+         "release_date": "25 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Full wallet encryption",
+            "Combine native and nested XBT wallets on trades tab",
+            "Fix fee estimation for unsigned payin"
+         ],
+         "bug_fixes": [
+            "TXSignRequest fixes (#1634)",
+            "Fix MAX in simple create TX dialog ( BST-2050 )"
+         ],
+         "revision": "6b08f213",
+         "common_revision": "c0e19178"
+      },
+      {
+         "version_string": "0.24.12",
+         "previous_version": "0.24.11",
+         "release_date": "20 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "BSEidNoticeBox fix - BST-2353 (#453)",
+            "Use primary wallet and default auth address for XBT in AQ",
+            "Prevent crash on AQ reply for CC"
+         ],
+         "bug_fixes": [
+            "Fix XBT amount error for CC trade"
+         ],
+         "revision": "d3491368",
+         "common_revision": "df247faf"
+      },
+      {
+         "version_string": "0.24.11",
+         "previous_version": "0.24.10",
+         "release_date": "18 Nov 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Handling chat offline messages (#1614)",
+            "Add timer to otc negotiation response widget"
+         ],
+         "bug_fixes": [
+            "Fixes for various CPFP dialog crashes",
+            "Fix wallet balance after import",
+            "TXSignRequest fixes (#1623)",
+            "Fix transaction model update",
+            "CC leaf fixes",
+            "UI fixes",
+            "Settlement dialog fixes (#452)"
+         ],
+         "revision": "721304cf",
+         "common_revision": "66f8ba98"
+      },
       {
          "version_string": "0.24.10",
          "previous_version": "0.24.9",

@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "SignerAdapter.h"
 #include <spdlog/spdlog.h>
 #include <QDataStream>
@@ -72,6 +82,11 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
       walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logger_, nullptr, nullptr);
       signContainer_->Start();
       walletsMgr_->setSignContainer(signContainer_);
+
+      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronizationStarted
+         , listener_.get(), &SignerInterfaceListener::onWalletsSynchronizationStarted);
+      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized
+         , listener_.get(), &SignerInterfaceListener::onWalletsSynchronized);
    }
    return walletsMgr_;
 }
@@ -98,14 +113,6 @@ void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const Secu
    request.set_password(password.toBinStr());
    const auto reqId = listener_->send(pt, request.SerializeAsString());
    listener_->setDecryptNodeCb(reqId, cb);
-}
-
-void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function<void()> &cb)
-{
-   signer::ReloadWalletsRequest request;
-   request.set_path(walletsDir.toStdString());
-   const auto reqId = listener_->send(signer::ReloadWalletsType, request.SerializeAsString());
-   listener_->setReloadWalletsCb(reqId, cb);
 }
 
 void SignerAdapter::updateWallet(const std::string &walletId)
@@ -279,4 +286,23 @@ std::shared_ptr<QmlFactory> SignerAdapter::qmlFactory() const
 std::shared_ptr<SignAdapterContainer> SignerAdapter::signContainer() const
 {
    return signContainer_;
+}
+
+void SignerAdapter::sendControlPassword(const bs::wallet::QPasswordData &password)
+{
+   signer::EnterControlPasswordRequest decryptEvent;
+   decryptEvent.set_controlpassword(password.binaryPassword().toBinStr());
+   listener_->send(signer::ControlPasswordReceivedType, decryptEvent.SerializeAsString());
+}
+
+void SignerAdapter::changeControlPassword(const bs::wallet::QPasswordData &oldPassword
+   , const bs::wallet::QPasswordData &newPassword
+   , const std::function<void(bs::error::ErrorCode errorCode)> &cb = nullptr)
+{
+   signer::ChangeControlPasswordRequest request;
+   request.set_controlpasswordold(oldPassword.binaryPassword().toBinStr());
+   request.set_controlpasswordnew(newPassword.binaryPassword().toBinStr());
+   const auto reqId = listener_->send(signer::ChangeControlPasswordType, request.SerializeAsString());
+
+   listener_->setChangeControlPwCb(reqId, cb);
 }

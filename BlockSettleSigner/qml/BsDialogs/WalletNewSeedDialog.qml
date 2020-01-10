@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 import QtQuick 2.9
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.2
@@ -129,6 +139,10 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
                     anchors.fill: parent
                     seed: root.seed
                 }
+
+                Component.onCompleted: {
+                    ScrollBar.vertical.position += 0.15
+                }
             }
         }
 
@@ -220,5 +234,10 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
                 }
             }
         }
+    }
+
+    function applyDialogClosing() {
+        JsHelper.openAbortBox(root, abortBoxType);
+        return false;
     }
 }

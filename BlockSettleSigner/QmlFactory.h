@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef QMLFACTORY_H
 #define QMLFACTORY_H
 
@@ -11,12 +21,33 @@
 
 #include "BSErrorCode.h"
 
+#include "bs_signer.pb.h"
+
 class SignerAdapter;
 namespace bs {
    namespace sync {
       class WalletsManager;
    }
 }
+
+class ControlPasswordStatus : public QObject
+{
+   Q_OBJECT
+   using ControlStatus = ::Blocksettle::Communication::signer::ControlPasswordStatus;
+public:
+   ControlPasswordStatus(QObject *parent = nullptr) : QObject(parent) {
+      assert(metaObject()->enumerator(metaObject()->indexOfEnumerator("Status")).keyCount() ==
+         ::Blocksettle::Communication::signer::ControlPasswordStatus_ARRAYSIZE);
+   }
+
+   enum Status {
+      Accepted = ControlStatus::Accepted,
+      Rejected = ControlStatus::Rejected,
+      RequestedNew = ControlStatus::RequestedNew,
+   };
+
+   Q_ENUMS(Status)
+};
 
 class QmlFactory : public QObject
 {
@@ -111,6 +142,8 @@ public:
 
    Q_INVOKABLE bool isDebugBuild();
 
+   Q_INVOKABLE int controlPasswordStatus() const;
+   Q_INVOKABLE void setControlPasswordStatus(int controlPasswordStatus);
 
 signals:
    void closeEventReceived();
@@ -127,7 +160,8 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
 
    QString headlessPubKey_;
-};
+   ControlPasswordStatus::Status controlPasswordStatus_;
 
+};
 
 #endif // QMLFACTORY_H

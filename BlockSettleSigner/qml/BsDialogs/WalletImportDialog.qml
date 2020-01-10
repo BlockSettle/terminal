@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 import QtQuick 2.9
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.2
@@ -18,7 +28,11 @@ CustomTitleDialogWindow {
     id: root
 
     property bool primaryWalletExists: walletsProxy.primaryWalletExists
-    property bool hasCCInfoLoaded: walletsProxy.hasCCInfo
+    // Let's skip hasCCInfo checking, seems to work fine anyway
+    //property bool hasCCInfoLoaded: walletsProxy.hasCCInfo
+    property bool isPrimaryWalletSelectionVisible: true
+    property bool isPrimaryWalletChecked: !primaryWalletExists
+
     property string password
     property QSeed seed: QSeed{}
     property WalletInfo walletInfo: WalletInfo{}
@@ -39,12 +53,12 @@ CustomTitleDialogWindow {
     property bool authNoticeShown: false
 
     title: qsTr("Import Wallet")
-    width: 400
+    width: 410
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
     Component.onCompleted: {
-        if (!primaryWalletExists && hasCCInfoLoaded) {
+        if (isPrimaryWalletChecked) {
             cbPrimary.checked = true
             tfName.text = qsTr("Primary Wallet");
         }
@@ -323,7 +337,7 @@ CustomTitleDialogWindow {
                     }
 
                     CustomHeader {
-                        visible: hasCCInfoLoaded
+                        visible: isPrimaryWalletSelectionVisible
                         text: qsTr("Primary Wallet")
                         Layout.fillWidth: true
                         Layout.preferredHeight: 25
@@ -333,7 +347,7 @@ CustomTitleDialogWindow {
                     }
 
                     RowLayout {
-                        visible: hasCCInfoLoaded
+                        visible: isPrimaryWalletSelectionVisible
                         spacing: 5
                         Layout.alignment: Qt.AlignTop
                         Layout.fillWidth: true
@@ -341,7 +355,7 @@ CustomTitleDialogWindow {
                         Layout.rightMargin: 10
 
                         CustomLabel {
-                            visible: hasCCInfoLoaded
+                            visible: isPrimaryWalletSelectionVisible
                             Layout.minimumWidth: inputLabelsWidth
                             Layout.preferredWidth: inputLabelsWidth
                             Layout.maximumWidth: inputLabelsWidth
@@ -351,72 +365,27 @@ CustomTitleDialogWindow {
 
                         CustomCheckBox {
                             id: cbPrimary
-                            visible: hasCCInfoLoaded
+                            visible: isPrimaryWalletSelectionVisible
                             Layout.fillWidth: true
-                            checked: !primaryWalletExists && hasCCInfoLoaded
+                            checked: isPrimaryWalletChecked
                             text: qsTr("Primary Wallet")
 
                             ToolTip.text: { primaryWalletExists
-                                            ? qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
-                                            : qsTr("Log into the Terminal in order to create a Primary Wallet.") }
+                                            ? qsTr("A primary wallet already exists, wallet will be created as regular wallet.")
+                                            : qsTr("A primary wallet does not exist, wallet will be created as primary.") }
 
                             ToolTip.delay: 150
                             ToolTip.timeout: 5000
-                            ToolTip.visible: cbPrimary.hovered && (primaryWalletExists || !hasCCInfoLoaded)
+                            ToolTip.visible: cbPrimary.hovered
 
                             // workaround on https://bugreports.qt.io/browse/QTBUG-30801
                             // enabled: !primaryWalletExists
                             onCheckedChanged: {
-                                if (primaryWalletExists || !hasCCInfoLoaded) {
-                                    cbPrimary.checked = false;
-                                    return;
-                                }
-
-                                if (!primaryWalletExists && (tfName.text === walletsProxy.generateNextWalletName() || tfName.text.length === 0)) {
-                                    tfName.text = qsTr("Primary Wallet");
-                                }
-                                else if (tfName.text === qsTr("Primary Wallet")  || tfName.text.length === 0){
-                                    tfName.text = walletsProxy.generateNextWalletName();
-                                }
+                                // BST-2411: first wallet is always created as primary
+                                cbPrimary.checked = isPrimaryWalletChecked;
                             }
                         }
                     }
-//                    RowLayout {
-//                        spacing: 5
-//                        Layout.fillWidth: true
-//                        Layout.leftMargin: 10
-//                        Layout.rightMargin: 10
-
-//                        CustomLabel {
-//                            Layout.minimumWidth: inputLabelsWidth
-//                            Layout.preferredWidth: inputLabelsWidth
-//                            Layout.maximumWidth: inputLabelsWidth
-//                            Layout.fillWidth: true
-//                            text: qsTr("Private Market\nLeafs")
-//                        }
-//                        CustomLabel {
-//                            Layout.fillWidth: true
-//                            text: qsTr("Status")
-//                        }
-//                    }
-//                    RowLayout {
-//                        spacing: 5
-//                        Layout.fillWidth: true
-//                        Layout.leftMargin: 10
-//                        Layout.rightMargin: 10
-
-//                        CustomLabel {
-//                            Layout.minimumWidth: inputLabelsWidth
-//                            Layout.preferredWidth: inputLabelsWidth
-//                            Layout.maximumWidth: inputLabelsWidth
-//                            Layout.fillWidth: true
-//                            text: qsTr("Authentication\nStatus")
-//                        }
-//                        CustomLabel {
-//                            Layout.fillWidth: true
-//                            text: qsTr("Status")
-//                        }
-//                    }
 
                     CustomHeader {
                         id: headerText2
@@ -672,5 +641,10 @@ CustomTitleDialogWindow {
                 }
             }
         }
+    }
+
+    function applyDialogClosing() {
+        JsHelper.openAbortBox(root, abortBoxType);
+        return false;
     }
 }

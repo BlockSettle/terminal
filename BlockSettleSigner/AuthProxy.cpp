@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "AuthProxy.h"
 
 #include <spdlog/spdlog.h>
@@ -42,7 +52,7 @@ AuthSignWalletObject::AuthSignWalletObject(const AuthSignWalletObject &other)
 void AuthSignWalletObject::connectToServer()
 {
    auto authKeys = settings_->GetAuthKeys();
-   autheIDClient_ = std::make_shared<AutheIDClient>(logger_, connectionManager_->GetNAM(), settings_->GetAuthKeys(), settings_->isAutheidTestEnv(), this);
+   autheIDClient_ = std::make_shared<AutheIDClient>(logger_, connectionManager_->GetNAM(), settings_->GetAuthKeys(), settings_->autheidEnv(), this);
 
    connect(autheIDClient_.get(), &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
       emit succeeded(QString::fromStdString(encKey), password);
@@ -61,7 +71,7 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
    std::vector<std::string> userIds;
    // send auth to all devices stored in encKeys
    for (const QString& encKey: walletInfo->encKeys()) {
-      auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData(encKey.toStdString()).toBinStr());
+      auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData::fromString(encKey.toStdString()).toBinStr());
 
       // deviceInfo is empty for ActivateWallet and is not empty for another requests
       if (!deviceInfo.deviceId.empty()) {
@@ -110,7 +120,7 @@ void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInf
    for (int i = 0; i < walletInfo->encKeys().size(); ++i) {
       if (index == i) continue;
 
-      auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData(walletInfo->encKeys().at(i).toStdString()).toBinStr());
+      auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData::fromString(walletInfo->encKeys().at(i).toStdString()).toBinStr());
 
       if (!deviceInfo.deviceId.empty()) {
          knownDeviceIds.push_back(deviceInfo.deviceId);

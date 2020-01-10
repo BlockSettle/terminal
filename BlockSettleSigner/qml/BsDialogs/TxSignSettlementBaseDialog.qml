@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.4
@@ -69,6 +79,7 @@ CustomTitleDialogWindowWithExpander {
     readonly property string plus_string: ""   // "+ "
 
     property string errorMessage
+    property string validationTitle
 
     id: root
     title: isExpanded ? passwordDialogData.Title : ""
@@ -109,10 +120,7 @@ CustomTitleDialogWindowWithExpander {
         });
         authSign.failed.connect(function(errorText) {
             if (root) {
-                var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
-                    , qsTr("Wallet"), errorText
-                    , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
-                mb.bsAccepted.connect(function() { root.rejectAnimated() })
+                showWalletError(errorText);
             }
         })
         authSign.userCancelled.connect(function() {
@@ -285,7 +293,7 @@ CustomTitleDialogWindowWithExpander {
                 Layout.fillWidth: true
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
-                text: qsTr("Counterparty Validation")
+                text: validationTitle + qsTr(" Validation")
                 Layout.preferredHeight: 25
             }
 
@@ -295,7 +303,7 @@ CustomTitleDialogWindowWithExpander {
 
                 CustomLabel {
                     Layout.fillWidth: true
-                    text: qsTr("Counterparty")
+                    text: validationTitle
                 }
                 CustomLabelValue {
                     text: signingAllowed ? qsTr("Valid") : qsTr("Not Valid")
@@ -431,7 +439,7 @@ CustomTitleDialogWindowWithExpander {
                         if (timeLeft <= 0) {
                             stop()
                             // assume non signed tx is cancelled tx
-                            rejectAnimated()
+                            showWalletError(kOperationTimeExceeded);
                         }
                     }
                     signal expired()
@@ -448,7 +456,7 @@ CustomTitleDialogWindowWithExpander {
                 }
 
                 CustomLabelValue {
-                    text: signingAllowed ? qsTr("%1 seconds left").arg(timeLeft.toFixed(0)) : errorMessage
+                    text: signingAllowed ? qsTr("%1 seconds left").arg(Math.max(0, timeLeft.toFixed(0))) : errorMessage
                     Layout.fillWidth: true
                 }
             }
@@ -474,8 +482,8 @@ CustomTitleDialogWindowWithExpander {
                 id: btnExportTx
                 primary: true
                 visible: walletInfo.encType === QPasswordData.Unencrypted
-                text: qsTr("SAVE TX")
-                anchors.right: btnImportTx.left
+                text: qsTr("EXPORT")
+                anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
                     exportTxDlg.open()
@@ -493,18 +501,20 @@ CustomTitleDialogWindowWithExpander {
                     onAccepted: {
                         txInfo.saveToFile(qmlAppObj.getUrlPath(exportTxDlg.file))
                         btnExportTx.primary = false
+                        btnExportTx.visible = false
                         btnImportTx.primary = true
                         btnImportTx.enabled = true
+                        btnImportTx.visible = true
                     }
                 }
             }
 
             CustomButton {
                 id: btnImportTx
-                visible: walletInfo.encType === QPasswordData.Unencrypted
+                visible: false
                 enabled: false
-                text: qsTr("LOAD SIGNED TX")
-                anchors.right: btnConfirm.left
+                text: qsTr("IMPORT")
+                anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
                     importTxDlg.open()
@@ -523,7 +533,15 @@ CustomTitleDialogWindowWithExpander {
                         result = txInfo.loadSignedTx(qmlAppObj.getUrlPath(importTxDlg.file))
                         if (result) {
                             btnImportTx.primary = false
+                            btnImportTx.visible = false
                             btnConfirm.primary = true
+                            btnConfirm.visible = true
+                        }
+                        else {
+                            JsHelper.messageBox(BSMessageBox.Type.Warning
+                                , qsTr("Signed Transacton Import")
+                                , qsTr("Error importing signed transaction")
+                                , qsTr("Error while importing signed transaction file.\nComparsion between signed and unsigned transaction failed."))
                         }
                     }
                 }
@@ -532,8 +550,8 @@ CustomTitleDialogWindowWithExpander {
             CustomButton {
                 id: btnConfirm
                 primary: walletInfo.encType ===  QPasswordData.Unencrypted ? false : true
-                visible: walletInfo.encType !== QPasswordData.Auth
-                text: qsTr("CONFIRM")
+                visible: walletInfo.encType === QPasswordData.Password
+                text: walletInfo.encType === QPasswordData.Unencrypted ?  qsTr("BROADCAST") : qsTr("CONFIRM")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: signingAllowed && acceptable

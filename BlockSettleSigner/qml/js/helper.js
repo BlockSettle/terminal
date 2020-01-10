@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 // https://doc.qt.io/qt-5/qtqml-javascript-resources.html
 // Don't use .import here
 // Don't use .pragma library here
@@ -54,8 +64,8 @@ function raiseWindow(w) {
 
 function hideWindow(w) {
     if ( w.hasOwnProperty("currentDialog") &&
-            (typeof w.currentDialog.rejectAnimated === "function")) {
-        w.currentDialog.rejectAnimated();
+            (typeof w.currentDialog.hideMainWindow === "function")) {
+        w.currentDialog.hideMainWindow();
         return;
     }
 
@@ -282,6 +292,23 @@ function evalWorker(method, cppCallback, argList) {
 }
 
 function prepareDialog(dialog) {
+    console.log("[JsHelper] prepareDialog: " + dialog)
+
+    if (dialog.hasOwnProperty("isPrepared")) {
+        if (dialog.isPrepared) {
+            return
+        }
+        else {
+            dialog.isPrepared = true
+        }
+    }
+
+    // close previous dialog
+    if (currentDialog && typeof currentDialog.close !== "undefined") {
+        currentDialog.close()
+    }
+    currentDialog = dialog
+
     if (isLiteMode()) {
         prepareLiteModeDialog(dialog)
     }
@@ -296,23 +323,14 @@ function prepareLiteModeDialog(dialog) {
     }
     console.log("Prepare qml lite dialog")
 
-    // close previous dialog
-    if (currentDialog && typeof currentDialog.close !== "undefined") {
-        currentDialog.close()
-    }
-
-    //dialog.show()
-    currentDialog = dialog
-//    if (typeof dialog.qmlTitleVisible !== "undefined") {
-//        dialog.qmlTitleVisible = false
-//    }
-
     mainWindow.moveMainWindowToScreenCenter()
     mainWindow.resizeAnimated(dialog.width, dialog.height)
 
     mainWindow.title = qsTr("BlockSettle Signer")
 
-    dialog.dialogsChainFinished.connect(function(){ hide() })
+    dialog.dialogsChainFinished.connect(function(){
+        hide();
+    })
     dialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
 //        if (typeof nextDialog.qmlTitleVisible !== "undefined") {
 //            nextDialog.qmlTitleVisible = false
@@ -357,33 +375,126 @@ function prepareFullModeDialog(dialog) {
     })
 }
 
+function checkEncryptionPassword(dlg) {
+    var onControlPasswordFinished = function(prevDialog, password){
+        if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.RequestedNew) {
+            walletsProxy.sendControlPassword(password)
+            qmlFactory.setControlPasswordStatus(ControlPasswordStatus.Accepted);
+            prevDialog.setNextChainDialog(dlg)
+            prepareDialog(dlg);
+            dlg.open()
+            return;
+        }
+        else if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.Accepted) {
+            return;
+        }
+
+        let onControlPasswordChanged = function(success, errorMsg){
+            if (success) {
+                qmlFactory.setControlPasswordStatus(ControlPasswordStatus.Accepted);
+                prevDialog.setNextChainDialog(dlg)
+                prepareDialog(dlg);
+                dlg.open()
+            } else {
+                let mbFail= messageBox(BSMessageBox.Type.Critical
+                    , qsTr("Public Data Encryption"), qsTr("Apply Public Data Encryption Password failed: \n") + errorMsg);
+                mbFail.bsAccepted.connect(prevDialog.dialogsChainFinished)
+                prevDialog.setNextChainDialog(mbFail)
+            }
+        }
+
+        walletsProxy.changeControlPassword(password,
+                                           password, onControlPasswordChanged);
+    }
+
+    if (qmlFactory.controlPasswordStatus() !== ControlPasswordStatus.Accepted) {
+        var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished,
+                                        qmlFactory.controlPasswordStatus(), true, false)
+        return controlPasswordDialog
+    }
+    else {
+        prepareDialog(dlg);
+        dlg.open();
+        return dlg;
+    }
+}
+
 function createNewWalletDialog(data) {
-    var newSeed = qmlFactory.createSeed(signerSettings.testNet)
+    let newSeed = qmlFactory.createSeed(signerSettings.testNet)
 
     // allow user to save wallet seed lines and then prompt him to enter them for verification
-    var dlgNewSeed = Qt.createComponent("../BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
+    let dlgNewSeed = Qt.createComponent("../BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
     dlgNewSeed.seed = newSeed
     dlgNewSeed.bsAccepted.connect(function() {
         // let user set a password or Auth eID and also name and desc. for the new wallet
         var dlgCreateWallet = Qt.createComponent("../BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
         dlgNewSeed.setNextChainDialog(dlgCreateWallet)
         dlgCreateWallet.seed = newSeed
+        prepareDialog(dlgCreateWallet);
         dlgCreateWallet.open()
     })
-//    if (Object.keys(mainWindow).indexOf("currentDialog") != -1) {
-//        mainWindow.sizeChanged.connect(function(w, h) {
-//            dlgNewSeed.width = w
-//            dlgNewSeed.height = h
-//        })
-//    }
-    dlgNewSeed.open()
-    return dlgNewSeed
+
+    return checkEncryptionPassword(dlgNewSeed);
 }
 
 function importWalletDialog(data) {
-    var dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
-    dlgImp.open()
-    return dlgImp
+    let dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
+    return checkEncryptionPassword(dlgImp);
+}
+
+function managePublicDataEncryption() {
+    const previousState = qmlFactory.controlPasswordStatus();
+
+    let onControlPasswordFinished = function(dialog, newPassword, oldPassword){
+        if (previousState === ControlPasswordStatus.RequestedNew) {
+            walletsProxy.sendControlPassword(newPassword);
+            if (newPassword !== "") {
+                let mbAccept = messageBox(BSMessageBox.Type.Success
+                    , qsTr("Public Data Encryption"), qsTr("Set Public Data Encryption Password succeed"));
+                mbAccept.bsAccepted.connect(dialog.dialogsChainFinished);
+                dialog.setNextChainDialog(mbAccept)
+            } else {
+                dialog.dialogsChainFinished();
+            }
+
+            return;
+        }
+
+        let successMessageBody;
+        let errorMessageBody;
+        let updatedOldPassword;
+        if (previousState === ControlPasswordStatus.Accepted) {
+            successMessageBody = qsTr("Change Public Data Encryption Password succeed");
+            errorMessageBody = qsTr("Change Public Data Encryption Password failed: ");
+            updatedOldPassword = oldPassword;
+        } else if (previousState === ControlPasswordStatus.Rejected) {
+            successMessageBody = qsTr("Set Public Data Encryption Password succeed");
+            errorMessageBody = qsTr("Set Public Data Encryption Password failed: ");
+            updatedOldPassword = newPassword;
+        }
+
+        let onControlPasswordChanged = function(success, errorMsg){
+            if (success) {
+                qmlFactory.setControlPasswordStatus(ControlPasswordStatus.Accepted);
+                let mbSuccess = messageBox(BSMessageBox.Type.Success
+                    , qsTr("Public Data Encryption"), qsTr(successMessageBody));
+                mbSuccess.bsAccepted.connect(dialog.dialogsChainFinished)
+                dialog.setNextChainDialog(mbSuccess)
+            } else {
+                let mbFail= messageBox(BSMessageBox.Type.Critical
+                    , qsTr("Public Data Encryption"), qsTr(errorMessageBody + "\n") + errorMsg);
+                mbFail.bsAccepted.connect(dialog.dialogsChainFinished)
+                dialog.setNextChainDialog(mbFail)
+            }
+        }
+
+        walletsProxy.changeControlPassword(updatedOldPassword,
+                                           newPassword, onControlPasswordChanged);
+    }
+
+    let controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished,
+                                        qmlFactory.controlPasswordStatus(), false, false)
+    return controlPasswordDialog;
 }
 
 function backupWalletDialog(data) {
@@ -594,15 +705,45 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
 }
 
 function updateDialogData(jsCallback, passwordDialogData) {
-    console.log("Trying to update password dialog " + currentDialog + ", Settl Id: " + passwordDialogData.SettlementId)
+    console.log("Trying to update password dialog with Settl Id: " + passwordDialogData.SettlementId)
     if (!currentDialog || typeof currentDialog.passwordDialogData === "undefined") {
+        console.log("Warning: current dialog not set")
         return
     }
+    console.log("Current dialog with Settl Id: " + currentDialog.passwordDialogData.SettlementId)
 
     if (passwordDialogData.SettlementId === currentDialog.passwordDialogData.SettlementId) {
         console.log("Updating password dialog, updated keys: " + passwordDialogData.keys())
         currentDialog.passwordDialogData.merge(passwordDialogData)
     }
+}
+
+function createControlPasswordDialog(jsCallback, controlPasswordStatus, usedInChain, initDialog) {
+    let dlg = Qt.createComponent("../BsControls/BSControlPasswordInput.qml").createObject(mainWindow
+        , { "controlPasswordStatus": controlPasswordStatus ,
+            "usedInChain" : usedInChain ,
+            "initDialog" : initDialog });
+
+    if (controlPasswordStatus === ControlPasswordStatus.Accepted) {
+        dlg.bsAccepted.connect(function() {
+            jsCallback(dlg, dlg.passwordData, dlg.passwordDataOld)
+        })
+    }
+    else {
+        dlg.bsAccepted.connect(function() {
+            jsCallback(dlg, dlg.passwordData)
+        })
+
+        if (usedInChain) {
+            dlg.bsRejected.connect(function() {
+                jsCallback(dlg, "")
+            })
+        }
+    }
+
+    prepareDialog(dlg)
+    dlg.open()
+    return dlg
 }
 
 function isLiteMode(){

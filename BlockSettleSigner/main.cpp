@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include <QApplication>
 #include <QIcon>
 #include <QStyleFactory>
@@ -25,11 +35,11 @@
 #include "BIP150_151.h"
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
-#include "HeadlessSettings.h"
+#include "Settings/HeadlessSettings.h"
 #include "LogManager.h"
 #include "SignalsHandler.h"
 #include "SignerAdapter.h"
-#include "SignerSettings.h"
+#include "Settings/SignerSettings.h"
 #include "SystemFileUtils.h"
 
 #include "QMLApp.h"
@@ -87,10 +97,11 @@ namespace bs {
          {
             SignalsHandler::registerHandler([this](int signal) {
                logger_->info("quit signal received, shutdown...");
-               queue_->quit();
-            });
 
-            appObj_.start();
+               QMetaObject::invokeMethod(qApp, [] {
+                  QApplication::quit();
+               });
+            });
 
             thrProc_ = std::thread([this] {
                logger_->debug("processing thread started");
@@ -106,10 +117,9 @@ namespace bs {
                   const auto errMsg = std::string("Signer processing error: ") + e.what();
                   logger_->error("{}", errMsg);
                   std::cerr << errMsg << std::endl;
-                  return EXIT_FAILURE;
+                  std::exit(EXIT_FAILURE);
                }
 #endif   //NDEBUG
-
                QMetaObject::invokeMethod(qApp, [] {
                   QApplication::quit();
                });
@@ -119,11 +129,12 @@ namespace bs {
          ~Queue()
          {
             appObj_.stop();
-            if (thrProc_.joinable()) {
-               thrProc_.join();
-            }
+            queue_->quit();
+            thrProc_.join();
             logger_->info("signer ended execution");
          }
+
+         void start() { appObj_.start(); }
 
       private:
          std::shared_ptr<spdlog::logger>  logger_;
@@ -172,7 +183,8 @@ void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QS
 }
 
 static int QMLApp(int argc, char **argv
-   , const std::shared_ptr<HeadlessSettings> &mainSettings)
+   , const std::shared_ptr<HeadlessSettings> &mainSettings
+   , bs::signer::Queue &queue)
 {
    qRegisterMetaType<std::string>();
    qRegisterMetaType<std::vector<BinaryData>>();
@@ -289,6 +301,10 @@ static int QMLApp(int argc, char **argv
 
       bs::disableAppNap();
 
+      QObject::connect(&qmlAppObj, &QMLAppObj::qmlAppStarted, [&queue](){
+         queue.start();
+      });
+
       return app.exec();
    } catch (const std::exception &e) {
       logger->critical("Failed to start signer: {}", e.what());
@@ -357,5 +373,5 @@ int main(int argc, char** argv)
    logger->info("Starting BS Signer...");
    bs::signer::Queue queue(logger, settings);
 
-   return QMLApp(argc, argv, settings);
+   return QMLApp(argc, argv, settings, queue);
 }

@@ -1,0 +1,673 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>BSTerminalMainWindow</class>
+ <widget class="QMainWindow" name="BSTerminalMainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>997</width>
+    <height>609</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>960</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <property name="dockOptions">
+   <set>QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
+  </property>
+  <property name="unifiedTitleAndToolBarOnMac">
+   <bool>false</bool>
+  </property>
+  <widget class="QWidget" name="mainTabBackground">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QFrame" name="horizontalFrame">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>25</height>
+       </size>
+      </property>
+      <property name="sizeIncrement">
+       <size>
+        <width>0</width>
+        <height>25</height>
+       </size>
+      </property>
+      <property name="applicationBar" stdset="0">
+       <bool>true</bool>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <property name="spacing">
+        <number>5</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>BlockSettle Terminal</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QWidget" name="loginGroupWidget" native="true">
+         <layout class="QHBoxLayout" name="loginLyt">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="testEnvSettings">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>TEST ENVIRONMENT</string>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+            <property name="usernameButton" stdset="0">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonUser">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Login</string>
+            </property>
+            <property name="usernameButton" stdset="0">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <property name="movable">
+       <bool>false</bool>
+      </property>
+      <property name="h5" stdset="0">
+       <bool>true</bool>
+      </property>
+      <widget class="PortfolioWidget" name="widgetPortfolio">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <attribute name="title">
+        <string>OVERVIEW</string>
+       </attribute>
+      </widget>
+      <widget class="RFQRequestWidget" name="widgetRFQ">
+       <attribute name="title">
+        <string>TRADE</string>
+       </attribute>
+      </widget>
+      <widget class="RFQReplyWidget" name="widgetRFQReply">
+       <attribute name="title">
+        <string>DEALING</string>
+       </attribute>
+      </widget>
+      <widget class="WalletsWidget" name="widgetWallets">
+       <attribute name="title">
+        <string>WALLETS</string>
+       </attribute>
+      </widget>
+      <widget class="TransactionsWidget" name="widgetTransactions">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>0</height>
+        </size>
+       </property>
+       <attribute name="title">
+        <string>TRANSACTIONS</string>
+       </attribute>
+      </widget>
+      <widget class="ExplorerWidget" name="widgetExplorer">
+       <attribute name="title">
+        <string>EXPLORER</string>
+       </attribute>
+      </widget>
+      <widget class="ChartWidget" name="widgetChart">
+       <attribute name="title">
+        <string>CHARTS</string>
+       </attribute>
+      </widget>
+      <widget class="ChatWidget" name="widgetChat">
+       <attribute name="title">
+        <string>OTC CHAT</string>
+       </attribute>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>997</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="actionSettings"/>
+    <addaction name="separator"/>
+    <addaction name="actionCreateNewWallet"/>
+    <addaction name="separator"/>
+    <addaction name="actionAbout"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menuBlockSettle">
+    <property name="title">
+     <string>BlockSettle</string>
+    </property>
+    <addaction name="actionAccountInformation"/>
+    <addaction name="actionAuthenticationAddresses"/>
+    <addaction name="actionEnterColorCoinToken"/>
+   </widget>
+   <widget class="QMenu" name="menu_Help">
+    <property name="title">
+     <string>&amp;Support</string>
+    </property>
+    <addaction name="actionGuides"/>
+    <addaction name="actionContact"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuBlockSettle"/>
+   <addaction name="menu_Help"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="sizeGripEnabled">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <action name="actionExportTransactions">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Export Transactions</string>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="text">
+    <string>&amp;Quit</string>
+   </property>
+  </action>
+  <action name="actionStandard">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Standard</string>
+   </property>
+   <property name="visible">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionAdvanced">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Advanced</string>
+   </property>
+   <property name="visible">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionExpert">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Expert</string>
+   </property>
+  </action>
+  <action name="actionMessageSigningVerification">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Sign Message</string>
+   </property>
+  </action>
+  <action name="actionEcCalculator">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;EC Calculator</string>
+   </property>
+  </action>
+  <action name="actionBroadcastRawTransaction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Broadcast Raw Transaction</string>
+   </property>
+  </action>
+  <action name="actionViewAddressBook">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>View &amp;Address Book</string>
+   </property>
+  </action>
+  <action name="actionSweepPrivateKeyAddress">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Sweep Private Key/Address</string>
+   </property>
+  </action>
+  <action name="actionImportPrivateKeyAddress">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Import Private Key/Address</string>
+   </property>
+  </action>
+  <action name="actionCreateNewWallet">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Create Wallet</string>
+   </property>
+   <property name="toolTip">
+    <string>Create Wallet</string>
+   </property>
+  </action>
+  <action name="actionImportOrRestoreWallet">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Import or Restore Wallet</string>
+   </property>
+  </action>
+  <action name="actionFixDamagedWallet">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Fix Damaged Wallet</string>
+   </property>
+  </action>
+  <action name="actionLockboxManager">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Lockbox &amp;Manager</string>
+   </property>
+  </action>
+  <action name="actionSimulFundPromissoryNote">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Simulfund &amp;Promissory Note</string>
+   </property>
+  </action>
+  <action name="actionSimulFundCollectMerge">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Simulfund &amp;Collect &amp;&amp; Merge</string>
+   </property>
+  </action>
+  <action name="actionSimulFundReviewSign">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Simulfund &amp;Review &amp;&amp; Sign</string>
+   </property>
+  </action>
+  <action name="actionGuides">
+   <property name="text">
+    <string>&amp;Guides</string>
+   </property>
+  </action>
+  <action name="actionVerifySignedPackage">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Verify Signed Package</string>
+   </property>
+  </action>
+  <action name="actionClearAllUnconfirmed">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Clear All Unconfirmed</string>
+   </property>
+  </action>
+  <action name="actionRescanDatabases">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Rescan Databases</string>
+   </property>
+  </action>
+  <action name="actionRebuildAndRescanDatabases">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Rebuild and Rescan Databases</string>
+   </property>
+  </action>
+  <action name="actionRescanBalance">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Rescan Balance</string>
+   </property>
+  </action>
+  <action name="actionFactoryReset">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Factory Reset</string>
+   </property>
+  </action>
+  <action name="actionAuthenticationAddresses">
+   <property name="text">
+    <string>Authentication Addresses</string>
+   </property>
+  </action>
+  <action name="actionCreateAccount">
+   <property name="text">
+    <string>Activate Market Data</string>
+   </property>
+  </action>
+  <action name="actionApplyForCashTrading">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Activate Blockchain products</string>
+   </property>
+  </action>
+  <action name="actionApplyForCashCoinsTrading">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Activate Cash Products</string>
+   </property>
+  </action>
+  <action name="actionContactSupport">
+   <property name="text">
+    <string>Contact Support</string>
+   </property>
+  </action>
+  <action name="actionAccountInformation">
+   <property name="text">
+    <string>Account Information</string>
+   </property>
+  </action>
+  <action name="actionDeposits">
+   <property name="text">
+    <string>Deposits</string>
+   </property>
+  </action>
+  <action name="actionWithdrawalRequest">
+   <property name="text">
+    <string>Withdrawal Request</string>
+   </property>
+  </action>
+  <action name="actionLinkAdditionalBankAccount">
+   <property name="text">
+    <string>Link Additional Bank Account</string>
+   </property>
+  </action>
+  <action name="actionSignMessage">
+   <property name="text">
+    <string>&amp;Sign Message</string>
+   </property>
+  </action>
+  <action name="actionVerifyMessage">
+   <property name="text">
+    <string>&amp;Verify Message</string>
+   </property>
+  </action>
+  <action name="actionSweepAddresses">
+   <property name="text">
+    <string>S&amp;weep Addresses</string>
+   </property>
+  </action>
+  <action name="actionOfflineTransaction">
+   <property name="text">
+    <string>&amp;Offline Transaction</string>
+   </property>
+  </action>
+  <action name="actionSetupLocalNode">
+   <property name="text">
+    <string>Setup &amp;Local Node</string>
+   </property>
+  </action>
+  <action name="actionOneTimePassword">
+   <property name="text">
+    <string>&amp;One-Time Password</string>
+   </property>
+  </action>
+  <action name="actionAccountManagement">
+   <property name="text">
+    <string>Account Management</string>
+   </property>
+  </action>
+  <action name="actionContact">
+   <property name="text">
+    <string>&amp;Contact</string>
+   </property>
+  </action>
+  <action name="actionVersion">
+   <property name="text">
+    <string>&amp;Version</string>
+   </property>
+   <property name="toolTip">
+    <string>Show version information</string>
+   </property>
+  </action>
+  <action name="actionEnterColorCoinToken">
+   <property name="text">
+    <string>Equity Token Issuance</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="text">
+    <string>&amp;Settings</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::PreferencesRole</enum>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>WalletsWidget</class>
+   <extends>QWidget</extends>
+   <header>WalletsWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TransactionsWidget</class>
+   <extends>QWidget</extends>
+   <header>TransactionsWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>PortfolioWidget</class>
+   <extends>QWidget</extends>
+   <header>PortfolioWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>RFQRequestWidget</class>
+   <extends>QWidget</extends>
+   <header>Trading/RFQRequestWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>RFQReplyWidget</class>
+   <extends>QWidget</extends>
+   <header>Trading/RFQReplyWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ExplorerWidget</class>
+   <extends>QWidget</extends>
+   <header>ExplorerWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ChartWidget</class>
+   <extends>QWidget</extends>
+   <header>ChartWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ChatWidget</class>
+   <extends>QWidget</extends>
+   <header>ChatUI/ChatWidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

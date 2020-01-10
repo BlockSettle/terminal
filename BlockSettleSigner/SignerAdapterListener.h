@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef SIGNER_ADAPTER_LISTENER_H
 #define SIGNER_ADAPTER_LISTENER_H
 
@@ -42,10 +52,15 @@ public:
 
    // Sent to GUI status update message
    void sendStatusUpdate();
+   void sendControlPasswordStatusUpdate(signer::ControlPasswordStatus status);
 
    void resetConnection();
 
    HeadlessContainerCallbacks *callbacks() const;
+
+   void walletsListUpdated();
+
+   void onStarted();
 
 protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
@@ -68,7 +83,6 @@ protected:
    bool onSetLimits(const std::string &data);
    bool onPasswordReceived(const std::string &data);
    bool onRequestClose();
-   bool onReloadWallets(const std::string &data, bs::signer::RequestId);
    bool onAutoSignRequest(const std::string &data, bs::signer::RequestId);
    bool onChangePassword(const std::string &data, bs::signer::RequestId);
    bool onCreateHDWallet(const std::string &data, bs::signer::RequestId);
@@ -76,8 +90,9 @@ protected:
    bool onImportWoWallet(const std::string &data, bs::signer::RequestId);
    bool onExportWoWallet(const std::string &data, bs::signer::RequestId);
    bool onSyncSettings(const std::string &data);
+   bool onControlPasswordReceived(const std::string &data);
+   bool onChangeControlPassword(const std::string &data, bs::signer::RequestId);
 
-   void walletsListUpdated();
    void shutdownIfNeeded();
 
    bool sendReady();
@@ -92,6 +107,8 @@ private:
    std::shared_ptr<DispatchQueue> queue_;
    std::shared_ptr<HeadlessSettings>   settings_;
    std::unique_ptr<HeadlessContainerCallbacksImpl> callbacks_;
+   bool started_{false};
+
 };
 
 #endif // SIGNER_ADAPTER_LISTENER_H

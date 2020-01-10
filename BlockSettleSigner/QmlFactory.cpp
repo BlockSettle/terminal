@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "QmlFactory.h"
 #include <QApplication>
 #include <QStyle>
@@ -184,3 +194,15 @@ void QmlFactory::setHeadlessPubKey(const QString &headlessPubKey)
       emit headlessPubKeyChanged();
    }
 }
+
+int QmlFactory::controlPasswordStatus() const
+{
+   // This method is using in QML so that's why we return int type 
+   return static_cast<int>(controlPasswordStatus_);
+}
+
+void QmlFactory::setControlPasswordStatus(int controlPasswordStatus)
+{
+   controlPasswordStatus_ = static_cast<ControlPasswordStatus::Status>(controlPasswordStatus);
+}
+

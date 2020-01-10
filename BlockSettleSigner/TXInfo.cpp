@@ -1,7 +1,18 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "TXInfo.h"
 
 #include "CheckRecipSigner.h"
 #include "OfflineSigner.h"
+#include "TxClasses.h"
 #include "Wallets/SyncHDWallet.h"
 #include "QWalletInfo.h"
 
@@ -85,6 +96,12 @@ double TXInfo::amountCCReceived(const QString &cc) const
    return txReq_.amountReceived(containsCCAddressCb) / BTCNumericTypes::BalanceDivider;
 }
 
+double TXInfo::amountCCSent() const
+{
+   return txReq_.totalSpent(containsAnyOurCCAddressCb_) / BTCNumericTypes::BalanceDivider;
+
+}
+
 double TXInfo::amountXBTReceived() const
 {
    // calculate received amount from counterparty outputs
@@ -116,8 +133,13 @@ bool TXInfo::loadSignedTx(const QString &fileName)
       return false;
    }
 
+   // check signed tx
+   if (!txReq_.isSourceOfTx(Tx(loadedTxs.front().prevStates.front()))) {
+      SPDLOG_LOGGER_ERROR(logger_, "sign request not equal to signed tx in '{}'", fileName.toStdString());
+      return false;
+   }
+
    txReqSigned_ = loadedTxs.front();
-   // FIXME: check if txReqSigned_ originally is txReq_
 
    emit dataChanged();
    return true;
@@ -192,6 +214,37 @@ QStringList TXInfo::allRecipients() const
 
    result.removeDuplicates();
    return result;
+}
+
+QString TXInfo::counterPartyCCReceiverAddress() const
+{
+   // Usable to find counterparty CC address where CC coins sent when we sell
+   const uint64_t amountCCSpent = txReq_.totalSpent(containsAnyOurCCAddressCb_);
+   return counterPartyReceiverAddress(amountCCSpent);
+}
+
+QString TXInfo::counterPartyXBTReceiverAddress() const
+{
+   // Find address where xbt coins sent (for CC settlements)
+   const uint64_t amountXBTSpent = txReq_.totalSpent(containsAnyOurXbtAddressCb_) - txReq_.getFee();
+   return counterPartyReceiverAddress(amountXBTSpent);
+}
+
+QString TXInfo::counterPartyReceiverAddress(uint64_t amount) const
+{
+   for (const auto &addressStr : counterPartyRecipients()) {
+      const auto address = bs::Address::fromAddressString(addressStr.toStdString());
+
+      // Set removeDuplicatedRecipients to fix problem with duplicated recipients.
+      // Looks like this is only needed for requesters.
+      const bool removeDuplicatedRecipients = true;
+      const uint64_t amountReceivedOn = txReq_.amountReceivedOn(address, removeDuplicatedRecipients) ;
+
+      if (amountReceivedOn == amount) {
+         return addressStr;
+      }
+   }
+   return {};
 }
 
 QStringList TXInfo::inputsXBT() const

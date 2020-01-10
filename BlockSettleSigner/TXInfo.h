@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __TX_INFO_H__
 #define __TX_INFO_H__
 
@@ -28,6 +38,9 @@ class TXInfo : public QObject
    Q_PROPERTY(QStringList allRecipients READ allRecipients NOTIFY dataChanged)
    Q_PROPERTY(QStringList counterPartyRecipients READ counterPartyRecipients NOTIFY dataChanged)
 
+   Q_PROPERTY(QString counterPartyCCReceiverAddress READ counterPartyCCReceiverAddress NOTIFY dataChanged)
+   Q_PROPERTY(QString counterPartyXBTReceiverAddress READ counterPartyXBTReceiverAddress NOTIFY dataChanged)
+
    Q_PROPERTY(int txVirtSize READ txVirtSize NOTIFY dataChanged)
    Q_PROPERTY(double amount READ amount NOTIFY dataChanged)
    Q_PROPERTY(double total READ total NOTIFY dataChanged)
@@ -56,10 +69,14 @@ public:
    QStringList counterPartyRecipients() const;
    QStringList allRecipients() const;
 
+   QString counterPartyCCReceiverAddress() const;
+   QString counterPartyXBTReceiverAddress() const;
+   QString counterPartyReceiverAddress(uint64_t amount) const;
+
    size_t txVirtSize() const { return txReq_.estimateTxVirtSize(); }
    double amount() const { return txReq_.amount(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }
    double total() const { return txReq_.totalSpent(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }
-   double fee() const { return txReq_.fee / BTCNumericTypes::BalanceDivider; }
+   double fee() const { return txReq_.getFee() / BTCNumericTypes::BalanceDivider; }
    bool hasChange() const { return (changeAmount() > 0); }
    double changeAmount() const { return txReq_.changeAmount(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }
    double inputAmount() const { return txReq_.inputAmount(containsThisAddressCb_) / BTCNumericTypes::BalanceDivider; }
@@ -69,7 +86,7 @@ public:
    bool isOfflineTxSigned() { return txReqSigned_.isValid(); }
 
    Q_INVOKABLE double amountCCReceived(const QString &cc) const;
-   Q_INVOKABLE double amountCCSent() const { return amount(); }
+   Q_INVOKABLE double amountCCSent() const;
    Q_INVOKABLE double amountXBTReceived() const;
 
    Q_INVOKABLE bool saveToFile(const QString &fileName) const;
@@ -96,24 +113,25 @@ private:
 
    using ContainsAddressCb = const std::function<bool(const bs::Address &)>;
    ContainsAddressCb containsThisAddressCb_ = [this](const bs::Address &address){
-      if (txReq_.walletIds.empty()) {
-         return false;
-      }
-
-      const auto &hdWallet = walletsMgr_->getHDWalletById(txReq_.walletIds.front());
-      if (hdWallet) {
-         for (auto leaf : hdWallet->getLeaves()) {
-            if (leaf->containsAddress(address)) {
+      for (const auto &walletId : txReq_.walletIds) {
+         const auto &wallet = walletsMgr_->getWalletById(walletId);
+         if (wallet) {
+            if (wallet->containsAddress(address)) {
                return true;
+            }
+            continue;
+         }
+
+         const auto &hdWallet = walletsMgr_->getHDWalletById(walletId);
+         if (hdWallet) {
+            for (auto leaf : hdWallet->getLeaves()) {
+               if (leaf->containsAddress(address)) {
+                  return true;
+               }
             }
          }
       }
-      else {
-         const auto &wallet = walletsMgr_->getWalletById(txReq_.walletIds.front());
-         if (wallet) {
-            return wallet->containsAddress(address);
-         }
-      }
+
       return false;
    };
 

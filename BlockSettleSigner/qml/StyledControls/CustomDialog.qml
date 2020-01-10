@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 import QtQuick 2.9
 import QtQuick.Controls 2.3
 import QtQuick.Layouts 1.0
@@ -10,6 +20,8 @@ import "../js/helper.js" as JsHelper
 
 CustomDialogWindow {
     id: root
+
+    property bool isPrepared: false
     property bool acceptable: false
     property bool rejectable: false
     property bool abortConfirmation: false
@@ -57,6 +69,17 @@ CustomDialogWindow {
     function closeAnimated(result){
         if (result) acceptAnimated()
         else rejectAnimated()
+    }
+
+    function hideMainWindow() {
+        if (applyDialogClosing()) {
+            rejectAnimated();
+        }
+    }
+
+    // override this function where needed
+    function applyDialogClosing() {
+        return true;
     }
 
     property int animationDuration: 100

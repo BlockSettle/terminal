@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef SIGNER_INTERFACE_LISTENER_H
 #define SIGNER_INTERFACE_LISTENER_H
 
@@ -10,6 +20,7 @@
 
 #include <functional>
 #include <memory>
+#include <queue>
 
 namespace bs {
    namespace signer {
@@ -68,9 +79,6 @@ public:
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb) {
       cbDecryptNode_[reqId] = cb;
    }
-   void setReloadWalletsCb(bs::signer::RequestId reqId, const std::function<void()> &cb) {
-      cbReloadWallets_[reqId] = cb;
-   }
    void setChangePwCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
       cbChangePwReqs_[reqId] = cb;
    }
@@ -83,10 +91,17 @@ public:
    void setAutoSignCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
       cbAutoSignReqs_[reqId] = cb;
    }
+   void setChangeControlPwCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
+      cbChangeControlPwReqs_[reqId] = cb;
+   }
 
    void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
 
    void closeConnection();
+
+public slots:
+   void onWalletsSynchronizationStarted();
+   void onWalletsSynchronized();
 
 private:
    void processData(const std::string &);
@@ -105,14 +120,15 @@ private:
    void onCreateWO(const std::string &data, bs::signer::RequestId);
    void onExportWO(const std::string &data, bs::signer::RequestId);
    void onDecryptedKey(const std::string &data, bs::signer::RequestId);
-   void onReloadWallets(bs::signer::RequestId);
    void onExecCustomDialog(const std::string &data, bs::signer::RequestId);
    void onChangePassword(const std::string &data, bs::signer::RequestId);
    void onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    void onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
    void onUpdateWallet(const std::string &data, bs::signer::RequestId);
    void onUpdateStatus(const std::string &data);
+   void onUpdateControlPasswordStatus(const std::string &data);
    void onTerminalEvent(const std::string &data);
+   void onChangeControlPassword(const std::string &data, bs::signer::RequestId);
 
    void requestPasswordForTx(signer::PasswordDialogType reqType, bs::sync::PasswordDialogData *dialogData
       , bs::wallet::TXInfo *txInfo, bs::hd::WalletInfo *walletInfo);
@@ -142,13 +158,18 @@ private:
    std::map<bs::signer::RequestId, std::function<void(const BinaryData &)>>      cbExportWO_;
    std::map<bs::signer::RequestId
       , std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)>>   cbDecryptNode_;
-   std::map<bs::signer::RequestId, std::function<void()>>   cbReloadWallets_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbChangePwReqs_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbCreateHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbDeleteHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbAutoSignReqs_;
+   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbChangeControlPwReqs_;
 
    std::shared_ptr<QmlBridge>  qmlBridge_;
+
+   std::queue<std::string> decryptWalletRequestsQueue_;
+
+   bool isWalletsSynchronized_{false};
+
 };
 
 

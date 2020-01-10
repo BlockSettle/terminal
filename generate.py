@@ -9,7 +9,7 @@ import sys
 if sys.platform == "darwin":
    os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.12'
 
-sys.path.insert(0, 'common')
+sys.path.insert(0, os.path.join('common'))
 sys.path.insert(0, os.path.join('common', 'build_scripts'))
 
 from build_scripts.settings               import Settings
@@ -27,7 +27,7 @@ from build_scripts.websockets_settings    import WebsocketsSettings
 from build_scripts.libchacha20poly1305_settings import LibChaCha20Poly1305Settings
 from build_scripts.botan_settings         import BotanSettings
 
-def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags):
+def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags, build_tests):
    project_settings = Settings(build_mode, link_mode)
 
    print('Build mode        : {} ( {} )'.format(project_settings.get_build_mode(), ('Production' if build_production else 'Development')))
@@ -54,6 +54,9 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       BotanSettings(project_settings),
       QtSettings(project_settings)
    ]
+
+   if build_tests:
+      required_3rdparty.append(GtestSettings(project_settings))
 
    for component in required_3rdparty:
       if not component.config_component():
@@ -111,6 +114,9 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
    # to remove cmake 3.10 dev warnings
    command.append('-Wno-dev')
 
+   if build_tests:
+      command.append('-DBUILD_TESTS=1')
+
    if cmake_flags != None:
       for flag in cmake_flags.split():
          command.append(flag)
@@ -132,7 +138,7 @@ if __name__ == '__main__':
                              action='store',
                              default='release',
                              choices=['debug', 'release'])
-   input_parser.add_argument('-production',
+   input_parser.add_argument('--production',
                              help='Make production build',
                              action='store_true',
                              dest='build_production',
@@ -143,16 +149,19 @@ if __name__ == '__main__':
                              action='store',
                              default='static',
                              choices=['static', 'shared'])
-   input_parser.add_argument('-hide-warnings',
+   input_parser.add_argument('--hide-warnings',
                              help='Hide warnings in external sources',
                              action='store_true',
                              dest='hide_warnings',
                              default=False)
-   input_parser.add_argument('-cmake-flags',
+   input_parser.add_argument('--cmake-flags',
                              action='store',
                              type=str,
                              help='Additional CMake flags. Example: "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_FLAGS=-fuse-ld=gold"')
+   input_parser.add_argument('--test',
+                             help='Select to also build tests',
+                             action='store_true')
 
    args = input_parser.parse_args()
 
-   sys.exit(generate_project(args.build_mode, args.link_mode, args.build_production, args.hide_warnings, args.cmake_flags))
+   sys.exit(generate_project(args.build_mode, args.link_mode, args.build_production, args.hide_warnings, args.cmake_flags, args.test))

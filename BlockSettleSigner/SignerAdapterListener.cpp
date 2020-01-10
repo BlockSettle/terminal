@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include "SignerAdapterListener.h"
 
 #include <spdlog/spdlog.h>
@@ -8,7 +18,7 @@
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
-#include "HeadlessSettings.h"
+#include "Settings/HeadlessSettings.h"
 #include "ProtobufHeadlessUtils.h"
 #include "ServerConnection.h"
 #include "StringUtils.h"
@@ -202,9 +212,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::RequestCloseType:
       rc = onRequestClose();
       break;
-   case signer::ReloadWalletsType:
-      rc = onReloadWallets(packet.data(), packet.id());
-      break;
    case signer::AutoSignActType:
       rc = onAutoSignRequest(packet.data(), packet.id());
       break;
@@ -225,6 +232,12 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
       break;
    case signer::SyncSettingsRequestType:
       rc = onSyncSettings(packet.data());
+      break;
+   case signer::ControlPasswordReceivedType:
+      rc = onControlPasswordReceived(packet.data());
+      break;
+   case signer::ChangeControlPasswordType:
+      rc = onChangeControlPassword(packet.data(), packet.id());
       break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
@@ -260,6 +273,13 @@ void SignerAdapterListener::sendStatusUpdate()
    sendData(signer::UpdateStatusType, evt.SerializeAsString());
 
    callbacks_->ccNamesReceived(!walletsMgr_->ccLeaves().empty());
+}
+
+void SignerAdapterListener::sendControlPasswordStatusUpdate(signer::ControlPasswordStatus status)
+{
+   signer::UpdateControlPasswordStatus evt;
+   evt.set_controlpasswordstatus(status);
+   sendData(signer::UpdateControlPasswordStatusType, evt.SerializeAsString());
 }
 
 void SignerAdapterListener::resetConnection()
@@ -356,7 +376,7 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
    try {
       if (txSignReq.walletIds.size() == 1) {
          const auto &wallet = walletsMgr_->getWalletById(txSignReq.walletIds.front());
-         bs::core::WalletPasswordScoped lock(hdWallet, request.password());
+         bs::core::WalletPasswordScoped lock(hdWallet, SecureBinaryData::fromString(request.password()));
          const auto tx = wallet->signTXRequest(txSignReq);
          evt.set_signedtx(tx.toBinStr());
       }
@@ -385,7 +405,7 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
             wallets[wallet->walletId()] = wallet;
          }
          {
-            const bs::core::WalletPasswordScoped passLock(hdWallet, request.password());
+            const bs::core::WalletPasswordScoped passLock(hdWallet, SecureBinaryData::fromString(request.password()));
             const auto tx = bs::core::SignMultiInputTX(multiReq, wallets);
             evt.set_signedtx(tx.toBinStr());
          }
@@ -525,7 +545,7 @@ bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::sign
    std::string seedStr, privKeyStr;
 
    try {
-      const bs::core::WalletPasswordScoped lock(hdWallet, request.password());
+      const bs::core::WalletPasswordScoped lock(hdWallet, SecureBinaryData::fromString(request.password()));
       const auto &seed = hdWallet->getDecryptedSeed();
       seedStr = seed.seed().toBinStr();
       privKeyStr = seed.toXpriv().toBinStr();
@@ -580,6 +600,34 @@ bool SignerAdapterListener::onSyncSettings(const std::string &data)
    return true;
 }
 
+bool SignerAdapterListener::onControlPasswordReceived(const std::string &data)
+{
+   signer::EnterControlPasswordRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   app_->setControlPassword(SecureBinaryData::fromString(request.controlpassword()));
+   return true;
+}
+
+bool SignerAdapterListener::onChangeControlPassword(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::ChangeControlPasswordRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   bs::error::ErrorCode result = app_->changeControlPassword(SecureBinaryData::fromString(request.controlpasswordold())
+      , SecureBinaryData::fromString(request.controlpasswordnew()));
+
+   signer::ChangePasswordResponse response;
+   response.set_errorcode(static_cast<uint32_t>(result));
+   sendData(signer::ChangeControlPasswordType, response.SerializeAsString(), reqId);
+
+   return true;
+}
+
 bool SignerAdapterListener::onPasswordReceived(const std::string &data)
 {
    signer::DecryptWalletEvent request;
@@ -588,7 +636,7 @@ bool SignerAdapterListener::onPasswordReceived(const std::string &data)
       return false;
    }
    app_->passwordReceived(request.wallet_id(), static_cast<bs::error::ErrorCode>(request.errorcode())
-      , request.password());
+      , BinaryData::fromString(request.password()));
    return true;
 }
 
@@ -596,19 +644,6 @@ bool SignerAdapterListener::onRequestClose()
 {
    logger_->info("[SignerAdapterListener::{}] closing on interface request", __func__);
    app_->close();
-   return true;
-}
-
-bool SignerAdapterListener::onReloadWallets(const std::string &data, bs::signer::RequestId reqId)
-{
-   signer::ReloadWalletsRequest request;
-   if (!request.ParseFromString(data)) {
-      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
-      return false;
-   }
-   app_->reloadWallets(request.path(), [this, reqId] {
-      sendData(signer::ReloadWalletsType, "", reqId);
-   });
    return true;
 }
 
@@ -621,7 +656,7 @@ bool SignerAdapterListener::onAutoSignRequest(const std::string &data, bs::signe
    }
 
    bs::error::ErrorCode result = app_->activateAutoSign(request.rootwalletid(), request.activateautosign()
-      , SecureBinaryData(request.password()));
+      , SecureBinaryData::fromString(request.password()));
 
    signer::AutoSignActResponse response;
    response.set_errorcode(static_cast<uint32_t>(result));
@@ -654,8 +689,8 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
    std::vector<bs::wallet::PasswordData> pwdData;
    for (int i = 0; i < request.new_password_size(); ++i) {
       const auto &pwd = request.new_password(i);
-      pwdData.push_back({ SecureBinaryData(pwd.password())
-         , { static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()} } );
+      pwdData.push_back({ SecureBinaryData::fromString(pwd.password())
+         , { static_cast<bs::wallet::EncryptionType>(pwd.enctype()), BinaryData::fromString(pwd.enckey())} } );
    }
 
    if (!request.remove_old() && pwdData.empty()) {
@@ -674,9 +709,9 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
       return false;
    }
 
-   const bs::wallet::PasswordData oldPass = { SecureBinaryData(request.old_password().password())
+   const bs::wallet::PasswordData oldPass = { SecureBinaryData::fromString(request.old_password().password())
    ,  {static_cast<bs::wallet::EncryptionType>(request.old_password().enctype())
-      , request.old_password().enckey() } };
+      , BinaryData::fromString(request.old_password().enckey()) } };
 
    if (request.remove_old()) {
       logger_->warn("[SignerContainerListener] password removal is not supported, yet");
@@ -723,16 +758,17 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
       return false;
    }
 
-   const bs::wallet::PasswordData pwdData = { request.password().password()
-      , { static_cast<bs::wallet::EncryptionType>(request.password().enctype())
-         , request.password().enckey() } };
-
+   bs::wallet::PasswordData pwdData;
+   pwdData.password = SecureBinaryData::fromString(request.password().password());
+   pwdData.metaData = { static_cast<bs::wallet::EncryptionType>(request.password().enctype())
+      , BinaryData::fromString(request.password().enckey()) };
+   pwdData.controlPassword = app_->controlPassword();
 
    try {
       const auto &w = request.wallet();
       const auto netType = w.testnet() ? NetworkType::TestNet : NetworkType::MainNet;
-      const auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
-         : bs::core::wallet::Seed::fromXpriv(w.privatekey(), netType);
+      const auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(SecureBinaryData::fromString(w.seed()), netType)
+         : bs::core::wallet::Seed::fromXpriv(SecureBinaryData::fromString(w.privatekey()), netType);
 
       const auto wallet = walletsMgr_->createWallet(w.name(), w.description(), seed
          , settings_->getWalletsDir(), pwdData, w.primary());
@@ -813,7 +849,7 @@ bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer
    }
 
    const auto woWallet = walletsMgr_->loadWoWallet(settings_->netType()
-      , settings_->getWalletsDir(), request.filename());
+      , settings_->getWalletsDir(), request.filename(), app_->controlPassword());
    if (!woWallet) {
       return false;
    }
@@ -869,6 +905,12 @@ void SignerAdapterListener::walletsListUpdated()
    sendData(signer::WalletsListUpdatedType, {});
 }
 
+void SignerAdapterListener::onStarted()
+{
+   started_ = true;
+   sendReady();
+}
+
 void SignerAdapterListener::shutdownIfNeeded()
 {
    if (settings_->runMode() == bs::signer::RunMode::litegui && app_) {
@@ -879,6 +921,10 @@ void SignerAdapterListener::shutdownIfNeeded()
 
 bool SignerAdapterListener::sendReady()
 {
+   if (!started_) {
+      return true;
+   }
+
    // Notify GUI about bind status
    sendStatusUpdate();
 

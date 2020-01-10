@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 import QtQuick 2.9
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
@@ -15,7 +25,7 @@ import "../BsControls"
 import "../BsStyles"
 import "../js/helper.js" as JsHelper
 
-CustomTitleDialogWindow {
+BSWalletHandlerDialog {
     property WalletInfo walletInfo: WalletInfo {}
     property TXInfo txInfo: TXInfo {}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
@@ -51,10 +61,7 @@ CustomTitleDialogWindow {
             acceptAnimated()
         });
         authSign.failed.connect(function(errorText) {
-            var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
-                , qsTr("Wallet"), errorText
-                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
-            mb.bsAccepted.connect(function() { rejectAnimated() })
+            showWalletError(errorText);
         })
         authSign.userCancelled.connect(function() {
             rejectAnimated()
@@ -288,7 +295,7 @@ CustomTitleDialogWindow {
                     timeLeft -= 0.5
                     if (timeLeft <= 0) {
                         stop()
-                        rejectAnimated()
+                        showWalletError(kOperationTimeExceeded);
                     }
                 }
                 signal expired()
@@ -305,7 +312,7 @@ CustomTitleDialogWindow {
             }
 
             CustomLabelValue {
-                text: qsTr("%1 seconds left").arg(timeLeft.toFixed((0)))
+                text: qsTr("%1 seconds left").arg(Math.max(0, timeLeft.toFixed(0)))
                 Layout.fillWidth: true
             }
         }

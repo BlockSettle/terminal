@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2016 - 2019, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include <QFile>
 #include <QFileInfo>
 #include <QVariant>
@@ -13,6 +23,7 @@
 #include "PaperBackupWriter.h"
 #include "SignerAdapter.h"
 #include "SignerAdapterContainer.h"
+#include "TXInfo.h"
 #include "UiUtils.h"
 #include "WalletBackupFile.h"
 #include "WalletEncryption.h"
@@ -21,7 +32,6 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
 #include "OfflineSigner.h"
-#include "TXInfo.h"
 
 #include "signer.pb.h"
 
@@ -377,7 +387,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
       if (isPrintable) {
          try {
             WalletBackupPdfWriter pdfWriter(walletId, QString::fromStdString(seedData.part1),
-               QString::fromStdString(seedData.part2), QPixmap(QLatin1String(":/FULL_LOGO")),
+               QString::fromStdString(seedData.part2),
                UiUtils::getQRCode(QString::fromStdString(seedData.part1 + "\n" + seedData.part2)));
             if (!pdfWriter.write(fn)) {
                throw std::runtime_error("write failure");
@@ -527,7 +537,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
 
          bs::hd::WalletInfo *walletInfo = adapter_->qmlFactory()->createWalletInfo(walletId);
 
-         adapter_->qmlBridge()->invokeQmlMethod("createTxSignDialog", cb
+         adapter_->qmlBridge()->invokeQmlMethod(QmlBridge::CreateTxSignDialog, cb
             , QVariant::fromValue(txInfo)
             , QVariant::fromValue(dialogData)
             , QVariant::fromValue(walletInfo));
@@ -685,7 +695,7 @@ void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsC
       cb(errWallet);
       return;
    }
-   const BinaryData content(f.readAll().toStdString());
+   const auto content = BinaryData::fromString(f.readAll().toStdString());
    f.close();
 
    QFileInfo fi(walletPath);
@@ -743,4 +753,31 @@ QString WalletsProxy::walletIdForIndex(int index) const
       return {};
    }
    return QString::fromStdString(hdWallets[index]->walletId());
+}
+
+void WalletsProxy::sendControlPassword(bs::wallet::QPasswordData *password)
+{
+   if (password) {
+      adapter_->sendControlPassword(*password);
+   }
+}
+
+void WalletsProxy::changeControlPassword(bs::wallet::QPasswordData *oldPassword, bs::wallet::QPasswordData *newPassword
+   , const QJSValue &jsCallback)
+{
+   const auto cb = [this, jsCallback](bs::error::ErrorCode result) {
+      QMetaObject::invokeMethod(this, [this, jsCallback, result] {
+         invokeJsCallBack(jsCallback, QJSValueList()
+            << QJSValue(result == bs::error::ErrorCode::NoError)
+            << QJSValue(bs::error::ErrorCodeToString(result)));
+      });
+
+      if (result == bs::error::ErrorCode::NoError) {
+         onWalletsChanged();
+      }
+   };
+
+   if (oldPassword && newPassword) {
+      adapter_->changeControlPassword(*oldPassword, *newPassword, cb);
+   }
 }

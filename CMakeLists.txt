@@ -63,8 +63,9 @@ ENDIF()
 
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
+SET(TERMINAL_GUI_ROOT ${CMAKE_SOURCE_DIR})
 
-set(CMAKE_MODULE_PATH "${BLOCK_SETTLE_ROOT}/common/build_scripts/CMakeModules")
+set(CMAKE_MODULE_PATH "${TERMINAL_GUI_ROOT}/common/build_scripts/CMakeModules")
 
 set(QML_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "QML import path")
 set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "QML2 import path")
@@ -72,19 +73,23 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # set versions info
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
-SET(BS_VERSION_MINOR 24 )
-SET(BS_VERSION_PATCH 10 )
+SET(BS_VERSION_MINOR 25 )
+SET(BS_VERSION_PATCH 7 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 
 IF( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
-  MESSAGE( FATAL_ERROR "THis is not a Git repository, but it should be.")
-ELSE ()
-   # we only take the 8 first characters
-  string(SUBSTRING ${GIT_SHA1} 0 8 BS_REVISIOIN_SHA1)
+    IF (NOT DEFINED ENV{BS_GIT_REVISION})
+	MESSAGE( FATAL_ERROR "Building from a none git repository, please define the shell veriable revision BS_GIT_REVISION=XXX")
+    ELSE()
+	SET(GIT_SHA1 "$ENV{BS_GIT_REVISION}")
+    ENDIF()
 ENDIF ()
+
+# we only take the 8 first characters
+string(SUBSTRING ${GIT_SHA1} 0 8 BS_REVISIOIN_SHA1)
 
 # set DEV_3RD_ROOT env variable to your custom location of 3rd party components
 IF (DEFINED ENV{DEV_3RD_ROOT})
@@ -352,6 +357,25 @@ IF( NOT MPIR_LIB)
    MESSAGE( FATAL_ERROR "Could not find MPIR lib in ${MPIR_LIB_DIR}")
 ENDIF()
 
+IF(BUILD_TESTS)
+   SET(GTEST_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/Gtest)
+   INCLUDE_DIRECTORIES( ${GTEST_PACKAGE_ROOT}/include )
+   SET(GTEST_LIB_DIR ${GTEST_PACKAGE_ROOT}/lib)
+   IF (WIN32)
+      IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
+         SET(GTEST_LIB_NAME gtestd gtest_maind)
+      ELSE ("Debug")
+         SET(GTEST_LIB_NAME gtest gtest_main)
+      ENDIF ("Debug")
+   ELSE(WIN32)
+      SET(GTEST_LIB_NAME libgtest.a libgtest_main.a)
+   ENDIF(WIN32)
+   FIND_LIBRARY( GTEST_LIB NAMES ${GTEST_LIB_NAME} PATHS ${GTEST_LIB_DIR} NO_DEFAULT_PATH )
+   IF( NOT GTEST_LIB)
+      MESSAGE( FATAL_ERROR "Could not find Gtest lib in ${GTEST_LIB_DIR}")
+   ENDIF()
+ENDIF(BUILD_TESTS)
+
 # setup protobuf
 SET( CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${THIRD_PARTY_COMMON_DIR}/Protobuf )
 FIND_PACKAGE( Protobuf REQUIRED )
@@ -365,10 +389,12 @@ ELSE ( UNIX )
 ENDIF ( UNIX )
 
 # autheid helper sources
-INCLUDE_DIRECTORIES( ${BLOCK_SETTLE_ROOT}/AuthAPI/utils/cpp )
+INCLUDE_DIRECTORIES( ${TERMINAL_GUI_ROOT}/AuthAPI/utils/cpp )
+SET( AUTHEID_UTILS ${TERMINAL_GUI_ROOT}/AuthAPI/utils/cpp/autheid_utils.cpp )
 
 
-SET( PATH_TO_GENERATED ${BLOCK_SETTLE_ROOT}/generated_proto )
+SET( PROTO_ROOT_DIR ${TERMINAL_GUI_ROOT} )
+SET( PATH_TO_GENERATED ${TERMINAL_GUI_ROOT}/generated_proto )
 FILE( MAKE_DIRECTORY ${PATH_TO_GENERATED} )
 
 SET( AUTH_PROTO_LIB_NAME               AuthAPI )
@@ -383,13 +409,13 @@ SET( BS_NETWORK_LIB_NAME               BSNetwork )
 SET( COMMON_LIB_NAME                   CommonLib )
 SET( COMMON_UI_LIB_NAME                CommonUI )
 
-SET( BLOCKSETTLE_UI_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/BlockSettleUILib)
-SET( CRYPTO_LIB_DIR ${BLOCK_SETTLE_ROOT}/common/cppForSwig )
+SET( BLOCKSETTLE_UI_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/BlockSettleUILib)
+SET( CRYPTO_LIB_DIR ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig )
 SET( CRYPTO_LIB_INCLUDE_DIR ${CRYPTO_LIB_DIR} )
-SET( WALLET_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/WalletsLib )
-SET( BS_NETWORK_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/BlocksettleNetworkingLib )
-SET( COMMON_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/CommonLib )
-SET( COMMON_UI_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/CommonUI )
+SET( WALLET_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/WalletsLib )
+SET( BS_NETWORK_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/BlocksettleNetworkingLib )
+SET( COMMON_UI_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/CommonUI )
+SET( COMMON_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/CommonLib )
 
 SET(MDB_DIR ${CRYPTO_LIB_DIR}/lmdb/libraries/liblmdb)
 
@@ -813,19 +839,23 @@ ELSE() # Static version
 ENDIF()
 
 
-ADD_SUBDIRECTORY( Celer )
 ADD_SUBDIRECTORY( common/Blocksettle_proto )
+ADD_SUBDIRECTORY( Celer )
 ADD_SUBDIRECTORY( AuthAPI )
 
-ADD_SUBDIRECTORY(BlockSettleApp)
-ADD_SUBDIRECTORY(BlockSettleSigner)
-
-ADD_SUBDIRECTORY(common/BlockSettleUILib)
+ADD_SUBDIRECTORY(BlockSettleUILib)
 ADD_SUBDIRECTORY(common/BlocksettleNetworkingLib)
 ADD_SUBDIRECTORY(common/WalletsLib)
 ADD_SUBDIRECTORY(common/cppForSwig)
 ADD_SUBDIRECTORY(common/CommonLib)
-ADD_SUBDIRECTORY(common/CommonUI)
+ADD_SUBDIRECTORY(CommonUI)
+
+ADD_SUBDIRECTORY(BlockSettleApp)
+ADD_SUBDIRECTORY(BlockSettleSigner)
+
+IF(BUILD_TESTS)
+   ADD_SUBDIRECTORY(UnitTests)
+ENDIF(BUILD_TESTS)
 
 MESSAGE("3rd party root   : ${THIRD_PARTY_COMMON_DIR}")
 MESSAGE("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
