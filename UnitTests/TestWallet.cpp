@@ -1849,3 +1849,41 @@ TEST_F(TestWallet, TxIdNestedSegwit)
       ASSERT_FALSE(true) << e.what();
    }
 }
+
+TEST_F(TestWallet, ChangePassword)
+{
+   auto passMd = bs::wallet::PasswordMetaData{ bs::wallet::EncryptionType::Password, {} };
+
+   auto passphrase1 = SecureBinaryData::fromString("password1");
+   auto passphrase2 = SecureBinaryData::fromString("password2");
+   auto passphrase3 = SecureBinaryData::fromString("password3");
+
+   const bs::wallet::PasswordData pd1{ passphrase1, passMd, {}, {} };
+   const bs::wallet::PasswordData pd2{ passphrase2, passMd, {}, {} };
+   const bs::wallet::PasswordData pd3{ passphrase3, passMd, {}, {} };
+
+   ASSERT_NE(envPtr_->walletsMgr(), nullptr);
+
+   const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
+      , NetworkType::TestNet };
+   auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test", seed, walletFolder_, pd1, true);
+
+   {
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphrase1);
+      bool result = coreWallet->changePassword(passMd, pd2);
+      ASSERT_TRUE(result);
+   }
+
+   {
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphrase2);
+      bool result = coreWallet->changePassword(passMd, pd3);
+      ASSERT_TRUE(result);
+   }
+
+   {
+      // Wrong password
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphrase2);
+      bool result = coreWallet->changePassword(passMd, pd1);
+      ASSERT_FALSE(result);
+   }
+}
