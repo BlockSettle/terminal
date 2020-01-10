@@ -1887,3 +1887,31 @@ TEST_F(TestWallet, ChangePassword)
       ASSERT_FALSE(result);
    }
 }
+
+TEST_F(TestWallet, changeControlPassword)
+{
+   auto passMd = bs::wallet::PasswordMetaData{ bs::wallet::EncryptionType::Password, {} };
+   auto passphrase = SecureBinaryData::fromString("password");
+
+   auto controlPassphraseEmpty = SecureBinaryData::fromString("");
+   auto controlPassphrase1 = SecureBinaryData::fromString("controlPassword1");
+   auto controlPassphrase2 = SecureBinaryData::fromString("controlPassword2");
+   auto controlPassphraseWrong = SecureBinaryData::fromString("controlPassphraseWrong");
+
+   const bs::wallet::PasswordData pd1{ passphrase, passMd, {}, controlPassphraseEmpty };
+
+   ASSERT_NE(envPtr_->walletsMgr(), nullptr);
+
+   const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
+      , NetworkType::TestNet };
+   auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test", seed, walletFolder_, pd1, true);
+
+   // Set control password
+   ASSERT_NO_THROW(coreWallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase1));
+   ASSERT_THROW(coreWallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase2), std::runtime_error);
+
+   // Change control password
+   ASSERT_NO_THROW(coreWallet->changeControlPassword(controlPassphrase1, controlPassphrase2));
+   ASSERT_THROW(coreWallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase1), std::runtime_error);
+   ASSERT_THROW(coreWallet->changeControlPassword(controlPassphraseWrong, controlPassphrase1), std::runtime_error);
+}
