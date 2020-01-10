@@ -42,7 +42,7 @@ class TestWallet : public ::testing::Test
    void SetUp()
    {
       envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
-      passphrase_ = SecureBinaryData("pass");
+      passphrase_ = SecureBinaryData::fromString("pass");
       walletFolder_ = std::string("./homedir");
 
       DBUtils::removeDirectory(walletFolder_);
@@ -63,8 +63,8 @@ public:
 
 TEST_F(TestWallet, BIP44_derivation)
 {
-   const bs::core::wallet::Seed seed{ SecureBinaryData{"test seed"}, NetworkType::TestNet };
-   const SecureBinaryData passphrase("passphrase");
+   const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
+   const auto passphrase = SecureBinaryData::fromString("passphrase");
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
    const SecureBinaryData ctrlPass;
    auto wallet = std::make_shared<bs::core::hd::Wallet>("test", "", seed, pd, walletFolder_);
@@ -107,11 +107,11 @@ TEST_F(TestWallet, BIP44_derivation)
 
 TEST_F(TestWallet, BIP44_primary)
 {
-   SecureBinaryData passphrase("passphrase");
-   SecureBinaryData wrongPass("wrongPass");
+   auto passphrase = SecureBinaryData::fromString("passphrase");
+   auto wrongPass = SecureBinaryData::fromString("wrongPass");
    ASSERT_NE(envPtr_->walletsMgr(), nullptr);
 
-   const bs::core::wallet::Seed seed{ SecureBinaryData("Sample test seed")
+   const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
       , NetworkType::TestNet };
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
 
@@ -183,10 +183,10 @@ TEST_F(TestWallet, BIP44_primary)
 
 TEST_F(TestWallet, BIP44_address)
 {
-   const SecureBinaryData passphrase("passphrase");
+   const auto passphrase = SecureBinaryData::fromString("passphrase");
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
    auto wallet = std::make_shared<bs::core::hd::Wallet>("test", ""
-      , bs::core::wallet::Seed{ SecureBinaryData("test seed"), NetworkType::TestNet }
+      , bs::core::wallet::Seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet }
       , pd, walletFolder_);
    ASSERT_NE(wallet, nullptr);
 
@@ -211,11 +211,11 @@ TEST_F(TestWallet, BIP44_address)
 
 TEST_F(TestWallet, BIP44_WatchingOnly)
 {
-   const SecureBinaryData passphrase("passphrase");
+   const auto passphrase = SecureBinaryData::fromString("passphrase");
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
    const size_t nbAddresses = 10;
    auto wallet = std::make_shared<bs::core::hd::Wallet>("test", ""
-      , bs::core::wallet::Seed{ SecureBinaryData("test seed"), NetworkType::TestNet}
+      , bs::core::wallet::Seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet}
       , pd, walletFolder_);
    ASSERT_NE(wallet, nullptr);
    EXPECT_FALSE(wallet->isWatchingOnly());
@@ -276,8 +276,8 @@ TEST_F(TestWallet, BIP44_WatchingOnly)
 
 TEST_F(TestWallet, ExtOnlyAddresses)
 {
-   const SecureBinaryData passphrase("test");
-   const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+   const auto passphrase = SecureBinaryData::fromString("test");
+   const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
 
    auto wallet1 = std::make_shared<bs::core::hd::Wallet>("test1", "", seed, pd, walletFolder_
@@ -300,7 +300,7 @@ TEST_F(TestWallet, ExtOnlyAddresses)
    const auto index1 = leaf1->getAddressIndex(addr1);
    EXPECT_EQ(index1, "0/0");
 
-   const bs::core::wallet::Seed seed2{ SecureBinaryData("test seed 2"), NetworkType::TestNet };
+   const bs::core::wallet::Seed seed2{ SecureBinaryData::fromString("test seed 2"), NetworkType::TestNet };
    auto wallet2 = std::make_shared<bs::core::hd::Wallet>("test2", "", seed2, pd, walletFolder_
       , envPtr_->logger());
 
@@ -329,8 +329,8 @@ TEST_F(TestWallet, CreateDestroyLoad)
 {
    //setup bip32 node
    BIP32_Node baseNodeNative, baseNodeNested;
-   baseNodeNative.initFromSeed(SecureBinaryData("test seed"));
-   baseNodeNested.initFromSeed(SecureBinaryData("test seed"));
+   baseNodeNative.initFromSeed(SecureBinaryData::fromString("test seed"));
+   baseNodeNested.initFromSeed(SecureBinaryData::fromString("test seed"));
 
    std::vector<bs::Address> extAddrVecNative, extAddrVecNested;
    std::vector<bs::Address> intAddrVec;
@@ -338,10 +338,10 @@ TEST_F(TestWallet, CreateDestroyLoad)
 
    std::string filename, woFilename;
 
-   const SecureBinaryData passphrase("test");
+   const auto passphrase = SecureBinaryData::fromString("test");
    {
       //create a wallet
-      const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
       const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
          "test", "", seed, pd, walletFolder_, envPtr_->logger());
@@ -544,7 +544,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
 
 TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 {
-   const SecureBinaryData passphrase("test");
+   const auto passphrase = SecureBinaryData::fromString("test");
    const SecureBinaryData ctrlPass;
    std::string filename;
 
@@ -553,7 +553,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 
    //bip32 derived counterpart
    BIP32_Node base_node;
-   base_node.initFromSeed(SecureBinaryData("test seed"));
+   base_node.initFromSeed(SecureBinaryData::fromString("test seed"));
 
    std::vector<unsigned> derPath = {
       0x8000002c, //44' 
@@ -568,7 +568,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 
    {
       //create a wallet
-      const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
       const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
          "test", "", seed, pd, walletFolder_, envPtr_->logger());
@@ -827,7 +827,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
 {
    //setup bip32 node
    BIP32_Node base_node;
-   base_node.initFromSeed(SecureBinaryData("test seed"));
+   base_node.initFromSeed(SecureBinaryData::fromString("test seed"));
 
    std::vector<bs::Address> extAddrVec;
    std::set<BinaryData> grabbedAddrHash;
@@ -835,10 +835,10 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
    std::string filename, woFilename;
    auto&& salt = CryptoPRNG::generateRandom(32);
 
-   SecureBinaryData passphrase("test");
+   auto passphrase = SecureBinaryData::fromString("test");
    {
       //create a wallet
-      const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
       const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
          "test", "", seed, pd, walletFolder_, envPtr_->logger());
@@ -1077,10 +1077,10 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
    std::vector<BinaryData> settlementIDs;
    bs::Address authAddr;
 
-   const SecureBinaryData passphrase("test");
+   const auto passphrase = SecureBinaryData::fromString("test");
    {
       //create a wallet
-      const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
       const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
          "test", "", seed, pd, walletFolder_, envPtr_->logger());
@@ -1281,7 +1281,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SettlementLeaf)
 
 TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 {
-   const SecureBinaryData passphrase("test");
+   const auto passphrase = SecureBinaryData::fromString("test");
    std::string filename;
 
    std::vector<bs::Address> extAddrVec;
@@ -1289,7 +1289,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 
    //bip32 derived counterpart
    BIP32_Node base_node;
-   base_node.initFromSeed(SecureBinaryData("test seed"));
+   base_node.initFromSeed(SecureBinaryData::fromString("test seed"));
 
    std::vector<unsigned> derPath = {
       0x8000002c, //44' 
@@ -1303,7 +1303,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 
    {
       //create a wallet
-      const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
       const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>("test", ""
          , seed, pd, walletFolder_, envPtr_->logger());
@@ -1459,7 +1459,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 
 TEST_F(TestWallet, ImportExport_Easy16)
 {
-   const SecureBinaryData passphrase("test");
+   const auto passphrase = SecureBinaryData::fromString("test");
 
    bs::core::wallet::Seed seed{ CryptoPRNG::generateRandom(32), NetworkType::TestNet };
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
@@ -1588,7 +1588,7 @@ TEST_F(TestWallet, ImportExport_Easy16)
 
 TEST_F(TestWallet, ImportExport_xpriv)
 {
-   const SecureBinaryData passphrase("test");
+   const auto passphrase = SecureBinaryData::fromString("test");
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
 
    bs::core::wallet::Seed seed{ CryptoPRNG::generateRandom(32), NetworkType::TestNet };
@@ -1706,11 +1706,11 @@ TEST_F(TestWallet, ImportExport_xpriv)
 
 TEST_F(TestWallet, MultipleKeys)
 {
-   const SecureBinaryData passphrase("test");
+   const auto passphrase = SecureBinaryData::fromString("test");
    const auto authEidKey = CryptoPRNG::generateRandom(32);
-   const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+   const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
    const bs::wallet::PasswordData pd1{ passphrase, { bs::wallet::EncryptionType::Password } };
-   const bs::wallet::PasswordData pd2{ authEidKey, { bs::wallet::EncryptionType::Auth, std::string("email@example.com") } };
+   const bs::wallet::PasswordData pd2{ authEidKey, { bs::wallet::EncryptionType::Auth, BinaryData::fromString("email@example.com") } };
    auto wallet = std::make_shared<bs::core::hd::Wallet>("test1", "", seed, pd1, "./homedir"
       , StaticLogger::loggerPtr);
    ASSERT_NE(wallet, nullptr);
@@ -1754,8 +1754,8 @@ TEST_F(TestWallet, TxIdNativeSegwit)
 
 TEST_F(TestWallet, TxIdNestedSegwit)
 {
-   const SecureBinaryData passphrase("password");
-   const bs::core::wallet::Seed seed{ SecureBinaryData("TxId test seed"), NetworkType::TestNet };
+   const auto passphrase = SecureBinaryData::fromString("password");
+   const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("TxId test seed"), NetworkType::TestNet };
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
 
    auto coreWallet = std::make_shared<bs::core::hd::Wallet>("test", "", seed, pd, walletFolder_);

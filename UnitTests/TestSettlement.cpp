@@ -61,7 +61,7 @@ TestSettlement::TestSettlement()
 
 void TestSettlement::SetUp()
 {
-   passphrase_ = SecureBinaryData("pass");
+   passphrase_ = SecureBinaryData::fromString("pass");
    coinbasePubKey_ = CryptoECDSA().ComputePublicKey(coinbasePrivKey_, true);
    coinbaseScrAddr_ = BtcUtils::getHash160(coinbasePubKey_);
    coinbaseFeed_ =

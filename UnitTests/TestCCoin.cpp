@@ -37,7 +37,7 @@ void TestCCoin::SetUp()
    envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
    envPtr_->requireAssets();
 
-   passphrase_ = SecureBinaryData("pass");
+   passphrase_ = SecureBinaryData::fromString("pass");
 
    // setup mining
    coinbasePubKey_ = CryptoECDSA().ComputePublicKey(coinbasePrivKey_, true);
@@ -54,7 +54,7 @@ void TestCCoin::SetUp()
       const bs::wallet::PasswordData pd{ passphrase_, { bs::wallet::EncryptionType::Password } };
    {
       const auto coreWallet = envPtr_->walletsMgr()->createWallet("root", "",
-         bs::core::wallet::Seed(SecureBinaryData("genesis seed"), NetworkType::TestNet),
+         bs::core::wallet::Seed(SecureBinaryData::fromString("genesis seed"), NetworkType::TestNet),
          envPtr_->armoryInstance()->homedir_, pd, true); // added inside
       {
          auto grp = coreWallet->createGroup(coreWallet->getXBTGroupType());
@@ -67,7 +67,7 @@ void TestCCoin::SetUp()
 
    for (size_t i = 0; i < usersCount_; ++i) {
       const auto coreWallet = envPtr_->walletsMgr()->createWallet("user"+std::to_string(i), "",
-         bs::core::wallet::Seed(SecureBinaryData("seed for user"+std::to_string(i)), NetworkType::TestNet),
+         bs::core::wallet::Seed(SecureBinaryData::fromString("seed for user"+std::to_string(i)), NetworkType::TestNet),
          envPtr_->armoryInstance()->homedir_, pd, true); // added inside
       {
          auto grp = coreWallet->createGroup(coreWallet->getXBTGroupType());

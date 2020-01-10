@@ -695,7 +695,7 @@ void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsC
       cb(errWallet);
       return;
    }
-   const BinaryData content(f.readAll().toStdString());
+   const auto content = BinaryData::fromString(f.readAll().toStdString());
    f.close();
 
    QFileInfo fi(walletPath);

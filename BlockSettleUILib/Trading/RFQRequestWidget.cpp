@@ -378,7 +378,7 @@ void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTe
          const auto &command = response.sign_payout();
          auto timestamp = QDateTime::fromMSecsSinceEpoch(command.timestamp_ms());
          // payin_data - payin hash . binary
-         emit signedPayoutRequested(command.settlement_id(), command.payin_data(), timestamp);
+         emit signedPayoutRequested(command.settlement_id(), BinaryData::fromString(command.payin_data()), timestamp);
          break;
       }
 
@@ -386,7 +386,7 @@ void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTe
          const auto &command = response.sign_payin();
          auto timestamp = QDateTime::fromMSecsSinceEpoch(command.timestamp_ms());
          // unsigned_payin_data - serialized payin. binary
-         emit signedPayinRequested(command.settlement_id(), command.unsigned_payin_data(), timestamp);
+         emit signedPayinRequested(command.settlement_id(), BinaryData::fromString(command.unsigned_payin_data()), timestamp);
          break;
       }
 

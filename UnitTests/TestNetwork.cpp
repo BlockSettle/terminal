@@ -128,7 +128,7 @@ TEST(TestNetwork, ZMQ_BIP15X)
    protected:
        void OnDataFromClient(const std::string &clientId, const std::string &data) override {
          logger_->error("[{}] {} from {} #{}", __func__, data.size()
-            , BinaryData(clientId).toHexStr(), clientPktCnt_);
+            , BinaryData::fromString(clientId).toHexStr(), clientPktCnt_);
          if (clientPktCnt_ < clientPackets.size()) {
             if (clientPackets[clientPktCnt_++] != data) {
                packetsMatch_ = false;
@@ -140,17 +140,17 @@ TEST(TestNetwork, ZMQ_BIP15X)
          }
       }
       void onClientError(const std::string &clientId, const std::string &errStr) override {
-         logger_->debug("[{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
+         logger_->debug("[{}] {}: {}", __func__, BinaryData::fromString(clientId).toHexStr(), errStr);
          if (!failed_) {
             clientPktsProm.set_value(false);
             failed_ = true;
          }
       }
       void OnClientConnected(const std::string &clientId) override {
-         logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
+         logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
       }
       void OnClientDisconnected(const std::string &clientId) override {
-         logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
+         logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
       }
 
    private:
@@ -278,7 +278,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
 
       void OnDataFromClient(const std::string &clientId, const std::string &data) override {
          logger_->debug("[{}] {} from {} #{}", __func__, data.size()
-            , BinaryData(clientId).toHexStr(), clientPktCnt);
+            , BinaryData::fromString(clientId).toHexStr(), clientPktCnt);
          if (clientPktCnt < packets.size()) {
             if (packets[clientPktCnt++] != data) {
                logger_->error("[{}] packet #{} mismatch", __func__, clientPktCnt - 1);
@@ -286,7 +286,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
          }
          else {
             logger_->debug("[{}] rekeying client {} after packet {}", __func__
-               , BinaryData(clientId).toHexStr(), data.size());
+               , BinaryData::fromString(clientId).toHexStr(), data.size());
             clientPktCnt = 0;
             connection_->rekey(clientId);
             return;
@@ -304,7 +304,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
          }
       }
       void onClientError(const std::string &clientId, const std::string &errStr) override {
-         logger_->debug("[{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
+         logger_->debug("[{}] {}: {}", __func__, BinaryData::fromString(clientId).toHexStr(), errStr);
          if (!conn1Reported) {
             connectProm1.set_value(false);
             conn1Reported = true;
@@ -319,10 +319,10 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
          }
       }
       void OnClientConnected(const std::string &clientId) override {
-         logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
+         logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
       }
       void OnClientDisconnected(const std::string &clientId) override {
-         logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
+         logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
       }
 
       std::shared_ptr<spdlog::logger>  logger_;
@@ -520,11 +520,11 @@ public:
     void OnDataFromClient(const std::string &clientId, const std::string &data) override {
        ++dataRecv_;
        logger_->debug("[{}] {} from {}", __func__, data.size()
-           , BinaryData(clientId).toHexStr());
+           , BinaryData::fromString(clientId).toHexStr());
     }
     void onClientError(const std::string &clientId, const std::string &errStr) override {
        ++error_;
-       logger_->debug("[{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
+       logger_->debug("[{}] {}: {}", __func__, BinaryData::fromString(clientId).toHexStr(), errStr);
     }
     void OnClientConnected(const std::string &clientId) override {
        lastConnectedClient_ = clientId;
@@ -533,12 +533,12 @@ public:
           lastConnectedKey_ = server_->getClientKey(clientId);
           ASSERT_TRUE(lastConnectedKey_);
        }
-       logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
+       logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
     }
     void OnClientDisconnected(const std::string &clientId) override {
        lastDisconnectedClient_ = clientId;
        ++disconnected_;
-       logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
+       logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
     }
 
     std::atomic<int> dataRecv_{};

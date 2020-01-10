@@ -294,7 +294,7 @@ void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::Re
    else {
       result = static_cast<bs::error::ErrorCode>(evt.errorcode());
       if (result == bs::error::ErrorCode::NoError) {
-         tx = evt.signedtx();
+         tx = BinaryData::fromString(evt.signedtx());
          emit parent_->txSigned(tx);
       }
       else {
@@ -338,7 +338,7 @@ void SignerInterfaceListener::onCancelTx(const std::string &data, bs::signer::Re
    }
 
    QMetaObject::invokeMethod(parent_, [this, evt] {
-      emit parent_->cancelTxSign(evt.tx_id());
+      emit parent_->cancelTxSign(BinaryData::fromString(evt.tx_id()));
    });
 }
 
@@ -418,7 +418,7 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer
       for (int j = 0; j < group.leaves_size(); ++j) {
          const auto leaf = group.leaves(j);
          leaves.push_back({ leaf.id(), bs::hd::Path::fromString(leaf.path())
-            , false, leaf.extra_data() });
+            , false, BinaryData::fromString(leaf.extra_data()) });
       }
       result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), leaves });
    }
@@ -481,8 +481,8 @@ void SignerInterfaceListener::onCreateWO(const std::string &data, bs::signer::Re
             addresses.push_back({ addr.index()
                , static_cast<AddressEntryType>(addr.aet()) });
          }
-         leaves.push_back({ leaf.id(), bs::hd::Path::fromString(leaf.path()), leaf.public_key()
-            , leaf.chain_code(), addresses });
+         leaves.push_back({ leaf.id(), bs::hd::Path::fromString(leaf.path()), BinaryData::fromString(leaf.public_key())
+            , BinaryData::fromString(leaf.chain_code()), addresses });
       }
       result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), leaves });
    }
@@ -504,7 +504,7 @@ void SignerInterfaceListener::onExportWO(const std::string &data, RequestId reqI
       return;
    }
 
-   itCb->second(BinaryData(response.content()));
+   itCb->second(BinaryData::fromString(response.content()));
    cbExportWO_.erase(itCb);
 }
 
@@ -521,7 +521,7 @@ void SignerInterfaceListener::onDecryptedKey(const std::string &data, bs::signer
          , __func__, reqId);
       return;
    }
-   itCb->second(response.private_key(), response.chain_code());
+   itCb->second(SecureBinaryData::fromString(response.private_key()), SecureBinaryData::fromString(response.chain_code()));
    cbDecryptNode_.erase(itCb);
 }
 
@@ -629,7 +629,7 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
    }
 
    emit parent_->headlessBindUpdated(bs::signer::BindStatus(evt.signer_bind_status()));
-   emit parent_->signerPubKeyUpdated(evt.signer_pub_key());
+   emit parent_->signerPubKeyUpdated(BinaryData::fromString(evt.signer_pub_key()));
 }
 
 void SignerInterfaceListener::onUpdateControlPasswordStatus(const std::string &data)

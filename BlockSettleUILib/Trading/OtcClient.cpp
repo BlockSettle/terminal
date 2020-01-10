@@ -291,7 +291,7 @@ bool OtcClient::sendQuoteRequest(const QuoteRequest &request)
    auto d = msg.mutable_request();
    d->set_sender_side(Otc::Side(request.ourSide));
    d->set_range(Otc::RangeType(request.rangeType));
-   emit sendPublicMessage(msg.SerializeAsString());
+   emit sendPublicMessage(BinaryData::fromString(msg.SerializeAsString()));
 
    updatePublicLists();
 
@@ -410,7 +410,7 @@ bool OtcClient::pullOrReject(Peer *peer)
 
       Otc::PublicMessage msg;
       msg.mutable_close();
-      emit sendPublicMessage(msg.SerializeAsString());
+      emit sendPublicMessage(BinaryData::fromString(msg.SerializeAsString()));
 
       updatePublicLists();
       return true;
@@ -816,7 +816,7 @@ void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers 
       blockPeer("invalid auth_address_buyer in buyer offer", peer);
       return;
    }
-   peer->authPubKey = msg.auth_address_buyer();
+   peer->authPubKey = BinaryData::fromString(msg.auth_address_buyer());
 
    switch (peer->state) {
       case State::Idle:
@@ -937,7 +937,7 @@ void OtcClient::processBuyerAccepts(Peer *peer, const ContactMessage_BuyerAccept
       blockPeer("invalid auth_address in BuyerAccepts message", peer);
       return;
    }
-   peer->authPubKey = msg.auth_address_buyer();
+   peer->authPubKey = BinaryData::fromString(msg.auth_address_buyer());
 
    sendSellerAccepts(peer);
 }
@@ -959,13 +959,13 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
       blockPeer("invalid auth_address_seller in SellerAccepts message", peer);
       return;
    }
-   peer->authPubKey = msg.auth_address_seller();
+   peer->authPubKey = BinaryData::fromString(msg.auth_address_seller());
 
    if (msg.payin_tx_id().size() != kTxHashSize) {
       blockPeer("invalid payin_tx_id in SellerAccepts message", peer);
       return;
    }
-   peer->payinTxIdFromSeller = BinaryData(msg.payin_tx_id());
+   peer->payinTxIdFromSeller = BinaryData::fromString(msg.payin_tx_id());
 
    createBuyerRequest(settlementId, peer, [this, peer, settlementId, offer = peer->offer
       , handle = peer->validityFlag.handle(), logger = logger_] (OtcClientDeal &&deal)
@@ -1271,7 +1271,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             signRequestIds_[reqId] = deal->settlementId;
             deal->payoutReqId = reqId;
             verifyAuthAddresses(deal);
-            peer->activeSettlementId = deal->settlementId;
+            peer->activeSettlementId = BinaryData::fromString(deal->settlementId);
          }
 
          changePeerState(peer, State::WaitBuyerSign);
@@ -1300,7 +1300,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             signRequestIds_[reqId] = deal->settlementId;
             deal->payinReqId = reqId;
             verifyAuthAddresses(deal);
-            peer->activeSettlementId = deal->settlementId;
+            peer->activeSettlementId = BinaryData::fromString(deal->settlementId);
          }
 
          changePeerState(peer, State::WaitSellerSeal);
@@ -1408,7 +1408,7 @@ void OtcClient::send(Peer *peer, ContactMessage &msg)
 {
    assert(!peer->contactId.empty());
    msg.set_contact_type(Otc::ContactType(peer->type));
-   emit sendContactMessage(peer->contactId, msg.SerializeAsString());
+   emit sendContactMessage(peer->contactId, BinaryData::fromString(msg.SerializeAsString()));
 }
 
 void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer, const OtcClientDealCb &cb)

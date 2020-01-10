@@ -58,7 +58,7 @@ void TestCC::SetUp()
 {
    UnitTestWalletACT::clear();
 
-   passphrase_ = SecureBinaryData("pass");
+   passphrase_ = SecureBinaryData::fromString("pass");
    coinbasePubKey_ = CryptoECDSA().ComputePublicKey(coinbasePrivKey_, true);
    coinbaseScrAddr_ = BtcUtils::getHash160(coinbasePubKey_);
    coinbaseFeed_ = 
@@ -72,7 +72,7 @@ void TestCC::SetUp()
    const bs::wallet::PasswordData pd{ passphrase_, { bs::wallet::EncryptionType::Password } };
 
    const auto priWallet = envPtr_->walletsMgr()->createWallet("Primary", "",
-      bs::core::wallet::Seed(SecureBinaryData("test seed"), NetworkType::TestNet),
+      bs::core::wallet::Seed(SecureBinaryData::fromString("test seed"), NetworkType::TestNet),
       envPtr_->armoryInstance()->homedir_, pd, true);
 
    if (!priWallet)
