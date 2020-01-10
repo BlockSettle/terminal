@@ -88,6 +88,6 @@ TEST(TestAuthEid, VerifySignature)
 
    signResultInvalid = signResult;
    // Invalid check using production root CA
-   result = AutheIDClient::verifySignature(signResultInvalid, AuthEidEnv::Staging);
+   result = AutheIDClient::verifySignature(signResultInvalid, AuthEidEnv::Prod);
    EXPECT_TRUE(!result.valid);
 }
