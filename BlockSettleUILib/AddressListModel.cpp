@@ -39,6 +39,21 @@ QString AddressListModel::AddressRow::getAddress() const
    return UiUtils::displayAddress(displayedAddress);
 }
 
+bool AddressListModel::AddressRow::operator==(const AddressRow& other)
+{
+   return  wallet.get() == other.wallet.get() &&
+      address == other.address &&
+      bytes == other.bytes &&
+      transactionCount == other.transactionCount &&
+      balance == other.balance &&
+      comment == other.comment &&
+      displayedAddress == other.displayedAddress &&
+      walletName == other.walletName &&
+      walletId == other.walletId &&
+      addrIndex == other.addrIndex &&
+      wltType == other.wltType &&
+      isExternal == other.isExternal;
+}
 
 AddressListModel::AddressListModel(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , QObject* parent, AddressType addrType)
@@ -51,11 +66,11 @@ AddressListModel::AddressListModel(const std::shared_ptr<bs::sync::WalletsManage
       connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this
          , &AddressListModel::updateWallets);
       connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
-         , &AddressListModel::updateData);
+         , &AddressListModel::updateWallets);
       connect(walletsMgr_.get(), &bs::sync::WalletsManager::blockchainEvent, this
          , &AddressListModel::updateWallets);
       connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated
-         , this, &AddressListModel::updateData);
+         , this, &AddressListModel::updateWallets);
    }
 }
 
@@ -109,17 +124,25 @@ void AddressListModel::updateData(const std::string &walletId)
    if (!std::atomic_compare_exchange_strong(&processing_, &expected, desired)) {
       return;
    }
-   beginResetModel();
-   addressRows_.clear();
+
+   std::vector<AddressRow> newAddresses;
    for (const auto &wallet : wallets_) {
-      updateWallet(wallet);
+      updateWallet(wallet, newAddresses);
    }
-   endResetModel();
-   updateWalletData();
+
+   if (addressRows_.size() != newAddresses.size() || 
+      !std::equal(addressRows_.begin(), addressRows_.end(), newAddresses.begin())) {
+      
+      beginResetModel();
+      addressRows_ = std::move(newAddresses);
+      endResetModel();
+      updateWalletData();
+   }
+
    processing_.store(false);
 }
 
-void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wallet)
+void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wallet, std::vector<AddressRow> &addresses)
 {
    if (filterBtcOnly_ && wallet->type() != bs::core::wallet::Type::Bitcoin) {
       return;
@@ -128,7 +151,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
    if (wallet->type() == bs::core::wallet::Type::Authentication) {
       const auto addr = bs::Address();
       auto row = createRow(addr, wallet);
-      addressRows_.emplace_back(std::move(row));
+      addresses.emplace_back(std::move(row));
    } else {
       if ((wallets_.size() > 1) && (wallet->type() == bs::core::wallet::Type::ColorCoin)) {
          return;  // don't populate PM addresses when multiple wallets selected
@@ -148,7 +171,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
          break;
       }
 
-      addressRows_.reserve(addressRows_.size() + addressList.size());
+      addresses.reserve(addresses.size() + addressList.size());
 
       for (size_t i = 0; i < addressList.size(); i++) {
          const auto &addr = addressList[i];
@@ -157,7 +180,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
          row.addrIndex = i;
          row.comment = QString::fromStdString(wallet->getAddressComment(addr));
 
-         addressRows_.emplace_back(std::move(row));
+         addresses.emplace_back(std::move(row));
       }
    }
 }
