@@ -68,7 +68,7 @@ TEST(TestCommon, CacheFile)
    const auto filename = "test_tx_cache";
    auto txCF = new TxCacheFile(filename);
    ASSERT_NE(txCF, nullptr);
-   const auto tx = txCF->get(BinaryData("non-existent key"));
+   const auto tx = txCF->get(BinaryData::fromString("non-existent key"));
    EXPECT_FALSE(tx.isInitialized());
 
    delete txCF;

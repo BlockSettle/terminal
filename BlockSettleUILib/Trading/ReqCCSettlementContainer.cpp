@@ -356,7 +356,7 @@ bool ReqCCSettlementContainer::cancel()
 {
    deactivate();
    emit settlementCancelled();
-   signingContainer_->CancelSignTx(id());
+   signingContainer_->CancelSignTx(BinaryData::fromString(id()));
 
    SettlementContainer::releaseUtxoRes();
 

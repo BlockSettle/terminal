@@ -19,7 +19,7 @@ using namespace Blocksettle::Communication;
 
 namespace {
 
-   const auto kPassword = SecureBinaryData("passphrase");
+   const auto kPassword = SecureBinaryData::fromString("passphrase");
 
    const auto kSettlementId = std::string("dc26c004d7b24f71cd5b348a254c292777586f5d9d00f60ac65dd7d5b06d0c2b");
 
@@ -31,7 +31,7 @@ public:
    void init(TestEnv &env, const std::string &name)
    {
       name_ = name;
-      bs::core::wallet::Seed seed(name, NetworkType::TestNet);
+      bs::core::wallet::Seed seed(SecureBinaryData::fromString(name), NetworkType::TestNet);
 
       bs::wallet::PasswordData pd;
       pd.password = kPassword;
@@ -156,7 +156,7 @@ public:
                   verifyDone_ = true;
 
                   auto settlementAddress = bs::TradesVerification::constructSettlementAddress(BinaryData::CreateFromHex(s.settlement_id())
-                     , s.auth_address_buyer(), s.auth_address_seller());
+                     , BinaryData::fromString(s.auth_address_buyer()), BinaryData::fromString(s.auth_address_seller()));
                   ASSERT_TRUE(settlementAddress.isValid());
 
                   std::map<std::string, BinaryData> preimageData;
@@ -171,7 +171,7 @@ public:
                      preimageData.emplace(peer1_.nestedAddr_.display(), preimage);
                   }
 
-                  auto result = bs::TradesVerification::verifyUnsignedPayin(s.unsigned_tx(), preimageData, env_->armoryConnection()->testFeePerByte()
+                  auto result = bs::TradesVerification::verifyUnsignedPayin(BinaryData::fromString(s.unsigned_tx()), preimageData, env_->armoryConnection()->testFeePerByte()
                      , settlementAddress.display(), uint64_t(s.amount()));
                   ASSERT_TRUE(result->success);
 
@@ -206,11 +206,11 @@ public:
                   const auto &data = verifySeller_.getValue();
 
                   auto settlementAddress = bs::TradesVerification::constructSettlementAddress(BinaryData::CreateFromHex(data.settlement_id())
-                     , data.auth_address_buyer(), data.auth_address_seller());
+                     , BinaryData::fromString(data.auth_address_buyer()), BinaryData::fromString(data.auth_address_seller()));
                   ASSERT_TRUE(settlementAddress.isValid());
 
-                  auto result = bs::TradesVerification::verifySignedPayout(request.process_tx().signed_tx()
-                     , bs::toHex(data.auth_address_buyer()), bs::toHex(data.auth_address_seller()), data.payin_tx_hash()
+                  auto result = bs::TradesVerification::verifySignedPayout(BinaryData::fromString(request.process_tx().signed_tx())
+                     , bs::toHex(data.auth_address_buyer()), bs::toHex(data.auth_address_seller()), BinaryData::fromString(data.payin_tx_hash())
                      , uint64_t(data.amount()), env_->armoryConnection()->testFeePerByte(), data.settlement_id(), settlementAddress.display());
                   ASSERT_TRUE(result->success);
 
@@ -221,8 +221,8 @@ public:
 
                   const auto &data = verifySeller_.getValue();
 
-                  auto result = bs::TradesVerification::verifySignedPayin(request.process_tx().signed_tx()
-                     , data.payin_tx_hash(), env_->armoryConnection()->testFeePerByte(), totalFee_);
+                  auto result = bs::TradesVerification::verifySignedPayin(BinaryData::fromString(request.process_tx().signed_tx())
+                     , BinaryData::fromString(data.payin_tx_hash()), env_->armoryConnection()->testFeePerByte(), totalFee_);
                   ASSERT_TRUE(result->success);
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_SUCCEED);

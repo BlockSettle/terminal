@@ -71,7 +71,7 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
    std::vector<std::string> userIds;
    // send auth to all devices stored in encKeys
    for (const QString& encKey: walletInfo->encKeys()) {
-      auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData(encKey.toStdString()).toBinStr());
+      auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData::fromString(encKey.toStdString()).toBinStr());
 
       // deviceInfo is empty for ActivateWallet and is not empty for another requests
       if (!deviceInfo.deviceId.empty()) {
@@ -120,7 +120,7 @@ void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInf
    for (int i = 0; i < walletInfo->encKeys().size(); ++i) {
       if (index == i) continue;
 
-      auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData(walletInfo->encKeys().at(i).toStdString()).toBinStr());
+      auto deviceInfo = AutheIDClient::getDeviceInfo(SecureBinaryData::fromString(walletInfo->encKeys().at(i).toStdString()).toBinStr());
 
       if (!deviceInfo.deviceId.empty()) {
          knownDeviceIds.push_back(deviceInfo.deviceId);

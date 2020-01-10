@@ -28,9 +28,9 @@ protected:
       envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
       envPtr_->requireArmory();
 
-      passphrase_ = SecureBinaryData("pass");
+      passphrase_ = SecureBinaryData::fromString("pass");
       bs::core::wallet::Seed seed{ 
-         SecureBinaryData("dem seeds"), NetworkType::TestNet };
+         SecureBinaryData::fromString("dem seeds"), NetworkType::TestNet };
       const bs::wallet::PasswordData pd{ passphrase_, { bs::wallet::EncryptionType::Password } };
 
       walletPtr_ = std::make_shared<bs::core::hd::Wallet>(
@@ -183,7 +183,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
       const auto txReq = syncLeaf->createTXRequest(inputs, { recipient }, 0, false, addrVec[0]);
       BinaryData txWrongSigned;
       {
-         const bs::core::WalletPasswordScoped lock(walletPtr_, SecureBinaryData{"wrongPass"});
+         const bs::core::WalletPasswordScoped lock(walletPtr_, SecureBinaryData::fromString("wrongPass"));
          EXPECT_THROW(txWrongSigned = leaf->signTXRequest(txReq), std::exception);
          EXPECT_TRUE(txWrongSigned.isNull());
       }

@@ -45,18 +45,18 @@ TEST(TestAuthEid, VerifySignature)
 
    AutheIDClient::SignResult signResult;
    signResult.serialization = AutheIDClient::Serialization(packet.autheidsign().serialization());
-   signResult.data = packet.autheidsign().signature_data();
-   signResult.sign = packet.autheidsign().sign();
-   signResult.certificateClient = packet.autheidsign().certificate_client();
-   signResult.certificateIssuer = packet.autheidsign().certificate_issuer();
-   signResult.ocspResponse = packet.autheidsign().ocsp_response();
+   signResult.data = BinaryData::fromString(packet.autheidsign().signature_data());
+   signResult.sign = BinaryData::fromString(packet.autheidsign().sign());
+   signResult.certificateClient = BinaryData::fromString(packet.autheidsign().certificate_client());
+   signResult.certificateIssuer = BinaryData::fromString(packet.autheidsign().certificate_issuer());
+   signResult.ocspResponse = BinaryData::fromString(packet.autheidsign().ocsp_response());
 
    auto result = AutheIDClient::verifySignature(signResult, AuthEidEnv::Staging);
    ASSERT_TRUE(result.valid);
 
    ASSERT_EQ(result.uniqueUserId, "2pq54tfr");
 
-   auto requestDataHash = BtcUtils::getSha256(packet.requestdata());
+   auto requestDataHash = BtcUtils::getSha256(BinaryData::fromString(packet.requestdata()));
    ASSERT_EQ(result.invisibleData, requestDataHash);
 
    ASSERT_EQ(result.email, "test21@verified-fast.com");

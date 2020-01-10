@@ -72,11 +72,9 @@ void CCTokenEntryDialog::tokenChanged()
    }
 
    try {
-      BinaryData base58In(strToken_);
-      base58In.append('\0'); // Remove once base58toScrAddr() is fixed.
-      const auto decoded = BtcUtils::base58toScrAddr(base58In).toBinStr();
+      const auto decoded = BtcUtils::base58toScrAddr(strToken_);
       Blocksettle::Communication::CCSeedResponse response;
-      if (!response.ParseFromString(decoded)) {
+      if (!response.ParseFromArray(decoded.getPtr(), decoded.getSize())) {
          throw std::invalid_argument("invalid internal token structure");
       }
       seed_ = response.bsseed();

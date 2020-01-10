@@ -218,7 +218,7 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 
 bool DealerCCSettlementContainer::cancel()
 {
-   signingContainer_->CancelSignTx(id());
+   signingContainer_->CancelSignTx(BinaryData::fromString(id()));
    cancelled_ = true;
 
    SettlementContainer::releaseUtxoRes();

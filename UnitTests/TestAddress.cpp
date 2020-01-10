@@ -30,13 +30,12 @@ TEST(TestAddress, ValidScenarios)
 
       EXPECT_EQ(prefixedHash, addr.prefixed());
       auto b58 = BtcUtils::scrAddrToBase58(prefixedHash);
-      std::string b58str(b58.toCharPtr());
-      EXPECT_EQ(addr.display(), b58str);
+      EXPECT_EQ(addr.display(), b58);
 
       auto addr2 = bs::Address::fromHash(prefixedHash);
       EXPECT_EQ(pubkeyHash1, addr2.unprefixed());
       EXPECT_EQ(prefixedHash, addr2.prefixed());
-      EXPECT_EQ(addr2.display(), b58str);
+      EXPECT_EQ(addr2.display(), b58);
 
       EXPECT_EQ(addr, addr2);
    }
@@ -51,13 +50,12 @@ TEST(TestAddress, ValidScenarios)
 
       EXPECT_EQ(prefixedHash, addr.prefixed());
       auto bch32 = BtcUtils::scrAddrToSegWitAddress(pubkeyHash1);
-      std::string bch32str(bch32.getCharPtr(), bch32.getSize());
-      EXPECT_EQ(addr.display(), bch32str);
+      EXPECT_EQ(addr.display(), bch32);
 
       auto addr2 = bs::Address::fromHash(prefixedHash);
       EXPECT_EQ(pubkeyHash1, addr2.unprefixed());
       EXPECT_EQ(prefixedHash, addr2.prefixed());
-      EXPECT_EQ(addr2.display(), bch32str);
+      EXPECT_EQ(addr2.display(), bch32);
  
       EXPECT_EQ(addr, addr2);
    }
@@ -75,13 +73,12 @@ TEST(TestAddress, ValidScenarios)
 
       EXPECT_EQ(prefixedHash, addr.prefixed());
       auto b58 = BtcUtils::scrAddrToBase58(prefixedHash);
-      std::string b58str(b58.toCharPtr());
-      EXPECT_EQ(addr.display(), b58str);
+      EXPECT_EQ(addr.display(), b58);
 
       auto addr2 = bs::Address::fromHash(prefixedHash);
       EXPECT_EQ(rando20, addr2.unprefixed());
       EXPECT_EQ(prefixedHash, addr2.prefixed());
-      EXPECT_EQ(addr2.display(), b58str);
+      EXPECT_EQ(addr2.display(), b58);
 
       EXPECT_EQ(addr, addr2);
    }
@@ -98,12 +95,11 @@ TEST(TestAddress, ValidScenarios)
 
       EXPECT_EQ(prefixedHash, addr.prefixed());
       auto b58 = BtcUtils::scrAddrToBase58(prefixedHash);
-      std::string b58str(b58.toCharPtr());
-      EXPECT_EQ(b58str, addr.display());
+      EXPECT_EQ(b58, addr.display());
 
       auto addr2 = bs::Address::fromHash(prefixedHash);
       EXPECT_EQ(prefixedHash, addr2.prefixed());
-      EXPECT_EQ(b58str, addr2.display());
+      EXPECT_EQ(b58, addr2.display());
 
       EXPECT_EQ(addr, addr2);
    }
@@ -120,12 +116,11 @@ TEST(TestAddress, ValidScenarios)
 
       EXPECT_EQ(prefixedHash, addr.prefixed());
       auto b58 = BtcUtils::scrAddrToBase58(prefixedHash);
-      std::string b58str(b58.toCharPtr());
-      EXPECT_EQ(b58str, addr.display());
+      EXPECT_EQ(b58, addr.display());
 
       auto addr2 = bs::Address::fromHash(prefixedHash);
       EXPECT_EQ(prefixedHash, addr2.prefixed());
-      EXPECT_EQ(b58str, addr2.display());
+      EXPECT_EQ(b58, addr2.display());
 
       EXPECT_EQ(addr, addr2);
    }
@@ -145,12 +140,11 @@ TEST(TestAddress, ValidScenarios)
       EXPECT_EQ(prefixedHash, addr.prefixed());
 
       auto b58 = BtcUtils::scrAddrToBase58(prefixedHash);
-      std::string b58str(b58.toCharPtr());
-      EXPECT_EQ(b58str, addr.display());
+      EXPECT_EQ(b58, addr.display());
 
       auto addr2 = bs::Address::fromHash(prefixedHash);
       EXPECT_EQ(prefixedHash, addr2.prefixed());
-      EXPECT_EQ(b58str, addr2.display());
+      EXPECT_EQ(b58, addr2.display());
 
       EXPECT_EQ(addr, addr2);
    }
@@ -178,12 +172,11 @@ TEST(TestAddress, ValidScenarios)
       EXPECT_EQ(prefixedHash, addr.prefixed());
       
       auto b58 = BtcUtils::scrAddrToBase58(prefixedHash);
-      std::string b58str(b58.toCharPtr());
-      EXPECT_EQ(b58str, addr.display());
+      EXPECT_EQ(b58, addr.display());
 
       auto addr2 = bs::Address::fromHash(prefixedHash);
       EXPECT_EQ(prefixedHash, addr2.prefixed());
-      EXPECT_EQ(b58str, addr2.display());
+      EXPECT_EQ(b58, addr2.display());
 
       EXPECT_EQ(addr, addr2);
    }
@@ -201,12 +194,11 @@ TEST(TestAddress, ValidScenarios)
       prefixedHash.append(rando32);
 
       auto bch32 = BtcUtils::scrAddrToSegWitAddress(rando32);
-      std::string bch32str(bch32.getCharPtr(), bch32.getSize());
-      EXPECT_EQ(addr.display(), bch32str);
+      EXPECT_EQ(addr.display(), bch32);
 
       auto addr2 = bs::Address::fromHash(prefixedHash);
       EXPECT_EQ(prefixedHash, addr2.prefixed());
-      EXPECT_EQ(addr2.display(), bch32str);
+      EXPECT_EQ(addr2.display(), bch32);
    
       EXPECT_EQ(addr, addr2);
    }
@@ -226,12 +218,11 @@ TEST(TestAddress, ValidScenarios)
       EXPECT_EQ(prefixedHash, addr.prefixed());
 
       auto bch32 = BtcUtils::scrAddrToSegWitAddress(hash);
-      std::string bch32str(bch32.getCharPtr(), bch32.getSize());
-      EXPECT_EQ(bch32str, addr.display());
+      EXPECT_EQ(bch32, addr.display());
 
       auto addr2 = bs::Address::fromHash(prefixedHash);
       EXPECT_EQ(prefixedHash, addr2.prefixed());
-      EXPECT_EQ(addr2.display(), bch32str);
+      EXPECT_EQ(addr2.display(), bch32);
 
       EXPECT_EQ(addr, addr2);
    }
@@ -259,12 +250,11 @@ TEST(TestAddress, ValidScenarios)
       EXPECT_EQ(prefixedHash, addr.prefixed());
 
       auto bch32 = BtcUtils::scrAddrToSegWitAddress(hash);
-      std::string bch32str(bch32.getCharPtr(), bch32.getSize());
-      EXPECT_EQ(bch32str, addr.display());
+      EXPECT_EQ(bch32, addr.display());
 
       auto addr2 = bs::Address::fromHash(prefixedHash);
       EXPECT_EQ(prefixedHash, addr2.prefixed());
-      EXPECT_EQ(addr2.display(), bch32str);
+      EXPECT_EQ(addr2.display(), bch32);
 
       EXPECT_EQ(addr, addr2);
    }
