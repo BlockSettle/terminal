@@ -1,7 +1,54 @@
 {
-   "latest_version": "0.25.7",
+   "latest_version": "0.24.11",
    "release_date": "10 Jan 2020",
    "changes": [
+      {
+         "version_string": "0.24.11",
+         "previous_version": "0.24.11",
+         "release_date": "10 Jan 2020",
+         "release_type": "prod",
+         "improvements": [
+            "",
+            ""
+         ],
+         "bug_fixes": [],
+         "revision": "5925c1111",
+         "common_revision": "5925c1111"
+      },
+      {
+         "version_string": "0.24.11",
+         "previous_version": "0.25.7",
+         "release_date": "10 Jan 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Merge branch 'bs_dev'",
+            "Prod release 0.24.10",
+            "Release 0.24.8",
+            "Release 0.27.3",
+            "Release 0.20.0",
+            "Release 0.19.1",
+            "Release 0.19.0",
+            "Release 0.17.1",
+            "Release 0.16.1",
+            "Merge branch 'bs_dev'",
+            "Release 0.15.15",
+            "Merge branch 'bs_dev'",
+            "Release 0.15.12",
+            "Merge branch 'bs_dev'",
+            "Release 0.15.10",
+            "Release 0.14.4",
+            "Merge branch 'bs_dev'",
+            "Merge branch 'bs_dev'",
+            "Release 0.13.6",
+            "Release bs0.13.3",
+            "Release bs0.13.2",
+            "bs0.12.12",
+            ""
+         ],
+         "bug_fixes": [],
+         "revision": "5925c1111",
+         "common_revision": "5925c1111"
+      },
       {
          "version_string": "0.25.7",
          "previous_version": "0.25.6",
