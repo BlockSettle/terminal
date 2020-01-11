@@ -15,7 +15,7 @@ def generate_project(sourcesRoot, productionBuild):
    command.append('release')
 
    if productionBuild:
-      command.append('-production')
+      command.append('--production')
 
    result = subprocess.call(command, cwd=sourcesRoot)
    return result == 0
