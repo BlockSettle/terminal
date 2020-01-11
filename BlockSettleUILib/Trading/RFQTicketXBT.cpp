@@ -745,7 +745,9 @@ void RFQTicketXBT::submitButtonClicked()
          rfq->receiptAddress = recvAddr.display();
          submitRFQCb_(*rfq, bs::UtxoReservationToken{});
       };
-      // BST-2474: All addresses related to trading, not just change addresses, should use internal addresses
+      // BST-2474: All addresses related to trading, not just change addresses, should use internal addresses.
+      // This has no effect as CC wallets have only external addresses.
+      // But CCLeaf::getSpendableTxOutList is require only 1 conf so it's OK.
       ccWallet->getNewIntAddress(cbRecvAddr);
       return;
    }
