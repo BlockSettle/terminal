@@ -734,7 +734,8 @@ void RFQTicketXBT::submitButtonClicked()
                SPDLOG_LOGGER_ERROR(logger_, "can't find XBT leaves");
                return;
             }
-            leaves.front()->getNewExtAddress(recvXbtAddressCb);
+            // BST-2474: All addresses related to trading, not just change addresses, should use internal addresses
+            leaves.front()->getNewIntAddress(recvXbtAddressCb);
          }
          return;
       }
@@ -744,7 +745,8 @@ void RFQTicketXBT::submitButtonClicked()
          rfq->receiptAddress = recvAddr.display();
          submitRFQCb_(*rfq, bs::UtxoReservationToken{});
       };
-      ccWallet->getNewExtAddress(cbRecvAddr);
+      // BST-2474: All addresses related to trading, not just change addresses, should use internal addresses
+      ccWallet->getNewIntAddress(cbRecvAddr);
       return;
    }
 

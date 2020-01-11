@@ -341,7 +341,8 @@ void RFQDealerReply::getAddress(const std::string &quoteRequestId, const std::sh
    };
    switch (type) {
       case AddressType::Recv:
-         wallet->getNewExtAddress(cbWrap);
+         // BST-2474: All addresses related to trading, not just change addresses, should use internal addresses
+         wallet->getNewIntAddress(cbWrap);
          break;
       case AddressType::Change:
          wallet->getNewChangeAddress(cbWrap);
