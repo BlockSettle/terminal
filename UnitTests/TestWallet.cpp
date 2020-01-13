@@ -1854,37 +1854,40 @@ TEST_F(TestWallet, ChangePassword)
 {
    auto passMd = bs::wallet::PasswordMetaData{ bs::wallet::EncryptionType::Password, {} };
 
-   auto passphrase1 = SecureBinaryData::fromString("password1");
-   auto passphrase2 = SecureBinaryData::fromString("password2");
-   auto passphrase3 = SecureBinaryData::fromString("password3");
+   auto passphraseOld = SecureBinaryData::fromString("passwordOld");
+   auto passphraseNew = SecureBinaryData::fromString("passwordNew");
 
-   const bs::wallet::PasswordData pd1{ passphrase1, passMd, {}, {} };
-   const bs::wallet::PasswordData pd2{ passphrase2, passMd, {}, {} };
-   const bs::wallet::PasswordData pd3{ passphrase3, passMd, {}, {} };
+   const bs::wallet::PasswordData pdOld{ passphraseOld, passMd, {}, {} };
+   const bs::wallet::PasswordData pdNew{ passphraseNew, passMd, {}, {} };
 
    ASSERT_NE(envPtr_->walletsMgr(), nullptr);
 
    const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
       , NetworkType::TestNet };
-   auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test", seed, walletFolder_, pd1, true);
+   auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test", seed, walletFolder_, pdOld, true);
+   envPtr_->walletsMgr()->reset();
 
    {
-      const bs::core::WalletPasswordScoped lock(coreWallet, passphrase1);
-      bool result = coreWallet->changePassword(passMd, pd2);
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphraseOld);
+      auto seedDecrypted = coreWallet->getDecryptedSeed();
+      ASSERT_EQ(seed.seed(), seedDecrypted.seed());
+   }
+
+   {
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphraseOld);
+      bool result = coreWallet->changePassword(passMd, pdNew);
       ASSERT_TRUE(result);
    }
 
    {
-      const bs::core::WalletPasswordScoped lock(coreWallet, passphrase2);
-      bool result = coreWallet->changePassword(passMd, pd3);
-      ASSERT_TRUE(result);
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphraseNew);
+      auto seedDecrypted = coreWallet->getDecryptedSeed();
+      EXPECT_EQ(seed.seed(), seedDecrypted.seed());
    }
 
    {
-      // Wrong password
-      const bs::core::WalletPasswordScoped lock(coreWallet, passphrase2);
-      bool result = coreWallet->changePassword(passMd, pd1);
-      ASSERT_FALSE(result);
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphraseOld);
+      EXPECT_THROW(coreWallet->getDecryptedSeed(), std::exception);
    }
 }
 
