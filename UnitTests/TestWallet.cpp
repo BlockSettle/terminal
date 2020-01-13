@@ -1891,7 +1891,7 @@ TEST_F(TestWallet, ChangePassword)
    }
 }
 
-TEST_F(TestWallet, changeControlPassword)
+TEST_F(TestWallet, ChangeControlPassword)
 {
    auto passMd = bs::wallet::PasswordMetaData{ bs::wallet::EncryptionType::Password, {} };
    auto passphrase = SecureBinaryData::fromString("password");
