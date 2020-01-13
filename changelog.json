@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.25.6",
-   "release_date": "02 Jan 2020",
+   "latest_version": "0.25.7",
+   "release_date": "10 Jan 2020",
    "changes": [
+      {
+         "version_string": "0.25.7",
+         "previous_version": "0.25.6",
+         "release_date": "10 Jan 2020",
+         "release_type": "dev",
+         "improvements": [
+            "Update armory",
+            "UI improvements",
+            "Update trades reporting",
+            "Update CCY list"
+         ],
+         "bug_fixes": [],
+         "revision": "8d2ddaef7",
+         "common_revision": "fd54df17"
+      },
       {
          "version_string": "0.25.6",
          "previous_version": "0.25.5",
