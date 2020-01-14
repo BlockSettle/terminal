@@ -1814,8 +1814,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade wallet to enable trading"), tr("Upgrade wallet to enable trading?")
             , tr("To trade through BlockSettle, you are required to have a wallet which"
                " supports the sub-wallets required to interact with the system. Each Terminal"
-               " will only have one trading enabled wallet. Do you wish to upgrade your wallet?")
-            .arg(QString::fromStdString(wallet->name())), this);
+               " will only have one trading enabled wallet. Do you wish to upgrade your wallet?"), this);
          if (qry.exec() == QDialog::Accepted) {
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
                if (result == bs::error::ErrorCode::NoError) {
