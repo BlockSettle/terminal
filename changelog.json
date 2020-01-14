@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.24.11",
-   "release_date": "10 Jan 2020",
+   "latest_version": "0.24.12",
+   "release_date": "14 Jan 2020",
    "changes": [
+      {
+         "version_string": "0.24.12",
+         "previous_version": "0.24.11",
+         "release_date": "14 Jan 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Always use internal addresses for trading",
+            "Remove unused QString::arg call",
+            "Avoid unisntalling before installing",
+            "Production Release Version 0.24.11",
+	    "Always use internal addresses for trading",
+         ],
+         "bug_fixes": [],
+         "revision": "d0331a59f",
+         "common_revision": "d0331a59f"
+      },
       {
          "version_string": "0.24.11",
          "previous_version": "0.24.11",
