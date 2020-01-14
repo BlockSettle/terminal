@@ -20,6 +20,7 @@
 
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "CoreWalletsManager.cpp"
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
@@ -29,9 +30,11 @@
 #include "SystemFileUtils.h"
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
+#include "ThreadWorker/QtParallelThreadWorker.h"
 
 #include "bs_signer.pb.h"
 
+Q_DECLARE_METATYPE(bs::core::WalletsManager::AsyncLoadResult)
 using namespace bs::error;
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
@@ -402,34 +405,38 @@ void HeadlessAppObj::reloadWallets(bool notifyGUI, const std::function<void()> &
       logger_->debug("Loaded wallet {} of {}", cur, total);
    };
 
-   bool ok = walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
-      , controlPassword(), cbProgress);
-//   settings_->setWalletsDir(walletsDir);
+   const auto& walletsLoaded = [this, notifyOrigin = notifyGUI, cbOrigin = std::move(cb)](bool isSuccess) {
+      if (cbOrigin) {
+         cbOrigin();
+      }
 
-   if (cb) {
-      cb();
-   }
-
-   if (ok) {
-      logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
-      if (controlPassword().getSize() == 0) {
-         controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
+      if (isSuccess) {
+         logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
+         if (controlPassword().getSize() == 0) {
+            controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
+         }
+         else {
+            controlPasswordStatus_ = signer::ControlPasswordStatus::Accepted;
+         }
       }
       else {
-         controlPasswordStatus_ = signer::ControlPasswordStatus::Accepted;
+         // wallets not loaded if control password wrong
+         // send message to gui to request it
+         logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
+         controlPasswordStatus_ = signer::ControlPasswordStatus::Rejected;
       }
-   }
-   else {
-      // wallets not loaded if control password wrong
-      // send message to gui to request it
-      logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
-      controlPasswordStatus_ = signer::ControlPasswordStatus::Rejected;
-   }
 
-   if (notifyGUI) {
-      guiListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
-   }
-   terminalListener_->setNoWallets(ok && walletsMgr_->empty());
+      if (notifyOrigin) {
+         guiListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
+      }
+      terminalListener_->setNoWallets(isSuccess && walletsMgr_->empty());
+      terminalListener_->walletsListUpdated();
+   };
+
+   threadWorker.reset(new QtParallelThreadWorker);
+
+   walletsMgr_->loadWalletsAsync(threadWorker.get(), settings_->netType(), settings_->getWalletsDir()
+      , controlPassword(), walletsLoaded, cbProgress);
 }
 
 void HeadlessAppObj::setLimits(bs::signer::Limits limits)

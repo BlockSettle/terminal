@@ -39,6 +39,7 @@ class SignerAdapterListener;
 class HeadlessSettings;
 class ZmqBIP15XServerConnection;
 class DispatchQueue;
+class QtParallelThreadWorker;
 
 class HeadlessAppObj
 {
@@ -96,6 +97,8 @@ private:
 
    SecureBinaryData controlPassword_;
    Blocksettle::Communication::signer::ControlPasswordStatus controlPasswordStatus_;
+
+   std::unique_ptr<QtParallelThreadWorker> threadWorker = nullptr;
 
 };
 
