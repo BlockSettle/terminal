@@ -19,6 +19,12 @@
 #include "Wallets/SyncWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+namespace {
+
+   const uint64_t kAuthAddrValue = 1000;
+
+}
+
 
 AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
    : QWidget(parent)
@@ -119,26 +125,31 @@ void AddressDetailsWidget::updateFields()
                , tr("%1 %2").arg(QString::number(amt)).arg(QString::fromStdString(ccFound_.security)));
          }
       }
+      return;
    }
-   else {
+
+   if (balanceLoaded_) {
+      ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_.load()));
+      ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_.load()));
+      ui_->balance->setText(UiUtils::displayAmount(totalReceived_ - totalSpent_));
+   }
+
+   if (bsAuthAddrs_.find(currentAddrStr_) != bsAuthAddrs_.end()) {
+      ui_->addressId->setText(tr("%1 [Authentication: BlockSettle funding address]")
+         .arg(QString::fromStdString(currentAddrStr_)));
+      return;
+   }
+
+   if (isAuthAddr_) {
       const auto authIt = authAddrStates_.find(currentAddr_);
-      if (bsAuthAddrs_.find(currentAddrStr_) != bsAuthAddrs_.end()) {
-         ui_->addressId->setText(tr("%1 [Authentication: BlockSettle funding address]")
-            .arg(QString::fromStdString(currentAddrStr_)));
-      }
-      else if ((authIt != authAddrStates_.end()) && (authIt->second != AddressVerificationState::VerificationFailed)) {
+      if ((authIt != authAddrStates_.end()) && (authIt->second != AddressVerificationState::VerificationFailed)) {
          ui_->addressId->setText(tr("%1 [Authentication: %2]").arg(QString::fromStdString(currentAddrStr_))
             .arg(QString::fromStdString(to_string(authIt->second))));
       }
-      else {
-         ui_->addressId->setText(QString::fromStdString(currentAddrStr_));
-      }
-      if (balanceLoaded_) {
-         ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_.load()));
-         ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_.load()));
-         ui_->balance->setText(UiUtils::displayAmount(totalReceived_ - totalSpent_));
-      }
+      return;
    }
+
+   ui_->addressId->setText(QString::fromStdString(currentAddrStr_));
 }
 
 void AddressDetailsWidget::searchForCC()
@@ -202,7 +213,6 @@ void AddressDetailsWidget::loadTransactions()
    uint64_t totCount = 0;
 
    QtConcurrent::run(this, &AddressDetailsWidget::searchForCC);
-   QtConcurrent::run(this, &AddressDetailsWidget::searchForAuth);
 
    // Go through each TXEntry object and calculate all required UI data.
    for (const auto &curTXEntry : txEntryHashSet_) {
@@ -261,6 +271,23 @@ void AddressDetailsWidget::loadTransactions()
          totalSpent_ -= curTXEntry.second.value; // Negative, so fake that out.
       }
       totCount++;
+
+      // Detect if this is an auth address
+      if (curTXEntry.second.value == kAuthAddrValue) {
+         for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
+            const auto &txOut = tx.getTxOutCopy(static_cast<int>(i));
+            try {
+               const auto addr = bs::Address::fromTxOut(txOut);
+               if (bsAuthAddrs_.find(addr.display()) != bsAuthAddrs_.end()) {
+                  isAuthAddr_ = true;
+                  QtConcurrent::run(this, &AddressDetailsWidget::searchForAuth);
+                  break;
+               }
+            } catch (const std::exception &e) {
+               SPDLOG_LOGGER_ERROR(logger_, "auth address detection failed: {}", e.what());
+            }
+         }
+      }
 
       setConfirmationColor(item);
       // disabled as per Scott's request
@@ -468,6 +495,7 @@ void AddressDetailsWidget::clear()
    txMap_.clear();
    txEntryHashSet_.clear();
    ccFound_ = {};
+   isAuthAddr_ = false;
    authAddrStates_.clear();
 
    ui_->addressId->clear();

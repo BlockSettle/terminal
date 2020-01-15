@@ -116,6 +116,7 @@ private:
    std::shared_ptr<AddressVerificator> addrVerify_;
    std::map<bs::Address, AddressVerificationState> authAddrStates_;
    std::unordered_set<std::string>     bsAuthAddrs_;
+   bool isAuthAddr_{false};
 
    std::mutex mutex_;
 
